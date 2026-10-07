@@ -177,7 +177,7 @@ async fn save_deck_as(app: &App, id: &str, profile_id: &str, cards: &[String], n
                 "createdAt": now,
                 "updatedAt": now,
             })),
-            MAX_SAVED_DECKS,
+            MAX_SAVED_DECKS as i64,
         )
     );
     assert_eq!(to_json(&outcome), json!("created"));
@@ -216,7 +216,7 @@ async fn save_trio_for(app: &App, profile_id: &str, deck_ids: Option<[Option<Str
                 "createdAt": now,
                 "updatedAt": now,
             })),
-            MAX_SAVED_TRIOS,
+            MAX_SAVED_TRIOS as i64,
         )
     );
     assert_eq!(to_json(&outcome), json!("created"));

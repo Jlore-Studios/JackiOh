@@ -141,7 +141,7 @@ struct Submitter {
 impl Submitter {
     async fn submit(&mut self, player: PlayerId, body: Value) {
         self.n += 1;
-        let reply = to_json(&self.actor.submit(player, &format!("lb-{}", self.n), from(body.clone())).await);
+        let reply = to_json(&self.actor.submit(player, format!("lb-{}", self.n), from(body.clone())).await);
         if reply["type"] == "error" {
             panic!("{} by {player}: {reply}", body["type"]);
         }

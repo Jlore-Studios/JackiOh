@@ -77,7 +77,7 @@ fn rating_move(rating_a: f64, rating_b: f64, score_a: f64) -> (f64, f64) {
         deviation: float(RATING_DEVIATION_START),
         volatility: float(RATING_VOLATILITY_START),
     };
-    let next = rate_game(fresh(rating_a), fresh(rating_b), score_a);
+    let next = rate_game(&fresh(rating_a), &fresh(rating_b), score_a);
     (next.a.rating, next.b.rating)
 }
 
@@ -563,7 +563,7 @@ async fn view_json(actor: &MatchActor, player: PlayerId) -> Value {
 /// One action through `submit`, which must be acked.
 async fn submit_ok(actor: &MatchActor, player: PlayerId, nonce: &str, body: Value) {
     let body: ActionBody = serde_json::from_value(body).expect("an ActionBody");
-    let reply = actor.submit(player, nonce, body).await;
+    let reply = actor.submit(player, nonce.to_string(), body).await;
     let reply = serde_json::to_value(&reply).expect("ServerMessage serialises");
     assert_eq!(reply["type"], json!("ack"), "the walk's {nonce} was refused: {reply}");
 }
@@ -1018,7 +1018,7 @@ mod m6_t4_the_match_actor {
         h.p1.clear();
         h.p2.clear();
 
-        let budget = int(MATCH_ACTIONS_PER_SECOND);
+        let budget = MATCH_ACTIONS_PER_SECOND as i64;
         for i in 0..=budget {
             send(&h, &h.p1, &format!("flood-{i}"), filler()).await;
         }
@@ -1394,7 +1394,7 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
 
         // Put p1 over the per-second action budget, so the next action frame is the flood refusal.
         // (R345's preference stands in for TS's `offerDraw`, as in the flood test above.)
-        for n in 0..=int(MATCH_ACTIONS_PER_SECOND) {
+        for n in 0..=MATCH_ACTIONS_PER_SECOND as i64 {
             h.p1.receive_json(json!({
                 "type": "action",
                 "action": { "type": "setAutoEndTurn", "enabled": false, "nonce": format!("flood-{n}") },

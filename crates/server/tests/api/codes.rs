@@ -34,7 +34,6 @@ use tower::ServiceExt;
 use tracing_subscriber::layer::SubscriberExt;
 
 use jackioh_server::api::codes::{DEFAULT_INVITE_CODE_MAX_USES, MintDeps, MintInput, mint_invite_code};
-use jackioh_server::api::crypto::{Hashes, create_hashes};
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
     CODE_ATTEMPT_WINDOW_SECONDS, CODE_ATTEMPTS_PER_IP_PER_HOUR, CODE_ATTEMPTS_PER_PROFILE_PER_HOUR,
@@ -199,11 +198,6 @@ fn ip_hash(raw: &str) -> String {
 /// R191's reading only drops the separators.
 fn code_hash(formatted: &str) -> String {
     hmac_sha256_hex(&format!("{PEPPER}:code"), &formatted.replace('-', ""))
-}
-
-/// The hashes this server keys with, for `mint_invite_code` (TS's `deps.hashes`).
-fn hashes() -> Hashes {
-    create_hashes(&format!("{PEPPER}:code"), &format!("{PEPPER}:ip"))
 }
 
 struct Minted {

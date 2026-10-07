@@ -147,7 +147,7 @@ pub(crate) fn is_integer(value: f64) -> bool {
 /// `new Date(ms).toISOString()`: `2026-10-07T12:34:56.789Z`.
 fn iso_string(ms: i64) -> Result<String> {
     let at = time::OffsetDateTime::from_unix_timestamp_nanos(i128::from(ms) * 1_000_000)?;
-    let format = time::format_description::parse(
+    let format = time::format_description::parse_borrowed::<1>(
         "[year]-[month]-[day]T[hour]:[minute]:[second].[subsecond digits:3]Z",
     )?;
     Ok(at.format(&format)?)

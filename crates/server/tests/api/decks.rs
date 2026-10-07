@@ -578,7 +578,7 @@ mod the_deck_s_portrait_r641_d5 {
         // PREMISE: the expected issue is the validator's own verdict for the same input — computed
         // here against the same `is_portrait_id` the route passes, never a sentence typed out.
         let deckable = |card_id: &str| is_deckable(card_id);
-        let portrait = |value: &str| is_portrait_id(value);
+        let portrait = |value: &str| is_portrait_id(&Value::from(value));
         let expected = json_of(&check_deck_draft(&DeckDraftInput {
             name: normalize_name("Aggro"),
             cards: cards(4, 0),
@@ -1159,7 +1159,7 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
     }
 
     async fn save(app: &App, deck: SavedDeck) {
-        store!(app, decks_upsert(&deck, MAX_SAVED_DECKS));
+        store!(app, decks_upsert(&deck, MAX_SAVED_DECKS as i64));
     }
 
     async fn freeze(app: &App, profile_id: &str, choice: Value) -> Result<Value, ApiError> {
@@ -1295,7 +1295,7 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
             "createdAt": 0,
             "updatedAt": 0,
         }));
-        store!(ctx.app, trios_upsert(&trio, MAX_SAVED_TRIOS));
+        store!(ctx.app, trios_upsert(&trio, MAX_SAVED_TRIOS as i64));
 
         let frozen = freeze(&ctx.app, PROFILE, json!({ "mode": "bo3", "trioId": uuid(9) })).await.expect("frozen");
 
@@ -1336,7 +1336,7 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
             "createdAt": 0,
             "updatedAt": 0,
         }));
-        store!(ctx.app, trios_upsert(&trio, MAX_SAVED_TRIOS));
+        store!(ctx.app, trios_upsert(&trio, MAX_SAVED_TRIOS as i64));
         // A frozen trio with a hole in it is never the answer: the one filled deck goes to the
         // validator alone, and L1 refuses a trio of one.
         let refused = freeze(&ctx.app, PROFILE, json!({ "mode": "bo3", "trioId": uuid(9) })).await.expect_err("gappy");

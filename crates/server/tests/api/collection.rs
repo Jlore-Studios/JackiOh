@@ -433,7 +433,7 @@ mod owned_map_section_9_4_l5_s_input {
     #[tokio::test]
     async fn is_empty_for_a_profile_that_owns_nothing() {
         let (server, _token) = setup().await;
-        assert_eq!(owned(&server, PROFILE).await, IndexMap::new());
+        assert_eq!(owned(&server, PROFILE).await, IndexMap::<String, i64>::new());
     }
 
     #[tokio::test]
@@ -441,7 +441,7 @@ mod owned_map_section_9_4_l5_s_input {
         let (server, _token) = setup().await;
         let _ = store_of(&server.app).lock().await.seed_profile(json!({ "id": "p2", "userId": "u2", "status": "active" }));
         grant(&server, "p2", json!([{ "cardId": "core-001", "quantity": 1 }]), "reward").await.expect("the grant");
-        assert_eq!(owned(&server, PROFILE).await, IndexMap::new());
+        assert_eq!(owned(&server, PROFILE).await, IndexMap::<String, i64>::new());
         assert_eq!(owned(&server, "p2").await, IndexMap::from([("core-001".to_string(), 1)]));
     }
 }

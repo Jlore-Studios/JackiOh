@@ -1364,7 +1364,7 @@ mod tutorial {
 
     async fn merge(harness: &StoreHarness, input: Value, max_lessons: usize) -> Value {
         let input: TutorialMergeInput = from(input);
-        j(&q!(harness, t => t.tutorial_merge(&input, max_lessons)))
+        j(&q!(harness, t => t.tutorial_merge(&input, max_lessons as i64)))
     }
 
     async fn r320_holds_no_row_before_the_first_write_and_the_first_write_makes_one(harness: &StoreHarness) {

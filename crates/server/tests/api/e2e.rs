@@ -682,7 +682,7 @@ mod r143_the_optional_seed {
                 "createdAt": 0,
                 "updatedAt": 0,
             }));
-            store!(app.db, decks_upsert(&deck, MAX_SAVED_DECKS));
+            store!(app.db, decks_upsert(&deck, MAX_SAVED_DECKS as i64));
             tokens.push(fixture.token.to_string());
             decks.push(uuid(index + 1));
         }

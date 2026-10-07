@@ -269,7 +269,7 @@ async fn open_turn_one(actor: &MatchActor) -> usize {
     let owed = actor.snapshot().mulligan_owed;
     for seat in &owed {
         let keep = hand_of(&view_of(actor, *seat).await);
-        let reply = to_json(&actor.submit(*seat, &format!("keep-{seat}"), from(json!({ "type": "mulligan", "keep": keep }))).await);
+        let reply = to_json(&actor.submit(*seat, format!("keep-{seat}"), from(json!({ "type": "mulligan", "keep": keep }))).await);
         assert_eq!(reply["type"], "ack", "the opening mulligan was refused: {reply}");
     }
     owed.len()

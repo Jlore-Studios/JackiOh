@@ -18,7 +18,7 @@ use std::time::Duration;
 
 use jackioh_engine::{Aim, PlayerId, PlayerView};
 use jackioh_server::actor::match_actor::{MatchActor, aim_is_public};
-use jackioh_server::actor::protocol::{ClientMessage, parse_client_message};
+use jackioh_server::actor::protocol::{AimMessage, ClientMessage, parse_client_message};
 use jackioh_server::actor::ws_server::Socket;
 use jackioh_server::app::App;
 use jackioh_server::config::AIM_RELAY_INTERVAL_MS;
@@ -237,7 +237,7 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
             })
             .to_string(),
         );
-        let ClientMessage::Aim { aim } = parsed else { panic!("the frame did not parse as an aim") };
+        let Ok(ClientMessage::Aim(AimMessage { aim })) = parsed else { panic!("the frame did not parse as an aim") };
         assert_eq!(
             serde_json::to_value(&aim).expect("Aim serialises"),
             json!({

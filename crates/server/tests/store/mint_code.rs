@@ -94,7 +94,6 @@ mod the_pepper_derivation_the_script_shares_with_app_rs {
     #[tokio::test]
     async fn stores_a_hash_a_different_pepper_cannot_find() {
         let db = Db::fake();
-        let hashes = mint_hashes();
         let minted = mint_invite_code(MintDeps { db: &db, code_pepper: CODE_PEPPER }, MintInput::default()).await.expect("a code is minted");
 
         let other = create_hashes("a-different-pepper-of-thirty-two-plus", "x");
