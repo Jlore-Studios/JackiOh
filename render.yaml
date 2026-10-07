@@ -16,7 +16,7 @@ services:
     # deploy-watch.yml looks the service up by this name; never rename it.
     name: jackioh-server
     # The image is built from crates/server/Dockerfile (docs/v0.3.0/SURFACE.md §11.3): a
-    # `rust:1.97-slim` stage runs `cargo build --release -p jackioh-server`, and a
+    # `rust:1.97-slim-bookworm` stage runs `cargo build --release -p jackioh-server`, and a
     # `debian:bookworm-slim` stage with `ca-certificates` holds the one binary. Nothing at run time
     # needs Node, pnpm or the repository: the catalog, the patch history and every migration are
     # compiled into the binary (`include_str!`), so the image is the whole deploy.

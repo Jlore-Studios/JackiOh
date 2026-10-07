@@ -17,7 +17,10 @@
 # ---------------------------------------------------------------------------
 # Build
 # ---------------------------------------------------------------------------
-FROM rust:1.97-slim AS build
+# On bookworm, the runtime stage's Debian: the binary links the build image's glibc, and plain
+# `rust:1.97-slim` is trixie, whose binary asks for GLIBC_2.38 that bookworm's 2.36 does not have
+# (the rehearsal's first boot exited on exactly that).
+FROM rust:1.97-slim-bookworm AS build
 
 WORKDIR /src
 
