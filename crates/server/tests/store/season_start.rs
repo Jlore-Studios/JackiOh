@@ -1,0 +1,209 @@
+//! `src/cli/season_start.rs` — R609's season-open admin script — driven against the in-memory
+//! store, where `--dry-run`'s rollback is the observable half: the report must describe the reset
+//! exactly while the store holds none of its writes.
+//!
+//! The port of `apps/server/test/db/season-start.test.ts`. TS's `createTestDeps()` is
+//! `support::deps::test_app()` (a fake store and the test patch version); its `seedProfile` is the
+//! store's own `profiles.create`, `profiles.setGlicko` and `profiles.setStatus`, so the two rated
+//! profiles are whatever ids the store hands back rather than fixed strings.
+
+use jackioh_server::api::ranked::{SeasonDeps, rate_ranked_game};
+use jackioh_server::cli::season_start::{SeasonStartOptions, parse_season_start_args, start_season};
+use jackioh_server::config::SEASON_RESET_STRENGTH;
+use jackioh_server::db::store::Db;
+use serde::Serialize;
+use serde::de::DeserializeOwned;
+use serde_json::{Value, json};
+
+use crate::support::deps::{TEST_PATCH_VERSION, test_app};
+
+/// One transaction around one store call, as TS's store gave every method called outside
+/// `store.tx`: begin, the call, commit. Answers the call's value, or the first error's text.
+macro_rules! once {
+    ($db:expr, $sub:expr, |$tx:ident| $call:expr) => {
+        async {
+            let mut $tx = $db.begin($sub).await.map_err(|error| error.to_string())?;
+            let value = $call.await.map_err(|error| error.to_string())?;
+            $tx.commit().await.map_err(|error| error.to_string())?;
+            Ok::<_, String>(value)
+        }
+        .await
+    };
+}
+
+fn de<T: DeserializeOwned>(value: Value) -> T {
+    serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
+}
+
+fn js<T: Serialize>(value: &T) -> Value {
+    serde_json::to_value(value).expect("a row serialises")
+}
+
+fn args(values: &[&str]) -> Vec<String> {
+    values.iter().map(|value| value.to_string()).collect()
+}
+
+/// `toBeCloseTo(expected, 9)`: within half of 1e-9.
+fn assert_close(actual: f64, expected: f64) {
+    assert!((actual - expected).abs() < 0.5e-9, "{actual} is not close to {expected}");
+}
+
+/// R609: `v<major>.<minor>` of a patch version (`ranked/season.rs`'s `season_id_of`, copied so the
+/// expectation is computed here rather than by the code under test).
+fn season_id_of(patch_version: &str) -> String {
+    let rest = patch_version.strip_prefix('v').unwrap_or_else(|| panic!("{patch_version:?} is not a patch version"));
+    let mut parts = rest.splitn(3, ['.', '-']);
+    let major: u64 = parts.next().and_then(|part| part.parse().ok()).expect("a major version");
+    let minor: u64 = parts
+        .next()
+        .map(|part| part.chars().take_while(char::is_ascii_digit).collect::<String>())
+        .and_then(|digits| digits.parse().ok())
+        .expect("a minor version");
+    format!("v{major}.{minor}")
+}
+
+fn player(profile_id: &str) -> Value {
+    json!({ "kind": "player", "profileId": profile_id })
+}
+
+/// TS's `seedProfile({ id, rating, ratingDeviation: 100 })`: an active profile at that rating.
+/// Ratings go in as JSON integers, which read as a whole `f64` or an integer field alike.
+async fn seed_profile(db: &Db, name: &str, rating: i64) -> String {
+    let user_id = format!("user-{name}");
+    let input = json!({ "userId": user_id, "email": format!("{name}@example.test"), "rating": rating, "at": 0 });
+    let created = js(&once!(db, None, |tx| tx.profiles_create(&de(input.clone()))).expect("profiles.create"));
+    let id = created["id"].as_str().expect("a profile id").to_string();
+    let glicko = json!({ "rating": rating, "deviation": 100, "volatility": created["ratingVolatility"].clone() });
+    once!(db, Some(id.as_str()), |tx| tx.profiles_set_glicko(&id, &de(glicko.clone()))).expect("profiles.setGlicko");
+    once!(db, Some(id.as_str()), |tx| tx.profiles_set_status(&id, de(json!("active")))).expect("profiles.setStatus");
+    id
+}
+
+async fn profile_of(db: &Db, profile_id: &str) -> Value {
+    let found = once!(db, Some(profile_id), |tx| tx.profiles_get_by_id(profile_id)).expect("profiles.getById");
+    js(&found.expect("the profile exists"))
+}
+
+async fn season_ids(db: &Db) -> Vec<String> {
+    let seasons = once!(db, None, |tx| tx.ranked_seasons()).expect("ranked.seasons");
+    seasons.iter().map(|season| js(season)["id"].as_str().unwrap_or_default().to_string()).collect()
+}
+
+/// Two rated players and their season — the state a mid-version bump finds. Answers `(A, B)`.
+async fn rated_pair(app: &std::sync::Arc<jackioh_server::app::App>) -> (String, String) {
+    let a = seed_profile(&app.db, "profile-a", 1200).await;
+    let b = seed_profile(&app.db, "profile-b", 800).await;
+    // One rated game between the two profiles: what `ratedPlayers` (and so the reset) reads.
+    let input = json!({
+        "id": "m-1",
+        "kind": "match",
+        "catalogVersion": "test-1",
+        "sides": [player(&a), player(&b)],
+        "winnerSide": 0,
+        "reason": "hero-death",
+        "at": 1,
+    });
+    let mut tx = app.db.begin(None).await.expect("store.tx");
+    rate_ranked_game(&mut tx, app, &de(input)).await.expect("rateRankedGame");
+    tx.commit().await.expect("commit");
+    (a, b)
+}
+
+fn deps(patch_version: &str) -> SeasonDeps {
+    SeasonDeps { patch_version: patch_version.to_string() }
+}
+
+mod season_start_args {
+    use super::*;
+
+    #[test]
+    fn takes_only_dry_run() {
+        assert!(!parse_season_start_args(&args(&[])).expect("no arguments").dry_run);
+        assert!(parse_season_start_args(&args(&["--dry-run"])).expect("--dry-run").dry_run);
+        assert!(parse_season_start_args(&args(&["--dry-run", "--dry-run"])).expect("twice").dry_run);
+        let apply = parse_season_start_args(&args(&["--apply"])).expect_err("--apply is refused");
+        assert!(apply.to_string().contains("--apply"), "{apply}");
+        let version = parse_season_start_args(&args(&["v0.2"])).expect_err("a bare version is refused");
+        assert!(version.to_string().contains("v0.2"), "{version}");
+    }
+}
+
+mod r609_start_season {
+    use super::*;
+
+    #[tokio::test]
+    async fn opens_the_builds_season_for_real_when_dry_run_is_absent() {
+        let app = test_app().await;
+        rated_pair(&app).await;
+
+        let opened = js(&start_season(&app.db, &deps("v0.2.0"), &SeasonStartOptions { dry_run: false })
+            .await
+            .expect("startSeason"));
+        assert_eq!(opened["season"]["id"], "v0.2");
+        assert_eq!(opened["opened"], true);
+        assert_eq!(opened["reset"]["players"].as_i64(), Some(2));
+        assert_eq!(season_ids(&app.db).await, vec![season_id_of(TEST_PATCH_VERSION), "v0.2".to_string()]);
+
+        // And it is idempotent: the season the server boot would open is already there.
+        let again = js(&start_season(&app.db, &deps("v0.2.0"), &SeasonStartOptions { dry_run: false })
+            .await
+            .expect("startSeason again"));
+        assert_eq!(again["opened"], false);
+        assert_eq!(again["reset"], Value::Null);
+    }
+
+    #[tokio::test]
+    async fn dry_run_reports_the_reset_and_rolls_every_write_back() {
+        let app = test_app().await;
+        let (a_id, b_id) = rated_pair(&app).await;
+        let (a, b) = (profile_of(&app.db, &a_id).await, profile_of(&app.db, &b_id).await);
+        let rating = |profile: &Value| profile["rating"].as_f64().expect("a rating");
+        let mean = (rating(&a) + rating(&b)) / 2.0;
+
+        let opened = js(&start_season(&app.db, &deps("v0.2.0"), &SeasonStartOptions { dry_run: true })
+            .await
+            .expect("startSeason --dry-run"));
+
+        // The report is the real reset's: two players, pulled toward their mean by the strength.
+        assert_eq!(opened["season"]["id"], "v0.2");
+        assert_eq!(opened["opened"], true);
+        assert_eq!(opened["reset"]["players"].as_i64(), Some(2));
+        assert_close(opened["reset"]["mean"].as_f64().expect("a mean"), mean);
+        assert_close(
+            opened["reset"]["highestAfter"].as_f64().expect("a highest rating"),
+            mean + (rating(&a) - mean) * (1.0 - SEASON_RESET_STRENGTH),
+        );
+
+        // …and nothing it described survives: no season row, untouched ratings.
+        assert_eq!(season_ids(&app.db).await, vec![season_id_of(TEST_PATCH_VERSION)]);
+        let (a_after, b_after) = (profile_of(&app.db, &a_id).await, profile_of(&app.db, &b_id).await);
+        assert_eq!(a_after["rating"], a["rating"]);
+        assert_eq!(a_after["ratingDeviation"], a["ratingDeviation"]);
+        assert_eq!(b_after["rating"], b["rating"]);
+        assert_eq!(b_after["ratingDeviation"], b["ratingDeviation"]);
+
+        // A real run right after does exactly what the dry run reported.
+        let applied = js(&start_season(&app.db, &deps("v0.2.0"), &SeasonStartOptions { dry_run: false })
+            .await
+            .expect("startSeason"));
+        assert_eq!(applied["opened"], true);
+        assert_eq!(applied["reset"]["players"].as_i64(), Some(2));
+        assert_close(
+            rating(&profile_of(&app.db, &a_id).await),
+            mean + (rating(&a) - mean) * (1.0 - SEASON_RESET_STRENGTH),
+        );
+    }
+
+    #[tokio::test]
+    async fn dry_run_on_an_already_open_season_reports_it_as_unopened_and_writes_nothing() {
+        let app = test_app().await;
+        rated_pair(&app).await;
+        let opened = js(&start_season(&app.db, &deps(TEST_PATCH_VERSION), &SeasonStartOptions { dry_run: true })
+            .await
+            .expect("startSeason --dry-run"));
+        assert_eq!(opened["season"]["id"], season_id_of(TEST_PATCH_VERSION).as_str());
+        assert_eq!(opened["opened"], false);
+        assert_eq!(opened["reset"], Value::Null);
+        assert_eq!(season_ids(&app.db).await, vec![season_id_of(TEST_PATCH_VERSION)]);
+    }
+}
