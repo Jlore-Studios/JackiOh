@@ -332,6 +332,24 @@ class FreshEachTickTests(unittest.TestCase):
         self.assertNotEqual(caps[0], 0.33)
         self.assertIn("::warning::kept the subscriptions and secrets as they were", out)
 
+    def test_subscriptions_this_checkout_cannot_read_end_the_loop(self):
+        """A subscription on main that only newer code reads (claude-7's new secret, which kept a
+        loop started before it drawing six accounts): the loop ends, without a rewrite, and the
+        next one starts on main's code."""
+        gh = FakeGitHub()
+        raw = raw_providers()
+        raw["providers"]["claude-4"]["secret"] = "CLAUDE_CODE_OAUTH_TOKEN_99"
+
+        def change_main(tick):
+            if tick == 1:
+                gh.files[("main", ".harness/providers.json")] = (json.dumps(raw), "b1")
+
+        seen, out = self.loop(gh, make_config(), 3, change_main)
+        self.assertEqual(len(seen), 1)
+        self.assertIn("::notice::this checkout cannot read the subscriptions on main", out)
+        self.assertIn("CLAUDE_CODE_OAUTH_TOKEN_99", out)
+        self.assertNotIn("::warning::kept the subscriptions", out)
+
     def test_a_plan_job_records_the_secrets_it_saw(self):
         from harness import plan as plan_mod
         gh = FakeGitHub()
