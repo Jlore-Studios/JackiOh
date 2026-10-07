@@ -448,9 +448,9 @@ src/tutorial/
   `?seat=` never override a lesson's own. `window.__jackiohTutorial` (dev builds only) exposes the
   coach's display and the action its current step asks for, which spec 22 performs through the UI.
 - `scripts/lesson-deal.ts <lessonId> [seed | --scan …]` prints a lesson's deal, which is how a
-  lesson's seed is picked. It still imports `registerAll` from `@jackioh/cards`, which the WASM wire
-  layer does not export, and never loads the module, so it does not run until it is ported to
-  `src/wasm/` (its command was `pnpm --dir apps/web exec tsx scripts/lesson-deal.ts …`).
+  lesson's seed is picked: `pnpm --dir apps/web exec tsx scripts/lesson-deal.ts basics`, after
+  `sh scripts/build-wasm.sh` has written `src/wasm/pkg` (it loads the module from disk through
+  `src/wasm/`, as `src/test/setup.ts` does).
 - Progress lives on the device and, for an active account, on the account too (R320, R321). The
   device's copy is the one the page renders; `accountSync.ts` reads the account's once per visit,
   merges it in (the union of completed lessons, the newest Hide/Show choice by the time it was
