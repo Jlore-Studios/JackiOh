@@ -25,8 +25,7 @@
 //! The threshold is the declared `threshold` (R386), read through `param`.
 
 use jackioh_engine::prelude::*;
-use jackioh_engine::effects::{choose_target, for_each_card, steal, ForEachCardArgs};
-use std::sync::Arc;
+use jackioh_engine::effects::{ForEachCardArgs, choose_target, for_each_card, steal};
 
 pub const ID: &str = "classic-040";
 
@@ -47,43 +46,50 @@ fn enemy_permanents(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
 }
 
 /// "If your opponent controls {threshold} or more permanents": the one test the Cry and the glow make.
-/// (TS takes `EffectContext | ConditionContext`; the Rust takes the three things it reads off either.)
+/// TS takes `EffectContext | ConditionContext` and reads `state`, `controller` and
+/// `param(ctx, "threshold")` off it; the two are different types here, so the caller hands over those
+/// three readings.
 fn enough_permanents(state: &GameState, controller: PlayerId, threshold: i32) -> bool {
     enemy_permanents(state, controller).len() as i32 >= threshold
 }
 
 /// R195: in hand, whether playing it now would steal.
-fn condition_met(ctx: &ConditionContext) -> bool {
-    ctx.zone == ConditionZone::Hand && enough_permanents(&ctx.state, ctx.controller, param(ctx, "threshold"))
+fn condition_met(c: ConditionContext) -> bool {
+    c.zone == ConditionZone::Hand && enough_permanents(c.state, c.controller, param(&c, "threshold"))
+}
+
+/// R60: one of them at random, drawn as the Cry reaches the clause (the base `forEachCard`'s `cards`).
+fn random_permanent(c: &mut EffectContext) -> Vec<String> {
+    let permanents = enemy_permanents(&c.state, c.controller);
+    c.rng.shuffle(&permanents).into_iter().take(1).map(|card| card.id).collect()
+}
+
+fn steal_it(instance_id: &str) -> Effect {
+    steal(json_as(json!({ "instanceId": instance_id })))
 }
 
 pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(hook(|ctx| {
-            if enough_permanents(&ctx.state, ctx.controller, param(ctx, "threshold")) {
+            let threshold = param(ctx, "threshold");
+            if enough_permanents(&ctx.state, ctx.controller, threshold) {
                 vec![for_each_card(ForEachCardArgs {
                     // R60: one of them at random, drawn as the Cry reaches the clause.
-                    cards: Arc::new(|c: &EffectContext| -> Vec<String> {
-                        c.rng
-                            .shuffle(&enemy_permanents(&c.state, c.controller))
-                            .into_iter()
-                            .take(1)
-                            .map(|card| card.id)
-                            .collect()
-                    }),
-                    each: Arc::new(|instance_id: &str| steal(json_as(json!({ "instanceId": instance_id })))),
+                    cards: Arc::new(random_permanent),
+                    each: Arc::new(steal_it),
                 })]
             } else {
                 vec![]
             }
         })),
-        condition_met: Some(Arc::new(|ctx: &ConditionContext| -> bool { condition_met(ctx) })),
+        condition_met: Some(condition_hook(condition_met)),
         ..Script::default()
     };
 
     let radiant = Script {
         cry: Some(hook(|ctx| {
-            if enough_permanents(&ctx.state, ctx.controller, param(ctx, "threshold")) {
+            let threshold = param(ctx, "threshold");
+            if enough_permanents(&ctx.state, ctx.controller, threshold) {
                 vec![choose_target(json_as(json!({
                     "step": STEAL_STEP,
                     "scope": { "side": "enemy", "of": ["unit", "backrow"] },
@@ -94,7 +100,7 @@ pub fn script() -> CardScripts {
             }
         })),
         resume: IndexMap::from([(STEAL_STEP, hook(|_ctx| vec![steal(json_as(json!({ "target": { "of": "chosen" } })))]))]),
-        condition_met: Some(Arc::new(|ctx: &ConditionContext| -> bool { condition_met(ctx) })),
+        condition_met: Some(condition_hook(condition_met)),
         ..Script::default()
     };
 
@@ -136,6 +142,13 @@ mod tests {
         serde_json::to_value(value).expect("an engine value serialises")
     }
 
+    /// TS `stepParam(s.card(ref), key, steps)`: TS's `card()` handed back the live instance, so the
+    /// step is written on the state's own copy, found again by id.
+    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
+        let id = s.card(card).id.clone();
+        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
+    }
+
     /// TS `FACE_DOWN_TRAPS`: the four traps, each face-down.
     fn face_down_traps() -> Value {
         Value::Array([PAWN, BREAD, STIMMY, UNLICENSED].iter().map(|d| json!({ "def": d, "faceUp": false })).collect())
@@ -161,7 +174,7 @@ mod tests {
         #[test]
         fn has_a_script_per_face_and_the_radiant_pick_answers_into_its_resume_step() {
             crate::register_all();
-            assert_eq!(ID, TECH);
+            assert_eq!(crate::card_def(ID).id, TECH);
             let scripts = script();
             assert!(scripts.base.cry.is_some());
             assert!(scripts.radiant.resume.contains_key("steal"));
@@ -312,7 +325,7 @@ mod tests {
                     "p1": { "hand": [TECH, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO, VANILLA] },
                 }));
-                step_param(harder.card_mut(TECH), "threshold", 1);
+                step(&mut harder, TECH, "threshold", 1);
                 harder.play(TECH, json!({ "zone": 5 }));
                 assert!(stolen_ids(&harder).is_empty());
 
@@ -320,7 +333,7 @@ mod tests {
                     "p1": { "hand": [TECH, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO] },
                 }));
-                step_param(easier.card_mut(TECH), "threshold", -1);
+                step(&mut easier, TECH, "threshold", -1);
                 easier.play(TECH, json!({ "zone": 5 }));
                 assert_eq!(stolen_ids(&easier).len(), 1);
             }
@@ -480,7 +493,7 @@ mod tests {
                     "p1": { "hand": [{ "def": TECH, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO], "backrow": [FIELD_SPELL] },
                 }));
-                step_param(s.card_mut(TECH), "threshold", 1);
+                step(&mut s, TECH, "threshold", 1);
 
                 s.play(TECH, json!({ "zone": 5 }));
 
