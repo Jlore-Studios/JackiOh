@@ -349,3 +349,101 @@ Lines: 0
 
 ## Totals (engine src)
 Lines: before 69,294, after 67,929 (`git diff --shortstat 85aeec0^ HEAD -- crates/engine/src`: 80 files, 513 insertions, 1,878 deletions). Errors (type-check phase): 187 → 45, all E0308 and local; see `.fullsend/damage/engine-src.md`.
+
+# server
+
+## Cluster: Socket
+Winner: `crates/server/src/actor/ws_server.rs`'s `Socket` + `SocketFrame` — SURFACE §11.2 names `actor::ws_server::Socket` (rule 1)
+Losers: `actor/contracts.rs`'s `Socket`, `SocketFrame`, `SocketSendError`, `NEXT_SOCKET_ID` — deleted (contracts.rs keeps `SocketHandlers`)
+Callers updated: 2 (registry.rs's import; match_actor.rs: `send` answers nothing, `previous != socket` for `same`, and the close handler tells the seat's own socket by `is_open` instead of an id, so no handle cycle)
+Semantic conflicts: none
+Unresolved: none
+Lines: before 152 (contracts' transport half), after 0
+
+## Cluster: handlers' receiver (SURFACE §11.2 hole)
+Winner: `&Arc<App>` for every route handler, `app::Handler`, `h!`, `api::http::dispatch`/`run_route` — `Registry::start` needs the `Arc` its actor keeps; three handlers already took it
+Losers: `&App` handlers; `Registry::bind`/`app()` and its `OnceLock<Weak<App>>` (19.2), the `series.rs` "registry not bound" branch and `run_sweeper`'s bind — deleted
+Callers updated: 34 handler signatures in 13 files; series.rs's `ensure_series_game`, `start_series_game`, `resume_series`, `write_transition`, `player_transition`, `sweep_one`, `sweep_series` take `&Arc<App>`
+Semantic conflicts: none
+Unresolved: recorded in spec-gaps.md (SURFACE §11.2 writes `&App`)
+Lines: −22 net (bind/app and the branch)
+
+## Cluster: the server clock
+Winner: `crates/server/src/app.rs`'s `now_ms` — score 10 − 0 branches (epoch anchored once, advanced by `tokio::time::Instant`, so a paused test clock moves it); more callers
+Losers: `actor/clock.rs`'s `now_ms` (signed-offset branch), the private copies in `api/queue.rs`, `api/results.rs`, `api/rematch.rs`, `cli/mint_code.rs` — deleted
+Callers updated: registry.rs, match_actor.rs, series.rs, clock.rs, the four files above, `tests/actor/clock.rs`, `tests/actor/match_actor.rs`
+Semantic conflicts: clock.server/time.server → `app::now_ms`
+Unresolved: the fake store's default clock stays the wall clock (`fake::system_now`, TS `createMemoryStore()`'s `Date.now()`); TS's test deps handed it `timers.now`. Tests that pause tokio and read store stamps may need `FakeData.now = Arc::new(app::now_ms)` (Wave 3)
+Lines: −62
+
+## Cluster: StoreError
+Winner: `crates/server/src/db/store.rs` — `Duplicate(String)`, `Db(sqlx::Error)`, `Other(String)` (the owner, 20.4)
+Losers: `Duplicate { match_id }` (fake.rs), `DuplicateResult` (results.rs) — rewritten to the owner's variant
+Callers updated: 2 (fake.rs's `duplicate_result`, results.rs's `insert_error`); the tests' `StoreError::Duplicate { .. }` patterns already match a tuple variant
+Semantic conflicts: none
+Unresolved: none
+Lines: 0
+
+## Cluster: store method shapes
+Winner: `crates/server/src/db/store.rs`'s 88 `Tx` methods (names and argument types; every caller name already matched)
+Losers: pg.rs's spread `profiles_create(user_id, email, rating, at, display_name)` and `player_stats_list_public(search, limit, offset)`; pg/fake `i32`/`usize` caps, counts and positions (`decks_upsert`, `trios_upsert`, `tutorial_merge`, `last_boards_sample_others`, `ranked_note_peak_jlorious`, `codes_count_*`, `tickets_count_open`), `IndexMap<QueueMode, _>` for `PerMode<i64>`; fake's `ListPublicOptions`/`CardCount` names; `fake::begin`/`commit` answering `Result`
+Callers updated: pg.rs (9 fns, binds kept `int4` behind TS's `::int` casts), fake.rs (8 fns); api callers (registry, results, rematch, tutorial, collection, series_rules) converted to the store's `i64`
+Semantic conflicts: store.ints → `i64` (store.rs's header); series rows `i64` (19.1's `usize` converts at the row); `null.optional` `x?: T | null` → `Option<Option<T>>` (absent_or_null), pg/fake/queue/series_rules read and write it so
+Unresolved: none
+Lines: ±0 (conversions)
+
+## Cluster: TS tuples in the store
+Winner: tuples `(Option<String>, Option<String>, Option<String>)` for `TrioSlots` and `(FrozenDeck, FrozenDeck, FrozenDeck)` for `FrozenTrio.decks` — SURFACE §4.3 (`[A, B]` → `(A, B)`, rule 1) and every caller
+Losers: store.rs's `[T; 3]`
+Callers updated: 0 (decks.rs, series_rules.rs, pg.rs, fake.rs already used `.0`/`.1`/`.2`)
+Semantic conflicts: none (serde writes both as the same 3-array)
+Unresolved: none
+Lines: 2 changed
+
+## Cluster: the empty in-memory store
+Winner: `impl Default for FakeData` in `db/fake.rs` (TS `createMemoryStore()`: wall clock, default redemption, no launch grant), behind store.rs's `Db::fake()` — 3 lines, 0 options, most callers (6)
+Losers: `fake::create_memory_store` + `MemoryStoreOptions` (no callers; two config options) — deleted
+Callers updated: `app.rs`'s E2E store is now `create_e2e_store(E2eStoreOptions { catalog, now: app::now_ms })` (TS `createE2EStore({ catalog, now: timers.now })`: R111's launch grant needs the catalog); `tests/support/deps.rs` uses `Db::fake()` or `TestAppOptions.db`
+Semantic conflicts: none
+Unresolved: none
+Lines: −19
+
+## Cluster: mint_invite_code
+Winner: `api/codes.rs`'s `mint_invite_code(MintDeps { db, code_pepper }, MintInput { max_uses: Option<i32>, expires_at })` (the owner, 18.5's shape)
+Losers: the guessed `(&Db, &Hashes, MintInviteCodeInput)` at `cli/mint_code.rs`, `tests/api/codes.rs`, `tests/store/mint_code.rs`
+Callers updated: 4 (the CLI passes `env.code_pepper` and narrows its `i64` count; the tests pass their pepper)
+Semantic conflicts: none
+Unresolved: none
+Lines: −3
+
+## Cluster: owners' signatures at call sites (src)
+Winner: each owner — `api::ranked::rate_ranked_game(&RankedGameInput)`, `api::series::{advance_series_in_tx(&SeriesGameResult), resume_series(Option<&SeriesRow>), start_series(NewSeriesInput by value)}`, `RatedReason::Series(SeriesEnd)` (no `From`), `api::http::rate_limit_address(raw)`, `jackioh_ai::AiDeckOptions.banned: Option<Vec<String>>` (the ai reconciler's decision), `jackioh_engine::validator::TRIO_DECKS`, `jackioh_engine::wire::emotes::is_portrait_id(&Value)`, `db::Ticket.portrait` three-state
+Losers: the callers' guesses
+Callers updated: results.rs (7), series.rs (1), queue.rs (3), rooms.rs (1), ws_server.rs (1), engine.rs (1), seed_accounts.rs (1), decks.rs (1), http.rs (2: `candidate` → `auth`, a local slip)
+Semantic conflicts: none
+Unresolved: none
+Lines: ±0
+
+## Cluster: gaps added to owners
+Winner (added, shaped as the callers call them): `pub use store::*;` in `db/mod.rs` (SURFACE §11.2's `db::Db`, `db::Profile`); `Catalog.banned` (R164, 18.4's GAPS; `defs_json` public so `Catalog { banned, ..catalog }` builds); serde on `OpenedSeason`, `RankedGameInput`/`RankedSideInput`, `NewSeriesInput`/`NewSeriesSide`, `ModeChoiceInput`, `FrozenChoice` (TS's `mode`-tagged shapes), `fake::CollectionRow`/`LastBoardRow`; `jsonwebtoken` `rust_crypto`
+Losers: none
+Callers updated: 0
+Semantic conflicts: none
+Unresolved: none
+Lines: +40
+
+## Cluster: test support (`tests/support/{deps,engine,socket}.rs`)
+Winner: the support files' own names and shapes, reshaped where every caller disagreed: `FakeSocket` methods take `&self` (28 sockets bound immutably, 0 `&mut`), `receive_json(Value)` (40 by value), `TestAppOptions.db` (a restart over a store; no reseed); kept: `add_user(app, user, email, verified)` (15 of 24 callers; the other 9 pass TS's default `true`), `call(.., body: Value)` (~20 of 37), `install_test_cards()` for TS `createFakeEngine` (the real engine always opens on the mulligans, so its `mulligan` option has nothing to switch), `TEST_CATALOG_VERSION`
+Losers: `create_fake_engine`/`FakeEngineOptions`, `TestAppOptions.e2e`, `TEST_PATCH_VERSION`, results.rs's local `install_test_cards` wrapper
+Callers updated: ~200 test call sites (the actor's sync methods un-awaited ×103, `&ClockView` ×26, `call` bodies ×17, `add_user` ×8, fake-engine ×7, `start_series` in a transaction ×4, `unwon_slots`/`first_unwon` given `&series.games` ×7, `SupabaseAuth::new` ×2, `E2E*` names, `PlayerStatsListOptions`, `Arc` `on_call` ×3, `tables.game_records`, `Some(reason)` for `grant_entire_catalog` ×6, `with_cors` per request)
+Semantic conflicts: none
+Unresolved: `TestAppOptions.e2e` — every test app runs `E2E=1` (`test_env`), so rooms.rs's non-E2E arm (R143's seed ignored outside E2E) is the same app; `TEST_PATCH_VERSION` — the Rust test app rates in the compiled-in version's season, so season_start.rs's v0.1/v0.2 expectations need a seam (both listed in spec-gaps.md for part 35)
+Lines: tests +330 −301
+
+## Cluster: copied helpers (fullsend rule 5)
+Winner: one home each — `ApiError::{new, with_details, internal}`, `http::{bad_request, rate_limited, ok, lock}` and `From<StoreError> for ApiError` (http.rs owns `ApiError`); `collection::{caller_profile, owned_in}` (TS `callerProfile` is collection.ts's); `queue::{new_uuid, new_seed, json_list}`; `QueueMode::as_str`; `PlayerId::opponent`; `env::{js_number, quoted}`; `mint_code::is_integer`; `card_stats::literal`; `auth::is_uuid` (fewer lines); `Value::{as_object, is_object}`; `fake::{count_number, to_public_player_summary}` (pg.rs called its copies private); `StoreError::from` for `fail`; `pg::assert_postgres_url` (store.ts's); `codes::pad_to` (http.rs's had no caller); `catalog::load_patch_versions`
+Losers: `api_error` ×8, `bad_request` ×4, `internal` ×4, `store_failure` ×3, `hide_internal` ×2, `caller_profile` ×8, `rate_limited`, `ok`, `new_uuid` ×2, `new_seed` ×2, `lock` ×4, `json_list`, `mode_name` ×2, `other` ×2, `js_number` ×3, `is_integer`, `json_text` ×3, `quoted`, `literal`, `is_uuid`, `is_record` ×2, `count_number`, `to_public_player_summary`, `fail` ×2, `assert_postgres_url`, `pad_to` + `sleep`, `load_patch_versions`, `owned_in` — deleted
+Callers updated: ~250 call sites in 27 files
+Semantic conflicts: error.style → `dispatch` is the one place a non-API error is logged `handler.threw` and answered 500 "something went wrong" (`store_failure`, `hide_internal` and tutorial's `internal(path, error)` did it a second time, so TS's one log line was two)
+Unresolved: none
+Lines: src +315 −891 for this cluster

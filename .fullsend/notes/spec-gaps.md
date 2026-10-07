@@ -113,3 +113,42 @@
   `ChooseFromHandArgs.where_`). `forEachCard`/`castEach` answer card ids (`Vec<String>`).
 - **`wire/codes.rs`'s NFKC tables** (~180 KB, hand-generated from Node's ICU, part 5.3) are left as
   they are; SURFACE §2 lists no Unicode crate, so a replacement is part 37's call.
+
+## server (part 31)
+
+- **SURFACE §11.2, the handlers' receiver.** It fixes every handler as `pub async fn <name>(app: &App,
+  req: Req) -> ApiResult` and also `Registry::start(&self, app: &Arc<App>, ..)`: a handler that starts a
+  match (queue pairing, a room's join, a rematch, a series pick) cannot get the `Arc` from `&App`.
+  Decision taken: every handler, `app::Handler`, `h!` and `api::http::dispatch` take `&Arc<App>`;
+  part 19.2's `Registry::bind`/`app()` workaround is deleted, so `app.rs`'s boot and the test app need
+  no bind. Suggested §11.2 text: `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`.
+- **SURFACE §2, `jsonwebtoken`.** 11.1 has no crypto provider by default and panics on the first
+  verify. Decision taken: `features = ["rust_crypto"]` on the workspace entry (Cargo.lock updated).
+- **SURFACE §4.3, `x?: T | null`.** The table has `x?: T` and `x: T | null` but not TS's three-state
+  optional nullable (`Profile.displayName`, `FrozenDeck.portrait`, `Ticket.portrait`,
+  `Room.hostPortrait`), which the store's rows keep apart (absent vs `null`). Decision taken (the
+  store's, 20.4): `Option<Option<T>>` with `#[serde(default, skip_serializing_if = "Option::is_none",
+  with = "absent_or_null")]`.
+- **SURFACE §4.3, a store's counts and caps.** Not game quantities, indexes or cursors. Decision taken
+  (store.rs): `i64` for every count, cap, position, sequence number and epoch ms at the `Tx` boundary;
+  pg.rs keeps TS's `::int` SQL and binds `int4` behind a conversion.
+- **Five TS tests dropped for want of a seam (19.6), for part 35.** `rooms.test.ts`: "R149 retries
+  past a code that is already in use and mints the next one" and "R149 gives up after a bounded number
+  of collisions and says no code is available" (they script `Ids.code`; the Rust server mints room
+  codes itself). `series-recovery.test.ts`: "R263 a pick that loses the compare-and-set is re-applied
+  to the row that won", "R263 a write that keeps losing is refused with 409 and writes nothing", "R263
+  a result whose series write loses the compare-and-set re-reads the series and records the game"
+  (they replace `store.series.update`; `FakeData.on_call` can only fail a call). Seams were not added
+  (a reconciler adds no feature); part 35 decides: an injectable code source in `actor::rooms`, and a
+  fake-store hook that may change the tables before a named method runs.
+- **The test app is always `E2E=1`** (`tests/support/deps.rs`'s `test_env`; without it `load_env`
+  demands Supabase and Postgres). TS's test deps were not E2E unless asked, so
+  `tests/actor/rooms.rs`'s non-E2E harness (R143: a client-sent seed is ignored outside E2E) builds the
+  same app as its E2E arm; part 19.6 asked for `TestAppOptions.e2e`. Not added; for part 35.
+- **The test app's patch version.** TS's test deps rated games under `TEST_PATCH_VERSION = "v0.1.1"`;
+  the Rust server rates in `jackioh_cards::catalog_version()`'s season (SURFACE §11.3), so
+  `tests/store/season_start.rs` (now reading `TEST_CATALOG_VERSION`) expects a v0.1 season the server
+  cannot open. For part 35: a `SeasonDeps` on `App` (a test seam), or recast the expectations.
+- **TS's optional `tx` on `startSeries`.** 19.2 made `api::series::start_series` always take the
+  caller's `&mut Tx` (both TS callers passed one); four tests that called it without one now open and
+  commit their own. No SURFACE change needed.
