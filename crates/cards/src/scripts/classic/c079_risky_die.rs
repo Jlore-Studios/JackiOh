@@ -166,12 +166,6 @@ mod tests {
         costs
     }
 
-    /// TS `stepParam(s.card(ref), key, delta)`: the live card, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, delta: i32) {
-        let id = s.card(card).id.clone();
-        step_param(must(find_instance_mut(s.state_mut(), &id), "the card to tune"), key, delta);
-    }
-
     /// is a (1) Spell; its draw count and kept threshold are declared numbers
     #[test]
     fn is_a_1_spell_its_draw_count_and_kept_threshold_are_declared_numbers() {
@@ -341,7 +335,7 @@ mod tests {
         #[test]
         fn r386_its_draw_count_is_declared_an_upgrade_s_step_draws_4() {
             let mut s = scenario(json!({ "p1": { "hand": [RISKY, VANILLA], "library": [FILLER, FILLER, FILLER, FILLER, FILLER] } }));
-            step(&mut s, RISKY, "draw", 1);
+            step_param(s.card_mut(RISKY), "draw", 1);
             s.play(RISKY, json!({}));
             assert_eq!(drawn_ids(s.last_events(), P1).len(), 4);
         }
@@ -350,7 +344,7 @@ mod tests {
         #[test]
         fn r386_its_kept_threshold_is_declared_an_upgrade_s_step_keeps_a_card_that_costs_1() {
             let mut s = scenario(json!({ "p1": { "hand": [RISKY, VANILLA], "library": [ARMOR, FILLER, FILLER] } }));
-            step(&mut s, RISKY, "threshold", 1);
+            step_param(s.card_mut(RISKY), "threshold", 1);
             s.play(RISKY, json!({}));
             s.expect_in_zone(ARMOR, "hand");
             assert_eq!(hand_costs(&s).get(ARMOR).copied(), Some(1));
@@ -376,7 +370,7 @@ mod tests {
         #[test]
         fn r386_its_threshold_steps_from_1_a_degrade_s_step_exiles_the_2_card_too() {
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": RISKY, "radiant": true }, VANILLA], "library": [ARMOR, FILLER, FILLER] } }));
-            step(&mut s, RISKY, "threshold", -1);
+            step_param(s.card_mut(RISKY), "threshold", -1);
             s.play(RISKY, json!({}));
             s.expect_in_zone(ARMOR, "exile");
         }

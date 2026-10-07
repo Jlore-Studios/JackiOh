@@ -114,13 +114,6 @@ mod tests {
         serde_json::to_value(value).expect("an engine value serialises")
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: TS's `card()` handed back the live instance, so the
-    /// step is written on the state's own copy, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     fn tokens_on(s: &Scenario, player: PlayerId, lane: i32) -> i32 {
         s.unit(player, lane).and_then(|unit| unit.counters.plague).unwrap_or(0)
     }
@@ -259,7 +252,7 @@ mod tests {
                     json!([{ "def": VANILLA, "counters": { "plague": 1 } }]),
                     json!([{ "def": MENACE, "counters": { "plague": 1 } }]),
                 );
-                step(&mut s, TOXINS, "stats", 1);
+                step_param(s.card_mut(TOXINS), "stats", 1);
                 s.expect_stats(VANILLA, json!({ "attack": 6, "maxHealth": 6 }));
                 s.expect_stats(MENACE, json!({ "attack": 7, "maxHealth": 7 }));
             }
@@ -316,7 +309,7 @@ mod tests {
             fn r386_an_upgrade_of_tokens_places_on_3_different_units() {
                 crate::register_all();
                 let mut s = with_toxins(false, json!([VANILLA, TIMMY]), json!([MENACE]));
-                step(&mut s, TOXINS, "tokens", 1);
+                step_param(s.card_mut(TOXINS), "tokens", 1);
                 s.activate(TOXINS, json!({}));
                 assert_eq!(
                     [tokens_on(&s, PlayerId::P1, 1), tokens_on(&s, PlayerId::P1, 2), tokens_on(&s, PlayerId::P2, 1)],

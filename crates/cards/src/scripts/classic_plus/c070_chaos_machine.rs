@@ -107,12 +107,6 @@ mod tests {
         s.backrow(P1, 1).expect("Chaos Machine in lane 1").id
     }
 
-    /// TS `stepParam(card, key, steps)` on the live card in the state.
-    fn step(s: &mut Scenario, id: &str, key: &str, steps: i32) {
-        let instance = find_instance_mut(s.state_mut(), id).expect("the card is in the state");
-        step_param(instance, key, steps);
-    }
-
     #[test]
     fn is_a_2_field_spell_whose_two_hooks_run_one_tick_on_both_faces() {
         crate::register_all();
@@ -335,7 +329,7 @@ mod tests {
                 None,
             );
             let own = machine_id(&s);
-            step(&mut s, &own, "cards", 1);
+            step_param(s.card_mut(&own), "cards", 1);
             s.end_turn();
             assert_eq!(tunes(s.last_events(), "upgraded").len(), 2);
             assert_eq!(tunes(s.last_events(), "degraded").len(), 2);

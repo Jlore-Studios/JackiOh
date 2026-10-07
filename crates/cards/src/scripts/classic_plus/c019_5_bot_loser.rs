@@ -93,11 +93,6 @@ mod tests {
         panic!("no Bot Loser");
     }
 
-    /// TS wrote through the live instance `s.card(ref)` (or `bot(s)`) handed back.
-    fn card_mut<'a>(s: &'a mut Scenario, id: &str) -> &'a mut CardInstance {
-        find_instance_mut(s.state_mut(), id).expect("the card is in no zone")
-    }
-
     fn send_berserk(s: &mut Scenario, card: &CardInstance) {
         let (seed, cursor) = (s.state().seed.clone(), s.state().rng_cursor);
         let mut events: Vec<GameEvent> = Vec::new();
@@ -240,8 +235,8 @@ mod tests {
                     json!({}),
                 );
                 let id = bot(&s, P1).id;
-                step_param(card_mut(&mut s, &id), "attackGain", 0);
-                card_mut(&mut s, &id).buffs.attack += 5;
+                step_param(s.card_mut(&id), "attackGain", 0);
+                s.card_mut(&id).buffs.attack += 5;
                 let me = bot(&s, P1);
                 send_berserk(&mut s, &me);
                 s.end_turn();
@@ -260,7 +255,7 @@ mod tests {
             fn r78_berserk_is_lost_when_it_leaves_the_field_back_by_reborn_it_is_not_berserk_and_attacks_nothing() {
                 let mut s = with_bot(json!({ "hand": [HIT_JOB, FILLER] }), false, json!({}));
                 let first = bot(&s, P1);
-                card_mut(&mut s, &first.id).granted_keywords.push(Keyword::Reborn);
+                s.card_mut(&first.id).granted_keywords.push(Keyword::Reborn);
                 send_berserk(&mut s, &first);
                 assert_eq!(s.card(&first).berserk, Some(true));
                 s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": first.id }] }));
@@ -282,7 +277,7 @@ mod tests {
                     json!({ "field": [{ "def": VANILLA, "lane": 3 }] }),
                 );
                 let jungle = s.unit(P1, 1).unwrap_or_else(|| bot(&s, P1)).id;
-                set_param(card_mut(&mut s, &jungle), "chance", 100);
+                set_param(s.card_mut(&jungle), "chance", 100);
                 s.end_turn();
                 assert_eq!(bot(&s, P1).berserk, Some(true));
                 assert_eq!(
@@ -295,7 +290,7 @@ mod tests {
             fn r386_the_gain_reads_through_param_an_upgrade_makes_it_6() {
                 let mut s = with_bot(json!({}), false, json!({ "field": [{ "def": VANILLA, "lane": 3 }] }));
                 let id = bot(&s, P1).id;
-                step_param(card_mut(&mut s, &id), "attackGain", 1);
+                step_param(s.card_mut(&id), "attackGain", 1);
                 let target = unit_or_blank(&s, P2, 3);
                 s.attack(&id, target);
                 let me = bot(&s, P1);
@@ -324,7 +319,7 @@ mod tests {
                     json!({ "field": [{ "def": VANILLA, "lane": 3 }] }),
                 );
                 let jungle = s.unit(P1, 1).unwrap_or_else(|| bot(&s, P1)).id;
-                set_param(card_mut(&mut s, &jungle), "chance", 100);
+                set_param(s.card_mut(&jungle), "chance", 100);
                 s.end_turn();
                 assert!(s.unit(P2, 3).is_none());
                 assert_eq!(bot(&s, P1).berserk, None);
@@ -337,7 +332,7 @@ mod tests {
                 let mut s = with_bot(json!({}), false, json!({}));
                 let me = bot(&s, P1);
                 send_berserk(&mut s, &me);
-                card_mut(&mut s, &me.id).radiant = true;
+                s.card_mut(&me.id).radiant = true;
                 s.end_turn().end_turn();
                 s.expect_health(P1, 30);
             }

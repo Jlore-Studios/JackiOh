@@ -78,13 +78,6 @@ mod tests {
         serde_json::to_value(value).expect("an engine value serialises")
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`, on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, steps);
-    }
-
     fn cost_of(s: &Scenario, card: &str) -> i32 {
         effective_cost(s.state(), s.card(card), Default::default())
     }
@@ -267,7 +260,7 @@ mod tests {
             fn r386_an_upgrade_of_discount_makes_it_3_less() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, MANA_WELL, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
-                step(&mut s, TRICKSTER, "discount", 1);
+                step_param(s.card_mut(TRICKSTER), "discount", 1);
                 s.play(TRICKSTER, json!({}));
                 assert_eq!(cost_of(&s, MANA_WELL), 0);
                 assert_eq!(modifier_labels(&s, P1, "you"), vec!["Your next Trap or Field Spell costs (3) less"]);
@@ -277,7 +270,7 @@ mod tests {
             fn r386_a_degrade_of_discount_makes_it_1_less() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, MANA_WELL, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
-                step(&mut s, TRICKSTER, "discount", -1);
+                step_param(s.card_mut(TRICKSTER), "discount", -1);
                 s.play(TRICKSTER, json!({}));
                 assert_eq!(cost_of(&s, MANA_WELL), 2);
             }

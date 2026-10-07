@@ -106,13 +106,6 @@ mod tests {
         }))
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: the live card in the state, tuned in place.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let instance = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(instance, key, steps);
-    }
-
     /// TS `s.card(ref).tuning = …`: the live card's tuning replaced.
     fn set_tuning(s: &mut Scenario, card: &str, tuning: Value) {
         let id = s.card(card).id.clone();
@@ -246,17 +239,17 @@ mod tests {
         fn r386_an_upgrade_of_its_count_adds_3_grapes_a_degrade_1_never_fewer_than_1() {
             crate::register_all();
             let mut up = played(false, None, None);
-            step(&mut up, GRAPES, "grapes", 1);
+            step_param(up.card_mut(GRAPES), "grapes", 1);
             up.play(GRAPES, json!({}));
             assert_eq!(added(&up).len(), 3);
 
             let mut down = played(false, None, None);
-            step(&mut down, GRAPES, "grapes", -1);
+            step_param(down.card_mut(GRAPES), "grapes", -1);
             down.play(GRAPES, json!({}));
             assert_eq!(added(&down).len(), 1);
 
             let mut floor = played(false, None, None);
-            step(&mut floor, GRAPES, "grapes", -5);
+            step_param(floor.card_mut(GRAPES), "grapes", -5);
             floor.play(GRAPES, json!({}));
             assert_eq!(added(&floor).len(), 1);
         }
@@ -358,7 +351,7 @@ mod tests {
         fn r386_the_radiant_count_steps_the_same_way() {
             crate::register_all();
             let mut s = played(true, None, None);
-            step(&mut s, GRAPES, "grapes", 1);
+            step_param(s.card_mut(GRAPES), "grapes", 1);
             s.play(GRAPES, json!({}));
             assert_eq!(added(&s).len(), 3);
         }

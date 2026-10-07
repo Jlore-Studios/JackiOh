@@ -45,13 +45,6 @@ mod tests {
         jackioh_engine::testkit::scenario(opts)
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: TS stepped the live card; here the card under its id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(live, key, steps);
-    }
-
     /// TS `pain({ radiant?, theirs? })`: `None` is TS's `[A, B, C]`.
     fn pain(radiant: bool, theirs: Option<&[&str]>) -> Scenario {
         let theirs: Vec<&str> = theirs.map_or_else(|| vec![A, B, C], |cards| cards.to_vec());
@@ -180,14 +173,14 @@ mod tests {
         #[test]
         fn r386_an_upgrade_asks_for_3_a_degrade_for_1() {
             let mut up = pain(false, None);
-            step(&mut up, BOOK, "discards", 1);
+            step_param(up.card_mut(BOOK), "discards", 1);
             up.play(BOOK, json!({}));
             assert!(up.state().pending.is_none());
             assert_eq!(up.pile(PlayerId::P2, "graveyard").len(), 3);
             assert_eq!(up.hand(PlayerId::P2).len(), 0);
 
             let mut down = pain(false, None);
-            step(&mut down, BOOK, "discards", -1);
+            step_param(down.card_mut(BOOK), "discards", -1);
             down.play(BOOK, json!({}));
             assert!(down.state().pending.is_none());
             assert_eq!(down.pile(PlayerId::P2, "graveyard").len(), 1);

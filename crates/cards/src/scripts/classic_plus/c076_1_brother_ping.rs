@@ -97,12 +97,6 @@ mod tests {
         json!([{ "pick": "instance", "instanceId": instance_id }])
     }
 
-    /// TS's live `s.card(ref)`, written through: the card under that id in the state.
-    fn card_mut<'a>(s: &'a mut Scenario, card: &str) -> &'a mut CardInstance {
-        let id = s.card(card).id.clone();
-        find_instance_mut(s.state_mut(), &id).expect("the card is in the state")
-    }
-
     /// The `activate`/`activatePower` actions `legalActions` lists for `player` on that card, as JSON.
     fn listed(s: &Scenario, player: PlayerId, instance_id: &str) -> Vec<Value> {
         legal_actions(s.state(), player)
@@ -267,7 +261,7 @@ mod tests {
                     "p1": { "hand": [HIT_JOB, FILLER], "field": [PING], "library": [FILLER] },
                     "p2": { "hand": [FILLER] },
                 }));
-                card_mut(&mut s, PING).granted_keywords = vec![json_as(json!({ "kind": "Reborn" }))];
+                s.card_mut(PING).granted_keywords = vec![json_as(json!({ "kind": "Reborn" }))];
                 s.activate(PING, json!({ "targets": enemy_hero() }));
                 let ping = s.card(PING).id.clone();
                 assert!(listed(&s, P1, &ping).is_empty());
@@ -306,14 +300,14 @@ mod tests {
             #[test]
             fn r386_an_upgrade_of_its_x_makes_it_activate_2_a_degrade_never_takes_it_below_1() {
                 let mut up = setup(false, &[], &[]);
-                card_mut(&mut up, PING).tuning = Some(json_as(json!({ "x": { "Activate": 1 } })));
+                up.card_mut(PING).tuning = Some(json_as(json!({ "x": { "Activate": 1 } })));
                 up.activate(PING, json!({ "targets": enemy_hero() }))
                     .activate(PING, json!({ "targets": enemy_hero() }));
                 up.expect_health(P2, 28);
                 up.expect_refused(|s| s.activate(PING, json!({ "targets": enemy_hero() })));
 
                 let mut down = setup(false, &[], &[]);
-                card_mut(&mut down, PING).tuning = Some(json_as(json!({ "x": { "Activate": -3 } })));
+                down.card_mut(PING).tuning = Some(json_as(json!({ "x": { "Activate": -3 } })));
                 down.activate(PING, json!({ "targets": enemy_hero() }));
                 down.expect_health(P2, 29);
                 down.expect_refused(|s| s.activate(PING, json!({ "targets": enemy_hero() })));
@@ -322,12 +316,12 @@ mod tests {
             #[test]
             fn r386_an_upgrade_of_its_damage_deals_2_a_degrade_never_below_1() {
                 let mut up = setup(false, &[], &[]);
-                step_param(card_mut(&mut up, PING), "damage", 1);
+                step_param(up.card_mut(PING), "damage", 1);
                 up.activate(PING, json!({ "targets": enemy_hero() }));
                 up.expect_health(P2, 28);
 
                 let mut down = setup(false, &[], &[]);
-                step_param(card_mut(&mut down, PING), "damage", -1);
+                step_param(down.card_mut(PING), "damage", -1);
                 down.activate(PING, json!({ "targets": enemy_hero() }));
                 down.expect_health(P2, 29);
             }
@@ -361,7 +355,7 @@ mod tests {
             #[test]
             fn r386_an_upgrade_of_the_radiant_x_makes_it_activate_3() {
                 let mut s = setup(true, &[], &[]);
-                card_mut(&mut s, PING).tuning = Some(json_as(json!({ "x": { "Activate": 1 } })));
+                s.card_mut(PING).tuning = Some(json_as(json!({ "x": { "Activate": 1 } })));
                 s.activate(PING, json!({ "targets": enemy_hero() }))
                     .activate(PING, json!({ "targets": enemy_hero() }))
                     .activate(PING, json!({ "targets": enemy_hero() }));

@@ -76,11 +76,6 @@ mod tests {
         base
     }
 
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     /// TS `AT_HERO`.
     fn at_hero() -> Value {
         json!([{ "pick": "hero", "player": "p2" }])
@@ -272,7 +267,7 @@ mod tests {
         #[test]
         fn r386_the_floor_reads_through_param_and_never_drops_below_1() {
             let mut s = scenario(json!({ "p1": { "hand": [FOREVER, LUNAR, FILLER], "mana": 10 }, "p2": { "hand": [STOCKPILE] } }));
-            step(&mut s, FOREVER, "floor", -5);
+            step_param(s.card_mut(FOREVER), "floor", -5);
             s.play(FOREVER, json!({}));
             let id = lunar_in(&s);
             s.play(&id, json!({ "targets": at_hero() }));
@@ -306,7 +301,7 @@ mod tests {
                 "p1": { "hand": [{ "def": FOREVER, "radiant": true }, LUNAR, FILLER], "mana": 10 },
                 "p2": { "hand": [STOCKPILE] },
             }));
-            step(&mut s, FOREVER, "floor", 1);
+            step_param(s.card_mut(FOREVER), "floor", 1);
             s.play(FOREVER, json!({}));
             let id = lunar_in(&s);
             s.play(&id, json!({ "targets": at_hero() }));

@@ -114,13 +114,6 @@ mod tests {
         s
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: the step written on the card as it stands in the state.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let instance = find_instance_mut(s.state_mut(), &id).expect("the card to step is in the state");
-        step_param(instance, key, steps);
-    }
-
     fn graveyard(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
         s.pile(player, "graveyard")
     }
@@ -389,7 +382,7 @@ mod tests {
                     "p2": { "hand": [VANILLA, FILLER] },
                     "active": "p2",
                 }));
-                step(&mut s, FELINOR, "returnCost", 1);
+                step_param(s.card_mut(FELINOR), "returnCost", 1);
                 s.play(VANILLA, json!({}));
                 let felinor = s.card(FELINOR).clone();
                 s.expect_in_zone(&felinor, "hand");

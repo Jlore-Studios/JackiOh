@@ -94,15 +94,6 @@ mod tests {
             .collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        match find_instance_mut(s.state_mut(), &id) {
-            Some(live) => step_param(live, key, steps),
-            None => panic!("no card {card} to tune"),
-        }
-    }
-
     #[test]
     fn declares_one_unit_target_on_either_side_and_runs_one_script_on_both_faces() {
         assert_eq!(crate::card_def(ID).id, BOOK);
@@ -216,13 +207,13 @@ mod tests {
         #[test]
         fn r386_an_upgrade_makes_it_deal_and_heal_6_a_degrade_4() {
             let mut up = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 20 }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
-            step(&mut up, BOOK, "damage", 1);
+            step_param(up.card_mut(BOOK), "damage", 1);
             let targets = at(&up, P2, 1);
             up.play(BOOK, json!({ "targets": targets }));
             up.expect_stats(MENACE, json!({ "health": 3 })).expect_health(P1, 26);
 
             let mut down = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 20 }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
-            step(&mut down, BOOK, "damage", -1);
+            step_param(down.card_mut(BOOK), "damage", -1);
             let targets = at(&down, P2, 1);
             down.play(BOOK, json!({ "targets": targets }));
             down.expect_stats(MENACE, json!({ "health": 5 })).expect_health(P1, 24);
@@ -266,7 +257,7 @@ mod tests {
                 "p1": { "hand": [{ "def": BOOK, "radiant": true }, FILLER], "health": 10 },
                 "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "radiant": true }] },
             }));
-            step(&mut s, BOOK, "damage", 1);
+            step_param(s.card_mut(BOOK), "damage", 1);
 
             let targets = at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));

@@ -52,13 +52,6 @@ mod tests {
         jackioh_engine::testkit::scenario(opts)
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: TS stepped the live card; here the card under its id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(live, key, steps);
-    }
-
     /// TS `book({ radiant?, seed?, fillers? })`: `None` is the TS default.
     fn book(radiant: bool, seed: Option<&str>, fillers: Option<usize>) -> Scenario {
         let mut hand = vec![json!({ "def": BOOK, "radiant": radiant })];
@@ -236,12 +229,12 @@ mod tests {
         #[test]
         fn r386_an_upgrade_adds_3_a_degrade_1_never_fewer() {
             let mut up = book(false, None, None);
-            step(&mut up, BOOK, "books", 1);
+            step_param(up.card_mut(BOOK), "books", 1);
             up.play(BOOK, json!({}));
             assert_eq!(added(&up).len(), 3);
 
             let mut down = book(false, None, None);
-            step(&mut down, BOOK, "books", -3);
+            step_param(down.card_mut(BOOK), "books", -3);
             down.play(BOOK, json!({}));
             assert_eq!(added(&down).len(), 1);
         }

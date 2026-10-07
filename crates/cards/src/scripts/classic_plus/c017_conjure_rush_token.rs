@@ -64,11 +64,6 @@ mod tests {
         serde_json::to_value(value).expect("serialises")
     }
 
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     fn tokens(s: &Scenario) -> Vec<CardInstance> {
         (1..=5)
             .filter_map(|lane| s.unit(P1, lane))
@@ -150,12 +145,12 @@ mod tests {
         #[test]
         fn r386_the_keyword_count_reads_through_param_an_upgrade_gives_two_more_a_degrade_two_fewer_its_step_is_2() {
             let mut up = scenario(json!({ "p1": { "hand": [CARD, FILLER] }, "p2": { "hand": [FILLER] } }));
-            step(&mut up, CARD, "keywords", 1);
+            step_param(up.card_mut(CARD), "keywords", 1);
             up.play(CARD, json!({}));
             assert_eq!(gained(&up, &first_token(&up)).len(), KEYWORDS + STEP);
 
             let mut down = scenario(json!({ "p1": { "hand": [CARD, FILLER] }, "p2": { "hand": [FILLER] } }));
-            step(&mut down, CARD, "keywords", -1);
+            step_param(down.card_mut(CARD), "keywords", -1);
             down.play(CARD, json!({}));
             assert_eq!(gained(&down, &first_token(&down)).len(), KEYWORDS - STEP);
         }
@@ -164,7 +159,7 @@ mod tests {
         #[test]
         fn r21_tuned_past_the_pool_the_token_gains_every_keyword_r21_leaves_it_13_and_no_repeat() {
             let mut s = scenario(json!({ "p1": { "hand": [CARD, FILLER] }, "p2": { "hand": [FILLER] } }));
-            step(&mut s, CARD, "keywords", 4);
+            step_param(s.card_mut(CARD), "keywords", 4);
             s.play(CARD, json!({}));
             assert_eq!(gained(&s, &first_token(&s)).len(), RANDOM_KEYWORD_POOL.len() - 1);
         }

@@ -118,12 +118,6 @@ mod tests {
         cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     mod base {
         use super::*;
 
@@ -238,7 +232,7 @@ mod tests {
                 "p1": { "hand": [LEGION, STOCKPILE], "library": [LUNAR, LUNAR, LUNAR, LUNAR, LUNAR, LUNAR], "mana": 8 },
                 "p2": { "hand": [STOCKPILE] },
             }));
-            step(&mut s, LEGION, "cards", -1);
+            step_param(s.card_mut(LEGION), "cards", -1);
             s.play(LEGION, json!({}));
             assert_eq!(s.pile(P1, "exile").len(), 4);
         }

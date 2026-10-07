@@ -90,13 +90,6 @@ mod tests {
         s.unit(player, lane).map(|card| card.id).unwrap_or_default()
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: TS stepped the live card; here the card under its id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(live, key, steps);
-    }
-
     /// Adaptive Growth on top of p1's library, p2 about to end their turn so p1 draws it.
     fn drawn(radiant: bool, mine: Value, theirs: Value) -> Scenario {
         scenario(json!({
@@ -241,13 +234,13 @@ mod tests {
         #[test]
         fn r386_an_upgrade_moves_both_numbers_3_3_and_3_3() {
             let mut up = held(false, json!([VANILLA]), json!([]));
-            step(&mut up, GROWTH, "buff", 1);
+            step_param(up.card_mut(GROWTH), "buff", 1);
             up.play(GROWTH, json!({}));
             let mine = unit_id(&up, PlayerId::P1, 1);
             up.expect_stats(&mine, json!({ "attack": 7, "health": 7 }));
 
             let mut down = held(false, json!([VANILLA]), json!([VANILLA, VANILLA]));
-            step(&mut down, GROWTH, "debuff", 1);
+            step_param(down.card_mut(GROWTH), "debuff", 1);
             down.play(GROWTH, json!({}));
             let mine = unit_id(&down, PlayerId::P1, 1);
             down.expect_stats(&mine, json!({ "attack": 1, "health": 1 }));
@@ -285,13 +278,13 @@ mod tests {
                 json!([VANILLA]),
                 json!([{ "def": VANILLA, "statsOverride": { "attack": 9, "health": 9 } }, VANILLA]),
             );
-            step(&mut fewer, GROWTH, "debuff", 1);
+            step_param(fewer.card_mut(GROWTH), "debuff", 1);
             fewer.play(GROWTH, json!({}));
             let theirs = unit_id(&fewer, PlayerId::P2, 1);
             fewer.expect_stats(&theirs, json!({ "attack": 5, "health": 5 }));
 
             let mut more = held(true, json!([VANILLA]), json!([]));
-            step(&mut more, GROWTH, "buff", -1);
+            step_param(more.card_mut(GROWTH), "buff", -1);
             more.play(GROWTH, json!({}));
             let mine = unit_id(&more, PlayerId::P1, 1);
             more.expect_stats(&mine, json!({ "attack": 6, "health": 6 }));

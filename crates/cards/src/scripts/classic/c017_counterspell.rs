@@ -161,15 +161,6 @@ mod tests {
         }
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        match find_instance_mut(s.state_mut(), &id) {
-            Some(live) => step_param(live, key, steps),
-            None => panic!("no card {card} to tune"),
-        }
-    }
-
     fn copy_in_hand(s: &Scenario, player: PlayerId) -> Option<CardInstance> {
         s.hand(player).into_iter().find(|card| card.def_id == STOCKPILE)
     }
@@ -412,7 +403,7 @@ mod tests {
         #[test]
         fn r386_a_degrade_of_its_set_cost_makes_the_copy_cost_1() {
             let mut s = setup(json!({}), json!({}), true);
-            step(&mut s, COUNTER, "setCost", 1);
+            step_param(s.card_mut(COUNTER), "setCost", 1);
 
             s.play(STOCKPILE, json!({}));
 

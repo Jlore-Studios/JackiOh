@@ -165,12 +165,6 @@ mod tests {
         Value::Array(hand)
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: on the live instance, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the state"), key, steps);
-    }
-
     fn pending_player(s: &Scenario) -> Option<PlayerId> {
         s.state().pending.as_ref().map(|pending| pending.player_id)
     }
@@ -484,7 +478,7 @@ mod tests {
             fn r386_a_degrade_of_its_discards_stays_the_whole_hand_an_upgrade_499_is_still_more_than_any_hand() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [PACT, VANILLA, TIMMY], "library": [TIMMY] }, "p2": { "hand": [FILLER] } }));
-                step(&mut s, PACT, "discards", -1);
+                step_param(s.card_mut(PACT), "discards", -1);
 
                 s.play(PACT, json!({ "zone": 1 }));
 
@@ -560,7 +554,7 @@ mod tests {
             fn r386_an_upgrade_of_its_discards_takes_one_step_of_167_the_base_face_s_so_the_radiant_6_goes_to_its_floor_of_1() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": radiant_pact_and_eight() }, "p2": { "hand": [FILLER] } }));
-                step(&mut s, PACT, "discards", -1);
+                step_param(s.card_mut(PACT), "discards", -1);
 
                 s.play(PACT, json!({ "zone": 1 }));
 

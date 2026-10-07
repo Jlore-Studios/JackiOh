@@ -145,12 +145,6 @@ mod tests {
         card.cost_mod != 0 || card.tuning.is_some()
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     #[test]
     fn is_a_2_spell_declaring_cards_4_and_draw_1_on_both_faces() {
         crate::register_all();
@@ -318,13 +312,13 @@ mod tests {
         fn r386_card_count_and_draw_read_through_param_an_upgrade_of_each_moves_what_resolves() {
             crate::register_all();
             let mut s = setup(vanillas(8), false, None, two_stockpiles());
-            step(&mut s, STORM, "cards", 1);
+            step_param(s.card_mut(STORM), "cards", 1);
             s.play(STORM, json!({}));
             assert_eq!(changed(s.events()).len(), 5);
 
             let mut t = setup(json!([VANILLA]), false, None, json!([STOCKPILE, STOCKPILE, STOCKPILE]));
             let hand = t.hand(P1).len();
-            step(&mut t, STORM, "draw", 1);
+            step_param(t.card_mut(STORM), "draw", 1);
             t.play(STORM, json!({}));
             assert_eq!(t.hand(P1).len(), hand - 1 + 2);
         }

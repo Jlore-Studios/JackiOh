@@ -104,12 +104,6 @@ mod tests {
         s.answer(json!(card.id));
     }
 
-    /// TS `stepParam(s.card(ref), key, delta)`: the live card, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, delta: i32) {
-        let id = s.card(card).id.clone();
-        step_param(must(find_instance_mut(s.state_mut(), &id), "the card to tune"), key, delta);
-    }
-
     fn board(radiant_face: bool, library: usize) -> Scenario {
         scenario(json!({
             "p1": { "hand": [{ "def": BRINGER, "radiant": radiant_face }, ANCHOR], "library": lib(library) },
@@ -305,8 +299,8 @@ mod tests {
         #[test]
         fn r386_an_upgrade_places_three_and_draws_2() {
             let mut s = board(false, 4);
-            step(&mut s, BRINGER, "tokens", 1);
-            step(&mut s, BRINGER, "draw", 1);
+            step_param(s.card_mut(BRINGER), "tokens", 1);
+            step_param(s.card_mut(BRINGER), "draw", 1);
             s.play(BRINGER, json!({}));
 
             let vanilla = s.card(VANILLA).clone();
@@ -342,8 +336,8 @@ mod tests {
         #[test]
         fn r386_a_degrade_places_three_and_draws_1() {
             let mut s = board(true, 4);
-            step(&mut s, BRINGER, "tokens", -1);
-            step(&mut s, BRINGER, "draw", -1);
+            step_param(s.card_mut(BRINGER), "tokens", -1);
+            step_param(s.card_mut(BRINGER), "draw", -1);
             s.play(BRINGER, json!({}));
 
             let vanilla = s.card(VANILLA).clone();

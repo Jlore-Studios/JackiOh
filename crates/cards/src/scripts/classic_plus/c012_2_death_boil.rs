@@ -80,12 +80,6 @@ mod tests {
         json!([{ "pick": "instance", "instanceId": s.unit(player, 1).map(|unit| unit.id).unwrap_or_default() }])
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     mod base {
         use super::*;
 
@@ -132,7 +126,7 @@ mod tests {
         fn r386_the_amount_reads_through_param_an_upgrade_steps_it_by_2() {
             crate::register_all();
             let mut s = boil(false, json!({}), json!({}));
-            step(&mut s, BOIL, "amount", 1);
+            step_param(s.card_mut(BOIL), "amount", 1);
             s.play(BOIL, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
             s.expect_health(P2, HERO_HEALTH - 8);
         }

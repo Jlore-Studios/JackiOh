@@ -67,12 +67,6 @@ mod tests {
         (1..=10).map(|at| format!("classicplus-t-ai-{at:02}")).collect()
     }
 
-    /// TS's live `s.card(ref)`, written through: the card under that id in the state.
-    fn card_mut<'a>(s: &'a mut Scenario, card: &str) -> &'a mut CardInstance {
-        let id = s.card(card).id.clone();
-        find_instance_mut(s.state_mut(), &id).expect("the card is in the state")
-    }
-
     fn setup(radiant_face: bool, hand: usize, seed: Option<&str>) -> Scenario {
         crate::register_all();
         let hand: Vec<Value> = (0..hand).map(|_| json!(VANILLA)).collect();
@@ -209,7 +203,7 @@ mod tests {
             #[test]
             fn r386_the_count_is_fixed_at_1_an_upgrade_still_adds_exactly_one_card() {
                 let mut s = setup(false, 1, None);
-                step_param(card_mut(&mut s, DATACENTER), "cards", 1);
+                step_param(s.card_mut(DATACENTER), "cards", 1);
                 s.end_turn();
                 assert_eq!(ai_cards_in(&s).len(), 1);
                 assert!(ai_cards_in(&s).iter().all(|card| card.cost_override == Some(0)));

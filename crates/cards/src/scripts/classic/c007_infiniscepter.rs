@@ -170,13 +170,6 @@ mod tests {
         }
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`, on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, steps);
-    }
-
     /// TS `{ ...defaults, ...over }` on a side's setup.
     fn merged(mut defaults: Value, over: Value) -> Value {
         if let (Some(into), Value::Object(over)) = (defaults.as_object_mut(), over) {
@@ -320,7 +313,7 @@ mod tests {
             fn r386_an_upgrade_of_its_cost_limit_admits_a_2_cost_spell() {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [SCEPTER, CALL, FILLER] }), false, json!({}));
-                step(&mut s, SCEPTER, "costLimit", 1);
+                step_param(s.card_mut(SCEPTER), "costLimit", 1);
 
                 let targets = pick(s.card(CALL));
                 s.play(SCEPTER, json!({ "zone": 1, "targets": targets }));
@@ -519,7 +512,7 @@ mod tests {
             fn r386_a_degrade_of_the_radiant_limit_to_1_refuses_a_2_cost_spell() {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [{ "def": SCEPTER, "radiant": true }, CALL, FILLER] }), true, json!({}));
-                step(&mut s, SCEPTER, "costLimit", -1);
+                step_param(s.card_mut(SCEPTER), "costLimit", -1);
 
                 s.expect_refused(|s| {
                     let targets = pick(s.card(CALL));

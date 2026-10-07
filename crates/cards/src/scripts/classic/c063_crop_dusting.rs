@@ -92,13 +92,6 @@ mod tests {
         serde_json::to_value(value).expect("an engine value serialises")
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: the step recorded on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, steps);
-    }
-
     fn lib(n: usize, card: &'static str) -> Vec<&'static str> {
         vec![card; n]
     }
@@ -375,8 +368,8 @@ mod tests {
                     "p1": { "hand": [DUSTING, FILLER], "field": [VANILLA], "library": lib(5, X) },
                     "p2": { "hand": [FILLER], "field": [MENACE], "library": lib(4, X) },
                 }));
-                step(&mut s, DUSTING, "tokens", 1);
-                step(&mut s, DUSTING, "draw", 1);
+                step_param(s.card_mut(DUSTING), "tokens", 1);
+                step_param(s.card_mut(DUSTING), "draw", 1);
                 s.play(DUSTING, json!({}));
                 s.end_turn();
 
@@ -425,8 +418,8 @@ mod tests {
                     "p1": { "hand": [{ "def": DUSTING, "radiant": true }, FILLER], "field": [VANILLA], "library": lib(5, X) },
                     "p2": { "hand": [FILLER], "library": lib(4, X) },
                 }));
-                step(&mut s, DUSTING, "tokens", -1);
-                step(&mut s, DUSTING, "draw", -1);
+                step_param(s.card_mut(DUSTING), "tokens", -1);
+                step_param(s.card_mut(DUSTING), "draw", -1);
                 s.play(DUSTING, json!({}));
                 s.end_turn();
 

@@ -88,13 +88,6 @@ mod tests {
         }))
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: the live card in the state, tuned in place.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let instance = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(instance, key, steps);
-    }
-
     fn values(entries: &[(&str, i32)]) -> IndexMap<String, i32> {
         entries.iter().map(|(key, value)| ((*key).to_string(), *value)).collect()
     }
@@ -235,12 +228,12 @@ mod tests {
         fn r386_an_upgrade_summons_3_a_degrade_1() {
             crate::register_all();
             let mut up = pear(false, None, None);
-            step(&mut up, PEAR, "units", 1);
+            step_param(up.card_mut(PEAR), "units", 1);
             up.play(PEAR, json!({}));
             assert_eq!(summoned(&up).len(), 3);
 
             let mut down = pear(false, None, None);
-            step(&mut down, PEAR, "units", -1);
+            step_param(down.card_mut(PEAR), "units", -1);
             down.play(PEAR, json!({}));
             assert_eq!(summoned(&down).len(), 1);
         }

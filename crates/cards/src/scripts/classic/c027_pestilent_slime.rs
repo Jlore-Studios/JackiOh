@@ -92,12 +92,6 @@ mod tests {
         s.card(card).counters.plague
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: on the live instance, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the state"), key, steps);
-    }
-
     mod c_n27_pestilent_slime {
         use super::*;
 
@@ -243,7 +237,7 @@ mod tests {
                     "p1": { "hand": [OUTBREAK, ANCHOR], "field": [SLIME], "library": [X, X, X, X] },
                     "p2": { "hand": [ANCHOR] },
                 }));
-                step(&mut up, SLIME, "multiplier", 1);
+                step_param(up.card_mut(SLIME), "multiplier", 1);
                 let slime = up.card(SLIME).id.clone();
                 outbreak_on(&mut up, &slime);
                 assert_eq!(plague_of(&up, SLIME), Some(3));
@@ -252,7 +246,7 @@ mod tests {
                     "p1": { "hand": [OUTBREAK, ANCHOR], "field": [SLIME], "library": [X, X, X, X] },
                     "p2": { "hand": [ANCHOR] },
                 }));
-                step(&mut down, SLIME, "multiplier", -1);
+                step_param(down.card_mut(SLIME), "multiplier", -1);
                 let slime = down.card(SLIME).id.clone();
                 outbreak_on(&mut down, &slime);
                 assert_eq!(plague_of(&down, SLIME), Some(1));
@@ -286,7 +280,7 @@ mod tests {
                     "p1": { "hand": [OUTBREAK, ANCHOR], "field": [{ "def": SLIME, "radiant": true }], "library": [X, X, X, X, X] },
                     "p2": { "hand": [ANCHOR] },
                 }));
-                step(&mut s, SLIME, "multiplier", 1);
+                step_param(s.card_mut(SLIME), "multiplier", 1);
 
                 let slime = s.card(SLIME).id.clone();
                 outbreak_on(&mut s, &slime);

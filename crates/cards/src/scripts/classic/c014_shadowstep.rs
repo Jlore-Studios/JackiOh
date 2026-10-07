@@ -209,15 +209,6 @@ mod tests {
         s.backrow(player, lane).map(|card| card.def_id)
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        match find_instance_mut(s.state_mut(), &id) {
-            Some(live) => step_param(live, key, steps),
-            None => panic!("no card {card} to tune"),
-        }
-    }
-
     fn burned_ids(s: &Scenario) -> Vec<String> {
         s.events()
             .iter()
@@ -411,7 +402,7 @@ mod tests {
         #[test]
         fn r386_a_degrade_of_the_cost_makes_them_cost_1() {
             let mut s = wipe(false, json!([MENACE]), json!({}));
-            step(&mut s, SHADOWSTEP, "setCost", 1);
+            step_param(s.card_mut(SHADOWSTEP), "setCost", 1);
             let menace = s.card(MENACE).clone();
             s.play(BIG_FELINOR, json!({}));
             assert_eq!(s.card(&menace).cost_override, Some(1));
@@ -517,7 +508,7 @@ mod tests {
         #[test]
         fn r386_a_degrade_of_the_cost_makes_the_copies_cost_1() {
             let mut s = wipe(true, json!([MENACE]), json!({}));
-            step(&mut s, SHADOWSTEP, "setCost", 1);
+            step_param(s.card_mut(SHADOWSTEP), "setCost", 1);
             s.play(BIG_FELINOR, json!({}));
             let copy = s.hand(P1).into_iter().find(|card| card.def_id == MENACE);
             assert_eq!(copy.and_then(|card| card.cost_override), Some(1));

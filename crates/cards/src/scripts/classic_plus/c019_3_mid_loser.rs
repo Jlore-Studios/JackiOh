@@ -119,12 +119,6 @@ mod tests {
         panic!("no Mid Loser on the field");
     }
 
-    /// TS wrote through the live instance `s.card(ref)` handed back.
-    fn card_mut<'a>(s: &'a mut Scenario, card: &str) -> &'a mut CardInstance {
-        let id = s.card(card).id.clone();
-        find_instance_mut(s.state_mut(), &id).expect("the card is in no zone")
-    }
-
     /// TS `s.unit(p, lane) ?? ""`: the unit's id, or a reference that names nothing.
     fn unit_or_blank(s: &Scenario, player: PlayerId, lane: i32) -> String {
         s.unit(player, lane).map(|unit| unit.id).unwrap_or_default()
@@ -239,13 +233,13 @@ mod tests {
             #[test]
             fn r386_heads_and_tails_read_through_param_an_upgrade_makes_heads_6_6_and_tails_2_2() {
                 let mut heads = seeded(from_hand(false), |each| next_flip(each, 0) == Flip::Heads);
-                step_param(card_mut(&mut heads, MID), "heads", 1);
+                step_param(heads.card_mut(MID), "heads", 1);
                 heads.play(MID, json!({}));
                 let me = mid(&heads);
                 heads.expect_stats(&me, json!({ "attack": 11, "health": 11 }));
 
                 let mut tails = seeded(from_hand(false), |each| next_flip(each, 0) == Flip::Tails);
-                step_param(card_mut(&mut tails, MID), "tails", -1);
+                step_param(tails.card_mut(MID), "tails", -1);
                 tails.play(MID, json!({}));
                 let me = mid(&tails);
                 tails.expect_stats(&me, json!({ "attack": 3, "health": 3 }));
@@ -312,7 +306,7 @@ mod tests {
             #[test]
             fn r386_lucky_is_tuned_like_any_numbered_keyword_lucky_2_flips_three_times() {
                 let mut s = from_hand(true)("mid-three-coins");
-                let tuning = tuning_of(card_mut(&mut s, MID));
+                let tuning = tuning_of(s.card_mut(MID));
                 tuning.x = Some(add_step(tuning.x.as_ref(), "Lucky", 1));
                 let cursor = s.state().rng_cursor;
                 s.play(MID, json!({}));

@@ -172,12 +172,6 @@ mod tests {
         events.iter().filter(|event| event.event_type() == GameEventType::Exiled).cloned().collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: on the live instance, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the state"), key, steps);
-    }
-
     fn def_id_of(card: Option<CardInstance>) -> Option<String> {
         card.map(|card| card.def_id)
     }
@@ -363,7 +357,7 @@ mod tests {
             fn r386_a_degrade_of_the_threshold_never_goes_below_1() {
                 crate::register_all();
                 let mut s = lag_board(false);
-                step(&mut s, LAG, "threshold", -1);
+                step_param(s.card_mut(LAG), "threshold", -1);
                 s.play(LAG, json!({}));
                 // A (1) Cost card still goes: the Timmy on your field. Hands are out of scope.
                 assert_eq!(def_ids(&s.hand(P1)), vec![FELINORS, VANILLA]);
@@ -374,7 +368,7 @@ mod tests {
             fn r386_an_upgrade_of_the_threshold_reaches_2_cost_cards_on_the_fields() {
                 crate::register_all();
                 let mut s = lag_board(false);
-                step(&mut s, LAG, "threshold", 1);
+                step_param(s.card_mut(LAG), "threshold", 1);
                 s.play(LAG, json!({}));
                 assert!(s.unit(P1, 1).is_none());
                 assert!(s.backrow(P2, 2).is_none());
@@ -435,7 +429,7 @@ mod tests {
             fn r386_an_upgrade_of_the_threshold_reaches_their_2_cost_cards() {
                 crate::register_all();
                 let mut s = lag_board(true);
-                step(&mut s, LAG, "threshold", 1);
+                step_param(s.card_mut(LAG), "threshold", 1);
                 s.play(LAG, json!({}));
                 assert!(s.hand(P2).is_empty());
                 assert!(s.backrow(P2, 2).is_none());

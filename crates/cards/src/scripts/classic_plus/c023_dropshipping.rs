@@ -117,12 +117,6 @@ mod tests {
         s.end_turn().end_turn()
     }
 
-    /// TS wrote through the live instance `s.card(ref)` handed back.
-    fn card_mut<'a>(s: &'a mut Scenario, card: &str) -> &'a mut CardInstance {
-        let id = s.card(card).id.clone();
-        find_instance_mut(s.state_mut(), &id).expect("the card is in no zone")
-    }
-
     /// TS `/-\d{3}-\d/.test(id)`: a token's three-digit index followed by its own number.
     fn has_token_index(id: &str) -> bool {
         id.as_bytes().windows(6).any(|w| {
@@ -348,7 +342,7 @@ mod tests {
                         s.view(P2).opponent.units.get(at).and_then(|view| view.as_ref()).and_then(|view| view.brittle),
                         Some(2)
                     );
-                    card_mut(&mut s, &unit).granted_keywords.push(Keyword::Indestructible);
+                    s.card_mut(&unit).granted_keywords.push(Keyword::Indestructible);
                     next_own_turn(&mut s);
                     next_own_turn(&mut s);
                     // Indestructible ignores the destroy, and the count stays at 0.
@@ -396,8 +390,8 @@ mod tests {
             #[test]
             fn r386_the_card_count_and_the_brittle_read_through_param() {
                 let mut s = shop("drop-tuned", false, &[FILLER]);
-                step_param(card_mut(&mut s, DROP), "cards", 1);
-                step_param(card_mut(&mut s, DROP), "brittle", 1);
+                step_param(s.card_mut(DROP), "cards", 1);
+                step_param(s.card_mut(DROP), "brittle", 1);
                 s.play(DROP, json!({}));
                 let ids = added(&s);
                 assert_eq!(ids.len(), 4);

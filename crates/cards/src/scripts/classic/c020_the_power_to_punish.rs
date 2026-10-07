@@ -204,12 +204,6 @@ mod tests {
             .collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: on the live instance, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the state"), key, steps);
-    }
-
     fn def_ids(cards: &[CardInstance]) -> Vec<String> {
         cards.iter().map(|card| card.def_id.clone()).collect()
     }
@@ -517,12 +511,12 @@ mod tests {
             fn r386_an_upgrade_of_its_damage_deals_3_an_upgrade_of_its_discards_takes_2_cards() {
                 crate::register_all();
                 let mut hit = setup(json!({}), json!({}), false);
-                step(&mut hit, PUNISH, "damage", 1);
+                step_param(hit.card_mut(PUNISH), "damage", 1);
                 activate_punish(&mut hit, DAMAGE, Some(at_p2()));
                 hit.expect_health(P2, 27);
 
                 let mut two = setup(json!({}), json!({ "hand": [VANILLA, TIMMY, MENACE] }), false);
-                step(&mut two, PUNISH, "discards", 1);
+                step_param(two.card_mut(PUNISH), "discards", 1);
                 activate_punish(&mut two, DISCARD, None);
                 assert!(two.state().pending.is_none());
                 assert_eq!(two.hand(P2).len(), 1);
@@ -656,7 +650,7 @@ mod tests {
             fn r386_an_upgrade_of_its_damage_deals_5() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), true);
-                step(&mut s, PUNISH, "damage", 1);
+                step_param(s.card_mut(PUNISH), "damage", 1);
 
                 activate_punish(&mut s, DAMAGE, Some(at_p2()));
 

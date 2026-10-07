@@ -103,13 +103,6 @@ mod tests {
         s.play(&fig, json!({ "targets": [{ "pick": "hero", "player": player }] }));
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: the live card in the state, tuned in place.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let instance = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(instance, key, steps);
-    }
-
     #[test]
     fn is_a_4_field_spell_fruit_both_faces_flag_fruit_plays_radiant() {
         crate::register_all();
@@ -175,7 +168,7 @@ mod tests {
         fn r386_the_count_reads_through_param_an_upgrade_of_fruits_adds_two() {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [PRODUCE, FILLER] }, "p2": { "hand": [FILLER] } }));
-            step(&mut s, PRODUCE, "fruits", 1);
+            step_param(s.card_mut(PRODUCE), "fruits", 1);
             assert_eq!(play_produce(&mut s).len(), 2);
         }
 
@@ -357,7 +350,7 @@ mod tests {
         fn r386_an_upgrade_of_fruits_adds_three() {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": PRODUCE, "radiant": true }, FILLER] }, "p2": { "hand": [FILLER] } }));
-            step(&mut s, PRODUCE, "fruits", 1);
+            step_param(s.card_mut(PRODUCE), "fruits", 1);
             let before = hand_ids(&s);
             s.play(PRODUCE, json!({ "zone": 1 }));
             assert_eq!(s.hand(P1).into_iter().filter(|card| !before.contains(&card.id)).count(), 3);

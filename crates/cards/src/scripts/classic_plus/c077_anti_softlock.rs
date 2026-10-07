@@ -87,12 +87,6 @@ mod tests {
         out
     }
 
-    /// TS's live `s.card(ref)`, written through: the card under that id in the state.
-    fn card_mut<'a>(s: &'a mut Scenario, card: &str) -> &'a mut CardInstance {
-        let id = s.card(card).id.clone();
-        find_instance_mut(s.state_mut(), &id).expect("the card is in the state")
-    }
-
     fn zone(player: &str, row: &str, lane: i32) -> ZoneRef {
         json_as(json!({ "player": player, "row": row, "lane": lane }))
     }
@@ -336,7 +330,7 @@ mod tests {
             #[test]
             fn r386_the_draw_reads_through_param_an_upgrade_draws_2() {
                 let mut s = softlock(false, json!({}), json!({}));
-                step_param(card_mut(&mut s, SOFTLOCK), "draw", 1);
+                step_param(s.card_mut(SOFTLOCK), "draw", 1);
                 s.play(SOFTLOCK, json!({}));
                 assert_eq!(s.hand(P1).len(), 3);
             }

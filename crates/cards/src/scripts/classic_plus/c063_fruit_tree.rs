@@ -64,13 +64,6 @@ mod tests {
         jackioh_engine::testkit::scenario(opts)
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: TS stepped the live card; here the card under its id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(live, key, steps);
-    }
-
     fn is_grape(id: &str) -> bool {
         GRAPES.contains(&id)
     }
@@ -230,12 +223,12 @@ mod tests {
         #[test]
         fn r386_the_count_is_fixed_at_1_an_upgrade_or_a_degrade_still_adds_exactly_one_fruit() {
             let mut up = grown(false, None, None);
-            step(&mut up, TREE, "fruits", 1);
+            step_param(up.card_mut(TREE), "fruits", 1);
             up.end_turn();
             assert_eq!(fruits_added(&up, PlayerId::P1).len(), 1);
 
             let mut down = grown(false, None, None);
-            step(&mut down, TREE, "fruits", -1);
+            step_param(down.card_mut(TREE), "fruits", -1);
             down.end_turn();
             assert_eq!(fruits_added(&down, PlayerId::P1).len(), 1);
         }
@@ -288,7 +281,7 @@ mod tests {
         #[test]
         fn r386_the_radiant_count_is_fixed_at_1_too() {
             let mut s = grown(true, None, None);
-            step(&mut s, TREE, "fruits", 1);
+            step_param(s.card_mut(TREE), "fruits", 1);
             s.end_turn();
             let added = fruits_added(&s, PlayerId::P1);
             assert_eq!(added.len(), 1);

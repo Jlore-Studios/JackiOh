@@ -129,12 +129,6 @@ mod tests {
         must(s.state().pending.as_ref(), "open prompt")
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: the step written on the card as it stands in the state.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(must(find_instance_mut(s.state_mut(), &id), "card to step"), key, steps);
-    }
-
     /// `graveyard` entries are bare ids or `{ def, costMod? }` objects; `field` is the TS default `[]`
     /// when empty.
     fn back(radiant_face: bool, graveyard: Value, field: &[&str]) -> Scenario {
@@ -355,7 +349,7 @@ mod tests {
             fn r386_an_upgrade_of_the_budget_lets_6_in() {
                 crate::register_all();
                 let mut s = back(false, json!([POINTMASTER, SEVEN]), &[]);
-                step(&mut s, BACK, "budget", 1);
+                step_param(s.card_mut(BACK), "budget", 1);
                 s.play(BACK, json!({}));
                 assert_eq!(open(&s).budget, Some(6));
                 let picks = json!([s.card(POINTMASTER).id, s.card(SEVEN).id]);
@@ -367,7 +361,7 @@ mod tests {
             fn r386_a_degrade_of_the_budget_makes_it_4() {
                 crate::register_all();
                 let mut s = back(false, json!([POINTMASTER, MENACE]), &[]);
-                step(&mut s, BACK, "budget", -1);
+                step_param(s.card_mut(BACK), "budget", -1);
                 s.play(BACK, json!({}));
                 assert_eq!(open(&s).budget, Some(4));
                 let picks = json!([s.card(POINTMASTER).id, s.card(MENACE).id]);

@@ -136,13 +136,6 @@ mod tests {
         }
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`, on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, steps);
-    }
-
     /// TS `{ ...defaults, ...over }` on a side's setup.
     fn merged(mut defaults: Value, over: Value) -> Value {
         if let (Some(into), Value::Object(over)) = (defaults.as_object_mut(), over) {
@@ -481,7 +474,7 @@ mod tests {
             fn r386_an_upgrade_of_its_damage_deals_5() {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [MENACE, FILLER] }), json!({}), false);
-                step(&mut s, TESLA, "damage", 1);
+                step_param(s.card_mut(TESLA), "damage", 1);
 
                 s.play(MENACE, json!({ "zone": 2 }));
 

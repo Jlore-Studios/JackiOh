@@ -141,13 +141,6 @@ mod tests {
         }
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: TS's `card()` handed back the live instance, so the
-    /// step is written on the state's own copy, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     /// `{ ...base, ...over }`: the TS object spread, the override's keys winning.
     fn spread(mut base: Value, over: Value) -> Value {
         if let (Some(into), Some(from)) = (base.as_object_mut(), over.as_object()) {
@@ -430,7 +423,7 @@ mod tests {
             fn r386_a_degrade_of_its_trigger_play_makes_it_wait_for_the_4th() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
-                step(&mut s, AUCTION, "plays", 1);
+                step_param(s.card_mut(AUCTION), "plays", 1);
 
                 play_fillers(&mut s, 3, P2);
                 assert_eq!(s.card(AUCTION).face_up, Some(false));
@@ -443,8 +436,8 @@ mod tests {
             fn r386_an_upgrade_of_its_draw_and_damage_2_cards_and_3_damage_per_play() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
-                step(&mut s, AUCTION, "draw", 1);
-                step(&mut s, AUCTION, "damage", 1);
+                step_param(s.card_mut(AUCTION), "draw", 1);
+                step_param(s.card_mut(AUCTION), "damage", 1);
 
                 play_fillers(&mut s, 4, P2);
 
@@ -483,7 +476,7 @@ mod tests {
             fn r386_an_upgrade_never_takes_its_trigger_play_below_2() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), true);
-                step(&mut s, AUCTION, "plays", -1);
+                step_param(s.card_mut(AUCTION), "plays", -1);
 
                 play_fillers(&mut s, 1, P2);
                 assert_eq!(s.card(AUCTION).face_up, Some(false));

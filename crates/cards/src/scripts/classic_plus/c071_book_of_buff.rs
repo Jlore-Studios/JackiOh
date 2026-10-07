@@ -68,13 +68,6 @@ mod tests {
         }))
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: the live card in the state, tuned in place.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let instance = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(instance, key, steps);
-    }
-
     #[test]
     fn is_a_1_spell_book_with_one_script_on_both_faces() {
         crate::register_all();
@@ -198,7 +191,7 @@ mod tests {
             crate::register_all();
             for (steps, count) in [(1, 6), (-1, 4)] {
                 let mut s = book(false);
-                step(&mut s, BOOK, "times", steps);
+                step_param(s.card_mut(BOOK), "times", steps);
                 let target = s.unit(P1, 1).expect("p1's unit").id;
                 s.play(BOOK, json!({ "targets": pick(&target) }));
                 assert_eq!(upgrades(s.events()).len(), count);

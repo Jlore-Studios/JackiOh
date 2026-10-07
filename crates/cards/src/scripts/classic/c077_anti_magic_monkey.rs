@@ -115,12 +115,6 @@ mod tests {
         hand.iter().find(|card| card["defId"] == json!(def_id)).and_then(|card| card["cost"].as_i64())
     }
 
-    /// TS `stepParam(s.card(ref), key, delta)`: the live card, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, delta: i32) {
-        let id = s.card(card).id.clone();
-        step_param(must(find_instance_mut(s.state_mut(), &id), "the card to tune"), key, delta);
-    }
-
     fn played_cost(events: &[GameEvent], def_id: Option<&str>) -> Option<i32> {
         events.iter().find_map(|event| match event {
             GameEvent::CardPlayed { def_id: played, cost_paid, .. }
@@ -321,7 +315,7 @@ mod tests {
         #[test]
         fn r386_its_surcharge_is_the_declared_number_an_upgrade_s_step_makes_spells_cost_2_more() {
             let mut s = scenario(json!({ "p1": { "hand": [STOCKPILE], "field": [MONKEY] } }));
-            step(&mut s, MONKEY, "surcharge", 1);
+            step_param(s.card_mut(MONKEY), "surcharge", 1);
             assert_eq!(hand_cost(&s, P1, STOCKPILE), Some(3));
         }
     }
@@ -355,10 +349,10 @@ mod tests {
         #[test]
         fn r386_its_declared_surcharge_steps_from_2_an_upgrade_makes_it_3_a_degrade_1() {
             let mut up = scenario(json!({ "p1": { "hand": [STOCKPILE], "field": [{ "def": MONKEY, "radiant": true }] } }));
-            step(&mut up, MONKEY, "surcharge", 1);
+            step_param(up.card_mut(MONKEY), "surcharge", 1);
             assert_eq!(hand_cost(&up, P1, STOCKPILE), Some(4));
             let mut down = scenario(json!({ "p1": { "hand": [STOCKPILE], "field": [{ "def": MONKEY, "radiant": true }] } }));
-            step(&mut down, MONKEY, "surcharge", -1);
+            step_param(down.card_mut(MONKEY), "surcharge", -1);
             assert_eq!(hand_cost(&down, P1, STOCKPILE), Some(2));
         }
 

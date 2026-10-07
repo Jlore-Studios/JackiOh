@@ -93,12 +93,6 @@ mod tests {
         (view.attack, view.max_health)
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     mod base {
         use super::*;
 
@@ -142,7 +136,7 @@ mod tests {
         fn r386_the_aura_reads_through_param_an_upgrade_makes_it_3_3() {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [SHELL, FILLER], "field": [MENACE] }, "p2": { "hand": [FILLER] } }));
-            step(&mut s, SHELL, "aura", 1);
+            step_param(s.card_mut(SHELL), "aura", 1);
             s.play(SHELL, json!({}));
             s.expect_stats(MENACE, json!({ "attack": 12, "maxHealth": 12 }));
         }

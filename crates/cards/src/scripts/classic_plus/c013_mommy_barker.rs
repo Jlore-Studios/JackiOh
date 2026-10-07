@@ -65,11 +65,6 @@ mod tests {
         (0..=9).any(|digit| text.contains(&format!("classicplus-012-{digit}")))
     }
 
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     fn pancakes_in(s: &Scenario) -> Vec<String> {
         let tokens = pancake_tokens();
         s.hand(P1)
@@ -152,7 +147,7 @@ mod tests {
                 "p1": { "hand": [FILLER], "field": [MOMMY], "library": [FILLER] },
                 "p2": { "hand": [FILLER], "field": [MENACE] },
             }));
-            step(&mut s, MOMMY, "tokens", 1);
+            step_param(s.card_mut(MOMMY), "tokens", 1);
             s.attack(MOMMY, MENACE);
             assert_eq!(pancakes_in(&s).len(), 2);
         }

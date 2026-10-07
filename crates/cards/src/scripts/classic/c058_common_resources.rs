@@ -78,13 +78,6 @@ mod tests {
         events.iter().map(js).filter(|event| event["type"] == "drawn" && event["player"] == player).collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: the step recorded on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, steps);
-    }
-
     /// `opts[key]`, or `fallback` where the TS default (`??`) applies.
     fn or(opts: &Value, key: &str, fallback: Value) -> Value {
         if opts[key].is_null() { fallback } else { opts[key].clone() }
@@ -328,7 +321,7 @@ mod tests {
             fn r386_its_count_is_the_declared_number_an_upgrades_step_draws_2_from_the_bottom_bottom_first() {
                 crate::register_all();
                 let mut s = waiting(json!({ "p2Library": [STOCKPILE, VANILLA, MENACE] }));
-                step(&mut s, RESOURCES, "cards", 1);
+                step_param(s.card_mut(RESOURCES), "cards", 1);
                 s.end_turn();
                 assert_eq!(
                     drawn_by(s.last_events(), PlayerId::P1).iter().map(|event| event["defId"].clone()).collect::<Vec<Value>>(),
@@ -364,7 +357,7 @@ mod tests {
             fn r386_its_declared_count_steps_for_both_an_upgrade_draws_2_at_each_end() {
                 crate::register_all();
                 let mut s = waiting(json!({ "radiant": true, "p2Library": [VANILLA, VANILLA, MENACE, MENACE] }));
-                step(&mut s, RESOURCES, "cards", 1);
+                step_param(s.card_mut(RESOURCES), "cards", 1);
                 s.end_turn();
                 assert_eq!(drawn_by(s.last_events(), PlayerId::P1).iter().filter(|event| event["defId"] == MENACE).count(), 2);
                 s.end_turn();

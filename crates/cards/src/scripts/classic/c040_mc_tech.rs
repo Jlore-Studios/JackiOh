@@ -142,13 +142,6 @@ mod tests {
         serde_json::to_value(value).expect("an engine value serialises")
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: TS's `card()` handed back the live instance, so the
-    /// step is written on the state's own copy, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     /// TS `FACE_DOWN_TRAPS`: the four traps, each face-down.
     fn face_down_traps() -> Value {
         Value::Array([PAWN, BREAD, STIMMY, UNLICENSED].iter().map(|d| json!({ "def": d, "faceUp": false })).collect())
@@ -325,7 +318,7 @@ mod tests {
                     "p1": { "hand": [TECH, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO, VANILLA] },
                 }));
-                step(&mut harder, TECH, "threshold", 1);
+                step_param(harder.card_mut(TECH), "threshold", 1);
                 harder.play(TECH, json!({ "zone": 5 }));
                 assert!(stolen_ids(&harder).is_empty());
 
@@ -333,7 +326,7 @@ mod tests {
                     "p1": { "hand": [TECH, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO] },
                 }));
-                step(&mut easier, TECH, "threshold", -1);
+                step_param(easier.card_mut(TECH), "threshold", -1);
                 easier.play(TECH, json!({ "zone": 5 }));
                 assert_eq!(stolen_ids(&easier).len(), 1);
             }
@@ -493,7 +486,7 @@ mod tests {
                     "p1": { "hand": [{ "def": TECH, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO], "backrow": [FIELD_SPELL] },
                 }));
-                step(&mut s, TECH, "threshold", 1);
+                step_param(s.card_mut(TECH), "threshold", 1);
 
                 s.play(TECH, json!({ "zone": 5 }));
 

@@ -92,13 +92,6 @@ mod tests {
         s.events().iter().map(|event| serde_json::to_value(event).expect("an event is JSON")).collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, delta)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, delta: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, delta);
-    }
-
     #[test]
     fn runs_one_script_on_both_faces_its_card_count_is_the_declared_cards() {
         let def = crate::card_def(SLOP);
@@ -218,11 +211,11 @@ mod tests {
         #[test]
         fn r386_its_card_count_reads_through_param_an_upgrade_fuses_4_a_degrade_2() {
             let mut up = slop("slop-up", false, None);
-            step(&mut up, SLOP, "cards", 1);
+            step_param(up.card_mut(SLOP), "cards", 1);
             up.play(SLOP, json!({}));
             assert_eq!(specs(&up).len(), 4);
             let mut down = slop("slop-down", false, None);
-            step(&mut down, SLOP, "cards", -1);
+            step_param(down.card_mut(SLOP), "cards", -1);
             down.play(SLOP, json!({}));
             assert_eq!(specs(&down).len(), 2);
         }
@@ -230,8 +223,8 @@ mod tests {
         #[test]
         fn r582_tuned_to_one_card_that_card_is_added_as_it_is_unfused_at_0() {
             let mut s = slop("slop-one", false, None);
-            step(&mut s, SLOP, "cards", -1);
-            step(&mut s, SLOP, "cards", -1);
+            step_param(s.card_mut(SLOP), "cards", -1);
+            step_param(s.card_mut(SLOP), "cards", -1);
             s.play(SLOP, json!({}));
             let card = made(&s);
             assert!(ai_ids().contains(&card.def_id));
@@ -261,8 +254,8 @@ mod tests {
         #[test]
         fn r582_tuned_to_one_card_the_card_is_radiant() {
             let mut s = slop("slop-radiant-one", true, None);
-            step(&mut s, SLOP, "cards", -1);
-            step(&mut s, SLOP, "cards", -1);
+            step_param(s.card_mut(SLOP), "cards", -1);
+            step_param(s.card_mut(SLOP), "cards", -1);
             s.play(SLOP, json!({}));
             assert!(made(&s).radiant);
         }

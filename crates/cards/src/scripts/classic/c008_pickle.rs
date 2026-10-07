@@ -252,13 +252,6 @@ mod tests {
         serde_json::to_value(value).expect("an engine value serialises")
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`, on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, steps);
-    }
-
     /// TS `JSON.parse(JSON.stringify(state))`.
     fn round_trip(state: &GameState) -> GameState {
         serde_json::from_value(js(state)).expect("the state round-trips")
@@ -606,7 +599,7 @@ mod tests {
             fn r386_an_upgrade_of_choices_asks_a_fourth_question() {
                 crate::register_all();
                 let mut s = pickle(false, Piles::default());
-                step(&mut s, PICKLE, "choices", 1);
+                step_param(s.card_mut(PICKLE), "choices", 1);
                 s.play(PICKLE, json!({}));
                 for _question in 0..4 {
                     s.answer(json!("draw"));
@@ -621,7 +614,7 @@ mod tests {
             fn r386_an_upgrade_of_draw_makes_you_draw_2() {
                 crate::register_all();
                 let mut s = pickle(false, Piles::default());
-                step(&mut s, PICKLE, "draw", 1);
+                step_param(s.card_mut(PICKLE), "draw", 1);
                 s.play(PICKLE, json!({}));
                 s.answer(json!("draw"));
                 assert_eq!(defs(&s, P1, "hand"), vec![FILLER, MY_DECK[0], MY_DECK[1]]);
@@ -631,8 +624,8 @@ mod tests {
             fn r386_an_upgrade_of_discard_makes_them_discard_2_and_of_exile_exiles_2() {
                 crate::register_all();
                 let mut s = pickle(false, Piles::default());
-                step(&mut s, PICKLE, "discard", 1);
-                step(&mut s, PICKLE, "exile", 1);
+                step_param(s.card_mut(PICKLE), "discard", 1);
+                step_param(s.card_mut(PICKLE), "exile", 1);
                 s.play(PICKLE, json!({}));
                 s.answer(json!("discard"));
                 let grave = defs(&s, P2, "graveyard");
@@ -648,7 +641,7 @@ mod tests {
             fn r386_a_degrade_of_choices_asks_only_two_questions() {
                 crate::register_all();
                 let mut s = pickle(false, Piles::default());
-                step(&mut s, PICKLE, "choices", -1);
+                step_param(s.card_mut(PICKLE), "choices", -1);
                 s.play(PICKLE, json!({}));
                 s.answer(json!("draw"));
                 s.answer(json!("draw"));

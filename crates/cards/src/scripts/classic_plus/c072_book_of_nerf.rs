@@ -88,13 +88,6 @@ mod tests {
         scenario(options)
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: the live card in the state, tuned in place.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let instance = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(instance, key, steps);
-    }
-
     #[test]
     fn is_a_1_spell_book_the_radiant_face_declares_a_wider_target() {
         crate::register_all();
@@ -194,7 +187,7 @@ mod tests {
             crate::register_all();
             for (steps, count) in [(1, 6), (-1, 4)] {
                 let mut s = book(false, None);
-                step(&mut s, BOOK, "times", steps);
+                step_param(s.card_mut(BOOK), "times", steps);
                 let target = s.unit(P2, 2).expect("p2's unit").id;
                 s.play(BOOK, json!({ "targets": pick(&target) }));
                 assert_eq!(degrades(s.events()).len(), count);

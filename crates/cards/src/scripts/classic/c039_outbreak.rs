@@ -153,13 +153,6 @@ mod tests {
         serde_json::to_value(value).expect("an engine value serialises")
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: TS's `card()` handed back the live instance, so the
-    /// step is written on the state's own copy, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     /// TS `at(s, ref): Selection[]`.
     fn at(s: &Scenario, card: &str) -> Value {
         json!([{ "pick": "instance", "instanceId": s.card(card).id }])
@@ -434,7 +427,7 @@ mod tests {
                     "p1": { "hand": [OUTBREAK, ANCHOR], "library": lib(3) },
                     "p2": { "hand": [ANCHOR], "backrow": [{ "def": UNLICENSED, "faceUp": false }] },
                 }));
-                step(&mut s, OUTBREAK, "tokens", 1);
+                step_param(s.card_mut(OUTBREAK), "tokens", 1);
                 let trap = s.card(UNLICENSED).id.clone();
 
                 s.play(OUTBREAK, json!({ "targets": [{ "pick": "instance", "instanceId": trap }] }));
@@ -505,7 +498,7 @@ mod tests {
                 }));
                 s.play(BILLY, json!({ "x": 3 }));
                 s.end_turn();
-                step(&mut s, OUTBREAK, "tokens", 1);
+                step_param(s.card_mut(OUTBREAK), "tokens", 1);
 
                 let targets = at(&s, BILLY);
                 s.play(OUTBREAK, json!({ "targets": targets }));

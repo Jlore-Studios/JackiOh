@@ -174,12 +174,6 @@ mod tests {
         s.hand(player).into_iter().filter(|card| card.def_id == CRAWLER).collect()
     }
 
-    /// TS `stepParam(card, key, steps)` on a live card: the step written on the card under its id.
-    fn step(s: &mut Scenario, card: &CardInstance, key: &str, steps: i32) {
-        let instance = find_instance_mut(s.state_mut(), &card.id).expect("the card to step is in the state");
-        step_param(instance, key, steps);
-    }
-
     fn two_crawlers(s: &Scenario) -> (CardInstance, CardInstance) {
         let mut both = crawlers(s, P1).into_iter();
         match (both.next(), both.next()) {
@@ -506,8 +500,8 @@ mod tests {
                     "p2": { "hand": [ANCHOR], "field": [VANILLA] },
                 }));
                 let (first, second) = two_crawlers(&s);
-                step(&mut s, &first, "tokens", 1);
-                step(&mut s, &first, "draw", 1);
+                step_param(s.card_mut(&first), "tokens", 1);
+                step_param(s.card_mut(&first), "draw", 1);
 
                 let vanilla = s.card(VANILLA).clone();
                 s.play(&first, json!({ "targets": at(&vanilla) }));
@@ -578,8 +572,8 @@ mod tests {
                     s.hand(P1).into_iter().find(|card| card.def_id == CRAWLER && card.radiant).expect("a Radiant Crawler");
                 let base_one =
                     s.hand(P1).into_iter().find(|card| card.def_id == CRAWLER && !card.radiant).expect("a base Crawler");
-                step(&mut s, &radiant_one, "tokens", -1);
-                step(&mut s, &radiant_one, "draw", -1);
+                step_param(s.card_mut(&radiant_one), "tokens", -1);
+                step_param(s.card_mut(&radiant_one), "draw", -1);
 
                 let vanilla = s.card(VANILLA).clone();
                 s.play(&radiant_one, json!({ "targets": at(&vanilla) }));

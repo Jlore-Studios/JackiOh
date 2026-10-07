@@ -134,12 +134,6 @@ mod tests {
         }))
     }
 
-    /// TS `stepParam(s.card(ref), key, delta)`: the live card, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, delta: i32) {
-        let id = s.card(card).id.clone();
-        step_param(must(find_instance_mut(s.state_mut(), &id), "the card to tune"), key, delta);
-    }
-
     /// is a Field Spell with one once-a-turn ability of three modes, its three numbers, one script on both faces
     #[test]
     fn is_a_field_spell_with_one_once_a_turn_ability_of_three_modes_its_three_numbers_one_script_on_both_faces() {
@@ -288,7 +282,7 @@ mod tests {
             for (mode, check) in cases {
                 let mut s = standing(false, json!({}));
                 for key in ["heal", "draw", "mana"] {
-                    step(&mut s, THRIVE, key, 1);
+                    step_param(s.card_mut(THRIVE), key, 1);
                 }
                 s.activate(THRIVE, json!({ "modes": [mode] }));
                 check(&mut s);
@@ -328,7 +322,7 @@ mod tests {
         #[test]
         fn r386_a_degrade_heals_5() {
             let mut s = standing(true, json!({}));
-            step(&mut s, THRIVE, "heal", -1);
+            step_param(s.card_mut(THRIVE), "heal", -1);
             s.activate(THRIVE, json!({ "modes": ["heal"] }));
             s.expect_health(P1, 25);
         }

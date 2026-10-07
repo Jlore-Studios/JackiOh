@@ -69,13 +69,6 @@ mod tests {
         serde_json::to_value(value).expect("an engine value serialises")
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: TS's `card()` handed back the live instance, so the
-    /// step is written on the state's own copy, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     /// Every `cardPlayed` so far, as `{ defId, costPaid }`.
     fn spells_paid(s: &Scenario) -> Vec<Value> {
         s.events()
@@ -242,13 +235,13 @@ mod tests {
             fn r386_an_upgrade_makes_it_3_less_a_degrade_1_less_a_4_flood_costs_1_then_3() {
                 crate::register_all();
                 let mut up = scenario(json!({ "p1": { "hand": [PREP, FLOOD, ANCHOR] }, "p2": { "hand": [ANCHOR] } }));
-                step(&mut up, PREP, "discount", 1);
+                step_param(up.card_mut(PREP), "discount", 1);
                 up.play(PREP, json!({}));
                 up.play(FLOOD, json!({}));
                 assert_eq!(paid_for(&up, FLOOD), vec![1]);
 
                 let mut down = scenario(json!({ "p1": { "hand": [PREP, FLOOD, ANCHOR] }, "p2": { "hand": [ANCHOR] } }));
-                step(&mut down, PREP, "discount", -1);
+                step_param(down.card_mut(PREP), "discount", -1);
                 down.play(PREP, json!({}));
                 down.play(FLOOD, json!({}));
                 assert_eq!(paid_for(&down, FLOOD), vec![3]);
@@ -302,7 +295,7 @@ mod tests {
                     "p1": { "hand": [{ "def": PREP, "radiant": true }, FLOOD, ANCHOR] },
                     "p2": { "hand": [ANCHOR] },
                 }));
-                step(&mut s, PREP, "discount", -1);
+                step_param(s.card_mut(PREP), "discount", -1);
 
                 s.play(PREP, json!({}));
                 s.play(FLOOD, json!({}));

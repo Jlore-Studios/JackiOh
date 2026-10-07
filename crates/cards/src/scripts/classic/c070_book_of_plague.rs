@@ -68,11 +68,6 @@ mod tests {
         serde_json::to_value(value).expect("serialises")
     }
 
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     fn lib(n: usize) -> Vec<&'static str> {
         vec![X; n]
     }
@@ -334,7 +329,7 @@ mod tests {
         #[test]
         fn r386_an_upgrade_places_six() {
             let mut s = board(false);
-            step(&mut s, BOOK, "tokens", 1);
+            step_param(s.card_mut(BOOK), "tokens", 1);
             s.play(BOOK, json!({}));
 
             let menace = s.card(MENACE).clone();
@@ -367,7 +362,7 @@ mod tests {
         #[test]
         fn r386_a_degrade_places_nine() {
             let mut s = board(true);
-            step(&mut s, BOOK, "tokens", -1);
+            step_param(s.card_mut(BOOK), "tokens", -1);
             s.play(BOOK, json!({}));
 
             let menace = s.card(MENACE).clone();

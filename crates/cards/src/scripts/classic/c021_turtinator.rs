@@ -132,12 +132,6 @@ mod tests {
             .collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: on the live instance, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the state"), key, steps);
-    }
-
     mod c_n21_turtinator {
         use super::*;
 
@@ -378,12 +372,12 @@ mod tests {
             fn r386_an_upgrade_of_its_multiplier_doubles_the_hit_a_degrade_never_takes_it_below_1() {
                 crate::register_all();
                 let mut up = setup(json!({ "field": [TURTLE, POINTMASTER] }), json!({}));
-                step(&mut up, TURTLE, "multiplier", 1);
+                step_param(up.card_mut(TURTLE), "multiplier", 1);
                 eat(&mut up, POINTMASTER, enemy_hero(), TURTLE);
                 up.expect_health(P2, 16);
 
                 let mut down = setup(json!({ "field": [TURTLE, POINTMASTER] }), json!({}));
-                step(&mut down, TURTLE, "multiplier", -1);
+                step_param(down.card_mut(TURTLE), "multiplier", -1);
                 eat(&mut down, POINTMASTER, enemy_hero(), TURTLE);
                 down.expect_health(P2, 23);
             }
@@ -426,7 +420,7 @@ mod tests {
             fn r386_an_upgrade_takes_the_radiant_multiplier_to_3() {
                 crate::register_all();
                 let mut s = setup(json!({ "field": [{ "def": TURTLE, "radiant": true }, TIMMY] }), json!({}));
-                step(&mut s, TURTLE, "multiplier", 1);
+                step_param(s.card_mut(TURTLE), "multiplier", 1);
 
                 eat(&mut s, TIMMY, enemy_hero(), TURTLE);
 

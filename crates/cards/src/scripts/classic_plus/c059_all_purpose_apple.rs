@@ -62,13 +62,6 @@ mod tests {
         jackioh_engine::testkit::scenario(opts)
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: TS stepped the live card; here the card under its id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(live, key, steps);
-    }
-
     /// TS `s.unit(p, lane) ?? ""`: the unit's instance id, or "" (which no card answers to).
     fn unit_id(s: &Scenario, player: PlayerId, lane: i32) -> String {
         s.unit(player, lane).map(|card| card.id).unwrap_or_default()
@@ -158,14 +151,14 @@ mod tests {
         #[test]
         fn r386_an_upgrade_heals_3_and_deals_2_a_degrade_never_takes_either_below_1() {
             let mut up = apple(false, json!([]), Some(20));
-            step(&mut up, APPLE, "heal", 1);
-            step(&mut up, APPLE, "damage", 1);
+            step_param(up.card_mut(APPLE), "heal", 1);
+            step_param(up.card_mut(APPLE), "damage", 1);
             up.play(APPLE, json!({ "targets": enemy_hero() }));
             up.expect_health(PlayerId::P1, 23).expect_health(PlayerId::P2, 28);
 
             let mut down = apple(false, json!([]), Some(20));
-            step(&mut down, APPLE, "heal", -5);
-            step(&mut down, APPLE, "damage", -5);
+            step_param(down.card_mut(APPLE), "heal", -5);
+            step_param(down.card_mut(APPLE), "damage", -5);
             down.play(APPLE, json!({ "targets": enemy_hero() }));
             down.expect_health(PlayerId::P1, 21).expect_health(PlayerId::P2, 29);
         }
@@ -192,8 +185,8 @@ mod tests {
         #[test]
         fn r386_the_radiant_numbers_step_from_4_and_2() {
             let mut s = apple(true, json!([]), Some(20));
-            step(&mut s, APPLE, "heal", 1);
-            step(&mut s, APPLE, "damage", 1);
+            step_param(s.card_mut(APPLE), "heal", 1);
+            step_param(s.card_mut(APPLE), "damage", 1);
             s.play(APPLE, json!({ "targets": enemy_hero() }));
             s.expect_health(PlayerId::P1, 25).expect_health(PlayerId::P2, 27);
         }

@@ -113,28 +113,6 @@ mod tests {
             .collect()
     }
 
-    /// `_glow.ts`'s `glows` (a private copy, fullsend rule 5): `true` when the view carries the key
-    /// (which must then be exactly `true`), `false` when absent.
-    fn glows(card: Option<&Value>) -> bool {
-        let card = card.expect("no card at that place in the view");
-        match card.get("conditionActive") {
-            None => false,
-            Some(value) => {
-                assert_eq!(value, &json!(true));
-                true
-            }
-        }
-    }
-
-    /// `_glow.ts`'s `handGlows(s, instanceId)`: does this hand card glow in p1's own view right now?
-    fn hand_glows(s: &Scenario, instance_id: &str) -> bool {
-        let view = serde_json::to_value(s.view("p1")).expect("a view is JSON");
-        let hand = view["you"]["hand"]
-            .as_array()
-            .expect("the viewer's own hand must travel in full (§10.8)");
-        glows(hand.iter().find(|card| card["instanceId"] == instance_id))
-    }
-
     mod quickstriker {
         use super::*;
 
@@ -428,11 +406,11 @@ mod tests {
             }));
             // X = 0 for the first play of the turn: nothing glows yet.
             let timmy = s.card(TEMPO_TIMMY).id.clone();
-            assert!(!hand_glows(&s, &timmy));
+            assert!(!hand_glows(&s, &timmy, PlayerId::P1));
 
             s.play(RAPID_REPLENISH, json!({}));
             let timmy = s.card(TEMPO_TIMMY).id.clone();
-            assert!(hand_glows(&s, &timmy));
+            assert!(hand_glows(&s, &timmy, PlayerId::P1));
             s.play(TEMPO_TIMMY, json!({}));
             assert_eq!(hits_on_p2(&s), vec![if radiant { 2 } else { 1 }]);
         }
@@ -449,9 +427,9 @@ mod tests {
             }));
             s.play(RAPID_REPLENISH, json!({}));
             let quickstriker = s.card(QUICKSTRIKER).id.clone();
-            assert!(!hand_glows(&s, &quickstriker));
+            assert!(!hand_glows(&s, &quickstriker, PlayerId::P1));
             let timmy = s.card(TEMPO_TIMMY).id.clone();
-            assert!(!hand_glows(&s, &timmy));
+            assert!(!hand_glows(&s, &timmy, PlayerId::P1));
         }
 
         #[test]
@@ -483,7 +461,7 @@ mod tests {
             }));
             s.play(RAPID_REPLENISH, json!({}));
             let timmy = s.card(TEMPO_TIMMY).id.clone();
-            assert!(!hand_glows(&s, &timmy));
+            assert!(!hand_glows(&s, &timmy, PlayerId::P1));
         }
     }
 }

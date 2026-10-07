@@ -112,15 +112,6 @@ mod tests {
         s.stats(card).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Charge)
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        match find_instance_mut(s.state_mut(), &id) {
-            Some(live) => step_param(live, key, steps),
-            None => panic!("no card {card} to tune"),
-        }
-    }
-
     #[test]
     fn declares_its_text_as_an_afterattack_hook_on_each_face_and_no_trigger() {
         assert_eq!(crate::card_def(ID).id, BOOTS);
@@ -226,7 +217,7 @@ mod tests {
         #[test]
         fn r386_an_upgrade_makes_it_draw_2() {
             let mut s = scenario(json!({ "p1": { "hand": [ANCHOR], "field": [BOOTS], "library": [A, B] }, "p2": { "hand": [ANCHOR] } }));
-            step(&mut s, BOOTS, "draw", 1);
+            step_param(s.card_mut(BOOTS), "draw", 1);
 
             s.attack(BOOTS, "hero");
 
@@ -364,7 +355,7 @@ mod tests {
                 "p1": { "hand": [ANCHOR], "field": [{ "def": BOOTS, "radiant": true }], "library": [TEMPO, STOCKPILE, VANILLA] },
                 "p2": { "hand": [ANCHOR] },
             }));
-            step(&mut s, BOOTS, "recruits", 1);
+            step_param(s.card_mut(BOOTS), "recruits", 1);
 
             s.attack(BOOTS, "hero");
 

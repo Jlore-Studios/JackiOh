@@ -105,13 +105,6 @@ mod tests {
         }
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: the step recorded on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, steps);
-    }
-
     fn hero(player: &str) -> Value {
         json!({ "pick": "hero", "player": player })
     }
@@ -342,10 +335,10 @@ mod tests {
             fn r386_its_damage_is_the_declared_number_an_upgrades_step_makes_it_5_a_degrades_3() {
                 crate::register_all();
                 let mut up = scenario(json!({ "p1": { "hand": [WILDFIRE, FILLER] } }));
-                step(&mut up, WILDFIRE, "damage", 1);
+                step_param(up.card_mut(WILDFIRE), "damage", 1);
                 up.play(WILDFIRE, json!({ "targets": [hero("p2")] })).expect_health(P2, 25);
                 let mut down = scenario(json!({ "p1": { "hand": [WILDFIRE, FILLER] } }));
-                step(&mut down, WILDFIRE, "damage", -1);
+                step_param(down.card_mut(WILDFIRE), "damage", -1);
                 down.play(WILDFIRE, json!({ "targets": [hero("p2")] })).expect_health(P2, 27);
                 let graveyard = js(&down.view(P1).you.graveyard);
                 let params = graveyard
@@ -552,7 +545,7 @@ mod tests {
             fn r386_its_declared_damage_steps_from_8_an_upgrade_makes_it_9_enough_to_kill_the_9_9() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": WILDFIRE, "radiant": true }, FILLER] }, "p2": { "field": [MENACE] } }));
-                step(&mut s, WILDFIRE, "damage", 1);
+                step_param(s.card_mut(WILDFIRE), "damage", 1);
                 let target = at(&s, MENACE);
                 s.play(WILDFIRE, json!({ "targets": [target] }));
                 s.expect_in_zone(MENACE, "graveyard");

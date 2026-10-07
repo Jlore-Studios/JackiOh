@@ -88,14 +88,6 @@ fn craft(s: &mut Scenario, def_ids: &[&str]) -> CardInstance {
     )
 }
 
-/// TS `g.card(x).field = …`: the live card, written through.
-fn card_mut<'a>(g: &'a mut Scenario, id: &str) -> &'a mut CardInstance {
-    match find_instance_mut(g.state_mut(), id) {
-        Some(card) => card,
-        None => panic!("{id} is in no zone"),
-    }
-}
-
 /// TS `toMatch(/^t-\d+:<parts>$/)`: a fused definition's id, `t-<n>:` and then its ingredients.
 fn is_fused_id(id: &str, parts: &str) -> bool {
     match id.strip_prefix("t-").and_then(|rest| rest.split_once(':')) {
@@ -336,8 +328,8 @@ mod r77_5_2_a_keyword_a_fuse_newly_prints_applies_at_once {
         }));
         let kpop = unit_at(&g, P1, 1);
         // A granted Divine Shield (#63's or #80's pool, R21) that a hit has already spent (§4.4 step 1).
-        card_mut(&mut g, &kpop.id).granted_keywords = vec![Keyword::DivineShield];
-        card_mut(&mut g, &kpop.id).divine_shield_spent = Some(true);
+        g.card_mut(&kpop.id).granted_keywords = vec![Keyword::DivineShield];
+        g.card_mut(&kpop.id).divine_shield_spent = Some(true);
         assert!(!kinds(&g, &kpop).contains(&KeywordKind::DivineShield));
 
         // p2 plays Jilliax (Rush, Taunt, Lifesteal, Divine Shield); #85 fuses it onto the Kpop.
@@ -368,7 +360,7 @@ mod r77_5_2_a_keyword_a_fuse_newly_prints_applies_at_once {
         }));
         let kpop = unit_at(&g, P1, 1);
         // A Kpop that came back through a granted Reborn: the body has used its Reborn (§4.5 step 4).
-        card_mut(&mut g, &kpop.id).reborn_spent = Some(true);
+        g.card_mut(&kpop.id).reborn_spent = Some(true);
 
         // p2 plays Right-house defender (Reborn printed); #85 fuses it onto the Kpop's Reborn body.
         g.play(RIGHT_HOUSE, json!({ "zone": 1 }));
@@ -569,7 +561,7 @@ mod r43_r151_r77_a_heroic_powers_text_fused_onto_another_permanent_has_a_power {
             g.state().players.p1.hand.iter().find(|card| card.def_id == HEROIC_POWER).cloned(),
             "the live Heroic Power",
         );
-        card_mut(&mut g, &power.id).memory.insert(subsystems::POWER_KEY.to_string(), json!("burn"));
+        g.card_mut(&power.id).memory.insert(subsystems::POWER_KEY.to_string(), json!("burn"));
         let well = must(g.backrow(P2, 2).cloned(), "p2's Mana Well");
 
         // p1 plays it (which uses nothing, R752), and after it resolves p2's #85 fuses it onto the Mana Well
@@ -734,7 +726,7 @@ mod r77_r102_a_fuse_leaves_the_kept_cards_memory_as_it_was_but_for_the_prices_it
         // Something the kept card remembers from before the Fuse, which R77 keeps where it is: no text
         // of the card wrote it through `remember`, so it is none of what moves with the card's texts
         // (re-entry.test.ts's R77 case has a Cube's meal move).
-        card_mut(&mut g, &kept.id).memory.insert("r77-before".to_string(), json!("kept"));
+        g.card_mut(&kept.id).memory.insert("r77-before".to_string(), json!("kept"));
         let before = g.card(&kept.id).memory.clone();
         g.play(GOING_LONG, json!({ "zone": 1, "embiggen": embiggen }));
         assert!(is_fused_id(&g.card(&kept.id).def_id, "core-084+core-084"));

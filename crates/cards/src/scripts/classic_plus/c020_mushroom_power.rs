@@ -56,12 +56,6 @@ mod tests {
         s.unit(player, lane).expect("setup")
     }
 
-    /// TS wrote through the live instance `s.card(ref)` handed back.
-    fn card_mut<'a>(s: &'a mut Scenario, card: &str) -> &'a mut CardInstance {
-        let id = s.card(card).id.clone();
-        find_instance_mut(s.state_mut(), &id).expect("the card is in no zone")
-    }
-
     fn buffed_count(s: &Scenario) -> usize {
         s.events()
             .iter()
@@ -195,7 +189,7 @@ mod tests {
                     "p1": { "hand": [MUSHROOM, FILLER], "field": [{ "def": BODY, "lane": 2 }] },
                     "p2": { "hand": [FILLER] },
                 }));
-                step_param(card_mut(&mut s, MUSHROOM), "buff", 1);
+                step_param(s.card_mut(MUSHROOM), "buff", 1);
                 let neighbour = unit(&s, P1, 2);
                 s.play(MUSHROOM, json!({ "zone": 3 }));
                 s.expect_stats(&neighbour, json!({ "attack": 12, "health": 12 }));

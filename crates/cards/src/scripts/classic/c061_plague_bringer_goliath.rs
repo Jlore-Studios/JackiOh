@@ -87,13 +87,6 @@ mod tests {
         serde_json::from_str(&text).expect("the state parses back")
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: the step recorded on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, steps);
-    }
-
     fn lib(n: usize) -> Vec<&'static str> {
         vec![X; n]
     }
@@ -436,8 +429,8 @@ mod tests {
             fn r386_an_upgrade_of_its_tokens_places_four_of_its_draw_draws_2() {
                 crate::register_all();
                 let mut s = ready(false, json!({}));
-                step(&mut s, GOLIATH, "tokens", 1);
-                step(&mut s, GOLIATH, "draw", 1);
+                step_param(s.card_mut(GOLIATH), "tokens", 1);
+                step_param(s.card_mut(GOLIATH), "draw", 1);
                 play_goliath(&mut s);
                 let menace = s.card(MENACE).clone();
 
@@ -473,8 +466,8 @@ mod tests {
             fn r386_a_degrade_of_its_draw_draws_2_of_its_tokens_places_two() {
                 crate::register_all();
                 let mut s = ready(true, json!({}));
-                step(&mut s, GOLIATH, "draw", -1);
-                step(&mut s, GOLIATH, "tokens", -1);
+                step_param(s.card_mut(GOLIATH), "draw", -1);
+                step_param(s.card_mut(GOLIATH), "tokens", -1);
                 play_goliath(&mut s);
                 let menace = s.card(MENACE).clone();
 

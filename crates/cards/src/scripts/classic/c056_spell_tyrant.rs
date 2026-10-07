@@ -108,13 +108,6 @@ mod tests {
         serde_json::from_str(&text).expect("the state parses back")
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: the step recorded on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, steps);
-    }
-
     fn played(s: &Scenario) -> Vec<String> {
         s.events()
             .iter()
@@ -350,12 +343,12 @@ mod tests {
                 crate::register_all();
                 let grave = [STOCKPILE, SPEK, FRIENDS, LUNAR, STOCKPILE];
                 let mut up = scenario(json!({ "p1": { "hand": [TYRANT, FILLER], "graveyard": grave, "library": DECK }, "p2": { "hand": [FILLER] } }));
-                step(&mut up, TYRANT, "spells", 1);
+                step_param(up.card_mut(TYRANT), "spells", 1);
                 up.play(TYRANT, json!({}));
                 assert_eq!(js(&up.state().pending)["max"], 4);
 
                 let mut down = scenario(json!({ "p1": { "hand": [TYRANT, FILLER], "graveyard": grave, "library": DECK }, "p2": { "hand": [FILLER] } }));
-                step(&mut down, TYRANT, "spells", -1);
+                step_param(down.card_mut(TYRANT), "spells", -1);
                 down.play(TYRANT, json!({}));
                 assert_eq!(js(&down.state().pending)["max"], 2);
             }

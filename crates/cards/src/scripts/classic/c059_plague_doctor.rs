@@ -140,13 +140,6 @@ mod tests {
         serde_json::to_value(value).expect("an engine value serialises")
     }
 
-    /// TS `stepParam(card, key, steps)`: the step recorded on the live card, named by id or def id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, steps);
-    }
-
     /// The selection naming one instance, by its id.
     fn at(card: &str) -> Value {
         json!([{ "pick": "instance", "instanceId": card }])
@@ -351,7 +344,7 @@ mod tests {
             fn r386_the_base_face_never_reads_its_tokens_an_upgrade_of_them_changes_nothing() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [DOCTOR, ANCHOR], "field": [{ "def": VANILLA, "counters": { "plague": 1 } }] }, "p2": { "hand": [ANCHOR], "health": 20 } }));
-                step(&mut s, DOCTOR, "tokens", 1);
+                step_param(s.card_mut(DOCTOR), "tokens", 1);
 
                 s.play(DOCTOR, json!({ "targets": enemy_hero() }));
 
@@ -430,8 +423,8 @@ mod tests {
                 let (Some(up), Some(down)) = (doctors.first().cloned(), doctors.get(1).cloned()) else {
                     panic!("two Doctors in hand");
                 };
-                step(&mut s, &up, "tokens", 1);
-                step(&mut s, &down, "tokens", -1);
+                step_param(s.card_mut(&up), "tokens", 1);
+                step_param(s.card_mut(&down), "tokens", -1);
 
                 s.play(&up, json!({ "targets": enemy_hero() }));
                 assert_eq!(s.card(&up).counters.plague, Some(3));

@@ -83,13 +83,6 @@ mod tests {
         jackioh_engine::testkit::scenario(opts)
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: TS stepped the live card; here the card under its id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(live, key, steps);
-    }
-
     /// TS `signed({ radiant?, seed?, contracts?, fillers? })`: `None` is the TS default.
     fn signed(radiant: bool, seed: Option<&str>, contracts: Option<usize>, fillers: Option<usize>) -> Scenario {
         let contract = json!({ "def": CONTRACT, "radiant": radiant });
@@ -302,7 +295,7 @@ mod tests {
         #[test]
         fn r594_r386_an_upgrade_before_the_cast_adds_2_each_turn_the_count_is_read_as_it_resolves_and_carried() {
             let mut s = signed(false, None, None, None);
-            step(&mut s, CONTRACT, "cards", 1);
+            step_param(s.card_mut(CONTRACT), "cards", 1);
             play_all(&mut s);
             next_turn(&mut s);
             assert_eq!(delivered(&s).len(), 2);
@@ -389,8 +382,8 @@ mod tests {
         #[test]
         fn r594_r386_count_and_discount_read_through_param_as_it_resolves() {
             let mut s = signed(true, None, None, None);
-            step(&mut s, CONTRACT, "cards", 1);
-            step(&mut s, CONTRACT, "discount", 1);
+            step_param(s.card_mut(CONTRACT), "cards", 1);
+            step_param(s.card_mut(CONTRACT), "discount", 1);
             play_all(&mut s);
             next_turn(&mut s);
             let cards: Vec<CardInstance> = delivered(&s).iter().map(|event| s.card(&instance_of(event)).clone()).collect();

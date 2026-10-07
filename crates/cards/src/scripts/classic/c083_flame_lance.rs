@@ -113,12 +113,6 @@ mod tests {
         hits_of(s).into_iter().map(|(_, amount)| amount).collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, delta)`: the live card, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, delta: i32) {
-        let id = s.card(card).id.clone();
-        step_param(must(find_instance_mut(s.state_mut(), &id), "the card to tune"), key, delta);
-    }
-
     /// base
     mod base {
         use super::*;
@@ -242,7 +236,7 @@ mod tests {
                 "p1": { "hand": [LANCE, STOCKPILE], "library": spare_library() },
                 "p2": with_spare(json!({ "field": [VANILLA] }))
             }));
-            step(&mut s, LANCE, "damage", 1);
+            step_param(s.card_mut(LANCE), "damage", 1);
             let foe = must(s.unit(P2, 1), "p2's Vanilla");
             lance_at(&mut s, &foe.id);
             assert_eq!(amounts(&s), vec![4, 8]);
@@ -273,7 +267,7 @@ mod tests {
                 "p1": { "hand": [{ "def": LANCE, "radiant": true }, STOCKPILE], "library": spare_library() },
                 "p2": with_spare(json!({ "field": [VANILLA] }))
             }));
-            step(&mut s, LANCE, "damage", -1);
+            step_param(s.card_mut(LANCE), "damage", -1);
             let foe = must(s.unit(P2, 1), "p2's Vanilla");
             lance_at(&mut s, &foe.id);
             assert_eq!(amounts(&s), vec![4, 14]);

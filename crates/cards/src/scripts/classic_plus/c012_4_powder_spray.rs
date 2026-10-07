@@ -60,12 +60,6 @@ mod tests {
         s.stats(s.unit(player, lane).map(|unit| unit.id).unwrap_or_default()).health
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     mod base {
         use super::*;
 
@@ -121,7 +115,7 @@ mod tests {
         fn r386_the_damage_reads_through_param_an_upgrade_deals_4() {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [SPRAY, FILLER] }, "p2": { "hand": [FILLER] } }));
-            step(&mut s, SPRAY, "damage", 1);
+            step_param(s.card_mut(SPRAY), "damage", 1);
             s.play(SPRAY, json!({}));
             s.expect_health(P2, HERO_HEALTH - 4);
         }

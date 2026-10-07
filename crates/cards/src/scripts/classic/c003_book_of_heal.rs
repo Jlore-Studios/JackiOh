@@ -66,13 +66,6 @@ mod tests {
         serde_json::to_value(value).expect("an engine value serialises")
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`, on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, steps);
-    }
-
     /// The unit in that lane, as the play's `targets` (`Selection[]`).
     fn at(s: &Scenario, player: PlayerId, lane: i32) -> Value {
         let Some(unit) = s.unit(player, lane) else {
@@ -181,7 +174,7 @@ mod tests {
             fn r386_an_upgrade_moves_heal_by_its_declared_step_of_2_it_heals_11() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 10 }, "p2": { "hand": [FILLER] } }));
-                step(&mut s, BOOK, "heal", 1);
+                step_param(s.card_mut(BOOK), "heal", 1);
 
                 s.play(BOOK, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
 
@@ -192,7 +185,7 @@ mod tests {
             fn r386_a_degrade_moves_it_the_other_way_by_2_it_heals_7() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 10 }, "p2": { "hand": [FILLER] } }));
-                step(&mut s, BOOK, "heal", -1);
+                step_param(s.card_mut(BOOK), "heal", -1);
 
                 s.play(BOOK, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
 
@@ -243,7 +236,7 @@ mod tests {
                     "p1": { "hand": [{ "def": BOOK, "radiant": true }, FILLER], "health": 10 },
                     "p2": { "hand": [FILLER] },
                 }));
-                step(&mut s, BOOK, "heal", 1);
+                step_param(s.card_mut(BOOK), "heal", 1);
 
                 s.play(BOOK, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
 

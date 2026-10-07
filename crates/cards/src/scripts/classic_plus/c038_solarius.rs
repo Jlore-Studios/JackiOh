@@ -79,13 +79,6 @@ mod tests {
         cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, delta)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, delta: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, delta);
-    }
-
     /// TS `power.memory[subsystems.POWER_KEY] = power` on the live Heroic Power card.
     fn set_power(s: &mut Scenario, id: &str, power: &str) {
         let live = find_instance_mut(s.state_mut(), id).expect("the Heroic Power card");
@@ -279,7 +272,7 @@ mod tests {
         #[test]
         fn r386_no_draw_to_tune_a_draw_tuning_still_draws_nothing() {
             let mut s = scenario(json!({ "p1": { "hand": [SOLARIUS, FILLER], "library": [LUNAR_ECLIPSE, FILLER, FILLER] }, "p2": { "hand": [FILLER] } }));
-            step(&mut s, SOLARIUS, "draw", 1);
+            step_param(s.card_mut(SOLARIUS), "draw", 1);
             s.play(SOLARIUS, json!({}));
             assert_eq!(s.hand(P1).len(), 1);
         }

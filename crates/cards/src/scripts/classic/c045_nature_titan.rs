@@ -109,13 +109,6 @@ mod tests {
         [1, 2, 3, 4, 5].into_iter().map(|lane| s.unit(player, lane).map(|card| card.def_id)).collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: the step written on the card as it stands in the state.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let instance = find_instance_mut(s.state_mut(), &id).expect("the card to step is in the state");
-        step_param(instance, key, steps);
-    }
-
     mod c45_nature_titan {
         use super::*;
 
@@ -325,7 +318,7 @@ mod tests {
                     "p1": { "hand": [TITAN, ANCHOR], "field": [VANILLA], "library": [A, B, C], "health": 20 },
                     "p2": { "hand": [ANCHOR] },
                 }));
-                step(&mut draw_up, TITAN, "draw", 1);
+                step_param(draw_up.card_mut(TITAN), "draw", 1);
                 draw_up.play(TITAN, json!({ "tributes": [VANILLA] }));
                 assert_eq!(hand_defs(&draw_up, P1), vec![ANCHOR, A, B]);
                 draw_up.expect_health(P1, 23);
@@ -334,7 +327,7 @@ mod tests {
                     "p1": { "hand": [TITAN, ANCHOR], "field": [VANILLA], "library": [A, B, C], "health": 20 },
                     "p2": { "hand": [ANCHOR] },
                 }));
-                step(&mut heal_up, TITAN, "heal", 1);
+                step_param(heal_up.card_mut(TITAN), "heal", 1);
                 heal_up.play(TITAN, json!({ "tributes": [VANILLA] }));
                 heal_up.expect_health(P1, 24);
             }
@@ -390,7 +383,7 @@ mod tests {
                     "p1": { "hand": [ANCHOR], "field": [{ "def": TITAN, "radiant": true }], "library": [A, B, C], "health": 20 },
                     "p2": { "hand": [ANCHOR] },
                 }));
-                step(&mut s, TITAN, "heal", 1);
+                step_param(s.card_mut(TITAN), "heal", 1);
 
                 s.attack(TITAN, "hero");
 

@@ -148,12 +148,6 @@ mod tests {
         ids.iter().collect::<IndexSet<_>>().len()
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: on the live instance, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the state"), key, steps);
-    }
-
     mod c_n22_mid_runner {
         use super::*;
 
@@ -369,7 +363,7 @@ mod tests {
                     "p1": { "hand": [RUNNER, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE] },
                 }));
-                step(&mut harder, RUNNER, "threshold", 1);
+                step_param(harder.card_mut(RUNNER), "threshold", 1);
                 harder.play(RUNNER, json!({ "zone": 1 }));
                 assert_eq!(bounced_ids(&harder), Vec::<String>::new());
 
@@ -377,7 +371,7 @@ mod tests {
                     "p1": { "hand": [RUNNER, ANCHOR], "mana": 3 },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE] },
                 }));
-                step(&mut easier, RUNNER, "threshold", -1);
+                step_param(easier.card_mut(RUNNER), "threshold", -1);
                 easier.play(RUNNER, json!({ "zone": 1 }));
                 assert_eq!(bounced_ids(&easier).len(), 2);
             }
@@ -389,7 +383,7 @@ mod tests {
                     "p1": { "hand": [RUNNER, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO, VANILLA] },
                 }));
-                step(&mut s, RUNNER, "bounces", 1);
+                step_param(s.card_mut(RUNNER), "bounces", 1);
 
                 s.play(RUNNER, json!({ "zone": 1 }));
 

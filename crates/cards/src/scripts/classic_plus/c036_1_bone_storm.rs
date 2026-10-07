@@ -87,13 +87,6 @@ mod tests {
         cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, delta)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, delta: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, delta);
-    }
-
     mod base {
         use super::*;
 
@@ -183,7 +176,7 @@ mod tests {
                 "p1": { "hand": [FILLER], "field": [TIMMY], "library": [storm(false), FILLER] },
                 "p2": { "hand": [FILLER], "field": [MENACE], "library": [FILLER, FILLER] },
             }));
-            step(&mut s, BONE_STORM, "damage", 1);
+            step_param(s.card_mut(BONE_STORM), "damage", 1);
             s.end_turn();
             s.end_turn();
             s.expect_health(P2, HERO_HEALTH - 2).expect_stats(MENACE, json!({ "health": 7 }));

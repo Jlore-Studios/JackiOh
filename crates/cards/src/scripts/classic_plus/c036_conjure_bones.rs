@@ -81,13 +81,6 @@ mod tests {
         s
     }
 
-    /// TS `stepParam(s.card(ref), key, delta)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, delta: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, delta);
-    }
-
     mod base {
         use super::*;
 
@@ -169,12 +162,12 @@ mod tests {
         #[test]
         fn r386_count_and_paid_count_read_through_param_steps_2_and_4() {
             let mut up = scenario(json!({ "p1": { "hand": [BONES, FILLER], "library": [FILLER], "mana": 4 }, "p2": { "hand": [FILLER] } }));
-            step(&mut up, BONES, "count", 1);
+            step_param(up.card_mut(BONES), "count", 1);
             up.play(BONES, json!({}));
             assert_eq!(bones_in(&up, P1), 9);
 
             let mut paid = scenario(json!({ "p1": { "hand": [BONES, FILLER], "library": [FILLER], "mana": 4 }, "p2": { "hand": [FILLER] } }));
-            step(&mut paid, BONES, "paidCount", -1);
+            step_param(paid.card_mut(BONES), "paidCount", -1);
             paid.play(BONES, json!({ "embiggen": true }));
             assert_eq!(bones_in(&paid, P1), 13);
         }

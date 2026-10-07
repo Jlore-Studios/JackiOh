@@ -114,13 +114,6 @@ mod tests {
         serde_json::to_value(s.view(seat)).expect("a view is JSON")
     }
 
-    /// TS `stepParam(s.card(ref), key, delta)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, delta: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, delta);
-    }
-
     mod base {
         use super::*;
 
@@ -270,7 +263,7 @@ mod tests {
         #[test]
         fn r386_there_is_no_tunable_growth_an_upgrade_still_stacks_one_token_a_turn() {
             let mut s = on_field(false, &[FILLER, FILLER]);
-            step(&mut s, WORM, "growth", 1);
+            step_param(s.card_mut(WORM), "growth", 1);
             next_own_turn(&mut s);
             assert_eq!(tokens_of(&s, WORM), 1);
             let before = hand_ids(&s);

@@ -119,13 +119,6 @@ mod tests {
         s.events().iter().map(|event| serde_json::to_value(event).expect("an event is JSON")).collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, delta)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, delta: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, delta);
-    }
-
     #[test]
     fn is_a_start_of_turn_script_on_both_faces_its_numbers_the_declared_mana_discards_and_heal() {
         let def = crate::card_def(GIFT);
@@ -269,9 +262,9 @@ mod tests {
         #[test]
         fn r386_its_numbers_read_through_param_an_upgrade_of_each() {
             let mut s = gift(false, json!({}), json!({}));
-            step(&mut s, GIFT, "mana", 1);
-            step(&mut s, GIFT, "discards", 1);
-            step(&mut s, GIFT, "heal", 1);
+            step_param(s.card_mut(GIFT), "mana", 1);
+            step_param(s.card_mut(GIFT), "discards", 1);
+            step_param(s.card_mut(GIFT), "heal", 1);
             s.end_turn();
             s.expect_mana(P1, MAX_MANA + 2);
             assert!(s.state().pending.is_none());
@@ -310,7 +303,7 @@ mod tests {
         #[test]
         fn r386_a_degrade_steps_the_radiant_heal_from_10_to_9() {
             let mut s = gift(true, json!({}), json!({ "hand": [], "library": [FILLER] }));
-            step(&mut s, GIFT, "heal", -1);
+            step_param(s.card_mut(GIFT), "heal", -1);
             s.end_turn();
             s.expect_health(P1, HERO_HEALTH + 9);
         }

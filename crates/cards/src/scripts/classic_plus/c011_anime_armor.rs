@@ -95,12 +95,6 @@ mod tests {
         }))
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     #[test]
     fn is_a_2_4_4_unit_radiant_8_8_with_reborn_declaring_cap_1_better_down_never_below_1_one_script_runs_both_faces() {
         crate::register_all();
@@ -187,7 +181,7 @@ mod tests {
                 "p1": { "hand": [HIT_JOB, FILLER], "field": [ANIME], "health": 20, "mana": 8 },
                 "p2": { "hand": [FILLER], "field": [{ "def": SNAKE, "counters": { "plague": 6 } }] },
             }));
-            step(&mut s, SNAKE, "damage", 1);
+            step_param(s.card_mut(SNAKE), "damage", 1);
 
             let snake = s.card(SNAKE).id.clone();
             s.play(HIT_JOB, json!({ "targets": at(&snake) }));
@@ -206,7 +200,7 @@ mod tests {
             assert_eq!(hero_hits(&s, P1), vec![1]);
 
             let mut loose = under_fire(json!({ "backrow": [ANTI_ONESHOT] }), json!({ "field": [MENACE] }), false);
-            step(&mut loose, ANIME, "cap", 6); // Degraded six times: cap 7, so Anti-oneshot's 5 is lower
+            step_param(loose.card_mut(ANIME), "cap", 6); // Degraded six times: cap 7, so Anti-oneshot's 5 is lower
             loose.attack(MENACE, "hero");
             assert_eq!(hero_hits(&loose, P1), vec![5]);
 
@@ -215,7 +209,7 @@ mod tests {
                 json!({ "field": [MENACE] }),
                 false,
             );
-            step(&mut tight, ANIME, "cap", 6);
+            step_param(tight.card_mut(ANIME), "cap", 6);
             tight.attack(MENACE, "hero");
             assert_eq!(hero_hits(&tight, P1), vec![3]);
         }
@@ -291,12 +285,12 @@ mod tests {
         fn r386_the_cap_reads_through_param_a_degrade_lets_2_through_and_an_upgrade_never_takes_it_below_1() {
             crate::register_all();
             let mut degraded = under_fire(json!({}), json!({ "hand": [LUNAR, FILLER] }), false);
-            step(&mut degraded, ANIME, "cap", 1);
+            step_param(degraded.card_mut(ANIME), "cap", 1);
             degraded.play(LUNAR, json!({ "targets": hero_p1() }));
             assert_eq!(hero_hits(&degraded, P1), vec![2]);
 
             let mut upgraded = under_fire(json!({}), json!({ "hand": [LUNAR, FILLER] }), false);
-            step(&mut upgraded, ANIME, "cap", -1);
+            step_param(upgraded.card_mut(ANIME), "cap", -1);
             upgraded.play(LUNAR, json!({ "targets": hero_p1() }));
             assert_eq!(hero_hits(&upgraded, P1), vec![1]);
         }

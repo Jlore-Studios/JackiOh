@@ -169,26 +169,6 @@ mod tests {
         s.unit(seat, lane).map(|card| card.def_id)
     }
 
-    /// `_glow.ts`'s `glows` (a private copy, fullsend rule 5): `true` when the view carries the key
-    /// (which must then be exactly `true`), `false` when absent.
-    fn glows(card: Option<&Value>) -> bool {
-        let card = card.filter(|card| !card.is_null()).expect("no card at that place in the view");
-        match card.get("conditionActive") {
-            None => false,
-            Some(value) => {
-                assert_eq!(value, &json!(true));
-                true
-            }
-        }
-    }
-
-    /// `_glow.ts`'s `backrowGlows(s, lane)`: does the card in this backrow lane (1-based) glow in its
-    /// controller's own view right now? The viewer is p1, as TS defaulted it.
-    fn backrow_glows(s: &Scenario, lane: usize) -> bool {
-        let view = serde_json::to_value(s.view("p1")).expect("a view is JSON");
-        glows(view["you"]["backrow"].get(lane - 1))
-    }
-
     mod base {
         use super::*;
 
@@ -463,14 +443,14 @@ mod tests {
                 "seed": format!("r662-041-{face}-mine"),
                 "p1": { "backrow": [{ "def": "core-041", "radiant": radiant }], "hand": ["core-010"] },
             }));
-            assert!(!backrow_glows(&mine, 1));
+            assert!(!backrow_glows(&mine, 1, PlayerId::P1));
             let mut theirs = scn(json!({
                 "seed": format!("r662-041-{face}-theirs"),
                 "active": "p2",
                 "p1": { "backrow": [{ "def": "core-041", "radiant": radiant }] },
                 "p2": { "hand": ["core-008", "core-010"] },
             }));
-            assert!(!backrow_glows(&theirs, 1));
+            assert!(!backrow_glows(&theirs, 1, PlayerId::P1));
 
             // And it still fires on the Unit: the missing glow hides nothing the trap would do.
             theirs.play("core-008", json!({}));

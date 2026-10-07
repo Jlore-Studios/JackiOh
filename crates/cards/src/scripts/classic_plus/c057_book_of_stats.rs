@@ -49,13 +49,6 @@ mod tests {
         jackioh_engine::testkit::scenario(opts)
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: TS stepped the live card; here the card under its id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(live, key, steps);
-    }
-
     /// TS `s.unit(p, lane) ?? ""`: the unit's instance id, or "" (which no card answers to).
     fn unit_id(s: &Scenario, player: PlayerId, lane: i32) -> String {
         s.unit(player, lane).map(|card| card.id).unwrap_or_default()
@@ -172,14 +165,14 @@ mod tests {
         #[test]
         fn r386_an_upgrade_gives_6_6_a_degrade_4_4() {
             let mut up = stats(false);
-            step(&mut up, BOOK, "buff", 1);
+            step_param(up.card_mut(BOOK), "buff", 1);
             let targets = at(&up, PlayerId::P1);
             up.play(BOOK, json!({ "targets": targets }));
             let unit = unit_id(&up, PlayerId::P1, 1);
             up.expect_stats(&unit, json!({ "attack": 10, "health": 10 }));
 
             let mut down = stats(false);
-            step(&mut down, BOOK, "buff", -1);
+            step_param(down.card_mut(BOOK), "buff", -1);
             let targets = at(&down, PlayerId::P1);
             down.play(BOOK, json!({ "targets": targets }));
             let unit = unit_id(&down, PlayerId::P1, 1);
@@ -202,7 +195,7 @@ mod tests {
         #[test]
         fn r386_the_radiant_buff_steps_by_its_declared_step_an_upgrade_gives_11_11() {
             let mut s = stats(true);
-            step(&mut s, BOOK, "buff", 1);
+            step_param(s.card_mut(BOOK), "buff", 1);
             let targets = at(&s, PlayerId::P1);
             s.play(BOOK, json!({ "targets": targets }));
             let unit = unit_id(&s, PlayerId::P1, 1);

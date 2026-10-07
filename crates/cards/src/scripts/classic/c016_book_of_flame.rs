@@ -76,15 +76,6 @@ mod tests {
             .collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        match find_instance_mut(s.state_mut(), &id) {
-            Some(live) => step_param(live, key, steps),
-            None => panic!("no card {card} to tune"),
-        }
-    }
-
     fn refs_of(id: &str) -> Vec<String> {
         crate::CATALOG.get(id).and_then(|card| card.refs.clone()).unwrap_or_default()
     }
@@ -172,12 +163,12 @@ mod tests {
         #[test]
         fn r386_an_upgrade_makes_it_deal_5_a_degrade_3() {
             let mut up = scenario(json!({ "p1": { "hand": [BOOK, FILLER] }, "p2": { "hand": [FILLER] } }));
-            step(&mut up, BOOK, "damage", 1);
+            step_param(up.card_mut(BOOK), "damage", 1);
             up.play(BOOK, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
             up.expect_health(P2, 25);
 
             let mut down = scenario(json!({ "p1": { "hand": [BOOK, FILLER] }, "p2": { "hand": [FILLER] } }));
-            step(&mut down, BOOK, "damage", -1);
+            step_param(down.card_mut(BOOK), "damage", -1);
             down.play(BOOK, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
             down.expect_health(P2, 27);
         }
@@ -212,7 +203,7 @@ mod tests {
         #[test]
         fn r386_an_upgrade_steps_the_radiant_8_to_9() {
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": BOOK, "radiant": true }, FILLER] }, "p2": { "hand": [FILLER] } }));
-            step(&mut s, BOOK, "damage", 1);
+            step_param(s.card_mut(BOOK), "damage", 1);
 
             s.play(BOOK, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
 

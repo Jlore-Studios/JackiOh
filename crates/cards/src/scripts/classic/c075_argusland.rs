@@ -77,11 +77,6 @@ mod tests {
         serde_json::to_value(value).expect("serialises")
     }
 
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     fn hero_hits(s: &Scenario, player: PlayerId) -> Vec<i32> {
         let hero = format!("hero-{player}");
         s.events()
@@ -301,7 +296,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [POINTMASTER] },
                 "active": "p2",
             }));
-            step(&mut up, ARGUSLAND, "divisor", 1);
+            step_param(up.card_mut(ARGUSLAND), "divisor", 1);
             up.attack(POINTMASTER, "hero");
             assert_eq!(hero_hits(&up, P1), vec![3]);
 
@@ -310,7 +305,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [POINTMASTER] },
                 "active": "p2",
             }));
-            step(&mut down, ARGUSLAND, "divisor", -1);
+            step_param(down.card_mut(ARGUSLAND), "divisor", -1);
             down.attack(POINTMASTER, "hero");
             assert_eq!(hero_hits(&down, P1), vec![4]);
         }
@@ -379,7 +374,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [POINTMASTER] },
                 "active": "p2",
             }));
-            step(&mut s, ARGUSLAND, "divisor", -1);
+            step_param(s.card_mut(ARGUSLAND), "divisor", -1);
             s.attack(POINTMASTER, "hero");
             assert_eq!(hero_hits(&s, P1), vec![3]);
         }

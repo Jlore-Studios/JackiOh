@@ -157,13 +157,6 @@ mod tests {
         }
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`, on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, steps);
-    }
-
     fn hits_on(s: &Scenario, player: PlayerId) -> Vec<i32> {
         let hero = format!("hero-{}", player.as_str());
         s.events()
@@ -316,7 +309,7 @@ mod tests {
             fn r386_an_upgrade_of_damage_per_card_deals_2_for_each() {
                 crate::register_all();
                 let mut s = curse(false, CurseOpts::default());
-                step(&mut s, CURSE, "damage", 1);
+                step_param(s.card_mut(CURSE), "damage", 1);
                 s.play(CURSE, json!({}));
                 assert_eq!(hits_on(&s, P2), vec![6]);
             }
@@ -325,7 +318,7 @@ mod tests {
             fn r386_an_upgrade_of_draw_draws_2() {
                 crate::register_all();
                 let mut s = curse(false, CurseOpts::default());
-                step(&mut s, CURSE, "draw", 1);
+                step_param(s.card_mut(CURSE), "draw", 1);
                 s.play(CURSE, json!({}));
                 assert_eq!(hand_defs(&s, P1), vec![STOCKPILE, VANILLA, MENACE]);
             }
@@ -501,7 +494,7 @@ mod tests {
             fn r386_an_upgrade_of_damage_per_card_deals_2_for_each_and_the_recruit_still_happens() {
                 crate::register_all();
                 let mut s = curse(true, CurseOpts { their_exile: Some(vec![VANILLA, STOCKPILE]), ..CurseOpts::default() });
-                step(&mut s, CURSE, "damage", 1);
+                step_param(s.card_mut(CURSE), "damage", 1);
                 s.play(CURSE, json!({}));
                 assert_eq!(hits_on(&s, P2), vec![4, 4]);
             }

@@ -200,12 +200,6 @@ mod tests {
         must(s.state().pending.as_ref(), what).options.iter().map(|option| option.key.clone()).collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, delta)`: the live card, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, delta: i32) {
-        let id = s.card(card).id.clone();
-        step_param(must(find_instance_mut(s.state_mut(), &id), "the card to tune"), key, delta);
-    }
-
     /// R402 is a Field Spell with one Activate ♾️ ability, its target a tokened permanent, and two numbers
     #[test]
     fn r402_is_a_field_spell_with_one_activate_ability_its_target_a_tokened_permanent_and_two_numbers() {
@@ -506,8 +500,8 @@ mod tests {
                 },
                 "p2": { "hand": [FILLER], "health": 30 }
             }));
-            step(&mut s, MUTATE, "draw", 1);
-            step(&mut s, MUTATE, "attacks", 1);
+            step_param(s.card_mut(MUTATE), "draw", 1);
+            step_param(s.card_mut(MUTATE), "attacks", 1);
 
             let mutate = s.card(MUTATE).clone();
             s.activate(MUTATE, json!({ "targets": at(&mutate) }));
@@ -762,8 +756,8 @@ mod tests {
                 },
                 "p2": { "hand": [FILLER], "health": 30 }
             }));
-            step(&mut s, MUTATE, "draw", -1);
-            step(&mut s, MUTATE, "attacks", -1);
+            step_param(s.card_mut(MUTATE), "draw", -1);
+            step_param(s.card_mut(MUTATE), "attacks", -1);
 
             let mutate = s.card(MUTATE).clone();
             s.activate(MUTATE, json!({ "targets": at(&mutate) }));

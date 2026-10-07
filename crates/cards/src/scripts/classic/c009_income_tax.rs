@@ -198,12 +198,6 @@ mod tests {
         s.backrow(player, lane).map(|card| card.def_id)
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(must(find_instance_mut(s.state_mut(), &id), "card to tune"), key, steps);
-    }
-
     fn answer_with(s: &mut Scenario, card: &str) {
         let id = s.card(card).id.clone();
         s.answer(json!(id));
@@ -576,12 +570,12 @@ mod tests {
         #[test]
         fn r386_a_degrade_of_the_trigger_draw_makes_it_the_3rd_draw() {
             let mut s = tax_board(json!({ "p1Library": [FELINORS, SEVEN, TIMMY, VANILLA] }));
-            step(&mut s, TAX, "draws", 1);
+            step_param(s.card_mut(TAX), "draws", 1);
             s.start_turn(); // 1
             s.play(STOCKPILE, json!({})); // 2, 3
             assert!(fired(&s));
             let mut t = tax_board(json!({ "p1Library": [FELINORS, SEVEN] }));
-            step(&mut t, TAX, "draws", 1);
+            step_param(t.card_mut(TAX), "draws", 1);
             t.play(STOCKPILE, json!({})); // 1, 2
             assert!(!fired(&t));
         }
@@ -589,7 +583,7 @@ mod tests {
         #[test]
         fn r386_never_below_2_an_upgrade_of_the_trigger_draw_leaves_it_at_the_2nd() {
             let mut s = tax_board(json!({}));
-            step(&mut s, TAX, "draws", -1);
+            step_param(s.card_mut(TAX), "draws", -1);
             s.start_turn(); // 1 — not yet
             assert!(!fired(&s));
         }
@@ -629,7 +623,7 @@ mod tests {
         #[test]
         fn r386_an_upgrade_of_the_discount_makes_them_cost_2_less() {
             let mut s = tax_board(json!({ "radiantFace": true }));
-            step(&mut s, TAX, "discount", 1);
+            step_param(s.card_mut(TAX), "discount", 1);
             s.play(STOCKPILE, json!({}));
             let seven = must(s.hand(P1).into_iter().find(|card| card.def_id == SEVEN), "7/7");
             answer_with(&mut s, MENACE);

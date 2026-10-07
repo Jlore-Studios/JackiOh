@@ -124,12 +124,6 @@ mod tests {
             .collect()
     }
 
-    /// TS wrote through the live instance `s.card(ref)` handed back.
-    fn card_mut<'a>(s: &'a mut Scenario, card: &str) -> &'a mut CardInstance {
-        let id = s.card(card).id.clone();
-        find_instance_mut(s.state_mut(), &id).expect("the card is in no zone")
-    }
-
     mod c_n25_soul_shot {
         use super::*;
 
@@ -321,7 +315,7 @@ mod tests {
             #[test]
             fn r386_lucky_is_tuned_like_any_numbered_keyword_lucky_2_makes_three_picks() {
                 let mut s = shot(json!({ "field": [{ "def": SMALL, "lane": 1 }, { "def": BIG, "lane": 2 }] }), true, "soul-shot");
-                let tuning = tuning_of(card_mut(&mut s, SHOT));
+                let tuning = tuning_of(s.card_mut(SHOT));
                 tuning.x = Some(add_step(tuning.x.as_ref(), "Lucky", 1));
                 let cursor = s.state().rng_cursor;
                 s.play(SHOT, json!({}));

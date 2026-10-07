@@ -119,12 +119,6 @@ mod tests {
         out
     }
 
-    /// TS's live `s.card(ref)`, written through: the card under that id in the state.
-    fn card_mut<'a>(s: &'a mut Scenario, card: &str) -> &'a mut CardInstance {
-        let id = s.card(card).id.clone();
-        find_instance_mut(s.state_mut(), &id).expect("the card is in the state")
-    }
-
     /// p1 sets the trap (lane 2) on turn 9 and ends its turn; p2's turn 10 begins, p2 with mana to spare.
     fn set_then_their_turn(radiant_face: bool, p1: Value, p2: Value, tune: impl FnOnce(&mut Scenario)) -> Scenario {
         crate::register_all();
@@ -502,15 +496,15 @@ mod tests {
             #[test]
             fn r386_every_n_reads_through_param_never_below_2_a_degrade_makes_it_3_and_brittle_gained_moves_with_it() {
                 let mut floor = set_then_their_turn(false, json!({}), json!({}), |s| {
-                    step_param(card_mut(s, FORWARD), "plays", -1);
+                    step_param(s.card_mut(FORWARD), "plays", -1);
                 });
                 floor.play(RAPID, json!({})).play(STOCKPILE, json!({}));
                 assert_eq!(fused_events(&floor), 1);
 
                 let mut slow =
                     set_then_their_turn(false, json!({}), json!({ "hand": [RAPID, RAPID, RAPID, VANILLA] }), |s| {
-                        step_param(card_mut(s, FORWARD), "plays", 1);
-                        step_param(card_mut(s, FORWARD), "brittleGain", 1);
+                        step_param(s.card_mut(FORWARD), "plays", 1);
+                        step_param(s.card_mut(FORWARD), "brittleGain", 1);
                     });
                 slow.play(RAPID, json!({})).play(RAPID, json!({}));
                 assert_eq!(fused_events(&slow), 0);
@@ -523,7 +517,7 @@ mod tests {
             fn r687_r386_its_brittle_is_its_numbered_keyword_an_upgrades_x_change_starts_it_at_3_on_its_first_fuse_plus_1_gained()
              {
                 let mut s = set_then_their_turn(false, json!({}), json!({}), |s0| {
-                    let card = card_mut(s0, FORWARD);
+                    let card = s0.card_mut(FORWARD);
                     let mut tuning = card.tuning.clone().unwrap_or_default();
                     let mut x = tuning.x.clone().unwrap_or_default();
                     x.insert("Brittle".to_string(), 1);

@@ -62,11 +62,6 @@ mod tests {
         serde_json::to_value(value).expect("serialises")
     }
 
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     fn tokens(s: &Scenario) -> Vec<CardInstance> {
         (1..=5)
             .filter_map(|lane| s.unit(P1, lane))
@@ -148,12 +143,12 @@ mod tests {
         #[test]
         fn r386_the_keyword_count_reads_through_param_an_upgrade_gives_one_more_a_degrade_one_fewer() {
             let mut up = scenario(json!({ "p1": { "hand": [CARD, FILLER] }, "p2": { "hand": [FILLER] } }));
-            step(&mut up, CARD, "keywords", 1);
+            step_param(up.card_mut(CARD), "keywords", 1);
             up.play(CARD, json!({}));
             assert_eq!(gained(&up, &first_token(&up)).len(), KEYWORDS + 1);
 
             let mut down = scenario(json!({ "p1": { "hand": [CARD, FILLER] }, "p2": { "hand": [FILLER] } }));
-            step(&mut down, CARD, "keywords", -1);
+            step_param(down.card_mut(CARD), "keywords", -1);
             down.play(CARD, json!({}));
             assert_eq!(gained(&down, &first_token(&down)).len(), KEYWORDS - 1);
         }

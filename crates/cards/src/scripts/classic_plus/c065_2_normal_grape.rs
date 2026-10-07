@@ -95,13 +95,6 @@ mod tests {
         events.iter().any(|event| event.event_type().as_str() == kind)
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: the live card in the state, tuned in place.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let instance = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(instance, key, steps);
-    }
-
     fn zone_of(s: &Scenario, card: &str) -> ZoneName {
         s.card(card).zone.z()
     }
@@ -258,15 +251,15 @@ mod tests {
         fn r386_an_upgrade_makes_it_3_and_2_draws_a_degrade_never_takes_either_below_1() {
             crate::register_all();
             let mut up = scenario(json!({ "p1": { "hand": [GRAPE, FILLER], "library": [DECK_A, DECK_B] }, "p2": { "hand": [FILLER] } }));
-            step(&mut up, GRAPE, "amount", 1);
-            step(&mut up, GRAPE, "draw", 1);
+            step_param(up.card_mut(GRAPE), "amount", 1);
+            step_param(up.card_mut(GRAPE), "draw", 1);
             up.play(GRAPE, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
             up.expect_health(P2, 27);
             assert_eq!([up.card(DECK_A).cost_mod, up.card(DECK_B).cost_mod], [-1, -1]);
 
             let mut down = scenario(json!({ "p1": { "hand": [GRAPE, FILLER], "library": [DECK_A, DECK_B] }, "p2": { "hand": [FILLER] } }));
-            step(&mut down, GRAPE, "amount", -3);
-            step(&mut down, GRAPE, "draw", -3);
+            step_param(down.card_mut(GRAPE), "amount", -3);
+            step_param(down.card_mut(GRAPE), "draw", -3);
             down.play(GRAPE, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
             down.expect_health(P2, 29);
             assert_eq!(zone_of(&down, DECK_A), ZoneName::Hand);

@@ -139,13 +139,6 @@ mod tests {
         serde_json::to_value(value).expect("an engine value serialises")
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: TS's `card()` handed back the live instance, so the
-    /// step is written on the state's own copy, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     /// TS `plagued(defId, n, extra = {})`: `{ def, counters: { plague: n }, ...extra }`.
     fn plagued_with(def_id: &str, n: i32, extra: Value) -> Value {
         let mut entry = json!({ "def": def_id, "counters": { "plague": n } });
@@ -289,7 +282,7 @@ mod tests {
             fn r386_an_upgrade_gives_2_mana_per_token() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [NUKE, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": [plagued(VANILLA, 2)] } }));
-                step(&mut s, NUKE, "mana", 1);
+                step_param(s.card_mut(NUKE), "mana", 1);
 
                 s.play(NUKE, json!({}));
 

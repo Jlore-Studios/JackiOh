@@ -169,12 +169,6 @@ mod tests {
         if entry.is_string() { json!({ "def": entry }) } else { entry.clone() }
     }
 
-    /// TS `stepParam(card, key, steps)` on a live card: the step written on the card under `id`.
-    fn step_id(s: &mut Scenario, id: &str, key: &str, steps: i32) {
-        let instance = find_instance_mut(s.state_mut(), id).expect("the card to step is in the state");
-        step_param(instance, key, steps);
-    }
-
     mod c52_final_gambit {
         use super::*;
 
@@ -518,8 +512,8 @@ mod tests {
                     "active": "p2",
                 }));
                 let gambit = s.card(GAMBIT).id.clone();
-                step_id(&mut s, &gambit, "heal", 1);
-                step_id(&mut s, &gambit, "draw", 1);
+                step_param(s.card_mut(&gambit), "heal", 1);
+                step_param(s.card_mut(&gambit), "draw", 1);
                 s.attack(VANILLA, "hero");
                 s.expect_health(PlayerId::P1, 16);
                 assert_eq!(s.hand(PlayerId::P1).len(), 5);
@@ -534,8 +528,8 @@ mod tests {
                     "active": "p2",
                 }));
                 let gambit = s.card(GAMBIT).id.clone();
-                step_id(&mut s, &gambit, "heal", -1);
-                step_id(&mut s, &gambit, "draw", -1);
+                step_param(s.card_mut(&gambit), "heal", -1);
+                step_param(s.card_mut(&gambit), "draw", -1);
                 s.attack(VANILLA, "hero");
                 s.expect_health(PlayerId::P1, 12);
                 assert_eq!(s.hand(PlayerId::P1).len(), 3);
@@ -640,7 +634,7 @@ mod tests {
                     "active": "p2",
                 }));
                 let gambit = s.card(GAMBIT).id.clone();
-                step_id(&mut s, &gambit, "heal", -1);
+                step_param(s.card_mut(&gambit), "heal", -1);
                 s.attack(VANILLA, "hero");
                 s.expect_health(PlayerId::P1, 22);
             }

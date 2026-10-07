@@ -61,13 +61,6 @@ mod tests {
         jackioh_engine::testkit::scenario(opts)
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: TS stepped the live card; here the card under its id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(live, key, steps);
-    }
-
     fn hand_cost(s: &Scenario, player: PlayerId) -> i32 {
         let card = s
             .hand(player)
@@ -193,7 +186,7 @@ mod tests {
         #[test]
         fn s2_3_the_cost_floors_at_0() {
             let mut s = with_fruit(false, Some(2));
-            step(&mut s, MULCH, "discount", 5);
+            step_param(s.card_mut(MULCH), "discount", 5);
             play_fig(&mut s);
             assert_eq!(hand_cost(&s, PlayerId::P1), 4);
             play_fig(&mut s);
@@ -203,11 +196,11 @@ mod tests {
         #[test]
         fn r386_the_discount_reads_through_param_an_upgrade_makes_each_fruit_2_off_a_degrade_never_takes_it_below_1() {
             let mut up = with_fruit(false, Some(1));
-            step(&mut up, MULCH, "discount", 1);
+            step_param(up.card_mut(MULCH), "discount", 1);
             play_fig(&mut up);
             assert_eq!(hand_cost(&up, PlayerId::P1), 8);
             let mut down = with_fruit(false, Some(1));
-            step(&mut down, MULCH, "discount", -1);
+            step_param(down.card_mut(MULCH), "discount", -1);
             play_fig(&mut down);
             assert_eq!(hand_cost(&down, PlayerId::P1), 9);
         }

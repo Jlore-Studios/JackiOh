@@ -62,13 +62,6 @@ mod tests {
         jackioh_engine::testkit::scenario(opts)
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: TS stepped the live card; here the card under its id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(live, key, steps);
-    }
-
     /// The Apples that reached a hand in the last step (a draw reports `addedToHand` too), as
     /// `(instanceId, defId)`.
     fn added(s: &Scenario, player: PlayerId) -> Vec<(String, String)> {
@@ -215,7 +208,7 @@ mod tests {
         #[test]
         fn r386_an_upgrade_makes_the_activation_add_2_apples() {
             let mut s = in_hand(false, None, json!([]));
-            step(&mut s, ORDERS, "apples", 1);
+            step_param(s.card_mut(ORDERS), "apples", 1);
             s.play(ORDERS, json!({}));
             s.activate(ORDERS, json!({}));
             assert_eq!(added(&s, PlayerId::P1).len(), 2);

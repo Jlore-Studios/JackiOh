@@ -78,13 +78,6 @@ mod tests {
         jackioh_engine::testkit::scenario(opts)
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: TS stepped the live card; here the card under its id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(live, key, steps);
-    }
-
     /// TS `book({ radiant?, field?, seed? })`.
     fn book(radiant: bool, field: Value, seed: Option<&str>) -> Scenario {
         let mut opts = json!({
@@ -179,7 +172,7 @@ mod tests {
         #[test]
         fn r386_the_count_is_no_declared_number_a_tokens_tuning_moves_nothing_the_roll_stays_1_2() {
             let mut s = book(false, json!([]), Some("book-of-tokens-tune"));
-            step(&mut s, BOOK, "tokens", 2);
+            step_param(s.card_mut(BOOK), "tokens", 2);
             s.play(BOOK, json!({}));
             assert!(tokens(&s).len() >= 1);
             assert!(tokens(&s).len() <= 2);
@@ -234,7 +227,7 @@ mod tests {
         #[test]
         fn r386_the_radiant_roll_is_untunable_the_same_way() {
             let mut s = book(true, json!([]), Some("book-of-tokens-radiant-tune"));
-            step(&mut s, BOOK, "tokens", 2);
+            step_param(s.card_mut(BOOK), "tokens", 2);
             s.play(BOOK, json!({}));
             assert!(tokens(&s).len() >= 1);
             assert!(tokens(&s).len() <= 2);

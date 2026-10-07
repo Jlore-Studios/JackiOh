@@ -235,13 +235,6 @@ mod tests {
             .is_some_and(|card| card["conditionActive"] == true)
     }
 
-    /// TS `stepParam(s.card(ref), key, delta)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, delta: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, delta);
-    }
-
     /// TS `Array.prototype.indexOf`: the first position, or -1.
     fn index_of(list: &[String], item: &str) -> i64 {
         list.iter().position(|entry| entry == item).map_or(-1, |at| at as i64)
@@ -479,7 +472,7 @@ mod tests {
                 "p1": { "hand": [WARDRUM, REPLENISH, REPLENISH, REPLENISH], "library": LIBRARY },
                 "p2": { "hand": [FILLER] },
             }));
-            step(&mut s, WARDRUM, "threshold", -1);
+            step_param(s.card_mut(WARDRUM), "threshold", -1);
             assert!(!glows(&s));
             play_from_hand(&mut s, REPLENISH, json!({}));
             assert!(glows(&s));
@@ -487,7 +480,7 @@ mod tests {
             assert_eq!(wardrum_in(&s), ZoneName::Field);
 
             let mut floor = scenario(json!({ "p1": { "hand": [WARDRUM, REPLENISH, REPLENISH], "library": LIBRARY }, "p2": { "hand": [FILLER] } }));
-            step(&mut floor, WARDRUM, "threshold", -5);
+            step_param(floor.card_mut(WARDRUM), "threshold", -5);
             play_from_hand(&mut floor, REPLENISH, json!({}));
             assert_eq!(wardrum_in(&floor), ZoneName::Hand);
             play_from_hand(&mut floor, REPLENISH, json!({}));

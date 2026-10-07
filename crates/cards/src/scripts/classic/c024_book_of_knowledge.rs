@@ -66,12 +66,6 @@ mod tests {
         s.events().iter().filter(|event| event.event_type() == kind).count()
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: on the live instance, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the state"), key, steps);
-    }
-
     mod c_n24_book_of_knowledge {
         use super::*;
 
@@ -192,12 +186,12 @@ mod tests {
             fn r386_an_upgrade_makes_it_draw_4_a_degrade_2() {
                 crate::register_all();
                 let mut up = scenario(json!({ "p1": { "hand": [BOOK], "library": [A, B, C, D, E] }, "p2": { "hand": [FILLER] } }));
-                step(&mut up, BOOK, "draw", 1);
+                step_param(up.card_mut(BOOK), "draw", 1);
                 up.play(BOOK, json!({}));
                 assert_eq!(hand_defs(&up, P1), vec![A, B, C, D]);
 
                 let mut down = scenario(json!({ "p1": { "hand": [BOOK], "library": [A, B, C, D, E] }, "p2": { "hand": [FILLER] } }));
-                step(&mut down, BOOK, "draw", -1);
+                step_param(down.card_mut(BOOK), "draw", -1);
                 down.play(BOOK, json!({}));
                 assert_eq!(hand_defs(&down, P1), vec![A, B]);
             }
@@ -241,7 +235,7 @@ mod tests {
                     "p1": { "hand": [{ "def": BOOK, "radiant": true }], "library": [A, B, C, D, E, F, G] },
                     "p2": { "hand": [FILLER] },
                 }));
-                step(&mut s, BOOK, "draw", 1);
+                step_param(s.card_mut(BOOK), "draw", 1);
 
                 s.play(BOOK, json!({}));
 

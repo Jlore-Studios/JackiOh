@@ -110,12 +110,6 @@ mod tests {
         expected.iter().all(|wanted| actual.iter().any(|have| have == wanted))
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: on the live instance, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the state"), key, steps);
-    }
-
     mod c_n26_rapid_draw {
         use super::*;
 
@@ -272,14 +266,14 @@ mod tests {
             fn r386_an_upgrade_draws_5_a_degrade_of_discard_takes_5_an_upgrade_of_it_3() {
                 crate::register_all();
                 let mut draw_up = scenario(json!({ "p1": { "hand": [RAPID], "library": [A, B, C, D, E, F] }, "p2": { "hand": [FILLER] } }));
-                step(&mut draw_up, RAPID, "draw", 1);
+                step_param(draw_up.card_mut(RAPID), "draw", 1);
                 draw_up.play(RAPID, json!({}));
                 assert!(draw_up.state().pending.is_none());
                 assert_eq!(draw_up.hand(P1).len(), 1);
                 assert_eq!(discarded_defs(&draw_up).len(), 4);
 
                 let mut discard_up = scenario(json!({ "p1": { "hand": [RAPID], "library": [A, B, C, D, E] }, "p2": { "hand": [FILLER] } }));
-                step(&mut discard_up, RAPID, "discard", -1);
+                step_param(discard_up.card_mut(RAPID), "discard", -1);
                 discard_up.play(RAPID, json!({}));
                 assert_eq!(discarded_defs(&discard_up).len(), 3);
 
@@ -287,7 +281,7 @@ mod tests {
                     "p1": { "hand": [RAPID, FILLER, FILLER], "library": [A, B, C, D, E] },
                     "p2": { "hand": [FILLER] },
                 }));
-                step(&mut discard_down, RAPID, "discard", 1);
+                step_param(discard_down.card_mut(RAPID), "discard", 1);
                 discard_down.play(RAPID, json!({}));
                 assert_eq!(discarded_defs(&discard_down).len(), 5);
             }

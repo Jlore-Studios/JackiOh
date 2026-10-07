@@ -107,12 +107,6 @@ mod tests {
         s.pile(player, "library").into_iter().map(|card| card.def_id).collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, delta)`: the live card, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, delta: i32) {
-        let id = s.card(card).id.clone();
-        step_param(must(find_instance_mut(s.state_mut(), &id), "the card to tune"), key, delta);
-    }
-
     /// base
     mod base {
         use super::*;
@@ -256,7 +250,7 @@ mod tests {
                 "p1": { "hand": [{ "def": KING, "radiant": true }, STOCKPILE], "library": [TIMMY] },
                 "p2": p2_with(json!([MENACE, VANILLA, TIMMY]))
             }));
-            step(&mut s, KING, "recruits", 1);
+            step_param(s.card_mut(KING), "recruits", 1);
             s.play(KING, json!({}));
             assert_eq!(
                 [s.unit(P1, 2).map(|card| card.def_id), s.unit(P1, 3).map(|card| card.def_id)],

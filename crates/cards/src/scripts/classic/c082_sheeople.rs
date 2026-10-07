@@ -148,12 +148,6 @@ mod tests {
         s.card(&id).clone()
     }
 
-    /// TS `stepParam(s.card(ref), key, delta)`: the live card, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, delta: i32) {
-        let id = s.card(card).id.clone();
-        step_param(must(find_instance_mut(s.state_mut(), &id), "the card to tune"), key, delta);
-    }
-
     fn at(card: &CardInstance) -> Value {
         json!([{ "pick": "instance", "instanceId": card.id }])
     }
@@ -345,7 +339,7 @@ mod tests {
         #[test]
         fn r386_an_upgrade_of_its_draw_draws_3() {
             let mut s = scenario(json!({ "p1": { "hand": [ROCK, ANCHOR], "field": [SHEEOPLE], "library": lib(4) }, "p2": { "hand": [ANCHOR] } }));
-            step(&mut s, SHEEOPLE, "draw", 1);
+            step_param(s.card_mut(SHEEOPLE), "draw", 1);
 
             let sheeople = s.card(SHEEOPLE).id.clone();
             s.play(ROCK, json!({ "tributes": [sheeople] }));
@@ -358,7 +352,7 @@ mod tests {
         fn r386_an_upgrade_of_its_worth_makes_it_worth_3_alone_it_pays_a_tribute_3() {
             let mut s = scenario(json!({ "p1": { "hand": [GOLEM, ANCHOR], "field": [SHEEOPLE], "library": lib(3) }, "p2": { "hand": [ANCHOR] } }));
             let sheeople = s.card(SHEEOPLE).clone();
-            step(&mut s, SHEEOPLE, "worth", 1);
+            step_param(s.card_mut(SHEEOPLE), "worth", 1);
 
             let golem = s.card(GOLEM).clone();
             assert_eq!(tribute_sets(&s, &golem), vec![vec![sheeople.id.clone()]]);
@@ -418,7 +412,7 @@ mod tests {
                 "p1": { "hand": [FILLER], "field": [{ "def": SHEEOPLE, "radiant": true }], "library": lib(4) },
                 "p2": { "hand": [HIT_JOB, ANCHOR] }
             }));
-            step(&mut s, SHEEOPLE, "draw", -1);
+            step_param(s.card_mut(SHEEOPLE), "draw", -1);
 
             let sheeople = s.card(SHEEOPLE).clone();
             s.play(HIT_JOB, json!({ "targets": at(&sheeople) }));

@@ -51,14 +51,6 @@ fn scenario(setup: Value) -> Scenario {
     jackioh_engine::testkit::scenario(setup)
 }
 
-/// TS `g.card(x).field = …`: the live card, written through.
-fn card_mut<'a>(g: &'a mut Scenario, id: &str) -> &'a mut CardInstance {
-    match find_instance_mut(g.state_mut(), id) {
-        Some(card) => card,
-        None => panic!("{id} is in no zone"),
-    }
-}
-
 /// A cursor at which a base #95's single roll is `effect`, the pick 095's own tests use (R28).
 fn chaos_cursor(seed: &str, effect: &str) -> u32 {
     for cursor in 0..500u32 {
@@ -254,7 +246,7 @@ mod r215_a_card_that_lands_from_the_resolving_zone_is_the_printed_card_again {
         let seed = "inv-r5-chaos-chain";
         let mut s = scenario(json!({ "seed": seed, "p1": { "hand": [CHAOS, REMINISCE, MENACE], "mana": 20 }, "p2": { "hand": [MENACE] } }));
         let chaos = s.card(CHAOS).id.clone();
-        card_mut(&mut s, &chaos)
+        s.card_mut(&chaos)
             .memory
             .insert(subsystems::CHAOS_CHAIN_KEY.to_string(), json!(CALL_TO_CHAOS_CHAIN_CAP - 1));
         s.state_mut().rng_cursor = chaos_cursor(seed, "recast");
@@ -406,7 +398,7 @@ mod r215_10_3_a_price_given_as_a_card_reaches_a_hand_is_announced {
             "p1": { "hand": [silas], "field": [{ "def": RENO, "lane": 5 }] },
         }));
         let silas_id = s.card(silas).id.clone();
-        card_mut(&mut s, &silas_id).radiant = true;
+        s.card_mut(&silas_id).radiant = true;
         let Some(reno) = s.unit(P1, 5).map(|card| card.id.clone()) else {
             panic!("expected p1's Reno in lane 5");
         };

@@ -100,13 +100,6 @@ mod tests {
         serde_json::to_value(value).expect("an engine value serialises")
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: TS's `card()` handed back the live instance, so the
-    /// step is written on the state's own copy, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     /// TS `AT_HERO: Selection[]`.
     fn at_hero() -> Value {
         json!([{ "pick": "hero", "player": "p2" }])
@@ -236,17 +229,17 @@ mod tests {
             fn r386_an_upgrade_deals_3_a_degrade_of_the_threshold_to_5_stops_4_mana_drawing_an_upgrade_of_draw_draws_2() {
                 crate::register_all();
                 let mut dmg = scenario(json!({ "p1": { "hand": [BURN, ANCHOR], "library": [A, B] }, "p2": { "hand": [ANCHOR] } }));
-                step(&mut dmg, BURN, "damage", 1);
+                step_param(dmg.card_mut(BURN), "damage", 1);
                 dmg.play(BURN, json!({ "targets": at_hero() }));
                 dmg.expect_health(PlayerId::P2, 27);
 
                 let mut harder = scenario(json!({ "p1": { "hand": [BURN, ANCHOR], "library": [A, B] }, "p2": { "hand": [ANCHOR] } }));
-                step(&mut harder, BURN, "threshold", 1);
+                step_param(harder.card_mut(BURN), "threshold", 1);
                 harder.play(BURN, json!({ "targets": at_hero() }));
                 assert_eq!(hand_defs(&harder), vec![ANCHOR]);
 
                 let mut more = scenario(json!({ "p1": { "hand": [BURN, ANCHOR], "library": [A, B] }, "p2": { "hand": [ANCHOR] } }));
-                step(&mut more, BURN, "draw", 1);
+                step_param(more.card_mut(BURN), "draw", 1);
                 more.play(BURN, json!({ "targets": at_hero() }));
                 assert_eq!(hand_defs(&more), vec![ANCHOR, A, B]);
             }
@@ -292,7 +285,7 @@ mod tests {
                     "p1": { "hand": [{ "def": BURN, "radiant": true }, ANCHOR], "library": [A] },
                     "p2": { "hand": [ANCHOR] },
                 }));
-                step(&mut s, BURN, "threshold", 1);
+                step_param(s.card_mut(BURN), "threshold", 1);
 
                 s.play(BURN, json!({ "targets": at_hero() }));
 

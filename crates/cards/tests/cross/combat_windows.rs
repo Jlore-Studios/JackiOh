@@ -65,13 +65,6 @@ fn aim(card: &CardInstance) -> Value {
     json!([{ "pick": "instance", "instanceId": card.id }])
 }
 
-/// TS wrote through the live instance `s.card(...)` handed back; here the card under that reference
-/// is found again in the state and written in place.
-fn card_mut<'a>(s: &'a mut Scenario, card: impl Into<CardRef>) -> &'a mut CardInstance {
-    let id = s.card(card).id.clone();
-    find_instance_mut(s.state_mut(), &id).unwrap_or_else(|| panic!("{id} is in no zone"))
-}
-
 fn exertion_json(s: &Scenario, card: &CardInstance) -> Value {
     serde_json::to_value(&s.card(card).exertion).unwrap()
 }
@@ -133,7 +126,7 @@ mod r176_my_pawns_projection_follows_the_combat {
             "p1": { "field": [SORCERER], "hand": [STOCKPILE], "library": [TIMMY, TIMMY] },
             "p2": { "health": 3, "field": [POINTMASTER], "backrow": [{ "def": MY_PAWN, "faceUp": false }], "library": [GIGA, GIGA] },
         }));
-        card_mut(&mut s, SORCERER).granted_keywords = vec![Keyword::Trample];
+        s.card_mut(SORCERER).granted_keywords = vec![Keyword::Trample];
         let sorcerer = s.card(SORCERER).clone();
         let pointmaster = s.card(POINTMASTER).clone();
 
@@ -163,7 +156,7 @@ mod r176_my_pawns_projection_follows_the_combat {
             },
         }));
         let panther = s.card(PANTHER).clone();
-        card_mut(&mut s, &panther).granted_keywords = vec![Keyword::Trample];
+        s.card_mut(&panther).granted_keywords = vec![Keyword::Trample];
 
         s.attack(&panther, RIGHT_HOUSE);
 
@@ -191,7 +184,7 @@ mod r176_my_pawns_projection_follows_the_combat {
             },
         }));
         let panther = s.card(PANTHER).clone();
-        card_mut(&mut s, &panther).granted_keywords = vec![Keyword::Trample];
+        s.card_mut(&panther).granted_keywords = vec![Keyword::Trample];
 
         s.attack(&panther, RIGHT_HOUSE);
 
@@ -215,7 +208,7 @@ mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
             "p1": { "field": [SORCERER, DUELIST], "library": [GIGA, GIGA] },
             "p2": { "health": 4, "backrow": [{ "def": MY_PAWN, "faceUp": false }], "library": [GIGA, GIGA] },
         }));
-        card_mut(&mut s, DUELIST).exertion.switched = true;
+        s.card_mut(DUELIST).exertion.switched = true;
 
         s.attack(SORCERER, "hero");
 
@@ -548,7 +541,7 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
         fixture(&mut s, "edge-r6-vaporize", "Trap", vaporize());
         set_trap(&mut s, "edge-r6-vaporize", PlayerId::P2, 1);
         let sorcerer = must(s.unit("p1", 1), "p1's Twisted Sorcerer");
-        card_mut(&mut s, &sorcerer).granted_keywords.push(Keyword::Reborn);
+        s.card_mut(&sorcerer).granted_keywords.push(Keyword::Reborn);
 
         s.attack(&sorcerer, "hero");
 
@@ -770,8 +763,8 @@ mod r176_the_hero_my_pawn_projects_is_the_one_the_combat_leaves {
         }));
         let sorcerer = must(s.unit("p1", 1), "p1's Twisted Sorcerer");
         let jilliax = must(s.unit("p2", 1), "p2's Jilliax");
-        card_mut(&mut s, &sorcerer).granted_keywords.push(Keyword::Trample);
-        card_mut(&mut s, &jilliax).divine_shield_spent = Some(true);
+        s.card_mut(&sorcerer).granted_keywords.push(Keyword::Trample);
+        s.card_mut(&jilliax).divine_shield_spent = Some(true);
 
         s.attack(&sorcerer, &jilliax);
 
@@ -937,9 +930,9 @@ mod r176_a_lifesteal_strike_back_that_tramples_heals_what_it_really_deals {
         }));
         let bigot = must(s.unit("p1", 1), "p1's Bigot");
         let jilliax = must(s.unit("p2", 1), "p2's Jilliax");
-        card_mut(&mut s, &bigot).granted_keywords.push(Keyword::Trample);
-        card_mut(&mut s, &jilliax).granted_keywords.push(Keyword::Trample);
-        card_mut(&mut s, &jilliax).divine_shield_spent = Some(true);
+        s.card_mut(&bigot).granted_keywords.push(Keyword::Trample);
+        s.card_mut(&jilliax).granted_keywords.push(Keyword::Trample);
+        s.card_mut(&jilliax).divine_shield_spent = Some(true);
 
         s.attack(&bigot, &jilliax);
 

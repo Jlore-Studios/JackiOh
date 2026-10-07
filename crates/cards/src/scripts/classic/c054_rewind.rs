@@ -85,13 +85,6 @@ mod tests {
         serde_json::from_str(&text).expect("the state parses back")
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: the step recorded on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, steps);
-    }
-
     /// TS `applicableChanges(s.state, s.card(ref), direction)`, each row as its JSON name.
     fn changes(s: &Scenario, card: &str, direction: TuneDirection) -> Vec<Value> {
         applicable_changes(s.state(), s.card(card), direction).iter().map(js).collect()
@@ -330,7 +323,7 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [REWIND, FILLER], "graveyard": [MR_TOKEN] }, "p2": { "hand": [FILLER] } }));
                 assert!(!changes(&s, REWIND, TuneDirection::Upgrade).contains(&json!("number")));
                 assert!(!changes(&s, REWIND, TuneDirection::Degrade).contains(&json!("number")));
-                step(&mut s, REWIND, "repeats", 1);
+                step_param(s.card_mut(REWIND), "repeats", 1);
                 let mr_token = s.card(MR_TOKEN).id.clone();
                 s.play(REWIND, json!({ "targets": pick(&mr_token) }));
                 assert_eq!(tokens_of(&s, P1), 1);
@@ -433,7 +426,7 @@ mod tests {
                     "p2": { "hand": [FILLER] },
                 }));
                 assert!(changes(&s, REWIND, TuneDirection::Degrade).contains(&json!("number")));
-                step(&mut s, REWIND, "repeats", -1);
+                step_param(s.card_mut(REWIND), "repeats", -1);
                 let mr_token = s.card(MR_TOKEN).id.clone();
                 s.play(REWIND, json!({ "targets": pick(&mr_token) }));
                 assert_eq!(tokens_of(&s, P1), 1);

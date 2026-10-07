@@ -106,11 +106,6 @@ mod tests {
         serde_json::to_value(value).expect("serialises")
     }
 
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     fn kinds(s: &Scenario, card: &str) -> Vec<String> {
         s.stats(card)
             .keywords
@@ -279,11 +274,11 @@ mod tests {
         #[test]
         fn r386_an_upgrade_makes_it_plus_3_per_token_a_degrade_plus_1() {
             let mut up = scenario(json!({ "p1": { "field": [{ "def": CHARGER, "counters": { "plague": 2 } }], "hand": [FILLER] } }));
-            step(&mut up, CHARGER, "attack", 1);
+            step_param(up.card_mut(CHARGER), "attack", 1);
             up.expect_stats(CHARGER, json!({ "attack": 10 }));
 
             let mut down = scenario(json!({ "p1": { "field": [{ "def": CHARGER, "counters": { "plague": 2 } }], "hand": [FILLER] } }));
-            step(&mut down, CHARGER, "attack", -1);
+            step_param(down.card_mut(CHARGER), "attack", -1);
             down.expect_stats(CHARGER, json!({ "attack": 6 }));
         }
     }
@@ -314,7 +309,7 @@ mod tests {
         #[test]
         fn r386_an_upgrade_makes_it_plus_5_per_token() {
             let mut s = scenario(json!({ "p1": { "field": [{ "def": CHARGER, "radiant": true, "counters": { "plague": 1 } }], "hand": [FILLER] } }));
-            step(&mut s, CHARGER, "attack", 1);
+            step_param(s.card_mut(CHARGER), "attack", 1);
 
             s.expect_stats(CHARGER, json!({ "attack": 13 }));
         }

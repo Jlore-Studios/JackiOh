@@ -101,11 +101,6 @@ mod tests {
         serde_json::to_value(value).expect("serialises")
     }
 
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     /// TS `type Step = { state; events } & { error? }`.
     struct Step {
         state: GameState,
@@ -460,7 +455,7 @@ mod tests {
         #[test]
         fn r386_an_upgrade_places_3_on_itself() {
             let mut s = scenario(json!({ "p1": { "hand": [PLANTATION, ANCHOR] }, "p2": { "hand": [ANCHOR] } }));
-            step(&mut s, PLANTATION, "tokens", 1);
+            step_param(s.card_mut(PLANTATION), "tokens", 1);
 
             s.play(PLANTATION, json!({}));
             let plantation = s.card(PLANTATION).clone();
@@ -499,7 +494,7 @@ mod tests {
         #[test]
         fn r386_a_degrade_places_3() {
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": PLANTATION, "radiant": true }, ANCHOR] }, "p2": { "hand": [ANCHOR] } }));
-            step(&mut s, PLANTATION, "tokens", -1);
+            step_param(s.card_mut(PLANTATION), "tokens", -1);
 
             s.play(PLANTATION, json!({}));
             let plantation = s.card(PLANTATION).clone();

@@ -103,13 +103,6 @@ mod tests {
         serde_json::to_value(value).expect("an engine value serialises")
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`, on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, steps);
-    }
-
     fn cost_of(s: &Scenario, card: &str) -> i32 {
         effective_cost(s.state(), s.card(card), Default::default())
     }
@@ -353,7 +346,7 @@ mod tests {
                     "p1": { "hand": [EXPERIMENT, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
-                step(&mut s, CRACKER, "mana", -1);
+                step_param(s.card_mut(CRACKER), "mana", -1);
                 s.play(EXPERIMENT, json!({ "zone": 1 }));
                 s.expect_mana(P1, 5);
             }
@@ -376,7 +369,7 @@ mod tests {
                     "p1": { "hand": [EXPERIMENT, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE] },
                 }));
-                step(&mut s, CRACKER, "mana", 1);
+                step_param(s.card_mut(CRACKER), "mana", 1);
                 s.play(EXPERIMENT, json!({ "zone": 1 }));
                 s.expect_mana(P1, 6);
             }

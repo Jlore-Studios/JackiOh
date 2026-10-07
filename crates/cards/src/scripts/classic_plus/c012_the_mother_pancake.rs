@@ -65,11 +65,6 @@ mod tests {
         (0..=9).any(|digit| text.contains(&format!("classicplus-012-{digit}")))
     }
 
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     /// TS `atEndOfTurn(radiant, { seed?, hand? })`: the scenario after p1's end of turn, and the def ids it added.
     fn at_end_of_turn(radiant: bool, seed: Option<String>, hand: Option<Vec<&str>>) -> (Scenario, Vec<String>) {
         let hand = hand.unwrap_or_else(|| vec![FILLER]);
@@ -180,7 +175,7 @@ mod tests {
                 "p1": { "hand": [FILLER], "field": [MOTHER], "library": [FILLER, FILLER] },
                 "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
             }));
-            step(&mut s, MOTHER, "tokens", 1);
+            step_param(s.card_mut(MOTHER), "tokens", 1);
             let before = s.hand(P1).len();
             s.end_turn();
             assert_eq!(s.hand(P1).len(), before + 2);

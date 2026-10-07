@@ -59,12 +59,6 @@ mod tests {
         serde_json::to_value(value).expect("serialises")
     }
 
-    /// TS's live `s.card(ref)`, written through: the card under that id in the state.
-    fn card_mut<'a>(s: &'a mut Scenario, card: &str) -> &'a mut CardInstance {
-        let id = s.card(card).id.clone();
-        find_instance_mut(s.state_mut(), &id).expect("the card is in the state")
-    }
-
     fn target(s: &Scenario, card: &str) -> Value {
         json!([{ "pick": "instance", "instanceId": s.card(card).id }])
     }
@@ -156,7 +150,7 @@ mod tests {
             fn r64_a_granted_reborn_reserves_lars_zone_for_its_return_so_ping_goes_to_the_next_open_zone() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [HIT_JOB, FILLER], "field": [LAR] }, "p2": { "hand": [FILLER] } }));
-                card_mut(&mut s, LAR).granted_keywords = reborn();
+                s.card_mut(LAR).granted_keywords = reborn();
                 let targets = target(&s, LAR);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 assert_eq!(s.unit(P1, 2).map(|unit| unit.def_id), Some(PING.to_string()));
@@ -170,7 +164,7 @@ mod tests {
                     "p1": { "hand": [FILLER], "field": [LAR, TIMMY, TIMMY, TIMMY, TIMMY] },
                     "p2": { "hand": [FILLER], "field": [MENACE] },
                 }));
-                card_mut(&mut s, LAR).granted_keywords = reborn();
+                s.card_mut(LAR).granted_keywords = reborn();
                 s.attack(LAR, MENACE);
                 assert!(pings(&s).is_empty());
             }

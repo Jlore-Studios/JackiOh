@@ -175,12 +175,6 @@ mod tests {
         s
     }
 
-    /// TS `stepParam(s.card(ref), key, delta)`: the live card, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, delta: i32) {
-        let id = s.card(card).id.clone();
-        step_param(must(find_instance_mut(s.state_mut(), &id), "the card to tune"), key, delta);
-    }
-
     fn at(card: &CardInstance) -> Value {
         json!([{ "pick": "instance", "instanceId": card.id }])
     }
@@ -326,7 +320,7 @@ mod tests {
                 "p1": { "hand": [SIPHON, ANCHOR] },
                 "p2": { "hand": [ANCHOR], "field": [MENACE, { "def": VANILLA, "lane": 2 }] }
             }));
-            step(&mut s, SIPHON, "multiplier", 1);
+            step_param(s.card_mut(SIPHON), "multiplier", 1);
             s.play(SIPHON, json!({}));
 
             assert_eq!(attack_of(&s, P2, 1), 3);
@@ -408,7 +402,7 @@ mod tests {
                 "p1": { "hand": [{ "def": SIPHON, "radiant": true }, ANCHOR] },
                 "p2": { "hand": [ANCHOR], "field": [MENACE] }
             }));
-            step(&mut s, SIPHON, "multiplier", 1);
+            step_param(s.card_mut(SIPHON), "multiplier", 1);
             s.play(SIPHON, json!({}));
 
             assert_eq!(attack_of(&s, P2, 1), 0);

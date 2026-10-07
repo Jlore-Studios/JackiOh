@@ -133,12 +133,6 @@ mod tests {
         side.units.into_iter().flatten().find(|unit| unit.def_id == SNAKE).and_then(|unit| unit.preview)
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     /// TS `toMatchObject`: every key the pattern names holds the pattern's value (objects recursively).
     fn matches_object(actual: &Value, pattern: &Value) -> bool {
         match (actual, pattern) {
@@ -323,12 +317,12 @@ mod tests {
         fn r386_tokens_per_turn_and_damage_per_token_read_through_param_an_upgrade_of_each_moves_what_resolves() {
             crate::register_all();
             let mut s = with_snake(0, json!({}), Extra::default());
-            step(&mut s, SNAKE, "tokens", 1);
+            step_param(s.card_mut(SNAKE), "tokens", 1);
             s.end_turn();
             assert_eq!(s.card(SNAKE).counters.plague, Some(3));
 
             let mut t = with_snake(2, json!({}), Extra::default());
-            step(&mut t, SNAKE, "damage", 1);
+            step_param(t.card_mut(SNAKE), "damage", 1);
             kill_snake(&mut t);
             let snake_id = t.card(SNAKE).id.clone();
             assert_eq!(snake_hits(&t, &snake_id).iter().map(|hit| hit.amount).collect::<Vec<_>>(), vec![2, 2]);

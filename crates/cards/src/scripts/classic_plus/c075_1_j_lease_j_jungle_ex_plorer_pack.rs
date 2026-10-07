@@ -69,12 +69,6 @@ mod tests {
         serde_json::to_value(value).expect("serialises")
     }
 
-    /// TS's live `s.card(ref)`, written through: the card under that id in the state.
-    fn card_mut<'a>(s: &'a mut Scenario, card: &str) -> &'a mut CardInstance {
-        let id = s.card(card).id.clone();
-        find_instance_mut(s.state_mut(), &id).expect("the card is in the state")
-    }
-
     /// The `addedToHand` and `burned` events of the last step that name a generated card.
     fn generated(s: &Scenario) -> Vec<GameEvent> {
         s.last_events()
@@ -237,12 +231,12 @@ mod tests {
             fn r386_an_upgrade_adds_6_a_degrade_4() {
                 crate::register_all();
                 let mut up = scenario(json!({ "p1": { "hand": [PACK, MENACE] }, "p2": { "hand": [MENACE] } }));
-                step_param(card_mut(&mut up, PACK), "cards", 1);
+                step_param(up.card_mut(PACK), "cards", 1);
                 up.play(PACK, json!({}));
                 assert_eq!(generated(&up).len(), 6);
 
                 let mut down = scenario(json!({ "p1": { "hand": [PACK, MENACE] }, "p2": { "hand": [MENACE] } }));
-                step_param(card_mut(&mut down, PACK), "cards", -1);
+                step_param(down.card_mut(PACK), "cards", -1);
                 down.play(PACK, json!({}));
                 assert_eq!(generated(&down).len(), 4);
             }

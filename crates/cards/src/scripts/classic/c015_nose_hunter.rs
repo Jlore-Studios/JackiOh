@@ -122,15 +122,6 @@ mod tests {
         cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        match find_instance_mut(s.state_mut(), &id) {
-            Some(live) => step_param(live, key, steps),
-            None => panic!("no card {card} to tune"),
-        }
-    }
-
     /// The def ids a viewer reads in an exile pile of their view (`you` or `opponent`).
     fn exile_seen(s: &Scenario, viewer: PlayerId, side: &str) -> Vec<String> {
         let view = serde_json::to_value(s.view(viewer)).unwrap();
@@ -326,13 +317,13 @@ mod tests {
         #[test]
         fn r386_an_upgrade_of_its_number_exiles_the_bottom_2_cards_a_degrade_never_takes_it_below_1() {
             let mut up = setup(json!({ "hand": [FILLER], "field": [NOSE] }), json!({}));
-            step(&mut up, NOSE, "exile", 1);
+            step_param(up.card_mut(NOSE), "exile", 1);
             up.activate(NOSE, json!({}));
             assert_eq!(defs_of(&up.pile(P2, "exile")), [POINTMASTER, TIMMY]);
             assert_eq!(defs_of(&up.pile(P2, "library")), [VANILLA]);
 
             let mut down = setup(json!({ "hand": [FILLER], "field": [NOSE] }), json!({}));
-            step(&mut down, NOSE, "exile", -1);
+            step_param(down.card_mut(NOSE), "exile", -1);
             down.activate(NOSE, json!({}));
             assert_eq!(defs_of(&down.pile(P2, "exile")), [POINTMASTER]);
         }
@@ -408,7 +399,7 @@ mod tests {
                 json!({ "hand": [FILLER], "field": [{ "def": NOSE, "radiant": true }] }),
                 json!({ "hand": [MENACE, VANILLA] }),
             );
-            step(&mut s, NOSE, "exile", 1);
+            step_param(s.card_mut(NOSE), "exile", 1);
 
             s.activate(NOSE, json!({}));
 

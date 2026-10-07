@@ -126,12 +126,6 @@ mod tests {
         s.hand(player).into_iter().map(|card| card.def_id).collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(must(find_instance_mut(s.state_mut(), &id), "card to tune"), key, steps);
-    }
-
     /// The JSON round trip of §9.3, then the answer sent through `reduce`.
     fn revive_and_answer(s: &Scenario, selection: Value, nonce: &str) -> ReduceResult {
         let revived: GameState = serde_json::from_value(js(s.state())).unwrap();
@@ -270,7 +264,7 @@ mod tests {
         #[test]
         fn r386_an_upgrade_of_cards_exiled_makes_it_two_picks_both_exiled() {
             let mut s = melt(false, json!(THEIR_HAND));
-            step(&mut s, MELT, "cards", 1);
+            step_param(s.card_mut(MELT), "cards", 1);
             s.play(MELT, json!({}));
             let pending = open(&s);
             assert_eq!(pending.min, 2);
@@ -286,7 +280,7 @@ mod tests {
         #[test]
         fn r386_an_upgraded_count_larger_than_their_hand_picks_the_whole_hand() {
             let mut s = melt(false, json!([MENACE]));
-            step(&mut s, MELT, "cards", 2);
+            step_param(s.card_mut(MELT), "cards", 2);
             s.play(MELT, json!({}));
             assert_eq!(open(&s).max, 1);
             let menace = s.card(MENACE).id.clone();

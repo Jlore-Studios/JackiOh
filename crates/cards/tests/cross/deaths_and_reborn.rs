@@ -101,14 +101,6 @@ fn was_destroyed(events: &[GameEvent], id: &str) -> bool {
         .any(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if instance_id == id))
 }
 
-/// TS `g.card(x).field = …`: the live card, written through.
-fn card_mut<'a>(g: &'a mut Scenario, id: &str) -> &'a mut CardInstance {
-    match find_instance_mut(g.state_mut(), id) {
-        Some(card) => card,
-        None => panic!("{id} is in no zone"),
-    }
-}
-
 mod r89_4_5_step_1_collects_at_once_so_every_unit_dies_as_it_stood {
     use super::*;
 
@@ -347,7 +339,7 @@ fn place_fixture(s: &mut Scenario, def_id: &str, player: PlayerId, row: Row, lan
         panic!("could not place {def_id}");
     }
     let turn = s.state().turn;
-    let live = card_mut(s, &card.id);
+    let live = s.card_mut(&card.id);
     live.summoned_turn = Some(turn - 1);
     live.clone()
 }
@@ -459,7 +451,7 @@ fn place_unit(s: &mut Scenario, def_id: &str, player: PlayerId, lane: i32) -> Ca
     if !place_on_field(s.state_mut(), &mut card, &ZoneSlot { player, row: Row::Units, lane }, Default::default()) {
         panic!("could not place {def_id}");
     }
-    let live = card_mut(s, &card.id);
+    let live = s.card_mut(&card.id);
     live.position = Some(Position::Atk);
     live.clone()
 }

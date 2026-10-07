@@ -171,13 +171,6 @@ mod tests {
         }
     }
 
-    /// TS `stepParam(card, key, steps)`, on the live card (`card` an instance id or a catalog id).
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
-        step_param(live, key, steps);
-    }
-
     /// TS `{ ...defaults, ...over }` on a side's setup.
     fn merged(mut defaults: Value, over: Value) -> Value {
         if let (Some(into), Value::Object(over)) = (defaults.as_object_mut(), over) {
@@ -353,7 +346,7 @@ mod tests {
                 let Some(lenient) = s.backrow(P1, 2) else {
                     panic!("fixture");
                 };
-                step(&mut s, &lenient.id, "drawLimit", 1);
+                step_param(s.card_mut(&lenient.id), "drawLimit", 1);
 
                 s.play(STOCKPILE, json!({}));
 
@@ -364,7 +357,7 @@ mod tests {
             fn r386_a_degrade_of_the_limit_lets_the_opponent_draw_2_a_turn() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
-                step(&mut s, PALANTIR, "drawLimit", 1);
+                step_param(s.card_mut(PALANTIR), "drawLimit", 1);
 
                 s.play(STOCKPILE, json!({}));
 
@@ -375,7 +368,7 @@ mod tests {
             fn r386_an_upgrade_never_takes_the_limit_below_1() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
-                step(&mut s, PALANTIR, "drawLimit", -1);
+                step_param(s.card_mut(PALANTIR), "drawLimit", -1);
 
                 s.play(STOCKPILE, json!({}));
 
@@ -601,7 +594,7 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({ "hand": [STOCKPILE, BOOK, VANILLA] }), true);
                 let palantir = s.card(PALANTIR).clone();
-                step(&mut s, &palantir.id, "threshold", 1);
+                step_param(s.card_mut(&palantir.id), "threshold", 1);
 
                 s.play(STOCKPILE, json!({}));
                 s.play(BOOK, json!({}));
@@ -674,7 +667,7 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), true);
                 let palantir = s.card(PALANTIR).clone();
-                step(&mut s, &palantir.id, "threshold", -1);
+                step_param(s.card_mut(&palantir.id), "threshold", -1);
 
                 s.play(STOCKPILE, json!({}));
 

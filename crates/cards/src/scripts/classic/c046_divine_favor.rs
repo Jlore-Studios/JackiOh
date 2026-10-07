@@ -100,13 +100,6 @@ mod tests {
         (0..count).map(|_| def_id.to_string()).collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: the step written on the card as it stands in the state.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let instance = find_instance_mut(s.state_mut(), &id).expect("the card to step is in the state");
-        step_param(instance, key, steps);
-    }
-
     mod c46_divine_favor {
         use super::*;
 
@@ -253,7 +246,7 @@ mod tests {
                 }));
                 assert!(!applicable_changes(s.state(), s.card(FAVOR), TuneDirection::Upgrade).contains(&TuneRow::Number));
                 assert!(!applicable_changes(s.state(), s.card(FAVOR), TuneDirection::Degrade).contains(&TuneRow::Number));
-                step(&mut s, FAVOR, "multiplier", 1);
+                step_param(s.card_mut(FAVOR), "multiplier", 1);
                 s.play(FAVOR, json!({}));
                 // As many as the opponent's three, as the text says: the Filler and two draws.
                 assert_eq!(s.hand(PlayerId::P1).len(), 3);
@@ -310,7 +303,7 @@ mod tests {
                     "p2": { "hand": many(3, STOCKPILE) },
                 }));
                 assert!(applicable_changes(s.state(), s.card(FAVOR), TuneDirection::Degrade).contains(&TuneRow::Number));
-                step(&mut s, FAVOR, "multiplier", -1);
+                step_param(s.card_mut(FAVOR), "multiplier", -1);
                 s.play(FAVOR, json!({}));
                 assert_eq!(s.hand(PlayerId::P1).len(), 3);
             }

@@ -99,18 +99,6 @@ mod tests {
         of_type(s, "drawLimited", player)
     }
 
-    /// TS `stepParam(card, key, steps)` on a live card: the step written on the card under `id`.
-    fn step_id(s: &mut Scenario, id: &str, key: &str, steps: i32) {
-        let instance = find_instance_mut(s.state_mut(), id).expect("the card to step is in the state");
-        step_param(instance, key, steps);
-    }
-
-    /// TS `stepParam(s.card(ref), key, steps)`.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_id(s, &id, key, steps);
-    }
-
     mod c49_anti_greed_machine {
         use super::*;
 
@@ -265,7 +253,7 @@ mod tests {
                 let Some(tuned) = both.unit(P1, 1) else {
                     panic!("no Radiant Machine");
                 };
-                step_id(&mut both, &tuned.id, "limit", 1);
+                step_param(both.card_mut(&tuned.id), "limit", 1);
                 both.play(STOCKPILE, json!({}));
                 assert_eq!(drawn(&both, P2).len(), 1);
                 assert_eq!(limited(&both, P2).len(), 1);
@@ -275,7 +263,7 @@ mod tests {
                     "p2": { "hand": [STOCKPILE, FILLER], "library": [VANILLA, VANILLA, VANILLA] },
                     "active": "p2",
                 }));
-                step(&mut alone, MACHINE, "limit", 1);
+                step_param(alone.card_mut(MACHINE), "limit", 1);
                 alone.play(STOCKPILE, json!({}));
                 assert_eq!(drawn(&alone, P2).len(), 2);
             }
@@ -289,7 +277,7 @@ mod tests {
                     "p2": { "hand": [STOCKPILE, FILLER], "library": [VANILLA, VANILLA, VANILLA] },
                     "active": "p2",
                 }));
-                step(&mut palantir_lower, MACHINE, "limit", 1);
+                step_param(palantir_lower.card_mut(MACHINE), "limit", 1);
                 palantir_lower.play(STOCKPILE, json!({}));
                 assert_eq!(drawn(&palantir_lower, P2).len(), 1);
                 assert_eq!(limited(&palantir_lower, P2).len(), 1);
@@ -299,7 +287,7 @@ mod tests {
                     "p2": { "hand": [STOCKPILE, FILLER], "library": [VANILLA, VANILLA, VANILLA] },
                     "active": "p2",
                 }));
-                step(&mut machine_lower, PALANTIR, "drawLimit", 1);
+                step_param(machine_lower.card_mut(PALANTIR), "drawLimit", 1);
                 machine_lower.play(STOCKPILE, json!({}));
                 assert_eq!(drawn(&machine_lower, P2).len(), 1);
                 assert_eq!(limited(&machine_lower, P2).len(), 1);
@@ -373,7 +361,7 @@ mod tests {
                     "p1": { "hand": [FILLER], "field": [{ "def": MACHINE, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE, FILLER], "library": [VANILLA, VANILLA, VANILLA, VANILLA] },
                 }));
-                step(&mut s, MACHINE, "limit", 1);
+                step_param(s.card_mut(MACHINE), "limit", 1);
                 s.end_turn();
                 assert_eq!(drawn(&s, P2).len(), 1);
                 s.play(STOCKPILE, json!({}));
@@ -388,7 +376,7 @@ mod tests {
                     "p1": { "hand": [FILLER], "field": [{ "def": MACHINE, "radiant": true }] },
                     "p2": { "hand": [STOCKPILE, FILLER], "library": [VANILLA, VANILLA, VANILLA] },
                 }));
-                step(&mut s, MACHINE, "limit", -1);
+                step_param(s.card_mut(MACHINE), "limit", -1);
                 assert_eq!(js(&s.view(P1))["you"]["units"][0]["params"], json!({ "limit": 1 }));
                 s.end_turn();
                 assert_eq!(drawn(&s, P2).len(), 1);

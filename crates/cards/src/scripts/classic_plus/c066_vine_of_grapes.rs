@@ -99,13 +99,6 @@ mod tests {
         }))
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: the live card in the state, tuned in place.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let instance = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(instance, key, steps);
-    }
-
     #[test]
     fn is_a_3_fruit_spell_with_no_refs_grape_names_the_five_grapes_r480_the_radiant_face_prints_lucky_1() {
         crate::register_all();
@@ -173,12 +166,12 @@ mod tests {
         fn r386_an_upgrade_of_its_count_adds_6_a_degrade_4() {
             crate::register_all();
             let mut up = played(false, None, None);
-            step(&mut up, VINE, "grapes", 1);
+            step_param(up.card_mut(VINE), "grapes", 1);
             up.play(VINE, json!({}));
             assert_eq!(added(&up).len(), 6);
 
             let mut down = played(false, None, None);
-            step(&mut down, VINE, "grapes", -1);
+            step_param(down.card_mut(VINE), "grapes", -1);
             down.play(VINE, json!({}));
             assert_eq!(added(&down).len(), 4);
         }
@@ -230,7 +223,7 @@ mod tests {
         fn r386_the_radiant_count_steps_the_same_way() {
             crate::register_all();
             let mut s = played(true, None, None);
-            step(&mut s, VINE, "grapes", -1);
+            step_param(s.card_mut(VINE), "grapes", -1);
             s.play(VINE, json!({}));
             assert_eq!(added(&s).len(), 4);
         }

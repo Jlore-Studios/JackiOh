@@ -62,11 +62,6 @@ mod tests {
         serde_json::to_value(value).expect("serialises")
     }
 
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     /// The Rush Tokens on p1's side, lane order.
     fn tokens(s: &Scenario) -> Vec<CardInstance> {
         (1..=5)
@@ -159,7 +154,7 @@ mod tests {
         #[test]
         fn r386_the_keyword_count_reads_through_param_an_upgrade_gives_two_and_a_degrade_never_goes_below_one() {
             let mut up = scenario(json!({ "p1": { "hand": [CARD, FILLER] }, "p2": { "hand": [FILLER] } }));
-            step(&mut up, CARD, "keywords", 1);
+            step_param(up.card_mut(CARD), "keywords", 1);
             up.play(CARD, json!({}));
             let up_token = tokens(&up).into_iter().next().expect("no token");
             let keys = gained(&up, &up_token.id);
@@ -167,7 +162,7 @@ mod tests {
             expect_from_pool(&keys);
 
             let mut down = scenario(json!({ "p1": { "hand": [CARD, FILLER] }, "p2": { "hand": [FILLER] } }));
-            step(&mut down, CARD, "keywords", -1);
+            step_param(down.card_mut(CARD), "keywords", -1);
             down.play(CARD, json!({}));
             let down_token = tokens(&down).into_iter().next().expect("no token");
             assert_eq!(gained(&down, &down_token.id).len(), 1);
@@ -255,7 +250,7 @@ mod tests {
         #[test]
         fn r386_an_upgrade_gives_each_of_the_three_two_keywords() {
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": CARD, "radiant": true }, FILLER] }, "p2": { "hand": [FILLER] } }));
-            step(&mut s, CARD, "keywords", 1);
+            step_param(s.card_mut(CARD), "keywords", 1);
             s.play(CARD, json!({}));
             let made = tokens(&s);
             assert_eq!(made.len(), 3);

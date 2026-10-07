@@ -63,13 +63,6 @@ mod tests {
         jackioh_engine::testkit::scenario(opts)
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: TS stepped the live card; here the card under its id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(live, key, steps);
-    }
-
     /// p1's Stockpile `addedToHand` events in the last step, as `(instanceId, defId)`.
     fn stockpiles(s: &Scenario) -> Vec<(String, String)> {
         s.last_events()
@@ -274,12 +267,12 @@ mod tests {
         #[test]
         fn r386_an_upgrade_adds_3_a_degrade_1() {
             let mut up = bubble(false, json!([NETHER, FILLER]), None, json!([]));
-            step(&mut up, BAUBLE, "cards", 1);
+            step_param(up.card_mut(BAUBLE), "cards", 1);
             up.play(NETHER, json!({}));
             assert_eq!(stockpiles(&up).len(), 3);
 
             let mut down = bubble(false, json!([NETHER, FILLER]), None, json!([]));
-            step(&mut down, BAUBLE, "cards", -4);
+            step_param(down.card_mut(BAUBLE), "cards", -4);
             down.play(NETHER, json!({}));
             assert_eq!(stockpiles(&down).len(), 1);
         }

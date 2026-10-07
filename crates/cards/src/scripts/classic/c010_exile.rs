@@ -179,15 +179,6 @@ mod tests {
         serde_json::to_value(value).unwrap()
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)` on the live card.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        match find_instance_mut(s.state_mut(), &id) {
-            Some(live) => step_param(live, key, steps),
-            None => panic!("no card {card} to tune"),
-        }
-    }
-
     fn defs(cards: &[CardInstance]) -> Vec<String> {
         cards.iter().map(|card| card.def_id.clone()).collect()
     }
@@ -337,7 +328,7 @@ mod tests {
         #[test]
         fn r386_an_upgrade_of_its_threshold_reaches_a_3_cost_play() {
             let mut s = setup(json!({ "hand": [MENACE, VANILLA] }), false, json!({}));
-            step(&mut s, EXILE, "threshold", 1);
+            step_param(s.card_mut(EXILE), "threshold", 1);
 
             s.play(MENACE, json!({ "zone": 1 }));
 
@@ -495,7 +486,7 @@ mod tests {
         #[test]
         fn r448_a_countered_tribute_card_s_tribute_stays_spent_an_upgrade_to_4_reaches_the_rock() {
             let mut s = setup(json!({ "hand": [ROCK, VANILLA], "field": [{ "def": TIMMY, "lane": 1 }] }), true, json!({}));
-            step(&mut s, EXILE, "threshold", 1);
+            step_param(s.card_mut(EXILE), "threshold", 1);
             let Some(timmy) = s.unit(P2, 1) else {
                 panic!("fixture");
             };
@@ -511,7 +502,7 @@ mod tests {
         #[test]
         fn r386_a_degrade_of_its_threshold_makes_it_answer_2_or_less_with_a_budget_of_2_minus_the_cost() {
             let mut s = setup(json!({ "hand": [MENACE, TIMMY], "field": [POINTMASTER] }), true, json!({}));
-            step(&mut s, EXILE, "threshold", -1);
+            step_param(s.card_mut(EXILE), "threshold", -1);
 
             s.play(MENACE, json!({ "zone": 2 }));
             assert_eq!(count(s.events(), GameEventType::Countered), 0);

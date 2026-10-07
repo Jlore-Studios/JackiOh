@@ -217,12 +217,6 @@ mod tests {
         }))
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: on the live instance, found again by id.
-    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the state"), key, steps);
-    }
-
     mod c_n19_lizard_s_breath {
         use super::*;
 
@@ -355,22 +349,22 @@ mod tests {
             fn r386_each_number_tunes_damage_3_draw_2_mana_3_extra_damage_5() {
                 crate::register_all();
                 let mut dmg = breath(Face::Base, 3, 1, 1, None);
-                step(&mut dmg, BREATH, "damage", 1);
+                step_param(dmg.card_mut(BREATH), "damage", 1);
                 dmg.play(BREATH, json!({ "targets": at_hero() }));
                 assert_eq!(hits(&dmg), vec![3]);
 
                 let mut more = breath(Face::Base, 3, 1, 1, None);
-                step(&mut more, BREATH, "draw", 1);
+                step_param(more.card_mut(BREATH), "draw", 1);
                 more.play(BREATH, json!({ "targets": at_hero() }));
                 assert_eq!(drawn(&more), 2);
 
                 let mut mana = breath(Face::Base, 1, 3, 1, None);
-                step(&mut mana, BREATH, "mana", 1);
+                step_param(mana.card_mut(BREATH), "mana", 1);
                 mana.play(BREATH, json!({ "targets": at_hero() }));
                 mana.expect_mana(P1, 6);
 
                 let mut extra = breath(Face::Base, 1, 1, 3, None);
-                step(&mut extra, BREATH, "extraDamage", 1);
+                step_param(extra.card_mut(BREATH), "extraDamage", 1);
                 extra.play(BREATH, json!({ "targets": at_hero() }));
                 assert_eq!(hits(&extra), vec![7]);
             }
@@ -444,7 +438,7 @@ mod tests {
             fn r386_an_upgrade_of_damage_on_the_radiant_face_steps_4_to_5_and_with_exile_9() {
                 crate::register_all();
                 let mut s = breath(Face::Radiant, 4, 1, 3, None);
-                step(&mut s, BREATH, "damage", 1);
+                step_param(s.card_mut(BREATH), "damage", 1);
 
                 s.play(BREATH, json!({ "targets": at_hero() }));
 

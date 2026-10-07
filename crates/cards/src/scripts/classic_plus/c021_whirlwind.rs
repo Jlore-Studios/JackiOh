@@ -69,12 +69,6 @@ mod tests {
         s.unit(player, lane).map(|unit| unit.id).unwrap_or_default()
     }
 
-    /// TS wrote through the live instance `s.card(ref)` handed back.
-    fn card_mut<'a>(s: &'a mut Scenario, card: &str) -> &'a mut CardInstance {
-        let id = s.card(card).id.clone();
-        find_instance_mut(s.state_mut(), &id).expect("the card is in no zone")
-    }
-
     fn has_keyword(s: &Scenario, card: &str, kind: KeywordKind) -> bool {
         s.stats(card).keywords.iter().any(|keyword| keyword.kind() == kind)
     }
@@ -209,7 +203,7 @@ mod tests {
                     "p1": { "hand": [WHIRLWIND, FILLER] },
                     "p2": { "hand": [FILLER], "field": [BODY] },
                 }));
-                step_param(card_mut(&mut s, WHIRLWIND), "damage", 1);
+                step_param(s.card_mut(WHIRLWIND), "damage", 1);
                 s.play(WHIRLWIND, json!({}));
                 let body = unit_or_blank(&s, P2, 1);
                 s.expect_stats(&body, json!({ "health": 7 }));

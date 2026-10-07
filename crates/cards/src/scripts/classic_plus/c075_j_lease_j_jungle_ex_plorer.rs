@@ -64,12 +64,6 @@ mod tests {
         serde_json::to_value(value).expect("serialises")
     }
 
-    /// TS's live `s.card(ref)`, written through: the card under that id in the state.
-    fn card_mut<'a>(s: &'a mut Scenario, card: &str) -> &'a mut CardInstance {
-        let id = s.card(card).id.clone();
-        find_instance_mut(s.state_mut(), &id).expect("the card is in the state")
-    }
-
     fn packs(s: &Scenario) -> Vec<CardInstance> {
         s.pile(P1, "library").into_iter().filter(|card| card.def_id == PACK).collect()
     }
@@ -212,12 +206,12 @@ mod tests {
             #[test]
             fn r386_an_upgrade_of_its_count_shuffles_2_packs_a_degrade_never_takes_it_below_1() {
                 let mut up = explorer(false, 4);
-                step_param(card_mut(&mut up, EXPLORER), "packs", 1);
+                step_param(up.card_mut(EXPLORER), "packs", 1);
                 up.play(EXPLORER, json!({}));
                 assert_eq!(packs(&up).len(), 2);
 
                 let mut down = explorer(false, 4);
-                step_param(card_mut(&mut down, EXPLORER), "packs", -1);
+                step_param(down.card_mut(EXPLORER), "packs", -1);
                 down.play(EXPLORER, json!({}));
                 assert_eq!(packs(&down).len(), 1);
             }
