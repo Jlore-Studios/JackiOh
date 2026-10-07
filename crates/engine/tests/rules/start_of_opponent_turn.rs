@@ -126,11 +126,11 @@ mod at_the_start_of_your_opponents_turn_c_62_r400_r68 {
     #[test]
     fn r68_it_fires_on_the_opponents_turn_after_their_own_start_of_turn_hooks_and_never_on_its_controllers_turn() {
         let fresh = new_game("start-of-opponent-turn", None);
-        let mut catalog = registered_catalog().clone();
+        let mut catalog = catalog::registered_catalog().clone();
         catalog.insert(WATCHER.to_string(), watcher());
         catalog.insert(HOLDER.to_string(), holder());
         register_catalog(catalog);
-        let mut all = registered_scripts();
+        let mut all = scripts::registered_scripts();
         all.extend(scripts());
         register_scripts(all);
         let mut state = reduce::begin_game(&fresh).state;
