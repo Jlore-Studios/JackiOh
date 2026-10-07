@@ -9,14 +9,14 @@ use std::cell::Cell;
 
 use jackioh_engine::testkit::*;
 
-use super::fixtures::harness::{PutOptions, new_game, put as put_with, slot};
+use super::fixtures::harness::{new_game, put as put_with, slot};
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
 
 /// The harness's `put(state, defId, ref)` with TS's default `options = {}`.
 fn put(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
-    put_with(state, def_id, at, PutOptions::default())
+    put_with(state, def_id, at, json!({}))
 }
 
 fn def(id: &str, type_: CardType, index: i32) -> CardDef {

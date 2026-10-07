@@ -51,7 +51,7 @@ use jackioh_engine::triggers::SettleOptions;
 use jackioh_engine::zones::{MoveToZoneOptions, OffFieldZone, PlaceOnFieldOptions};
 
 use super::fixtures::combat::stacker;
-use super::fixtures::harness::{PutOptions, in_hand, new_game, put as put_with, slot};
+use super::fixtures::harness::{in_hand, new_game, put as put_with, slot};
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
@@ -886,12 +886,12 @@ fn scripts() -> IndexMap<String, CardScripts> {
 
 /// The harness's `put(state, defId, ref)` with TS's default `options = {}`.
 fn put(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
-    put_with(state, def_id, at, PutOptions::default())
+    put_with(state, def_id, at, json!({}))
 }
 
 /// The harness's `put(state, defId, ref, { radiant: true })`.
 fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
-    put_with(state, def_id, at, PutOptions { radiant: Some(true) })
+    put_with(state, def_id, at, json!({ "radiant": true }))
 }
 
 /// The card as it stands now in `state`, by id (TS read the live object).
@@ -1241,7 +1241,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         // Dormant under a Stack: in the lane, but not on the field for anything (§3.2, R13). The same
         // refusal R13 gives an attack, and the position it had is left exactly where it was.
         live_mut(&mut state, &under).exertion = Exertion { attacked: false, switched: false, attacks: None }; // a fresh turn's worth, so a spend shows
-        let mut top = new_instance(&mut state, &stacker().id, P1, Zone::Hand { player: P1 });
+        let mut top = new_instance(&mut state, &stacker.id, P1, Zone::Hand { player: P1 });
         assert!(zones::place_on_field(
             &mut state,
             &mut top,
@@ -1912,7 +1912,7 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
             "pluck",
             "tricks",
         ]);
-        assert_eq!(as_json(HERO_POWER_NAMES), names);
+        assert_eq!(as_json(&HERO_POWER_NAMES), names);
         assert_eq!(Value::Array(HERO_POWERS.iter().map(|power| as_json(&power.name)).collect()), names);
         // Ping reaches any unit or hero on either side, declared with the activation (R81).
         let ping = must(HERO_POWERS.iter().find(|power| as_json(&power.name) == json!("ping")), "the ping power");
@@ -3309,7 +3309,7 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
     #[test]
     fn r140_gives_a_zone_less_stack_play_the_leftmost_empty_zone_and_lifts_occupancy_only_when_named() {
         let mut state = game("r140-stack-zone");
-        let card = must(in_hand(&mut state, &stacker().id, P1, 1).into_iter().next(), "a Stack card in hand");
+        let card = must(in_hand(&mut state, &stacker.id, P1, 1).into_iter().next(), "a Stack card in hand");
         let play = |state: &GameState, lane: Option<i32>| -> Option<String> {
             let fields = match lane {
                 None => json!({ "instanceId": card.id }),
@@ -3398,7 +3398,7 @@ mod spec_11_r151_and_r153_arrivals_and_zone_gated_hooks_m3_gate {
         // R151: it rolls on arrival, so it has a power again (R43, R78).
         let rolled = must(live(&state, &card).memory.get(POWER_KEY).cloned(), "a rolled power");
         assert!(rolled.is_string());
-        assert!(as_json(HERO_POWER_NAMES).as_array().is_some_and(|names| names.contains(&rolled)));
+        assert!(as_json(&HERO_POWER_NAMES).as_array().is_some_and(|names| names.contains(&rolled)));
         assert!(must(power_of(&live(&state, &card)), "the rolled power").x > 0);
 
         // And the roll is idempotent: a card that already has one keeps it when it arrives again.
