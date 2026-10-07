@@ -186,7 +186,8 @@ pub enum CastAfterward {
 ///   (Classic #56 Spell Tyrant's "then exile them", R453) — §10.5 step 7's landing (`echo.exileOnLanding`).
 ///
 /// TS `HookOptions & { random?; targetEnemies?; afterward? }`: `HookOptions`' fields, then these.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct CastOptions {
     pub controller: Option<PlayerId>,
     pub targets: Option<Vec<Selection>>,

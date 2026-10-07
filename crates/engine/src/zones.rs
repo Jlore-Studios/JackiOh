@@ -579,8 +579,10 @@ pub fn is_unit_token(state: &GameState, instance: &CardInstance) -> bool {
     def.token && card_type_of(state, instance) == CardType::Unit
 }
 
-/// `place_on_field`'s options: `stack` lets a Stack card top an occupied zone.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+/// `place_on_field`'s options: `stack` lets a Stack card top an occupied zone (TS `{ stack? }`, which a
+/// test builds with `json_as`).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct PlaceOnFieldOptions {
     pub stack: Option<bool>,
 }

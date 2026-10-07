@@ -98,7 +98,9 @@ pub const RESUME_HOOK: &str = "resume";
 /// `work.WorkPlan` under the name the effect side reads it by.
 pub type ResumePlan = WorkPlan;
 
-#[derive(Clone, Debug, PartialEq)]
+/// `openPrompt`'s argument (data: a test builds it from TS's literal with `json_as`).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct OpenPromptArgs {
     pub player: PlayerId,
     pub kind: PromptKind,
@@ -1070,7 +1072,8 @@ impl From<&CardInstance> for HookInstance {
 }
 
 /// `runHookResumable`'s options.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct HookResumableOptions {
     pub controller: Option<PlayerId>,
     pub targets: Option<Vec<Selection>>,
