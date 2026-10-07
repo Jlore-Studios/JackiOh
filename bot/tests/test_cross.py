@@ -258,11 +258,12 @@ class HandoffTests(unittest.TestCase):
         self.assertTrue(record["planned_at"])  # planned in that run: not planned again
         # The notes never reach the branch.
         self.assertNotIn(NOTES_FILE, git(h.origin, "ls-tree", "-r", "--name-only", result["head"]))
-        # claude-3 is parked until its reset; the next run is another account, told what happened.
+        # claude-3 is parked until its reset; the next run is another account (claude-7, next
+        # in the usage order), told what happened.
         second = FakeRunner({"build": builder({"src/game.txt": "whole\n"}),
                              "review": reviewer(APPROVE)})
         planned, result = h.night(second)
-        self.assertEqual((planned["provider"], result["status"]), ("claude-1", "approved"))
+        self.assertEqual((planned["provider"], result["status"]), ("claude-7", "approved"))
         self.assertEqual([c.role for c in second.calls], ["build", "review"])
         prompt = second.calls[0].prompt
         self.assertIn("## Picking up from another agent", prompt)
