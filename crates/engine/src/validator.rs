@@ -824,10 +824,10 @@ fn free(count: i32, what: &str) -> String {
 /// R340: whether an import fits under both caps, and the sentence when it does not.
 pub fn check_import_room(input: &ImportRoomInput) -> ImportRoom {
     let ImportRoomInput { saved, limits, adding } = *input;
-    let free_decks = 0.max(limits.decks - saved.decks);
-    let free_trios = 0.max(limits.trios - saved.trios);
-    let decks_short = 0.max(adding.decks - free_decks);
-    let trios_short = 0.max(adding.trios - free_trios);
+    let free_decks = 0_i32.max(limits.decks - saved.decks);
+    let free_trios = 0_i32.max(limits.trios - saved.trios);
+    let decks_short = 0_i32.max(adding.decks - free_decks);
+    let trios_short = 0_i32.max(adding.trios - free_trios);
     if decks_short == 0 && trios_short == 0 {
         return ImportRoom {
             ok: true,

@@ -262,7 +262,7 @@ fn deal_from(sink: &mut EngineSink, seat: usize) {
         sink.state.players[player].library = library;
 
         // R748: the other cards first; what the hand still lacks comes from the set-aside cards, uncast.
-        let others = 0.max((size - quickdraw_count).min(drawable_len));
+        let others = 0_i32.max((size - quickdraw_count).min(drawable_len));
         deal_suspended(sink, player, size - quickdraw_count - others);
         draw(sink, player, others);
         // An arrival clause of the opening draw is asking (R158: the draw has owed its own remainder), so
