@@ -60,7 +60,7 @@ fn unit_now(state: &GameState, card: &CardInstance) -> AttackTarget {
 }
 
 /// lethal projection (M3-T7, R44)
-mod lethal_projection_m3_t7_r44 {
+mod r44_lethal_projection_m3_t7 {
     use super::*;
 
     #[test]
@@ -132,7 +132,7 @@ mod lethal_projection_m3_t7_r44 {
     fn r44_clamps_the_projection_with_anti_oneshot_armor_base_5_and_radiant_3_s4_4_step_3() {
         let mut state = board("cap-base");
         let attacker = put(&mut state, &big_body.id, slot(P1, Row::Units, 1), json!({ "radiant": true })); // 10/20
-        put(&mut state, &anti_oneshot.id, slot(P2, Row::Backrow, 1), json!({}));
+        put(&mut state, &anti_oneshot().id, slot(P2, Row::Backrow, 1), json!({}));
 
         assert_eq!(unit_view(&state, &live(&state, &attacker)).attack, 10);
         assert_eq!(projected(&state, &attacker, &on_hero()), ANTI_ONESHOT_CAP.base);
@@ -144,7 +144,7 @@ mod lethal_projection_m3_t7_r44 {
         // Radiant Anti-oneshot Armor clamps to 3, so the same 10 attack needs a hero on 3.
         let mut radiant = board("cap-radiant");
         let bigger = put(&mut radiant, &big_body.id, slot(P1, Row::Units, 1), json!({ "radiant": true }));
-        put(&mut radiant, &anti_oneshot.id, slot(P2, Row::Backrow, 1), json!({ "radiant": true }));
+        put(&mut radiant, &anti_oneshot().id, slot(P2, Row::Backrow, 1), json!({ "radiant": true }));
 
         assert_eq!(projected(&radiant, &bigger, &on_hero()), ANTI_ONESHOT_CAP.radiant);
         radiant.players.p2.hero.health = 4;
@@ -179,7 +179,7 @@ mod lethal_projection_m3_t7_r44 {
         let mut capped = board("trample-capped");
         let big = put(&mut capped, &trampler.id, slot(P1, Row::Units, 1), json!({ "radiant": true })); // 12/8 Trample
         let small = put(&mut capped, &plain.id, slot(P2, Row::Units, 1), json!({})); // 3/3
-        put(&mut capped, &anti_oneshot.id, slot(P2, Row::Backrow, 1), json!({}));
+        put(&mut capped, &anti_oneshot().id, slot(P2, Row::Backrow, 1), json!({}));
         assert_eq!(projected(&capped, &big, &unit_now(&capped, &small)), ANTI_ONESHOT_CAP.base);
     }
 
@@ -225,7 +225,7 @@ mod lethal_projection_m3_t7_r44 {
         let attacker = put(&mut state, &trampler.id, slot(P1, Row::Units, 1), json!({}));
         let blocker = put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({}));
         let shield = put(&mut state, &shielded.id, slot(P2, Row::Units, 2), json!({}));
-        put(&mut state, &anti_oneshot.id, slot(P2, Row::Backrow, 1), json!({}));
+        put(&mut state, &anti_oneshot().id, slot(P2, Row::Backrow, 1), json!({}));
         state.players.p2.hero.armor = 1;
         state.players.p2.hero.health = 3;
 

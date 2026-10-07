@@ -77,7 +77,7 @@ fn bare_context(state: &mut GameState, radiant: bool, def_id: Option<&str>) -> E
 }
 
 /// B3.4 rule 5: declared numbers (R386)
-mod b3_4_rule_5_declared_numbers_r386 {
+mod r386_b3_4_rule_5_declared_numbers {
     use super::*;
 
     #[test]
@@ -344,7 +344,7 @@ fn act(state: &GameState, body: ActionInput) -> GameState {
 }
 
 /// B3.4 rule 5: a card resolves with its number as it stands (R386)
-mod b3_4_rule_5_a_card_resolves_with_its_number_as_it_stands_r386 {
+mod r386_b3_4_rule_5_a_card_resolves_with_its_number_as_it_stands {
     use super::*;
 
     #[test]

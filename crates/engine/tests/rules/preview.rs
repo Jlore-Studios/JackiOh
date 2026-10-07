@@ -652,7 +652,7 @@ mod r280_preview_on_the_field {
     }
 
     #[test]
-    fn r280_a_face_down_trap_follows_control_r33_a_stolen_one_shows_to_its_new_controller_not_its_owner() {
+    fn r280_r33_a_face_down_trap_follows_control_a_stolen_one_shows_to_its_new_controller_not_its_owner() {
         let mut state = game("r280-backrow-stolen");
         let trap = put(&mut state, &pv_trap().id, slot(P2, Row::Backrow, 3), json!({}));
         live_mut(&mut state, &trap).owner = P1;
@@ -867,7 +867,7 @@ mod r280_the_hook_is_a_pure_read {
 // ---------------------------------------------------------------------------
 
 /// R280 a fusion's preview is its ingredients' lists in ingredient order (R102)
-mod r280_a_fusion_s_preview_is_its_ingredients_lists_in_ingredient_order_r102 {
+mod r280_r102_a_fusion_s_preview_is_its_ingredients_lists_in_ingredient_order {
     use super::*;
 
     /// Craft a fusion of `def_ids` into p1's hand through the real R77 `fuse`, the path #99 takes.
@@ -927,7 +927,7 @@ mod r280_a_fusion_s_preview_is_its_ingredients_lists_in_ingredient_order_r102 {
     }
 
     #[test]
-    fn r280_a_fusion_kept_on_the_field_r77_s_target_shows_the_list_to_both_seats() {
+    fn r280_r77_a_fusion_kept_on_the_field_the_target_shows_the_list_to_both_seats() {
         let mut state = game("r280-fused-field");
         let target = put(&mut state, &pv_a().id, slot(P1, Row::Units, 2), json!({}));
         let ingredient = one(in_hand(&mut state, &pv_b().id, P1, 1));
@@ -953,7 +953,7 @@ mod r280_a_fusion_s_preview_is_its_ingredients_lists_in_ingredient_order_r102 {
     }
 
     #[test]
-    fn r102_a_fused_definition_names_every_card_its_ingredients_name_their_refs_union_in_order_r279() {
+    fn r102_r279_a_fused_definition_names_every_card_its_ingredients_name_their_refs_union_in_order() {
         let mut state = game("r102-fused-refs");
         let both = craft(&mut state, &[pv_a().id, pv_b().id]);
         let one_ = craft(&mut state, &[pv_b().id, quiet_unit().id]);

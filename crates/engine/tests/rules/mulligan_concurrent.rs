@@ -140,7 +140,7 @@ mod r265_the_mulligans_are_open_at_once {
         let mut casts = 0;
         for n in 0..40 {
             let seed = format!("r265-cast-{n}");
-            let mut first_deck = vec![hinder.id.clone()];
+            let mut first_deck = vec![hinder().id];
             first_deck.extend(vanilla_deck(hard.deck_size - 1, 1));
             let decks: (Vec<String>, Vec<String>) = (first_deck, vanilla_deck(DECK_SIZE, 21));
             let mut game = create_game(&CreateGameOptions {
@@ -150,7 +150,7 @@ mod r265_the_mulligans_are_open_at_once {
                 ..CreateGameOptions::default()
             });
             for seat in SEATS {
-                let virus = new_instance(&mut game, &cn_virus.id, seat, Zone::Library { player: seat });
+                let virus = new_instance(&mut game, &cn_virus().id, seat, Zone::Library { player: seat });
                 game.players[seat].library.push(virus);
             }
             let begun = begin_game(&game).state;
@@ -166,7 +166,7 @@ mod r265_the_mulligans_are_open_at_once {
                 .iter()
                 .flat_map(|&seat| first.state.players[seat].graveyard.iter())
                 .collect();
-            if played.iter().any(|card| card.def_id == hinder.id || card.def_id == cn_virus.id) {
+            if played.iter().any(|card| card.def_id == hinder().id || card.def_id == cn_virus().id) {
                 casts += 1;
             }
         }
@@ -201,7 +201,7 @@ mod r265_a_game_that_ends_while_the_mulligans_are_open {
     use super::*;
 
     #[test]
-    fn r265_closes_both_mulligans_with_the_game_so_no_view_offers_one_no_one_can_answer_r216() {
+    fn r265_r216_closes_both_mulligans_with_the_game_so_no_view_offers_one_no_one_can_answer() {
         let begun = begin_game(&new_game("r265-concede", None)).state;
         let waiting = act(&begun, input(json!({ "type": "mulligan", "keep": [], "playerId": "p1" })));
         for (state, who) in [(&begun, P1), (&waiting, P2), (&waiting, P1)] {
@@ -501,7 +501,7 @@ mod r269_a_draw_offer_s_lifetime {
     }
 
     #[test]
-    fn r269_is_gone_once_the_game_is_over_however_it_ended_r216() {
+    fn r269_r216_is_gone_once_the_game_is_over_however_it_ended() {
         let offered = act(&playing("r269-over"), input(json!({ "type": "offerDraw", "playerId": "p1" })));
         for (who, body) in [
             (P2, json!({ "type": "concede" })),
