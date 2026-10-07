@@ -709,7 +709,7 @@ mod view_for_10_8_m3_t6 {
             &mut state,
             &mut top,
             slot(PlayerId::P2, Row::Units, 1),
-            json_as(json!({ "stack": true })),
+            PlaceOnFieldOptions { stack: Some(true), ..Default::default() },
         ));
 
         for viewer in [PlayerId::P1, PlayerId::P2] {
