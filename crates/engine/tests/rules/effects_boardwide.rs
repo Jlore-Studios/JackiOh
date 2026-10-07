@@ -123,10 +123,10 @@ impl Runner {
         // TS handed over the live object: read it back as it stands now.
         let self_ = options.self_.map(|card| find_instance(&self.state, &card.id).cloned().unwrap_or_else(|| card.clone()));
         {
-            let sink = EngineSink::new(&mut self.state, &mut self.events, &mut self.rng);
+            let mut sink = EngineSink::new(&mut self.state, &mut self.events, &mut self.rng);
             let mut ctx = make_context(
-                sink,
-                self_,
+                &mut sink,
+                self_.as_ref(),
                 HookOptions {
                     controller: Some(options.controller.unwrap_or(PlayerId::P1)),
                     targets: Some(targets),
@@ -214,8 +214,8 @@ fn only(cards: Vec<CardInstance>) -> CardInstance {
 
 /// A card owned by one player but standing on the other's field, for R12's "owner's graveyard".
 fn stolen_onto(state: &mut GameState, def_id: &str, owner: PlayerId, at: ZoneSlot) -> CardInstance {
-    let card = new_instance(state, def_id, owner, Zone::Hand { player: owner });
-    if !place_on_field(state, card.clone(), at, Default::default()) {
+    let mut card = new_instance(state, def_id, owner, Zone::Hand { player: owner });
+    if !place_on_field(state, &mut card, at, Default::default()) {
         panic!("could not place the stolen fixture");
     }
     card
@@ -373,8 +373,8 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
         // §3.2.
         let mut state = game("destroyAll-stack");
         let dormant = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 1), json!({}));
-        let top = new_instance(&mut state, BEAST, PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
-        assert!(place_on_field(&mut state, top.clone(), slot(PlayerId::P2, Row::Units, 1), json_as(json!({ "stack": true }))));
+        let mut top = new_instance(&mut state, BEAST, PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
+        assert!(place_on_field(&mut state, &mut top, slot(PlayerId::P2, Row::Units, 1), json_as(json!({ "stack": true }))));
         let mut run = Runner::new(state);
 
         run.apply(destroy_all(json_as(json!({ "side": "enemy" }))), None, defaults());

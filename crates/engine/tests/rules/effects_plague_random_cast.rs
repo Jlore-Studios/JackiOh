@@ -91,7 +91,8 @@ fn cast_from_box(state: &mut GameState) {
                 query: CastRandomQuery::Fixed(json_as(json!({ "defId": plague_spell().id }))),
                 count: Some(CastRandomCount::Fixed(1)),
                 radiant: None,
-                how: json_as(json!({})),
+                target_enemies: None,
+                afterward: None,
             })],
             &mut ctx,
         );

@@ -48,8 +48,8 @@ fn run(sink: &mut EngineSink<'_>, effect: Effect, options: RunOptions) {
     let RunOptions { self_, controller, targets } = options;
     let self_ = self_.map(|card| find_instance(sink.state, &card.id).cloned().unwrap_or(card));
     let mut ctx = make_context(
-        sink.reborrow(),
-        self_,
+        sink,
+        self_.as_ref(),
         HookOptions { controller, targets, ..Default::default() },
     );
     (effect.apply)(&mut ctx);
@@ -162,8 +162,8 @@ mod plague_s6_3_plague_counter_m3_t1 {
         );
         assert_eq!(live(sink.state, &unit).counters.plague, Some(3));
 
-        let moving = live(sink.state, &unit).clone();
-        move_to_zone(sink.state, &moving, ZoneName::Graveyard, Default::default());
+        let mut moving = live(sink.state, &unit).clone();
+        move_to_zone(sink.state, &mut moving, OffFieldZone::Graveyard, Default::default());
         assert_eq!(live(sink.state, &unit).counters.plague, None);
     }
 
@@ -221,12 +221,12 @@ mod lock_s3_2_m3_t1 {
 
         // Once it leaves, the lock lasts until the game ends — but R688 lets placements in: a Lock
         // refuses plays, never summons or moves.
-        let moving = live(sink.state, &occupant).clone();
-        move_to_zone(sink.state, &moving, ZoneName::Graveyard, Default::default());
+        let mut moving = live(sink.state, &occupant).clone();
+        move_to_zone(sink.state, &mut moving, OffFieldZone::Graveyard, Default::default());
         assert!(card_at(sink.state, slot(P2, Units, 2)).is_none());
         assert!(is_locked(sink.state, slot(P2, Units, 2)));
-        let newcomer = new_instance(&mut *sink.state, &plain.id, P2, Zone::Hand { player: P2 });
-        assert!(place_on_field(sink.state, newcomer.clone(), slot(P2, Units, 2), Default::default()));
+        let mut newcomer = new_instance(&mut *sink.state, &plain.id, P2, Zone::Hand { player: P2 });
+        assert!(place_on_field(sink.state, &mut newcomer, slot(P2, Units, 2), Default::default()));
         assert_eq!(card_at(sink.state, slot(P2, Units, 2)).map(|card| card.id.clone()), Some(newcomer.id.clone()));
         assert!(is_locked(sink.state, slot(P2, Units, 2)));
     }
@@ -242,8 +242,8 @@ mod lock_s3_2_m3_t1 {
             lock(json_as(json!({ "zone": { "of": "chosen" } }))),
             RunOptions { targets: Some(on_instance(&trap)), controller: Some(P1), ..Default::default() },
         );
-        let moving = live(sink.state, &trap).clone();
-        move_to_zone(sink.state, &moving, ZoneName::Graveyard, Default::default());
+        let mut moving = live(sink.state, &trap).clone();
+        move_to_zone(sink.state, &mut moving, OffFieldZone::Graveyard, Default::default());
 
         assert!(is_locked(sink.state, slot(P2, Backrow, 4)));
         // Only that row and lane: the unit zone in the same lane is untouched.

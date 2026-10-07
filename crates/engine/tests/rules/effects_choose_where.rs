@@ -17,8 +17,8 @@ fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     {
-        let sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(sink, None, HookOptions { controller: Some(PlayerId::P1), ..Default::default() });
+        let mut sink = EngineSink::new(state, &mut events, &mut rng);
+        let mut ctx = make_context(&mut sink, None, HookOptions { controller: Some(PlayerId::P1), ..Default::default() });
         (effect.apply)(&mut ctx);
     }
     events
@@ -31,7 +31,7 @@ fn choose_where(
     choose_target_where(ChooseTargetWhereArgs {
         step: "picked".to_string(),
         scope: Some(json_as(scope)),
-        where_: Arc::new(where_),
+        where_: Some(Arc::new(where_)),
         prompt: None,
         data: None,
     })
