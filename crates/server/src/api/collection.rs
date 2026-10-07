@@ -28,7 +28,7 @@ use std::sync::Arc;
 use indexmap::IndexMap;
 use serde_json::json;
 
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
+use crate::api::http::{ApiError, ApiResult, Req, bad_request, json};
 use crate::app::App;
 use crate::db::store::{CollectionEntry, CollectionGrant, Profile, StoreError, Tx};
 
@@ -62,20 +62,6 @@ pub struct GrantInput {
     pub entries: Vec<CollectionEntry>,
     /// Why, for the append-only ledger (§9.4).
     pub reason: String,
-}
-
-fn api_error(code: ApiErrorCode, message: impl Into<String>) -> ApiError {
-    ApiError { code, message: message.into(), details: None, retry_after_ms: None }
-}
-
-fn bad_request(message: impl Into<String>) -> ApiError {
-    api_error(ApiErrorCode::BadRequest, message)
-}
-
-/// A store fault is a 500, logged, as TS's router turned a thrown error into one.
-fn store_failure(error: impl std::fmt::Debug) -> ApiError {
-    tracing::warn!(event = "handler.threw", message = %format!("{error:?}"));
-    api_error(ApiErrorCode::Internal, "something went wrong")
 }
 
 /// The caller behind a route that declares `AuthLevel::Active`. `api::http::dispatch` has already
@@ -125,8 +111,8 @@ pub async fn grant_cards(app: &App, input: GrantInput) -> Result<(), ApiError> {
     }
 
     let at = crate::app::now_ms();
-    let mut tx = app.db.begin(Some(&input.profile_id)).await.map_err(store_failure)?;
-    let current = owned_in(&mut tx, &input.profile_id).await.map_err(store_failure)?;
+    let mut tx = app.db.begin(Some(&input.profile_id)).await?;
+    let current = owned_in(&mut tx, &input.profile_id).await?;
     let mut quantities: Vec<CollectionEntry> = Vec::new();
     let mut grants: Vec<CollectionGrant> = Vec::new();
     for (card_id, delta) in &deltas {
@@ -142,9 +128,9 @@ pub async fn grant_cards(app: &App, input: GrantInput) -> Result<(), ApiError> {
             at,
         });
     }
-    tx.collection_upsert_quantities(&input.profile_id, &quantities).await.map_err(store_failure)?;
-    tx.collection_append_grants(&grants).await.map_err(store_failure)?;
-    tx.commit().await.map_err(store_failure)?;
+    tx.collection_upsert_quantities(&input.profile_id, &quantities).await?;
+    tx.collection_append_grants(&grants).await?;
+    tx.commit().await?;
 
     tracing::info!(
         event = "collection.granted",
@@ -189,7 +175,7 @@ pub async fn grant_entire_catalog(app: &App, profile_id: &str, reason: Option<&s
 }
 
 /// Shared by `owned_map` and `grant_cards`, which needs the read inside its own transaction.
-async fn owned_in(tx: &mut Tx<'_>, profile_id: &str) -> Result<IndexMap<String, i64>, StoreError> {
+pub(crate) async fn owned_in(tx: &mut Tx<'_>, profile_id: &str) -> Result<IndexMap<String, i64>, StoreError> {
     let mut owned: IndexMap<String, i64> = IndexMap::new();
     for entry in tx.collection_get(profile_id).await? {
         *owned.entry(entry.card_id.clone()).or_insert(0) += entry.quantity;
@@ -201,9 +187,9 @@ async fn owned_in(tx: &mut Tx<'_>, profile_id: &str) -> Result<IndexMap<String, 
 /// loadout never exceed the quantity owned"), so `decks.rs` builds the validator's input from
 /// here and never reads `collection` itself.
 pub async fn owned_map(app: &App, profile_id: &str) -> Result<IndexMap<String, i64>, ApiError> {
-    let mut tx = app.db.begin(Some(profile_id)).await.map_err(store_failure)?;
-    let owned = owned_in(&mut tx, profile_id).await.map_err(store_failure)?;
-    tx.commit().await.map_err(store_failure)?;
+    let mut tx = app.db.begin(Some(profile_id)).await?;
+    let owned = owned_in(&mut tx, profile_id).await?;
+    tx.commit().await?;
     Ok(owned)
 }
 
@@ -218,9 +204,9 @@ pub async fn owned_map(app: &App, profile_id: &str) -> Result<IndexMap<String, i
 /// client does not see here is owned zero times.
 pub async fn get_collection(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
-    let mut tx = app.db.begin(Some(&profile.id)).await.map_err(store_failure)?;
-    let mut entries = tx.collection_get(&profile.id).await.map_err(store_failure)?;
-    tx.commit().await.map_err(store_failure)?;
+    let mut tx = app.db.begin(Some(&profile.id)).await?;
+    let mut entries = tx.collection_get(&profile.id).await?;
+    tx.commit().await?;
     entries.sort_by(|a, b| a.card_id.cmp(&b.card_id));
     let entries: Vec<serde_json::Value> = entries
         .iter()

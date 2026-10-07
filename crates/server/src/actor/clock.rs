@@ -23,11 +23,12 @@
 //! Every number comes from `crate::config` (`src/config.ts`), so R79's values are stated once.
 
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
+use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;
 
 use jackioh_engine::{PLAYER_IDS, PerPlayer, PlayerId};
 
+use crate::api::http::lock;
 use crate::actor::contracts::{ClockExpiry, ClockView, CreateMatchClockInput, ExpiryHandler};
 use crate::app::now_ms;
 use crate::config::{
@@ -91,10 +92,6 @@ pub(crate) fn after(ms: i64, f: impl FnOnce(u64) + Send + 'static) -> Timer {
         id,
         handle: Some(handle),
     }
-}
-
-fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 // ---------------------------------------------------------------------------

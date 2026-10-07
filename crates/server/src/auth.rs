@@ -260,7 +260,7 @@ fn signed_with_shared_secret(token: &str) -> bool {
 
 /// supabase-js's admin calls refuse an id that is not a UUID before any request, and TS's catch
 /// turned that into "unavailable".
-fn is_uuid(id: &str) -> bool {
+pub(crate) fn is_uuid(id: &str) -> bool {
     uuid::Uuid::parse_str(id).is_ok()
 }
 

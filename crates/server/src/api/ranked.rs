@@ -24,8 +24,9 @@ use serde_json::{Value, json};
 
 use jackioh_engine::PerPlayer;
 
+use crate::api::collection::caller_profile;
 use crate::api::crypto::player_tag;
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, log_alert, log_info, now_ms, ok_of};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, log_alert, log_info, now_ms, ok_of};
 use crate::app::App;
 use crate::db::store::{
     BotRating, Pilot, Profile, RatedGameKind, RatedGameRow, RatedReason, RatedSide, Season, SeasonStanding,
@@ -708,12 +709,6 @@ pub async fn match_ranks(app: &App, match_id: &str, viewer_id: &str) -> Result<O
         ranked: row.ranked.unwrap_or(false),
         seats: PerPlayer { p1: seat(&row.players.0), p2: seat(&row.players.1) },
     }))
-}
-
-/// The caller behind a route that declares `AuthLevel::Active` (a private copy of
-/// `collection.rs`'s `callerProfile`).
-fn caller_profile(req: &Req) -> Result<&Profile, ApiError> {
-    req.caller.as_ref().map(|caller| &caller.profile).ok_or_else(|| bad_request("this endpoint needs a signed-in profile"))
 }
 
 // TS's `createRankedRoutes()`, in its order, is three `AuthLevel::Active` rows of `app.rs`'s

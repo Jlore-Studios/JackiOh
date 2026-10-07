@@ -24,6 +24,7 @@ use jackioh_engine::wire::{
     DEFAULT_CARD_STATS_FILTER, GAME_MODES, PILOT_FILTERS, SOURCE_FILTERS,
 };
 
+use crate::env::quoted;
 use crate::db::store::{Db, GameRecordQuery, StoreError};
 
 const USAGE: &str = "Usage: jackioh-server stats-cards [options]
@@ -45,16 +46,11 @@ pub struct CardStatsOptions {
 
 /// The literal a string-union value serialises as (`"live"`, `"bo1"`, …): what the flag's value is
 /// compared with and what the refusal lists.
-fn literal<T: Serialize>(value: &T) -> String {
+pub(crate) fn literal<T: Serialize>(value: &T) -> String {
     match serde_json::to_value(value) {
         Ok(serde_json::Value::String(text)) => text,
         _ => String::new(),
     }
-}
-
-/// `JSON.stringify` of a string, for the refusals' `(got "…")`.
-fn quoted(text: &str) -> String {
-    serde_json::to_string(text).unwrap_or_default()
 }
 
 fn one_of<T: Copy + Serialize>(name: &str, raw: &str, allowed: &[T]) -> anyhow::Result<T> {

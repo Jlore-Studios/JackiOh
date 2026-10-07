@@ -39,8 +39,9 @@ use std::time::Duration;
 use indexmap::{IndexMap, IndexSet};
 use serde_json::{Value, json};
 
+use crate::api::collection::caller_profile;
 use crate::api::decks::{FrozenChoice, ModeChoiceInput, assert_not_in_series, freeze_choice, read_mode_choice};
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json, bad_request};
 use crate::api::series::start_series;
 use crate::api::series_rules::{NewSeriesInput, NewSeriesSide};
 use crate::app::{App, now_ms};
@@ -55,63 +56,21 @@ const MS_PER_SECOND: f64 = 1000.0;
 // ---------------------------------------------------------------------------
 
 /// TS `deps.ids.uuid()` (`systemIds.uuid`, `crypto.randomUUID()`).
-fn new_uuid() -> String {
+pub(crate) fn new_uuid() -> String {
     uuid::Uuid::new_v4().to_string()
 }
 
 /// TS `deps.ids.seed()` (`systemIds.seed`): 16 random bytes as lower-case hex. The engine is seeded
 /// only from this (SPEC §9.3).
-fn new_seed() -> String {
+pub(crate) fn new_seed() -> String {
     let mut bytes = [0u8; 16];
     getrandom::fill(&mut bytes).expect("the system's random source failed");
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
-fn api_error(code: ApiErrorCode, message: impl Into<String>, details: Option<Value>) -> ApiError {
-    ApiError { code, message: message.into(), details, retry_after_ms: None }
-}
-
-/// TS `badRequest(message)`.
-fn bad_request(message: impl Into<String>) -> ApiError {
-    api_error(ApiErrorCode::BadRequest, message, None)
-}
-
-/// An error that was not an `ApiError` in TS (a store failure, a thrown `Error`), carrying its own
-/// sentence for the log line of whoever catches it.
-fn internal(error: impl std::fmt::Display) -> ApiError {
-    api_error(ApiErrorCode::Internal, error.to_string(), None)
-}
-
-/// At a handler's edge, what TS's router did with a thrown non-`ApiError`: log it as
-/// `handler.threw` and answer 500 `internal` "something went wrong", never the sentence itself.
-fn hide_internal(error: ApiError) -> ApiError {
-    if !matches!(error.code, ApiErrorCode::Internal) {
-        return error;
-    }
-    tracing::warn!(event = "handler.threw", message = %error.message);
-    api_error(ApiErrorCode::Internal, "something went wrong", None)
-}
-
-/// TS `callerProfile(req)` (`collection.ts`): the signed-in profile a non-`none` route carries.
-fn caller_profile(req: &Req) -> Result<Profile, ApiError> {
-    match &req.caller {
-        Some(caller) => Ok(caller.profile.clone()),
-        None => Err(bad_request("this endpoint needs a signed-in profile")),
-    }
-}
-
 /// A list as the JSON array a TS log line printed it as.
-fn json_list<T: serde::Serialize>(items: &[T]) -> String {
+pub(crate) fn json_list<T: serde::Serialize>(items: &[T]) -> String {
     serde_json::to_string(items).unwrap_or_default()
-}
-
-/// The literal a mode is written as (`queue.enqueued`'s and `queue.paired`'s `mode`).
-fn mode_name(mode: QueueMode) -> &'static str {
-    match mode {
-        QueueMode::Bo1 => "bo1",
-        QueueMode::Bo3 => "bo3",
-        QueueMode::Random => "random",
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -208,20 +167,16 @@ async fn enqueue_ticket(
     // §9.5: "asserts the account is active and not in a match". `AuthLevel::Active` did the first
     // half (§9.4's gate, in the router); this is the second.
     if profile.in_match_id.is_some() {
-        return Err(api_error(ApiErrorCode::AlreadyInMatch, "finish your current match first", None));
+        return Err(ApiError::new(ApiErrorCode::AlreadyInMatch, "finish your current match first"));
     }
     // R264: between the games of a series a profile is in no match, and still not free to queue.
     assert_not_in_series(app, &profile.id).await?;
     {
-        let mut tx = app.db.begin(None).await.map_err(internal)?;
-        let open = tx.tickets_open_for_profile(&profile.id).await.map_err(internal)?;
-        tx.commit().await.map_err(internal)?;
+        let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
+        let open = tx.tickets_open_for_profile(&profile.id).await.map_err(|error| ApiError::internal(error.to_string()))?;
+        tx.commit().await.map_err(|error| ApiError::internal(error.to_string()))?;
         if let Some(open) = open {
-            return Err(api_error(
-                ApiErrorCode::AlreadyQueued,
-                "you are already in the queue",
-                Some(json!({ "ticketId": open.id })),
-            ));
+            return Err(ApiError::with_details(ApiErrorCode::AlreadyQueued, "you are already in the queue", json!({ "ticketId": open.id })));
         }
     }
 
@@ -261,17 +216,13 @@ async fn enqueue_ticket(
     if let Err(error) = inserted {
         // `tickets_profile_queued_key` (migration 0004) is the race-proof half of "not already
         // queued": two simultaneous enqueues both pass the read above and one loses here.
-        let mut tx = app.db.begin(None).await.map_err(internal)?;
-        let existing = tx.tickets_open_for_profile(&profile.id).await.map_err(internal)?;
-        tx.commit().await.map_err(internal)?;
+        let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
+        let existing = tx.tickets_open_for_profile(&profile.id).await.map_err(|error| ApiError::internal(error.to_string()))?;
+        tx.commit().await.map_err(|error| ApiError::internal(error.to_string()))?;
         if let Some(existing) = existing {
-            return Err(api_error(
-                ApiErrorCode::AlreadyQueued,
-                "you are already in the queue",
-                Some(json!({ "ticketId": existing.id })),
-            ));
+            return Err(ApiError::with_details(ApiErrorCode::AlreadyQueued, "you are already in the queue", json!({ "ticketId": existing.id })));
         }
-        return Err(internal(error));
+        return Err(ApiError::internal(error.to_string()));
     }
 
     // R143, after the insert won: a seed remembered for a ticket that does not exist would never be
@@ -284,7 +235,7 @@ async fn enqueue_ticket(
         event = "queue.enqueued",
         profileId = %profile.id,
         ticketId = %ticket.id,
-        mode = mode_name(ticket.mode),
+        mode = ticket.mode.as_str(),
     );
     Ok(ticket)
 }
@@ -317,15 +268,15 @@ fn qualifies(a: &Ticket, b: &Ticket, now: i64) -> bool {
 fn trio_of(ticket: &Ticket) -> Result<FrozenTrio, ApiError> {
     match &ticket.trio {
         Some(trio) => Ok(trio.clone()),
-        None => Err(internal(format!("Conquest ticket {} holds no trio", ticket.id))),
+        None => Err(ApiError::internal(format!("Conquest ticket {} holds no trio", ticket.id))),
     }
 }
 
 /// R263: forget the `open` skeleton `tickets_claim_pair` wrote, in its own transaction.
 async fn discard_open(app: &App, match_id: &str) -> Result<(), ApiError> {
-    let mut tx = app.db.begin(None).await.map_err(internal)?;
-    tx.matches_discard_open(match_id).await.map_err(internal)?;
-    tx.commit().await.map_err(internal)
+    let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
+    tx.matches_discard_open(match_id).await.map_err(|error| ApiError::internal(error.to_string()))?;
+    tx.commit().await.map_err(|error| ApiError::internal(error.to_string()))
 }
 
 /// R259: a Conquest pair becomes a series, not a match. Its first game's match id is the one
@@ -353,9 +304,9 @@ async fn start_paired_series(app: &App, a: &Ticket, b: &Ticket, match_id: &str) 
         // One transaction, so the series row and `start_series`'s stale-ticket cancels land together
         // or not at all: a 'picking' row that half-landed would hold both players out of the queue
         // (assert_not_in_series) until the pick deadline ran it out (R333).
-        let mut tx = app.db.begin(None).await.map_err(internal)?;
-        let series = start_series(app, input, &mut tx).await.map_err(internal)?;
-        tx.commit().await.map_err(internal)?;
+        let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
+        let series = start_series(app, input, &mut tx).await.map_err(|error| ApiError::internal(error.to_string()))?;
+        tx.commit().await.map_err(|error| ApiError::internal(error.to_string()))?;
         Ok::<SeriesRow, ApiError>(series)
     }
     .await;
@@ -440,11 +391,11 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
     // in-match state; `profiles.current_match_id` is a foreign key into `matches` and the `open`
     // row `tickets_claim_pair` wrote is what satisfies it.
     {
-        let mut tx = app.db.begin(None).await.map_err(internal)?;
+        let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
         // §9.5: in-match state is set here and cleared by `results.rs` at every ending.
-        tx.profiles_set_in_match(&a.profile_id, Some(match_id)).await.map_err(internal)?;
-        tx.profiles_set_in_match(&b.profile_id, Some(match_id)).await.map_err(internal)?;
-        tx.commit().await.map_err(internal)?;
+        tx.profiles_set_in_match(&a.profile_id, Some(match_id)).await.map_err(|error| ApiError::internal(error.to_string()))?;
+        tx.profiles_set_in_match(&b.profile_id, Some(match_id)).await.map_err(|error| ApiError::internal(error.to_string()))?;
+        tx.commit().await.map_err(|error| ApiError::internal(error.to_string()))?;
     }
 
     // R604: a match the queue pairs is ranked.
@@ -470,10 +421,10 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
         // deletion forever. Undo it before the error stands: the tickets are claimed either way (the
         // pair is lost), but the players must come free.
         let cleanup = async {
-            let mut tx = app.db.begin(None).await.map_err(internal)?;
-            tx.profiles_set_in_match(&a.profile_id, None).await.map_err(internal)?;
-            tx.profiles_set_in_match(&b.profile_id, None).await.map_err(internal)?;
-            tx.commit().await.map_err(internal)?;
+            let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
+            tx.profiles_set_in_match(&a.profile_id, None).await.map_err(|error| ApiError::internal(error.to_string()))?;
+            tx.profiles_set_in_match(&b.profile_id, None).await.map_err(|error| ApiError::internal(error.to_string()))?;
+            tx.commit().await.map_err(|error| ApiError::internal(error.to_string()))?;
             discard_open(app, match_id).await
         }
         .await;
@@ -484,7 +435,7 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
     }
     tracing::info!(
         event = "queue.paired",
-        mode = mode_name(a.mode),
+        mode = a.mode.as_str(),
         matchId = %match_id,
         tickets = %json_list(&[a.id.clone(), b.id.clone()]),
         ratings = %json_list(&[a.rating, b.rating]),
@@ -511,11 +462,11 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
 /// Answers how many matches this sweep made.
 pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
     let now = now_ms();
-    let mut tx = app.db.begin(None).await.map_err(internal)?;
-    let mut open: Vec<Ticket> = tx.tickets_list_open().await.map_err(internal)?;
+    let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
+    let mut open: Vec<Ticket> = tx.tickets_list_open().await.map_err(|error| ApiError::internal(error.to_string()))?;
     open.sort_by(|x, y| x.enqueued_at.cmp(&y.enqueued_at).then_with(|| x.id.cmp(&y.id)));
     if open.len() < 2 {
-        tx.commit().await.map_err(internal)?;
+        tx.commit().await.map_err(|error| ApiError::internal(error.to_string()))?;
         return Ok(0);
     }
 
@@ -527,16 +478,16 @@ pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
     let mut busy: IndexSet<String> = tx
         .profiles_get_many(&owners)
         .await
-        .map_err(internal)?
+        .map_err(|error| ApiError::internal(error.to_string()))?
         .into_iter()
         .filter(|profile| profile.in_match_id.is_some())
         .map(|profile| profile.id)
         .collect();
-    for series in tx.series_active().await.map_err(internal)? {
+    for series in tx.series_active().await.map_err(|error| ApiError::internal(error.to_string()))? {
         busy.insert(series.sides.0.profile_id.clone());
         busy.insert(series.sides.1.profile_id.clone());
     }
-    tx.commit().await.map_err(internal)?;
+    tx.commit().await.map_err(|error| ApiError::internal(error.to_string()))?;
     let mut taken: IndexSet<String> =
         open.iter().filter(|ticket| busy.contains(&ticket.profile_id)).map(|ticket| ticket.id.clone()).collect();
     let mut made = 0;
@@ -557,18 +508,18 @@ pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
             // §9.5: "both tickets are claimed in one atomic statement". Everything before this line is
             // a guess; only a `true` here gives this process the right to create a match.
             let won = {
-                let mut tx = app.db.begin(None).await.map_err(internal)?;
-                let won = tx.tickets_claim_pair(&a.id, &b.id, &match_id, now).await.map_err(internal)?;
-                tx.commit().await.map_err(internal)?;
+                let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
+                let won = tx.tickets_claim_pair(&a.id, &b.id, &match_id, now).await.map_err(|error| ApiError::internal(error.to_string()))?;
+                tx.commit().await.map_err(|error| ApiError::internal(error.to_string()))?;
                 won
             };
             if !won {
                 // Another matcher got one of them. Never create a match for a ticket we did not claim:
                 // find out which one is gone and either try another opponent or drop this ticket.
                 let still = {
-                    let mut tx = app.db.begin(None).await.map_err(internal)?;
-                    let still = tx.tickets_get(&a.id).await.map_err(internal)?;
-                    tx.commit().await.map_err(internal)?;
+                    let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
+                    let still = tx.tickets_get(&a.id).await.map_err(|error| ApiError::internal(error.to_string()))?;
+                    tx.commit().await.map_err(|error| ApiError::internal(error.to_string()))?;
                     still
                 };
                 if still.is_none_or(|ticket| ticket.status != TicketStatus::Open) {
@@ -620,7 +571,7 @@ pub async fn run_matchmaker(app: Arc<App>) {
 /// It takes `&Arc<App>` where SURFACE §11.2 writes `&App`: pairing inline starts the match, and
 /// `Registry::start` takes `&Arc<App>` (the actor task owns a handle on the app).
 pub async fn enqueue(app: &Arc<App>, req: Req) -> ApiResult {
-    enqueue_route(app, req).await.map_err(hide_internal)
+    enqueue_route(app, req).await
 }
 
 async fn enqueue_route(app: &Arc<App>, req: Req) -> ApiResult {
@@ -633,14 +584,14 @@ async fn enqueue_route(app: &Arc<App>, req: Req) -> ApiResult {
     let ticket = enqueue_ticket(app, &profile, &choice, seed).await?;
     try_pair(app).await?;
 
-    let mut tx = app.db.begin(None).await.map_err(internal)?;
-    let current = tx.tickets_get(&ticket.id).await.map_err(internal)?;
+    let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
+    let current = tx.tickets_get(&ticket.id).await.map_err(|error| ApiError::internal(error.to_string()))?;
     let status = current.as_ref().map(|current| current.status).unwrap_or(ticket.status);
     // A paired Conquest ticket's `match_id` is game 1's reserved id, which is not a match anyone
     // can open yet: the player goes to the series to pick a deck, so it answers with that.
     let paired = status == TicketStatus::Matched;
     let series_id = if paired && ticket.mode == QueueMode::Bo3 {
-        tx.series_active_for(&profile.id).await.map_err(internal)?.map(|series| series.id)
+        tx.series_active_for(&profile.id).await.map_err(|error| ApiError::internal(error.to_string()))?.map(|series| series.id)
     } else {
         None
     };
@@ -649,8 +600,8 @@ async fn enqueue_route(app: &Arc<App>, req: Req) -> ApiResult {
     } else {
         None
     };
-    let population = tx.tickets_count_open().await.map_err(internal)?;
-    tx.commit().await.map_err(internal)?;
+    let population = tx.tickets_count_open().await.map_err(|error| ApiError::internal(error.to_string()))?;
+    tx.commit().await.map_err(|error| ApiError::internal(error.to_string()))?;
     Ok(json(
         200,
         json!({
@@ -683,18 +634,18 @@ async fn enqueue_route(app: &Arc<App>, req: Req) -> ApiResult {
 ///
 /// `tickets.status = 'cancelled'` in migration 0004 is what this writes.
 pub async fn dequeue(app: &Arc<App>, req: Req) -> ApiResult {
-    dequeue_route(app, req).await.map_err(hide_internal)
+    dequeue_route(app, req).await
 }
 
 async fn dequeue_route(app: &App, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
-    let mut tx = app.db.begin(None).await.map_err(internal)?;
-    let Some(ticket) = tx.tickets_open_for_profile(&profile.id).await.map_err(internal)? else {
-        tx.commit().await.map_err(internal)?;
+    let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
+    let Some(ticket) = tx.tickets_open_for_profile(&profile.id).await.map_err(|error| ApiError::internal(error.to_string()))? else {
+        tx.commit().await.map_err(|error| ApiError::internal(error.to_string()))?;
         return Ok(json(200, json!({ "cancelled": false })));
     };
-    tx.tickets_cancel(&ticket.id, now_ms()).await.map_err(internal)?;
-    tx.commit().await.map_err(internal)?;
+    tx.tickets_cancel(&ticket.id, now_ms()).await.map_err(|error| ApiError::internal(error.to_string()))?;
+    tx.commit().await.map_err(|error| ApiError::internal(error.to_string()))?;
     // R143: a cancelled ticket will never be paired, so its seed is dropped with it.
     forget_seed(&ticket.id);
     tracing::info!(event = "queue.cancelled", profileId = %profile.id, ticketId = %ticket.id);
@@ -713,13 +664,13 @@ async fn dequeue_route(app: &App, req: Req) -> ApiResult {
 ///
 /// R257: the total, and per mode, so the lobby can say how many are waiting for each.
 pub async fn population(app: &Arc<App>, _req: Req) -> ApiResult {
-    population_route(app).await.map_err(hide_internal)
+    population_route(app).await
 }
 
 async fn population_route(app: &App) -> ApiResult {
-    let mut tx = app.db.begin(None).await.map_err(internal)?;
-    let population = tx.tickets_count_open().await.map_err(internal)?;
-    let by_mode = tx.tickets_count_open_by_mode().await.map_err(internal)?;
-    tx.commit().await.map_err(internal)?;
+    let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
+    let population = tx.tickets_count_open().await.map_err(|error| ApiError::internal(error.to_string()))?;
+    let by_mode = tx.tickets_count_open_by_mode().await.map_err(|error| ApiError::internal(error.to_string()))?;
+    tx.commit().await.map_err(|error| ApiError::internal(error.to_string()))?;
     Ok(json(200, json!({ "population": population, "byMode": by_mode })))
 }

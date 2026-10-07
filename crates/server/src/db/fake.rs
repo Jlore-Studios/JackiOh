@@ -380,11 +380,6 @@ fn call(f: &mut FakeTx<'_>, method: &str) -> Result<(), StoreError> {
     }
 }
 
-/// A TS `throw new Error(message)` from a fake: the store's general failure.
-fn fail(message: String) -> StoreError {
-    StoreError::Other(message)
-}
-
 /// TS `new DuplicateResultError(matchId)`: `results_insert`'s refusal of a second row for one match.
 fn duplicate_result(match_id: &str) -> StoreError {
     StoreError::Duplicate(match_id.to_string())
@@ -654,7 +649,7 @@ pub fn profiles_get_many(f: &mut FakeTx<'_>, profile_ids: &[String]) -> Result<V
 pub fn profiles_create(f: &mut FakeTx<'_>, input: &ProfileCreateInput) -> Result<Profile, StoreError> {
     call(f, "profiles.create")?;
     if f.tables().profiles.iter().any(|profile| profile.user_id == input.user_id) {
-        return Err(fail(format!("profiles.user_id is unique: {} already has a profile", input.user_id)));
+        return Err(StoreError::from(format!("profiles.user_id is unique: {} already has a profile", input.user_id)));
     }
     // §9.4: an account exists the moment auth says so and stays pending until a code is
     // redeemed, which is what `resolve_caller` in http.rs relies on.
@@ -679,7 +674,7 @@ pub fn profiles_create(f: &mut FakeTx<'_>, input: &ProfileCreateInput) -> Result
 pub fn profiles_set_status(f: &mut FakeTx<'_>, profile_id: &str, status: ProfileStatus) -> Result<(), StoreError> {
     call(f, "profiles.setStatus")?;
     let Some(row) = profile_of(f.tables(), profile_id) else {
-        return Err(fail(format!("no profile {profile_id}")));
+        return Err(StoreError::from(format!("no profile {profile_id}")));
     };
     let was_pending = row.status == ProfileStatus::Pending;
     row.status = status;
@@ -694,7 +689,7 @@ pub fn profiles_set_status(f: &mut FakeTx<'_>, profile_id: &str, status: Profile
 pub fn profiles_set_glicko(f: &mut FakeTx<'_>, profile_id: &str, glicko: &Glicko) -> Result<(), StoreError> {
     call(f, "profiles.setGlicko")?;
     let Some(row) = profile_of(f.tables(), profile_id) else {
-        return Err(fail(format!("no profile {profile_id}")));
+        return Err(StoreError::from(format!("no profile {profile_id}")));
     };
     row.rating = glicko.rating;
     row.rating_deviation = glicko.deviation;
@@ -711,7 +706,7 @@ pub fn profiles_set_display_name(
 ) -> Result<(), StoreError> {
     call(f, "profiles.setDisplayName")?;
     let Some(row) = profile_of(f.tables(), profile_id) else {
-        return Err(fail(format!("no profile {profile_id}")));
+        return Err(StoreError::from(format!("no profile {profile_id}")));
     };
     row.display_name = Some(display_name.map(str::to_string));
     Ok(())
@@ -721,7 +716,7 @@ pub fn profiles_set_display_name(
 pub fn profiles_set_in_match(f: &mut FakeTx<'_>, profile_id: &str, match_id: Option<&str>) -> Result<(), StoreError> {
     call(f, "profiles.setInMatch")?;
     let Some(row) = profile_of(f.tables(), profile_id) else {
-        return Err(fail(format!("no profile {profile_id}")));
+        return Err(StoreError::from(format!("no profile {profile_id}")));
     };
     row.in_match_id = match_id.map(str::to_string);
     Ok(())
@@ -740,7 +735,7 @@ pub fn profiles_remove(f: &mut FakeTx<'_>, profile_id: &str) -> Result<bool, Sto
 pub fn codes_insert(f: &mut FakeTx<'_>, code: &InviteCode) -> Result<(), StoreError> {
     call(f, "codes.insert")?;
     if f.tables().codes.iter().any(|row| row.code_hash == code.code_hash) {
-        return Err(fail("invite_codes.code_hash is unique".to_string()));
+        return Err(StoreError::from("invite_codes.code_hash is unique".to_string()));
     }
     f.tables().codes.push(code.clone());
     Ok(())
@@ -865,7 +860,7 @@ pub fn collection_append_grants(f: &mut FakeTx<'_>, grants: &[CollectionGrant]) 
     for grant in grants {
         // `collection_grants.delta <> 0` in migration 0002.
         if grant.delta == 0 {
-            return Err(fail("collection_grants.delta must not be 0".to_string()));
+            return Err(StoreError::from("collection_grants.delta must not be 0".to_string()));
         }
     }
     f.tables().grants.extend(grants.iter().cloned());
@@ -879,7 +874,7 @@ pub fn collection_append_grants(f: &mut FakeTx<'_>, grants: &[CollectionGrant]) 
 pub fn matches_create(f: &mut FakeTx<'_>, row: &MatchRow) -> Result<(), StoreError> {
     call(f, "matches.create")?;
     if f.tables().matches.iter().any(|existing| existing.id == row.id) {
-        return Err(fail(format!("matches.id is unique: {}", row.id)));
+        return Err(StoreError::from(format!("matches.id is unique: {}", row.id)));
     }
     f.tables().matches.push(row.clone());
     Ok(())
@@ -897,7 +892,7 @@ pub fn matches_append_actions(f: &mut FakeTx<'_>, rows: &[MatchActionRow]) -> Re
     for row in rows {
         let clash = tables.match_actions.iter().any(|existing| existing.match_id == row.match_id && existing.seq == row.seq);
         if clash {
-            return Err(fail(format!("match_actions is append-only: seq {} exists", row.seq)));
+            return Err(StoreError::from(format!("match_actions is append-only: seq {} exists", row.seq)));
         }
         tables.match_actions.push(row.clone());
     }
@@ -915,7 +910,7 @@ pub fn matches_actions(f: &mut FakeTx<'_>, match_id: &str) -> Result<Vec<MatchAc
 pub fn matches_set_clocks(f: &mut FakeTx<'_>, match_id: &str, clocks: &MatchClocks) -> Result<(), StoreError> {
     call(f, "matches.setClocks")?;
     let Some(row) = f.tables().matches.iter_mut().find(|row| row.id == match_id) else {
-        return Err(fail(format!("no match {match_id}")));
+        return Err(StoreError::from(format!("no match {match_id}")));
     };
     row.clocks = clocks.clone();
     Ok(())
@@ -924,7 +919,7 @@ pub fn matches_set_clocks(f: &mut FakeTx<'_>, match_id: &str, clocks: &MatchCloc
 pub fn matches_finish(f: &mut FakeTx<'_>, match_id: &str, at: i64) -> Result<(), StoreError> {
     call(f, "matches.finish")?;
     let Some(row) = f.tables().matches.iter_mut().find(|row| row.id == match_id) else {
-        return Err(fail(format!("no match {match_id}")));
+        return Err(StoreError::from(format!("no match {match_id}")));
     };
     row.status = MatchStatus::Finished;
     row.finished_at = Some(at);
@@ -1007,7 +1002,7 @@ pub fn tickets_insert(f: &mut FakeTx<'_>, ticket: &Ticket) -> Result<(), StoreEr
     let queued =
         f.tables().tickets.iter().any(|row| row.profile_id == ticket.profile_id && row.status == TicketStatus::Open);
     if queued {
-        return Err(fail("tickets_profile_queued_key: this profile is already queued".to_string()));
+        return Err(StoreError::from("tickets_profile_queued_key: this profile is already queued".to_string()));
     }
     f.tables().tickets.push(ticket.clone());
     Ok(())
@@ -1237,7 +1232,7 @@ pub fn trios_upsert(f: &mut FakeTx<'_>, trio: &SavedTrio, max_trios: i64) -> Res
     let filled: Vec<&String> = [&trio.deck_ids.0, &trio.deck_ids.1, &trio.deck_ids.2].into_iter().flatten().collect();
     let distinct: IndexSet<&String> = filled.iter().copied().collect();
     if distinct.len() != filled.len() {
-        return Err(fail("trios_decks_distinct: a trio cannot hold the same deck twice".to_string()));
+        return Err(StoreError::from("trios_decks_distinct: a trio cannot hold the same deck twice".to_string()));
     }
     let mine = |deck_id: &String| t.decks.iter().any(|deck| &deck.id == deck_id && deck.profile_id == trio.profile_id);
     if !filled.iter().all(|&deck_id| mine(deck_id)) {
@@ -1272,7 +1267,7 @@ pub fn trios_remove(f: &mut FakeTx<'_>, profile_id: &str, trio_id: &str) -> Resu
 pub fn series_create(f: &mut FakeTx<'_>, row: &SeriesRow) -> Result<(), StoreError> {
     call(f, "series.create")?;
     if f.tables().series.iter().any(|existing| existing.id == row.id) {
-        return Err(fail(format!("series.id is unique: {}", row.id)));
+        return Err(StoreError::from(format!("series.id is unique: {}", row.id)));
     }
     f.tables().series.push(row.clone());
     Ok(())
@@ -1592,7 +1587,7 @@ pub fn game_records_insert(f: &mut FakeTx<'_>, record: &GameRecord) -> Result<bo
     call(f, "gameRecords.insert")?;
     // R378: `game_records_dev_id_check` (0014). A development id begins "dev:", a live one never.
     if (record.source == GameSource::Dev) != record.id.starts_with(DEV_RECORD_ID_PREFIX) {
-        return Err(fail(format!(
+        return Err(StoreError::from(format!(
             "game_records_dev_id_check: a {} record cannot have the id {}",
             record.source, record.id
         )));
@@ -2056,7 +2051,7 @@ pub fn ranked_put_bot(f: &mut FakeTx<'_>, bot: &BotRating) -> Result<(), StoreEr
 pub fn ranked_record_game(f: &mut FakeTx<'_>, row: &RatedGameRow) -> Result<(), StoreError> {
     call(f, "ranked.recordGame")?;
     if f.tables().rated_games.iter().any(|game| game.id == row.id) {
-        return Err(fail(format!("rated_games already holds a row for {}", row.id)));
+        return Err(StoreError::from(format!("rated_games already holds a row for {}", row.id)));
     }
     f.tables().rated_games.push(row.clone());
     Ok(())

@@ -35,6 +35,7 @@ use indexmap::IndexMap;
 use serde::Serialize;
 use serde_json::{Value, json};
 
+use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, log_info, now_ms, ok_of};
 use crate::app::App;
 use crate::config::{
@@ -43,7 +44,7 @@ use crate::config::{
 };
 use crate::db::store::{
     PlayerSettingValue, PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput,
-    PlayerSettingsMergeOutcome, PlayerSettingsRow, Profile,
+    PlayerSettingsMergeOutcome, PlayerSettingsRow,
 };
 
 /// R633: a group id is a lower-case slug (`gameplay`, `audio`, `fx`, `cards`).
@@ -97,10 +98,6 @@ fn settings_view(row: Option<&PlayerSettingsRow>) -> PlayerSettingsView {
     }
 }
 
-fn is_record(value: &Value) -> bool {
-    value.is_object()
-}
-
 /// A setting's value: a boolean, a finite number or a short text, as the store keeps it.
 fn read_value(group: &str, name: &str, value: &Value) -> Result<PlayerSettingValue, ApiError> {
     let accepted = match value {
@@ -133,7 +130,7 @@ fn epoch_ms_of(value: Option<&Value>) -> Option<i64> {
 /// own clock is taken as now, as R320 does for a choice: a device whose clock runs ahead could
 /// otherwise make its settings win over every later change for as long as its clock stays ahead.
 pub fn read_groups(body: &Value, now: i64) -> Result<IndexMap<String, PlayerSettingsGroup>, ApiError> {
-    let Some(raw) = body.get("groups").filter(|raw| is_record(raw)).and_then(Value::as_object) else {
+    let Some(raw) = body.get("groups").filter(|raw| (raw).is_object()).and_then(Value::as_object) else {
         return Err(bad_request("\"groups\" must be an object of setting groups"));
     };
     if raw.len() > PLAYER_SETTINGS_GROUPS_MAX as usize {
@@ -146,8 +143,8 @@ pub fn read_groups(body: &Value, now: i64) -> Result<IndexMap<String, PlayerSett
                 "every group id must be a lower-case slug of at most {PLAYER_SETTINGS_NAME_MAX_LENGTH} characters"
             )));
         }
-        let values_raw = group.get("values").filter(|values| is_record(values)).and_then(Value::as_object);
-        let Some(values_raw) = values_raw.filter(|_| is_record(group)) else {
+        let values_raw = group.get("values").filter(|values| (values).is_object()).and_then(Value::as_object);
+        let Some(values_raw) = values_raw.filter(|_| (group).is_object()) else {
             return Err(bad_request(format!("\"{id}\" must be {{ at: epoch milliseconds, values: an object }}")));
         };
         let Some(at) = epoch_ms_of(group.get("at")) else {
@@ -168,12 +165,6 @@ pub fn read_groups(body: &Value, now: i64) -> Result<IndexMap<String, PlayerSett
         groups.insert(id.clone(), PlayerSettingsGroup { at: at.min(now), values });
     }
     Ok(groups)
-}
-
-/// The caller behind a route that declares `AuthLevel::Active` (a private copy of
-/// `collection.rs`'s `callerProfile`).
-fn caller_profile(req: &Req) -> Result<&Profile, ApiError> {
-    req.caller.as_ref().map(|caller| &caller.profile).ok_or_else(|| bad_request("this endpoint needs a signed-in profile"))
 }
 
 // TS's `createSettingsRoutes()` is two rows of `app.rs`'s `ROUTES`, `GET` and `PUT /api/settings`

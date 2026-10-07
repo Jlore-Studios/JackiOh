@@ -42,25 +42,15 @@ const SIGN_IN_FAILED_MESSAGE: &str = "That email and password do not match an ac
 const ACCOUNT_DELETION_IN_MATCH_MESSAGE: &str = "Finish or concede your match before you delete your account.";
 const ACCOUNT_DELETION_IN_SERIES_MESSAGE: &str = "Finish your Conquest series before you delete your account.";
 
-fn api_error(code: ApiErrorCode, message: impl Into<String>) -> ApiError {
-    ApiError { code, message: message.into(), details: None, retry_after_ms: None }
-}
-
 fn unauthorized() -> ApiError {
-    api_error(ApiErrorCode::Unauthorized, "sign in first")
-}
-
-/// A store fault is a 500, logged, as TS's router made of a thrown error.
-fn store_failure(error: impl std::fmt::Debug) -> ApiError {
-    tracing::warn!(event = "handler.threw", message = %format!("{error:?}"));
-    api_error(ApiErrorCode::Internal, "something went wrong")
+    ApiError::new(ApiErrorCode::Unauthorized, "sign in first")
 }
 
 /// TS `str(body, key)` (http.ts): a non-empty string field, or a 400 naming it.
 fn required_str(body: &Value, key: &str) -> Result<String, ApiError> {
     match body.get(key) {
         Some(Value::String(value)) if !value.is_empty() => Ok(value.clone()),
-        _ => Err(api_error(ApiErrorCode::BadRequest, format!("\"{key}\" must be a string"))),
+        _ => Err(ApiError::new(ApiErrorCode::BadRequest, format!("\"{key}\" must be a string"))),
     }
 }
 
@@ -81,11 +71,11 @@ async fn call_provider<T>(
 ) -> Result<T, ApiError> {
     match call.await {
         Ok(value) => Ok(value),
-        Err(AuthError::Unavailable(text)) => Err(api_error(ApiErrorCode::Unavailable, text)),
+        Err(AuthError::Unavailable(text)) => Err(ApiError::new(ApiErrorCode::Unavailable, text)),
         Err(error) => {
             // Tokens and keys are never part of these arguments, so nothing secret is logged.
             tracing::warn!(event = event, reason = %error);
-            Err(api_error(ApiErrorCode::Unauthorized, message))
+            Err(ApiError::new(ApiErrorCode::Unauthorized, message))
         }
     }
 }
@@ -125,9 +115,9 @@ pub async fn sign_in(app: &Arc<App>, req: Req) -> ApiResult {
 pub async fn get_profile(app: &Arc<App>, req: Req) -> ApiResult {
     let caller = caller_of(&req)?;
     let profile = &caller.profile;
-    let mut tx = app.db.begin(Some(&profile.id)).await.map_err(store_failure)?;
-    let record = tx.results_record_for(&profile.id).await.map_err(store_failure)?;
-    tx.commit().await.map_err(store_failure)?;
+    let mut tx = app.db.begin(Some(&profile.id)).await?;
+    let record = tx.results_record_for(&profile.id).await?;
+    tx.commit().await?;
     let played = record.wins as i64 + record.losses as i64 + record.draws as i64;
     Ok(json(
         200,
@@ -161,25 +151,25 @@ pub async fn delete_account(app: &Arc<App>, req: Req) -> ApiResult {
     let caller = caller_of(&req)?;
     let profile = &caller.profile;
     if !app.auth.can_delete_users() {
-        return Err(api_error(ApiErrorCode::Unavailable, ACCOUNT_DELETION_UNAVAILABLE_MESSAGE));
+        return Err(ApiError::new(ApiErrorCode::Unavailable, ACCOUNT_DELETION_UNAVAILABLE_MESSAGE));
     }
     if profile.in_match_id.is_some() {
-        return Err(api_error(ApiErrorCode::AlreadyInMatch, ACCOUNT_DELETION_IN_MATCH_MESSAGE));
+        return Err(ApiError::new(ApiErrorCode::AlreadyInMatch, ACCOUNT_DELETION_IN_MATCH_MESSAGE));
     }
-    let mut tx = app.db.begin(Some(&profile.id)).await.map_err(store_failure)?;
-    let series = tx.series_active_for(&profile.id).await.map_err(store_failure)?;
-    tx.commit().await.map_err(store_failure)?;
+    let mut tx = app.db.begin(Some(&profile.id)).await?;
+    let series = tx.series_active_for(&profile.id).await?;
+    tx.commit().await?;
     if series.is_some() {
-        return Err(api_error(ApiErrorCode::Conflict, ACCOUNT_DELETION_IN_SERIES_MESSAGE));
+        return Err(ApiError::new(ApiErrorCode::Conflict, ACCOUNT_DELETION_IN_SERIES_MESSAGE));
     }
 
-    let mut tx = app.db.begin(Some(&profile.id)).await.map_err(store_failure)?;
-    tx.profiles_remove(&profile.id).await.map_err(store_failure)?;
-    tx.commit().await.map_err(store_failure)?;
+    let mut tx = app.db.begin(Some(&profile.id)).await?;
+    tx.profiles_remove(&profile.id).await?;
+    tx.commit().await?;
     match app.auth.delete_user(&caller.user.user_id).await {
         Ok(()) => {}
-        Err(AuthError::Unavailable(message)) => return Err(api_error(ApiErrorCode::Unavailable, message)),
-        Err(error) => return Err(api_error(ApiErrorCode::Unavailable, error.to_string())),
+        Err(AuthError::Unavailable(message)) => return Err(ApiError::new(ApiErrorCode::Unavailable, message)),
+        Err(error) => return Err(ApiError::new(ApiErrorCode::Unavailable, error.to_string())),
     }
     // No id in the line: the account is gone, and so is the reason to name it.
     tracing::info!(event = "account.deleted");
@@ -198,9 +188,9 @@ pub async fn get_me(app: &Arc<App>, req: Req) -> ApiResult {
     // R259, R264: the Conquest series this profile is in, while it is not over. Between games
     // `currentMatchId` is null and this is the only way a player who waited — the older ticket,
     // or the room's host — learns there is a deck to pick. Its own series only, like the match.
-    let mut tx = app.db.begin(Some(&profile.id)).await.map_err(store_failure)?;
-    let series = tx.series_active_for(&profile.id).await.map_err(store_failure)?;
-    tx.commit().await.map_err(store_failure)?;
+    let mut tx = app.db.begin(Some(&profile.id)).await?;
+    let series = tx.series_active_for(&profile.id).await?;
+    tx.commit().await?;
     let needs_invite_code = matches!(profile.status, crate::db::store::ProfileStatus::Pending);
     Ok(json(
         200,

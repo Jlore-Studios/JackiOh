@@ -23,6 +23,7 @@ use serde::Serialize;
 
 use jackioh_engine::wire::{parse_game_record_lines, GameSource, DEV_RECORD_ID_PREFIX};
 
+use crate::cli::card_stats::literal;
 use crate::db::store::Db;
 
 const USAGE: &str = "Usage: jackioh-server stats-import <records.jsonl>";
@@ -61,14 +62,6 @@ fn resolve(cwd: &str, base: &str, path: &str) -> PathBuf {
 pub fn run_file_path(path: &str, env: &IndexMap<String, String>, cwd: &str) -> PathBuf {
     let base = env.get("INIT_CWD").map(String::as_str).unwrap_or(cwd);
     resolve(cwd, base, path)
-}
-
-/// The literal a string-union value serialises as (`"live"`, `"dev"`), for the refusal's text.
-fn literal<T: Serialize>(value: &T) -> String {
-    match serde_json::to_value(value) {
-        Ok(serde_json::Value::String(text)) => text,
-        _ => String::new(),
-    }
 }
 
 /// R378: every record a development record, or nothing is written.

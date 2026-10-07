@@ -36,6 +36,7 @@ use std::time::Duration;
 use indexmap::IndexMap;
 use jackioh_engine::{GameOverReason, PlayerId, Winner};
 
+use crate::api::queue::json_list;
 use crate::actor::contracts::{RecordResultInput, TerminalOutcome, VoidMatchInput};
 use crate::api::game_records::record_live_game;
 use crate::api::http::{ApiError, ApiErrorCode};
@@ -52,11 +53,6 @@ use crate::db::store::{
 /// so the sentence is the error's own.
 fn failure(error: impl std::fmt::Display) -> ApiError {
     ApiError { code: ApiErrorCode::Internal, message: error.to_string(), details: None, retry_after_ms: None }
-}
-
-/// A list as the JSON array a TS log line printed it as.
-fn json_list(items: &[String]) -> String {
-    serde_json::to_string(items).unwrap_or_default()
 }
 
 /// The literal a series status is written as.

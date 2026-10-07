@@ -195,7 +195,7 @@ fn js_trim(value: &str) -> &str {
 }
 
 /// JS `JSON.stringify` of a string, for the `(got …)` part of a message.
-fn quoted(value: &str) -> String {
+pub(crate) fn quoted(value: &str) -> String {
     serde_json::to_string(value).unwrap_or_else(|_| format!("\"{value}\""))
 }
 
@@ -207,7 +207,7 @@ fn js_length(value: &str) -> usize {
 /// JS `Number(text)` for the strings an environment variable can hold: whitespace-trimmed, empty is
 /// 0, `0x`/`0o`/`0b` integer literals, `Infinity` with an optional sign, otherwise a decimal literal;
 /// anything else is NaN.
-fn js_number(text: &str) -> f64 {
+pub(crate) fn js_number(text: &str) -> f64 {
     let trimmed = js_trim(text);
     if trimmed.is_empty() {
         return 0.0;

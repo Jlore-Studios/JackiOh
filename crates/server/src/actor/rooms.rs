@@ -34,7 +34,7 @@ use crate::actor::engine::deal_random_deck;
 use crate::api::crypto::{is_well_formed_code, normalize_code, random_code};
 use crate::api::decks::{assert_not_in_series, freeze_choice, read_mode_choice, FrozenChoice, ModeChoiceInput};
 use crate::api::http::{json as json_response, ApiError, ApiErrorCode, ApiResult, Req};
-use crate::api::queue::seed_override_of;
+use crate::api::queue::{seed_override_of, new_uuid, new_seed};
 use crate::api::series::start_series;
 use crate::api::series_rules::{NewSeriesInput, NewSeriesSide};
 // `now_ms`: the server's one clock in epoch milliseconds (TS `deps.timers.now()`; SURFACE §11.3:
@@ -137,36 +137,18 @@ fn frozen_mode(frozen: &FrozenChoice) -> QueueMode {
     }
 }
 
-/// An `ApiError` with TS's `new ApiError(code, message, details?)` arguments.
-fn api_error(code: ApiErrorCode, message: &str, details: Option<Value>) -> ApiError {
-    ApiError { code, message: message.to_string(), details, retry_after_ms: None }
-}
-
 /// What a TS `throw new Error(…)` in a handler became: the router logged `handler.threw` and
 /// answered 500 `internal` "something went wrong" (api/http.ts). A wiring fault, never a player's.
 fn wiring_fault(message: String) -> ApiError {
     tracing::warn!(event = "handler.threw", message = %message);
-    api_error(ApiErrorCode::Internal, "something went wrong", None)
-}
-
-/// A new id for a match or a series (TS `deps.ids.uuid()`, `systemIds.uuid` = `randomUUID()`).
-fn new_uuid() -> String {
-    uuid::Uuid::new_v4().to_string()
-}
-
-/// A new match seed (TS `deps.ids.seed()`, `systemIds.seed` = 16 random bytes as hex). The engine
-/// is seeded only from this (SPEC §9.3).
-fn new_seed() -> Result<String, ApiError> {
-    let mut bytes = [0u8; 16];
-    getrandom::fill(&mut bytes).map_err(|error| wiring_fault(format!("no randomness for a seed: {error}")))?;
-    Ok(bytes.iter().map(|byte| format!("{byte:02x}")).collect())
+    ApiError::new(ApiErrorCode::Internal, "something went wrong")
 }
 
 /// §9.5: "Enqueue asserts the account is active and not in a match."
 fn assert_not_in_match(req: &Req) -> Result<(), ApiError> {
     let in_match = req.caller.as_ref().and_then(|caller| caller.profile.in_match_id.as_ref());
     if in_match.is_some() {
-        return Err(api_error(ApiErrorCode::AlreadyInMatch, "finish your current match first", None));
+        return Err(ApiError::new(ApiErrorCode::AlreadyInMatch, "finish your current match first"));
     }
     Ok(())
 }
@@ -175,7 +157,7 @@ fn profile_of(req: &Req) -> Result<String, ApiError> {
     match req.caller.as_ref() {
         Some(caller) => Ok(caller.profile.id.clone()),
         // Unreachable on an `AuthLevel::Active` route; the router resolves the caller first.
-        None => Err(api_error(ApiErrorCode::Unauthorized, "sign in first", None)),
+        None => Err(ApiError::new(ApiErrorCode::Unauthorized, "sign in first")),
     }
 }
 
@@ -184,7 +166,7 @@ fn profile_of(req: &Req) -> Result<String, ApiError> {
 /// identical invite-code error).
 async fn joinable_room(app: &App, typed: &str) -> Result<Room, ApiError> {
     let code = normalize_code(typed);
-    let miss = || api_error(ApiErrorCode::NotFound, "that room code is not open", None);
+    let miss = || ApiError::new(ApiErrorCode::NotFound, "that room code is not open");
     if !is_well_formed_code(&code, ROOM_CODE_LENGTH) {
         return Err(miss());
     }
@@ -199,11 +181,11 @@ async fn joinable_room(app: &App, typed: &str) -> Result<Room, ApiError> {
         return Err(miss());
     }
     if room.guest_profile_id.is_some() {
-        return Err(api_error(ApiErrorCode::Conflict, "someone already joined that room", None));
+        return Err(ApiError::new(ApiErrorCode::Conflict, "someone already joined that room"));
     }
     // §9.4: a stale catalog is rejected at every door into a match.
     if room.catalog_version != app.catalog.version {
-        return Err(api_error(ApiErrorCode::UpdateRequired, "update required", None));
+        return Err(ApiError::new(ApiErrorCode::UpdateRequired, "update required"));
     }
     Ok(room)
 }
@@ -220,11 +202,7 @@ async fn assert_host_free(app: &App, host_profile_id: &str) -> Result<(), ApiErr
     tx.commit().await?;
     let host_in_match = host.as_ref().and_then(|profile| profile.in_match_id.as_ref()).is_some();
     if host_in_match || series.is_some() {
-        return Err(api_error(
-            ApiErrorCode::Conflict,
-            "The host of that room is playing another game right now.",
-            None,
-        ));
+        return Err(ApiError::new(ApiErrorCode::Conflict, "The host of that room is playing another game right now."));
     }
     Ok(())
 }
@@ -337,7 +315,7 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
     }
 
     tracing::error!(event = "room.code.exhausted", attempts = CODE_ATTEMPTS);
-    Err(api_error(ApiErrorCode::Unavailable, "could not allocate a room code; try again", None))
+    Err(ApiError::new(ApiErrorCode::Unavailable, "could not allocate a room code; try again"))
 }
 
 /// POST /api/rooms/:code/join — claim the room and start its game (§9.5, R264): the match for
@@ -357,16 +335,12 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     let typed = req.params.get("code").cloned().unwrap_or_default();
     let room = joinable_room(app, &typed).await?;
     if room.host_profile_id == profile_id {
-        return Err(api_error(ApiErrorCode::Conflict, "you created that room; wait for someone to join", None));
+        return Err(ApiError::new(ApiErrorCode::Conflict, "you created that room; wait for someone to join"));
     }
     // R264: the room's mode, or a refusal naming it — before the joiner's deck is looked at, so the
     // answer is the useful one.
     if choice_mode(&choice) != room.mode {
-        return Err(api_error(
-            ApiErrorCode::Conflict,
-            mode_refusal(room.mode),
-            Some(json!({ "mode": room.mode })),
-        ));
+        return Err(ApiError::with_details(ApiErrorCode::Conflict, mode_refusal(room.mode), json!({ "mode": room.mode })));
     }
 
     let frozen = freeze_choice(app, &profile_id, &choice).await?;
@@ -381,12 +355,12 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     let claimed = tx.rooms_claim(&room.code, &profile_id, &match_id, now).await?;
     tx.commit().await?;
     let Some(claimed) = claimed else {
-        return Err(api_error(ApiErrorCode::Conflict, "someone already joined that room", None));
+        return Err(ApiError::new(ApiErrorCode::Conflict, "someone already joined that room"));
     };
     // R143: the server mints the seed, unless an end-to-end room asked for one.
     let seed = match take_seed_for_room(&claimed.code, joiner_seed) {
         Some(seed) => seed,
-        None => new_seed()?,
+        None => new_seed(),
     };
 
     if let FrozenChoice::Bo3 { trio } = &frozen {

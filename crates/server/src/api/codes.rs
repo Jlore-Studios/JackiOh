@@ -41,7 +41,7 @@ use serde_json::{Value, json};
 use sha2::Sha256;
 
 use crate::api::crypto::{canonical_invite_code, format_code, is_well_formed_code, normalize_code, random_code};
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json, lock, rate_limited};
 use crate::app::App;
 use crate::config::{
     CODE_ATTEMPT_WINDOW_SECONDS, CODE_ATTEMPTS_PER_PROFILE_PER_HOUR, INVITE_CODE_LENGTH,
@@ -110,28 +110,6 @@ fn limits() -> Limits {
     }
 }
 
-fn api_error(code: ApiErrorCode, message: impl Into<String>) -> ApiError {
-    ApiError { code, message: message.into(), details: None, retry_after_ms: None }
-}
-
-/// SPEC §11 R192: a refusal because the caller is going too fast says so, with how long to wait.
-/// The wait travels as `details.retryAfterMs` and as `Retry-After` (TS `rateLimited`).
-fn rate_limited(message: &str, retry_after_ms: i64) -> ApiError {
-    ApiError {
-        code: ApiErrorCode::RateLimited,
-        message: message.to_string(),
-        details: Some(json!({ "retryAfterMs": retry_after_ms })),
-        retry_after_ms: Some(retry_after_ms),
-    }
-}
-
-/// A store fault is not a code oracle (it does not depend on which code was sent), so it is a 500,
-/// logged and unpadded, as TS's router made of a thrown error.
-fn store_failure(error: impl std::fmt::Debug) -> ApiError {
-    tracing::warn!(event = "handler.threw", message = %format!("{error:?}"));
-    api_error(ApiErrorCode::Internal, "something went wrong")
-}
-
 /// §9.4: "Missing, expired and exhausted codes return an identical error in identical time."
 ///
 /// One constructor, no `details`, so all of them serialise to the same bytes as well as the same
@@ -139,7 +117,7 @@ fn store_failure(error: impl std::fmt::Debug) -> ApiError {
 /// exactly the oracle §9.8's brute-force row is about. The operator-facing reason string stays in
 /// `code_attempts.reason`, which §9.4 says is "never returned to the client".
 fn identical_code_error() -> ApiError {
-    api_error(ApiErrorCode::InvalidCode, REDEMPTION_IDENTICAL_ERROR)
+    ApiError::new(ApiErrorCode::InvalidCode, REDEMPTION_IDENTICAL_ERROR)
 }
 
 /// §9.4: codes are stored hashed — a keyed SHA-256 (HMAC) of the normalized code under the
@@ -247,10 +225,6 @@ pub fn create_breaker_state() -> BreakerState {
     BreakerState { open_until: 0, openings: 0 }
 }
 
-fn lock(breaker: &Mutex<BreakerState>) -> std::sync::MutexGuard<'_, BreakerState> {
-    breaker.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
-}
-
 // ---------------------------------------------------------------------------
 // Redemption
 // ---------------------------------------------------------------------------
@@ -294,7 +268,7 @@ pub async fn redeem_code(app: &App, input: RedeemInput<'_>) -> Result<RedeemOutc
     // R106's breaker, checked before step 1: while it is open nothing touches the profile, the
     // attempt log or the code table, which is the point of having it.
     if now < lock(breaker).open_until {
-        return Ok(RedeemOutcome::Refused(api_error(ApiErrorCode::Unavailable, BREAKER_MESSAGE)));
+        return Ok(RedeemOutcome::Refused(ApiError::new(ApiErrorCode::Unavailable, BREAKER_MESSAGE)));
     }
 
     // R145's three account-shaped refusals, which `Tx::redeem` answers as one `NotPending` and
@@ -303,18 +277,18 @@ pub async fn redeem_code(app: &App, input: RedeemInput<'_>) -> Result<RedeemOutc
     // that changes between here and there is still caught — as `NotPending`, below.
     let profile = input.profile;
     if matches!(profile.status, ProfileStatus::Banned) {
-        return Ok(RedeemOutcome::Refused(api_error(ApiErrorCode::AccountBanned, BANNED_MESSAGE)));
+        return Ok(RedeemOutcome::Refused(ApiError::new(ApiErrorCode::AccountBanned, BANNED_MESSAGE)));
     }
     if matches!(profile.status, ProfileStatus::Active) {
         // Not a code failure — §9.4 only makes redemption the pending → active transition, so an
         // active account asking again is a conflict, and it is told so plainly.
-        return Ok(RedeemOutcome::Refused(api_error(ApiErrorCode::Conflict, ALREADY_ACTIVE_MESSAGE)));
+        return Ok(RedeemOutcome::Refused(ApiError::new(ApiErrorCode::Conflict, ALREADY_ACTIVE_MESSAGE)));
     }
     // §9.4 step 1's "verified email", from the access token (R159). The store asks the managed-auth
     // table the same question and may still answer `EmailUnverified`; refusing here first is what
     // keeps an unverified caller from spending a row in the attempt log.
     if !input.email_verified {
-        return Ok(RedeemOutcome::Refused(api_error(ApiErrorCode::EmailUnverified, EMAIL_UNVERIFIED_MESSAGE)));
+        return Ok(RedeemOutcome::Refused(ApiError::new(ApiErrorCode::EmailUnverified, EMAIL_UNVERIFIED_MESSAGE)));
     }
 
     // §9.4: codes are "stored hashed", so the plaintext is read and hashed here and the store is
@@ -327,7 +301,7 @@ pub async fn redeem_code(app: &App, input: RedeemInput<'_>) -> Result<RedeemOutc
     let code_hash = canonical_invite_code(input.plain_code).map(|canonical| code_hash(&app.env.code_pepper, &canonical));
 
     // §9.4: "Redemption is one server-side transaction." This is it.
-    let mut tx = app.db.begin(Some(&profile.id)).await.map_err(store_failure)?;
+    let mut tx = app.db.begin(Some(&profile.id)).await?;
     let result = tx
         .redeem(&RedeemInviteCodeInput {
             profile_id: profile.id.clone(),
@@ -335,8 +309,8 @@ pub async fn redeem_code(app: &App, input: RedeemInput<'_>) -> Result<RedeemOutc
             ip_hash: input.ip_hash.to_string(),
         })
         .await
-        .map_err(store_failure)?;
-    tx.commit().await.map_err(store_failure)?;
+        ?;
+    tx.commit().await?;
     let failed = !matches!(result, RedeemResult::Ok);
 
     if matches!(result, RedeemResult::CircuitOpen) {
@@ -371,9 +345,9 @@ fn outcome_for(result: RedeemResult, limits: &Limits) -> RedeemOutcome {
         // authorization failed; what changed is the state the request was about. The pending →
         // active flip is also the only transition §9.4 gives redemption, so it is what almost always
         // happened.
-        RedeemResult::NotPending => RedeemOutcome::Refused(api_error(ApiErrorCode::Conflict, ALREADY_ACTIVE_MESSAGE)),
+        RedeemResult::NotPending => RedeemOutcome::Refused(ApiError::new(ApiErrorCode::Conflict, ALREADY_ACTIVE_MESSAGE)),
         RedeemResult::EmailUnverified => {
-            RedeemOutcome::Refused(api_error(ApiErrorCode::EmailUnverified, EMAIL_UNVERIFIED_MESSAGE))
+            RedeemOutcome::Refused(ApiError::new(ApiErrorCode::EmailUnverified, EMAIL_UNVERIFIED_MESSAGE))
         }
         // §9.4 steps 2 and 3. Which of the two windows refused is not told apart: the per-IP one
         // would say something about the other accounts behind the same address.
@@ -384,7 +358,7 @@ fn outcome_for(result: RedeemResult, limits: &Limits) -> RedeemOutcome {
         RedeemResult::RateLimitedProfile | RedeemResult::RateLimitedIp => {
             RedeemOutcome::Refused(rate_limited(RATE_LIMITED_MESSAGE, limits.redeem_window_ms))
         }
-        RedeemResult::CircuitOpen => RedeemOutcome::Refused(api_error(ApiErrorCode::Unavailable, BREAKER_MESSAGE)),
+        RedeemResult::CircuitOpen => RedeemOutcome::Refused(ApiError::new(ApiErrorCode::Unavailable, BREAKER_MESSAGE)),
         RedeemResult::InvalidCode => RedeemOutcome::Refused(identical_code_error()),
     }
 }
@@ -394,9 +368,9 @@ fn outcome_for(result: RedeemResult, limits: &Limits) -> RedeemOutcome {
 /// and outside it, because this is monitoring rather than part of the atomic redemption.
 async fn note_failure(app: &App, breaker: &Mutex<BreakerState>, now: i64) -> Result<(), ApiError> {
     let limits = limits();
-    let mut tx = app.db.begin(None).await.map_err(store_failure)?;
-    let failures = tx.codes_count_failures(now - limits.breaker_window_ms).await.map_err(store_failure)?;
-    tx.commit().await.map_err(store_failure)?;
+    let mut tx = app.db.begin(None).await?;
+    let failures = tx.codes_count_failures(now - limits.breaker_window_ms).await?;
+    tx.commit().await?;
     if (failures as i64) < limits.breaker_failure_threshold {
         return Ok(());
     }
@@ -438,7 +412,7 @@ async fn pad_to(started_at: tokio::time::Instant, floor_ms: u64) {
 fn plain_code_of(body: &Value) -> Result<String, ApiError> {
     match body.get("code") {
         Some(Value::String(value)) => Ok(value.clone()),
-        _ => Err(api_error(ApiErrorCode::BadRequest, "\"code\" must be a string")),
+        _ => Err(ApiError::new(ApiErrorCode::BadRequest, "\"code\" must be a string")),
     }
 }
 
@@ -446,7 +420,7 @@ fn plain_code_of(body: &Value) -> Result<String, ApiError> {
 async fn redeem_for_request(app: &App, req: &Req, breaker: &Mutex<BreakerState>) -> Result<RedeemOutcome, ApiError> {
     // `AuthLevel::User` guarantees the caller; the guard is here because `Req` types it optional.
     let Some(caller) = req.caller.as_ref() else {
-        return Ok(RedeemOutcome::Refused(api_error(ApiErrorCode::Unauthorized, "sign in first")));
+        return Ok(RedeemOutcome::Refused(ApiError::new(ApiErrorCode::Unauthorized, "sign in first")));
     };
     let plain_code = match plain_code_of(&req.body) {
         Ok(plain_code) => plain_code,
@@ -514,17 +488,17 @@ pub async fn get_status(app: &Arc<App>, req: Req) -> ApiResult {
     let mut attempts: i64 = 0;
     let mut attempts_retry_after_ms: i64 = 0;
     if let Some(profile_id) = profile_id.as_deref() {
-        let mut tx = app.db.begin(Some(profile_id)).await.map_err(store_failure)?;
-        attempts = tx.codes_count_attempts_by_profile(profile_id, since).await.map_err(store_failure)? as i64;
+        let mut tx = app.db.begin(Some(profile_id)).await?;
+        attempts = tx.codes_count_attempts_by_profile(profile_id, since).await? as i64;
         let remaining = (limits.redeem_per_profile_per_hour + 1 - attempts).max(0);
         if remaining == 0 {
-            let oldest = tx.codes_oldest_attempt_at_by_profile(profile_id, since).await.map_err(store_failure)?;
+            let oldest = tx.codes_oldest_attempt_at_by_profile(profile_id, since).await?;
             attempts_retry_after_ms = match oldest {
                 None => 0,
                 Some(oldest) => (oldest + limits.redeem_window_ms - now).max(0),
             };
         }
-        tx.commit().await.map_err(store_failure)?;
+        tx.commit().await?;
     }
     let attempts_remaining = (limits.redeem_per_profile_per_hour + 1 - attempts).max(0);
 

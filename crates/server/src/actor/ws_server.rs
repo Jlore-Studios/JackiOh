@@ -26,7 +26,7 @@
 
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
+use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Duration;
 
 use axum::extract::ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade};
@@ -39,7 +39,7 @@ use tokio::sync::mpsc;
 use crate::actor::contracts::SocketHandlers;
 use crate::actor::protocol::{encode, error_message, SocketErrorCode, MAX_FRAME_BYTES};
 use crate::actor::registry::AttachError;
-use crate::api::http::{assert_active, client_address, rate_limit_address, ApiError, ApiErrorCode};
+use crate::api::http::{assert_active, client_address, rate_limit_address, ApiError, ApiErrorCode, lock};
 use crate::app::{browser_origins, App};
 use crate::config::{DEFAULT_TRUSTED_PROXY_HOPS, WS_MAX_CONNECTIONS_PER_ADDRESS};
 
@@ -221,15 +221,6 @@ impl Eq for Socket {}
 impl std::fmt::Debug for Socket {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Socket").field("open", &self.is_open()).finish_non_exhaustive()
-    }
-}
-
-/// A std mutex's guard, recovered when a panic elsewhere poisoned it (nothing here can be left
-/// half-written by one).
-fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    match mutex.lock() {
-        Ok(guard) => guard,
-        Err(poisoned) => poisoned.into_inner(),
     }
 }
 

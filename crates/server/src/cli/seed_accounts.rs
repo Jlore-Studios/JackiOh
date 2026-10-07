@@ -38,8 +38,9 @@ use sqlx::{Connection, Row};
 
 use jackioh_engine::validator::TRIO_DECKS;
 
+use crate::cli::mint_code::is_integer;
 use crate::config::{AUTH_PASSWORD_MAX_LENGTH, AUTH_PASSWORD_MIN_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS};
-use crate::env::load_env;
+use crate::env::{load_env, js_number, quoted};
 
 const DEFAULT_COUNT: i64 = 2;
 const EMAIL_DOMAIN: &str = "example.com";
@@ -86,7 +87,7 @@ pub fn seed_accounts_settings(
     }
 
     let url = reqwest::Url::parse(supabase_url)
-        .map_err(|error| anyhow!("SUPABASE_URL is not a URL ({error}): {}", json_text(supabase_url)))?;
+        .map_err(|error| anyhow!("SUPABASE_URL is not a URL ({error}): {}", quoted(supabase_url)))?;
     let host = url.host_str().unwrap_or_default().to_string();
     let opt_in = source.get(SEED_PROJECT_VAR).map(|value| value.trim()).unwrap_or_default();
     if opt_in != host {
@@ -96,7 +97,7 @@ pub fn seed_accounts_settings(
             if opt_in.is_empty() {
                 " (it is not set).".to_string()
             } else {
-                format!(" (it is {}).", json_text(opt_in))
+                format!(" (it is {}).", quoted(opt_in))
             },
         ));
     }
@@ -182,7 +183,7 @@ async fn create_or_find_user(
 /// column decide; sqlx sends a `String` as `text`, which `uuid = text` refuses, so the SQL is kept
 /// as TS wrote it and the id is bound as a `uuid` instead.
 fn uuid_of(id: &str) -> Result<uuid::Uuid> {
-    uuid::Uuid::parse_str(id).map_err(|error| anyhow!("{} is not a uuid: {error}", json_text(id)))
+    uuid::Uuid::parse_str(id).map_err(|error| anyhow!("{} is not a uuid: {error}", quoted(id)))
 }
 
 /// A row's one column as text, or `None` for SQL NULL.
@@ -396,46 +397,3 @@ pub async fn run(args: Vec<String>) -> Result<()> {
     Ok(())
 }
 
-/// `JSON.stringify` of a string, for the refusals that quote what they were given.
-fn json_text(text: &str) -> String {
-    serde_json::to_string(text).unwrap_or_else(|_| format!("\"{text}\""))
-}
-
-/// JS `Number(raw)` on a command-line string: surrounding whitespace ignored, empty is 0,
-/// `Infinity`, `0x`/`0o`/`0b` integers and decimal literals (`5`, `1.5`, `1e3`, `.5`), anything
-/// else NaN.
-fn js_number(raw: &str) -> f64 {
-    let text = raw.trim_matches(|c: char| c.is_whitespace() || c == '\u{feff}');
-    if text.is_empty() {
-        return 0.0;
-    }
-    match text {
-        "Infinity" | "+Infinity" => return f64::INFINITY,
-        "-Infinity" => return f64::NEG_INFINITY,
-        _ => {}
-    }
-    for (prefix, radix) in [("0x", 16), ("0X", 16), ("0o", 8), ("0O", 8), ("0b", 2), ("0B", 2)] {
-        if let Some(digits) = text.strip_prefix(prefix) {
-            if digits.is_empty() {
-                return f64::NAN;
-            }
-            let mut value = 0.0;
-            for c in digits.chars() {
-                match c.to_digit(radix) {
-                    Some(digit) => value = value * f64::from(radix) + f64::from(digit),
-                    None => return f64::NAN,
-                }
-            }
-            return value;
-        }
-    }
-    if !text.chars().all(|c| c.is_ascii_digit() || matches!(c, '+' | '-' | '.' | 'e' | 'E')) {
-        return f64::NAN;
-    }
-    text.parse::<f64>().unwrap_or(f64::NAN)
-}
-
-/// JS `Number.isInteger`.
-fn is_integer(value: f64) -> bool {
-    value.is_finite() && value.fract() == 0.0
-}

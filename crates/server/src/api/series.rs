@@ -31,14 +31,14 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use axum::response::Response;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
 use jackioh_engine::Winner;
 
+use crate::api::collection::caller_profile;
 use crate::actor::contracts::{TerminalOutcome, one_tx};
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, ok};
 use crate::api::ranked::{RankedGameInput, RankedPlan, RankedSideInput, commit_ranked_game, plan_ranked_game};
 use crate::api::series_rules::{
     RatingMove, SeriesRefusal, SeriesRefusalReason, abandon_unstarted, already_picked, forfeit_series, game_ended,
@@ -49,7 +49,7 @@ use crate::config::{
     SERIES_START_GIVE_UP_SECONDS, SERIES_START_GRACE_SECONDS, SERIES_SWEEP_INTERVAL_SECONDS, SERIES_WRITE_ATTEMPTS,
 };
 use crate::db::store::{
-    MatchSeat, Profile, RatedGameKind, RatedReason, SeriesRow, SeriesSeat, SeriesStatus, StartMatchInput, StoreError, Tx,
+    MatchSeat, RatedGameKind, RatedReason, SeriesRow, SeriesSeat, SeriesStatus, StartMatchInput, StoreError, Tx,
 };
 
 pub use crate::api::series_rules::NewSeriesInput;
@@ -109,20 +109,6 @@ fn other(error: impl std::fmt::Display) -> SeriesError {
     SeriesError::Other(error.to_string())
 }
 
-fn api_error(code: ApiErrorCode, message: &str) -> ApiError {
-    ApiError {
-        code,
-        message: message.to_string(),
-        details: None,
-        retry_after_ms: None,
-    }
-}
-
-/// TS `badRequest(message)` (`http.ts`), a private copy.
-fn bad_request(message: &str) -> ApiError {
-    api_error(ApiErrorCode::BadRequest, message)
-}
-
 /// What the router made of a handler's error: an `ApiError` as it is, anything else logged and
 /// answered 500 "something went wrong" (`http.ts`'s catch).
 fn to_api(error: SeriesError) -> ApiError {
@@ -131,7 +117,7 @@ fn to_api(error: SeriesError) -> ApiError {
         SeriesError::Refusal(refusal) => refusal_to_api(&refusal),
         other => {
             tracing::warn!(event = "handler.threw", message = %other);
-            api_error(ApiErrorCode::Internal, "something went wrong")
+            ApiError::new(ApiErrorCode::Internal, "something went wrong")
         }
     }
 }
@@ -411,7 +397,7 @@ async fn write_transition(
         return Ok(written);
     }
     tracing::warn!(event = "series.write_contended", seriesId = %series_id, attempts = attempts);
-    Err(SeriesError::Api(api_error(
+    Err(SeriesError::Api(ApiError::new(
         ApiErrorCode::Conflict,
         "This series changed while your request was on its way. Try again.",
     )))
@@ -610,7 +596,7 @@ pub fn start_series_sweeper(app: Arc<App>) -> SeriesSweeper {
 
 /// One answer for a missing series and one the caller is not in, so an id reveals nothing.
 fn series_not_found() -> ApiError {
-    api_error(ApiErrorCode::NotFound, "This series could not be found.")
+    ApiError::new(ApiErrorCode::NotFound, "This series could not be found.")
 }
 
 /// A rules refusal as the player hears it: a bad slot is their request, the rest is timing.
@@ -618,16 +604,7 @@ fn refusal_to_api(refusal: &SeriesRefusal) -> ApiError {
     if matches!(refusal.reason, SeriesRefusalReason::SlotOutOfRange | SeriesRefusalReason::SlotWon) {
         return bad_request(&refusal.message);
     }
-    api_error(ApiErrorCode::Conflict, &refusal.message)
-}
-
-/// TS `callerProfile(req)` (`collection.ts`), a private copy: the router has resolved and gated the
-/// profile by then, so this only re-states it.
-fn caller_profile(req: &Req) -> Result<&Profile, ApiError> {
-    req.caller
-        .as_ref()
-        .map(|caller| &caller.profile)
-        .ok_or_else(|| bad_request("this endpoint needs a signed-in profile"))
+    ApiError::new(ApiErrorCode::Conflict, &refusal.message)
 }
 
 fn param<'a>(req: &'a Req, name: &str) -> &'a str {
@@ -689,11 +666,6 @@ async fn player_transition(
 
 fn view(series: &SeriesRow, profile_id: &str) -> Value {
     serde_json::to_value(project_series(series, profile_id, now_ms())).unwrap_or(Value::Null)
-}
-
-/// TS `ok(body)`: 200 with `http.rs`'s JSON headers.
-fn ok(body: Value) -> Response {
-    crate::api::http::json(200, body)
 }
 
 /// `GET /api/series/:id` (active): the caller's view of the series (R336). 404 when it does not

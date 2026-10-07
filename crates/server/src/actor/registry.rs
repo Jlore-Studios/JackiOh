@@ -16,7 +16,7 @@
 //! (SURFACE §11.3): a rematch's presence reads their sockets.
 
 use std::panic::AssertUnwindSafe;
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex};
 
 use indexmap::IndexMap;
 use tokio::sync::OnceCell;
@@ -27,7 +27,7 @@ use crate::actor::contracts::one_tx;
 use crate::actor::ws_server::Socket;
 use crate::actor::engine;
 use crate::actor::match_actor::{MatchActor, MatchActorInput, create_match_actor, last_boards_of};
-use crate::api::http::{ApiError, ApiErrorCode};
+use crate::api::http::{ApiError, ApiErrorCode, lock};
 use crate::app::{App, now_ms};
 use crate::config::{GLITCH_BOARDS_SAMPLED, MATCH_CEILING_MINUTES};
 use crate::db::store::{LastBoardKind, MatchClocks, MatchRow, MatchStatus, QueueMode, StartMatchInput};
@@ -62,7 +62,7 @@ enum RebuildError {
 impl From<RebuildError> for AttachError {
     fn from(error: RebuildError) -> AttachError {
         match error {
-            RebuildError::NotFound => AttachError::Api(api_error(ApiErrorCode::NotFound, "no such match")),
+            RebuildError::NotFound => AttachError::Api(ApiError::new(ApiErrorCode::NotFound, "no such match")),
             RebuildError::Internal(message) => AttachError::Internal(message),
         }
     }
@@ -81,23 +81,6 @@ impl Default for Registry {
     fn default() -> Registry {
         Registry::new()
     }
-}
-
-fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    mutex.lock().unwrap_or_else(PoisonError::into_inner)
-}
-
-fn api_error(code: ApiErrorCode, message: &str) -> ApiError {
-    ApiError {
-        code,
-        message: message.to_string(),
-        details: None,
-        retry_after_ms: None,
-    }
-}
-
-fn internal(error: impl std::fmt::Display) -> ApiError {
-    api_error(ApiErrorCode::Internal, &error.to_string())
 }
 
 /// What a panic carried, as TS's thrown message.
@@ -178,7 +161,7 @@ impl Registry {
             };
             (boards, sampled, derived_mode)
         })
-        .map_err(internal)?;
+        .map_err(|error| ApiError::internal(error.to_string()))?;
 
         let glitch_boards = (sampled.first().cloned().unwrap_or_default(), sampled.get(1).cloned().unwrap_or_default());
         let match_row = MatchRow {
@@ -217,9 +200,9 @@ impl Registry {
         let (last_boards, glitch) = last_boards_of(&match_row);
         let args = engine::create_game_args(&match_row.seed, &match_row.decks, last_boards, glitch, dealt);
         let state = std::panic::catch_unwind(AssertUnwindSafe(|| engine::begin_game(&engine::create_game(&args)).state))
-            .map_err(|payload| internal(panic_text(payload)))?;
+            .map_err(|payload| ApiError::internal(panic_text(payload)))?;
 
-        one_tx!(app.db, |t| t.matches_create(&match_row).await?).map_err(internal)?;
+        one_tx!(app.db, |t| t.matches_create(&match_row).await?).map_err(|error| ApiError::internal(error.to_string()))?;
         let match_id = match_row.id.clone();
         let players = match_row.players.clone();
         let actor = create_match_actor(
@@ -335,7 +318,7 @@ impl Registry {
         // Identical to a missing match on purpose: a socket learns nothing about matches it is not a
         // player in (§9.1).
         let Some(seat) = actor.seat_of(profile_id) else {
-            return Err(AttachError::Api(api_error(ApiErrorCode::NotFound, "no such match")));
+            return Err(AttachError::Api(ApiError::new(ApiErrorCode::NotFound, "no such match")));
         };
         actor.attach(seat, socket);
         Ok(())

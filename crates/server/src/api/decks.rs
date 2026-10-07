@@ -31,6 +31,7 @@ use serde_json::{Map, Value, json};
 use jackioh_engine::validator;
 use jackioh_engine::wire::emotes::is_portrait_id;
 
+use crate::api::collection::{caller_profile, owned_in};
 use crate::api::http::{
     ApiError, ApiErrorCode, ApiResult, Req, bad_request, log_info, now_ms, ok_of, optional_str, str, string_list,
     to_json,
@@ -38,7 +39,7 @@ use crate::api::http::{
 use crate::app::App;
 use crate::config::{DECK_NAME_MAX_LENGTH, DRAFT_ISSUES_REPORTED_MAX, MAX_SAVED_DECKS, MAX_SAVED_TRIOS};
 use crate::db::store::{
-    FrozenDeck, FrozenTrio, Profile, SavedDeck, SavedTrio, TrioSlots, TrioUpsertOutcome, Tx, UpsertOutcome,
+    FrozenDeck, FrozenTrio, SavedDeck, SavedTrio, TrioSlots, TrioUpsertOutcome, Tx, UpsertOutcome,
 };
 
 // ---------------------------------------------------------------------------
@@ -156,12 +157,6 @@ fn draft_refused(message: &str, issues: &[Value]) -> ApiError {
 
 fn not_found(what: &str) -> ApiError {
     ApiError::new(ApiErrorCode::NotFound, format!("There is no such {what}."))
-}
-
-/// The caller behind a route that declares `AuthLevel::Active` (a private copy of
-/// `collection.rs`'s `callerProfile`). `dispatch` has already resolved and gated the profile.
-fn caller_profile(req: &Req) -> Result<&Profile, ApiError> {
-    req.caller.as_ref().map(|caller| &caller.profile).ok_or_else(|| bad_request("this endpoint needs a signed-in profile"))
 }
 
 /// The issues a validator check returned, as the JSON the client reads.
@@ -760,16 +755,6 @@ async fn own_deck(t: &mut Tx<'_>, profile_id: &str, deck_id: &str) -> Result<Opt
 
 async fn chosen_deck(t: &mut Tx<'_>, profile_id: &str, deck_id: &str) -> Result<SavedDeck, ApiError> {
     own_deck(t, profile_id, deck_id).await?.ok_or_else(|| refused(DECK_GONE))
-}
-
-/// cardId → quantity owned: the `owned` input L5 is checked against (a private copy of
-/// `collection.rs`'s `ownedMap`, read inside the caller's transaction).
-async fn owned_in(t: &mut Tx<'_>, profile_id: &str) -> Result<IndexMap<String, i64>, ApiError> {
-    let mut owned: IndexMap<String, i64> = IndexMap::new();
-    for entry in t.collection_get(profile_id).await? {
-        *owned.entry(entry.card_id.clone()).or_insert(0) += entry.quantity as i64;
-    }
-    Ok(owned)
 }
 
 /// R253's two rule sets.

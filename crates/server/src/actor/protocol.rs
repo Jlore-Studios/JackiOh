@@ -288,11 +288,6 @@ pub fn encode(message: &ServerMessage) -> String {
 // Parsing: total, never throws, and whitelists every field it keeps
 // ---------------------------------------------------------------------------
 
-fn is_record(value: &Value) -> Option<&Map<String, Value>> {
-    // `typeof value === "object" && value !== null && !Array.isArray(value)`.
-    value.as_object()
-}
-
 fn is_string(value: Option<&Value>) -> Option<&str> {
     value.and_then(Value::as_str)
 }
@@ -345,14 +340,14 @@ fn non_negative_int(value: Option<&Value>) -> Option<i32> {
 }
 
 fn parse_zone(value: &Value) -> Option<ZoneChoice> {
-    let record = is_record(value)?;
+    let record = (value).as_object()?;
     let row = is_row(record.get("row"))?;
     let lane = non_negative_int(record.get("lane"))?;
     Some(ZoneChoice { row, lane })
 }
 
 fn parse_selection(value: &Value) -> Option<Selection> {
-    let record = is_record(value)?;
+    let record = (value).as_object()?;
     match record.get("pick").and_then(Value::as_str) {
         Some("instance") => is_string(record.get("instanceId")).map(|instance_id| Selection::Instance {
             instance_id: instance_id.to_string(),
@@ -554,7 +549,7 @@ pub fn parse_client_message(text: &str) -> Result<ClientMessage, MalformedMessag
     let Ok(parsed) = serde_json::from_str::<Value>(text) else {
         return Err(malformed("every frame must be JSON"));
     };
-    let Some(parsed) = is_record(&parsed) else {
+    let Some(parsed) = (&parsed).as_object() else {
         return Err(malformed("every frame must be a JSON object"));
     };
 
@@ -590,7 +585,7 @@ pub fn parse_client_message(text: &str) -> Result<ClientMessage, MalformedMessag
         // match that already exists. The frame is answered `malformed`, with the pointer TS gave.
         "joinRoom" => Err(malformed("join a room with POST /api/rooms/:code/join, not over the socket")),
         "action" => {
-            let Some(raw) = parsed.get("action").and_then(is_record) else {
+            let Some(raw) = parsed.get("action").and_then(Value::as_object) else {
                 return Err(malformed(r#""action" must be an object"#));
             };
             // SURFACE §11.3: the nonce is read inside `action` only (the client's form).

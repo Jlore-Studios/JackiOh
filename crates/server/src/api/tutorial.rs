@@ -35,10 +35,11 @@ use indexmap::IndexSet;
 use serde::Serialize;
 use serde_json::{Value, json};
 
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
+use crate::api::collection::caller_profile;
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json, bad_request};
 use crate::app::{App, now_ms};
 use crate::config::{TUTORIAL_LESSON_ID_MAX_LENGTH, TUTORIAL_LESSONS_MAX};
-use crate::db::store::{Profile, TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow};
+use crate::db::store::{TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow};
 
 /// R320: a lesson id is a lower-case slug (`basics`, `first-steps`): TS
 /// `/^[a-z0-9]+(?:-[a-z0-9]+)*$/u`, checked by hand (the server carries no regex crate).
@@ -67,32 +68,6 @@ fn progress_view(row: Option<&TutorialProgressRow>) -> TutorialProgressView {
                 .as_ref()
                 .map(|choice| TutorialHiddenChoice { hidden: choice.hidden, at: choice.at }),
         },
-    }
-}
-
-/// TS `badRequest(message)` (`http.ts`), a private copy (fullsend builder rule 5).
-fn bad_request(message: impl Into<String>) -> ApiError {
-    ApiError { code: ApiErrorCode::BadRequest, message: message.into(), details: None, retry_after_ms: None }
-}
-
-/// TS `callerProfile(req)` (`collection.ts`), a private copy (fullsend builder rule 5): the caller
-/// behind a route that declares `active`, which the router has already resolved and gated.
-fn caller_profile(req: &Req) -> Result<&Profile, ApiError> {
-    req.caller
-        .as_ref()
-        .map(|caller| &caller.profile)
-        .ok_or_else(|| bad_request("this endpoint needs a signed-in profile"))
-}
-
-/// The router's catch-all for a failure that is not an `ApiError` (TS `createRouter`'s
-/// `handler.threw` line and its 500), for the store's errors, which a TS handler let throw.
-fn internal(path: &str, error: impl std::fmt::Display) -> ApiError {
-    tracing::warn!(event = "handler.threw", path = path, message = %error);
-    ApiError {
-        code: ApiErrorCode::Internal,
-        message: "something went wrong".to_string(),
-        details: None,
-        retry_after_ms: None,
     }
 }
 
@@ -160,9 +135,9 @@ pub fn read_hidden_choice(body: &Value, now: i64) -> Result<Option<TutorialHidde
 /// `GET /api/tutorial` (`active`, so a pending account gets 403, §9.4).
 pub async fn get_tutorial(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
-    let mut tx = app.db.begin(Some(profile.id.as_str())).await.map_err(|error| internal("/api/tutorial", error))?;
-    let row = tx.tutorial_get(&profile.id).await.map_err(|error| internal("/api/tutorial", error))?;
-    tx.commit().await.map_err(|error| internal("/api/tutorial", error))?;
+    let mut tx = app.db.begin(Some(profile.id.as_str())).await?;
+    let row = tx.tutorial_get(&profile.id).await?;
+    tx.commit().await?;
     Ok(json(200, json!({ "progress": progress_view(row.as_ref()) })))
 }
 
@@ -177,12 +152,12 @@ pub async fn put_tutorial(app: &Arc<App>, req: Req) -> ApiResult {
     let sent = completed.len();
 
     let input = TutorialMergeInput { profile_id: profile.id.clone(), completed, hidden_choice, at: now };
-    let mut tx = app.db.begin(Some(profile.id.as_str())).await.map_err(|error| internal("/api/tutorial", error))?;
+    let mut tx = app.db.begin(Some(profile.id.as_str())).await?;
     let outcome = tx
         .tutorial_merge(&input, TUTORIAL_LESSONS_MAX as i64)
         .await
-        .map_err(|error| internal("/api/tutorial", error))?;
-    tx.commit().await.map_err(|error| internal("/api/tutorial", error))?;
+        ?;
+    tx.commit().await?;
 
     let progress = match outcome {
         TutorialMergeOutcome::Limit => {

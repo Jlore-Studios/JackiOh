@@ -18,7 +18,6 @@
 use std::collections::VecDeque;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::time::Duration;
 
 use axum::body::Body;
 use axum::extract::{ConnectInfo, Request};
@@ -770,7 +769,7 @@ pub struct RateLimiter {
     fewest_forwarded: Mutex<Option<usize>>,
 }
 
-fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+pub(crate) fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
@@ -1026,19 +1025,6 @@ async fn run_route(
 /// SURFACE §11.3: `Timers` → `tokio::time`). Re-exported so every API module reads the same clock.
 pub use crate::app::now_ms;
 
-pub async fn sleep(ms: i64) {
-    if ms <= 0 {
-        return;
-    }
-    tokio::time::sleep(Duration::from_millis(ms as u64)).await;
-}
-
-/// §9.4: "Missing, expired and exhausted codes return an identical error in identical time."
-/// Every redemption response is padded to the same floor measured from `started_at`, so the work
-/// each branch did is invisible from the outside.
-pub async fn pad_to(started_at: i64, floor_ms: i64) {
-    sleep(floor_ms - (now_ms() - started_at)).await;
-}
 
 // ---------------------------------------------------------------------------
 // Logging (TS `consoleLogger`, SURFACE §11.3: `tracing` JSON lines with the same event names)

@@ -25,6 +25,7 @@ use anyhow::{anyhow, bail};
 use indexmap::IndexMap;
 use serde_json::json;
 
+use crate::db::pg::assert_postgres_url;
 use crate::api::ranked::{OpenedSeason, SeasonDeps, open_season_in_tx};
 use crate::db::store::Db;
 
@@ -72,24 +73,6 @@ pub async fn start_season(
         t.commit().await.map_err(|e| anyhow!("{e}"))?;
     }
     Ok(opened)
-}
-
-/// Refuses anything but a `postgres://` or `postgresql://` URL (case-insensitive, after a trim),
-/// naming the variable, so end-to-end mode's `memory://e2e-fixture-store` placeholder is never
-/// mistaken for a database: a private copy of `store.ts`'s `assertPostgresUrl`, which TS's
-/// `createPostgresStore` ran, with its message.
-fn assert_postgres_url(connection_string: &str) -> anyhow::Result<()> {
-    let lower = connection_string.trim().to_ascii_lowercase();
-    if lower.starts_with("postgres://") || lower.starts_with("postgresql://") {
-        return Ok(());
-    }
-    // `connectionString.slice(0, 16)`: 16 UTF-16 code units.
-    let head: String = String::from_utf16_lossy(&connection_string.encode_utf16().take(16).collect::<Vec<u16>>());
-    bail!(
-        "DATABASE_URL must be a Postgres connection string (postgres://... or postgresql://...), \
-         got {}…. The in-memory store of src/db/fake.rs is reachable only with E2E=1.",
-        serde_json::to_string(&head).unwrap_or_default()
-    )
 }
 
 /// TS `createPostgresStore({ connectionString })` for a one-shot script: a small pool with the same

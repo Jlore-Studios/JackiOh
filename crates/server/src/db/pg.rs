@@ -66,6 +66,8 @@ use uuid::Uuid;
 use jackioh_engine::wire::{GameRecord, parse_game_record, portrait_or_default, sources_of};
 use jackioh_engine::{Action, LastBoardEntry};
 
+use crate::db::fake::to_public_player_summary;
+use crate::auth::is_uuid;
 use crate::db::store::{
     BotRating, CodeAttempt, CollectionEntry, CollectionGrant, FrozenDeck, FrozenTrio, GameRecordQuery,
     InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, PlayerSettingsGroup,
@@ -141,12 +143,6 @@ fn db_error(error: sqlx::Error) -> StoreError {
     StoreError::Db(error)
 }
 
-/// TS's `throw new Error(message)`: a row this store did not write, or a write the schema refused
-/// in a way the port names.
-fn fail(message: impl Into<String>) -> StoreError {
-    StoreError::Other(message.into())
-}
-
 // ---------------------------------------------------------------------------
 // Value conversions. The port speaks epoch milliseconds and plain JSON; Postgres speaks
 // timestamptz, jsonb, uuid and int8.
@@ -185,7 +181,7 @@ macro_rules! nullable_ts {
 /// An int8 that arrives as text (`seq::text`, the `::text` of `app.append_match_action`), because
 /// TS read it so: it does not fit a JS number in general.
 fn int_of(value: &str) -> Result<i64, StoreError> {
-    value.trim().parse::<i64>().map_err(|_| fail(format!("expected an integer, got {}", stringify(&value))))
+    value.trim().parse::<i64>().map_err(|_| StoreError::from(format!("expected an integer, got {}", stringify(&value))))
 }
 
 /// JS's `typeof`, for the messages `text_of` and friends write: what a JSON value would have been.
@@ -202,13 +198,13 @@ fn type_of(value: Option<&Value>) -> &'static str {
 fn text_of(value: Option<&Value>) -> Result<String, StoreError> {
     match value {
         Some(Value::String(text)) => Ok(text.clone()),
-        other => Err(fail(format!("expected text, got {}", type_of(other)))),
+        other => Err(StoreError::from(format!("expected text, got {}", type_of(other)))),
     }
 }
 
 fn card_list_of(value: &Value) -> Result<Vec<String>, StoreError> {
     let Some(entries) = value.as_array() else {
-        return Err(fail("expected a jsonb array of card ids"));
+        return Err(StoreError::from("expected a jsonb array of card ids"));
     };
     entries.iter().map(|entry| text_of(Some(entry))).collect()
 }
@@ -221,10 +217,10 @@ fn frozen_trio_of(value: &Value) -> Result<FrozenTrio, StoreError> {
     // JS's `typeof value !== "object" || value === null`: an array is an object there, and fails
     // one check later, at its missing `decks`.
     if !(value.is_object() || value.is_array()) {
-        return Err(fail("expected a frozen trio object"));
+        return Err(StoreError::from("expected a frozen trio object"));
     }
     let Some(decks) = value.get("decks").and_then(Value::as_array) else {
-        return Err(fail("expected a frozen trio's decks array"));
+        return Err(StoreError::from("expected a frozen trio's decks array"));
     };
     let empty = Value::Object(serde_json::Map::new());
     let mut frozen: Vec<FrozenDeck> = Vec::with_capacity(decks.len());
@@ -249,7 +245,7 @@ fn frozen_trio_of(value: &Value) -> Result<FrozenTrio, StoreError> {
             name: text_of(value.get("name"))?,
             decks: (first, second, third),
         }),
-        _ => Err(fail("expected a frozen trio of exactly three decks")),
+        _ => Err(StoreError::from("expected a frozen trio of exactly three decks")),
     }
 }
 
@@ -267,7 +263,7 @@ fn queue_mode_of(value: &str) -> Result<QueueMode, StoreError> {
     if QUEUE_MODES.contains(&value) {
         return from_literal(value);
     }
-    Err(fail(format!("expected a queue mode, got {}", stringify(&value))))
+    Err(StoreError::from(format!("expected a queue mode, got {}", stringify(&value))))
 }
 
 /// The two stakes a rematch may carry: a normal game and double-or-nothing.
@@ -279,28 +275,12 @@ fn stake_of<T: DeserializeOwned>(value: i16) -> Result<T, StoreError> {
     if STAKES.contains(&value) {
         return from_json(json!(value));
     }
-    Err(fail(format!("expected rematch stakes of 1 or 2, got {}", stringify(&value))))
-}
-
-/// The length of a hyphenated uuid, and where its four hyphens sit.
-const UUID_LENGTH: usize = 36;
-const UUID_HYPHENS: &[usize] = &[8, 13, 18, 23];
-
-/// The id columns are `uuid`, and Postgres answers a malformed one with an error (22P02), not with
-/// "no such row". A lookup whose id came from outside — `GET /api/matches/:matchId/series` reads
-/// `series_with_game` with whatever the path held — answers here, as the in-memory store does, with
-/// the nothing that such an id names. TS's `/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i`.
-fn is_uuid(value: &str) -> bool {
-    let bytes = value.as_bytes();
-    bytes.len() == UUID_LENGTH
-        && bytes.iter().enumerate().all(|(index, byte)| {
-            if UUID_HYPHENS.contains(&index) { *byte == b'-' } else { byte.is_ascii_hexdigit() }
-        })
+    Err(StoreError::from(format!("expected rematch stakes of 1 or 2, got {}", stringify(&value))))
 }
 
 /// TS's `json(value)`: `JSON.stringify`, the text a `$n::jsonb` parameter is bound as.
 fn json<T: Serialize + ?Sized>(value: &T) -> Result<String, StoreError> {
-    serde_json::to_string(value).map_err(|error| fail(error.to_string()))
+    serde_json::to_string(value).map_err(|error| StoreError::from(error.to_string()))
 }
 
 /// `value === null ? null : json(value)`.
@@ -318,8 +298,8 @@ fn stringify<T: Serialize + ?Sized>(value: &T) -> String {
 fn literal<T: Serialize + ?Sized>(value: &T) -> Result<String, StoreError> {
     match serde_json::to_value(value) {
         Ok(Value::String(text)) => Ok(text),
-        Ok(other) => Err(fail(format!("expected a string literal, got {other}"))),
-        Err(error) => Err(fail(error.to_string())),
+        Ok(other) => Err(StoreError::from(format!("expected a string literal, got {other}"))),
+        Err(error) => Err(StoreError::from(error.to_string())),
     }
 }
 
@@ -328,8 +308,8 @@ fn literal_or_null<T: Serialize + ?Sized>(value: &T) -> Result<Option<String>, S
     match serde_json::to_value(value) {
         Ok(Value::Null) => Ok(None),
         Ok(Value::String(text)) => Ok(Some(text)),
-        Ok(other) => Err(fail(format!("expected a string literal or null, got {other}"))),
-        Err(error) => Err(fail(error.to_string())),
+        Ok(other) => Err(StoreError::from(format!("expected a string literal or null, got {other}"))),
+        Err(error) => Err(StoreError::from(error.to_string())),
     }
 }
 
@@ -341,7 +321,7 @@ fn from_literal<T: DeserializeOwned>(text: &str) -> Result<T, StoreError> {
 /// A jsonb value read back as the port type TS cast it to (`row.action as Action`, `state.games`,
 /// a `VisibleRank`).
 fn from_json<T: DeserializeOwned>(value: Value) -> Result<T, StoreError> {
-    serde_json::from_value(value).map_err(|error| fail(error.to_string()))
+    serde_json::from_value(value).map_err(|error| StoreError::from(error.to_string()))
 }
 
 /// A numeric literal union (`0 | 1 | null`) as the integer it serialises as, whatever Rust type
@@ -350,10 +330,10 @@ fn int_or_null<T: Serialize + ?Sized>(value: &T) -> Result<Option<i64>, StoreErr
     match serde_json::to_value(value) {
         Ok(Value::Null) => Ok(None),
         Ok(Value::Number(number)) => {
-            number.as_i64().map(Some).ok_or_else(|| fail(format!("expected an integer, got {number}")))
+            number.as_i64().map(Some).ok_or_else(|| StoreError::from(format!("expected an integer, got {number}")))
         }
-        Ok(other) => Err(fail(format!("expected an integer or null, got {other}"))),
-        Err(error) => Err(fail(error.to_string())),
+        Ok(other) => Err(StoreError::from(format!("expected an integer or null, got {other}"))),
+        Err(error) => Err(StoreError::from(error.to_string())),
     }
 }
 
@@ -490,7 +470,7 @@ const PROFILE_STATUSES: &[&str] = &["pending", "active", "banned"];
 fn to_profile(row: ProfileRow) -> Result<Profile, StoreError> {
     let status = row.status;
     if !PROFILE_STATUSES.contains(&status.as_str()) {
-        return Err(fail(format!("profiles.status holds an unknown value: {status}")));
+        return Err(StoreError::from(format!("profiles.status holds an unknown value: {status}")));
     }
     let status: ProfileStatus = from_literal(&status)?;
     Ok(Profile {
@@ -587,7 +567,7 @@ macro_rules! match_columns {
 /// admits it. Each entry is taken as TS took it, field by field and unchecked.
 fn last_board_of(value: &Value) -> Result<Vec<LastBoardEntry>, StoreError> {
     let Some(entries) = value.as_array() else {
-        return Err(fail(format!("a last board is not an array: {}", stringify(value))));
+        return Err(StoreError::from(format!("a last board is not an array: {}", stringify(value))));
     };
     Ok(entries
         .iter()
@@ -602,7 +582,7 @@ fn to_match(row: MatchDbRow) -> Result<MatchRow, StoreError> {
     let Some(p2) = row.p2_profile_id else {
         // Only an `open` room reaches this, and `matches_get`/`matches_live` filter those out
         // before here.
-        return Err(fail(format!("match {} has no second player; it is still an open room", row.id)));
+        return Err(StoreError::from(format!("match {} has no second player; it is still an open room", row.id)));
     };
     let status = from_literal(if row.status == "over" { "finished" } else { "live" })?;
     let boards = (last_board_of(&row.p1_last_board)?, last_board_of(&row.p2_last_board)?);
@@ -706,7 +686,7 @@ fn to_ticket_status(value: &str) -> Result<TicketStatus, StoreError> {
         "queued" => from_literal("open"),
         "claimed" => from_literal("matched"),
         "cancelled" => from_literal("cancelled"),
-        _ => Err(fail(format!("tickets.status holds an unknown value: {value}"))),
+        _ => Err(StoreError::from(format!("tickets.status holds an unknown value: {value}"))),
     }
 }
 
@@ -947,7 +927,7 @@ fn upsert_outcome_of<T: DeserializeOwned>(
     {
         return from_literal(text);
     }
-    Err(fail(format!(
+    Err(StoreError::from(format!(
         "{function} returned {}, which is not one of {} (migration 0007)",
         stringify(&value),
         allowed.join(", ")
@@ -1134,7 +1114,7 @@ fn series_status_of<T: DeserializeOwned>(value: &str) -> Result<T, StoreError> {
     if SERIES_STATUSES.contains(&value) {
         return from_literal(value);
     }
-    Err(fail(format!("series.status holds an unknown value: {value}")))
+    Err(StoreError::from(format!("series.status holds an unknown value: {value}")))
 }
 
 /// `series_winner_check` (0009).
@@ -1144,7 +1124,7 @@ fn series_winner_of<T: DeserializeOwned>(value: Option<&str>) -> Result<T, Store
     match value {
         None => from_json(Value::Null),
         Some(winner) if SERIES_WINNERS.contains(&winner) => from_literal(winner),
-        Some(winner) => Err(fail(format!("series.winner holds an unknown value: {winner}"))),
+        Some(winner) => Err(StoreError::from(format!("series.winner holds an unknown value: {winner}"))),
     }
 }
 
@@ -1158,7 +1138,7 @@ fn to_series(row: SeriesDbRow) -> Result<SeriesRow, StoreError> {
     let sides = state.get("sides").and_then(Value::as_array).map(Vec::as_slice).unwrap_or(&[]);
     let (first, second) = match sides {
         [first, second] if !state.is_null() && state.get("games").is_some_and(Value::is_array) => (first, second),
-        _ => return Err(fail(format!("series {} has a state this store did not write", row.id))),
+        _ => return Err(StoreError::from(format!("series {} has a state this store did not write", row.id))),
     };
     let side = |profile_id: Option<String>, held: &Value| -> Result<SeriesSide, StoreError> {
         Ok(SeriesSide {
@@ -1373,7 +1353,7 @@ fn glicko_of(value: &Value) -> Result<Glicko, StoreError> {
     let number = |key: &str| value.get(key).and_then(Value::as_f64);
     match (number("rating"), number("deviation"), number("volatility")) {
         (Some(rating), Some(deviation), Some(volatility)) => Ok(Glicko { rating, deviation, volatility }),
-        _ => Err(fail(format!("expected a Glicko triple, got {}", stringify(value)))),
+        _ => Err(StoreError::from(format!("expected a Glicko triple, got {}", stringify(value)))),
     }
 }
 
@@ -1382,7 +1362,7 @@ fn visible_rank_of<T: DeserializeOwned>(value: Option<Value>) -> Result<T, Store
     match value {
         None | Some(Value::Null) => from_json(Value::Null),
         Some(rank) if rank.is_object() || rank.is_array() => from_json(rank),
-        Some(rank) => Err(fail(format!("expected a VisibleRank, got {}", stringify(&rank)))),
+        Some(rank) => Err(StoreError::from(format!("expected a VisibleRank, got {}", stringify(&rank)))),
     }
 }
 
@@ -1393,7 +1373,7 @@ fn pilot_of<T: DeserializeOwned>(value: &str) -> Result<T, StoreError> {
     if PILOTS.contains(&value) {
         return from_literal(value);
     }
-    Err(fail(format!("expected a pilot, got {value}")))
+    Err(StoreError::from(format!("expected a pilot, got {value}")))
 }
 
 fn to_rated_side(
@@ -1421,13 +1401,13 @@ const RATED_GAME_KINDS: &[&str] = &["match", "series"];
 
 fn to_rated_game(row: RatedGameDbRow) -> Result<RatedGameRow, StoreError> {
     if !RATED_GAME_KINDS.contains(&row.kind.as_str()) {
-        return Err(fail(format!("rated_games.kind holds an unknown value: {}", row.kind)));
+        return Err(StoreError::from(format!("rated_games.kind holds an unknown value: {}", row.kind)));
     }
     if let Some(side) = row.winner_side
         && side != 0
         && side != 1
     {
-        return Err(fail(format!("rated_games.winner_side holds an unknown value: {side}")));
+        return Err(StoreError::from(format!("rated_games.winner_side holds an unknown value: {side}")));
     }
     Ok(RatedGameRow {
         id: row.id,
@@ -1508,7 +1488,7 @@ fn to_redeem_result(value: Option<String>) -> Result<RedeemResult, StoreError> {
     {
         return from_literal(text);
     }
-    Err(fail(format!(
+    Err(StoreError::from(format!(
         "app.redeem_invite_code returned {}, which is not one of {} (migration 0001 §6)",
         stringify(&value),
         REDEEM_RESULTS.join(", ")
@@ -1547,12 +1527,12 @@ pub async fn close(pool: &PgPool) {
 /// How much of a refused connection string the refusal quotes.
 const URL_PREVIEW_CHARS: usize = 16;
 
-fn assert_postgres_url(connection_string: &str) -> Result<(), StoreError> {
+pub(crate) fn assert_postgres_url(connection_string: &str) -> Result<(), StoreError> {
     let trimmed = connection_string.trim().to_ascii_lowercase();
     let ok = trimmed.starts_with("postgres://") || trimmed.starts_with("postgresql://");
     if !ok {
         let preview: String = connection_string.chars().take(URL_PREVIEW_CHARS).collect();
-        return Err(fail(format!(
+        return Err(StoreError::from(format!(
             "DATABASE_URL must be a Postgres connection string (postgres://... or postgresql://...), \
              got {}…. The in-memory store of src/db/fake.rs is reachable only with E2E=1.",
             stringify(&preview)
@@ -1588,7 +1568,7 @@ pub async fn redeem(t: &mut PgTx<'_>, input: &RedeemInviteCodeInput) -> Result<R
         .await
         .map_err(db_error)?;
     let Some(row) = row else {
-        return Err(fail("app.redeem_invite_code returned no row"));
+        return Err(StoreError::from("app.redeem_invite_code returned no row"));
     };
     to_redeem_result(get(&row, "redeem_invite_code")?)
 }
@@ -1634,7 +1614,7 @@ pub async fn purge_expired(
     .await
     .map_err(db_error)?;
     let Some(row) = row else {
-        return Err(fail("app.purge_expired_rows returned no row"));
+        return Err(StoreError::from("app.purge_expired_rows returned no row"));
     };
     Ok(RetentionPurgeResult {
         code_attempts: get::<i64>(&row, "code_attempts")?,
@@ -1722,7 +1702,7 @@ pub async fn profiles_create(t: &mut PgTx<'_>, input: &ProfileCreateInput) -> Re
         .await
         .map_err(db_error)?;
     let Some(row) = row else {
-        return Err(fail(format!("profiles.create wrote no row for {user_id}")));
+        return Err(StoreError::from(format!("profiles.create wrote no row for {user_id}")));
     };
     to_profile(ProfileRow::read(&row)?)
 }
@@ -1741,7 +1721,7 @@ pub async fn profiles_set_status(t: &mut PgTx<'_>, profile_id: &str, status: Pro
         .await
         .map_err(db_error)?;
     if done.rows_affected() == 0 {
-        return Err(fail(format!("no profile {profile_id}")));
+        return Err(StoreError::from(format!("no profile {profile_id}")));
     }
     Ok(())
 }
@@ -1759,7 +1739,7 @@ pub async fn profiles_set_display_name(
         .await
         .map_err(db_error)?;
     if done.rows_affected() == 0 {
-        return Err(fail(format!("no profile {profile_id}")));
+        return Err(StoreError::from(format!("no profile {profile_id}")));
     }
     Ok(())
 }
@@ -1786,7 +1766,7 @@ pub async fn profiles_set_glicko(t: &mut PgTx<'_>, profile_id: &str, glicko: &Gl
     .await
     .map_err(db_error)?;
     if done.rows_affected() == 0 {
-        return Err(fail(format!("no profile {profile_id}")));
+        return Err(StoreError::from(format!("no profile {profile_id}")));
     }
     Ok(())
 }
@@ -1805,7 +1785,7 @@ pub async fn profiles_set_in_match(
         .await
         .map_err(db_error)?;
     if done.rows_affected() == 0 {
-        return Err(fail(format!("no profile {profile_id}")));
+        return Err(StoreError::from(format!("no profile {profile_id}")));
     }
     Ok(())
 }
@@ -2320,7 +2300,7 @@ pub async fn matches_create(t: &mut PgTx<'_>, m: &MatchRow) -> Result<(), StoreE
     if let Some(status) = status.as_deref()
         && status != "open"
     {
-        return Err(fail(format!("matches.id is unique: {}", m.id)));
+        return Err(StoreError::from(format!("matches.id is unique: {}", m.id)));
     }
 
     let statement = if status.is_none() {
@@ -2461,7 +2441,7 @@ pub async fn matches_append_actions(t: &mut PgTx<'_>, rows: &[MatchActionRow]) -
         // rollback takes that insert with it. A store that wrote the row and then complained
         // would be worse than one that refused.
         if assigned != row.seq {
-            return Err(fail(format!(
+            return Err(StoreError::from(format!(
                 "match_actions is append-only: seq {} exists (app.append_match_action assigned {} for nonce {})",
                 row.seq, assigned, action.nonce
             )));
@@ -2524,7 +2504,7 @@ pub async fn matches_set_clocks(t: &mut PgTx<'_>, match_id: &str, clocks: &Match
     .await
     .map_err(db_error)?;
     if done.rows_affected() == 0 {
-        return Err(fail(format!("no match {match_id}")));
+        return Err(StoreError::from(format!("no match {match_id}")));
     }
     Ok(())
 }
@@ -2557,7 +2537,7 @@ pub async fn matches_finish(t: &mut PgTx<'_>, match_id: &str, at: i64) -> Result
             .await
             .map_err(db_error)?;
         if rows.is_empty() {
-            return Err(fail(format!("no match {match_id}")));
+            return Err(StoreError::from(format!("no match {match_id}")));
         }
     }
     Ok(())
@@ -3306,7 +3286,7 @@ pub async fn tutorial_merge(
         Some("limit") => return Ok(TutorialMergeOutcome::Limit),
         Some("merged") => {}
         _ => {
-            return Err(fail(format!(
+            return Err(StoreError::from(format!(
                 "app.merge_tutorial_progress returned {}, which is not merged or limit (migration 0011)",
                 stringify(&outcome)
             )));
@@ -3322,7 +3302,7 @@ pub async fn tutorial_merge(
     .await
     .map_err(db_error)?;
     let Some(read) = read else {
-        return Err(fail("app.merge_tutorial_progress answered merged and wrote no row"));
+        return Err(StoreError::from("app.merge_tutorial_progress answered merged and wrote no row"));
     };
     Ok(TutorialMergeOutcome::Merged { progress: to_tutorial(TutorialDbRow::read(&read)?) })
 }
@@ -3379,7 +3359,7 @@ pub async fn player_settings_merge(
         Some("limit") => return Ok(PlayerSettingsMergeOutcome::Limit),
         Some("merged") => {}
         _ => {
-            return Err(fail(format!(
+            return Err(StoreError::from(format!(
                 "app.merge_player_settings returned {}, which is not merged or limit (migration 0018)",
                 stringify(&outcome)
             )));
@@ -3395,7 +3375,7 @@ pub async fn player_settings_merge(
     .await
     .map_err(db_error)?;
     let Some(read) = read else {
-        return Err(fail("app.merge_player_settings answered merged and wrote no row"));
+        return Err(StoreError::from("app.merge_player_settings answered merged and wrote no row"));
     };
     Ok(PlayerSettingsMergeOutcome::Merged { settings: to_player_settings(PlayerSettingsDbRow::read(&read)?) })
 }
@@ -3524,7 +3504,7 @@ pub async fn game_records_list(t: &mut PgTx<'_>, query: &GameRecordQuery) -> Res
     rows.iter()
         .map(|row| -> Result<GameRecord, StoreError> {
             let record: Value = get(row, "record")?;
-            parse_game_record(&record).map_err(|error| fail(error.to_string()))
+            parse_game_record(&record).map_err(|error| StoreError::from(error.to_string()))
         })
         .collect()
 }
@@ -3655,7 +3635,7 @@ pub async fn ranked_standings(t: &mut PgTx<'_>, season_id: &str) -> Result<Vec<S
         .map(|row| -> Result<SeasonStanding, StoreError> {
             let rank = to_season_rank(SeasonRankDbRow::read(row)?);
             let rating: f64 = get(row, "rating")?;
-            let mut standing = serde_json::to_value(&rank).map_err(|error| fail(error.to_string()))?;
+            let mut standing = serde_json::to_value(&rank).map_err(|error| StoreError::from(error.to_string()))?;
             if let Value::Object(fields) = &mut standing {
                 fields.insert(String::from("rating"), json!(rating));
             }
@@ -3841,7 +3821,7 @@ pub async fn ranked_record_game(t: &mut PgTx<'_>, row: &RatedGameRow) -> Result<
     .await
     .map_err(db_error)?;
     if done.rows_affected() == 0 {
-        return Err(fail(format!("rated_games already holds a row for {}", row.id)));
+        return Err(StoreError::from(format!("rated_games already holds a row for {}", row.id)));
     }
     Ok(())
 }
@@ -3939,12 +3919,12 @@ pub async fn player_stats_list_public(
     .map_err(db_error)?;
     rows.iter()
         .map(|row| -> Result<PublicPlayerSummary, StoreError> {
-            to_public_player_summary(
-                uuid_text(row, "profile_id")?,
-                get(row, "display_name")?,
+            Ok(to_public_player_summary(
+                &uuid_text(row, "profile_id")?,
+                get::<Option<String>>(row, "display_name")?.as_deref(),
                 &stats_col(row, "stats"),
                 ms_of(get(row, "updated_at")?),
-            )
+            ))
         })
         .collect()
 }
@@ -3959,89 +3939,6 @@ fn from_ticket_status(status: &TicketStatus) -> Result<&'static str, StoreError>
         "matched" => "claimed",
         _ => "cancelled",
     })
-}
-
-/// How many of a player's most-played cards the public summary names.
-const FAVOURITE_CARDS: usize = 3;
-
-/// JS's `Number.MAX_SAFE_INTEGER`, the bound `count_number`'s `Number.isSafeInteger` held.
-const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
-
-/// A private copy of the fake's `count_number` (`src/db/fake.rs`, TS's `memory-stores.ts`): a stat
-/// counter as a whole, positive, safe number, else 0.
-fn count_number(value: Option<&Value>) -> i64 {
-    let Some(number) = value.and_then(Value::as_f64) else {
-        return 0;
-    };
-    if number.fract() == 0.0 && number.abs() <= MAX_SAFE_INTEGER && number > 0.0 { number as i64 } else { 0 }
-}
-
-/// A private copy of the fake's `to_public_player_summary` (TS: `memory-stores.ts`'s
-/// `toPublicPlayerSummary`, which `store.ts` imported so both stores summarise alike), built
-/// through `PublicPlayerSummary`'s serde form.
-fn to_public_player_summary(
-    profile_id: String,
-    display_name: Option<String>,
-    stats: &IndexMap<String, Value>,
-    updated_at: i64,
-) -> Result<PublicPlayerSummary, StoreError> {
-    let games = count_number(stats.get("games"));
-    let wins = count_number(stats.get("wins"));
-    let losses = count_number(stats.get("losses"));
-    let draws = count_number(stats.get("draws"));
-    let win_rate = if games == 0 { None } else { Some(wins as f64 / games as f64) };
-
-    let mut played_counts: Vec<(String, i64)> = Vec::new();
-    let mut nemesis_counts: Vec<(String, i64)> = Vec::new();
-    let mut total_destroyed = 0;
-    let mut total_defeated = 0;
-
-    if let Some(Value::Object(cards)) = stats.get("cards") {
-        for (id, counters) in cards {
-            if !counters.is_object() {
-                continue;
-            }
-            let played = count_number(counters.get("played"));
-            let played_against = count_number(counters.get("playedAgainst"));
-            let destroyed = count_number(counters.get("destroyed"));
-            let defeated = count_number(counters.get("defeated"));
-
-            if played > 0 {
-                played_counts.push((id.clone(), played));
-            }
-            if played_against > 0 {
-                nemesis_counts.push((id.clone(), played_against));
-            }
-            total_destroyed += destroyed;
-            total_defeated += defeated;
-        }
-    }
-
-    played_counts.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
-    nemesis_counts.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
-
-    let favourite_cards: Vec<Value> = played_counts
-        .iter()
-        .take(FAVOURITE_CARDS)
-        .map(|(id, count)| json!({ "id": id, "count": count }))
-        .collect();
-
-    from_json(json!({
-        "profileId": profile_id,
-        "displayName": display_name,
-        "games": games,
-        "wins": wins,
-        "losses": losses,
-        "draws": draws,
-        "winRate": win_rate,
-        "favouriteCards": favourite_cards,
-        "funStats": {
-            "nemesisCardId": nemesis_counts.first().map(|(id, _)| id.clone()),
-            "totalDestroyed": total_destroyed,
-            "totalDefeated": total_defeated,
-        },
-        "updatedAt": updated_at,
-    }))
 }
 
 // =============================================================================

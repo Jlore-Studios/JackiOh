@@ -21,6 +21,8 @@ use serde_json::Value;
 use sqlx::Connection;
 use sqlx::postgres::PgConnection;
 
+use crate::env::quoted;
+
 /// Where the compiled-in catalog came from, for the messages that name it.
 const COMPILED_CATALOG: &str = "crates/cards/catalog.json";
 
@@ -109,8 +111,8 @@ fn catalog_rows(parsed: &Value, text: &str, path: &str) -> Result<Option<Vec<Val
         {
             return Err(anyhow!(
                 "{path}: entry keyed {} carries id {}",
-                json_text(key),
-                json_text(id)
+                quoted(key),
+                quoted(id)
             ));
         }
     }
@@ -244,7 +246,3 @@ pub async fn run(args: Vec<String>) -> Result<()> {
     Ok(())
 }
 
-/// `JSON.stringify` of a string, for the refusals that quote what they were given.
-fn json_text(text: &str) -> String {
-    serde_json::to_string(text).unwrap_or_else(|_| format!("\"{text}\""))
-}

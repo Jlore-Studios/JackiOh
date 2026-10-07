@@ -43,15 +43,6 @@ fn game_mode_of(mode: QueueMode) -> GameMode {
     }
 }
 
-/// The literal a mode is written as (`queue.enqueued`'s and `game.recorded`'s `mode`).
-fn mode_name(mode: QueueMode) -> &'static str {
-    match mode {
-        QueueMode::Bo1 => "bo1",
-        QueueMode::Bo3 => "bo3",
-        QueueMode::Random => "random",
-    }
-}
-
 /// The fold's input for a finished match: its seed, decks and log, and (R417, R678) the frozen
 /// boards it was created with, so the fold reads them as the live game did.
 fn fold_args_of(row: &MatchRow, log: Vec<Value>) -> Result<FoldArgs, serde_json::Error> {
@@ -137,7 +128,7 @@ async fn record_live_game_inner(app: &App, match_id: &str) -> Result<Option<Game
     tracing::info!(
         event = "game.recorded",
         matchId = %match_id,
-        mode = %mode_name(mode),
+        mode = %mode.as_str(),
         patch = %record.patch,
     );
     Ok(Some(record))

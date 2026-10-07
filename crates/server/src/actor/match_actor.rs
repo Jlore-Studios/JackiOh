@@ -200,7 +200,7 @@ impl std::fmt::Debug for MatchActor {
 /// R677: the seat the account that began in `home` plays now — and, read the other way, the account
 /// (by its home) that plays engine seat `seat`; a swap is its own inverse.
 fn playing(core: &Core, home: PlayerId) -> PlayerId {
-    if core.swapped { other(home) } else { home }
+    if core.swapped { home.opponent() } else { home }
 }
 
 fn mulligan_key(owed: &[PlayerId]) -> String {
@@ -391,7 +391,7 @@ impl MatchActor {
                 self.shared.clock.start_grace(player, None);
                 self.persist_clocks().await;
                 let core = self.lock();
-                self.push_clock(&core, other(player));
+                self.push_clock(&core, player.opponent());
             }
             Task::Attach { home } => {
                 let player = {
@@ -408,7 +408,7 @@ impl MatchActor {
                 self.push_view(&core, player);
                 self.push_clock(&core, player);
                 self.send_to_home(&core, home, &portraits_message(self.shared.portraits.0, self.shared.portraits.1));
-                self.push_clock(&core, other(player));
+                self.push_clock(&core, player.opponent());
             }
             Task::Idle(done) => {
                 let _ = done.send(());
@@ -448,7 +448,7 @@ impl MatchActor {
     /// it asks `legalActions` and greys out the rest").
     ///
     /// `player` is passed to BOTH calls, which is the whole security property: a socket is only ever
-    /// handed the actions its own seat may take. `legal_actions(state, other(player))` would name
+    /// handed the actions its own seat may take. `legal_actions(state, player.opponent())` would name
     /// every `play` in the opponent's hand and so hand over the hidden information §9.1 lists first.
     ///
     /// Both are read off the same `state` under the same lock, so the array is always true of the
@@ -596,7 +596,7 @@ impl MatchActor {
         if !owed.is_empty() && owed_key != core.last_mulligan_owed {
             for player in PLAYERS {
                 if !owed.contains(&player) {
-                    self.send(core, player, &prompt_for_opponent(other(player), deadline));
+                    self.send(core, player, &prompt_for_opponent(player.opponent(), deadline));
                     continue;
                 }
                 let view = engine::view_for(&core.state, player);
@@ -615,7 +615,7 @@ impl MatchActor {
                 if let Some(PendingView::ForYou(pending)) = &view.pending {
                     self.send(core, holder, &prompt_for_you(holder, &pending.choice_id, pending.kind, deadline));
                 }
-                self.send(core, other(holder), &prompt_for_opponent(holder, deadline));
+                self.send(core, holder.opponent(), &prompt_for_opponent(holder, deadline));
             }
         }
         core.last_pending_for = pending_for;
@@ -829,7 +829,7 @@ impl MatchActor {
                 let mut sent_at = gate.sent_at;
                 sent_at.push(now);
                 core.emote_history[home] = sent_at;
-                self.send(&core, other(player), &emote_relay_message(player, emote.emote));
+                self.send(&core, player.opponent(), &emote_relay_message(player, emote.emote));
             }
             Ok(ClientMessage::Aim(aim)) => self.receive_aim(&mut core, player, aim.aim),
             Ok(ClientMessage::Action(action)) => {
@@ -901,7 +901,7 @@ impl MatchActor {
         if core.finished || core.stopped {
             return;
         }
-        let receiver = other(player);
+        let receiver = player.opponent();
         let shown = match aim {
             None => None,
             Some(aim) => {
@@ -931,7 +931,7 @@ impl MatchActor {
             return;
         }
         slot.relayed = None;
-        self.send(core, other(player), &aim_relay_message(player, None));
+        self.send(core, player.opponent(), &aim_relay_message(player, None));
     }
 
     fn on_socket_gone(&self, home: PlayerId) {
@@ -1149,13 +1149,6 @@ fn clock_view_for(snapshot: &MatchSnapshot) -> ClockView {
         pending_for: snapshot.pending_for,
         mulligan_owed: snapshot.mulligan_owed.clone(),
         over: snapshot.result.is_some() || snapshot.phase == jackioh_engine::Phase::Over,
-    }
-}
-
-fn other(player: PlayerId) -> PlayerId {
-    match player {
-        PlayerId::P1 => PlayerId::P2,
-        PlayerId::P2 => PlayerId::P1,
     }
 }
 

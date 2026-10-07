@@ -20,7 +20,7 @@ use sqlx::postgres::PgPoolOptions;
 use crate::api::codes::{MintDeps, MintInput, mint_invite_code};
 use crate::app::now_ms;
 use crate::db::store::Db;
-use crate::env::{Env, load_env};
+use crate::env::{Env, load_env, js_number, quoted};
 
 const MS_PER_DAY: i64 = 24 * 60 * 60 * 1000;
 
@@ -48,7 +48,7 @@ pub fn parse_mint_args(argv: &[String]) -> Result<MintOptions> {
 
     for arg in argv {
         let Some((name, raw)) = flag_of(arg) else {
-            return Err(anyhow!("Unrecognised argument {}.\n\n{USAGE}", json_text(arg)));
+            return Err(anyhow!("Unrecognised argument {}.\n\n{USAGE}", quoted(arg)));
         };
 
         // The name is checked before the value, so `--label=bring-up` is reported as the unknown
@@ -61,7 +61,7 @@ pub fn parse_mint_args(argv: &[String]) -> Result<MintOptions> {
         if !is_integer(value) || value < 1.0 {
             return Err(anyhow!(
                 "--{name} must be a positive integer (got {}).\n\n{USAGE}",
-                json_text(raw)
+                quoted(raw)
             ));
         }
 
@@ -139,47 +139,8 @@ fn flag_of(arg: &str) -> Option<(&str, &str)> {
     Some((name, value))
 }
 
-/// `JSON.stringify` of a string, for the refusals that quote what they were given.
-fn json_text(text: &str) -> String {
-    serde_json::to_string(text).unwrap_or_else(|_| format!("\"{text}\""))
-}
-
-/// JS `Number(raw)` on a command-line string: surrounding whitespace ignored, empty is 0,
-/// `Infinity`, `0x`/`0o`/`0b` integers and decimal literals (`5`, `1.5`, `1e3`, `.5`), anything
-/// else NaN.
-fn js_number(raw: &str) -> f64 {
-    let text = raw.trim_matches(|c: char| c.is_whitespace() || c == '\u{feff}');
-    if text.is_empty() {
-        return 0.0;
-    }
-    match text {
-        "Infinity" | "+Infinity" => return f64::INFINITY,
-        "-Infinity" => return f64::NEG_INFINITY,
-        _ => {}
-    }
-    for (prefix, radix) in [("0x", 16), ("0X", 16), ("0o", 8), ("0O", 8), ("0b", 2), ("0B", 2)] {
-        if let Some(digits) = text.strip_prefix(prefix) {
-            if digits.is_empty() {
-                return f64::NAN;
-            }
-            let mut value = 0.0;
-            for c in digits.chars() {
-                match c.to_digit(radix) {
-                    Some(digit) => value = value * f64::from(radix) + f64::from(digit),
-                    None => return f64::NAN,
-                }
-            }
-            return value;
-        }
-    }
-    if !text.chars().all(|c| c.is_ascii_digit() || matches!(c, '+' | '-' | '.' | 'e' | 'E')) {
-        return f64::NAN;
-    }
-    text.parse::<f64>().unwrap_or(f64::NAN)
-}
-
 /// JS `Number.isInteger`.
-fn is_integer(value: f64) -> bool {
+pub(crate) fn is_integer(value: f64) -> bool {
     value.is_finite() && value.fract() == 0.0
 }
 

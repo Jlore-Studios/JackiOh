@@ -23,13 +23,16 @@ use jackioh_engine::wire::stats::{
 };
 use jackioh_engine::{CardCost, CardDef, PLAYER_IDS, Winner};
 
+use crate::api::catalog::load_patch_versions;
+use crate::env::js_number;
+use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, now_ms, ok_of, to_json};
 use crate::app::App;
 use crate::config::{
     CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_CURVE_TOP, CARD_STATS_MIN_SAMPLE, PLAYER_STATS_BYTES_MAX,
     PLAYER_STATS_CACHE_TTL_SECONDS, PLAYER_STATS_PAGE_LIMIT, PUBLIC_STATS_MIN_LIVE_GAMES,
 };
-use crate::db::store::{GameRecordQuery, PlayerStatsListOptions, Profile};
+use crate::db::store::{GameRecordQuery, PlayerStatsListOptions};
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -155,22 +158,6 @@ fn cached_ok(body: Value, max_age_seconds: i64) -> Response {
     response
 }
 
-/// All patch versions from `patches.json` in release order (TS `loadPatchVersions`, a private copy
-/// over the file compiled in from `crates/cards/patches/`).
-fn load_patch_versions() -> Vec<String> {
-    let Ok(parsed) = serde_json::from_str::<Value>(include_str!("../../../cards/patches/patches.json")) else {
-        return Vec::new();
-    };
-    let Some(entries) = parsed.as_array() else {
-        return Vec::new();
-    };
-    entries
-        .iter()
-        .map(|entry| entry.get("version").and_then(Value::as_str).unwrap_or("").to_string())
-        .filter(|version| !version.is_empty())
-        .collect()
-}
-
 /// R654: tutorial games are never counted. No game mode is `tutorial` today; the guard is TS's.
 fn is_tutorial(record: &GameRecord) -> bool {
     serde_json::to_value(&record.mode).ok().as_ref().and_then(Value::as_str) == Some("tutorial")
@@ -185,28 +172,6 @@ fn numeric_cost(def: &CardDef) -> i32 {
     }
 }
 
-/// TS `Number(text)` on a query parameter: NaN as none.
-fn js_number(text: &str) -> Option<f64> {
-    let trimmed = text.trim();
-    if trimmed.is_empty() {
-        return Some(0.0);
-    }
-    match trimmed {
-        "Infinity" | "+Infinity" => return Some(f64::INFINITY),
-        "-Infinity" => return Some(f64::NEG_INFINITY),
-        _ => {}
-    }
-    for (prefix, radix) in [("0x", 16), ("0X", 16), ("0o", 8), ("0O", 8), ("0b", 2), ("0B", 2)] {
-        if let Some(digits) = trimmed.strip_prefix(prefix) {
-            return u64::from_str_radix(digits, radix).ok().map(|value| value as f64);
-        }
-    }
-    if !trimmed.chars().all(|ch| ch.is_ascii_digit() || matches!(ch, '.' | 'e' | 'E' | '+' | '-')) {
-        return None;
-    }
-    trimmed.parse::<f64>().ok()
-}
-
 /// TS `a.name.localeCompare(b.name)`, approximated without a collator: case-insensitive first,
 /// then as written.
 fn locale_compare(a: &str, b: &str) -> Ordering {
@@ -216,12 +181,6 @@ fn locale_compare(a: &str, b: &str) -> Ordering {
 /// A tally's games and wins as `i64`s.
 fn tally_of(tally: &Tally) -> (i64, i64) {
     (tally.games as i64, tally.wins as i64)
-}
-
-/// The caller behind a route that declares `AuthLevel::Active` (a private copy of
-/// `collection.rs`'s `callerProfile`).
-fn caller_profile(req: &Req) -> Result<&Profile, ApiError> {
-    req.caller.as_ref().map(|caller| &caller.profile).ok_or_else(|| bad_request("this endpoint needs a signed-in profile"))
 }
 
 /// A query parameter, trimmed, when it is present and not empty after trimming.
@@ -250,7 +209,7 @@ async fn records_for(app: &App, source: SourceFilter, patch: &str) -> Result<Vec
 /// - At and above 1000 live games, live games only, AI games ignored.
 /// - Minimum sample threshold: below 20 games, hasEnoughGames is false.
 pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
-    let versions = load_patch_versions();
+    let versions = load_patch_versions().await;
     let current_patch = app.catalog.version.clone();
     let requested_patch = query_trimmed(&req, "patch").unwrap_or(current_patch);
     let source_param = req.query.get("source").map(|value| value.trim().to_lowercase());
@@ -334,7 +293,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         }
         let cost = numeric_cost(def);
         if let Some(cost_text) = cost_param.as_deref().filter(|text| !text.is_empty()) {
-            if let Some(parsed_cost) = js_number(&cost_text.replacen('+', "", 1)) {
+            if let Some(parsed_cost) = Some(js_number(&cost_text.replacen('+', "", 1))).filter(|number| !number.is_nan()) {
                 if parsed_cost >= CARD_STATS_CURVE_TOP as f64 {
                     if (cost as f64) < CARD_STATS_CURVE_TOP as f64 {
                         continue;
@@ -447,7 +406,7 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
         return Err(ApiError::new(ApiErrorCode::NotFound, format!("Card {card_id} not found")));
     };
 
-    let versions = load_patch_versions();
+    let versions = load_patch_versions().await;
     let mut patch_history: Vec<PatchRate> = Vec::new();
 
     for version in &versions {
