@@ -25,7 +25,6 @@
 
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use axum::body::Body;
 use axum::extract::ConnectInfo;
@@ -158,8 +157,10 @@ fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
     rows.iter().map(|row| serde_json::to_value(row).expect("a row serialises")).collect()
 }
 
+/// The server's clock (`app::now_ms`, TS `deps.timers.now()`): what it stamps rows with and counts
+/// its windows on. Not the wall clock, which the test clock (tokio's) does not move.
 fn now_ms() -> i64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).expect("after 1970").as_millis() as i64
+    jackioh_server::app::now_ms()
 }
 
 /// HMAC-SHA256 as lower-case hex (RFC 2104 over `sha2`, so this file needs no MAC crate's API).
@@ -354,6 +355,14 @@ impl<S: tracing::Subscriber> tracing_subscriber::Layer<S> for Recording {
             .or_else(|| data.remove("message"))
             .and_then(|value| value.as_str().map(str::to_string))
             .unwrap_or_default();
+        // `api::http::log_info(event, data)` writes TS's data object as one `data` field of JSON
+        // text; its keys are the entry's data, as TS's logger kept them.
+        if let Some(Value::String(text)) = data.get("data")
+            && let Ok(Value::Object(object)) = serde_json::from_str::<Value>(text)
+        {
+            data.remove("data");
+            data.extend(object);
+        }
         let level = event.metadata().level().to_string().to_lowercase();
         self.0.lock().expect("the recording").push(Entry { level, event: name, data });
     }

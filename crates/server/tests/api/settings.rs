@@ -14,7 +14,7 @@
 //! TS's manual clock is the server's own wall clock: a time "now" is read from it around the call.
 
 use std::sync::Arc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 use jackioh_server::app::App;
 use jackioh_server::config::{
@@ -69,10 +69,10 @@ where
     usize::try_from(value).expect("a count fits a usize")
 }
 
-/// The wall clock in epoch milliseconds, the clock the server reads.
+/// The clock the server reads (`app::now_ms`), in epoch milliseconds: the wall clock as the server
+/// anchored it, moved by tokio's.
 fn wall_ms() -> i64 {
-    let since = SystemTime::now().duration_since(UNIX_EPOCH).expect("the clock is after 1970");
-    i64::try_from(since.as_millis()).expect("epoch milliseconds fit an i64")
+    jackioh_server::app::now_ms()
 }
 
 /// An object with computed keys (TS `{ [id]: group }`, `Object.fromEntries`).

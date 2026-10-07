@@ -152,7 +152,13 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
     auth.set_deletion(options.deletion.unwrap_or(E2eDeletion::Deletes));
 
     let restarted = options.db.is_some();
-    let db = options.db.unwrap_or_else(jackioh_server::db::store::Db::fake);
+    // TS `createMemoryStore({ now: () => timers.now(), … })`: the store stamps rows (and counts §9.4's
+    // attempt windows) on the test's clock, which a paused tokio moves, not on the wall clock.
+    let db = options.db.unwrap_or_else(|| {
+        use jackioh_server::db::fake::{FakeData, default_redemption_settings};
+        let data = FakeData::new(Arc::new(app::now_ms), default_redemption_settings(), None);
+        jackioh_server::db::store::Db::Fake(Arc::new(tokio::sync::Mutex::new(data)))
+    });
     let app = Arc::new(App {
         env,
         db,

@@ -19,7 +19,6 @@
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use axum::body::Body;
 use axum::http::Request;
@@ -144,8 +143,10 @@ async fn grant_rows(server: &Server) -> Vec<Value> {
     json_rows(&store_of(&server.app).lock().await.tables.grants)
 }
 
+/// The server's clock (`app::now_ms`, TS `deps.timers.now()`): what it stamps rows with and counts
+/// its windows on. Not the wall clock, which the test clock (tokio's) does not move.
 fn now_ms() -> i64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).expect("after 1970").as_millis() as i64
+    jackioh_server::app::now_ms()
 }
 
 /// An active profile row and an auth user who verifies as it; answers the bearer token.

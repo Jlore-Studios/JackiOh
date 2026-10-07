@@ -19,7 +19,6 @@
 //! test generator without a macro, so each half of B5 is one test that names the failing row.
 
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use axum::body::Body;
 use axum::http::{HeaderMap, Request};
@@ -138,8 +137,10 @@ async fn codes(server: &Server) -> Vec<Value> {
     json_rows(&store_of(&server.app).lock().await.tables.codes)
 }
 
+/// The server's clock (`app::now_ms`, TS `deps.timers.now()`): what it stamps rows with and counts
+/// its windows on. Not the wall clock, which the test clock (tokio's) does not move.
 fn now_ms() -> i64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).expect("after 1970").as_millis() as i64
+    jackioh_server::app::now_ms()
 }
 
 /// HMAC-SHA256 as lower-case hex (RFC 2104 over `sha2`, so this file needs no MAC crate's API).

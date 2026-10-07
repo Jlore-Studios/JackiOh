@@ -20,7 +20,6 @@
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use axum::body::Body;
 use axum::http::{Request, Response};
@@ -163,8 +162,10 @@ async fn status_of(server: &Server, id: &str) -> Value {
     profiles(server).await.into_iter().find(|row| row["id"] == json!(id)).map(|row| row["status"].clone()).unwrap_or(Value::Null)
 }
 
+/// The server's clock (`app::now_ms`, TS `deps.timers.now()`): what it stamps rows with and counts
+/// its windows on. Not the wall clock, which the test clock (tokio's) does not move.
 fn now_ms() -> i64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).expect("after 1970").as_millis() as i64
+    jackioh_server::app::now_ms()
 }
 
 /// HMAC-SHA256 as lower-case hex (RFC 2104 over `sha2`, so this file needs no MAC crate's API).

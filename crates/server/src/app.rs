@@ -64,16 +64,27 @@ pub struct App {
 /// tokio's clock, so a test that calls `tokio::time::pause()` and `advance()` moves every deadline
 /// the server reads (SURFACE §11.2: they replace TS's manual timers), while a deployment reads the
 /// wall clock as TS did.
+///
+/// The anchor is a `std` instant, the same in every runtime, and the reading is the calling
+/// runtime's tokio instant measured from it, either side: a paused runtime's clock starts where
+/// `std`'s stood when it paused and moves only as it is advanced, so it may stand before the anchor
+/// (a runtime paused before the first call) or far after it (one advanced by hours). Anchoring on
+/// the first caller's tokio instant instead made every other runtime's reading relative to that
+/// caller's paused clock: frozen for as long as it had been advanced.
 pub fn now_ms() -> i64 {
-    static ANCHOR: OnceLock<(tokio::time::Instant, i64)> = OnceLock::new();
+    static ANCHOR: OnceLock<(std::time::Instant, i64)> = OnceLock::new();
     let (at, epoch_ms) = *ANCHOR.get_or_init(|| {
         let wall = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|since| since.as_millis() as i64)
             .unwrap_or(0);
-        (tokio::time::Instant::now(), wall)
+        (std::time::Instant::now(), wall)
     });
-    epoch_ms + tokio::time::Instant::now().saturating_duration_since(at).as_millis() as i64
+    let now = tokio::time::Instant::now().into_std();
+    match now.checked_duration_since(at) {
+        Some(after) => epoch_ms + after.as_millis() as i64,
+        None => epoch_ms - at.duration_since(now).as_millis() as i64,
+    }
 }
 
 // ---------------------------------------------------------------------------
