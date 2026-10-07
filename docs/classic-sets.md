@@ -10,10 +10,14 @@
 >
 > Proposed rulings are numbered **CL1, CL2, …**. They are not `R<n>` rows. The implementing change
 > takes a fresh block of §11 numbers (the last row today is R374, so R380 upward is free), assigns
-> them, and keeps a CL→R table in its PR. Each one still needs its `it("R<n> …")` test and its line
-> in `packages/engine/test/rulings.test.ts` (CLAUDE.md rule 3). Items marked **⚠ designer** are
-> guesses the designer should confirm before or during the build; everything else follows the spec's
-> existing rules or, where the spec is silent, Hearthstone.
+> them, and keeps a CL→R table in its PR. Each one still needs a test named after it and its entry in
+> the rulings index, since v0.3.0 a note in `spec/rulings/` (CLAUDE.md rule 3). Items marked
+> **⚠ designer** are guesses the designer should confirm before or during the build; everything else
+> follows the spec's existing rules or, where the spec is silent, Hearthstone.
+>
+> The brief was written against the TypeScript code base. Since v0.3.0 the code is Rust: the paths
+> below name the Rust files, and the TypeScript file names and identifiers it still uses (`deck.ts`,
+> `catalog.test.ts`, `buildAiDeck`, …) map to their Rust ones in `docs/v0.3.0/PORT-MAP.md`.
 
 ## Contents
 
@@ -181,10 +185,10 @@ or on the id instead:
   `summon.ts`, `choose.ts`) and the cards package's `pool(ownIndex)`. Switch the self-exclusion to the
   def id (`excludeDefId`, `pool(ownId)`), which is also what B4.1 needs, and give every remaining
   index lookup a set (`defByIndex(set, index)`), so `"43"` can never find two cards.
-- Pools that are Core today because Core was all there was: `packages/ai/src/deck.ts`
-  (`buildAiDeck`'s `query({ set: "Core" })`) and `packages/ai/src/determinize.ts` (R185's resample:
+- Pools that are Core today because Core was all there was: `crates/ai/src/deck.rs`
+  (`buildAiDeck`'s `query({ set: "Core" })`) and `crates/ai/src/determinize.rs` (R185's resample:
   its two `set: "Core"` queries, and `AI_DETERMINIZE.excludeIndexes`, whose `["98"]` becomes an id)
-  reach every set (B2.6). `packages/engine/src/subsystems/scorer.ts` (`query({ set: "Core",
+  reach every set (B2.6). `crates/engine/src/subsystems/scorer.rs` (`query({ set: "Core",
   excludeIndex: ZEPHYRS_INDEX })`) stays Core, because Core #97 Zephyrs says so, and keys its
   exclusion by id.
 - Core #82 KY's Trial rolls Core numbers 1–100 and adds "the Radiant Core card" with that index: filter
@@ -194,7 +198,7 @@ or on the id instead:
   Classic+ 2000 + n, still LEB128). Keep reading version 1 codes as Core numbers, since every code
   minted so far is one: R255 refuses "another version", which becomes "a version other than 1 or 2".
   Trio codes (R339, `trioCode.ts`) write each deck as R255 does, so `TRIO_CODE_VERSION` goes to 2 in
-  the same change and reads version 1 the same way. Both constants live in `apps/server/src/config.ts`.
+  the same change and reads version 1 the same way. Both constants live in `crates/server/src/config.rs`.
 - `scripts/naming.ts`, `gen-registry.ts` and `missing-tests.ts` learn the set folders;
   `validate-catalog.ts` and `catalog.test.ts` count per set (B2.5).
 - BUILD's must-pass table (M4-T4) gains a Classic and a Classic+ table keyed by set and number.
@@ -504,7 +508,7 @@ attack and health, a numbered keyword's value, or a declared number.
 > specified)
 
 This is already the rule for Core: §5.1 ("never include the generating card's own definition, unless
-the card names the pool itself") and `pool(ownIndex)` in `packages/cards/src/query.ts`. The new sets
+the card names the pool itself") and `pool(ownIndex)` in `crates/cards/src/query.rs`. The new sets
 make it matter far more (Book of Books makes Books, Fruit Basket makes Fruit, Jogg's Box casts Spells),
 so it is restated for every path, and re-keyed:
 
@@ -528,27 +532,28 @@ so it is restated for every path, and re-keyed:
 > **Designer:** Card patches are tracked from here on (and retroactively) so older versions of cards
 > can still be accessed
 
-Today `CATALOG_VERSION` is `"core-1"` (`packages/cards/src/catalog-data.ts`, the server's env) and
+Today `CATALOG_VERSION` is `"core-1"` (the cards' `catalog-data.ts` and the server's env) and
 patch v0.1.1 changed 105 entries without bumping it, so nothing records what a card used to be except
 git. Proposal:
 
-1. **Patches are data.** `packages/cards/patches/patches.json` lists every patch in order:
-   `{ version, date, title, source, notes }`. `packages/cards/patches/<version>.json` is the whole
+1. **Patches are data.** `crates/cards/patches/patches.json` lists every patch in order:
+   `{ version, date, title, source, notes }`. `crates/cards/patches/<version>.json` is the whole
    catalog as that patch left it (snapshots rather than diffs: simple, and small next to the client
    bundle). A generated index maps each card id to the versions in which it changed.
 2. **The version is the patch.** `CATALOG_VERSION` becomes the latest patch's version and every patch
-   bumps it everywhere the string lives: `catalog-data.ts`; the server's env (`apps/server/src/env.ts`
+   bumps it everywhere the string lives: `catalog-data.ts`; the server's env (`crates/server/src/env.rs`
    reads it, `.env.example` and `render.yaml` set it, and `VITE_CATALOG_VERSION` is the client's
-   copy); and the database, where `db:seed-catalog` stamps every `cards` row and `app.settings`'
+   copy); and the database, where `seed-catalog` stamps every `cards` row and `app.settings`'
    `catalog_version` (migration 0001 seeded `"core-1"`), so each patch reseeds. R105 is rewritten with
    it: it names `core-1` as the Core set's version and forbids parsing or ordering a version, so the
    order of patches comes from `patches.json`, never from comparing version strings. A test holds
    `catalog.json` equal to the latest snapshot and `CATALOG_VERSION` equal to its version.
-3. **Making a patch** starts with `pnpm --filter @jackioh/cards run patches <version> <date> "<title>"` (in
-   `scripts/`, where fs is allowed): it adds a pending fragment claiming the catalog ids the branch
+3. **Making a patch** starts with `cargo jackioh patches <version> <date> "<title>"` (in the tools
+   crate, where fs is allowed): it adds a pending fragment claiming the catalog ids the branch
    changes. After merge, `patches ship` snapshots that first-parent commit, writes the patch-notes
    entry and advances the catalog version in ship order (R646).
-4. **Retroactively**, from `git log --follow packages/cards/catalog.json` on a full clone (a shallow
+4. **Retroactively**, from `git log --follow` on the catalog's path of the time
+   (`packages/cards/catalog.json`, before v0.3.0) on a full clone (a shallow
    one stops at later commits that change no entry), checked on 2026-09-30:
 
    | Proposed version | Commit(s) | Date | Card data that changed |
@@ -592,7 +597,7 @@ A card's lines of code (Classic #48, Classic+ #44 and #45, E36) are card data an
 The limit read here is the turn cap: "There is a 30 turn cap, where an auto-draw happens"
 (`JackiOh_Mechanics.md`), §2.5, and R2, which is still marked decide. `TURN_CAP_PLAYER_TURNS` goes
 from 30 to 60: 30 turns each. **⚠ designer:** the other limit in the game is the 75-second turn clock
-(R79, `TURN_CLOCK_SECONDS` in `apps/server/src/config.ts`); if that is what was meant, the clock goes
+(R79, `TURN_CLOCK_SECONDS` in `crates/server/src/config.rs`); if that is what was meant, the clock goes
 to 150 seconds instead and the cap stays 30.
 
 Knock-on work:
@@ -625,7 +630,7 @@ Knock-on work:
 > **Designer:** AI is less inclined to shadowban cards during its training. Its (pseudo)random decks
 > are stacked to more frequently include cards that are currently on track to be shadowbanned.
 
-Today (R186, `packages/ai/src/sweep.ts`): each non-token card is forced into AI decks, 8 seeds at Easy
+Today (R186, `crates/ai/src/sweep.rs`): each non-token card is forced into AI decks, 8 seeds at Easy
 and 8 at Hard, against the greedy baseline; a card is flagged `error`, `timeout`, `neverPlayed`
 (affordable on 3 or more turns, never played) or `selfHarm`, and any flag bans it at every tier. The
 rest of each AI deck, 19 cards at Easy and 29 at Hard, is an ordinary `buildAiDeck` draw that leaves
@@ -665,7 +670,7 @@ different AI from the one that plays. The ban's scope is unchanged (R186): AI de
 > **Designer:** If Tributing as a cost would open up enough board space for the permanent to be
 > played, it can be played.
 
-Today `legalZonesFor` and `refuseZone` (`packages/engine/src/playChoices.ts`) judge the zone before the
+Today `legalZonesFor` and `refuseZone` (`crates/engine/src/play_choices.rs`) judge the zone before the
 Tribute is paid, so with five units down no Tribute card can be played at all, although its own
 Tribute would empty a zone (§3.2: "requires an empty, unlocked zone").
 
@@ -2929,7 +2934,7 @@ Its three Spell tokens (`classicplus-032-1` … `-3`), Epic by the designer:
 - **Radiant:** the same, and the rewards are Radiant.
 - **Engine (E31):** two prompts: the three difficulties, each labelled with the reward rolled for it (one
   random entry of its list, rolled as the Spell resolves); then the chosen problem, its statement and
-  four options in an rng-shuffled order. The bank is data in `packages/cards` (public, like the catalog):
+  four options in an rng-shuffled order. The bank is data in `crates/cards` (public, like the catalog):
   `{ id, difficulty, statement, options[4], answer }`, at least 30 problems per difficulty, the Easy
   ones generated from the rng (a + b with near-miss wrong sums). The engine checks the answer, and **the
   answer never leaves the engine**: the options go to the chooser, the key stays in the prompt's resume
@@ -3671,8 +3676,8 @@ server, each task done when its acceptance items are green tests (CLAUDE.md rule
    `JackiOh_Core_Cards.md` (this brief's Designer quotes are that text, per card), so REVIEW.md Part A
    can check SPEC against it; add the new keywords to `JackiOh_Mechanics.md` if the designer wants the
    mechanics sheet to carry them.
-4. **READMEs.** `packages/cards` (set folders, `params`, `loc`), `packages/ai` (the sweep),
-   `apps/server` (catalog versions, last boards), `apps/web` (the new client layers).
+4. **READMEs.** `crates/cards` (set folders, `params`, `loc`), `crates/ai` (the sweep),
+   `crates/server` (catalog versions, last boards), `apps/web` (the new client layers).
 
 ### B10.2 Build order
 
@@ -3681,12 +3686,12 @@ server, each task done when its acceptance items are green tests (CLAUDE.md rule
 | M9-T1 Catalog shape | `SetName` "Classic+", tags Book, Pancake, AI; `CardFace.type`; `params`; `loc` and its generator; `printedRarity`; ids and set folders in `naming.ts`, `gen-registry.ts`, `missing-tests.ts`; `excludeDefId` and every index lookup keyed by set (B2.2: `defByIndex`, `cardDefByIndex`, `excludingIndex`, the `index`/`notIndex`/`excludeIndex` filters, `deck.ts`, `determinize.ts`, `scorer.ts`); deck and trio codes v2 | catalog, query, deck-code, trio-code and registry tests pass with Core alone, unchanged |
 | M9-T2 Patch history | `patches/`, snapshots for v0.1.0 … v0.1.1 rebuilt from git (B4.2), the `patch` script, `CATALOG_VERSION` from the latest patch everywhere it lives (`catalog-data.ts`, the server's env, `render.yaml`, `VITE_CATALOG_VERSION`, the reseeded `cards` rows and `app.settings`; R105 rewritten), and `GET /api/catalog/:version` | the snapshot test; the server serves each version |
 | M9-T3 Global mechanics | turn cap 60 (B4.3), with `08-turn-cap-draw.cy.ts` reworked in the same change; Tribute zones (B4.5); self-exclusion by id (B4.1) | their R-tests; fuzz green at 1,000 seeds; e2e 08 green |
-| M9-T4 Keywords | Animated, Activate, Brittle, Degrade/Upgrade (B3) with fixture scripts in `packages/engine/test/fixtures/` | an engine test per rule of B3 |
+| M9-T4 Keywords | Animated, Activate, Brittle, Degrade/Upgrade (B3) with fixture scripts in `crates/engine/tests/rules/fixtures/` | an engine test per rule of B3 |
 | M9-T5 Systems | E1–E40, each with fixture tests, in dependency order (E1, E2, E4, E5, E6, E15, E19, E11, E12 first: most cards need them) | an engine test per row of B5 |
 | M9-T6 Cards, wave A | keyword-only and one-primitive cards (Classic #3, #12, #16, #24, #26, #41, #73, #82; Classic+ #6, #10, #15, #16, #20, #28, #53–#57, #59, #67, …) | their card tests (base and Radiant, CLAUDE.md rule 6) |
 | M9-T7 Cards, wave B | cards on one or two B5 systems | the same |
 | M9-T8 Cards, wave C | the subsystems: Classic #57, #90; Classic+ #19 and the Losers, #27, #29, #35, #42, #62, #73, #74, the Audits and Hired Shrimp | the same, plus each subsystem's own tests |
-| M9-T9 AI | pools across sets (R184, R185), the two-pass sweep (B4.4), a sweep of record over 268 cards, the gates re-run and their counts recorded in §9.9 | `pnpm ai:gate`; the new `shadowBan.ts` |
+| M9-T9 AI | pools across sets (R184, R185), the two-pass sweep (B4.4), a sweep of record over 268 cards, the gates re-run and their counts recorded in §9.9 | `cargo jackioh gate --full`; the new `shadow_ban.rs` |
 | M9-T10 Client | the Activate control (as Heroic Power's), animations and cues for the new events, the Brittle badge, Degrade/Upgrade marks, the KY's Test dialog, the Papaya cell picker, the In Too Deep quest panel, the History tab and Patch notes page, `loc` in the inspect overlay, glossary rows, deck builder set filter | component tests; `ANIMATIONS` and `SOUND_CUES` stay total |
 | M9-T11 Server | a migration re-adding `cards_tags_check` with Book, Pancake and AI, as `0010_jlockeed_tag.sql` did for Jlockeed (without it `db:seed-catalog` refuses the whole catalog); new cards seeded (`db:seed-catalog`) and granted to every account (the collection is a ledger: a grant migration through `collection_grants`), last boards stored per profile for Portal to the Past (with RLS, `test:sql`) | `test:sql`, `test:db`, the API tests |
 | M9-T12 End to end | Cypress specs for an Animated trap springing, an Activate, a Counter on the opponent's turn and a Tribute onto a full board | the e2e job on Chrome and Electron |
@@ -3708,6 +3713,6 @@ server, each task done when its acceptance items are green tests (CLAUDE.md rule
   cards to the random-policy decks it deals).
 - **Replays.** Portal to the Past adds a setup input, Rollback adds state history, KY's Test adds a
   data bank: all three must survive `JSON.parse(JSON.stringify(state))` and fold exactly from the log.
-- **Rulings coverage.** A CL number is not an R number: none of them may appear in `packages/` or `apps/`
-  (CLAUDE.md rule 3's scan fails on an `R<n>` §11 lacks, and a stray "CL" reference would only confuse).
+- **Rulings coverage.** A CL number is not an R number: none of them may appear in `crates/`, `apps/web/src/`
+  or `e2e/` (CLAUDE.md rule 3's scan fails on an `R<n>` §11 lacks, and a stray "CL" reference would only confuse).
   Cite the R numbers the port assigns.
