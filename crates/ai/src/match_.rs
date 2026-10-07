@@ -77,12 +77,19 @@ pub type AfterActionHook<'a> = Box<dyn FnMut(&GameState, &GameState, PlayerId, &
 /// handed the seat and the call, and must call it once; the call keeps its own result.
 pub type TimeDecisionHook<'a> = Box<dyn FnMut(PlayerId, &mut dyn FnMut()) + 'a>;
 
+/// Handed (the true state, the seat, the controller's answer); answers the action the controller plays.
+pub type OverrideChoiceHook<'a> = Box<dyn FnMut(&GameState, PlayerId, Option<ActionBody>) -> Option<ActionBody> + 'a>;
+
 #[derive(Default)]
 pub struct MatchHooks<'a> {
     /// Called with the true state before and after every accepted action.
     pub after_action: Option<AfterActionHook<'a>>,
     /// Wraps each controller call for timing (the sweep); default none.
     pub time_decision: Option<TimeDecisionHook<'a>>,
+    /// A test seam standing in for `match-refusal.test.ts`'s `vi.mock` of the baselines: called with
+    /// each controller call's answer inside the call (a panic in it is the controller's throw), before
+    /// a `None` is replaced by `random_action`; what it answers is the controller's answer.
+    pub override_choice: Option<OverrideChoiceHook<'a>>,
 }
 
 /// One refused action (`MatchRecord.rejected`).
@@ -116,7 +123,7 @@ pub struct MatchRecord {
     /// AI decisions with reason "fallback", plus controller nulls replaced by random_action.
     pub fallbacks: i32,
     pub decisions: i32,
-    pub nodes: i32,
+    pub nodes: usize,
     /// defIds each seat played, in order.
     pub played: PerPlayer<Vec<String>>,
 }
@@ -213,7 +220,7 @@ pub fn play_match(config: &MatchConfig, hooks: &mut MatchHooks) -> MatchRecord {
     let mut played: PerPlayer<Vec<String>> = PerPlayer { p1: Vec::new(), p2: Vec::new() };
     let mut fallbacks: i32 = 0;
     let mut decisions: i32 = 0;
-    let mut nodes: i32 = 0;
+    let mut nodes: usize = 0;
 
     while state.result.is_none() && log.len() < max_actions {
         let seat: PlayerId = seat_to_act(&state).unwrap_or(state.active);
@@ -224,8 +231,15 @@ pub fn play_match(config: &MatchConfig, hooks: &mut MatchHooks) -> MatchRecord {
         let called = {
             let rng = &mut rngs[seat];
             let time_decision = &mut hooks.time_decision;
+            let override_choice = &mut hooks.override_choice;
             catch_unwind(AssertUnwindSafe(|| {
-                let mut run = || choice = Some(choose_for(&controller, current, seat, rng));
+                let mut run = || {
+                    let mut made = choose_for(&controller, current, seat, rng);
+                    if let Some(over) = override_choice.as_mut() {
+                        made.action = over(current, seat, made.action.take());
+                    }
+                    choice = Some(made);
+                };
                 match time_decision.as_mut() {
                     Some(time) => time(seat, &mut run),
                     None => run(),

@@ -50,7 +50,7 @@ pub fn greedy_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option
 
     let answering = det.pending.as_ref().is_some_and(|pending| pending.player_id == seat);
     // Every candidate gets its one simulation, auto-answers of the other seat's prompts included.
-    let mut counter = create_node_counter(candidates.len() as i32 * (1 + AI_SEARCH.max_auto_answers), None);
+    let counter = create_node_counter(candidates.len() * (1 + AI_SEARCH.max_auto_answers as usize), None);
 
     let mut best: Option<ActionBody> = None;
     let mut best_score = f64::NEG_INFINITY;
@@ -58,7 +58,7 @@ pub fn greedy_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option
         if matches!(action, ActionBody::EndTurn) {
             continue;
         }
-        let Some(Ok(next)) = simulate(&det, seat, action, &mut counter) else {
+        let Some(Ok(next)) = simulate(&det, seat, action, &counter) else {
             continue;
         };
         let score = evaluate(&next, seat, NextSwing::Enemy, &GREEDY_EVAL);

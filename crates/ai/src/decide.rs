@@ -33,7 +33,7 @@ use crate::mulligan::mulligan_keep;
 use crate::observe::{ai_to_act, redact, unanswered_draw_offer};
 use crate::reply::{hidden_card_ids, reply_score};
 use crate::search::{Line, beam_search, score_line};
-use crate::simulate::{create_node_counter, create_sub_counter};
+use crate::simulate::{CountingNodeCounter, create_node_counter, create_sub_counter};
 use crate::types::{AiOptions, Decision, DecisionReason, NodeCounter, SearchBudget, SearchStats, StoppedBy};
 
 fn quiet_stats() -> SearchStats {
@@ -134,8 +134,8 @@ enum Plan {
 /// What the guarded body leaves behind for the fallback when it panics (TS's outer `let`s).
 struct Scratch {
     candidates: Vec<ActionBody>,
-    determinizations: i32,
-    lines: i32,
+    determinizations: usize,
+    lines: usize,
 }
 
 /// Steps 1–7 on the redacted copy; every number `stats` reads beside the counter goes in `scratch`.
@@ -144,7 +144,7 @@ fn plan(
     seat: PlayerId,
     budget: SearchBudget,
     rng: &mut Rng,
-    counter: &mut dyn NodeCounter,
+    counter: &dyn NodeCounter,
     scratch: &mut Scratch,
 ) -> Plan {
     // 1. Everything below reads the redacted copy.
@@ -179,7 +179,7 @@ fn plan(
     scratch.determinizations = k;
 
     // 5. Lethal, verified on every determinization.
-    if let Some(lethal) = find_lethal(&dets, seat, &mut *counter, budget.lethal_nodes)
+    if let Some(lethal) = find_lethal(&dets, seat, counter, budget.lethal_nodes)
         && let Some(first_lethal) = lethal.first().cloned()
     {
         return Plan::Searched {
@@ -198,19 +198,19 @@ fn plan(
         return Plan::Searched { line: vec![action.clone()], action, reason: DecisionReason::Fallback, score: 0.0, stopped_by: None };
     };
     let root_turn = det0.turn;
-    let remaining = (budget.nodes - counter.used()).max(0);
+    let remaining = budget.nodes.saturating_sub(counter.used());
     let finalist_count = budget.finalists.max(1);
-    let per_finalist = AI_SEARCH.lines_per_action * AI_REPLY.reserve_steps
-        + (k - 1) * (budget.max_depth + 1 + AI_REPLY.reserve_steps);
+    let per_finalist = (AI_SEARCH.lines_per_action * AI_REPLY.reserve_steps) as usize
+        + (k - 1) * (budget.max_depth + 1 + AI_REPLY.reserve_steps as usize);
     let reserve = (remaining / 2).min(finalist_count * per_finalist);
     // The beam's own slice of the counter. Its stop reason is read as the beam ends: nothing takes a
     // node through the slice afterwards, so it is the reason TS read off it at the end.
     let (found, beam_stopped_by) = {
-        let mut beam_counter = create_sub_counter(&mut *counter, remaining - reserve);
-        let found = beam_search(det0, seat, &mut beam_counter, budget);
+        let beam_counter = create_sub_counter(counter, remaining - reserve);
+        let found = beam_search(det0, seat, &beam_counter, budget);
         (found, beam_counter.stopped_by())
     };
-    scratch.lines = found.len() as i32;
+    scratch.lines = found.len();
 
     if found.is_empty() {
         let action = fallback_action(&scratch.candidates);
@@ -229,18 +229,18 @@ fn plan(
     // for any one first action) are scored after the opponent's reply on determinization 0; each
     // first action keeps its best line; the best `finalists` first actions are scored again on every
     // other determinization, and the best mean wins.
-    let shortlist = shortlist_lines(&found, (finalist_count * AI_SEARCH.lines_per_action).max(0) as usize);
+    let shortlist = shortlist_lines(&found, finalist_count * AI_SEARCH.lines_per_action as usize);
     let hidden0 = hidden_card_ids(det0, seat);
     let mut replied: Vec<Scored<'_>> = Vec::new();
     for line in shortlist {
-        let Some(score) = reply_score(&line.end, seat, root_turn, &mut *counter, &hidden0) else {
+        let Some(score) = reply_score(&line.end, seat, root_turn, counter, &hidden0) else {
             break;
         };
         replied.push(Scored { line, score });
     }
     let unreplied: Vec<Scored<'_>> = found.iter().map(|line| Scored { line, score: line.score }).collect();
     let finalists =
-        best_per_first_action(if !replied.is_empty() { &replied } else { &unreplied }, finalist_count as usize);
+        best_per_first_action(if !replied.is_empty() { &replied } else { &unreplied }, finalist_count);
 
     let mut totals: Vec<f64> = finalists.iter().map(|entry| entry.score).collect();
     let mut scored_on: i32 = 1;
@@ -249,7 +249,7 @@ fn plan(
         let mut row: Vec<f64> = Vec::new();
         for entry in &finalists {
             let Some(score) =
-                score_line(world, seat, &entry.line.actions, &mut *counter, !replied.is_empty(), Some(&hidden))
+                score_line(world, seat, &entry.line.actions, counter, !replied.is_empty(), Some(&hidden))
             else {
                 break;
             };
@@ -306,13 +306,13 @@ pub fn decide(state: &GameState, seat: PlayerId, options: &mut AiOptions) -> Opt
     }
 
     let budget = options.budget;
-    let mut counter = create_node_counter(budget.nodes, options.should_stop);
+    let counter = create_node_counter(budget.nodes, options.should_stop);
     let mut scratch = Scratch { candidates: Vec::new(), determinizations: 0, lines: 0 };
     let rng = &mut options.rng;
 
-    let outcome = catch_unwind(AssertUnwindSafe(|| plan(state, seat, budget, rng, &mut counter, &mut scratch)));
+    let outcome = catch_unwind(AssertUnwindSafe(|| plan(state, seat, budget, rng, &counter, &mut scratch)));
 
-    let stats = |counter: &dyn NodeCounter, thrown: i32, score: f64, stopped_by: Option<StoppedBy>| SearchStats {
+    let stats = |counter: &CountingNodeCounter, thrown: usize, score: f64, stopped_by: Option<StoppedBy>| SearchStats {
         nodes: counter.used(),
         determinizations: scratch.determinizations,
         lines: scratch.lines,

@@ -156,7 +156,7 @@ enum Known {
 
 /// Step 1: the best play of a card the opponent holds that is not in `hidden`, by the opponent's own
 /// evaluation, when it beats standing still.
-fn known_play(state: &GameState, seat: PlayerId, hidden: &IndexSet<String>, counter: &mut dyn NodeCounter) -> Known {
+fn known_play(state: &GameState, seat: PlayerId, hidden: &IndexSet<String>, counter: &dyn NodeCounter) -> Known {
     let opp = seat.opponent();
     let plays: Vec<ActionBody> = candidate_actions(state, opp)
         .into_iter()
@@ -169,7 +169,7 @@ fn known_play(state: &GameState, seat: PlayerId, hidden: &IndexSet<String>, coun
     let mut best: Option<GameState> = None;
     let mut best_value = evaluate(state, opp, NextSwing::Enemy, &AI_EVAL);
     for play in &plays {
-        let next = match simulate(state, opp, play, &mut *counter) {
+        let next = match simulate(state, opp, play, counter) {
             None => return Known::Cut,
             Some(Err(_)) => continue,
             Some(Ok(next)) => next,
@@ -206,7 +206,7 @@ pub fn hidden_card_ids(state: &GameState, seat: PlayerId) -> IndexSet<String> {
 pub fn simulate_reply(
     state: &GameState,
     seat: PlayerId,
-    counter: &mut dyn NodeCounter,
+    counter: &dyn NodeCounter,
     hidden: &IndexSet<String>,
 ) -> Option<GameState> {
     let opp = seat.opponent();
@@ -227,7 +227,7 @@ pub fn simulate_reply(
             if !counter.take() {
                 return None;
             }
-            let Some(next) = reduce_for(&current, answerer, &answer, &*counter) else {
+            let Some(next) = reduce_for(&current, answerer, &answer, counter) else {
                 return Some(current);
             };
             current = next;
@@ -237,7 +237,7 @@ pub fn simulate_reply(
             return Some(current);
         }
 
-        match known_play(&current, seat, hidden, &mut *counter) {
+        match known_play(&current, seat, hidden, counter) {
             Known::Cut => return None,
             Known::Played(played) => {
                 current = played;
@@ -251,7 +251,7 @@ pub fn simulate_reply(
             return None;
         }
         let step = attack.clone().unwrap_or(ActionBody::EndTurn);
-        if let Some(next) = reduce_for(&current, opp, &step, &*counter) {
+        if let Some(next) = reduce_for(&current, opp, &step, counter) {
             current = next;
             continue;
         }
@@ -259,7 +259,7 @@ pub fn simulate_reply(
         if attack.is_none() || !counter.take() {
             return if attack.is_none() { Some(current) } else { None };
         }
-        let Some(ended) = reduce_for(&current, opp, &ActionBody::EndTurn, &*counter) else {
+        let Some(ended) = reduce_for(&current, opp, &ActionBody::EndTurn, counter) else {
             return Some(current);
         };
         current = ended;
@@ -276,7 +276,7 @@ pub fn reply_score(
     end: &GameState,
     seat: PlayerId,
     root_turn: i32,
-    counter: &mut dyn NodeCounter,
+    counter: &dyn NodeCounter,
     hidden: &IndexSet<String>,
 ) -> Option<f64> {
     let status = line_status(end, seat, root_turn);

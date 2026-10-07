@@ -52,13 +52,13 @@ fn best_first_lines(mut lines: Vec<Line>) -> Vec<Line> {
 }
 
 /// The first `width` candidates that are not endTurn, plus endTurn when it is legal.
-fn expansion(state: &GameState, seat: PlayerId, width: i32) -> Vec<ActionBody> {
+fn expansion(state: &GameState, seat: PlayerId, width: usize) -> Vec<ActionBody> {
     let candidates = candidate_actions(state, seat);
     let end = candidates.iter().find(|action| matches!(action, ActionBody::EndTurn)).cloned();
     let mut moves: Vec<ActionBody> = candidates
         .into_iter()
         .filter(|action| !matches!(action, ActionBody::EndTurn))
-        .take(width.max(0) as usize)
+        .take(width)
         .collect();
     if let Some(end) = end {
         moves.push(end);
@@ -72,7 +72,7 @@ fn expansion(state: &GameState, seat: PlayerId, width: i32) -> Vec<ActionBody> {
 /// terminalScore; the best beamWidth open children (stable) form the next frontier. The loop stops at
 /// maxDepth (open lines are closed by terminalScore) or when the counter refuses. Returns complete
 /// lines, best first.
-pub fn beam_search(det: &GameState, seat: PlayerId, counter: &mut dyn NodeCounter, budget: SearchBudget) -> Vec<Line> {
+pub fn beam_search(det: &GameState, seat: PlayerId, counter: &dyn NodeCounter, budget: SearchBudget) -> Vec<Line> {
     let root_turn = det.turn;
     let mut complete: Vec<Line> = Vec::new();
     let mut frontier: Vec<OpenLine> = vec![OpenLine {
@@ -94,7 +94,7 @@ pub fn beam_search(det: &GameState, seat: PlayerId, counter: &mut dyn NodeCounte
                 break;
             }
             for action in expansion(&line.state, seat, width) {
-                let next = match simulate(&line.state, seat, &action, &mut *counter) {
+                let next = match simulate(&line.state, seat, &action, counter) {
                     None => {
                         stopped = true;
                         break;
@@ -128,7 +128,7 @@ pub fn beam_search(det: &GameState, seat: PlayerId, counter: &mut dyn NodeCounte
             break;
         }
         let mut next_frontier = best_first_open(children);
-        next_frontier.truncate(budget.beam_width.max(1) as usize);
+        next_frontier.truncate(budget.beam_width.max(1));
         frontier = next_frontier;
         depth += 1;
     }
@@ -142,7 +142,7 @@ pub fn beam_search(det: &GameState, seat: PlayerId, counter: &mut dyn NodeCounte
         if line.actions.is_empty() {
             continue;
         }
-        let end = close_line(&line.state, seat, root_turn, &mut *counter);
+        let end = close_line(&line.state, seat, root_turn, counter);
         // TS asked whether `closeLine` handed back the very state it was given (no step was taken):
         // a step always moves the state on, so equality answers the same question.
         let score = if end == line.state {
@@ -165,7 +165,7 @@ pub fn score_line(
     det: &GameState,
     seat: PlayerId,
     actions: &[ActionBody],
-    counter: &mut dyn NodeCounter,
+    counter: &dyn NodeCounter,
     reply: bool,
     hidden: Option<&IndexSet<String>>,
 ) -> Option<f64> {
@@ -180,7 +180,7 @@ pub fn score_line(
         if !candidate_actions(&state, seat).iter().any(|candidate| action_key(candidate) == key) {
             break;
         }
-        match simulate(&state, seat, action, &mut *counter) {
+        match simulate(&state, seat, action, counter) {
             None => return None,
             Some(Err(_)) => break,
             Some(Ok(next)) => state = next,
@@ -194,7 +194,7 @@ pub fn score_line(
         && state.active == seat
         && state.phase == Phase::Main
     {
-        match simulate(&state, seat, &ActionBody::EndTurn, &mut *counter) {
+        match simulate(&state, seat, &ActionBody::EndTurn, counter) {
             None => return None,
             Some(Err(_)) => return Some(evaluate(&state, seat, NextSwing::Enemy, &AI_EVAL)),
             Some(Ok(next)) => state = next,

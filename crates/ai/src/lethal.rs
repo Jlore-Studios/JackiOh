@@ -87,7 +87,7 @@ fn holds_everywhere(
     dets: &[GameState],
     seat: PlayerId,
     line: &[ActionBody],
-    counter: &mut dyn NodeCounter,
+    counter: &dyn NodeCounter,
 ) -> Option<bool> {
     for det in dets.iter().skip(1) {
         let mut state = det.clone();
@@ -99,7 +99,7 @@ fn holds_everywhere(
             if !legal_actions(&state, seat).iter().any(|legal| action_key(legal) == key) {
                 return Some(false);
             }
-            match simulate(&state, seat, action, &mut *counter) {
+            match simulate(&state, seat, action, counter) {
                 None => return None,
                 Some(Err(_)) => return Some(false),
                 Some(Ok(next)) => state = next,
@@ -167,7 +167,7 @@ fn judge(
     next: &GameState,
     root_turn: i32,
     visited: &mut IndexSet<String>,
-    counter: &mut dyn NodeCounter,
+    counter: &dyn NodeCounter,
 ) -> Option<Verdict> {
     if let Some(result) = &next.result {
         if result.winner.player() != Some(seat) {
@@ -191,7 +191,7 @@ fn judge(
 }
 
 /// Stage 1: depth-first in move order, with a visited set on `search_signature`.
-fn depth_first(dets: &[GameState], seat: PlayerId, counter: &mut dyn NodeCounter) -> Walk {
+fn depth_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter) -> Walk {
     let Some(root) = dets.first() else {
         return Walk::Exhausted;
     };
@@ -201,14 +201,14 @@ fn depth_first(dets: &[GameState], seat: PlayerId, counter: &mut dyn NodeCounter
     push_moves(&mut stack, Rc::new(root.clone()), Rc::new(Vec::new()), seat);
 
     while let Some(frame) = stack.pop() {
-        let next = match simulate(&frame.state, seat, &frame.action, &mut *counter) {
+        let next = match simulate(&frame.state, seat, &frame.action, counter) {
             None => return Walk::Cut,
             Some(Err(_)) => continue,
             Some(Ok(next)) => next,
         };
         let mut line: Vec<ActionBody> = frame.line.as_ref().clone();
         line.push(frame.action.clone());
-        let Some(verdict) = judge(dets, seat, &line, &next, root.turn, &mut visited, &mut *counter) else {
+        let Some(verdict) = judge(dets, seat, &line, &next, root.turn, &mut visited, counter) else {
             return Walk::Cut;
         };
         match verdict {
@@ -238,7 +238,7 @@ fn next_open(open: &[Open]) -> usize {
 }
 
 /// Stage 2: best-first by `ready_gap`, each expansion simulating its first AI_SEARCH.lethalWidth moves.
-fn best_first(dets: &[GameState], seat: PlayerId, counter: &mut dyn NodeCounter) -> Walk {
+fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter) -> Walk {
     let Some(root) = dets.first() else {
         return Walk::Exhausted;
     };
@@ -252,14 +252,14 @@ fn best_first(dets: &[GameState], seat: PlayerId, counter: &mut dyn NodeCounter)
         let node = open.remove(next_open(&open));
         let width = AI_SEARCH.lethal_width.max(0) as usize;
         for action in lethal_moves(&node.state, seat).into_iter().take(width) {
-            let next = match simulate(&node.state, seat, &action, &mut *counter) {
+            let next = match simulate(&node.state, seat, &action, counter) {
                 None => return Walk::Cut,
                 Some(Err(_)) => continue,
                 Some(Ok(next)) => next,
             };
             let mut line = node.line.clone();
             line.push(action);
-            let Some(verdict) = judge(dets, seat, &line, &next, root.turn, &mut visited, &mut *counter) else {
+            let Some(verdict) = judge(dets, seat, &line, &next, root.turn, &mut visited, counter) else {
                 return Walk::Cut;
             };
             match verdict {
@@ -286,11 +286,23 @@ fn best_first(dets: &[GameState], seat: PlayerId, counter: &mut dyn NodeCounter)
 pub fn find_lethal(
     dets: &[GameState],
     seat: PlayerId,
-    counter: &mut dyn NodeCounter,
-    limit: i32,
+    counter: &dyn NodeCounter,
+    limit: usize,
+) -> Option<Vec<ActionBody>> {
+    find_lethal_with_quick_nodes(dets, seat, counter, limit, AI_SEARCH.lethal_quick_nodes as usize)
+}
+
+/// `find_lethal` with the depth-first walk's share given: TS's test set `AI_SEARCH.lethalQuickNodes`
+/// at run time, which a Rust `const` cannot be (`tests/ai/lethal.rs`).
+pub fn find_lethal_with_quick_nodes(
+    dets: &[GameState],
+    seat: PlayerId,
+    counter: &dyn NodeCounter,
+    limit: usize,
+    quick_nodes: usize,
 ) -> Option<Vec<ActionBody>> {
     let root = dets.first()?;
-    if limit <= 0 {
+    if limit == 0 {
         return None;
     }
     if line_status(root, seat, root.turn) != LineStatus::Open {
@@ -299,8 +311,8 @@ pub fn find_lethal(
 
     let start = counter.used();
     let first = {
-        let mut quick = create_sub_counter(&mut *counter, limit.min(AI_SEARCH.lethal_quick_nodes));
-        depth_first(dets, seat, &mut quick)
+        let quick = create_sub_counter(counter, limit.min(quick_nodes));
+        depth_first(dets, seat, &quick)
     };
     match first {
         Walk::Line(line) => return Some(line),
@@ -311,13 +323,13 @@ pub fn find_lethal(
         return None;
     }
 
-    let left = limit - (counter.used() - start);
-    if left <= 0 {
+    let left = limit.saturating_sub(counter.used() - start);
+    if left == 0 {
         return None;
     }
     let second = {
-        let mut rest = create_sub_counter(&mut *counter, left);
-        best_first(dets, seat, &mut rest)
+        let rest = create_sub_counter(counter, left);
+        best_first(dets, seat, &rest)
     };
     match second {
         Walk::Line(line) => Some(line),
