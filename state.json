@@ -2980,6 +2980,13 @@
     "436": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-07T14:07:24Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule line 7 fails: the fix is a change to staging's .github/ files, which no unit test on main can check and only a person may make; the item is already labelled medium"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-3",
