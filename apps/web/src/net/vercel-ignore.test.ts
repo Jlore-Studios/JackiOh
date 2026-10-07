@@ -73,22 +73,41 @@ afterAll(() => {
 describe("scripts/vercel-ignore.sh", () => {
   it("builds main when a file the bundle reads changed", () => {
     for (const file of [
-      "packages/engine/src/reduce.ts",
-      "packages/cards/catalog.json",
+      // The four crates scripts/build-wasm.sh compiles into the WASM module, and the card data.
+      "crates/engine/src/reduce.rs",
+      "crates/engine/src/wire/view.rs",
+      "crates/engine/Cargo.toml",
+      "crates/cards/catalog.json",
+      "crates/cards/flavour.json",
+      "crates/cards/build.rs",
+      "crates/cards/patches/patches.json",
+      "crates/ai/src/decide.rs",
+      "crates/ai/generation.json",
+      "crates/wasm/src/lib.rs",
+      // The card scripts are compiled in: a scripts/ directory at the root is tooling, src/scripts/ is not.
+      "crates/cards/src/scripts/core/c001_big_d_fender.rs",
+      // The testkit is a feature of the engine's own src/, not a tests/ directory.
+      "crates/engine/src/testkit/scenario.rs",
+      // What cargo reads to build any member: the workspace, the lockfile, the toolchain, every manifest.
+      "Cargo.toml",
+      "Cargo.lock",
+      "rust-toolchain.toml",
+      ".cargo/config.toml",
+      "crates/server/Cargo.toml",
+      "crates/tools/Cargo.toml",
+      "scripts/build-wasm.sh",
       "apps/web/src/main.tsx",
+      "apps/web/src/wasm/index.ts",
+      "apps/web/src/wire/generated/PlayerView.ts",
       "apps/web/public/robots.txt",
       "package.json",
       "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
       "vercel.json",
       "assets/music/a.mid",
       "tsconfig.base.json",
       "apps/web/vite.config.ts",
       "apps/web/index.html",
-      "packages/ai/src/decide.ts",
-      "packages/shared/src/index.ts",
-      "packages/cards/patches/patches.json",
-      // The card scripts are bundled: a package's scripts/ is tooling, but src/scripts/ is not.
-      "packages/cards/src/scripts/001-bigot.ts",
       // Named like test support, but not a *.test.* file or a test/ directory, so not proved unread.
       "apps/web/src/game/deckbuilder/testkit.ts",
       "apps/web/src/patches/fixtures.ts",
@@ -98,21 +117,23 @@ describe("scripts/vercel-ignore.sh", () => {
     }
   });
 
-  it("skips main when only the night bot, architecture, docs, the server, CI, tests or tooling changed", () => {
+  it("skips main when only the night bot, docs, the spec, the training lanes, the server, the CLI, CI, tests or tooling changed", () => {
     for (const files of [
       ["bot/harness/state.py", ".harness/config.json"],
       [".squishy/config.json", ".github/workflows/squishy-run.yml"],
       [".github/workflows/ci.yml", ".github/actions/setup/action.yml"],
       ["docs/architecture.md", "SPEC.md", "BUILD.md", "CLAUDE.md", "REVIEW.md", "README.md"],
-      ["apps/server/src/index.ts", "apps/server/package.json", "render.yaml"],
+      // The server and the CLI are never compiled into the WASM module; only their manifests are read.
+      ["crates/server/src/main.rs", "crates/server/migrations/0001_init.sql", "crates/server/Dockerfile", "render.yaml"],
+      ["crates/server/tests/server.rs", "crates/server/.env.example", "crates/tools/src/fuzz.rs"],
       ["e2e/cypress/e2e/01-hotseat-full-game.cy.ts", "reviews/2026-10-03.md"],
-      ["scripts/ci-scope.sh", "JackiOh_Core_Cards.md", "ARCHITECTURE-CCG.md"],
-      // Tests and tooling inside the client and the packages are never imported by the bundle.
+      ["scripts/ci-scope.sh", "scripts/golden/record.ts", "JackiOh_Core_Cards.md", "ARCHITECTURE-CCG.md"],
+      ["spec/rulings/R0195.md", "spec/INDEX.md", "training/README.md", "training/history/improve.jsonl"],
+      // Tests and tooling inside the client and the crates are never imported by the bundle.
       ["apps/web/src/game/Board.test.tsx", "apps/web/src/net/x.test.ts", "apps/web/src/test/setup.ts"],
-      ["packages/cards/test/002-bigot.test.ts", "packages/engine/test/reduce.test.ts", "packages/ai/test/_support.ts"],
-      ["packages/validator/test/x.test.ts", "packages/shared/test/y.test.ts", "packages/engine/src/z.test.ts"],
-      ["packages/cards/scripts/patch.ts", "packages/ai/scripts/sweep.ts", "apps/web/scripts/gen-voice.mjs"],
-      ["packages/cards/README.md", "packages/shared/README.md", "apps/web/README.md"],
+      ["crates/engine/tests/rules/combat.rs", "crates/engine/tests/golden/games.jsonl", "crates/engine/tests/fixtures/code-input-cases.json"],
+      ["crates/cards/tests/cross/catalog.rs", "crates/ai/tests/ai.rs", "crates/wasm/tests/x.rs"],
+      ["apps/web/scripts/gen-voice.mjs", "apps/web/README.md"],
     ]) {
       commits(files);
       expect(builds(), files.join(", ")).toBe(false);
@@ -120,28 +141,40 @@ describe("scripts/vercel-ignore.sh", () => {
   });
 
   it("builds when one file the bundle reads sits among files that do not", () => {
-    commits(["bot/harness/state.py", "docs/architecture.md", "packages/ai/src/decide.ts"]);
+    commits(["bot/harness/state.py", "docs/architecture.md", "crates/ai/src/decide.rs"]);
     expect(builds()).toBe(true);
     commits(["docs/x.md", "apps/web/src/x.ts"]);
     expect(builds()).toBe(true);
     // A path that only looks like a skipped one.
     commits(["apps/serverless/x.ts"]);
     expect(builds()).toBe(true);
+    commits(["crates/serverless/src/x.rs"]);
+    expect(builds()).toBe(true);
     commits(["botany/x.ts"]);
     expect(builds()).toBe(true);
     commits(["docs-copy/x.md"]);
     expect(builds()).toBe(true);
+    commits(["training-data/x.json"]);
+    expect(builds()).toBe(true);
     // A test or tooling file beside a source file the bundle reads is still a build.
     commits(["apps/web/src/game/Board.test.tsx", "apps/web/src/game/Board.tsx"]);
     expect(builds()).toBe(true);
-    commits(["packages/cards/test/002-bigot.test.ts", "packages/cards/src/scripts/002-bigot.ts"]);
+    commits(["crates/cards/tests/cross/catalog.rs", "crates/cards/src/scripts/core/c002_bigot.rs"]);
     expect(builds()).toBe(true);
-    commits(["packages/cards/scripts/patch.ts", "packages/cards/catalog.json"]);
+    commits(["crates/server/src/main.rs", "crates/engine/src/reduce.rs"]);
     expect(builds()).toBe(true);
-    // Paths that only look like tests or tooling: a test/ or scripts/ below src, another suffix.
-    commits(["packages/cards/src/test/x.ts"]);
+    commits(["crates/tools/src/patches.rs", "crates/cards/catalog.json"]);
     expect(builds()).toBe(true);
-    commits(["packages/cards/src/scripts/scripts/x.ts"]);
+    // The script that builds the module sits in scripts/, which is otherwise tooling.
+    commits(["scripts/ci-scope.sh", "scripts/build-wasm.sh"]);
+    expect(builds()).toBe(true);
+    // A manifest of a member the module does not use is still read by cargo.
+    commits(["crates/server/src/main.rs", "crates/server/Cargo.toml"]);
+    expect(builds()).toBe(true);
+    // Paths that only look like tests or tooling: a tests/ below src, another suffix.
+    commits(["crates/cards/src/tests/x.rs"]);
+    expect(builds()).toBe(true);
+    commits(["crates/engine/tests.rs"]);
     expect(builds()).toBe(true);
     commits(["apps/web/src/game/Board.tsx.test"]);
     expect(builds()).toBe(true);
@@ -151,7 +184,7 @@ describe("scripts/vercel-ignore.sh", () => {
 
   it("never skips past a commit that was not built: it diffs against the last one that was", () => {
     // A changed the bundle and its build never ran (the daily cap); B only touched the bot.
-    commits(["packages/engine/src/a.ts"], ["bot/harness/b.py"]);
+    commits(["crates/engine/src/a.rs"], ["bot/harness/b.py"]);
     expect(builds()).toBe(true);
     // Once A is the last build, B alone is skipped.
     const built = git("rev-parse", "HEAD~1");
@@ -189,7 +222,7 @@ describe("scripts/vercel-ignore.sh", () => {
   });
 
   it("skips every branch but main (and production) without the flag, whatever it changed", () => {
-    commits(["packages/engine/src/reduce.ts"]);
+    commits(["crates/engine/src/reduce.rs"]);
     expect(builds({ ref: "feat/live-cards" })).toBe(false);
     expect(builds({ ref: "fix/anim-double", env: "preview" })).toBe(false);
     expect(builds({ ref: "" })).toBe(false);
@@ -203,7 +236,7 @@ describe("scripts/vercel-ignore.sh", () => {
     commits(["docs/architecture.md"]);
     mkdirSync(join(repo, "apps/web"), { recursive: true });
     expect(builds({}, join(repo, "apps/web"))).toBe(false);
-    commits(["packages/engine/src/reduce.ts"]);
+    commits(["crates/engine/src/reduce.rs"]);
     expect(builds({}, join(repo, "apps/web"))).toBe(true);
     // Outside any repository the script is not there, and a missing script is a build.
     const elsewhere = mkdtempSync(join(tmpdir(), "no-repo-"));
