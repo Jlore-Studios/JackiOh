@@ -180,7 +180,7 @@ mod tests {
             let chalice = s.card(CHALICE).clone();
             let xs: BTreeSet<Option<i64>> = legal_actions(s.state(), P1)
                 .iter()
-                .map(|action| js(action))
+                .map(js)
                 .filter(|action| action["type"] == json!("play") && action["instanceId"] == json!(chalice.id))
                 .map(|play| play["x"].as_i64())
                 .collect();
@@ -203,7 +203,7 @@ mod tests {
                 .events()
                 .iter()
                 .filter(|event| matches!(event, GameEvent::CounterChanged { .. }))
-                .map(|event| js(event))
+                .map(js)
                 .collect();
             assert_eq!(
                 json!(changes),

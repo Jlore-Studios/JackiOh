@@ -33,13 +33,13 @@ fn each_of(f: impl Fn(&str) -> Effect + Send + Sync + 'static) -> ForEachCardEac
 fn frozen_wastes(deck_of: impl Fn(PlayerId) -> PlayerId + Copy + Send + Sync + 'static) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            let count = doomed(&ctx.state);
+            let count = doomed(ctx.state);
             let deck = deck_of(ctx.controller);
             vec![
                 destroy_all(json_as(json!({ "side": "any" }))),
                 for_each_card(ForEachCardArgs {
                     cards: cards_of(move |at| {
-                        zone_cards(&at.state, deck, OffFieldZone::Library)
+                        zone_cards(at.state, deck, OffFieldZone::Library)
                             .into_iter()
                             .take(count.max(0) as usize)
                             .map(|card| card.id)

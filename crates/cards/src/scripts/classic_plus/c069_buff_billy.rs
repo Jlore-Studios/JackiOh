@@ -136,7 +136,7 @@ mod tests {
             let card = s.card(BILLY).id.clone();
             let mut xs: Vec<i64> = legal_actions(s.state(), P1)
                 .iter()
-                .map(|action| js(action))
+                .map(js)
                 .filter(|action| {
                     action["type"] == json!("play") && action["instanceId"] == json!(card) && action["zone"]["lane"] == json!(1)
                 })

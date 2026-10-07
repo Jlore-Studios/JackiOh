@@ -16,7 +16,7 @@ pub const ID: &str = "classicplus-062";
 pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(hook(|_ctx| subsystems::papaya_begin())),
-        resume: IndexMap::from([(subsystems::PAPAYA_STEP, hook(|ctx| subsystems::papaya_answered(ctx)))]),
+        resume: IndexMap::from([(subsystems::PAPAYA_STEP, hook(subsystems::papaya_answered))]),
         ..Script::default()
     };
     // The same script: the Radiant face's "every enemy card" is the running face, read by the subsystem.

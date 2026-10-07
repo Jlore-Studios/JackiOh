@@ -16,11 +16,11 @@ fn across_from_bot_losers(state: &GameState, controller: PlayerId) -> Vec<KillCr
     slots_of(controller, Row::Units)
         .into_iter()
         .flat_map(|slot| {
-            let bot = match card_at(state, &slot) {
+            let bot = match card_at(state, slot) {
                 Some(bot) if bot.def_id == BOT_LOSER => bot,
                 _ => return Vec::new(),
             };
-            match card_at(state, &ZoneRef { player: enemy, row: Row::Units, lane: slot.lane }) {
+            match card_at(state, ZoneRef { player: enemy, row: Row::Units, lane: slot.lane }) {
                 None => Vec::new(),
                 Some(victim) => vec![KillCredit { victim_id: victim.id.clone(), to_id: bot.id.clone() }],
             }

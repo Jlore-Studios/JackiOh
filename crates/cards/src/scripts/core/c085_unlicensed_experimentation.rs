@@ -101,7 +101,7 @@ fn played_permanent(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<CardIn
         return None;
     }
 
-    let card = find_instance(&ctx.state, instance_id)?;
+    let card = find_instance(ctx.state, instance_id)?;
 
     let played = def_of(Some(&*ctx.state), &card.def_id);
     // R61: "tokens … never set it off", including a token card played from a hand.
@@ -130,7 +130,7 @@ fn matching_permanents(ctx: &EffectContext<'_>, type_: CardType, played: &CardIn
             slots_of(ctx.controller, row)
                 .into_iter()
                 .filter_map(|slot| {
-                    let card = card_at(&ctx.state, &slot)?;
+                    let card = card_at(ctx.state, slot)?;
                     if Some(&card.id) == self_id.as_ref() || card.id == played.id {
                         return None;
                     }
@@ -166,7 +166,7 @@ fn experimentation(on_all: bool) -> TrapTrigger {
             let type_ = def_of(Some(&*ctx.state), &played.def_id).type_;
             let target_ids: Vec<String> = matching_permanents(ctx, type_, &played)
                 .into_iter()
-                .filter(|card| !unit_has(&ctx.state, card, KeywordKind::Immutable))
+                .filter(|card| !unit_has(ctx.state, card, KeywordKind::Immutable))
                 .map(|card| card.id)
                 .collect();
 
@@ -324,7 +324,7 @@ mod tests {
     fn index_of_event(s: &Scenario, matching: impl Fn(&GameEvent) -> bool) -> isize {
         s.events()
             .iter()
-            .position(|event| matching(event))
+            .position(matching)
             .map(|index| index as isize)
             .unwrap_or(-1)
     }

@@ -54,10 +54,10 @@ const DRAWN_COST: i32 = 2;
 /// (top down), which is the order they are drawn in. By instance id, which is what `forEachCard`
 /// keeps (TS took the instances and read their ids).
 fn drawn_cards(ctx: &EffectContext<'_>) -> Vec<String> {
-    zone_cards(&ctx.state, ctx.controller, OffFieldZone::Library)
+    zone_cards(ctx.state, ctx.controller, OffFieldZone::Library)
         .iter()
         .filter(|card| {
-            !is_x_cost(&ctx.state, card) && effective_cost(&ctx.state, card, Default::default()) == DRAWN_COST
+            !is_x_cost(ctx.state, card) && effective_cost(ctx.state, card, Default::default()) == DRAWN_COST
         })
         .map(|card| card.id.clone())
         .collect()

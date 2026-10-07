@@ -29,7 +29,7 @@ pub const ID: &str = "classic-044";
 
 /// Your graveyard's Units, oldest first (§3: a graveyard is chronological).
 fn graveyard_units(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
-    let state: &GameState = &ctx.state;
+    let state: &GameState = ctx.state;
     let mut units = Vec::new();
     for card in zone_cards(state, ctx.controller, OffFieldZone::Graveyard).iter() {
         if def_of(Some(state), &card.def_id).type_ == CardType::Unit {
@@ -43,7 +43,7 @@ pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(hook(|ctx| {
             // Any number of Units, the budget the only bound.
-            let max = zone_count(&ctx.state, ctx.controller, OffFieldZone::Graveyard);
+            let max = zone_count(ctx.state, ctx.controller, OffFieldZone::Graveyard);
             let budget = param(&*ctx, "budget");
             vec![
                 choose_pick(json_as(json!({

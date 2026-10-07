@@ -166,7 +166,7 @@ mod tests {
     fn r81_declares_its_four_modes_with_the_play_on_both_faces() {
         let def = crate::card_def(APPROPRIATIONS);
         assert_eq!(def.id, APPROPRIATIONS);
-        assert_eq!(serde_json::to_value(&def.cost).expect("a cost is JSON"), json!("X"));
+        assert_eq!(serde_json::to_value(def.cost).expect("a cost is JSON"), json!("X"));
         let scripts = super::script();
         for face in [&scripts.base, &scripts.radiant] {
             assert_eq!(
@@ -501,7 +501,7 @@ mod tests {
             let timmy = unit(&s, P1, 1);
             s.expect_stats(&timmy, json!({ "attack": 3, "health": 7 }));
             assert_eq!(s.stats(&timmy).armor, 2);
-            assert_eq!(s.stats(&unit(&s, P1, 2)).armor, 9);
+            assert_eq!(s.stats(unit(&s, P1, 2)).armor, 9);
             let vanilla = mine(&s, VANILLA, "hand");
             assert_eq!(vanilla.buffs.health, 4);
             assert_eq!(vanilla.granted_keywords, vec![Keyword::Armor { n: 2 }]);

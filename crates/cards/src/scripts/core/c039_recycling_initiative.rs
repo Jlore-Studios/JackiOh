@@ -230,10 +230,7 @@ mod tests {
 
     /// The index in the cumulative log of the first event matching, or -1.
     fn index_of(s: &Scenario, matches: impl Fn(&GameEvent) -> bool) -> i64 {
-        s.events()
-            .iter()
-            .position(|event| matches(event))
-            .map_or(-1, |at| at as i64)
+        s.events().iter().position(matches).map_or(-1, |at| at as i64)
     }
 
     fn added_to_hand_of(player: PlayerId, def_id: &'static str) -> impl Fn(&GameEvent) -> bool {
@@ -573,7 +570,7 @@ mod tests {
             assert!(copy.radiant);
             assert_eq!(copy.damage, 0);
             assert_eq!(
-                serde_json::to_value(&copy.buffs).expect("buffs are JSON"),
+                serde_json::to_value(copy.buffs).expect("buffs are JSON"),
                 json!({ "attack": 0, "health": 0 })
             );
         }

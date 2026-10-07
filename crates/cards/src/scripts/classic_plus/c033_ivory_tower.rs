@@ -15,7 +15,7 @@ pub const ID: &str = "classicplus-033";
 /// The Unit standing on this Tower now, if any.
 fn rider_of(state: &GameState, tower: &CardInstance) -> Option<CardInstance> {
     let at = slot_of(state, tower)?;
-    carried_at(state, at).map(|rider| rider.clone())
+    carried_at(state, at).cloned()
 }
 
 /// R653: the event is the play of the Unit stacked onto this Tower, landing or resolved. (TS's

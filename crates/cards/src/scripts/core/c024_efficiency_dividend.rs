@@ -91,7 +91,7 @@ fn dividend(uses: i32) -> Script {
             let Some(self_) = ctx.live_self() else {
                 return vec![];
             };
-            let played = was_played_this_turn(&ctx.state, self_.controller, self_);
+            let played = was_played_this_turn(ctx.state, self_.controller, self_);
             if self_.return_to_hand_at_end_of_turn != Some(true) && !played {
                 return vec![];
             }

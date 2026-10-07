@@ -39,7 +39,7 @@ fn rapid_replenish(count: i32) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             // The plays before this one, at play time: not this spell, and not a card its step 5 cast.
-            let earlier = played_earlier(&ctx.state, ctx.controller, ctx.live_self());
+            let earlier = played_earlier(ctx.state, ctx.controller, ctx.live_self());
             if earlier >= COMBO {
                 vec![draw(json_as(json!({ "count": count })))]
             } else {

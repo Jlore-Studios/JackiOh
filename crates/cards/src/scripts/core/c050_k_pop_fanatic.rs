@@ -46,6 +46,7 @@
 //!     player (`held_now`). That second read has to wait for the steal to have run, which is what a
 //!     lazy part of the list is for: `for_each_card` reads its set when the list reaches it, so the
 //!     rider's set is the stolen card or nothing (engine/src/effects/each.rs, `Effect.expand`).
+//!
 //! Together they are "the steal took it"; either alone is not (a card already this player's passes
 //! the second, a row-full refusal the first). So a Make Radiant never reaches a card off the field —
 //! one in a hand the controller may not read above all — and `set_radiant` by id is aimed at the stay
@@ -383,7 +384,7 @@ mod tests {
             let entry = g.state().delayed[0].clone();
             assert_eq!(entry.owner, P1);
             assert_eq!(
-                serde_json::to_value(&entry.at).unwrap(),
+                serde_json::to_value(entry.at).unwrap(),
                 json!({ "phase": "start", "player": "p1" })
             );
             assert_eq!(entry.resume.def_id, KPOP);

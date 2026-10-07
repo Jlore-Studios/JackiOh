@@ -81,7 +81,7 @@ fn gift(ctx: &EffectContext<'_>) -> Vec<Effect> {
     let Some(this) = ctx.self_.as_ref() else {
         return vec![];
     };
-    let cost = this.cost_override.unwrap_or_else(|| printed_cost(&ctx.state, this)) - GIFT_DISCOUNT;
+    let cost = this.cost_override.unwrap_or_else(|| printed_cost(ctx.state, this)) - GIFT_DISCOUNT;
     if cost <= 0 {
         return vec![];
     }
@@ -338,7 +338,7 @@ mod tests {
             }));
             let gary = s.card(GARY).clone();
             // A Locked zone is ordinary state (#36 Magic Jammed locks one); this seeds it directly.
-            lock_zone(s.state_mut(), &slot(P2, 1));
+            lock_zone(s.state_mut(), slot(P2, 1));
 
             s.play(CHAOS, json!({ "modes": ["board"] }));
 
@@ -347,8 +347,8 @@ mod tests {
             assert!(s.hand(Some(P1)).iter().any(|card| card.id == gary.id));
             assert!(s.unit(P2, 1).is_none());
             // The lock is a zone flag: it neither travelled nor was cleared.
-            assert!(is_locked(s.state(), &slot(P2, 1)));
-            assert!(!is_locked(s.state(), &slot(P1, 1)));
+            assert!(is_locked(s.state(), slot(P2, 1)));
+            assert!(!is_locked(s.state(), slot(P1, 1)));
             s.expect_events(json!(["swapped", "bounced"]));
         }
 

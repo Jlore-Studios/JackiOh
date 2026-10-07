@@ -121,7 +121,7 @@ mod tests {
             let lance = s.card(LANCE).clone();
             let plays: Vec<Value> = legal_actions(s.state(), P1)
                 .iter()
-                .map(|action| js(action))
+                .map(js)
                 .filter(|action| action["type"] == json!("play") && action["instanceId"] == json!(lance.id))
                 .collect();
             assert!(!plays.is_empty());
@@ -167,7 +167,7 @@ mod tests {
             assert!(
                 legal_actions(s.state(), P1)
                     .iter()
-                    .map(|action| js(action))
+                    .map(js)
                     .any(|action| action["type"] == json!("play") && action["instanceId"] == json!(lance.id))
             );
             s.play(LANCE, json!({}));

@@ -49,7 +49,7 @@ fn answer(ctx: &EffectContext, event: &GameEvent) -> Option<Answer> {
     let GameEvent::CardPlayed { player, .. } = event else {
         return None;
     };
-    let reached = cards_played_this_turn(&ctx.state, *player) == param(ctx, "plays");
+    let reached = cards_played_this_turn(ctx.state, *player) == param(ctx, "plays");
     if has_activated(ctx) {
         return Some(Answer::Sale);
     }

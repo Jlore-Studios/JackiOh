@@ -14,11 +14,11 @@ pub const ID: &str = "classicplus-008";
 
 /// The deck cards the base face reaches, in deck order (R242); read once, so a pause resumes over them (R113).
 fn picks(ctx: &mut EffectContext<'_>) -> Vec<CardInstance> {
-    let deck = zone_cards(&ctx.state, opponent_of(ctx.controller), OffFieldZone::Library);
+    let deck = zone_cards(ctx.state, opponent_of(ctx.controller), OffFieldZone::Library);
     let count = param(&*ctx, "cards").min(deck.len() as i32).max(0) as usize;
     let changeable: Vec<CardInstance> = deck
         .iter()
-        .filter(|card| !applicable_changes(&ctx.state, card, TuneDirection::Degrade).is_empty())
+        .filter(|card| !applicable_changes(ctx.state, card, TuneDirection::Degrade).is_empty())
         .cloned()
         .collect();
     // R60, R129: N different cards, or all of them (and no draw) when there are no more than N.

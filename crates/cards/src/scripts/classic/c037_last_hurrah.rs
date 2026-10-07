@@ -22,7 +22,7 @@ fn last_hurrah(turn: &'static str) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             vec![
-                draw(json_as(json!({ "count": zone_count(&ctx.state, ctx.controller, OffFieldZone::Library) }))),
+                draw(json_as(json!({ "count": zone_count(ctx.state, ctx.controller, OffFieldZone::Library) }))),
                 discard_hand_at_turn_end(json_as(json!({ "turn": turn }))),
             ]
         })),
@@ -133,8 +133,8 @@ mod tests {
                 let mut want = vec!["core-010"];
                 want.extend(DECK);
                 assert_eq!(hand, want);
-                assert_eq!(count(&s.last_events(), "drawn"), DECK.len());
-                assert_eq!(count(&s.last_events(), "fatigue"), 0);
+                assert_eq!(count(s.last_events(), "drawn"), DECK.len());
+                assert_eq!(count(s.last_events(), "fatigue"), 0);
             }
 
             #[test]
@@ -150,7 +150,7 @@ mod tests {
 
                 assert_eq!(s.hand(PlayerId::P1).len(), HAND_CAP as usize);
                 assert_eq!(s.pile(PlayerId::P1, "library").len(), 0);
-                assert_eq!(count(&s.last_events(), "burned"), DECK.len() - 1);
+                assert_eq!(count(s.last_events(), "burned"), DECK.len() - 1);
                 let grave: Vec<String> =
                     s.pile(PlayerId::P1, "graveyard").iter().map(|card| card.def_id.clone()).collect();
                 let burnt_ones: Vec<String> = [MENACE, POINTMASTER, FELINORS].iter().map(|id| id.to_string()).collect();
@@ -177,10 +177,10 @@ mod tests {
 
                 s.play(HURRAH, json!({}));
 
-                assert_eq!(count(&s.last_events(), "drawn"), 1);
+                assert_eq!(count(s.last_events(), "drawn"), 1);
                 assert_eq!(s.pile(PlayerId::P1, "library").len(), DECK.len() - 1);
-                assert_eq!(count(&s.last_events(), "fatigue"), 0);
-                assert!(count(&s.last_events(), "drawLimited") > 0);
+                assert_eq!(count(s.last_events(), "fatigue"), 0);
+                assert!(count(s.last_events(), "drawLimited") > 0);
             }
 
             #[test]
@@ -190,8 +190,8 @@ mod tests {
 
                 s.play(HURRAH, json!({}));
 
-                assert_eq!(count(&s.last_events(), "drawn"), 0);
-                assert_eq!(count(&s.last_events(), "fatigue"), 0);
+                assert_eq!(count(s.last_events(), "drawn"), 0);
+                assert_eq!(count(s.last_events(), "fatigue"), 0);
                 s.expect_health(PlayerId::P1, 30);
             }
 
@@ -233,7 +233,7 @@ mod tests {
                 assert!(ended >= 0);
                 assert!(first_discard > ended);
                 assert!(first_discard < started);
-                assert_eq!(count(&s.last_events(), "promptOpened"), 0);
+                assert_eq!(count(s.last_events(), "promptOpened"), 0);
             }
 
             #[test]

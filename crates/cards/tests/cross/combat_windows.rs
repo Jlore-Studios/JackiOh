@@ -66,7 +66,7 @@ fn aim(card: &CardInstance) -> Value {
 }
 
 fn exertion_json(s: &Scenario, card: &CardInstance) -> Value {
-    serde_json::to_value(&s.card(card).exertion).unwrap()
+    serde_json::to_value(s.card(card).exertion).unwrap()
 }
 
 fn keyword_kinds(s: &Scenario, card: &CardInstance) -> Vec<String> {
@@ -216,7 +216,7 @@ mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
         // The Duelist's swing ends the game inside the AI turn, and nothing happens after that (R216):
         // the trap that fired once is not consumed afterwards, so it is still in the backrow, face-up.
         assert_eq!(
-            serde_json::to_value(&s.state().result).unwrap(),
+            serde_json::to_value(s.state().result).unwrap(),
             json!({ "winner": "p1", "reason": "hero-death" })
         );
         let to_graveyard = s

@@ -204,7 +204,7 @@ mod tests {
             }
             assert!(hits.iter().all(|hit| enemies.contains(&hit.target_id)));
             let dealt = 30 - s.state().players.p2.hero.health
-                + [1, 2].iter().map(|&lane| 4 - s.stats(&s.unit(P2, lane).unwrap()).health).sum::<i32>();
+                + [1, 2].iter().map(|&lane| 4 - s.stats(s.unit(P2, lane).unwrap()).health).sum::<i32>();
             assert_eq!(dealt, 3);
             s.expect_health(P1, 30);
         }

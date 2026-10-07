@@ -280,7 +280,7 @@ mod tests {
 
                 s.play(BREATH, json!({ "targets": at_hero() }));
 
-                assert_eq!(serde_json::to_value(&s.view(P1).you.mana).unwrap(), json!({ "current": 5, "max": 4 }));
+                assert_eq!(serde_json::to_value(s.view(P1).you.mana).unwrap(), json!({ "current": 5, "max": 4 }));
             }
 
             #[test]

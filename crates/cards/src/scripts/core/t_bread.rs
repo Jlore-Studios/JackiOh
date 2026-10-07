@@ -161,7 +161,7 @@ mod tests {
                 let def = crate::card_def(ID);
                 assert_eq!(def.index, "T-bread");
                 assert_eq!(def.name, "Bread Token");
-                assert_eq!(serde_json::to_value(&def.cost).unwrap(), json!(0));
+                assert_eq!(serde_json::to_value(def.cost).unwrap(), json!(0));
                 assert_eq!(def.type_, CardType::Unit);
                 assert!(def.token);
                 assert!(def.tags.contains(&Tag::Token));

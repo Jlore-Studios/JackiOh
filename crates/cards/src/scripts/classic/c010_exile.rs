@@ -62,12 +62,12 @@ fn budget_picks(ctx: &mut EffectContext<'_>, budget: i32) -> Vec<CardInstance> {
     while left > 0 {
         let fits: Vec<CardInstance> = cards_in_scope(ctx, &enemy_permanents())
             .into_iter()
-            .filter(|card| !picked.iter().any(|taken| taken.id == card.id) && cost_now(&ctx.state, card) <= left)
+            .filter(|card| !picked.iter().any(|taken| taken.id == card.id) && cost_now(ctx.state, card) <= left)
             .collect();
         let Some(card) = ctx.rng.pick(&fits).cloned() else {
             break;
         };
-        left -= cost_now(&ctx.state, &card);
+        left -= cost_now(ctx.state, &card);
         picked.push(card);
     }
     picked

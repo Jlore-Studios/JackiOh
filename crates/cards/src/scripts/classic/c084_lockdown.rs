@@ -144,7 +144,7 @@ mod tests {
     }
 
     fn locked(s: &Scenario, player: PlayerId, row: Row, lane: i32) -> bool {
-        is_locked(s.state(), &ZoneSlot { player, row, lane })
+        is_locked(s.state(), ZoneSlot { player, row, lane })
     }
 
     fn lock_events(s: &Scenario) -> Vec<String> {
@@ -380,7 +380,7 @@ mod tests {
             assert!(
                 legal_actions(s.state(), P1)
                     .iter()
-                    .map(|action| js(action))
+                    .map(js)
                     .any(|action| action["type"] == json!("activate") && action["instanceId"] == json!(lockdown.id))
             );
             assert!(!legal_actions(s.state(), P2).iter().any(|action| js(action)["type"] == json!("activate")));

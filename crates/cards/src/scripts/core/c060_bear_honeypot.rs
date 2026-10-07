@@ -97,7 +97,7 @@ fn match_(ctx: &EffectContext, event: &GameEvent, any_cost: bool) -> Option<Reso
         return None;
     }
     // R430: "if you have an empty unit zone" — an empty, unlocked, unreserved one (R64).
-    if open_zones(&ctx.state, ctx.controller, Row::Units).is_empty() {
+    if open_zones(ctx.state, ctx.controller, Row::Units).is_empty() {
         return None;
     }
     Some(ResolvedPlay {

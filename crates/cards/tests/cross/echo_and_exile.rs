@@ -294,7 +294,7 @@ mod r119_10_5_step_6_an_echo_repeats_granted_combo_parts_do_not_answer_what_its_
             .filter(|event| matches!(event, GameEvent::ChaosRolled { instance_id, .. } if *instance_id == call.id))
             .count();
         assert_eq!(rolls, 2);
-        assert!(quickstrikers_of(&s, P1).len() >= 1);
+        assert!(!quickstrikers_of(&s, P1).is_empty());
         // R119: a permanent #95 summons while the play resolves "starts counting from the next play";
         // the Echo repeat is not a next play, so the Quickstriker grants it no Combo damage.
         let hits = s

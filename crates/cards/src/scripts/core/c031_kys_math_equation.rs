@@ -117,13 +117,13 @@ fn return_to_hand(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     if self_.zone.z() != ZoneName::Graveyard {
         return vec![];
     }
-    if !was_played_this_turn(&ctx.state, self_.owner, &self_) {
+    if !was_played_this_turn(ctx.state, self_.owner, &self_) {
         return vec![];
     }
     // R78: the +1 rides on the instance in every zone. It is the price of the return, so it lands only
     // on a card that reached the hand: a full hand burns the card back to the graveyard (§2.4, R4),
     // which is no return at all. R429: never above (4), so at (4) or more it adds nothing.
-    let raise = RETURN_COST_STEP.min(RETURN_COST_CAP - own_cost(&ctx.state, &self_)).max(0);
+    let raise = RETURN_COST_STEP.min(RETURN_COST_CAP - own_cost(ctx.state, &self_)).max(0);
     let mut effects = vec![bounce(json_as(json!({ "target": { "of": "self" } })))];
     if raise > 0 {
         effects.push(set_cost_mod(json_as(json!({ "amount": raise, "inHandOnly": true }))));

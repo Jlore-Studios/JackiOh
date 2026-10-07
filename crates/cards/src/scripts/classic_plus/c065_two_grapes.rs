@@ -319,7 +319,7 @@ mod tests {
             let lucky_now = |s: &Scenario| -> Option<i64> {
                 numbers_on(s.state(), s.card(GRAPES))
                     .iter()
-                    .map(|number| js(number))
+                    .map(js)
                     .find(|number| number["ref"]["kind"] == json!("keyword") && number["ref"]["key"] == json!("Lucky"))
                     .and_then(|number| number["value"].as_i64())
             };

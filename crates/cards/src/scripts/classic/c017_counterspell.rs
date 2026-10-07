@@ -52,7 +52,7 @@ fn counter_it(ctx: &EffectContext<'_>, announced: &Announced, copy: bool) -> Vec
         return vec![countered];
     }
     // Read before the counter moves it: the copy keeps the countered card's face (R57).
-    let radiant = find_instance(&ctx.state, &announced.instance_id).is_some_and(|card| card.radiant);
+    let radiant = find_instance(ctx.state, &announced.instance_id).is_some_and(|card| card.radiant);
     vec![
         countered,
         add_to_hand(json_as(json!({

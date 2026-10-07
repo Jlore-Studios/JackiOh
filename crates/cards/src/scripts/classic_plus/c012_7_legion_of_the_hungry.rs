@@ -23,13 +23,13 @@ fn legion(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             // ponytail: the picks are drawn as the Cry resolves; nothing in this list can pause between them.
-            let library = zone_cards(&ctx.state, ctx.controller, OffFieldZone::Library);
+            let library = zone_cards(ctx.state, ctx.controller, OffFieldZone::Library);
             let shuffled = ctx.rng.shuffle(&library);
             let count = param(&*ctx, "cards").max(0) as usize;
             let picks: Vec<CardInstance> = shuffled.into_iter().take(count).collect();
             let units: Vec<String> = picks
                 .iter()
-                .filter(|card| card_type_of(&ctx.state, card) == CardType::Unit)
+                .filter(|card| card_type_of(ctx.state, card) == CardType::Unit)
                 .map(|card| card.id.clone())
                 .collect();
             let pick_ids: Vec<String> = picks.iter().map(|card| card.id.clone()).collect();

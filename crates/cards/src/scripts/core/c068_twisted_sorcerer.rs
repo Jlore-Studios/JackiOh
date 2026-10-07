@@ -61,7 +61,7 @@ fn sorcerer(low: i32, high: i32) -> Script {
     Script {
         targets: targets(),
         cry: Some(hook(move |ctx| {
-            let amount = if hero_is_low(&ctx.state, ctx.controller) { high } else { low };
+            let amount = if hero_is_low(ctx.state, ctx.controller) { high } else { low };
             vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))]
         })),
         // R195: hand only — the glow says playing it now deals `high`.

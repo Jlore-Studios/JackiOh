@@ -219,10 +219,10 @@ mod tests {
                     let mut firsts: Vec<Option<String>> = Vec::new();
                     for _ in 0..3 {
                         let first = probe.pick(&pool).map(|card| card.id.clone());
-                        if let Some(id) = &first {
-                            if grapes.contains(id.as_str()) {
-                                probe.int(table);
-                            }
+                        if let Some(id) = &first
+                            && grapes.contains(id.as_str())
+                        {
+                            probe.int(table);
                         }
                         firsts.push(first);
                         expected.push(pick_generated(&mut rng, &pool, None).map(|card| card.id.clone()));

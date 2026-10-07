@@ -312,7 +312,7 @@ mod tests {
                 };
                 ended += 1;
                 assert!(!events[over..].iter().any(|event| event["type"] == "cardAnnounced"), "{seed}");
-                assert_eq!(serde_json::to_value(&s.state().result).expect("a result is JSON")["winner"], "p1");
+                assert_eq!(serde_json::to_value(s.state().result).expect("a result is JSON")["winner"], "p1");
             }
             assert!(ended > 0);
         }

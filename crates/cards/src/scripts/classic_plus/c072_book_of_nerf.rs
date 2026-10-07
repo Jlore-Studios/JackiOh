@@ -53,7 +53,7 @@ mod tests {
 
     /// The `degraded` events, as their JSON (`instanceId`, `defId`, `change`).
     fn degrades(events: &[GameEvent]) -> Vec<Value> {
-        events.iter().filter(|event| matches!(event, GameEvent::Degraded { .. })).map(|event| js(event)).collect()
+        events.iter().filter(|event| matches!(event, GameEvent::Degraded { .. })).map(js).collect()
     }
 
     fn pick(id: &str) -> Value {
@@ -65,7 +65,7 @@ mod tests {
         let own = s.card(BOOK).id.clone();
         legal_actions(s.state(), P1)
             .iter()
-            .map(|action| js(action))
+            .map(js)
             .filter(|action| action["type"] == json!("play") && action["instanceId"] == json!(own))
             .flat_map(|action| action["targets"].as_array().cloned().unwrap_or_default())
             .filter(|selection| selection["pick"] == json!("instance"))

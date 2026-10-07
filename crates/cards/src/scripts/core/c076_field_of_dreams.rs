@@ -37,7 +37,7 @@ const REMINISCE: &str = "core-072";
 /// read-only `zone_count` (engine/src/query.rs), which is what keeps BUILD M3-T1's and REVIEW B1.7's
 /// `state.players` grep over `src` clean.
 fn hand_size_of(ctx: &EffectContext<'_>) -> i32 {
-    zone_count(&ctx.state, ctx.controller, OffFieldZone::Hand)
+    zone_count(ctx.state, ctx.controller, OffFieldZone::Hand)
 }
 
 /// The two faces differ only in whether the copies are Radiant (§5.2, R74).

@@ -22,6 +22,7 @@
 //!   - Radiant: `counterPlay({ to: "thief" })` is E2's steal off the field — the owner becomes this
 //!     trap's controller (R12), the hand cap applies (R317), and the card is hidden in the opponent's
 //!     view once in the thief's hand (R97).
+//!
 //! No tuned numbers.
 
 use jackioh_engine::effects::counter_play;

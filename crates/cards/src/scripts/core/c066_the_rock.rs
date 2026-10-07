@@ -18,6 +18,7 @@
 //!     of *your* units";
 //!   * `refuse_tributes` refuses the play outright when the board cannot pay — the "play refused
 //!     without a tribute" row of BUILD M4-T4.
+//!
 //! The units chosen travel in the `play` action's own `tributes` list rather than in `targets`
 //! (R81, R90), so there is nothing for a hook to read and no hook here at all.
 //!

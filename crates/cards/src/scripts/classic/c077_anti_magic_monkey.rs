@@ -190,7 +190,7 @@ mod tests {
             let id = s.card(DIVIDEND).id.clone();
             let xs: Vec<i64> = legal_actions(s.state(), P1)
                 .iter()
-                .map(|action| js(action))
+                .map(js)
                 .filter(|action| action["type"] == json!("play") && action["instanceId"] == json!(id))
                 .map(|action| action["x"].as_i64().unwrap_or(0))
                 .collect();
@@ -253,7 +253,7 @@ mod tests {
             let id = s.card(STOCKPILE).id.clone();
             let offered = legal_actions(s.state(), P1)
                 .iter()
-                .map(|action| js(action))
+                .map(js)
                 .any(|action| action["type"] == json!("play") && action["instanceId"] == json!(id));
             assert!(!offered);
             s.expect_refused_with(|s| s.play(STOCKPILE, json!({})), "costs 2");

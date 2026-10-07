@@ -246,8 +246,8 @@ mod tests {
             crate::register_all();
             let def = crate::card_def(super::super::ID);
             assert_eq!(def.id, MIND_CONTROL);
-            assert_eq!(serde_json::to_value(&def.type_).unwrap(), json!("Spell"));
-            assert_eq!(serde_json::to_value(&def.cost).unwrap(), json!(4));
+            assert_eq!(serde_json::to_value(def.type_).unwrap(), json!("Spell"));
+            assert_eq!(serde_json::to_value(def.cost).unwrap(), json!(4));
             let scripts = super::super::script();
             for face in [&scripts.base, &scripts.radiant] {
                 assert_eq!(

@@ -10,6 +10,7 @@
 //!   * `oncePerTurn` — §10.5 step 2 (`playSteps.consumeUsedDiscounts`) removes it on the first Spell
 //!     it priced, so only the next Spell is cheaper;
 //!   * `{ until: "thisTurn" }` — §2.2's cleanup takes it if no Spell used it.
+//!
 //! R65 floors the price at (0), so a (1) Spell under a 2 discount costs (0) and gives nothing back.
 //! R70: a cast pays nothing and never uses a discount, so a Spell cast this turn leaves it for the
 //! next Spell played.

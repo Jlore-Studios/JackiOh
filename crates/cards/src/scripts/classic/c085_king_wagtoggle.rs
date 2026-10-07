@@ -113,7 +113,7 @@ mod tests {
                 .last_events()
                 .iter()
                 .filter(|event| matches!(event, GameEvent::Swapped { .. }))
-                .map(|event| js(event))
+                .map(js)
                 .collect();
             assert_eq!(json!(swaps), json!([{ "type": "swapped", "what": "library" }]));
             assert!(!s.last_events().iter().any(|event| matches!(event, GameEvent::ShuffledIn { .. })));

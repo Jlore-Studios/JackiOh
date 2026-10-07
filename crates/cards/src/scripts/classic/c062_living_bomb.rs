@@ -30,7 +30,7 @@ pub const ID: &str = "classic-062";
 
 /// R400: one destroy for each permanent `player` controls with a Plague Counter on it, in R68's order.
 fn destroy_plagued(ctx: &EffectContext<'_>, player: PlayerId) -> Vec<Effect> {
-    permanents_on_field(&ctx.state, player)
+    permanents_on_field(ctx.state, player)
         .iter()
         .filter(|card| card.controller == player && plague_on(card) > 0)
         .map(|card| destroy(json_as(json!({ "target": { "of": "instance", "instanceId": card.id } }))))

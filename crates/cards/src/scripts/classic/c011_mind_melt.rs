@@ -225,7 +225,7 @@ mod tests {
                     .events
                     .iter()
                     .filter(|event| event.event_type() == GameEventType::Exiled)
-                    .map(|event| js(event))
+                    .map(js)
                     .collect();
                 assert_eq!(
                     exiled,

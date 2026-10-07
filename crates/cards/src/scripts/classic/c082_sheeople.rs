@@ -114,7 +114,7 @@ mod tests {
     fn tribute_sets(s: &Scenario, card: &CardInstance) -> Vec<Vec<String>> {
         let sets: IndexSet<String> = legal_actions(s.state(), P1)
             .iter()
-            .map(|action| js(action))
+            .map(js)
             .filter(|action| action["type"] == json!("play") && action["instanceId"] == json!(card.id))
             .map(|play| {
                 let mut ids: Vec<String> = play["tributes"]

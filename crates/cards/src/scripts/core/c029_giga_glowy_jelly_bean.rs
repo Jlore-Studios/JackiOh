@@ -30,7 +30,7 @@ pub const ID: &str = "core-029";
 /// copy. The GIGA Glowy Jelly Bean itself sits in the `resolving` zone while its script runs
 /// (§10.5), so it is not in this list and does not flag itself on the way to the graveyard.
 fn hand_of(ctx: &EffectContext<'_>) -> Vec<String> {
-    zone_cards(&ctx.state, ctx.controller, OffFieldZone::Hand)
+    zone_cards(ctx.state, ctx.controller, OffFieldZone::Hand)
         .iter()
         .map(|card| card.id.clone())
         .collect()
@@ -40,9 +40,9 @@ fn hand_of(ctx: &EffectContext<'_>) -> Vec<String> {
 fn permanents_of(ctx: &EffectContext<'_>) -> Vec<String> {
     let backrow: Vec<String> = slots_of(ctx.controller, Row::Backrow)
         .iter()
-        .filter_map(|slot| card_at(&ctx.state, slot).map(|card| card.id.clone()))
+        .filter_map(|slot| card_at(ctx.state, slot).map(|card| card.id.clone()))
         .collect();
-    let mut ids: Vec<String> = active_units_of(&ctx.state, ctx.controller)
+    let mut ids: Vec<String> = active_units_of(ctx.state, ctx.controller)
         .iter()
         .map(|card| card.id.clone())
         .collect();

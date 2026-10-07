@@ -198,7 +198,7 @@ mod tests {
     use crate::js;
 
     fn events_json(s: &Scenario) -> Vec<Value> {
-        s.events().iter().map(|event| js(event)).collect()
+        s.events().iter().map(js).collect()
     }
 
     /// The only trigger the card registers; `when` is where every arming condition lives (R61).

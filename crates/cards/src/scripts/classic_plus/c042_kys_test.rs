@@ -232,7 +232,7 @@ mod tests {
             assert_eq!(pending.kind, PromptKind::Answer);
             let problem = KY_TEST_BANK
                 .iter()
-                .find(|entry| entry.statement.to_string() == pending.prompt)
+                .find(|entry| entry.statement == pending.prompt)
                 .expect("a problem of the bank");
             assert_eq!(problem.difficulty.to_string(), "Medium");
             let keys: Vec<String> = pending.options.iter().map(|option| option.key.clone()).collect();
@@ -263,7 +263,7 @@ mod tests {
             let mut s = cast("kys-test-hard", false, &[FILLER]);
             s.answer(json!("Hard"));
             let prompt = pending_prompt(&s);
-            let problem = KY_TEST_BANK.iter().find(|entry| entry.statement.to_string() == prompt);
+            let problem = KY_TEST_BANK.iter().find(|entry| entry.statement == prompt);
             assert_eq!(problem.map(|entry| entry.difficulty.to_string()), Some("Hard".to_string()));
         }
 
@@ -277,7 +277,7 @@ mod tests {
             let parsed = prompt
                 .strip_suffix(" = ?")
                 .and_then(|sum| sum.split_once(" + "))
-                .filter(|(a, b)| digits(*a) && digits(*b))
+                .filter(|(a, b)| digits(a) && digits(b))
                 .map(|(a, b)| (a.parse::<i64>().unwrap_or(-1), b.parse::<i64>().unwrap_or(-1)));
             assert!(parsed.is_some());
             let (a, b) = parsed.unwrap_or((-1, -1));

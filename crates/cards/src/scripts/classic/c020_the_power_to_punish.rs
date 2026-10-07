@@ -17,6 +17,7 @@
 //!     delayed effects (R62, R68) whether or not this card is still on the field (as R76), and it is a
 //!     destroy, so an Indestructible Unit survives it (R46). Either face's Units wear the red mark while
 //!     it waits (R437; on the Radiant face every enemy Unit, those played meanwhile too, R750).
+//!
 //! Activating is not a play (R384).
 
 use jackioh_engine::effects::{damage, destroy_at_next_turn_start, discard_random};

@@ -115,10 +115,10 @@ impl Sweep {
             return;
         }
         for option in &pending.options {
-            if let Selection::Mode { option: offered } = &option.selection {
-                if offered == def_id {
-                    self.found.push(format!("Discover offered {def_id}"));
-                }
+            if let Selection::Mode { option: offered } = &option.selection
+                && offered == def_id
+            {
+                self.found.push(format!("Discover offered {def_id}"));
             }
         }
     }
@@ -168,11 +168,10 @@ fn sweep(def_id: &str, seed: &str) -> Vec<String> {
     for event in &run.events {
         match event {
             GameEvent::CardPlayed { instance_id, former_id: Some(former), .. }
-            | GameEvent::Summoned { instance_id, former_id: Some(former), .. } => {
-                if own_ids.contains(former) {
+            | GameEvent::Summoned { instance_id, former_id: Some(former), .. }
+                if own_ids.contains(former) => {
                     own_ids.insert(instance_id.clone());
                 }
-            }
             _ => {}
         }
     }

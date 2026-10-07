@@ -90,10 +90,10 @@ mod tests {
     fn tokens(s: &Scenario) -> Vec<(i32, bool)> {
         let mut out = Vec::new();
         for lane in 1..=5 {
-            if let Some(unit) = s.unit(PlayerId::P1, lane) {
-                if unit.def_id == RUSH {
-                    out.push((lane, unit.radiant));
-                }
+            if let Some(unit) = s.unit(PlayerId::P1, lane)
+                && unit.def_id == RUSH
+            {
+                out.push((lane, unit.radiant));
             }
         }
         out
@@ -131,7 +131,7 @@ mod tests {
                 );
                 s.play(BOOK, json!({}));
                 let found = tokens(&s);
-                assert!(found.len() >= 1);
+                assert!(!found.is_empty());
                 assert!(found.len() <= 2);
                 let lanes: Vec<i32> = found.iter().map(|token| token.0).collect();
                 assert_eq!(lanes, if found.len() == 1 { vec![2] } else { vec![2, 4] });
@@ -170,7 +170,7 @@ mod tests {
             let mut s = book(false, json!([]), Some("book-of-tokens-tune"));
             step_param(s.card_mut(BOOK), "tokens", 2);
             s.play(BOOK, json!({}));
-            assert!(tokens(&s).len() >= 1);
+            assert!(!tokens(&s).is_empty());
             assert!(tokens(&s).len() <= 2);
         }
     }
@@ -185,7 +185,7 @@ mod tests {
                 let mut s = book(true, json!([]), Some(&format!("book-of-tokens-radiant-{n}")));
                 s.play(BOOK, json!({}));
                 let found = tokens(&s);
-                assert!(found.len() >= 1);
+                assert!(!found.is_empty());
                 assert!(found.len() <= 2);
                 let lanes: Vec<i32> = found.iter().map(|token| token.0).collect();
                 assert_eq!(lanes, if found.len() == 1 { vec![1] } else { vec![1, 2] });
@@ -225,7 +225,7 @@ mod tests {
             let mut s = book(true, json!([]), Some("book-of-tokens-radiant-tune"));
             step_param(s.card_mut(BOOK), "tokens", 2);
             s.play(BOOK, json!({}));
-            assert!(tokens(&s).len() >= 1);
+            assert!(!tokens(&s).is_empty());
             assert!(tokens(&s).len() <= 2);
         }
     }

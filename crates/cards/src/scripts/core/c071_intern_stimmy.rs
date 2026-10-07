@@ -60,13 +60,13 @@ fn intern_stimmy(max_cost: i32) -> Script {
     let recruit_unit = recruit(json_as(json!({ "filter": { "type": "Unit", "costRange": { "max": max_cost } } })));
 
     let at_end_of_any_turn = TriggerDef::new("intern-stimmy-window", &[GameEventType::TurnEnded], move |ctx, _event| {
-        if library_is_larger(&ctx.state, ctx.controller) {
+        if library_is_larger(ctx.state, ctx.controller) {
             vec![recruit_unit.clone()]
         } else {
             vec![]
         }
     })
-    .with_when(|ctx, _event| library_is_larger(&ctx.state, ctx.controller));
+    .with_when(|ctx, _event| library_is_larger(ctx.state, ctx.controller));
 
     Script {
         triggers: vec![at_end_of_any_turn],

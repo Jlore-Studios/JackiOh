@@ -48,7 +48,7 @@ fn destroy_in_lane(ctx: &EffectContext, enemy_only: bool) -> Vec<Effect> {
     lane_zones(ctx.controller, enemy_only)
         .into_iter()
         .filter_map(|(player, row)| {
-            card_at(&*ctx.state, &ZoneSlot { player, row, lane: at.lane }).map(|card| {
+            card_at(&*ctx.state, ZoneSlot { player, row, lane: at.lane }).map(|card| {
                 destroy(json_as(json!({ "target": { "of": "instance", "instanceId": card.id } })))
             })
         })
@@ -112,7 +112,7 @@ mod tests {
     }
 
     fn locked(s: &Scenario, player: PlayerId, row: Row, lane: i32) -> bool {
-        is_locked(s.state(), &ZoneSlot { player, row, lane })
+        is_locked(s.state(), ZoneSlot { player, row, lane })
     }
 
     /// The four zones of lane 2, and whether each is Locked: p1 units, p1 backrow, p2 units, p2 backrow.

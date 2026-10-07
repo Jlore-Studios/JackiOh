@@ -52,9 +52,9 @@ pub fn script() -> CardScripts {
     let radiant = Script {
         cry: Some(hook(|_ctx| {
             vec![cast_each_then_exile(|ctx| {
-                zone_cards(&ctx.state, ctx.controller, OffFieldZone::Graveyard)
+                zone_cards(ctx.state, ctx.controller, OffFieldZone::Graveyard)
                     .into_iter()
-                    .filter(|card| card_type_of(&ctx.state, card) == CardType::Spell)
+                    .filter(|card| card_type_of(ctx.state, card) == CardType::Spell)
                     .map(|card| card.id.clone())
                     .collect()
             })]

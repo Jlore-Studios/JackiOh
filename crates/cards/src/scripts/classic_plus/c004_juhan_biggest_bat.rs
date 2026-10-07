@@ -57,7 +57,7 @@ mod tests {
     }
 
     fn beneath(s: &Scenario) -> Vec<CardInstance> {
-        beneath_at(s.state(), &LANE_1).to_vec()
+        beneath_at(s.state(), LANE_1).to_vec()
     }
 
     fn count(s: &Scenario, type_: &str) -> usize {
@@ -153,7 +153,7 @@ mod tests {
             };
             s.play(JUHAN, json!({ "zone": lane }));
 
-            let copy = beneath_at(s.state(), &ZoneSlot { player: P1, row: Row::Units, lane }).first().cloned();
+            let copy = beneath_at(s.state(), ZoneSlot { player: P1, row: Row::Units, lane }).first().cloned();
             assert_eq!(copy.as_ref().map(|card| card.def_id.as_str()), Some(JUHAN));
             assert_eq!(copy.as_ref().map(|card| card.owner), Some(P2));
             assert_eq!(copy.as_ref().map(|card| card.controller), Some(P1));
@@ -208,7 +208,7 @@ mod tests {
 
             assert_eq!(count(&s, "transformed"), 0);
             assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(VANILLA.to_string()));
-            assert!(beneath_at(s.state(), &ZoneSlot { player: P1, row: Row::Units, lane: 2 }).is_empty());
+            assert!(beneath_at(s.state(), ZoneSlot { player: P1, row: Row::Units, lane: 2 }).is_empty());
         }
     }
 

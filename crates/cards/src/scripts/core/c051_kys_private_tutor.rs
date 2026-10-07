@@ -53,10 +53,12 @@
 //!
 //! TWO MISSING VERBS (reported, not worked around, and not faked with a different verb):
 //!
-//!   1. discoverFromLibrary({ step: string, count?: number, player?: "self" | "enemy",
+//!   1. ```text
+//!      discoverFromLibrary({ step: string, count?: number, player?: "self" | "enemy",
 //!                            filter?: { type?: CardType | CardType[];
 //!                                       costRange?: { min?: number; max?: number } },
 //!                            prompt?: string, data?: Record<string, unknown> }): Effect
+//!      ```
 //!      §6.3's Discover row already describes this card as the primitive: "'Reveal N matching cards,
 //!      then choose one' (KY's Private Tutor) is this same primitive with the library as the pool:
 //!      the revealed cards are that prompt's options, so only the chooser ever sees them (§10.8)".
@@ -224,10 +226,10 @@ fn matches_type(ctx: &EffectContext<'_>, card: &CardInstance, option: TypeOption
 fn matches_bracket(ctx: &EffectContext<'_>, card: &CardInstance, bracket: BracketOption) -> bool {
     let cost = effective_cost(&*ctx.state, card, Default::default());
     let range = range_for(bracket);
-    if let Some(min) = range.min {
-        if cost < min {
-            return false;
-        }
+    if let Some(min) = range.min
+        && cost < min
+    {
+        return false;
     }
     range.max.is_none_or(|max| cost <= max)
 }

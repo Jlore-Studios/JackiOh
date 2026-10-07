@@ -129,7 +129,7 @@ mod c10_rapid_replenish_lights_up_at_combo_3_r195_b5 {
         // The flag was off, and the resolution agreed: no draw.
         assert_eq!(s.pile("p1", "library").len(), library);
         let ids: Vec<String> = s.hand("p1").into_iter().map(|card| card.id).collect();
-        assert_eq!(ids, [second.id.clone()]);
+        assert_eq!(ids, std::slice::from_ref(&second.id));
 
         // That copy counted as a play, so the other one now finds three earlier plays.
         assert!(hand_glows(&s, &second));
@@ -1093,8 +1093,6 @@ mod classic_plus_c50_adaptive_growth_lights_up_while_you_control_fewer_units_r19
 
 /// R195 the cards that declare conditionMet
 mod r195_the_cards_that_declare_condition_met {
-    use super::*;
-
     // Classic+ #18 Gullible Treatler, #19.5 Bot Loser and #37 Wardrum prove theirs in their own test files
     // (test/classic-plus/018-gullible-treatler, 019-5-bot-loser and 037-wardrum), and so do R662's
     // Core #18, #60, #70, #85, #96 and #100 (test/NNN-slug.test.ts).

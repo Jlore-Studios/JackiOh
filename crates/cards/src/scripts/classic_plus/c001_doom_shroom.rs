@@ -15,8 +15,8 @@ fn attacks_your_hero(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     if *forced {
         return false;
     }
-    let target = attack_target_of(&ctx.state, target_id);
-    find_instance(&ctx.state, attacker_id).map(|attacker| attacker.controller) == Some(opponent_of(ctx.controller))
+    let target = attack_target_of(ctx.state, target_id);
+    find_instance(ctx.state, attacker_id).map(|attacker| attacker.controller) == Some(opponent_of(ctx.controller))
         && matches!(target, Some(AttackTarget::Hero { player }) if player == ctx.controller)
 }
 

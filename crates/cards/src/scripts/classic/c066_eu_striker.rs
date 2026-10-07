@@ -26,6 +26,7 @@
 //!   - "A Unit" is the played card's definition's type; "you" is the play's player, the Striker's
 //!     controller (its owner, in hand). The opponent's plays do nothing.
 //!   - The return is §6.3 Bounce: R78's reset, the hand cap (a burned card goes to the graveyard, §2.4).
+//!
 //! Rush on the Radiant face is printed (§10.4 layer 1). No tuned numbers.
 
 use jackioh_engine::effects::{bounce, summon_this};

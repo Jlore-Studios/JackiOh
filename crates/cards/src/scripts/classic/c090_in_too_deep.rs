@@ -559,10 +559,10 @@ mod tests {
             &view.opponent
         };
         for entry in side.backrow.iter().flatten() {
-            if let BackrowView::Public(entry) = entry {
-                if entry.instance_id == card.id {
-                    return entry.clone();
-                }
+            if let BackrowView::Public(entry) = entry
+                && entry.instance_id == card.id
+            {
+                return entry.clone();
             }
         }
         panic!("{viewer} is not shown In Too Deep");

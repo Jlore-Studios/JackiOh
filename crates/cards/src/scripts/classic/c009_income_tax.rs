@@ -45,7 +45,7 @@ fn taxes(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
 
 fn tax(radiant: bool) -> TriggerDef {
     TriggerDef::new("income-tax", &[GameEventType::Drawn], move |ctx, _event| {
-        if zone_count(&ctx.state, opponent_of(ctx.controller), OffFieldZone::Hand) <= 1 {
+        if zone_count(ctx.state, opponent_of(ctx.controller), OffFieldZone::Hand) <= 1 {
             return vec![];
         }
         let mut data = json!({});

@@ -342,7 +342,7 @@ mod tests {
             let def = def();
             assert_eq!(def.id, AURA);
             assert_eq!(serde_json::to_value(def.type_).unwrap(), json!("Field Spell"));
-            assert_eq!(serde_json::to_value(&def.cost).unwrap(), json!({ "base": 2, "embiggen": 4 }));
+            assert_eq!(serde_json::to_value(def.cost).unwrap(), json!({ "base": 2, "embiggen": 4 }));
             let scripts = script();
             for face in [&scripts.base, &scripts.radiant] {
                 assert!(face.aura.is_some());

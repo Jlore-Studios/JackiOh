@@ -181,7 +181,7 @@ mod tests {
                 _ => None,
             });
             assert!(burned.is_some());
-            let fruit = s.card(&burned.unwrap_or_default()).clone();
+            let fruit = s.card(burned.unwrap_or_default()).clone();
             assert_eq!(fruit.zone.z(), ZoneName::Graveyard);
             assert_eq!(fruit.cost_override, None);
             assert_eq!(fruits_added(&s, PlayerId::P1), Vec::<(String, String)>::new());

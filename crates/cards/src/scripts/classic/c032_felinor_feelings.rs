@@ -36,10 +36,10 @@ const STEAL: &str = "feelings-steal";
 fn feeling_lanes(state: &GameState, player: PlayerId) -> IndexSet<i32> {
     let mut lanes = IndexSet::new();
     for unit in active_units_of(state, player).iter() {
-        if let Zone::Field { lane, .. } = unit.zone {
-            if cost_now(state, unit) == 1 {
-                lanes.insert(lane);
-            }
+        if let Zone::Field { lane, .. } = unit.zone
+            && cost_now(state, unit) == 1
+        {
+            lanes.insert(lane);
         }
     }
     lanes

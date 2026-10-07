@@ -175,7 +175,7 @@ mod tests {
                 next_turn(&mut s);
                 let cards = delivered(&s);
                 assert_eq!(cards.len(), 1);
-                assert_eq!(s.card(&instance_of(&cards[0])).zone.z(), ZoneName::Hand);
+                assert_eq!(s.card(instance_of(&cards[0])).zone.z(), ZoneName::Hand);
                 let events = s.last_events();
                 let contract = events.iter().position(|event| *event == cards[0]).map_or(-1, |i| i as i64);
                 let drawn = events
@@ -382,7 +382,7 @@ mod tests {
             step_param(s.card_mut(CONTRACT), "discount", 1);
             play_all(&mut s);
             next_turn(&mut s);
-            let cards: Vec<CardInstance> = delivered(&s).iter().map(|event| s.card(&instance_of(event)).clone()).collect();
+            let cards: Vec<CardInstance> = delivered(&s).iter().map(|event| s.card(instance_of(event)).clone()).collect();
             assert_eq!(cards.len(), 2);
             assert!(cards.iter().all(|card| card.cost_mod == -2 && card.radiant));
         }

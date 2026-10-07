@@ -17,6 +17,7 @@
 //!   - Radiant: a ban (`ban: true`) on the opponent's cards whose finished price is the threshold or
 //!     more (an X card at its chosen X included): `legalActions` never offers such a play and §10.5
 //!     step 1 refuses it, read last (R65); its controller's own plays and every cast are untouched.
+//!
 //! Both numbers are declared and read through `param` (R386); "threshold ↓" moves toward harder for a
 //! Degrade — up, so fewer cards are caught.
 

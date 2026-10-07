@@ -62,7 +62,7 @@ mod tests {
 
     /// TS `Tune[]`: the `upgraded` or `degraded` events, as their JSON (`instanceId`, `defId`, `change`).
     fn tunes(events: &[GameEvent], kind: &str) -> Vec<Value> {
-        events.iter().filter(|event| event.event_type().as_str() == kind).map(|event| js(event)).collect()
+        events.iter().filter(|event| event.event_type().as_str() == kind).map(js).collect()
     }
 
     fn instance_id_of(tune: &Value) -> String {

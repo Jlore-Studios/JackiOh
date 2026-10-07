@@ -33,6 +33,7 @@
 //!   - `setCostMod({ amount: -1 })` is R65's "costs 1 less": it adds to the instance's `costMod`,
 //!     which R78 keeps in every zone, so the discount survives the card's next trip to the
 //!     graveyard. `cost.ts` names this card as the reason that verb exists.
+//!
 //! The order is bounce-then-discount so the discount is the price of a card that reached the hand:
 //! `inHandOnly` skips it for a pick a full hand burned straight back to the graveyard (§2.4, R4),
 //! which would otherwise keep a discount for a return it never made (R78). The `costChanged` event

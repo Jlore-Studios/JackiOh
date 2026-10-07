@@ -37,10 +37,10 @@ fn enemy_permanents(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let enemy = opponent_of(player);
     let backrow: Vec<CardInstance> = slots_of(enemy, Row::Backrow)
         .iter()
-        .flat_map(|slot| card_at(state, slot).map(|card| card.clone()))
+        .flat_map(|slot| card_at(state, slot).cloned())
         .collect();
     let mut permanents: Vec<CardInstance> =
-        active_units_of(state, enemy).into_iter().map(|card| card.clone()).collect();
+        active_units_of(state, enemy).into_iter().cloned().collect();
     permanents.extend(backrow);
     permanents
 }
@@ -60,7 +60,7 @@ fn condition_met(c: ConditionContext) -> bool {
 
 /// R60: one of them at random, drawn as the Cry reaches the clause (the base `forEachCard`'s `cards`).
 fn random_permanent(c: &mut EffectContext) -> Vec<String> {
-    let permanents = enemy_permanents(&c.state, c.controller);
+    let permanents = enemy_permanents(c.state, c.controller);
     c.rng.shuffle(&permanents).into_iter().take(1).map(|card| card.id).collect()
 }
 
@@ -72,7 +72,7 @@ pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(hook(|ctx| {
             let threshold = param(ctx, "threshold");
-            if enough_permanents(&ctx.state, ctx.controller, threshold) {
+            if enough_permanents(ctx.state, ctx.controller, threshold) {
                 vec![for_each_card(ForEachCardArgs {
                     // R60: one of them at random, drawn as the Cry reaches the clause.
                     cards: Arc::new(random_permanent),
@@ -89,7 +89,7 @@ pub fn script() -> CardScripts {
     let radiant = Script {
         cry: Some(hook(|ctx| {
             let threshold = param(ctx, "threshold");
-            if enough_permanents(&ctx.state, ctx.controller, threshold) {
+            if enough_permanents(ctx.state, ctx.controller, threshold) {
                 vec![choose_target(json_as(json!({
                     "step": STEAL_STEP,
                     "scope": { "side": "enemy", "of": ["unit", "backrow"] },
@@ -192,7 +192,7 @@ mod tests {
 
                 let stolen = stolen_ids(&s);
                 assert_eq!(stolen.len(), 1);
-                let card = s.card(&first_or_empty(&stolen));
+                let card = s.card(first_or_empty(&stolen));
                 assert_eq!(card.controller, PlayerId::P1);
                 assert_eq!(card.owner, PlayerId::P2);
             }
@@ -207,7 +207,7 @@ mod tests {
 
                 s.play(TECH, json!({ "zone": 5 }));
 
-                let stolen = s.card(&first_or_empty(&stolen_ids(&s))).id.clone();
+                let stolen = s.card(first_or_empty(&stolen_ids(&s))).id.clone();
                 let lane = [1, 2, 3, 4].into_iter().find(|&l| s.unit(PlayerId::P1, l).is_some_and(|unit| unit.id == stolen));
                 assert!(lane.is_some());
                 assert!(s.unit(PlayerId::P2, lane.unwrap_or(0)).is_none());
@@ -284,7 +284,7 @@ mod tests {
 
                 s.play(TECH, json!({ "zone": 5 }));
 
-                let stolen = s.card(&first_or_empty(&stolen_ids(&s))).id.clone();
+                let stolen = s.card(first_or_empty(&stolen_ids(&s))).id.clone();
                 s.expect_refused(|s| {
                     s.attack(&stolen, "hero")
                 });
@@ -297,7 +297,7 @@ mod tests {
 
                 s.play(TECH, json!({ "zone": 5 }));
 
-                let stolen_id = s.card(&first_or_empty(&stolen_ids(&s))).id.clone();
+                let stolen_id = s.card(first_or_empty(&stolen_ids(&s))).id.clone();
                 let stolen = js(s.card(&stolen_id));
                 assert_eq!(stolen["zone"]["z"], "field");
                 assert_eq!(stolen["zone"]["player"], "p1");

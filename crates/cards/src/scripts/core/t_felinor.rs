@@ -171,7 +171,7 @@ mod tests {
                 crate::register_all();
                 let def = crate::card_def(ID);
                 assert_eq!(def.index, "T-felinor");
-                assert_eq!(serde_json::to_value(&def.cost).unwrap(), json!(1));
+                assert_eq!(serde_json::to_value(def.cost).unwrap(), json!(1));
                 assert_eq!(def.type_, CardType::Unit);
                 assert!(def.token);
                 assert!(def.tags.contains(&Tag::Felinor));

@@ -330,7 +330,7 @@ fn fixture(s: &mut Scenario, id: &str, type_: CardType, script: Script, stats: O
 
 fn place_fixture(s: &mut Scenario, def_id: &str, player: PlayerId, row: Row, lane: i32) -> CardInstance {
     let mut card = new_instance(s.state_mut(), def_id, player, Zone::Hand { player });
-    if !place_on_field(s.state_mut(), &mut card, &ZoneSlot { player, row, lane }, Default::default()) {
+    if !place_on_field(s.state_mut(), &mut card, ZoneSlot { player, row, lane }, Default::default()) {
         panic!("could not place {def_id}");
     }
     let turn = s.state().turn;
@@ -443,7 +443,7 @@ fn in_hand(s: &mut Scenario, def_id: &str, player: PlayerId) -> CardInstance {
 
 fn place_unit(s: &mut Scenario, def_id: &str, player: PlayerId, lane: i32) -> CardInstance {
     let mut card = new_instance(s.state_mut(), def_id, player, Zone::Hand { player });
-    if !place_on_field(s.state_mut(), &mut card, &ZoneSlot { player, row: Row::Units, lane }, Default::default()) {
+    if !place_on_field(s.state_mut(), &mut card, ZoneSlot { player, row: Row::Units, lane }, Default::default()) {
         panic!("could not place {def_id}");
     }
     let live = s.card_mut(&card.id);

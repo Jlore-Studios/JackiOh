@@ -371,7 +371,7 @@ mod c18_bread_and_butter_previews_the_bread_tokens_x_r280 {
 
         s.end_turn();
 
-        let token = must(s.unit(PlayerId::P1, 2).map(|card| card.clone()), "the Bread Token");
+        let token = must(s.unit(PlayerId::P1, 2), "the Bread Token");
         assert_eq!(token.def_id, "core-t-bread");
         s.expect_stats(token.id.as_str(), json!({ "attack": 3, "health": 3 }));
     }
@@ -970,7 +970,7 @@ mod c_19_lizards_breath_previews_the_pile_or_piles_that_would_count_now_r280 {
             let text = text_of(LIZARDS_BREATH, face);
             for entry in preview(&breath(face, 3, 2, 1)).unwrap_or_default() {
                 assert!(text.contains(&entry.label));
-                assert!(!entry.label.contains(|c: char| c == '{' || c == '}'));
+                assert!(!entry.label.contains(['{', '}']));
             }
         }
     }
@@ -1115,7 +1115,7 @@ mod r280_each_core_hook_is_a_pure_read_of_public_facts {
                 if zone == ConditionZone::Hand {
                     held(&s, PlayerId::P1, id)
                 } else {
-                    s.backrow(PlayerId::P1, 1).or(s.unit(PlayerId::P1, 1)).map(|card| card.clone())
+                    s.backrow(PlayerId::P1, 1).or(s.unit(PlayerId::P1, 1))
                 },
                 &format!("p1's {id}"),
             );
@@ -1172,7 +1172,7 @@ mod r280_each_core_hook_is_a_pure_read_of_public_facts {
         }
         fn previews(s: &Scenario, viewer: PlayerId) -> Vec<Option<Vec<PreviewValue>>> {
             let view = s.view(viewer);
-            let mut out: Vec<Option<Vec<PreviewValue>>> = own_hand(&view).iter().map(|card| shown_of(card)).collect();
+            let mut out: Vec<Option<Vec<PreviewValue>>> = own_hand(&view).iter().map(shown_of).collect();
             for side in [&view.you, &view.opponent] {
                 for unit in &side.units {
                     out.push(if unit.is_none() { None } else { shown_of(unit) });
@@ -1348,7 +1348,7 @@ mod c_43_plague_nuke_previews_the_mana_it_would_give_now_r280 {
         let list = must(shown_of(&hand_card(&s.view(PlayerId::P1), &s.card(PLAGUE_NUKE).id)), "the Nuke's preview");
         assert_eq!(list.iter().map(|entry| entry.label.clone()).collect::<Vec<String>>(), vec![LABEL]);
         assert!(text_of(PLAGUE_NUKE, face).contains(LABEL));
-        assert!(!LABEL.contains(|c: char| c == '{' || c == '}'));
+        assert!(!LABEL.contains(['{', '}']));
     }
 
     /// TS's second `it` inside the face loop.
@@ -1634,7 +1634,7 @@ mod c_59_plague_doctor_previews_n_the_hit_its_cry_deals_r280 {
             );
             assert_eq!(list.iter().map(|entry| entry.label.clone()).collect::<Vec<String>>(), vec![DOCTOR_LABEL]);
             assert!(text_of(PLAGUE_DOCTOR, face).contains(DOCTOR_LABEL));
-            assert!(!DOCTOR_LABEL.contains(|c: char| c == '{' || c == '}'));
+            assert!(!DOCTOR_LABEL.contains(['{', '}']));
         }
     }
 
@@ -1772,7 +1772,7 @@ mod c_88_siphon_squad_previews_x_the_attack_its_aura_takes_off_each_enemy_unit_r
         let list = must(shown_of(&s.view(PlayerId::P1).you.backrow[0]), "the controller's preview");
         assert_eq!(list.iter().map(|entry| entry.label.clone()).collect::<Vec<String>>(), vec![SIPHON_LABEL]);
         assert!(text_of(SIPHON_SQUAD, FaceKind::Base).contains(SIPHON_LABEL));
-        assert!(!SIPHON_LABEL.contains(|c: char| c == '{' || c == '}'));
+        assert!(!SIPHON_LABEL.contains(['{', '}']));
     }
 
     #[test]
@@ -1843,7 +1843,7 @@ mod c_88_siphon_squad_previews_x_the_attack_its_aura_takes_off_each_enemy_unit_r
                 "p1": { "hand": [RAPID_REPLENISH], "backrow": [{ "def": SIPHON_SQUAD, "faceUp": false }], "library": [MENACE] },
                 "p2": { "hand": [STOCKPILE], "field": [MENACE], "library": [MENACE] },
             }));
-            let card = must(s.backrow(PlayerId::P1, 1).map(|card| card.clone()), "the Siphon");
+            let card = must(s.backrow(PlayerId::P1, 1), "the Siphon");
             let hook = must(preview_hook(SIPHON_SQUAD, FaceKind::Base), "its hook");
             let (state, self_) = guarded(s.state(), &card.id);
             let answer = hook(ConditionContext {
@@ -1902,7 +1902,7 @@ mod c_46_divine_favor_previews_how_many_cards_it_would_draw_now_r280 {
             json!([{ "label": LABEL, "value": expected }])
         );
         s.play(card.as_str(), json!({}));
-        assert_eq!(drawn_by_p1(&s.last_events()), expected as usize);
+        assert_eq!(drawn_by_p1(s.last_events()), expected as usize);
     }
 
     #[test]
@@ -1992,6 +1992,6 @@ mod c_46_divine_favor_previews_how_many_cards_it_would_draw_now_r280 {
             json!([{ "label": LABEL, "value": 1 }])
         );
         s.play(echo.as_str(), json!({}));
-        assert_eq!(drawn_by_p1(&s.last_events()), 1);
+        assert_eq!(drawn_by_p1(s.last_events()), 1);
     }
 }

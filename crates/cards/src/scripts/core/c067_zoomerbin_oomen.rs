@@ -67,7 +67,7 @@ fn oomen(pool: CardQuery, radiant: bool) -> Script {
             let Some(self_) = ctx.live_self() else {
                 return vec![];
             };
-            let at = slot_of(&ctx.state, self_);
+            let at = slot_of(ctx.state, self_);
             // Off the field there is no "this lane" to summon into, so nothing happens (§3.1).
             let Some(at) = at else {
                 return vec![];

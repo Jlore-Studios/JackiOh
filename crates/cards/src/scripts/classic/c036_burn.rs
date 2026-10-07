@@ -47,8 +47,8 @@ fn burn(radiant: bool) -> Script {
         cry: Some(hook(move |ctx| {
             let mut effects = vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": param(ctx, "damage") })))];
             let threshold = param(ctx, "threshold");
-            let left = unspent_mana_of(&ctx.state, ctx.controller);
-            if draw_condition(&ctx.state, ctx.controller, threshold, radiant, left) {
+            let left = unspent_mana_of(ctx.state, ctx.controller);
+            if draw_condition(ctx.state, ctx.controller, threshold, radiant, left) {
                 effects.push(draw(json_as(json!({ "count": param(ctx, "draw") }))));
             }
             effects

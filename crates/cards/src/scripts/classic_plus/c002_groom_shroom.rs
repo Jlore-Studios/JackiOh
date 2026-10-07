@@ -20,8 +20,8 @@ fn attacks_your_hero(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     if *forced {
         return false;
     }
-    let target = attack_target_of(&ctx.state, target_id);
-    find_instance(&ctx.state, attacker_id).map(|attacker| attacker.controller) == Some(opponent_of(ctx.controller))
+    let target = attack_target_of(ctx.state, target_id);
+    find_instance(ctx.state, attacker_id).map(|attacker| attacker.controller) == Some(opponent_of(ctx.controller))
         && matches!(target, Some(AttackTarget::Hero { player }) if player == ctx.controller)
 }
 
@@ -40,7 +40,7 @@ fn groom_shroom(radiant: bool) -> Script {
         triggers: vec![
             TriggerDef::new("groom-shroom", &[GameEventType::AttackDeclared], move |ctx, _event| {
                 let lanes: Vec<i32> =
-                    fill_board_zones(&ctx.state, ctx.controller).iter().map(|zone| zone.lane).collect();
+                    fill_board_zones(ctx.state, ctx.controller).iter().map(|zone| zone.lane).collect();
                 let mut effects: Vec<Effect> = lanes
                     .iter()
                     .map(|&lane| {
@@ -54,7 +54,7 @@ fn groom_shroom(radiant: bool) -> Script {
                         lanes
                             .iter()
                             .filter_map(|&lane| {
-                                card_at(&now.state, &ZoneSlot { player, row: Row::Units, lane }).map(|card| card.id.clone())
+                                card_at(now.state, ZoneSlot { player, row: Row::Units, lane }).map(|card| card.id.clone())
                             })
                             .collect()
                     }),
@@ -241,8 +241,8 @@ mod tests {
         fn r64_skips_a_locked_zone_and_a_zone_reserved_for_a_reborn_return() {
             crate::register_all();
             let mut s = setup(json!({}), false, None);
-            lock_zone(s.state_mut(), &ZoneSlot { player: P1, row: Row::Units, lane: 2 });
-            reserve_zone(s.state_mut(), &ZoneSlot { player: P1, row: Row::Units, lane: 4 });
+            lock_zone(s.state_mut(), ZoneSlot { player: P1, row: Row::Units, lane: 2 });
+            reserve_zone(s.state_mut(), ZoneSlot { player: P1, row: Row::Units, lane: 4 });
 
             let attacker = s.unit(P2, 1).unwrap();
             s.attack(&attacker, "hero");

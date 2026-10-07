@@ -93,7 +93,7 @@ mod tests {
         let thrive = s.card(THRIVE).id.clone();
         let mut modes: Vec<String> = legal_actions(s.state(), P1)
             .iter()
-            .map(|action| js(action))
+            .map(js)
             .filter(|action| action["type"] == json!("activate") && action["instanceId"] == json!(thrive))
             .flat_map(|action| {
                 action["modes"]
@@ -257,7 +257,8 @@ mod tests {
         /// R386 an Upgrade heals 4, draws 2, gives 2 mana
         #[test]
         fn r386_an_upgrade_heals_4_draws_2_gives_2_mana() {
-            let cases: [(&str, fn(&mut Scenario)); 3] = [
+            type Check = fn(&mut Scenario);
+            let cases: [(&str, Check); 3] = [
                 ("heal", |s| {
                     s.expect_health(P1, 24);
                 }),

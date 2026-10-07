@@ -79,7 +79,7 @@ fn spiteful_stab(face: FaceKind) -> Script {
     Script {
         targets: targets(),
         cry: Some(hook(move |ctx| {
-            let amount = stab_amount(&ctx.state, ctx.controller, numbers);
+            let amount = stab_amount(ctx.state, ctx.controller, numbers);
             vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))]
         })),
         // R280: the label is the face's whole text, the formula as printed.

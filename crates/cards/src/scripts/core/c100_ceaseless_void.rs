@@ -295,7 +295,7 @@ mod tests {
             crate::register_all();
             let def = crate::card_def(VOID);
             assert_eq!(def.type_, CardType::Unit);
-            assert_eq!(serde_json::to_value(&def.cost).unwrap(), json!(PRINTED));
+            assert_eq!(serde_json::to_value(def.cost).unwrap(), json!(PRINTED));
             assert_eq!(serde_json::to_value(def.rarity).unwrap(), json!("Mythic"));
             assert_eq!((def.base.attack, def.base.health), (Some(10), Some(10)));
             // R275: a Radiant Unit's attack and health are each at least double its base face's.

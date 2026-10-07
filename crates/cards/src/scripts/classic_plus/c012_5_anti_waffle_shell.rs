@@ -23,7 +23,7 @@ pub fn script() -> CardScripts {
         cry: Some(hook(|_ctx| {
             vec![for_each_card(ForEachCardArgs {
                 cards: cards_of(|ctx| {
-                    active_units_of(&ctx.state, ctx.controller).iter().map(|unit| unit.id.clone()).collect()
+                    active_units_of(ctx.state, ctx.controller).iter().map(|unit| unit.id.clone()).collect()
                 }),
                 each: each_of(|instance_id| {
                     grant_keyword(json_as(json!({

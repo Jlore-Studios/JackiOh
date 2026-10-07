@@ -14,9 +14,8 @@
 //! ```
 //!
 //! It fails the build, naming the path, for a card file without `ID`, an `ID` the catalog lacks, a
-//! duplicate `ID`, a file outside `<set>/`, or a file name that is not a Rust identifier. A catalog id
-//! with no file is a warning while `src/scripts/` holds fewer files than the catalog has ids (the
-//! card parts of the v0.3.0 rewrite are still filling it), and an error once it holds as many.
+//! duplicate `ID`, a file outside `<set>/`, a file name that is not a Rust identifier, or a catalog id
+//! with no file (all 318 are written; part 33 made the last one an error).
 //!
 //! It also compiles the catalog version in: the `version` of the last entry of
 //! `patches/patches.json` (the newest shipped patch), as `JACKIOH_CATALOG_VERSION`.
@@ -78,7 +77,7 @@ fn main() {
         }
     }
 
-    // Every catalog id has a file: a warning until the scripts are all written, then an error.
+    // Every catalog id has a file.
     let missing: Vec<&String> = catalog_ids
         .iter()
         .filter(|id| !by_id.contains_key(id.as_str()))
@@ -91,11 +90,7 @@ fn main() {
             shown.join(", "),
             if missing.len() > shown.len() { ", …" } else { "" }
         );
-        if files.len() >= catalog_ids.len() {
-            problems.push(message);
-        } else {
-            println!("cargo:warning={message}");
-        }
+        problems.push(message);
     }
 
     if !problems.is_empty() {
@@ -241,8 +236,10 @@ fn render(files: &[CardFile], by_id: &BTreeMap<&str, &CardFile>) -> String {
         out.push_str("    }\n");
     }
     out.push_str("}\n\n");
+    out.push_str("/// A card file's `script` (SURFACE §7.1).\n");
+    out.push_str("pub type ScriptFn = fn() -> jackioh_engine::CardScripts;\n\n");
     out.push_str("/// Every card file's `(ID, script)`, sorted by `ID` (SURFACE §7.4).\n");
-    out.push_str("pub static REGISTRY: &[(&str, fn() -> jackioh_engine::CardScripts)] = &[\n");
+    out.push_str("pub static REGISTRY: &[(&str, ScriptFn)] = &[\n");
     for (id, file) in by_id {
         let _ = writeln!(
             out,

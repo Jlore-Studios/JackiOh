@@ -18,6 +18,7 @@
 //!   - Each of them gets `costMod` −1, which persists in every zone (R78); then each whose cost in hand
 //!     now (R65's `effectiveCost`: a player's discounts and surcharges included, an X-cost card 0) is
 //!     more than the threshold is exiled, publicly. The kept ones stay hidden in hand (R97).
+//!
 //! Both numbers are declared and read through `param` (R386): the draw count, and the kept threshold
 //! ("↑": an Upgrade keeps more).
 
@@ -41,7 +42,7 @@ fn drawn_into_hand(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
     zone_cards(&*ctx.state, ctx.controller, OffFieldZone::Hand)
         .iter()
         .filter(|card| library.contains(&card.id))
-        .map(|card| CardInstance::clone(card))
+        .map(CardInstance::clone)
         .collect()
 }
 

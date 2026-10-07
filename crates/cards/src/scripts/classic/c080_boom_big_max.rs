@@ -97,7 +97,7 @@ mod tests {
         let boom = s.card(BOOM).id.clone();
         legal_actions(s.state(), P1)
             .iter()
-            .map(|action| js(action))
+            .map(js)
             .filter(|action| action["type"] == json!("play") && action["instanceId"] == json!(boom))
             .collect()
     }

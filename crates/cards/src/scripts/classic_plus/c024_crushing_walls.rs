@@ -178,7 +178,7 @@ mod tests {
                 if !place_on_field(
                     s.state_mut(),
                     &mut card,
-                    &ZoneRef { player: P1, row: Row::Backrow, lane: 5 },
+                    ZoneRef { player: P1, row: Row::Backrow, lane: 5 },
                     PlaceOnFieldOptions::default(),
                 ) {
                     panic!("setup");

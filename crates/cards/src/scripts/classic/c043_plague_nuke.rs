@@ -39,8 +39,8 @@ const MANA_LABEL: &str = "for each Plague Counter that was on them";
 
 /// Every Unit on the field, R68's order from `first`'s side: the tops of the unit piles (R13).
 fn units_on_field(state: &GameState, first: PlayerId) -> Vec<CardInstance> {
-    let mut units: Vec<CardInstance> = active_units_of(state, first).into_iter().map(|unit| unit.clone()).collect();
-    units.extend(active_units_of(state, opponent_of(first)).into_iter().map(|unit| unit.clone()));
+    let mut units: Vec<CardInstance> = active_units_of(state, first).into_iter().cloned().collect();
+    units.extend(active_units_of(state, opponent_of(first)).into_iter().cloned());
     units
 }
 
@@ -54,8 +54,8 @@ fn plague_nuke(resummons: bool) -> Script {
         cry: Some(hook(move |ctx| {
             // Read once, before anything dies: the tokens, and the non-token Units that carry any.
             let first = ctx.state.active;
-            let mana = tokens_on_units(&ctx.state, first) * param(ctx, "mana");
-            let plagued: Vec<String> = units_on_field(&ctx.state, first)
+            let mana = tokens_on_units(ctx.state, first) * param(ctx, "mana");
+            let plagued: Vec<String> = units_on_field(ctx.state, first)
                 .into_iter()
                 .filter(|unit| plague_on(unit) > 0 && !def_of(Some(&*ctx.state), &unit.def_id).token)
                 .map(|unit| unit.id)
@@ -69,7 +69,7 @@ fn plague_nuke(resummons: bool) -> Script {
                             plagued
                                 .iter()
                                 .filter(|id| {
-                                    find_instance(&after.state, id.as_str())
+                                    find_instance(after.state, id.as_str())
                                         .is_some_and(|card| card.zone.z() == ZoneName::Graveyard)
                                 })
                                 .map(|instance_id| {

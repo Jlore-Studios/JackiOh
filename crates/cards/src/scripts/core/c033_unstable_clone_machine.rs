@@ -382,7 +382,7 @@ mod tests {
 
             s.play("31", json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
 
-            assert_eq!(s.pile("p1", "library").len() as i32, LIBRARY_CAP as i32);
+            assert_eq!(s.pile("p1", "library").len() as i32, LIBRARY_CAP);
             assert_eq!(copies_in(&s.pile("p1", "library"), "core-031").len(), 0);
         }
 
@@ -398,11 +398,11 @@ mod tests {
                 },
                 "p2": { "field": ["15"] },
             }));
-            assert_eq!(s.pile("p1", "library").len() as i32, LIBRARY_CAP as i32 - 1);
+            assert_eq!(s.pile("p1", "library").len() as i32, LIBRARY_CAP - 1);
 
             s.play("31", json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
 
-            assert_eq!(s.pile("p1", "library").len() as i32, LIBRARY_CAP as i32);
+            assert_eq!(s.pile("p1", "library").len() as i32, LIBRARY_CAP);
             let copies = copies_in(&s.pile("p1", "library"), "core-031");
             assert_eq!(copies.len(), 1);
             assert_eq!(copies.first().map(|card| card.radiant), Some(true));

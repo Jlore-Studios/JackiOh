@@ -254,7 +254,7 @@ mod tests {
             let def = def();
             assert_eq!(def.id, CONTROLLER);
             assert_eq!(serde_json::to_value(def.type_).unwrap(), json!("Spell"));
-            assert_eq!(serde_json::to_value(&def.cost).unwrap(), json!(0));
+            assert_eq!(serde_json::to_value(def.cost).unwrap(), json!(0));
             let scripts = script();
             assert!(scripts.base.modes.is_empty());
             assert_eq!(

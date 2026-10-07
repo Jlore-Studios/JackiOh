@@ -552,7 +552,7 @@ fn by_key() -> IndexMap<String, &'static CardDef> {
 
 fn entry_for(by_key: &IndexMap<String, &'static CardDef>, set: SetName, index: &str) -> &'static CardDef {
     match by_key.get(&key_of(set.as_str(), index)) {
-        Some(entry) => *entry,
+        Some(entry) => entry,
         None => panic!(
             "{} is in the fixture but missing from catalog.json",
             key_of(set.as_str(), index)

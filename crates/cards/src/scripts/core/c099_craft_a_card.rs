@@ -224,7 +224,7 @@ mod tests {
     fn events_of(s: &Scenario, kind: &str) -> Vec<Value> {
         s.events()
             .iter()
-            .map(|event| js(event))
+            .map(js)
             .filter(|event| event["type"] == kind)
             .collect()
     }

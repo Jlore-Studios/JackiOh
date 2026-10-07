@@ -29,7 +29,7 @@ pub const ID: &str = "core-086";
 /// "Death: Take control of the Unit that destroyed this" — identical on both faces.
 fn death() -> Hook {
     hook(|ctx| {
-        let killer = killer_of(&ctx.state, ctx.self_.as_ref()).map(|killer| killer.id.clone());
+        let killer = killer_of(ctx.state, ctx.self_.as_ref()).map(|killer| killer.id.clone());
         match killer {
             None => vec![],
             Some(instance_id) => vec![steal(json_as(json!({ "instanceId": instance_id })))],

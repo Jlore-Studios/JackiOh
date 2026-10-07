@@ -39,7 +39,7 @@ fn make_one_radiant() -> Vec<Effect> {
 /// of its cards are Radiant is not (§9.1), so an all-Radiant hand is rolled too and its success is
 /// cued on a Radiant card (R177).
 fn any_to_make_radiant(ctx: &EffectContext<'_>) -> bool {
-    !zone_cards(&ctx.state, ctx.controller, OffFieldZone::Hand).is_empty()
+    !zone_cards(ctx.state, ctx.controller, OffFieldZone::Hand).is_empty()
 }
 
 /// §5.1 and R68: at the end of the turn it was played on, the spell goes from the graveyard back to
@@ -52,7 +52,7 @@ fn returns_to_hand(ctx: &EffectContext<'_>) -> bool {
     if self_.return_to_hand_at_end_of_turn == Some(true) {
         return true;
     }
-    was_played_this_turn(&ctx.state, self_.controller, self_)
+    was_played_this_turn(ctx.state, self_.controller, self_)
 }
 
 fn end_of_turn() -> Hook {
@@ -156,8 +156,8 @@ mod tests {
 
                 // R60: one random card, never two, and nothing at all on a miss.
                 assert!(results.iter().all(|count| *count == 0 || *count == 1));
-                assert!(results.iter().any(|count| *count == 1));
-                assert!(results.iter().any(|count| *count == 0));
+                assert!(results.contains(&1));
+                assert!(results.contains(&0));
             }
 
             #[test]

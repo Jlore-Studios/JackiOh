@@ -102,7 +102,7 @@ fn expect_entered_now(g: &Scenario, card: &CardInstance) {
         live.def_id
     );
     assert_eq!(
-        serde_json::to_value(&live.exertion).unwrap(),
+        serde_json::to_value(live.exertion).unwrap(),
         json!({ "attacked": false, "switched": false }),
         "{} ({}) exertion",
         live.id,
@@ -184,7 +184,7 @@ mod r171_with_the_cards_that_change_control {
 
         expect_entered_now(&g, &jilliax);
         g.expect_refused_with(|g| g.attack(&jilliax, "hero"), RUSH_NOT_HERO);
-        assert_eq!(offered_attacks(&g, &jilliax), [vanilla.id.clone()]);
+        assert_eq!(offered_attacks(&g, &jilliax), std::slice::from_ref(&vanilla.id));
         g.attack(&jilliax, &vanilla);
         g.expect_in_zone(&vanilla, "graveyard");
     }
@@ -425,7 +425,7 @@ mod r171_with_the_cards_that_change_control {
                 _ => None,
             })
             .collect();
-        assert_eq!(changed, [inbound.id.clone()]);
+        assert_eq!(changed, std::slice::from_ref(&inbound.id));
         assert_eq!(g.card(&inbound).summoned_turn, Some(g.state().turn));
         assert_eq!(offered_attacks(&g, &inbound), Vec::<String>::new());
         // A card moving along its own side is not marked at all.
@@ -446,7 +446,7 @@ mod r171_with_the_cards_that_change_control {
 
         assert!(keyword_kinds(&g, &prey).contains(&"Rush".to_string()));
         g.expect_refused_with(|g| g.attack(&prey, "hero"), RUSH_NOT_HERO);
-        assert_eq!(offered_attacks(&g, &prey), [vanilla.id.clone()]);
+        assert_eq!(offered_attacks(&g, &prey), std::slice::from_ref(&vanilla.id));
         g.attack(&prey, &vanilla);
         g.expect_in_zone(&vanilla, "graveyard");
     }
@@ -469,7 +469,7 @@ mod r171_with_the_cards_that_change_control {
         for unit in [&fresh, &prey] {
             expect_entered_now(&g, unit);
             assert!(keyword_kinds(&g, unit).contains(&"Rush".to_string()));
-            assert_eq!(offered_attacks(&g, unit), [target.id.clone()]);
+            assert_eq!(offered_attacks(&g, unit), std::slice::from_ref(&target.id));
         }
 
         // #36 Magic Jammed on p1's own Field Spell: the aura, and the Rush it granted, are gone.

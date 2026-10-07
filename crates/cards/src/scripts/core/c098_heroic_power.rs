@@ -163,7 +163,7 @@ mod tests {
     fn events_of(s: &Scenario, kind: &str) -> Vec<Value> {
         s.last_events()
             .iter()
-            .map(|event| js(event))
+            .map(js)
             .filter(|event| event["type"] == kind)
             .collect()
     }
@@ -243,7 +243,7 @@ mod tests {
     fn listed(s: &Scenario, card: &CardInstance) -> Vec<Value> {
         legal_actions(s.state(), P1)
             .iter()
-            .map(|body| js(body))
+            .map(js)
             .filter(|body| body["type"] == "activate" && body["instanceId"] == card.id.as_str())
             .collect()
     }
@@ -332,7 +332,7 @@ mod tests {
             assert_eq!(sorted(members(&scripts.base)), wanted);
             assert_eq!(sorted(members(&scripts.radiant)), wanted);
             let ids: Vec<String> = scripts.base.activations.iter().map(|decl| decl.id.clone()).collect();
-            assert_eq!(json!(ids), js(&*subsystems::HERO_POWER_NAMES));
+            assert_eq!(json!(ids), js(subsystems::HERO_POWER_NAMES));
             let prices: Vec<Option<i32>> = scripts
                 .radiant
                 .activations

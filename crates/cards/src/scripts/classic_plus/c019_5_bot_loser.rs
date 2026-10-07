@@ -84,10 +84,10 @@ mod tests {
 
     fn bot(s: &Scenario, player: PlayerId) -> CardInstance {
         for lane in 1..=5 {
-            if let Some(unit) = s.unit(player, lane) {
-                if unit.def_id == BOT {
-                    return unit;
-                }
+            if let Some(unit) = s.unit(player, lane)
+                && unit.def_id == BOT
+            {
+                return unit;
             }
         }
         panic!("no Bot Loser");

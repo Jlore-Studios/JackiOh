@@ -161,7 +161,7 @@ mod tests {
 
     /// The events of one type, as their JSON.
     fn events_of(s: &Scenario, kind: &str) -> Vec<Value> {
-        s.events().iter().filter(|event| event.event_type().as_str() == kind).map(|event| js(event)).collect()
+        s.events().iter().filter(|event| event.event_type().as_str() == kind).map(js).collect()
     }
 
     fn added_to(s: &Scenario) -> Vec<CardInstance> {
@@ -617,7 +617,7 @@ mod tests {
                     .events
                     .iter()
                     .filter(|event| event.event_type().as_str() == "chaosRolled")
-                    .map(|event| js(event))
+                    .map(js)
                     .collect();
                 assert_eq!(rolled.len(), 1);
                 assert_eq!(rolled[0]["defId"], json!(CHAOS));

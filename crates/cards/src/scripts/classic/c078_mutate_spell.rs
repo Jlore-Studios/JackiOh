@@ -163,7 +163,7 @@ mod tests {
         let mutate = s.card(MUTATE).id.clone();
         let ids: Vec<String> = legal_actions(s.state(), P1)
             .iter()
-            .map(|action| js(action))
+            .map(js)
             .filter(|action| action["type"] == json!("activate") && action["instanceId"] == json!(mutate))
             .flat_map(|action| {
                 action["targets"]
@@ -352,7 +352,7 @@ mod tests {
                 .last_events()
                 .iter()
                 .filter(|event| matches!(event, GameEvent::CounterChanged { .. }))
-                .map(|event| js(event))
+                .map(js)
                 .collect();
             assert_eq!(
                 json!(changes),

@@ -19,6 +19,7 @@
 //!     is at the cap resolves into nothing and no substitute effect is rolled (R87), so a Radiant
 //!     Call at the cap runs only its other two.
 //!   * R436: before anything resolves, `chaosRolled` names the rolled clauses to both players.
+//!
 //! Rebuilding any of that here would be a second source of truth for the same rules.
 //!
 //! The face is passed explicitly, so each face states which text of §8 it is, rather than leaning on
@@ -295,7 +296,7 @@ mod tests {
     }
 
     fn events_json(s: &Scenario) -> Vec<Value> {
-        s.events().iter().map(|event| js(event)).collect()
+        s.events().iter().map(js).collect()
     }
 
     fn events_of(s: &Scenario, kind: &str) -> Vec<Value> {
@@ -801,7 +802,7 @@ mod tests {
             .iter()
             .map(|name| {
                 must(
-                    subsystems::CHAOS_EFFECTS.iter().find(|effect| effect.name.to_string() == *name),
+                    subsystems::CHAOS_EFFECTS.iter().find(|effect| effect.name == name.as_str()),
                     name,
                 )
                 .label

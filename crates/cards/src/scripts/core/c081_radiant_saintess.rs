@@ -49,10 +49,10 @@ pub const ID: &str = "core-081";
 /// already standing in a unit zone.
 fn radiate_your_units(ctx: &EffectContext<'_>, include_self: bool) -> Vec<Effect> {
     let mut ids: Vec<String> = Vec::new();
-    if include_self {
-        if let Some(self_) = &ctx.self_ {
-            ids.push(self_.id.clone());
-        }
+    if include_self
+        && let Some(self_) = &ctx.self_
+    {
+        ids.push(self_.id.clone());
     }
     ids.extend(active_units_of(ctx.state, ctx.controller).iter().map(|unit| unit.id.clone()));
     ids.into_iter()

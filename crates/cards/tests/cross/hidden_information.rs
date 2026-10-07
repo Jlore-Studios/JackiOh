@@ -1220,7 +1220,7 @@ fn most_matching(pending: &PendingChoice, count: impl Fn(&str) -> usize) -> Stri
             _ => None,
         })
         .collect();
-    options.sort_by(|a, b| count(b.as_str()).cmp(&count(a.as_str())));
+    options.sort_by_key(|option| std::cmp::Reverse(count(option.as_str())));
     must(options.into_iter().next(), "a mode option")
 }
 

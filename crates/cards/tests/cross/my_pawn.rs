@@ -44,10 +44,7 @@ fn backrow_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
 
 /// TS's `Array.prototype.findIndex`: the first match's index, or -1.
 fn find_index(events: &[GameEvent], predicate: impl Fn(&GameEvent) -> bool) -> i64 {
-    events
-        .iter()
-        .position(|event| predicate(event))
-        .map_or(-1, |at| at as i64)
+    events.iter().position(predicate).map_or(-1, |at| at as i64)
 }
 
 mod section_4_2_step_4_the_window_after_a_cancel {
@@ -277,7 +274,7 @@ fn place_fixture(s: &mut Scenario, def_id: &str, player: PlayerId, row: Row, lan
     if !place_on_field(
         s.state_mut(),
         &mut card,
-        &ZoneSlot { player, row, lane },
+        ZoneSlot { player, row, lane },
         PlaceOnFieldOptions::default(),
     ) {
         panic!("could not place {def_id}");

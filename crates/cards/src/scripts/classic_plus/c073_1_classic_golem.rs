@@ -252,7 +252,7 @@ mod tests {
             assert!(s.stats(made.as_str()).attack > 0);
             let attacks = legal_actions(s.state(), P1)
                 .iter()
-                .map(|action| js(action))
+                .map(js)
                 .filter(|action| action["type"] == json!("attack") && action["attackerId"] == json!(made))
                 .count();
             assert!(attacks > 0);
@@ -290,7 +290,7 @@ mod tests {
             assert!(
                 !legal_actions(s.state(), P1)
                     .iter()
-                    .map(|action| js(action))
+                    .map(js)
                     .any(|action| action["type"] == json!("attack") && action["attackerId"] == json!(made_id))
             );
         }

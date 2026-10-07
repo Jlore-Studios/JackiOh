@@ -22,6 +22,7 @@
 //!     stolen. A stolen face-down trap is read by its new controller from then on (R33).
 //!   * otherwise — your own permanent always — one draw per Plague Counter on it (§2.4: the hand cap
 //!     burns what does not fit).
+//!
 //! A target that has left the field by then takes nothing and draws nothing.
 //!
 //! Both branches are read after the placement, as the list reaches them (`forEachCard`), because the
@@ -56,7 +57,7 @@ fn outcome(ctx: &EffectContext) -> Option<Outcome> {
     let taken_now = ctx.events[ctx.events_from..].iter().any(|event| {
         matches!(event, GameEvent::ControlChanged { instance_id, .. } if *instance_id == card.id)
     });
-    let steals = taken_now || (card.controller != ctx.controller && tokens >= cost_now(&ctx.state, &card));
+    let steals = taken_now || (card.controller != ctx.controller && tokens >= cost_now(ctx.state, &card));
     Some(Outcome {
         id: card.id.clone(),
         steals,

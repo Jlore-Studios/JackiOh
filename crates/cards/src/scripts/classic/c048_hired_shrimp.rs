@@ -46,7 +46,7 @@ fn shrimp(check: Option<&'static str>) -> Script {
                 None => ID.to_string(),
             };
             match target {
-                Some(target) if longer(&ctx.state, &target, &shrimp_def_id) => {
+                Some(target) if longer(ctx.state, &target, &shrimp_def_id) => {
                     vec![destroy(json_as(json!({ "target": { "of": "chosen" } })))]
                 }
                 _ => vec![],

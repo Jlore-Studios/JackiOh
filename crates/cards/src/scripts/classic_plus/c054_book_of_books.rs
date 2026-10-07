@@ -190,7 +190,7 @@ mod tests {
             let view = own_hand(&s);
             assert!(books.iter().all(|card| view.iter().any(|entry| {
                 entry.instance_id == card.id
-                    && entry.keywords.as_ref().is_some_and(|keywords| keywords.iter().any(|k| *k == Keyword::Temporary))
+                    && entry.keywords.as_ref().is_some_and(|keywords| keywords.contains(&Keyword::Temporary))
             })));
 
             s.end_turn();

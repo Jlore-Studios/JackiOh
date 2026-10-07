@@ -74,7 +74,7 @@ fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     // The Cry only reads the board while it builds its list.
     let ctx: &EffectContext<'_> = ctx;
     let amount = damage_now(&Read {
-        state: &ctx.state,
+        state: ctx.state,
         self_: ctx.self_.as_ref(),
         radiant: ctx.radiant,
         controller: ctx.controller,

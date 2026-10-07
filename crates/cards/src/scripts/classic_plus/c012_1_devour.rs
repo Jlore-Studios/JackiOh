@@ -17,7 +17,7 @@ fn targets() -> Vec<TargetDecl> {
 fn health_of_chosen(ctx: &EffectContext<'_>) -> i32 {
     match instance_of(ctx, &json_as::<TargetSpec>(json!({ "of": "chosen" }))) {
         None => 0,
-        Some(unit) => unit_view(&ctx.state, &unit).health.max(0),
+        Some(unit) => unit_view(ctx.state, &unit).health.max(0),
     }
 }
 

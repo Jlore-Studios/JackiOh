@@ -15,7 +15,7 @@ const RIGHT_HOUSE_ODDS: f64 = 2.0 / 3.0;
 
 fn summon_one() -> Hook {
     hook(|ctx| {
-        if first_free_zone(&ctx.state, ctx.controller, Row::Units).is_none() {
+        if first_free_zone(ctx.state, ctx.controller, Row::Units).is_none() {
             vec![]
         } else {
             let def_id = if ctx.rng.chance(RIGHT_HOUSE_ODDS) { RIGHT_HOUSE } else { WRONG_HOUSE };

@@ -42,10 +42,10 @@ fn final_gambit(draw_count: DrawCount) -> Script {
             hook(move |ctx| {
                 // R216: the re-aimed hit left the enemy hero at 0 or less, so the game is over.
                 let to = replacement_of(ctx).and_then(|record| record.redirected_to);
-                if let Some(to) = to {
-                    if hero_of(&ctx.state, to).health <= 0 {
-                        return vec![];
-                    }
+                if let Some(to) = to
+                    && hero_of(ctx.state, to).health <= 0
+                {
+                    return vec![];
                 }
                 let amount = param(&*ctx, "heal");
                 let count = draw_count(&*ctx);
@@ -63,7 +63,7 @@ pub fn script() -> CardScripts {
     let base = final_gambit(Arc::new(|ctx: &EffectContext<'_>| -> i32 { param(ctx, "draw") }));
 
     let radiant = final_gambit(Arc::new(|ctx: &EffectContext<'_>| -> i32 {
-        zone_count(&ctx.state, ctx.controller, OffFieldZone::Library)
+        zone_count(ctx.state, ctx.controller, OffFieldZone::Library)
     }));
 
     CardScripts { base, radiant }

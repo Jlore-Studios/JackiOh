@@ -399,7 +399,7 @@ mod tests {
 
             play_rollback(&mut s, &["3"]);
             s.expect_in_zone(&first, "hand").expect_in_zone(&second, "graveyard");
-            assert_eq!(event_ids(&of_type(s.last_events(), GameEventType::Burned)), [second.id.clone()]);
+            assert_eq!(event_ids(&of_type(s.last_events(), GameEventType::Burned)), std::slice::from_ref(&second.id));
             assert_eq!(s.hand(P2).len(), 10);
         }
 
@@ -453,7 +453,7 @@ mod tests {
             s.expect_in_zone(&fiender, "hand");
             assert_eq!(pile_ids(s.state(), P1, 1), Some(vec![felinor.id.clone()]));
             assert_eq!(unit_id(&s, P1, 1), Some(felinor.id.clone()));
-            assert_eq!(event_ids(&of_type(s.last_events(), GameEventType::Bounced)), [fiender.id.clone()]);
+            assert_eq!(event_ids(&of_type(s.last_events(), GameEventType::Bounced)), std::slice::from_ref(&fiender.id));
             // The Felinor never left its side: nothing but `rolledBack` reports it (R566).
             assert!(of_type(s.last_events(), GameEventType::ControlChanged).is_empty());
         }

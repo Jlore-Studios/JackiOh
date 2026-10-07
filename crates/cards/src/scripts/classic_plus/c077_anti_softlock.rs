@@ -229,7 +229,7 @@ mod tests {
                     .expect("a Mana Well in hand");
                 s.play(&top, json!({ "zone": 1 }));
                 assert_eq!(s.backrow(P1, 1).map(|card| card.id), Some(top.id.clone()));
-                assert_eq!(ids(&beneath_at(s.state(), zone("p1", "backrow", 1))), vec![under.id]);
+                assert_eq!(ids(beneath_at(s.state(), zone("p1", "backrow", 1))), vec![under.id]);
             }
 
             #[test]

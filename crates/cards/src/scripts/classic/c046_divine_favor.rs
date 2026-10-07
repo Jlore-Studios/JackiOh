@@ -35,7 +35,7 @@ pub fn script() -> CardScripts {
         cry: Some(hook(|_ctx| {
             vec![draw_while(DrawWhileArgs {
                 more: Arc::new(|now: &mut EffectContext<'_>| -> bool {
-                    draws_wanted(&now.state, now.controller, param(now, "multiplier"), 0) > 0
+                    draws_wanted(now.state, now.controller, param(now, "multiplier"), 0) > 0
                 }),
                 player: None,
             })]
@@ -128,7 +128,7 @@ mod tests {
                     "p2": { "hand": many(4, STOCKPILE) },
                 }));
                 s.play(FAVOR, json!({}));
-                assert_eq!(drawn(&s.last_events(), PlayerId::P1).len(), 3);
+                assert_eq!(drawn(s.last_events(), PlayerId::P1).len(), 3);
                 assert_eq!(s.hand(PlayerId::P1).len(), 4);
             }
 
@@ -140,13 +140,13 @@ mod tests {
                     "p2": { "hand": many(2, STOCKPILE) },
                 }));
                 level.play(FAVOR, json!({}));
-                assert_eq!(drawn(&level.last_events(), PlayerId::P1).len(), 0);
+                assert_eq!(drawn(level.last_events(), PlayerId::P1).len(), 0);
                 let mut ahead = scenario(json!({
                     "p1": { "hand": [FAVOR, FILLER, FILLER, FILLER], "library": many(3, MENACE) },
                     "p2": { "hand": many(1, STOCKPILE) },
                 }));
                 ahead.play(FAVOR, json!({}));
-                assert_eq!(drawn(&ahead.last_events(), PlayerId::P1).len(), 0);
+                assert_eq!(drawn(ahead.last_events(), PlayerId::P1).len(), 0);
             }
 
             #[test]
@@ -154,7 +154,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [FAVOR], "library": [MENACE] }, "p2": { "hand": many(6, STOCKPILE) } }));
                 s.play(FAVOR, json!({}));
-                assert_eq!(drawn(&s.last_events(), PlayerId::P1).len(), 1);
+                assert_eq!(drawn(s.last_events(), PlayerId::P1).len(), 1);
                 assert_eq!(s.state().players.p1.fatigue_count, 1);
             }
 
@@ -219,7 +219,7 @@ mod tests {
                     "p2": { "hand": many(4, STOCKPILE) },
                 }));
                 s.play(FAVOR, json!({}));
-                assert_eq!(drawn(&s.last_events(), PlayerId::P1).len(), 1);
+                assert_eq!(drawn(s.last_events(), PlayerId::P1).len(), 1);
                 assert_eq!(s.last_events().iter().map(js).filter(|event| event["type"] == "drawLimited").count(), 1);
             }
 
@@ -231,7 +231,7 @@ mod tests {
                     "p2": { "hand": many(2, STOCKPILE), "library": many(9, MENACE) },
                 }));
                 s.play(FAVOR, json!({}));
-                assert_eq!(drawn(&s.last_events(), PlayerId::P1).len(), 2);
+                assert_eq!(drawn(s.last_events(), PlayerId::P1).len(), 2);
             }
 
             #[test]
@@ -247,7 +247,7 @@ mod tests {
                 s.play(FAVOR, json!({}));
                 // As many as the opponent's three, as the text says: the Filler and two draws.
                 assert_eq!(s.hand(PlayerId::P1).len(), 3);
-                assert_eq!(drawn(&s.last_events(), PlayerId::P1).len(), 2);
+                assert_eq!(drawn(s.last_events(), PlayerId::P1).len(), 2);
             }
 
             #[test]
@@ -278,7 +278,7 @@ mod tests {
                 }));
                 s.play(FAVOR, json!({}));
                 assert_eq!(s.hand(PlayerId::P1).len(), 6);
-                assert_eq!(drawn(&s.last_events(), PlayerId::P1).len(), 5);
+                assert_eq!(drawn(s.last_events(), PlayerId::P1).len(), 5);
             }
 
             #[test]
@@ -289,7 +289,7 @@ mod tests {
                     "p2": { "hand": many(1, STOCKPILE) },
                 }));
                 s.play(FAVOR, json!({}));
-                assert_eq!(drawn(&s.last_events(), PlayerId::P1).len(), 0);
+                assert_eq!(drawn(s.last_events(), PlayerId::P1).len(), 0);
             }
 
             #[test]

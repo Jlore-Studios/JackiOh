@@ -79,7 +79,7 @@ fn shadowstep() -> TriggerDef {
             })
             .filter(|(_, controller)| *controller == ctx.controller)
             .filter(|(instance_id, _)| {
-                matches!(find_instance(&ctx.state, instance_id).map(|card| &card.zone), Some(Zone::Graveyard { .. }))
+                matches!(find_instance(ctx.state, instance_id).map(|card| &card.zone), Some(Zone::Graveyard { .. }))
             })
             .map(|(instance_id, _)| {
                 add_to_hand(json_as(json!({

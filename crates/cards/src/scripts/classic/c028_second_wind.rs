@@ -307,11 +307,11 @@ mod tests {
                 let unit = s.card(MR_TOKEN).clone();
                 let after = play_from_graveyard(&s, &unit, json!({}));
                 assert_eq!(
-                    card_at(&after.state, &ZoneRef { player: P1, row: Row::Units, lane: 1 }).map(|card| card.id.clone()),
+                    card_at(&after.state, ZoneRef { player: P1, row: Row::Units, lane: 1 }).map(|card| card.id.clone()),
                     Some(unit.id.clone())
                 );
                 assert_eq!(
-                    card_at(&after.state, &ZoneRef { player: P1, row: Row::Units, lane: 2 }).map(|card| card.def_id.clone()),
+                    card_at(&after.state, ZoneRef { player: P1, row: Row::Units, lane: 2 }).map(|card| card.def_id.clone()),
                     Some(RUSH_TOKEN.to_string())
                 );
                 assert_eq!(unspent_mana_of(&after.state, P1), 3);
@@ -505,7 +505,7 @@ mod tests {
                 let unit = s.card(MR_TOKEN).clone();
                 let after = play_from_graveyard(&s, &unit, json!({}));
                 assert_eq!(
-                    card_at(&after.state, &ZoneRef { player: P1, row: Row::Units, lane: 2 }).map(|card| card.def_id.clone()),
+                    card_at(&after.state, ZoneRef { player: P1, row: Row::Units, lane: 2 }).map(|card| card.def_id.clone()),
                     Some(RUSH_TOKEN.to_string())
                 );
             }

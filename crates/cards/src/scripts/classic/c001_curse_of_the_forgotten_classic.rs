@@ -76,7 +76,7 @@ fn newest_permanent_of_theirs(ctx: &EffectContext<'_>) -> Option<CardInstance> {
         .iter()
         .rev()
         .find(|card| def_of(Some(state), &card.def_id).type_ != CardType::Spell)
-        .map(|card| CardInstance::clone(card))
+        .cloned()
 }
 
 pub fn script() -> CardScripts {
@@ -93,13 +93,13 @@ pub fn script() -> CardScripts {
             effects.push(recruit(json_as(json!({ "from": "exile", "whose": "enemy" }))));
             // "If it's a Unit, it attacks": the unit this list summoned of that definition — not a Unit a
             // card cast on the draw summoned (C+ #26 Tommy Tempo), which is summoned by this list too.
-            if let Some(card) = recruited {
-                if def_of(Some(&*ctx.state), &card.def_id).type_ == CardType::Unit {
-                    effects.push(forced_attacks(json_as(json!({
-                        "attackers": { "side": "self", "defId": card.def_id, "summonedThisScript": true },
-                        "target": { "spec": { "of": "enemyHero" } },
-                    }))));
-                }
+            if let Some(card) = recruited
+                && def_of(Some(&*ctx.state), &card.def_id).type_ == CardType::Unit
+            {
+                effects.push(forced_attacks(json_as(json!({
+                    "attackers": { "side": "self", "defId": card.def_id, "summonedThisScript": true },
+                    "target": { "spec": { "of": "enemyHero" } },
+                }))));
             }
             effects
         })),

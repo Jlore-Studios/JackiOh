@@ -25,6 +25,7 @@
 //!   - The Radiant face's "Echo 1" is §6.2's Echo X (`staticFlags.echo`), a numbered keyword Degrade and
 //!     Upgrade move (R386), added to any Echo the copied face prints (R546). Its number is a keyword's,
 //!     not a declared `params` entry, so nothing here reads `param`.
+//!
 //! "Echo" is also a rules word: the "Echo 1" printed on other cards is never a reference to this card
 //! (R381, `test/references.test.ts`).
 

@@ -96,8 +96,8 @@ fn board_cards(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
             slots_of(ctx.controller, row)
                 .into_iter()
                 .filter_map(|slot| {
-                    let card = card_at(&ctx.state, &slot)?;
-                    if unit_has(&ctx.state, &card, KeywordKind::Immutable) {
+                    let card = card_at(ctx.state, slot)?;
+                    if unit_has(ctx.state, card, KeywordKind::Immutable) {
                         None
                     } else {
                         Some(card.clone())
@@ -112,13 +112,13 @@ fn board_cards(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
 /// `transform`s this card builds replace every card in the pile being walked, so iterating the live
 /// array would be iterating a list the effects are rewriting.
 fn pile_cards(ctx: &EffectContext<'_>, zone: OffFieldZone) -> Vec<CardInstance> {
-    let cards: Vec<CardInstance> = zone_cards(&ctx.state, ctx.controller, zone).to_vec();
+    let cards: Vec<CardInstance> = zone_cards(ctx.state, ctx.controller, zone).to_vec();
     // R223: each replacement takes a new id, and walked top down the library's would be one run of
     // numbers in library order, so any of them the owner is later shown (#51's reveal, a Recruit)
     // would say where it lies. The library is walked in an order of the seed's own instead; each
     // replacement still takes its card's place (R35).
     if zone == OffFieldZone::Library {
-        numbering_order(&ctx.state, &cards)
+        numbering_order(ctx.state, &cards)
     } else {
         cards
     }

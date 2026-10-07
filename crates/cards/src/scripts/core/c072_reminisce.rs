@@ -20,6 +20,7 @@
 //!   - graveyard empty: `discover_from_graveyard` returns without opening anything (§6.3: an effect
 //!     with no options fizzles and the card still resolves), no prompt, so `exile` runs straight
 //!     through in the same pass and `resume.chosen` never runs at all.
+//!
 //! The resume step therefore reads only `{ of: "chosen" }` and never `ctx.self`: a resumed step may
 //! find its instance gone (§10.6), and a Spell mid-resolution is in no pile for `find_instance` to
 //! find anyway.

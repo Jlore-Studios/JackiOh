@@ -282,10 +282,8 @@ mod summarize_game_over_real_cards_s9_11 {
                         }
                         GameEvent::CardPlayed {
                             instance_id, def_id, ..
-                        } => {
-                            if unplaced.shift_remove(instance_id) {
-                                cast_ids.push(def_id.clone());
-                            }
+                        } if unplaced.shift_remove(instance_id) => {
+                            cast_ids.push(def_id.clone());
                         }
                         _ => {}
                     }

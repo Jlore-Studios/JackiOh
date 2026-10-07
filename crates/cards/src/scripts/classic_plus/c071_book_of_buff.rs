@@ -50,7 +50,7 @@ mod tests {
 
     /// The `upgraded` events, as their JSON (`instanceId`, `defId`, `change`).
     fn upgrades(events: &[GameEvent]) -> Vec<Value> {
-        events.iter().filter(|event| matches!(event, GameEvent::Upgraded { .. })).map(|event| js(event)).collect()
+        events.iter().filter(|event| matches!(event, GameEvent::Upgraded { .. })).map(js).collect()
     }
 
     fn pick(id: &str) -> Value {
@@ -87,7 +87,7 @@ mod tests {
             let own = s.card(BOOK).id.clone();
             let offered: Vec<Value> = legal_actions(s.state(), P1)
                 .iter()
-                .map(|action| js(action))
+                .map(js)
                 .filter(|action| action["type"] == json!("play") && action["instanceId"] == json!(own))
                 .flat_map(|action| action["targets"].as_array().cloned().unwrap_or_default())
                 .collect();

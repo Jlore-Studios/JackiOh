@@ -44,8 +44,8 @@ const LOWEST: &str = "lowest";
 fn extreme(ctx: &EffectContext<'_>, want: &str) -> Option<CardInstance> {
     let mut best: Option<CardInstance> = None;
     let mut best_cost = 0;
-    for card in zone_cards(&ctx.state, ctx.controller, OffFieldZone::Library) {
-        let cost = effective_cost(&ctx.state, &card, Default::default());
+    for card in zone_cards(ctx.state, ctx.controller, OffFieldZone::Library) {
+        let cost = effective_cost(ctx.state, &card, Default::default());
         let better = if want == HIGHEST { cost > best_cost } else { cost < best_cost };
         // Strict, and top down, so a tie keeps the card already held — the one nearer the top (R24).
         if best.is_none() || better {

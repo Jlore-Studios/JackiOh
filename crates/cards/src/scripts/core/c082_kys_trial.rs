@@ -22,6 +22,7 @@
 //!     so #82 can never be offered and the reroll costs nothing.
 //!   - "1–100": `set: "Core"`, which is §8's own numbering — the Core set is indices 1–100 plus its
 //!     tokens, and the tokens are already gone.
+//!
 //! So: 3 options out of those 100, drawn without replacement by `rng.shuffle` (§6.3 Discover), which
 //! is R60's "Discover options are always different" — the "3 distinct numbers" of the row.
 //!
