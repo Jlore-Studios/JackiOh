@@ -35,22 +35,12 @@ pub enum CardZone {
     Library,
 }
 
-/// `CardScope.side`: sides, relative to `ctx.controller`.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[serde(rename_all = "camelCase")]
-pub enum CardScopeSide {
-    #[serde(rename = "self")]
-    SelfSide,
-    Enemy,
-    Any,
-}
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct CardScope {
     /// Sides, relative to `ctx.controller`. Default "self".
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub side: Option<CardScopeSide>,
+    pub side: Option<super::targets::ScopeSide>,
     /// Which piles. A hand and a deck are their owner's; the field is its controller's.
     pub zones: Vec<CardZone>,
     /// Field rows. Default both.
@@ -166,18 +156,6 @@ fn field_cards(state: &GameState, player: PlayerId, rows: &[Row]) -> Vec<CardIns
         .collect()
 }
 
-/// TS `targets.sidesOf` over this scope's sides: R68's walk order, the active player's side first.
-fn sides_of(ctx: &EffectContext<'_>, side: CardScopeSide) -> Vec<PlayerId> {
-    match side {
-        CardScopeSide::SelfSide => vec![ctx.controller],
-        CardScopeSide::Enemy => vec![opponent_of(ctx.controller)],
-        CardScopeSide::Any => {
-            let active = ctx.state.active;
-            vec![active, opponent_of(active)]
-        }
-    }
-}
-
 /// Every card the scope reaches, in R242's order (this file's header). `wholeHiddenPiles` keeps every
 /// card the scope reaches that someone may not read — a hand's, a deck's, a face-down trap — the ones
 /// its filters reject marked `matches: false`: a verb that reports each card of a hidden pile it
@@ -195,7 +173,7 @@ pub fn cards_in_card_scope(
         .unwrap_or_else(|| vec![Row::Units, Row::Backrow]);
     let whole_hidden_piles = options.and_then(|options| options.whole_hidden_piles) == Some(true);
     let mut out: Vec<ScopedCard> = Vec::new();
-    for player in sides_of(ctx, scope.side.unwrap_or(CardScopeSide::SelfSide)) {
+    for player in super::targets::sides_of(ctx, Some(scope.side.unwrap_or(super::targets::ScopeSide::SelfSide))) {
         let side = &state.players[player];
         let piles: [(CardZone, Vec<CardInstance>); 3] = [
             (
