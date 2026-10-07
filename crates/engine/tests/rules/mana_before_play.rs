@@ -122,7 +122,7 @@ mod the_players_mana_as_the_play_began_classic_22 {
         let other = only(&in_hand(&mut poor, &runner().id, PlayerId::P1, 1));
         let then = pb_act(
             &poor,
-            json_as(json!({ "type": "play", "instanceId": other.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" })),
+            json!({ "type": "play", "instanceId": other.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
         );
         assert_eq!(then.players.p2.hero.health, poor.players.p2.hero.health - 1);
     }
@@ -142,7 +142,7 @@ mod the_players_mana_as_the_play_began_classic_22 {
             .filter(|action| action.action_type() == ActionType::Answer)
             .collect();
         let answer = only(&answers);
-        let live = pb_act(&paused, json_as(with_player(&answer, PlayerId::P1)));
+        let live = pb_act(&paused, with_player(&answer, PlayerId::P1));
         let again = pb_act(&round, json_as(with_player(&answer, PlayerId::P1)));
         assert_eq!(hash_state(&again), hash_state(&live));
         assert_eq!(live.players.p2.hero.health, state.players.p2.hero.health - 4);

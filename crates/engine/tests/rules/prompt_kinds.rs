@@ -251,7 +251,7 @@ mod e18_a_mode_prompt_the_other_player_holds_classic_8 {
     #[test]
     fn e18_a_pickle_game_replays_from_its_log() {
         let qd = quickdraw_of(&pickle()).id;
-        let game = replayable("pickle-replay", &[qd.as_str()], &[]);
+        let game = replayable("pickle-replay", &[qd.clone()], &[]);
         let decks = game.decks;
         let mut log = game.log;
         let mut state = game.state;
@@ -441,7 +441,7 @@ mod r465_e18_the_answer_kind_classic_plus_42 {
     #[test]
     fn r465_a_kys_test_game_replays_from_its_log() {
         let qd = quickdraw_of(&quiz()).id;
-        let game = replayable("quiz-replay", &[qd.as_str()], &[]);
+        let game = replayable("quiz-replay", &[qd.clone()], &[]);
         let decks = game.decks;
         let mut log = game.log;
         let mut state = game.state;
@@ -530,7 +530,7 @@ mod e18_the_cell_kind_classic_plus_62 {
     #[test]
     fn e18_a_papaya_game_replays_from_its_log() {
         let qd = quickdraw_of(&papaya()).id;
-        let game = replayable("papaya-replay", &[qd.as_str()], &[]);
+        let game = replayable("papaya-replay", &[qd.clone()], &[]);
         let decks = game.decks;
         let mut log = game.log;
         let mut state = game.state;
@@ -610,7 +610,7 @@ mod e18_the_reward_kind_classic_90 {
     #[test]
     fn e18_a_quest_game_its_reward_asked_on_the_other_players_turn_replays_from_its_log() {
         let qd = quickdraw_of(&quest()).id;
-        let game = replayable("quest-replay", &[qd.as_str()], &[]);
+        let game = replayable("quest-replay", &[qd.clone()], &[]);
         let decks = game.decks;
         let mut log = game.log;
         let dealt = game.state;
@@ -781,7 +781,7 @@ mod e18_the_pick_kind_an_up_to_pile_pick_classic_44 {
     fn e18_a_back_from_the_gy_game_replays_from_its_log() {
         let back = quickdraw_of(&back_from_gy()).id;
         let mill_card = quickdraw_of(&mill()).id;
-        let game = replayable("back-replay", &[mill_card.as_str(), back.as_str()], &[]);
+        let game = replayable("back-replay", &[mill_card.clone(), back.clone()], &[]);
         let decks = game.decks;
         let mut log = game.log;
         let mut state = game.state;
@@ -927,7 +927,7 @@ mod e17_the_other_players_hand_as_a_prompt_classic_11 {
     #[test]
     fn e17_a_mind_melt_game_replays_from_its_log() {
         let qd = quickdraw_of(&mind_melt()).id;
-        let game = replayable("mind-melt-replay", &[qd.as_str()], &[]);
+        let game = replayable("mind-melt-replay", &[qd.clone()], &[]);
         let decks = game.decks;
         let mut log = game.log;
         let mut state = game.state;

@@ -300,10 +300,10 @@ mod e13_trigger_a_cry {
         let rewinding = hand_card(&state, P1, &back);
         state = act(
             &state,
-            json_as(json!({
+            json!({
                 "type": "play", "playerId": "p1", "instanceId": rewinding.id,
                 "targets": [{ "pick": "instance", "instanceId": unit.id }],
-            })),
+            }),
             Some(&mut log),
         );
         let pending = open_as(&state, PromptKind::Target, P1);

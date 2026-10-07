@@ -374,7 +374,7 @@ fn shown_card(card: &CardView) -> Option<Vec<PreviewValue>> {
     shown_list(&card.preview)
 }
 
-fn shown_unit(unit: &Option<UnitView>) -> Option<Vec<PreviewValue>> {
+fn shown_unit(unit: &Option<wire::UnitView>) -> Option<Vec<PreviewValue>> {
     shown_list(&unit.as_ref().expect("no card at that place in the view").preview)
 }
 

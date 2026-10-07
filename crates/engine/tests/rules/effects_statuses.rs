@@ -87,7 +87,7 @@ mod e35_go_berserk {
         let mut game = recorder(&state);
         game.play(json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(game.state().players.p1.hero.health, 30);
-        let back = game.play(json_as(json!({ "type": "endTurn", "playerId": "p2" })));
+        let back = game.play(json!({ "type": "endTurn", "playerId": "p2" }));
         let after = game.state().clone();
         assert_eq!(after.players.p1.hero.health, 25);
         assert_eq!(

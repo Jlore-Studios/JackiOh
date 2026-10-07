@@ -18,7 +18,7 @@ use crate::rules::fixtures::play_pipeline_b::{
 /// R345: no automatic turn ends, so a test walks the turns it names.
 fn manual_turns(state: &GameState) -> GameState {
     let one = pb_act(state, json!({ "type": "setAutoEndTurn", "enabled": false, "playerId": "p1" }));
-    pb_act(&one, json_as(json!({ "type": "setAutoEndTurn", "enabled": false, "playerId": "p2" })))
+    pb_act(&one, json!({ "type": "setAutoEndTurn", "enabled": false, "playerId": "p2" }))
 }
 
 fn hand_card(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
@@ -242,7 +242,7 @@ mod r455_e15_price_rules_on_a_player {
         assert_eq!(cost(&after, &spell), 1);
 
         // A Spell played leaves it; a cast Trap leaves it (a cast never uses a discount, R70).
-        after = pb_act(&after, json_as(json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" })));
+        after = pb_act(&after, json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }));
         run(&mut after, vec![cast_new_of(cast_trap().id)], PlayerId::P1);
         assert!(after.players.p1.mods.iter().any(|modifier| modifier.id == rule.id));
         // It waits across turns ("next" has no "this turn").
@@ -292,7 +292,7 @@ mod r455_e15_price_rules_on_a_player {
         // Not on the turn it was cast.
         assert_eq!(cost(&after, &only(&held(&after.players.p2.hand, &theirs.id))), 1);
         assert_eq!(only(&view_for(&after, PlayerId::P1).opponent.modifiers).label, "Your cards cost (1) more (next turn)");
-        after = pb_act(&after, json_as(json!({ "type": "endTurn", "playerId": "p1" })));
+        after = pb_act(&after, json!({ "type": "endTurn", "playerId": "p1" }));
         // On their next turn: +1.
         assert_eq!(after.active, PlayerId::P2);
         assert_eq!(cost(&after, &only(&held(&after.players.p2.hand, &theirs.id))), 2);
@@ -335,7 +335,7 @@ mod r455_e39_return_after_resolving_and_its_floor {
         let spell = hand_card(&mut after, &grave_spell().id, PlayerId::P1);
         after.players.p1.mana.current = 4;
         let before = after.players.p2.hero.health;
-        after = pb_act(&after, json_as(json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" })));
+        after = pb_act(&after, json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }));
         // Resolved (1 damage), back in hand, carrying the enchantment; the rider is spent.
         assert_eq!(after.players.p2.hero.health, before - 1);
         let back = only(&held(&after.players.p1.hand, &spell.id));

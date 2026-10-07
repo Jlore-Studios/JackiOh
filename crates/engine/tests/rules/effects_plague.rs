@@ -271,7 +271,7 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
         // TS: `act` throws `${type} refused: ${error}`; `refusal` is the same reduce's error.
         let named = refusal(
             &run,
-            json_as(json!({ "type": "answer", "choiceId": pending.id, "selection": [pick(&in_hand)], "playerId": "p1" })),
+            json!({ "type": "answer", "choiceId": pending.id, "selection": [pick(&in_hand)], "playerId": "p1" }),
         );
         assert!(named.is_some_and(|error| error.contains("not one of the options")));
         let wrong_seat = refusal(
@@ -390,7 +390,7 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
         find_instance_mut(&mut start.state, &radiant.id).expect("the radiant spell").radiant = true;
         let mut run = frozen(&start);
         run = act(&run, play_on(&spell, &theirs));
-        run = act(&run, json_as(play_on(&radiant, &theirs)));
+        run = act(&run, play_on(&radiant, &theirs));
         assert!(run.state.pending.is_none());
         let events = last_events(&run.state, 2);
         assert_eq!(
@@ -465,7 +465,7 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
 
         // Two placements on it: one answer (R689); all three triggers still wait for the whole effect and
         // the Spell (R59, R68), so the health lands where two answers put it.
-        run = act(&run, json_as(play(&book)));
+        run = act(&run, play(&book));
         run = answer(&run, pick(&worm), None);
         assert!(run.state.pending.is_none());
         assert_eq!(hero_health(&run.state, PlayerId::P2), before - 1 - 1 - 2);

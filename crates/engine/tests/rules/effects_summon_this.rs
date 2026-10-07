@@ -228,12 +228,12 @@ mod e26_summon_this_from_your_hand_or_deck {
         assert!(ids_of(&state.players.p1.hand).contains(&eu.id));
         state = act(
             &state,
-            json_as(json!({
+            json!({
                 "type": "play",
                 "playerId": "p1",
                 "instanceId": body.id,
                 "zone": { "row": "units", "lane": 1 },
-            })),
+            }),
             None,
         );
         assert_eq!(unit_top(&state, PlayerId::P1, 1).map(|unit| unit.id), Some(eu.id.clone()));

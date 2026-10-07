@@ -122,7 +122,7 @@ mod r454_e11_play_from_the_graveyard {
 
         let before = hero_health(&state, PlayerId::P2);
         let played = state.counters.played;
-        let result = pb_reduce(&state, json_as(with_player(only(&offered), PlayerId::P1)));
+        let result = pb_reduce(&state, with_player(only(&offered), PlayerId::P1));
         assert_eq!(result.error, None);
         let after = &result.state;
         // Its script ran (1 damage), it was counted as a play, and it paid its price.
@@ -201,7 +201,7 @@ mod r454_e11_play_from_the_graveyard {
         put(&mut taxed, &second_wind().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
         put(&mut taxed, &monkey().id, slot(PlayerId::P2, Row::Units, 1), Default::default());
         let again = in_graveyard(&mut taxed, &grave_spell().id, PlayerId::P1);
-        let paid = pb_reduce(&taxed, json_as(json!({ "type": "play", "instanceId": again.id, "playerId": "p1" })));
+        let paid = pb_reduce(&taxed, json!({ "type": "play", "instanceId": again.id, "playerId": "p1" }));
         assert_eq!(only(&of_type(&paid.events, GameEventType::CardPlayed))["costPaid"], json!(2));
     }
 
@@ -267,7 +267,7 @@ mod r454_e11_play_from_the_graveyard {
             .contains("spending Plague Counters"));
         assert!(refusal(&pb_reduce(
             &state,
-            json_as(json!({ "type": "play", "instanceId": body.id, "plague": { "from": field.id, "tokens": 0 }, "playerId": "p1" }))
+            json!({ "type": "play", "instanceId": body.id, "plague": { "from": field.id, "tokens": 0 }, "playerId": "p1" })
         ))
         .contains("at least 1 Plague Counter"));
         assert!(refusal(&pb_reduce(
@@ -448,7 +448,7 @@ mod r454_e11_play_from_the_graveyard {
             .filter(|action| action.action_type() == ActionType::Answer)
             .collect();
         let answer = serde_json::to_value(only(&answers)).expect("an answer serialises");
-        let live = pb_act(&paused, json_as(with_player(answer.clone(), PlayerId::P1)));
+        let live = pb_act(&paused, with_player(answer.clone(), PlayerId::P1));
         let replayed = pb_act(&round, json_as(with_player(answer, PlayerId::P1)));
         assert_eq!(hash_state(&replayed), hash_state(&live));
         assert_eq!(live.pending, None);
