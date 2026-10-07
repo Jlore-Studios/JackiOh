@@ -20,7 +20,7 @@ inputs:
     required: false
     default: "true"
   cache-key:
-    description: "A name for this job's Rust cache: a matrix whose entries build different crates gives each its own, or they share the job's one cache entry and only the first to finish writes it"
+    description: "A name for this job's Rust cache (no commas): a matrix whose entries build different crates gives each its own, or they share the job's one cache entry and only the first to finish writes it"
     required: false
     default: ""
 runs:

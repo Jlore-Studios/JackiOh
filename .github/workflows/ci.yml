@@ -119,12 +119,16 @@ jobs:
 
   # Every crate's tests: the engine's rules and golden replay, every card, the AI's units, the server
   # on the fake store, the tools. One job compiling the whole workspace took 14 minutes, nearly all
-  # of it compiling, so each group compiles only its own crates and what they build on, side by side.
-  # Every crate of the workspace is in exactly one group: a new crate joins one, or gets its own.
+  # of it compiling, so each group compiles only its own crates and what they build on (the engine
+  # and the cards at opt-level 2, about 80 s in every group), side by side. The engine and the cards
+  # each split further, by test binary: `rules`, the engine's unit tests and the cards' unit tests
+  # (one per card) each take two to three minutes to compile on their own. `binaries` lists every test
+  # binary of a crate split that way, checked against Cargo so a new one cannot go unrun; the last
+  # group takes every crate no other group names, so a new crate cannot either.
   # The engine's two features: testkit, which its `rules` binary requires, and ts, whose
-  # export_bindings tests write apps/web/src/wire/generated/ (SURFACE §5.1); the engine's and the
-  # server's export_config tests write engineConfig.ts and serverConfig.ts. What a group wrote must
-  # be what is committed (V20), so every group checks.
+  # export_bindings tests (in its unit tests) write apps/web/src/wire/generated/ (SURFACE §5.1); the
+  # engine's and the server's export_config tests write engineConfig.ts and serverConfig.ts. What a
+  # group wrote must be what is committed (V20), so every group checks.
   rust-test:
     name: rust (test ${{ matrix.group }})
     needs: changes
@@ -135,26 +139,65 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Without ts, which nothing in `rules` reads: ts-rs's derives only add to the compile.
+          - group: engine rules
+            cache: engine-rules
+            test: -p jackioh-engine --features jackioh-engine/testkit --test rules
           - group: engine
-            packages: -p jackioh-engine --features jackioh-engine/testkit,jackioh-engine/ts
+            cache: engine
+            test: -p jackioh-engine --features jackioh-engine/testkit,jackioh-engine/ts --lib --test golden --test export_config
+            doc: -p jackioh-engine --features jackioh-engine/testkit,jackioh-engine/ts
+            binaries: jackioh-engine export_config golden rules
+          - group: cards lib
+            cache: cards-lib
+            test: -p jackioh-cards --lib
           - group: cards
-            packages: -p jackioh-cards
+            cache: cards
+            test: -p jackioh-cards --test cards
+            doc: -p jackioh-cards
+            binaries: jackioh-cards cards
           - group: server
-            packages: -p jackioh-server
-          - group: ai, tools, wasm
-            packages: -p jackioh-ai -p jackioh-tools -p jackioh-wasm
+            cache: server
+            test: -p jackioh-server
+          - group: ai
+            cache: ai
+            test: -p jackioh-ai
+          - group: tools, wasm
+            cache: tools-wasm
+            test: --workspace --exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
         with:
           node: "false"
-          cache-key: test-${{ matrix.group }}
+          # A cache key may not hold a comma.
+          cache-key: test-${{ matrix.cache }}
+      - name: the crate's test binaries are the ones its groups run
+        if: ${{ matrix.binaries }}
+        env:
+          BINARIES: ${{ matrix.binaries }}
+        run: |
+          # shellcheck disable=SC2086 # BINARIES is several words on purpose.
+          set -- $BINARIES
+          crate=$1
+          shift
+          named=$(printf '%s\n' "$@" | sort | tr '\n' ' ')
+          found=$(cargo metadata --no-deps --format-version 1 | jq -r --arg crate "$crate" '.packages[] | select(.name == $crate) | .targets[] | select(.kind != ["lib"] and .kind != ["custom-build"]) | .name' | sort | tr '\n' ' ')
+          if [ "$found" != "$named" ]; then
+            echo "::error::$crate has the test binaries $found but ci.yml's rust-test groups run $named: give a new one a group"
+            exit 1
+          fi
       - name: cargo test
         env:
-          PACKAGES: ${{ matrix.packages }}
+          TEST: ${{ matrix.test }}
+          DOC: ${{ matrix.doc }}
         run: |
-          # shellcheck disable=SC2086 # PACKAGES is several arguments on purpose.
-          cargo test --timings $PACKAGES
+          # shellcheck disable=SC2086 # TEST is several arguments on purpose.
+          cargo test --timings $TEST
+          if [ -n "$DOC" ]; then
+            # shellcheck disable=SC2086 # and so is DOC.
+            cargo test --doc $DOC
+          fi
       - name: the slowest units to compile
         if: ${{ !cancelled() }}
         continue-on-error: true
@@ -532,8 +575,10 @@ jobs:
           node: "false"
       # The rehearsal's image is built by buildx with its layer cache in GitHub's cache service, so an
       # image whose Dockerfile and context have not changed is not compiled again: read everywhere,
-      # written only from main and staging, as the Rust cache is. The build is the same Dockerfile and
-      # context either way (rehearse.sh's REHEARSAL_CACHE_FROM and REHEARSAL_CACHE_TO).
+      # written only from main and staging, as the Rust cache is. Only the image's own layers
+      # (mode=min): the compile stage's layer (a gigabyte, over a minute to export) is reused only
+      # when nothing under crates/ changed, and then the image's layers are reused anyway. The build
+      # is the same Dockerfile and context either way (rehearse.sh's REHEARSAL_CACHE_FROM and _TO).
       - uses: docker/setup-buildx-action@v3
         if: ${{ matrix.image-cache }}
       # The cache service's URL and token, which only an action sees, for the script's buildx.
@@ -545,7 +590,7 @@ jobs:
         env:
           SCRIPT: ${{ matrix.script }}
           REHEARSAL_CACHE_FROM: ${{ matrix.image-cache && 'type=gha,scope=deploy-rehearsal' || '' }}
-          REHEARSAL_CACHE_TO: ${{ matrix.image-cache && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging') && 'type=gha,mode=max,scope=deploy-rehearsal' || '' }}
+          REHEARSAL_CACHE_TO: ${{ matrix.image-cache && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging') && 'type=gha,mode=min,scope=deploy-rehearsal' || '' }}
         run: sh "$SCRIPT"
 
   db:
