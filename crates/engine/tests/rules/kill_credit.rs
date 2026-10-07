@@ -23,13 +23,14 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// `put(state, defId, ref, { radiant: true })`: placed, then made Radiant in the state (these
-/// fixtures print nothing that depends on the face as they enter).
+/// `put(state, defId, ref, { radiant: true })`: the card is made Radiant before it is placed, as the
+/// harness's `put` does with that option.
 fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
-    let placed = put(state, def_id, at);
-    let card = find_instance_mut(state, &placed.id).expect("the card was just placed");
+    let mut card = state::new_instance(state, def_id, at.player, Zone::Hand { player: at.player });
     card.radiant = true;
-    card.clone()
+    let placed = zones::place_on_field(state, &mut card, at, Default::default());
+    assert!(placed, "could not place {def_id} in {} {}", at.row, at.lane);
+    find_instance(state, &card.id).expect("the card was just placed").clone()
 }
 
 /// `{ ...body, playerId }`.
