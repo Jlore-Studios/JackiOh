@@ -258,10 +258,13 @@ fn cast_one_random(asked: CatalogQueryArgs, radiant: bool, how: CastHow) -> Effe
     })
 }
 
-/// `castRandom`'s `query`: a fixed query, or one read off the context as the part is built.
-#[derive(Clone)]
+/// `castRandom`'s `query`: a fixed query, or one read off the context as the part is built (set in
+/// Rust; a `json!` literal reads as `Fixed`).
+#[derive(Clone, Deserialize)]
+#[serde(untagged)]
 pub enum CastRandomQuery {
     Fixed(CatalogQueryArgs),
+    #[serde(skip)]
     Read(Arc<dyn Fn(&mut EffectContext<'_>) -> CatalogQueryArgs + Send + Sync>),
 }
 
@@ -271,10 +274,13 @@ impl From<CatalogQueryArgs> for CastRandomQuery {
     }
 }
 
-/// `castRandom`'s `count`: a number, or one read off the context as the part is built.
-#[derive(Clone)]
+/// `castRandom`'s `count`: a number, or one read off the context as the part is built (set in Rust;
+/// a `json!` number reads as `Fixed`).
+#[derive(Clone, Deserialize)]
+#[serde(untagged)]
 pub enum CastRandomCount {
     Fixed(i32),
+    #[serde(skip)]
     Read(Arc<dyn Fn(&mut EffectContext<'_>) -> i32 + Send + Sync>),
 }
 
@@ -285,12 +291,17 @@ impl From<i32> for CastRandomCount {
 }
 
 /// `castRandom`'s argument: `{ query; count?; radiant? } & Omit<CastHow, "random">`.
-#[derive(Clone)]
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CastRandomArgs {
     pub query: CastRandomQuery,
+    #[serde(default)]
     pub count: Option<CastRandomCount>,
+    #[serde(default)]
     pub radiant: Option<bool>,
+    #[serde(default)]
     pub target_enemies: Option<bool>,
+    #[serde(default)]
     pub afterward: Option<CastAfterward>,
 }
 
