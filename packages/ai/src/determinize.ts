@@ -11,6 +11,7 @@ import { PLAYER_IDS, opponentOf } from "@jackioh/shared";
 import {
   activeUnitsOf,
   cloneState,
+  effectiveCost,
   query,
   scriptsFor,
   unitView,
@@ -74,8 +75,24 @@ function hasAura(defId: string): boolean {
   return base.aura !== undefined || radiant.aura !== undefined;
 }
 
+/**
+ * R762: the cost a trap of `defId` would show in the zone `card` holds, read as the board reads a
+ * face-down card's (R65, R351), without the shown number `redact` parked on the placeholder.
+ */
+function costIn(state: GameState, card: CardInstance, defId: string): number {
+  const slot: CardInstance = { ...card, defId };
+  delete slot.costOverride;
+  return effectiveCost(state, slot);
+}
+
+/** How a determinization samples. `greedyAction` keeps the sampler the quality gates were fixed on. */
+export type DeterminizeOptions = {
+  /** R762: a face-down card showing a cost takes a trap of that cost while an unseen one is left. Default true. */
+  readonly matchShownCost?: boolean;
+};
+
 /** R185: one concrete world consistent with `publicState` (the output of redact). Pure given rng. */
-export function determinize(publicState: GameState, seat: PlayerId, rng: Rng): GameState {
+export function determinize(publicState: GameState, seat: PlayerId, rng: Rng, options: DeterminizeOptions = {}): GameState {
   const opp = opponentOf(seat);
   const next = cloneState(publicState);
 
@@ -96,7 +113,8 @@ export function determinize(publicState: GameState, seat: PlayerId, rng: Rng): G
   const trapPool = query({ type: ["Trap", "Field Trap"] }).map((def) => def.id);
   const auraTraps = trapPool.filter(hasAura);
   const shown = auraTraps.length > 0 ? shownUnits(next) : "";
-  const trapFor = (card: CardInstance): string => {
+  const matchShownCost = options.matchShownCost ?? true;
+  const trapFor = (card: CardInstance, shownCost: number | undefined): string => {
     const agrees = (defId: string): boolean => {
       card.defId = defId;
       const same = shownUnits(next) === shown;
@@ -104,17 +122,26 @@ export function determinize(publicState: GameState, seat: PlayerId, rng: Rng): G
       return same;
     };
     const open = auraTraps.length === 0 ? trapPool : trapPool.filter((id) => !auraTraps.includes(id) || agrees(id));
-    return sampleDef(open.length > 0 ? open : trapPool, seen, sampled, rng);
+    const pool = open.length > 0 ? open : trapPool;
+    // R762: the board shows this card's cost (R351), so a trap that would show another is no world the
+    // seat could be in; with no unseen trap of that cost left, the pool falls back as before.
+    if (matchShownCost && shownCost !== undefined) {
+      const priced = pool.filter((id) => costIn(next, card, id) === shownCost);
+      if (priced.some((id) => !seen.has(id) && !sampled.has(id))) return sampleDef(priced, seen, sampled, rng);
+    }
+    return sampleDef(pool, seen, sampled, rng);
   };
   for (const side of [opp, seat] as const) {
     // B5 E21: then the face-down cards dormant under each backrow pile, lane by lane.
-    const backrow = [...next.players[side].backrow, ...(next.players[side].backrowPiles ?? []).flat()];
+    const tops = next.players[side].backrow;
+    const backrow = [...tops, ...(next.players[side].backrowPiles ?? []).flat()];
     for (const card of backrow) {
-      if (card !== null && isPlaceholder(card)) card.defId = trapFor(card);
+      // R762: a top card shows its cost (R351); a dormant one beneath shows only that it is there (R447).
+      if (card !== null && isPlaceholder(card)) card.defId = trapFor(card, tops.includes(card) ? card.costOverride : undefined);
     }
     // R448: a card being set face-down waits in the resolving zone as a placeholder; it is a trap too.
     for (const card of next.players[side].resolving) {
-      if (isPlaceholder(card)) card.defId = trapFor(card);
+      if (isPlaceholder(card)) card.defId = trapFor(card, undefined);
     }
   }
 

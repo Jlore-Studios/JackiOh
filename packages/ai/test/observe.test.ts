@@ -550,7 +550,7 @@ describe("determinize (B12)", () => {
     }
   });
 
-  it("B12: with more face-down cards than unseen traps, the sampler falls back to the whole trap pool", () => {
+  it("R762 B12: each face-down card takes an unseen trap of the cost it shows; with none of that cost left, the sampler falls back to the trap pool", () => {
     const faceDown = ["core-018", "core-041", "core-060", "core-071", "core-085"];
     // Every trap of every set is shown but four, so four unseen traps are left for five lanes.
     const shown = trapPool().filter((id) => !["core-018", "core-060", "core-071", "core-085"].includes(id));
@@ -561,16 +561,17 @@ describe("determinize (B12)", () => {
     const lanes = state.players.p2.backrow.map((card) => card?.id);
     expect(lanes.every((id) => id !== undefined)).toBe(true);
     const traps = new Set(trapPool());
-    const unseen = trapPool().filter((id) => !shown.includes(id));
-    expect(unseen.length).toBeLessThan(faceDown.length);
+    expect(state.players.p2.backrow.map((card) => effectiveCost(state, card as CardInstance))).toEqual([1, 1, 1, 1, 2]);
 
     for (let k = 0; k < 20; k += 1) {
       const det = determinize(redact(state, AI), AI, createRng(`observe-trap-exhaust:${k}`));
       const samples = lanes.map((id) => cardById(det, id as string)?.defId as string);
       for (const defId of samples) expect(traps.has(defId), `seed ${k}: ${defId}`).toBe(true);
-      // In lane order: the unseen traps are used up first, each once, before any fallback.
-      const first = samples.slice(0, unseen.length);
-      expect([...first].sort(), `seed ${k}`).toEqual([...unseen].sort());
+      // In lane order: the three unseen (1) traps fill the first three lanes that show (1).
+      expect(samples.slice(0, 3).sort(), `seed ${k}`).toEqual(["core-018", "core-060", "core-071"]);
+      // Lane 4 shows (1) with no unseen (1) left, so it falls back to the pool's only unseen trap.
+      expect(samples[3], `seed ${k}`).toBe("core-085");
+      // Lane 5, showing (2) with nothing unseen left, takes any trap.
     }
   });
 

@@ -1,7 +1,7 @@
 # The JackiOh night bot
 
 `@jgoetzmann-bot` works through the issues you hand it, on whichever of your subscriptions is
-free: up to six Claude accounts (Opus at extra-high effort), ChatGPT through the Codex CLI,
+free: up to seven Claude accounts (Opus at extra-high effort), ChatGPT through the Codex CLI,
 Google through the Antigravity CLI (`agy`), Meta through Muse Code and Cognition through the
 Devin CLI, each with its own hours
 and limits ([Subscriptions](#subscriptions)). Up to ten items run at once: the Claude accounts' on
@@ -357,6 +357,7 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `claude-4` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `claude-5` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_5` | any time | 40% of 5 hours, 60% of the week |
 | `claude-6` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_6` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
+| `claude-7` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_7` | any time | none: until it refuses (the same rules as claude-3) |
 | `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh` | on the machine, as `agent-gpt` | any time | 100% of the week (Codex reports it) |
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | 95% of 5 hours, all of the week (its own `agy -p /usage`, the Gemini pool's row) |
 | `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2, free on the CLI until 2026-10-16); off from 2026-10-05 to 2026-10-06 (#311: every call failed in seconds), on again since a `devin -p` call answered on the machine (#318) | on the machine, as `agent-devin` | any time until 2026-10-15 (`off_from`) | none: until it refuses |
@@ -441,7 +442,7 @@ may be on the bot's machine (its two vCPUs run each job's checks; GitHub's runne
 and no such limit), `plan_lanes` how many planning runs may go on top of those (the planning
 lane, below; 2), `priority` the usage order (below), and `tiers` each tier's models in the
 order the router tries them after `priority`. A subscription's own `lanes`
-(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can nearly fill its box alone, Muse's is 2, and claude-1, claude-2 and claude-3 have 2 each. A `secret` must be one of the names the workflows hand over (the six Claude ones,
+(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can nearly fill its box alone, Muse's is 2, and claude-1, claude-2 and claude-3 have 2 each. A `secret` must be one of the names the workflows hand over (the seven Claude ones,
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
 **Who takes what.** Each run takes one item on one subscription, and a subscription works on as
@@ -491,9 +492,9 @@ may build it, and the weakest whose plan it builds from (`config.PLAN_FLOOR`, #3
 | hard | strong only | strong only | the same as medium |
 | (unrated) | medium or strong, who rates it | as medium | as medium |
 
-**The usage order** (`priority`) is the owner's: spend claude-3 and claude-1 first, up to their
-caps; then claude-4, claude-6 and then claude-5, last of the Claude accounts (claude-4 and
-claude-6 held to half their 5-hour session outside 03:00–15:00 and to 70% of it inside it, with
+**The usage order** (`priority`) is the owner's: spend claude-3, claude-7 (the same rules as
+claude-3: any hour, no caps) and claude-1 first, up to their caps; then claude-4, claude-6 and
+then claude-5, last of the Claude accounts (claude-4 and claude-6 held to half their 5-hour session outside 03:00–15:00 and to 70% of it inside it, with
 no weekly cap, claude-5 to 40% of its 5-hour session and 60% of its week); then the medium models,
 Muse first (the most reliable builder, #305), then agy and Codex; then claude-2, kept back mostly
 for planning and reviewing; then Devin; and devin-train last, which takes only items labelled
@@ -741,7 +742,7 @@ loses nothing now, a build or revision starts only 5 points under a 5-hour cap
 
 None of these is an API key: each is the login of one account.
 
-- **Claude** (`claude-1` to `claude-6`), a GitHub secret each.
+- **Claude** (`claude-1` to `claude-7`), a GitHub secret each.
   1. Log in to the account with `claude`.
   2. Run `claude setup-token` and paste the token it prints (good for a year) into the secret.
 

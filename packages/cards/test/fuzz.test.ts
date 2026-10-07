@@ -18,8 +18,11 @@
 //                       "(seed, log) reconstructs any match" true.
 //   4. FAILURE DETAIL — every card id in the failing seed's two decks is named in the report,
 //                       because a bare seed number is useless against a 100-card pool.
-// And at every step, INVARIANTS: `_invariants.ts`'s I1–I4 (summoning sickness and exertion, R171)
-// hold on the state each action is chosen in and on the state it produces (stage "invariant").
+// And at every step, INVARIANTS: `_invariants.ts`'s I1–I5 (summoning sickness and exertion, R171, and
+// nothing after game over, R216) hold on the state each action is chosen in and on the state it
+// produces (stage "invariant"), and I6 (no card a seat may not read in its view or legal actions,
+// §10.8) holds for both seats on every state, setup's included: every state under `pnpm test`, every
+// I6_GATE_STRIDE-th under the 1,000-seed gate.
 //
 // Determinism (SPEC §9.3, §10.7, CLAUDE.md rule 4): nothing here reads `Math.random` or the clock.
 // The deck draw, the game and the policy each come from `createRng` over a seed string derived from
@@ -52,7 +55,7 @@ import {
   mulliganOwed,
 } from "@jackioh/engine";
 import { CATALOG, registerAll } from "../src/index";
-import { createInvariantMonitor } from "./_invariants";
+import { I6_GATE_STRIDE, createInvariantMonitor } from "./_invariants";
 
 // ---------------------------------------------------------------------------------------------
 // Wave size
@@ -88,6 +91,11 @@ export const SWEEP_SEEDS = 100;
 function isWholeSuiteSweep(): boolean {
   const script = process.env["npm_lifecycle_event"];
   return script === "test" || script === "test:coverage";
+}
+
+/** I6's stride: every state in `pnpm test`'s wave, every I6_GATE_STRIDE-th in the gate (`_invariants.ts`). */
+export function hiddenStride(): number {
+  return isWholeSuiteSweep() ? 1 : I6_GATE_STRIDE;
 }
 
 /**
@@ -222,8 +230,10 @@ function playGame(seed: number): GameRun {
   const order = createRng(`jackioh-fuzz-policy-order-${seed}`);
   const log: Action[] = [];
   const monitor = createInvariantMonitor(state);
+  const stride = hiddenStride();
   // Setup's own events: a Unit cast on draw in the opening deal (C+ #26 Tommy Tempo) enters there.
-  monitor.after(begun.events, state);
+  const setup = [...monitor.after(begun.events, state), ...monitor.hidden(state)];
+  if (setup[0] !== undefined) throw new FuzzFailure("invariant", setup[0], { turn: state.turn, actions: 0 });
 
   while (state.result === null) {
     if (log.length >= MAX_ACTIONS_PER_GAME) {
@@ -268,7 +278,10 @@ function playGame(seed: number): GameRun {
     log.push(action);
     state = result.state;
 
-    const broken = monitor.after(result.events, state);
+    const broken = [
+      ...monitor.after(result.events, state),
+      ...(log.length % stride === 0 || state.result !== null ? monitor.hidden(state) : []),
+    ];
     if (broken[0] !== undefined) {
       throw new FuzzFailure("invariant", broken[0], { turn: state.turn, actions: log.length });
     }
@@ -546,7 +559,7 @@ describe("fuzz (M4 gate)", () => {
           `  ${passed > 0 ? Math.round(actionsTotal / passed) : 0} actions/game on average, ` +
           `${actionsMax} at most; longest game ended on turn ${turnMax} of ${TURN_CAP_PLAYER_TURNS}\n` +
           `  pool: ${FUZZ_POOL.length} deck-legal cards, ${POOL_EXCLUSIONS.length} excluded; ` +
-          `${Math.round(elapsedMs / 1000)}s\n`,
+          `I6 every ${hiddenStride()} state(s); ${Math.round(elapsedMs / 1000)}s\n`,
       );
 
       expect(failures.length, failures.length === 0 ? "" : report(failures, ran, elapsedMs)).toBe(0);
