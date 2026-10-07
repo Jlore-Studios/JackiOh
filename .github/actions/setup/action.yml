@@ -45,6 +45,20 @@ runs:
       with:
         components: rustfmt, clippy
         targets: wasm32-unknown-unknown
+    # rust-cache keys its cache on the version of every toolchain rustup has, and the runner image
+    # ships its own `stable`, which is not the same on every runner while GitHub rolls out a new
+    # image (1.98.1 on one, 1.99.0 on the next, in one run): a job then misses its own cache on
+    # every other runner and compiles every dependency again. Nothing here uses any toolchain but
+    # the pinned one, so the others go before the cache is keyed.
+    - name: only the pinned toolchain
+      if: ${{ inputs.rust == 'true' }}
+      shell: bash
+      run: |
+        pinned=$(rustup show active-toolchain | cut -d ' ' -f 1)
+        for toolchain in $(rustup toolchain list --quiet); do
+          if [ "$toolchain" != "$pinned" ]; then rustup toolchain uninstall "$toolchain"; fi
+        done
+        rustup toolchain list
     # .cache/bin holds the wasm-bindgen CLI scripts/build-wasm.sh downloads.
     - uses: Swatinem/rust-cache@v2
       if: ${{ inputs.rust == 'true' }}
