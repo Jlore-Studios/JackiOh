@@ -5,10 +5,15 @@
 //!
 //! - A reader returns references into the state (`card_at` → `Option<&CardInstance>`,
 //!   `active_units_of` → `Vec<&CardInstance>`); `card_at_mut` and `pile_at_mut` are their mutable twins.
-//! - A mover takes the card as `&mut CardInstance`: that value IS the card, as TS's object was — it is
-//!   updated exactly as TS updated the object, and where the card lands in the state, a copy of it as
-//!   it then stands is what the state holds. A caller passes the card as it stands now (cloned out of
-//!   the state just before), and keeps an up-to-date copy afterwards.
+//! - A mover that takes a card off its zone (`move_to_zone`, `remove_from_any_zone`, `cease_to_exist`)
+//!   takes it as `&mut CardInstance`: the value is first brought up to date with the card under its id
+//!   in the state, then updated exactly as TS updated the live object, so the caller holds the card as
+//!   it landed (`report_graveyard_landing` reads where). A card in no zone is taken as handed.
+//! - A mover that sets a card down (`place_on_field`, `replace_in_zone`'s replacement,
+//!   `fresh_face_down_id`) takes the card as `&mut CardInstance` as handed — a new card, or one already
+//!   taken off its zone — and the state holds a copy of it as it then stands.
+//! - A function that changes a card where it stands (`step_into_unit_zone`, `step_into_backrow`,
+//!   `flicker_in_place`) takes `&CardInstance` and works on the card under that id in the state.
 //! - A zone slot argument takes a `ZoneSlot` or a `&ZoneSlot` (`impl Into<ZoneSlot>`).
 //! - TS's `registerGraveyardRedirect` hook is a direct call to `replacements::graveyard_redirect_for`
 //!   (SURFACE §6.6: the registration hooks go).
@@ -24,8 +29,8 @@ use crate::own_library::show_to_owner;
 use crate::script::EngineSink;
 use crate::scripts::flags_of;
 use crate::state::{
-    CardInstance, Exertion, GameState, HomeZone, Pile, PlayerState, QueuedTrigger, find_instance_mut,
-    rename_in_board_history,
+    CardInstance, Exertion, GameState, HomeZone, Pile, PlayerState, QueuedTrigger, find_instance,
+    find_instance_mut, rename_in_board_history,
 };
 use crate::stays::{note_field_exit, note_moved, note_uncovered};
 use crate::wire::{
@@ -46,6 +51,12 @@ impl From<&ZoneRef> for ZoneRef {
 /// A lane's index in its row, or `None` for a lane below 1.
 fn lane_index(lane: i32) -> Option<usize> {
     usize::try_from(lane - 1).ok()
+}
+
+/// The card under `card`'s id as it stands in the state now, or `card` itself when it is in no zone
+/// (TS held the live object; a caller holds a copy, which may be older than the state).
+fn live_or(state: &GameState, card: &CardInstance) -> CardInstance {
+    find_instance(state, &card.id).cloned().unwrap_or_else(|| card.clone())
 }
 
 /// Make `row` long enough to hold `index` (JS grows an array assigned past its end).
@@ -732,6 +743,7 @@ enum OldPlace {
 /// the zone was occupied before and is occupied after. Returns false, changing nothing, when the old
 /// card is not on the field. The old card is left pointing at its zone for the caller to retire.
 pub fn replace_in_zone(state: &mut GameState, old: &CardInstance, replacement: &mut CardInstance) -> bool {
+    let old = &live_or(state, old);
     let Zone::Field { player, row, lane } = old.zone else {
         return false;
     };
@@ -945,9 +957,11 @@ fn pile_for(side: &mut PlayerState, zone: OffFieldZone) -> &mut Vec<CardInstance
     }
 }
 
-/// Take a card out of wherever it is. TS's `delete instance.returnToHandAtEndOfTurn` on a card leaving
-/// a graveyard is made on `instance`, the card as the caller holds it.
+/// Take a card out of wherever it is. `instance` is first brought up to date with the card under its id
+/// in the state (TS's live object), and TS's `delete instance.returnToHandAtEndOfTurn` on a card leaving
+/// a graveyard is made on it, so the caller holds the card as it left.
 pub fn remove_from_any_zone(state: &mut GameState, instance: &mut CardInstance) {
+    *instance = live_or(state, instance);
     if remove_from_field(state, instance, RemoveFromFieldOptions::default()) {
         return;
     }
@@ -1067,6 +1081,7 @@ fn forget_queued_triggers(state: &mut GameState, instance_id: &str) {
 /// into a Sheep as a card no longer in play (`traps::standing_event`), and the delayed effects and
 /// queued triggers aimed at that stay end with it, as `move_to_zone` ends them for a card that lands.
 pub fn cease_to_exist(state: &mut GameState, instance: &mut CardInstance) {
+    *instance = live_or(state, instance);
     let was_on_field = instance.zone.z() == ZoneName::Field;
     remove_from_any_zone(state, instance);
     if was_on_field {
@@ -1191,6 +1206,7 @@ pub fn move_to_zone(
     zone: OffFieldZone,
     options: MoveToZoneOptions,
 ) -> MoveResult {
+    *instance = live_or(state, instance);
     let from = instance.zone.z();
     let was_on_field = from == ZoneName::Field;
     let token = is_unit_token(state, instance);
@@ -1354,46 +1370,40 @@ pub fn slot_of(_state: &GameState, instance: &CardInstance) -> Option<ZoneSlot> 
 /// reset, no departure counted (R174), nothing that watches it or that it queued forgotten. A card
 /// dormant beneath it in its backrow pile resumes (§3.2). False, changing nothing, when the card is
 /// not acting in a backrow zone or `to` is not an open unit zone of its side.
-pub fn step_into_unit_zone(state: &mut GameState, card: &mut CardInstance, to: impl Into<ZoneSlot>) -> bool {
+///
+/// `card` names the card; the one that moves is the card under that id as it stands in the state.
+pub fn step_into_unit_zone(state: &mut GameState, card: &CardInstance, to: impl Into<ZoneSlot>) -> bool {
     let to = to.into();
-    let Some(from) = slot_of(state, card) else {
+    let mut moving = live_or(state, card);
+    let Some(from) = slot_of(state, &moving) else {
         return false;
     };
     if from.row != Row::Backrow || to.row != Row::Units {
         return false;
     }
-    if from.player != to.player || !acts_on_field(state, card) || !takes_move(state, to) {
+    if from.player != to.player || !acts_on_field(state, &moving) || !takes_move(state, to) {
         return false;
     }
-    remove_from_field(state, card, RemoveFromFieldOptions { with_pile: Some(true) });
-    place_on_field(state, card, to, PlaceOnFieldOptions::default())
-}
-
-/// `step_into_backrow`'s options: `stack` lets a card with Stack top an occupied backrow zone.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct StepIntoBackrowOptions {
-    pub stack: Option<bool>,
+    remove_from_field(state, &moving, RemoveFromFieldOptions { with_pile: Some(true) });
+    place_on_field(state, &mut moving, to, PlaceOnFieldOptions::default())
 }
 
 /// B3.1 rule 6: move a card acting in a unit zone into a backrow zone of its side, without leaving the
 /// field. `to` must take it: not held for another card, and empty — or, for a card that
 /// has Stack, a zone a Stack card may top (B5 E21). A Lock never stops a move (R688). The caller releases the card's own home first. False,
 /// changing nothing, when it cannot go.
-pub fn step_into_backrow(
-    state: &mut GameState,
-    card: &mut CardInstance,
-    to: impl Into<ZoneSlot>,
-    options: StepIntoBackrowOptions,
-) -> bool {
+///
+/// `card` names the card, as in `step_into_unit_zone`; `stack` is TS's `{ stack?: boolean }`.
+pub fn step_into_backrow(state: &mut GameState, card: &CardInstance, to: impl Into<ZoneSlot>, stack: bool) -> bool {
     let to = to.into();
-    let stack = options.stack == Some(true);
-    let Some(from) = slot_of(state, card) else {
+    let mut moving = live_or(state, card);
+    let Some(from) = slot_of(state, &moving) else {
         return false;
     };
     if from.row != Row::Units || to.row != Row::Backrow {
         return false;
     }
-    if from.player != to.player || !acts_on_field(state, card) {
+    if from.player != to.player || !acts_on_field(state, &moving) {
         return false;
     }
     let takes = if is_empty(state, to) {
@@ -1404,8 +1414,8 @@ pub fn step_into_backrow(
     if !takes {
         return false;
     }
-    remove_from_field(state, card, RemoveFromFieldOptions { with_pile: Some(true) });
-    place_on_field(state, card, to, PlaceOnFieldOptions { stack: Some(stack) })
+    remove_from_field(state, &moving, RemoveFromFieldOptions { with_pile: Some(true) });
+    place_on_field(state, &mut moving, to, PlaceOnFieldOptions { stack: Some(stack) })
 }
 
 /// B5 E22: the card leaves the field and re-enters the same zone at once — the same place in its pile,
@@ -1415,23 +1425,25 @@ pub fn step_into_backrow(
 /// comes back like any other card (R444, as R175 brings one back through Reborn). The caller emits
 /// the events. False, changing nothing, for a card that is not acting on the field.
 ///
-/// The card stays where it is, so the state's copy of it is replaced by `card` as it then stands.
-pub fn flicker_in_place(state: &mut GameState, card: &mut CardInstance) -> bool {
-    let Zone::Field { player, row, .. } = card.zone else {
+/// `card` names the card; the one reset is the card under that id as it stands in the state.
+pub fn flicker_in_place(state: &mut GameState, card: &CardInstance) -> bool {
+    let current = live_or(state, card);
+    let Zone::Field { player, row, .. } = current.zone else {
         return false;
     };
-    if !acts_on_field(state, card) {
+    if !acts_on_field(state, &current) {
         return false;
     }
-    left_the_field(state, &card.id);
-    reset_instance(card);
-    card.controller = player;
-    card.summoned_turn = Some(state.turn);
-    if row == Row::Units || is_unit_face(state, card) {
-        card.position = Some(Position::Atk);
-    }
-    if let Some(live) = find_instance_mut(state, &card.id) {
-        *live = card.clone();
+    left_the_field(state, &current.id);
+    let turn = state.turn;
+    let unit_face = row == Row::Units || is_unit_face(state, &current);
+    if let Some(live) = find_instance_mut(state, &current.id) {
+        reset_instance(live);
+        live.controller = player;
+        live.summoned_turn = Some(turn);
+        if unit_face {
+            live.position = Some(Position::Atk);
+        }
     }
     true
 }

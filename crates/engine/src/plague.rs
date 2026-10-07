@@ -37,8 +37,9 @@ pub fn plague_on(card: &CardInstance) -> i32 {
 /// Every permanent on the field in R68's order — the given side first (the active player's when
 /// `first` is `None`, TS's default), units lane 1 upward then the backrow lane 1 upward, then the
 /// other side: the top of each unit pile only (R13), and every backrow card, face-down or not.
-pub fn permanents_on_field(state: &GameState, first: Option<PlayerId>) -> Vec<&CardInstance> {
-    let first = first.unwrap_or(state.active);
+/// `first` takes a `PlayerId` or an `Option` (`None` for TS's omitted argument).
+pub fn permanents_on_field(state: &GameState, first: impl Into<Option<PlayerId>>) -> Vec<&CardInstance> {
+    let first = first.into().unwrap_or(state.active);
     let sides = [first, opponent_of(first)];
     let mut out: Vec<&CardInstance> = Vec::new();
     for player in sides {
@@ -54,8 +55,10 @@ pub fn permanents_on_field(state: &GameState, first: Option<PlayerId>) -> Vec<&C
 }
 
 /// Classic #59 Plague Doctor: "the number of Plague Counters on the field" — every token on every
-/// permanent, both sides, face-down cards included; or one side's only, with `player`.
-pub fn plague_on_field(state: &GameState, player: Option<PlayerId>) -> i32 {
+/// permanent, both sides, face-down cards included; or one side's only, with `player` (a `PlayerId`, or
+/// `None` for TS's omitted argument).
+pub fn plague_on_field(state: &GameState, player: impl Into<Option<PlayerId>>) -> i32 {
+    let player: Option<PlayerId> = player.into();
     permanents_on_field(state, None)
         .into_iter()
         .filter(|card| player.is_none_or(|player| card.controller == player))
