@@ -4254,14 +4254,18 @@
         {
           "at": "2026-10-06T14:08:43Z",
           "minutes": 40.2
+        },
+        {
+          "at": "2026-10-07T01:59:22Z",
+          "minutes": 10.8
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-06T18:20:00Z",
-          "utilization": 0.11
+          "resets_at": "2026-10-07T06:20:00Z",
+          "utilization": 0.51
         },
-        "observed_at": "2026-10-06T14:08:43Z",
+        "observed_at": "2026-10-07T01:59:22Z",
         "status": "allowed"
       }
     },
