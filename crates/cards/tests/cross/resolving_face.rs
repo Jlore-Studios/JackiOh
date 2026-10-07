@@ -11,6 +11,7 @@
 //!  - R214: step 3 can make the played card Radiant after step 1 has read its choices, so step 1 and
 //!    `legalActions` read the choices of the face step 5 will resolve.
 
+use jackioh_engine::subsystems::FuseArgs;
 use jackioh_engine::testkit::*;
 
 const BIGOT: &str = "core-002";
