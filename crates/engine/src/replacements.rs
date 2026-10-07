@@ -316,7 +316,7 @@ fn finish(
     {
         let result = crate::zones::move_to_zone(
             sink.state,
-            &card,
+            &mut card,
             crate::zones::OffFieldZone::Graveyard,
             Default::default(),
         );
@@ -671,14 +671,14 @@ pub fn answer_targeting(
         let Some(def) = answering(sink.state, &cand, ReplacementMoment::Targeted, &event) else {
             continue;
         };
-        let card = cand.card.clone();
+        let mut card = cand.card.clone();
         // §3.2, R64, R688: the leftmost empty, unreserved unit zone (an unlocked one first), which
         // `place_on_field` accepts: Joro is summoned, not played.
         let Some(slot) = crate::zones::first_entry_zone(sink.state, defender, Row::Units) else {
             continue;
         };
-        crate::zones::remove_from_any_zone(sink.state, &card);
-        crate::zones::place_on_field(sink.state, card.clone(), slot, Default::default());
+        crate::zones::remove_from_any_zone(sink.state, &mut card);
+        crate::zones::place_on_field(sink.state, &mut card, slot, Default::default());
         let turn = sink.state.turn;
         if let Some(placed) = find_instance_mut(sink.state, &card.id) {
             placed.summoned_turn = Some(turn);

@@ -90,8 +90,8 @@ fn place_glitch_boards(state: &mut GameState) {
     for player in PLAYER_IDS {
         for row in [Row::Units, Row::Backrow] {
             for slot in crate::zones::slots_of(player, row) {
-                for card in crate::zones::zone_contents(state, &slot) {
-                    crate::zones::cease_to_exist(state, &card);
+                for mut card in crate::zones::zone_contents(state, &slot) {
+                    crate::zones::cease_to_exist(state, &mut card);
                 }
                 crate::zones::unlock_zone(state, &slot);
             }
@@ -119,7 +119,7 @@ fn place_glitch_boards(state: &mut GameState) {
             let Some(slot) = crate::zones::first_free_zone(state, player, row) else {
                 continue;
             };
-            if !crate::zones::place_on_field(state, &card, &slot, Default::default()) {
+            if !crate::zones::place_on_field(state, &mut card, &slot, Default::default()) {
                 continue;
             }
             let turn = state.turn;

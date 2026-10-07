@@ -1048,7 +1048,7 @@ fn replace_played_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
             Zone::Resolving { player: run.player },
         );
         fresh.radiant = *radiant;
-        cease_to_exist(sink.state, &old);
+        cease_to_exist(sink.state, &mut old.clone());
         sink.state.players[run.player].resolving.push(fresh.clone());
         sink.events.push(GameEvent::Transformed {
             instance_id: old.id.clone(),
@@ -1419,7 +1419,7 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     if !matches!(card.zone, Zone::Resolving { .. }) {
         return false;
     }
-    remove_from_any_zone(sink.state, &card);
+    remove_from_any_zone(sink.state, &mut card);
     if run.cast == Some(true) || run.replaced == Some(true) {
         // R70, R449: a permanent takes the leftmost empty, unlocked zone of its row (R64), as a play that
         // names none does.
@@ -2578,7 +2578,7 @@ pub fn cast_through_pipeline(sink: &mut EngineSink<'_>, instance: &CardInstance,
     let mut card = instance.clone();
     let from_graveyard =
         find_instance(sink.state, &card.id).is_some_and(|held| matches!(held.zone, Zone::Graveyard { .. }));
-    remove_from_any_zone(sink.state, &card);
+    remove_from_any_zone(sink.state, &mut card);
     // R155: a card that leaves the graveyard has spent the landing §5.1's end-of-turn return belongs to
     // (the one change TS's `removeFromAnyZone` wrote onto the instance it was handed).
     if from_graveyard {

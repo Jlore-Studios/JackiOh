@@ -338,7 +338,7 @@ fn run_cry(sink: &mut EngineSink, run: &CryRun, card: &CardInstance) {
         .insert(RUN_MARKS_KEY.to_string(), json!({ "exitsFrom": exits_from }));
     run_resume(
         sink,
-        resume,
+        &resume,
         ResumeOptions {
             controller: Some(run.controller),
             targets: Some(run.targets.clone()),

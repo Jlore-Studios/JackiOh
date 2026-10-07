@@ -74,7 +74,7 @@ pub fn damage_split(args: DamageSplitArgs) -> Effect {
             let source = ctx.live_self().cloned();
             deal_damage(
                 ctx,
-                &DamageArgs {
+                DamageArgs {
                     source,
                     target,
                     amount: hit,

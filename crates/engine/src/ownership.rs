@@ -110,11 +110,11 @@ pub fn take_into_hand(sink: &mut EngineSink<'_>, card: &CardInstance, thief: Pla
     if !change_owner(sink, card, thief) {
         return None;
     }
-    let card = live(sink.state, card);
+    let mut card = live(sink.state, card);
     // `draw::add_to_hand` burns a card entering a full hand (§2.4, R4): the same test, read before
     // the move, names where it went.
     let burns = sink.state.players[card.owner].hand.len() as i32 >= HAND_CAP;
-    crate::draw::add_to_hand(sink, &card);
+    crate::draw::add_to_hand(sink, &mut card);
     Some(if burns { TakenTo::Burned } else { TakenTo::Hand })
 }
 

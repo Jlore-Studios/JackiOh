@@ -1582,7 +1582,7 @@ fn keep_instance(
         if card.id == kept.id {
             continue;
         }
-        crate::zones::cease_to_exist(state, card);
+        crate::zones::cease_to_exist(state, &mut card.clone());
     }
     find_instance(state, &kept.id).cloned().unwrap_or_else(|| kept.clone())
 }
@@ -1648,9 +1648,9 @@ fn craft_in_hand(
     // R102, B3.4 rule 4, R443: as `keep_instance`'s.
     carry_instance_data(&mut card, ingredients);
     for ingredient in ingredients {
-        crate::zones::cease_to_exist(sink.state, ingredient);
+        crate::zones::cease_to_exist(sink.state, &mut ingredient.clone());
     }
-    let _ = crate::draw::add_to_hand(sink, &card);
+    let _ = crate::draw::add_to_hand(sink, &mut card);
     // TS: `addToHand(sink, card) === "hand"`, which is where the card now stands.
     if let Some(landed) = find_instance_mut(sink.state, &card.id)
         && landed.zone.z() == ZoneName::Hand

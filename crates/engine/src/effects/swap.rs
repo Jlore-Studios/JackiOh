@@ -92,7 +92,7 @@ fn place_contents(state: &mut GameState, cards: &[CardInstance], to: &ZoneSlot) 
         // so a refusal here is a broken invariant, not a game rule; `rotation.rs` says so the same way.
         if !place_on_field(
             state,
-            card.clone(),
+            &mut card.clone(),
             to,
             PlaceOnFieldOptions {
                 stack: Some(placed > 0),
@@ -108,7 +108,7 @@ fn place_contents(state: &mut GameState, cards: &[CardInstance], to: &ZoneSlot) 
 /// §6.3 Bounce). The hand cap applies, so a full hand burns it (§2.4, R4), and a unit token ceases
 /// to exist on the way and never reaches a hand (R11).
 fn bounce_home(ctx: &mut EffectContext<'_>, card: &CardInstance) {
-    bounce_card(ctx, card.clone());
+    bounce_card(ctx, card);
 }
 
 /// R73 health: the two values change places; armor stays with its hero.

@@ -92,7 +92,7 @@ fn place_contents(state: &mut GameState, cards: &[CardInstance], to: &ZoneSlot) 
             stack: Some(placed > 0),
             ..Default::default()
         };
-        if !crate::zones::place_on_field(state, card, to, options) {
+        if !crate::zones::place_on_field(state, &mut card.clone(), to, options) {
             panic!(
                 "rotation could not place {} in {} {} {}",
                 card.id, to.player, to.row, to.lane

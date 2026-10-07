@@ -103,9 +103,12 @@ fn reveal_self(state: &mut GameState, self_id: &str) {
         return;
     };
     live.face_up = Some(true);
-    let card = live.clone();
-    // The card as it stands, face-up now; `brittle_count` writes its count to the card by id.
-    start_brittle_on_field(state, &card, false);
+    let mut card = live.clone();
+    // The card as it stands, face-up now; the count `brittle_count` starts on it is written back by id.
+    start_brittle_on_field(state, &mut card, false);
+    if let Some(live) = find_instance_mut(state, self_id) {
+        live.brittle = card.brittle;
+    }
 }
 
 /// Writes one memory key on the card as it stands in the state (TS wrote through the live `ctx.self`).

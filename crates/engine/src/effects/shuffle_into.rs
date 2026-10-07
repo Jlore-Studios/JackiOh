@@ -63,7 +63,7 @@ pub fn shuffle_into(args: ShuffleIntoArgs) -> Effect {
             }
             let source = source_of(ctx.state, args.copy_of.as_deref()).cloned();
             carry_from(&mut card, source.as_ref());
-            shuffle_into_library(ctx, card, false, args.copy_of.as_deref());
+            shuffle_into_library(ctx, &mut card, false, args.copy_of.as_deref());
         }
     })
 }
@@ -89,7 +89,7 @@ pub fn shuffle_copies_of_self(args: ShuffleCopiesOfSelfArgs) -> Effect {
             let mut card = new_instance(&mut *ctx.state, &this.def_id, player, Zone::Library { player });
             card.radiant = this.radiant;
             carry_from(&mut card, Some(&this));
-            shuffle_into_library(ctx, card, false, Some(this.id.as_str()));
+            shuffle_into_library(ctx, &mut card, false, Some(this.id.as_str()));
         }
     })
 }

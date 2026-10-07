@@ -77,8 +77,8 @@ pub fn return_random_from_graveyard(args: ReturnRandomFromGraveyardArgs) -> Effe
             return;
         }
         let picked: Vec<CardInstance> = ctx.rng.shuffle(&graveyard).into_iter().take(count).collect();
-        for card in picked {
-            put_in_hand(ctx, card);
+        for mut card in picked {
+            put_in_hand(ctx, &mut card);
         }
     })
 }

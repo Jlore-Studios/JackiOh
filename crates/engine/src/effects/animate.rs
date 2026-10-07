@@ -35,6 +35,12 @@ pub fn animate(args: AnimateArgs) -> Effect {
         };
         // TS `args.position === undefined ? {} : { position: args.position }`: the options object's one
         // field, passed as it stands.
-        let _ = crate::animated::animate_card(ctx, &card, args.position);
+        let _ = crate::animated::animate_card(
+            ctx,
+            &card,
+            crate::animated::AnimateOptions {
+                position: args.position,
+            },
+        );
     })
 }

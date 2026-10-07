@@ -247,7 +247,7 @@ pub fn restore_board(sink: &mut EngineSink<'_>, by: PlayerId, turns_ago: i32, on
             continue;
         };
         let Some(from) = placement.from else {
-            remove_from_any_zone(sink.state, live);
+            remove_from_any_zone(sink.state, &mut live.clone());
             continue;
         };
         // A restored side's piles are rebuilt whole, so nothing there resumes; on the other side the card

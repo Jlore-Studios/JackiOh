@@ -91,7 +91,7 @@ pub struct Scored {
 
 /// R29, §5.1: the candidate pool — Core only, because #97 says "only from the core set" (B2.6), and
 /// never #97 itself, named by its id (R387). `query` already drops tokens.
-pub fn candidate_defs() -> Vec<CardDef> {
+pub fn candidate_defs() -> Vec<&'static CardDef> {
     let zephyrs = crate::catalog::def_by_index(SetName::Core, ZEPHYRS_INDEX).map(|def| def.id.clone());
     let query = match zephyrs {
         None => json!({ "set": "Core" }),

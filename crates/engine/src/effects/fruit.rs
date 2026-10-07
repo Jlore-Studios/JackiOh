@@ -259,13 +259,13 @@ pub fn replace_hand_with_random(args: ReplaceHandWithRandomArgs) -> Effect {
         }
         for card in &replaced {
             // The card as it stands now (TS read the live object's zone).
-            let Some(card) = find_instance(ctx.sink.state, &card.id).cloned() else {
+            let Some(mut card) = find_instance(ctx.sink.state, &card.id).cloned() else {
                 continue;
             };
             if card.zone.z() != ZoneName::Hand {
                 continue;
             }
-            let moved = move_to_zone(ctx.sink.state, &card, OffFieldZone::Graveyard, Default::default());
+            let moved = move_to_zone(ctx.sink.state, &mut card, OffFieldZone::Graveyard, Default::default());
             let landed = find_instance(ctx.sink.state, &card.id).cloned().unwrap_or(card);
             report_graveyard_landing(ctx, &landed, moved);
         }

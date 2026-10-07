@@ -20,7 +20,8 @@ use crate::zones::{MoveResult, OffFieldZone, move_to_zone};
 /// counts only a card that gets there (R55); a unit-token card ceases to exist instead (R11); the
 /// `exiled` event reports the card leaving either way.
 fn exile_card(ctx: &mut EffectContext<'_>, card: &CardInstance) {
-    let moved = move_to_zone(ctx.sink.state, card, OffFieldZone::Exile, Default::default());
+    let mut card = card.clone();
+    let moved = move_to_zone(ctx.sink.state, &mut card, OffFieldZone::Exile, Default::default());
     if matches!(moved, MoveResult::Moved) {
         ctx.sink.state.counters.exiled += 1;
     }

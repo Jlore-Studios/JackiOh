@@ -96,7 +96,7 @@ fn replace_on_field(
     replacement.summoned_turn = Some(turn);
     let replacement_id = replacement.id.clone();
 
-    if !replace_in_zone(&mut *ctx.state, old, replacement) {
+    if !replace_in_zone(&mut *ctx.state, old, &mut replacement) {
         return None;
     }
     // The replaced card ceases to exist: no graveyard, no exile pile, no Death trigger (§6.3, R35) —
@@ -165,7 +165,7 @@ fn replace_off_field(
     let made = replacement.clone();
     let _ = move_to_zone(
         &mut *ctx.state,
-        replacement,
+        &mut replacement,
         at,
         MoveToZoneOptions {
             position: Some(LibraryPosition::At(index as i32)),
@@ -367,10 +367,9 @@ pub fn transform_random(args: TransformRandomArgs) -> Effect {
             None => ctx.def_id.clone(),
         };
         let asked = excluding_def_id(Some(&*ctx.state), &args.query.clone().unwrap_or_default(), own.as_deref());
-        let pool: Vec<CardDef> = query(&asked)
+        let pool: Vec<&CardDef> = query(&asked)
             .into_iter()
             .filter(|def| can_replace(&old, def))
-            .cloned()
             .collect();
         // R673: a card transformed in a hand or a deck is generated there and may be Glitch; one on the
         // field may not, since Glitch is only ever played.
@@ -384,7 +383,7 @@ pub fn transform_random(args: TransformRandomArgs) -> Effect {
             Some(TransformRadiant::Flag(flag)) => flag,
             None => false,
         };
-        let replacement = replace_card(ctx, &old, &def, radiant);
+        let replacement = replace_card(ctx, &old, def, radiant);
         if let Some(replacement) = replacement
             && args.ready_to_attack == Some(true)
             && replacement.zone.z() == ZoneName::Field
@@ -440,7 +439,7 @@ pub fn transform_beneath(args: TransformBeneathArgs) -> Effect {
             let hidden_from = unreadable_by(ctx, old);
             let copy_id = copy.id.clone();
             let copy_def_id = copy.def_id.clone();
-            if !replace_in_zone(&mut *ctx.state, old, copy) {
+            if !replace_in_zone(&mut *ctx.state, old, &mut copy) {
                 continue;
             }
             if let Some(live) = find_instance_mut(ctx.state, &copy_id) {
@@ -485,22 +484,21 @@ pub fn swap_book(args: SwapBookArgs) -> Effect {
             return;
         }
         let books: CatalogQueryArgs = json_as(json!({ "tags": ["Book"] }));
-        let pool: Vec<CardDef> = query(&books)
+        let pool: Vec<&CardDef> = query(&books)
             .into_iter()
             .filter(|def| def.id != old.def_id && def.id != args.from)
-            .cloned()
             .collect();
         let Some(def) = pick_generated(ctx.sink.rng, &pool, None) else {
             return;
         };
         let temporary = is_temporary_card(ctx.state, &old);
-        let Some(replacement) = replace_card(ctx, &old, &def, old.radiant) else {
+        let Some(replacement) = replace_card(ctx, &old, def, old.radiant) else {
             return;
         };
         if let Some(live) = find_instance_mut(ctx.state, &replacement.id) {
             let _ = add_enchantment(
                 live,
-                Enchantment::SwapsBook {
+                &Enchantment::SwapsBook {
                     from: args.from.clone(),
                 },
             );

@@ -17,7 +17,7 @@ use super::targets::{TargetSpec, instance_on_its_stay, resolve_target};
 use crate::brittle_count::{active_brittle_count, gain_brittle_count, give_brittle_count};
 use crate::damage::DamageTarget;
 use crate::script::{Effect, EffectContext};
-use crate::state::{CardInstance, find_instance};
+use crate::state::{CardInstance, GameState, find_instance, find_instance_mut};
 use crate::wire::{CounterKind, GameEvent, ZoneName};
 
 /// Which cards a Brittle verb reaches: one named card (a spec or an id a script captured), or a scope.
@@ -96,11 +96,24 @@ fn report(ctx: &mut EffectContext<'_>, card: &CardInstance) {
     });
 }
 
+/// Change the count of the card as it stands in the state (TS wrote through the live object the scope or
+/// target handed back): the verb runs on a copy of the live card, and the count it leaves is written back.
+fn write_count(ctx: &mut EffectContext<'_>, card: &CardInstance, change: impl FnOnce(&GameState, &mut CardInstance)) {
+    let mut live = find_instance(ctx.state, &card.id)
+        .cloned()
+        .unwrap_or_else(|| card.clone());
+    change(ctx.state, &mut live);
+    if let Some(stored) = find_instance_mut(&mut *ctx.state, &card.id) {
+        stored.brittle = live.brittle;
+    }
+}
+
 /// B3.3 rule 4: "Give Brittle N" — the count is N from now, whatever it was (a given count, R385).
 pub fn give_brittle(args: GiveBrittleArgs) -> Effect {
     Effect::new("giveBrittle", move |ctx| {
         for entry in reached(ctx, &args.on) {
-            give_brittle_count(&mut *ctx.state, &entry.card, args.n);
+            let n = args.n;
+            write_count(ctx, &entry.card, |state, card| give_brittle_count(state, card, n));
             if entry.report {
                 report(ctx, &entry.card);
             }
@@ -113,7 +126,8 @@ pub fn give_brittle(args: GiveBrittleArgs) -> Effect {
 pub fn gain_brittle(args: GainBrittleArgs) -> Effect {
     Effect::new("gainBrittle", move |ctx| {
         for entry in reached(ctx, &args.on) {
-            gain_brittle_count(&mut *ctx.state, &entry.card, args.n);
+            let n = args.n;
+            write_count(ctx, &entry.card, |state, card| gain_brittle_count(state, card, n));
             if entry.report {
                 report(ctx, &entry.card);
             }

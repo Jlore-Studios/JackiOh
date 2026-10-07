@@ -984,7 +984,7 @@ fn build_state(opts: &ScenarioOptions) -> Result<GameState, String> {
     for player in PLAYER_IDS {
         let library = state.players[player].library.clone();
         for card in &library {
-            crate::zones::remove_from_any_zone(&mut state, card);
+            crate::zones::remove_from_any_zone(&mut state, &mut card.clone());
         }
     }
     state.next_id = 1;

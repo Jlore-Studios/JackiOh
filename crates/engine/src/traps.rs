@@ -318,7 +318,7 @@ pub fn consume_trap(sink: &mut EngineSink<'_>, instance: &CardInstance) {
     // B5 E5: its graveyard, or wherever a replacement sends it (Classic #50 Voidwalker's exile).
     let result = crate::zones::move_to_zone(
         sink.state,
-        &card,
+        &mut card,
         crate::zones::OffFieldZone::Graveyard,
         Default::default(),
     );

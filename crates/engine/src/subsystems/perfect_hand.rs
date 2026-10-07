@@ -9,7 +9,6 @@
 //!
 //! Port of `packages/engine/src/subsystems/perfectHand.ts`.
 
-use std::borrow::Borrow;
 use std::cmp::Ordering;
 
 use serde::{Deserialize, Serialize};
@@ -39,14 +38,9 @@ pub struct ReplaceHandWithPerfectArgs {
     pub radiant: Option<bool>,
 }
 
-/// The definitions a catalog query hands back, as owned copies.
-fn owned_defs<R: Borrow<CardDef>>(defs: impl IntoIterator<Item = R>) -> Vec<CardDef> {
-    defs.into_iter().map(|def| def.borrow().clone()).collect()
-}
-
 /// R416: every non-token Classic and Classic+ card but `selfDefId`'s (R387), best first, ties by id.
 pub fn rank_perfect_hand(state: &GameState, viewer: PlayerId, options: RankPerfectHandOptions) -> Vec<Scored> {
-    let base = dry_run_base(state, viewer);
+    let mut base = dry_run_base(state, viewer);
     // TS `excludingDefId({ set: ["Classic", "Classic+"] }, selfDefId)`: the running card's ids added to
     // the pool's exclusions, none when there is no running card.
     let excluded: Vec<String> = match options.self_def_id.as_deref() {
@@ -68,14 +62,12 @@ pub fn rank_perfect_hand(state: &GameState, viewer: PlayerId, options: RankPerfe
     };
     let pool: crate::catalog::CatalogQueryArgs = json_as(pool);
     let radiant = options.radiant == Some(true);
-    let mut ranked: Vec<Scored> = owned_defs(crate::catalog::query(&pool))
-        .iter()
-        .map(|def| {
-            let scorer_options = ScorerOptions {
-                radiant: Some(radiant),
-            };
-            score_def(state, viewer, def, scorer_options, base.as_ref())
-        })
+    let scorer_options = ScorerOptions {
+        radiant: Some(radiant),
+    };
+    let mut ranked: Vec<Scored> = crate::catalog::query(&pool)
+        .into_iter()
+        .map(|def| score_def(state, viewer, def, &scorer_options, base.as_mut()))
         .collect();
     // TS `b.score - a.score || (a.def.id < b.def.id ? -1 : 1)`: a NaN difference ties, as JS reads it.
     ranked.sort_by(|a, b| match b.score.partial_cmp(&a.score) {
@@ -109,9 +101,10 @@ pub fn replace_hand_with_perfect(args: ReplaceHandWithPerfectArgs) -> Effect {
             },
         );
         for card in &hand {
+            let mut card = card.clone();
             let result = crate::zones::move_to_zone(
                 ctx.sink.state,
-                card,
+                &mut card,
                 crate::zones::OffFieldZone::Graveyard,
                 Default::default(),
             );

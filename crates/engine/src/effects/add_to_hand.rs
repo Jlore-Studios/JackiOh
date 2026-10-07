@@ -78,7 +78,7 @@ fn put_in_hand_with(ctx: &mut EffectContext<'_>, mut card: CardInstance, riders:
         apply_radiant_rider(live, riders);
     }
     let reaches_hand = (ctx.state.players[card.owner].hand.len() as i32) < HAND_CAP;
-    let _ = crate::draw::add_to_hand(ctx, &card);
+    let _ = crate::draw::add_to_hand(ctx, &mut card);
     if reaches_hand && let Some(live) = find_instance_mut(&mut *ctx.state, &card.id) {
         apply_cost_riders(live, riders);
     }
@@ -266,10 +266,10 @@ pub fn add_random_from_graveyard(args: AddRandomFromGraveyardArgs) -> Effect {
             if pool.is_empty() {
                 return;
             }
-            let Some(card) = ctx.rng.pick(&pool).cloned() else {
+            let Some(mut card) = ctx.rng.pick(&pool).cloned() else {
                 return;
             };
-            let _ = crate::draw::add_to_hand(ctx, &card);
+            let _ = crate::draw::add_to_hand(ctx, &mut card);
         }
     })
 }

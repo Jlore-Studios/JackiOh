@@ -302,8 +302,8 @@ fn dealt_quickdraw(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
 
 /// R225: the seat's dealt Quickdraw cards, each as the opening draw it replaces, in the library's order.
 fn deal_quickdraw(sink: &mut EngineSink, player: PlayerId) {
-    for card in dealt_quickdraw(sink.state, player) {
-        move_to_zone(sink.state, &card, OffFieldZone::Hand, MoveToZoneOptions::default());
+    for mut card in dealt_quickdraw(sink.state, player) {
+        move_to_zone(sink.state, &mut card, OffFieldZone::Hand, MoveToZoneOptions::default());
         sink.state.counters.drawn += 1;
         sink.events.push(GameEvent::Drawn {
             player,
@@ -339,8 +339,8 @@ fn deal_suspended(sink: &mut EngineSink, player: PlayerId, count: i32) {
             .cloned()
             .collect()
     };
-    for card in waiting {
-        move_to_zone(sink.state, &card, OffFieldZone::Hand, MoveToZoneOptions::default());
+    for mut card in waiting {
+        move_to_zone(sink.state, &mut card, OffFieldZone::Hand, MoveToZoneOptions::default());
         if let Some(live) = find_instance_mut(sink.state, &card.id) {
             live.memory.insert(SUSPENDED_CAST_KEY.to_string(), Value::Bool(true));
         }
@@ -490,7 +490,7 @@ fn finish_mulligan(
         let position = sink.rng.int(sink.state.players[player].library.len() as i32 + 1);
         move_to_zone(
             sink.state,
-            &card,
+            &mut card,
             OffFieldZone::Library,
             MoveToZoneOptions {
                 position: Some(LibraryPosition::At(position)),
@@ -666,8 +666,8 @@ pub fn deal_coins(sink: &mut EngineSink) {
     for (seat, player) in PLAYER_IDS.into_iter().enumerate() {
         let count = OPENING_COINS.get(seat).copied().unwrap_or(0);
         for _dealt in 0..count {
-            let coin = new_instance(&mut *sink.state, COIN_DEF_ID, player, Zone::Hand { player });
-            add_to_hand(sink, coin);
+            let mut coin = new_instance(&mut *sink.state, COIN_DEF_ID, player, Zone::Hand { player });
+            add_to_hand(sink, &mut coin);
         }
     }
 }
