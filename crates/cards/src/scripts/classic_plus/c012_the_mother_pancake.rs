@@ -45,11 +45,7 @@ mod tests {
     const MOTHER: &str = "classicplus-012";
     const FILLER: &str = "core-005";
 
-    /// The harness registers every card first (TS's harness did on import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn js<T: serde::Serialize>(value: &T) -> Value {
         serde_json::to_value(value).expect("serialises")

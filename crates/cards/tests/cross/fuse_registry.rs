@@ -10,7 +10,6 @@
 //! scripts are built on lookup from the state (SURFACE §6.6), so this holds by construction; the test
 //! still proves it end to end.
 
-use jackioh_cards::register_all;
 use jackioh_engine::testkit::*;
 use jackioh_engine::PlayerId::{P1, P2};
 
@@ -22,11 +21,7 @@ const RENO: &str = "core-053";
 const UNLICENSED: &str = "core-085";
 const LIBRARY: [&str; 6] = [RENO; 6];
 
-/// `scenario(...)` over the real cards: what importing the TS harness registered (`registerAll()`).
-fn scenario(setup: Value) -> Scenario {
-    register_all();
-    jackioh_engine::testkit::scenario(setup)
-}
+use super::scenario;
 
 fn unit_at(g: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
     match g.unit(player, lane) {

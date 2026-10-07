@@ -46,11 +46,7 @@ mod tests {
     const ANTI_ONESHOT: &str = "core-073"; // Field Spell: "Your hero can't take more than 5 damage at once." (Radiant 3)
     const MENACE: &str = "core-019";
 
-    /// `_harness.ts` registers every card on import; the engine's testkit cannot, so this does.
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn health_lost(s: &Scenario) -> Vec<GameEvent> {
         s.last_events()

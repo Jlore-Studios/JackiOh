@@ -57,11 +57,7 @@ mod tests {
     const VANILLA: &str = "core-008";
     const FILLER: &str = "core-011"; // Tempo Timmy, a (1) Unit (never a Stockpile, so the adds read plainly)
 
-    /// `_harness.ts` registers every card on import; the engine's testkit cannot, so this does.
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     /// p1's Stockpile `addedToHand` events in the last step, as `(instanceId, defId)`.
     fn stockpiles(s: &Scenario) -> Vec<(String, String)> {

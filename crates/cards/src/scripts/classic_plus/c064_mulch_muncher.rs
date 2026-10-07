@@ -55,11 +55,7 @@ mod tests {
     const GRAPE: &str = "classicplus-065-1"; // Rotten Grape: (1) Spell, Fruit, Token.
     const FILLER: &str = "core-005";
 
-    /// `_harness.ts` registers every card on import; the engine's testkit cannot, so this does.
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn hand_cost(s: &Scenario, player: PlayerId) -> i32 {
         let card = s

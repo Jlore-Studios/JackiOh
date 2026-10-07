@@ -118,11 +118,7 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    /// The harness, after the catalog and every card script are registered (TS's harness did it on import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn def() -> CardDef {
         crate::register_all();

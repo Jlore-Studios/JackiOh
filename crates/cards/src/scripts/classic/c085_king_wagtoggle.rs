@@ -57,11 +57,7 @@ mod tests {
     const MANA_WELL: &str = "core-006"; // Field Spell
     const SHEEPISH: &str = "core-041"; // Trap
 
-    /// The harness, after the catalog and every card script are registered (TS's harness did it on import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn js<T: serde::Serialize>(value: &T) -> Value {
         serde_json::to_value(value).expect("serialisable")

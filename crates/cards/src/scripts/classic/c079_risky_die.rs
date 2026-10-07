@@ -120,11 +120,7 @@ mod tests {
     const HINDER: &str = "core-021"; // (0) Spell, Cast on draw: … Discard 1.
     const VANILLA: &str = "core-008"; // (1) Unit
 
-    /// The harness, after the catalog and every card script are registered (TS's harness did it on import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn def() -> CardDef {
         crate::register_all();

@@ -23,7 +23,6 @@
 //! owned copies here, read back from the state by id after every step and written through
 //! `find_instance_mut`.
 
-use jackioh_cards::register_all;
 use jackioh_engine::effects::bounce;
 use jackioh_engine::testkit::*;
 use jackioh_engine::PlayerId::{P1, P2};
@@ -45,11 +44,7 @@ const CRAFT: &str = "core-099";
 const MENACE: &str = "core-019";
 const CHAOS: &str = "core-095";
 
-/// `scenario(...)` over the real cards: what importing the TS harness registered (`registerAll()`).
-fn scenario(setup: Value) -> Scenario {
-    register_all();
-    jackioh_engine::testkit::scenario(setup)
-}
+use super::scenario;
 
 /// A cursor at which a base #95's single roll is `effect`, the pick 095's own tests use (R28).
 fn chaos_cursor(seed: &str, effect: &str) -> u32 {

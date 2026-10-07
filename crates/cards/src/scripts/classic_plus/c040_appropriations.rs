@@ -105,11 +105,7 @@ mod tests {
     const FILLER: &str = "core-005";
     const FIENDER: &str = "core-092"; // Felinor Fiender, Stack
 
-    /// The harness's `scenario`, with the shipped cards registered first (the TS harness did it at import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     /// TS `{ ...side, ...over }`: the override's keys replace the side's.
     fn merged(mut side: Value, over: Value) -> Value {

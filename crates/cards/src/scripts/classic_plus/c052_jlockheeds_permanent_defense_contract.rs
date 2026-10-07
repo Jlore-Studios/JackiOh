@@ -77,11 +77,7 @@ mod tests {
     const FILLER: &str = "core-005";
     const POOL: [&str; 5] = ["classic-004", "classicplus-048", "classicplus-051", "core-013", "core-014"];
 
-    /// `_harness.ts` registers every card on import; the engine's testkit cannot, so this does.
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     /// TS `signed({ radiant?, seed?, contracts?, fillers? })`: `None` is the TS default.
     fn signed(radiant: bool, seed: Option<&str>, contracts: Option<usize>, fillers: Option<usize>) -> Scenario {

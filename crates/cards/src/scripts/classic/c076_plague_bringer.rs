@@ -55,11 +55,7 @@ mod tests {
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
     const X: &str = "core-020"; // library filler.
 
-    /// The harness, after the catalog and every card script are registered (TS's harness did it on import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn def() -> CardDef {
         crate::register_all();

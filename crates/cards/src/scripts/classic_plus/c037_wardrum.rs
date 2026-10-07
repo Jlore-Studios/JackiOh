@@ -179,11 +179,7 @@ mod tests {
 
     const LIBRARY: [&str; 8] = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
 
-    /// The harness's `scenario`, with the shipped cards registered first (the TS harness did it at import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn hand(s: &Scenario, def_id: &str) -> String {
         match s.hand(P1).into_iter().find(|held| held.def_id == def_id) {

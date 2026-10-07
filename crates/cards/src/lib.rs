@@ -102,6 +102,14 @@ pub fn register_all() {
     });
 }
 
+/// The card files' tests' `scenario()`: the shipped cards registered first (TS's vitest globalSetup,
+/// which the engine's testkit cannot do: it cannot name this crate), then the testkit's harness.
+#[cfg(test)]
+pub(crate) fn scenario(opts: serde_json::Value) -> jackioh_engine::testkit::Scenario {
+    register_all();
+    jackioh_engine::testkit::scenario(opts)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

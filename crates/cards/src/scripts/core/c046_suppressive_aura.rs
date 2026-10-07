@@ -123,12 +123,7 @@ mod tests {
     use jackioh_engine::testkit::*;
     use jackioh_engine::zones::{OffFieldZone, move_to_zone};
 
-    /// TS's harness registered the real catalog and every script on import (`registerAll()`); the
-    /// Rust testkit cannot name this crate, so the scenario builder registers first.
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     /// TS's `def` (`cardDef("core-046")`): the catalog card this file scripts.
     fn def() -> CardDef {

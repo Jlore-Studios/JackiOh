@@ -21,7 +21,6 @@
 //! are owned copies here, read back from the state by id (`g.card(&id)`) after every step and written
 //! through `find_instance_mut`.
 
-use jackioh_cards::register_all;
 use jackioh_engine::effects::{damage, destroy, draw, exile_matching};
 use jackioh_engine::testkit::*;
 use jackioh_engine::PlayerId::{P1, P2};
@@ -53,11 +52,7 @@ const LIBRARY: [&str; 10] = [VANILLA; 10];
 const REBORN_SEED: &str = "re-entry-reborn-token-32"; // R346 put Pierce in the pool, which moved the roll off "-4"; R636's Windfury moved it off "-10" and "-19"; R49's Deft moved it off "-31".
 const REBORN_SEED_DIGGER: &str = "re-entry-reborn-token-40"; // Same history: R49's Deft moved the roll off "-31".
 
-/// `scenario(...)` over the real cards: what importing the TS harness registered (`registerAll()`).
-fn scenario(setup: Value) -> Scenario {
-    register_all();
-    jackioh_engine::testkit::scenario(setup)
-}
+use super::scenario;
 
 /// TS `at(card)`: the one-instance target list a play sends.
 fn at(card: &CardInstance) -> Value {

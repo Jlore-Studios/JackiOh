@@ -69,11 +69,7 @@ mod tests {
         (1..=12).map(|i| format!("prime-{i}")).collect()
     }
 
-    /// The harness's `scenario`, with the shipped cards registered first (the TS harness did it at import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn events_json(s: &Scenario) -> Vec<Value> {
         s.events().iter().map(|event| serde_json::to_value(event).expect("an event is JSON")).collect()

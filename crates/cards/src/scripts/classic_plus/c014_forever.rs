@@ -60,11 +60,7 @@ mod tests {
     const JELLY_BEAN: &str = "core-027"; // (1) Spell, cast on draw: make a random hand card Radiant, lose 5 health
     const FILLER: &str = "core-008"; // Mr. Vanilla: a Unit, inert
 
-    /// The harness registers every card first (TS's harness did on import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     /// TS `{ ...base, ...over }` on two object literals.
     fn merged(mut base: Value, over: Value) -> Value {

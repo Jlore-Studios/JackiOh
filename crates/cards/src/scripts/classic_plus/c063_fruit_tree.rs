@@ -58,11 +58,7 @@ mod tests {
         "classicplus-065-5",
     ];
 
-    /// `_harness.ts` registers every card on import; the engine's testkit cannot, so this does.
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn is_grape(id: &str) -> bool {
         GRAPES.contains(&id)

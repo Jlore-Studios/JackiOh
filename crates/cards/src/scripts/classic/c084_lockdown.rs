@@ -101,11 +101,7 @@ mod tests {
     const TIMMY: &str = "core-011";
     const GRAND_COUNTERSPELL: &str = "classic-072"; // Trap: when your opponent plays a non-Unit card, Counter it.
 
-    /// The harness, after the catalog and every card script are registered (TS's harness did it on import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn js<T: serde::Serialize>(value: &T) -> Value {
         serde_json::to_value(value).expect("serialisable")

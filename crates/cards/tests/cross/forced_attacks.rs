@@ -12,7 +12,6 @@
 //!
 //! Port of `packages/cards/test/forced-attacks.test.ts` (SURFACE §4.1, §8).
 
-use jackioh_cards::register_all;
 use jackioh_engine::testkit::*;
 use jackioh_engine::PlayerId::{P1, P2};
 
@@ -30,11 +29,7 @@ const SURGERY: &str = "core-063";
 const FIENDER: &str = "core-092";
 const LIBRARY: [&str; 6] = [VANILLA; 6];
 
-/// `scenario(...)` over the real cards: what importing the TS harness registered (`registerAll()`).
-fn scenario(setup: Value) -> Scenario {
-    register_all();
-    jackioh_engine::testkit::scenario(setup)
-}
+use super::scenario;
 
 fn unit_at(g: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
     match g.unit(player, lane) {

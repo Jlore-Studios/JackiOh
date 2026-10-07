@@ -49,11 +49,7 @@ mod tests {
     const BONE_STORM: &str = "classicplus-036-1";
     const FILLER: &str = "core-005"; // Stockpile: inert in a library.
 
-    /// The harness's `scenario`, with the shipped cards registered first (the TS harness did it at import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn bones_in(s: &Scenario, player: PlayerId) -> usize {
         s.pile(player, "library").into_iter().filter(|card| card.def_id == BONE_STORM).count()

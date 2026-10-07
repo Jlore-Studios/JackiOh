@@ -94,11 +94,7 @@ mod tests {
     const GIFT: &str = "classicplus-042-1"; // (4) Field Spell with mana 1, discards 1, heal 5
     const FILLER: &str = "core-005";
 
-    /// The harness's `scenario`, with the shipped cards registered first (the TS harness did it at import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn constant(hand: &[&str], radiant_face: bool, seed: Option<&str>) -> Scenario {
         let mut cards = vec![json!({ "def": CONSTANT, "radiant": radiant_face })];

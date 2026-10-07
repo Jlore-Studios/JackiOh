@@ -46,11 +46,7 @@ mod tests {
     const CONJURE_KY: &str = "core-057";
     const FILLER: &str = "core-005";
 
-    /// The harness's `scenario`, with the shipped cards registered first (the TS harness did it at import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     /// TS `type Difficulty = "Easy" | "Medium" | "Hard"`, read as the config's difficulty.
     fn difficulty_of(name: &str) -> KyTestDifficulty {

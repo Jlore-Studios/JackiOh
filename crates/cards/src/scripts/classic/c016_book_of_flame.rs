@@ -44,11 +44,7 @@ mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
 
-    /// Card tests run on the real catalog and scripts (TS: the vitest globalSetup's `registerAll`).
-    fn scenario(setup: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(setup)
-    }
+    use crate::scenario;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;

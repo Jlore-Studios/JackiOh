@@ -87,12 +87,7 @@ mod tests {
     use super::script;
     use jackioh_engine::testkit::*;
 
-    /// TS's harness registered the real catalog and every script on import (`registerAll()`); the
-    /// Rust testkit cannot name this crate, so the scenario builder registers first.
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     /// A library of `n` identical non-Radiant, non-token cards. Identity is irrelevant to every clause
     /// of this card — only the counts and the flags are — and #25 4-mana 7/7 has no script at all, so

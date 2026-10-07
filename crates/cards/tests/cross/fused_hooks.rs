@@ -34,7 +34,6 @@
 //! owned copies here, read back from the state by id after every step and written through
 //! `find_instance_mut`; a regular expression on a fused id is the hand check `is_fused_id`.
 
-use jackioh_cards::register_all;
 use jackioh_engine::subsystems::fuse::FuseArgs;
 use jackioh_engine::testkit::*;
 use jackioh_engine::PlayerId::{P1, P2};
@@ -49,11 +48,7 @@ const PREJUDICED_POSTDOC: &str = "core-061";
 const MASOCHISM_MASK: &str = "core-065";
 const TWISTED_SORCERER: &str = "core-068";
 
-/// `scenario(...)` over the real cards: what importing the TS harness registered (`registerAll()`).
-fn scenario(setup: Value) -> Scenario {
-    register_all();
-    jackioh_engine::testkit::scenario(setup)
-}
+use super::scenario;
 
 fn must<T>(value: Option<T>, what: &str) -> T {
     match value {

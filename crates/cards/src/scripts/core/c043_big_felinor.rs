@@ -75,12 +75,7 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
-    /// TS's harness registered the real catalog and every script on import (`registerAll()`); the
-    /// Rust testkit cannot name this crate, so the scenario builder registers first.
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     /// Big Felinor waits in p1's hand; #21 Hinder rides along so the turn does not auto-end (R82).
     /// `radiant_felinor` flags the hand card Radiant (TS set the flag on it after the build; the setup

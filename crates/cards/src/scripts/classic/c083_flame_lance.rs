@@ -58,11 +58,7 @@ mod tests {
     const THE_ROCK: &str = "core-066"; // 10/10 Indestructible
     const STOCKPILE: &str = "core-005";
 
-    /// The harness, after the catalog and every card script are registered (TS's harness did it on import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn js<T: serde::Serialize>(value: &T) -> Value {
         serde_json::to_value(value).expect("serialisable")

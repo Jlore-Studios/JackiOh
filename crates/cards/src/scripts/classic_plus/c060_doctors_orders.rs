@@ -56,11 +56,7 @@ mod tests {
     const WELL: &str = "core-006"; // Mana Well, a Field Spell to fill a backrow
     const FILLER: &str = "core-005";
 
-    /// `_harness.ts` registers every card on import; the engine's testkit cannot, so this does.
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     /// The Apples that reached a hand in the last step (a draw reports `addedToHand` too), as
     /// `(instanceId, defId)`.

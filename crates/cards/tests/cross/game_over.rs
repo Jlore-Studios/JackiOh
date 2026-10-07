@@ -13,7 +13,6 @@
 //!
 //! Port of `packages/cards/test/game-over.test.ts` (SURFACE §4.1, §8).
 
-use jackioh_cards::register_all;
 use jackioh_engine::testkit::*;
 use jackioh_engine::PlayerId::{P1, P2};
 
@@ -29,11 +28,7 @@ const FULLSEND: &str = "core-078";
 const SCARAB: &str = "core-007";
 const POINTMASTER: &str = "core-020";
 
-/// `scenario(...)` over the real cards: what importing the TS harness registered (`registerAll()`).
-fn scenario(setup: Value) -> Scenario {
-    register_all();
-    jackioh_engine::testkit::scenario(setup)
-}
+use super::scenario;
 
 /// TS `lastEvents.map((event) => event.type)`.
 fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {

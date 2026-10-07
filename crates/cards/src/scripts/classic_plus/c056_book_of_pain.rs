@@ -39,11 +39,7 @@ mod tests {
     const C: &str = "core-020"; // Pointmaster
     const RUSH: &str = "core-t-rush"; // a unit-token card (R11)
 
-    /// `_harness.ts` registers every card on import; the engine's testkit cannot, so this does.
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     /// TS `pain({ radiant?, theirs? })`: `None` is TS's `[A, B, C]`.
     fn pain(radiant: bool, theirs: Option<&[&str]>) -> Scenario {

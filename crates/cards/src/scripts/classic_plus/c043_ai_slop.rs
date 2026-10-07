@@ -58,11 +58,7 @@ mod tests {
         (1..=10).map(|n| format!("classicplus-t-ai-{n:02}")).collect()
     }
 
-    /// The harness's `scenario`, with the shipped cards registered first (the TS harness did it at import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn slop(seed: &str, radiant: bool, hand: Option<Vec<&str>>) -> Scenario {
         let mut cards = vec![json!({ "def": SLOP, "radiant": radiant })];

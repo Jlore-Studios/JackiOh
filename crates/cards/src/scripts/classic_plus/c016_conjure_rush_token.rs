@@ -52,11 +52,7 @@ mod tests {
     const FILLER: &str = "core-005"; // a card in hand, so a turn never auto-ends under the test
     const BODY: &str = "core-019"; // Midrange Menace, a unit to fill a zone
 
-    /// The harness registers every card first (TS's harness did on import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn js<T: serde::Serialize>(value: &T) -> Value {
         serde_json::to_value(value).expect("serialises")

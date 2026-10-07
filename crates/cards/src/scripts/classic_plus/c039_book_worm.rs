@@ -79,11 +79,7 @@ mod tests {
     const FLOOD: &str = "core-017"; // (4) Spell: bounce all Units.
     const FILLER: &str = "core-005";
 
-    /// The harness's `scenario`, with the shipped cards registered first (the TS harness did it at import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn on_field(radiant: bool, hand: &[&str]) -> Scenario {
         scenario(json!({

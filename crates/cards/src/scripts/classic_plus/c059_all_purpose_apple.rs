@@ -56,11 +56,7 @@ mod tests {
     const SOLARIUS: &str = "classicplus-038"; // a Unit printing Spell Damage +2
     const FILLER: &str = "core-005";
 
-    /// `_harness.ts` registers every card on import; the engine's testkit cannot, so this does.
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     /// TS `s.unit(p, lane) ?? ""`: the unit's instance id, or "" (which no card answers to).
     fn unit_id(s: &Scenario, player: PlayerId, lane: i32) -> String {

@@ -14,7 +14,6 @@
 //!
 //! Port of `packages/cards/test/echo-and-exile.test.ts` (SURFACE §4.1, §8).
 
-use jackioh_cards::register_all;
 use jackioh_engine::testkit::*;
 use jackioh_engine::PlayerId::{P1, P2};
 
@@ -30,11 +29,7 @@ const SEVEN_SEVEN: &str = "core-025";
 const RENO: &str = "core-053";
 const LIBRARY: [&str; 6] = [RENO; 6];
 
-/// `scenario(...)` over the real cards: what importing the TS harness registered (`registerAll()`).
-fn scenario(setup: Value) -> Scenario {
-    register_all();
-    jackioh_engine::testkit::scenario(setup)
-}
+use super::scenario;
 
 /// TS `at(card)`: the one-instance target list a play sends.
 fn at(card: &CardInstance) -> Value {

@@ -43,11 +43,7 @@ mod tests {
     const TOKEN: &str = "core-t-rush";
     const FILLER: &str = "core-005";
 
-    /// `_harness.ts` registers every card on import; the engine's testkit cannot, so this does.
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     /// A card on every cell: Mr. Vanilla in each unit zone, a Mana Well in each backrow zone.
     fn full_side() -> Value {

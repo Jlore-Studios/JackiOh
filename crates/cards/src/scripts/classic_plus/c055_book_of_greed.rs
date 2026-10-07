@@ -41,11 +41,7 @@ mod tests {
     const BOOK: &str = "classicplus-055";
     const FILLER: &str = "core-005";
 
-    /// `_harness.ts` registers every card on import; the engine's testkit cannot, so this does.
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     /// TS `book({ radiant?, seed?, fillers? })`: `None` is the TS default.
     fn book(radiant: bool, seed: Option<&str>, fillers: Option<usize>) -> Scenario {

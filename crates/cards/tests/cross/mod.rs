@@ -2,6 +2,12 @@
 //! a per-card file (those are the `mod tests` of their card's script). Written once by part 1; the
 //! files are parts 22–27's.
 
+/// `scenario(...)` over the real cards: what importing the TS harness registered (`registerAll()`).
+pub fn scenario(setup: serde_json::Value) -> jackioh_engine::testkit::Scenario {
+    jackioh_cards::register_all();
+    jackioh_engine::testkit::scenario(setup)
+}
+
 pub mod after_resolution;
 pub mod card_text;
 pub mod catalog;

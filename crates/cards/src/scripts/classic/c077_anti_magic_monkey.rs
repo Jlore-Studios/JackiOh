@@ -73,11 +73,7 @@ mod tests {
     const FILLER: &str = "core-010"; // (0) Spell
     const SECOND_WIND: &str = "classic-028"; // Radiant Aura: you may play cards from your graveyard that cost (1) or more.
 
-    /// The harness, after the catalog and every card script are registered (TS's harness did it on import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn def() -> CardDef {
         crate::register_all();

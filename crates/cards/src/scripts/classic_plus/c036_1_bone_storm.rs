@@ -54,11 +54,7 @@ mod tests {
     const TIMMY: &str = "core-011"; // a 3/3 Unit that keeps p1's turns alive.
     const FILLER: &str = "core-005";
 
-    /// The harness's `scenario`, with the shipped cards registered first (the TS harness did it at import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn storm(radiant: bool) -> Value {
         json!({ "def": BONE_STORM, "radiant": radiant })

@@ -40,11 +40,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // 4/4
     const STOCKPILE: &str = "core-005";
 
-    /// The harness registers every card first (TS's harness did on import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     /// TS `{ ...base, ...over }` on two object literals.
     fn merged(mut base: Value, over: Value) -> Value {

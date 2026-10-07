@@ -42,11 +42,7 @@ mod tests {
     const HONEYPOT: &str = "core-060"; // Trap: Radiant fires on any card the opponent plays; Rush Tokens attack a Unit
     const FILLER: &str = "core-005";
 
-    /// `_harness.ts` registers every card on import; the engine's testkit cannot, so this does.
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn kinds(s: &Scenario, card: &str) -> Vec<String> {
         s.stats(card)

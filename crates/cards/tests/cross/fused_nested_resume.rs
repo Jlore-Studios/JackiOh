@@ -12,7 +12,6 @@
 //!
 //! Port of `packages/cards/test/fused-nested-resume.test.ts` (SURFACE §4.1, §8).
 
-use jackioh_cards::register_all;
 use jackioh_engine::subsystems::fuse::FuseArgs;
 use jackioh_engine::testkit::*;
 use jackioh_engine::PlayerId::{P1, P2};
@@ -23,11 +22,7 @@ const COUNTERSPELL: &str = "classic-017"; // (2) Trap with no table of steps: th
 const FILLER: &str = "core-005";
 const ATTACKER: &str = "core-008"; // 4/4
 
-/// `scenario(...)` over the real cards: what importing the TS harness registered (`registerAll()`).
-fn scenario(setup: Value) -> Scenario {
-    register_all();
-    jackioh_engine::testkit::scenario(setup)
-}
+use super::scenario;
 
 /// TS `craft(s, ingredients)`: `subsystems.fuse` over a sink on the scenario's state, with an event
 /// list of its own and an rng at the state's cursor that nothing writes back.

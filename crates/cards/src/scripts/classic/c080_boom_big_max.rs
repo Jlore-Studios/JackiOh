@@ -56,11 +56,7 @@ mod tests {
     const HIT_JOB: &str = "core-016";
     const STOCKPILE: &str = "core-005";
 
-    /// The harness, after the catalog and every card script are registered (TS's harness did it on import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     fn def() -> CardDef {
         crate::register_all();

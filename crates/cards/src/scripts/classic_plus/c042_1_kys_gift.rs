@@ -57,11 +57,7 @@ mod tests {
     const MENACE: &str = "core-019";
     const TIMMY: &str = "core-011";
 
-    /// The harness's `scenario`, with the shipped cards registered first (the TS harness did it at import).
-    fn scenario(opts: Value) -> Scenario {
-        crate::register_all();
-        jackioh_engine::testkit::scenario(opts)
-    }
+    use crate::scenario;
 
     /// TS `{ ...side, ...over }`: the override's keys replace the side's.
     fn merged(mut side: Value, over: Value) -> Value {
