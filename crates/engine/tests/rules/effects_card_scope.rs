@@ -28,8 +28,8 @@ fn with_ctx<R>(
 ) -> R {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    let sink = EngineSink::new(state, &mut events, &mut rng);
-    let mut ctx = make_context(sink, self_, options);
+    let mut sink = EngineSink::new(state, &mut events, &mut rng);
+    let mut ctx = make_context(&mut sink, self_.as_ref(), options);
     f(&mut ctx)
 }
 
@@ -90,7 +90,7 @@ mod card_scopes_r242_r440 {
                 .map(|entry| entry.card.id.clone())
                 .collect();
             let whole: Vec<(String, bool)> =
-                cards_in_card_scope(ctx, &the_scope, json_as(json!({ "wholeHiddenPiles": true })))
+                cards_in_card_scope(ctx, &the_scope, Some(&json_as(json!({ "wholeHiddenPiles": true }))))
                     .iter()
                     .map(|entry| (entry.card.id.clone(), entry.matches))
                     .collect();
@@ -107,8 +107,8 @@ mod card_scopes_r242_r440 {
         // §3.2.
         let mut state = game(PlayerId::P1);
         let under = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let top = new_instance(&mut state, &stacker.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
-        place_on_field(&mut state, top.clone(), slot(PlayerId::P1, Row::Units, 1), json_as(json!({ "stack": true })));
+        let mut top = new_instance(&mut state, &stacker.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        place_on_field(&mut state, &mut top, slot(PlayerId::P1, Row::Units, 1), json_as(json!({ "stack": true })));
         let back = put(&mut state, &tesla.id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
         let theirs = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let me = find_instance(&state, &top.id).cloned();

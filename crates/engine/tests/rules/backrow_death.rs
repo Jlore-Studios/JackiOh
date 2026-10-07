@@ -100,7 +100,7 @@ mod section_4_5_step_3_death_for_a_collected_backrow_card {
         let one = put(&mut quiet, &bauble.id, slot(P1, Row::Backrow, 1), Default::default());
         let two = put(&mut quiet, &bauble.id, slot(P1, Row::Backrow, 2), Default::default());
         let mut sink = sink_for(&mut quiet);
-        let mut ctx = make_context(sink.reborrow(), None, by(P1));
+        let mut ctx = make_context(&mut sink, None, by(P1));
         apply_effects(
             &[
                 bounce(json_as(json!({ "target": { "of": "instance", "instanceId": one.id } }))),

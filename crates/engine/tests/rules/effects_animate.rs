@@ -42,7 +42,7 @@ mod animate_b3_1_r383 {
         let mut state = playing("animate-self");
         let card = put(&mut state, &springer.id, slot(PlayerId::P2, Row::Backrow, 3), json!({}));
         let events = sink_run(&mut state, |sink| {
-            let mut ctx = make_context(sink.reborrow(), Some(card.clone()), as_player(PlayerId::P2));
+            let mut ctx = make_context(sink, Some(&card), as_player(PlayerId::P2));
             (animate(Default::default()).apply)(&mut ctx);
         });
         assert_eq!(id_at(&state, slot(PlayerId::P2, Row::Units, 3)), Some(card.id.clone()));
@@ -57,7 +57,7 @@ mod animate_b3_1_r383 {
         let card = put(&mut state, &golem.id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
         put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
         let events = sink_run(&mut state, |sink| {
-            let mut ctx = make_context(sink.reborrow(), None, as_player(PlayerId::P1));
+            let mut ctx = make_context(sink, None, as_player(PlayerId::P1));
             (animate(json_as(json!({ "target": { "of": "instance", "instanceId": card.id }, "position": "DEF" }))).apply)(
                 &mut ctx,
             );
@@ -80,14 +80,14 @@ mod animate_b3_1_r383 {
         let held = new_instance(&mut state, &golem.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
         state.players[PlayerId::P1].hand.push(held.clone());
         let buried = put(&mut state, &golem.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
-        let top = new_instance(&mut state, &cover.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
-        place_on_field(&mut state, top.clone(), slot(PlayerId::P1, Row::Backrow, 1), json_as(json!({ "stack": true })));
+        let mut top = new_instance(&mut state, &cover.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        place_on_field(&mut state, &mut top, slot(PlayerId::P1, Row::Backrow, 1), json_as(json!({ "stack": true })));
         put(&mut state, &tower.id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
-        let rider = new_instance(&mut state, &plain.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
-        place_on_field(&mut state, rider.clone(), slot(PlayerId::P1, Row::Backrow, 2), Default::default());
+        let mut rider = new_instance(&mut state, &plain.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        place_on_field(&mut state, &mut rider, slot(PlayerId::P1, Row::Backrow, 2), Default::default());
         let events = sink_run(&mut state, |sink| {
             for card in [&held, &buried, &rider] {
-                let mut ctx = make_context(sink.reborrow(), None, as_player(PlayerId::P1));
+                let mut ctx = make_context(sink, None, as_player(PlayerId::P1));
                 (animate(json_as(json!({ "target": { "of": "instance", "instanceId": card.id } }))).apply)(&mut ctx);
             }
         });
@@ -101,11 +101,11 @@ mod animate_b3_1_r383 {
         let mut state = playing("animate-already");
         let card = put(&mut state, &springer.id, slot(PlayerId::P2, Row::Backrow, 4), json!({}));
         let events = sink_run(&mut state, |sink| {
-            let mut ctx = make_context(sink.reborrow(), Some(card.clone()), as_player(PlayerId::P2));
+            let mut ctx = make_context(sink, Some(&card), as_player(PlayerId::P2));
             (animate(json_as(json!({ "position": "DEF" }))).apply)(&mut ctx);
             // TS passed the same live object again; here the card is read back as it now stands.
             let now = find_instance(sink.state, &card.id).cloned();
-            let mut ctx = make_context(sink.reborrow(), now, as_player(PlayerId::P2));
+            let mut ctx = make_context(sink, now.as_ref(), as_player(PlayerId::P2));
             (animate(json_as(json!({ "position": "ATK" }))).apply)(&mut ctx);
         });
         assert_eq!(id_at(&state, slot(PlayerId::P2, Row::Units, 4)), Some(card.id.clone()));
@@ -121,7 +121,7 @@ mod animate_b3_1_r383 {
         }
         let card = put(&mut state, &banner.id, slot(PlayerId::P1, Row::Backrow, 5), json!({}));
         let events = sink_run(&mut state, |sink| {
-            let mut ctx = make_context(sink.reborrow(), Some(card.clone()), as_player(PlayerId::P1));
+            let mut ctx = make_context(sink, Some(&card), as_player(PlayerId::P1));
             (animate(Default::default()).apply)(&mut ctx);
         });
         assert_eq!(id_at(&state, slot(PlayerId::P1, Row::Backrow, 5)), Some(card.id.clone()));

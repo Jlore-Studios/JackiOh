@@ -91,7 +91,11 @@ fn draw_to(state: &mut GameState, more: impl Fn(&EffectContext<'_>) -> bool + Se
         let mut sink = EngineSink::new(state, &mut events, &mut rng);
         let mut ctx =
             make_context(&mut sink, None, HookOptions { controller: Some(PlayerId::P1), ..Default::default() });
-        (draw_while(DrawWhileArgs { more: Arc::new(more) }).apply)(&mut ctx);
+        (draw_while(DrawWhileArgs {
+            more: Arc::new(move |c: &mut EffectContext<'_>| more(c)),
+            player: None,
+        })
+        .apply)(&mut ctx);
     }
     events
 }

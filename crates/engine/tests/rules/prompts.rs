@@ -497,8 +497,8 @@ fn run(state: &mut GameState, effect: Effect, controller: PlayerId) {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     {
-        let sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(sink, None, by(controller));
+        let mut sink = EngineSink::new(state, &mut events, &mut rng);
+        let mut ctx = make_context(&mut sink, None, by(controller));
         (effect.apply)(&mut ctx);
     }
     state.rng_cursor = rng.cursor();
@@ -999,10 +999,10 @@ mod prompts_s10_6_m3_t3 {
         // and so cannot notice it missing. R113 raises rather than dropping an item nobody can resume,
         // so a dropped registration turns every mid-list prompt into an error: assert the wiring, not
         // just the behaviour.
-        assert!(can_resume(&owed.resume));
+        assert!(can_resume(&state, &owed.resume));
         let mut nobody = owed.resume.clone();
         nobody.hook = "__noSuchHook".to_string();
-        assert!(!can_resume(&nobody));
+        assert!(!can_resume(&state, &nobody));
     }
 
     #[test]

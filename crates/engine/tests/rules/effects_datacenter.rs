@@ -68,9 +68,10 @@ fn run(state: &mut GameState, effect: Effect, controller: PlayerId) -> Vec<GameE
     let me = resolving(state, controller);
     let mut sink = sink_for(state);
     {
+        let mut engine_sink = sink.sink();
         let mut ctx = make_context(
-            sink.sink(),
-            Some(me),
+            &mut engine_sink,
+            Some(&me),
             HookOptions { controller: Some(controller), ..Default::default() },
         );
         (effect.apply)(&mut ctx);
@@ -162,7 +163,8 @@ mod draw_while_cheap_t_ai_4_chain_of_thought {
         add_modifier(
             &mut sink_for(&mut taxed).sink(),
             P1,
-            json_as(json!({ "kind": "costRule", "rule": { "amount": 1 }, "expiry": { "until": "never" } })),
+            ModifierExpiry::Never,
+            json_as(json!({ "kind": "costRule", "rule": { "amount": 1 } })),
         );
         run(&mut taxed, chain(1), P1);
         let zones: Vec<ZoneName> = taxed_library.iter().map(|card| zone_of(&taxed, card)).collect();
@@ -354,8 +356,8 @@ mod destroy_field_spells_and_hit_t_ai_6_datacenter_fire {
         let me = resolving(&mut state, P1);
         let reader = SweepReader { state: &state, self_: Some(&me), def_id: None, radiant: false, controller: P1 };
         let before = serde_json::to_string(&state).expect("serialises");
-        assert_eq!(field_spells_doomed(&reader, FieldSpellSide::Any).len(), 2);
-        assert_eq!(field_spells_doomed(&reader, FieldSpellSide::Enemy).len(), 1);
+        assert_eq!(field_spells_doomed(reader, FieldSpellSide::Any).len(), 2);
+        assert_eq!(field_spells_doomed(reader, FieldSpellSide::Enemy).len(), 1);
         assert_eq!(serde_json::to_string(&state).expect("serialises"), before);
     }
 }
