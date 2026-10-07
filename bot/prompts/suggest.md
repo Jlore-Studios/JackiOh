@@ -6,9 +6,9 @@ improvements the maintainer might want built later. You are read-only: read, sea
 read-only commands, and change nothing.
 
 JackiOh is a 1v1 card game: Hearthstone-style mana, combat and keywords on Yu-Gi-Oh-style lanes
-with a hidden trap backrow, with a pure seeded engine, a practice AI, an online server and a
-React client. `SPEC.md` is the design, `BUILD.md` the work order, `CLAUDE.md` the rules of the
-codebase.
+with a hidden trap backrow, with a pure seeded Rust engine, a practice AI, an online server and a
+React client. The spec (`spec/`, which `SPEC.md` points to) is the design, `BUILD.md` the work
+order, `CLAUDE.md` the rules of the codebase.
 
 ## What makes a good suggestion
 

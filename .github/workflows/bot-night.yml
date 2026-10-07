@@ -245,8 +245,8 @@ jobs:
     name: work
     needs: plan
     if: contains(fromJSON('["plan", "build", "revise", "review", "suggest"]'), needs.plan.outputs.action)
-    # The subscription's runner (providers.json `runs_on`). On the machine the CLIs, Node, pnpm
-    # and Python are installed already, and a login there never leaves it.
+    # The subscription's runner (providers.json `runs_on`). On the machine the CLIs, Node, pnpm,
+    # each user's Rust and Python are installed already, and a login there never leaves it.
     runs-on: ${{ needs.plan.outputs.runs_on || 'ubuntu-latest' }}
     timeout-minutes: 350
     permissions:
@@ -283,6 +283,14 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
+
+      # The Rust toolchain rust-toolchain.toml pins, with its components and target, as ci.yml's
+      # setup installs it (.github/actions/setup); the harness's checks run cargo.
+      - uses: dtolnay/rust-toolchain@1.97.0
+        if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
+        with:
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
 
       - uses: actions/setup-python@v5
         if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
