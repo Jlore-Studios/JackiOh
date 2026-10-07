@@ -26,7 +26,7 @@ use serde_json::{json, Value};
 use tokio::sync::{mpsc, MutexGuard};
 
 use jackioh_engine::PlayerId;
-use jackioh_server::actor::ws_server::{Socket, SocketOut};
+use jackioh_server::actor::ws_server::{Socket, SocketFrame};
 use jackioh_server::api::game_records::record_live_game;
 use jackioh_server::api::results::record_result;
 use jackioh_server::app::App;
@@ -130,7 +130,7 @@ fn real_decks() -> (Vec<String>, Vec<String>) {
 struct Client {
     seat: &'static str,
     socket: Socket,
-    frames: mpsc::UnboundedReceiver<SocketOut>,
+    frames: mpsc::UnboundedReceiver<SocketFrame>,
     view: Option<Value>,
     sent: u32,
 }
@@ -153,8 +153,8 @@ impl Client {
     async fn frame(&mut self) -> Value {
         loop {
             match self.frames.recv().await {
-                Some(SocketOut::Text(text)) => return self.absorb(&text),
-                Some(SocketOut::Close { .. }) => {}
+                Some(SocketFrame::Text(text)) => return self.absorb(&text),
+                Some(SocketFrame::Close { .. }) => {}
                 None => panic!("{}'s socket is gone", self.seat),
             }
         }
@@ -163,7 +163,7 @@ impl Client {
     /// This seat's latest view, waiting for the first one.
     async fn current_view(&mut self) -> Value {
         while let Ok(out) = self.frames.try_recv() {
-            if let SocketOut::Text(text) = out {
+            if let SocketFrame::Text(text) = out {
                 self.absorb(&text);
             }
         }

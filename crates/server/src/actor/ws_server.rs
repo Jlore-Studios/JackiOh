@@ -87,13 +87,13 @@ const CLOSE_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// What a `Socket` hands its transport: a text frame, or the closing handshake.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum SocketOut {
+pub enum SocketFrame {
     Text(String),
     Close { code: u16, reason: String },
 }
 
 struct SocketInner {
-    out: mpsc::UnboundedSender<SocketOut>,
+    out: mpsc::UnboundedSender<SocketFrame>,
     open: AtomicBool,
     /// The close handler has run; it runs once, whichever side closed.
     gone: AtomicBool,
@@ -101,8 +101,9 @@ struct SocketInner {
 }
 
 /// One player's connection (TS `Socket`, `actor/contracts.rs`). Text frames only: every protocol
-/// message is JSON. The axum adapter (`socket_from_ws`) and the in-memory test socket both drive
-/// this one type through its channel, so the actor is transport-agnostic.
+/// message is JSON. The axum adapter (`socket_from_ws`) and the in-memory test socket
+/// (`tests/support/socket.rs`) both drive this one type through channels, so the actor is
+/// transport-agnostic.
 ///
 /// Clones are the same connection: equality is identity, as TS compared sockets with `===`.
 #[derive(Clone)]
@@ -111,9 +112,26 @@ pub struct Socket {
 }
 
 impl Socket {
-    /// A socket whose frames go to `out`. The transport reads `out` and calls `receive` and
-    /// `transport_closed` back.
-    pub fn new(out: mpsc::UnboundedSender<SocketOut>) -> Socket {
+    /// A socket over two channels: the frames it sends go to `out`, and the client's text frames
+    /// arrive on `incoming`. When `incoming`'s sender is dropped the transport is gone (a dropped
+    /// connection), and the close handler runs. Spawns the reader, so it is called inside a tokio
+    /// runtime.
+    pub fn new(out: mpsc::UnboundedSender<SocketFrame>, incoming: mpsc::UnboundedReceiver<String>) -> Socket {
+        let socket = Socket::detached(out);
+        let reader = socket.clone();
+        tokio::spawn(async move {
+            let mut incoming = incoming;
+            while let Some(text) = incoming.recv().await {
+                reader.receive(text);
+            }
+            reader.transport_closed();
+        });
+        socket
+    }
+
+    /// A socket whose frames go to `out` and whose transport calls `receive` and
+    /// `transport_closed` itself (the axum adapter does).
+    pub fn detached(out: mpsc::UnboundedSender<SocketFrame>) -> Socket {
         Socket {
             inner: Arc::new(SocketInner {
                 out,
@@ -124,10 +142,10 @@ impl Socket {
         }
     }
 
-    /// A socket and the receiving end of its channel, for a transport (or a test) to drain.
-    pub fn channel() -> (Socket, mpsc::UnboundedReceiver<SocketOut>) {
+    /// A detached socket and the receiving end of its frames, for a transport (or a test) to drain.
+    pub fn channel() -> (Socket, mpsc::UnboundedReceiver<SocketFrame>) {
         let (out, frames) = mpsc::unbounded_channel();
-        (Socket::new(out), frames)
+        (Socket::detached(out), frames)
     }
 
     pub fn is_open(&self) -> bool {
@@ -141,7 +159,7 @@ impl Socket {
             return;
         }
         // The transport is gone if its end of the channel is; the close below is what reports it.
-        let _ = self.inner.out.send(SocketOut::Text(text.into()));
+        let _ = self.inner.out.send(SocketFrame::Text(text.into()));
     }
 
     /// Starts the closing handshake: `ws.close(code ?? 1000, reason ?? "")`. The close handler runs
@@ -150,7 +168,7 @@ impl Socket {
         if !self.inner.open.swap(false, Ordering::SeqCst) {
             return;
         }
-        let _ = self.inner.out.send(SocketOut::Close {
+        let _ = self.inner.out.send(SocketFrame::Close {
             code: code.unwrap_or(CLOSE_NORMAL),
             reason: reason.unwrap_or("").to_string(),
         });
@@ -237,7 +255,7 @@ pub fn socket_from_ws(ws: WebSocket) -> (Socket, tokio::task::JoinHandle<()>) {
     (socket, pump)
 }
 
-async fn pump(mut ws: WebSocket, socket: Socket, mut frames: mpsc::UnboundedReceiver<SocketOut>) {
+async fn pump(mut ws: WebSocket, socket: Socket, mut frames: mpsc::UnboundedReceiver<SocketFrame>) {
     let mut closing: Option<tokio::time::Instant> = None;
     loop {
         let deadline = closing.map(|since| since + CLOSE_HANDSHAKE_TIMEOUT);
@@ -267,12 +285,12 @@ async fn pump(mut ws: WebSocket, socket: Socket, mut frames: mpsc::UnboundedRece
                 None => break,
             },
             outgoing = frames.recv() => match outgoing {
-                Some(SocketOut::Text(text)) => {
+                Some(SocketFrame::Text(text)) => {
                     if ws.send(Message::Text(text.into())).await.is_err() {
                         break;
                     }
                 }
-                Some(SocketOut::Close { code, reason }) => {
+                Some(SocketFrame::Close { code, reason }) => {
                     let _ = ws.send(Message::Close(Some(CloseFrame { code, reason: reason.into() }))).await;
                     closing.get_or_insert_with(tokio::time::Instant::now);
                 }

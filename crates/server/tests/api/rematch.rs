@@ -82,7 +82,7 @@ async fn fake(app: &App) -> MutexGuard<'_, FakeData> {
 
 /// `{ status, body }` of one request (TS's `router(jsonRequest(…))` and `readJson`).
 async fn request(app: &Arc<App>, method: &str, path: &str, token: &str, body: Option<Value>) -> (u16, Value) {
-    let (status, _headers, body) = call(app, method, path, Some(token), body).await;
+    let (status, _headers, body) = call(app, method, path, Some(token), body.unwrap_or(Value::Null)).await;
     (status, body)
 }
 

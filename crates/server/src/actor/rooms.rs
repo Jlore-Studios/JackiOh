@@ -23,7 +23,7 @@
 //! `create` (`POST /api/rooms`) and `join` (`POST /api/rooms/:code/join`), with SURFACE §11.2's
 //! shape; `app.rs`'s `ROUTES` lists them where `createRoomRoutes()` put them in `allRoutes()`.
 
-use std::sync::{LazyLock, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 
 use indexmap::IndexMap;
 use serde_json::{json, Value};
@@ -342,7 +342,10 @@ pub async fn create(app: &App, req: Req) -> ApiResult {
 
 /// POST /api/rooms/:code/join — claim the room and start its game (§9.5, R264): the match for
 /// Best of 1 and All Random, the series for Conquest.
-pub async fn join(app: &App, req: Req) -> ApiResult {
+///
+/// Takes `&Arc<App>`, not SURFACE §11.2's `&App`: it starts a match, and `Registry::start` takes
+/// `&Arc<App>` (the same choice `api::queue::enqueue` makes; part 31 settles `h!`).
+pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     let profile_id = profile_of(&req)?;
     assert_not_in_match(&req)?;
     let choice = read_mode_choice(&req.body)?;
@@ -409,7 +412,7 @@ pub async fn join(app: &App, req: Req) -> ApiResult {
         // of the queue and the room until the pick deadline ran it out (R333).
         let started: Result<SeriesRow, ApiError> = async {
             let mut tx = app.db.begin(None).await?;
-            let series = start_series(app, input, &mut tx).await?;
+            let series = start_series(app, &input, &mut tx).await?;
             tx.commit().await?;
             Ok(series)
         }
