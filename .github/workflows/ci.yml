@@ -543,8 +543,11 @@ jobs:
           path: e2e/artifacts/component/screenshots
           if-no-files-found: warn
 
+  # A dispatch with `e2e: all` reports as `e2e all`, never under the required check's name: its
+  # result lands on the branch's head commit, which is a pull request's head too, and must not stand
+  # in for (or turn red) that pull request's own `e2e smoke`.
   e2e-smoke:
-    name: e2e smoke
+    name: ${{ inputs.e2e == 'all' && 'e2e all' || 'e2e smoke' }}
     needs: [changes, e2e-smoke-shard, e2e-component]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest

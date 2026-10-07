@@ -332,6 +332,9 @@ class RequiredChecksTests(unittest.TestCase):
                 continue
             for raw in re.findall(r"^    name: (.+)$", text, re.M):
                 raw = raw.strip().strip('"')
+                # A name chosen by a dispatch input (`inputs.x == 'v' && 'A' || 'B'`) is its `B` on a
+                # pull request, which has no inputs.
+                raw = re.sub(r"\$\{\{ inputs\.[\w-]+ == '[^']*' && '[^']*' \|\| '([^']*)' \}\}", r"\1", raw)
                 if "${{ matrix.browser }}" in raw:
                     names.update(raw.replace("${{ matrix.browser }}", b) for b in ("chrome", "electron"))
                 else:
