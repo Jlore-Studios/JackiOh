@@ -3832,19 +3832,24 @@
         {
           "at": "2026-10-06T13:40:42Z",
           "minutes": 9.8
+        },
+        {
+          "at": "2026-10-07T01:56:57Z",
+          "minutes": 7.8
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-06T18:30:00Z",
-          "utilization": 0.9
+          "resets_at": "2026-10-07T06:40:00Z",
+          "utilization": 1.01
         },
-        "observed_at": "2026-10-06T13:40:42Z",
+        "observed_at": "2026-10-07T01:56:57Z",
+        "rejected_resets_at": "2026-10-07T06:40:00Z",
         "seven_day": {
           "resets_at": "2026-10-10T05:00:00Z",
-          "utilization": 0.33
+          "utilization": 0.42
         },
-        "status": "allowed_warning"
+        "status": "rejected"
       }
     },
     "claude-3": {
