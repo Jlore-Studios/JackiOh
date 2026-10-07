@@ -37,3 +37,9 @@ __pycache__/
 package-lock.json
 .polish-website/
 .wrangler/
+
+# The v0.3.0 Rust workspace (docs/v0.3.0/SURFACE.md §1): cargo's build output, the downloaded
+# wasm-bindgen-cli (scripts/build-wasm.sh) and the generated WASM package the web client loads.
+target/
+.cache/
+apps/web/src/wasm/pkg/

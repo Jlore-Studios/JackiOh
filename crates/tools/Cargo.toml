@@ -1,0 +1,23 @@
+[package]
+name = "jackioh-tools"
+description = "The `jackioh` CLI: fuzz, replay, catalog, patches, gates, golden traces, the spec graph, training (docs/v0.3.0/SURFACE.md §12)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "jackioh"
+path = "src/main.rs"
+
+[dependencies]
+# testkit: fuzz's invariant monitor (SURFACE §2, §8).
+jackioh-engine = { workspace = true, features = ["testkit"] }
+jackioh-cards = { workspace = true }
+jackioh-ai = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+indexmap = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
+rayon = { workspace = true }

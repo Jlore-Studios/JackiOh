@@ -1,0 +1,6936 @@
+[
+  {
+    "version": "v0.1.0",
+    "date": "2026-09-18",
+    "title": "Core as first built",
+    "source": "The initial commit (4626690)",
+    "notes": "The Core set as first built: 100 cards and 9 tokens.",
+    "changes": [
+      {
+        "id": "core-001",
+        "name": "Big D-fender",
+        "kind": "added"
+      },
+      {
+        "id": "core-002",
+        "name": "Bigot",
+        "kind": "added"
+      },
+      {
+        "id": "core-003",
+        "name": "Right-house defender",
+        "kind": "added"
+      },
+      {
+        "id": "core-004",
+        "name": "Gary the Gambler",
+        "kind": "added"
+      },
+      {
+        "id": "core-005",
+        "name": "Stockpile",
+        "kind": "added"
+      },
+      {
+        "id": "core-006",
+        "name": "Mana Well",
+        "kind": "added"
+      },
+      {
+        "id": "core-007",
+        "name": "Jewelosco Scarab",
+        "kind": "added"
+      },
+      {
+        "id": "core-008",
+        "name": "Mr. Vanilla",
+        "kind": "added"
+      },
+      {
+        "id": "core-009",
+        "name": "Moths to the Flame",
+        "kind": "added"
+      },
+      {
+        "id": "core-010",
+        "name": "Rapid Replenish",
+        "kind": "added"
+      },
+      {
+        "id": "core-011",
+        "name": "Tempo Timmy",
+        "kind": "added"
+      },
+      {
+        "id": "core-012",
+        "name": "Duplicating Felinors",
+        "kind": "added"
+      },
+      {
+        "id": "core-013",
+        "name": "Jlockeed Shredder-10",
+        "kind": "added"
+      },
+      {
+        "id": "core-014",
+        "name": "Jlockeed's Weapons",
+        "kind": "added"
+      },
+      {
+        "id": "core-015",
+        "name": "Me and Mr Token",
+        "kind": "added"
+      },
+      {
+        "id": "core-016",
+        "name": "Hit Job",
+        "kind": "added"
+      },
+      {
+        "id": "core-017",
+        "name": "Flood",
+        "kind": "added"
+      },
+      {
+        "id": "core-018",
+        "name": "Bread and Butter",
+        "kind": "added"
+      },
+      {
+        "id": "core-019",
+        "name": "Midrange Menace",
+        "kind": "added"
+      },
+      {
+        "id": "core-020",
+        "name": "Pointmaster",
+        "kind": "added"
+      },
+      {
+        "id": "core-021",
+        "name": "Hinder",
+        "kind": "added"
+      },
+      {
+        "id": "core-022",
+        "name": "Carnivorous Cube",
+        "kind": "added"
+      },
+      {
+        "id": "core-023",
+        "name": "Reoccurring Dream",
+        "kind": "added"
+      },
+      {
+        "id": "core-024",
+        "name": "Efficiency Dividend",
+        "kind": "added"
+      },
+      {
+        "id": "core-025",
+        "name": "4-mana 7/7",
+        "kind": "added"
+      },
+      {
+        "id": "core-026",
+        "name": "Glowy Jelly Bean",
+        "kind": "added"
+      },
+      {
+        "id": "core-027",
+        "name": "Blood Ridden Glowy Jelly Bean",
+        "kind": "added"
+      },
+      {
+        "id": "core-028",
+        "name": "Knockoff Temu Glowy Jelly Bean",
+        "kind": "added"
+      },
+      {
+        "id": "core-029",
+        "name": "GIGA Glowy Jelly Bean",
+        "kind": "added"
+      },
+      {
+        "id": "core-030",
+        "name": "Archivist",
+        "kind": "added"
+      },
+      {
+        "id": "core-031",
+        "name": "KY's Math Equation",
+        "kind": "added"
+      },
+      {
+        "id": "core-032",
+        "name": "Prem Panther",
+        "kind": "added"
+      },
+      {
+        "id": "core-033",
+        "name": "Unstable Clone Machine",
+        "kind": "added"
+      },
+      {
+        "id": "core-034",
+        "name": "Collateral Damage",
+        "kind": "added"
+      },
+      {
+        "id": "core-035",
+        "name": "Lunar Eclipse",
+        "kind": "added"
+      },
+      {
+        "id": "core-036",
+        "name": "Magic Jammed",
+        "kind": "added"
+      },
+      {
+        "id": "core-037",
+        "name": "Gravedigger",
+        "kind": "added"
+      },
+      {
+        "id": "core-038",
+        "name": "Quickstriker",
+        "kind": "added"
+      },
+      {
+        "id": "core-039",
+        "name": "Recycling Initiative",
+        "kind": "added"
+      },
+      {
+        "id": "core-040",
+        "name": "Echoes of the Forgotten",
+        "kind": "added"
+      },
+      {
+        "id": "core-041",
+        "name": "Sheepish",
+        "kind": "added"
+      },
+      {
+        "id": "core-042",
+        "name": "Eugenics",
+        "kind": "added"
+      },
+      {
+        "id": "core-043",
+        "name": "Big Felinor",
+        "kind": "added"
+      },
+      {
+        "id": "core-044",
+        "name": "True Strike",
+        "kind": "added"
+      },
+      {
+        "id": "core-045",
+        "name": "Deft Duelist",
+        "kind": "added"
+      },
+      {
+        "id": "core-046",
+        "name": "Suppressive Aura",
+        "kind": "added"
+      },
+      {
+        "id": "core-047",
+        "name": "Fig of Life",
+        "kind": "added"
+      },
+      {
+        "id": "core-048",
+        "name": "5pek Controller",
+        "kind": "added"
+      },
+      {
+        "id": "core-049",
+        "name": "Snom Bunny Mind Control",
+        "kind": "added"
+      },
+      {
+        "id": "core-050",
+        "name": "Kpop Fanatic",
+        "kind": "added"
+      },
+      {
+        "id": "core-051",
+        "name": "KY's Private Tutor",
+        "kind": "added"
+      },
+      {
+        "id": "core-051-1",
+        "name": "KY's Empty Notebook",
+        "kind": "added"
+      },
+      {
+        "id": "core-052",
+        "name": "Silly Silas",
+        "kind": "added"
+      },
+      {
+        "id": "core-053",
+        "name": "Reno",
+        "kind": "added"
+      },
+      {
+        "id": "core-054",
+        "name": "Straaza",
+        "kind": "added"
+      },
+      {
+        "id": "core-055",
+        "name": "Lava Golem",
+        "kind": "added"
+      },
+      {
+        "id": "core-056",
+        "name": "Jilliax",
+        "kind": "added"
+      },
+      {
+        "id": "core-057",
+        "name": "Conjure KY",
+        "kind": "added"
+      },
+      {
+        "id": "core-058",
+        "name": "Rush Token Farm",
+        "kind": "added"
+      },
+      {
+        "id": "core-059",
+        "name": "Unbiased Immigration",
+        "kind": "added"
+      },
+      {
+        "id": "core-060",
+        "name": "Bear Honeypot",
+        "kind": "added"
+      },
+      {
+        "id": "core-061",
+        "name": "Prejudiced Postdoc",
+        "kind": "added"
+      },
+      {
+        "id": "core-062",
+        "name": "Friend of Felinors",
+        "kind": "added"
+      },
+      {
+        "id": "core-063",
+        "name": "Plastic Surgery",
+        "kind": "added"
+      },
+      {
+        "id": "core-064",
+        "name": "Gifted Program",
+        "kind": "added"
+      },
+      {
+        "id": "core-065",
+        "name": "Masochism Mask",
+        "kind": "added"
+      },
+      {
+        "id": "core-065-1",
+        "name": "Spikey Pillow",
+        "kind": "added"
+      },
+      {
+        "id": "core-066",
+        "name": "The Rock",
+        "kind": "added"
+      },
+      {
+        "id": "core-067",
+        "name": "Zoomerbin Oomen",
+        "kind": "added"
+      },
+      {
+        "id": "core-068",
+        "name": "Twisted Sourcerer",
+        "kind": "added"
+      },
+      {
+        "id": "core-069",
+        "name": "Call to Arms",
+        "kind": "added"
+      },
+      {
+        "id": "core-070",
+        "name": "Spiteful Stab",
+        "kind": "added"
+      },
+      {
+        "id": "core-071",
+        "name": "Intern Stimmy",
+        "kind": "added"
+      },
+      {
+        "id": "core-072",
+        "name": "Reminisce",
+        "kind": "added"
+      },
+      {
+        "id": "core-073",
+        "name": "Anti-oneshot Armor",
+        "kind": "added"
+      },
+      {
+        "id": "core-074",
+        "name": "Adaptive UI",
+        "kind": "added"
+      },
+      {
+        "id": "core-075",
+        "name": "Infinite Reserves",
+        "kind": "added"
+      },
+      {
+        "id": "core-076",
+        "name": "Field of Dreams",
+        "kind": "added"
+      },
+      {
+        "id": "core-077",
+        "name": "Professor Curvature",
+        "kind": "added"
+      },
+      {
+        "id": "core-078",
+        "name": "/fullsend",
+        "kind": "added"
+      },
+      {
+        "id": "core-079",
+        "name": "Twinspell",
+        "kind": "added"
+      },
+      {
+        "id": "core-080",
+        "name": "Zao Gao",
+        "kind": "added"
+      },
+      {
+        "id": "core-081",
+        "name": "Radiant Saintess",
+        "kind": "added"
+      },
+      {
+        "id": "core-082",
+        "name": "KY's Trial",
+        "kind": "added"
+      },
+      {
+        "id": "core-083",
+        "name": "Transmogulate",
+        "kind": "added"
+      },
+      {
+        "id": "core-084",
+        "name": "Going Long",
+        "kind": "added"
+      },
+      {
+        "id": "core-085",
+        "name": "Unlicensed Experimentation",
+        "kind": "added"
+      },
+      {
+        "id": "core-086",
+        "name": "\"Miss\" Mrow",
+        "kind": "added"
+      },
+      {
+        "id": "core-087",
+        "name": "Pocket Chaos",
+        "kind": "added"
+      },
+      {
+        "id": "core-088",
+        "name": "Twisting Nether",
+        "kind": "added"
+      },
+      {
+        "id": "core-089",
+        "name": "Corpse Eater",
+        "kind": "added"
+      },
+      {
+        "id": "core-090",
+        "name": "CN-Viral Injection",
+        "kind": "added"
+      },
+      {
+        "id": "core-090-1",
+        "name": "CN-Virus",
+        "kind": "added"
+      },
+      {
+        "id": "core-091",
+        "name": "Fed Fauci",
+        "kind": "added"
+      },
+      {
+        "id": "core-092",
+        "name": "Felinor Fiender",
+        "kind": "added"
+      },
+      {
+        "id": "core-093",
+        "name": "Combo-Index",
+        "kind": "added"
+      },
+      {
+        "id": "core-093-1",
+        "name": "Combo-Fodder",
+        "kind": "added"
+      },
+      {
+        "id": "core-094",
+        "name": "Genn's Greed",
+        "kind": "added"
+      },
+      {
+        "id": "core-095",
+        "name": "Call to Chaos (Core Edition)",
+        "kind": "added"
+      },
+      {
+        "id": "core-095-1",
+        "name": "Chaos Golem",
+        "kind": "added"
+      },
+      {
+        "id": "core-096",
+        "name": "My Pawn",
+        "kind": "added"
+      },
+      {
+        "id": "core-097",
+        "name": "Zephyrs",
+        "kind": "added"
+      },
+      {
+        "id": "core-098",
+        "name": "Heroic Power",
+        "kind": "added"
+      },
+      {
+        "id": "core-099",
+        "name": "Craft a Card",
+        "kind": "added"
+      },
+      {
+        "id": "core-100",
+        "name": "Ceaseless Void",
+        "kind": "added"
+      },
+      {
+        "id": "core-t-rush",
+        "name": "Rush Token",
+        "kind": "added"
+      },
+      {
+        "id": "core-t-sheep",
+        "name": "Sheep Token",
+        "kind": "added"
+      },
+      {
+        "id": "core-t-felinor",
+        "name": "Felinor Token",
+        "kind": "added"
+      },
+      {
+        "id": "core-t-bread",
+        "name": "Bread Token",
+        "kind": "added"
+      }
+    ]
+  },
+  {
+    "version": "v0.1.0b",
+    "date": "2026-09-22",
+    "title": "Core Set balance changes",
+    "source": "Issue #1: commits 1539fa7 and cd780db; the designer's balance notes landed first as ba45d13 (PR #2), in the source notes",
+    "notes": "#3 Right-house defender, #68's name, #81 Radiant Saintess (twice), and the Rush, Sheep, Felinor and Bread Tokens' Radiant faces.",
+    "changes": [
+      {
+        "id": "core-003",
+        "name": "Right-house defender",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-068",
+        "name": "Twisted Sorcerer",
+        "kind": "changed",
+        "fields": [
+          "name"
+        ]
+      },
+      {
+        "id": "core-081",
+        "name": "Radiant Saintess",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-t-rush",
+        "name": "Rush Token",
+        "kind": "changed",
+        "fields": [
+          "radiant.attack",
+          "radiant.health",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-t-sheep",
+        "name": "Sheep Token",
+        "kind": "changed",
+        "fields": [
+          "radiant.attack",
+          "radiant.health",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-t-felinor",
+        "name": "Felinor Token",
+        "kind": "changed",
+        "fields": [
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "core-t-bread",
+        "name": "Bread Token",
+        "kind": "changed",
+        "fields": [
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.1.0c",
+    "date": "2026-09-24",
+    "title": "Call to Chaos's text and The Coin",
+    "source": "Commits f5b94bc (PR #11, the edge-case hunt) and a17a9e8 (PR #14)",
+    "notes": "#95 Call to Chaos's text; The Coin added for the player going second.",
+    "changes": [
+      {
+        "id": "core-095",
+        "name": "Call to Chaos (Core Edition)",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "core-t-coin",
+        "name": "The Coin",
+        "kind": "added"
+      }
+    ]
+  },
+  {
+    "version": "v0.1.0d",
+    "date": "2026-09-25",
+    "title": "The Radiant pass",
+    "source": "PR #18 (commit c219bb4), R275-R279",
+    "notes": "Radiant faces meet one standard and print in full; the Jlockeed tag; cards list the cards they name (refs).",
+    "changes": [
+      {
+        "id": "core-001",
+        "name": "Big D-fender",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-003",
+        "name": "Right-house defender",
+        "kind": "changed",
+        "fields": [
+          "refs"
+        ]
+      },
+      {
+        "id": "core-004",
+        "name": "Gary the Gambler",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-005",
+        "name": "Stockpile",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-006",
+        "name": "Mana Well",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-008",
+        "name": "Mr. Vanilla",
+        "kind": "changed",
+        "fields": [
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-009",
+        "name": "Moths to the Flame",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-010",
+        "name": "Rapid Replenish",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-012",
+        "name": "Duplicating Felinors",
+        "kind": "changed",
+        "fields": [
+          "radiant.attack",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-013",
+        "name": "Jlockeed Shredder-10",
+        "kind": "changed",
+        "fields": [
+          "tags",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-014",
+        "name": "Jlockeed's Weapons",
+        "kind": "changed",
+        "fields": [
+          "tags",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-015",
+        "name": "Me and Mr Token",
+        "kind": "changed",
+        "fields": [
+          "refs"
+        ]
+      },
+      {
+        "id": "core-017",
+        "name": "Flood",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-018",
+        "name": "Bread and Butter",
+        "kind": "changed",
+        "fields": [
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "core-019",
+        "name": "Midrange Menace",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-021",
+        "name": "Hinder",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-022",
+        "name": "Carnivorous Cube",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-023",
+        "name": "Reoccurring Dream",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-024",
+        "name": "Efficiency Dividend",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-025",
+        "name": "4-mana 7/7",
+        "kind": "changed",
+        "fields": [
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "core-026",
+        "name": "Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-027",
+        "name": "Blood Ridden Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-028",
+        "name": "Knockoff Temu Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-029",
+        "name": "GIGA Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-030",
+        "name": "Archivist",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-031",
+        "name": "KY's Math Equation",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-032",
+        "name": "Prem Panther",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-033",
+        "name": "Unstable Clone Machine",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-034",
+        "name": "Collateral Damage",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-035",
+        "name": "Lunar Eclipse",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-037",
+        "name": "Gravedigger",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-038",
+        "name": "Quickstriker",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-039",
+        "name": "Recycling Initiative",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-040",
+        "name": "Echoes of the Forgotten",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-041",
+        "name": "Sheepish",
+        "kind": "changed",
+        "fields": [
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "core-042",
+        "name": "Eugenics",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-043",
+        "name": "Big Felinor",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-044",
+        "name": "True Strike",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-045",
+        "name": "Deft Duelist",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-047",
+        "name": "Fig of Life",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-048",
+        "name": "5pek Controller",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-049",
+        "name": "Snom Bunny Mind Control",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-050",
+        "name": "Kpop Fanatic",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-051",
+        "name": "KY's Private Tutor",
+        "kind": "changed",
+        "fields": [
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "core-052",
+        "name": "Silly Silas",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-053",
+        "name": "Reno",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-054",
+        "name": "Straaza",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-055",
+        "name": "Lava Golem",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-057",
+        "name": "Conjure KY",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-058",
+        "name": "Rush Token Farm",
+        "kind": "changed",
+        "fields": [
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "core-059",
+        "name": "Unbiased Immigration",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-060",
+        "name": "Bear Honeypot",
+        "kind": "changed",
+        "fields": [
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "core-061",
+        "name": "Prejudiced Postdoc",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-062",
+        "name": "Friend of Felinors",
+        "kind": "changed",
+        "fields": [
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "core-063",
+        "name": "Plastic Surgery",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-064",
+        "name": "Gifted Program",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-065",
+        "name": "Masochism Mask",
+        "kind": "changed",
+        "fields": [
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "core-065-1",
+        "name": "Spikey Pillow",
+        "kind": "changed",
+        "fields": [
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "core-066",
+        "name": "The Rock",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-067",
+        "name": "Zoomerbin Oomen",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-068",
+        "name": "Twisted Sorcerer",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-069",
+        "name": "Call to Arms",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-070",
+        "name": "Spiteful Stab",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-071",
+        "name": "Intern Stimmy",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-072",
+        "name": "Reminisce",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-073",
+        "name": "Anti-oneshot Armor",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-074",
+        "name": "Adaptive UI",
+        "kind": "changed",
+        "fields": [
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "core-075",
+        "name": "Infinite Reserves",
+        "kind": "changed",
+        "fields": [
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "core-076",
+        "name": "Field of Dreams",
+        "kind": "changed",
+        "fields": [
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "core-077",
+        "name": "Professor Curvature",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-078",
+        "name": "/fullsend",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-079",
+        "name": "Twinspell",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-080",
+        "name": "Zao Gao",
+        "kind": "changed",
+        "fields": [
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "core-081",
+        "name": "Radiant Saintess",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-082",
+        "name": "KY's Trial",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-083",
+        "name": "Transmogulate",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-084",
+        "name": "Going Long",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-085",
+        "name": "Unlicensed Experimentation",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-086",
+        "name": "\"Miss\" Mrow",
+        "kind": "changed",
+        "fields": [
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-087",
+        "name": "Pocket Chaos",
+        "kind": "changed",
+        "fields": [
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "core-088",
+        "name": "Twisting Nether",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-089",
+        "name": "Corpse Eater",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-090",
+        "name": "CN-Viral Injection",
+        "kind": "changed",
+        "fields": [
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "core-090-1",
+        "name": "CN-Virus",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-091",
+        "name": "Fed Fauci",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-092",
+        "name": "Felinor Fiender",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-093",
+        "name": "Combo-Index",
+        "kind": "changed",
+        "fields": [
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "core-093-1",
+        "name": "Combo-Fodder",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-094",
+        "name": "Genn's Greed",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-095",
+        "name": "Call to Chaos (Core Edition)",
+        "kind": "changed",
+        "fields": [
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "core-095-1",
+        "name": "Chaos Golem",
+        "kind": "changed",
+        "fields": [
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-096",
+        "name": "My Pawn",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-097",
+        "name": "Zephyrs",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-098",
+        "name": "Heroic Power",
+        "kind": "changed",
+        "fields": [
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "core-099",
+        "name": "Craft a Card",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-100",
+        "name": "Ceaseless Void",
+        "kind": "changed",
+        "fields": [
+          "radiant.attack",
+          "radiant.health",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-t-rush",
+        "name": "Rush Token",
+        "kind": "changed",
+        "fields": [
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-t-sheep",
+        "name": "Sheep Token",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-t-felinor",
+        "name": "Felinor Token",
+        "kind": "changed",
+        "fields": [
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.1.1",
+    "date": "2026-09-27",
+    "title": "Patch v0.1.1",
+    "source": "Issue #27, PR #28 (commit 1005c50)",
+    "notes": "Pierce, the card patches, Deck and Tribute, and face-down traps that show their cost: the Ghoul Token added and 105 entries changed.",
+    "changes": [
+      {
+        "id": "core-001",
+        "name": "Big D-fender",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "base.text",
+          "radiant.health",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-002",
+        "name": "Bigot",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-003",
+        "name": "Right-house defender",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-004",
+        "name": "Gary the Gambler",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-005",
+        "name": "Stockpile",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-006",
+        "name": "Mana Well",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-007",
+        "name": "Jewelosco Scarab",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-008",
+        "name": "Mr. Vanilla",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-009",
+        "name": "Moths to the Flame",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-010",
+        "name": "Rapid Replenish",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-012",
+        "name": "Duplicating Felinors",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-013",
+        "name": "Jlockeed Shredder-10",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-014",
+        "name": "Jlockeed's Weapons",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-015",
+        "name": "Me and Mr Token",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-016",
+        "name": "Hit Job",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-017",
+        "name": "Flood",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-018",
+        "name": "Bread and Butter",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-019",
+        "name": "Midrange Menace",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-020",
+        "name": "Pointmaster",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "core-021",
+        "name": "Hinder",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-022",
+        "name": "Carnivorous Cube",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-023",
+        "name": "Reoccurring Dream",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-024",
+        "name": "Efficiency Dividend",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-025",
+        "name": "4-mana 7/7",
+        "kind": "changed",
+        "fields": [
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-026",
+        "name": "Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-027",
+        "name": "Blood Ridden Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-028",
+        "name": "Knockoff Temu Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-029",
+        "name": "GIGA Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-030",
+        "name": "Archivist",
+        "kind": "changed",
+        "fields": [
+          "tags",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-031",
+        "name": "KY's Math Equation",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-032",
+        "name": "Prem Panther",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-033",
+        "name": "Unstable Clone Machine",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-034",
+        "name": "Collateral Damage",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-035",
+        "name": "Lunar Eclipse",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-036",
+        "name": "Magic Jammed",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-037",
+        "name": "Gravedigger",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-038",
+        "name": "Quickstriker",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-039",
+        "name": "Recycling Initiative",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-040",
+        "name": "Echoes of the Forgotten",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-041",
+        "name": "Sheepish",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-042",
+        "name": "Eugenics",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-043",
+        "name": "Big Felinor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-044",
+        "name": "True Strike",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-045",
+        "name": "Deft Duelist",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-046",
+        "name": "Suppressive Aura",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-047",
+        "name": "Fig of Life",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-048",
+        "name": "5pek Controller",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-049",
+        "name": "Snom Bunny Mind Control",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-050",
+        "name": "K-Pop Fanatic",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-051",
+        "name": "KY's Private Tutor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-051-1",
+        "name": "KY's Empty Notebook",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-052",
+        "name": "Silly Silas",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-053",
+        "name": "Reno",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-054",
+        "name": "Straaza",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-055",
+        "name": "Lava Golem",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-056",
+        "name": "Jilliax",
+        "kind": "changed",
+        "fields": [
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-057",
+        "name": "Conjure KY",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-058",
+        "name": "Rush Token Farm",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-059",
+        "name": "Unbiased Immigration",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-060",
+        "name": "Bear Honeypot",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-061",
+        "name": "Prejudiced Postdoc",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-062",
+        "name": "Friend of Felinors",
+        "kind": "changed",
+        "fields": [
+          "tags",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-063",
+        "name": "Plastic Surgery",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-064",
+        "name": "Gifted Program",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-065",
+        "name": "Masochism Mask",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-065-1",
+        "name": "Spikey Pillow",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-067",
+        "name": "Zoomerbin Oomen",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-068",
+        "name": "Twisted Sorcerer",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-069",
+        "name": "Call to Arms",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-070",
+        "name": "Spiteful Stab",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-071",
+        "name": "Intern Stimmy",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-072",
+        "name": "Reminisce",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-073",
+        "name": "Anti-oneshot Armor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-074",
+        "name": "Adaptive UI",
+        "kind": "changed",
+        "fields": [
+          "refs",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-075",
+        "name": "Infinite Reserves",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-076",
+        "name": "Field of Dreams",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-077",
+        "name": "Professor Curvature",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-078",
+        "name": "/fullsend",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-079",
+        "name": "Twinspell",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-080",
+        "name": "Zao Gao",
+        "kind": "changed",
+        "fields": [
+          "tags",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-081",
+        "name": "Radiant Saintess",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-082",
+        "name": "KY's Trial",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-083",
+        "name": "Transmogulate",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-084",
+        "name": "Going Long",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-085",
+        "name": "Unlicensed Experimentation",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-086",
+        "name": "\"Miss\" Mrow",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-087",
+        "name": "Pocket Chaos",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-088",
+        "name": "Twisting Nether",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-089",
+        "name": "Corpse Eater",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-090",
+        "name": "CN-Viral Injection",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-090-1",
+        "name": "CN-Virus",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-091",
+        "name": "Fed Fauci",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-092",
+        "name": "Felinor Fiender",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-093",
+        "name": "Combo-Index",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-093-1",
+        "name": "Combo-Fodder",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-094",
+        "name": "Genn's Greed",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-095",
+        "name": "Call to Chaos (Core Edition)",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-096",
+        "name": "My Pawn",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-097",
+        "name": "Zephyrs",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-098",
+        "name": "Heroic Power",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-099",
+        "name": "Craft a Card",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-100",
+        "name": "Ceaseless Void",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-t-rush",
+        "name": "Rush Token",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-t-sheep",
+        "name": "Sheep Token",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-t-coin",
+        "name": "The Coin",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-t-ghoul",
+        "name": "Ghoul Token",
+        "kind": "added"
+      }
+    ]
+  },
+  {
+    "version": "v0.2.0",
+    "date": "2026-09-30",
+    "title": "Patch v0.2.0: Classic and Classic+",
+    "source": "Issue #40; the design brief docs/classic-sets.md",
+    "notes": "Two new sets, Classic (90 cards) and Classic+ (78 cards and 38 tokens), with the keywords Animated, Activate, Brittle, Degrade and Upgrade. Core: Hit Job costs (3); Flood, Collateral Damage, Big Felinor, Snom Bunny Mind Control and Twisting Nether cost (4); Masochism Mask costs (1); new text for Hinder, Carnivorous Cube, KY's Math Equation, Prem Panther, Sheepish, Bear Honeypot and Call to Chaos's Radiant face; every card writes a specific cost as \"(N) Cost\"; every card records its lines of code.",
+    "changes": [
+      {
+        "id": "core-001",
+        "name": "Big D-fender",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-002",
+        "name": "Bigot",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-003",
+        "name": "Right-house defender",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-004",
+        "name": "Gary the Gambler",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-005",
+        "name": "Stockpile",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-006",
+        "name": "Mana Well",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-007",
+        "name": "Jewelosco Scarab",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-008",
+        "name": "Mr. Vanilla",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-009",
+        "name": "Moths to the Flame",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-010",
+        "name": "Rapid Replenish",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-011",
+        "name": "Tempo Timmy",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-012",
+        "name": "Duplicating Felinors",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-013",
+        "name": "Jlockeed Shredder-10",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-014",
+        "name": "Jlockeed's Weapons",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-015",
+        "name": "Me and Mr Token",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-016",
+        "name": "Hit Job",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-017",
+        "name": "Flood",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-018",
+        "name": "Bread and Butter",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-019",
+        "name": "Midrange Menace",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-020",
+        "name": "Pointmaster",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-021",
+        "name": "Hinder",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-022",
+        "name": "Carnivorous Cube",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-023",
+        "name": "Reoccurring Dream",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-024",
+        "name": "Efficiency Dividend",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-025",
+        "name": "4-mana 7/7",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-026",
+        "name": "Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-027",
+        "name": "Blood Ridden Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-028",
+        "name": "Knockoff Temu Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-029",
+        "name": "GIGA Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-030",
+        "name": "Archivist",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-031",
+        "name": "KY's Math Equation",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-032",
+        "name": "Prem Panther",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-033",
+        "name": "Unstable Clone Machine",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-034",
+        "name": "Collateral Damage",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-035",
+        "name": "Lunar Eclipse",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-036",
+        "name": "Magic Jammed",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-037",
+        "name": "Gravedigger",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-038",
+        "name": "Quickstriker",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-039",
+        "name": "Recycling Initiative",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-040",
+        "name": "Echoes of the Forgotten",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-041",
+        "name": "Sheepish",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-042",
+        "name": "Eugenics",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-043",
+        "name": "Big Felinor",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-044",
+        "name": "True Strike",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-045",
+        "name": "Deft Duelist",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-046",
+        "name": "Suppressive Aura",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-047",
+        "name": "Fig of Life",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-048",
+        "name": "5pek Controller",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-049",
+        "name": "Snom Bunny Mind Control",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-050",
+        "name": "K-Pop Fanatic",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-051",
+        "name": "KY's Private Tutor",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-051-1",
+        "name": "KY's Empty Notebook",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-052",
+        "name": "Silly Silas",
+        "kind": "changed",
+        "fields": [
+          "radiant.text",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-053",
+        "name": "Reno",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-054",
+        "name": "Straaza",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-055",
+        "name": "Lava Golem",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-056",
+        "name": "Jilliax",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-057",
+        "name": "Conjure KY",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-058",
+        "name": "Rush Token Farm",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-059",
+        "name": "Unbiased Immigration",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-060",
+        "name": "Bear Honeypot",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-061",
+        "name": "Prejudiced Postdoc",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-062",
+        "name": "Friend of Felinors",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-063",
+        "name": "Plastic Surgery",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-064",
+        "name": "Gifted Program",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-065",
+        "name": "Masochism Mask",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-065-1",
+        "name": "Spikey Pillow",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-066",
+        "name": "The Rock",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-067",
+        "name": "Zoomerbin Oomen",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-068",
+        "name": "Twisted Sorcerer",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-069",
+        "name": "Call to Arms",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-070",
+        "name": "Spiteful Stab",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-071",
+        "name": "Intern Stimmy",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-072",
+        "name": "Reminisce",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-073",
+        "name": "Anti-oneshot Armor",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-074",
+        "name": "Adaptive UI",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-075",
+        "name": "Infinite Reserves",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-076",
+        "name": "Field of Dreams",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-077",
+        "name": "Professor Curvature",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-078",
+        "name": "/fullsend",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-079",
+        "name": "Twinspell",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-080",
+        "name": "Zao Gao",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-081",
+        "name": "Radiant Saintess",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-082",
+        "name": "KY's Trial",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-083",
+        "name": "Transmogulate",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-084",
+        "name": "Going Long",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-085",
+        "name": "Unlicensed Experimentation",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-086",
+        "name": "\"Miss\" Mrow",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-087",
+        "name": "Pocket Chaos",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-088",
+        "name": "Twisting Nether",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-089",
+        "name": "Corpse Eater",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-090",
+        "name": "CN-Viral Injection",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-090-1",
+        "name": "CN-Virus",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-091",
+        "name": "Fed Fauci",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-092",
+        "name": "Felinor Fiender",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-093",
+        "name": "Combo-Index",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-093-1",
+        "name": "Combo-Fodder",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-094",
+        "name": "Genn's Greed",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-095",
+        "name": "Call to Chaos (Core Edition)",
+        "kind": "changed",
+        "fields": [
+          "refs",
+          "base.text",
+          "radiant.text",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-095-1",
+        "name": "Chaos Golem",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-096",
+        "name": "My Pawn",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-097",
+        "name": "Zephyrs",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-098",
+        "name": "Heroic Power",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "loc"
+        ]
+      },
+      {
+        "id": "core-099",
+        "name": "Craft a Card",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-100",
+        "name": "Ceaseless Void",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-t-rush",
+        "name": "Rush Token",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-t-sheep",
+        "name": "Sheep Token",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-t-felinor",
+        "name": "Felinor Token",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-t-bread",
+        "name": "Bread Token",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-t-coin",
+        "name": "The Coin",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-t-ghoul",
+        "name": "Ghoul Token",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classic-001",
+        "name": "Curse of the Forgotten Classic",
+        "kind": "added"
+      },
+      {
+        "id": "classic-002",
+        "name": "The Trickster",
+        "kind": "added"
+      },
+      {
+        "id": "classic-003",
+        "name": "Book of Heal",
+        "kind": "added"
+      },
+      {
+        "id": "classic-004",
+        "name": "Palantir",
+        "kind": "added"
+      },
+      {
+        "id": "classic-005",
+        "name": "Tesla",
+        "kind": "added"
+      },
+      {
+        "id": "classic-006",
+        "name": "Cloaked Toe Cracker",
+        "kind": "added"
+      },
+      {
+        "id": "classic-007",
+        "name": "InfiniScepter",
+        "kind": "added"
+      },
+      {
+        "id": "classic-008",
+        "name": "Pickle",
+        "kind": "added"
+      },
+      {
+        "id": "classic-009",
+        "name": "Income Tax",
+        "kind": "added"
+      },
+      {
+        "id": "classic-010",
+        "name": "Exile",
+        "kind": "added"
+      },
+      {
+        "id": "classic-011",
+        "name": "Mind Melt",
+        "kind": "added"
+      },
+      {
+        "id": "classic-012",
+        "name": "Book of Blood",
+        "kind": "added"
+      },
+      {
+        "id": "classic-013",
+        "name": "Boots on the Ground",
+        "kind": "added"
+      },
+      {
+        "id": "classic-014",
+        "name": "Shadowstep",
+        "kind": "added"
+      },
+      {
+        "id": "classic-015",
+        "name": "Nose Hunter",
+        "kind": "added"
+      },
+      {
+        "id": "classic-016",
+        "name": "Book of Flame",
+        "kind": "added"
+      },
+      {
+        "id": "classic-017",
+        "name": "Counterspell",
+        "kind": "added"
+      },
+      {
+        "id": "classic-018",
+        "name": "Glitch in the System",
+        "kind": "added"
+      },
+      {
+        "id": "classic-019",
+        "name": "Lizard's Breath",
+        "kind": "added"
+      },
+      {
+        "id": "classic-020",
+        "name": "The Power to Punish",
+        "kind": "added"
+      },
+      {
+        "id": "classic-021",
+        "name": "Turtinator",
+        "kind": "added"
+      },
+      {
+        "id": "classic-022",
+        "name": "Mid Runner",
+        "kind": "added"
+      },
+      {
+        "id": "classic-023",
+        "name": "Devil's Pact",
+        "kind": "added"
+      },
+      {
+        "id": "classic-024",
+        "name": "Book of Knowledge",
+        "kind": "added"
+      },
+      {
+        "id": "classic-025",
+        "name": "Lag in the System",
+        "kind": "added"
+      },
+      {
+        "id": "classic-026",
+        "name": "Rapid Draw",
+        "kind": "added"
+      },
+      {
+        "id": "classic-027",
+        "name": "Pestilent Slime",
+        "kind": "added"
+      },
+      {
+        "id": "classic-028",
+        "name": "Second Wind",
+        "kind": "added"
+      },
+      {
+        "id": "classic-029",
+        "name": "Book of Vital Kill",
+        "kind": "added"
+      },
+      {
+        "id": "classic-030",
+        "name": "Recycle",
+        "kind": "added"
+      },
+      {
+        "id": "classic-031",
+        "name": "Cookie Guild",
+        "kind": "added"
+      },
+      {
+        "id": "classic-032",
+        "name": "Felinor Feelings",
+        "kind": "added"
+      },
+      {
+        "id": "classic-033",
+        "name": "Joro",
+        "kind": "added"
+      },
+      {
+        "id": "classic-034",
+        "name": "Ancient Acquisition",
+        "kind": "added"
+      },
+      {
+        "id": "classic-035",
+        "name": "Prep",
+        "kind": "added"
+      },
+      {
+        "id": "classic-036",
+        "name": "Burn",
+        "kind": "added"
+      },
+      {
+        "id": "classic-037",
+        "name": "Last Hurrah",
+        "kind": "added"
+      },
+      {
+        "id": "classic-038",
+        "name": "Jackiestan Auctioneer",
+        "kind": "added"
+      },
+      {
+        "id": "classic-039",
+        "name": "Outbreak",
+        "kind": "added"
+      },
+      {
+        "id": "classic-040",
+        "name": "MC Tech",
+        "kind": "added"
+      },
+      {
+        "id": "classic-041",
+        "name": "State of the Game",
+        "kind": "added"
+      },
+      {
+        "id": "classic-042",
+        "name": "Transmutable Toxins",
+        "kind": "added"
+      },
+      {
+        "id": "classic-043",
+        "name": "Plague Nuke",
+        "kind": "added"
+      },
+      {
+        "id": "classic-044",
+        "name": "Back from the GY",
+        "kind": "added"
+      },
+      {
+        "id": "classic-045",
+        "name": "Nature Titan",
+        "kind": "added"
+      },
+      {
+        "id": "classic-046",
+        "name": "Divine Favor",
+        "kind": "added"
+      },
+      {
+        "id": "classic-047",
+        "name": "Recurring Felinor",
+        "kind": "added"
+      },
+      {
+        "id": "classic-048",
+        "name": "Hired Shrimp",
+        "kind": "added"
+      },
+      {
+        "id": "classic-049",
+        "name": "Anti-Greed Machine",
+        "kind": "added"
+      },
+      {
+        "id": "classic-050",
+        "name": "Voidwalker",
+        "kind": "added"
+      },
+      {
+        "id": "classic-051",
+        "name": "Back Breaker",
+        "kind": "added"
+      },
+      {
+        "id": "classic-052",
+        "name": "Final Gambit",
+        "kind": "added"
+      },
+      {
+        "id": "classic-053",
+        "name": "Plague Crawler",
+        "kind": "added"
+      },
+      {
+        "id": "classic-054",
+        "name": "Rewind",
+        "kind": "added"
+      },
+      {
+        "id": "classic-055",
+        "name": "Book of Wildfire",
+        "kind": "added"
+      },
+      {
+        "id": "classic-056",
+        "name": "Spell Tyrant",
+        "kind": "added"
+      },
+      {
+        "id": "classic-057",
+        "name": "Echo",
+        "kind": "added"
+      },
+      {
+        "id": "classic-058",
+        "name": "Common Resources",
+        "kind": "added"
+      },
+      {
+        "id": "classic-059",
+        "name": "Plague Doctor",
+        "kind": "added"
+      },
+      {
+        "id": "classic-060",
+        "name": "Pile On",
+        "kind": "added"
+      },
+      {
+        "id": "classic-061",
+        "name": "Plague Bringer Goliath",
+        "kind": "added"
+      },
+      {
+        "id": "classic-062",
+        "name": "Living Bomb",
+        "kind": "added"
+      },
+      {
+        "id": "classic-063",
+        "name": "Crop Dusting",
+        "kind": "added"
+      },
+      {
+        "id": "classic-064",
+        "name": "Malzahar's Recycler",
+        "kind": "added"
+      },
+      {
+        "id": "classic-065",
+        "name": "Ace in the Hole",
+        "kind": "added"
+      },
+      {
+        "id": "classic-066",
+        "name": "EU Striker",
+        "kind": "added"
+      },
+      {
+        "id": "classic-067",
+        "name": "Felinor Feeler",
+        "kind": "added"
+      },
+      {
+        "id": "classic-068",
+        "name": "Small Card Lobbyist",
+        "kind": "added"
+      },
+      {
+        "id": "classic-069",
+        "name": "Plague Charger",
+        "kind": "added"
+      },
+      {
+        "id": "classic-070",
+        "name": "Book of Plague",
+        "kind": "added"
+      },
+      {
+        "id": "classic-071",
+        "name": "Lane Eater",
+        "kind": "added"
+      },
+      {
+        "id": "classic-072",
+        "name": "Grand Counterspell",
+        "kind": "added"
+      },
+      {
+        "id": "classic-073",
+        "name": "Nurse Cleaver",
+        "kind": "added"
+      },
+      {
+        "id": "classic-074",
+        "name": "Corpse Plantation",
+        "kind": "added"
+      },
+      {
+        "id": "classic-075",
+        "name": "Argusland",
+        "kind": "added"
+      },
+      {
+        "id": "classic-076",
+        "name": "Plague Bringer",
+        "kind": "added"
+      },
+      {
+        "id": "classic-077",
+        "name": "Anti-Magic Monkey",
+        "kind": "added"
+      },
+      {
+        "id": "classic-078",
+        "name": "Mutate Spell",
+        "kind": "added"
+      },
+      {
+        "id": "classic-079",
+        "name": "Risky Die",
+        "kind": "added"
+      },
+      {
+        "id": "classic-080",
+        "name": "BOOM! Big Max",
+        "kind": "added"
+      },
+      {
+        "id": "classic-081",
+        "name": "The Power to Thrive",
+        "kind": "added"
+      },
+      {
+        "id": "classic-082",
+        "name": "Sheeople",
+        "kind": "added"
+      },
+      {
+        "id": "classic-083",
+        "name": "Flame Lance",
+        "kind": "added"
+      },
+      {
+        "id": "classic-084",
+        "name": "Lockdown",
+        "kind": "added"
+      },
+      {
+        "id": "classic-085",
+        "name": "King Wagtoggle",
+        "kind": "added"
+      },
+      {
+        "id": "classic-086",
+        "name": "Genn",
+        "kind": "added"
+      },
+      {
+        "id": "classic-087",
+        "name": "Plague Chalice",
+        "kind": "added"
+      },
+      {
+        "id": "classic-088",
+        "name": "Siphon Squad",
+        "kind": "added"
+      },
+      {
+        "id": "classic-089",
+        "name": "Paul Allen's Ghost",
+        "kind": "added"
+      },
+      {
+        "id": "classic-090",
+        "name": "In Too Deep",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-001",
+        "name": "Doom Shroom",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-002",
+        "name": "Groom Shroom",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-003",
+        "name": "Second Amendment Snake",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-004",
+        "name": "Juhan Biggest Bat",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-005",
+        "name": "Guy Att",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-006",
+        "name": "Wrong-House Attacker",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-007",
+        "name": "The House",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-008",
+        "name": "Withering Storm",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-009",
+        "name": "Silence",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-010",
+        "name": "New Wraps",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-011",
+        "name": "Anime Armor",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-012",
+        "name": "The Mother Pancake",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-012-1",
+        "name": "Devour",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-012-2",
+        "name": "Death Boil",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-012-3",
+        "name": "Fluffy Grip",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-012-4",
+        "name": "Powder Spray",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-012-5",
+        "name": "Anti-Waffle Shell",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-012-6",
+        "name": "Frozen Wastes",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-012-7",
+        "name": "Legion of the Hungry",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-012-8",
+        "name": "Frostspatula",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-013",
+        "name": "Mommy Barker",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-014",
+        "name": "Forever&",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-015",
+        "name": "Conjure Rush Token",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-016",
+        "name": "Conjure Rush Token+",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-017",
+        "name": "Conjure Rush Token++",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-018",
+        "name": "Gullible Treatler",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-019",
+        "name": "League of Losers",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-019-1",
+        "name": "Top Loser",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-019-2",
+        "name": "Jungle Loser",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-019-3",
+        "name": "Mid Loser",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-019-4",
+        "name": "Support Loser",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-019-5",
+        "name": "Bot Loser",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-020",
+        "name": "Mushroom Power",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-021",
+        "name": "Whirlwind",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-022",
+        "name": "Blood Moon",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-023",
+        "name": "Dropshipping",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-024",
+        "name": "Crushing Walls",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-025",
+        "name": "Soul Shot",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-026",
+        "name": "Tommy Tempo",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-027",
+        "name": "Zephrys Zealotism",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-028",
+        "name": "Nuestro hogar, nuestras tumbas",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-029",
+        "name": "Portal to the Past",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-030",
+        "name": "Felinor Fuser",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-031",
+        "name": "Fusion Lab",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-032",
+        "name": "Otherworldly Removal",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-032-1",
+        "name": "Execute",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-032-2",
+        "name": "Brawl",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-032-3",
+        "name": "Blade Storm",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-033",
+        "name": "Ivory Tower",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-034",
+        "name": "Memory Leak",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-035",
+        "name": "Rollback",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-036",
+        "name": "Conjure Bones",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-036-1",
+        "name": "Bone Storm",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-037",
+        "name": "Wardrum",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-038",
+        "name": "Solarius",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-038-1",
+        "name": "Solarius-Prime",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-039",
+        "name": "Book Worm",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-040",
+        "name": "Appropriations",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-041",
+        "name": "KY's Constant",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-042",
+        "name": "KY's Test",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-042-1",
+        "name": "KY's Gift",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-043",
+        "name": "AI Slop",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-044",
+        "name": "Simplicity Audit",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-045",
+        "name": "Complexity Audit",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-046",
+        "name": "Felinor Flagbearer",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-046-1",
+        "name": "Felinor Flagbearer Prime",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-047",
+        "name": "Jogg's Box",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-048",
+        "name": "Jlockheed's Lobbyist",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-049",
+        "name": "Jay Fungus",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-050",
+        "name": "Adaptive Growth",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-051",
+        "name": "Jlockheed's J15 Fighter",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-052",
+        "name": "Jlockheed's Permanent Defense Contract",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-053",
+        "name": "Book of Tokens",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-054",
+        "name": "Book of Books",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-055",
+        "name": "Book of Greed",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-056",
+        "name": "Book of Pain",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-057",
+        "name": "Book of Stats",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-058",
+        "name": "Fruit Basket",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-059",
+        "name": "All Purpose Apple",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-060",
+        "name": "Doctors Orders",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-061",
+        "name": "Bauble Bubble",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-062",
+        "name": "KY's Papaya",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-063",
+        "name": "Fruit Tree",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-064",
+        "name": "Mulch Muncher",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-065",
+        "name": "Two Grapes",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-065-1",
+        "name": "Rotten Grape",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-065-2",
+        "name": "Normal Grape",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-065-3",
+        "name": "Large Grape",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-065-4",
+        "name": "Golden Grape",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-065-5",
+        "name": "Mythic Grape",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-066",
+        "name": "Vine of Grapes",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-067",
+        "name": "Pear",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-068",
+        "name": "Organic Produce",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-069",
+        "name": "Buff Billy",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-070",
+        "name": "Chaos Machine",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-071",
+        "name": "Book of Buff",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-072",
+        "name": "Book of Nerf",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-073",
+        "name": "Call to Chaos (Classic+ Edition)",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-073-1",
+        "name": "Classic Golem",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-074",
+        "name": "Twice Forward One Step Backwards",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-075",
+        "name": "J-lease J-Jungle EX-plorer",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-075-1",
+        "name": "J-lease J-Jungle EX-plorer Pack",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-076",
+        "name": "Brother Lar",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-076-1",
+        "name": "Brother Ping",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-077",
+        "name": "Anti-Softlock",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-078",
+        "name": "Claude's Datacenter",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-t-ai-01",
+        "name": "Helpful Assistant",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-t-ai-02",
+        "name": "Scaling Law",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-t-ai-03",
+        "name": "Hallucination",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-t-ai-04",
+        "name": "Chain of Thought",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-t-ai-05",
+        "name": "Autocomplete",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-t-ai-06",
+        "name": "Datacenter Fire",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-t-ai-07",
+        "name": "Alignment Tax",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-t-ai-08",
+        "name": "Rate Limit",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-t-ai-09",
+        "name": "Refusal",
+        "kind": "added"
+      },
+      {
+        "id": "classicplus-t-ai-10",
+        "name": "Fine-Tuning",
+        "kind": "added"
+      }
+    ]
+  },
+  {
+    "version": "v0.2.1",
+    "date": "2026-10-03",
+    "title": "Patch v0.2.1: card text pass",
+    "source": "#45",
+    "notes": "Card text pass: consistent terminology and house style across Core, Classic and Classic+",
+    "changes": [
+      {
+        "id": "core-017",
+        "name": "Flood",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-023",
+        "name": "Reoccurring Dream",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-024",
+        "name": "Efficiency Dividend",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-031",
+        "name": "KY's Math Equation",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-067",
+        "name": "Zoomerbin Oomen",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-010",
+        "name": "Exile",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-014",
+        "name": "Shadowstep",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "classic-022",
+        "name": "Mid Runner",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-025",
+        "name": "Lag in the System",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-029",
+        "name": "Book of Vital Kill",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-034",
+        "name": "Ancient Acquisition",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-047",
+        "name": "Recurring Felinor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-054",
+        "name": "Rewind",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-063",
+        "name": "Crop Dusting",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-065",
+        "name": "Ace in the Hole",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-066",
+        "name": "EU Striker",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-014",
+        "name": "Forever&",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-019-5",
+        "name": "Bot Loser",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "classicplus-021",
+        "name": "Whirlwind",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-026",
+        "name": "Tommy Tempo",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "classicplus-034",
+        "name": "Memory Leak",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "classicplus-052",
+        "name": "Jlockheed's Permanent Defense Contract",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.2.2",
+    "date": "2026-10-04",
+    "title": "Small set of mechanics changes",
+    "source": "#149",
+    "notes": "Classic+ #70 Chaos Machine never Upgrades itself (R585). Classic #33 Joro answers only a Spell's targeting (R651). A Grape any pool picks is re-rolled on GRAPE_ODDS (R382). Every card that uses Plague Tokens gains the Plague tag (17 cards). Classic+ #32.3 Blade Storm casts Whirlwind until a Unit dies, up to 30 rounds unshown (R652). Classic+ #50 Adaptive Growth standardized to +-2/2, Radiant +-3/3. Classic #10 Exile answers (2) or less on its base face.",
+    "changes": [
+      {
+        "id": "core-091",
+        "name": "Fed Fauci",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-010",
+        "name": "Exile",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text"
+        ]
+      },
+      {
+        "id": "classic-027",
+        "name": "Pestilent Slime",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-033",
+        "name": "Joro",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-039",
+        "name": "Outbreak",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-042",
+        "name": "Transmutable Toxins",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-043",
+        "name": "Plague Nuke",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-053",
+        "name": "Plague Crawler",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-059",
+        "name": "Plague Doctor",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-061",
+        "name": "Plague Bringer Goliath",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-062",
+        "name": "Living Bomb",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-063",
+        "name": "Crop Dusting",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-069",
+        "name": "Plague Charger",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-070",
+        "name": "Book of Plague",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-074",
+        "name": "Corpse Plantation",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-076",
+        "name": "Plague Bringer",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-078",
+        "name": "Mutate Spell",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-087",
+        "name": "Plague Chalice",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classicplus-003",
+        "name": "Second Amendment Snake",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classicplus-032-3",
+        "name": "Blade Storm",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "classicplus-050",
+        "name": "Adaptive Growth",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-070",
+        "name": "Chaos Machine",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.2.3",
+    "date": "2026-10-04",
+    "title": "Patch v0.2.3: Animated pass on Field Spells, Ivory Tower fuses",
+    "source": "Issue #113",
+    "notes": "Eighteen Field Spells that could come to life gain Animated, with a unit face and its Radiant double: Core #14, #33, #38, #65 and #73, Classic #4, #7, #62, #64 and #87, Classic+ #7, #12.5, #12.7, #31, #61, #63, #70 and #78. Classic+ #33 Ivory Tower's text is replaced: the first Unit you stack onto it is fused into it (its Radiant face fuses it in Radiant). Classic #52 Final Gambit's follow-up neither heals nor draws once its re-aimed hit has felled the enemy hero (R216), so one fused into a Field Trap that stays cannot re-aim its own fatigue for ever.",
+    "changes": [
+      {
+        "id": "core-014",
+        "name": "Jlockeed's Weapons",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "core-033",
+        "name": "Unstable Clone Machine",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "core-038",
+        "name": "Quickstriker",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "core-065",
+        "name": "Masochism Mask",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "core-073",
+        "name": "Anti-oneshot Armor",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classic-004",
+        "name": "Palantir",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classic-007",
+        "name": "InfiniScepter",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classic-052",
+        "name": "Final Gambit",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classic-062",
+        "name": "Living Bomb",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classic-064",
+        "name": "Malzahar's Recycler",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classic-087",
+        "name": "Plague Chalice",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-007",
+        "name": "The House",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-012-5",
+        "name": "Anti-Waffle Shell",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-012-7",
+        "name": "Legion of the Hungry",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-031",
+        "name": "Fusion Lab",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-033",
+        "name": "Ivory Tower",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-061",
+        "name": "Bauble Bubble",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-063",
+        "name": "Fruit Tree",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-070",
+        "name": "Chaos Machine",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-078",
+        "name": "Claude's Datacenter",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.2.4",
+    "date": "2026-10-04",
+    "title": "Patch v0.2.4: aimed random casts and the Deft keyword",
+    "source": "#181, #206",
+    "notes": "Smarter targeting for random casts (R656: harmful picks aim at enemies, helpful ones at friends; Jogg's Box unchanged) and the Deft keyword (R49), printed by Deft Duelist and added to the random keyword pool (R21).",
+    "commits": [
+      "7f3458e41b6c54bf5d35e52f45c4b5c124c3844d"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-045",
+        "name": "Deft Duelist",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-003",
+        "name": "Book of Heal",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classicplus-010",
+        "name": "New Wraps",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classicplus-038-1",
+        "name": "Solarius-Prime",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-040",
+        "name": "Appropriations",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.2.5",
+    "date": "2026-10-05",
+    "title": "Patch v0.2.5: undo the v0.2.3 animated additions",
+    "source": "Issue #218",
+    "notes": "Removes Animated and the unit faces from the eighteen Field Spells v0.2.3 animated; Ivory Tower's fusion (R653) and Final Gambit's R216 guard stay. Adds R657: an Animated card with no printed stats fights as a 0/1.",
+    "commits": [
+      "1be5a28e08c3b6ef94b95b3845c908adaa86d14e"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-014",
+        "name": "Jlockeed's Weapons",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-033",
+        "name": "Unstable Clone Machine",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-038",
+        "name": "Quickstriker",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-065",
+        "name": "Masochism Mask",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-073",
+        "name": "Anti-oneshot Armor",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-004",
+        "name": "Palantir",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-007",
+        "name": "InfiniScepter",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-062",
+        "name": "Living Bomb",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-064",
+        "name": "Malzahar's Recycler",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-087",
+        "name": "Plague Chalice",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-007",
+        "name": "The House",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-012-5",
+        "name": "Anti-Waffle Shell",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-012-7",
+        "name": "Legion of the Hungry",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-031",
+        "name": "Fusion Lab",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-061",
+        "name": "Bauble Bubble",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-063",
+        "name": "Fruit Tree",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-070",
+        "name": "Chaos Machine",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-078",
+        "name": "Claude's Datacenter",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.2.6",
+    "date": "2026-10-05",
+    "title": "Book of Wildfire becomes a different Book at the end of your turn",
+    "source": "#271",
+    "notes": "Classic #55 Book of Wildfire gains \"End of turn: Become a different Book.\" (Radiant: \"… a different Radiant Book.\"): at the end of its owner's turn, while in hand, it becomes a random other Book (never Wildfire, never the Book it is), on its own face, which keeps swapping each turn (R671).",
+    "commits": [
+      "b26b1b9dde3f723528e60739caf5aee359a16c20"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "classic-055",
+        "name": "Book of Wildfire",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.2.7",
+    "date": "2026-10-05",
+    "title": "Patch v0.2.7: More card patches",
+    "source": "#126",
+    "notes": "Plastic Surgery can no longer be played with no Unit to target, though a cast with none still fizzles (R703). Craft a Card's Radiant face no longer draws a card. Crushing Walls now closes spiked walls in on lanes 1 and 5, and a card in your hand that Plague Chalice would counter now wears a green warning (R667).",
+    "commits": [
+      "533b4e2db58eaae47b0edd0eee6da6d7e12439f3"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-099",
+        "name": "Craft a Card",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-087",
+        "name": "Plague Chalice",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.2.7b",
+    "date": "2026-10-05",
+    "title": "Patch v0.2.Y: the yellow condition glow for ten Core cards",
+    "source": "#260",
+    "notes": "The yellow 'condition met' glow (R662) for Bread and Butter, Bear Honeypot, Unlicensed Experimentation, My Pawn, Spiteful Stab and Ceaseless Void, and for the hand cards Quickstriker, Gifted Program and a Radiant /fullsend grant a condition to; Sheepish never glows. Only each script's line count moves; no card plays differently.",
+    "commits": [
+      "80e7960ccaef1a8c0bb5c463eadacd8fd402d858"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-018",
+        "name": "Bread and Butter",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-060",
+        "name": "Bear Honeypot",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-070",
+        "name": "Spiteful Stab",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-085",
+        "name": "Unlicensed Experimentation",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-096",
+        "name": "My Pawn",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-100",
+        "name": "Ceaseless Void",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.2.8",
+    "date": "2026-10-05",
+    "title": "Patch v0.2.8: Easter egg, Glitch",
+    "source": "#170",
+    "notes": "A hidden token, Glitch: once a … in the System card has been played, each card generated into a hand or deck has n/10000 odds of being Glitch (R673). It is in no pool, the Almanac or the Deck Builder (R674), is always playable on its owner's turn (R675), and when played resets the match, swaps the seats, lays two other games' boards on the field, or voids the match (R676–R679).",
+    "commits": [
+      "509e9a302ab71542a4e141fe7231c9743722bdba"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "classic-t-glitch",
+        "name": "Glitch",
+        "kind": "added"
+      }
+    ]
+  },
+  {
+    "version": "v0.2.8b",
+    "date": "2026-10-05",
+    "title": "Patch v0.2.Y: Buff Gary the Gambler",
+    "source": "#323",
+    "notes": "Gary the Gambler base and radiant Cries gain: flip a coin, heads Divine Shield, tails Rush",
+    "commits": [
+      "16724d26939a1a03779523f11461b41c57871ccb"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-004",
+        "name": "Gary the Gambler",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.2.9",
+    "date": "2026-10-05",
+    "title": "Patch v0.2.9: rarity pass",
+    "source": "#44",
+    "notes": "Rarity pass over Classic and Classic+ (and Core #27, #28, #40, let rare by the designer): 15 rarity changes; Traps reveal; Plague Counters; Crop Dusting's Radiant face (3 counters, draw 3); Pocket Chaos costs (4) and its gift costs (1) less. Named v0.2.9, the next number: the designer's v0.2.2 label is kept in the issue.",
+    "commits": [
+      "97a00bd613bd3adfaafdc4d1580f5d895d2b5e22"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-027",
+        "name": "Blood Ridden Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "core-028",
+        "name": "Knockoff Temu Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "core-040",
+        "name": "Echoes of the Forgotten",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "core-087",
+        "name": "Pocket Chaos",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-091",
+        "name": "Fed Fauci",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-003",
+        "name": "Book of Heal",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "classic-005",
+        "name": "Tesla",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-009",
+        "name": "Income Tax",
+        "kind": "changed",
+        "fields": [
+          "rarity",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-010",
+        "name": "Exile",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-012",
+        "name": "Book of Blood",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "classic-014",
+        "name": "Shadowstep",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-016",
+        "name": "Book of Flame",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "classic-017",
+        "name": "Counterspell",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-018",
+        "name": "Glitch in the System",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "classic-025",
+        "name": "Lag in the System",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "classic-027",
+        "name": "Pestilent Slime",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-028",
+        "name": "Second Wind",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "classic-038",
+        "name": "Jackiestan Auctioneer",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-039",
+        "name": "Outbreak",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-042",
+        "name": "Transmutable Toxins",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-043",
+        "name": "Plague Nuke",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-047",
+        "name": "Recurring Felinor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-052",
+        "name": "Final Gambit",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-053",
+        "name": "Plague Crawler",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-059",
+        "name": "Plague Doctor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-060",
+        "name": "Pile On",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "classic-061",
+        "name": "Plague Bringer Goliath",
+        "kind": "changed",
+        "fields": [
+          "rarity",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-062",
+        "name": "Living Bomb",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-063",
+        "name": "Crop Dusting",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-065",
+        "name": "Ace in the Hole",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-069",
+        "name": "Plague Charger",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-070",
+        "name": "Book of Plague",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-072",
+        "name": "Grand Counterspell",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-074",
+        "name": "Corpse Plantation",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-076",
+        "name": "Plague Bringer",
+        "kind": "changed",
+        "fields": [
+          "rarity",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-078",
+        "name": "Mutate Spell",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-087",
+        "name": "Plague Chalice",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-001",
+        "name": "Doom Shroom",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-002",
+        "name": "Groom Shroom",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-003",
+        "name": "Second Amendment Snake",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-022",
+        "name": "Blood Moon",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-029",
+        "name": "Portal to the Past",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "classicplus-077",
+        "name": "Anti-Softlock",
+        "kind": "changed",
+        "fields": [
+          "rarity"
+        ]
+      },
+      {
+        "id": "classicplus-t-ai-08",
+        "name": "Rate Limit",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-t-ai-09",
+        "name": "Refusal",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.2.10",
+    "date": "2026-10-06",
+    "title": "Patch v0.2.10: Classic and Classic+ balance patch 1",
+    "source": "#88",
+    "notes": "Classic and Classic+ balance patch 1: random discards unless a card says of your choice (R682), a Bounce keyword for every return to hand (R692), Plague Counters of one effect on one chosen permanent (R689), Recruit skipping (X)-cost cards (R690), Locked zones refusing only plays (R688), Transform keeping battle position (R691), Reveal (R686), and per-card balance and text changes across Classic and Classic+.",
+    "commits": [
+      "a065f26ebfebf33dbf25801d4e06e6e334a80d96"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-017",
+        "name": "Flood",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-021",
+        "name": "Hinder",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "core-023",
+        "name": "Reoccurring Dream",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-024",
+        "name": "Efficiency Dividend",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-031",
+        "name": "KY's Math Equation",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-032",
+        "name": "Prem Panther",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-052",
+        "name": "Silly Silas",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-004",
+        "name": "Palantir",
+        "kind": "changed",
+        "fields": [
+          "tags",
+          "loc",
+          "base.text"
+        ]
+      },
+      {
+        "id": "classic-008",
+        "name": "Pickle",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classic-010",
+        "name": "Exile",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classic-014",
+        "name": "Shadowstep",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "classic-015",
+        "name": "Nose Hunter",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-018",
+        "name": "Glitch in the System",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text"
+        ]
+      },
+      {
+        "id": "classic-020",
+        "name": "The Power to Punish",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classic-021",
+        "name": "Turtinator",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-022",
+        "name": "Mid Runner",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-023",
+        "name": "Devil's Pact",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classic-025",
+        "name": "Lag in the System",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text"
+        ]
+      },
+      {
+        "id": "classic-026",
+        "name": "Rapid Draw",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classic-028",
+        "name": "Second Wind",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "classic-033",
+        "name": "Joro",
+        "kind": "changed",
+        "fields": [
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classic-034",
+        "name": "Ancient Acquisition",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-037",
+        "name": "Last Hurrah",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classic-038",
+        "name": "Jackiestan Auctioneer",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-043",
+        "name": "Plague Nuke",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classic-046",
+        "name": "Divine Favor",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "classic-047",
+        "name": "Recurring Felinor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-048",
+        "name": "Hired Shrimp",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-054",
+        "name": "Rewind",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "classic-064",
+        "name": "Malzahar's Recycler",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classic-065",
+        "name": "Ace in the Hole",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-066",
+        "name": "EU Striker",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-074",
+        "name": "Corpse Plantation",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-075",
+        "name": "Argusland",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classic-080",
+        "name": "BOOM! Big Max",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-083",
+        "name": "Flame Lance",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-088",
+        "name": "Siphon Squad",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-090",
+        "name": "In Too Deep",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-007",
+        "name": "The House",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "classicplus-012-6",
+        "name": "Frozen Wastes",
+        "kind": "changed",
+        "fields": [
+          "type",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-014",
+        "name": "Forever&",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-019",
+        "name": "League of Losers",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classicplus-021",
+        "name": "Whirlwind",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-030",
+        "name": "Felinor Fuser",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classicplus-031",
+        "name": "Fusion Lab",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-038",
+        "name": "Solarius",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-039",
+        "name": "Book Worm",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-040",
+        "name": "Appropriations",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-042",
+        "name": "KY's Test",
+        "kind": "changed",
+        "fields": [
+          "refs",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-042-1",
+        "name": "KY's Gift",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classicplus-046",
+        "name": "Felinor Flagbearer",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "loc",
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-053",
+        "name": "Book of Tokens",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "loc",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-056",
+        "name": "Book of Pain",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      },
+      {
+        "id": "classicplus-060",
+        "name": "Doctors Orders",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-063",
+        "name": "Fruit Tree",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-065",
+        "name": "Two Grapes",
+        "kind": "changed",
+        "fields": [
+          "refs",
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-065-2",
+        "name": "Normal Grape",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-065-4",
+        "name": "Golden Grape",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-066",
+        "name": "Vine of Grapes",
+        "kind": "changed",
+        "fields": [
+          "refs",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-073-1",
+        "name": "Classic Golem",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-074",
+        "name": "Twice Forward One Step Backwards",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-078",
+        "name": "Claude's Datacenter",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.2.10b",
+    "date": "2026-10-06",
+    "title": "Patch v0.2.Y: 3 new tags and naming conventions",
+    "source": "#322",
+    "notes": "Three new tags: Catalyst on Solarius and Felinor Flagbearer, Prime on the tokens their Deaths shuffle in, and Acclaimed on BOOM! Big Max and Wardrum. Solarius-Prime is now Solarius Prime, spaced like Felinor Flagbearer Prime, and Solarius's text names it so. No card plays differently.",
+    "commits": [
+      "ce4a741b706ac75a7104c73736cb568ddc40f33f"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "classic-080",
+        "name": "BOOM! Big Max",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classicplus-037",
+        "name": "Wardrum",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classicplus-038",
+        "name": "Solarius",
+        "kind": "changed",
+        "fields": [
+          "tags",
+          "refs",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-038-1",
+        "name": "Solarius Prime",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags"
+        ]
+      },
+      {
+        "id": "classicplus-046",
+        "name": "Felinor Flagbearer",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classicplus-046-1",
+        "name": "Felinor Flagbearer Prime",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.2.10c",
+    "date": "2026-10-06",
+    "title": "Patch v0.2.Y: Bounce keyword only applies to permanents",
+    "source": "#354",
+    "notes": "Bounce only for a permanent returned from the field (R746): Reoccurring Dream, Efficiency Dividend, KY's Math Equation, Ancient Acquisition, Recurring Felinor, Forever& and Whirlwind's Radiant face say \"Return … to hand\" again, as before v0.2.10; these seven cards play as before (the bounce destination is R747, an engine change that touches no card text)",
+    "commits": [
+      "5234550417f490e87b65cbd9a7ae078ce707979c"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-023",
+        "name": "Reoccurring Dream",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-024",
+        "name": "Efficiency Dividend",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-031",
+        "name": "KY's Math Equation",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-034",
+        "name": "Ancient Acquisition",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-047",
+        "name": "Recurring Felinor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-014",
+        "name": "Forever&",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-021",
+        "name": "Whirlwind",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.2.10d",
+    "date": "2026-10-06",
+    "title": "Patch v0.2.10d: balance patch 1 follow-up",
+    "source": "#355",
+    "notes": "Follow-up to balance patch 1 (#88). A deck too short of other cards fills an opening hand with its Cast on Draw cards, which wait uncast and are cast at the start of the game (R748). Divine Favor's and Rewind's numbers are tuned on the Radiant face only, the one that prints them (R749). The Power to Punish's Radiant face marks every enemy Unit it will destroy (R750). Core cards no longer say \"to a target\" or \"target <card>\" (R751).",
+    "commits": [
+      "ada067c48f78173e6b472fc9860b960b1ff30f15"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-002",
+        "name": "Bigot",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "core-016",
+        "name": "Hit Job",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-024",
+        "name": "Efficiency Dividend",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-031",
+        "name": "KY's Math Equation",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-034",
+        "name": "Collateral Damage",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-035",
+        "name": "Lunar Eclipse",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-036",
+        "name": "Magic Jammed",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-049",
+        "name": "Snom Bunny Mind Control",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-063",
+        "name": "Plastic Surgery",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-068",
+        "name": "Twisted Sorcerer",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-070",
+        "name": "Spiteful Stab",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-074",
+        "name": "Adaptive UI",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-098",
+        "name": "Heroic Power",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-046",
+        "name": "Divine Favor",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-054",
+        "name": "Rewind",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.2.11",
+    "date": "2026-10-06",
+    "title": "Patch v0.2.11: the Heroic Power rework",
+    "source": "issue #37 (MaxGoetzmann, 2026-09-30; scope narrowed to the rework on 2026-10-06)",
+    "notes": "Heroic Power costs (0), and playing it uses nothing. Each of its thirteen powers is an Activate that spends its (X), once per turn: Expedition Map, Life Tap, Steady Shot, Ranching, Cat Cafe, Ping, Witness Value, Stitching, Armor Up (Tank Up on the Radiant face), Die Insect, KY Brainstorm, Pluck and Terminus Tricks, each with a Radiant face (R752–R761). Ping's target is chosen as it is activated, so it can be dragged onto its target. In play the card shows only the power it rolled.",
+    "commits": [
+      "d79927e13dfbeef7267501c7330ec6376c9f7b5c"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-098",
+        "name": "Heroic Power",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "refs",
+          "loc",
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      }
+    ]
+  }
+]

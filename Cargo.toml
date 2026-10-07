@@ -1,0 +1,52 @@
+# The v0.3.0 Rust workspace (docs/v0.3.0/SURFACE.md §1, §2). Every third-party crate is pinned
+# here and named with `{ workspace = true }` by the crates; nobody adds one that is not on this
+# list during Waves 1–3.
+[workspace]
+members = ["crates/*"]
+resolver = "3"
+
+[workspace.package]
+version = "0.3.0"
+edition = "2024"
+rust-version = "1.97.0"
+publish = false
+
+[workspace.dependencies]
+# Path dependencies (SURFACE §2, crate edges).
+jackioh-engine = { path = "crates/engine" }
+jackioh-cards = { path = "crates/cards" }
+jackioh-ai = { path = "crates/ai" }
+
+# Third-party crates (SURFACE §2), versions as written; `=` only for wasm-bindgen.
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.151" }
+indexmap = { version = "2.14.2", features = ["serde"] }
+ts-rs = { version = "12.0.1", features = ["serde-compat", "no-serde-warnings", "indexmap-impl", "serde-json-impl"] }
+wasm-bindgen = { version = "=0.2.129" }
+js-sys = { version = "0.3.106" }
+console_error_panic_hook = { version = "0.1.7" }
+axum = { version = "0.8.9", features = ["ws", "macros"] }
+tokio = { version = "1.53.2", features = ["full", "test-util"] }
+tower = { version = "0.5.3", features = ["util"] }
+tower-http = { version = "0.7.1", features = ["cors", "trace"] }
+sqlx = { version = "0.9.0", features = ["runtime-tokio", "tls-rustls", "postgres", "json", "time", "uuid"] }
+jsonwebtoken = { version = "11.1.0" }
+reqwest = { version = "0.13.5", default-features = false, features = ["json", "rustls-tls"] }
+hmac = { version = "0.13.0" }
+sha2 = { version = "0.11.0" }
+base64 = { version = "0.23.1" }
+uuid = { version = "1.27.0", features = ["v4", "serde"] }
+time = { version = "0.3.55", features = ["serde", "formatting", "parsing"] }
+getrandom = { version = "0.4.3" }
+tracing = { version = "0.1.44" }
+tracing-subscriber = { version = "0.3.23", features = ["json", "env-filter"] }
+anyhow = { version = "1.0.104" }
+thiserror = { version = "2.0.21" }
+clap = { version = "4.6.7", features = ["derive"] }
+rayon = { version = "1.12.0" }
+
+[profile.release]
+lto = "thin"
+
+[profile.release.package.jackioh-wasm]
+opt-level = "s"

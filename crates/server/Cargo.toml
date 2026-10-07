@@ -1,0 +1,50 @@
+[package]
+name = "jackioh-server"
+description = "The JackiOh server: the HTTP API and the match actors (docs/v0.3.0/SURFACE.md §11)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+name = "jackioh_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "jackioh-server"
+path = "src/main.rs"
+
+[dependencies]
+jackioh-engine = { workspace = true }
+jackioh-cards = { workspace = true }
+jackioh-ai = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+# SURFACE §11.2's `Req` carries `indexmap::IndexMap` params and query.
+indexmap = { workspace = true }
+axum = { workspace = true }
+tokio = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+sqlx = { workspace = true }
+jsonwebtoken = { workspace = true }
+reqwest = { workspace = true }
+hmac = { workspace = true }
+sha2 = { workspace = true }
+base64 = { workspace = true }
+uuid = { workspace = true }
+time = { workspace = true }
+getrandom = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+clap = { workspace = true }
+
+[dev-dependencies]
+jackioh-engine = { workspace = true, features = ["testkit"] }
+
+# The one integration-test binary (SURFACE §1, §11.2): `mod api; mod actor; mod store; mod support;`.
+[[test]]
+name = "server"
+path = "tests/server.rs"
