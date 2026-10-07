@@ -18,7 +18,7 @@ const TURN: i32 = 9;
 
 /// `determinize` with TS's default options (`{}`).
 fn det(public: &GameState, seat: PlayerId, rng: &mut Rng) -> GameState {
-    determinize(public, seat, rng, &DeterminizeOptions::default())
+    determinize(public, seat, rng, DeterminizeOptions::default())
 }
 
 /// `evaluate(state, seat)`: TS's two defaulted arguments, passed explicitly.

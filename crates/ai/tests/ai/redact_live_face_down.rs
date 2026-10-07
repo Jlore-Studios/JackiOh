@@ -13,7 +13,7 @@ use super::support::{AI, HUMAN, card_by_id, is_legal, trap_pool};
 
 /// `determinize` with TS's default options (`{}`).
 fn det(public: &GameState, seat: PlayerId, rng: &mut Rng) -> GameState {
-    determinize(public, seat, rng, &DeterminizeOptions::default())
+    determinize(public, seat, rng, DeterminizeOptions::default())
 }
 
 /// TS's `{ rng: createRng(seed) }`: the AI's own stream at AI_BUDGET, with no clock.

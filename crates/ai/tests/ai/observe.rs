@@ -77,7 +77,7 @@ fn js<T: serde::Serialize>(value: T) -> Value {
 
 /// `determinize` with TS's default options (`{}`).
 fn det(public: &GameState, seat: PlayerId, rng: &mut Rng) -> GameState {
-    determinize(public, seat, rng, &DeterminizeOptions::default())
+    determinize(public, seat, rng, DeterminizeOptions::default())
 }
 
 /// TS's `{ rng: createRng(seed) }`: AI_BUDGET, no clock.

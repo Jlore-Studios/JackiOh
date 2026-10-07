@@ -12,7 +12,7 @@ use super::support::{AI, HUMAN, card_by_id, trap_pool};
 
 /// `determinize` with TS's default options (`{}`).
 fn det(public: &GameState, seat: PlayerId, rng: &mut Rng) -> GameState {
-    determinize(public, seat, rng, &DeterminizeOptions::default())
+    determinize(public, seat, rng, DeterminizeOptions::default())
 }
 
 fn setting(face_down: bool) -> (GameState, String) {
