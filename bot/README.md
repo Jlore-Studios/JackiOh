@@ -5,8 +5,9 @@ free: up to seven Claude accounts (Opus at extra-high effort), ChatGPT through t
 Google through the Antigravity CLI (`agy`), Meta through Muse Code and Cognition through the
 Devin CLI, each with its own hours
 and limits ([Subscriptions](#subscriptions)). Up to ten items run at once: the Claude accounts' on
-GitHub's runners, and at most seven on the bot's own machines (six on the night box, one on
-the training box). Every model has a tier (weak,
+GitHub's runners, and at most six on the bot's own machine, the night box. (The AI's two training
+lanes run on a box of their own, outside the harness: [`machine/`](machine/README.md#the-training-box).)
+Every model has a tier (weak,
 medium or strong) and every item a difficulty (easy, medium or hard), which decides who may plan,
 build and review it ([Difficulty and tiers](#difficulty-and-tiers)). A medium or strong model plans
 each item first (a strong one for medium and hard items) and rates an item nobody rated, under a
@@ -42,7 +43,7 @@ flowchart TD
     PL["plan (bot token, no model)<br/>HALT? halted? a free lane?<br/>claim one item and one subscription: bot:working"]
     PL --> PN["planner (medium or strong; strong for medium and hard)<br/>rates an unrated item, writes the plan"]
     PN --> B["work, on that subscription's own runner<br/>(its login only) builder: the cheapest the item's difficulty allows"]
-    B --> G["the repository's checks<br/>lint, typecheck, catalog, card tests,<br/>rulings coverage, unit tests"]
+    B --> G["the repository's checks<br/>cargo fmt, clippy, catalog, patches,<br/>spec, cargo tests, web unit tests"]
     G -- "a self-checking builder (Devin)" --> SC["self check: the builder's own model,<br/>a fresh session, until clean (up to 3)"]
     SC --> R
     G --> R["adversarial reviewer<br/>the run's own medium or strong model"]
@@ -53,7 +54,7 @@ flowchart TD
     X -- "approved" --> CI
     PL -- "nothing queued" --> S["suggestion survey<br/>up to 4 open bot:suggestion issues;<br/>a person's bot:approved goes to triage"]
   end
-  D --> CI["CI on the PR: lint, typecheck, unit, fuzz,<br/>coverage, AI gates, Postgres, e2e, bot selftest"]
+  D --> CI["CI on the PR: rust (fmt, clippy, tests, checks, fuzz),<br/>web, e2e smoke, db, bot selftest"]
   CI -- "green" --> M["squash-merged into main;<br/>the issue closes"]
   CI -- "red (after one re-run)" --> E
 ```
@@ -362,7 +363,6 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | 95% of 5 hours, all of the week (its own `agy -p /usage`, the Gemini pool's row) |
 | `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2, free on the CLI until 2026-10-16); off from 2026-10-05 to 2026-10-06 (#311: every call failed in seconds), on again since a `devin -p` call answered on the machine (#318) | on the machine, as `agent-devin` | any time until 2026-10-15 (`off_from`) | none: until it refuses |
 | `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh`, on two lanes | on the machine, as `agent-muse` | any time | 95% of 5 hours, all of the week (its TUI's `/usage` panel) |
-| `devin-train` | a second Devin login, `swe-2-max`, for ladder training only; **off** until the training box is built (#318) | on the training box, as `agent-devin-train` | any time | none: until it refuses |
 
 The Claude accounts' model jobs run on GitHub's runners (`ubuntu-latest`), which install their
 CLI each time; every other subscription's runs on its own runner on the machine, `night-vm-<id>`.
@@ -427,8 +427,6 @@ prints each one and whether it could start now, and `/harness status` does the s
 - `quiet_check`: no subscription sets it. When one did (`true`), the gate waited until
   nobody else was spending it ([below](#it-no-longer-waits-for-the-subscription-to-be-quiet)).
 - `roles`: what it may do (`plan`, `build`, `fix`, `revise`, `review`, `suggest`).
-- `only_labels`: items carrying all of them are its alone (devin-train takes only `training`
-  items), and no other subscription takes an item carrying a label some subscription claims.
 - `env`: non-secret environment for its CLI.
 - `off_hours` (`{"five_hour": 0.4}`, say): with a `window` schedule, it may also work outside the
   window, but only under these tighter caps; a run there stops once past them.
@@ -438,11 +436,11 @@ prints each one and whether it could start now, and `/harness status` does the s
   Devin's is 2026-10-15, the day before SWE-2 stops being free on its CLI.
 
 At the top level, `max_parallel` is how many run at once, `machine_parallel` how many of them
-may be on the bot's machine (its two vCPUs run each job's checks; GitHub's runners have four each
-and no such limit), `plan_lanes` how many planning runs may go on top of those (the planning
+may be on the bot's machine (6; its two vCPUs run each job's checks; GitHub's runners have four
+each and no such limit), `plan_lanes` how many planning runs may go on top of those (the planning
 lane, below; 2), `priority` the usage order (below), and `tiers` each tier's models in the
 order the router tries them after `priority`. A subscription's own `lanes`
-(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can nearly fill its box alone, Muse's is 2, and claude-1, claude-2 and claude-3 have 2 each. A `secret` must be one of the names the workflows hand over (the seven Claude ones,
+(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can fill its box alone, Muse's is 2, and claude-1, claude-2 and claude-3 have 2 each. A `secret` must be one of the names the workflows hand over (the seven Claude ones,
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
 **Who takes what.** Each run takes one item on one subscription, and a subscription works on as
@@ -497,13 +495,12 @@ claude-3: any hour, no caps) and claude-1 first, up to their caps; then claude-4
 then claude-5, last of the Claude accounts (claude-4 and claude-6 held to half their 5-hour session outside 03:00–15:00 and to 70% of it inside it, with
 no weekly cap, claude-5 to 40% of its 5-hour session and 60% of its week); then the medium models,
 Muse first (the most reliable builder, #305), then agy and Codex; then claude-2, kept back mostly
-for planning and reviewing; then Devin; and devin-train last, which takes only items labelled
-`training` on the training box. For building alone, claude-2 is `build_last`: it builds only
-when no other subscription that may is free, Devin included. Devin is `easy_first`: it may build
-only easy items, so it takes them ahead of everyone while it has a free lane, and the stronger
-models keep the medium and hard items only they may build. A `training` label reserves an item
-for devin-train (`only_labels`): no other subscription takes it, and devin-train takes nothing
-else. Its builds still need a plan first, like Devin's, and their reviews float to any reviewer.
+for planning and reviewing; then Devin, last. For building alone, claude-2 is `build_last`: it
+builds only when no other subscription that may is free, Devin included. Devin is `easy_first`:
+it may build only easy items, so it takes them ahead of everyone while it has a free lane, and
+the stronger models keep the medium and hard items only they may build. (There is no training
+lane in the harness any more, and no `training` label: the AI's two training lanes run as
+services on the training box, [`machine/`](machine/README.md#the-training-box).)
 
 - **Planning: the Needs plan stage.** Every build starts from a plan its difficulty may build
   from. A queued item without one carries `bot:needs-plan`: one with no plan, and one whose plan
@@ -589,13 +586,15 @@ under about 500 lines). An item is easy only if every line holds; if any fails, 
 tell, it is medium at least:
 
 1. **Small:** at most 10 files and 400 lines added plus removed (`easy` in `.harness/config.json`).
-2. **One place:** one package or app, its own tests aside.
-3. **None of the conflict hot spots:** `SPEC.md`, `BUILD.md`, `packages/engine/test/rulings.test.ts`.
-4. **None of the shared surfaces:** `events.ts`, `script.ts`, `state.ts`, the effects barrel.
-5. **No rules or data work:** nothing in `packages/engine/src/` or `packages/ai/src/`, no catalog,
+2. **One place:** one crate or app, its own tests aside.
+3. **None of the conflict hot spots:** `SPEC.md` and the spec's notes (`spec/`: no new ruling),
+   `BUILD.md`.
+4. **None of the shared surfaces:** `wire/events.rs`, `script.rs`, `state.rs`, `effects/mod.rs`
+   in `crates/engine/src/`.
+5. **No rules or data work:** nothing in `crates/engine/src/` or `crates/ai/src/`, no catalog,
    patch or card script change, no migration.
 6. **No review-only or forbidden path,** and no new dependency.
-7. **Checked by a unit test** in the same package; no e2e change, nothing judged by eye.
+7. **Checked by a unit test** in the same crate or app; no e2e change, nothing judged by eye.
 8. **No decisions left:** the plan names every file, change and test.
 9. **Stands alone:** blocked by nothing open.
 
@@ -812,18 +811,22 @@ account.
    already sits in its user's home; a Claude token is written only into a private directory for
    the job ([setting up](#setting-up-each-subscription)). After the job, the runner deletes its
    working files and package store. A worktree on `bot/issue-<n>` (or the pull
-   request's own branch, with `main` merged in), then `pnpm install`. A build with no plan yet
+   request's own branch, with `main` merged in), then the install (`rustup toolchain install`,
+   which installs the toolchain `rust-toolchain.toml` pins when it is missing, and `pnpm
+   install`). A build with no plan yet
    starts with a planning session on the planner's model. Then up to ten rounds:
    - a builder session on the builder's model (`claude --model sonnet --effort xhigh`, say) that
      can read, edit and run commands;
    - the repository's checks from `.harness/config.json`, with any check that is also red on
-     untouched `main` marked as not this change's fault. The test check runs only the tests the
-     change can affect (`vitest run --changed origin/main`, without the AI gates and the fuzz
-     wave, which CI runs in jobs of their own). A check that runs out of time is inconclusive:
-     it neither blocks the change nor runs again on `main`, and CI decides. On the bot's machine
-     a run skips the checks marked `"machine": false` (lint and the tests), which CI on the pull
-     request runs anyway, and its builder and reviewer are told to check only what they changed:
-     every job there shares two vCPUs, so the heavy suites run on GitHub's runners instead;
+     untouched `main` marked as not this change's fault: `cargo fmt --check`, `cargo clippy`,
+     the `cargo jackioh` catalog, patches and spec checks, the cargo tests, and the web's unit
+     tests the change can affect (`vitest run --project web --changed origin/main`, after the
+     WASM module is built, without the audio, fx and asset tests, which run daily). A check that
+     runs out of time is inconclusive: it neither blocks the change nor runs again on `main`, and
+     CI decides. On the bot's machine a run skips the checks marked `"machine": false` (clippy and
+     the tests), which CI on the pull request runs anyway, and its builder and reviewer are told
+     to check only what they changed: every job there shares two vCPUs, so the heavy suites run
+     on GitHub's runners instead;
    - for a self-checking builder, [the self-check loop](#the-self-check-loop);
    - when `main` moved since the run merged it and merges cleanly, it is merged again and the
      checks run on the merged head;
@@ -875,9 +878,10 @@ account.
   (`review_paths`) still becomes a pull request, but it is labelled `bot:needs-review`, you are
   asked to review it, and auto-merge stays off. Once the reviews approve it, it is labelled
   `ready for merge` too, and the bot @-mentions you to merge it. The review-only paths are the files that define
-  what the checks do or how the game deploys: every `package.json`, the lockfile, the vitest,
-  vite, eslint, TypeScript and Cypress configs, `scripts/`, `vercel.json`, `render.yaml` and the
-  database migrations.
+  what the checks do or how the game deploys: every `package.json` and `Cargo.toml`, the
+  lockfiles, `rust-toolchain.toml`, `rustfmt.toml` and `.cargo/`, the crates' `clippy.toml`
+  (the pure crates' purity) and build scripts, the vitest, vite, eslint, TypeScript and Cypress configs, `scripts/`, `vercel.json`,
+  `render.yaml`, the server's `Dockerfile` and the database migrations.
 - **It cannot change its own rules.** `.github/`, `.harness/`, `bot/`, `.claude/`, `.mcp.json`,
   editor and devcontainer config, git hooks, `.gitattributes` and `.gitmodules` are forbidden
   paths (`forbidden_paths`). They are enforced twice: in the work job, which puts such a change
