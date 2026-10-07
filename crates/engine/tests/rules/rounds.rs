@@ -212,7 +212,7 @@ mod r652_cast_rounds_until_death_each_round_casts_and_the_storm_stops_after_a_ro
                 put(s, &body1().id, slot(PlayerId::P2, Row::Units, 1), Default::default());
                 put(s, &body5().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
             },
-            Some(&long),
+            Some(long.as_str()),
         );
         assert_eq!(casts(&events), 1);
         assert_eq!(deaths(&events), vec![body1().id]);

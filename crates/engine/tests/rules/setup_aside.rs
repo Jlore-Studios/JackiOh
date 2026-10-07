@@ -535,10 +535,10 @@ mod r748_a_hand_the_other_cards_cannot_fill_takes_cast_on_draw_cards_cast_at_the
             defs_of(cards).into_iter().filter(|d| !is_cod(d)).collect()
         };
         let casting = |cards: &[CardInstance]| -> usize { defs_of(cards).iter().filter(|d| is_cod(d)).count() };
-        assert_eq!(others(p1), vec!["fx-1".to_string()]);
-        assert_eq!(casting(p1), 2);
-        assert_eq!(others(p2).len(), 2);
-        assert_eq!(casting(p2), 2);
+        assert_eq!(others(&p1[..]), vec!["fx-1".to_string()]);
+        assert_eq!(casting(&p1[..]), 2);
+        assert_eq!(others(&p2[..]).len(), 2);
+        assert_eq!(casting(&p2[..]), 2);
         assert_eq!(state.players.p1.library.len() as i32, DECK_SIZE - 3);
         assert_eq!(count(&begun.events, GameEventType::Fatigue), 0);
         assert_eq!(count(&begun.events, GameEventType::CardPlayed), 0);

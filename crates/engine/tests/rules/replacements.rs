@@ -915,8 +915,8 @@ mod e5_a_friendly_unit_is_targeted_e9_attack_redirect {
             game.state().clone()
         };
         assert_eq!(
-            view_json(&build(&joro().id), P1),
-            view_json(&build(&grunt().id), P1)
+            view_json(&build(joro().id.as_str()), P1),
+            view_json(&build(grunt().id.as_str()), P1)
         );
     }
 }
@@ -989,9 +989,9 @@ mod r97_r177_the_replacement_events_in_both_views {
             })));
             game.state().clone()
         };
-        let moon = build(&blood_moon().id);
-        let step = build(&shadowstep().id);
-        let plain = build(&gambit().id);
+        let moon = build(blood_moon().id.as_str());
+        let step = build(shadowstep().id.as_str());
+        let plain = build(gambit().id.as_str());
         assert_eq!(view_json(&moon, P2), view_json(&plain, P2));
         assert_eq!(view_json(&step, P2), view_json(&plain, P2));
     }
