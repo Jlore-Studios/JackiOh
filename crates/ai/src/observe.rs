@@ -429,7 +429,10 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
 
     // Step 3: every hidden card becomes a placeholder. R351: a face-down backrow card's cost is shown
     // to both players, so its placeholder keeps that number as its price, and whatever trap
-    // `determinize` puts there shows the seat the same cost the true board does.
+    // `determinize` puts there shows the seat the same cost the true board does. A card that is a
+    // placeholder already (the state was redacted before: the training arena sends each agent
+    // `redact(state, seat)`, and `decide` redacts what it is given, SURFACE §14.1) has no definition
+    // to price, and already shows its price, so redacting twice is redacting once.
     for (player, place) in every_place(&next) {
         let Some(card) = card_at(&next, player, place) else {
             continue;
@@ -437,16 +440,18 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         if !hidden.contains(&card.id) {
             continue;
         }
-        let shown_cost = if matches!(
+        let shown_cost = if !matches!(
             card.zone,
             Zone::Field {
                 row: Row::Backrow,
                 ..
             }
         ) {
-            Some(effective_cost(&next, card, CostOptions::default()))
-        } else {
             None
+        } else if card.def_id == HIDDEN_DEF_ID {
+            card.cost_override
+        } else {
+            Some(effective_cost(&next, card, CostOptions::default()))
         };
         if let Some(card) = card_at_mut(&mut next, player, place) {
             to_placeholder(card);

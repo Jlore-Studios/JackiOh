@@ -923,6 +923,10 @@ mod tests {
                 "{} does not replay to its hash",
                 outcome.game.seed
             );
+            // Clean, as a gate game must be (B31): an agent decides on `redact(state, seat)` and
+            // `decide` redacts it again, which must never throw (a face-down trap once did).
+            assert_eq!(outcome.thrown, Vec::<String>::new(), "{}", outcome.game.seed);
+            assert!(outcome.result.is_some(), "{} has no result", outcome.game.seed);
         }
     }
 
