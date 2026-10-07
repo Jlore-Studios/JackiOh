@@ -21,8 +21,8 @@
 use std::str::FromStr;
 
 use jackioh_engine::{
-    self as engine, Action, CardDefs, CreateGameArgs, DECK_SIZE, FoldArgs, GameState, PLAYER_IDS, PerPlayerOpt,
-    PlayerId, Rng,
+    self as engine, Action, CardDefs, CreateGameArgs, DECK_SIZE, FoldArgs, GameState, PLAYER_IDS,
+    PerPlayerOpt, PlayerId, Rng,
 };
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -40,7 +40,8 @@ fn parse<T: DeserializeOwned>(what: &str, text: &str) -> Result<T, JsError> {
 
 /// The JSON text of a result.
 fn to_json<T: Serialize + ?Sized>(value: &T) -> Result<String, JsError> {
-    serde_json::to_string(value).map_err(|error| JsError::new(&format!("could not serialise the result: {error}")))
+    serde_json::to_string(value)
+        .map_err(|error| JsError::new(&format!("could not serialise the result: {error}")))
 }
 
 /// `"p1"` or `"p2"`; anything else is refused with `PlayerId`'s own message.
@@ -70,7 +71,9 @@ fn check_setup(args: &CreateGameArgs) -> Result<(), JsError> {
         }
     }
     for seat in PLAYER_IDS {
-        let size = handicaps.get(seat).map_or(DECK_SIZE, |handicap| handicap.deck_size);
+        let size = handicaps
+            .get(seat)
+            .map_or(DECK_SIZE, |handicap| handicap.deck_size);
         let deck = match seat {
             PlayerId::P1 => &args.decks.0,
             PlayerId::P2 => &args.decks.1,
@@ -219,12 +222,21 @@ struct DecideOptions {
 /// clock passes it (TS `shouldStop`). `deadline_ms <= 0` means no clock, so the decision depends
 /// only on `(state, seed, cursor, budget)`.
 #[wasm_bindgen]
-pub fn ai_decide(state_json: &str, seat: &str, options_json: &str, deadline_ms: f64) -> Result<String, JsError> {
+pub fn ai_decide(
+    state_json: &str,
+    seat: &str,
+    options_json: &str,
+    deadline_ms: f64,
+) -> Result<String, JsError> {
     let state = state_of("decide", state_json)?;
     let seat = player(seat)?;
     let request: DecideOptions = parse("decide: the options", options_json)?;
     let clock = move || js_sys::Date::now() >= deadline_ms;
-    let should_stop = if deadline_ms > 0.0 { Some(&clock as &dyn Fn() -> bool) } else { None };
+    let should_stop = if deadline_ms > 0.0 {
+        Some(&clock as &dyn Fn() -> bool)
+    } else {
+        None
+    };
     let mut options = jackioh_ai::AiOptions {
         rng: Rng::new(&request.rng_seed, request.rng_cursor),
         budget: request.budget.unwrap_or(jackioh_ai::AI_BUDGET),
@@ -252,7 +264,9 @@ pub fn build_ai_deck(options_json: &str) -> Result<String, JsError> {
         },
     };
     let size = match request.remove("size").and_then(|value| value.as_i64()) {
-        Some(size) => i32::try_from(size).map_err(|_| JsError::new("buildAiDeck: \"size\" is out of range"))?,
+        Some(size) => {
+            i32::try_from(size).map_err(|_| JsError::new("buildAiDeck: \"size\" is out of range"))?
+        }
         None => return Err(JsError::new("buildAiDeck: \"size\" must be a whole number")),
     };
     let options: jackioh_ai::AiDeckOptions = serde_json::from_value(Value::Object(request))
@@ -266,7 +280,12 @@ pub fn build_ai_deck(options_json: &str) -> Result<String, JsError> {
 /// `subsystems.chooseAction(state, seat, rng)`, whose default skip set is `jackioh_ai::random_action`'s),
 /// drawing from `(rng_seed, rng_cursor)`.
 #[wasm_bindgen]
-pub fn choose_action(state_json: &str, seat: &str, rng_seed: &str, rng_cursor: f64) -> Result<String, JsError> {
+pub fn choose_action(
+    state_json: &str,
+    seat: &str,
+    rng_seed: &str,
+    rng_cursor: f64,
+) -> Result<String, JsError> {
     let state = state_of("chooseAction", state_json)?;
     let seat = player(seat)?;
     if !((0.0..=f64::from(u32::MAX)).contains(&rng_cursor) && rng_cursor.fract() == 0.0) {
@@ -299,10 +318,14 @@ pub fn constants() -> Result<String, JsError> {
 pub fn engine_tables() -> Result<String, JsError> {
     use jackioh_engine::subsystems::{call_to_chaos, call_to_chaos_plus, hero_power};
 
-    let chaos_effects: Vec<Value> =
-        call_to_chaos::CHAOS_EFFECTS.iter().map(|effect| json!({ "label": effect.label })).collect();
-    let chaos_plus_effects: Vec<Value> =
-        call_to_chaos_plus::CHAOS_PLUS_EFFECTS.iter().map(|effect| json!({ "label": effect.label })).collect();
+    let chaos_effects: Vec<Value> = call_to_chaos::CHAOS_EFFECTS
+        .iter()
+        .map(|effect| json!({ "label": effect.label }))
+        .collect();
+    let chaos_plus_effects: Vec<Value> = call_to_chaos_plus::CHAOS_PLUS_EFFECTS
+        .iter()
+        .map(|effect| json!({ "label": effect.label }))
+        .collect();
     let hero_powers: Vec<Value> = hero_power::HERO_POWERS
         .iter()
         .map(|power| {
@@ -359,7 +382,9 @@ fn check_deck_draft(input_json: &str) -> Result<String, JsError> {
         cards: request.cards,
         is_deckable: &is_deckable,
         portrait: request.portrait,
-        is_portrait: request.portrait_known.map(|_| &is_portrait as &dyn Fn(&str) -> bool),
+        is_portrait: request
+            .portrait_known
+            .map(|_| &is_portrait as &dyn Fn(&str) -> bool),
         name_max_length: request.name_max_length,
     };
     to_json(&validator::check_deck_draft(&input))
