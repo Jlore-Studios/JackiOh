@@ -56,3 +56,134 @@ pub fn script() -> CardScripts {
         radiant: combo_fodder(RADIANT_DAMAGE),
     }
 }
+
+// #93.1 Combo-Fodder (SPEC §8.4, §7; R11, R81, R85, R275, R276). BUILD M4-T4 row 93.1: "2 damage to
+// a target, Lifesteal; radiant 4". The token's own cases, on its own: how #93 Combo-Index hands it out
+// (one each start of turn, a full hand burning it), the rest of R81's target set and its place in no
+// random pool are in `c093_combo_index.rs`, beside the card that makes it.
+#[cfg(test)]
+mod tests {
+    use jackioh_engine::testkit::*;
+
+    const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
+
+    const FODDER: &str = "core-093-1"; // Spell token, 0 mana
+    /// #61 Postdoc is 2/4: the base 2 leaves it standing, the radiant 4 kills it.
+    const POSTDOC: &str = "core-061";
+    /// §2.5/R82 TURN ANCHOR. #10 Rapid Replenish is a 0-cost Spell, always an affordable play, so one
+    /// in hand keeps p1's turn from auto-ending (and p2's from starting) under the assertions.
+    const ANCHOR: &str = "core-010";
+
+    /// The amounts of every `damage` event on `target` (an instance id, or `hero-p1`/`hero-p2`).
+    fn damage_on(s: &Scenario, target: &str) -> Vec<i32> {
+        s.events()
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Damage { target_id, amount, .. } if target_id == target => Some(*amount),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// The amounts of every `healed` event on `target`.
+    fn healed_on(s: &Scenario, target: &str) -> Vec<i32> {
+        s.events()
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Healed { target_id, amount, .. } if target_id == target => Some(*amount),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// R81: the play's declared target, one instance.
+    fn at(card: &CardInstance) -> Value {
+        json!({ "targets": [{ "pick": "instance", "instanceId": card.id }] })
+    }
+
+    fn at_hero(player: &str) -> Value {
+        json!({ "targets": [{ "pick": "hero", "player": player }] })
+    }
+
+    fn postdoc_of(s: &Scenario) -> CardInstance {
+        s.unit(P2, 1)
+            .unwrap_or_else(|| panic!("expected p2's Postdoc in lane 1"))
+    }
+
+    mod n93_1_combo_fodder_base {
+        use super::*;
+
+        #[test]
+        fn s8_it_costs_0_deals_2_to_the_chosen_unit_and_its_lifesteal_heals_you_2_once() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [FODDER, ANCHOR], "health": 20 },
+                "p2": { "field": [POSTDOC] },
+            }));
+            let postdoc = postdoc_of(&s);
+
+            s.play(FODDER, at(&postdoc));
+
+            s.expect_mana(P1, 4);
+            assert_eq!(damage_on(&s, &postdoc.id), vec![2]);
+            s.expect_stats(&postdoc, json!({ "health": 2, "maxHealth": 4 }));
+            // R85: the effect's Lifesteal and the printed keyword are one Lifesteal, so it heals once.
+            assert_eq!(healed_on(&s, "hero-p1"), vec![2]);
+            s.expect_health(P1, 22);
+        }
+
+        #[test]
+        fn r11_a_spell_token_resolves_at_the_enemy_hero_and_goes_to_the_graveyard_like_any_spell() {
+            crate::register_all();
+            let mut s = scenario(json!({ "p1": { "hand": [FODDER, ANCHOR], "health": 20 } }));
+            let fodder = s.card(FODDER).clone();
+
+            s.play(FODDER, at_hero("p2"));
+
+            assert!(s.state().pending.is_none());
+            assert_eq!(damage_on(&s, "hero-p2"), vec![2]);
+            s.expect_health(P2, 28).expect_health(P1, 22);
+            s.expect_in_zone(&fodder, "graveyard");
+            assert_eq!(s.state().players[P1].turn_log.cards_played, 1);
+        }
+    }
+
+    mod n93_1_combo_fodder_radiant {
+        use super::*;
+
+        #[test]
+        fn r275_only_the_number_changes_so_4_damage_kills_the_2_4_and_lifesteal_heals_4() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [{ "def": FODDER, "radiant": true }, ANCHOR], "health": 20 },
+                "p2": { "field": [POSTDOC] },
+            }));
+            let postdoc = postdoc_of(&s);
+            assert!(s.card(FODDER).radiant);
+
+            s.play(FODDER, at(&postdoc));
+
+            s.expect_mana(P1, 4);
+            assert_eq!(damage_on(&s, &postdoc.id), vec![4]);
+            s.expect_in_zone(&postdoc, "graveyard");
+            assert_eq!(healed_on(&s, "hero-p1"), vec![4]);
+            s.expect_health(P1, 24);
+        }
+
+        #[test]
+        fn r275_the_radiant_face_reaches_a_hero_too_and_still_goes_to_the_graveyard() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [{ "def": FODDER, "radiant": true }, ANCHOR], "health": 20 },
+            }));
+            let fodder = s.card(FODDER).clone();
+
+            s.play(FODDER, at_hero("p2"));
+
+            assert_eq!(damage_on(&s, "hero-p2"), vec![4]);
+            s.expect_health(P2, 26).expect_health(P1, 24);
+            s.expect_in_zone(&fodder, "graveyard");
+        }
+    }
+}
