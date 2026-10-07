@@ -101,7 +101,7 @@ mod turn_loop_and_mana_m1_t6 {
     #[test]
     fn mana_well_adds_temporary_mana_above_the_refresh_6() {
         let mut state = playing("mana-well", None);
-        put(&mut state, &mana_well().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
+        put(&mut state, &mana_well.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
         state = end_turns(&state, 6);
         assert_eq!(state.players.p1.mana.max, 4);
         assert_eq!(state.players.p1.mana.current, 5);
@@ -153,7 +153,7 @@ mod turn_loop_and_mana_m1_t6 {
     #[test]
     fn fires_start_of_turn_triggers_before_the_draw_37_gravedigger() {
         let mut state = playing("gravedigger", None);
-        put(&mut state, &gravedigger().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+        put(&mut state, &gravedigger.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let buried = new_instance(&mut state, "fx-9", PlayerId::P1, Zone::Graveyard { player: PlayerId::P1 });
         state.players.p1.graveyard.push(buried.clone());
         state.players.p1.hand = vec![];
@@ -168,9 +168,9 @@ mod turn_loop_and_mana_m1_t6 {
     #[test]
     fn r348_refuses_an_x_above_current_mana_and_an_x_of_0() {
         let deck: Vec<String> =
-            std::iter::once(x_bolt().id).chain(vanilla_deck(Some(DECK_SIZE - 1), Some(1))).collect();
-        let mut state = playing("x-cost", Some((deck.clone(), vanilla_deck(Some(DECK_SIZE), Some(21)))));
-        let bolt = new_instance(&mut state, &x_bolt().id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+            std::iter::once(x_bolt.id.clone()).chain(vanilla_deck(DECK_SIZE - 1, 1)).collect();
+        let mut state = playing("x-cost", Some((deck.clone(), vanilla_deck(DECK_SIZE, 21))));
+        let bolt = new_instance(&mut state, &x_bolt.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
         state.players.p1.hand.push(bolt.clone());
 
         let too_big = reduce(
@@ -203,8 +203,8 @@ mod turn_loop_and_mana_m1_t6 {
             vec![Some(1)]
         );
 
-        state = playing("x-cost-2", Some((deck, vanilla_deck(Some(DECK_SIZE), Some(21)))));
-        let bolt2 = new_instance(&mut state, &x_bolt().id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        state = playing("x-cost-2", Some((deck, vanilla_deck(DECK_SIZE, 21))));
+        let bolt2 = new_instance(&mut state, &x_bolt.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
         state.players.p1.hand.push(bolt2.clone());
         let one = reduce(
             &state,
@@ -218,7 +218,7 @@ mod turn_loop_and_mana_m1_t6 {
     #[test]
     fn r62_runs_a_turn_in_order_refresh_start_triggers_draw_then_end_of_turn() {
         let mut state = playing("r62", None);
-        put(&mut state, &gravedigger().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+        put(&mut state, &gravedigger.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let buried = new_instance(&mut state, "fx-9", PlayerId::P1, Zone::Graveyard { player: PlayerId::P1 });
         state.players.p1.graveyard.push(buried);
 
@@ -270,7 +270,7 @@ mod turn_loop_and_mana_m1_t6 {
     #[test]
     fn fires_a_start_of_turn_trigger_on_its_controllers_turn_only_6_2() {
         let mut state = playing("own-turn-only", None);
-        put(&mut state, &gravedigger().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+        put(&mut state, &gravedigger.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let buried = new_instance(&mut state, "fx-9", PlayerId::P1, Zone::Graveyard { player: PlayerId::P1 });
         state.players.p1.graveyard.push(buried.clone());
 
@@ -284,8 +284,8 @@ mod turn_loop_and_mana_m1_t6 {
     #[test]
     fn r68_resolves_two_end_of_turn_triggers_on_one_side_in_lane_order() {
         let mut state = playing("r68", None);
-        let first = put(&mut state, &shredder().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
-        let second = put(&mut state, &shredder().id, slot(PlayerId::P1, Row::Units, 3), Default::default());
+        let first = put(&mut state, &shredder.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let second = put(&mut state, &shredder.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
 
         let nonce = next_nonce();
         let result = reduce(
@@ -306,7 +306,7 @@ mod turn_loop_and_mana_m1_t6 {
     fn r70_a_cast_counts_as_a_play_and_pays_nothing() {
         let mut state = playing("r70", None);
         let before = state.players.p1.turn_log.cards_played;
-        set_library(&mut state, PlayerId::P1, &[hinder().id, "fx-2".to_string()]);
+        set_library(&mut state, PlayerId::P1, &[hinder.id.clone(), "fx-2".to_string()]);
         let events = {
             let mut sink = sink_for(&mut state);
             jackioh_engine::draw::draw(&mut sink, PlayerId::P1, 1);
@@ -324,7 +324,7 @@ mod turn_loop_and_mana_m1_t6 {
     #[test]
     fn resets_exertion_at_the_controllers_next_turn_4_1() {
         let mut state = playing("exertion", None);
-        let unit = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), Default::default());
+        let unit = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({}));
         state = act(&state, json!({ "type": "switchPosition", "instanceId": unit.id, "playerId": "p1" }));
         let top = |state: &GameState| {
             state.players.p1.units[0].as_ref().and_then(|pile| pile.first()).map(|card| card.exertion.switched)
@@ -427,7 +427,7 @@ fn notes(state: &GameState) -> Vec<String> {
 fn ask_controller() -> Effect {
     Effect::new("tn:ask", |ctx| {
         let player = ctx.controller;
-        let resume = resume_self(ctx, "asked", IndexMap::new());
+        let resume = resume_self(ctx, "asked", Default::default());
         open_prompt(
             ctx,
             json_as(json!({
@@ -522,7 +522,7 @@ fn turn_game(seed: &str) -> GameState {
     state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }));
     let keep = ids(&state.players.p2.hand);
     state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }));
-    put(&mut state, &log_card().id, slot(PlayerId::P1, Row::Backrow, NOTE_LANE), Default::default());
+    put(&mut state, &log_card().id, slot(PlayerId::P1, Row::Backrow, NOTE_LANE), json!({}));
     state
 }
 
@@ -589,7 +589,7 @@ mod r62_r113_r117_r126_r127_delayed_continuations_and_the_end_of_turn_2_2_10_6 {
     #[test]
     fn r126_re_enters_a_delayed_continuation_that_lives_in_the_resume_step_table_not_only_a_delayed_hook() {
         let mut state = turn_game("r126-step-table");
-        let scheduler = put(&mut state, &table_card().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
+        let scheduler = put(&mut state, &table_card().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
         // The shape `resolve.runHook` could not read: `hook` is the step table, `step` picks the entry.
         // It used to fetch `script.resume` — an object — and call it, which threw.
         delay_at_end_of_p1(
@@ -627,8 +627,8 @@ mod r62_r113_r117_r126_r127_delayed_continuations_and_the_end_of_turn_2_2_10_6 {
     #[test]
     fn r113_r122_parks_the_rest_of_the_end_of_turn_when_a_delayed_effect_prompts_and_r122s_answer_finishes_it() {
         let mut state = turn_game("r113-end-of-turn-remainder");
-        let asking = put(&mut state, &ask_card().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
-        let scheduler = put(&mut state, &table_card().id, slot(PlayerId::P1, Row::Backrow, 2), Default::default());
+        let asking = put(&mut state, &ask_card().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let scheduler = put(&mut state, &table_card().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
         delay_at_end_of_p1(&mut state, resume(&ask_card().id, "delayed", "", Some(&asking.id), json!({})));
         // R68's creation order: this one is due at the same point and waits for the first to finish.
         let second = delay_at_end_of_p1(
@@ -672,9 +672,9 @@ mod r62_r113_r117_r126_r127_delayed_continuations_and_the_end_of_turn_2_2_10_6 {
     #[test]
     fn r62_finishes_the_end_of_turn_triggers_before_the_turn_ended_event_when_one_of_them_prompts() {
         let mut state = turn_game("r62-trigger-pause");
-        put(&mut state, &ask_hook_card().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
-        put(&mut state, &second_hook_card().id, slot(PlayerId::P1, Row::Backrow, 2), Default::default());
-        let scheduler = put(&mut state, &table_card().id, slot(PlayerId::P1, Row::Backrow, 3), Default::default());
+        put(&mut state, &ask_hook_card().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        put(&mut state, &second_hook_card().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
+        let scheduler = put(&mut state, &table_card().id, slot(PlayerId::P1, Row::Backrow, 3), json!({}));
         delay_at_end_of_p1(
             &mut state,
             resume(&table_card().id, RESUME_HOOK, STEP, Some(&scheduler.id), json!({ "amount": 2 })),

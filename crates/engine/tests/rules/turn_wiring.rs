@@ -28,8 +28,8 @@ use jackioh_engine::testkit::{mock_animate_at_turn_start, mock_brittle_tick, moc
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{in_hand, new_game, put, set_library, setup_catalog, slot};
 use crate::rules::fixtures::turn::{
-    LOG_LANE, cast_spell, clock, crumble_watcher, log_card, note, notes, reminder, turn_catalog, turn_scripts,
-    write,
+    LOG_LANE, cast_spell, clock, crumble_watcher, log_card, note, notes, reminder, turn_catalog, write,
+    TURN_SCRIPTS,
 };
 
 /// The log card also answers the doubles' prompts, and holds a delayed step for them.
@@ -51,8 +51,8 @@ fn log_scripts() -> CardScripts {
 fn register() {
     register_catalog(turn_catalog(registered_catalog().clone()));
     let mut scripts = registered_scripts().clone();
-    scripts.extend(turn_scripts());
-    scripts.insert(log_card().id, log_scripts());
+    scripts.extend(TURN_SCRIPTS.clone());
+    scripts.insert(log_card.id.clone(), log_scripts());
     register_scripts(scripts);
 }
 
@@ -66,7 +66,7 @@ fn ask(sink: &mut EngineSink<'_>, player: PlayerId, step: &str) {
             "kind": "target",
             "prompt": "a stage asks",
             "options": [{ "key": "none", "label": "nothing", "selection": { "pick": "none" } }],
-            "resume": { "defId": log_card().id, "hook": "resume", "step": step, "radiant": false, "data": {} },
+            "resume": { "defId": log_card.id, "hook": "resume", "step": step, "radiant": false, "data": {} },
         })),
     );
 }
@@ -122,7 +122,7 @@ fn playing(seed: &str) -> GameState {
         let keep = ids(&state.players[player].hand);
         state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": player })).0;
     }
-    put(&mut state, &log_card().id, slot(PlayerId::P2, Row::Backrow, LOG_LANE), Default::default());
+    put(&mut state, &log_card.id, slot(PlayerId::P2, Row::Backrow, LOG_LANE), json!({}));
     state.players.p1.auto_end_turn = Some(false);
     state.players.p2.auto_end_turn = Some(false);
     state
@@ -132,10 +132,10 @@ fn playing(seed: &str) -> GameState {
 /// turn, and a cast-on-draw card on top of their library: every stage of p1's next start leaves a note.
 fn staged(seed: &str) -> GameState {
     let mut state = playing(seed);
-    put(&mut state, &clock().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
-    let card = in_hand(&mut state, &reminder().id, PlayerId::P1, None)[0].clone();
+    put(&mut state, &clock.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+    let card = in_hand(&mut state, &reminder.id, PlayerId::P1, 1)[0].clone();
     state = act(&state, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" })).0;
-    set_library(&mut state, PlayerId::P1, &[cast_spell().id, "fx-9".to_string()]);
+    set_library(&mut state, PlayerId::P1, &[cast_spell.id.clone(), "fx-9".to_string()]);
     state
 }
 
@@ -266,7 +266,7 @@ mod r62_s_start_of_a_turn_with_the_brittle_and_animated_stages_b3_1_b3_3 {
     fn r62_a_trigger_the_brittle_stages_own_events_wake_may_ask_too_the_stages_settle_pauses_and_the_rest_waits() {
         let _calls = recording_doubles();
         let mut state = staged("brittle-event");
-        put(&mut state, &crumble_watcher().id, slot(PlayerId::P1, Row::Backrow, 2), Default::default());
+        put(&mut state, &crumble_watcher.id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
         mock_brittle_tick(|sink: &mut EngineSink<'_>, player: PlayerId| {
             write(sink.state, &format!("brittle:{player}"));
             let Some(card) = sink.state.players[player].hand.first().cloned() else {
@@ -359,7 +359,7 @@ mod r62_s_start_of_a_turn_with_the_brittle_and_animated_stages_b3_1_b3_3 {
                     player: PlayerId::P1,
                 },
                 Resume {
-                    def_id: log_card().id,
+                    def_id: log_card.id.clone(),
                     hook: "delayed".to_string(),
                     step: "late".to_string(),
                     radiant: false,
@@ -384,7 +384,7 @@ mod r62_s_cleanup_with_the_animated_return_as_its_last_step_b3_1 {
     fn r62_the_return_runs_after_every_end_of_turn_step_and_cleanups_own_steps_before_the_turn_cap_and_the_next_turn() {
         let calls = recording_doubles();
         let mut state = playing("return-order");
-        put(&mut state, &clock().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
+        put(&mut state, &clock.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
         let (after, events) = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(
             notes(&after).into_iter().filter(|entry| entry.contains("p1")).collect::<Vec<_>>(),
@@ -467,7 +467,7 @@ mod r62_s_cleanup_with_the_animated_return_as_its_last_step_b3_1 {
             }
         });
         let seed = "turn-wiring-replay";
-        let decks = (vanilla_deck(Some(DECK_SIZE), Some(1)), vanilla_deck(Some(DECK_SIZE), Some(21)));
+        let decks = (vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 21));
         setup_catalog();
         register();
         let mut game = Played {
