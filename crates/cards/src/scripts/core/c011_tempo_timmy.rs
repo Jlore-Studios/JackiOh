@@ -13,7 +13,9 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "core-011";
 
 pub fn script() -> CardScripts {
-    CardScripts { base: Script::default(), radiant: Script::default() }
+    let base = Script::default();
+    let radiant = Script::default();
+    CardScripts { base, radiant }
 }
 
 // #11 Tempo Timmy (SPEC §8.1, BUILD M4-T4 row 11): "Attacks a unit on summon turn, not the hero;
@@ -25,97 +27,134 @@ pub fn script() -> CardScripts {
 // HARNESS GAP: `SideSetup.hand` is `string[]`, so a RADIANT card cannot be seeded in a hand, and a
 // radiant Cry or a radiant summoning-sick body can only be reached by playing one. Until `hand`
 // takes `{ def, radiant }` the radiant tests set the flag on the hand instance themselves; see
-// `playRadiant` below.
+// `play_radiant` below.
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
-    use serde_json::json;
 
     /// HARNESS GAP (see the header): make the hand copy radiant, then play it.
-    fn play_radiant(s: &mut Scenario, card: &str) {
-        s.card_mut(card).radiant = true;
-        s.play(card, json!({}));
+    fn play_radiant<'a>(s: &'a mut Scenario, card: &str) -> &'a mut Scenario {
+        let id = s.card(card).id.clone();
+        match find_instance_mut(s.state_mut(), &id) {
+            Some(instance) => instance.radiant = true,
+            None => panic!("no instance {id}"),
+        }
+        s.play(card, json!({}))
     }
 
-    /// TS `expect(script).toEqual({})`: no hook, no declaration and no data field is set.
-    fn is_empty_script(sc: &Script) -> bool {
-        sc.cost.is_none()
-            && sc.cry.is_none()
-            && sc.death.is_none()
-            && sc.start_of_game.is_none()
-            && sc.resume.is_empty()
-            && sc.delayed.is_none()
-            && sc.set_stat.is_none()
-            && sc.start_of_turn.is_none()
-            && sc.end_of_turn.is_none()
-            && sc.aura.is_none()
-            && sc.triggers.is_empty()
-            && sc.on_play_hook.is_none()
-            && sc.hand_triggers.is_empty()
-            && sc.static_flags.is_none()
-            && sc.targets.is_empty()
-            && sc.modes.is_empty()
-            && sc.condition_met.is_none()
-            && sc.preview.is_none()
-            && sc.activations.is_empty()
-            && sc.target_checks.is_empty()
-            && sc.cost_aura.is_none()
-            && sc.graveyard_play.is_none()
-            && sc.targeting_discards.is_none()
-            && sc.records_play_as.is_none()
-            && sc.draw_limit.is_none()
-            && sc.replacements.is_empty()
-            && sc.hero_guard.is_none()
-            && sc.conditional_keywords.is_none()
-            && sc.after_attack.is_none()
-            && sc.plague_multiplier.is_none()
-            && sc.deck_triggers.is_empty()
-            && sc.graveyard_triggers.is_empty()
-            && sc.quests.is_none()
-            && sc.tribute_when.is_none()
-            && sc.would_counter.is_none()
-            && sc.start_of_opponent_turn.is_none()
+    /// TS `expect(script).toEqual({})`: a face with no hook, no declaration and no flag. The
+    /// destructuring names every field, so a field added to `Script` must be added here too.
+    fn is_empty_script(script: &Script) -> bool {
+        let Script {
+            cost,
+            cry,
+            death,
+            start_of_game,
+            resume,
+            delayed,
+            set_stat,
+            start_of_turn,
+            end_of_turn,
+            aura,
+            triggers,
+            on_play_hook,
+            hand_triggers,
+            static_flags,
+            targets,
+            modes,
+            condition_met,
+            preview,
+            activations,
+            target_checks,
+            cost_aura,
+            graveyard_play,
+            targeting_discards,
+            records_play_as,
+            draw_limit,
+            replacements,
+            hero_guard,
+            conditional_keywords,
+            after_attack,
+            plague_multiplier,
+            deck_triggers,
+            graveyard_triggers,
+            quests,
+            tribute_when,
+            would_counter,
+            start_of_opponent_turn,
+        } = script;
+        cost.is_none()
+            && cry.is_none()
+            && death.is_none()
+            && start_of_game.is_none()
+            && resume.is_empty()
+            && delayed.is_none()
+            && set_stat.is_none()
+            && start_of_turn.is_none()
+            && end_of_turn.is_none()
+            && aura.is_none()
+            && triggers.is_empty()
+            && on_play_hook.is_none()
+            && hand_triggers.is_empty()
+            && static_flags.is_none()
+            && targets.is_empty()
+            && modes.is_empty()
+            && condition_met.is_none()
+            && preview.is_none()
+            && activations.is_empty()
+            && target_checks.is_empty()
+            && cost_aura.is_none()
+            && graveyard_play.is_none()
+            && targeting_discards.is_none()
+            && records_play_as.is_none()
+            && draw_limit.is_none()
+            && replacements.is_empty()
+            && hero_guard.is_none()
+            && conditional_keywords.is_none()
+            && after_attack.is_none()
+            && plague_multiplier.is_none()
+            && deck_triggers.is_empty()
+            && graveyard_triggers.is_empty()
+            && quests.is_none()
+            && tribute_when.is_none()
+            && would_counter.is_none()
+            && start_of_opponent_turn.is_none()
     }
 
-    /// The `kind` of every keyword in a printed keyword list, in order.
-    fn kinds(keywords: &[Keyword]) -> Vec<String> {
-        serde_json::to_value(keywords)
-            .unwrap()
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|k| k["kind"].as_str().unwrap().to_string())
-            .collect()
+    fn kinds(keywords: &[Keyword]) -> Vec<&'static str> {
+        keywords.iter().map(|keyword| keyword.kind().as_str()).collect()
     }
 
-    mod c11_tempo_timmy {
+    mod n11_tempo_timmy {
         use super::*;
 
         #[test]
-        fn is_keywords_only_both_faces_print_their_keywords_and_neither_script_has_a_hook_8() {
+        fn is_keywords_only_both_faces_print_their_keywords_and_neither_script_has_a_hook_s8() {
+            crate::register_all();
             // §8 Conventions: a radiant cell that lists keywords without "Plus" is the COMPLETE radiant
             // list, so Rush is gone and Charge replaces it. Verified against the catalog here because a
             // mismatch would otherwise be papered over by a script that re-granted the keyword.
             let def = crate::card_def(ID);
             assert_eq!(kinds(&def.base.keywords), vec!["Rush", "First Strike"]);
             assert_eq!(kinds(&def.radiant.keywords), vec!["Charge", "First Strike"]);
-            let sc = script();
-            assert!(is_empty_script(&sc.base));
-            assert!(is_empty_script(&sc.radiant));
+            let scripts = script();
+            assert!(is_empty_script(&scripts.base));
+            assert!(is_empty_script(&scripts.radiant));
         }
 
         mod base {
             use super::*;
 
             #[test]
-            fn attacks_a_unit_on_its_summon_turn_rush_4_1() {
+            fn attacks_a_unit_on_its_summon_turn_rush_s4_1() {
+                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": ["core-011", "core-005"], "library": ["core-005"] },
                     "p2": { "field": [{ "def": "core-008", "damage": 1 }], "library": ["core-005"] }
                 }));
                 s.play("core-011", json!({}));
-                let vanilla = s.card("core-008").id.clone();
+                let vanilla = s.card("core-008").clone();
 
                 s.attack("core-011", "core-008");
 
@@ -123,7 +162,8 @@ mod tests {
             }
 
             #[test]
-            fn kills_a_3_health_unit_unharmed_first_strike_4_3_step_1() {
+            fn kills_a_3_health_unit_unharmed_first_strike_s4_3_step_1() {
+                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": ["core-011", "core-005"], "library": ["core-005"] },
                     // Mr. Vanilla is a 4/4 at 3 health with no First Strike of its own, so §4.3's step 1
@@ -132,7 +172,7 @@ mod tests {
                     "p2": { "field": [{ "def": "core-008", "damage": 1 }], "library": ["core-005"] }
                 }));
                 s.play("core-011", json!({}));
-                let vanilla = s.card("core-008").id.clone();
+                let vanilla = s.card("core-008").clone();
 
                 s.attack("core-011", "core-008");
 
@@ -141,7 +181,8 @@ mod tests {
             }
 
             #[test]
-            fn cannot_hit_the_hero_on_its_summon_turn_rush_not_charge_4_2_step_2() {
+            fn cannot_hit_the_hero_on_its_summon_turn_rush_not_charge_s4_2_step_2() {
+                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": ["core-011", "core-005"], "library": ["core-005"] },
                     "p2": { "field": [{ "def": "core-008", "damage": 1 }], "library": ["core-005"] }
@@ -149,9 +190,7 @@ mod tests {
                 s.play("core-011", json!({}));
 
                 s.expect_refused_with(
-                    |s| {
-                        s.attack("core-011", "hero");
-                    },
+                    |s| s.attack("core-011", "hero"),
                     "Rush cannot hit the hero on its summon turn",
                 );
                 s.expect_health(PlayerId::P2, 30);
@@ -162,7 +201,8 @@ mod tests {
             use super::*;
 
             #[test]
-            fn may_hit_the_hero_on_its_summon_turn_charge_4_1() {
+            fn may_hit_the_hero_on_its_summon_turn_charge_s4_1() {
+                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": ["core-011", "core-005"], "library": ["core-005"] },
                     "p2": { "field": [{ "def": "core-008", "damage": 1 }], "library": ["core-005"] }
@@ -176,13 +216,14 @@ mod tests {
             }
 
             #[test]
-            fn still_kills_a_3_health_unit_unharmed_first_strike_is_kept_8_conventions() {
+            fn still_kills_a_3_health_unit_unharmed_first_strike_is_kept_s8_conventions() {
+                crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": ["core-011", "core-005"], "library": ["core-005"] },
                     "p2": { "field": [{ "def": "core-008", "damage": 1 }], "library": ["core-005"] }
                 }));
                 play_radiant(&mut s, "core-011");
-                let vanilla = s.card("core-008").id.clone();
+                let vanilla = s.card("core-008").clone();
 
                 s.attack("core-011", "core-008");
 
