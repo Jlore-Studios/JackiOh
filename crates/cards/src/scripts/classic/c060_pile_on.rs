@@ -8,20 +8,26 @@
 //!            clause is a replacement on this card's own move to its graveyard — resolving, discarded,
 //!            burned — to the bottom of the deck; a full deck turns it away (R80).
 
-use jackioh_engine::prelude::*;
 use jackioh_engine::effects::recruit_all;
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-060";
 
 pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(hook(|_ctx| vec![recruit_all(Default::default())])),
-        replacements: vec![json_as(json!({
-            "id": "pile-on",
-            "on": "toGraveyard",
-            "where": "self",
-            "instead": { "to": "bottomOfLibrary" },
-        }))],
+        replacements: vec![ReplacementDef {
+            id: "pile-on".to_string(),
+            on: ReplacementMoment::ToGraveyard,
+            where_: Some(ReplacementWhere::SelfCard),
+            when: None,
+            instead: ReplacementInstead {
+                to: Some(InsteadTo::BottomOfLibrary),
+                ..ReplacementInstead::default()
+            },
+            then: None,
+            by: None,
+        }],
         ..Script::default()
     };
 
@@ -99,10 +105,17 @@ mod tests {
             assert_eq!(def["cost"], 5);
             assert!(def["params"].is_null());
             let scripts = script();
-            assert_eq!(
-                js(&scripts.base.replacements),
-                json!([{ "id": "pile-on", "on": "toGraveyard", "where": "self", "instead": { "to": "bottomOfLibrary" } }]),
-            );
+            // TS `toEqual([{ id: "pile-on", on: "toGraveyard", where: "self", instead: { to: "bottomOfLibrary" } }])`:
+            // a declaration holds a hook slot (`when`), so it is compared field by field.
+            assert_eq!(scripts.base.replacements.len(), 1);
+            let replacement = &scripts.base.replacements[0];
+            assert_eq!(replacement.id, "pile-on");
+            assert_eq!(replacement.on, ReplacementMoment::ToGraveyard);
+            assert_eq!(replacement.where_, Some(ReplacementWhere::SelfCard));
+            assert!(replacement.when.is_none());
+            assert_eq!(js(&replacement.instead), json!({ "to": "bottomOfLibrary" }));
+            assert!(replacement.then.is_none());
+            assert!(replacement.by.is_none());
             assert!(scripts.radiant.replacements.is_empty());
             // TS `expect(radiant.cry).toBe(base.cry)`: the same shared hook.
             assert!(match (&scripts.radiant.cry, &scripts.base.cry) {
@@ -115,34 +128,30 @@ mod tests {
             use super::*;
 
             #[test]
-            fn c2_3_at_the_mana_cap_of_4_it_cannot_be_played_refused_and_legalactions_offers_no_play_of_it() {
+            fn s2_3_at_the_mana_cap_of_4_it_cannot_be_played_refused_and_legalactions_offers_no_play_of_it() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [PILE_ON, FILLER], "library": [VANILLA] }, "p2": { "hand": [FILLER] } }));
                 let pile_on = s.card(PILE_ON).id.clone();
-                assert_eq!(
-                    legal_actions(s.state(), PlayerId::P1)
+                assert!(
+                    !legal_actions(s.state(), PlayerId::P1)
                         .iter()
                         .map(js)
-                        .any(|action| action["type"] == "play" && action["instanceId"] == pile_on),
-                    false,
+                        .any(|action| action["type"] == "play" && action["instanceId"] == pile_on)
                 );
-                s.expect_refused(|s| {
-                    s.play(PILE_ON, json!({}));
-                });
+                s.expect_refused(|s| s.play(PILE_ON, json!({})));
                 s.expect_in_zone(&pile_on, "hand");
             }
 
             #[test]
-            fn c2_3_with_5_mana_it_is_offered_and_plays() {
+            fn s2_3_with_5_mana_it_is_offered_and_plays() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [PILE_ON, FILLER], "library": [VANILLA], "mana": 5 }, "p2": { "hand": [FILLER] } }));
                 let pile_on = s.card(PILE_ON).id.clone();
-                assert_eq!(
+                assert!(
                     legal_actions(s.state(), PlayerId::P1)
                         .iter()
                         .map(js)
-                        .any(|action| action["type"] == "play" && action["instanceId"] == pile_on),
-                    true,
+                        .any(|action| action["type"] == "play" && action["instanceId"] == pile_on)
                 );
                 s.play(PILE_ON, json!({}));
                 s.expect_mana(PlayerId::P1, 0);
@@ -169,7 +178,7 @@ mod tests {
                 s.play(PILE_ON, json!({}));
                 s.expect_in_zone(VANILLA, "field");
                 s.expect_stats(GARY, json!({ "attack": 1, "health": 1 }));
-                assert_eq!(s.events().iter().map(js).any(|event| event["type"] == "destroyed" || event["type"] == "buffed"), false);
+                assert!(!s.events().iter().map(js).any(|event| event["type"] == "destroyed" || event["type"] == "buffed"));
             }
 
             #[test]
@@ -179,12 +188,16 @@ mod tests {
                 s.play(PILE_ON, json!({}));
                 let (trap, field, field_trap) = (s.backrow(PlayerId::P1, 1), s.backrow(PlayerId::P1, 2), s.backrow(PlayerId::P1, 3));
                 assert_eq!(
-                    [trap.map(|card| card.def_id.as_str()), field.map(|card| card.def_id.as_str()), field_trap.map(|card| card.def_id.as_str())],
+                    [
+                        trap.as_ref().map(|card| card.def_id.as_str()),
+                        field.as_ref().map(|card| card.def_id.as_str()),
+                        field_trap.as_ref().map(|card| card.def_id.as_str()),
+                    ],
                     [Some(SHEEPISH), Some(MANA_WELL), Some(BREAD)],
                 );
-                assert_ne!(trap.and_then(|card| card.face_up), Some(true));
-                assert_ne!(field_trap.and_then(|card| card.face_up), Some(true));
-                assert_eq!(field.and_then(|card| card.face_up), Some(true));
+                assert_ne!(trap.as_ref().and_then(|card| card.face_up), Some(true));
+                assert_ne!(field_trap.as_ref().and_then(|card| card.face_up), Some(true));
+                assert_eq!(field.as_ref().and_then(|card| card.face_up), Some(true));
                 let theirs = s.view(PlayerId::P2);
                 assert_eq!(js(&theirs.opponent.backrow[0])["faceDown"], true);
                 assert_eq!(js(&theirs.opponent.backrow[2])["faceDown"], true);
@@ -225,7 +238,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [PILE_ON, FILLER], "mana": 5 }, "p2": { "hand": [FILLER] } }));
                 s.play(PILE_ON, json!({}));
-                assert_eq!(s.events().iter().map(js).any(|event| event["type"] == "summoned"), false);
+                assert!(!s.events().iter().map(js).any(|event| event["type"] == "summoned"));
                 assert_eq!(library_ids(&s), vec![PILE_ON]);
             }
 
@@ -261,7 +274,7 @@ mod tests {
                 s.expect_in_zone(&pile_on, "library");
                 assert_eq!(library_ids(&s), vec![LUNAR, STOCKPILE, PILE_ON]);
                 assert!(s.pile(PlayerId::P1, "graveyard").is_empty());
-                assert_eq!(s.events().iter().map(js).any(|event| event["type"] == "enteredGraveyard"), false);
+                assert!(!s.events().iter().map(js).any(|event| event["type"] == "enteredGraveyard"));
             }
 
             #[test]
@@ -283,7 +296,7 @@ mod tests {
                 hand.extend(nine);
                 let mut s = scenario(json!({ "p1": { "hand": hand, "library": [LUNAR, PILE_ON, GARY] }, "p2": { "hand": [FILLER] } }));
                 s.play(STOCKPILE, json!({}));
-                assert_eq!(s.events().iter().map(js).any(|event| event["type"] == "burned"), true);
+                assert!(s.events().iter().map(js).any(|event| event["type"] == "burned"));
                 assert_eq!(library_ids(&s), vec![GARY, PILE_ON]);
                 assert_eq!(
                     s.pile(PlayerId::P1, "graveyard").iter().map(|card| card.def_id.clone()).collect::<Vec<String>>(),
@@ -308,9 +321,7 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [PILE_ON, FILLER], "library": [VANILLA], "mana": 5 }, "p2": { "hand": [FILLER] } }));
                 s.play(PILE_ON, json!({}));
                 s.expect_events(json!(["cardPlayed", "summoned", "cardResolved"]));
-                s.expect_refused(|s| {
-                    s.attack(VANILLA, "hero");
-                });
+                s.expect_refused(|s| s.attack(VANILLA, "hero"));
             }
         }
 
@@ -360,12 +371,10 @@ mod tests {
             }
 
             #[test]
-            fn c2_3_at_the_mana_cap_of_4_it_cannot_be_played() {
+            fn s2_3_at_the_mana_cap_of_4_it_cannot_be_played() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": PILE_ON, "radiant": true }, FILLER] }, "p2": { "hand": [FILLER] } }));
-                s.expect_refused(|s| {
-                    s.play(PILE_ON, json!({}));
-                });
+                s.expect_refused(|s| s.play(PILE_ON, json!({})));
             }
         }
     }

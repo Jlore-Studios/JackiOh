@@ -23,7 +23,7 @@ use jackioh_engine::effects::draw_from_opponent;
 pub const ID: &str = "classic-058";
 
 /// "Draw {cards} from the bottom of your opponent's deck": that many separate draws (§2.4).
-fn draw_bottoms(ctx: &EffectContext) -> Vec<Effect> {
+fn draw_bottoms(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     (0..param(ctx, "cards")).map(|_| draw_from_opponent(json_as(json!({ "end": "bottom" })))).collect()
 }
 
@@ -76,6 +76,13 @@ mod tests {
     fn drawn_by(events: &[GameEvent], player: PlayerId) -> Vec<Value> {
         let player = js(&player);
         events.iter().map(js).filter(|event| event["type"] == "drawn" && event["player"] == player).collect()
+    }
+
+    /// TS `stepParam(s.card(ref), key, steps)`: the step recorded on the live card.
+    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
+        let id = s.card(card).id.clone();
+        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
+        step_param(live, key, steps);
     }
 
     /// `opts[key]`, or `fallback` where the TS default (`??`) applies.
@@ -142,7 +149,7 @@ mod tests {
             }
 
             #[test]
-            fn c2_2_r62_it_is_a_start_of_turn_trigger_of_yours_only_the_opponents_turn_draws_nothing_from_it() {
+            fn s2_2_r62_it_is_a_start_of_turn_trigger_of_yours_only_the_opponents_turn_draws_nothing_from_it() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "backrow": [{ "def": RESOURCES, "faceUp": true }], "library": [STOCKPILE] },
@@ -172,7 +179,7 @@ mod tests {
                 s.expect_in_zone(&bottom, "graveyard");
                 assert_eq!(js(&s.card(&bottom).owner), "p1");
                 assert!(s.pile(PlayerId::P1, "graveyard").iter().any(|card| card.id == bottom));
-                assert_eq!(s.last_events().iter().map(js).any(|event| event["type"] == "burned"), true);
+                assert!(s.last_events().iter().map(js).any(|event| event["type"] == "burned"));
             }
 
             #[test]
@@ -189,17 +196,16 @@ mod tests {
                 assert_eq!(cast["player"], "p1");
                 assert_eq!(cast["costPaid"], 0);
                 // "Take 1 damage" is its caster's: p1's hero.
-                assert_eq!(
+                assert!(
                     s.last_events()
                         .iter()
                         .map(js)
-                        .any(|event| event["type"] == "damage" && event["targetId"] == "hero-p1" && event["amount"] == 1),
-                    true,
+                        .any(|event| event["type"] == "damage" && event["targetId"] == "hero-p1" && event["amount"] == 1)
                 );
             }
 
             #[test]
-            fn r58_r549_9_3_a_cast_on_draw_is_yours_either_way_no_prompt_its_repeat_draws_from_your_own_deck_and_the_turn_finishes_after_a_json_round_trip() {
+            fn r58_r549_s9_3_a_cast_on_draw_is_yours_either_way_no_prompt_its_repeat_draws_from_your_own_deck_and_the_turn_finishes_after_a_json_round_trip() {
                 crate::register_all();
                 let mut s = waiting(json!({ "p1Hand": [FILLER, VANILLA], "p2Library": [VANILLA, MENACE, HINDER] }));
                 s.end_turn();
@@ -241,7 +247,7 @@ mod tests {
             }
 
             #[test]
-            fn c10_1_it_is_your_draw_in_your_per_turn_count_with_the_turns_own_draw_it_sets_off_c_9_income_tax() {
+            fn s10_1_it_is_your_draw_in_your_per_turn_count_with_the_turns_own_draw_it_sets_off_c_9_income_tax() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER, VANILLA], "backrow": [{ "def": RESOURCES, "faceUp": true }], "library": [STOCKPILE] },
@@ -250,7 +256,7 @@ mod tests {
                 }));
                 let taken = s.card(MENACE).id.clone();
                 s.end_turn();
-                assert_eq!(s.events().iter().map(js).any(|event| event["type"] == "trapFired"), true);
+                assert!(s.events().iter().map(js).any(|event| event["type"] == "trapFired"));
                 let pending = js(&s.state().pending);
                 assert_eq!(pending["playerId"], "p1");
                 assert_eq!(pending["kind"], "hand");
@@ -264,7 +270,7 @@ mod tests {
             }
 
             #[test]
-            fn c2_4_your_draw_limit_under_the_opponents_radiant_anti_greed_machine_it_is_your_one_draw_and_your_turns_own_draw_is_stopped() {
+            fn s2_4_your_draw_limit_under_the_opponents_radiant_anti_greed_machine_it_is_your_one_draw_and_your_turns_own_draw_is_stopped() {
                 crate::register_all();
                 let mut s = waiting(json!({ "p2Field": [{ "def": MACHINE, "radiant": true }] }));
                 s.end_turn();
@@ -322,7 +328,7 @@ mod tests {
             fn r386_its_count_is_the_declared_number_an_upgrades_step_draws_2_from_the_bottom_bottom_first() {
                 crate::register_all();
                 let mut s = waiting(json!({ "p2Library": [STOCKPILE, VANILLA, MENACE] }));
-                step_param(s.card_mut(RESOURCES), "cards", 1);
+                step(&mut s, RESOURCES, "cards", 1);
                 s.end_turn();
                 assert_eq!(
                     drawn_by(s.last_events(), PlayerId::P1).iter().map(|event| event["defId"].clone()).collect::<Vec<Value>>(),
@@ -358,7 +364,7 @@ mod tests {
             fn r386_its_declared_count_steps_for_both_an_upgrade_draws_2_at_each_end() {
                 crate::register_all();
                 let mut s = waiting(json!({ "radiant": true, "p2Library": [VANILLA, VANILLA, MENACE, MENACE] }));
-                step_param(s.card_mut(RESOURCES), "cards", 1);
+                step(&mut s, RESOURCES, "cards", 1);
                 s.end_turn();
                 assert_eq!(drawn_by(s.last_events(), PlayerId::P1).iter().filter(|event| event["defId"] == MENACE).count(), 2);
                 s.end_turn();
@@ -377,7 +383,7 @@ mod tests {
                 let events: Vec<Value> = s.last_events().iter().map(js).collect();
                 let p2_starts = events.iter().position(|event| event["type"] == "turnStarted");
                 let before = &events[..p2_starts.unwrap_or(events.len())];
-                assert_eq!(before.iter().any(|event| event["type"] == "drawn" || event["type"] == "fatigue"), false);
+                assert!(!before.iter().any(|event| event["type"] == "drawn" || event["type"] == "fatigue"));
                 assert_eq!(s.state().players.p1.fatigue_count, 0);
             }
         }

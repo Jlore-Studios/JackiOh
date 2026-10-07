@@ -24,9 +24,8 @@
 //! The number is the declared `tokens` (R386), read through `param`; the base face declares it too (the
 //! entry's params are per card) but never reads it.
 
-use jackioh_engine::prelude::*;
 use jackioh_engine::effects::{damage, place_plague};
-use std::sync::Arc;
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-059";
 
@@ -52,7 +51,7 @@ pub struct Read<'a> {
 /// Every Plague Counter on the field: each permanent on both sides, face-down ones included, the top of
 /// each pile only (R13). Walked from the controller's side, so the read never asks whose turn it is.
 fn tokens_on_field(read: &Read) -> i32 {
-    permanents_on_field(read.state, Some(read.controller)).iter().fold(0, |sum, card| sum + plague_on(card))
+    permanents_on_field(read.state, read.controller).iter().fold(0, |sum, card| sum + plague_on(card))
 }
 
 /// The Plague Counters the Radiant face's own placement puts on the Doctor: the declared number times its
@@ -71,7 +70,9 @@ pub fn damage_now(read: &Read) -> i32 {
     tokens_on_field(read) + tokens_it_places(read)
 }
 
-fn cry(ctx: &EffectContext) -> Vec<Effect> {
+fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    // The Cry only reads the board while it builds its list.
+    let ctx: &EffectContext<'_> = ctx;
     let amount = damage_now(&Read {
         state: &ctx.state,
         self_: ctx.self_.as_ref(),
@@ -88,13 +89,13 @@ fn cry(ctx: &EffectContext) -> Vec<Effect> {
     effects
 }
 
-fn preview(read: &ConditionContext) -> Vec<PreviewValue> {
+fn preview(read: ConditionContext<'_>) -> Vec<PreviewValue> {
     let value = damage_now(&Read {
-        state: &read.state,
-        self_: Some(&read.self_),
+        state: read.state,
+        self_: Some(read.self_),
         radiant: read.radiant,
         controller: read.controller,
-        tokens: &|| param(read, "tokens"),
+        tokens: &|| param(&read, "tokens"),
     });
     vec![json_as(json!({ "label": DOCTOR_LABEL, "value": value }))]
 }
@@ -103,7 +104,7 @@ pub fn script() -> CardScripts {
     let base = Script {
         targets: targets(),
         cry: Some(hook(cry)),
-        preview: Some(Arc::new(preview)),
+        preview: Some(condition_hook(preview)),
         ..Script::default()
     };
 
@@ -137,6 +138,13 @@ mod tests {
     /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
     fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
         serde_json::to_value(value).expect("an engine value serialises")
+    }
+
+    /// TS `stepParam(card, key, steps)`: the step recorded on the live card, named by id or def id.
+    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
+        let id = s.card(card).id.clone();
+        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the game");
+        step_param(live, key, steps);
     }
 
     /// The selection naming one instance, by its id.
@@ -280,9 +288,7 @@ mod tests {
                     ]),
                 );
                 let well = s.card(MANA_WELL).id.clone();
-                s.expect_refused(|s| {
-                    s.play(&doctor, json!({ "targets": at(&well) }));
-                });
+                s.expect_refused(|s| s.play(&doctor, json!({ "targets": at(&well) })));
             }
 
             #[test]
@@ -298,7 +304,7 @@ mod tests {
             }
 
             #[test]
-            fn c3_2_r13_a_card_dormant_under_a_stack_pile_is_not_on_the_field_its_tokens_are_not_counted() {
+            fn s3_2_r13_a_card_dormant_under_a_stack_pile_is_not_on_the_field_its_tokens_are_not_counted() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [DOCTOR, ANCHOR] },
@@ -345,7 +351,7 @@ mod tests {
             fn r386_the_base_face_never_reads_its_tokens_an_upgrade_of_them_changes_nothing() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [DOCTOR, ANCHOR], "field": [{ "def": VANILLA, "counters": { "plague": 1 } }] }, "p2": { "hand": [ANCHOR], "health": 20 } }));
-                step_param(s.card_mut(DOCTOR), "tokens", 1);
+                step(&mut s, DOCTOR, "tokens", 1);
 
                 s.play(DOCTOR, json!({ "targets": enemy_hero() }));
 
@@ -424,8 +430,8 @@ mod tests {
                 let (Some(up), Some(down)) = (doctors.first().cloned(), doctors.get(1).cloned()) else {
                     panic!("two Doctors in hand");
                 };
-                step_param(s.card_mut(&up), "tokens", 1);
-                step_param(s.card_mut(&down), "tokens", -1);
+                step(&mut s, &up, "tokens", 1);
+                step(&mut s, &down, "tokens", -1);
 
                 s.play(&up, json!({ "targets": enemy_hero() }));
                 assert_eq!(s.card(&up).counters.plague, Some(3));
