@@ -184,3 +184,168 @@ Lines: 6 changed
 
 ## Not a collision
 `catalog::newest_version` (catalog-version.mjs) and `stats::newest_patch` (stats.ts): TS had both; each has its own test and message (rule 3). `tools/src/golden.rs` and `engine/tests/golden.rs`: SURFACE §13 mandates both, and neither can call the other (a bin crate, an integration test). `cards/tests/cross/registry.rs`'s private `naming` copy: out of scope, and a cards test cannot depend on the tools binary (part 37). `name_of` in trace.rs and sweep.rs, `describe` in catalog.rs and trace.rs, `play_game` in fuzz.rs and arena.rs: different TS functions, different jobs.
+
+# engine src
+
+## Cluster: the sink's "events of this action dispatched" (`EngineSink`)
+Winner: `crates/engine/src/triggers.rs` `Frontier`/`FrontierSlot` as `EngineSink.frontier` (part 3.3) — score 10 (§10.3's frontier, which settle actually uses), 0 options, 1 lifetime parameter — `new` sets its own, `reborrow` shares the parent's
+Losers: part 3.1's `EngineSink.dispatched: Option<usize>` (combat.rs) — never added; part 6.1's `SettleSink { sink, dispatched }` struct (effects/combat.rs) — deleted (`SettleSink` is triggers' alias of `EngineSink`)
+Callers updated: 4 (combat.rs `withhold_from_frontier` → `triggers::{dispatched, set_dispatched}`, combat.rs's interposer mark and ai_policy's playout → `mark_dispatched(sink, &[GameEvent])`, effects/combat.rs `settle_before_playout` on `&mut ctx.sink`)
+Semantic conflicts: `owed_behind` (part 3.1, TS `DrainSink.owedBehind`, R117) is not part of the collision (it is work's drain bookkeeping, not dispatch) → added as its own field, cloned by `reborrow` as 3.1 decided; `converting`/`dry_running` copied down by `reborrow` (paired increments make the copy exact, part 3.2's report)
+Unresolved: TS's `makeContext` built a fresh object, so a context carried no `owedBehind`; Rust's contexts (built by `reborrow`) carry a clone. Only a drain nested in a context that a resumed item opened can tell.
+Lines: with the next two decisions, commit 85aeec0: +73 −77
+
+## Decision: `script::TriggerWhen` takes `&mut EffectContext`
+Winner: part 8.3's report (Classic+ #74's `when` writes its own card while it declines) — `TriggerWhen` and `TriggerDef::with_when` take `&mut EffectContext<'_>`
+Losers: part 1's `&EffectContext` alias — changed (part 1's frozen file, recorded)
+Callers updated: 1 (traps.rs `fire_trap` builds `let mut ctx` and passes `&mut ctx`); a `with_when` closure that only reads compiles either way
+Semantic conflicts: none
+Unresolved: none
+Lines: +2
+
+## Decision: refusals are `Result<(), EngineError>` (SURFACE §4.4.9)
+Winner: `Result<(), EngineError>` with TS's text at the owner
+Losers: `restrictions::attack_restriction -> Option<&'static str>`, `zones::why_cannot_carry -> Option<&'static str>`, `setup::why_mulligan_refused -> Option<String>` — changed at the owner
+Callers updated: 2 (`zones::carrier_zones_for` `.is_ok()`); combat.rs, play_choices.rs and reduce.rs already read them as `Result`
+Semantic conflicts: none
+Unresolved: none
+Lines: ±0
+
+## Cluster: option-argument structs and enums (`zones`, `prompts`, `draw`, `card_scope`, `work`, `catalog`, `heal`)
+Winner: each owner's name and fields — zones (2.1) `MoveToZoneOptions { position: Option<LibraryPosition>, keep_state }`, `LibraryPosition::{Top, Bottom, At(i32)}`, `PlaceOnFieldOptions { stack }`, `RemoveFromFieldOptions`, `OffFieldZone`, `GraveyardRedirect::{Exile, LibraryBottom}`; prompts (3.2) `HookResumableOptions`, `OpenPromptArgs`, `ResumeAtArgs`, `HookInstance`; draw (4.2) `AddToHandOutcome`; card_scope (6.1) `cards_in_card_scope(ctx, scope, Option<&CardScopeOptions>)`; work (3.1) `WorkPlan` (fields written out, `WorkPlan::new(resume, owner)`); catalog (2.2) `GlitchOdds = GameState`; heal (6.1) `HealArgs::{Amount, ToFull, UpTo}`; damage (3.1) `DamageArgs`/`DamageFlags`; resolve (3.2) `HookOptions`, `CastOptions`, `CastAfterward`
+Losers: callers' `MoveOptions` (13), `MovePosition` (2), `PlaceOptions` (4), `MoveToZonePosition::Index` (1), `RunHookOptions` (3), `AddToHandResult` (2), `CardsInCardScopeOptions` (1) + `Default::default()` for the `Option` (3), `WorkPlan { resume, owner }` (4), `GlitchOdds { system_plays }` (3), `HealArgs { amount, to_full, up_to }` (1), `GraveyardRedirect` from JSON (1)
+Callers updated: 38
+Semantic conflicts: none
+Unresolved: none
+Lines: commit f92b3d2 (with the call shapes below): +107 −118
+
+## Decision: effect argument structs are data (`Deserialize`, camelCase)
+Winner: SURFACE §6.6 — derived at the owner: `ResumeAtArgs`, `CastNewArgs`/`CastNewDef` (untagged, `Read` `#[serde(skip)]`), `CastRandomArgs`/`CastRandomQuery`/`CastRandomCount` (likewise), `CastAfterward`, `CastOptions`, `OpenPromptArgs`, `HookResumableOptions`, `PlaceOnFieldOptions`. Every `f(json_as(…))` call in `crates/` now names a `Deserialize` argument (checked by script).
+Losers: none
+Callers updated: 0
+Semantic conflicts: none
+Unresolved: `CastEachArgs`, `DrawWhileArgs`, `ForEachCardArgs`, `WithKillCreditArgs`, `CallToChaosArgs` hold required closures or fn tables and stay `Clone` only: built by struct literal.
+Lines: commits 2783d0e and 37482eb: +27 −10 (the rest inside f92b3d2)
+
+## Decision: closure fields of effect arguments (orchestrator's item 1)
+Winner: the owners' shapes (effects/*.rs, parts 6–7), unchanged: `ForEachCardArgs.cards: Arc<dyn Fn(&mut EffectContext) -> Vec<String>>` (card ids) and `.each: Arc<dyn Fn(&str) -> Effect>`; `CastEachArgs.cards: Fn(&mut EffectContext) -> Vec<String>`; `DrawWhileArgs.more: Fn(&mut EffectContext) -> bool` (+ `player: Option<PlayerSpec>`); `DiscoverFromCatalogArgs.query_fn: Fn(&mut EffectContext) -> CatalogQueryArgs`; `CastNewDef::Read: Fn(&mut EffectContext) -> Option<CastDef>`; `CastRandomQuery::Read`/`CastRandomCount::Read: Fn(&mut EffectContext) -> …`; `KillCreditPairs: Fn(&mut EffectContext, &CardInstance)`. The two filters stay `&`: `ChooseTargetWhereArgs.where_: Fn(&EffectContext, Option<&CardInstance>) -> bool` and `ChooseFromHandArgs.where_: Fn(&EffectContext, &CardInstance) -> bool` (no TS caller mutates or draws in a `where`; #32 Felinor Feelings, the one user, reads)
+Losers: card files writing `|ctx: &EffectContext| …` for `cards`/`more`/`query_fn`, or `CardInstance`s for `cards`, and `&mut` for a `where_` — the cards reconciler updates them (Mid Runner, Classic #22, shuffles in `cards`: `&mut` is what it needs)
+Callers updated: 1 in scope (hero_power's Brainstorm, now `effects::each::for_each_card`)
+Semantic conflicts: none
+Unresolved: none
+Lines: 0
+
+## Decision: the prelude's `register_catalog` (orchestrator's item 2)
+Winner: the testkit's `register_catalog` owns the name in a card test (SURFACE §8)
+Losers: `prelude.rs`'s `pub use crate::catalog::*` — replaced by an explicit list of catalog's names without `register_catalog` (cards' `register_all` names it by path)
+Callers updated: 0
+Semantic conflicts: none
+Unresolved: the six prelude/testkit name pairs part 1 recorded (`draw`, `add_to_hand`, `end_turn`, `gain_mana`, `refresh_mana`, `lose_health`: effect verb vs engine function, both TS's) stay; so do the module names `damage`, `draw`, `combat`, `mana`, `plague`, `kill_credit`, `fuse` (under `effects::` in the prelude, at the root in the testkit). Each is ambiguous only where a card test names it bare.
+Lines: +6
+
+## Decision: `subsystems::audit`'s argument struct (orchestrator's item 3)
+Winner: `AuditArgs` (part 8.1, the owner)
+Losers: part 25.1's `AuditTargetsArgs` — for the engine-tests reconciler to rename at the call
+Callers updated: 0 in scope
+Semantic conflicts: none
+Unresolved: none
+Lines: 0
+
+## Cluster: TS `scripts.scriptOf(instance)` / `flagsOf` / `textsOf`
+Winner: `crates/engine/src/scripts.rs` `script_of(state, &card) -> Script` (`ScriptKey`), `flags_of`, `texts_of`, `TextFlags` (part 2.1) — score 10 (§6.3 Vanilla guard, R102's texts), 0 options
+Losers: `running_script` ×9, `script_of_card` ×9, `face_script` ×6, `with_face` ×3, private `flags_of` ×3, `flags_of_card` ×4, damage.rs's `texts_of`/`CardText` — deleted
+Callers updated: 56
+Semantic conflicts: none (every copy was the same Vanilla-guarded face pick)
+Unresolved: none
+Lines: this and the next four clusters are commit dd94430: 35 files, +114 −949 (net −835)
+
+## Cluster: R102's ingredient records
+Winner: `scripts.rs` `IngredientRecord`, `ingredients_of`, `ingredient_paid(&CardInstance, &[usize])`, `as_ingredient`, `ingredient_record` (part 2.1)
+Losers: subsystems/fuse.rs's private copies (paths as `i64`), damage.rs's `IngredientEntry`/`records_from` — deleted
+Callers updated: 7
+Semantic conflicts: path index `i64` (fuse) vs `usize` (scripts, work) → `usize`
+Unresolved: none
+Lines: in dd94430
+
+## Cluster: fused-id parse (R179, R468, R469)
+Winner: `catalog.rs` `fused_id_specs(Option<&GameState>, id)`, `fused_id_parts`, `self_def_ids`, `is_digest_id`, and `fused_head_len`/`copy_spec` (now `pub`/`pub(crate)`) (part 2.2, TS `catalog.fusedIdSpecs`)
+Losers: subsystems/fuse.rs `fused_id_specs_in`, `fused_head_len`, `is_digest_id`, `copy_spec`; params.rs `fused_id_parts`, `fused_head_len`, `FUSED_DIGEST_MARK`, `RADIANT_INGREDIENT_MARK`; scripts.rs `fused_head_len`; perfect_hand.rs and glitch.rs `self_def_ids` — deleted
+Callers updated: 14
+Semantic conflicts: none (identical parses; catalog's reads a digest's list through `find_def(Some(state))`, transient defs first)
+Unresolved: none
+Lines: in dd94430
+
+## Cluster: part paths and remembered keys (R102, R77)
+Winner: `work.rs` `part_path_of -> Option<Vec<usize>>`, `reroot_remembered(memory, usize)`, `memory_of_part`, `PART_KEY` (part 3.1)
+Losers: subsystems/fuse.rs's copies (`i64`), params.rs's `part_path_of -> Vec<Value>` and `PART_KEY` — deleted
+Callers updated: 6
+Semantic conflicts: TS `partPathOf` kept any number and `params.param` threw on an unusable one; `work`'s drops non-`u64` entries, so a malformed path is skipped rather than thrown on
+Unresolved: TS's `findIndex` = -1 for a kept card that is no ingredient rerooted to `key@-1`; Rust skips the reroot
+Lines: in dd94430
+
+## Cluster: composed-list runners and declaration readers
+Winner: `resolve.rs` `lazy_part`, `apply_effects` (part 3.2); `play_choices.rs` `active_target_decls`, `stored_declaration_slices` (part 4.2)
+Losers: subsystems/fuse.rs and subsystems/call_to_chaos_plus.rs `lazy_part`/`apply_effects`; fuse.rs's two play_choices copies — deleted
+Callers updated: 5
+Semantic conflicts: `stored_declaration_slices`: fuse's copy read `as_u64`, play_choices' `as_f64().max(0)` → play_choices'
+Unresolved: none
+Lines: in dd94430
+
+## Cluster: board readers, stay marks, paused/owe/settle
+Winner: `zones.rs` (part 2.1) `acts_on_field`, `slot_of`, `row_size`, `card_at`, `carried_at`, `is_carrier`, `is_reserved`, `reserve_zone`, `release_zone`, `OffFieldZone`; `stays.rs` (part 2.1) `exit_mark`, `event_mark`, `left_field_after`; `work.rs` (3.1) `paused`, `owe`; `triggers.rs` (3.3) `settle`
+Losers: private copies in replacements, traps, targeting, quests, state_check, modifiers, carriers, resolve, prompts, triggers, turn, testkit/scenario (`card_at`, `PileZone`) — deleted
+Callers updated: 60
+Semantic conflicts: replacements' `acts_on_field` checked "top of its zone", zones' "on the field, not buried": the same set
+Unresolved: none
+Lines: commit 9db75e7: +54 −251 (the testkit's `card_at`/`PileZone` in ebc028a)
+
+## Cluster: smaller single-owner copies
+Winner: `tuning::{tuned_count, numbered_sum}`, `enchantments::{add_enchantment, united_enchantments}`, `times_played::count_play`, `kill_credit::credited_killer_id(&source, &victim)`, `setup::mulligan_prompt_for`, `effects::each::for_each_card`, `effects::targets::player_of`, `catalog::query` (the testkit's filler deck), `catalog::find_def` (the testkit's `def_of`)
+Losers: numbers.rs, shuffle_random.rs, summon.rs, play_steps.rs, damage.rs, testkit/invariants.rs, subsystems/hero_power.rs copies; `player_or_self` ×7; `owned` ×9 (a hedge over return kinds now known); the testkit's `is_token`/`index_rank`/`set_rank`/`catalog_order`
+Callers updated: 50
+Semantic conflicts: shuffle_random/summon compared enchantments with `==`, enchantments.rs with its own `same_enchantment` → enchantments.rs's (TS's module)
+Unresolved: none
+Lines: commit 8cc91d0: +58 −268; the testkit's in ebc028a (+15 −111, with `card_mut`)
+
+## Cluster: `CardScope.side`
+Winner: `effects::targets::ScopeSide` and `sides_of` (part 7.1; TS `BoardScope["side"]`, which `cardScope.ts` passed to `targets.sidesOf`)
+Losers: effects/card_scope.rs `CardScopeSide` and its private `sides_of` — deleted
+Callers updated: 1
+Semantic conflicts: none (same three literals, same walk order)
+Unresolved: card files that name `CardScopeSide` (none found) would rename
+Lines: commit 2d1370f: +2 −24
+
+## Decision: testkit methods the card files call
+Winner: `Scenario::card_mut(impl Into<CardRef>) -> &mut CardInstance` added (resolved as `card()`); every other method the cards call (`state_mut`, `expect_refused_with`, `last_events`, `view`, `backrow`, `pile`, `unit`, …) already existed
+Losers: 17 private `fn card_mut(s, id)` in `crates/cards/**` tests — for the cards reconciler to delete
+Callers updated: 0 in scope
+Semantic conflicts: none
+Unresolved: none
+Lines: in ebc028a
+
+## Decision: `catalog::def_of`'s shape
+Winner: part 2.2's `def_of(Option<&GameState>, &str) -> &CardDef` (panics with TS's text) and `find_def(Option<&GameState>, &str) -> Option<&CardDef>`
+Losers: callers passing a bare `&GameState` — 16 in engine src updated; in `crates/cards` 137 calls already pass `Some(..)`, 15 pass `&…`, 1 `state`, 1 `g` — for the cards reconciler
+Callers updated: 16
+Semantic conflicts: none
+Unresolved: none
+Lines: 0
+
+## Decision: other call shapes settled at the owner
+Winner: `triggers::settle(sink, SettleOptions)`, `combat::switch_position(sink, &unit, SwitchPositionOptions)`, `ai_policy::play_out_turn(sink, player, PolicyOptions)`, `mana::effective_cost(state, card, CostOptions)`, `damage::pierces(state, Option<&CardInstance>, Option<&DamageFlags>)`, `catalog::excluding_def_id/self_def_ids/fused_id_parts(Option<&GameState>, …)`, `work::owe(sink, impl Into<OweItem>)` (one item), `prompts::resume_self(ctx, step, IndexMap)`, `resolve::make_context(&mut EngineSink, …)` (it reborrows), `resolve::cast_card(sink, &CardInstance, CastOptions)`, `prompts::{apply_resumable, run_resumable_list}(ctx, &plan, Vec<Effect>, Option<PausedStep>)`, `work::park_work(sink, &plan, &PausedStep)`, `targets::{cards_in_scope, adjacent_to}(ctx, …, &BoardScope)`, `play_steps::run_play_steps(sink, player, &PlayAction)`, `activate::activate_ability(sink, player, &ActivateAction)`, `catalog::query(&CatalogQueryArgs) -> Vec<&'static CardDef>`
+Losers: the callers' guesses (≈60 sites, all updated)
+Callers updated: ≈60
+Semantic conflicts: none
+Unresolved: the movers' `&mut CardInstance` (zones, draw, brittle_count) and `pick_generated(&[&CardDef])` are the owners' too; their ~30 call sites are left to Wave 3 as local E0308s
+Lines: ±0
+
+## Decision: test seams the engine-tests reconciler asked about (`mock_*`, `register_work_handler`)
+Winner: none added. TS's `vi.mock` of brittle/animated/cleanup (part 26.6, turn_wiring.rs) and `registerWorkHandler` (part 25.3, pauses.rs) were test-framework or registration hooks SURFACE §6.6 removed; adding thread-local hooks to engine paths is a feature neither the Rust nor SURFACE has (reconciler: no new features)
+Losers: the two test files' wished names — for the orchestrator: rewrite those tests against the real board, or drop them
+Callers updated: 0
+Semantic conflicts: none
+Unresolved: yes, listed in spec-gaps.md (engine src)
+Lines: 0
+
+## Totals (engine src)
+Lines: before 69,294, after 67,929 (`git diff --shortstat 85aeec0^ HEAD -- crates/engine/src`: 80 files, 513 insertions, 1,878 deletions). Errors (type-check phase): 187 → 45, all E0308 and local; see `.fullsend/damage/engine-src.md`.

@@ -66,3 +66,50 @@
   wasm-bindgen exposes with the same JS return type and throws an `Error` with the engine's message
   where TS threw (bad JSON, a bad seat, an unknown validator call, a setup `create_game` would panic
   on). Kept; §10.1 should say so.
+
+## engine src (part 31)
+
+- **SURFACE §6.5, `EngineSink`'s fields.** §6.5 lists `state`, `events`, `rng`, `converting`,
+  `dry_running`. Two more are needed and are now in `script.rs`: `frontier:
+  triggers::FrontierSlot<'a>` (TS told an action's events apart by object identity — `SettleSink.
+  dispatched` and `triggers.ts`'s two module `WeakSet`s; Rust keeps positions in the action's event
+  list, and every sink over one list must share them, so `reborrow` hands a nested sink its parent's
+  `Frontier`), and `owed_behind: Option<IndexSet<String>>` (TS `work.ts`'s `DrainSink.owedBehind`,
+  R117, cloned by `reborrow`). Decision taken: both added; `converting`/`dry_running` stay copied down
+  (every change to `converting` is undone before its call returns). Suggested §6.5 wording: list the
+  two fields and say "`reborrow` shares `frontier` and copies the rest".
+- **SURFACE §6.6, `TriggerWhen`.** §6.6 (and part 1's alias) give `TriggerDef.when` a `&EffectContext`;
+  Classic+ #74's `when` writes its own card's memory, reveals it and gains Brittle while it declines
+  (R99). Decision taken: `TriggerWhen = Arc<dyn Fn(&mut EffectContext, &GameEvent) -> bool>`, and
+  `with_when` likewise.
+- **SURFACE §8, the testkit's `Scenario` methods.** The table names `s.state()` but not
+  `state_mut()` (TS tests assign `g.state.…`; `invariants.rs` and ~440 card-test calls use it) nor
+  `card_mut()` (TS wrote through `s.card(…)`'s live object; 17 card files wrote a private copy).
+  Decision taken: both are `Scenario` methods (`state_mut(&mut self) -> &mut GameState`,
+  `card_mut(&mut self, impl Into<CardRef>) -> &mut CardInstance`). Suggested §8 row: "`s.state` written
+  through → `s.state_mut()`; `s.card(ref)` written through → `s.card_mut(ref)`".
+- **SURFACE §6.1, `view_for`'s clock.** TS's `viewFor(state, player, clockMs?)` (R79) has a third
+  argument the server's actor passes; §6.1 fixes `view_for(state, player)`. Decision kept (part 5.2):
+  `view_for_with_clock(&GameState, PlayerId, Option<i32>)` beside `view_for`. §6.1 should list it.
+- **SURFACE §7.1, the prelude and the testkit in one card test.** A card's `mod tests` globs both
+  (`use super::*; use jackioh_engine::testkit::*;`). The prelude's `catalog::*` brought
+  `catalog::register_catalog`, the testkit its override of the same name, so naming it was ambiguous.
+  Decision taken: the prelude lists catalog's names explicitly, without `register_catalog`. Still
+  ambiguous where named bare (part 1's design, unchanged): the effect verbs `draw`, `add_to_hand`,
+  `end_turn`, `gain_mana`, `refresh_mana`, `lose_health` against the engine functions, and the module
+  names `damage`, `draw`, `combat`, `mana`, `plague`, `kill_credit`, `fuse` (`effects::…` vs the root).
+- **Test seams asked for by the engine-tests reconciler (above): not added.** `mock_brittle_tick`,
+  `mock_animate_at_turn_start`, `mock_return_at_cleanup` (TS `vi.mock`, part 26.6) and a test-made work
+  handler (TS `registerWorkHandler`, part 25.3) would put thread-local hooks into engine code paths;
+  SURFACE §6.6 removed the registration hooks and §8 allows exactly one override (the registries).
+  Decision: none added (a reconciler adds no feature neither design had). For the orchestrator: port
+  those tests against the real board (`turn_wiring.rs`'s 9, `pauses.rs`'s 2) or drop them; or patch §8
+  to allow the seams, and the engine owner adds them in Wave 3.
+- **SURFACE §6.6, closure fields of effect arguments.** "A field that holds a function is skipped by
+  serde and set in Rust" leaves its signature open. Decision taken (the owners'): a field that
+  builds a list or a query reads `&mut EffectContext` (`ForEachCardArgs.cards`, `CastEachArgs.cards`,
+  `DrawWhileArgs.more`, `DiscoverFromCatalogArgs.query_fn`, `CastNewDef::Read`, `CastRandomQuery::Read`,
+  `CastRandomCount::Read`); a filter reads `&EffectContext` (`ChooseTargetWhereArgs.where_`,
+  `ChooseFromHandArgs.where_`). `forEachCard`/`castEach` answer card ids (`Vec<String>`).
+- **`wire/codes.rs`'s NFKC tables** (~180 KB, hand-generated from Node's ICU, part 5.3) are left as
+  they are; SURFACE §2 lists no Unicode crate, so a replacement is part 37's call.
