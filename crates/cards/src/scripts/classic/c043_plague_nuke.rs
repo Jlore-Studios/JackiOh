@@ -31,7 +31,6 @@
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::effects::{after_state_check, destroy_all, gain_mana, summon};
-use std::sync::Arc;
 
 pub const ID: &str = "classic-043";
 
@@ -58,12 +57,12 @@ fn plague_nuke(resummons: bool) -> Script {
             let mana = tokens_on_units(&ctx.state, first) * param(ctx, "mana");
             let plagued: Vec<String> = units_on_field(&ctx.state, first)
                 .into_iter()
-                .filter(|unit| plague_on(unit) > 0 && !def_of(&ctx.state, &unit.def_id).token)
+                .filter(|unit| plague_on(unit) > 0 && !def_of(Some(&*ctx.state), &unit.def_id).token)
                 .map(|unit| unit.id)
                 .collect();
             vec![
                 destroy_all(json_as(json!({ "side": "any" }))),
-                after_state_check(hook(move |after| {
+                after_state_check(move |after| {
                     let mut effects = vec![gain_mana(json_as(json!({ "amount": mana })))];
                     if resummons {
                         effects.extend(
@@ -71,7 +70,7 @@ fn plague_nuke(resummons: bool) -> Script {
                                 .iter()
                                 .filter(|id| {
                                     find_instance(&after.state, id.as_str())
-                                        .is_some_and(|card| matches!(card.zone, Zone::Graveyard { .. }))
+                                        .is_some_and(|card| card.zone.z() == ZoneName::Graveyard)
                                 })
                                 .map(|instance_id| {
                                     summon(json_as(json!({
@@ -82,15 +81,17 @@ fn plague_nuke(resummons: bool) -> Script {
                         );
                     }
                     effects
-                })),
+                }),
             ]
         })),
         // R280: the mana it would give now.
-        preview: Some(Arc::new(|ctx: &ConditionContext| -> Vec<PreviewValue> {
-            vec![json_as(json!({
-                "label": MANA_LABEL,
-                "value": tokens_on_units(&ctx.state, ctx.controller) * param(ctx, "mana"),
-            }))]
+        preview: Some(condition_hook(|c: ConditionContext| -> Vec<PreviewValue> {
+            vec![PreviewValue {
+                label: MANA_LABEL.into(),
+                value: tokens_on_units(c.state, c.controller) * param(&c, "mana"),
+                display: None,
+                ids: None,
+            }]
         })),
         ..Script::default()
     }
@@ -138,9 +139,27 @@ mod tests {
         serde_json::to_value(value).expect("an engine value serialises")
     }
 
-    /// TS `plagued(defId, n)` (no caller passes the TS helper's optional `extra`).
+    /// TS `stepParam(s.card(ref), key, steps)`: TS's `card()` handed back the live instance, so the
+    /// step is written on the state's own copy, found again by id.
+    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
+        let id = s.card(card).id.clone();
+        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
+    }
+
+    /// TS `plagued(defId, n, extra = {})`: `{ def, counters: { plague: n }, ...extra }`.
+    fn plagued_with(def_id: &str, n: i32, extra: Value) -> Value {
+        let mut entry = json!({ "def": def_id, "counters": { "plague": n } });
+        if let (Some(into), Some(from)) = (entry.as_object_mut(), extra.as_object()) {
+            for (key, value) in from {
+                into.insert(key.clone(), value.clone());
+            }
+        }
+        entry
+    }
+
+    /// TS `plagued(defId, n)`, the default `extra` of `{}`.
     fn plagued(def_id: &str, n: i32) -> Value {
-        json!({ "def": def_id, "counters": { "plague": n } })
+        plagued_with(def_id, n, json!({}))
     }
 
     fn mana_gained(s: &Scenario) -> i32 {
@@ -164,7 +183,7 @@ mod tests {
         #[test]
         fn has_a_script_per_face_each_with_a_preview() {
             crate::register_all();
-            assert_eq!(ID, NUKE);
+            assert_eq!(crate::card_def(ID).id, NUKE);
             let scripts = script();
             assert!(scripts.base.preview.is_some());
             assert!(scripts.radiant.preview.is_some());
@@ -189,7 +208,7 @@ mod tests {
             }
 
             #[test]
-            fn c4_5_one_state_check_every_death_comes_first_and_the_mana_after_them() {
+            fn s4_5_one_state_check_every_death_comes_first_and_the_mana_after_them() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [NUKE, ANCHOR], "field": [plagued(VANILLA, 1)] },
@@ -270,7 +289,7 @@ mod tests {
             fn r386_an_upgrade_gives_2_mana_per_token() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [NUKE, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": [plagued(VANILLA, 2)] } }));
-                step_param(s.card_mut(NUKE), "mana", 1);
+                step(&mut s, NUKE, "mana", 1);
 
                 s.play(NUKE, json!({}));
 
@@ -411,7 +430,12 @@ mod tests {
                     "p1": { "hand": [{ "def": NUKE, "radiant": true }, ANCHOR] },
                     "p2": { "hand": [ANCHOR], "field": [plagued(VANILLA, 1), VOIDWALKER] },
                 }));
-                s.card_mut(VOIDWALKER).granted_keywords.push(json_as(json!({ "kind": "Indestructible" })));
+                // TS wrote through the live instance `s.card()` handed back; here the state's own copy.
+                let voidwalker = s.card(VOIDWALKER).id.clone();
+                find_instance_mut(s.state_mut(), &voidwalker)
+                    .expect("the Voidwalker is on the field")
+                    .granted_keywords
+                    .push(json_as(json!({ "kind": "Indestructible" })));
 
                 s.play(NUKE, json!({}));
 
