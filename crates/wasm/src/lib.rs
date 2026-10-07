@@ -14,15 +14,27 @@
 //! refusal is the `error` of the `ReduceResult` (SURFACE §6.1). A panic is an engine invariant broken
 //! (SURFACE §4.4.9); `console_error_panic_hook` prints it on the console before the trap.
 //!
+//! The state cache. Every call that takes a state parses its JSON, and the client hands the same
+//! state over and over: a step of the practice worker or the hotseat asks `view_for` for both seats,
+//! `legal_actions`, `seat_to_act` and `ai_to_act` of the state `reduce` just returned. So the bindings
+//! keep the few states they parsed or produced last (`STATE_CACHE`), each under its exact JSON text,
+//! and a call whose text is one of them reads that state instead of parsing it again. A text that
+//! differs by one byte is parsed, so the answer never depends on the cache: parsing is deterministic,
+//! and the engine only reads the state it is given. A state `reduce`, `begin_game` or `create_game`
+//! returns is remembered under the text the binding wrote, which is the text `JSON.stringify` writes
+//! of the object `JSON.parse` made of it (same keys, same order, integers only).
+//!
 //! The clock. The pure crates never read one (CLAUDE.md rule 4, SURFACE §3). The AI's wall-clock cap
 //! is this crate's: `ai_decide` hands `decide` a `should_stop` that reads `js_sys::Date::now()`
 //! against the deadline the page computed, as TypeScript's `shouldStop` read `performance.now()`.
 
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::str::FromStr;
 
 use jackioh_engine::{
     self as engine, Action, CardDefs, CreateGameArgs, DECK_SIZE, FoldArgs, GameState, PLAYER_IDS,
-    PerPlayerOpt, PlayerId, Rng,
+    PerPlayerOpt, PlayerId, ReduceResult, Rng,
 };
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -49,8 +61,105 @@ fn player(text: &str) -> Result<PlayerId, JsError> {
     PlayerId::from_str(text).map_err(|error| JsError::new(&error))
 }
 
-fn state_of(what: &str, state_json: &str) -> Result<GameState, JsError> {
-    parse(&format!("{what}: the state"), state_json)
+/// How many states the bindings keep, by their JSON text (the module doc's "state cache"): the state a
+/// call is asked about, the one `reduce` returned from it, and a little room for a caller that keeps
+/// two games (the hotseat's replay check, a test's two cores).
+const STATE_CACHE: usize = 4;
+
+thread_local! {
+    /// Most recently used first. WebAssembly runs one thread; `thread_local!` is how a module keeps
+    /// data between calls without a `static mut`.
+    static STATES: RefCell<Vec<(String, Rc<GameState>)>> = const { RefCell::new(Vec::new()) };
+}
+
+/// The state cached under exactly this text, moved to the front, if one is.
+fn cached_state(state_json: &str) -> Option<Rc<GameState>> {
+    STATES.with(|states| {
+        let mut states = states.borrow_mut();
+        let at = states.iter().position(|(text, _)| same_text(text, state_json))?;
+        let entry = states.remove(at);
+        let state = Rc::clone(&entry.1);
+        states.insert(0, entry);
+        Some(state)
+    })
+}
+
+/// `a == b`, eight bytes at a time: WebAssembly's `memcmp` (compiler-builtins) goes byte by byte,
+/// and the text a call is matched against is the whole ~80 KB state.
+fn same_text(a: &str, b: &str) -> bool {
+    let (a, b) = (a.as_bytes(), b.as_bytes());
+    if a.len() != b.len() {
+        return false;
+    }
+    let (left, right) = (a.as_chunks::<8>(), b.as_chunks::<8>());
+    left.0
+        .iter()
+        .zip(right.0.iter())
+        .all(|(x, y)| u64::from_ne_bytes(*x) == u64::from_ne_bytes(*y))
+        && left.1 == right.1
+}
+
+/// Keep `state` under `text`, dropping the least recently used state past `STATE_CACHE`.
+fn remember(text: String, state: Rc<GameState>) {
+    STATES.with(|states| {
+        let mut states = states.borrow_mut();
+        states.retain(|(known, _)| *known != text);
+        states.insert(0, (text, state));
+        states.truncate(STATE_CACHE);
+    });
+}
+
+/// How `apps/web/src/wasm/index.ts` wraps a state's JSON, `["\u{a0}",<state>]`: wasm-bindgen's glue
+/// copies a string into the module with a per-character JavaScript loop up to its first non-ASCII
+/// character and with `TextEncoder.encodeInto` after it, and a state's JSON is all ASCII, so the
+/// no-break space third in the text moves nearly all of it onto `encodeInto` (`stateJson` there says
+/// what that saves). A state's JSON is an object, so the plain text never looks like this, and it is
+/// read as before.
+const STATE_ENVELOPE: (&str, &str) = ("[\"\u{a0}\",", "]");
+
+/// A state argument's JSON, out of its envelope when it came in one.
+fn unwrapped(state_json: &str) -> &str {
+    let (head, tail) = STATE_ENVELOPE;
+    state_json
+        .strip_prefix(head)
+        .and_then(|rest| rest.strip_suffix(tail))
+        .unwrap_or(state_json)
+}
+
+/// The state a JSON argument holds: the cached one with this very text, else parsed (and cached).
+fn state_of(what: &str, state_json: &str) -> Result<Rc<GameState>, JsError> {
+    let state_json = unwrapped(state_json);
+    if let Some(state) = cached_state(state_json) {
+        return Ok(state);
+    }
+    let state: Rc<GameState> = Rc::new(parse(&format!("{what}: the state"), state_json)?);
+    remember(state_json.to_owned(), Rc::clone(&state));
+    Ok(state)
+}
+
+/// A state the bindings return: its JSON text, with the state cached under it.
+fn returned_state(state: GameState) -> Result<String, JsError> {
+    let text = to_json(&state)?;
+    remember(text.clone(), Rc::new(state));
+    Ok(text)
+}
+
+/// `ReduceResult`'s JSON, `{"state":…,"events":[…]}` plus `"error"` on a refusal, exactly as serde
+/// writes the struct (`error` is skipped when absent), with the new state cached under its own text.
+fn reduce_result_json(result: ReduceResult) -> Result<String, JsError> {
+    let ReduceResult { state, events, error } = result;
+    let events = to_json(&events)?;
+    let error = match &error {
+        Some(message) => format!(",\"error\":{}", to_json(message)?),
+        None => String::new(),
+    };
+    // A refusal hands back the input state, which the cache holds already under the caller's text.
+    let state = if error.is_empty() {
+        returned_state(state)?
+    } else {
+        to_json(&state)?
+    };
+    Ok(format!("{{\"state\":{state},\"events\":{events}{error}}}"))
 }
 
 /// The checks TypeScript's `createGame` threw on, in its order (R180's handicaps first, so a bad
@@ -117,14 +226,14 @@ pub fn catalog_version() -> String {
 pub fn create_game(args_json: &str) -> Result<String, JsError> {
     let args: CreateGameArgs = parse("createGame", args_json)?;
     check_setup(&args)?;
-    to_json(&engine::create_game(&args))
+    returned_state(engine::create_game(&args))
 }
 
 /// `ReduceResult`: `{ state, events, error? }`.
 #[wasm_bindgen]
 pub fn begin_game(state_json: &str) -> Result<String, JsError> {
     let state = state_of("beginGame", state_json)?;
-    to_json(&engine::begin_game(&state))
+    reduce_result_json(engine::begin_game(&state))
 }
 
 /// `ReduceResult`. An illegal action is refused in `error`, never thrown (SURFACE §6.1).
@@ -132,7 +241,7 @@ pub fn begin_game(state_json: &str) -> Result<String, JsError> {
 pub fn reduce(state_json: &str, action_json: &str) -> Result<String, JsError> {
     let state = state_of("reduce", state_json)?;
     let action: Action = parse("reduce: the action", action_json)?;
-    to_json(&engine::reduce(&state, &action))
+    reduce_result_json(engine::reduce(&state, &action))
 }
 
 /// `ActionBody[]`: everything `player` may legally do now.

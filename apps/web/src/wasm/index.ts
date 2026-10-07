@@ -133,6 +133,22 @@ function json(value: unknown): string {
   return JSON.stringify(value);
 }
 
+/** The no-break space `stateJson` puts ahead of a state. */
+const STATE_MARK = "\u00A0";
+
+/**
+ * A state as it crosses: `["\u00A0",<the state's JSON>]`, which the bindings unwrap (`crates/wasm`'s
+ * `state_of`). wasm-bindgen's glue copies a string into the module one character at a time up to its
+ * first non-ASCII character and hands the rest to `TextEncoder.encodeInto`, and a state's JSON is all
+ * ASCII, so its ~80 KB went through the per-character loop on every call (0.18 ms of a 0.24 ms crossing,
+ * measured in Node). The no-break space third in this text sends all but two characters through
+ * `encodeInto`. One `JSON.stringify` writes it, so no second string is built, and it stays one byte a
+ * character (a mark outside Latin-1, or one added with `+`, cost more than it saved).
+ */
+function stateJson(state: GameState): string {
+  return JSON.stringify([STATE_MARK, state]);
+}
+
 function parsed<T>(text: string): T {
   return JSON.parse(text) as T;
 }
@@ -183,34 +199,34 @@ export function createGame(args: CreateGameArgs): GameState {
 }
 
 export function beginGame(state: GameState): ReduceResult {
-  return call("beginGame", () => reduceResult(begin_game(json(state)), state));
+  return call("beginGame", () => reduceResult(begin_game(stateJson(state)), state));
 }
 
 export function reduce(state: GameState, action: Action): ReduceResult {
-  return call("reduce", () => reduceResult(reduce_action(json(state), json(action)), state));
+  return call("reduce", () => reduceResult(reduce_action(stateJson(state), json(action)), state));
 }
 
 /** Everything `player` may legally do now. The client greys out the rest (BUILD M5-T2). */
 export function legalActions(state: GameState, player: PlayerId): ActionBody[] {
-  return call("legalActions", () => parsed<ActionBody[]>(legal_actions(json(state), player)));
+  return call("legalActions", () => parsed<ActionBody[]>(legal_actions(stateJson(state), player)));
 }
 
 /** The only window the client has onto the game (SPEC §10.8). */
 export function viewFor(state: GameState, player: PlayerId): PlayerView {
-  return call("viewFor", () => parsed<PlayerView>(view_for(json(state), player)));
+  return call("viewFor", () => parsed<PlayerView>(view_for(stateJson(state), player)));
 }
 
 /** The seat that owes the next action, or null when none does. */
 export function seatToAct(state: GameState): PlayerId | null {
   return call("seatToAct", () => {
-    const seat = seat_to_act(json(state));
+    const seat = seat_to_act(stateJson(state));
     return seat === "" ? null : (seat as PlayerId);
   });
 }
 
 /** SURFACE §5.2's hash: eight hex digits, TypeScript's `hashState` bit for bit. */
 export function hashState(state: GameState): string {
-  return call("hashState", () => hash_state(json(state)));
+  return call("hashState", () => hash_state(stateJson(state)));
 }
 
 /** Fold a recorded log from scratch (SPEC §9.2, §9.3). Throws on a setup `createGame` refuses. */
@@ -220,17 +236,17 @@ export function fold(input: FoldInput): FoldResult {
 
 /** R417, R508: the board `seat` takes away. */
 export function lastBoardFor(state: GameState, seat: PlayerId): LastBoardCard[] {
-  return call("lastBoardFor", () => parsed<LastBoardCard[]>(last_board_for(json(state), seat)));
+  return call("lastBoardFor", () => parsed<LastBoardCard[]>(last_board_for(stateJson(state), seat)));
 }
 
 /** R677: the seat the player who began in `home` plays now. */
 export function seatPlayedBy(state: GameState, home: PlayerId): PlayerId {
-  return call("seatPlayedBy", () => seat_played_by(json(state), home) as PlayerId);
+  return call("seatPlayedBy", () => seat_played_by(stateJson(state), home) as PlayerId);
 }
 
 /** The card with this instance id, wherever it is, or undefined (TypeScript's `findInstance`). */
 export function findInstance(state: GameState, instanceId: string): CardInstance | undefined {
-  return call("findInstance", () => parsed<CardInstance | null>(find_instance(json(state), instanceId)) ?? undefined);
+  return call("findInstance", () => parsed<CardInstance | null>(find_instance(stateJson(state), instanceId)) ?? undefined);
 }
 
 let catalogCache: CardDefs | null = null;
@@ -253,7 +269,7 @@ export function catalogVersion(): string {
 // ---------------------------------------------------------------------------------------------
 
 export function aiToAct(state: GameState, seat: PlayerId): boolean {
-  return call("aiToAct", () => ai_to_act(json(state), seat));
+  return call("aiToAct", () => ai_to_act(stateJson(state), seat));
 }
 
 /** The AI's own stream as it crosses: its seed and where it stands. */
@@ -270,7 +286,7 @@ export type DecideResult = { decision: Decision | null; rngCursor: number };
  * state, the stream and the budget.
  */
 export function decide(state: GameState, seat: PlayerId, request: DecideRequest, deadlineMs: number): DecideResult {
-  return call("decide", () => parsed<DecideResult>(ai_decide(json(state), seat, json(request), deadlineMs)));
+  return call("decide", () => parsed<DecideResult>(ai_decide(stateJson(state), seat, json(request), deadlineMs)));
 }
 
 /** `buildAiDeck`'s options as they cross (`AiDeckOptions` plus the stream and the size). */
@@ -295,7 +311,7 @@ export function buildAiDeck(request: AiDeckRequest): { deck: string[]; rngCursor
 /** §10.7's random policy (`subsystems.chooseAction`), drawing from `(rngSeed, rngCursor)`. */
 export function chooseAction(state: GameState, seat: PlayerId, stream: StreamAt): { action: ActionBody | null; rngCursor: number } {
   return call("chooseAction", () =>
-    parsed<{ action: ActionBody | null; rngCursor: number }>(choose_action(json(state), seat, stream.rngSeed, stream.rngCursor)),
+    parsed<{ action: ActionBody | null; rngCursor: number }>(choose_action(stateJson(state), seat, stream.rngSeed, stream.rngCursor)),
   );
 }
 
