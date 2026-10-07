@@ -9,18 +9,23 @@
 //! first under this feature (SURFACE §8), and they win here over the production
 //! `scripts::register_scripts`/`catalog::register_catalog` that `crate::*` also brings.
 //!
+//! `seams.rs` (part 32) holds the two test seams TS's tests made from outside the engine: a test-made
+//! work handler (`registerWorkHandler`) and stand-ins for three turn stages (`vi.mock`).
+//!
 //! The effects library is not globbed in (its `draw`, `add_to_hand`, `gain_mana`, … share names with
 //! engine functions): a test names `effects::<verb>` or imports the verbs it uses.
 
 pub mod glow;
 pub mod invariants;
 pub mod scenario;
+pub mod seams;
 
 pub use crate::*;
 
 pub use glow::*;
 pub use invariants::*;
 pub use scenario::*;
+pub use seams::*;
 
 // The thread-local override wins over the production registries `crate::*` re-exports (SURFACE §8).
 pub use scenario::{register_catalog, register_scripts};

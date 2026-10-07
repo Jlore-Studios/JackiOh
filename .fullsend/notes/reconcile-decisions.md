@@ -520,3 +520,70 @@ Lines: 0
 
 ## Totals (cards)
 Lines: before 150,207, after 147,837 (`git diff --shortstat 9684288 HEAD -- crates/cards`: 274 files, 999 insertions, 3,369 deletions). Errors: shadow build 183 → real build 0 (1 warning); clippy 273 warnings for Wave 3. See `.fullsend/damage/cards.md`.
+
+# engine green
+
+Part 32 step 1 (the engine library compiles). `cargo check -p jackioh-engine --lib --features testkit`:
+45 errors (all E0308, part 31's leftovers) → 0, and 0 after the borrow check (no E0499/E0502/E0505/E0507
+appeared); `cargo clippy --lib -D warnings` (with and without `testkit`, and with `ts`): 286 → 0; the
+lib's unit tests 146/146 (142 before the seams' 4).
+
+## Decision: the movers' callers hand over a mutable copy
+Winner: the owners' `&mut CardInstance` (zones' `move_to_zone`, `place_on_field`, `remove_from_any_zone`,
+`cease_to_exist`, `replace_in_zone`; draw's `add_to_hand`, `shuffle_into_library`) — the mover brings the
+copy up to date with the live card (`live_or`) and leaves it as it landed, which is TS's live object
+Losers: none (part 31 left the ~30 call sites as E0308s)
+Callers updated: the 45 sites part 31 listed (`let mut card = …`, `&mut card.clone()`, `&mut card`)
+Semantic conflicts: brittle_count's `give_brittle_count`/`gain_brittle_count`/`start_brittle_on_field`
+take a `&mut CardInstance` beside `&GameState`, so a card that is in the state cannot be handed over
+live: `effects::brittle` and `subsystems::twice_forward::reveal_self` run the verb on a copy of the live
+card and write its `brittle` back by id (TS wrote through the live object; the same count results)
+Unresolved: none
+Lines: commit f0e8727, 25 files +62 −48
+
+## Decision: catalog pools stay `&'static CardDef`
+Winner: `catalog::query -> Vec<&'static CardDef>` and `pick_generated(&[&CardDef])` (part 31); the
+callers stop cloning into owned pools (`effects::transform` ×2, `call_to_chaos_plus`, `perfect_hand`),
+and `scorer::candidate_defs` now returns `Vec<&'static CardDef>` too
+Losers: `owned_defs` in perfect_hand.rs and call_to_chaos_plus.rs — deleted
+Callers updated: 5 in src; `tests/rules/{scorer,rulings_a}.rs` and Core #97's test read `candidate_defs()`
+through `.iter()` field reads, which compile unchanged
+Semantic conflicts: none
+Unresolved: none
+Lines: in f0e8727
+
+## Decision: clippy's remaining lints
+Winner: fixes, not allows, except one: `damage::DamageTarget` keeps `#[allow(clippy::large_enum_variant)]`
+(its `Unit { instance: CardInstance }` is matched by value at ~90 sites in cards and tests; a `Box` buys
+nothing there). `turn::Due::Delayed` boxes its effect (private); `CastNewDef::Read(CastDefReader)` and
+`InterceptArgs.accepts: Option<&InterceptorFilter>` name their function types; the Cry's ask order is a
+pair of `Asker` fn pointers (clippy's `if_same_then_else` read `a && b` / `b && a` as one block, but the
+order is the point); `catalog::fused_id_specs` ranges over `head`, the value `start` began at (the loop
+moves `start`, which never moved the range). `validator::LoadoutResult.errors` exports under `ts` as
+`ts(as = "Option<Vec<LoadoutError>>", optional)` (ts-rs 12 refuses `optional` on a `Vec`; the TS type
+`errors?: LoadoutError[]` is unchanged)
+Losers: none
+Callers updated: 0 outside src
+Semantic conflicts: none
+Unresolved: none
+Lines: commit 63e6160, 70 files
+
+## Decision: the two test seams (orchestrator's decision; spec-gaps.md "engine tests")
+Winner: `crates/engine/src/testkit/seams.rs`, under `testkit` only and globbed into `testkit::*`:
+(a) `register_work_handler(hook: &str, handler: WorkHandler) -> Option<WorkHandler>` (returns the one it
+replaced, as TS's did), `unregister_work_handler(hook)`, `work_handler(hook)`, with
+`WorkHandler = fn(&mut EngineSink<'_>, &WorkItem)`; a thread-local table that `work::run_work_item`'s
+fallthrough reads before a card's own continuation (TS: the handler map before the default handler)
+and `work::can_resume` reads after the built-in hooks. (b) `mock_brittle_tick`, `mock_animate_at_turn_start`,
+`mock_return_at_cleanup`, each `impl Fn(&mut EngineSink<'_>, PlayerId) + 'static` (closures may capture
+an `mpsc::Sender`, as turn_wiring.rs's do), held per thread as `Rc<StageDouble>`; `turn.rs`'s
+`start_of_turn_brittle`, `start_of_turn_animate` and `cleanup` run a set double in place of the real
+stage. `clear_seams()` puts every seam back. Thread-locals are `Cell`s (clippy.toml bans `RefCell`), as
+the registry override's are.
+Losers: part 31's "none added" (superseded by the orchestrator)
+Callers updated: 0 (the engine-tests owner ports `pauses.rs`'s two tests back and builds turn_wiring.rs)
+Semantic conflicts: a built-in hook (`@setup`, `play`, …) cannot be overridden by a test handler — the
+seam is the `_` arm only, as the orchestrator specified; TS let a test replace any handler, and no TS
+test did
+Unresolved: none
+Lines: seams.rs +239 (with its 4 tests), turn.rs +30 −3, work.rs +12, testkit/mod.rs +5

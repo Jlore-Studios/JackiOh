@@ -11,6 +11,9 @@
   the engine-src reconciler (or the orchestrator) decides whether these three thread-local hooks
   exist, `#[cfg(feature = "testkit")]` beside the registry override. Until then: 1 E0432 in
   turn_wiring.rs, and the `rules` binary does not build while it stands (its 9 tests).
+  **DECIDED (orchestrator; built in part 32, `# engine green` in reconcile-decisions.md):** the three
+  doubles exist in `testkit::seams` with the names and argument this file calls them with; `turn.rs`
+  runs a set double in place of its stage under `testkit` only.
 - **A test-made work handler (part 25.3, `crates/engine/tests/rules/pauses.rs`).** Two TS tests
   ("§9.3 resumes a three-step sequence at the step after the one that asked", "§9.3 finishes a pause
   nested inside an owed sequence before the sequence's own tail") drain work owed under a hook name the
@@ -20,6 +23,11 @@
   thread-local `register_work_handler(hook, fn(&mut EngineSink, &WorkItem))` consulted by the
   dispatcher's fallthrough under `#[cfg(feature = "testkit")]` (the same exception SURFACE §8 makes
   for the registries); if it does, the two tests are ported back from `pauses.test.ts`.
+  **DECIDED (orchestrator; built in part 32, `# engine green` in reconcile-decisions.md):**
+  `testkit::register_work_handler(hook, WorkHandler) -> Option<WorkHandler>` (the previous one, as
+  TS) and `unregister_work_handler(hook)`, `WorkHandler = fn(&mut EngineSink<'_>, &WorkItem)`;
+  `work::run_work_item`'s fallthrough and `work::can_resume` consult it under `testkit` only. The
+  engine-tests owner ports the two tests back.
 - **The testkit exports no `Arc`** (SURFACE §8 lists `json!`, `Value`, `serde_json`, `IndexMap`,
   `IndexSet`, `json_as`), while effect argument structs that hold functions (`ForEachCardArgs`,
   `ChooseTargetWhereArgs`, `DrawWhileArgs`, `CastEachArgs`) need `Arc::new` at the call. Decision:
@@ -104,7 +112,8 @@
   SURFACE §6.6 removed the registration hooks and §8 allows exactly one override (the registries).
   Decision: none added (a reconciler adds no feature neither design had). For the orchestrator: port
   those tests against the real board (`turn_wiring.rs`'s 9, `pauses.rs`'s 2) or drop them; or patch §8
-  to allow the seams, and the engine owner adds them in Wave 3.
+  to allow the seams, and the engine owner adds them in Wave 3. **DECIDED:** the orchestrator chose the
+  seams; part 32 added them (`testkit::seams`, see the two entries under "engine tests").
 - **SURFACE §6.6, closure fields of effect arguments.** "A field that holds a function is skipped by
   serde and set in Rust" leaves its signature open. Decision taken (the owners'): a field that
   builds a list or a query reads `&mut EffectContext` (`ForEachCardArgs.cards`, `CastEachArgs.cards`,

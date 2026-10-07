@@ -671,6 +671,11 @@ pub fn can_resume(state: &GameState, resume: &Resume) -> bool {
     if ENGINE_WORK_HOOKS.contains(&resume.hook.as_str()) {
         return true;
     }
+    // A sequence a test made (`testkit::seams::register_work_handler`, TS's `registerWorkHandler`).
+    #[cfg(feature = "testkit")]
+    if crate::testkit::seams::work_handler(&resume.hook).is_some() {
+        return true;
+    }
     card_step_for(state, resume).is_some()
 }
 
@@ -696,6 +701,13 @@ pub fn run_work_item(sink: &mut EngineSink<'_>, item: &WorkItem) {
         "@activate" => crate::subsystems::activate::run_owed_activation(sink, item),
         "@aiTurn" => crate::subsystems::ai_policy::run_owed_ai_turn(sink, item),
         _ => {
+            // A sequence a test made (`testkit::seams::register_work_handler`): TS's handler map, read
+            // before its default handler.
+            #[cfg(feature = "testkit")]
+            if let Some(handler) = crate::testkit::seams::work_handler(&item.resume.hook) {
+                handler(sink, item);
+                return;
+            }
             // TS's default handler (`prompts.ts:912`): a card's own continuation, re-entered at the
             // step it names with the data the pause captured.
             if card_step_for(sink.state, &item.resume).is_some() {

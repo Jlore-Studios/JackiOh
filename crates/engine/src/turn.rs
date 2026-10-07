@@ -440,14 +440,30 @@ pub fn start_turn(sink: &mut EngineSink, player: PlayerId) {
 /// a full turn cycle ticks, and a count that reaches 0 crumbles its card. The tick is `brittle.rs`'s;
 /// this is its place in the turn and what follows it (`after_start_stage`).
 fn start_of_turn_brittle(sink: &mut EngineSink, player: PlayerId, due_before: u32) {
-    crate::brittle::brittle_tick(sink, player);
+    // The testkit's stand-in for this stage, when a test set one (`testkit::seams`, TS's `vi.mock`).
+    #[cfg(feature = "testkit")]
+    let double = crate::testkit::seams::brittle_tick_double();
+    #[cfg(not(feature = "testkit"))]
+    let double: Option<fn(&mut EngineSink, PlayerId)> = None;
+    match double {
+        Some(double) => double(sink, player),
+        None => crate::brittle::brittle_tick(sink, player),
+    }
     after_start_stage(sink, player, START_BRITTLE_STEP, due_before);
 }
 
 /// R62, B3.1 (R383): `player`'s "Animated on your turn" cards step into their unit zones, after the
 /// Brittle tick and before the delayed effects. The move is `animated.rs`'s.
 fn start_of_turn_animate(sink: &mut EngineSink, player: PlayerId, due_before: u32) {
-    crate::animated::animate_at_turn_start(sink, player);
+    // The testkit's stand-in for this stage, when a test set one (`testkit::seams`, TS's `vi.mock`).
+    #[cfg(feature = "testkit")]
+    let double = crate::testkit::seams::animate_at_turn_start_double();
+    #[cfg(not(feature = "testkit"))]
+    let double: Option<fn(&mut EngineSink, PlayerId)> = None;
+    match double {
+        Some(double) => double(sink, player),
+        None => crate::animated::animate_at_turn_start(sink, player),
+    }
     after_start_stage(sink, player, START_ANIMATE_STEP, due_before);
 }
 
@@ -668,7 +684,15 @@ fn cleanup(sink: &mut EngineSink, player: PlayerId) {
     // to their backrow zones, after every end-of-turn step, so their own end-of-turn text ran while they
     // were Units. The move is `animated.rs`'s; its events are answered by the loop after cleanup
     // (`end_of_turn_cleanup_settle`), which parks the rest of the turn on a prompt like any other stage.
-    crate::animated::return_at_cleanup(sink, player);
+    // The testkit's stand-in for this step, when a test set one (`testkit::seams`, TS's `vi.mock`).
+    #[cfg(feature = "testkit")]
+    let double = crate::testkit::seams::return_at_cleanup_double();
+    #[cfg(not(feature = "testkit"))]
+    let double: Option<fn(&mut EngineSink, PlayerId)> = None;
+    match double {
+        Some(double) => double(sink, player),
+        None => crate::animated::return_at_cleanup(sink, player),
+    }
 }
 
 // ---------------------------------------------------------------------------
