@@ -20,6 +20,7 @@
 //! The modifier sits on the controller's own `mods`, so it is read only when that player's cards are
 //! costed; the opponent's turn in between cannot reach it even while it is live.
 
+use jackioh_engine::effects::add_player_modifier;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-077";
@@ -65,6 +66,9 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
+
     const CURVATURE: &str = "core-077";
 
     /// The probes, in hand and never played except where a test says so.
@@ -80,7 +84,7 @@ mod tests {
 
     /// The cost a card in the viewer's own hand shows now (§10.8, R65).
     fn hand_cost(s: &Scenario, def_id: &str) -> i32 {
-        let view = s.view(Some(PlayerId::P1));
+        let view = s.view(P1);
         let HandView::Cards(hand) = &view.you.hand else {
             panic!("§10.8: the viewer's own hand is a list of cards");
         };
@@ -103,7 +107,25 @@ mod tests {
             .collect()
     }
 
+    /// TS `toMatchObject`: every key of `pattern` is in `actual` with a matching value, recursively.
+    fn matches_object(actual: &Value, pattern: &Value) -> bool {
+        match (actual, pattern) {
+            (Value::Object(have), Value::Object(want)) => want
+                .iter()
+                .all(|(key, value)| have.get(key).is_some_and(|got| matches_object(got, value))),
+            _ => actual == pattern,
+        }
+    }
+
+    /// p1's first player modifier, as JSON.
+    fn first_mod(s: &Scenario) -> Value {
+        serde_json::to_value(s.state().players.p1.mods.first()).expect("a modifier serialises")
+    }
+
+    /// The scenario every test plays on, with the shipped cards registered first (the TS
+    /// globalSetup's `registerAll()`).
     fn board(radiant: bool) -> Scenario {
+        crate::register_all();
         let hand: Vec<Value> = std::iter::once(json!({ "def": CURVATURE, "radiant": radiant }))
             .chain(PROBES.iter().map(|probe| json!(probe)))
             .collect();
@@ -117,9 +139,13 @@ mod tests {
     }
 
     /// Two `end_turn()`s: the opponent really takes a turn in between, so this is p1's NEXT turn.
-    fn to_my_next_turn(s: &mut Scenario) {
-        s.end_turn();
-        s.end_turn();
+    fn to_my_next_turn(s: &mut Scenario) -> &mut Scenario {
+        s.end_turn().end_turn()
+    }
+
+    fn labels(view: &PlayerView, mine: bool) -> Vec<String> {
+        let side = if mine { &view.you } else { &view.opponent };
+        side.modifiers.iter().map(|modifier| modifier.label.clone()).collect()
     }
 
     mod professor_curvature_base {
@@ -136,15 +162,19 @@ mod tests {
             assert_eq!(hand_cost(&s, COST_6), 6);
             // It is installed all the same: R48 is `modifier_is_live`'s "not on `from_turn`", not an absent mod.
             assert_eq!(discounts(&s).len(), 1);
-            let installed = serde_json::to_value(&s.state().players.p1.mods[0]).unwrap();
-            assert_eq!(installed["kind"], json!("costDiscount"));
-            assert_eq!(installed["amount"], json!(1));
-            assert_eq!(installed["minCurrentCost"], json!(4));
-            assert_eq!(installed["expiry"], json!({ "until": "nextTurnOf", "player": "p1", "fromTurn": 9 }));
+            assert!(matches_object(
+                &first_mod(&s),
+                &json!({
+                    "kind": "costDiscount",
+                    "amount": 1,
+                    "minCurrentCost": 4,
+                    "expiry": { "until": "nextTurnOf", "player": "p1", "fromTurn": 9 },
+                })
+            ));
         }
 
         #[test]
-        fn r363_plus_r65_on_the_controllers_next_turn_a_cost_4_card_costs_3_a_cost_6_card_5_and_a_cost_3_card_is_untouched() {
+        fn r363_r65_on_the_controllers_next_turn_a_cost_4_card_costs_3_a_cost_6_card_5_and_a_cost_3_card_is_untouched() {
             let mut s = board(false);
             s.play(CURVATURE, json!({}));
 
@@ -163,9 +193,9 @@ mod tests {
             to_my_next_turn(&mut s);
 
             // Mana refreshed to MAX_MANA (4) at the start of this turn (§2.3).
-            s.expect_mana(PlayerId::P1, 4);
+            s.expect_mana(P1, 4);
             s.play(COST_4, json!({}));
-            s.expect_mana(PlayerId::P1, 1);
+            s.expect_mana(P1, 1);
         }
 
         #[test]
@@ -178,7 +208,7 @@ mod tests {
             // Ending the turn it covered is the cleanup that drops it (§2.2).
             s.end_turn();
 
-            assert_eq!(discounts(&s).len(), 0);
+            assert!(discounts(&s).is_empty());
             assert_eq!(hand_cost(&s, COST_4), 4);
         }
 
@@ -188,8 +218,8 @@ mod tests {
 
             s.play(CURVATURE, json!({}));
 
-            s.expect_events(json!(["cardPlayed", "modifierChanged"]));
-            s.expect_stats(CURVATURE, json!({ "attack": 3, "maxHealth": 3, "health": 3 }));
+            s.expect_events(json!(["cardPlayed", "modifierChanged"]))
+                .expect_stats(CURVATURE, json!({ "attack": 3, "maxHealth": 3, "health": 3 }));
         }
     }
 
@@ -206,11 +236,11 @@ mod tests {
 
             s.play(CURVATURE, json!({}));
 
-            let badges = s.view(Some(PlayerId::P1)).you.modifiers;
+            let badges = s.view(P1).you.modifiers;
             assert_eq!(badges.len(), 1, "the discount is on the board and so is its badge");
             assert_eq!(
-                badges.first().map(|badge| badge.label.clone()),
-                Some("(4)+ Cost cards cost (1) less (next turn)".to_string())
+                badges.first().map(|badge| badge.label.as_str()),
+                Some("(4)+ Cost cards cost (1) less (next turn)")
             );
             // §10.3 names the badge by id, so the animation lands on the element the view carries.
             assert_eq!(
@@ -226,12 +256,10 @@ mod tests {
 
             to_my_next_turn(&mut s);
 
-            let labels: Vec<String> =
-                s.view(Some(PlayerId::P1)).you.modifiers.iter().map(|modifier| modifier.label.clone()).collect();
-            assert_eq!(labels, vec!["(4)+ Cost cards cost (1) less"]);
+            assert_eq!(labels(&s.view(P1), true), ["(4)+ Cost cards cost (1) less"]);
             // R48: the same cleanup that ends the discount ends the badge, so neither outlives the other.
             s.end_turn();
-            assert!(s.view(Some(PlayerId::P1)).you.modifiers.is_empty());
+            assert!(s.view(P1).you.modifiers.is_empty());
         }
 
         #[test]
@@ -240,14 +268,7 @@ mod tests {
 
             s.play(CURVATURE, json!({}));
 
-            let labels: Vec<String> = s
-                .view(Some(PlayerId::P2))
-                .opponent
-                .modifiers
-                .iter()
-                .map(|modifier| modifier.label.clone())
-                .collect();
-            assert_eq!(labels, vec!["(4)+ Cost cards cost (2) less (next turn)"]);
+            assert_eq!(labels(&s.view(P2), false), ["(4)+ Cost cards cost (2) less (next turn)"]);
         }
     }
 
@@ -261,14 +282,14 @@ mod tests {
             s.play(CURVATURE, json!({}));
 
             assert_eq!(hand_cost(&s, COST_4), 4);
-            let installed = serde_json::to_value(&s.state().players.p1.mods[0]).unwrap();
-            assert_eq!(installed["kind"], json!("costDiscount"));
-            assert_eq!(installed["amount"], json!(2));
-            assert_eq!(installed["minCurrentCost"], json!(4));
+            assert!(matches_object(
+                &first_mod(&s),
+                &json!({ "kind": "costDiscount", "amount": 2, "minCurrentCost": 4 })
+            ));
         }
 
         #[test]
-        fn r363_plus_r65_radiant_takes_a_cost_4_card_to_2_and_a_cost_6_card_to_4_next_turn_cost_3_untouched() {
+        fn r363_r65_radiant_takes_a_cost_4_card_to_2_and_a_cost_6_card_to_4_next_turn_cost_3_untouched() {
             let mut s = board(true);
             s.play(CURVATURE, json!({}));
 
@@ -278,7 +299,7 @@ mod tests {
             assert_eq!(hand_cost(&s, COST_3), 3);
             assert_eq!(hand_cost(&s, COST_6), 4);
             s.play(COST_4, json!({}));
-            s.expect_mana(PlayerId::P1, 2);
+            s.expect_mana(P1, 2);
         }
 
         #[test]
@@ -289,7 +310,7 @@ mod tests {
 
             s.end_turn();
 
-            assert_eq!(discounts(&s).len(), 0);
+            assert!(discounts(&s).is_empty());
         }
 
         #[test]
