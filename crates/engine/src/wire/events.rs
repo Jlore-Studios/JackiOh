@@ -112,7 +112,11 @@ string_union! {
 /// `{ winner: PlayerId | "draw"; reason: GameOverReason }`: how a game ended (`GameState.result`,
 /// `PlayerView.result`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct GameResult {
     pub winner: Winner,
@@ -120,7 +124,11 @@ pub struct GameResult {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum GameEvent {
     /// `formerId` (R227): the id the card had until this moment, set only when the play put it
@@ -132,23 +140,29 @@ pub enum GameEvent {
         def_id: String,
         cost_paid: i32,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         x: Option<i32>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         embiggened: Option<bool>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         former_id: Option<String>,
         /// B5 E11, R454: the card was played from its player's graveyard, not the hand. Public.
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         from: Option<PlayedFrom>,
         /// R119: the permanents that arrived on the field during this play before §10.5 step 4
         /// announced it — a tributed unit's Death at step 2 (#22's copies) — which do not answer it, as
         /// `cardResolved`'s field says for step 7. Engine bookkeeping: a view never forwards it.
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         arrived_during: Option<Vec<String>>,
         /// R174, R212: the field's departures as the play was announced (the engine's exit mark), so a
         /// response the loop hands this event later judges the played card's stay from the moment the
         /// event happened. Engine bookkeeping: a view never forwards it.
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         exits_from: Option<u32>,
     },
     /// §10.5 step 7: the card has finished resolving — after its Cry and any Echo repeats, and after a
@@ -174,12 +188,14 @@ pub enum GameEvent {
         permanent: bool,
         cost_paid: i32,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         radiant: Option<bool>,
         /// R119: the permanents that arrived on the field while this play resolved, whatever put them
         /// there — a Recruit by its Cry (#98), #95's backrow, a Reborn body its own Cry brought back, a
         /// unit a trap answering the play summoned — which do not answer it, as the played card does not
         /// answer its own play. Engine bookkeeping: a view never forwards it.
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         arrived_during: Option<Vec<String>>,
         /// R174, R212: the field's departures as step 7 emitted this (the engine's exit mark). A cast's
         /// `cardResolved` waits for the loop of the effect that cast it (R70), and the rest of that
@@ -188,6 +204,7 @@ pub enum GameEvent {
         /// here, not from the dispatch, so that body is not "it". Engine bookkeeping: a view never
         /// forwards it.
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         exits_from: Option<u32>,
     },
     Summoned {
@@ -198,12 +215,15 @@ pub enum GameEvent {
         lane: i32,
         /// `formerId` (R227): as on `cardPlayed`, when this summon put an existing card face-down.
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         former_id: Option<String>,
         /// R119: on a played card's step-4 `summoned`, as on its `cardPlayed`. A view never forwards it.
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         arrived_during: Option<Vec<String>>,
         /// R174, R212: on a played card's step-4 `summoned`, as on its `cardPlayed`. A view never forwards it.
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         exits_from: Option<u32>,
     },
     Damage {
@@ -237,6 +257,7 @@ pub enum GameEvent {
         /// R89: set when the unit died on its Radiant face (C+ #12.8 Frostspatula's memory, R409).
         /// Only ever `Some(true)`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         radiant: Option<bool>,
     },
     EnteredGraveyard {
@@ -284,12 +305,14 @@ pub enum GameEvent {
         /// Radiant CN-Virus copies Radiant), so the board shows the face it would have had. It is the
         /// card's, so a view that hides the card hides this too (R97). Only ever `Some(true)`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         radiant: Option<bool>,
         /// R316: the card a `notCreated` copy was a copy of (#33 copies whatever its controller plays,
         /// a Trap set face-down included; #90.1 copies itself), so a view judges the copy that was never
         /// made by that card, and a face-down trap's copy does not name it (R97). Engine bookkeeping: a
         /// view never forwards it.
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         copy_of: Option<String>,
     },
     Discarded {
@@ -306,11 +329,13 @@ pub enum GameEvent {
         instance_id: String,
         def_id: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         turn_draw: Option<i32>,
         /// B5 E33: this draw took the last card of the drawer's own library — Classic #90's quest 9, "a
         /// draw of yours takes the last card of your deck". Present, and `true`, only then. Public: the
         /// library count already says as much.
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         emptied: Option<bool>,
     },
     AddedToHand {
@@ -336,6 +361,7 @@ pub enum GameEvent {
         /// knock-down takes for the rest of the turn, which a unit already in Attack Position would
         /// otherwise lose with no event (§10.3, R91). Absent on a grant. Only ever `Some(true)`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         lost: Option<bool>,
     },
     /// `brittle` is B3.3's count (R385). `placed` (B5 E19) is how many Plague Counters one placement put
@@ -346,6 +372,7 @@ pub enum GameEvent {
         counter: CounterKind,
         value: i32,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         placed: Option<i32>,
     },
     /// R177: `hiddenFrom` is set on a change made to a card in a library — both players, who could not
@@ -355,6 +382,7 @@ pub enum GameEvent {
         instance_id: String,
         cost: i32,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         hidden_from: Option<Vec<PlayerId>>,
     },
     ModifierChanged {
@@ -377,6 +405,7 @@ pub enum GameEvent {
         to_def_id: String,
         new_instance_id: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         hidden_from: Option<Vec<PlayerId>>,
     },
     Fused {
@@ -396,6 +425,7 @@ pub enum GameEvent {
         row: Row,
         lane: i32,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         former_id: Option<String>,
     },
     Rotated {
@@ -485,11 +515,14 @@ pub enum GameEvent {
         cost_paid: i32,
         targets: Vec<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         row: Option<Row>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         lane: Option<i32>,
         /// Only ever `Some(true)`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         face_down: Option<bool>,
     },
     /// B5 E1: an announced play was cancelled. `to` is where the card went (a steal sends it to a hand, E2).
@@ -511,8 +544,13 @@ pub enum GameEvent {
         from: PlayerId,
         to: PlayerId,
         /// One of "hand" | "library" | "resolving" | "graveyard" | "exile" | "field".
+        #[cfg_attr(
+            feature = "ts",
+            ts(type = "\"hand\" | \"library\" | \"resolving\" | \"graveyard\" | \"exile\" | \"field\"")
+        )]
         zone: ZoneName,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         readable_from: Option<Vec<PlayerId>>,
     },
     /// B5 E20: a Locked zone opened again.
@@ -539,6 +577,7 @@ pub enum GameEvent {
         unit_lane: i32,
         /// Only ever `Some(true)`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         carried: Option<bool>,
     },
     /// B3.1, R383: an "Animated on your turn" card went back to its backrow zone.
@@ -555,6 +594,7 @@ pub enum GameEvent {
         def_id: String,
         owner: PlayerId,
         /// Always "field".
+        #[cfg_attr(feature = "ts", ts(type = "\"field\""))]
         zone: ZoneName,
     },
     /// B3.4, R386: one Degrade or Upgrade change. `hiddenFrom` (R177) names the players who could not
@@ -565,6 +605,7 @@ pub enum GameEvent {
         def_id: String,
         change: TuningChange,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         hidden_from: Option<Vec<PlayerId>>,
     },
     Upgraded {
@@ -572,6 +613,7 @@ pub enum GameEvent {
         def_id: String,
         change: TuningChange,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         hidden_from: Option<Vec<PlayerId>>,
     },
     /// B3.4, Classic+ #41 KY's Constant: one of a card's numbers set outright (`key` as `numbersOn` names
@@ -583,6 +625,7 @@ pub enum GameEvent {
         key: String,
         value: i32,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         hidden_from: Option<Vec<PlayerId>>,
     },
     /// B5 E9: a damage instance, an attack or a chosen target moved to a new one. Ids as `damage` writes them.
@@ -666,7 +709,11 @@ pub enum GameEvent {
 /// moved. `none` is R440's cue on a card someone may not read that nothing could change (Immutable, or
 /// no change applies), so the events over a hidden pile number the applications, never the changes.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum TuningChange {
     Cost { delta: i32 },
@@ -855,12 +902,26 @@ mod tests {
 
     #[test]
     fn events_serialise_as_ts_writes_them() {
-        let event = GameEvent::Damage { source_id: None, target_id: "hero-p2".into(), amount: 3, combat: false };
+        let event = GameEvent::Damage {
+            source_id: None,
+            target_id: "hero-p2".into(),
+            amount: 3,
+            combat: false,
+        };
         let json = serde_json::to_string(&event).unwrap();
-        assert_eq!(json, r#"{"type":"damage","sourceId":null,"targetId":"hero-p2","amount":3,"combat":false}"#);
+        assert_eq!(
+            json,
+            r#"{"type":"damage","sourceId":null,"targetId":"hero-p2","amount":3,"combat":false}"#
+        );
         assert_eq!(serde_json::from_str::<GameEvent>(&json).unwrap(), event);
-        let over = GameEvent::GameOver { winner: Winner::Draw, reason: GameOverReason::TurnCap };
-        assert_eq!(serde_json::to_string(&over).unwrap(), r#"{"type":"gameOver","winner":"draw","reason":"turn-cap"}"#);
+        let over = GameEvent::GameOver {
+            winner: Winner::Draw,
+            reason: GameOverReason::TurnCap,
+        };
+        assert_eq!(
+            serde_json::to_string(&over).unwrap(),
+            r#"{"type":"gameOver","winner":"draw","reason":"turn-cap"}"#
+        );
         assert_eq!(over.event_type().as_str(), "gameOver");
         assert_eq!(GAME_EVENT_TYPES.len(), 65);
     }

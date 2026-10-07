@@ -13,7 +13,11 @@ use clap::{Parser, Subcommand};
 use jackioh_server::{app, cli, db};
 
 #[derive(Parser)]
-#[command(name = "jackioh-server", version, about = "The JackiOh server and its tools (SURFACE §11)")]
+#[command(
+    name = "jackioh-server",
+    version,
+    about = "The JackiOh server and its tools (SURFACE §11)"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Option<Command>,

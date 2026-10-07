@@ -29,8 +29,8 @@ use serde_json::Value;
 use crate::rng::Rng;
 use crate::state::{CardInstance, CostRule, EventStay, GameState, PlayRecord};
 use crate::wire::{
-    CardType, GameEvent, GameEventType, Keyword, ModeDecl, PlayerId, PreviewValue, Selection, Tag, TargetDecl,
-    string_union,
+    CardType, GameEvent, GameEventType, Keyword, ModeDecl, PlayerId, PreviewValue, Selection, Tag,
+    TargetDecl, string_union,
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -54,7 +54,13 @@ pub struct EngineSink<'a> {
 impl<'a> EngineSink<'a> {
     /// A sink with both per-call flags at rest.
     pub fn new(state: &'a mut GameState, events: &'a mut Vec<GameEvent>, rng: &'a mut Rng) -> EngineSink<'a> {
-        EngineSink { state, events, rng, converting: 0, dry_running: false }
+        EngineSink {
+            state,
+            events,
+            rng,
+            converting: 0,
+            dry_running: false,
+        }
     }
 
     /// The same sink, borrowed again for a nested call: the flags travel with it.
@@ -221,7 +227,11 @@ pub struct Effect {
 impl Effect {
     /// TS `{ kind, apply(ctx) { … } }`.
     pub fn new(kind: &'static str, apply: impl Fn(&mut EffectContext<'_>) + Send + Sync + 'static) -> Effect {
-        Effect { kind, apply: Arc::new(apply), expand: None }
+        Effect {
+            kind,
+            apply: Arc::new(apply),
+            expand: None,
+        }
     }
 
     /// TS `{ kind, expand, apply }`: an effect that is a lazily built part.
@@ -230,13 +240,20 @@ impl Effect {
         apply: impl Fn(&mut EffectContext<'_>) + Send + Sync + 'static,
         expand: impl Fn(&mut EffectContext<'_>, &Memo) -> EffectPart + Send + Sync + 'static,
     ) -> Effect {
-        Effect { kind, apply: Arc::new(apply), expand: Some(Arc::new(expand)) }
+        Effect {
+            kind,
+            apply: Arc::new(apply),
+            expand: Some(Arc::new(expand)),
+        }
     }
 }
 
 impl std::fmt::Debug for Effect {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Effect").field("kind", &self.kind).field("expand", &self.expand.is_some()).finish()
+        f.debug_struct("Effect")
+            .field("kind", &self.kind)
+            .field("expand", &self.expand.is_some())
+            .finish()
     }
 }
 
@@ -283,11 +300,19 @@ impl TriggerDef {
         on: &[GameEventType],
         run: impl Fn(&mut EffectContext<'_>, &GameEvent) -> Vec<Effect> + Send + Sync + 'static,
     ) -> TriggerDef {
-        TriggerDef { id: id.into(), on: on.to_vec(), when: None, run: Arc::new(run) }
+        TriggerDef {
+            id: id.into(),
+            on: on.to_vec(),
+            when: None,
+            run: Arc::new(run),
+        }
     }
 
     /// The same trigger with a `when`.
-    pub fn with_when(mut self, when: impl Fn(&EffectContext<'_>, &GameEvent) -> bool + Send + Sync + 'static) -> TriggerDef {
+    pub fn with_when(
+        mut self,
+        when: impl Fn(&EffectContext<'_>, &GameEvent) -> bool + Send + Sync + 'static,
+    ) -> TriggerDef {
         self.when = Some(Arc::new(when));
         self
     }
@@ -295,7 +320,10 @@ impl TriggerDef {
 
 impl std::fmt::Debug for TriggerDef {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("TriggerDef").field("id", &self.id).field("on", &self.on).finish()
+        f.debug_struct("TriggerDef")
+            .field("id", &self.id)
+            .field("on", &self.on)
+            .finish()
     }
 }
 
@@ -608,7 +636,8 @@ pub struct GraveyardPlayPermission {
 }
 
 /// E11, R454: the permissions this card gives its controller to play cards from their graveyard.
-pub type GraveyardPlayHook = Arc<dyn for<'a> Fn(CostAuraArgs<'a>) -> Vec<GraveyardPlayPermission> + Send + Sync>;
+pub type GraveyardPlayHook =
+    Arc<dyn for<'a> Fn(CostAuraArgs<'a>) -> Vec<GraveyardPlayPermission> + Send + Sync>;
 
 /// B5 E5: "to target this with anything but an attack, a player must also discard N cards".
 pub type TargetingDiscardsHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
@@ -652,7 +681,9 @@ pub struct WouldCounterArgs<'a> {
 pub type WouldCounterHook = Arc<dyn for<'a> Fn(WouldCounterArgs<'a>) -> bool + Send + Sync>;
 
 /// Builds a `WouldCounterHook`.
-pub fn would_counter_hook(f: impl for<'a> Fn(WouldCounterArgs<'a>) -> bool + Send + Sync + 'static) -> WouldCounterHook {
+pub fn would_counter_hook(
+    f: impl for<'a> Fn(WouldCounterArgs<'a>) -> bool + Send + Sync + 'static,
+) -> WouldCounterHook {
     Arc::new(f)
 }
 
@@ -826,7 +857,11 @@ mod unlimited {
 
     pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<(), D::Error> {
         let text = String::deserialize(deserializer)?;
-        if text == "unlimited" { Ok(()) } else { Err(D::Error::custom("expected \"unlimited\"")) }
+        if text == "unlimited" {
+            Ok(())
+        } else {
+            Err(D::Error::custom("expected \"unlimited\""))
+        }
     }
 }
 
@@ -899,7 +934,10 @@ pub fn activation_decls(script: &Script) -> Vec<ActivationDecl> {
             if count == 1 {
                 decl.clone()
             } else {
-                ActivationDecl { id: format!("{}#{count}", decl.id), ..decl.clone() }
+                ActivationDecl {
+                    id: format!("{}#{count}", decl.id),
+                    ..decl.clone()
+                }
             }
         })
         .collect()
@@ -969,8 +1007,13 @@ string_union! {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum HealedRef {
-    Hero { player: PlayerId },
-    Unit { instance_id: String, controller: PlayerId },
+    Hero {
+        player: PlayerId,
+    },
+    Unit {
+        instance_id: String,
+        controller: PlayerId,
+    },
 }
 
 /// One unit a `wouldDie` event names.
@@ -994,13 +1037,22 @@ string_union! {
 #[serde(tag = "moment", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ReplacedEvent {
     /// A hit of `amount` (after Armor, divisor and caps) would bring `player`'s hero to 0 or less.
-    LethalHit { player: PlayerId, amount: i32, source_id: Option<String> },
+    LethalHit {
+        player: PlayerId,
+        amount: i32,
+        source_id: Option<String>,
+    },
     /// A heal of `amount` (its stated amount, R462) would land on `target`.
     Healed { target: HealedRef, amount: i32 },
     /// §4.5 step 1 collected these units, which would now die.
     WouldDie { units: Vec<DyingUnit> },
     /// This card would go to its owner's graveyard, from `from`.
-    ToGraveyard { instance_id: String, def_id: String, owner: PlayerId, from: String },
+    ToGraveyard {
+        instance_id: String,
+        def_id: String,
+        owner: PlayerId,
+        from: String,
+    },
     /// `by` chose this unit of `controller`'s — as an attack's target, or as a play's or prompt's pick.
     /// `source` is the targeting card's type (a Spell, a Unit, a Trap …); an attack has none (R651).
     Targeted {
@@ -1053,7 +1105,9 @@ pub struct ReplacementContext<'a> {
 pub type ReplacementWhen = Arc<dyn for<'a> Fn(ReplacementContext<'a>) -> bool + Send + Sync>;
 
 /// Builds a `ReplacementWhen`.
-pub fn replacement_when(f: impl for<'a> Fn(ReplacementContext<'a>) -> bool + Send + Sync + 'static) -> ReplacementWhen {
+pub fn replacement_when(
+    f: impl for<'a> Fn(ReplacementContext<'a>) -> bool + Send + Sync + 'static,
+) -> ReplacementWhen {
     Arc::new(f)
 }
 
@@ -1243,12 +1297,21 @@ mod tests {
             has: None,
             run: hook(|_ctx| vec![]),
         };
-        let script = Script { activations: vec![decl("power"), decl("other"), decl("power")], ..Script::default() };
+        let script = Script {
+            activations: vec![decl("power"), decl("other"), decl("power")],
+            ..Script::default()
+        };
         let ids: Vec<String> = activation_decls(&script).into_iter().map(|d| d.id).collect();
         assert_eq!(ids, ["power", "other", "power#2"]);
         assert_eq!(activation_hook("power#2"), "activation:power#2");
-        assert_eq!(serde_json::to_string(&ActivationUses::Unlimited).unwrap(), "\"unlimited\"");
-        assert_eq!(serde_json::from_str::<ActivationUses>("3").unwrap(), ActivationUses::Count(3));
+        assert_eq!(
+            serde_json::to_string(&ActivationUses::Unlimited).unwrap(),
+            "\"unlimited\""
+        );
+        assert_eq!(
+            serde_json::from_str::<ActivationUses>("3").unwrap(),
+            ActivationUses::Count(3)
+        );
     }
 
     #[test]

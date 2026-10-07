@@ -41,7 +41,10 @@ pub struct Rng {
 impl Rng {
     /// TS `createRng(seed, cursor)`.
     pub fn new(seed: &str, cursor: u32) -> Rng {
-        Rng { seed_int: seed_to_int(seed), cursor }
+        Rng {
+            seed_int: seed_to_int(seed),
+            cursor,
+        }
     }
 
     /// Draws taken so far; store this in state and resume from it.
@@ -50,6 +53,10 @@ impl Rng {
     }
 
     /// A float in [0, 1).
+    #[allow(
+        clippy::should_implement_trait,
+        reason = "TS's name (SURFACE §6.3); an Rng is not an Iterator"
+    )]
     pub fn next(&mut self) -> f64 {
         let value = value_at(self.seed_int, self.cursor);
         self.cursor += 1;

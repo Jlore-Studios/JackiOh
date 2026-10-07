@@ -46,7 +46,11 @@ impl PlayerId {
 
 /// `Record<PlayerId, T>` (SURFACE §4.3, §6.4): one value per seat, serialised `{ "p1": …, "p2": … }`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 pub struct PerPlayer<T> {
     pub p1: T,
     pub p2: T,
@@ -63,7 +67,10 @@ impl<T> PerPlayer<T> {
     }
 
     pub fn map<U>(&self, mut f: impl FnMut(PlayerId, &T) -> U) -> PerPlayer<U> {
-        PerPlayer { p1: f(PlayerId::P1, &self.p1), p2: f(PlayerId::P2, &self.p2) }
+        PerPlayer {
+            p1: f(PlayerId::P1, &self.p1),
+            p2: f(PlayerId::P2, &self.p2),
+        }
     }
 }
 
@@ -87,13 +94,21 @@ impl<T> std::ops::IndexMut<PlayerId> for PerPlayer<T> {
     }
 }
 
-/// `Partial<Record<PlayerId, T>>` (SURFACE §4.3): only a seat with a value has a key.
+/// `Partial<Record<PlayerId, T>>` (SURFACE §4.3): only a seat with a value has a key. (The serde
+/// `bound` stops `#[serde(default)]` from asking `T: Default`, which a missing `Option` never needs.)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[serde(bound(deserialize = "T: Deserialize<'de>"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 pub struct PerPlayerOpt<T> {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub p1: Option<T>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub p2: Option<T>,
 }
 
@@ -216,7 +231,11 @@ pub const SHIPPED_SETS: [SetName; 3] = [SetName::Core, SetName::Classic, SetName
 #[cfg_attr(
     feature = "ts",
     derive(ts_rs::TS),
-    ts(export, export_to = "../../../apps/web/src/wire/generated/", type = "number | \"X\" | { base: number, embiggen: number, }")
+    ts(
+        export,
+        export_to = "../../../apps/web/src/wire/generated/",
+        type = "number | \"X\" | { base: number, embiggen: number, }"
+    )
 )]
 pub enum CardCost {
     /// A printed number.
@@ -254,7 +273,9 @@ impl<'de> Deserialize<'de> for CardCost {
         match Raw::deserialize(deserializer)? {
             Raw::Fixed(n) => Ok(CardCost::Fixed(n)),
             Raw::Text(text) if text == "X" => Ok(CardCost::X),
-            Raw::Text(text) => Err(D::Error::custom(format!("a card cost is a number, \"X\" or {{ base, embiggen }}, got {text:?}"))),
+            Raw::Text(text) => Err(D::Error::custom(format!(
+                "a card cost is a number, \"X\" or {{ base, embiggen }}, got {text:?}"
+            ))),
             Raw::Embiggen { base, embiggen } => Ok(CardCost::Embiggen { base, embiggen }),
         }
     }
@@ -262,7 +283,11 @@ impl<'de> Deserialize<'de> for CardCost {
 
 /// A unit keyword (§6.1). Armor and Lucky carry a number; Armor sums across sources (§10.4).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(tag = "kind")]
 pub enum Keyword {
     Taunt,
@@ -284,18 +309,26 @@ pub enum Keyword {
     Stack,
     #[serde(rename = "Can't attack")]
     CantAttack,
-    Armor { n: i32 },
-    Lucky { n: i32 },
+    Armor {
+        n: i32,
+    },
+    Lucky {
+        n: i32,
+    },
     /// R383: a Field Spell, Trap or Field Trap that steps into a unit zone as a Unit (B3.1).
     Animated,
     /// R383: animated at its controller's start of turn, back in its backrow zone at their cleanup.
     #[serde(rename = "Animated on your turn")]
     AnimatedOnYourTurn,
     /// R385: printed Brittle N — the count starts when the card enters the field (B3.3).
-    Brittle { n: i32 },
+    Brittle {
+        n: i32,
+    },
     /// §4.4: a Spell its controller casts deals N more damage per hit (E6). Printed "Spell Damage +N".
     #[serde(rename = "Spell Damage")]
-    SpellDamage { n: i32 },
+    SpellDamage {
+        n: i32,
+    },
     /// E35: a Spell can't target this and doesn't affect it.
     #[serde(rename = "Immune to Spells")]
     ImmuneToSpells,
@@ -376,9 +409,10 @@ impl Keyword {
     /// `"n" in keyword ? keyword.n : undefined`: the number a numbered keyword carries.
     pub fn n(&self) -> Option<i32> {
         match *self {
-            Keyword::Armor { n } | Keyword::Lucky { n } | Keyword::Brittle { n } | Keyword::SpellDamage { n } => {
-                Some(n)
-            }
+            Keyword::Armor { n }
+            | Keyword::Lucky { n }
+            | Keyword::Brittle { n }
+            | Keyword::SpellDamage { n } => Some(n),
             _ => None,
         }
     }
@@ -438,7 +472,11 @@ pub fn armor_of(keywords: &[Keyword]) -> i32 {
 /// `{ attack: number; health: number }`: the shape of `CardFace.xStats`, `CardInstance.buffs` and
 /// `CardInstance.statsOverride` (TS writes it inline each time).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct AttackHealth {
     pub attack: i32,
@@ -448,21 +486,29 @@ pub struct AttackHealth {
 /// One side of a card: the base form or the radiant form (§5). Spells have no stats; an Animated
 /// backrow card (B3.1) prints the attack and health of the Unit it becomes.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct CardFace {
     /// B2.7: the face's own type, when it differs from the card's (Classic+ #22 Blood Moon's Radiant
     /// face is a Field Trap). The card's type is its running face's (§5.2). Absent: the card's `type`.
     #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub type_: Option<CardType>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub attack: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub health: Option<i32>,
     /// B2.7: "[3X/3X]" stats (Classic+ #69 Buff Billy): the Unit is summoned with `statsOverride` of
     /// these multiples of the X it was played for. The printed `attack`/`health` are then 0/0, as the
     /// Ghoul Token's are.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub x_stats: Option<AttackHealth>,
     pub keywords: Vec<Keyword>,
     /// The face's printed text: the base face's §8 cell, or the Radiant face's cell read by §8's
@@ -498,7 +544,11 @@ string_union! {
 /// B3.4 rule 5: a number on a card that Degrade, Upgrade and KY's Constant may move. The face texts
 /// write it as `{key}`; the view carries an instance's current values; scripts read `param(ctx, key)`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct Param {
     /// The name the texts write as `{key}`, unique within the card.
@@ -511,16 +561,20 @@ pub struct Param {
     pub better: ParamBetter,
     /// How far one Degrade or Upgrade moves it (B3.4: 1 up to 5, 2 for 6–12, a quarter above).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub step: Option<i32>,
     /// It never goes below this (an amount never drops below 1).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub min: Option<i32>,
     /// It never goes above this (100 for a percentage).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub max: Option<i32>,
     /// R749: the one face a Degrade, an Upgrade or KY's Constant may move it on, for a number only that
     /// face prints; on the other face it always reads its printed value. Absent, both faces.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub tuned_on: Option<ParamTunedOn>,
 }
 
@@ -545,13 +599,19 @@ pub const PARAM_PLACEHOLDER: &str = r"\{([A-Za-z][A-Za-z0-9]*)(?:\|([^|{}]*)\|([
 
 /// One placeholder `paramPlaceholders` found: its key and, for the agreeing form, both wordings.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct ParamPlaceholder {
     pub key: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub one: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub many: Option<String>,
 }
 
@@ -577,7 +637,11 @@ fn placeholder_at(text: &str, start: usize) -> Option<PlaceholderMatch<'_>> {
     }
     let key = &text[key_start..at];
     match bytes.get(at) {
-        Some(b'}') => Some(PlaceholderMatch { end: at + 1, key, words: None }),
+        Some(b'}') => Some(PlaceholderMatch {
+            end: at + 1,
+            key,
+            words: None,
+        }),
         Some(b'|') => {
             let word = |from: usize| {
                 let mut to = from;
@@ -628,7 +692,11 @@ pub fn param_placeholders(text: &str) -> Vec<ParamPlaceholder> {
     placeholders(text)
         .into_iter()
         .map(|(_, found)| match found.words {
-            None => ParamPlaceholder { key: found.key.to_string(), one: None, many: None },
+            None => ParamPlaceholder {
+                key: found.key.to_string(),
+                one: None,
+                many: None,
+            },
             Some((one, many)) => ParamPlaceholder {
                 key: found.key.to_string(),
                 one: Some(one.to_string()),
@@ -660,7 +728,9 @@ pub fn fill_params(def: &CardDef, face: FaceKind, values: Option<&IndexMap<Strin
             out.push_str(&text[start..found.end]);
             continue;
         };
-        let value = values.and_then(|v| v.get(found.key).copied()).unwrap_or_else(|| param.on(face));
+        let value = values
+            .and_then(|v| v.get(found.key).copied())
+            .unwrap_or_else(|| param.on(face));
         match found.words {
             None => out.push_str(&value.to_string()),
             Some((one, many)) => {
@@ -675,7 +745,11 @@ pub fn fill_params(def: &CardDef, face: FaceKind, values: Option<&IndexMap<Strin
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct CardDef {
     /// Catalog id, e.g. "core-043"; transient defs (Fuse, Craft a Card) use "t-<n>".
@@ -691,6 +765,7 @@ pub struct CardDef {
     /// B2.5: the rarity a token prints (the Classic+ tokens the designer rated), for the card frame and
     /// the summon sting only. A token's `rarity` stays "Token", so no pool ever finds one by rarity.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub printed_rarity: Option<PrintedRarity>,
     pub token: bool,
     pub cost: CardCost,
@@ -699,15 +774,18 @@ pub struct CardDef {
     /// such name to the card it names. Absent when the text names none. A fused definition's is the
     /// union of its ingredients' (R102).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub refs: Option<Vec<String>>,
     /// B3.4 rule 5: the numbers on this card Degrade, Upgrade and KY's Constant may move.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub params: Option<Vec<Param>>,
     /// E36: the non-blank, non-comment lines of this card's script file, imports excluded. Frozen
     /// gameplay data since v0.3.0 (SURFACE §7.5): C+ #44, C+ #45 and Classic #48 read it. Public (the
     /// inspect overlay prints it) and part of the card's patch history (B4.2). Absent while the card
     /// has no script.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub loc: Option<i32>,
     /// R349: this card prints no Radiant form of its own (the Ghoul Token, §7). Its `radiant` face is
     /// the fallback the rule gives it — the base face with its attack and health doubled, the same
@@ -715,12 +793,14 @@ pub struct CardDef {
     /// every card that prints a Radiant form, a fused definition included (R77 sums the ingredients'
     /// Radiant forms). Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub radiant_fallback: Option<bool>,
     /// R179, R468, R469: a fused definition's ingredients, in ingredient order — the definition each
     /// was, and `radiant` when it went into both of the fused forms on its Radiant face ("fuse a random
     /// Radiant card"). Only a Fuse writes it. While the list is short the id spells it out too; past
     /// `FUSED_ID_CAP` the id is a digest of it, and this list is what rebuilds the scripts.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub ingredients: Option<Vec<FusedIngredient>>,
     pub base: CardFace,
     pub radiant: CardFace,
@@ -738,12 +818,17 @@ impl CardDef {
 
 /// R179, R469: one ingredient of a fused definition (`CardDef.ingredients`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct FusedIngredient {
     pub def_id: String,
     /// Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub radiant: Option<bool>,
 }
 
@@ -752,7 +837,11 @@ pub type CardDefs = IndexMap<String, CardDef>;
 
 /// TS `T | T[]`: a query or filter field that takes one value or several.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(untagged)]
 pub enum OneOrMany<T> {
     One(T),
@@ -776,43 +865,62 @@ impl<T: PartialEq> OneOrMany<T> {
 
 /// `{ min?: number; max?: number }`: `CatalogQuery.costRange` and `TargetFilter.costRange`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct CostRange {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub min: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub max: Option<i32>,
 }
 
 /// §5.1: the one query every random pool and Discover goes through. Every field narrows; `{}` is every
 /// non-token card of every set (R380: a pool that names no set draws from all of them).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct CatalogQuery {
     #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub type_: Option<OneOrMany<CardType>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub cost: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub cost_range: Option<CostRange>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub tags: Option<Vec<Tag>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub not_tags: Option<Vec<Tag>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub rarity: Option<OneOrMany<Rarity>>,
     /// A set, or several ("Classic or Classic+"). Absent is every set (R380).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub set: Option<OneOrMany<SetName>>,
     /// R387: never these definitions, by catalog id — a card's own id, so it never generates itself
     /// (§5.1, B4.1). An index is unique only within its set, so a pool never excludes by index.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub exclude_def_id: Option<OneOrMany<String>>,
     /// R382: tokens may come out of this pool beside the cards — Dropshipping's "(including tokens)".
     /// Without it a pool holds no token, except that a Fruit pool holds the Grapes.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub with_tokens: Option<bool>,
 }
 
@@ -863,7 +971,11 @@ string_union! {
 
 /// A zone a card can sit in. Field zones name a side, a row and a lane (§3).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(tag = "z", rename_all = "camelCase")]
 pub enum Zone {
     Hand {
@@ -935,7 +1047,11 @@ impl Zone {
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct ZoneRef {
     pub player: PlayerId,
@@ -966,34 +1082,48 @@ string_union! {
 
 /// Which cards a declared choice may pick (§10.6, R81).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct TargetFilter {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub side: Option<FilterSide>,
     /// `graveyard`: a card in a graveyard on the named side (Classic #54's "on the field or in your graveyard").
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub of: Option<Vec<FilterOf>>,
     #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub type_: Option<OneOrMany<CardType>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub tags: Option<Vec<Tag>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub not_tags: Option<Vec<Tag>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub exclude_self: Option<bool>,
     /// The card's cost as R65 reads it where it is now (a hand card at its hand cost).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub cost_range: Option<CostRange>,
     /// A unit with damage above 0 (Classic+ #32.1 Execute).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub damaged: Option<bool>,
     /// A card with at least one Plague Counter on it (Classic #78 Mutate Spell).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub plague: Option<bool>,
     /// The name of a predicate in the declaring script's `targetChecks`, for a filter no field above
     /// can say (Classic #32's lane rule, #48's lines of code). Data, so a declaration stays JSON.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub check: Option<String>,
 }
 
@@ -1007,34 +1137,44 @@ string_union! {
 
 /// What a card asks for as part of its own play (R81).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct TargetDecl {
     /// `Extract<PromptKind, "target" | "hand" | "zone" | "tribute">`.
+    #[cfg_attr(feature = "ts", ts(type = "\"target\" | \"hand\" | \"zone\" | \"tribute\""))]
     pub kind: PromptKind,
     pub min: i32,
     pub max: i32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub filter: Option<TargetFilter>,
     /// For Tribute: how many tributes the play costs (Sheep Tokens count 2, §6.3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub amount: Option<i32>,
     /// The modes this declaration belongs to, when it belongs to some only: the play asks for it only
     /// when one of its chosen modes is listed here, and takes nothing for it otherwise (R90). #24
     /// Efficiency Dividend's target is its damage and heal modes' — "deal X damage to a target; heal a
     /// target 2X" — and its mana mode names none (§8 Conventions).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub for_modes: Option<Vec<String>>,
     /// Whether the target pick is beneficial ("help") or harmful ("harm").
     /// Defaults to "harm". Used by random casts with `targetEnemies` to aim at
     /// friendly targets when beneficial and enemies when harmful (R656).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub aim: Option<TargetAim>,
     /// The play needs this pick: while the board offers fewer than `min` options for it, the play is
     /// refused and `legalActions` never offers it, where R90 would let it play and fizzle (R703, #63
     /// Plastic Surgery). A cast is never refused (R70), so a cast with no option still fizzles.
     /// Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub required: Option<bool>,
 }
 
@@ -1051,7 +1191,16 @@ impl TargetDecl {
                 Err(error) => panic!("not a TargetFilter ({error}): {filter}"),
             }
         };
-        TargetDecl { kind, min, max, filter, amount: None, for_modes: None, aim: None, required: None }
+        TargetDecl {
+            kind,
+            min,
+            max,
+            filter,
+            amount: None,
+            for_modes: None,
+            aim: None,
+            required: None,
+        }
     }
 
     /// `{ kind: "target", min, max, filter }` (SURFACE §7.1).
@@ -1078,10 +1227,15 @@ impl TargetDecl {
 /// A choice among fixed options that travels in the play (R81): a mode, a direction, or E18's number
 /// (Classic #18's 0 to 10, whose options are the numbers themselves).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct ModeDecl {
     /// `Extract<PromptKind, "mode" | "direction" | "number">`.
+    #[cfg_attr(feature = "ts", ts(type = "\"mode\" | \"direction\" | \"number\""))]
     pub kind: PromptKind,
     pub options: Vec<String>,
 }
@@ -1091,7 +1245,14 @@ mod tests {
     use super::*;
 
     fn def_with(text: &str, params: Vec<Param>) -> CardDef {
-        let face = CardFace { type_: None, attack: None, health: None, x_stats: None, keywords: vec![], text: text.into() };
+        let face = CardFace {
+            type_: None,
+            attack: None,
+            health: None,
+            x_stats: None,
+            keywords: vec![],
+            text: text.into(),
+        };
         CardDef {
             id: "core-999".into(),
             index: "999".into(),
@@ -1114,16 +1275,37 @@ mod tests {
     }
 
     fn param(key: &str, base: i32, radiant: i32) -> Param {
-        Param { key: key.into(), base, radiant, better: ParamBetter::Up, step: None, min: None, max: None, tuned_on: None }
+        Param {
+            key: key.into(),
+            base,
+            radiant,
+            better: ParamBetter::Up,
+            step: None,
+            min: None,
+            max: None,
+            tuned_on: None,
+        }
     }
 
     #[test]
     fn fill_params_fills_numbers_and_agreeing_words() {
-        let def = def_with("Draw {draw|card|cards}. Deal {damage} damage. {nope} {x|a}", vec![param("draw", 1, 2), param("damage", 3, 6)]);
-        assert_eq!(fill_params(&def, FaceKind::Base, None), "Draw 1 card. Deal 3 damage. {nope} {x|a}");
-        assert_eq!(fill_params(&def, FaceKind::Radiant, None), "Draw 2 cards. Deal 6 damage. {nope} {x|a}");
+        let def = def_with(
+            "Draw {draw|card|cards}. Deal {damage} damage. {nope} {x|a}",
+            vec![param("draw", 1, 2), param("damage", 3, 6)],
+        );
+        assert_eq!(
+            fill_params(&def, FaceKind::Base, None),
+            "Draw 1 card. Deal 3 damage. {nope} {x|a}"
+        );
+        assert_eq!(
+            fill_params(&def, FaceKind::Radiant, None),
+            "Draw 2 cards. Deal 6 damage. {nope} {x|a}"
+        );
         let values: IndexMap<String, i32> = [("damage".to_string(), 9)].into_iter().collect();
-        assert_eq!(fill_params(&def, FaceKind::Base, Some(&values)), "Draw 1 card. Deal 9 damage. {nope} {x|a}");
+        assert_eq!(
+            fill_params(&def, FaceKind::Base, Some(&values)),
+            "Draw 1 card. Deal 9 damage. {nope} {x|a}"
+        );
     }
 
     #[test]
@@ -1132,9 +1314,21 @@ mod tests {
         assert_eq!(
             found,
             vec![
-                ParamPlaceholder { key: "c".into(), one: None, many: None },
-                ParamPlaceholder { key: "d1".into(), one: None, many: None },
-                ParamPlaceholder { key: "e".into(), one: Some("f".into()), many: Some("g".into()) },
+                ParamPlaceholder {
+                    key: "c".into(),
+                    one: None,
+                    many: None
+                },
+                ParamPlaceholder {
+                    key: "d1".into(),
+                    one: None,
+                    many: None
+                },
+                ParamPlaceholder {
+                    key: "e".into(),
+                    one: Some("f".into()),
+                    many: Some("g".into())
+                },
             ]
         );
     }
@@ -1144,7 +1338,10 @@ mod tests {
         for (json, cost) in [
             ("3", CardCost::Fixed(3)),
             ("\"X\"", CardCost::X),
-            ("{\"base\":2,\"embiggen\":4}", CardCost::Embiggen { base: 2, embiggen: 4 }),
+            (
+                "{\"base\":2,\"embiggen\":4}",
+                CardCost::Embiggen { base: 2, embiggen: 4 },
+            ),
         ] {
             assert_eq!(serde_json::from_str::<CardCost>(json).unwrap(), cost);
             assert_eq!(serde_json::to_string(&cost).unwrap(), json);
@@ -1152,9 +1349,19 @@ mod tests {
         let armor: Keyword = serde_json::from_str("{\"kind\":\"Armor\",\"n\":2}").unwrap();
         assert_eq!(armor, Keyword::Armor { n: 2 });
         assert_eq!(keyword_key(&armor), "Armor 2");
-        assert_eq!(serde_json::to_string(&Keyword::CantAttack).unwrap(), "{\"kind\":\"Can't attack\"}");
+        assert_eq!(
+            serde_json::to_string(&Keyword::CantAttack).unwrap(),
+            "{\"kind\":\"Can't attack\"}"
+        );
         assert_eq!(serde_json::to_string(&PlayerId::P2).unwrap(), "\"p2\"");
-        let zone = Zone::Field { player: PlayerId::P1, row: Row::Units, lane: 3 };
-        assert_eq!(serde_json::to_string(&zone).unwrap(), "{\"z\":\"field\",\"player\":\"p1\",\"row\":\"units\",\"lane\":3}");
+        let zone = Zone::Field {
+            player: PlayerId::P1,
+            row: Row::Units,
+            lane: 3,
+        };
+        assert_eq!(
+            serde_json::to_string(&zone).unwrap(),
+            "{\"z\":\"field\",\"player\":\"p1\",\"row\":\"units\",\"lane\":3}"
+        );
     }
 }

@@ -9,7 +9,11 @@ use crate::wire::string_union;
 
 /// Where a permanent is being played (§3.2: the player picks the zone).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct ZoneChoice {
     pub row: Row,
@@ -18,7 +22,11 @@ pub struct ZoneChoice {
 
 /// One selection inside a play: an instance, a hero, or a zone (R81).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(tag = "pick", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Selection {
     Instance { instance_id: String },
@@ -32,7 +40,11 @@ pub enum Selection {
 /// Corpse Plantation): `from` is the card they come off, `tokens` how many — each pays (1).
 /// (TS: the `play` action's inline `plague` object; `graveyardPlay.PlagueSpend`.)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct PlagueSpend {
     pub from: String,
@@ -40,7 +52,11 @@ pub struct PlagueSpend {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ActionBody {
     Mulligan {
@@ -49,21 +65,28 @@ pub enum ActionBody {
     Play {
         instance_id: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         zone: Option<ZoneChoice>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         x: Option<i32>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         embiggen: Option<bool>,
         /// Units sacrificed to pay a Tribute cost (§6.3).
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         tributes: Option<Vec<String>>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         targets: Option<Vec<Selection>>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         modes: Option<Vec<String>>,
         /// B5 E11, E19: Plague Counters paying part of the price of a play from the graveyard (Classic #74
         /// Corpse Plantation): `from` is the card they come off, `tokens` how many — each pays (1).
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         plague: Option<PlagueSpend>,
     },
     Attack {
@@ -79,18 +102,23 @@ pub enum ActionBody {
     Activate {
         instance_id: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         ability: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         targets: Option<Vec<Selection>>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         modes: Option<Vec<String>>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         tributes: Option<Vec<String>>,
     },
     /// R43, R384: Heroic Power's activation, kept as an alias of `activate` so old logs replay.
     ActivatePower {
         instance_id: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         targets: Option<Vec<Selection>>,
     },
     Answer {
@@ -164,7 +192,11 @@ impl ActionBody {
 /// `ActionBody & { playerId: PlayerId; nonce: string }`: the body's fields flattened beside the
 /// sender and the nonce, as TS writes it.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct Action {
     #[serde(flatten)]
@@ -175,7 +207,11 @@ pub struct Action {
 
 impl Action {
     pub fn new(body: ActionBody, player_id: PlayerId, nonce: impl Into<String>) -> Action {
-        Action { body, player_id, nonce: nonce.into() }
+        Action {
+            body,
+            player_id,
+            nonce: nonce.into(),
+        }
     }
 
     /// `action.type`.
@@ -186,7 +222,11 @@ impl Action {
 
 /// An action without its nonce, which the caller or the server adds (`ActionBody & { playerId }`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct ActionInput {
     #[serde(flatten)]
@@ -197,7 +237,11 @@ pub struct ActionInput {
 impl ActionInput {
     /// The action with its nonce.
     pub fn with_nonce(self, nonce: impl Into<String>) -> Action {
-        Action { body: self.body, player_id: self.player_id, nonce: nonce.into() }
+        Action {
+            body: self.body,
+            player_id: self.player_id,
+            nonce: nonce.into(),
+        }
     }
 }
 
@@ -232,7 +276,10 @@ mod tests {
         let action = Action::new(
             ActionBody::Play {
                 instance_id: "c12".into(),
-                zone: Some(ZoneChoice { row: Row::Units, lane: 2 }),
+                zone: Some(ZoneChoice {
+                    row: Row::Units,
+                    lane: 2,
+                }),
                 x: None,
                 embiggen: None,
                 tributes: None,

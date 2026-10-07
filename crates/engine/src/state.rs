@@ -35,7 +35,9 @@ pub struct EngineError {
 
 impl EngineError {
     pub fn new(message: impl Into<String>) -> EngineError {
-        EngineError { message: message.into() }
+        EngineError {
+            message: message.into(),
+        }
     }
 }
 
@@ -55,7 +57,9 @@ impl From<String> for EngineError {
 
 impl From<&str> for EngineError {
     fn from(message: &str) -> EngineError {
-        EngineError { message: message.to_string() }
+        EngineError {
+            message: message.to_string(),
+        }
     }
 }
 
@@ -63,18 +67,27 @@ impl From<&str> for EngineError {
 /// declared this turn once there is a second one (absent, it is 1 when `attacked` and 0 otherwise)
 /// against `combat.attacksPerTurn`, two with Windfury.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct Exertion {
     pub attacked: bool,
     pub switched: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub attacks: Option<i32>,
 }
 
 /// R311: what a card's owner was shown of it as it went into their library (`CardInstance.knownAs`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct KnownAs {
     pub def_id: String,
@@ -83,18 +96,27 @@ pub struct KnownAs {
 
 /// B3.3, R385, R638: a card's Brittle count and the turn it started (`CardInstance.brittle`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct BrittleCounter {
     pub count: i32,
     pub since: i32,
     /// Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub printed: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct CardInstance {
     pub id: String,
@@ -104,8 +126,10 @@ pub struct CardInstance {
     pub radiant: bool,
     pub zone: Zone,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub position: Option<Position>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub summoned_turn: Option<i32>,
     pub damage: i32,
     pub buffs: AttackHealth,
@@ -113,10 +137,13 @@ pub struct CardInstance {
     pub vanilla: bool,
     pub cost_mod: i32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub cost_override: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub x: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub embiggened: Option<bool>,
     pub counters: Counters,
     #[cfg_attr(feature = "ts", ts(type = "Record<string, unknown>"))]
@@ -126,38 +153,48 @@ pub struct CardInstance {
     /// against `combat.attacksPerTurn`, two with Windfury.
     pub exertion: Exertion,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub stats_override: Option<AttackHealth>,
     /// §7: the Bread Token's radiant face prints "Armor X", where X is the same unspent-mana X its
     /// stats use — so it cannot be a printed number any more than its X/X can. Set beside
     /// `statsOverride` by whoever summons it, and substituted into the printed `Armor` keyword by
     /// `faceOf`. Inert until the token is radiant, because only the radiant face prints Armor.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub armor_override: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub return_to_hand_at_end_of_turn: Option<bool>,
     /// Indestructible would-destroy: no Taunt for this turn (R46).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub taunt_suppressed_turn: Option<i32>,
     /// A backrow card whose identity is public, e.g. a Field Trap that has fired (R33).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub face_up: Option<bool>,
     /// R638: a backrow Trap or Field Trap both players may read while it stays armed — revealed, not
     /// face-up, so it still fires. Cleared by R78's reset with the card leaving the field.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub revealed: Option<bool>,
     /// Instance id of the source whose damage instance was lethal — the hit that took this unit from
     /// above 0 health to 0 or less, or a Poisonous hit — for "destroys a unit" (R42, R89). Unset while
     /// no hit has killed it (`damage.creditKiller`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub last_damaged_by: Option<String>,
     /// Divine Shield has absorbed a hit and is gone until granted again (§6.1).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub divine_shield_spent: Option<bool>,
     /// Destroyed by an effect; the next state check collects it (§4.5, §6.3 Destroy).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub marked_destroyed: Option<bool>,
     /// Came back through Reborn, so it no longer has it (§4.5 step 4).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub reborn_spent: Option<bool>,
     /// R311: what this card's owner was shown of it as it went into their library — its definition and
     /// its face — written by `own_library::show_to_owner` where a card goes in openly and read by
@@ -165,12 +202,14 @@ pub struct CardInstance {
     /// owner was never shown (R312). A change made to the card inside the library, where nobody sees
     /// it, leaves this record as it was.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub known_as: Option<KnownAs>,
     // ---- Patch v0.2.0: what rides a card through every zone (R78's reset leaves these alone) ----
     /// B3.4, R386: what Degrade, Upgrade and KY's Constant have changed on this card (`tuning.rs`). Kept
     /// in every zone and through leaving the field; a copy keeps it, a Transform makes a card without
     /// it, a Fuse sums it (R57, R102).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub tuning: Option<Tuning>,
     /// B3.3, R385, R638: the card's Brittle count and the turn it started, which the first tick waits two
     /// player-turns behind (`brittle.rs`). Kept in every zone but ticking on the field only: a card in a
@@ -179,15 +218,18 @@ pub struct CardInstance {
     /// R78's reset (R441). `printed` marks a count its printed Brittle started as the card entered the
     /// field, which a Vanilla switches off while a given one stays (B3.3 rule 5).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub brittle: Option<BrittleCounter>,
     /// B5 E39: lasting instructions riding the card through every zone (`enchantments.rs`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub enchantments: Option<Vec<Enchantment>>,
     /// B5 E35: this unit has gone Berserk (Classic+ #19.2 sends Classic+ #19.5 there) — a status an
     /// effect sets (`effects::statuses::go_berserk`), never text, so a Vanilla keeps it; R78's reset
     /// takes it off with the card leaving the field. Its own card makes the forced attacks it owes.
     /// Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub berserk: Option<bool>,
     /// R429: how many times this card has been played, the play under way included — counted at §10.5
     /// step 4 (casts too, R70; a countered play never reaches it) for a card whose script asks
@@ -195,6 +237,7 @@ pub struct CardInstance {
     /// zone and through leaving the field, like `costMod` (R78's reset leaves it alone); a copy or a
     /// Transform is a new card with a count of its own (R57).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub times_played: Option<i32>,
 }
 
@@ -202,7 +245,11 @@ pub struct CardInstance {
 /// its target picks to enemies when one is legal (`targetEnemies`), or both. `casts` counts the casts
 /// a random cast's resolution has made in all, itself included, against RANDOM_CAST_CHAIN_CAP.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct CastMode {
     pub instance_id: String,
@@ -217,7 +264,11 @@ pub type Pile = Vec<CardInstance>;
 
 /// B3.1 rule 6: an animated "Animated on your turn" card's backrow zone, held for its return (SPEC §10.1).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct HomeZone {
     pub instance_id: String,
@@ -225,7 +276,11 @@ pub struct HomeZone {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(tag = "until", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ModifierExpiry {
     ThisTurn {
@@ -247,22 +302,34 @@ pub enum ModifierExpiry {
 /// (below 0 a discount, above 0 a surcharge); `setTo` is "costs (N)", which wins over every add.
 /// (TS `costRules.ts`; here because `PlayerModifier` holds one.)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct CostRule {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub types: Option<Vec<CardType>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub min_cost: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub amount: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub set_to: Option<i32>,
 }
 
 /// What a player modifier does, discriminated on `kind` (TS: the union half of `PlayerModifier`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ModifierKind {
     /// `minCurrentCost`: R48, R363 — only a card whose cost is then this or more (#77, "Cost (4)+").
@@ -270,20 +337,25 @@ pub enum ModifierKind {
     CostDiscount {
         amount: i32,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "\"Spell\""))]
         only_type: Option<CardType>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         min_current_cost: Option<i32>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         once_per_turn: Option<bool>,
     },
     EchoNextSpell {
         amount: i32,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         source_id: Option<String>,
     },
     RadiantFirstCheapCard {
         max_cost: i32,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         used_turn: Option<i32>,
     },
     ComboDraw {
@@ -328,6 +400,7 @@ pub enum ModifierKind {
         resume: Resume,
         label: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
         ran_turn: Option<i32>,
     },
     // ---- v0.2.0 modifier kinds, by workstream: damage and combat (E8 heal into damage) ----
@@ -349,7 +422,11 @@ pub enum ModifierKind {
 /// `{ id; expiry } & (kind union)`: one player-level modifier (§10.1 `PlayerState.mods`). The kind's
 /// fields are flattened beside `id` and `expiry`, as TS writes them.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerModifier {
     pub id: String,
@@ -360,16 +437,25 @@ pub struct PlayerModifier {
 
 /// `DelayedEffect.at`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct DelayedAt {
     /// Only `Phase::Start` or `Phase::End` (TS `"start" | "end"`).
+    #[cfg_attr(feature = "ts", ts(type = "\"start\" | \"end\""))]
     pub phase: Phase,
     pub player: PlayerId,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct DelayedEffect {
     pub id: String,
@@ -381,6 +467,7 @@ pub struct DelayedEffect {
     /// (Classic #37 Radiant) is made with the current turn plus one, so the end of the turn it was made
     /// on passes it by. Absent: the next such boundary.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub not_before: Option<i32>,
     /// A serializable continuation: script id, hook name, captured data (§10.6).
     pub resume: Resume,
@@ -389,11 +476,16 @@ pub struct DelayedEffect {
     /// (`zones::move_to_zone`), so a card that comes back — bounced and replayed, or a Reborn body — is a
     /// new arrival the effect never chose, and R76's "fizzles if the target has left the field" holds.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub watch: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct Resume {
     pub def_id: String,
@@ -403,6 +495,7 @@ pub struct Resume {
     pub radiant: bool,
     /// The instance the script belongs to, when it still exists.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub instance_id: Option<String>,
     #[cfg_attr(feature = "ts", ts(type = "Record<string, unknown>"))]
     pub data: IndexMap<String, Value>,
@@ -414,7 +507,11 @@ pub struct Resume {
 ///
 /// §10.3: an emitted event waiting for the trigger loop to dispatch it.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct DispatchItem {
     pub id: String,
@@ -425,7 +522,11 @@ pub struct DispatchItem {
 /// R30: a spell's pending Echo repeats. A repeat waits here while a prompt from the first
 /// resolution is still open, so the sequence survives the pause (§10.6, `work.rs`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct EchoItem {
     pub id: String,
@@ -437,7 +538,11 @@ pub struct EchoItem {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkItem {
     pub id: String,
@@ -448,7 +553,11 @@ pub struct WorkItem {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct PromptOption {
     pub key: String,
@@ -456,15 +565,21 @@ pub struct PromptOption {
     pub selection: Selection,
     /// B5 E18: what this option counts against a `pick` prompt's `budget` (R65's cost where it lies).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub cost: Option<i32>,
     /// A face the option shows: the card it offers is Radiant, or a definition is offered Radiant.
     /// Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub radiant: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct PendingChoice {
     pub id: String,
@@ -478,6 +593,7 @@ pub struct PendingChoice {
     /// #44's "a total cost of (5) or less"). Absent on every other prompt, so a state without one hashes
     /// as it did before the field existed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub budget: Option<i32>,
     pub resume: Resume,
 }
@@ -486,7 +602,11 @@ pub struct PendingChoice {
 /// prompt, whose options are its opening hand; `keep` is its sealed answer — the ids it keeps — and
 /// null until it answers. Nothing reads an answer before both seats have given one (R266).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct MulliganSeat {
     pub prompt: PendingChoice,
@@ -494,7 +614,11 @@ pub struct MulliganSeat {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct QueuedTrigger {
     pub id: String,
@@ -515,7 +639,11 @@ pub struct QueuedTrigger {
 /// `CardInstance` the declaration was built from is a different object and only the ids still name
 /// the same cards.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct DeclaredAttack {
     /// This declaration, told apart from one opened inside its own window (R44's AI turn takes
@@ -529,36 +657,49 @@ pub struct DeclaredAttack {
     pub cancelled: bool,
     /// R220: the player who declared it, whose unit the attacker must still be at step 5.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub by: Option<PlayerId>,
     /// R220, R174: the field's departures when it was declared (`stays::exit_mark`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub exits_from: Option<u32>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct TurnLog {
     pub played_ids: Vec<String>,
     pub cards_played: i32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub unspent_at_end: Option<i32>,
     /// The cost each play this turn actually paid (R56), in play order beside `playedIds`, a cast's 0
     /// included (R70). #64 Gifted Program's "the first card costing 1 or less you play each turn" is
     /// the player's count, not the card's (R213). Optional so a log written without it reads as no
     /// plays; `startTurn` rebuilds the log, which clears it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub costs_paid: Option<Vec<i32>>,
     /// B5 E4: this turn's plays by the type each was played as (B2.7), casts included (R70), countered
     /// plays never — Classic+ #37 Wardrum counts Spells, Field Spells and Traps. `startTurn` rebuilds
     /// the log for both players, which clears it as it clears the rest of "this turn".
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub played_by_type: Option<IndexMap<CardType, i32>>,
 }
 
 /// `PlayerState.hero`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct HeroState {
     pub health: i32,
@@ -567,7 +708,11 @@ pub struct HeroState {
 
 /// `PlayerState.mana`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct ManaState {
     pub current: i32,
@@ -578,18 +723,28 @@ pub struct ManaState {
 
 /// `PlayerState.drawOffer`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct DrawOfferState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub offered_turn: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub blocked_until: Option<i32>,
 }
 
 /// `PlayerState.draws`: B5 E3, E4, R457.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct DrawCount {
     pub turn: i32,
@@ -597,7 +752,11 @@ pub struct DrawCount {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerState {
     pub hero: HeroState,
@@ -622,11 +781,13 @@ pub struct PlayerState {
     /// R180: this seat's handicap. Absent means HUMAN_HANDICAP, and createGame never stores one equal
     /// to it, so a game without handicaps hashes exactly as it did before this field existed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub handicap: Option<Handicap>,
     /// R345: `false` once this player has turned R82's automatic turn end off (`setAutoEndTurn`).
     /// Absent means on, and turning it back on deletes the field, so a game in which nobody touched
     /// the setting hashes exactly as it did before this field existed. Only ever `Some(false)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "false"))]
     pub auto_end_turn: Option<bool>,
     // ---- v0.2.0 player fields, by workstream: field (B3.1, E20, E21, E22) ----
     /// B5 E21: the dormant cards beneath each backrow zone's top card, top first, by lane (index lane −
@@ -634,12 +795,14 @@ pub struct PlayerState {
     /// and not on the field for effects (`zones::is_buried`). Absent while no backrow zone holds a pile, so a
     /// game that never builds one hashes as it did before the field existed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub backrow_piles: Option<Vec<Vec<CardInstance>>>,
     /// B5 E21, R446: the Unit a carrier in each backrow zone holds, by lane — a Unit played on top of a
     /// backrow card whose static flag lets one (Classic+ #33 Ivory Tower). It stands in that backrow
     /// zone (its `zone.row` is "backrow"), is a Unit for every rule (`zones::active_units_of`), and can
     /// neither attack nor be attacked (`zones::is_carried`). Absent while nothing is carried.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub carried: Option<Vec<Option<CardInstance>>>,
     // ---- v0.2.0 player fields, by workstream: play pipeline (E4 play counters, E11) ----
     /// B5 E4, R451: what this player's plays leave for the rest of the game, never reset
@@ -648,18 +811,24 @@ pub struct PlayerState {
     /// played (AI Autocomplete). Absent until their first play, so a game without one hashes as it did
     /// before this field existed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub game_log: Option<GameLog>,
     // ---- v0.2.0 player fields, by workstream: activate and turn (E3, E4 draw counts, E10) ----
     /// B5 E3, E4, R457: how many draws this player has made on turn `turn`, whoever's turn it is — a
     /// fatigue draw included, a draw a limit stopped not. A count kept for an earlier turn reads as 0,
     /// so it resets where the turn log does without anything clearing it (`draw::draws_this_turn`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub draws: Option<DrawCount>,
 }
 
 /// Ceaseless Void's four game counters (R55): `GameState.counters`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct GameCounters {
     pub drawn: i32,
@@ -670,7 +839,11 @@ pub struct GameCounters {
 
 /// Nonce dedupe: one already-applied action and the events it produced (§9.3, `GameState.applied`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct AppliedAction {
     pub nonce: String,
@@ -678,7 +851,11 @@ pub struct AppliedAction {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct GameState {
     pub seed: String,
@@ -717,6 +894,7 @@ pub struct GameState {
     /// resolves them, so a state past its mulligan hashes as it did before this field existed.
     /// `pending` stays the one prompt §10.1 allows; the two mulligans are the one sealed-bid step.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub mulligan: Option<PerPlayer<MulliganSeat>>,
     pub result: Option<GameResult>,
     /// Next instance/choice/trigger id, so ids are deterministic under replay.
@@ -729,6 +907,7 @@ pub struct GameState {
     /// included, so R58's cap bounds the whole chain. Present only while a chain runs (a pause inside
     /// one keeps it here for the answer), and gone once the draw that began it has finished.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub cast_chain: Option<i32>,
     /// R174: the field's departures, counted, and each card's latest (`stays.rs`). An effect aimed at a
     /// card on the field is aimed at that stay, and a sequence a prompt splits resumes in a later
@@ -736,12 +915,14 @@ pub struct GameState {
     /// the field since" is read off this record, which survives the pause. Absent until a card first
     /// leaves the field.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub field_exits: Option<FieldExits>,
     // ---- v0.2.0 game fields, by workstream: field (B3.1 home zones, E21) ----
     /// B3.1 rule 6, R383: the backrow zone each animated "Animated on your turn" card goes back to at
     /// its controller's cleanup, held for it meanwhile as R64 holds a dying Reborn unit's zone
     /// (`zones::is_reserved` reads both). Absent while no such card is animated.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub homes: Option<Vec<HomeZone>>,
     // ---- v0.2.0 game fields, by workstream: play pipeline (E1 announce, E4 last plays, E12) ----
     /// play pipeline B (E12, R452): the casts being driven right now that change how choices are made —
@@ -749,18 +930,22 @@ pub struct GameState {
     /// enemies when it can — innermost last. Present only while such a cast's steps run
     /// (`random_cast::with_cast_mode`), so a state at rest, a paused one included, never carries it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub casts_resolving: Option<Vec<CastMode>>,
     /// B5 E1, R448: the plays whose announce window is open, innermost last (a cast a responder makes
     /// announces inside the window it answers). Present only while one is open (`announce.rs`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub announcing: Option<Vec<AnnounceRecord>>,
     /// B5 E4: the last Spell anyone played (Classic #57 Echo), overwritten by the next, never cleared.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub last_spell: Option<PlayRecord>,
     /// R58: the cards a cast-on-draw draw is casting, by the id each was drawn under, whose `drawn` is
     /// held from every dispatch until that cast has resolved — the draw's "complete" point
     /// (`draw_complete.rs`). Present only while one is held.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub held_draws: Option<Vec<String>>,
     // ---- v0.2.0 game fields, by workstream: Core patches and cosmetics (R433) ----
     /// R437: the marks cards carry for an effect aimed at them that is still to come — #50 K-Pop
@@ -770,53 +955,71 @@ pub struct GameState {
     /// `marked` event says so each way. Absent when no card is marked, so a game without marks hashes
     /// as it did before the field existed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub marks: Option<Vec<MarkRecord>>,
     // ---- v0.2.0 game fields, by workstream: cards-plus-c (E30) ----
     /// R417: each seat's last board, a `create_game` input frozen into the match and never written
     /// again (`subsystems::last_boards`). Only a seat with one has a key, and a game with none has no
     /// field, so it hashes as it did before. `view_for` never sends it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub last_boards: Option<PerPlayerOpt<Vec<LastBoardEntry>>>,
     /// C+ #35 Rollback, R419: the field as each of the last BOARD_HISTORY_DEPTH turns began, oldest first
     /// (`subsystems::board_history`). Never in a view (§10.8). Absent until the first turn starts.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub board_history: Option<Vec<BoardSnapshot>>,
     // ---- the Glitch Easter egg (issue #170; R673–R679) ----
     /// R673: how many "… in the System" cards either player has played. Absent at 0, so a match without one hashes as before.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub system_plays: Option<i32>,
     /// R676: the decks and dealt seats `create_game` began with, which a reset deals again. Never in a view.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub opening: Option<OpeningRecord>,
     /// R676: how many times Glitch has reset the match; keys the reset's id numbering. Absent until the first.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub resets: Option<i32>,
     /// R676: a reset Glitch owes, done once the action that drew it has settled (`subsystems::glitch`).
     /// Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub reset_owed: Option<bool>,
     /// R677: how many times Glitch has swapped the seats; odd means each account now holds the other seat.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub seat_swaps: Option<i32>,
     /// R678: the two boards of other players' games a Glitch may put on the field, a `create_game` input
     /// frozen like `lastBoards` (R417, R564). Never in a view.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub glitch_boards: Option<PerPlayerOpt<Vec<LastBoardEntry>>>,
 }
 
 /// R676: what a Glitch reset deals again — `create_game`'s decks and dealt seats.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct OpeningRecord {
     pub decks: (Vec<String>, Vec<String>),
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub dealt: Option<Vec<PlayerId>>,
 }
 
 /// R417: one card of a last board — the card and its face, never stats, buffs or damage.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct LastBoardEntry {
     pub def_id: String,
@@ -828,7 +1031,11 @@ pub type LastBoardInput = (Vec<LastBoardEntry>, Vec<LastBoardEntry>);
 
 /// R437: one mark on one card, while the delayed effect `delayedId` waits (`marks.rs`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct MarkRecord {
     pub instance_id: String,
@@ -840,23 +1047,34 @@ pub struct MarkRecord {
 /// R419: one side of the field as a turn began — its zones' cards whole, its Locks, the homes held then.
 /// (TS `Pick<PlayerState, "units" | "backrow" | "backrowPiles" | "carried" | "locks"> & { homes? }`.)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct SideSnapshot {
     pub units: Vec<Option<Pile>>,
     pub backrow: Vec<Option<CardInstance>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub backrow_piles: Option<Vec<Vec<CardInstance>>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub carried: Option<Vec<Option<CardInstance>>>,
     pub locks: RowFlags,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub homes: Option<Vec<HomeZone>>,
 }
 
 /// R419: the field at the start of player-turn `turn` (`subsystems::board_history`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct BoardSnapshot {
     pub turn: i32,
@@ -908,7 +1126,11 @@ pub fn rename_in_board_history(state: &mut GameState, from: &str, to: &str) {
 /// reads off the board as it resolves is judged from when its run began. All JSON.
 /// (TS `stays.ts`; here because `EffectContext` and paused work carry one.)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct EventStay {
     pub from: u32,
@@ -920,12 +1142,17 @@ pub struct EventStay {
 /// exiled, stolen, fused away — to the note of that removal (`stays::note_uncovered`), so the events
 /// reporting its leaving, and every event before them, are not answered by the card it uncovered.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct FieldExits {
     pub count: u32,
     pub last: IndexMap<String, u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub uncovered: Option<IndexMap<String, UncoveredNote>>,
 }
 
@@ -933,13 +1160,19 @@ pub struct FieldExits {
 /// `reported`: the loop has dispatched a report of that removal (`stays::note_reported`). `movedOn`: the
 /// card that left has moved zones again since (`stays::note_moved`). The note goes once both are true.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct UncoveredNote {
     pub resumed: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub reported: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub moved_on: Option<bool>,
 }
 
@@ -949,22 +1182,32 @@ pub struct UncoveredNote {
 /// will be set face-down (a Trap or Field Trap): while it waits in the resolving zone only `player`
 /// reads it (`view_for`). `countered` is set by the Counter that cancelled it (`effects::move_::counter_play`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct AnnounceRecord {
     pub instance_id: String,
     pub player: PlayerId,
     /// Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub face_down: Option<bool>,
     /// Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub countered: Option<bool>,
 }
 
 /// B5 E4: a card as a play record names it — the definition and the face it was played with.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayRecord {
     pub def_id: String,
@@ -973,7 +1216,11 @@ pub struct PlayRecord {
 
 /// B5 E4: a face-up play's record, with the type it was played as (B2.7). (TS `PlayRecord & { type }`.)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct FaceUpRecord {
     pub def_id: String,
@@ -984,11 +1231,16 @@ pub struct FaceUpRecord {
 
 /// B5 E4, R451: a player's per-game play record (`PlayerState.gameLog`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct GameLog {
     pub played_by_tag: IndexMap<Tag, i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub last_face_up_play: Option<FaceUpRecord>,
 }
 
@@ -1002,8 +1254,16 @@ fn empty_locks(size: i32) -> Vec<bool> {
 
 pub fn create_player_state() -> PlayerState {
     PlayerState {
-        hero: HeroState { health: HERO_HEALTH, armor: 0 },
-        mana: ManaState { current: 0, max: 0, next_turn_mod: 0, perm_mod: 0 },
+        hero: HeroState {
+            health: HERO_HEALTH,
+            armor: 0,
+        },
+        mana: ManaState {
+            current: 0,
+            max: 0,
+            next_turn_mod: 0,
+            perm_mod: 0,
+        },
         hand: Vec::new(),
         library: Vec::new(),
         graveyard: Vec::new(),
@@ -1011,9 +1271,16 @@ pub fn create_player_state() -> PlayerState {
         resolving: Vec::new(),
         units: empty_row::<Pile>(UNIT_ZONES),
         backrow: empty_row::<CardInstance>(BACKROW_ZONES),
-        locks: RowFlags { units: empty_locks(UNIT_ZONES), backrow: empty_locks(BACKROW_ZONES) },
+        locks: RowFlags {
+            units: empty_locks(UNIT_ZONES),
+            backrow: empty_locks(BACKROW_ZONES),
+        },
         mods: Vec::new(),
-        turn_log: TurnLog { played_ids: Vec::new(), cards_played: 0, ..TurnLog::default() },
+        turn_log: TurnLog {
+            played_ids: Vec::new(),
+            cards_played: 0,
+            ..TurnLog::default()
+        },
         draw_offer: DrawOfferState::default(),
         fatigue_count: 0,
         turns_started: 0,
@@ -1029,7 +1296,11 @@ pub fn create_player_state() -> PlayerState {
 
 /// `createGame`'s options.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateGameOptions {
     pub seed: String,
@@ -1038,24 +1309,29 @@ pub struct CreateGameOptions {
     /// registry is a `OnceLock`, SURFACE §3, and tests use the testkit's override, §8): when given,
     /// `create_game` validates the decks against it instead of the registered catalog.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub catalog: Option<CardDefs>,
     /// R180: per-seat handicaps. An omitted seat, or one equal to HUMAN_HANDICAP, stores nothing.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub handicaps: Option<PerPlayerOpt<Handicap>>,
     /// R433: the seats whose deck their player was dealt rather than built — All Random's (R258),
     /// practice's fresh random deck. Their starting library is written no record of what its owner
     /// was shown (R311), so its cards list as unknown until they leave it (R312). Setup, not an
     /// action: a replay passes the same list (`replay::ReplayInput.dealt`). Omitted, every deck was built.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub dealt: Option<Vec<PlayerId>>,
     /// R417: each seat's last board (C+ #29). Setup, not an action: a replay passes the same boards
     /// (`replay::ReplayInput.lastBoards`). Omitted, both are empty (hotseat, practice, a first game).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub last_boards: Option<LastBoardInput>,
     /// R678: the boards of two other players' games a Glitch may put on the field, one per seat. Setup,
     /// not an action, frozen as `lastBoards` is (R564): a replay passes the same boards
     /// (`replay::ReplayInput.glitchBoards`). Omitted, a Glitch's boards outcome leaves both fields empty.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub glitch_boards: Option<LastBoardInput>,
 }
 
@@ -1063,7 +1339,13 @@ pub struct CreateGameOptions {
 pub type CreateGameArgs = CreateGameOptions;
 
 /// The five fields of a handicap, in §9.9's order, so every reader walks the same list.
-const HANDICAP_FIELDS: [&str; 5] = ["deckSize", "manaBonus", "manaCap", "extraOpeningCards", "extraDrawsPerTurn"];
+const HANDICAP_FIELDS: [&str; 5] = [
+    "deckSize",
+    "manaBonus",
+    "manaCap",
+    "extraOpeningCards",
+    "extraDrawsPerTurn",
+];
 
 /// `handicap[field]` for one of `HANDICAP_FIELDS`.
 fn handicap_field(handicap: &Handicap, field: &str) -> i32 {
@@ -1088,7 +1370,9 @@ pub fn starting_hero_health(handicap: Option<&Handicap>) -> i32 {
 
 /// R180: whether a handicap is exactly a human's, which is what `create_game` declines to store.
 fn is_human_handicap(handicap: &Handicap) -> bool {
-    HANDICAP_FIELDS.iter().all(|field| handicap_field(handicap, field) == handicap_field(&HUMAN_HANDICAP, field))
+    HANDICAP_FIELDS
+        .iter()
+        .all(|field| handicap_field(handicap, field) == handicap_field(&HUMAN_HANDICAP, field))
         && starting_hero_health(Some(handicap)) == HERO_HEALTH
 }
 
@@ -1141,7 +1425,9 @@ pub fn validate_deck(deck: &[String], catalog: &CardDefs, label: &str, size: i32
     let mut seen: Vec<&str> = Vec::with_capacity(deck.len());
     for def_id in deck {
         let Some(def) = catalog.get(def_id) else {
-            return Err(EngineError::new(format!("{label}: \"{def_id}\" is not in the catalog (§9.4 L6)")));
+            return Err(EngineError::new(format!(
+                "{label}: \"{def_id}\" is not in the catalog (§9.4 L6)"
+            )));
         };
         if seen.contains(&def_id.as_str()) {
             return Err(EngineError::new(format!(
@@ -1197,7 +1483,11 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         embiggened: None,
         counters: Counters::default(),
         memory: IndexMap::new(),
-        exertion: Exertion { attacked: false, switched: false, attacks: None },
+        exertion: Exertion {
+            attacked: false,
+            switched: false,
+            attacks: None,
+        },
         stats_override: None,
         armor_override: None,
         return_to_hand_at_end_of_turn: None,
@@ -1241,7 +1531,11 @@ pub fn create_game_for_reset(options: &CreateGameOptions, next_id: u32, resets: 
 }
 
 fn deck_of(options: &CreateGameOptions, seat: usize) -> &Vec<String> {
-    if seat == 0 { &options.decks.0 } else { &options.decks.1 }
+    if seat == 0 {
+        &options.decks.0
+    } else {
+        &options.decks.1
+    }
 }
 
 fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameState {
@@ -1273,7 +1567,10 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameS
         turn: SETUP_TURN,
         active: PlayerId::P1,
         phase: Phase::Setup,
-        players: PerPlayer { p1: create_player_state(), p2: create_player_state() },
+        players: PerPlayer {
+            p1: create_player_state(),
+            p2: create_player_state(),
+        },
         pending: None,
         trigger_queue: Vec::new(),
         declared_attack: None,
@@ -1282,7 +1579,12 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameS
         echo_queue: Vec::new(),
         dispatch: Vec::new(),
         delayed: Vec::new(),
-        counters: GameCounters { drawn: 0, played: 0, destroyed: 0, exiled: 0 },
+        counters: GameCounters {
+            drawn: 0,
+            played: 0,
+            destroyed: 0,
+            exiled: 0,
+        },
         transient_defs: IndexMap::new(),
         reserved: Vec::new(),
         mulliganed: Vec::new(),
@@ -1324,7 +1626,10 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameS
         let numbers: Vec<String> = library.iter().map(|card| card.id.clone()).collect();
         let ids = numbering.shuffle(&numbers);
         // R433: a dealt deck is not one its player built, so they know none of it yet.
-        let built = !options.dealt.as_ref().is_some_and(|dealt| dealt.contains(&player));
+        let built = !options
+            .dealt
+            .as_ref()
+            .is_some_and(|dealt| dealt.contains(&player));
         for (at, card) in library.iter_mut().enumerate() {
             if let Some(id) = ids.get(at) {
                 card.id = id.clone();
@@ -1350,14 +1655,19 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameS
                 mana_cap: handicap.mana_cap,
                 extra_opening_cards: handicap.extra_opening_cards,
                 extra_draws_per_turn: handicap.extra_draws_per_turn,
-                hero_health: if hero_health == HERO_HEALTH { None } else { Some(hero_health) },
+                hero_health: if hero_health == HERO_HEALTH {
+                    None
+                } else {
+                    Some(hero_health)
+                },
             });
             side.hero.health = hero_health;
         }
     }
 
     // R417, R564: frozen as the match is created, minus every entry this match cannot rebuild.
-    state.last_boards = crate::subsystems::last_boards::freeze_last_boards(options.last_boards.as_ref(), catalog);
+    state.last_boards =
+        crate::subsystems::last_boards::freeze_last_boards(options.last_boards.as_ref(), catalog);
     // R678: the same freeze for the boards a Glitch may lay down.
     state.glitch_boards =
         crate::subsystems::last_boards::freeze_last_boards(options.glitch_boards.as_ref(), catalog);
@@ -1386,7 +1696,11 @@ pub fn numbering_order<T: Clone>(state: &GameState, items: &[T]) -> Vec<T> {
     if items.len() < 2 {
         return items.to_vec();
     }
-    Rng::new(&format!("{}{}:{}", state.seed, INSTANCE_ID_STREAM, state.next_id), 0).shuffle(items)
+    Rng::new(
+        &format!("{}{}:{}", state.seed, INSTANCE_ID_STREAM, state.next_id),
+        0,
+    )
+    .shuffle(items)
 }
 
 /// A deep copy of a state. §10.1 keeps the state JSON-only; in Rust the clone is the derived one
@@ -1396,7 +1710,10 @@ pub fn clone_state(state: &GameState) -> GameState {
 }
 
 pub fn active_units(side: &PlayerState) -> Vec<&CardInstance> {
-    side.units.iter().filter_map(|pile| pile.as_ref().and_then(|pile| pile.first())).collect()
+    side.units
+        .iter()
+        .filter_map(|pile| pile.as_ref().and_then(|pile| pile.first()))
+        .collect()
 }
 
 pub fn all_zones_empty(side: &PlayerState) -> bool {
@@ -1452,7 +1769,11 @@ pub fn find_instance<'a>(state: &'a GameState, instance_id: &str) -> Option<&'a 
 /// `find_instance`, mutably: TS handed back the live object, which its callers wrote through.
 pub fn find_instance_mut<'a>(state: &'a mut GameState, instance_id: &str) -> Option<&'a mut CardInstance> {
     let in_p1 = side_cards(&state.players.p1).any(|card| card.id == instance_id);
-    let side = if in_p1 { &mut state.players.p1 } else { &mut state.players.p2 };
+    let side = if in_p1 {
+        &mut state.players.p1
+    } else {
+        &mut state.players.p2
+    };
     side_cards_mut(side).find(|card| card.id == instance_id)
 }
 
@@ -1477,7 +1798,12 @@ mod tests {
     #[test]
     fn new_instances_number_from_next_id() {
         let mut counter: u32 = 7;
-        let card = new_instance(&mut counter, "core-001", PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
+        let card = new_instance(
+            &mut counter,
+            "core-001",
+            PlayerId::P2,
+            Zone::Hand { player: PlayerId::P2 },
+        );
         assert_eq!(card.id, "c7");
         assert_eq!(counter, 8);
         let json = serde_json::to_value(&card).unwrap();
@@ -1497,8 +1823,16 @@ mod tests {
     fn player_modifiers_flatten_their_kind() {
         let modifier = PlayerModifier {
             id: "m1".into(),
-            expiry: ModifierExpiry::NextTurnOf { player: PlayerId::P1, from_turn: 3 },
-            kind: ModifierKind::CostDiscount { amount: 2, only_type: Some(CardType::Spell), min_current_cost: None, once_per_turn: None },
+            expiry: ModifierExpiry::NextTurnOf {
+                player: PlayerId::P1,
+                from_turn: 3,
+            },
+            kind: ModifierKind::CostDiscount {
+                amount: 2,
+                only_type: Some(CardType::Spell),
+                min_current_cost: None,
+                once_per_turn: None,
+            },
         };
         let json = serde_json::to_value(&modifier).unwrap();
         assert_eq!(
@@ -1513,14 +1847,19 @@ mod tests {
 
     #[test]
     fn handicaps_and_decks_refuse_with_ts_messages() {
-        let bad = Handicap { deck_size: 0, ..HUMAN_HANDICAP };
+        let bad = Handicap {
+            deck_size: 0,
+            ..HUMAN_HANDICAP
+        };
         assert_eq!(
             validate_handicap(&bad, "p2").unwrap_err().message,
             "p2: handicap deckSize must be between 1 and 60 (R184), got 0"
         );
         let catalog = CardDefs::new();
         assert_eq!(
-            validate_deck(&["core-001".to_string()], &catalog, "p1", DECK_SIZE).unwrap_err().message,
+            validate_deck(&["core-001".to_string()], &catalog, "p1", DECK_SIZE)
+                .unwrap_err()
+                .message,
             "p1: deck must hold exactly 20 cards (§2.6 L2), got 1"
         );
         assert!(is_human_handicap(&HUMAN_HANDICAP));

@@ -68,8 +68,12 @@ pub const GLITCH_ODDS_PER_SYSTEM_PLAY: i32 = 1;
 /// R673: "a 1/10000 chance".
 pub const GLITCH_ODDS_DENOMINATOR: i32 = 10000;
 /// R676: Glitch's four outcomes, in the order the issue lists them; one is drawn uniformly by the match rng.
-pub const GLITCH_OUTCOMES: &[GlitchOutcome] =
-    &[GlitchOutcome::Reset, GlitchOutcome::Swap, GlitchOutcome::Boards, GlitchOutcome::Void];
+pub const GLITCH_OUTCOMES: &[GlitchOutcome] = &[
+    GlitchOutcome::Reset,
+    GlitchOutcome::Swap,
+    GlitchOutcome::Boards,
+    GlitchOutcome::Void,
+];
 
 /// R5 (decide): any unit may attack any enemy unit or hero, subject to Taunt.
 pub const LANE_RESTRICTED_ATTACKS: bool = false;
@@ -224,7 +228,11 @@ pub const DRAWS_PER_TURN: i32 = 1;
 /// §9.9, R180: the resources one seat plays with. Every field is a non-negative integer. The type
 /// lives here because `config.ts` imports nothing; `state.rs` stores it on a `PlayerState`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, export_to = "../../../apps/web/src/wire/generated/"))]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct Handicap {
     /// R184: exactly how many cards `createGame` requires in this seat's deck.
@@ -241,6 +249,7 @@ pub struct Handicap {
     /// HERO_HEALTH, which is why the three practice tiers never set it and hash exactly as before the
     /// field existed. Only the tutorial's handicap (`AI_TUTORIAL`) sets it, and only lower.
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub hero_health: Option<i32>,
 }
 
@@ -429,7 +438,10 @@ pub struct MarkSpec {
 }
 
 /// B5 E35: the mark a Berserk unit carries in both views (R437's reusable mark), and its colour key.
-pub const BERSERK_MARK: MarkSpec = MarkSpec { mark: "berserk", color: "red" };
+pub const BERSERK_MARK: MarkSpec = MarkSpec {
+    mark: "berserk",
+    color: "red",
+};
 
 // ---- v0.2.0 constants: prompts and generation (E18, E19, E23–E25) ----
 
@@ -469,8 +481,11 @@ string_union! {
 }
 
 /// R420: the three difficulties, in the order the first prompt offers them.
-pub const KY_TEST_DIFFICULTIES: &[KyTestDifficulty] =
-    &[KyTestDifficulty::Easy, KyTestDifficulty::Medium, KyTestDifficulty::Hard];
+pub const KY_TEST_DIFFICULTIES: &[KyTestDifficulty] = &[
+    KyTestDifficulty::Easy,
+    KyTestDifficulty::Medium,
+    KyTestDifficulty::Hard,
+];
 /// R420: the options every problem shows, exactly one of them its answer.
 pub const KY_TEST_OPTIONS: i32 = 4;
 /// R420: the floor of bank problems per difficulty (the bank test's floor, in `jackioh-cards`).
@@ -540,7 +555,11 @@ impl KyTestRewards {
     }
 }
 
-const fn pool_of(tags: Option<&'static [Tag]>, rarity: Option<Rarity>, cost: Option<i32>) -> Option<KyTestRewardPool> {
+const fn pool_of(
+    tags: Option<&'static [Tag]>,
+    rarity: Option<Rarity>,
+    cost: Option<i32>,
+) -> Option<KyTestRewardPool> {
     Some(KyTestRewardPool { tags, rarity, cost })
 }
 
@@ -642,11 +661,26 @@ pub struct GrapeOdds {
 /// R382: each Grape's chance in percent, in Lucky's order from worst to best (Rotten < Normal < Large <
 /// Golden < Mythic): a roll with Lucky keeps the later of its two.
 pub const GRAPE_ODDS: &[GrapeOdds] = &[
-    GrapeOdds { def_id: "classicplus-065-1", percent: 12 },
-    GrapeOdds { def_id: "classicplus-065-2", percent: 60 },
-    GrapeOdds { def_id: "classicplus-065-3", percent: 20 },
-    GrapeOdds { def_id: "classicplus-065-4", percent: 7 },
-    GrapeOdds { def_id: "classicplus-065-5", percent: 1 },
+    GrapeOdds {
+        def_id: "classicplus-065-1",
+        percent: 12,
+    },
+    GrapeOdds {
+        def_id: "classicplus-065-2",
+        percent: 60,
+    },
+    GrapeOdds {
+        def_id: "classicplus-065-3",
+        percent: 20,
+    },
+    GrapeOdds {
+        def_id: "classicplus-065-4",
+        percent: 7,
+    },
+    GrapeOdds {
+        def_id: "classicplus-065-5",
+        percent: 1,
+    },
 ];
 
 // Classic+ #73 Call to Chaos (Classic+ Edition) (SPEC §8.7 row 73, R423): its table's numbers.
@@ -819,9 +853,15 @@ pub struct TrainingGate {
 }
 
 /// SURFACE §14.2: the `improve` lane's gate.
-pub const TRAINING_IMPROVE: TrainingGate = TrainingGate { vs_random: 90, vs_parent: 85 };
+pub const TRAINING_IMPROVE: TrainingGate = TrainingGate {
+    vs_random: 90,
+    vs_parent: 85,
+};
 /// SURFACE §14.2: the `unban` lane's gate (plus strictly fewer shadow bans than the parent).
-pub const TRAINING_UNBAN: TrainingGate = TrainingGate { vs_random: 90, vs_parent: 75 };
+pub const TRAINING_UNBAN: TrainingGate = TrainingGate {
+    vs_random: 90,
+    vs_parent: 75,
+};
 
 #[cfg(test)]
 mod tests {
