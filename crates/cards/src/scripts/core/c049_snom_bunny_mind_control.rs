@@ -92,158 +92,170 @@ mod tests {
         json!({ "def": MIND_CONTROL, "radiant": true })
     }
 
-    #[test]
-    fn r15_base_the_stolen_unit_lands_in_the_same_lane_when_that_zone_is_free() {
-        let mut g = scenario(json!({
-            "p1": { "hand": [MIND_CONTROL] },
-            "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 3 }] },
-        }));
-        let prey = g.unit(PlayerId::P2, 3).expect("setup: p2 should hold the 7/7 in lane 3").clone();
+    mod n49_snom_bunny_mind_control {
+        use super::*;
 
-        g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
+        #[test]
+        fn r15_base_the_stolen_unit_lands_in_the_same_lane_when_that_zone_is_free() {
+            crate::register_all();
+            let mut g = scenario(json!({
+                "p1": { "hand": [MIND_CONTROL] },
+                "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 3 }] },
+            }));
+            let prey = g.unit(PlayerId::P2, 3).expect("setup: p2 should hold the 7/7 in lane 3").clone();
 
-        assert_eq!(g.unit(PlayerId::P1, 3).map(|u| u.id.clone()), Some(prey.id.clone()));
-        assert!(g.unit(PlayerId::P2, 3).is_none());
-        // R12: control is a field-only notion; ownership never moves.
-        assert_eq!(g.card(&prey).controller, PlayerId::P1);
-        assert_eq!(g.card(&prey).owner, PlayerId::P2);
-        g.expect_events(json!(["cardPlayed", "controlChanged", "enteredGraveyard"]));
-        // (4) since patch v0.2.0 (issue #40), out of the harness's 4.
-        g.expect_mana(PlayerId::P1, 0);
-    }
+            g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
 
-    #[test]
-    fn r15_base_the_first_free_zone_of_the_row_when_the_same_lane_is_taken() {
-        let mut g = scenario(json!({
-            "p1": { "hand": [MIND_CONTROL], "field": [{ "def": VANILLA, "lane": 3 }] },
-            "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 3 }] },
-        }));
-        let prey = g.unit(PlayerId::P2, 3).expect("setup: p2 should hold the 7/7 in lane 3").clone();
+            assert_eq!(g.unit(PlayerId::P1, 3).map(|u| u.id.clone()), Some(prey.id.clone()));
+            assert!(g.unit(PlayerId::P2, 3).is_none());
+            // R12: control is a field-only notion; ownership never moves.
+            assert_eq!(g.card(&prey).controller, PlayerId::P1);
+            assert_eq!(g.card(&prey).owner, PlayerId::P2);
+            g.expect_events(json!(["cardPlayed", "controlChanged", "enteredGraveyard"]));
+            // (4) since patch v0.2.0 (issue #40), out of the harness's 4.
+            g.expect_mana(PlayerId::P1, 0);
+        }
 
-        g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
+        #[test]
+        fn r15_base_the_first_free_zone_of_the_row_when_the_same_lane_is_taken() {
+            crate::register_all();
+            let mut g = scenario(json!({
+                "p1": { "hand": [MIND_CONTROL], "field": [{ "def": VANILLA, "lane": 3 }] },
+                "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 3 }] },
+            }));
+            let prey = g.unit(PlayerId::P2, 3).expect("setup: p2 should hold the 7/7 in lane 3").clone();
 
-        // Lane 3 is occupied, so `first_free_zone` scans lanes 1..5 and lane 1 wins.
-        assert_eq!(g.unit(PlayerId::P1, 1).map(|u| u.id.clone()), Some(prey.id.clone()));
-        assert_eq!(g.unit(PlayerId::P1, 3).map(|u| u.def_id.clone()), Some(VANILLA.to_string()));
-        assert!(g.unit(PlayerId::P2, 3).is_none());
-    }
+            g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
 
-    #[test]
-    fn r15_base_a_full_row_leaves_the_card_with_the_opponent_and_the_spell_still_resolves() {
-        let mut g = scenario(json!({
-            "p1": {
-                "hand": [MIND_CONTROL],
-                "field": [
-                    { "def": SEVEN_SEVEN, "lane": 1 },
-                    { "def": POINTMASTER, "lane": 2 },
-                    { "def": DUELIST, "lane": 3 },
-                    { "def": TIMMY, "lane": 4 },
-                    { "def": VANILLA, "lane": 5 },
-                ],
-            },
-            "p2": { "field": [{ "def": TOKEN_MAKER, "lane": 3 }] },
-        }));
-        let prey = g.unit(PlayerId::P2, 3).expect("setup: p2 should hold the target").clone();
+            // Lane 3 is occupied, so `first_free_zone` scans lanes 1..5 and lane 1 wins.
+            assert_eq!(g.unit(PlayerId::P1, 1).map(|u| u.id.clone()), Some(prey.id.clone()));
+            assert_eq!(g.unit(PlayerId::P1, 3).map(|u| u.def_id.clone()), Some(VANILLA.to_string()));
+            assert!(g.unit(PlayerId::P2, 3).is_none());
+        }
 
-        g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
+        #[test]
+        fn r15_base_a_full_row_leaves_the_card_with_the_opponent_and_the_spell_still_resolves() {
+            crate::register_all();
+            let mut g = scenario(json!({
+                "p1": {
+                    "hand": [MIND_CONTROL],
+                    "field": [
+                        { "def": SEVEN_SEVEN, "lane": 1 },
+                        { "def": POINTMASTER, "lane": 2 },
+                        { "def": DUELIST, "lane": 3 },
+                        { "def": TIMMY, "lane": 4 },
+                        { "def": VANILLA, "lane": 5 },
+                    ],
+                },
+                "p2": { "field": [{ "def": TOKEN_MAKER, "lane": 3 }] },
+            }));
+            let prey = g.unit(PlayerId::P2, 3).expect("setup: p2 should hold the target").clone();
 
-        assert_eq!(g.unit(PlayerId::P2, 3).map(|u| u.id.clone()), Some(prey.id.clone()));
-        assert_eq!(g.card(&prey).controller, PlayerId::P2);
-        g.expect_in_zone(MIND_CONTROL, "graveyard");
-        assert!(!g.events().iter().any(|event| event.event_type().as_str() == "controlChanged"));
-    }
+            g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
 
-    #[test]
-    fn r15_r33_base_a_face_down_enemy_trap_is_a_permanent_and_it_stays_face_down() {
-        let mut g = scenario(json!({
-            "p1": { "hand": [MIND_CONTROL] },
-            "p2": { "backrow": [{ "def": SHEEPISH, "lane": 2 }] },
-        }));
-        let trap = g.backrow(PlayerId::P2, 2).expect("setup: p2 should hold Sheepish in backrow lane 2").clone();
-        assert_ne!(trap.face_up, Some(true));
+            assert_eq!(g.unit(PlayerId::P2, 3).map(|u| u.id.clone()), Some(prey.id.clone()));
+            assert_eq!(g.card(&prey).controller, PlayerId::P2);
+            g.expect_in_zone(MIND_CONTROL, "graveyard");
+            assert!(!g.events().iter().any(|event| event.event_type().as_str() == "controlChanged"));
+        }
 
-        g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": trap.id }] }));
+        #[test]
+        fn r15_r33_base_a_face_down_enemy_trap_is_a_permanent_and_it_stays_face_down() {
+            crate::register_all();
+            let mut g = scenario(json!({
+                "p1": { "hand": [MIND_CONTROL] },
+                "p2": { "backrow": [{ "def": SHEEPISH, "lane": 2 }] },
+            }));
+            let trap = g.backrow(PlayerId::P2, 2).expect("setup: p2 should hold Sheepish in backrow lane 2").clone();
+            assert_ne!(trap.face_up, Some(true));
 
-        // §6.3's "permanent" is Unit, Field Spell, Trap or Field Trap, and R15 places it in its row.
-        assert_eq!(g.backrow(PlayerId::P1, 2).map(|c| c.id.clone()), Some(trap.id.clone()));
-        assert!(g.backrow(PlayerId::P2, 2).is_none());
-        assert_eq!(g.card(&trap).controller, PlayerId::P1);
-        assert_eq!(g.card(&trap).owner, PlayerId::P2);
-        // R33: `face_up` is untouched — who may READ it follows the controller, in `view_for`.
-        assert_ne!(g.card(&trap).face_up, Some(true));
-    }
+            g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": trap.id }] }));
 
-    #[test]
-    fn r22_r74_radiant_the_stolen_card_becomes_radiant_keeping_its_damage() {
-        let mut g = scenario(json!({
-            "p1": { "hand": [radiant_mind_control()] },
-            "p2": { "field": [{ "def": DUELIST, "lane": 2, "damage": 2 }] },
-        }));
-        let prey = g.unit(PlayerId::P2, 2).expect("setup: p2 should hold Deft Duelist").clone();
-        g.expect_stats(&prey, json!({ "attack": 4, "maxHealth": 3, "health": 1 }));
+            // §6.3's "permanent" is Unit, Field Spell, Trap or Field Trap, and R15 places it in its row.
+            assert_eq!(g.backrow(PlayerId::P1, 2).map(|c| c.id.clone()), Some(trap.id.clone()));
+            assert!(g.backrow(PlayerId::P2, 2).is_none());
+            assert_eq!(g.card(&trap).controller, PlayerId::P1);
+            assert_eq!(g.card(&trap).owner, PlayerId::P2);
+            // R33: `face_up` is untouched — who may READ it follows the controller, in `view_for`.
+            assert_ne!(g.card(&trap).face_up, Some(true));
+        }
 
-        g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
+        #[test]
+        fn r22_r74_radiant_the_stolen_card_becomes_radiant_keeping_its_damage() {
+            crate::register_all();
+            let mut g = scenario(json!({
+                "p1": { "hand": [radiant_mind_control()] },
+                "p2": { "field": [{ "def": DUELIST, "lane": 2, "damage": 2 }] },
+            }));
+            let prey = g.unit(PlayerId::P2, 2).expect("setup: p2 should hold Deft Duelist").clone();
+            g.expect_stats(&prey, json!({ "attack": 4, "maxHealth": 3, "health": 1 }));
 
-        assert_eq!(g.unit(PlayerId::P1, 2).map(|u| u.id.clone()), Some(prey.id.clone()));
-        assert!(g.card(&prey).radiant);
-        // R22: the base layer swaps at once (4/3 → 8/6) and the 2 damage stays.
-        g.expect_stats(&prey, json!({ "attack": 8, "maxHealth": 6, "health": 4 }));
-        assert_eq!(g.card(&prey).damage, 2);
-        // The steal moved the card first; `set_radiant` still found it, because it resolves by id.
-        g.expect_events(json!(["controlChanged", "radiantSet"]));
-    }
+            g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
 
-    #[test]
-    fn r22_radiant_the_flag_fires_no_cry_nothing_is_summoned_alongside_the_steal() {
-        let mut g = scenario(json!({
-            "p1": { "hand": [radiant_mind_control()] },
-            "p2": { "field": [{ "def": TOKEN_MAKER, "lane": 1 }] },
-        }));
-        let prey = g.unit(PlayerId::P2, 1).expect("setup: p2 should hold Me and Mr Token").clone();
+            assert_eq!(g.unit(PlayerId::P1, 2).map(|u| u.id.clone()), Some(prey.id.clone()));
+            assert!(g.card(&prey).radiant);
+            // R22: the base layer swaps at once (4/3 → 8/6) and the 2 damage stays.
+            g.expect_stats(&prey, json!({ "attack": 8, "maxHealth": 6, "health": 4 }));
+            assert_eq!(g.card(&prey).damage, 2);
+            // The steal moved the card first; `set_radiant` still found it, because it resolves by id.
+            g.expect_events(json!(["controlChanged", "radiantSet"]));
+        }
 
-        g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
+        #[test]
+        fn r22_radiant_the_flag_fires_no_cry_nothing_is_summoned_alongside_the_steal() {
+            crate::register_all();
+            let mut g = scenario(json!({
+                "p1": { "hand": [radiant_mind_control()] },
+                "p2": { "field": [{ "def": TOKEN_MAKER, "lane": 1 }] },
+            }));
+            let prey = g.unit(PlayerId::P2, 1).expect("setup: p2 should hold Me and Mr Token").clone();
 
-        assert!(g.card(&prey).radiant);
-        // Me and Mr Token's Cry summons a Rush Token; setting a flag is not an entry to the field.
-        let mine: Vec<String> = [1, 2, 3, 4, 5]
-            .into_iter()
-            .filter_map(|lane| g.unit(PlayerId::P1, lane).map(|unit| unit.def_id.clone()))
-            .collect();
-        assert_eq!(mine, vec![prey.def_id.clone()]);
-    }
+            g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
 
-    #[test]
-    fn s6_3_radiant_a_card_that_is_already_radiant_is_stolen_and_left_alone() {
-        let mut g = scenario(json!({
-            "p1": { "hand": [radiant_mind_control()] },
-            "p2": { "field": [{ "def": DUELIST, "lane": 4, "radiant": true }] },
-        }));
-        let prey = g.unit(PlayerId::P2, 4).expect("setup: p2 should hold a radiant Deft Duelist").clone();
+            assert!(g.card(&prey).radiant);
+            // Me and Mr Token's Cry summons a Rush Token; setting a flag is not an entry to the field.
+            let mine: Vec<String> = [1, 2, 3, 4, 5]
+                .into_iter()
+                .filter_map(|lane| g.unit(PlayerId::P1, lane).map(|unit| unit.def_id.clone()))
+                .collect();
+            assert_eq!(mine, vec![prey.def_id.clone()]);
+        }
 
-        g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
+        #[test]
+        fn s6_3_radiant_a_card_that_is_already_radiant_is_stolen_and_left_alone() {
+            crate::register_all();
+            let mut g = scenario(json!({
+                "p1": { "hand": [radiant_mind_control()] },
+                "p2": { "field": [{ "def": DUELIST, "lane": 4, "radiant": true }] },
+            }));
+            let prey = g.unit(PlayerId::P2, 4).expect("setup: p2 should hold a radiant Deft Duelist").clone();
 
-        assert_eq!(g.unit(PlayerId::P1, 4).map(|u| u.id.clone()), Some(prey.id.clone()));
-        assert!(g.card(&prey).radiant);
-        // §6.3 Make Radiant: no effect on a Radiant card, so the flag change emits nothing.
-        assert_eq!(
-            g.events().iter().filter(|event| event.event_type().as_str() == "radiantSet").count(),
-            0
-        );
-    }
+            g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
 
-    #[test]
-    fn r81_both_faces_declare_one_enemy_permanent_and_the_radiant_face_adds_the_flag() {
-        let def = crate::card_def(super::ID);
-        assert_eq!(def.id, MIND_CONTROL);
-        assert_eq!(serde_json::to_value(&def.type_).unwrap(), json!("Spell"));
-        assert_eq!(serde_json::to_value(&def.cost).unwrap(), json!(4));
-        let scripts = super::script();
-        for face in [&scripts.base, &scripts.radiant] {
+            assert_eq!(g.unit(PlayerId::P1, 4).map(|u| u.id.clone()), Some(prey.id.clone()));
+            assert!(g.card(&prey).radiant);
+            // §6.3 Make Radiant: no effect on a Radiant card, so the flag change emits nothing.
             assert_eq!(
-                serde_json::to_value(&face.targets).unwrap(),
-                json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit", "backrow"] } }])
+                g.events().iter().filter(|event| event.event_type().as_str() == "radiantSet").count(),
+                0
             );
-            assert!(face.modes.is_empty());
+        }
+
+        #[test]
+        fn r81_both_faces_declare_one_enemy_permanent_and_the_radiant_face_adds_the_flag() {
+            crate::register_all();
+            let def = crate::card_def(super::super::ID);
+            assert_eq!(def.id, MIND_CONTROL);
+            assert_eq!(serde_json::to_value(&def.type_).unwrap(), json!("Spell"));
+            assert_eq!(serde_json::to_value(&def.cost).unwrap(), json!(4));
+            let scripts = super::super::script();
+            for face in [&scripts.base, &scripts.radiant] {
+                assert_eq!(
+                    serde_json::to_value(&face.targets).unwrap(),
+                    json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit", "backrow"] } }])
+                );
+                assert!(face.modes.is_empty());
+            }
         }
     }
 }

@@ -37,7 +37,7 @@ fn below_floor(state: &GameState, controller: PlayerId, floor: i32) -> bool {
 fn reno(floor: i32) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            if below_floor(ctx.state, ctx.controller, floor) {
+            if below_floor(&*ctx.state, ctx.controller, floor) {
                 vec![heal(json_as(json!({ "target": { "of": "selfHero" }, "upTo": floor })))]
             } else {
                 vec![]
@@ -71,11 +71,12 @@ mod tests {
         s.last_events().iter().filter(|event| event.event_type().as_str() == "healed").count()
     }
 
-    mod reno_base {
+    mod n53_reno_base {
         use super::*;
 
         #[test]
         fn s6_3_raises_a_hero_at_12_to_30() {
+            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-053"], "health": 12 } }));
 
             s.play("core-053", json!({}));
@@ -85,6 +86,7 @@ mod tests {
 
         #[test]
         fn s6_3_heal_up_to_30_is_a_floor_not_a_ceiling_a_hero_at_35_stays_35() {
+            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-053"], "health": 35 } }));
 
             s.play("core-053", json!({}));
@@ -95,6 +97,7 @@ mod tests {
 
         #[test]
         fn a_hero_exactly_at_30_is_untouched_and_29_goes_up_by_1() {
+            crate::register_all();
             let mut at_30 = scenario(json!({ "p1": { "hand": ["core-053"], "health": 30 } }));
             at_30.play("core-053", json!({}));
             at_30.expect_health(PlayerId::P1, 30);
@@ -105,6 +108,7 @@ mod tests {
 
         #[test]
         fn the_cry_is_gated_on_below_30_the_branch_its_yellow_glow_reports_at_exactly_30_no_heal_is_emitted() {
+            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-053"], "health": 30 } }));
             let view = s.view(Some(PlayerId::P1));
             let HandView::Cards(hand) = &view.you.hand else {
@@ -120,6 +124,7 @@ mod tests {
 
         #[test]
         fn s8_conventions_your_means_the_controller_the_enemy_hero_is_not_raised() {
+            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-053"], "health": 12 }, "p2": { "health": 12 } }));
 
             s.play("core-053", json!({}));
@@ -129,6 +134,7 @@ mod tests {
 
         #[test]
         fn the_unit_still_enters_the_field_with_its_printed_4_6_s10_4_layer_1() {
+            crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-053"], "health": 12 } }));
 
             s.play("core-053", json!({}));
@@ -141,7 +147,7 @@ mod tests {
     // a "HARNESS GAP" note from before the harness took `{ def, radiant }` in a hand). The scenario's
     // hand entry `{ "def": …, "radiant": true }` builds the same state — the harness creates the hand
     // card and then sets the flag, as the TS line did — without a mutable card reference.
-    mod reno_radiant {
+    mod n53_reno_radiant {
         use super::*;
 
         fn radiant_reno_in_hand(health: i32) -> Scenario {
@@ -150,6 +156,7 @@ mod tests {
 
         #[test]
         fn s8_conventions_only_the_number_changes_so_35_becomes_60() {
+            crate::register_all();
             let mut s = radiant_reno_in_hand(35);
 
             s.play("core-053", json!({}));
@@ -158,6 +165,7 @@ mod tests {
 
         #[test]
         fn raises_a_hero_at_12_straight_to_60_in_one_heal() {
+            crate::register_all();
             let mut s = radiant_reno_in_hand(12);
 
             s.play("core-053", json!({}));
@@ -167,6 +175,7 @@ mod tests {
 
         #[test]
         fn r19_a_hero_already_above_60_keeps_its_health_70_stays_70() {
+            crate::register_all();
             let mut s = radiant_reno_in_hand(70);
 
             s.play("core-053", json!({}));
@@ -176,6 +185,7 @@ mod tests {
 
         #[test]
         fn the_radiant_unit_enters_as_8_12_s5_2() {
+            crate::register_all();
             let mut s = radiant_reno_in_hand(12);
 
             s.play("core-053", json!({}));
