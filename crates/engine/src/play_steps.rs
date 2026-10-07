@@ -103,18 +103,6 @@ pub use crate::play_choices::PlayAction;
 // Private copies of small helpers other modules own (fullsend rule 5)
 // ---------------------------------------------------------------------------
 
-/// TS `scripts.flagsOf(instance)`: the running face's static flags — the radiant text's once the
-/// instance is Radiant (§5.2), none at all for a Vanilla instance (§6.3 Vanilla, R115).
-fn flags_of_card(state: &GameState, card: &CardInstance) -> StaticFlags {
-    let script: Script = if card.vanilla {
-        empty_script()
-    } else {
-        let entry = crate::scripts::script_of(state, &card.def_id);
-        if card.radiant { entry.radiant } else { entry.base }
-    };
-    script.flags()
-}
-
 /// TS `enchantments.hasEnchantment(card, "returnAfterResolve")`.
 fn has_return_after_resolve(card: &CardInstance) -> bool {
     card.enchantments
@@ -137,7 +125,7 @@ fn count_play(state: &mut GameState, instance_id: &str) {
     let Some(card) = find_instance(state, instance_id) else {
         return;
     };
-    if flags_of_card(state, card).counts_plays != Some(true) {
+    if crate::scripts::flags_of(state, card).counts_plays != Some(true) {
         return;
     }
     let so_far = card.times_played.filter(|count| *count > 0).unwrap_or(0);
@@ -800,7 +788,7 @@ fn handed_over_zone(state: &GameState, run: &PlayRun, card: &CardInstance) -> Op
     if zone.row != Row::Units {
         return None;
     }
-    if flags_of_card(state, card).enemy_tribute_hands_over != Some(true) {
+    if crate::scripts::flags_of(state, card).enemy_tribute_hands_over != Some(true) {
         return None;
     }
     let opponent = opponent_of(run.player);
@@ -1689,7 +1677,7 @@ fn quickstriker_grants(state: &GameState, run: &PlayRun, played: &CardInstance) 
             if held.id == played.id || arrived.contains(&held.id) {
                 continue;
             }
-            let grants = match flags_of_card(state, &held).quickstriker {
+            let grants = match crate::scripts::flags_of(state, &held).quickstriker {
                 Some(FlagOrCount::Flag(true)) => 1,
                 Some(FlagOrCount::Count(count)) => count.max(0),
                 _ => 0,

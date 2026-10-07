@@ -145,21 +145,6 @@ pub fn is_trap_window_event(event: &GameEvent) -> bool {
     TRAP_WINDOW_EVENTS.contains(&event.event_type())
 }
 
-/// TS `scripts.scriptOf(instance)`: the face that is running (§5.2), and no script at all for a
-/// Vanilla (§6.3, R115). A private copy over `scripts::script_of`, which answers a definition's two
-/// faces (fullsend rule 5).
-fn with_face<R>(state: &GameState, card: &CardInstance, read: impl FnOnce(&Script) -> R) -> R {
-    if card.vanilla {
-        return read(&empty_script());
-    }
-    let scripts = crate::scripts::script_of(state, &card.def_id);
-    read(if card.radiant {
-        &scripts.radiant
-    } else {
-        &scripts.base
-    })
-}
-
 /// TS `work.paused`: a prompt is open, or the game is over (§9.3).
 fn is_paused(state: &GameState) -> bool {
     state.pending.is_some() || state.result.is_some()
@@ -252,7 +237,7 @@ pub fn traps_in_order(state: &GameState) -> Vec<CardInstance> {
 }
 
 fn trap_triggers_of(state: &GameState, trap: &CardInstance) -> Vec<TrapTrigger> {
-    with_face(state, trap, |script| script.triggers.clone())
+    crate::scripts::script_of(state, trap).triggers
 }
 
 /// R119: the events that say a card arrived. A card does not answer the play that put it onto the

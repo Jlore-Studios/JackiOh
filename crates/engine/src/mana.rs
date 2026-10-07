@@ -13,17 +13,6 @@ use crate::state::{
 };
 use crate::wire::{CardCost, GameEvent, PlayerId, Zone};
 
-/// TS `scripts.scriptOf(instance)`, a private copy (fullsend rule 5): the face that is running — the
-/// radiant text once the instance is Radiant (§5.2) — and no script at all for a Vanilla instance
-/// (§6.3 Vanilla, R115).
-fn running_script(state: &GameState, card: &CardInstance) -> Script {
-    if card.vanilla {
-        return empty_script();
-    }
-    let entry = crate::scripts::script_of(state, &card.def_id);
-    if card.radiant { entry.radiant } else { entry.base }
-}
-
 /// §2.3, R181: max mana is min(turns started + the seat's mana bonus, its mana cap), plus persistent
 /// modifiers, floored at 0. With no handicap the bonus is 0 and the cap is MAX_MANA, which is §2.3's
 /// "min(number of turns you have started, 4), plus persistent modifiers". `nextTurnMod` is not one of
@@ -82,7 +71,7 @@ pub fn mana_event(player: PlayerId, side: &PlayerState) -> GameEvent {
 
 /// The printed cost as it stands: X uses the chosen X, an embiggen card the chosen price (R65).
 pub fn printed_cost(state: &GameState, instance: &CardInstance) -> i32 {
-    let script = running_script(state, instance);
+    let script = crate::scripts::script_of(state, instance);
     if let Some(cost) = script.cost.as_ref() {
         return cost(CostArgs { state, instance }).max(0);
     }

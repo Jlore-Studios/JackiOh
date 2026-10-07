@@ -130,21 +130,6 @@ struct Candidate {
     zone: CandidateZone,
 }
 
-/// TS `scripts.scriptOf(instance)`: the face that is running (§5.2), and no script at all for a
-/// Vanilla (§6.3, R115). A private copy over `scripts::script_of`, which answers a definition's two
-/// faces (fullsend rule 5).
-fn with_face<R>(state: &GameState, card: &CardInstance, read: impl FnOnce(&Script) -> R) -> R {
-    if card.vanilla {
-        return read(&empty_script());
-    }
-    let scripts = crate::scripts::script_of(state, &card.def_id);
-    read(if card.radiant {
-        &scripts.radiant
-    } else {
-        &scripts.base
-    })
-}
-
 /// TS `zones.slotOf`: the zone a card on the field stands in.
 fn slot_in(card: &CardInstance) -> Option<ZoneRef> {
     match card.zone {
@@ -277,9 +262,11 @@ fn answering(
     moment: ReplacementMoment,
     event: &ReplacedEvent,
 ) -> Option<ReplacementDef> {
-    let defs: Vec<ReplacementDef> = with_face(state, &cand.card, |script| {
-        script.replacements.iter().filter(|def| def.on == moment).cloned().collect()
-    });
+    let defs: Vec<ReplacementDef> = crate::scripts::script_of(state, &cand.card)
+        .replacements
+        .into_iter()
+        .filter(|def| def.on == moment)
+        .collect();
     defs.into_iter().find(|def| {
         if !stands_where(state, cand, def.where_.unwrap_or(ReplacementWhere::Field), event) {
             return false;
@@ -441,7 +428,7 @@ fn acts_on_field(state: &GameState, card: &CardInstance) -> bool {
 
 /// E8: whether the card converts heals by its text, as it stands now (face-up, when a Trap).
 fn converts_by_text(state: &GameState, cand: &Candidate) -> bool {
-    if with_face(state, &cand.card, |script| script.flags().heal_to_damage) != Some(true) {
+    if crate::scripts::flags_of(state, &cand.card).heal_to_damage != Some(true) {
         return false;
     }
     if cand.zone != CandidateZone::Field && cand.zone != CandidateZone::Backrow {

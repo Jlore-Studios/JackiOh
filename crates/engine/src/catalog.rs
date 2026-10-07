@@ -319,7 +319,7 @@ pub const FUSED_DIGEST_MARK: &str = "#";
 pub const RADIANT_INGREDIENT_MARK: &str = "*";
 
 /// `/^t-\d+:/`: the length of a fused id's head, or `None` for an id no Fuse minted.
-fn fused_head_len(def_id: &str) -> Option<usize> {
+pub fn fused_head_len(def_id: &str) -> Option<usize> {
     let rest = def_id.strip_prefix("t-")?;
     let digits = rest.bytes().take_while(u8::is_ascii_digit).count();
     if digits == 0 || rest.as_bytes().get(digits) != Some(&b':') {
@@ -336,7 +336,7 @@ pub fn is_digest_id(def_id: &str) -> bool {
     }
 }
 
-fn copy_spec(entry: &FusedIngredient) -> FusedIngredient {
+pub(crate) fn copy_spec(entry: &FusedIngredient) -> FusedIngredient {
     FusedIngredient {
         def_id: entry.def_id.clone(),
         radiant: if entry.radiant == Some(true) { Some(true) } else { None },

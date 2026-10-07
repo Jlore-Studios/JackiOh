@@ -88,17 +88,6 @@ struct CryRun {
     awaiting: Option<CryAwaiting>,
 }
 
-/// TS `scripts.scriptOf(instance)`: the running face's script, and none for a Vanilla card (§6.3,
-/// R115). A private copy over `scripts::script_of(state, def_id)` (SURFACE §6.6).
-fn script_of_card(state: &GameState, card: &CardInstance) -> Script {
-    if card.vanilla {
-        return crate::script::empty_script();
-    }
-    let scripts = crate::scripts::script_of(state, &card.def_id);
-    let face = if card.radiant { &scripts.radiant } else { &scripts.base };
-    face.clone()
-}
-
 /// The name a card's definition prints.
 fn name_of(state: &GameState, def_id: &str) -> String {
     crate::catalog::def_of(Some(state), def_id).name.clone()
@@ -112,7 +101,7 @@ pub fn cry_place_of(state: &GameState, card: &CardInstance) -> Option<CryPlace> 
     if crate::faces::card_type_of(state, card) != CardType::Unit {
         return None;
     }
-    if script_of_card(state, card).cry.is_none() {
+    if crate::scripts::script_of(state, card).cry.is_none() {
         return None;
     }
     match card.zone {

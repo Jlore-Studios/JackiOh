@@ -38,16 +38,6 @@ fn exit_mark(state: &GameState) -> u32 {
     state.field_exits.as_ref().map_or(0, |exits| exits.count)
 }
 
-/// TS `scripts.scriptOf(instance)`: the face that is running — radiant text once the instance is
-/// Radiant (§5.2) — and no script at all on a Vanilla instance (§6.3, R115).
-fn face_script(state: &GameState, instance: &CardInstance) -> Script {
-    if instance.vanilla {
-        return Script::default();
-    }
-    let entry = crate::scripts::script_of(state, &instance.def_id);
-    if instance.radiant { entry.radiant } else { entry.base }
-}
-
 /// TS `makeContext(sink, self, options)`. The context borrows the sink for as long as it lives (it is
 /// the sink, plus this run's facts); `self_` is copied in as the card stands now.
 pub fn make_context<'b>(
@@ -176,7 +166,7 @@ fn hook_of(script: &Script, name: HookName) -> Option<Hook> {
 /// (a trigger, a play's or a cast's Cry, an activate), and a start-of-game clause, which may return a
 /// Choose like any other list (§10.9), runs through `prompts.runStartOfGame` (R151, R113).
 pub fn run_hook(sink: &mut EngineSink<'_>, instance: &CardInstance, name: HookName, options: HookOptions) {
-    let Some(hook) = hook_of(&face_script(sink.state, instance), name) else {
+    let Some(hook) = hook_of(&crate::scripts::script_of(sink.state, instance), name) else {
         return;
     };
     let mut ctx = make_context(sink, Some(instance), options);
@@ -265,7 +255,7 @@ pub fn flag_return_to_hand_at_end_of_turn(state: &mut GameState, instance_id: &s
     if crate::faces::card_type_of(state, card) != CardType::Spell {
         return;
     }
-    if face_script(state, card).end_of_turn.is_none() {
+    if crate::scripts::script_of(state, card).end_of_turn.is_none() {
         return;
     }
     if let Some(card) = find_instance_mut(state, instance_id) {

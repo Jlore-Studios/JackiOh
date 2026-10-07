@@ -53,43 +53,12 @@ fn entry_kind(name: &str) -> &'static str {
     }
 }
 
-/// Apply an effect list in order; once a state check inside it has ended the game, the rest does not
-/// resolve (R216). A private copy of `resolve::apply_effects`.
-fn apply_effects(effects: &[Effect], ctx: &mut EffectContext<'_>) {
-    for effect in effects {
-        if ctx.sink.state.result.is_some() {
-            return;
-        }
-        (effect.apply)(ctx);
-    }
-}
-
-/// A part of a composed list (`Effect.expand`), built when the list reaches it rather than when the
-/// list is made (R102). Applied on its own it builds and applies its effects in one go; inside
-/// `prompts::apply_resumable` it runs as a nested list a prompt can pause. A private copy of
-/// `resolve::lazy_part`.
-fn lazy_part(
-    kind: &'static str,
-    expand: impl Fn(&mut EffectContext<'_>, &Memo) -> EffectPart + Send + Sync + 'static,
-) -> Effect {
-    let expand = Arc::new(expand);
-    let build = expand.clone();
-    Effect::with_expand(
-        kind,
-        move |ctx| {
-            let part = build(ctx, &None);
-            apply_effects(&part.effects, ctx);
-        },
-        move |ctx, memo| expand(ctx, memo),
-    )
-}
-
 /// One entry, built as it resolves (`lazy_part`), kept by name across a pause like Core's (R87).
 fn entry(
     name: &'static str,
     build: impl Fn(&mut EffectContext<'_>) -> Vec<Effect> + Send + Sync + 'static,
 ) -> Effect {
-    lazy_part(entry_kind(name), move |ctx, _memo| EffectPart {
+    crate::resolve::lazy_part(entry_kind(name), move |ctx, _memo| EffectPart {
         effects: build(ctx),
         memo: None,
     })

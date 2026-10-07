@@ -84,103 +84,6 @@ fn controller_of(target: &DamageTarget) -> PlayerId {
 // flags, and every text a card carries (`scripts.ts`'s `scriptOf`, `flagsOf`, `textsOf`).
 // ---------------------------------------------------------------------------------------------
 
-/// TS `scripts.scriptOf`: the face that is running; a Vanilla instance runs no script (§6.3, R115).
-fn script_of_card(state: &GameState, card: &CardInstance) -> Script {
-    if card.vanilla {
-        return empty_script();
-    }
-    let scripts = crate::scripts::script_of(state, &card.def_id);
-    if card.radiant {
-        scripts.radiant.clone()
-    } else {
-        scripts.base.clone()
-    }
-}
-
-/// TS `scripts.flagsOf`.
-fn flags_of_card(state: &GameState, card: &CardInstance) -> StaticFlags {
-    script_of_card(state, card).flags()
-}
-
-/// One ingredient of a fused card, as `scripts::INGREDIENTS_KEY` records it.
-struct IngredientEntry {
-    def_id: String,
-    embiggened: bool,
-    parts: Option<Vec<IngredientEntry>>,
-}
-
-fn records_from(raw: Option<&Value>) -> Option<Vec<IngredientEntry>> {
-    let list = raw?.as_array()?;
-    Some(
-        list.iter()
-            .filter_map(|entry| {
-                let record = entry.as_object()?;
-                let def_id = record.get("defId")?.as_str()?.to_string();
-                let parts = records_from(record.get("parts"));
-                Some(IngredientEntry {
-                    def_id,
-                    embiggened: record.get("embiggened").and_then(Value::as_bool) == Some(true),
-                    parts,
-                })
-            })
-            .collect(),
-    )
-}
-
-/// One text a card carries: its static flags and the price it was played for.
-struct CardText {
-    flags: StaticFlags,
-    embiggened: bool,
-}
-
-/// TS `scripts.textsOf`: one text for a card that records no prices, one per ingredient for one that
-/// does (R102). A Vanilla card carries none (§6.3, R115).
-fn texts_of(state: &GameState, card: &CardInstance) -> Vec<CardText> {
-    if card.vanilla {
-        return Vec::new();
-    }
-    let Some(records) = records_from(card.memory.get(crate::scripts::INGREDIENTS_KEY)) else {
-        return vec![CardText {
-            flags: flags_of_card(state, card),
-            embiggened: card.embiggened == Some(true),
-        }];
-    };
-    fn walk(state: &GameState, radiant: bool, list: &[IngredientEntry], out: &mut Vec<CardText>) {
-        for record in list {
-            if let Some(parts) = &record.parts {
-                walk(state, radiant, parts, out);
-                continue;
-            }
-            let entry = crate::scripts::script_of(state, &record.def_id);
-            let face = if radiant { entry.radiant.clone() } else { entry.base.clone() };
-            out.push(CardText {
-                flags: face.flags(),
-                embiggened: record.embiggened,
-            });
-        }
-    }
-    let mut out = Vec::new();
-    walk(state, card.radiant, &records, &mut out);
-    out
-}
-
-/// R42, R412: whom a lethal hit by `source` on `victim` names as its killer (a private copy of
-/// `kill_credit::credited_killer_id`).
-fn credited_killer_id(source: &CardInstance, victim_id: &str) -> String {
-    source
-        .memory
-        .get(crate::kill_credit::KILL_CREDIT_KEY)
-        .and_then(Value::as_array)
-        .and_then(|credits| {
-            credits.iter().find(|each| {
-                each.get("victimId").and_then(Value::as_str) == Some(victim_id)
-            })
-        })
-        .and_then(|credit| credit.get("toId").and_then(Value::as_str))
-        .map(str::to_string)
-        .unwrap_or_else(|| source.id.clone())
-}
-
 /// §4.4 step 2 for a hero: the Armor written on the hero itself plus every backrow card that grants
 /// it (#84 Going Long), each contributing the `HERO_ARMOR` value its own face and price select.
 ///
@@ -202,7 +105,7 @@ pub fn hero_armor_of(state: &GameState, player: PlayerId) -> i32 {
         let side = HERO_ARMOR.on(card.radiant);
         // R124, R102: every Going Long text a card carries grants its own Armor, at the price that
         // text's card was played for — a Going Long fused onto a Going Long is Armor 4 as two apart are.
-        for text in texts_of(state, &card) {
+        for text in crate::scripts::texts_of(state, &card) {
             let grants = text.flags.hero_armor.map_or(0, |grant| grant.count());
             sum += grants.max(0) * side.on(text.embiggened);
         }
@@ -244,7 +147,7 @@ fn acting_texts_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
 fn hero_guards_of(state: &GameState, player: PlayerId) -> Vec<HeroGuard> {
     acting_texts_of(state, player)
         .iter()
-        .flat_map(|card| match script_of_card(state, card).hero_guard {
+        .flat_map(|card| match crate::scripts::script_of(state, card).hero_guard {
             Some(guard) => guard(HookArgs {
                 state,
                 self_: card,
@@ -261,7 +164,7 @@ fn hero_guards_of(state: &GameState, player: PlayerId) -> Vec<HeroGuard> {
 pub fn hero_damage_cap(state: &GameState, player: PlayerId) -> Option<i32> {
     let mut caps: Vec<i32> = acting_texts_of(state, player)
         .iter()
-        .filter(|card| flags_of_card(state, card).anti_oneshot == Some(true))
+        .filter(|card| crate::scripts::flags_of(state, card).anti_oneshot == Some(true))
         .map(|card| ANTI_ONESHOT_CAP.on(card.radiant))
         .collect();
     caps.extend(
@@ -365,7 +268,8 @@ fn credit_killer(unit: &mut CardInstance, source: Option<&CardInstance>, killed_
         return;
     };
     // R412: a kill credit in force on the source names another unit (`kill_credit.rs`).
-    unit.last_damaged_by = Some(credited_killer_id(source, &unit.id));
+    let killer = crate::kill_credit::credited_killer_id(source, unit);
+    unit.last_damaged_by = Some(killer);
 }
 
 /// R346: whether a hit skips §4.4 step 2. Pierce is a keyword of the source — a unit's, read through
@@ -564,7 +468,8 @@ fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redire
         // R42: the Poisonous hit is the one that destroys it, whatever health it left — unless something
         // had already killed it, in which case this hit landed on a dead unit and kills nothing.
         if !killed_before {
-            card.last_damaged_by = Some(credited_killer_id(source_card, &card.id));
+            let killer = crate::kill_credit::credited_killer_id(source_card, card);
+            card.last_damaged_by = Some(killer);
         }
     }
 

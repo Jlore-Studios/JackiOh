@@ -131,26 +131,6 @@ pub const OWED_TO_TRAPS: &str = "@traps";
 pub const SETTLE_PASS_CAP: usize =
     (LIBRARY_CAP * CAST_ON_DRAW_CHAIN_CAP * (UNIT_ZONES + BACKROW_ZONES)) as usize * PLAYER_IDS.len();
 
-/// TS `scripts.scriptOf(instance)`: the face that is running (§5.2), and no script at all for a
-/// Vanilla (§6.3, R115). A private copy over `scripts::script_of`, which answers a definition's two
-/// faces (fullsend rule 5).
-fn with_face<R>(state: &GameState, card: &CardInstance, read: impl FnOnce(&Script) -> R) -> R {
-    if card.vanilla {
-        return read(&empty_script());
-    }
-    let scripts = crate::scripts::script_of(state, &card.def_id);
-    read(if card.radiant {
-        &scripts.radiant
-    } else {
-        &scripts.base
-    })
-}
-
-/// `with_face`, kept: the holder carries its running face (`TriggerHolder.script`).
-fn face_script(state: &GameState, card: &CardInstance) -> Script {
-    with_face(state, card, Script::clone)
-}
-
 fn sides_of(state: &GameState) -> [PlayerId; 2] {
     if state.active == PlayerId::P1 {
         [PlayerId::P1, PlayerId::P2]
@@ -225,7 +205,7 @@ fn zone_registers_hook(_state: &GameState, holder: &TriggerHolder, hook: HookNam
 }
 
 fn holder_of(state: &GameState, card: &CardInstance, zone: TriggerZone, controller: PlayerId) -> TriggerHolder {
-    let script = face_script(state, card);
+    let script = crate::scripts::script_of(state, card);
     // R383: an animated Field Trap in a unit zone is a trap too — `traps.rs` fires it, and it is never
     // also queued (§10.3).
     let is_trap = (zone == TriggerZone::Backrow || zone == TriggerZone::Field) && is_trap_card(state, card);
@@ -264,7 +244,7 @@ fn library_holders(state: &GameState, player: PlayerId) -> Vec<TriggerHolder> {
     let mut cards: Vec<&CardInstance> = state.players[player]
         .library
         .iter()
-        .filter(|card| with_face(state, card, |script| !script.deck_triggers.is_empty()))
+        .filter(|card| !crate::scripts::script_of(state, card).deck_triggers.is_empty())
         .collect();
     // Stable, as TS's `Array.prototype.sort` (SURFACE §4.4.1).
     cards.sort_by(|a, b| {

@@ -32,18 +32,6 @@ use crate::subsystems::copied_text::copied_echo;
 use crate::wire::{CardType, GameEvent, PlayerId, Zone};
 use crate::zones::{MoveToZoneOptions, MoveResult, OffFieldZone, move_to_zone, report_graveyard_landing};
 
-/// TS `scripts.flagsOf(instance)`, a private copy (fullsend rule 5): the running face's static flags —
-/// the radiant text's once the instance is Radiant (§5.2), none at all for a Vanilla instance (R115).
-fn flags_of_card(state: &GameState, card: &CardInstance) -> StaticFlags {
-    let script: Script = if card.vanilla {
-        empty_script()
-    } else {
-        let entry = crate::scripts::script_of(state, &card.def_id);
-        if card.radiant { entry.radiant } else { entry.base }
-    };
-    script.flags()
-}
-
 /// TS `tuning.tunedCount(card, "Echo", printed)`, a private copy (fullsend rule 5). B3.4, R386: the
 /// value a numbered keyword has now — its printed value (or the value KY's Constant set outright,
 /// `tuning.set`) moved by the card's tuning steps for its key. A number the card does not print (0) is
@@ -153,7 +141,7 @@ pub fn drop_echo_repeats(state: &mut GameState, instance_id: &str) {
 /// (fused scripts are built from the state, SURFACE §6.6), so it is required here.
 pub fn printed_echo(card: &CardInstance, state: &GameState) -> i32 {
     // B3.4: Echo X is a numbered keyword Degrade and Upgrade move, read through the card's tuning.
-    let own = 0.max(tuned_echo(card, flags_of_card(state, card).echo.unwrap_or(0)));
+    let own = 0.max(tuned_echo(card, crate::scripts::flags_of(state, card).echo.unwrap_or(0)));
     own + copied_echo(state, card)
 }
 
@@ -177,7 +165,7 @@ pub fn echo_grant_of(state: &GameState, player: PlayerId, modifier: &PlayerModif
     if !matches!(source.zone, Zone::Field { .. }) || source.controller != player {
         return 0;
     }
-    0.max(flags_of_card(state, source).echo_grant.unwrap_or(*amount))
+    0.max(crate::scripts::flags_of(state, source).echo_grant.unwrap_or(*amount))
 }
 
 /// R30: Twinspell grants Echo to the next Spell and "stays until a spell is played, then goes to the

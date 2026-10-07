@@ -90,16 +90,6 @@ const PRINTED_NUMBERED: &[(NumberedKey, KeywordKind)] = &[
     (NumberedKey::SpellDamage, KeywordKind::SpellDamage),
 ];
 
-/// TS `scripts.scriptOf(instance)`: the face that is running, none on a Vanilla card (§6.3, R115).
-/// A private copy over `scripts::script_of` (SURFACE §6.6).
-fn running_script(state: &GameState, instance: &CardInstance) -> Script {
-    if instance.vanilla {
-        return empty_script();
-    }
-    let entry = crate::scripts::script_of(state, &instance.def_id);
-    if instance.radiant { entry.radiant } else { entry.base }
-}
-
 /// `tuning::tuned_count(instance, key, printed)` with its default floor (`TUNED_FLOOR`, which is
 /// `TUNE_MIN_AMOUNT`): the printed value moved by the card's tuning steps for `key`, or set outright by
 /// KY's Constant. A private copy: a number the card does not print (0) is never tuned into existence.
@@ -239,7 +229,7 @@ pub fn numbered_keywords_on(state: &GameState, card: &CardInstance) -> Vec<Numbe
             ParamBetter::Up,
         ),
     }
-    let script = running_script(state, card);
+    let script = crate::scripts::script_of(state, card);
     let flags = script.flags();
     add(&mut out, NumberedKey::Echo, flags.echo.unwrap_or(0), ParamBetter::Up);
     add(

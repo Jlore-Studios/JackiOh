@@ -72,17 +72,6 @@ pub struct ClimbedPrice {
     pub used: Vec<String>,
 }
 
-/// TS `scripts.scriptOf(instance)`: the running face's script, and none for a Vanilla card (§6.3,
-/// R115). A private copy over `scripts::script_of(state, def_id)` (SURFACE §6.6).
-fn script_of_card(state: &GameState, card: &CardInstance) -> Script {
-    if card.vanilla {
-        return crate::script::empty_script();
-    }
-    let scripts = crate::scripts::script_of(state, &card.def_id);
-    let face = if card.radiant { &scripts.radiant } else { &scripts.base };
-    face.clone()
-}
-
 // ---------------------------------------------------------------------------
 // Matching
 // ---------------------------------------------------------------------------
@@ -135,7 +124,7 @@ fn acting_permanents(state: &GameState) -> Vec<&CardInstance> {
 pub fn cost_auras_for(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<CostAura> {
     let mut out: Vec<CostAura> = Vec::new();
     for source in acting_permanents(state) {
-        let script = script_of_card(state, source);
+        let script = crate::scripts::script_of(state, source);
         let Some(hook) = script.cost_aura.as_ref() else {
             continue;
         };

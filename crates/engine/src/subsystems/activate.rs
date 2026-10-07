@@ -136,16 +136,6 @@ pub const ACTIVATE_TUNING_KEY: &str = "Activate";
 // The card and its abilities
 // ---------------------------------------------------------------------------
 
-/// TS `scripts.scriptOf(instance)`: the running face's script, none on a Vanilla card (§6.3). A private
-/// copy on purpose (fullsend builder rule 5) over SURFACE §6.6's `script_of(state, def_id)`.
-fn script_of_card(state: &GameState, card: &CardInstance) -> Script {
-    if card.vanilla {
-        return empty_script();
-    }
-    let entry = crate::scripts::script_of(state, &card.def_id);
-    if card.radiant { entry.radiant } else { entry.base }
-}
-
 /// B3.2 rule 2: the card acts on the field — it is the top of its pile (a card dormant under a Stack
 /// pile is not on the field for effects, R13, and the same holds under a backrow pile), and a backrow
 /// card is face-up: a face-down card has no text anyone can use.
@@ -165,7 +155,7 @@ pub fn is_acting_on_field(state: &GameState, card: &CardInstance) -> bool {
 /// ids made unique for a fused card (`script::activation_decls`, R102), less any it does not have on this
 /// instance (`ActivationDecl.has`).
 pub fn abilities_of(state: &GameState, card: &CardInstance) -> Vec<ActivationDecl> {
-    activation_decls(&script_of_card(state, card))
+    activation_decls(&crate::scripts::script_of(state, card))
         .into_iter()
         .filter(|decl| {
             decl.has.as_ref().is_none_or(|has| {

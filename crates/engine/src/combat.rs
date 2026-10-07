@@ -99,24 +99,6 @@ fn active_now(state: &GameState, id: &str) -> bool {
     find_instance(state, id).is_some_and(|card| is_active_on_field(state, card))
 }
 
-/// TS `scripts.scriptOf`: the face that is running; a Vanilla instance runs no script (§6.3, R115).
-fn script_of_card(state: &GameState, card: &CardInstance) -> Script {
-    if card.vanilla {
-        return empty_script();
-    }
-    let scripts = crate::scripts::script_of(state, &card.def_id);
-    if card.radiant {
-        scripts.radiant.clone()
-    } else {
-        scripts.base.clone()
-    }
-}
-
-/// TS `scripts.flagsOf`.
-fn flags_of_card(state: &GameState, card: &CardInstance) -> StaticFlags {
-    script_of_card(state, card).flags()
-}
-
 fn to_json<T: Serialize>(value: &T) -> Value {
     serde_json::to_value(value).unwrap_or(Value::Null)
 }
@@ -258,7 +240,7 @@ pub fn switch_position(
         return Err(EngineError::new("that unit has already acted this turn"));
     }
     // §4.1: Spikey Pillow cannot be switched to Defense Position, by an action or by an effect.
-    if to == Position::Def && flags_of_card(sink.state, &unit).never_defense == Some(true) {
+    if to == Position::Def && crate::scripts::flags_of(sink.state, &unit).never_defense == Some(true) {
         return Err(EngineError::new("that unit cannot be in Defense Position"));
     }
 
@@ -1338,7 +1320,7 @@ fn close_combat(sink: &mut EngineSink<'_>, attacker: &CardInstance, target: &Att
     let since = crate::stays::exit_mark(sink.state);
     let from = sink.events.len();
     crate::state_check::state_check(sink);
-    if script_of_card(sink.state, &snapshot).after_attack.is_none() || sink.state.result.is_some() {
+    if crate::scripts::script_of(sink.state, &snapshot).after_attack.is_none() || sink.state.result.is_some() {
         return;
     }
     let destroyed_ids: Vec<String> = sink.events[from.min(sink.events.len())..]
@@ -1377,7 +1359,7 @@ fn owe_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack) {
 
 /// The attacker's hook, from `paused` when a question split it, then the check that follows it.
 fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: Option<PausedStep>) {
-    let Some(hook) = script_of_card(sink.state, &owed.snapshot).after_attack else {
+    let Some(hook) = crate::scripts::script_of(sink.state, &owed.snapshot).after_attack else {
         return;
     };
     if sink.state.result.is_some() {

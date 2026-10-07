@@ -177,16 +177,6 @@ fn exit_mark(state: &GameState) -> u32 {
     state.field_exits.as_ref().map_or(0, |exits| exits.count)
 }
 
-/// TS `scripts.scriptOf(instance)`: the face that is running — radiant text once the instance is
-/// Radiant (§5.2) — and no script at all on a Vanilla instance (§6.3, R115).
-fn face_script(state: &GameState, instance: &CardInstance) -> Script {
-    if instance.vanilla {
-        return Script::default();
-    }
-    let entry = crate::scripts::script_of(state, &instance.def_id);
-    if instance.radiant { entry.radiant } else { entry.base }
-}
-
 // ---------------------------------------------------------------------------
 // The stored records
 // ---------------------------------------------------------------------------
@@ -1146,7 +1136,7 @@ pub fn run_hook_resumable(
 /// caller running a sequence of its own (setup, a draw loop) owes its remainder behind.
 pub fn run_start_of_game(sink: &mut EngineSink<'_>, card: &CardInstance, controller: PlayerId) -> bool {
     // A Vanilla card carries no text (§6.3), and a card without the clause has nothing to run.
-    if face_script(sink.state, card).start_of_game.is_none() {
+    if crate::scripts::script_of(sink.state, card).start_of_game.is_none() {
         return true;
     }
     run_hook_resumable(

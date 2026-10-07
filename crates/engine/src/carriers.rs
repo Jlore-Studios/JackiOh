@@ -25,20 +25,10 @@ use crate::zones::{ZoneSlot, first_entry_zone, is_open, slots_of, step_into_unit
 /// Memory, so R78 clears it when the card leaves the field.
 const STRANDED_KEY: &str = "__stranded";
 
-/// TS `scripts.scriptOf(instance)`: the running face's script, none on a Vanilla card (§6.3, R115).
-/// A private copy over `scripts::script_of` (SURFACE §6.6).
-fn running_script(state: &GameState, instance: &CardInstance) -> Script {
-    if instance.vanilla {
-        return empty_script();
-    }
-    let entry = crate::scripts::script_of(state, &instance.def_id);
-    if instance.radiant { entry.radiant } else { entry.base }
-}
-
 /// `zones::is_carrier`: a backrow card whose text lets a Unit be played on top of it (`carrier`, or
 /// Classic+ #33's `fusesCarried`, R653); a Vanilla carrier carries nothing more (§6.3, R115).
 fn is_carrier(state: &GameState, card: &CardInstance) -> bool {
-    let flags = running_script(state, card).flags();
+    let flags = crate::scripts::script_of(state, card).flags();
     flags.carrier == Some(true) || flags.fuses_carried == Some(true)
 }
 

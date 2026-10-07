@@ -44,19 +44,6 @@ fn owned_defs<R: Borrow<CardDef>>(defs: impl IntoIterator<Item = R>) -> Vec<Card
     defs.into_iter().map(|def| def.borrow().clone()).collect()
 }
 
-/// TS `catalog.selfDefIds`: the catalog ids a card stands for — its own, or, for a fused card, every
-/// ingredient's, recursively (R387). Read through `subsystems::fuse`, which knows a digest id's list
-/// from the state (SURFACE §6.6: no process-wide digest table).
-fn self_def_ids(state: &GameState, def_id: &str) -> Vec<String> {
-    match crate::subsystems::fuse::fused_id_specs_in(state, def_id) {
-        None => vec![def_id.to_string()],
-        Some(specs) => specs
-            .iter()
-            .flat_map(|spec| self_def_ids(state, &spec.def_id))
-            .collect(),
-    }
-}
-
 /// R416: every non-token Classic and Classic+ card but `selfDefId`'s (R387), best first, ties by id.
 pub fn rank_perfect_hand(state: &GameState, viewer: PlayerId, options: RankPerfectHandOptions) -> Vec<Scored> {
     let base = dry_run_base(state, viewer);
@@ -66,7 +53,7 @@ pub fn rank_perfect_hand(state: &GameState, viewer: PlayerId, options: RankPerfe
         None => Vec::new(),
         Some(self_def_id) => {
             let mut ids: Vec<String> = Vec::new();
-            for id in self_def_ids(state, self_def_id) {
+            for id in crate::catalog::self_def_ids(Some(state), self_def_id) {
                 if !ids.contains(&id) {
                     ids.push(id);
                 }

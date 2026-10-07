@@ -36,62 +36,6 @@ use crate::state::{CardInstance, GameState};
 use crate::tuning::{add_step, tidy_tuning, tuning_of};
 use crate::wire::{Param, ParamBetter, ParamTunedOn, Tuning};
 
-/// `work.rs`'s `PART_KEY`: where a context's data names the ingredient path of a fused card's part.
-const PART_KEY: &str = "__part";
-
-/// R179, R468: what follows `t-<n>:` in a digest id (`catalog.rs`'s `FUSED_DIGEST_MARK`).
-const FUSED_DIGEST_MARK: char = '#';
-
-/// R469: the mark an ingredient that went in on its Radiant face carries in a readable fused id.
-const RADIANT_INGREDIENT_MARK: char = '*';
-
-/// The length of a fused id's `t-<n>:` head (TS `/^t-\d+:/`), or `None` for any other id.
-fn fused_head_len(def_id: &str) -> Option<usize> {
-    let rest = def_id.strip_prefix("t-")?;
-    let digits = rest.bytes().take_while(u8::is_ascii_digit).count();
-    if digits == 0 || rest.as_bytes().get(digits) != Some(&b':') {
-        return None;
-    }
-    Some(2 + digits + 1)
-}
-
-/// R179, R468: the ingredient ids a fused id names (TS `catalog.fusedIdParts`): a readable id split at
-/// its top-level `+` signs, a fused ingredient in parentheses, a Radiant one's `*` dropped; a digest id
-/// read off its definition's `ingredients`. `None` for any other id.
-fn fused_id_parts(state: &GameState, def_id: &str) -> Option<Vec<String>> {
-    let head = fused_head_len(def_id)?;
-    if def_id[head..].starts_with(FUSED_DIGEST_MARK) {
-        let def = state.transient_defs.get(def_id)?;
-        let list = def.ingredients.as_ref()?;
-        return Some(list.iter().map(|entry| entry.def_id.clone()).collect());
-    }
-    let bytes = def_id.as_bytes();
-    let mut parts: Vec<String> = Vec::new();
-    let mut depth: i32 = 0;
-    let mut start = head;
-    for at in head..=def_id.len() {
-        let byte = bytes.get(at).copied();
-        if byte == Some(b'(') {
-            depth += 1;
-        } else if byte == Some(b')') {
-            depth -= 1;
-        } else if (byte == Some(b'+') && depth == 0) || at == def_id.len() {
-            let mut part = &def_id[start..at];
-            if let Some(stripped) = part.strip_suffix(RADIANT_INGREDIENT_MARK) {
-                part = stripped;
-            }
-            let name = if part.len() >= 2 && part.starts_with('(') && part.ends_with(')') {
-                &part[1..part.len() - 1]
-            } else {
-                part
-            };
-            parts.push(name.to_string());
-            start = at + 1;
-        }
-    }
-    if parts.iter().all(|part| !part.is_empty()) { Some(parts) } else { None }
-}
-
 /// B3.4 rule 5: the numbers a definition declares. A catalog card's are its `params`; a fused
 /// definition's (R77, R102) are its ingredients', the first declaration of each key kept. Empty for a
 /// card that declares none.
@@ -100,7 +44,7 @@ pub fn params_of(state: &GameState, def_id: &str) -> Vec<Param> {
     if let Some(params) = def.params.as_ref() {
         return params.clone();
     }
-    let Some(parts) = fused_id_parts(state, def_id) else {
+    let Some(parts) = crate::catalog::fused_id_parts(Some(state), def_id) else {
         return Vec::new();
     };
     let mut out: Vec<Param> = Vec::new();
@@ -321,14 +265,6 @@ impl ParamContext for CostArgs<'_> {
     }
 }
 
-/// The ingredient path a context's data names (`work::PART_KEY`), or `None` outside a fused card's
-/// part (TS `work.partPathOf`): the numbers of the stored list, `None` when it holds none.
-fn part_path_of(data: &IndexMap<String, Value>) -> Option<Vec<Value>> {
-    let raw = data.get(PART_KEY)?.as_array()?;
-    let path: Vec<Value> = raw.iter().filter(|at| at.is_number()).cloned().collect();
-    if path.is_empty() { None } else { Some(path) }
-}
-
 /// B3.4 rule 5: what a card script reads in place of a literal — `param(ctx, "damage")` on a card
 /// whose text says "Deal {damage} damage". The number is the running card's (`ctx.self`), on the face
 /// that is running (`ctx.radiant`), read off the declaration of the text that is running: on a fused
@@ -349,16 +285,13 @@ pub fn param<C: ParamContext + ?Sized>(ctx: &C, key: &str) -> i32 {
         Some(def_id) => def_id,
         None => panic!("param \"{key}\": no card to read it on (B3.4 rule 5)"),
     };
-    let path = ctx.param_data().and_then(part_path_of);
+    let path = ctx.param_data().and_then(crate::work::part_path_of);
     for index in path.iter().flatten() {
-        let part = index
-            .as_u64()
-            .and_then(|at| usize::try_from(at).ok())
-            .and_then(|at| fused_id_parts(state, &def_id).and_then(|parts| parts.get(at).cloned()));
+        let part = crate::catalog::fused_id_parts(Some(state), &def_id).and_then(|parts| parts.get(*index).cloned());
         match part {
             Some(part) => def_id = part,
             None => {
-                let joined: Vec<String> = path.iter().flatten().map(Value::to_string).collect();
+                let joined: Vec<String> = path.iter().flatten().map(usize::to_string).collect();
                 panic!(
                     "param \"{key}\": {def_id} has no ingredient {index} on the part path {} (R102, R468)",
                     joined.join(".")

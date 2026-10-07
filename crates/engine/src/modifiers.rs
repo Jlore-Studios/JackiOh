@@ -14,22 +14,6 @@ use crate::state::{
 };
 use crate::wire::{GameEvent, PLAYER_IDS, PlayerId, Row, ZoneName};
 
-/// TS `scripts.scriptOf(instance)`: the face that is running — radiant text once the instance is
-/// Radiant (§5.2) — and no script at all on a Vanilla instance (§6.3, R115). A private copy over
-/// `scripts::script_of(state, def_id)`, which composes a fused card's scripts from the state.
-fn face_script(state: &GameState, instance: &CardInstance) -> Script {
-    if instance.vanilla {
-        return Script::default();
-    }
-    let entry = crate::scripts::script_of(state, &instance.def_id);
-    if instance.radiant { entry.radiant } else { entry.base }
-}
-
-/// TS `scripts.flagsOf(instance)`: `scriptOf(instance).staticFlags ?? {}`.
-fn flags_of(state: &GameState, instance: &CardInstance) -> StaticFlags {
-    face_script(state, instance).flags()
-}
-
 /// TS `zones.slotsOf(player, row)`'s lane count: a row's size (§3), lanes 1 up.
 fn row_size(row: Row) -> i32 {
     match row {
@@ -172,7 +156,7 @@ pub fn install_lasting_modifiers(sink: &mut EngineSink<'_>) {
                 let Some(card) = card_at(sink.state, player, row, lane).cloned() else {
                     continue;
                 };
-                let amount = flags_of(sink.state, &card).echo_grant.unwrap_or(0).max(0);
+                let amount = crate::scripts::flags_of(sink.state, &card).echo_grant.unwrap_or(0).max(0);
                 if amount <= 0 {
                     continue;
                 }

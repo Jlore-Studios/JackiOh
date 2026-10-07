@@ -58,21 +58,11 @@ pub fn registered_scripts() -> IndexMap<String, CardScripts> {
     }
 }
 
-/// The length of a fused id's `t-<n>:` head (TS `/^t-\d+:/`), or `None` for any other id.
-fn fused_head_len(def_id: &str) -> Option<usize> {
-    let rest = def_id.strip_prefix("t-")?;
-    let digits = rest.bytes().take_while(u8::is_ascii_digit).count();
-    if digits == 0 || rest.as_bytes().get(digits) != Some(&b':') {
-        return None;
-    }
-    Some(2 + digits + 1)
-}
-
 /// R179, R468: how many ingredients a fused id names (TS `fuse.fusedIngredientSpecs`' length): a
 /// readable id's top-level `+`-separated parts, or a digest id's (`t-<n>:#<hex>`) list off its
 /// definition. `None` for any other id, or a malformed one.
 fn fused_ingredient_count(state: &GameState, def_id: &str) -> Option<usize> {
-    let head = fused_head_len(def_id)?;
+    let head = crate::catalog::fused_head_len(def_id)?;
     if def_id[head..].starts_with('#') {
         return state
             .transient_defs

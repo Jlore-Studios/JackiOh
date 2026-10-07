@@ -45,17 +45,6 @@ pub struct PlayPayment {
     pub plague: Option<PlagueSpend>,
 }
 
-/// TS `scripts.scriptOf(instance)`: the running face's script, and none for a Vanilla card (§6.3,
-/// R115). A private copy over `scripts::script_of(state, def_id)` (SURFACE §6.6).
-fn script_of_card(state: &GameState, card: &CardInstance) -> Script {
-    if card.vanilla {
-        return crate::script::empty_script();
-    }
-    let scripts = crate::scripts::script_of(state, &card.def_id);
-    let face = if card.radiant { &scripts.radiant } else { &scripts.base };
-    face.clone()
-}
-
 /// E11: every permission the player has now — from each card acting on their side of the field (the
 /// top of a pile, a backrow card) whose running face grants one, in lane order, units first. A Vanilla
 /// card grants nothing (`script_of`, R115); a card dormant under a Stack pile is not on the field for
@@ -70,7 +59,7 @@ pub fn graveyard_grants_of(state: &GameState, player: PlayerId) -> Vec<Graveyard
             if source.controller != player {
                 continue;
             }
-            let script = script_of_card(state, source);
+            let script = crate::scripts::script_of(state, source);
             let Some(hook) = script.graveyard_play.as_ref() else {
                 continue;
             };

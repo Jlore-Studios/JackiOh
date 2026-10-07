@@ -18,16 +18,6 @@ use crate::script::{HookArgs, ReplacementMoment, ReplacementWhere, Script, Targe
 use crate::state::{CardInstance, EngineError, GameState, find_instance};
 use crate::wire::{CardType, PlayerId, Row, Selection, TargetAim, TargetDecl, Zone, opponent_of};
 
-/// TS `scripts.scriptOf(instance)`: the face that is running — radiant text once the instance is
-/// Radiant (§5.2) — and no script at all on a Vanilla instance (§6.3, R115).
-fn face_script(state: &GameState, instance: &CardInstance) -> Script {
-    if instance.vanilla {
-        return Script::default();
-    }
-    let entry = crate::scripts::script_of(state, &instance.def_id);
-    if instance.radiant { entry.radiant } else { entry.base }
-}
-
 /// A card acting on the field: a unit on top of its pile, or a backrow card (§3.2, R13).
 fn acts_on_field(state: &GameState, card: &CardInstance) -> bool {
     matches!(card.zone, Zone::Field { .. }) && !crate::zones::is_buried(state, card)
@@ -67,7 +57,7 @@ pub fn targeting_discards_of(state: &GameState, card: &CardInstance) -> i32 {
     if crate::catalog::fused_id_parts(Some(state), &card.def_id).is_some() {
         return fused_cost(state, card, &card.def_id);
     }
-    face_cost(&face_script(state, card), state, card)
+    face_cost(&crate::scripts::script_of(state, card), state, card)
 }
 
 /// R450: whether `chooser` could pay to target `card`: at least its cost in OTHER cards in their hand —
@@ -103,7 +93,7 @@ pub fn may_target(
 
 /// The card's "targeted" replacements that answer from a hand (`{ on: "targeted", where: "hand" }`).
 fn hand_interpositions(state: &GameState, card: &CardInstance) -> Vec<TargetedReplacement> {
-    face_script(state, card)
+    crate::scripts::script_of(state, card)
         .replacements
         .into_iter()
         .filter(|entry| entry.on == ReplacementMoment::Targeted && entry.where_ == Some(ReplacementWhere::Hand))

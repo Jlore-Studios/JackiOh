@@ -83,16 +83,6 @@ use crate::zones::{active_units_of, card_at, is_buried, slots_of};
 // (`Script.quests`: the quest that opens as it enters, every quest, every reward).
 pub use crate::script::{QuestBook, QuestDef, QuestGoal, QuestRewardDef};
 
-/// TS `scripts.scriptOf(instance)`: the running face's script, none on a Vanilla card (§6.3, R115).
-/// A private copy on purpose (fullsend builder rule 5) over SURFACE §6.6's `script_of(state, def_id)`.
-fn script_of_card(state: &GameState, card: &CardInstance) -> Script {
-    if card.vanilla {
-        return empty_script();
-    }
-    let entry = crate::scripts::script_of(state, &card.def_id);
-    if card.radiant { entry.radiant } else { entry.base }
-}
-
 /// The goals the state check reads off the board rather than counting.
 fn is_board_goal(goal: &QuestGoal) -> bool {
     matches!(
@@ -117,7 +107,7 @@ pub fn quest_goal_of(quest: &QuestDef) -> i32 {
 
 /// The quest tree a card's running face declares, or `None` (a Vanilla card has none, R115).
 pub fn quest_book_of(state: &GameState, card: &CardInstance) -> Option<QuestBook> {
-    script_of_card(state, card).quests
+    crate::scripts::script_of(state, card).quests
 }
 
 pub fn quest_def_of<'b>(book: &'b QuestBook, id: &str) -> Option<&'b QuestDef> {

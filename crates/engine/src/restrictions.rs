@@ -31,21 +31,6 @@ use crate::state::{CardInstance, EngineError, GameState};
 use crate::wire::{CardType, KeywordKind, Row, Zone};
 use crate::zones::{card_at, slot_of};
 
-/// TS `scripts.scriptOf(instance)`: the face that is running, none on a Vanilla card (§6.3, R115).
-/// A private copy over `scripts::script_of` (SURFACE §6.6).
-fn running_script(state: &GameState, instance: &CardInstance) -> Script {
-    if instance.vanilla {
-        return empty_script();
-    }
-    let entry = crate::scripts::script_of(state, &instance.def_id);
-    if instance.radiant { entry.radiant } else { entry.base }
-}
-
-/// TS `scripts.flagsOf(instance)`: `scriptOf(instance).staticFlags ?? {}`.
-fn flags_of(state: &GameState, instance: &CardInstance) -> StaticFlags {
-    running_script(state, instance).flags()
-}
-
 /// `faces::card_type_of` for a definition and a face alone (TS passed `{ defId, radiant }`, a card
 /// with no zone): the running face's own type, else the definition's.
 fn type_of_face(state: &GameState, def_id: &str, radiant: bool) -> CardType {
@@ -100,19 +85,19 @@ pub fn unaffected_by(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
 
 /// E35: this unit may make no attack, declared or forced ("can't attack or be attacked").
 pub fn cannot_attack(state: &GameState, unit: &CardInstance) -> bool {
-    flags_of(state, unit).cant_attack_or_be_attacked == Some(true)
+    crate::scripts::flags_of(state, unit).cant_attack_or_be_attacked == Some(true)
 }
 
 /// E35: no attack may be made on this unit, declared or forced. Effects still target and hit it.
 pub fn cannot_be_attacked(state: &GameState, unit: &CardInstance) -> bool {
-    let flags = flags_of(state, unit);
+    let flags = crate::scripts::flags_of(state, unit);
     flags.cant_be_attacked == Some(true) || flags.cant_attack_or_be_attacked == Some(true)
 }
 
 /// E35: only a unit standing in this unit's lane may attack it. (TS took the unit alone; its flags are
 /// read through the state here, which composes a fused card's script.)
 pub fn attackable_only_from_lane(state: &GameState, unit: &CardInstance) -> bool {
-    flags_of(state, unit).attacked_only_from_lane == Some(true)
+    crate::scripts::flags_of(state, unit).attacked_only_from_lane == Some(true)
 }
 
 /// E35: why the unit restrictions bar `attacker` from attacking `target` — a declared attack or a
@@ -160,7 +145,7 @@ pub fn can_go_berserk(state: &GameState, card: &CardInstance) -> bool {
     if !active_on_field(state, card) {
         return false;
     }
-    card.berserk != Some(true) && flags_of(state, card).never_berserk != Some(true)
+    card.berserk != Some(true) && crate::scripts::flags_of(state, card).never_berserk != Some(true)
 }
 
 /// The card that acts in its zone: on the field and the top of its pile (§3.2, R13).

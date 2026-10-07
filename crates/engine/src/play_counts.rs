@@ -26,18 +26,6 @@ use crate::script::{HookArgs, Script, empty_script};
 use crate::state::{CardInstance, FaceUpRecord, GameLog, GameState, PlayRecord};
 use crate::wire::{CardType, PlayerId, Tag};
 
-/// TS `scripts.scriptOf(instance)`, a private copy (fullsend rule 5): the face that is running — the
-/// radiant text once the instance is Radiant (§5.2) — and no script at all for a Vanilla instance
-/// (§6.3 Vanilla, R115). `scripts::script_of` answers for a definition id, fused ids included (SURFACE
-/// §6.6), so the face is picked here.
-fn running_script(state: &GameState, card: &CardInstance) -> Script {
-    if card.vanilla {
-        return empty_script();
-    }
-    let entry = crate::scripts::script_of(state, &card.def_id);
-    if card.radiant { entry.radiant } else { entry.base }
-}
-
 /// R451: what a play records as the card played — the card itself, or what its `recordsPlayAs` hook
 /// names (Classic #57 Echo records the Spell it copied; null records nothing). A fused card records
 /// itself: its combined text is its ingredients' (R102), and no ingredient names another card for it.
@@ -49,7 +37,7 @@ pub fn play_record_of(state: &GameState, card: &CardInstance) -> Option<PlayReco
     if fused_id_parts(Some(state), &card.def_id).is_some() {
         return Some(own);
     }
-    let script = running_script(state, card);
+    let script = crate::scripts::script_of(state, card);
     let Some(hook) = script.records_play_as.as_ref() else {
         return Some(own);
     };

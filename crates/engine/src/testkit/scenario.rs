@@ -1348,6 +1348,16 @@ impl Scenario {
         self.live(&id)
     }
 
+    /// The live instance, for a test that edits a card between steps (TS wrote through `s.card(…)`'s
+    /// live object). Resolved as `card()` resolves it.
+    pub fn card_mut(&mut self, card: impl Into<CardRef>) -> &mut CardInstance {
+        let id = or_fail(self.resolve(&card.into(), Where::Any, "card"));
+        match find_instance_mut(&mut self.current, &id) {
+            Some(card) => card,
+            None => panic!("{id} is in no zone any more"),
+        }
+    }
+
     /// §10.4's computed view: attack, maxHealth, health, keywords, armor, position.
     pub fn stats(&self, card: impl Into<CardRef>) -> UnitView {
         let id = or_fail(self.resolve(&card.into(), Where::Any, "stats"));

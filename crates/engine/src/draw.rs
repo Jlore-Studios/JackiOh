@@ -27,17 +27,6 @@ use crate::wire::{
     opponent_of,
 };
 
-/// TS `scripts.scriptOf(instance)`: the running face's script, and none for a Vanilla card (§6.3,
-/// R115). A private copy over `scripts::script_of(state, def_id)` (SURFACE §6.6).
-fn script_of_card(state: &GameState, card: &CardInstance) -> Script {
-    if card.vanilla {
-        return crate::script::empty_script();
-    }
-    let scripts = crate::scripts::script_of(state, &card.def_id);
-    let face = if card.radiant { &scripts.radiant } else { &scripts.base };
-    face.clone()
-}
-
 /// R151: a card whose script has a start-of-game hook runs it when it ARRIVES in a hand or a
 /// library, and not only at §2.1 step 4. R43 words the rule as an invariant rather than as a moment —
 /// "at start of game every Heroic Power in either player's hand or library rolls its power … and one
@@ -68,7 +57,7 @@ fn run_arrival_hooks(sink: &mut EngineSink, instance: &CardInstance) {
 fn infinite_reserves_source(sink: &EngineSink, player: PlayerId) -> Option<CardInstance> {
     for slot in crate::zones::slots_of(player, Row::Backrow) {
         if let Some(card) = crate::zones::card_at(sink.state, &slot)
-            && script_of_card(sink.state, card).flags().infinite_reserves == Some(true)
+            && crate::scripts::script_of(sink.state, card).flags().infinite_reserves == Some(true)
         {
             return Some(card.clone());
         }
@@ -292,7 +281,7 @@ pub fn draw_limit_of(state: &GameState, player: PlayerId) -> Option<i32> {
     let mut lowest: Option<i32> = None;
     for side in PLAYER_IDS {
         for card in text_on_field(state, side) {
-            let script = script_of_card(state, card);
+            let script = crate::scripts::script_of(state, card);
             let Some(hook) = script.draw_limit.as_ref() else {
                 continue;
             };
@@ -344,7 +333,7 @@ fn enchanted_cast_on_draw(card: &CardInstance) -> bool {
 /// enchantment riding it (Classic+ #40 Appropriations), or, for a card that has the last Spell's text
 /// (B5 E14, Classic #57 Echo, R547), that Spell's Cast on draw.
 pub fn casts_on_draw(state: &GameState, card: &CardInstance) -> bool {
-    script_of_card(state, card).flags().cast_on_draw == Some(true)
+    crate::scripts::script_of(state, card).flags().cast_on_draw == Some(true)
         || enchanted_cast_on_draw(card)
         || crate::subsystems::copied_text::copied_casts_on_draw(state, card)
 }

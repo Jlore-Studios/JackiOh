@@ -86,21 +86,6 @@ impl<'a> From<Option<&'a CardInstance>> for CardOrId<'a> {
     }
 }
 
-/// TS `scripts.scriptOf(instance)`: the face that is running, none on a Vanilla card (§6.3, R115).
-/// A private copy over `scripts::script_of` (SURFACE §6.6).
-fn running_script(state: &GameState, instance: &CardInstance) -> Script {
-    if instance.vanilla {
-        return empty_script();
-    }
-    let entry = crate::scripts::script_of(state, &instance.def_id);
-    if instance.radiant { entry.radiant } else { entry.base }
-}
-
-/// TS `scripts.flagsOf(instance)`.
-fn flags_of(state: &GameState, instance: &CardInstance) -> StaticFlags {
-    running_script(state, instance).flags()
-}
-
 /// §10.1's hero block for one player. `health` is the current total that §4.4 damages and §2.6 reads
 /// for the loss check; `armor` is the stored field §4.4 step 2 subtracts, not a computed total, so a
 /// card that wants "the Armor this hero has right now" wants the damage pipeline's own reader and
@@ -350,7 +335,7 @@ pub fn granted_combo_live(state: &GameState, player: PlayerId) -> bool {
     }
     let granted = permanents_held_by(state, player)
         .iter()
-        .any(|held| match flags_of(state, held).quickstriker {
+        .any(|held| match crate::scripts::flags_of(state, held).quickstriker {
             Some(FlagOrCount::Flag(flag)) => flag,
             Some(FlagOrCount::Count(count)) => count > 0,
             None => false,

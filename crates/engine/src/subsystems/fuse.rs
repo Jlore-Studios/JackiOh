@@ -314,16 +314,6 @@ fn rarest_of(defs: &[CardDef]) -> Rarity {
     best
 }
 
-/// The length of a fused id's head `t-<n>:` (TS `/^t-\d+:/`), or `None` for any other id.
-fn fused_head_len(def_id: &str) -> Option<usize> {
-    let rest = def_id.strip_prefix("t-")?;
-    let digits = rest.bytes().take_while(u8::is_ascii_digit).count();
-    if digits == 0 || rest.as_bytes().get(digits) != Some(&b':') {
-        return None;
-    }
-    Some(2 + digits + 1)
-}
-
 /// The id a transient def gets (R102, R179): `t-<n>`, where n depends only on how many transient defs
 /// the state already holds, so the same action list always produces the same id (§9.3) — followed by
 /// the ids of the ingredients it was fused from, `t-<n>:<a>+<b>`. An ingredient that is itself a
@@ -371,7 +361,7 @@ fn next_transient_id(state: &GameState, specs: &[FusedIngredient]) -> String {
 /// An ingredient as a fused id writes it: in parentheses when it is itself a fused card (R179), and
 /// followed by `*` when it went in on its Radiant face (R469).
 fn ingredient_name(spec: &FusedIngredient) -> String {
-    let name = if fused_head_len(&spec.def_id).is_some() {
+    let name = if crate::catalog::fused_head_len(&spec.def_id).is_some() {
         format!("({})", spec.def_id)
     } else {
         spec.def_id.clone()
@@ -402,71 +392,13 @@ pub fn fused_digest(text: &str) -> String {
     format!("{h2:08x}{h1:08x}")
 }
 
-/// R468: whether a fused id is a digest of its ingredients rather than their names.
-fn is_digest_id(def_id: &str) -> bool {
-    fused_head_len(def_id).is_some_and(|head| def_id[head..].starts_with(crate::catalog::FUSED_DIGEST_MARK))
-}
-
-fn copy_spec(entry: &FusedIngredient) -> FusedIngredient {
-    FusedIngredient {
-        def_id: entry.def_id.clone(),
-        radiant: if entry.radiant == Some(true) { Some(true) } else { None },
-    }
-}
-
-/// R179, R468, R469 (TS `catalog.fusedIdSpecs`, with the digest table read from the state): the
-/// ingredients a fused id names, in order, each with its Radiant mark; `None` for an id no Fuse minted,
-/// or a digest whose definition this state does not hold. A readable id is split at its top-level `+`
-/// signs (a fused ingredient in parentheses, a Radiant one followed by `*`); a digest id's list is its
-/// definition's (`CardDef.ingredients`), since SURFACE §6.6 keeps no process-wide table of them.
-pub fn fused_id_specs_in(state: &GameState, def_id: &str) -> Option<Vec<FusedIngredient>> {
-    let head = fused_head_len(def_id)?;
-    if is_digest_id(def_id) {
-        return state
-            .transient_defs
-            .get(def_id)
-            .and_then(|def| def.ingredients.as_ref())
-            .map(|list| list.iter().map(copy_spec).collect());
-    }
-    let mark = crate::catalog::RADIANT_INGREDIENT_MARK;
-    let bytes = def_id.as_bytes();
-    let mut specs: Vec<FusedIngredient> = Vec::new();
-    let mut depth: i32 = 0;
-    let mut start = head;
-    for at in head..=bytes.len() {
-        let byte = bytes.get(at).copied();
-        if byte == Some(b'(') {
-            depth += 1;
-        } else if byte == Some(b')') {
-            depth -= 1;
-        } else if (byte == Some(b'+') && depth == 0) || at == bytes.len() {
-            let mut part = &def_id[start..at];
-            let radiant = part.ends_with(mark);
-            if radiant {
-                part = &part[..part.len() - mark.len()];
-            }
-            let name = if part.len() >= 2 && part.starts_with('(') && part.ends_with(')') {
-                &part[1..part.len() - 1]
-            } else {
-                part
-            };
-            specs.push(FusedIngredient {
-                def_id: name.to_string(),
-                radiant: if radiant { Some(true) } else { None },
-            });
-            start = at + 1;
-        }
-    }
-    if specs.iter().all(|spec| !spec.def_id.is_empty()) { Some(specs) } else { None }
-}
-
 /// R179: the ingredient ids a fused def's id names, in ingredient order, or `None` for an id no Fuse
 /// minted (a catalog card's, or a bare `t-<n>`). The inverse of `next_transient_id`: the list is split
 /// at the `+` signs outside parentheses, and a parenthesised ingredient loses its parentheses
 /// (`fused_id_specs_in`, which R387's self-exclusion reads too). R468: a digest id's list comes from
 /// its definition in the state.
 pub fn fused_ingredients(state: &GameState, def_id: &str) -> Option<Vec<String>> {
-    let parts: Vec<String> = fused_id_specs_in(state, def_id)?
+    let parts: Vec<String> = crate::catalog::fused_id_specs(Some(state), def_id)?
         .into_iter()
         .map(|spec| spec.def_id)
         .collect();
@@ -475,7 +407,7 @@ pub fn fused_ingredients(state: &GameState, def_id: &str) -> Option<Vec<String>>
 
 /// R179, R468, R469: `fused_ingredients` with each ingredient's Radiant mark.
 pub fn fused_ingredient_specs(state: &GameState, def_id: &str) -> Option<Vec<FusedIngredient>> {
-    let specs = fused_id_specs_in(state, def_id)?;
+    let specs = crate::catalog::fused_id_specs(Some(state), def_id)?;
     if specs.len() >= FUSE_MIN_INGREDIENTS { Some(specs) } else { None }
 }
 
@@ -557,22 +489,12 @@ struct KeptCost {
     override_: Option<i32>,
 }
 
-/// TS `scripts.scriptOf(instance)`: the face that is running — none for a Vanilla card (§6.3, R115),
-/// the radiant text once the instance is Radiant (§5.2).
-fn running_script(state: &GameState, card: &CardInstance) -> Script {
-    if card.vanilla {
-        return Script::default();
-    }
-    let pair = crate::scripts::script_of(state, &card.def_id);
-    if card.radiant { pair.radiant } else { pair.base }
-}
-
 fn kept_cost_of(state: &GameState, kept: &CardInstance) -> KeptCost {
     if kept.cost_override.is_some() {
         return KeptCost::default();
     }
     let printed = crate::catalog::def_of(Some(state), &kept.def_id).cost;
-    if !matches!(printed, CardCost::Fixed(_)) && running_script(state, kept).cost.is_none() {
+    if !matches!(printed, CardCost::Fixed(_)) && crate::scripts::script_of(state, kept).cost.is_none() {
         return KeptCost {
             form: Some(printed),
             override_: None,
@@ -589,181 +511,12 @@ fn kept_cost_of(state: &GameState, kept: &CardInstance) -> KeptCost {
 // `work.ts`'s part paths), private copies so this module reads them exactly as it writes them.
 // ---------------------------------------------------------------------------------------------
 
-/// One ingredient of a fused card, as `scripts::INGREDIENTS_KEY` records it.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-struct IngredientRecord {
-    def_id: String,
-    embiggened: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    parts: Option<Vec<IngredientRecord>>,
-}
-
-fn records_from(raw: Option<&Value>) -> Option<Vec<IngredientRecord>> {
-    let list = raw?.as_array()?;
-    Some(
-        list.iter()
-            .filter_map(|entry| {
-                let record = entry.as_object()?;
-                let def_id = record.get("defId")?.as_str()?.to_string();
-                Some(IngredientRecord {
-                    def_id,
-                    embiggened: record.get("embiggened").and_then(Value::as_bool) == Some(true),
-                    parts: records_from(record.get("parts")),
-                })
-            })
-            .collect(),
-    )
-}
-
-/// The ingredient prices a kept fused card records, or `None` when it records none.
-fn ingredients_of(instance: &CardInstance) -> Option<Vec<IngredientRecord>> {
-    records_from(instance.memory.get(crate::scripts::INGREDIENTS_KEY))
-}
-
-/// R102: the price the text at `path` was played for — `path` is the text's place in the fusion, one
-/// index per level (`work::PART_KEY`'s path), and a card that records no prices has one, its own.
-fn ingredient_paid(instance: &CardInstance, path: &[i64]) -> bool {
-    let mut records = ingredients_of(instance);
-    let mut paid = instance.embiggened == Some(true);
-    for index in path {
-        let record = usize::try_from(*index)
-            .ok()
-            .and_then(|at| records.as_ref().and_then(|list| list.get(at)).cloned());
-        let Some(record) = record else {
-            return paid;
-        };
-        paid = record.embiggened;
-        records = record.parts;
-    }
-    paid
-}
-
-/// R102: the card as the text of ingredient `index` reads it — at that ingredient's price, carrying
-/// that ingredient's own record — for a hook that reads "this" rather than a context (§10.4's aura).
-/// The same instance when the card records no prices.
-fn as_ingredient(instance: &CardInstance, index: usize) -> CardInstance {
-    let Some(record) = ingredients_of(instance).and_then(|records| records.into_iter().nth(index)) else {
-        return instance.clone();
-    };
-    let mut card = instance.clone();
-    match record.parts {
-        None => {
-            card.memory.shift_remove(crate::scripts::INGREDIENTS_KEY);
-        }
-        Some(parts) => {
-            card.memory.insert(
-                crate::scripts::INGREDIENTS_KEY.to_string(),
-                serde_json::to_value(parts).unwrap_or(Value::Null),
-            );
-        }
-    }
-    card.embiggened = Some(record.embiggened);
-    card
-}
-
-/// What a Fuse records for the card it keeps (`INGREDIENTS_KEY`), or `None` when it records nothing.
-fn ingredient_record(kept: &CardInstance, ingredients: &[CardInstance]) -> Option<Vec<IngredientRecord>> {
-    let own = kept.embiggened == Some(true);
-    let records: Vec<IngredientRecord> = ingredients
-        .iter()
-        .map(|card| IngredientRecord {
-            def_id: card.def_id.clone(),
-            embiggened: card.embiggened == Some(true),
-            parts: ingredients_of(card),
-        })
-        .collect();
-    if records
-        .iter()
-        .all(|record| record.embiggened == own && record.parts.is_none())
-    {
-        None
-    } else {
-        Some(records)
-    }
-}
-
-/// The ingredient path a context's data names (`work::PART_KEY`), or `None` outside a fused card's part.
-fn part_path_of(data: &IndexMap<String, Value>) -> Option<Vec<i64>> {
-    let raw = data.get(crate::work::PART_KEY)?.as_array()?;
-    let path: Vec<i64> = raw.iter().filter_map(Value::as_i64).collect();
-    if path.is_empty() { None } else { Some(path) }
-}
-
 /// How much of `PART_KEY`'s path the combined hooks above the running one have used (`PART_DEPTH_KEY`).
 fn part_depth(data: &IndexMap<String, Value>) -> usize {
     data.get(crate::work::PART_DEPTH_KEY)
         .and_then(Value::as_u64)
         .and_then(|depth| usize::try_from(depth).ok())
         .unwrap_or(0)
-}
-
-/// The keys `effects::memory::remember` has written on a card (`work::REMEMBERED_KEY`).
-fn remembered_keys(memory: &IndexMap<String, Value>) -> Vec<String> {
-    memory
-        .get(crate::work::REMEMBERED_KEY)
-        .and_then(Value::as_array)
-        .map(|keys| {
-            keys.iter()
-                .filter_map(Value::as_str)
-                .map(str::to_string)
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-/// R102, R77 (TS `work.rerootRemembered`): a card a Fuse keeps becomes ingredient `index` of the new
-/// fusion, and what its texts remembered goes with them: its own `key` becomes `key@<index>`, and a key
-/// an earlier fusion's part wrote, `key@<path>`, becomes `key@<index>.<path>` — the path that text now
-/// runs at. So the card reads back what it remembered, and the ingredients fused onto it, which
-/// remember nothing yet, read nothing of it.
-fn reroot_remembered(memory: &mut IndexMap<String, Value>, index: i64) {
-    for key in remembered_keys(memory) {
-        let prefix = format!("{key}@");
-        let stored_keys: Vec<String> = memory.keys().cloned().collect();
-        for stored in stored_keys {
-            if stored != key && !stored.starts_with(&prefix) {
-                continue;
-            }
-            let path = if stored == key {
-                format!("{index}")
-            } else {
-                format!("{index}.{}", &stored[prefix.len()..])
-            };
-            let Some(value) = memory.shift_remove(&stored) else {
-                continue;
-            };
-            memory.insert(format!("{key}@{path}"), value);
-        }
-    }
-}
-
-/// R102, R384 (TS `work.memoryOfPart`): the memory as ingredient `index`'s text reads it from a hook
-/// that carries no context to name its place (an Activate ability's `canActivate` and `has`) — the
-/// inverse of `reroot_remembered`: what that text remembered, `key@<index>`, under `key`, what the
-/// ingredients fused into it remembered, `key@<index>.<path>`, under `key@<path>`, and what the other
-/// ingredients remembered left out. The engine's own entries, which no text remembered, stay as they are.
-fn memory_of_part(memory: &IndexMap<String, Value>, index: usize) -> IndexMap<String, Value> {
-    let mut out = memory.clone();
-    for key in remembered_keys(memory) {
-        let prefix = format!("{key}@");
-        let own = format!("{key}@{index}");
-        let own_prefix = format!("{own}.");
-        for stored in memory.keys() {
-            if *stored != key && !stored.starts_with(&prefix) {
-                continue;
-            }
-            out.shift_remove(stored);
-        }
-        for (stored, value) in memory {
-            if *stored == own {
-                out.insert(key.clone(), value.clone());
-            } else if let Some(rest) = stored.strip_prefix(&own_prefix) {
-                out.insert(format!("{key}@{rest}"), value.clone());
-            }
-        }
-    }
-    out
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -780,37 +533,6 @@ fn trigger_run(
     f: impl Fn(&mut EffectContext<'_>, &GameEvent) -> Vec<Effect> + Send + Sync + 'static,
 ) -> TriggerRun {
     Arc::new(f)
-}
-
-/// Apply an effect list in order; once a state check inside it has ended the game, the rest does not
-/// resolve (R216). A private copy of `resolve::apply_effects`.
-fn apply_effects(effects: &[Effect], ctx: &mut EffectContext<'_>) {
-    for effect in effects {
-        if ctx.sink.state.result.is_some() {
-            return;
-        }
-        (effect.apply)(ctx);
-    }
-}
-
-/// A part of a composed list (`Effect.expand`), built when the list reaches it rather than when the
-/// list is made (R102). Applied on its own it builds and applies its effects in one go; inside
-/// `prompts::apply_resumable` it runs as a nested list a prompt can pause. A private copy of
-/// `resolve::lazy_part`.
-fn lazy_part(
-    kind: &'static str,
-    expand: impl Fn(&mut EffectContext<'_>, &Memo) -> EffectPart + Send + Sync + 'static,
-) -> Effect {
-    let expand = Arc::new(expand);
-    let build = expand.clone();
-    Effect::with_expand(
-        kind,
-        move |ctx| {
-            let part = build(ctx, &None);
-            apply_effects(&part.effects, ctx);
-        },
-        move |ctx, memo| expand(ctx, memo),
-    )
 }
 
 /// TS `fused:part${index}`: an effect's kind is a static name, read by nothing but the debug output.
@@ -887,12 +609,12 @@ fn fused_aura(faces: &[Face]) -> Option<AuraHook> {
             let Some(aura) = aura else {
                 continue;
             };
-            let recorded = ingredients_of(args.self_).is_some_and(|records| records.len() > index);
+            let recorded = crate::scripts::ingredients_of(args.self_).is_some_and(|records| records.len() > index);
             if !recorded {
                 out.extend(aura(args));
                 continue;
             }
-            let card = Arc::new(as_ingredient(args.self_, index));
+            let card = Arc::new(crate::scripts::as_ingredient(args.self_, index));
             let mods: Vec<StatMod> = aura(HookArgs {
                 state: args.state,
                 self_: &card,
@@ -931,12 +653,11 @@ fn fused_aura(faces: &[Face]) -> Option<AuraHook> {
 /// down comes back to its own ingredient, not to the first one there that names its step the same.
 fn part_data(data: &IndexMap<String, Value>, index: usize) -> IndexMap<String, Value> {
     let depth = part_depth(data);
-    let named = part_path_of(data).unwrap_or_default();
-    let index = index as i64;
-    let path: Vec<i64> = if named.get(depth) == Some(&index) {
+    let named = crate::work::part_path_of(data).unwrap_or_default();
+    let path: Vec<usize> = if named.get(depth) == Some(&index) {
         named
     } else {
-        let mut path: Vec<i64> = named.into_iter().take(depth).collect();
+        let mut path: Vec<usize> = named.into_iter().take(depth).collect();
         path.push(index);
         path
     };
@@ -950,10 +671,10 @@ fn part_data(data: &IndexMap<String, Value>, index: usize) -> IndexMap<String, V
 /// price its card was played for as `embiggened` (R102, `ingredient_paid`), found by that
 /// place's path — #59's trigger reads it.
 fn in_place<'b>(ctx: &'b mut EffectContext<'_>, patch: &IndexMap<String, Value>) -> EffectContext<'b> {
-    let path = part_path_of(patch).unwrap_or_default();
+    let path = crate::work::part_path_of(patch).unwrap_or_default();
     let embiggened = match ctx.live_self() {
         None => ctx.embiggened,
-        Some(card) => ingredient_paid(card, &path),
+        Some(card) => crate::scripts::ingredient_paid(card, &path),
     };
     let mut data = ctx.data.clone();
     for (key, value) in patch {
@@ -999,7 +720,7 @@ fn ingredient_part(
     index: usize,
     build: impl Fn(&mut EffectContext<'_>) -> Vec<Effect> + Send + Sync + 'static,
 ) -> Effect {
-    lazy_part(part_kind(index), move |at, _memo| {
+    crate::resolve::lazy_part(part_kind(index), move |at, _memo| {
         let patch = part_data(&at.data, index);
         let effects = {
             let mut inner = in_place(at, &patch);
@@ -1031,14 +752,14 @@ fn combined_hook(fns: Vec<Option<Hook>>, step: bool) -> Hook {
         // engine left it for the card as a whole, not one of its texts: the prompt of the power R43
         // activates once (`hero_power::activate_power`) — comes back to the first ingredient that has the
         // step, once, rather than to every ingredient that names its step the same (R43, R102).
-        let first = fns.iter().position(Option::is_some).map(|at| at as i64);
-        let routed: Option<i64> = part_path_of(&ctx.data)
+        let first = fns.iter().position(Option::is_some);
+        let routed: Option<usize> = crate::work::part_path_of(&ctx.data)
             .and_then(|path| path.get(depth).copied())
             .or(if step { first } else { None });
         let indices: Vec<usize> = fns
             .iter()
             .enumerate()
-            .filter(|(index, f)| f.is_some() && routed.is_none_or(|routed| routed == *index as i64))
+            .filter(|(index, f)| f.is_some() && routed.is_none_or(|routed| routed == *index))
             .map(|(index, _)| index)
             .collect();
         indices
@@ -1434,8 +1155,8 @@ fn in_activation_ingredient(decl: &ActivationDecl, index: usize) -> ActivationDe
 /// place: at that ingredient's price (`as_ingredient`), with what that text remembered under
 /// its own keys (`memory_of_part`), so `recalled` with no part named reads it back.
 fn as_ingredient_text(instance: &CardInstance, index: usize) -> CardInstance {
-    let mut card = as_ingredient(instance, index);
-    card.memory = memory_of_part(&card.memory, index);
+    let mut card = crate::scripts::as_ingredient(instance, index);
+    card.memory = crate::work::memory_of_part(&card.memory, index);
     card
 }
 
@@ -1496,7 +1217,7 @@ fn fused_plague_multiplier(scripts: &[&Script]) -> Option<PlagueMultiplierHook> 
         hooks.iter().enumerate().fold(1, |product, (index, multiplier)| match multiplier {
             None => product,
             Some(multiplier) => {
-                let card = as_ingredient(args.self_, index);
+                let card = crate::scripts::as_ingredient(args.self_, index);
                 product
                     * multiplier(HookArgs {
                         state: args.state,
@@ -1528,28 +1249,6 @@ fn with_choices(effect: Effect, targets: Vec<Selection>, modes: Vec<String>) -> 
         }),
         expand: effect.expand,
     }
-}
-
-/// TS `playChoices.activeTargetDecls`: the declarations a play's chosen modes make active (R90).
-fn active_target_decls(decls: &[TargetDecl], modes: &[String]) -> Vec<TargetDecl> {
-    decls
-        .iter()
-        .filter(|decl| {
-            decl.for_modes
-                .as_ref()
-                .is_none_or(|for_modes| for_modes.iter().any(|mode| modes.contains(mode)))
-        })
-        .cloned()
-        .collect()
-}
-
-/// TS `playChoices.storedDeclarationSlices`: the slice lengths §10.5 step 1 read the play with
-/// (`play_choices::DECLARATION_SLICES_KEY`), or `None` when the data carries none.
-fn stored_declaration_slices(data: &IndexMap<String, Value>) -> Option<Vec<usize>> {
-    let raw = data.get(crate::play_choices::DECLARATION_SLICES_KEY)?.as_array()?;
-    raw.iter()
-        .map(|value| value.as_u64().and_then(|n| usize::try_from(n).ok()))
-        .collect()
 }
 
 /// R102 concatenates the ingredients' declared targets and modes in ingredient order, and R90 reads
@@ -1585,10 +1284,10 @@ fn fused_cry(faces: &[Face]) -> Option<Hook> {
         let decls_of: Vec<Vec<TargetDecl>> = faces
             .iter()
             .enumerate()
-            .map(|(index, face)| active_target_decls(&face.script.targets, &modes_of[index]))
+            .map(|(index, face)| crate::play_choices::active_target_decls(&face.script.targets, &modes_of[index]))
             .collect();
         let decls: Vec<TargetDecl> = decls_of.iter().flatten().cloned().collect();
-        let stored = stored_declaration_slices(&ctx.data);
+        let stored = crate::play_choices::stored_declaration_slices(&ctx.data);
         let slices: Vec<Vec<Selection>> = match stored {
             Some(stored) if stored.len() == decls.len() => cut_slices(&ctx.targets, &stored),
             _ => match ctx.live_self().cloned() {
@@ -1734,10 +1433,10 @@ fn fused_specs(state: &GameState, def_id: &str) -> Option<Vec<FusedIngredient>> 
         .transient_defs
         .get(def_id)
         .and_then(|def| def.ingredients.as_ref())
-        .map(|list| list.iter().map(copy_spec).collect::<Vec<FusedIngredient>>());
+        .map(|list| list.iter().map(crate::catalog::copy_spec).collect::<Vec<FusedIngredient>>());
     let specs = match from_def {
         Some(specs) => specs,
-        None => fused_id_specs_in(state, def_id)?,
+        None => crate::catalog::fused_id_specs(Some(state), def_id)?,
     };
     if specs.len() >= FUSE_MIN_INGREDIENTS { Some(specs) } else { None }
 }
@@ -1773,7 +1472,7 @@ pub fn compose_fused_scripts(state: &GameState, def: &CardDef) -> CardScripts {
     let own = def
         .ingredients
         .as_ref()
-        .map(|list| list.iter().map(copy_spec).collect::<Vec<FusedIngredient>>())
+        .map(|list| list.iter().map(crate::catalog::copy_spec).collect::<Vec<FusedIngredient>>())
         .filter(|specs| specs.len() >= FUSE_MIN_INGREDIENTS);
     let specs = match own {
         Some(specs) => specs,
@@ -1795,7 +1494,7 @@ pub fn rebuild_fused_def(state: &mut GameState, def_id: &str, owner: PlayerId) -
     if let Some(known) = crate::catalog::find_def(Some(&*state), def_id).map(|def| def.clone()) {
         return Some(known);
     }
-    let specs = if is_digest_id(def_id) {
+    let specs = if crate::catalog::is_digest_id(def_id) {
         None
     } else {
         fused_ingredient_specs(state, def_id)
@@ -1846,15 +1545,15 @@ fn keep_instance(
 
     // R102: the price each ingredient's text reads as its own, recorded before any of them ceases to
     // exist and only when they are not all the kept card's (`scripts::INGREDIENTS_KEY`).
-    let record = ingredient_record(kept, ingredients);
-    let at = ingredients
-        .iter()
-        .position(|card| card.id == kept.id)
-        .map_or(-1, |at| at as i64);
+    let record = crate::scripts::ingredient_record(kept, ingredients);
+    let at = ingredients.iter().position(|card| card.id == kept.id);
     if let Some(live) = find_instance_mut(state, &kept.id) {
         // R77, R102: the kept card's texts become ingredient `index` of the fusion, and what they
-        // remembered moves with them to the path they now run at (`reroot_remembered`).
-        reroot_remembered(&mut live.memory, at);
+        // remembered moves with them to the path they now run at (`reroot_remembered`). (TS's
+        // `findIndex` of a kept card that is no ingredient was -1; `work`'s index is a `usize`.)
+        if let Some(at) = at {
+            crate::work::reroot_remembered(&mut live.memory, at);
+        }
         gain_printed_keywords(live, &before, def);
         live.def_id = def.id.clone();
         live.buffs = AttackHealth { attack, health };

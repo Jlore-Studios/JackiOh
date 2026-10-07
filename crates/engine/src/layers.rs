@@ -43,16 +43,6 @@ pub struct BuffedStats {
     pub max_health: i32,
 }
 
-/// TS `scripts.scriptOf(instance)`: the face that is running, and no script at all on a Vanilla card
-/// (§6.3, R115). A private copy over `scripts::script_of` (SURFACE §6.6).
-fn running_script(state: &GameState, instance: &CardInstance) -> Script {
-    if instance.vanilla {
-        return empty_script();
-    }
-    let entry = crate::scripts::script_of(state, &instance.def_id);
-    if instance.radiant { entry.radiant } else { entry.base }
-}
-
 /// R349: what a summon's X/X (`statsOverride`) comes to on the face the instance wears. A card that
 /// prints no Radiant form of its own (`radiantFallback`, the Ghoul Token) is, made Radiant, its base
 /// face with its attack and health doubled, and its X/X is that base face — so a Radiant Ghoul
@@ -225,7 +215,7 @@ fn aura_mods(state: &GameState, unit: &CardInstance) -> Vec<StatMod> {
         if source.vanilla {
             continue;
         }
-        let script = running_script(state, source);
+        let script = crate::scripts::script_of(state, source);
         let Some(aura) = script.aura.as_ref() else {
             continue;
         };
@@ -272,7 +262,7 @@ fn as_set(keywords: &[Keyword]) -> Vec<Keyword> {
 /// "while it has a Plague Counter"): the card's `conditionalKeywords` hook, read with its printed ones,
 /// so a Vanilla takes it (`scripts::script_of` runs no script for one). The hook reads instance data only.
 fn conditional_keywords_of(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
-    let script = running_script(state, instance);
+    let script = crate::scripts::script_of(state, instance);
     match script.conditional_keywords.as_ref() {
         None => Vec::new(),
         Some(hook) => hook(HookArgs {
@@ -332,7 +322,7 @@ fn compute_layers(state: &GameState, instance: &CardInstance) -> Layered {
     // clamp).
     // Vanilla has cleared the card's scripts, so a Vanilla'd body keeps its printed stats (§6.1).
     if !instance.vanilla {
-        let script = running_script(state, instance);
+        let script = crate::scripts::script_of(state, instance);
         if let Some(set_stat) = script.set_stat.as_ref() {
             let set = set_stat(HookArgs {
                 state,

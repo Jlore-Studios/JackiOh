@@ -49,16 +49,6 @@ use crate::wire::{
 use crate::work::{PAUSE_KEY, PausedStep, WorkPlan, paused_of};
 use crate::zones::{MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot};
 
-/// TS `scripts.scriptOf(instance)`: the face that is running — radiant text once the instance is
-/// Radiant (§5.2) — and no script at all on a Vanilla instance (§6.3, R115).
-fn face_script(state: &GameState, instance: &CardInstance) -> Script {
-    if instance.vanilla {
-        return Script::default();
-    }
-    let entry = crate::scripts::script_of(state, &instance.def_id);
-    if instance.radiant { entry.radiant } else { entry.base }
-}
-
 /// A row's lanes (§3), 1 up (TS `zones.slotsOf`'s count).
 fn row_size(row: Row) -> i32 {
     match row {
@@ -605,7 +595,7 @@ fn run_death_pass(sink: &mut EngineSink<'_>, pass: &mut DeathPass, at: Option<Pa
         }
 
         // §5.2: the face the card was wearing as it died, which is the snapshot's own.
-        let Some(hook) = face_script(sink.state, &snapshot).death else {
+        let Some(hook) = crate::scripts::script_of(sink.state, &snapshot).death else {
             pass.owed.remove(0);
             resume_at = None;
             continue;
@@ -921,7 +911,7 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
             permanents_in_play(state)
                 .into_iter()
                 .filter(|card| {
-                    face_script(state, card).tribute_when.as_ref().is_some_and(|when| {
+                    crate::scripts::script_of(state, card).tribute_when.as_ref().is_some_and(|when| {
                         when(HookArgs {
                             state,
                             self_: card,

@@ -13,17 +13,6 @@
 use crate::script::{Script, empty_script};
 use crate::state::{CardInstance, GameState, find_instance_mut};
 
-/// TS `scripts.scriptOf(instance)`: the face that is running, and no script at all on a Vanilla card
-/// (§6.3, R115). A private copy over `scripts::script_of` (SURFACE §6.6), which composes a fused
-/// card's scripts from the state.
-fn running_script(state: &GameState, instance: &CardInstance) -> Script {
-    if instance.vanilla {
-        return empty_script();
-    }
-    let entry = crate::scripts::script_of(state, &instance.def_id);
-    if instance.radiant { entry.radiant } else { entry.base }
-}
-
 /// R429: the plays this card has had so far, the one under way included once step 4 has run.
 pub fn times_played_of(card: &CardInstance) -> i32 {
     match card.times_played {
@@ -37,7 +26,7 @@ pub fn times_played_of(card: &CardInstance) -> i32 {
 /// TS wrote through the live card; here `card` is the card as the caller holds it (its flags are
 /// read off it) and the count is written on the instance of that id in `state`.
 pub fn count_play(state: &mut GameState, card: &CardInstance) {
-    if running_script(state, card).flags().counts_plays != Some(true) {
+    if crate::scripts::script_of(state, card).flags().counts_plays != Some(true) {
         return;
     }
     if let Some(live) = find_instance_mut(state, &card.id) {

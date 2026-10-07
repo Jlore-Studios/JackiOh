@@ -157,17 +157,6 @@ const PICK_KIND_ORDER: [FilterOf; 6] = [
     FilterOf::Hero,
 ];
 
-/// TS `scripts.scriptOf(instance)`: the running face's script, and none for a Vanilla card (§6.3,
-/// R115). A private copy over `scripts::script_of(state, def_id)` (SURFACE §6.6).
-fn script_of_card(state: &GameState, card: &CardInstance) -> Script {
-    if card.vanilla {
-        return crate::script::empty_script();
-    }
-    let scripts = crate::scripts::script_of(state, &card.def_id);
-    let face = if card.radiant { &scripts.radiant } else { &scripts.base };
-    face.clone()
-}
-
 /// The name a card's definition prints.
 fn name_of(state: &GameState, def_id: &str) -> String {
     crate::catalog::def_of(Some(state), def_id).name.clone()
@@ -184,12 +173,12 @@ fn at_most(n: i32, count: usize) -> usize {
 
 /// The `targets` a card's running face declares (§10.9, R81); the empty list when it declares none.
 pub fn declared_targets(state: &GameState, card: &CardInstance) -> Vec<TargetDecl> {
-    script_of_card(state, card).targets
+    crate::scripts::script_of(state, card).targets
 }
 
 /// The `modes` a card's running face declares: "Choose one" and Silly Silas's direction (R81).
 pub fn declared_modes(state: &GameState, card: &CardInstance) -> Vec<ModeDecl> {
-    script_of_card(state, card).modes
+    crate::scripts::script_of(state, card).modes
 }
 
 /// The target declarations a play with these modes answers (R90, §8 Conventions). A declaration that
@@ -246,7 +235,7 @@ fn permanents_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
 pub fn gifted_makes_radiant(state: &GameState, player: PlayerId, cost_paid: i32) -> bool {
     let earlier: &[i32] = state.players[player].turn_log.costs_paid.as_deref().unwrap_or(&[]);
     permanents_of(state, player).into_iter().any(|held| {
-        let Some(threshold) = script_of_card(state, held).flags().gifted_program else {
+        let Some(threshold) = crate::scripts::script_of(state, held).flags().gifted_program else {
             return false;
         };
         if cost_paid > threshold {
@@ -287,7 +276,7 @@ pub fn tagged_play_radiant(state: &GameState, player: PlayerId, card: &CardInsta
         return false;
     }
     permanents_of(state, player).into_iter().any(|held| {
-        match script_of_card(state, held).flags().radiant_plays_tagged {
+        match crate::scripts::script_of(state, held).flags().radiant_plays_tagged {
             None => false,
             Some(wanted) => wanted.iter().any(|tag| tags.contains(tag)),
         }
@@ -409,7 +398,7 @@ fn immutable_fuser(state: &GameState, slot: &ZoneSlot) -> bool {
     match crate::zones::card_at(state, slot) {
         None => false,
         Some(top) => {
-            script_of_card(state, top).flags().fuses_carried == Some(true)
+            crate::scripts::script_of(state, top).flags().fuses_carried == Some(true)
                 && crate::layers::unit_has(state, top, KeywordKind::Immutable)
         }
     }
@@ -465,7 +454,7 @@ pub fn chooses_x(state: &GameState, instance: &CardInstance) -> bool {
     if crate::subsystems::copied_text::copies_text(instance) {
         return crate::subsystems::copied_text::copied_chooses_x(state, instance);
     }
-    crate::mana::is_x_cost(state, instance) && script_of_card(state, instance).cost.is_none()
+    crate::mana::is_x_cost(state, instance) && crate::scripts::script_of(state, instance).cost.is_none()
 }
 
 /// §2.3, R348: why this X is not one the player may choose for this card, or `Ok` when it is —
@@ -544,12 +533,12 @@ pub fn tribute_cost_of(state: &GameState, card: &CardInstance) -> i32 {
         .into_iter()
         .find(|decl| decl.kind == PromptKind::Tribute)
         .and_then(|decl| decl.amount);
-    let flagged = script_of_card(state, card).flags();
+    let flagged = crate::scripts::script_of(state, card).flags();
     declared.or(flagged.tribute).unwrap_or(0).max(0)
 }
 
 pub fn may_tribute_enemy_units(state: &GameState, card: &CardInstance) -> bool {
-    script_of_card(state, card).flags().tribute_enemies == Some(true)
+    crate::scripts::script_of(state, card).flags().tribute_enemies == Some(true)
 }
 
 /// §3.2: "Sheep Tokens are worth 2 Tributes while on the field"; every other unit is worth 1.
@@ -564,7 +553,7 @@ pub fn may_tribute_enemy_units(state: &GameState, card: &CardInstance) -> bool {
 /// an ingredient dropped (R102), so a Sheep #85 fused a unit onto is still worth 2 — the fused flags
 /// take the larger worth, as they take the larger Tribute.
 pub fn tribute_value_of(state: &GameState, unit: &CardInstance) -> i32 {
-    let flag = script_of_card(state, unit).flags().tribute_worth;
+    let flag = crate::scripts::script_of(state, unit).flags().tribute_worth;
     // B3.4 rule 5, R386: a card that declares its worth as a number (C #82 Sheeople's `worth`) is worth
     // what Degrade, Upgrade and KY's Constant have left it, read off the instance like any declared number.
     let worth = if flag.is_some() && crate::params::param_decl_of(state, &unit.def_id, "worth").is_some() {
@@ -793,7 +782,7 @@ fn check_allows(
     let Some(name) = filter.and_then(|filter| filter.check.as_ref()) else {
         return true;
     };
-    let script = script_of_card(state, self_);
+    let script = crate::scripts::script_of(state, self_);
     let Some(check) = script.target_checks.get(name.as_str()) else {
         return false;
     };

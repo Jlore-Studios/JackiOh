@@ -36,22 +36,9 @@ fn owned<R: Borrow<CardInstance>>(cards: impl IntoIterator<Item = R>) -> Vec<Car
     cards.into_iter().map(|card| card.borrow().clone()).collect()
 }
 
-/// TS `catalog.selfDefIds`: the catalog ids a card stands for — its own, or, for a fused card, every
-/// ingredient's, recursively. Read through `subsystems::fuse`, which knows a digest id's list from the
-/// state (SURFACE §6.6: no process-wide digest table).
-fn self_def_ids(state: &GameState, def_id: &str) -> Vec<String> {
-    match crate::subsystems::fuse::fused_id_specs_in(state, def_id) {
-        None => vec![def_id.to_string()],
-        Some(specs) => specs
-            .iter()
-            .flat_map(|spec| self_def_ids(state, &spec.def_id))
-            .collect(),
-    }
-}
-
 /// R673: count one play of `card` if it is a "… in the System" card (a fused one counts once).
 pub fn count_system_play(state: &mut GameState, card: &CardInstance) {
-    if !self_def_ids(state, &card.def_id)
+    if !crate::catalog::self_def_ids(Some(state), &card.def_id)
         .iter()
         .any(|id| SYSTEM_CARD_DEF_IDS.contains(&id.as_str()))
     {
