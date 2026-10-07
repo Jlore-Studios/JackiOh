@@ -48,6 +48,16 @@ pub fn register_scripts(scripts: IndexMap<String, CardScripts>) {
     let _ = REGISTERED.set(scripts);
 }
 
+/// One registered entry, borrowed: the testkit's override while one is set, else the production
+/// registry. A fused id is never in it. Lookups read through this rather than `registered_scripts`,
+/// which copies every entry.
+pub fn registered_entry(def_id: &str) -> Option<&'static CardScripts> {
+    match override_map() {
+        Some(over) => over.get(def_id),
+        None => REGISTERED.get().and_then(|map| map.get(def_id)),
+    }
+}
+
 /// Every registered entry, by catalog id: the testkit's override while one is set, else the
 /// production registry (empty before `register_scripts`). A copy, so a test may extend it and
 /// register the result (TS `registerScripts({ ...registeredScripts(), … })`).
@@ -114,12 +124,8 @@ fn fused_scripts(state: &GameState, def_id: &str) -> Option<CardScripts> {
 /// A definition's two scripts: the registry's entry, a fused definition's built from the state, or
 /// none (`{ base: EMPTY_SCRIPT, radiant: EMPTY_SCRIPT }`).
 pub fn scripts_for(state: &GameState, def_id: &str) -> CardScripts {
-    let registered = match override_map() {
-        Some(over) => over.get(def_id).cloned(),
-        None => REGISTERED.get().and_then(|map| map.get(def_id)).cloned(),
-    };
-    if let Some(entry) = registered {
-        return entry;
+    if let Some(entry) = registered_entry(def_id) {
+        return entry.clone();
     }
     fused_scripts(state, def_id).unwrap_or_default()
 }
@@ -136,7 +142,11 @@ fn instance_script(state: &GameState, instance: &CardInstance) -> Script {
     if instance.vanilla {
         return empty_script();
     }
-    let entry = scripts_for(state, &instance.def_id);
+    // Only the running face is copied out of the registry.
+    if let Some(entry) = registered_entry(&instance.def_id) {
+        return if instance.radiant { entry.radiant.clone() } else { entry.base.clone() };
+    }
+    let entry = fused_scripts(state, &instance.def_id).unwrap_or_default();
     if instance.radiant { entry.radiant } else { entry.base }
 }
 
@@ -184,6 +194,13 @@ pub fn script_of<K: ScriptKey>(state: &GameState, key: K) -> K::Scripts {
 
 /// The running face's static flags (`script.staticFlags ?? {}`); none for a Vanilla card.
 pub fn flags_of(state: &GameState, instance: &CardInstance) -> StaticFlags {
+    if instance.vanilla {
+        return StaticFlags::default();
+    }
+    if let Some(entry) = registered_entry(&instance.def_id) {
+        let face = if instance.radiant { &entry.radiant } else { &entry.base };
+        return face.flags();
+    }
     instance_script(state, instance).flags()
 }
 

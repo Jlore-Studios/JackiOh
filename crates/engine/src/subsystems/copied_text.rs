@@ -61,8 +61,7 @@ fn registry_flags_of(card: &CardInstance) -> StaticFlags {
     if card.vanilla {
         return StaticFlags::default();
     }
-    crate::scripts::registered_scripts()
-        .get(card.def_id.as_str())
+    crate::scripts::registered_entry(card.def_id.as_str())
         .and_then(|entry| {
             let face = if card.radiant { &entry.radiant } else { &entry.base };
             face.static_flags.clone()
