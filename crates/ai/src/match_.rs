@@ -9,7 +9,6 @@
 //! around a controller call and around `reduce` is `catch_unwind`: a refusal comes back as `error`, and
 //! what TS threw on an impossible state is a panic (SURFACE §4.4.9).
 
-use std::any::Any;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::{
@@ -135,16 +134,6 @@ pub struct AiTurnResult {
     pub state: GameState,
     pub actions: Vec<Action>,
     pub decisions: Vec<Decision>,
-}
-
-fn message_of(error: &(dyn Any + Send)) -> String {
-    if let Some(message) = error.downcast_ref::<String>() {
-        return message.clone();
-    }
-    if let Some(message) = error.downcast_ref::<&str>() {
-        return (*message).to_string();
-    }
-    "panic".to_string()
 }
 
 /// What one controller call produced: the action, and the AI's decision when it was an AI.
@@ -290,7 +279,7 @@ pub fn play_match(config: &MatchConfig, hooks: &mut MatchHooks) -> MatchRecord {
                 message: format!(
                     "controller {} threw: {}",
                     controller.kind(),
-                    message_of(error.as_ref())
+                    crate::simulate::panic_message(error.as_ref())
                 ),
             });
             break;
@@ -368,7 +357,7 @@ pub fn play_match(config: &MatchConfig, hooks: &mut MatchHooks) -> MatchRecord {
                     message: format!(
                         "reduce threw on \"{}\": {}",
                         chosen.action_type().as_str(),
-                        message_of(error.as_ref())
+                        crate::simulate::panic_message(error.as_ref())
                     ),
                 });
                 break;

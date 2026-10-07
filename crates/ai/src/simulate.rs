@@ -202,8 +202,10 @@ fn note_sim_error(counter: &dyn NodeCounter) {
     }
 }
 
-/// TS `error instanceof Error ? error.message : String(error)`, for a panic's payload.
-fn panic_message(payload: &(dyn std::any::Any + Send)) -> String {
+/// TS `error instanceof Error ? error.message : String(error)`, for a panic's payload. The one reader
+/// of a panic's message: the AI's simulations and match runner, the server's match tasks and the
+/// tools' agent, fuzz and arena all call it.
+pub fn panic_message(payload: &(dyn std::any::Any + Send)) -> String {
     if let Some(text) = payload.downcast_ref::<&str>() {
         (*text).to_string()
     } else if let Some(text) = payload.downcast_ref::<String>() {
