@@ -21,8 +21,10 @@ pub const ID: &str = "classicplus-027";
 
 /// "Refresh your mana": every spent crystal, which R364 caps at max mana (a Refresh never takes
 /// current mana above it), so this is a full refill, whatever the player's max is (§9.9's handicaps).
-/// TS wrote `Number.POSITIVE_INFINITY`; the largest `i32` is the same "every crystal" for any max.
-const ALL_MANA: i32 = i32::MAX;
+/// TS wrote `Number.POSITIVE_INFINITY`, and an `i32` has no infinity. The Refresh adds this to current
+/// mana before capping it at max (`mana::refresh_some_mana`), so the largest `i32` overflowed whenever
+/// any mana was left: half of it is still more than any max mana, and the sum stays in range.
+const ALL_MANA: i32 = i32::MAX / 2;
 
 /// The faces differ only in which face the scorer ranks and the new cards arrive with.
 fn zealotism(radiant: bool) -> Script {
