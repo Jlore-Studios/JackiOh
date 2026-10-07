@@ -16,8 +16,9 @@
 # export fetches the .wasm and whose `initSync` takes its bytes (apps/web/src/wasm/index.ts).
 #
 # Needs a Rust toolchain (rust-toolchain.toml pins it). On Vercel, vercel.json's installCommand
-# installs rustup first; a shell that installed it in an earlier step but never re-read its profile
-# is covered by sourcing ~/.cargo/env below.
+# uses the build image's own rustup (it ships one under /rust, already on PATH) and installs rustup
+# only where there is none; a shell that installed it in an earlier step but never re-read its
+# profile is covered by sourcing ~/.cargo/env below.
 
 set -eu
 

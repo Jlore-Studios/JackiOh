@@ -1,6 +1,6 @@
 {
   "framework": null,
-  "installCommand": "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none && . \"$HOME/.cargo/env\" && rustup toolchain install && rustup target add wasm32-unknown-unknown && pnpm install --frozen-lockfile",
+  "installCommand": "{ command -v rustup >/dev/null 2>&1 || { curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none && . \"$HOME/.cargo/env\"; }; } && { rustup toolchain install || rustup show; } && rustup target add wasm32-unknown-unknown && pnpm install --frozen-lockfile",
   "buildCommand": "rm -rf dist && pnpm --filter @jackioh/web build && { [ -d dist ] || cp -r apps/web/dist dist; }",
   "outputDirectory": "dist",
   "git": {
