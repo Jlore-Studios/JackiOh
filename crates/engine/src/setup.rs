@@ -238,7 +238,10 @@ fn deal_from(sink: &mut EngineSink, seat: usize) {
                 .cloned()
                 .collect();
             let dealt: IndexSet<&str> = quickdraw.iter().map(|card| card.id.as_str()).collect();
-            let rest: Vec<&CardInstance> = shuffled.iter().filter(|card| !dealt.contains(card.id.as_str())).collect();
+            let rest: Vec<&CardInstance> = shuffled
+                .iter()
+                .filter(|card| !dealt.contains(card.id.as_str()))
+                .collect();
             let set_aside: Vec<CardInstance> = rest
                 .iter()
                 .filter(|card| casts_on_draw(state, card))
@@ -406,7 +409,12 @@ fn resolve_mulligans(sink: &mut EngineSink) {
     let sealed: Vec<SealedMulligan> = PLAYER_IDS
         .into_iter()
         .map(|player| {
-            let offered: Vec<String> = open[player].prompt.options.iter().map(|option| option.key.clone()).collect();
+            let offered: Vec<String> = open[player]
+                .prompt
+                .options
+                .iter()
+                .map(|option| option.key.clone())
+                .collect();
             let keep = open[player].keep.clone().unwrap_or_else(|| offered.clone());
             SealedMulligan { player, offered, keep }
         })
@@ -467,7 +475,12 @@ fn resolve_from(sink: &mut EngineSink, sealed: &[SealedMulligan]) {
 }
 
 /// R9's second half — the returned cards shuffled back — then the next seat's mulligan, or the game.
-fn finish_mulligan(sink: &mut EngineSink, player: PlayerId, returned: &[CardInstance], rest: &[SealedMulligan]) {
+fn finish_mulligan(
+    sink: &mut EngineSink,
+    player: PlayerId,
+    returned: &[CardInstance],
+    rest: &[SealedMulligan],
+) {
     for card in returned {
         let mut card = card.clone();
         // R748: a card dealt uncast that the mulligan returned is a set-aside card again, shuffled in

@@ -157,7 +157,12 @@ fn read(reading: &mut Reading, events: &[GameEvent]) {
     }
 }
 
-fn seat_summary(reading: &Reading, decks: &(Vec<String>, Vec<String>), player: PlayerId, seat: usize) -> SeatSummary {
+fn seat_summary(
+    reading: &Reading,
+    decks: &(Vec<String>, Vec<String>),
+    player: PlayerId,
+    seat: usize,
+) -> SeatSummary {
     let deck = match seat {
         0 => decks.0.clone(),
         1 => decks.1.clone(),
