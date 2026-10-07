@@ -97,6 +97,7 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_4 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_4' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_5 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_5' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_6 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_6' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_7 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_7' || '' }}
             ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
             ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
@@ -125,6 +126,7 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_4 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_4' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_5 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_5' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_6 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_6' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_7 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_7' || '' }}
             ${{ secrets.CODEX_AUTH_JSON != '' && 'CODEX_AUTH_JSON' || '' }}
             ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}

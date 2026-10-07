@@ -1,7 +1,7 @@
 # The JackiOh night bot
 
 `@jgoetzmann-bot` works through the issues you hand it, on whichever of your subscriptions is
-free: up to six Claude accounts (Opus at extra-high effort), ChatGPT through the Codex CLI,
+free: up to seven Claude accounts (Opus at extra-high effort), ChatGPT through the Codex CLI,
 Google through the Antigravity CLI (`agy`), Meta through Muse Code and Cognition through the
 Devin CLI, each with its own hours
 and limits ([Subscriptions](#subscriptions)). Up to ten items run at once: the Claude accounts' on
@@ -357,6 +357,7 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `claude-4` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `claude-5` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_5` | any time | 40% of 5 hours, 60% of the week |
 | `claude-6` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_6` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
+| `claude-7` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_7` | any time | none: until it refuses (the same rules as claude-3) |
 | `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh` | on the machine, as `agent-gpt` | any time | 100% of the week (Codex reports it) |
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | 95% of 5 hours, all of the week (its own `agy -p /usage`, the Gemini pool's row) |
 | `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2, free on the CLI until 2026-10-16); off from 2026-10-05 to 2026-10-06 (#311: every call failed in seconds), on again since a `devin -p` call answered on the machine (#318) | on the machine, as `agent-devin` | any time until 2026-10-15 (`off_from`) | none: until it refuses |
@@ -441,7 +442,7 @@ may be on the bot's machine (its two vCPUs run each job's checks; GitHub's runne
 and no such limit), `plan_lanes` how many planning runs may go on top of those (the planning
 lane, below; 2), `priority` the usage order (below), and `tiers` each tier's models in the
 order the router tries them after `priority`. A subscription's own `lanes`
-(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can nearly fill its box alone, Muse's is 2, and claude-1, claude-2 and claude-3 have 2 each. A `secret` must be one of the names the workflows hand over (the six Claude ones,
+(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can nearly fill its box alone, Muse's is 2, and claude-1, claude-2 and claude-3 have 2 each. A `secret` must be one of the names the workflows hand over (the seven Claude ones,
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
 **Who takes what.** Each run takes one item on one subscription, and a subscription works on as
@@ -491,9 +492,9 @@ may build it, and the weakest whose plan it builds from (`config.PLAN_FLOOR`, #3
 | hard | strong only | strong only | the same as medium |
 | (unrated) | medium or strong, who rates it | as medium | as medium |
 
-**The usage order** (`priority`) is the owner's: spend claude-3 and claude-1 first, up to their
-caps; then claude-4, claude-6 and then claude-5, last of the Claude accounts (claude-4 and
-claude-6 held to half their 5-hour session outside 03:00–15:00 and to 70% of it inside it, with
+**The usage order** (`priority`) is the owner's: spend claude-3, claude-7 (the same rules as
+claude-3: any hour, no caps) and claude-1 first, up to their caps; then claude-4, claude-6 and
+then claude-5, last of the Claude accounts (claude-4 and claude-6 held to half their 5-hour session outside 03:00–15:00 and to 70% of it inside it, with
 no weekly cap, claude-5 to 40% of its 5-hour session and 60% of its week); then the medium models,
 Muse first (the most reliable builder, #305), then agy and Codex; then claude-2, kept back mostly
 for planning and reviewing; then Devin; and devin-train last, which takes only items labelled
@@ -741,7 +742,7 @@ loses nothing now, a build or revision starts only 5 points under a 5-hour cap
 
 None of these is an API key: each is the login of one account.
 
-- **Claude** (`claude-1` to `claude-6`), a GitHub secret each.
+- **Claude** (`claude-1` to `claude-7`), a GitHub secret each.
   1. Log in to the account with `claude`.
   2. Run `claude setup-token` and paste the token it prints (good for a year) into the secret.
 
@@ -957,7 +958,7 @@ days.
 
 | I want to | Do this |
 |---|---|
-| see what it is doing | the pinned issue **Night bot status**, which `bot-status.yml` rewrites every ten minutes (one job loops for five and a half hours, then starts the next loop; an hourly schedule restarts it if it stops, since GitHub fires schedules here only every few hours; each tick also runs the sweep, so a broken chain of night runs restarts within ten minutes; each tick also reads `.harness/providers.json` from `main` again and takes which secrets are set from the newest plan job's record, `secrets` in the state file, since GitHub fixes a run's secrets when the run is created, hours before a queued loop starts, so a subscription added or changed shows within ten minutes) with what each lane is doing and when it started (a clock time linking to its run; hover it for how long it had run), a timeline of the runs going now, the lanes as boxes (each Claude account, open or why not, and each of the machine's slots with the run in it), each subscription's usage as bars, the queue and the last runs; or `/harness status` anywhere, or `python3 -m harness status` in `bot/`: its "Running now" lists each subscription at work, on what, for how long, and its run |
+| see what it is doing | the pinned issue **Night bot status**, which `bot-status.yml` rewrites every ten minutes (one job loops for five and a half hours, then starts the next loop; an hourly schedule restarts it if it stops, since GitHub fires schedules here only every few hours; each tick also runs the sweep, so a broken chain of night runs restarts within ten minutes; each tick also reads `.harness/providers.json` from `main` again and takes which secrets are set from the newest plan job's record, `secrets` in the state file, since GitHub fixes a run's secrets when the run is created, hours before a queued loop starts, so a subscription added or changed shows within ten minutes; one the loop's checkout is too old to read, such as a new account's secret, ends the loop, and the next loop shows it on `main`'s code) with what each lane is doing and when it started (a clock time linking to its run; hover it for how long it had run), a timeline of the runs going now, the lanes as boxes (each Claude account, open or why not, and each of the machine's slots with the run in it), each subscription's usage as bars, the queue and the last runs; or `/harness status` anywhere, or `python3 -m harness status` in `bot/`: its "Running now" lists each subscription at work, on what, for how long, and its run |
 | see what it has done | the pinned issue **Night bot statistics** (`bot/harness/stats.py`), which the same loop rewrites every 30 minutes (`dashboard --stats`), or `python3 -m harness stats --force` in `bot/`. One table sets the last 6 hours, the last 24 hours, the last 7 days and all time side by side: runs by kind, outcomes, pull requests opened and merged, issues closed, lines added and removed, files, commits, time to merge, model hours. Each window then has its own section: per subscription and model, its runs by kind, outcomes, pull requests opened and merged, lines merged, pauses, failures and model time; bar charts of runs and lines by subscription; and every pull request merged in it with who planned, built, revised and approved it (all time adds model hours, outcomes and the last two weeks day by day). Charts are bars and lines, never pies. Runs and builders come from the bot's own comments; a pull request from before its comments named a builder takes the last build started on its issue before it was opened, and shows as "not recorded" when there was none |
 | stop everything now | `/harness halt`; for a lock nobody can lift by comment, commit `.harness/HALT` |
 | start again | `/harness start` (and delete `.harness/HALT` if you committed it) |

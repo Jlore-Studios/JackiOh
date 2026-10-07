@@ -3,7 +3,7 @@
   "machine_parallel": 7,
   "plan_lanes": 4,
   "start_headroom": { "five_hour": 0.05, "seven_day": 0.05 },
-  "priority": ["claude-3", "claude-1", "claude-4", "claude-6", "claude-5", "muse", "agy", "gpt", "claude-2", "devin", "devin-train"],
+  "priority": ["claude-3", "claude-7", "claude-1", "claude-4", "claude-6", "claude-5", "muse", "agy", "gpt", "claude-2", "devin", "devin-train"],
   "tiers": {
     "weak": [
       { "model": "swe-2-max", "note": "Devin (SWE-2): easy items only, under the easy rule. Its builds check themselves before any review." }
@@ -126,6 +126,23 @@
       "schedule": { "mode": "window", "start": "03:00", "end": "15:00" },
       "off_hours": { "five_hour": 0.5 },
       "limits": { "mode": "caps", "five_hour": 0.7 },
+      "quiet_check": false
+    },
+    "claude-7": {
+      "note": "A seventh Claude account (token added 2026-10-07), under the same rules as claude-3: any hour, no caps (its whole 5-hour session, no weekly cap). Second in the usage order, after claude-3: Opus for strong roles, Sonnet (medium) for easy and medium builds, and each run switches between the two as the work needs.",
+      "enabled": true,
+      "cli": "claude",
+      "family": "claude",
+      "model": "opus",
+      "effort": "xhigh",
+      "fix_effort": "high",
+      "tier": "strong",
+      "extra_models": [{ "model": "sonnet", "effort": "xhigh", "tier": "medium" }],
+      "login": "secret",
+      "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+      "runs_on": "ubuntu-latest",
+      "schedule": { "mode": "always" },
+      "limits": { "mode": "none" },
       "quiet_check": false
     },
     "gpt": {

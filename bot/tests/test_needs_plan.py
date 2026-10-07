@@ -91,9 +91,11 @@ class StageTests(unittest.TestCase):
 class PlanningLaneTests(unittest.TestCase):
     def test_planning_comes_first_easy_first_and_takes_no_build_lane(self):
         """claude-3 plans while it builds; claude-1, capped like the rest, plans only
-        when it holds nothing else; Devin builds once a strong model planned it."""
+        when it holds nothing else; Devin builds once a strong model planned it. claude-7,
+        uncapped like claude-3, would plan too, so it has no secret here."""
         gh = FakeGitHub()
-        ctx = lane_ctx(gh)
+        ctx = lane_ctx(gh, env=secrets(*(s for s in providers.SECRETS
+                                         if s != "CLAUDE_CODE_OAUTH_TOKEN_7")))
         busy(gh, ctx, ("claude-3", 50), ("claude-4", 52), ("agy", 53), ("muse", 54), ("gpt", 55))
         queue(gh, ctx, 3, "priority:high", planned=False)    # medium and urgent
         queue(gh, ctx, 4, EASY, "priority:low", planned=False)  # easy: Devin's, once planned
