@@ -29,26 +29,25 @@
 //! (R381, `test/references.test.ts`).
 
 use jackioh_engine::prelude::*;
-use std::sync::Arc;
 
 pub const ID: &str = "classic-057";
 
 /// B5 E4, R399: the Spell Echo copied, on its face, or nothing when it copied nothing.
-fn records_play_as(args: &SelfArgs) -> Option<PlayRecord> {
-    subsystems::copied_text_of(&args.state, &args.self_)
+fn records_play_as() -> RecordsPlayAsHook {
+    read_hook(|args| subsystems::copied_text_of(args.state, args.self_))
 }
 
 pub fn script() -> CardScripts {
     let base = Script {
         static_flags: Some(StaticFlags { copies_last_spell: Some(true), ..StaticFlags::default() }),
-        records_play_as: Some(Arc::new(records_play_as)),
+        records_play_as: Some(records_play_as()),
         ..Script::default()
     };
 
     // §6.2: Echo 1 — the copied text resolves once more, with fresh prompts.
     let radiant = Script {
         static_flags: Some(StaticFlags { copies_last_spell: Some(true), echo: Some(1), ..StaticFlags::default() }),
-        records_play_as: Some(Arc::new(records_play_as)),
+        records_play_as: Some(records_play_as()),
         ..Script::default()
     };
 
@@ -97,6 +96,12 @@ mod tests {
     /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
     fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
         serde_json::to_value(value).expect("an engine value serialises")
+    }
+
+    /// TS `JSON.parse(JSON.stringify(state))`: written and read back field by field, in field order.
+    fn round_trip(state: &GameState) -> GameState {
+        let text = serde_json::to_string(state).expect("the state serialises");
+        serde_json::from_str(&text).expect("the state parses back")
     }
 
     fn hits(events: &[GameEvent], target: &str) -> Vec<i64> {
@@ -284,9 +289,7 @@ mod tests {
                     wildfire_targets,
                 );
                 s.expect_refused_with(
-                    |s| {
-                        s.play(ECHO, json!({}));
-                    },
+                    |s| s.play(ECHO, json!({})),
                     "target",
                 );
             }
@@ -368,9 +371,7 @@ mod tests {
                 }
                 assert_eq!(xs, vec![json!(1), json!(2), json!(3)]);
                 s.expect_refused_with(
-                    |s| {
-                        s.play(ECHO, json!({ "x": 4, "targets": at_p2() }));
-                    },
+                    |s| s.play(ECHO, json!({ "x": 4, "targets": at_p2() })),
                     "X is above",
                 );
                 s.play(ECHO, json!({ "x": 3, "targets": at_p2() }));
@@ -391,9 +392,7 @@ mod tests {
                 s.state_mut().players.p1.mana.current = 1;
                 assert!(echo_plays(&s, PlayerId::P1).is_empty());
                 s.expect_refused_with(
-                    |s| {
-                        s.play(ECHO, json!({ "x": 1, "targets": at_p2() }));
-                    },
+                    |s| s.play(ECHO, json!({ "x": 1, "targets": at_p2() })),
                     "X is above",
                 );
                 s.expect_in_zone(ECHO, "hand");
@@ -408,7 +407,7 @@ mod tests {
                 s.play(ECHO, json!({}));
                 let pending = js(&s.state().pending);
                 assert_eq!(pending["resume"]["defId"], REMINISCE);
-                let round: GameState = serde_json::from_value(js(s.state())).expect("the state round-trips through JSON");
+                let round = round_trip(s.state());
                 let vanilla = s.pile(PlayerId::P1, "graveyard").iter().find(|card| card.def_id == VANILLA).map(|card| card.id.clone());
                 let option = pending["options"].as_array().and_then(|options| {
                     options
@@ -477,7 +476,7 @@ mod tests {
             use super::*;
 
             #[test]
-            fn c6_2_echo_1_the_copied_text_resolves_once_more_asking_a_fresh_pick_for_the_repeat() {
+            fn s6_2_echo_1_the_copied_text_resolves_once_more_asking_a_fresh_pick_for_the_repeat() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [WILDFIRE, { "def": ECHO, "radiant": true }, VANILLA] },
@@ -519,7 +518,8 @@ mod tests {
             fn r386_its_echo_is_a_numbered_keyword_upgrade_moves_as_an_x_one_step_more_is_one_more_repeat() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, { "def": ECHO, "radiant": true }, VANILLA] }, "p2": { "hand": [VANILLA] } }));
-                let echo = s.card_mut(ECHO);
+                let id = s.card(ECHO).id.clone();
+                let echo = find_instance_mut(s.state_mut(), &id).expect("the Echo is in p1's hand");
                 let tuning = tuning_of(echo);
                 tuning.x = Some(add_step(tuning.x.as_ref(), "Echo", 1));
                 s.play(WILDFIRE, json!({ "targets": at_p2() }));
