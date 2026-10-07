@@ -217,7 +217,7 @@ pub static ROUTES: &[Route] = &[
     ("GET", "/api/matches/:matchId/ranks", AuthLevel::Active, h!(api::ranked::get_match_ranks)),
     // api/rematch.rs
     ("POST", "/api/matches/:matchId/rematch", AuthLevel::Active, h!(api::rematch::offer_rematch)),
-    ("GET", "/api/matches/:matchId/rematch", AuthLevel::Active, h!(api::rematch::get_rematch)),
+    ("GET", "/api/matches/:matchId/rematch", AuthLevel::Active, h!(api::rematch::rematch_status)),
     // api/settings.rs
     ("GET", "/api/settings", AuthLevel::Active, h!(api::settings::get_settings)),
     ("PUT", "/api/settings", AuthLevel::Active, h!(api::settings::put_settings)),
