@@ -107,6 +107,13 @@ above; this section lists what SURFACE.md did not decide.
 - `wire`: `Phase`, `Position`, `Winner`, `GameResult` (state.rs re-exports them), `PerPlayer`,
   `PerPlayerOpt` (catalog_types.rs). A module that wants them by TS path writes `crate::state::Phase`
   and it resolves.
+- Four TS module types are the same literal sets as a wire or config type part 1 named after them;
+  the owning module uses (or `pub use`s) part 1's and does not define its own: `PlagueSpend`
+  (graveyardPlay.ts, part 4) is `wire::PlagueSpend`; `SwapWhat` (effects/swap.ts, part 7) is
+  `wire::SwapWhat`; `RotationDirection` (subsystems/rotation.ts, part 8) is
+  `wire::RotationDirection`; `KyTestDifficulty` (subsystems/kyTest.ts, part 8) is
+  `config::KyTestDifficulty`. A second definition compiles, but it is a second type that the event
+  field or `KY_TEST_REWARDS.of` will not accept.
 
 ### Names for TS's anonymous types (other parts use these names)
 state.rs: `Exertion`, `KnownAs`, `BrittleCounter`, `ModifierExpiry`, `ModifierKind` (the union half
