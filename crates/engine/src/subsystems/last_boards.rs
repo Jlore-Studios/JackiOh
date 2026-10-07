@@ -38,7 +38,9 @@ pub fn rebuildable_from_id(def_id: &str, catalog: &CardDefs) -> bool {
     if is_digest_id(def_id) {
         return false;
     }
-    let Some(specs) = fused_id_specs(def_id) else {
+    // No state here (`create_game` freezes before the match exists): a digest id was refused above,
+    // so the readable id's own text is all there is to read (part 2's `fused_id_specs(None, …)`).
+    let Some(specs) = fused_id_specs(None, def_id) else {
         return false;
     };
     if specs.len() < FUSED_MIN_PARTS {

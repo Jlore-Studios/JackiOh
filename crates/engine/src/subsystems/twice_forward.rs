@@ -99,14 +99,13 @@ fn still_there<'s>(state: &'s GameState, play: &Resolved) -> Option<&'s CardInst
 /// arrival never started. Firing already turned a fusing card face-up; the nothing-left-to-fuse path
 /// reveals it here, so no Brittle ever sits on an unrevealed card.
 fn reveal_self(state: &mut GameState, self_id: &str) {
-    let Some(mut card) = find_instance(state, self_id).cloned() else {
+    let Some(live) = find_instance_mut(state, self_id) else {
         return;
     };
-    card.face_up = Some(true);
-    start_brittle_on_field(state, &mut card, false);
-    if let Some(live) = find_instance_mut(state, self_id) {
-        *live = card;
-    }
+    live.face_up = Some(true);
+    let card = live.clone();
+    // The card as it stands, face-up now; `brittle_count` writes its count to the card by id.
+    start_brittle_on_field(state, &card, false);
 }
 
 /// Writes one memory key on the card as it stands in the state (TS wrote through the live `ctx.self`).
