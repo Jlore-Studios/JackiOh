@@ -1,0 +1,21 @@
+id.instance: String (TS "c<n>")
+num.game: i32
+num.cursor: u32
+map.ordered: IndexMap
+bag.data: IndexMap<String, serde_json::Value>
+error.style: Result<_, EngineError> with TS's message; panic only on invariants
+null.optional: Option + skip_serializing_if
+null.nullable: Option, serialised null
+case.json: camelCase via serde rename_all
+case.rust: snake_case
+state.mut: &mut GameState writes, &GameState reads, &mut EngineSink for TS sink mutators
+rng.source: Rng::new(&state.seed, state.rng_cursor) and write the cursor back
+hook.style: Arc<dyn Fn + Send + Sync> via hook(); no fn pointers, no Box
+registry.style: OnceLock set once by register_all; fused scripts built on lookup from state
+async.style: tokio in crates/server only; none in pure crates
+log.style: tracing JSON to stdout, server only
+refusal.why: Option<String> for TS `string | null` reasons (why_mulligan_refused)
+code.format: CodeFormat { alphabet: &'static str, length: usize, group_size: usize, separator: &'static str, max_input_length: usize }
+unicode.source: tables generated from Node 22 (ICU, Unicode 16.0); NFKC hand-written in wire/codes.rs
+js.length: UTF-16 code units (encode_utf16().count())
+validator.result: LoadoutResult { ok: bool, errors: Vec<LoadoutError> (skipped when empty) }
