@@ -52,7 +52,7 @@ use serde_json::{Value, json};
 
 use jackioh_ai::{
     AI_BUDGET, AI_EVAL, AI_GATE, AI_GATE_BUDGET, AI_TUNING_SERIES, AiDeckOptions, AiOptions, GREEDY_EVAL,
-    GateGame, MatchConfig, MatchHooks, Matchup, SHADOW_BAN, SeatController, binomial_tail, build_ai_deck,
+    GateGame, GateReport, MatchConfig, MatchHooks, Matchup, SHADOW_BAN, SeatController, binomial_tail, build_ai_deck,
     candidate_actions, decide, game_config, gate_needed, gate_shard_games, greedy_action, play_match,
     run_gate_games,
 };
@@ -112,16 +112,15 @@ const CLOSE_TO_12: f64 = 0.5e-12;
 /// `toBeCloseTo(x, 10)`.
 const CLOSE_TO_10: f64 = 0.5e-10;
 
-const MS_PER_SECOND: f64 = 1000.0;
+pub(crate) const MS_PER_SECOND: f64 = 1000.0;
 
 // ---------------------------------------------------------------------------
 // Matchups, seats and the gate's numbers
 // ---------------------------------------------------------------------------
 
-/// A matchup's literal as TS wrote it (`"ai-vs-random"` …), read through its serde form so this file
-/// never depends on the Rust variant names.
+/// A matchup's literal as TS wrote it (`"ai-vs-random"` …).
 pub(crate) fn matchup_name(matchup: Matchup) -> String {
-    literal(&matchup)
+    matchup.as_str().to_string()
 }
 
 /// The matchup a literal names (`"ai-vs-greedy"` …), or an error listing the three.
@@ -132,10 +131,7 @@ pub(crate) fn parse_matchup(text: &str) -> Result<Matchup> {
 
 /// The three matchups, in TS's order.
 pub(crate) fn matchups() -> Vec<Matchup> {
-    MATCHUP_NAMES
-        .iter()
-        .map(|name| parse_matchup(name).unwrap_or_else(|error| panic!("{error:#}")))
-        .collect()
+    Matchup::ALL.to_vec()
 }
 
 /// A serialised string union's literal (a matchup, a decision reason, a sweep flag); any other value
@@ -297,7 +293,7 @@ struct ShardGame {
 
 /// Writes a shard's games to `dir` (`--out`, `JACKIOH_AI_GATE_OUT`, default `ai-gate-shards/` in the
 /// cwd) and answers the file's path.
-fn write_shard(run: &GateRun, total: i32, shard: GateShard, played: &[i32], dir: &Path) -> Result<PathBuf> {
+fn write_shard(run: &GateReport, total: i32, shard: GateShard, played: &[i32], dir: &Path) -> Result<PathBuf> {
     std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
     let file = ShardFile {
         matchup: matchup_name(run.matchup),
@@ -423,32 +419,21 @@ fn merge(dir: &Path) -> Result<()> {
 // The matchups (gate-random.test.ts, gate-greedy.test.ts, gate-hard-easy.test.ts)
 // ---------------------------------------------------------------------------
 
-/// One matchup's run as `runGateGames` reports it: the games this process played, in order. `wins`
-/// is what a gate holds against `gateNeeded`, and `rate` is wins / games. `turn_cap_draws` is reported
-/// beside them and counts for nothing.
-struct GateRun {
-    matchup: Matchup,
-    games: Vec<GateGame>,
-    wins: i32,
-    turn_cap_draws: i32,
-    rate: f64,
-}
-
 /// Plays the listed games of a matchup (1-based, as `gameConfig` numbers them), each folded with its
 /// handicaps by `runGateGames` to fill replayHash/replayErrors. One game per rayon task, collected in
 /// the listed order.
-fn play_gate(matchup: Matchup, played: &[i32]) -> GateRun {
+fn play_gate(matchup: Matchup, played: &[i32]) -> GateReport {
     let per_game: Vec<Vec<GateGame>> =
         played.par_iter().map(|&n| run_gate_games(matchup, &[n], AI_GATE_BUDGET).games).collect();
     let games: Vec<GateGame> = per_game.into_iter().flatten().collect();
     let wins = games.iter().filter(|game| game.won).count() as i32;
     let turn_cap_draws = games.iter().filter(|game| is_turn_cap_draw(&game.record.result)).count() as i32;
     let rate = if games.is_empty() { 0.0 } else { f64::from(wins) / games.len() as f64 };
-    GateRun { matchup, games, wins, turn_cap_draws, rate }
+    GateReport { matchup, games, wins, turn_cap_draws, rate }
 }
 
 /// The seeds the subject did not win, each with its seat and result.
-fn losing_seeds(run: &GateRun) -> String {
+fn losing_seeds(run: &GateReport) -> String {
     run.games
         .iter()
         .filter(|game| !game.won)
@@ -624,7 +609,7 @@ fn check_greedy_frozen(matchup: Matchup) -> Result<()> {
 
 /// The win-count check's first half: the run holds one game per number played, each with its seed and
 /// subject seat, and `won` is exactly "the result names the subject".
-fn check_report(run: &GateRun, played: &[i32]) -> Result<()> {
+fn check_report(run: &GateReport, played: &[i32]) -> Result<()> {
     let name = matchup_name(run.matchup);
     expect_eq(run.games.len(), played.len(), &format!("{name}: games played"))?;
     for (at, game) in run.games.iter().enumerate() {
@@ -648,7 +633,7 @@ fn check_report(run: &GateRun, played: &[i32]) -> Result<()> {
 
 /// B31: every game is clean: nothing rejected or thrown, no fallback, a result, and a replay that
 /// matches.
-fn check_clean(run: &GateRun) -> Result<()> {
+fn check_clean(run: &GateReport) -> Result<()> {
     for game in &run.games {
         let label = format!("{} ({})", game.seed, game.subject_seat);
         expect_that(game.record.rejected.is_empty(), || format!("{label}: rejected {:?}", game.record.rejected))?;

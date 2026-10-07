@@ -27,7 +27,7 @@
 //! console; `crates/ai` stays pure and receives the clock as `now`.
 
 use std::io::Write as _;
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::Instant;
 
 use anyhow::{Context, Result};
 use indexmap::IndexSet;
@@ -40,24 +40,16 @@ use jackioh_ai::{
 use jackioh_engine::catalog::{CatalogQueryArgs, query};
 use jackioh_engine::config::Difficulty;
 
-use crate::gate::literal;
+use crate::arena::utc_date;
+use crate::gate::{MS_PER_SECOND, literal};
 
 /// The mean evaluate change per play, and each card's seconds, printed to this many decimals.
 const DECIMALS: usize = 1;
-
-const MS_PER_SECOND: f64 = 1000.0;
 
 /// Enough decimals to hold the exact expansion of any f64 whose value can be a rounding tie
 /// (`to_fixed`): a tie at a few decimals is a multiple of a power of two's reciprocal, whose
 /// expansion ends long before this.
 const EXACT_DIGITS: usize = 40;
-
-/// The days the civil calendar's 400-year era holds, and the other numbers of the days-to-date
-/// conversion (`utc_date_today`).
-const SECONDS_PER_DAY: u64 = 86_400;
-const DAYS_FROM_0000_03_01_TO_EPOCH: i64 = 719_468;
-const DAYS_PER_ERA: i64 = 146_097;
-const YEARS_PER_ERA: i64 = 400;
 
 /// `cargo jackioh sweep …`.
 #[derive(clap::Args, Debug)]
@@ -114,22 +106,6 @@ pub(crate) fn to_fixed(x: f64, digits: usize) -> String {
     }
     let (int_part, frac_part) = text.split_at(text.len() - digits);
     format!("{sign}{int_part}.{frac_part}")
-}
-
-/// Today's date in UTC as `YYYY-MM-DD` (TS: `Intl.DateTimeFormat("en-CA", { timeZone: "UTC" })`),
-/// from the system clock by the civil-from-days conversion.
-fn utc_date_today() -> String {
-    let seconds = SystemTime::now().duration_since(UNIX_EPOCH).map(|elapsed| elapsed.as_secs()).unwrap_or(0);
-    let days = (seconds / SECONDS_PER_DAY) as i64 + DAYS_FROM_0000_03_01_TO_EPOCH;
-    let era = days.div_euclid(DAYS_PER_ERA);
-    let day_of_era = days.rem_euclid(DAYS_PER_ERA);
-    let year_of_era = (day_of_era - day_of_era / 1460 + day_of_era / 36_524 - day_of_era / (DAYS_PER_ERA - 1)) / 365;
-    let day_of_year = day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
-    let month_index = (5 * day_of_year + 2) / 153;
-    let day = day_of_year - (153 * month_index + 2) / 5 + 1;
-    let month = if month_index < 10 { month_index + 3 } else { month_index - 9 };
-    let year = year_of_era + era * YEARS_PER_ERA + i64::from(month <= 2);
-    format!("{year:04}-{month:02}-{day:02}")
 }
 
 fn name_of(def_id: &str) -> String {
@@ -192,7 +168,7 @@ fn pass1(ids: &[String], mut emit: impl FnMut(&SweepResult)) -> Vec<SweepResult>
         for tier in AI_SWEEP.tiers.iter().copied() {
             let result = timed(
                 &format!("pass 1 {}/{} {id} {} @{tier}", index + 1, ids.len(), name_of(id)),
-                || sweep_card(id, SweepOptions { seeds: None, now: Some(&now), tier: Some(tier) }),
+                || sweep_card(id, &SweepOptions { seeds: None, now: Some(&now), tier: Some(tier) }),
                 |r| {
                     if !r.flags.is_empty() {
                         flag_names(&r.flags)
@@ -217,7 +193,7 @@ fn pass2(ids: &[String], at_risk: &[String], keep_out: &[String], mut emit: impl
         for tier in AI_SWEEP.tiers.iter().copied() {
             let result = timed(
                 &format!("pass 2 {}/{} {id} {} @{tier}", index + 1, ids.len(), name_of(id)),
-                || sweep_at_risk(id, at_risk, keep_out, SweepOptions { seeds: None, now: Some(&now), tier: Some(tier) }),
+                || sweep_at_risk(id, at_risk, keep_out, &SweepOptions { seeds: None, now: Some(&now), tier: Some(tier) }),
                 |r| format!("{} at-risk card(s) dealt, {} suspect line(s)", r.cards.len(), r.suspects.len()),
             );
             emit(&result);
@@ -251,7 +227,7 @@ fn report(first: &[SweepResult], second: &[SweepPass2], elapsed: Option<i64>) ->
     let suspects: Vec<_> = second.iter().flat_map(|result| result.suspects.iter()).collect();
 
     // The run's date for shadow_ban.rs's header.
-    let date = utc_date_today();
+    let date = utc_date();
     let budget = serde_json::to_string(&AI_GATE_BUDGET).unwrap_or_default();
     let tiers = AI_SWEEP.tiers.iter().map(|tier| tier.as_str()).collect::<Vec<_>>().join(" and ");
     let passes = format!(
@@ -489,7 +465,7 @@ mod tests {
 
     #[test]
     fn the_date_is_iso_shaped() {
-        let date = utc_date_today();
+        let date = utc_date();
         assert_eq!(date.len(), 10, "{date}");
         assert_eq!(&date[4..5], "-");
         assert_eq!(&date[7..8], "-");

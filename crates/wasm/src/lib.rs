@@ -278,15 +278,13 @@ pub fn choose_action(state_json: &str, seat: &str, rng_seed: &str, rng_cursor: f
 }
 
 /// `{ AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS }` for practice, the tutorial harness and their tests.
-/// `SHADOW_BAN_IDS` is TypeScript's `Object.keys(SHADOW_BAN).sort()`.
+/// `SHADOW_BAN_IDS` is TypeScript's `Object.keys(SHADOW_BAN).sort()` (`jackioh_ai::SHADOW_BAN_IDS`).
 #[wasm_bindgen]
 pub fn constants() -> Result<String, JsError> {
-    let mut shadow_ban_ids: Vec<&str> = jackioh_ai::SHADOW_BAN.iter().map(|(id, _reason)| *id).collect();
-    shadow_ban_ids.sort();
     to_json(&json!({
         "AI_BUDGET": jackioh_ai::AI_BUDGET,
         "AI_GATE_BUDGET": jackioh_ai::AI_GATE_BUDGET,
-        "SHADOW_BAN_IDS": shadow_ban_ids,
+        "SHADOW_BAN_IDS": jackioh_ai::SHADOW_BAN_IDS,
     }))
 }
 
@@ -345,8 +343,7 @@ struct DeckDraftRequest {
     portrait: Option<String>,
     #[serde(default)]
     portrait_known: Option<bool>,
-    /// Read into whatever integer type `DeckDraftInput.name_max_length` is, below.
-    name_max_length: Value,
+    name_max_length: usize,
 }
 
 fn check_deck_draft(input_json: &str) -> Result<String, JsError> {
@@ -363,8 +360,7 @@ fn check_deck_draft(input_json: &str) -> Result<String, JsError> {
         is_deckable: &is_deckable,
         portrait: request.portrait,
         is_portrait: request.portrait_known.map(|_| &is_portrait as &dyn Fn(&str) -> bool),
-        name_max_length: serde_json::from_value(request.name_max_length)
-            .map_err(|error| JsError::new(&format!("checkDeckDraft: nameMaxLength: {error}")))?,
+        name_max_length: request.name_max_length,
     };
     to_json(&validator::check_deck_draft(&input))
 }
@@ -380,10 +376,13 @@ pub fn validator(call: &str, input_json: &str) -> Result<String, JsError> {
             let input: validator::DeckInput = parse(call, input_json)?;
             to_json(&validator::validate_deck(&input))
         }
-        // R253: a trio is §9.4's loadout, so `validateTrio` is `validateLoadout`.
-        "validateTrio" | "validateLoadout" => {
+        "validateLoadout" => {
             let input: validator::LoadoutInput = parse(call, input_json)?;
             to_json(&validator::validate_loadout(&input))
+        }
+        "validateTrio" => {
+            let input: validator::LoadoutInput = parse(call, input_json)?;
+            to_json(&validator::validate_trio(&input))
         }
         "checkDeckDraft" => check_deck_draft(input_json),
         "checkTrioDraft" => {

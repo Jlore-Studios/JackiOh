@@ -33,6 +33,7 @@ use jackioh_engine::wire::{CardType, KEYWORD_KINDS, PrintedRarity, Rarity, SetNa
 
 use crate::patches::js::{self, Json, Object};
 use crate::patches::repo_root;
+use crate::spec::is_ident_char;
 
 /* ------------------------------------------------------------------------------------- unions */
 
@@ -952,10 +953,6 @@ enum Quote {
 }
 
 /// An identifier character, which a raw string's `r` may not follow.
-fn is_ident_char(c: char) -> bool {
-    c.is_alphanumeric() || c == '_'
-}
-
 /// A raw string opening at `i` (`r"`, `r#"`, `br"`, `cr##"` …): its length up to and including
 /// the quote, and its `#` count.
 fn raw_string_open(chars: &[char], i: usize) -> Option<(usize, usize)> {

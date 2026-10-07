@@ -30,25 +30,23 @@ use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, anyhow, bail};
-use jackioh_ai::{AiDeckOptions, build_ai_deck, random_action, redact};
+use jackioh_ai::{AiDeckOptions, RejectedAction, build_ai_deck, random_action, redact};
 use jackioh_engine::{
-    AI_DIFFICULTY, Action, ActionBody, ActionType, CreateGameOptions, DEV_RECORD_ID_PREFIX, FoldArgs, GameRecord,
+    AI_DIFFICULTY, Action, ActionBody, CreateGameOptions, DEV_RECORD_ID_PREFIX, FoldArgs, GameRecord,
     GameResult, GameState, PerPlayer, PlayerId, Rng, Winner, begin_game, create_game, fold, hash_state,
-    legal_actions, reduce, seat_to_act, summarize_game,
+    legal_actions, reduce, seat_to_act, subsystems, summarize_game,
 };
 use rayon::prelude::*;
 use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::agent::{self, AgentInfo};
+use crate::gate::MS_PER_SECOND;
+use crate::patches::utc_date_of;
 
 /// match.ts's `AI_MATCH.maxActions`: the referee's ceiling on actions in one game. The engine's turn
 /// cap (R2) ends every real game long before it; a game that reaches it has no result.
 const ARENA_MAX_ACTIONS: usize = 3000;
-
-/// aiPolicy.ts's `AI_SKIPPED_ACTIONS` (R84), copied: the action types the random policy never takes,
-/// and that match.ts's replacement for a refused action never offers.
-const SKIPPED_ACTIONS: &[ActionType] = &[ActionType::Concede, ActionType::OfferDraw, ActionType::AnswerDraw];
 
 /// The directory a lane's game records go to when `--out` names none (docs/v0.3.0/README.md §8:
 /// `~/training-out/<lane>/`, set by `training/loop.sh`).
@@ -56,9 +54,6 @@ pub(crate) const TRAINING_OUT_ENV: &str = "JACKIOH_TRAINING_OUT";
 
 /// duel.ts's `msP95`: the share of a seat's decisions at or under the reported time.
 const DUEL_PERCENTILE: f64 = 0.95;
-
-/// Seconds in a day, for the UTC date the record files are named by.
-const SECONDS_PER_DAY: u64 = 86_400;
 
 #[derive(clap::Args)]
 pub struct Args {
@@ -144,7 +139,7 @@ pub(crate) fn entrant(spec: &AgentSpec) -> anyhow::Result<Entrant> {
             label: "random".to_string(),
             generation: None,
             lane: None,
-            shadow_ban: agent::own_shadow_ban(),
+            shadow_ban: agent::own_info().shadow_ban,
         }),
         AgentSpec::Bin(path) => {
             let info = query_info(path)?;
@@ -184,15 +179,6 @@ pub(crate) struct ArenaGame {
     pub labels: (String, String),
 }
 
-/// One rejected action: match.ts's `rejected` entry (serialisable, for whoever dumps a game).
-#[derive(Serialize, Clone, Debug)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct Rejected {
-    pub seat: PlayerId,
-    pub action: ActionBody,
-    pub error: String,
-}
-
 /// What a game came to: match.ts's `MatchRecord`, minus what an agent does not report (its search
 /// statistics), plus each seat's decision times (duel.ts).
 #[derive(Clone, Debug)]
@@ -204,7 +190,7 @@ pub(crate) struct ArenaOutcome {
     /// `hash_state` of the final state.
     pub hash: String,
     pub turns: i32,
-    pub rejected: Vec<Rejected>,
+    pub rejected: Vec<RejectedAction>,
     pub thrown: Vec<String>,
     /// Agent answers of "no move", replaced by the random policy on the seat's stream.
     pub fallbacks: i32,
@@ -433,7 +419,7 @@ fn choose_for(
 fn replacements_for(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
     let legal: Vec<ActionBody> = legal_actions(state, seat)
         .into_iter()
-        .filter(|action| !SKIPPED_ACTIONS.contains(&action.action_type()))
+        .filter(|action| !subsystems::AI_SKIPPED_ACTIONS.contains(&action.action_type()))
         .collect();
     let is_answer = |action: &ActionBody| matches!(action, ActionBody::Answer { .. } | ActionBody::Mulligan { .. });
     let is_end_turn = |action: &ActionBody| matches!(action, ActionBody::EndTurn);
@@ -450,14 +436,14 @@ fn accept(
     seat: PlayerId,
     chosen: &ActionBody,
     nonce: &str,
-    rejected: &mut Vec<Rejected>,
+    rejected: &mut Vec<RejectedAction>,
 ) -> Option<(Action, GameState)> {
     let action = Action::new(chosen.clone(), seat, nonce);
     let result = reduce(state, &action);
     let Some(error) = result.error else {
         return Some((action, result.state));
     };
-    rejected.push(Rejected {
+    rejected.push(RejectedAction {
         seat,
         action: chosen.clone(),
         error,
@@ -491,7 +477,7 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
     let mut live = PerPlayer::new(Live::start(&game.seats.p1)?, Live::start(&game.seats.p2)?);
 
     let mut log: Vec<Action> = Vec::new();
-    let mut rejected: Vec<Rejected> = Vec::new();
+    let mut rejected: Vec<RejectedAction> = Vec::new();
     let mut thrown: Vec<String> = Vec::new();
     let mut fallbacks = 0;
     let mut times: PerPlayer<Vec<f64>> = PerPlayer::new(Vec::new(), Vec::new());
@@ -504,7 +490,7 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
 
         let started = Instant::now();
         let choice = choose_for(&mut live[seat], &state, seat, &ctl[seat], &mut rngs[seat]);
-        times[seat].push(started.elapsed().as_secs_f64() * 1000.0);
+        times[seat].push(started.elapsed().as_secs_f64() * MS_PER_SECOND);
         let chosen = match choice {
             Ok(chosen) => chosen,
             Err(message) => {
@@ -655,21 +641,7 @@ pub(crate) fn append_records(path: &Path, records: &[GameRecord]) -> anyhow::Res
 /// Today's date in UTC, `YYYY-MM-DD`.
 pub(crate) fn utc_date() -> String {
     let seconds = SystemTime::now().duration_since(UNIX_EPOCH).map(|elapsed| elapsed.as_secs()).unwrap_or(0);
-    civil_date((seconds / SECONDS_PER_DAY) as i64)
-}
-
-/// Days since 1970-01-01 as a proleptic Gregorian `YYYY-MM-DD` (Hinnant's `civil_from_days`).
-fn civil_date(days: i64) -> String {
-    let z = days + 719_468;
-    let era = (if z >= 0 { z } else { z - 146_096 }) / 146_097;
-    let doe = z - era * 146_097;
-    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let day = doy - (153 * mp + 2) / 5 + 1;
-    let month = if mp < 10 { mp + 3 } else { mp - 9 };
-    let year = yoe + era * 400 + i64::from(month <= 2);
-    format!("{year:04}-{month:02}-{day:02}")
+    utc_date_of(i64::try_from(seconds).unwrap_or(i64::MAX))
 }
 
 /// duel.ts's line for one game, from agent `a`'s side ("subject"), in its key order.
@@ -821,6 +793,9 @@ mod tests {
     use super::*;
     use jackioh_engine::GameOverReason;
 
+    /// Seconds in a day.
+    const SECONDS_PER_DAY: i64 = 86_400;
+
     fn self_entrant() -> Entrant {
         entrant(&AgentSpec::SelfAi).unwrap()
     }
@@ -901,6 +876,7 @@ mod tests {
 
     #[test]
     fn civil_dates_count_from_the_epoch() {
+        let civil_date = |days: i64| utc_date_of(days * SECONDS_PER_DAY);
         assert_eq!(civil_date(0), "1970-01-01");
         assert_eq!(civil_date(19_723), "2024-01-01");
         assert_eq!(civil_date(19_782), "2024-02-29");

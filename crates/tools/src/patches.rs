@@ -1889,7 +1889,7 @@ pub fn check_patches(repo_root: &Path) -> anyhow::Result<Vec<String>> {
 
 /// `git <args>` in `repo_root`, its stdout as text; a failing git is an error carrying its stderr
 /// (TS's `execFileSync` threw).
-fn git(repo_root: &Path, args: &[&str], extra_env: &[(&str, &str)]) -> anyhow::Result<String> {
+pub(crate) fn git(repo_root: &Path, args: &[&str], extra_env: &[(&str, &str)]) -> anyhow::Result<String> {
     let output = Command::new("git")
         .args(args)
         .current_dir(repo_root)

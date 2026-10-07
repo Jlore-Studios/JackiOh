@@ -32,7 +32,6 @@
 //! run measures them anyway, on HEAD's seeds, and says so.
 
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use anyhow::{Context, bail};
 use jackioh_engine::{GameResult, PlayerId, TRAINING_GAMES, TRAINING_IMPROVE, TRAINING_UNBAN, TrainingGate};
@@ -40,6 +39,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::arena::{self, AgentSpec, ArenaOutcome, Entrant};
+use crate::patches::{git, repo_root};
 
 /// The AI's source, whose git tree names the seeds.
 pub(crate) const AI_SOURCE: &str = "crates/ai/src";
@@ -154,37 +154,14 @@ pub(crate) fn game_seed(lane: Lane, tree: &str, k: i32) -> String {
     format!("{}:{tree}:{k}", lane.as_str())
 }
 
-/// `git -C <repo> <args>`, trimmed stdout; an error names the command and its stderr.
-fn git(repo: &Path, args: &[&str]) -> anyhow::Result<String> {
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(repo)
-        .args(args)
-        .output()
-        .with_context(|| format!("promote: cannot run git {}", args.join(" ")))?;
-    if !output.status.success() {
-        bail!(
-            "promote: git {} failed: {}",
-            args.join(" "),
-            String::from_utf8_lossy(&output.stderr).trim()
-        );
-    }
-    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
-}
-
-/// The repository the current directory is in.
-fn repo_root() -> anyhow::Result<PathBuf> {
-    Ok(PathBuf::from(git(Path::new("."), &["rev-parse", "--show-toplevel"])?))
-}
-
 /// SURFACE §14.2's `<tree>`: `git rev-parse HEAD:crates/ai/src`.
 pub(crate) fn ai_tree(repo: &Path) -> anyhow::Result<String> {
-    git(repo, &["rev-parse", &format!("HEAD:{AI_SOURCE}")])
+    Ok(git(repo, &["rev-parse", &format!("HEAD:{AI_SOURCE}")], &[])?.trim().to_string())
 }
 
 /// Whether `crates/ai/src` differs from HEAD (staged, unstaged or untracked).
 fn ai_source_dirty(repo: &Path) -> anyhow::Result<bool> {
-    Ok(!git(repo, &["status", "--porcelain", "--", AI_SOURCE])?.is_empty())
+    Ok(!git(repo, &["status", "--porcelain", "--", AI_SOURCE], &[])?.trim().is_empty())
 }
 
 /// The `main` commit the parent is: the branch's merge base with `origin/main` (a lane's branch is
@@ -192,7 +169,7 @@ fn ai_source_dirty(repo: &Path) -> anyhow::Result<bool> {
 fn parent_commit(repo: &Path) -> Option<String> {
     ["origin/main", "main"]
         .into_iter()
-        .find_map(|base| git(repo, &["merge-base", "HEAD", base]).ok())
+        .find_map(|base| git(repo, &["merge-base", "HEAD", base], &[]).ok().map(|commit| commit.trim().to_string()))
 }
 
 /// A promotion's record: `crates/ai/generation.json` and its history line, in SURFACE §14.2's key order.
@@ -334,7 +311,7 @@ fn report(
 
 pub fn run(args: Args) -> anyhow::Result<()> {
     jackioh_cards::register_all();
-    let repo = repo_root()?;
+    let repo = repo_root();
     let mode = if args.verify {
         "verify"
     } else if args.dry_run {
@@ -442,6 +419,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
 mod tests {
     use super::*;
     use jackioh_engine::{GameOverReason, Winner};
+    use std::process::Command;
 
     fn counts(vs_random: i32, vs_parent: i32, shadow_ban: usize, parent_shadow_ban: usize) -> GateCounts {
         GateCounts {

@@ -26,7 +26,7 @@ use std::any::Any;
 use std::io::{BufRead, Write};
 
 use anyhow::Context;
-use jackioh_ai::{AI_GATE_BUDGET, AiOptions, SHADOW_BAN, decide};
+use jackioh_ai::{AI_GATE_BUDGET, AiOptions, SHADOW_BAN_IDS, decide};
 use jackioh_engine::{ActionBody, GameState, PlayerId, Rng};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -144,7 +144,7 @@ pub(crate) fn decide_with(state: &GameState, seat: PlayerId, rng: Rng) -> (Optio
 }
 
 /// This build's `info`: its generation and lane from the compiled-in `crates/ai/generation.json`, and
-/// its shadow ban's ids, sorted (`SHADOW_BAN_IDS`).
+/// its shadow ban's ids, sorted (jackioh_ai's `SHADOW_BAN_IDS`).
 pub(crate) fn own_info() -> AgentInfo {
     let record: Value = serde_json::from_str(GENERATION_JSON).expect("crates/ai/generation.json is not JSON");
     let generation = record
@@ -159,15 +159,8 @@ pub(crate) fn own_info() -> AgentInfo {
     AgentInfo {
         generation,
         lane,
-        shadow_ban: own_shadow_ban(),
+        shadow_ban: SHADOW_BAN_IDS.iter().map(|id| id.to_string()).collect(),
     }
-}
-
-/// `SHADOW_BAN_IDS`: the shadow ban's ids (R186), sorted.
-pub(crate) fn own_shadow_ban() -> Vec<String> {
-    let mut ids: Vec<String> = SHADOW_BAN.iter().map(|(id, _)| id.to_string()).collect();
-    ids.sort();
-    ids
 }
 
 /// match.ts's `messageOf`: a panic's message, as TS read a thrown error's.
@@ -184,6 +177,7 @@ pub(crate) fn panic_message(panic: &(dyn Any + Send)) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use jackioh_ai::SHADOW_BAN;
 
     #[test]
     fn info_reports_the_compiled_generation_and_the_sorted_shadow_ban() {

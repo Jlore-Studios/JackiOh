@@ -30,15 +30,16 @@ use rayon::prelude::*;
 use serde::Serialize;
 use serde_json::{Value, json};
 
-use jackioh_cards::{CATALOG, register_all};
+use jackioh_cards::register_all;
 use jackioh_engine::replay::{canonical, fnv1a32_utf16};
 use jackioh_engine::rng::Rng;
 use jackioh_engine::subsystems::choose_action;
 use jackioh_engine::{
-    AI_DIFFICULTY, Action, CreateGameArgs, DECK_SIZE, Difficulty, FoldArgs, GameEvent, GameOverReason, GameState,
-    Handicap, PerPlayerOpt, PlayerId, Tag, Winner, begin_game, create_game, fold, hash_state, legal_actions,
-    mulligan_owed, reduce, seat_to_act, view_for,
+    Action, CreateGameArgs, FoldArgs, GameEvent, GameOverReason, GameState, Handicap, PerPlayerOpt, PlayerId, Winner,
+    begin_game, create_game, fold, hash_state, legal_actions, reduce, view_for,
 };
+
+use crate::fuzz::{SeedHandicap, actor_of, decks_for_seed, handicap_decks_for_seed, handicap_for_seed};
 
 // ---------------------------------------------------------------------------------------------
 // The recording's shape (§13.1, §13.3), as scripts/golden/record.ts has it
@@ -441,70 +442,9 @@ fn run_check(args: &CheckArgs) -> Result<()> {
 }
 
 // ---------------------------------------------------------------------------------------------
-// bless: the decks and policy streams, as scripts/golden/record.ts copies them from the fuzz files
+// bless: the decks and policy streams, dealt by `fuzz.rs`, as scripts/golden/record.ts copied them
+// from the fuzz files
 // ---------------------------------------------------------------------------------------------
-
-/// fuzz.test.ts's `POOL_EXCLUSIONS`: cards deliberately kept out of the fuzz deck pool, `(id, why)`.
-/// It must stay empty in a green tree (BUILD's "1,000 seeds with the full card pool").
-const POOL_EXCLUSIONS: &[(&str, &str)] = &[];
-
-/// Every deck-legal card: the whole catalog minus tokens (§2.6 L3), sorted by catalog id so the pool
-/// a seed shuffles is identical on every machine.
-fn deck_legal_ids() -> Vec<String> {
-    let mut ids: Vec<String> = CATALOG
-        .iter()
-        .filter(|(_, def)| !def.token && !def.tags.contains(&Tag::Token))
-        .map(|(id, _)| id.clone())
-        .collect();
-    ids.sort();
-    ids
-}
-
-/// fuzz.test.ts's `FUZZ_POOL`: the deck-legal cards minus `POOL_EXCLUSIONS`.
-fn fuzz_pool() -> Vec<String> {
-    deck_legal_ids()
-        .into_iter()
-        .filter(|id| !POOL_EXCLUSIONS.iter().any(|(excluded, _)| excluded == id))
-        .collect()
-}
-
-/// fuzz-handicap.test.ts's `POOL`: every deck-legal card (that file applies no exclusions).
-fn handicap_pool() -> Vec<String> {
-    deck_legal_ids()
-}
-
-/// fuzz.test.ts's `decksForSeed`: one seeded shuffle of the pool, the first 20 cards to p1 and the
-/// next 20 to p2, so the 40 are distinct (§2.6 L3) and a seed rebuilds its exact pair (§9.3).
-fn decks_for_seed(seed: u32, pool: &[String]) -> (Vec<String>, Vec<String>) {
-    let size = DECK_SIZE as usize;
-    let shuffled = Rng::new(&format!("jackioh-fuzz-decks-{seed}"), 0).shuffle(pool);
-    (shuffled[..size].to_vec(), shuffled[size..size * 2].to_vec())
-}
-
-/// fuzz-handicap.test.ts's `handicapForSeed`: seeds rotate over Medium and Hard and over p1 and p2.
-fn handicap_for_seed(seed: u32) -> (PlayerId, Difficulty, Handicap) {
-    let tier = if seed % 2 == 1 { Difficulty::Hard } else { Difficulty::Medium };
-    let seat = if (seed / 2) % 2 == 0 { PlayerId::P1 } else { PlayerId::P2 };
-    (seat, tier, AI_DIFFICULTY[tier])
-}
-
-/// fuzz-handicap.test.ts's `decksForSeed`: one shuffle of the pool, the handicapped seat takes its
-/// deckSize cards, the other seat the next 20.
-fn handicap_decks_for_seed(
-    seed: u32,
-    seat: PlayerId,
-    handicap: &Handicap,
-    pool: &[String],
-) -> (Vec<String>, Vec<String>) {
-    let shuffled = Rng::new(&format!("jackioh-fuzz-handicap-decks-{seed}"), 0).shuffle(pool);
-    let big_size = handicap.deck_size as usize;
-    let big = shuffled[..big_size].to_vec();
-    let small = shuffled[big_size..big_size + DECK_SIZE as usize].to_vec();
-    match seat {
-        PlayerId::P1 => (big, small),
-        PlayerId::P2 => (small, big),
-    }
-}
 
 /// One seed's game: its setup and its two policy streams.
 struct GameSpec {
@@ -521,12 +461,12 @@ struct GameSpec {
 /// §13.1: seed k's game, dealt and seeded as the fuzz file that owns k deals it.
 fn spec_for_seed(k: u32) -> Result<GameSpec> {
     if (HANDICAP_FIRST..=HANDICAP_LAST).contains(&k) {
-        let (seat, _tier, handicap) = handicap_for_seed(k);
+        let SeedHandicap { seat, handicap, .. } = handicap_for_seed(k);
         let mut handicaps = PerPlayerOpt::default();
         *handicaps.slot(seat) = Some(handicap);
         return Ok(GameSpec {
             seed: format!("jackioh-fuzz-handicap-{k}"),
-            decks: handicap_decks_for_seed(k, seat, &handicap, &handicap_pool()),
+            decks: handicap_decks_for_seed(k, seat, &handicap),
             handicaps: Some(handicaps),
             policy: format!("jackioh-fuzz-handicap-policy-{k}"),
             order: format!("jackioh-fuzz-handicap-policy-order-{k}"),
@@ -535,7 +475,7 @@ fn spec_for_seed(k: u32) -> Result<GameSpec> {
     if (PLAIN_FIRST..=PLAIN_LAST).contains(&k) {
         return Ok(GameSpec {
             seed: format!("jackioh-fuzz-{k}"),
-            decks: decks_for_seed(k, &fuzz_pool()),
+            decks: decks_for_seed(k),
             handicaps: None,
             policy: format!("jackioh-fuzz-policy-{k}"),
             order: format!("jackioh-fuzz-policy-order-{k}"),
@@ -623,12 +563,7 @@ fn record_seed(k: u32) -> Result<GameLine> {
 
     while state.result.is_none() && steps.len() < STEP_CAP {
         let n = steps.len();
-        // With a prompt open only its holder may act (§9.3); otherwise it is the active player's turn.
-        let player = if mulligan_owed(&state).len() == 2 && order.coin() {
-            PlayerId::P2
-        } else {
-            seat_to_act(&state).unwrap_or(state.active)
-        };
+        let player = actor_of(&state, &mut order);
         let l = fnv1a32_utf16(&legal_text(&state, player));
         let chosen = choose_action(&state, player, &mut policy).ok_or_else(|| {
             anyhow!(

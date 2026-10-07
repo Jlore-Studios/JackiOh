@@ -75,6 +75,9 @@ use jackioh_engine::{
 };
 use rayon::prelude::*;
 
+use crate::agent::panic_message;
+use crate::gate::MS_PER_SECOND;
+
 /// `cargo jackioh fuzz [--from N] [--seeds N] [--handicap]` (SURFACE §12).
 #[derive(clap::Args, Debug)]
 pub struct Args {
@@ -306,7 +309,7 @@ fn pending_label(state: &GameState) -> String {
 
 /// With a prompt open only its holder may act (§9.3); otherwise it is the active player's turn.
 /// R265: while both mulligans are open either seat may answer first; `order` picks which.
-fn actor_of(state: &GameState, order: &mut Rng) -> PlayerId {
+pub(crate) fn actor_of(state: &GameState, order: &mut Rng) -> PlayerId {
     if mulligan_owed(state).len() == 2 && order.coin() {
         PlayerId::P2
     } else {
@@ -756,17 +759,6 @@ fn origin_of(location: Option<&str>) -> String {
     }
 }
 
-/// A panic's message, as `${error.name}: ${error.message}` read it.
-fn panic_message(payload: &(dyn std::any::Any + Send)) -> String {
-    if let Some(text) = payload.downcast_ref::<&str>() {
-        (*text).to_string()
-    } else if let Some(text) = payload.downcast_ref::<String>() {
-        text.clone()
-    } else {
-        "a panic with no message".to_string()
-    }
-}
-
 /// Counts in first-seen order (a JS `Map`).
 fn count_by<'a>(values: impl IntoIterator<Item = &'a str>) -> IndexMap<String, usize> {
     let mut counts: IndexMap<String, usize> = IndexMap::new();
@@ -799,7 +791,7 @@ fn report(failures: &[Failure], ran: u32, elapsed_ms: f64) -> String {
         "M4 fuzz gate: {} of {ran} seeds failed ({} distinct failure signature(s), {}s).",
         failures.len(),
         ordered.len(),
-        round(elapsed_ms / 1000.0)
+        round(elapsed_ms / MS_PER_SECOND)
     ));
     lines.push(format!(
         "Pool: {} deck-legal cards, {} excluded.",
@@ -983,7 +975,7 @@ fn play_wave(from: u32, ran: u32) -> Wave {
     register_all();
     let started_at = Instant::now();
     let results: Vec<Result<Passed, Failure>> = (from..from + ran).into_par_iter().map(fuzz_seed).collect();
-    let elapsed_ms = started_at.elapsed().as_secs_f64() * 1000.0;
+    let elapsed_ms = started_at.elapsed().as_secs_f64() * MS_PER_SECOND;
 
     let mut wave = Wave {
         from,
@@ -1048,7 +1040,7 @@ impl Wave {
             FUZZ_POOL.len(),
             POOL_EXCLUSIONS.len(),
             hidden_stride(),
-            round(self.elapsed_ms / 1000.0),
+            round(self.elapsed_ms / MS_PER_SECOND),
         )
     }
 }
@@ -1089,7 +1081,7 @@ pub fn handicap_for_seed(seed: u32) -> SeedHandicap {
 
 /// One shuffle of the pool: the handicapped seat takes its deckSize cards, the other seat the next 20
 /// (TS `decksForSeed` of fuzz-handicap.test.ts, renamed beside the gate's own).
-fn handicap_decks_for_seed(seed: u32, seat: PlayerId, handicap: &Handicap) -> (Vec<String>, Vec<String>) {
+pub(crate) fn handicap_decks_for_seed(seed: u32, seat: PlayerId, handicap: &Handicap) -> (Vec<String>, Vec<String>) {
     let shuffled = Rng::new(&format!("jackioh-fuzz-handicap-decks-{seed}"), 0).shuffle(HANDICAP_POOL.as_slice());
     let big_size = usize::try_from(handicap.deck_size).unwrap_or(0);
     let small_size = usize::try_from(DECK_SIZE).unwrap_or(0);
