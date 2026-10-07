@@ -178,256 +178,260 @@ mod tests {
         }
     }
 
-    // -------------------------------------------------------------------------------------------
-    // The pool (§5.1, R60)
-    // -------------------------------------------------------------------------------------------
+    mod zoomerbin_oomen {
+        use super::*;
 
-    #[test]
-    fn build_row_67_r380_the_base_pool_is_every_sets_cost_1_traps_and_the_radiant_pool_every_trap() {
-        // The base face asks for Cost (1) traps, the radiant face for any trap. Field Trap counts as
-        // Trap (§8 #51, R35, R61), and #85 costs 2, so only the radiant query reaches it.
-        assert_eq!(query_ids(json!({ "type": TRAP_TYPES, "cost": 1 })), TRAP_POOL);
-        let every_trap = query_ids(json!({ "type": TRAP_TYPES }));
-        for id in TRAP_POOL.iter().chain(["core-085"].iter()) {
-            assert!(every_trap.iter().any(|entry| entry == id), "{id} in {every_trap:?}");
+        // -------------------------------------------------------------------------------------------
+        // The pool (§5.1, R60)
+        // -------------------------------------------------------------------------------------------
+
+        #[test]
+        fn build_row_67_r380_the_base_pool_is_every_sets_cost_1_traps_and_the_radiant_pool_every_trap() {
+            // The base face asks for Cost (1) traps, the radiant face for any trap. Field Trap counts as
+            // Trap (§8 #51, R35, R61), and #85 costs 2, so only the radiant query reaches it.
+            assert_eq!(query_ids(json!({ "type": TRAP_TYPES, "cost": 1 })), TRAP_POOL);
+            let every_trap = query_ids(json!({ "type": TRAP_TYPES }));
+            for id in TRAP_POOL.iter().chain(["core-085"].iter()) {
+                assert!(every_trap.iter().any(|entry| entry == id), "{id} in {every_trap:?}");
+            }
+            assert!(every_trap.iter().any(|id| id.starts_with("classic-")));
+            assert!(every_trap.iter().all(|id| {
+                crate::query::query(&json_as::<CardQuery>(json!({ "defId": id })))
+                    .first()
+                    .is_some_and(|def| def.type_.as_str().contains("Trap"))
+            }));
         }
-        assert!(every_trap.iter().any(|id| id.starts_with("classic-")));
-        assert!(every_trap.iter().all(|id| {
-            crate::query::query(&json_as::<CardQuery>(json!({ "defId": id })))
-                .first()
-                .is_some_and(|def| def.type_.as_str().contains("Trap"))
-        }));
-    }
 
-    #[test]
-    fn r81_the_cry_asks_for_nothing_the_lane_is_the_units_own_not_a_declared_pick() {
-        crate::register_all();
-        let scripts = super::script();
-        assert!(scripts.base.targets.is_empty());
-        assert!(scripts.base.modes.is_empty());
-        assert!(scripts.radiant.targets.is_empty());
-        assert!(scripts.base.cry.is_some());
-        assert!(scripts.radiant.cry.is_some());
-    }
+        #[test]
+        fn r81_the_cry_asks_for_nothing_the_lane_is_the_units_own_not_a_declared_pick() {
+            crate::register_all();
+            let scripts = super::super::script();
+            assert!(scripts.base.targets.is_empty());
+            assert!(scripts.base.modes.is_empty());
+            assert!(scripts.radiant.targets.is_empty());
+            assert!(scripts.base.cry.is_some());
+            assert!(scripts.radiant.cry.is_some());
+        }
 
-    // -------------------------------------------------------------------------------------------
-    // Base: the summon (§3.1, §3.2, R1, R33)
-    // -------------------------------------------------------------------------------------------
+        // -------------------------------------------------------------------------------------------
+        // Base: the summon (§3.1, §3.2, R1, R33)
+        // -------------------------------------------------------------------------------------------
 
-    #[test]
-    fn s8_3_summons_a_trap_from_the_pool_into_the_units_own_lanes_backrow_zone() {
-        let mut s = board(json!({ "p1": { "hand": [OOMEN] } }));
-        s.play(OOMEN, json!({ "zone": LANE }));
-
-        let trap = s.backrow(P1, LANE);
-        assert!(trap.is_some());
-        let def_id = trap.as_ref().map(|card| card.def_id.clone());
-        assert!(in_pool(&TRAP_POOL, def_id.as_deref()));
-        // §3.1: only that column, never the leftmost free zone (R64's fallback is not what this says).
-        assert_eq!(backrow_ids(&s), vec![None, None, def_id, None, None]);
-    }
-
-    #[test]
-    fn s3_2_r33_the_trap_arrives_face_down_and_not_radiant_and_r1_leaves_it_unpaid() {
-        let mut s = board(json!({ "p1": { "hand": [OOMEN] } }));
-        s.play(OOMEN, json!({ "zone": LANE }));
-
-        assert_ne!(s.backrow(P1, LANE).and_then(|card| card.face_up), Some(true));
-        // The base face makes an ordinary trap: "Radiant" is the radiant face's word (R275).
-        assert_eq!(s.backrow(P1, LANE).map(|card| card.radiant), Some(false));
-        // Only Oomen's own cost of 1 was paid: a summon pays nothing (R1, §6.3 Summon).
-        s.expect_mana(P1, 3).expect_events(json!(["cardPlayed", "summoned", "summoned"]));
-    }
-
-    #[test]
-    fn r60_the_seeded_pick_stays_inside_the_pool_and_reaches_every_member_of_it() {
-        let mut seen: IndexSet<String> = IndexSet::new();
-        for seed in 0..40 {
-            let mut s = board(json!({ "seed": format!("oomen-{seed}"), "p1": { "hand": [OOMEN] } }));
+        #[test]
+        fn s8_3_summons_a_trap_from_the_pool_into_the_units_own_lanes_backrow_zone() {
+            let mut s = board(json!({ "p1": { "hand": [OOMEN] } }));
             s.play(OOMEN, json!({ "zone": LANE }));
+
             let trap = s.backrow(P1, LANE);
             assert!(trap.is_some());
-            assert!(in_pool(&TRAP_POOL, trap.as_ref().map(|card| card.def_id.as_str())));
-            if let Some(trap) = trap {
-                seen.insert(trap.def_id);
+            let def_id = trap.as_ref().map(|card| card.def_id.clone());
+            assert!(in_pool(&TRAP_POOL, def_id.as_deref()));
+            // §3.1: only that column, never the leftmost free zone (R64's fallback is not what this says).
+            assert_eq!(backrow_ids(&s), vec![None, None, def_id, None, None]);
+        }
+
+        #[test]
+        fn s3_2_r33_the_trap_arrives_face_down_and_not_radiant_and_r1_leaves_it_unpaid() {
+            let mut s = board(json!({ "p1": { "hand": [OOMEN] } }));
+            s.play(OOMEN, json!({ "zone": LANE }));
+
+            assert_ne!(s.backrow(P1, LANE).and_then(|card| card.face_up), Some(true));
+            // The base face makes an ordinary trap: "Radiant" is the radiant face's word (R275).
+            assert_eq!(s.backrow(P1, LANE).map(|card| card.radiant), Some(false));
+            // Only Oomen's own cost of 1 was paid: a summon pays nothing (R1, §6.3 Summon).
+            s.expect_mana(P1, 3).expect_events(json!(["cardPlayed", "summoned", "summoned"]));
+        }
+
+        #[test]
+        fn r60_the_seeded_pick_stays_inside_the_pool_and_reaches_every_member_of_it() {
+            let mut seen: IndexSet<String> = IndexSet::new();
+            for seed in 0..40 {
+                let mut s = board(json!({ "seed": format!("oomen-{seed}"), "p1": { "hand": [OOMEN] } }));
+                s.play(OOMEN, json!({ "zone": LANE }));
+                let trap = s.backrow(P1, LANE);
+                assert!(trap.is_some());
+                assert!(in_pool(&TRAP_POOL, trap.as_ref().map(|card| card.def_id.as_str())));
+                if let Some(trap) = trap {
+                    seen.insert(trap.def_id);
+                }
+            }
+            let mut seen: Vec<String> = seen.into_iter().collect();
+            seen.sort();
+            let mut pool: Vec<String> = TRAP_POOL.iter().map(|id| id.to_string()).collect();
+            pool.sort();
+            assert_eq!(seen, pool);
+        }
+
+        #[test]
+        fn r60_the_same_seed_gives_the_same_trap_the_pick_replays_s9_3() {
+            let pick = || -> Option<String> {
+                let mut s = board(json!({ "seed": "oomen-replay", "p1": { "hand": [OOMEN] } }));
+                s.play(OOMEN, json!({ "zone": LANE }));
+                s.backrow(P1, LANE).map(|card| card.def_id)
+            };
+            assert_eq!(pick(), pick());
+        }
+
+        // -------------------------------------------------------------------------------------------
+        // Base: the fizzle (R47, §8 Conventions)
+        // -------------------------------------------------------------------------------------------
+
+        #[test]
+        fn r47_an_occupied_backrow_zone_fizzles_the_summon_and_the_unit_still_enters() {
+            let mut s = board(json!({ "p1": { "hand": [OOMEN], "backrow": [{ "def": MANA_WELL, "lane": LANE }] } }));
+            s.play(OOMEN, json!({ "zone": LANE }));
+
+            s.expect_in_zone(OOMEN, "field");
+            // Nothing moved, nothing spilled into another lane (§3.1: this card names one zone only).
+            assert_eq!(backrow_ids(&s), vec![None, None, Some(MANA_WELL.to_string()), None, None]);
+        }
+
+        #[test]
+        fn r688_a_locked_backrow_zone_takes_the_summon_a_lock_refuses_only_plays_and_this_text_names_none() {
+            let mut s = board(json!({ "p1": { "hand": [OOMEN] } }));
+            // §3.2 Lock is a zone flag. The harness exposes no way to lock a zone (reported as a harness
+            // gap: `SideSetup.locks` or `s.lock(player, row, lane)`), and #36 Magic Jammed only locks the
+            // zone of a backrow card it destroys, so the flag is set here directly — a test-only liberty.
+            s.state_mut().players.p1.locks.backrow[(LANE - 1) as usize] = true;
+            s.play(OOMEN, json!({ "zone": LANE }));
+
+            s.expect_in_zone(OOMEN, "field");
+            assert!(in_pool(&TRAP_POOL, s.backrow(P1, LANE).map(|card| card.def_id).as_deref()));
+            assert_ne!(s.backrow(P1, LANE).and_then(|card| card.face_up), Some(true));
+        }
+
+        #[test]
+        fn s3_1_lane_1_and_lane_5_are_read_as_the_units_own_column_too() {
+            for lane in [1, 5] {
+                let mut s = board(json!({ "p1": { "hand": [OOMEN] } }));
+                s.play(OOMEN, json!({ "zone": lane }));
+                assert!(s.backrow(P1, lane).is_some());
+                assert!(in_pool(&TRAP_POOL, s.backrow(P1, lane).map(|card| card.def_id).as_deref()));
             }
         }
-        let mut seen: Vec<String> = seen.into_iter().collect();
-        seen.sort();
-        let mut pool: Vec<String> = TRAP_POOL.iter().map(|id| id.to_string()).collect();
-        pool.sort();
-        assert_eq!(seen, pool);
-    }
 
-    #[test]
-    fn r60_the_same_seed_gives_the_same_trap_the_pick_replays_s9_3() {
-        let pick = || -> Option<String> {
-            let mut s = board(json!({ "seed": "oomen-replay", "p1": { "hand": [OOMEN] } }));
-            s.play(OOMEN, json!({ "zone": LANE }));
-            s.backrow(P1, LANE).map(|card| card.def_id)
-        };
-        assert_eq!(pick(), pick());
-    }
-
-    // -------------------------------------------------------------------------------------------
-    // Base: the fizzle (R47, §8 Conventions)
-    // -------------------------------------------------------------------------------------------
-
-    #[test]
-    fn r47_an_occupied_backrow_zone_fizzles_the_summon_and_the_unit_still_enters() {
-        let mut s = board(json!({ "p1": { "hand": [OOMEN], "backrow": [{ "def": MANA_WELL, "lane": LANE }] } }));
-        s.play(OOMEN, json!({ "zone": LANE }));
-
-        s.expect_in_zone(OOMEN, "field");
-        // Nothing moved, nothing spilled into another lane (§3.1: this card names one zone only).
-        assert_eq!(backrow_ids(&s), vec![None, None, Some(MANA_WELL.to_string()), None, None]);
-    }
-
-    #[test]
-    fn r688_a_locked_backrow_zone_takes_the_summon_a_lock_refuses_only_plays_and_this_text_names_none() {
-        let mut s = board(json!({ "p1": { "hand": [OOMEN] } }));
-        // §3.2 Lock is a zone flag. The harness exposes no way to lock a zone (reported as a harness
-        // gap: `SideSetup.locks` or `s.lock(player, row, lane)`), and #36 Magic Jammed only locks the
-        // zone of a backrow card it destroys, so the flag is set here directly — a test-only liberty.
-        s.state_mut().players.p1.locks.backrow[(LANE - 1) as usize] = true;
-        s.play(OOMEN, json!({ "zone": LANE }));
-
-        s.expect_in_zone(OOMEN, "field");
-        assert!(in_pool(&TRAP_POOL, s.backrow(P1, LANE).map(|card| card.def_id).as_deref()));
-        assert_ne!(s.backrow(P1, LANE).and_then(|card| card.face_up), Some(true));
-    }
-
-    #[test]
-    fn s3_1_lane_1_and_lane_5_are_read_as_the_units_own_column_too() {
-        for lane in [1, 5] {
+        #[test]
+        fn s3_1_the_trap_never_lands_on_the_opponents_side_your_backrow_zone() {
             let mut s = board(json!({ "p1": { "hand": [OOMEN] } }));
-            s.play(OOMEN, json!({ "zone": lane }));
-            assert!(s.backrow(P1, lane).is_some());
-            assert!(in_pool(&TRAP_POOL, s.backrow(P1, lane).map(|card| card.def_id).as_deref()));
+            s.play(OOMEN, json!({ "zone": LANE }));
+            let theirs: Vec<Option<CardInstance>> = (1..=5).map(|lane| s.backrow(P2, lane)).collect();
+            assert_eq!(theirs, vec![None, None, None, None, None]);
         }
-    }
 
-    #[test]
-    fn s3_1_the_trap_never_lands_on_the_opponents_side_your_backrow_zone() {
-        let mut s = board(json!({ "p1": { "hand": [OOMEN] } }));
-        s.play(OOMEN, json!({ "zone": LANE }));
-        let theirs: Vec<Option<CardInstance>> = (1..=5).map(|lane| s.backrow(P2, lane)).collect();
-        assert_eq!(theirs, vec![None, None, None, None, None]);
-    }
+        // -------------------------------------------------------------------------------------------
+        // Radiant: "a random Radiant Trap" (§8 Conventions, R275)
+        // -------------------------------------------------------------------------------------------
 
-    // -------------------------------------------------------------------------------------------
-    // Radiant: "a random Radiant Trap" (§8 Conventions, R275)
-    // -------------------------------------------------------------------------------------------
+        #[test]
+        fn r275_the_radiant_face_is_2_4_and_summons_a_radiant_trap_into_its_own_lane_face_down() {
+            let radiant_pool = radiant_trap_pool();
+            let mut s = board(json!({ "p1": { "hand": [{ "def": OOMEN, "radiant": true }] } }));
+            s.play(OOMEN, json!({ "zone": LANE }));
 
-    #[test]
-    fn r275_the_radiant_face_is_2_4_and_summons_a_radiant_trap_into_its_own_lane_face_down() {
-        let radiant_pool = radiant_trap_pool();
-        let mut s = board(json!({ "p1": { "hand": [{ "def": OOMEN, "radiant": true }] } }));
-        s.play(OOMEN, json!({ "zone": LANE }));
-
-        s.expect_stats(OOMEN, json!({ "attack": 2, "health": 4, "maxHealth": 4 }));
-        let trap = s.backrow(P1, LANE);
-        assert!(trap.is_some());
-        let trap = trap.expect("a trap in lane 3");
-        assert!(radiant_pool.contains(&trap.def_id));
-        assert!(trap.radiant);
-        assert_ne!(trap.face_up, Some(true));
-        assert_eq!(backrow_ids(&s), vec![None, None, Some(trap.def_id.clone()), None, None]);
-        // Still a summon: only Oomen's own cost was paid (R1).
-        s.expect_mana(P1, 3);
-    }
-
-    #[test]
-    fn r33_r97_the_radiant_trap_is_hidden_from_the_opponent_face_and_all_its_controller_reads_it() {
-        let mut s = board(json!({
-            "seed": "oomen-radiant-hidden",
-            "p1": { "hand": [{ "def": OOMEN, "radiant": true }] }
-        }));
-        s.play(OOMEN, json!({ "zone": LANE }));
-        let Some(trap) = s.backrow(P1, LANE) else {
-            panic!("the Radiant Oomen should have summoned a trap");
-        };
-        let at = (LANE - 1) as usize;
-
-        // The opponent is told the zone is occupied and what its back shows (R351), nothing more (§10.8).
-        let theirs = s.view(P2);
-        let shown_cost = js(&s.view(P1).you.backrow[at]).get("cost").cloned();
-        let mut back = json!({ "faceDown": true });
-        if let Some(cost) = shown_cost.filter(|cost| !cost.is_null()) {
-            back["cost"] = cost;
+            s.expect_stats(OOMEN, json!({ "attack": 2, "health": 4, "maxHealth": 4 }));
+            let trap = s.backrow(P1, LANE);
+            assert!(trap.is_some());
+            let trap = trap.expect("a trap in lane 3");
+            assert!(radiant_pool.contains(&trap.def_id));
+            assert!(trap.radiant);
+            assert_ne!(trap.face_up, Some(true));
+            assert_eq!(backrow_ids(&s), vec![None, None, Some(trap.def_id.clone()), None, None]);
+            // Still a summon: only Oomen's own cost was paid (R1).
+            s.expect_mana(P1, 3);
         }
-        assert_eq!(js(&theirs.opponent.backrow[at]), back);
-        // Nowhere in their view — the board, the events, a prompt — is the card named or its face shown.
-        let serialized = serde_json::to_string(&theirs).expect("a view serialises");
-        assert!(!serialized.contains(&format!("\"{}\"", trap.id)));
-        assert!(!serialized.contains(&format!("\"{}\"", trap.def_id)));
 
-        // Its controller reads it, Radiant face included (R33).
-        let mine = js(&s.view(P1).you.backrow[at]);
-        assert!(matches_object(
-            &mine,
-            &json!({ "faceDown": false, "defId": trap.def_id, "radiant": true })
-        ));
-    }
-
-    #[test]
-    fn s8_3_the_radiant_pool_drops_the_cost_clause_every_pick_is_a_trap_of_any_set_each_radiant() {
-        let radiant_pool = radiant_trap_pool();
-        let mut seen: IndexSet<String> = IndexSet::new();
-        for seed in 0..40 {
+        #[test]
+        fn r33_r97_the_radiant_trap_is_hidden_from_the_opponent_face_and_all_its_controller_reads_it() {
             let mut s = board(json!({
-                "seed": format!("oomen-radiant-{seed}"),
+                "seed": "oomen-radiant-hidden",
                 "p1": { "hand": [{ "def": OOMEN, "radiant": true }] }
             }));
             s.play(OOMEN, json!({ "zone": LANE }));
-            // The pick is read off its `summoned` event, not off lane 3's zone: R403 makes C #88 Siphon
-            // Squad live from the moment it is set, its self-Tribute included, and p2 controls no Units
-            // here, so the state check right after the summon Tributes it. It still came, Radiant.
-            let picks: Vec<String> = s
-                .events()
-                .iter()
-                .map(js)
-                .filter(|event| event["type"] == "summoned" && event["row"] == "backrow")
-                .filter_map(|event| event["instanceId"].as_str().map(str::to_string))
-                .collect();
-            assert_eq!(picks.len(), 1);
-            let trap = s.card(picks.first().map(String::as_str).unwrap_or("")).clone();
-            assert!(trap.radiant);
-            assert!(radiant_pool.contains(&trap.def_id));
-            // Every other pick stays where §3.1 put it.
-            if trap.def_id == SIPHON_SQUAD {
-                s.expect_in_zone(trap.id.as_str(), "graveyard");
-            } else {
-                assert_eq!(s.backrow(P1, LANE).map(|card| card.id), Some(trap.id.clone()));
+            let Some(trap) = s.backrow(P1, LANE) else {
+                panic!("the Radiant Oomen should have summoned a trap");
+            };
+            let at = (LANE - 1) as usize;
+
+            // The opponent is told the zone is occupied and what its back shows (R351), nothing more (§10.8).
+            let theirs = s.view(P2);
+            let shown_cost = js(&s.view(P1).you.backrow[at]).get("cost").cloned();
+            let mut back = json!({ "faceDown": true });
+            if let Some(cost) = shown_cost.filter(|cost| !cost.is_null()) {
+                back["cost"] = cost;
             }
-            seen.insert(trap.def_id);
+            assert_eq!(js(&theirs.opponent.backrow[at]), back);
+            // Nowhere in their view — the board, the events, a prompt — is the card named or its face shown.
+            let serialized = serde_json::to_string(&theirs).expect("a view serialises");
+            assert!(!serialized.contains(&format!("\"{}\"", trap.id)));
+            assert!(!serialized.contains(&format!("\"{}\"", trap.def_id)));
+
+            // Its controller reads it, Radiant face included (R33).
+            let mine = js(&s.view(P1).you.backrow[at]);
+            assert!(matches_object(
+                &mine,
+                &json!({ "faceDown": false, "defId": trap.def_id, "radiant": true })
+            ));
         }
-        // Forty seeds over a pool of every set's traps reach beyond the Cost (1) ones.
-        assert!(seen.iter().any(|id| !TRAP_POOL.contains(&id.as_str())));
-        assert!(seen.len() > TRAP_POOL.len());
-    }
 
-    #[test]
-    fn r47_the_radiant_face_fizzles_on_an_occupied_zone_and_the_unit_still_enters() {
-        let mut s = board(json!({
-            "p1": { "hand": [{ "def": OOMEN, "radiant": true }], "backrow": [{ "def": MANA_WELL, "lane": LANE }] }
-        }));
-        s.play(OOMEN, json!({ "zone": LANE }));
+        #[test]
+        fn s8_3_the_radiant_pool_drops_the_cost_clause_every_pick_is_a_trap_of_any_set_each_radiant() {
+            let radiant_pool = radiant_trap_pool();
+            let mut seen: IndexSet<String> = IndexSet::new();
+            for seed in 0..40 {
+                let mut s = board(json!({
+                    "seed": format!("oomen-radiant-{seed}"),
+                    "p1": { "hand": [{ "def": OOMEN, "radiant": true }] }
+                }));
+                s.play(OOMEN, json!({ "zone": LANE }));
+                // The pick is read off its `summoned` event, not off lane 3's zone: R403 makes C #88 Siphon
+                // Squad live from the moment it is set, its self-Tribute included, and p2 controls no Units
+                // here, so the state check right after the summon Tributes it. It still came, Radiant.
+                let picks: Vec<String> = s
+                    .events()
+                    .iter()
+                    .map(js)
+                    .filter(|event| event["type"] == "summoned" && event["row"] == "backrow")
+                    .filter_map(|event| event["instanceId"].as_str().map(str::to_string))
+                    .collect();
+                assert_eq!(picks.len(), 1);
+                let trap = s.card(picks.first().map(String::as_str).unwrap_or("")).clone();
+                assert!(trap.radiant);
+                assert!(radiant_pool.contains(&trap.def_id));
+                // Every other pick stays where §3.1 put it.
+                if trap.def_id == SIPHON_SQUAD {
+                    s.expect_in_zone(trap.id.as_str(), "graveyard");
+                } else {
+                    assert_eq!(s.backrow(P1, LANE).map(|card| card.id), Some(trap.id.clone()));
+                }
+                seen.insert(trap.def_id);
+            }
+            // Forty seeds over a pool of every set's traps reach beyond the Cost (1) ones.
+            assert!(seen.iter().any(|id| !TRAP_POOL.contains(&id.as_str())));
+            assert!(seen.len() > TRAP_POOL.len());
+        }
 
-        s.expect_in_zone(OOMEN, "field");
-        assert_eq!(backrow_ids(&s), vec![None, None, Some(MANA_WELL.to_string()), None, None]);
-        // The Field Spell already there is not made Radiant: the summon made nothing.
-        assert_eq!(s.backrow(P1, LANE).map(|card| card.radiant), Some(false));
-    }
+        #[test]
+        fn r47_the_radiant_face_fizzles_on_an_occupied_zone_and_the_unit_still_enters() {
+            let mut s = board(json!({
+                "p1": { "hand": [{ "def": OOMEN, "radiant": true }], "backrow": [{ "def": MANA_WELL, "lane": LANE }] }
+            }));
+            s.play(OOMEN, json!({ "zone": LANE }));
 
-    #[test]
-    fn r688_the_radiant_face_summons_into_a_locked_zone_too_and_the_unit_still_enters() {
-        let radiant_pool = radiant_trap_pool();
-        let mut s = board(json!({ "p1": { "hand": [{ "def": OOMEN, "radiant": true }] } }));
-        s.state_mut().players.p1.locks.backrow[(LANE - 1) as usize] = true;
-        s.play(OOMEN, json!({ "zone": LANE }));
+            s.expect_in_zone(OOMEN, "field");
+            assert_eq!(backrow_ids(&s), vec![None, None, Some(MANA_WELL.to_string()), None, None]);
+            // The Field Spell already there is not made Radiant: the summon made nothing.
+            assert_eq!(s.backrow(P1, LANE).map(|card| card.radiant), Some(false));
+        }
 
-        s.expect_in_zone(OOMEN, "field").expect_stats(OOMEN, json!({ "attack": 2, "health": 4 }));
-        assert!(s.backrow(P1, LANE).is_some_and(|card| radiant_pool.contains(&card.def_id)));
+        #[test]
+        fn r688_the_radiant_face_summons_into_a_locked_zone_too_and_the_unit_still_enters() {
+            let radiant_pool = radiant_trap_pool();
+            let mut s = board(json!({ "p1": { "hand": [{ "def": OOMEN, "radiant": true }] } }));
+            s.state_mut().players.p1.locks.backrow[(LANE - 1) as usize] = true;
+            s.play(OOMEN, json!({ "zone": LANE }));
+
+            s.expect_in_zone(OOMEN, "field").expect_stats(OOMEN, json!({ "attack": 2, "health": 4 }));
+            assert!(s.backrow(P1, LANE).is_some_and(|card| radiant_pool.contains(&card.def_id)));
+        }
     }
 }

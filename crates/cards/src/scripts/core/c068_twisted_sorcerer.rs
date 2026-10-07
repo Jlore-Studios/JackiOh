@@ -146,158 +146,162 @@ mod tests {
         json!([{ "pick": "hero", "player": "p2" }])
     }
 
-    // -------------------------------------------------------------------------------------------
-    // The declaration (§8 Conventions, R81, R90)
-    // -------------------------------------------------------------------------------------------
+    mod twisted_sorcerer {
+        use super::*;
 
-    #[test]
-    fn s8_conventions_declares_one_target_over_all_units_and_heroes_on_either_side_r90() {
-        crate::register_all();
-        let scripts = super::script();
-        // R90: a bare `target` declaration means a unit only, so the heroes have to be named.
-        let decl = json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }]);
-        assert_eq!(serde_json::to_value(&scripts.base.targets).unwrap(), decl);
-        assert_eq!(serde_json::to_value(&scripts.radiant.targets).unwrap(), decl);
-        assert!(scripts.base.modes.is_empty());
-    }
+        // -------------------------------------------------------------------------------------------
+        // The declaration (§8 Conventions, R81, R90)
+        // -------------------------------------------------------------------------------------------
 
-    // -------------------------------------------------------------------------------------------
-    // Base: 4, or 8 below 10 (§4.4, §8.3)
-    // -------------------------------------------------------------------------------------------
+        #[test]
+        fn s8_conventions_declares_one_target_over_all_units_and_heroes_on_either_side_r90() {
+            crate::register_all();
+            let scripts = super::super::script();
+            // R90: a bare `target` declaration means a unit only, so the heroes have to be named.
+            let decl = json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }]);
+            assert_eq!(serde_json::to_value(&scripts.base.targets).unwrap(), decl);
+            assert_eq!(serde_json::to_value(&scripts.radiant.targets).unwrap(), decl);
+            assert!(scripts.base.modes.is_empty());
+        }
 
-    #[test]
-    fn s8_3_deals_4_to_a_chosen_enemy_unit_with_the_hero_at_full_health() {
-        let mut s = board(json!({ "p1": { "hand": [SOURCERER] }, "p2": { "field": [SPONGE] } }));
-        let targets = on_unit(&s, P2, 1);
-        s.play(SOURCERER, json!({ "targets": targets }));
-        s.expect_stats(SPONGE, json!({ "health": 5, "maxHealth": 9 }))
-            .expect_stats(SOURCERER, json!({ "attack": 5, "health": 5 }));
-    }
+        // -------------------------------------------------------------------------------------------
+        // Base: 4, or 8 below 10 (§4.4, §8.3)
+        // -------------------------------------------------------------------------------------------
 
-    #[test]
-    fn s8_3_deals_4_to_a_chosen_hero_on_either_side() {
-        let mut s = board(json!({ "p1": { "hand": [SOURCERER] } }));
-        s.play(SOURCERER, json!({ "targets": at_enemy_hero() }));
-        s.expect_health(P2, 26);
+        #[test]
+        fn s8_3_deals_4_to_a_chosen_enemy_unit_with_the_hero_at_full_health() {
+            let mut s = board(json!({ "p1": { "hand": [SOURCERER] }, "p2": { "field": [SPONGE] } }));
+            let targets = on_unit(&s, P2, 1);
+            s.play(SOURCERER, json!({ "targets": targets }));
+            s.expect_stats(SPONGE, json!({ "health": 5, "maxHealth": 9 }))
+                .expect_stats(SOURCERER, json!({ "attack": 5, "health": 5 }));
+        }
 
-        let mut own = board(json!({ "p1": { "hand": [SOURCERER] } }));
-        own.play(SOURCERER, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
-        own.expect_health(P1, 26);
-    }
+        #[test]
+        fn s8_3_deals_4_to_a_chosen_hero_on_either_side() {
+            let mut s = board(json!({ "p1": { "hand": [SOURCERER] } }));
+            s.play(SOURCERER, json!({ "targets": at_enemy_hero() }));
+            s.expect_health(P2, 26);
 
-    #[test]
-    fn s8_3_deals_8_when_the_controllers_hero_is_below_10_at_resolution() {
-        let mut s = board(json!({ "p1": { "hand": [SOURCERER], "health": 9 }, "p2": { "field": [SPONGE] } }));
-        let targets = on_unit(&s, P2, 1);
-        s.play(SOURCERER, json!({ "targets": targets }));
-        s.expect_stats(SPONGE, json!({ "health": 1, "maxHealth": 9 }));
-    }
+            let mut own = board(json!({ "p1": { "hand": [SOURCERER] } }));
+            own.play(SOURCERER, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
+            own.expect_health(P1, 26);
+        }
 
-    #[test]
-    fn s8_3_below_10_is_strict_exactly_10_still_deals_4() {
-        let mut s = board(json!({ "p1": { "hand": [SOURCERER], "health": 10 }, "p2": { "field": [SPONGE] } }));
-        let targets = on_unit(&s, P2, 1);
-        s.play(SOURCERER, json!({ "targets": targets }));
-        s.expect_stats(SPONGE, json!({ "health": 5, "maxHealth": 9 }));
-    }
+        #[test]
+        fn s8_3_deals_8_when_the_controllers_hero_is_below_10_at_resolution() {
+            let mut s = board(json!({ "p1": { "hand": [SOURCERER], "health": 9 }, "p2": { "field": [SPONGE] } }));
+            let targets = on_unit(&s, P2, 1);
+            s.play(SOURCERER, json!({ "targets": targets }));
+            s.expect_stats(SPONGE, json!({ "health": 1, "maxHealth": 9 }));
+        }
 
-    #[test]
-    fn s8_3_the_threshold_reads_the_controllers_hero_not_the_opponents() {
-        // A low opponent must not raise the amount: "your hero" is the controller's (§8 Conventions).
-        let mut s = board(json!({
-            "p1": { "hand": [SOURCERER], "health": 30 },
-            "p2": { "field": [SPONGE], "health": 3 }
-        }));
-        let targets = on_unit(&s, P2, 1);
-        s.play(SOURCERER, json!({ "targets": targets }));
-        s.expect_stats(SPONGE, json!({ "health": 5, "maxHealth": 9 }));
-    }
+        #[test]
+        fn s8_3_below_10_is_strict_exactly_10_still_deals_4() {
+            let mut s = board(json!({ "p1": { "hand": [SOURCERER], "health": 10 }, "p2": { "field": [SPONGE] } }));
+            let targets = on_unit(&s, P2, 1);
+            s.play(SOURCERER, json!({ "targets": targets }));
+            s.expect_stats(SPONGE, json!({ "health": 5, "maxHealth": 9 }));
+        }
 
-    #[test]
-    fn s4_4_the_damage_is_one_pipeline_instance_so_armor_absorbs_it() {
-        // #25 4-mana 7/7 prints Armor 7: §4.4 step 2 subtracts it, and R63 makes a 0 hit a non-event.
-        let mut s = board(json!({ "p1": { "hand": [SOURCERER] }, "p2": { "field": ["core-025"] } }));
-        let targets = on_unit(&s, P2, 1);
-        s.play(SOURCERER, json!({ "targets": targets }));
-        s.expect_stats("core-025", json!({ "health": 7, "maxHealth": 7 }));
-    }
+        #[test]
+        fn s8_3_the_threshold_reads_the_controllers_hero_not_the_opponents() {
+            // A low opponent must not raise the amount: "your hero" is the controller's (§8 Conventions).
+            let mut s = board(json!({
+                "p1": { "hand": [SOURCERER], "health": 30 },
+                "p2": { "field": [SPONGE], "health": 3 }
+            }));
+            let targets = on_unit(&s, P2, 1);
+            s.play(SOURCERER, json!({ "targets": targets }));
+            s.expect_stats(SPONGE, json!({ "health": 5, "maxHealth": 9 }));
+        }
 
-    #[test]
-    fn r90_refuses_a_play_that_names_no_target_because_a_hero_is_always_legal() {
-        // §8's "empty target set fizzles" cannot arise for this card: both heroes are in the filter, so
-        // `legal_selections_for` is never empty and R90's "asks for what the board has" is still 1.
-        let mut s = board(json!({ "p1": { "hand": [SOURCERER] } }));
-        s.expect_refused_with(|s| s.play(SOURCERER, json!({})), TARGET_TEXT);
-    }
+        #[test]
+        fn s4_4_the_damage_is_one_pipeline_instance_so_armor_absorbs_it() {
+            // #25 4-mana 7/7 prints Armor 7: §4.4 step 2 subtracts it, and R63 makes a 0 hit a non-event.
+            let mut s = board(json!({ "p1": { "hand": [SOURCERER] }, "p2": { "field": ["core-025"] } }));
+            let targets = on_unit(&s, P2, 1);
+            s.play(SOURCERER, json!({ "targets": targets }));
+            s.expect_stats("core-025", json!({ "health": 7, "maxHealth": 7 }));
+        }
 
-    // -------------------------------------------------------------------------------------------
-    // Radiant: "8, or 16" (§8 Conventions — only the numbers move; R275)
-    // -------------------------------------------------------------------------------------------
+        #[test]
+        fn r90_refuses_a_play_that_names_no_target_because_a_hero_is_always_legal() {
+            // §8's "empty target set fizzles" cannot arise for this card: both heroes are in the filter, so
+            // `legal_selections_for` is never empty and R90's "asks for what the board has" is still 1.
+            let mut s = board(json!({ "p1": { "hand": [SOURCERER] } }));
+            s.expect_refused_with(|s| s.play(SOURCERER, json!({})), TARGET_TEXT);
+        }
 
-    #[test]
-    fn r275_the_radiant_face_is_10_10_and_deals_8_with_the_hero_at_full_health() {
-        let mut s = board(json!({
-            "p1": { "hand": [{ "def": SOURCERER, "radiant": true }] },
-            "p2": { "field": [SPONGE] }
-        }));
-        let targets = on_unit(&s, P2, 1);
-        s.play(SOURCERER, json!({ "targets": targets }));
-        s.expect_stats(SOURCERER, json!({ "attack": 10, "health": 10, "maxHealth": 10 }))
-            .expect_stats(SPONGE, json!({ "health": 1, "maxHealth": 9 }));
-    }
+        // -------------------------------------------------------------------------------------------
+        // Radiant: "8, or 16" (§8 Conventions — only the numbers move; R275)
+        // -------------------------------------------------------------------------------------------
 
-    #[test]
-    fn r275_the_radiant_face_deals_16_when_the_controllers_hero_is_below_10() {
-        let mut s = board(json!({
-            "p1": { "hand": [{ "def": SOURCERER, "radiant": true }], "health": 9 },
-            "p2": { "field": [{ "def": SPONGE, "radiant": true }] },
-        }));
-        let targets = on_unit(&s, P2, 1);
-        s.play(SOURCERER, json!({ "targets": targets }));
-        s.expect_stats(SPONGE, json!({ "health": 2, "maxHealth": 18 }));
-    }
+        #[test]
+        fn r275_the_radiant_face_is_10_10_and_deals_8_with_the_hero_at_full_health() {
+            let mut s = board(json!({
+                "p1": { "hand": [{ "def": SOURCERER, "radiant": true }] },
+                "p2": { "field": [SPONGE] }
+            }));
+            let targets = on_unit(&s, P2, 1);
+            s.play(SOURCERER, json!({ "targets": targets }));
+            s.expect_stats(SOURCERER, json!({ "attack": 10, "health": 10, "maxHealth": 10 }))
+                .expect_stats(SPONGE, json!({ "health": 1, "maxHealth": 9 }));
+        }
 
-    #[test]
-    fn s8_3_the_radiant_threshold_is_the_same_strict_below_10_at_10_it_deals_8() {
-        let mut s = board(json!({
-            "p1": { "hand": [{ "def": SOURCERER, "radiant": true }], "health": 10 },
-            "p2": { "field": [{ "def": SPONGE, "radiant": true }] },
-        }));
-        let targets = on_unit(&s, P2, 1);
-        s.play(SOURCERER, json!({ "targets": targets }));
-        s.expect_stats(SPONGE, json!({ "health": 10, "maxHealth": 18 }));
-    }
+        #[test]
+        fn r275_the_radiant_face_deals_16_when_the_controllers_hero_is_below_10() {
+            let mut s = board(json!({
+                "p1": { "hand": [{ "def": SOURCERER, "radiant": true }], "health": 9 },
+                "p2": { "field": [{ "def": SPONGE, "radiant": true }] },
+            }));
+            let targets = on_unit(&s, P2, 1);
+            s.play(SOURCERER, json!({ "targets": targets }));
+            s.expect_stats(SPONGE, json!({ "health": 2, "maxHealth": 18 }));
+        }
 
-    #[test]
-    fn s8_3_the_radiant_threshold_reads_the_controllers_hero_not_the_opponents() {
-        let mut s = board(json!({
-            "p1": { "hand": [{ "def": SOURCERER, "radiant": true }], "health": 30 },
-            "p2": { "field": [{ "def": SPONGE, "radiant": true }], "health": 3 },
-        }));
-        let targets = on_unit(&s, P2, 1);
-        s.play(SOURCERER, json!({ "targets": targets }));
-        s.expect_stats(SPONGE, json!({ "health": 10, "maxHealth": 18 }));
-    }
+        #[test]
+        fn s8_3_the_radiant_threshold_is_the_same_strict_below_10_at_10_it_deals_8() {
+            let mut s = board(json!({
+                "p1": { "hand": [{ "def": SOURCERER, "radiant": true }], "health": 10 },
+                "p2": { "field": [{ "def": SPONGE, "radiant": true }] },
+            }));
+            let targets = on_unit(&s, P2, 1);
+            s.play(SOURCERER, json!({ "targets": targets }));
+            s.expect_stats(SPONGE, json!({ "health": 10, "maxHealth": 18 }));
+        }
 
-    #[test]
-    fn r275_the_radiant_face_still_hits_a_hero_for_8_and_for_16() {
-        let mut high = board(json!({ "p1": { "hand": [{ "def": SOURCERER, "radiant": true }] } }));
-        high.play(SOURCERER, json!({ "targets": at_enemy_hero() }));
-        high.expect_health(P2, 22);
+        #[test]
+        fn s8_3_the_radiant_threshold_reads_the_controllers_hero_not_the_opponents() {
+            let mut s = board(json!({
+                "p1": { "hand": [{ "def": SOURCERER, "radiant": true }], "health": 30 },
+                "p2": { "field": [{ "def": SPONGE, "radiant": true }], "health": 3 },
+            }));
+            let targets = on_unit(&s, P2, 1);
+            s.play(SOURCERER, json!({ "targets": targets }));
+            s.expect_stats(SPONGE, json!({ "health": 10, "maxHealth": 18 }));
+        }
 
-        let mut low = board(json!({ "p1": { "hand": [{ "def": SOURCERER, "radiant": true }], "health": 1 } }));
-        low.play(SOURCERER, json!({ "targets": at_enemy_hero() }));
-        low.expect_health(P2, 14);
-    }
+        #[test]
+        fn r275_the_radiant_face_still_hits_a_hero_for_8_and_for_16() {
+            let mut high = board(json!({ "p1": { "hand": [{ "def": SOURCERER, "radiant": true }] } }));
+            high.play(SOURCERER, json!({ "targets": at_enemy_hero() }));
+            high.expect_health(P2, 22);
 
-    #[test]
-    fn s4_4_the_radiant_8_is_one_instance_too_armor_7_lets_1_through() {
-        let mut s = board(json!({
-            "p1": { "hand": [{ "def": SOURCERER, "radiant": true }] },
-            "p2": { "field": ["core-025"] }
-        }));
-        let targets = on_unit(&s, P2, 1);
-        s.play(SOURCERER, json!({ "targets": targets }));
-        s.expect_stats("core-025", json!({ "health": 6, "maxHealth": 7 }));
+            let mut low = board(json!({ "p1": { "hand": [{ "def": SOURCERER, "radiant": true }], "health": 1 } }));
+            low.play(SOURCERER, json!({ "targets": at_enemy_hero() }));
+            low.expect_health(P2, 14);
+        }
+
+        #[test]
+        fn s4_4_the_radiant_8_is_one_instance_too_armor_7_lets_1_through() {
+            let mut s = board(json!({
+                "p1": { "hand": [{ "def": SOURCERER, "radiant": true }] },
+                "p2": { "field": ["core-025"] }
+            }));
+            let targets = on_unit(&s, P2, 1);
+            s.play(SOURCERER, json!({ "targets": targets }));
+            s.expect_stats("core-025", json!({ "health": 6, "maxHealth": 7 }));
+        }
     }
 }
