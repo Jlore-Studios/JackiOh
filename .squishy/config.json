@@ -30,18 +30,21 @@
     "max_lines": 400,
     "off_limits": [
       "SPEC.md",
+      "spec/",
       "BUILD.md",
-      "packages/engine/test/rulings.test.ts",
-      "packages/shared/src/events.ts",
-      "packages/engine/src/",
-      "packages/ai/src/",
-      "packages/cards/catalog.json",
-      "packages/cards/patches/",
-      "packages/cards/src/scripts/",
-      "apps/server/src/db/migrations/",
+      "crates/engine/src/",
+      "crates/ai/src/",
+      "crates/cards/catalog.json",
+      "crates/cards/patches/",
+      "crates/cards/src/scripts/",
+      "crates/server/migrations/",
       "e2e/"
     ],
-    "generated": ["packages/cards/src/scripts/_generated.ts"]
+    "generated": [
+      "apps/web/src/wire/generated/",
+      "apps/web/src/wire/engineConfig.ts",
+      "apps/web/src/wire/serverConfig.ts"
+    ]
   },
   "max_failures": 3,
   "auto_merge": true,
@@ -77,6 +80,13 @@
     "pnpm-workspace.yaml",
     ".npmrc",
     ".nvmrc",
+    "Cargo.toml",
+    "Cargo.lock",
+    "rust-toolchain.toml",
+    "rustfmt.toml",
+    "clippy.toml",
+    "build.rs",
+    ".cargo/",
     "vitest.config.*",
     "vitest.workspace.*",
     "vite.config.*",
@@ -86,24 +96,32 @@
     "scripts/",
     "vercel.json",
     "render.yaml",
-    "apps/server/src/db/migrations/"
+    "crates/server/Dockerfile",
+    "crates/server/migrations/"
   ],
   "upload_transcripts": false,
-  "install": { "run": "pnpm install --frozen-lockfile", "timeout_minutes": 20 },
+  "install": { "run": "rustup toolchain install && pnpm install --frozen-lockfile", "timeout_minutes": 20 },
   "gates": [
-    { "name": "lint", "run": "pnpm lint", "timeout_minutes": 15, "machine": false },
-    { "name": "typecheck", "run": "pnpm typecheck", "timeout_minutes": 15 },
-    { "name": "catalog", "run": "pnpm validate:catalog", "timeout_minutes": 5 },
+    { "name": "rustfmt", "run": "cargo fmt --check", "timeout_minutes": 5 },
+    { "name": "catalog", "run": "cargo jackioh catalog check", "timeout_minutes": 20 },
+    { "name": "patches", "run": "cargo jackioh patches check", "timeout_minutes": 10 },
+    { "name": "rulings", "run": "cargo jackioh spec check", "timeout_minutes": 10 },
     {
-      "name": "card tests exist",
-      "run": "pnpm exec tsx packages/cards/scripts/missing-tests.ts",
-      "timeout_minutes": 5
+      "name": "clippy",
+      "run": "cargo clippy --workspace --all-targets -- -D warnings",
+      "timeout_minutes": 30,
+      "machine": false
     },
-    { "name": "rulings coverage", "run": "pnpm rulings:coverage", "timeout_minutes": 5 },
     {
-      "name": "related tests",
-      "run": "pnpm exec vitest run --changed origin/main --exclude '**/gate-*.test.ts' --exclude '**/fuzz*.test.ts'",
-      "timeout_minutes": 15,
+      "name": "cargo tests",
+      "run": "cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts && test -z \"$(git status --porcelain -- apps/web/src/wire)\"",
+      "timeout_minutes": 30,
+      "machine": false
+    },
+    {
+      "name": "web tests",
+      "run": "sh scripts/build-wasm.sh && pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts'",
+      "timeout_minutes": 20,
       "machine": false
     }
   ]

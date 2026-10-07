@@ -77,9 +77,24 @@ class MachineGateTests(unittest.TestCase):
     def test_the_committed_checks(self):
         cfg = make_config()
         machine = {g.name: g.machine for g in cfg.gates}
-        self.assertEqual(machine, {"lint": False, "typecheck": True, "catalog": True,
-                                   "card tests exist": True, "rulings coverage": True,
-                                   "related tests": False})
+        self.assertEqual(machine, {"rustfmt": True, "catalog": True, "patches": True,
+                                   "rulings": True, "clippy": False, "cargo tests": False,
+                                   "web tests": False})
+        runs = {g.name: g.run for g in cfg.gates}
+        # The night box's checks build only the CLI their three checks share; clippy, the tests
+        # and the WASM module the web's tests load compile far more, on GitHub's runners.
+        self.assertEqual(runs["rustfmt"], "cargo fmt --check")
+        for name, command in (("catalog", "catalog check"), ("patches", "patches check"),
+                              ("rulings", "spec check")):
+            self.assertEqual(runs[name], f"cargo jackioh {command}")
+        self.assertEqual(runs["clippy"], "cargo clippy --workspace --all-targets -- -D warnings")
+        self.assertIn("cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts",
+                      runs["cargo tests"])
+        self.assertIn('git status --porcelain -- apps/web/src/wire', runs["cargo tests"])  # V20
+        self.assertTrue(runs["web tests"].startswith("sh scripts/build-wasm.sh && "))
+        self.assertEqual(cfg.install.run, "rustup toolchain install && pnpm install --frozen-lockfile")
+        for gate in cfg.gates:
+            self.assertNotRegex(gate.run, r"\b(packages/|apps/server|tsc|pnpm lint|pnpm typecheck)")
 
 
 class WorkTests(unittest.TestCase):

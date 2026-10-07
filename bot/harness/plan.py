@@ -396,11 +396,6 @@ def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lan
             return None
         return Assignment(seat.provider, "review", candidate.difficulty, review=seat)
     builders = free(ROLE_OF[candidate.kind])
-    # Reserved work goes to the subscriptions that claim it, and nowhere else: a `training`
-    # item trains on devin-train's box, while anything else never lands there.
-    reserved = providers_mod.reserved_labels(pool.providers)
-    builders = [p for p in builders
-                if providers_mod.takes_item(p, set(candidate.labels), reserved)]
     floor = plan_floor(candidate)
     if candidate.kind == "build" and not plan_meets(candidate):
         # It has no plan its difficulty may build from (#317 part 6): the planning lane writes one
