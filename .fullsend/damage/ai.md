@@ -3,7 +3,7 @@
 ## How it was measured
 
 The real build cannot reach `jackioh-ai`: `cargo check -p jackioh-ai` stops in `jackioh-engine`
-(185 errors at `9edbee2`, the first build; 44 at `83a4255`, after the engine reconciler's commits).
+(185 errors at `9edbee2`, the first build; 44 once this part was rebased on the engine reconciler's commits).
 So every AI count below is from a **shadow build**: a scratch copy of the workspace (outside the
 repository, never committed) in which every function body of `jackioh-engine` and `jackioh-cards`
 is replaced by `loop {}` (signatures, types, consts and the testkit kept), the card scripts are left
@@ -50,7 +50,7 @@ Shadow build, `tests/ai.rs` (test binary): **41** errors.
 
 By code: E0061 19, E0308 18, E0609 3, E0432 1.
 
-## After (`83a4255`, staging pulled)
+## After (rebased on staging)
 
 Real build: 0 AI errors reachable; `jackioh-engine (lib)` 44 errors (the engine reconciler's).
 

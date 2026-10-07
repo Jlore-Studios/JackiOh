@@ -25,3 +25,20 @@
   `ChooseTargetWhereArgs`, `DrawWhileArgs`, `CastEachArgs`) need `Arc::new` at the call. Decision:
   four test files import `std::sync::Arc` themselves; no SURFACE change needed unless the orchestrator
   prefers the testkit to re-export it as the prelude does.
+
+## ai (part 31)
+
+- **SURFACE §4.3 / §9: the AI's node counts are not classified.** §4.3 sorts TS `number` into game
+  quantities (`i32`), indexes (`usize`), cursors (`u32`) and fractions (`f64`), and part 1 added
+  "bounds on Rust loops and collection lengths `usize`"; a search budget fits none of them cleanly,
+  and part 17's chunks split on it (17.1 `i32` "every AI count", 17.2 `usize`). Decision taken:
+  `SearchBudget`'s fields, `SearchStats.{nodes, determinizations, lines, sim_errors}`,
+  `NodeCounter::{used, limit}`, `find_lethal`'s `limit` and `MatchRecord.nodes` are `usize`
+  (`crates/ai/src/types.rs`); the AI's config counts (`AI_SEARCH`, `AI_REPLY`, `AI_MULLIGAN`) stay
+  `i32` and are cast where they meet a node count. JSON is unchanged (both serialise as numbers),
+  so `ai_decide`'s answer and `constants()`'s `AI_BUDGET` read the same in the web. Suggested line
+  for §4.3: "`number` (an AI node budget or count) → `usize`".
+- **SURFACE §9: `NodeCounter`'s receiver.** §9 names no counter; the decision (`&dyn
+  NodeCounter`, `&self` methods, tallies in `Cell`) is `types.rs`'s. `Cell` is allowed by §3's
+  `clippy.toml` (only `RefCell` is banned); if §3 means "no interior mutability" generally, the
+  counter is the one exception and should be named there.
