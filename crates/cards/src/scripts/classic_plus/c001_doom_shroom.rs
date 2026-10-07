@@ -76,6 +76,7 @@ mod tests {
     }
 
     fn setup(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
+        crate::register_all();
         scenario(json!({
             "active": "p2",
             "p1": merged(
@@ -96,6 +97,7 @@ mod tests {
 
     #[test]
     fn is_a_3_trap_each_face_declares_one_trap_trigger_on_attackdeclared() {
+        crate::register_all();
         let def = crate::card_def(ID);
         assert_eq!(def.type_, CardType::Trap);
         assert_eq!(def.cost, CardCost::Fixed(3));
@@ -109,9 +111,11 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r44_an_enemy_units_attack_on_your_hero_sets_it_off_every_unit_on_both_sides_is_exiled_and_no_combat_resolves() {
+        fn r44_an_enemy_unit_s_attack_on_your_hero_sets_it_off_every_unit_on_both_sides_is_exiled_and_no_combat_resolves()
+        {
+            crate::register_all();
             let mut s = setup(json!({ "field": [VANILLA, TIMMY] }), json!({ "field": [TIMMY, VANILLA] }), false);
-            let attacker = s.unit(P2, 1).unwrap().clone();
+            let attacker = s.unit(P2, 1).unwrap();
             let doom = s.card(DOOM).clone();
 
             s.attack(&attacker, "hero");
@@ -130,11 +134,12 @@ mod tests {
 
         #[test]
         fn never_fires_on_an_attack_on_a_unit_the_combat_resolves_and_the_trap_stays_set() {
+            crate::register_all();
             let mut s = setup(json!({ "field": [VANILLA] }), json!({}), false);
             let doom = s.card(DOOM).clone();
 
-            let attacker = s.unit(P2, 1).unwrap().clone();
-            let target = s.unit(P1, 1).unwrap().clone();
+            let attacker = s.unit(P2, 1).unwrap();
+            let target = s.unit(P1, 1).unwrap();
             s.attack(&attacker, &target);
 
             assert_eq!(count(&s, "trapFired"), 0);
@@ -144,13 +149,14 @@ mod tests {
         }
 
         #[test]
-        fn never_fires_on_its_own_controllers_attack_on_the_enemy_hero() {
+        fn never_fires_on_its_own_controller_s_attack_on_the_enemy_hero() {
+            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [FILLER], "field": [TIMMY], "backrow": [{ "def": DOOM, "faceUp": false, "lane": 2 }] },
                 "p2": { "hand": [FILLER] },
             }));
 
-            let attacker = s.unit(P1, 1).unwrap().clone();
+            let attacker = s.unit(P1, 1).unwrap();
             s.attack(&attacker, "hero");
 
             assert_eq!(count(&s, "trapFired"), 0);
@@ -160,19 +166,21 @@ mod tests {
 
         #[test]
         fn s3_2_r13_it_exiles_the_tops_of_piles_only_a_card_dormant_beneath_resumes_and_stays() {
+            crate::register_all();
             let mut s = setup(json!({ "field": [VANILLA, { "def": FIENDER, "stack": true }] }), json!({}), false);
             let vanilla = s.card(VANILLA).clone();
             let fiender = s.card(FIENDER).clone();
 
-            let attacker = s.unit(P2, 1).unwrap().clone();
+            let attacker = s.unit(P2, 1).unwrap();
             s.attack(&attacker, "hero");
 
             s.expect_in_zone(&fiender, "exile");
-            assert_eq!(s.unit(P1, 1).map(|unit| unit.id.clone()), Some(vanilla.id.clone()));
+            assert_eq!(s.unit(P1, 1).map(|unit| unit.id), Some(vanilla.id.clone()));
         }
 
         #[test]
         fn r11_s6_3_no_death_fires_reborn_does_not_return_and_an_exiled_token_ceases_to_exist() {
+            crate::register_all();
             // The Radiant defender (Reborn; Death: summon a base one) stands on the attacker's side, where
             // its Taunt binds nobody.
             let mut s = setup(
@@ -181,9 +189,9 @@ mod tests {
                 false,
             );
             let defender = s.card(DEFENDER).clone();
-            let token = s.unit(P1, 1).unwrap().clone();
+            let token = s.unit(P1, 1).unwrap();
 
-            let attacker = s.unit(P2, 1).unwrap().clone();
+            let attacker = s.unit(P2, 1).unwrap();
             s.attack(&attacker, "hero");
 
             s.expect_in_zone(&defender, "exile");
@@ -196,32 +204,33 @@ mod tests {
 
         #[test]
         fn e20_its_backrow_zone_is_locked_as_it_fires_and_a_later_play_into_that_zone_is_refused() {
+            crate::register_all();
             let mut s = setup(json!({ "hand": [SHEEPISH, SHEEPISH, FILLER] }), json!({}), false);
 
-            let attacker = s.unit(P2, 1).unwrap().clone();
+            let attacker = s.unit(P2, 1).unwrap();
             s.attack(&attacker, "hero");
 
             s.expect_events(json!(["trapFired", "locked"]));
             assert_eq!(s.view(P1).you.locks.backrow, vec![false, true, false, false, false]);
             s.end_turn();
             assert_eq!(s.state().active, P1);
-            s.expect_refused(|s| {
-                s.play(SHEEPISH, json!({ "zone": 2 }));
-            });
+            s.expect_refused(|s| s.play(SHEEPISH, json!({ "zone": 2 })));
             s.play(SHEEPISH, json!({ "zone": 3 }));
             assert!(s.backrow(P1, 2).is_none());
         }
 
         #[test]
         fn r33_r97_the_opponent_reads_only_a_face_down_card_until_it_fires_then_its_graveyard_names_it() {
+            crate::register_all();
             let mut s = setup(json!({}), json!({}), false);
             assert!(serde_json::to_string(&s.view(P1).you.backrow).unwrap().contains(DOOM));
             assert!(!serde_json::to_string(&s.view(P2)).unwrap().contains(DOOM));
 
-            let attacker = s.unit(P2, 1).unwrap().clone();
+            let attacker = s.unit(P2, 1).unwrap();
             s.attack(&attacker, "hero");
 
-            let graveyard: Vec<String> = s.view(P2).opponent.graveyard.iter().map(|card| card.def_id.clone()).collect();
+            let graveyard: Vec<String> =
+                s.view(P2).opponent.graveyard.iter().map(|card| card.def_id.clone()).collect();
             assert!(graveyard.iter().any(|def_id| def_id == DOOM));
         }
     }
@@ -231,9 +240,10 @@ mod tests {
 
         #[test]
         fn exiles_enemy_units_only_the_attacker_is_gone_no_combat_and_your_units_stay() {
+            crate::register_all();
             let mut s = setup(json!({ "field": [VANILLA, TIMMY] }), json!({ "field": [TIMMY, VANILLA] }), true);
-            let attacker = s.unit(P2, 1).unwrap().clone();
-            let mine = [s.unit(P1, 1).unwrap().clone(), s.unit(P1, 2).unwrap().clone()];
+            let attacker = s.unit(P2, 1).unwrap();
+            let mine = [s.unit(P1, 1).unwrap(), s.unit(P1, 2).unwrap()];
 
             s.attack(&attacker, "hero");
 
