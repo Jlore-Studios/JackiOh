@@ -152,3 +152,28 @@
 - **TS's optional `tx` on `startSeries`.** 19.2 made `api::series::start_series` always take the
   caller's `&mut Tx` (both TS callers passed one); four tests that called it without one now open and
   commit their own. No SURFACE change needed.
+
+## cards (part 31)
+
+- **SURFACE §8 does not say how a card test registers the shipped cards.** TS did it once, in vitest's
+  globalSetup; the engine's testkit cannot (it cannot name `jackioh_cards`), so Wave 1 wrote 88 local
+  wrappers (`scenario`, `game`). Decision taken here: one registering `scenario()` per test binary in
+  the cards crate — `crate::scenario` (`src/lib.rs`, `#[cfg(test)]`) for the card files' `mod tests`,
+  `cross::scenario` (`tests/cross/mod.rs`) for the cross tests — beside `crate::{js, matches_object,
+  merged, unit_or_blank}` for the JSON idioms TS wrote inline (`toMatchObject`, object spread). SURFACE
+  §8's table could name them so a card added later uses them.
+- **SURFACE §8's table has no `card_mut`.** TS tests wrote through `s.card(x)`'s live object
+  (`stepParam(s.card(x), …)`, `s.card(x).radiant = true`); the engine reconciler added
+  `Scenario::card_mut` and the cards' 142 shims around it are gone. The table should list
+  `s.card_mut(ref) -> &mut CardInstance` beside `card()`.
+- **`query::recalled`'s argument.** TS took `Pick<EffectContext, "self" | "data">`, so a pure-read hook
+  (Classic #28's replacement `when`) could call it as `recalled({ self, data: {} }, key)`; Rust's takes
+  `&EffectContext`, so #28 keeps a two-line private reader. Decision: left; the engine owner may widen
+  it (`recalled(self_: Option<&CardInstance>, data: &IndexMap<…>, key)`), and then the copy goes.
+- **naming.ts's tests live in the cards crate, its code in the tools binary** (port-map: naming.ts →
+  `crates/tools/src/patches.rs`; its test → `crates/cards/tests/cross/registry.rs`). A test binary of
+  `jackioh-cards` cannot import a binary crate, so part 22.3 copied `naming` into the test. Decision:
+  left as is; moving the naming tests into `patches.rs`'s `#[cfg(test)]` (tools) deletes the copy.
+- **A cross test reads a file outside the crate**: `tests/cross/radiant_standard.rs` does
+  `include_str!("../../../../docs/radiant-audit.md")`. SURFACE §3 ("data reaches a pure crate only at
+  compile time") allows it, but part 37's cull must keep `docs/radiant-audit.md` where it is.

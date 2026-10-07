@@ -447,3 +447,76 @@ Callers updated: ~250 call sites in 27 files
 Semantic conflicts: error.style → `dispatch` is the one place a non-API error is logged `handler.threw` and answered 500 "something went wrong" (`store_failure`, `hide_internal` and tutorial's `internal(path, error)` did it a second time, so TS's one log line was two)
 Unresolved: none
 Lines: src +315 −891 for this cluster
+
+# cards
+
+## Cluster: TS `stepParam(s.card(x), …)` and the live card in a test (`card_mut`)
+Winner: testkit `Scenario::card_mut(impl Into<CardRef>) -> &mut CardInstance` (added by the engine reconciler) with engine `params::step_param`, called inline as TS wrote it — score 10 (one behaviour: write through the live card), 0 options, 0 type parameters, 0 branches at the call
+Losers: 102 `step` + 2 `step_id` + 4 `step_param_of` + `step_param_on` + 3 `step_card_param` + `step_live_param` + `step_box`/`step_flag`/`step_fungus` (Classic, Classic+, cross `preview.rs`); 17 `card_mut(s, id)` (13 card tests, cross `combat_windows`, `deaths_and_reborn`, `fused_hooks`, `hand_returns`); 9 `()`-returning `make_radiant`/`flag_radiant`/`set_radiant` (Core #33–#35, #51.1, #52, #57, #59, #97, #99) — deleted (each scored the same behaviour plus a lookup the testkit already does)
+Callers updated: 321 step calls, 32 card_mut calls, 25 radiant writes
+Semantic conflicts: none (every copy resolved the reference as `s.card()` does, then wrote the live instance)
+Unresolved: TS's own `makeRadiant` (Core #16, #17, returning the scenario) stays, as TS had it per file. 98 inline `find_instance_mut(s.state_mut(), &id)` writes are no helper and stay (equal to `s.card_mut(&id)`).
+Lines: commits 5579d4a (+332 −1171, with the glow cluster) and part of 9710602
+
+## Cluster: `_glow.ts` in card tests
+Winner: `testkit::glow::{glows, hand_glows, backrow_glows}` (part 5, the port of `_glow.ts`)
+Losers: Core #38's `glows`/`hand_glows`, Core #41's `glows`/`backrow_glows` (private copies) — deleted
+Callers updated: 6 (TS's default viewer `p1` passed explicitly)
+Semantic conflicts: none
+Unresolved: none. `tests/cross/condition_active.rs` keeps its own `glows`/`hand_glows`: TS's condition-active.test.ts defined its own too (rule 3's exception).
+Lines: in 5579d4a
+
+## Cluster: "register the shipped cards, then `scenario()`" (TS's vitest globalSetup)
+Winner: one per test binary — `crate::scenario` (`src/lib.rs`, `#[cfg(test)]`) for the card files' tests, `cross::scenario` (`tests/cross/mod.rs`) for the cross tests: `register_all(); testkit::scenario(opts)`
+Losers: 72 identical local `fn scenario(…)` wrappers in card tests, 9 in cross files, 7 cross `fn game(setup)` wrappers (the same body under another name) — deleted; each module imports the winner
+Callers updated: 88 modules (71 `game(` calls renamed to `scenario(`)
+Semantic conflicts: none (identical bodies)
+Unresolved: none. Tests that call `crate::register_all()` before `scenario` still do (idempotent, left alone).
+Lines: 70ee480 (+95 −421), a31f95d (+78 −106)
+
+## Cluster: small JSON test helpers TS never had as functions (`js`, `matches_object`, `merged`, `unit_or_blank`)
+Winner: `crate::js` (the `?Sized` signature, covering every caller), `crate::matches_object`, `crate::merged`, `crate::unit_or_blank` (`src/lib.rs`, `#[cfg(test)]`)
+Losers: 141 `js`, 36 `matches_object`, 30 `merged`, 10 `unit_or_blank` in card-file tests — deleted
+Callers updated: 217 modules import them
+Semantic conflicts: `matches_object` on arrays: 5 copies compared with `==`, 31 item by item → item by item (Jest's `toMatchObject`, which the TS tests ran under)
+Unresolved: `spread` (22 copies: TS's `{ ...a, ...b }` again, with `(Value, &Value)` and `(Value, Value)` shapes) is the same concept as `merged`; left as is (two call shapes, more files changed than it saves). `must` is NOT a collision: TS's test files had 32 `must`s of their own (rule 3's exception) — the 25 a first pass folded were put back.
+Lines: 383f5f5 (+198 −932), 67781fa (+61 −328)
+
+## Cluster: "owned whatever the reader returns" hedges
+Winner: the owners' return types (`query::zone_cards`, `subsystems::audit_targets` answer `Vec<CardInstance>`)
+Losers: `owned<C: Borrow<CardInstance>>` in Core #51 and C+ #44 — deleted (as the engine reconciler deleted its 9)
+Callers updated: 2
+Semantic conflicts: none
+Unresolved: none
+Lines: in 9710602
+
+## Decision: call shapes the engine reconciler settled, applied in `crates/cards/**`
+Winner: the owners' shapes — `def_of(Option<&GameState>, …)`, `fused_id_parts(Option<&GameState>, …)`, `scripts_for(&GameState, …)`; `TriggerWhen`, `ForEachCardArgs.cards`, `DrawWhileArgs.more`, `CastNewDef::Read`, `KillCreditPairs` on `&mut EffectContext`; testkit `unit()`/`backrow()` answering owned copies and `expect_refused*` closures returning `&mut Scenario`; `CastRandomArgs { query, count, radiant, target_enemies, afterward }`; `AuditArgs`, `SweepReader`, `CostOptions` by value; `roll_chaos_effects(rng, radiant, Option<&[ChaosEffectDef]>)`; `score_def(…, &ScorerOptions, Option<&mut GameState>)` with TS's defaults; `answer_prompt(sink, &AnswerInput)`; `EngineSink::new`; the movers' `&mut CardInstance`
+Losers: the callers' guesses
+Callers updated: ≈160 (see `.fullsend/damage/cards.md`, Seams)
+Semantic conflicts: none
+Unresolved: none
+Lines: 9710602 (+235 −411, with the shim and hedge clusters)
+
+## Decision: `query.rs` (part 9) is the owner of the card-facing pool surface
+Winner: `query(&CardQuery) -> Vec<&'static CardDef>`, `pool(own_id, &CardQuery) -> Vec<&'static CardDef>`, `TRAP_TYPES`, `query_cost`, and `catalog` as a value with methods `query`/`pool`/`cost` and field `trap_types` (TS's `catalog` object). `CardQuery = CatalogQueryArgs` (engine) already derives `Serialize`/`Deserialize`.
+Losers: Transmogulate's by-value `pool(ID, json_as(…))` and `Vec<CardDef>` pools; cross `query.rs`'s `catalog::query(`/`catalog::TRAP_TYPES` module paths
+Callers updated: 23
+Semantic conflicts: none
+Unresolved: card files that call `jackioh_engine::catalog::query` directly (8) are not a collision — TS had `catalog.query` in the engine and the wrapper in cards; same function underneath.
+Lines: in 9710602
+
+## Decision: the registry and `ky_test_bank.rs`
+Winner: build.rs (part 1) — 318 card files ↔ 318 catalog ids, no duplicate `ID`; `ky_test_bank.rs` (part 15) keeps its shape, `KY_TEST_BANK: LazyLock<Vec<KyTestProblem>>` over the engine's `subsystems::ky_test::KyTestProblem` (no second problem type), handed to `subsystems::ky_test_script(&[KyTestProblem])` as `&KY_TEST_BANK` (deref to a slice)
+Losers: none (Core #37/#38, deleted by part 14.2's rebase, were restored by the orchestrator in 9684288)
+Callers updated: 0
+Semantic conflicts: none
+Unresolved: none
+Lines: 0
+
+## Unresolved (cards)
+- naming.ts is written twice: `crates/tools/src/patches.rs` (the owner, port-map) and `crates/cards/tests/cross/registry.rs`'s private `mod naming` (part 22.3), which the cards test binary needs and cannot import from the tools binary. Fewer files changed: left as is. The clean fix is moving the `naming` tests into `patches.rs`'s `#[cfg(test)]` and deleting the cards copy — outside this scope (tools crate).
+- Classic #28's `recalled_on(card, key)` is a private copy of `query::recalled` for a pure-read replacement `when`, because the engine's `recalled` takes `&EffectContext` while TS's took `Pick<EffectContext, "self" | "data">`. Two lines; left. If the engine owner widens `recalled` to TS's shape, the copy goes.
+
+## Totals (cards)
+Lines: before 150,207, after 147,837 (`git diff --shortstat 9684288 HEAD -- crates/cards`: 274 files, 999 insertions, 3,369 deletions). Errors: shadow build 183 → real build 0 (1 warning); clippy 273 warnings for Wave 3. See `.fullsend/damage/cards.md`.
