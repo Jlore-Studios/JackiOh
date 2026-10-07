@@ -26,41 +26,41 @@
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::effects::place_plague_random;
-use std::sync::Arc;
 
 pub const ID: &str = "classic-042";
 
-fn aura(args: &SelfArgs) -> Vec<AuraGrant> {
-    let per_token = param(args, "stats");
-    PLAYER_IDS
-        .iter()
-        .flat_map(|&player| {
-            active_units_of(&args.state, player)
-                .into_iter()
-                .flat_map(|unit| {
-                    let tokens = unit.counters.plague.unwrap_or(0);
-                    if tokens <= 0 {
-                        return vec![];
-                    }
-                    let change = (if unit.controller == args.self_.controller { 1 } else { -1 }) * per_token * tokens;
-                    let unit_id = unit.id.clone();
-                    vec![AuraGrant {
-                        applies: Arc::new(move |candidate: &CardInstance| candidate.id == unit_id),
-                        mod_: StatMod { attack: Some(change), max_health: Some(change), ..StatMod::default() },
-                    }]
-                })
-                .collect::<Vec<AuraGrant>>()
-        })
-        .collect()
+/// TS `const aura: AuraHook = ({ state, self, radiant }) => …`.
+fn aura<'a>(a: HookArgs<'a>) -> Vec<AuraEntry<'a>> {
+    let per_token = param(&a, "stats");
+    let mut entries = Vec::new();
+    for player in PLAYER_IDS {
+        for unit in active_units_of(a.state, player) {
+            let tokens = unit.counters.plague.unwrap_or(0);
+            if tokens <= 0 {
+                continue;
+            }
+            let change = (if unit.controller == a.self_.controller { 1 } else { -1 }) * per_token * tokens;
+            let unit_id = unit.id.clone();
+            entries.push(AuraEntry {
+                applies: Box::new(move |candidate: &CardInstance| candidate.id == unit_id),
+                mod_: StatMod {
+                    attack: Some(change),
+                    max_health: Some(change),
+                    ..StatMod::default()
+                },
+            });
+        }
+    }
+    entries
 }
 
 pub fn script() -> CardScripts {
     let toxins = Script {
-        aura: Some(Arc::new(|args: &SelfArgs| -> Vec<AuraGrant> { aura(args) })),
+        aura: Some(aura_hook(aura)),
         activations: vec![ActivationDecl {
             id: "transmutable-toxins".into(),
             label: "Place a Plague Counter on each of several random Units".into(),
-            uses: json_as(json!(1)),
+            uses: ActivationUses::Count(1),
             cost: None,
             targets: vec![],
             modes: vec![],
@@ -114,6 +114,13 @@ mod tests {
         serde_json::to_value(value).expect("an engine value serialises")
     }
 
+    /// TS `stepParam(s.card(ref), key, steps)`: TS's `card()` handed back the live instance, so the
+    /// step is written on the state's own copy, found again by id.
+    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
+        let id = s.card(card).id.clone();
+        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
+    }
+
     fn tokens_on(s: &Scenario, player: PlayerId, lane: i32) -> i32 {
         s.unit(player, lane).and_then(|unit| unit.counters.plague).unwrap_or(0)
     }
@@ -138,7 +145,7 @@ mod tests {
         fn declares_its_two_numbers_r386_tokens_2_stats_per_token_1_radiant_2_and_one_activate() {
             crate::register_all();
             assert_eq!(
-                js(&registered_catalog()[ID])["params"],
+                js(&crate::card_def(ID).params),
                 json!([
                     { "key": "tokens", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1 },
                     { "key": "stats", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 },
@@ -198,7 +205,7 @@ mod tests {
             }
 
             #[test]
-            fn c4_5_the_1_1_lowers_max_health_an_enemy_it_brings_to_0_dies_at_the_state_check() {
+            fn s4_5_the_1_1_lowers_max_health_an_enemy_it_brings_to_0_dies_at_the_state_check() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TOXINS, STOCKPILE] },
@@ -252,7 +259,7 @@ mod tests {
                     json!([{ "def": VANILLA, "counters": { "plague": 1 } }]),
                     json!([{ "def": MENACE, "counters": { "plague": 1 } }]),
                 );
-                step_param(s.card_mut(TOXINS), "stats", 1);
+                step(&mut s, TOXINS, "stats", 1);
                 s.expect_stats(VANILLA, json!({ "attack": 6, "maxHealth": 6 }));
                 s.expect_stats(MENACE, json!({ "attack": 7, "maxHealth": 7 }));
             }
@@ -309,7 +316,7 @@ mod tests {
             fn r386_an_upgrade_of_tokens_places_on_3_different_units() {
                 crate::register_all();
                 let mut s = with_toxins(false, json!([VANILLA, TIMMY]), json!([MENACE]));
-                step_param(s.card_mut(TOXINS), "tokens", 1);
+                step(&mut s, TOXINS, "tokens", 1);
                 s.activate(TOXINS, json!({}));
                 assert_eq!(
                     [tokens_on(&s, PlayerId::P1, 1), tokens_on(&s, PlayerId::P1, 2), tokens_on(&s, PlayerId::P2, 1)],

@@ -109,7 +109,7 @@ mod tests {
         #[test]
         fn is_keywords_only_both_faces_are_printed_on_the_catalog_so_neither_script_adds_anything() {
             crate::register_all();
-            assert_eq!(ID, STATE);
+            assert_eq!(crate::card_def(ID).id, STATE);
             let def = js(&registered_catalog()[ID]);
             assert_eq!(def["base"]["keywords"], json!([{ "kind": "Indestructible" }]));
             assert_eq!(def["radiant"]["keywords"], json!([{ "kind": "Indestructible" }, { "kind": "Lifesteal" }]));
@@ -131,7 +131,7 @@ mod tests {
             }
 
             #[test]
-            fn c4_4_step_4_combat_damage_never_removes_it_it_attacks_a_9_9_and_takes_nothing_back() {
+            fn s4_4_step_4_combat_damage_never_removes_it_it_attacks_a_9_9_and_takes_nothing_back() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [STATE] },
@@ -153,7 +153,7 @@ mod tests {
             }
 
             #[test]
-            fn c4_4_step_4_a_damage_effect_never_removes_it_book_of_flames_4_deals_it_nothing() {
+            fn s4_4_step_4_a_damage_effect_never_removes_it_book_of_flames_4_deals_it_nothing() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [STATE] },
@@ -213,7 +213,7 @@ mod tests {
             }
 
             #[test]
-            fn c6_1_an_exile_removes_it_no_destroy_is_involved_so_indestructible_does_not_help() {
+            fn s6_1_an_exile_removes_it_no_destroy_is_involved_so_indestructible_does_not_help() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [STATE] },
@@ -229,7 +229,7 @@ mod tests {
             }
 
             #[test]
-            fn c6_1_a_bounce_removes_it_to_its_controllers_hand() {
+            fn s6_1_a_bounce_removes_it_to_its_controllers_hand() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [STATE] },
@@ -245,7 +245,7 @@ mod tests {
             }
 
             #[test]
-            fn c6_3_a_tribute_removes_it_sacrifice_bypasses_indestructible_and_counts_as_a_death() {
+            fn s6_3_a_tribute_removes_it_sacrifice_bypasses_indestructible_and_counts_as_a_death() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [CUBE, FILLER], "field": [STATE] }, "p2": { "hand": [FILLER] } }));
                 let state = s.card(STATE).id.clone();
@@ -273,7 +273,7 @@ mod tests {
             }
 
             #[test]
-            fn c4_4_step_8_its_damage_to_the_enemy_hero_heals_your_hero_the_amount_dealt() {
+            fn s4_4_step_8_its_damage_to_the_enemy_hero_heals_your_hero_the_amount_dealt() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": STATE, "radiant": true }], "health": 20 },
@@ -287,7 +287,7 @@ mod tests {
             }
 
             #[test]
-            fn c4_4_step_8_its_damage_to_a_unit_heals_you_too_and_the_strike_back_still_deals_it_nothing() {
+            fn s4_4_step_8_its_damage_to_a_unit_heals_you_too_and_the_strike_back_still_deals_it_nothing() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": STATE, "radiant": true }], "health": 10 },
