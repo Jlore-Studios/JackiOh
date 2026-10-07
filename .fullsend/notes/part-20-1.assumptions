@@ -1,0 +1,20 @@
+id.instance: String (TS "c<n>")
+num.game: i32 (counts, caps, quantities, ladder ints); f64 for ratings and Glicko; i64 for epoch ms, int8 counts and seq
+num.cursor: u32
+map.ordered: IndexMap
+bag.data: IndexMap<String, serde_json::Value>
+error.style: Result<_, db::store::StoreError> with TS's message text (StoreError::Other(String) for TS's throw, StoreError::Db(sqlx::Error) for the driver, StoreError::Duplicate(match_id) for DuplicateResultError); no panics
+null.optional: Option + skip_serializing_if
+null.nullable: Option, serialised null
+case.json: camelCase via serde rename_all
+case.rust: snake_case
+state.mut: &mut GameState writes, &GameState reads, &mut EngineSink for TS sink mutators
+rng.source: Rng::new(&state.seed, state.rng_cursor) and write the cursor back
+hook.style: Arc<dyn Fn + Send + Sync> via hook(); no fn pointers, no Box
+registry.style: OnceLock set once by register_all; fused scripts built on lookup from state
+async.style: tokio in crates/server only; none in pure crates
+log.style: tracing JSON to stdout, server only
+pg.tx: every pg fn takes &mut sqlx::Transaction<'_, Postgres> (PgTx) and re-stamps role + request.jwt.claim.sub first; pg::begin(pool, claim_sub) / pg::commit(t)
+pg.sql: store.ts's text as &'static str via concat! macros (ts!, nullable_ts!, *_columns!); runtime sqlx::query + bind, no query! macros
+pg.enums: string unions bound and read through their serde form (literal / from_literal), never by variant name
+pg.tuples: TS [A, B] / [A, B, C] port fields are Rust tuples (.0 .1 .2)
