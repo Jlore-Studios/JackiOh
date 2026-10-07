@@ -366,6 +366,8 @@ mod r62_s_start_of_a_turn_with_the_brittle_and_animated_stages_b3_1_b3_3 {
                     instance_id: None,
                     data: IndexMap::new(),
                 },
+                None,
+                None,
             );
         });
         let three = to_turn_three(&state).0;

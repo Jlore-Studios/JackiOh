@@ -105,18 +105,18 @@ mod b5_e39_enchant_r443 {
         let mut state = game();
         let unit = put(&mut state, &body.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         run(&mut state, enchant_one(&unit.id, RETURN), None, HookOptions::default());
-        let now = live(&state, &unit.id).clone();
-        move_to_zone(&mut state, &now, OffFieldZone::Hand, Default::default());
+        let mut now = live(&state, &unit.id).clone();
+        move_to_zone(&mut state, &mut now, OffFieldZone::Hand, Default::default());
         assert_eq!(on(&state, &unit.id), vec![RETURN]);
         for zone in [OffFieldZone::Graveyard, OffFieldZone::Library, OffFieldZone::Exile] {
-            let now = live(&state, &unit.id).clone();
-            move_to_zone(&mut state, &now, zone, Default::default());
+            let mut now = live(&state, &unit.id).clone();
+            move_to_zone(&mut state, &mut now, zone, Default::default());
         }
         assert_eq!(on(&state, &unit.id), vec![RETURN]);
         // TS kept the live object after emptying the exile pile; here the copy taken just before.
-        let exiled = live(&state, &unit.id).clone();
+        let mut exiled = live(&state, &unit.id).clone();
         state.players[PlayerId::P1].exile = vec![];
-        assert!(place_on_field(&mut state, &exiled, &slot(PlayerId::P1, Row::Units, 2), Default::default()));
+        assert!(place_on_field(&mut state, &mut exiled, &slot(PlayerId::P1, Row::Units, 2), Default::default()));
         assert_eq!(on(&state, &unit.id), vec![RETURN]);
     }
 

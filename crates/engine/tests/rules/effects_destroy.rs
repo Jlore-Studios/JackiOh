@@ -297,8 +297,8 @@ mod destroy_m3_t1 {
     #[test]
     fn r12_a_stolen_unit_destroyed_goes_to_its_owner_s_graveyard() {
         let mut state = default_game();
-        let theirs = new_instance(&mut state, "fx-4", PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
-        assert!(place_on_field(&mut state, &theirs, &slot(PlayerId::P1, Row::Units, 1), Default::default()));
+        let mut theirs = new_instance(&mut state, "fx-4", PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
+        assert!(place_on_field(&mut state, &mut theirs, &slot(PlayerId::P1, Row::Units, 1), Default::default()));
         let theirs = live(&state, &theirs.id).clone();
         let mut run = runner(&state);
 
@@ -454,8 +454,8 @@ mod sacrifice_m3_t1 {
     #[test]
     fn r12_a_sacrificed_stolen_unit_goes_to_its_owner_s_graveyard() {
         let mut state = default_game();
-        let theirs = new_instance(&mut state, "fx-4", PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
-        assert!(place_on_field(&mut state, &theirs, &slot(PlayerId::P1, Row::Units, 1), Default::default()));
+        let mut theirs = new_instance(&mut state, "fx-4", PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
+        assert!(place_on_field(&mut state, &mut theirs, &slot(PlayerId::P1, Row::Units, 1), Default::default()));
         let theirs = live(&state, &theirs.id).clone();
         let mut run = runner(&state);
 

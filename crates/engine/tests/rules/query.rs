@@ -9,7 +9,7 @@
 //! the game through, which is the property the acceptance grep is really protecting.
 //!
 //! Port of `packages/engine/test/query.test.ts`. TS's `CardInstance | string` arguments are
-//! `CardOrId::Card(&card)` / `CardOrId::Id(id)`, and `| null` an `Option`. TS held the live card
+//! `CardOrId::Card(&card)` / `CardOrId::Id(id)`, and `null` `CardOrId::Nothing`. TS held the live card
 //! `put` and `inHand` returned; here a card is re-read from the state (`live`).
 
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -126,6 +126,8 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
     }
 
     #[test]
+    // The writes to `hero` are the test: they land on a copy nothing reads again.
+    #[allow(unused_variables, unused_assignments)]
     fn hero_of_hands_back_a_copy_so_a_script_cannot_write_a_hero_s_health_through_it() {
         let state = board("hero-copy");
         let mut hero = hero_of(&state, P1);
@@ -178,13 +180,13 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
 
         // All four zone names answer, which is what #83 walks and what #70's exile term counts.
         let unit = put(&mut state, "fx-5", slot(P1, Row::Units, 1), json!({}));
-        let now = live(&state, &unit);
-        move_to_zone(&mut state, &now, OffFieldZone::Graveyard, Default::default());
+        let mut now = live(&state, &unit);
+        move_to_zone(&mut state, &mut now, OffFieldZone::Graveyard, Default::default());
         assert_eq!(zone_count(&state, P1, OffFieldZone::Graveyard), 1);
         assert_eq!(ids(&zone_cards(&state, P1, OffFieldZone::Graveyard)), vec![unit.id.clone()]);
 
-        let now = live(&state, &unit);
-        move_to_zone(&mut state, &now, OffFieldZone::Exile, Default::default());
+        let mut now = live(&state, &unit);
+        move_to_zone(&mut state, &mut now, OffFieldZone::Exile, Default::default());
         assert_eq!(zone_count(&state, P1, OffFieldZone::Graveyard), 0);
         assert_eq!(zone_count(&state, P1, OffFieldZone::Exile), 1);
     }
@@ -273,21 +275,21 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
         let held = must(in_hand(&mut state, "fx-3", P1, 1).into_iter().next(), "a card kept in hand");
 
         // Nothing played yet: a card in hand would be the first play.
-        assert_eq!(played_earlier(&state, P1, Some(CardOrId::Card(&live(&state, &held)))), 0);
+        assert_eq!(played_earlier(&state, P1, CardOrId::Card(&live(&state, &held))), 0);
 
         state = play_into(&state, &first, 1);
         state = play_into(&state, &second, 2);
 
         // Its place in the log, by instance or by id: nothing before the first play, one before the second.
-        assert_eq!(played_earlier(&state, P1, Some(CardOrId::Id(&first.id))), 0);
+        assert_eq!(played_earlier(&state, P1, CardOrId::Id(&first.id)), 0);
         let on_field = must(top_of(&state, P1, 1), "the second card on the field");
-        assert_eq!(played_earlier(&state, P1, Some(CardOrId::Card(&on_field))), 1);
+        assert_eq!(played_earlier(&state, P1, CardOrId::Card(&on_field)), 1);
         // A card still in hand has not been played: both plays so far are earlier than its would be.
-        assert_eq!(played_earlier(&state, P1, Some(CardOrId::Id(&held.id))), 2);
+        assert_eq!(played_earlier(&state, P1, CardOrId::Id(&held.id)), 2);
         // An id the log does not hold is read the same way.
-        assert_eq!(played_earlier(&state, P1, Some(CardOrId::Id("no-such-card"))), 2);
+        assert_eq!(played_earlier(&state, P1, CardOrId::Id("no-such-card")), 2);
         // The log is per player: p1's plays are not earlier than anything of p2's.
-        assert_eq!(played_earlier(&state, P2, Some(CardOrId::Id(&first.id))), 0);
+        assert_eq!(played_earlier(&state, P2, CardOrId::Id(&first.id)), 0);
     }
 
     #[test]
@@ -299,16 +301,16 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
         state = play_into(&state, &twice, 1);
         state = play_into(&state, &other, 2);
         // Back to the hand (a bounce), and played again: the log holds it twice.
-        let on_field = must(top_of(&state, P1, 0), "the first card on the field");
-        move_to_zone(&mut state, &on_field, OffFieldZone::Hand, Default::default());
-        assert_eq!(played_earlier(&state, P1, Some(CardOrId::Id(&twice.id))), 2);
+        let mut on_field = must(top_of(&state, P1, 0), "the first card on the field");
+        move_to_zone(&mut state, &mut on_field, OffFieldZone::Hand, Default::default());
+        assert_eq!(played_earlier(&state, P1, CardOrId::Id(&twice.id)), 2);
         state = play_into(&state, &twice, 3);
 
         assert_eq!(
             played_ids_this_turn(&state, P1),
             vec![twice.id.clone(), other.id.clone(), twice.id.clone()]
         );
-        assert_eq!(played_earlier(&state, P1, Some(CardOrId::Id(&twice.id))), 2);
+        assert_eq!(played_earlier(&state, P1, CardOrId::Id(&twice.id)), 2);
     }
 
     #[test]
@@ -329,21 +331,21 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
         assert_eq!(log.len(), 2);
         assert_eq!(cards_played_this_turn(&state, P1), 2);
         // So the play that cast it still has nothing before it, and the cast has the play before it.
-        assert_eq!(played_earlier(&state, P1, Some(CardOrId::Id(&stockpile.id))), 0);
+        assert_eq!(played_earlier(&state, P1, CardOrId::Id(&stockpile.id)), 0);
         let cast = must(log.get(1).cloned(), "the cast");
-        assert_eq!(played_earlier(&state, P1, Some(CardOrId::Id(&cast))), 1);
+        assert_eq!(played_earlier(&state, P1, CardOrId::Id(&cast)), 1);
     }
 
     #[test]
     fn r127_played_earlier_with_no_card_takes_the_latest_play_as_the_running_script_s_own() {
         let mut state = playing("played-earlier-null");
-        assert_eq!(played_earlier(&state, P1, None), 0);
+        assert_eq!(played_earlier(&state, P1, CardOrId::Nothing), 0);
         let first = must(in_hand(&mut state, "fx-1", P1, 1).into_iter().next(), "a first card");
         let second = must(in_hand(&mut state, "fx-2", P1, 1).into_iter().next(), "a second card");
         state = play_into(&state, &first, 1);
-        assert_eq!(played_earlier(&state, P1, None), 0);
+        assert_eq!(played_earlier(&state, P1, CardOrId::Nothing), 0);
         state = play_into(&state, &second, 2);
-        assert_eq!(played_earlier(&state, P1, None), 1);
+        assert_eq!(played_earlier(&state, P1, CardOrId::Nothing), 1);
     }
 
     #[test]
@@ -429,8 +431,8 @@ mod r361_r42_killer_of_the_unit_that_destroyed_a_card_as_its_death_hook_reads_it
         assert!(killer_of(&state, Some(&dying)).is_none());
 
         // And in a graveyard it is gone for good.
-        let now = live(&state, &killer);
-        move_to_zone(&mut state, &now, OffFieldZone::Graveyard, Default::default());
+        let mut now = live(&state, &killer);
+        move_to_zone(&mut state, &mut now, OffFieldZone::Graveyard, Default::default());
         assert!(killer_of(&state, Some(&dying)).is_none());
     }
 }

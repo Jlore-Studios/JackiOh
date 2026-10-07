@@ -127,7 +127,7 @@ fn target_prompt(player: PlayerId, prompt: &str, options: &[&str]) -> OpenPrompt
 fn sequence(state: &GameState, seed: &str, steps: usize) -> Vec<Option<ActionBody>> {
     let mut rng = Rng::new(seed, 0);
     (0..steps)
-        .map(|_| choose_action(state, P1, &mut rng, PolicyOptions::default()))
+        .map(|_| choose_action(state, P1, &mut rng))
         .collect()
 }
 
@@ -156,8 +156,8 @@ mod r44_the_ai_policy_m3_t7_s10_7 {
         let state = busy_board("determinism");
 
         assert_eq!(
-            choose_action(&state, P1, &mut Rng::new("policy", 0), PolicyOptions::default()),
-            choose_action(&state, P1, &mut Rng::new("policy", 0), PolicyOptions::default())
+            choose_action(&state, P1, &mut Rng::new("policy", 0)),
+            choose_action(&state, P1, &mut Rng::new("policy", 0))
         );
         assert_eq!(sequence(&state, "policy", 12), sequence(&state, "policy", 12));
         // A different seed walks a different sequence, so the seed is really what decides.
@@ -170,7 +170,7 @@ mod r44_the_ai_policy_m3_t7_s10_7 {
         let offered = legal_actions(&state, P1);
 
         for i in 0..60 {
-            let chosen = choose_action(&state, P1, &mut Rng::new(&format!("seed-{i}"), 0), PolicyOptions::default());
+            let chosen = choose_action(&state, P1, &mut Rng::new(&format!("seed-{i}"), 0));
             assert!(chosen.is_some());
             let chosen = chosen.unwrap();
             assert!(offered.contains(&chosen));
@@ -191,7 +191,7 @@ mod r44_the_ai_policy_m3_t7_s10_7 {
 
         assert_eq!(policy_actions(&state, P1, PolicyOptions::default()), vec![ActionBody::EndTurn]);
         assert_eq!(
-            choose_action(&state, P1, &mut rng, PolicyOptions::default()),
+            choose_action(&state, P1, &mut rng),
             Some(ActionBody::EndTurn)
         );
         assert_eq!(rng.cursor(), 0);
@@ -199,7 +199,7 @@ mod r44_the_ai_policy_m3_t7_s10_7 {
         // With other actions available it ends the turn only on the AI_END_TURN_PROBABILITY roll.
         let busy = busy_board("sometimes-end-turn");
         let ends = (0..200)
-            .map(|i| choose_action(&busy, P1, &mut Rng::new(&format!("roll-{i}"), 0), PolicyOptions::default()))
+            .map(|i| choose_action(&busy, P1, &mut Rng::new(&format!("roll-{i}"), 0)))
             .filter(|action| matches!(action, Some(ActionBody::EndTurn)))
             .count();
         assert!(ends > 0);
@@ -216,7 +216,7 @@ mod r44_the_ai_policy_m3_t7_s10_7 {
 
         let mut picked: IndexSet<String> = IndexSet::new();
         for i in 0..40 {
-            let chosen = choose_action(sink.state, P1, &mut Rng::new(&format!("answer-{i}"), 0), PolicyOptions::default());
+            let chosen = choose_action(sink.state, P1, &mut Rng::new(&format!("answer-{i}"), 0));
             assert_eq!(chosen.as_ref().map(|action| action.action_type()), Some(ActionType::Answer));
             let Some(ActionBody::Answer { choice_id, selection }) = chosen else {
                 continue;
@@ -233,7 +233,7 @@ mod r44_the_ai_policy_m3_t7_s10_7 {
 
         // The prompt is not p2's, so p2 has nothing to do (§9.3).
         assert_eq!(
-            choose_action(sink.state, P2, &mut Rng::new("p2", 0), PolicyOptions::default()),
+            choose_action(sink.state, P2, &mut Rng::new("p2", 0)),
             None
         );
 

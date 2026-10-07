@@ -393,7 +393,7 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
     fn section_6_3_refuses_a_play_whose_tributes_fall_short_of_its_tribute_x_and_refuses_a_board_that_cannot_pay() {
         let mut state = playing("tribute-short");
         let card = hand_card(&mut state, &tribute_two().id, PlayerId::P1);
-        assert_eq!(tribute_cost_of(&card), 2);
+        assert_eq!(tribute_cost_of(&state, &card), 2);
 
         // An empty board cannot pay Tribute 2 at all, so the play is refused outright (§10.5 step 1).
         assert!(says(&refused(&state, &card, 3, &[], None), "needs Tribute 2"));
@@ -421,7 +421,7 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
 
         // A card with no Tribute cost takes no tributes at all (R90's "declared nothing" reading).
         let free = hand_card(&mut state, &death_pinger().id, PlayerId::P1);
-        assert_eq!(tribute_cost_of(&free), 0);
+        assert_eq!(tribute_cost_of(&state, &free), 0);
         assert!(says(&refused(&state, &free, 5, &[&one.id], None), "needs no Tribute"));
     }
 
@@ -481,7 +481,7 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
         let events = {
             let mut sink = sink_for(&mut direct);
             let mut ctx = make_context(
-                sink.reborrow(),
+                &mut sink,
                 None,
                 HookOptions {
                     controller: Some(PlayerId::P1),
@@ -579,7 +579,7 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
 
         // #22 declares no Tribute cost: what it sacrifices is named by its own text, so the play carries
         // a target, not a tribute, and a `tributes` list is refused.
-        assert_eq!(tribute_cost_of(&card), 0);
+        assert_eq!(tribute_cost_of(&state, &card), 0);
         assert!(says(
             &refused(
                 &state,
@@ -645,7 +645,7 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
         let their_sheep = put(&mut state, &sheep().id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let their_body = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
         let card = hand_card(&mut state, &lava_golem().id, PlayerId::P1);
-        assert_eq!(tribute_cost_of(&card), 3);
+        assert_eq!(tribute_cost_of(&state, &card), 3);
 
         // The validator counts both sides' units for #55, and the enemy Sheep is worth 2 there too.
         let offered: Vec<String> =
