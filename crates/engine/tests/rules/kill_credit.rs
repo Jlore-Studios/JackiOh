@@ -126,14 +126,15 @@ mod r42_r412_with_kill_credit {
         let mut state = game("kc-read");
         let striker = put(&mut state, &jungle.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
         let victim = put(&mut state, &grunt.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
-        assert_eq!(kill_credit::credited_killer_id(&striker, &victim.id), striker.id);
+        assert_eq!(kill_credit::credited_killer_id(&striker, &victim), striker.id);
         find_instance_mut(&mut state, &striker.id)
             .expect("the striker is on the field")
             .memory
             .insert(kill_credit::KILL_CREDIT_KEY.to_string(), json!([{ "victimId": victim.id, "toId": "c999" }]));
         let striker = find_instance(&state, &striker.id).expect("the striker is on the field").clone();
-        assert_eq!(kill_credit::credited_killer_id(&striker, &victim.id), "c999");
-        assert_eq!(kill_credit::credited_killer_id(&striker, "c1000"), striker.id);
+        assert_eq!(kill_credit::credited_killer_id(&striker, &victim), "c999");
+        let other = CardInstance { id: "c1000".to_string(), ..victim.clone() };
+        assert_eq!(kill_credit::credited_killer_id(&striker, &other), striker.id);
     }
 }
 

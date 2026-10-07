@@ -45,7 +45,7 @@ fn cells(points: Vec<PapayaPoint>) -> Vec<(i32, i32)> {
 
 /// The option key of a grid cell, from p1's seat (the caster in every test here).
 fn key(x: i32, y: i32) -> String {
-    let zone = zone_of_point(P1, pt(x, y));
+    let zone = zone_of_point(P1, &pt(x, y));
     format!("zone:{}:{}:{}", zone.player, zone.row, zone.lane)
 }
 
@@ -150,47 +150,47 @@ mod r422_the_grid_from_the_casters_seat {
     #[test]
     fn r422_x_is_the_lane_less_one_on_both_sides_y_0_your_backrow_1_your_units_2_their_units_3_their_backrow() {
         assert_eq!(
-            json_of(zone_of_point(P1, pt(0, 0))),
+            json_of(zone_of_point(P1, &pt(0, 0))),
             json!({ "player": "p1", "row": "backrow", "lane": 1 })
         );
         assert_eq!(
-            json_of(zone_of_point(P1, pt(4, 1))),
+            json_of(zone_of_point(P1, &pt(4, 1))),
             json!({ "player": "p1", "row": "units", "lane": 5 })
         );
         assert_eq!(
-            json_of(zone_of_point(P1, pt(2, 2))),
+            json_of(zone_of_point(P1, &pt(2, 2))),
             json!({ "player": "p2", "row": "units", "lane": 3 })
         );
         assert_eq!(
-            json_of(zone_of_point(P1, pt(4, 3))),
+            json_of(zone_of_point(P1, &pt(4, 3))),
             json!({ "player": "p2", "row": "backrow", "lane": 5 })
         );
         // The other seat's grid is its own: its backrow is its row 0.
         assert_eq!(
-            json_of(zone_of_point(P2, pt(0, 0))),
+            json_of(zone_of_point(P2, &pt(0, 0))),
             json!({ "player": "p2", "row": "backrow", "lane": 1 })
         );
         assert_eq!(
-            json_of(zone_of_point(P2, pt(1, 2))),
+            json_of(zone_of_point(P2, &pt(1, 2))),
             json!({ "player": "p1", "row": "units", "lane": 2 })
         );
         for caster in [P1, P2] {
             for x in 0..PAPAYA_LANES {
                 for y in 0..4 {
-                    let back = point_of_zone(caster, zone_of_point(caster, pt(x, y)));
+                    let back = point_of_zone(caster, &zone_of_point(caster, &pt(x, y)));
                     assert_eq!((back.x, back.y), (x, y));
                 }
             }
         }
         panics_with(
             || {
-                zone_of_point(P1, pt(5, 0));
+                zone_of_point(P1, &pt(5, 0));
             },
             "not a cell",
         );
         panics_with(
             || {
-                zone_of_point(P1, pt(0, 4));
+                zone_of_point(P1, &pt(0, 4));
             },
             "not a cell",
         );
@@ -315,7 +315,7 @@ mod r422_the_cells_are_asked_one_board_cell_prompt_at_a_time {
         let rows: Vec<i32> = first
             .options
             .iter()
-            .map(|option| point_of_zone(P1, zone_of(&option.selection)).y)
+            .map(|option| point_of_zone(P1, &zone_of(&option.selection)).y)
             .collect();
         let expected: Vec<i32> = [0, 1, 2, 3]
             .into_iter()

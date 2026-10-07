@@ -4,7 +4,7 @@
 //!
 //! Port of `packages/engine/test/audit.test.ts`.
 
-use jackioh_engine::subsystems::audit::{AuditTargetsArgs, audit_targets, lines_of_code};
+use jackioh_engine::subsystems::audit::{AuditArgs, audit_targets, lines_of_code};
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
@@ -91,8 +91,8 @@ fn controllers<C: std::borrow::Borrow<CardInstance>>(cards: &[C]) -> Vec<PlayerI
     cards.iter().map(|card| card.borrow().controller).collect()
 }
 
-fn args(controller: PlayerId, active: PlayerId, loc: i32, more: bool, enemy_only: bool) -> AuditTargetsArgs {
-    AuditTargetsArgs {
+fn args(controller: PlayerId, active: PlayerId, loc: i32, more: bool, enemy_only: bool) -> AuditArgs {
+    AuditArgs {
         controller,
         active,
         loc,
@@ -142,10 +142,10 @@ mod the_audits_sweep_e36 {
         let mut state = board();
         put(&mut state, &trap().id, slot(P2, Row::Backrow, 1), json!({}));
         put(&mut state, &small().id, slot(P2, Row::Units, 1), json!({}));
-        let top = new_instance(&mut state, &stacker().id, P2, Zone::Hand { player: P2 });
+        let mut top = new_instance(&mut state, &stacker().id, P2, Zone::Hand { player: P2 });
         assert!(place_on_field(
             &mut state,
-            top,
+            &mut top,
             slot(P2, Row::Units, 1),
             PlaceOnFieldOptions { stack: Some(true) }
         ));

@@ -169,7 +169,7 @@ mod r382_the_fruit_pool_holds_the_grapes_and_only_a_pool_that_takes_every_token_
     #[test]
     fn r382_with_tokens_takes_every_token_of_every_set_beside_the_cards_dropshipping_itself_excluded() {
         setup();
-        let pool = ids(&query(&excluding_def_id(&q(json!({ "withTokens": true })), Some("classicplus-058"))));
+        let pool = ids(&query(&excluding_def_id(None, &q(json!({ "withTokens": true })), Some("classicplus-058"))));
         assert_eq!(
             pool,
             vec![
@@ -206,33 +206,34 @@ mod r387_a_card_never_generates_itself_named_by_its_id {
     fn r387_excluding_def_id_adds_the_running_card_s_id_to_what_the_caller_excluded_never_replacing_it() {
         setup();
         assert_eq!(
-            as_json(&excluding_def_id(&q(json!({ "excludeDefId": "core-043" })), Some("classic-010"))),
+            as_json(&excluding_def_id(None, &q(json!({ "excludeDefId": "core-043" })), Some("classic-010"))),
             json!({ "excludeDefId": ["core-043", "classic-010"] })
         );
         // Already excluded: the query is handed back as it was.
         let asked = q(json!({ "excludeDefId": ["classic-010"] }));
-        assert_eq!(as_json(&excluding_def_id(&asked, Some("classic-010"))), as_json(&asked));
-        assert_eq!(as_json(&excluding_def_id(&asked, None)), as_json(&asked));
+        assert_eq!(as_json(&excluding_def_id(None, &asked, Some("classic-010"))), as_json(&asked));
+        assert_eq!(as_json(&excluding_def_id(None, &asked, None)), as_json(&asked));
     }
 
     #[test]
     fn r387_a_fused_card_excludes_every_ingredient_s_definition_a_fused_ingredient_s_included() {
         setup();
         assert_eq!(
-            fused_id_parts("t-2:(t-1:classic-043+core-047)+classicplus-058"),
+            fused_id_parts(None, "t-2:(t-1:classic-043+core-047)+classicplus-058"),
             Some(vec!["t-1:classic-043+core-047".to_string(), "classicplus-058".to_string()])
         );
         assert_eq!(
-            self_def_ids("t-2:(t-1:classic-043+core-047)+classicplus-058"),
+            self_def_ids(None, "t-2:(t-1:classic-043+core-047)+classicplus-058"),
             vec!["classic-043", "core-047", "classicplus-058"]
         );
         let pool = ids(&query(&excluding_def_id(
+            None,
             &q(json!({})),
             Some("t-2:(t-1:classic-043+core-047)+classicplus-058"),
         )));
         assert_eq!(pool, vec!["core-043", "classic-010", "classicplus-043", "classicplus-065"]);
         // A catalog card stands for itself alone; a bare crafted id has no ingredients.
-        assert_eq!(self_def_ids("classic-043"), vec!["classic-043"]);
-        assert_eq!(fused_id_parts("t-3"), None);
+        assert_eq!(self_def_ids(None, "classic-043"), vec!["classic-043"]);
+        assert_eq!(fused_id_parts(None, "t-3"), None);
     }
 }
