@@ -30,7 +30,7 @@ tokio = { version = "1.53.2", features = ["full", "test-util"] }
 tower = { version = "0.5.3", features = ["util"] }
 tower-http = { version = "0.7.1", features = ["cors", "trace"] }
 sqlx = { version = "0.9.0", features = ["runtime-tokio", "tls-rustls", "postgres", "json", "time", "uuid"] }
-jsonwebtoken = { version = "11.1.0" }
+jsonwebtoken = { version = "11.1.0", features = ["rust_crypto"] }
 reqwest = { version = "0.13.5", default-features = false, features = ["json", "rustls"] }
 hmac = { version = "0.13.0" }
 sha2 = { version = "0.11.0" }
