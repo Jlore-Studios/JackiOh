@@ -108,39 +108,29 @@ pub const TRAP_TYPES: &[CardType] = &[CardType::Trap, CardType::FieldTrap];
 pub use jackioh_engine::catalog::query_cost;
 
 /// The TS `catalog` object's type: `{ query, pool, cost: queryCost, trapTypes: TRAP_TYPES }`, so a
-/// script writes `catalog.pool(ID, &args)` and `catalog.trap_types` as the TypeScript did.
+/// script writes `catalog.pool(ID, &args)` and `catalog.trap_types` as the TypeScript did. The three
+/// functions are methods (no fn pointers in a pure crate's values) and the constant is a field.
 #[derive(Clone, Copy, Debug)]
 pub struct CatalogSurface {
-    /// §5.1's `catalog.query(...)`: [`query`].
-    pub query: fn(&CardQuery) -> Vec<&'static CardDef>,
-    /// [`pool`]: the pool for card `own_id`, never offering `own_id` itself (R387).
-    pub pool: fn(&str, &CardQuery) -> Vec<&'static CardDef>,
-    /// [`query_cost`]: R65's out-of-play cost.
-    pub cost: fn(&CardDef) -> i32,
-    /// [`TRAP_TYPES`]: both trap types.
+    /// [`TRAP_TYPES`]: both trap types (TS `catalog.trapTypes`).
     pub trap_types: &'static [CardType],
 }
 
 impl CatalogSurface {
-    /// `catalog.query(args)`.
+    /// §5.1's `catalog.query(...)`: [`query`].
     pub fn query(&self, args: &CardQuery) -> Vec<&'static CardDef> {
-        (self.query)(args)
+        query(args)
     }
 
-    /// `catalog.pool(ownId, args)`.
+    /// `catalog.pool(ownId, args)`: [`pool`], never offering `own_id` itself (R387).
     pub fn pool(&self, own_id: &str, args: &CardQuery) -> Vec<&'static CardDef> {
-        (self.pool)(own_id, args)
+        pool(own_id, args)
     }
 
-    /// `catalog.cost(def)`.
+    /// `catalog.cost(def)`: [`query_cost`], R65's out-of-play cost.
     pub fn cost(&self, def: &CardDef) -> i32 {
-        (self.cost)(def)
+        query_cost(def)
     }
-}
-
-/// R65's out-of-play cost, as a plain `fn` for the `catalog` object's `cost` slot.
-fn catalog_cost(def: &CardDef) -> i32 {
-    query_cost(def)
 }
 
 /// §5.1's `catalog.query(...)`, as the object 110 card scripts call. Lower-case because it is the
@@ -148,9 +138,6 @@ fn catalog_cost(def: &CardDef) -> i32 {
 /// it never collides with `jackioh_engine::catalog` in a script that names both.
 #[allow(non_upper_case_globals)]
 pub const catalog: CatalogSurface = CatalogSurface {
-    query,
-    pool,
-    cost: catalog_cost,
     trap_types: TRAP_TYPES,
 };
 
