@@ -411,7 +411,8 @@ mod r58_10_3_the_resolution_loop_runs_until_the_rules_say_it_is_done {
         assert!(casts <= 55);
         assert!(!s.events().iter().any(|event| matches!(event, GameEvent::ShuffledIn { .. })));
         // The draws past the empty library are §2.4's fatigue, which Going Long's Armor 2 cannot hold.
-        assert!(s.events().iter().filter(|event| matches!(event, GameEvent::Fatigue { .. })).count() > 0);
+        // (TS `filter(fatigue).length > 0`.)
+        assert!(s.events().iter().any(|event| matches!(event, GameEvent::Fatigue { .. })));
         assert_eq!(
             s.state().result,
             Some(GameResult { winner: Winner::P2, reason: GameOverReason::HeroDeath })
