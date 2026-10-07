@@ -89,8 +89,9 @@ R5, R14, R26, R39) and R2's turn cap included, with the training lanes' gate (`T
 ## Generated TypeScript
 
 With `--features ts`, every wire type derives `ts_rs::TS` and its `export_bindings_*` test writes it
-to `apps/web/src/wire/generated/`. Those files and `engineConfig.ts` are committed, and CI's
-`rust (test)` job fails when a run changes them (V20). Regenerate both with the CI command:
+to `apps/web/src/wire/generated/`. Those files and `engineConfig.ts` are committed, and each of CI's
+`rust (test …)` jobs fails when its run changes them (V20). Regenerate both with the command CI's
+error names:
 
 ```
 cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts

@@ -229,7 +229,7 @@ Every change to card data is a patch, and every patch is kept.
 - A branch that changes card data claims it with a pending fragment:
   `cargo jackioh patches <version> <date> "<title>" --source "<issue or PR>" --notes "<what changed>"`
   writes `patches/pending/<version>.json` (`--cards` names the ids; otherwise they are diffed from
-  the newest shipped snapshot). `cargo jackioh patches check` (CI's `rust (checks)` job) fails naming
+  the newest shipped snapshot). `cargo jackioh patches check` (CI's `rust (checks, fuzz 200)` job) fails naming
   the card when a change is unclaimed or claimed twice, a claimed card did not change, a version is
   neither a bare patch number nor a micro `vA.B.Y` (R650), or a fragment's title, sources or notes is
   empty.
