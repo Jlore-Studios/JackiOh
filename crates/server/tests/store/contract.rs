@@ -41,9 +41,9 @@ use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 
 use jackioh_engine::{Action, GameRecord, LastBoardEntry};
-use jackioh_server::db::fake::{self, E2EStoreOptions, FakeData, RedemptionSettings};
+use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
-    BotRating, CatalogInfo, CodeAttempt, CollectionEntry, CollectionGrant, Db, FrozenTrio, GameRecordQuery,
+    BotRating, CodeAttempt, CollectionEntry, CollectionGrant, Db, FrozenTrio, GameRecordQuery,
     InviteCode, LastBoardKind, ListPublicOptions, MatchActionRow, MatchClocks, MatchRow, PlayerSettingsLimits,
     PlayerSettingsMergeInput, PlayerSettingsRow, Profile, ProfileCreateInput, ProfileStatus, RatedGameRow,
     RedeemInviteCodeInput, ResultRow, RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeriesRow,
@@ -140,14 +140,13 @@ pub fn token_ids() -> Vec<String> {
     vec!["core-001.1".to_string(), "core-002.1".to_string()]
 }
 
-pub fn fixture_catalog() -> CatalogInfo {
+/// TS's `fixtureCatalog(): CatalogInfo`. The contract never renders a card, so it had no defs:
+/// `CatalogInfo` was consulted here only for `cardIds`, `isToken` and `isBanned` (the three R111
+/// reads), which are all the fake's `FakeCatalog` holds. The version is `CATALOG_VERSION`.
+pub fn fixture_catalog() -> FakeCatalog {
     let all: Vec<String> = playable_ids().into_iter().chain(token_ids()).collect();
     let tokens: IndexSet<String> = token_ids().into_iter().collect();
-    CatalogInfo {
-        version: CATALOG_VERSION.to_string(),
-        // The contract never renders a card, so the defs stay empty: `CatalogInfo` is consulted
-        // here only for `card_ids`, `is_token` and `is_banned` (the three R111 reads).
-        defs: Default::default(),
+    FakeCatalog {
         card_ids: all,
         is_token: Arc::new(move |card_id: &str| tokens.contains(card_id)),
         is_banned: Arc::new(|_card_id: &str| false),
@@ -210,14 +209,18 @@ impl StoreHarness {
             },
             ..fake::default_redemption_settings()
         };
-        let data = Arc::new(tokio::sync::Mutex::new(fake::create_e2e_store(E2EStoreOptions {
+        let db = fake::create_e2e_store(E2eStoreOptions {
             catalog: fixture_catalog(),
             now: Arc::new(now_ms),
             redemption: Some(redemption),
-        })));
+        });
+        let data = match &db {
+            Db::Fake(data) => Arc::clone(data),
+            Db::Pg(_) => panic!("create_e2e_store answers the in-memory store"),
+        };
         StoreHarness {
             name: "fake store (in memory, db/fake.rs)",
-            db: Db::Fake(Arc::clone(&data)),
+            db,
             playable_ids: playable_ids(),
             token_ids: token_ids(),
             catalog_version: CATALOG_VERSION.to_string(),
@@ -1095,7 +1098,7 @@ mod collection {
                 .await
                 .map_err(|error| error.to_string())?;
             // The fault: `t` is dropped here without a commit, which is the rollback.
-            Err("fault injected after both writes".to_string())
+            Err::<(), String>("fault injected after both writes".to_string())
         }
         .await;
         assert!(must(failed.err(), "the injected fault").contains("fault injected"));
@@ -3264,7 +3267,7 @@ mod tx {
             let mut t = harness.db.begin(None).await.map_err(|error| error.to_string())?;
             inner(&mut t, &profile.id).await?;
             // `t` is dropped here without a commit: the outer transaction rolls back.
-            Err("outer fails after the inner one returned".to_string())
+            Err::<(), String>("outer fails after the inner one returned".to_string())
         }
         .await;
         assert!(must(failed.err(), "the outer failure").contains("outer fails"));
