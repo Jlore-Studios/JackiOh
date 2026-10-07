@@ -21,17 +21,11 @@ use jackioh_engine::validator::{
 };
 
 use super::fixtures::validator_loadouts::{
-    ARCHIVIST, CEASELESS_VOID, HIT_JOB, NOT_IN_CATALOG, SHEEP_TOKEN, catalog, collection, legal_decks,
+    ARCHIVIST, CEASELESS_VOID, HIT_JOB, NOT_IN_CATALOG, POOL_IDS, SHEEP_TOKEN, catalog, collection,
+    legal_decks,
 };
 
 const NAME_MAX: usize = 12;
-
-/// The fixture's `POOL_IDS`: every deckable id, `core-001` up, a whole deck's worth of spares past
-/// the three decks (`fixtures/validator_loadouts.rs`).
-fn pool_ids() -> Vec<String> {
-    let size = (jackioh_engine::validator::LOADOUT_DECKS as usize + 1) * DECK_SIZE as usize;
-    (1..=size).map(|n| format!("core-{n:03}")).collect()
-}
 
 /// `catalog()`, as the JSON the validator is handed.
 fn snapshot() -> Value {
@@ -57,9 +51,10 @@ fn is_deckable() -> Arc<dyn Fn(&str) -> bool + Send + Sync> {
     })
 }
 
-/// The roster predicate a caller passes for D5.
+/// The roster predicate a caller passes for D5: the wire's `is_portrait_id`, which reads any JSON
+/// value (TS's `unknown`).
 fn is_portrait() -> Arc<dyn Fn(&str) -> bool + Send + Sync> {
-    Arc::new(|portrait: &str| is_portrait_id(portrait))
+    Arc::new(|portrait: &str| is_portrait_id(&json!(portrait)))
 }
 
 /// A deck draft as `checkDeckDraft` takes it, with the test's `isDeckable` and `NAME_MAX`.
@@ -154,10 +149,9 @@ mod r250_a_saved_deck_is_a_draft_d1_d4_are_all_a_save_checks {
 
     #[test]
     fn r250_saves_an_empty_a_partial_and_a_full_deck_alike() {
-        let pool = pool_ids();
         assert_eq!(draft(&[], "Aggro"), json!([]));
-        assert_eq!(draft(&pool[..7], "Aggro"), json!([]));
-        assert_eq!(draft(&pool[..DECK_SIZE as usize], "Aggro"), json!([]));
+        assert_eq!(draft(&POOL_IDS[..7], "Aggro"), json!([]));
+        assert_eq!(draft(&POOL_IDS[..DECK_SIZE as usize], "Aggro"), json!([]));
     }
 
     #[test]
@@ -210,8 +204,7 @@ mod r250_a_saved_deck_is_a_draft_d1_d4_are_all_a_save_checks {
 
     #[test]
     fn r250_d2_refuses_more_than_deck_size_cards() {
-        let pool = pool_ids();
-        let issues = draft(&pool[..DECK_SIZE as usize + 1], "Aggro");
+        let issues = draft(&POOL_IDS[..DECK_SIZE as usize + 1], "Aggro");
         assert_eq!(rule_list(&issues), vec!["D2"]);
         assert_eq!(
             issues[0]["message"],

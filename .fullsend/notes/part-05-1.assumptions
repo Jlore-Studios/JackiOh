@@ -1,0 +1,18 @@
+id.instance: String (TS "c<n>")
+num.game: i32
+num.cursor: u32
+map.ordered: IndexMap
+bag.data: IndexMap<String, serde_json::Value>
+error.style: Result<_, EngineError> with TS's message; panic only on invariants (the testkit panics with TS's message where the TS harness threw)
+null.optional: Option + skip_serializing_if
+null.nullable: Option, serialised null
+case.json: camelCase via serde rename_all
+case.rust: snake_case
+state.mut: &mut GameState writes, &GameState reads, &mut EngineSink for TS sink mutators
+rng.source: Rng::new(&state.seed, state.rng_cursor) and write the cursor back
+hook.style: Arc<dyn Fn + Send + Sync> via hook(); no fn pointers, no Box (the validator draft predicates are Arc<dyn Fn(&str) -> bool + Send + Sync> too)
+registry.style: OnceLock set once by register_all; fused scripts built on lookup from state; testkit override = thread_local Cell<Option<&'static _>> (leaked per registration)
+async.style: tokio in crates/server only; none in pure crates
+log.style: tracing JSON to stdout, server only
+fold.types: FoldArgs = ReplayInput, FoldResult = ReplayResult { state, errors: Vec<FoldError { nonce, error }> } in replay.rs
+testkit.failure: panic with TS's message; expect_refused*/expect_throw* catch it with catch_unwind

@@ -155,7 +155,7 @@ use crate::wire::{
     Action, ActionBody, AttackHealth, CardDef, CardDefs, CardType, Counters, GameEvent, PLAYER_IDS, Phase,
     PlayerId, PlayerView, Position, Row, SHIPPED_SETS, Selection, SetName, Tag, Zone, ZoneChoice, opponent_of,
 };
-use crate::zones::{MoveOptions, MovePosition, MoveResult, OffFieldZone, ZoneSlot};
+use crate::zones::{LibraryPosition, MoveOptions, MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot};
 
 pub const DEFAULT_SEED: &str = "jackioh-harness";
 /// A mid-game board: both sides at MAX_MANA. See the file header.
@@ -876,7 +876,10 @@ fn place_one(sink: &mut EngineSink<'_>, player: PlayerId, entry: &Placement) -> 
     // §3.2 Stack: `stack: true` buries whatever is in the lane already — `place_on_field` puts the
     // arriving card on top, so the pile reads top-first and the list reads bottom-first.
     let slot = ZoneSlot { player, row, lane };
-    if !crate::zones::place_on_field(&mut *sink.state, card, slot, entry.entry.stack == Some(true)) {
+    let options = PlaceOnFieldOptions {
+        stack: if entry.entry.stack == Some(true) { Some(true) } else { None },
+    };
+    if !crate::zones::place_on_field(&mut *sink.state, &mut card, &slot, options) {
         return Err(format!(
             "{}: {} {} lane {lane} would not take \"{}\"",
             entry.label,
@@ -979,10 +982,10 @@ fn place_pile(
         // `position: "bottom"` keeps list order, so `library[0]` is the next card drawn (draw.rs).
         let result = crate::zones::move_to_zone(
             &mut *sink.state,
-            card,
+            &mut card,
             zone.off_field(),
             MoveOptions {
-                position: Some(MovePosition::Bottom),
+                position: Some(LibraryPosition::Bottom),
                 ..MoveOptions::default()
             },
         );
@@ -1856,7 +1859,7 @@ mod tests {
 
     use super::*;
     use crate::config::{HAND_CAP, MAX_MANA};
-    use crate::mana::{CostOptions, effective_cost};
+    use crate::mana::effective_cost;
     use crate::wire::{KeywordKind, ZoneName};
     use serde_json::json;
 
@@ -2269,7 +2272,7 @@ mod tests {
                 },
             }));
             let at = |zone: &str| -> CardInstance { s.pile("p1", zone)[0].clone() };
-            let cost = |card: &CardInstance| effective_cost(s.state(), card, &CostOptions::default());
+            let cost = |card: &CardInstance| effective_cost(s.state(), card, Default::default());
 
             // R65/R66 read the cost at resolution through `effective_cost`, printed 4 for core-025.
             assert_eq!(at("hand").cost_mod, -1);
@@ -2287,7 +2290,7 @@ mod tests {
             let untouched = bare.hand("p1")[0].clone();
             assert_eq!(untouched.cost_mod, 0);
             assert_eq!(untouched.cost_override, None);
-            assert_eq!(effective_cost(bare.state(), &untouched, &CostOptions::default()), 4);
+            assert_eq!(effective_cost(bare.state(), &untouched, Default::default()), 4);
         }
 
         #[test]
