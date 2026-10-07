@@ -1,0 +1,21 @@
+id.instance: String (TS "c<n>")
+num.game: i32
+num.cursor: u32
+map.ordered: IndexMap
+bag.data: IndexMap<String, serde_json::Value>
+error.style: Result<_, EngineError> with TS's message; panic only on invariants (refusal-string checks such as why_cannot_attack are Result<(), EngineError>)
+null.optional: Option + skip_serializing_if
+null.nullable: Option, serialised null
+case.json: camelCase via serde rename_all
+case.rust: snake_case
+state.mut: &mut GameState writes, &GameState reads, &mut EngineSink for TS sink mutators
+rng.source: Rng::new(&state.seed, state.rng_cursor) and write the cursor back
+hook.style: Arc<dyn Fn(&mut EffectContext) -> Vec<Effect> + Send + Sync> via hook(); typed hooks via their builders (cost_hook); no fn pointers, no Box
+registry.style: OnceLock set once by register_all; fused scripts built on lookup from state; tests use the testkit's thread-local register_catalog/register_scripts
+async.style: tokio in crates/server only; none in pure crates
+log.style: tracing JSON to stdout, server only
+test.live_objects: owned CardInstance copies; re-read with find_instance, write with find_instance_mut
+test.sink_for: sink_for(&mut GameState) -> EngineSink<'_>; state read as sink.state while it lives
+test.default_params: scalar default/optional -> trailing Option<T> (None when omitted); options object -> struct (Default::default() when omitted; json_as(json!) when anonymous)
+test.fixture_defs: lowercase TS fixture CardDef constants are fns returning CardDef (veteran(), plain())
+test.literals: actions json_as::<ActionInput>(json!), effect args json_as(json!), toMatchObject via a local matcher over serde_json::Value
