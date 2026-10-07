@@ -3,9 +3,8 @@
 //! exactly while the store holds none of its writes.
 //!
 //! The port of `apps/server/test/db/season-start.test.ts`. TS's `createTestDeps()` is
-//! `support::deps::test_app()` (a fake store and the test patch version); its `seedProfile` is the
-//! store's own `profiles.create`, `profiles.setGlicko` and `profiles.setStatus`, so the two rated
-//! profiles are whatever ids the store hands back rather than fixed strings.
+//! `support::deps::test_app()` (a fake store and the test patch version); its store's
+//! `seedProfile` is `FakeData::seed_profile`, reached through the `Db::Fake` handle's lock.
 
 use jackioh_server::api::ranked::{SeasonDeps, rate_ranked_game};
 use jackioh_server::cli::season_start::{SeasonStartOptions, parse_season_start_args, start_season};
@@ -66,17 +65,14 @@ fn player(profile_id: &str) -> Value {
     json!({ "kind": "player", "profileId": profile_id })
 }
 
-/// TS's `seedProfile({ id, rating, ratingDeviation: 100 })`: an active profile at that rating.
-/// Ratings go in as JSON integers, which read as a whole `f64` or an integer field alike.
-async fn seed_profile(db: &Db, name: &str, rating: i64) -> String {
-    let user_id = format!("user-{name}");
-    let input = json!({ "userId": user_id, "email": format!("{name}@example.test"), "rating": rating, "at": 0 });
-    let created = js(&once!(db, None, |tx| tx.profiles_create(&de(input.clone()))).expect("profiles.create"));
-    let id = created["id"].as_str().expect("a profile id").to_string();
-    let glicko = json!({ "rating": rating, "deviation": 100, "volatility": created["ratingVolatility"].clone() });
-    once!(db, Some(id.as_str()), |tx| tx.profiles_set_glicko(&id, &de(glicko.clone()))).expect("profiles.setGlicko");
-    once!(db, Some(id.as_str()), |tx| tx.profiles_set_status(&id, de(json!("active")))).expect("profiles.setStatus");
-    id
+/// The two rated profiles.
+const A: &str = "profile-a";
+const B: &str = "profile-b";
+
+/// TS `deps.store.seedProfile(input)`: an active profile written straight into the fake's tables.
+async fn seed_profile(db: &Db, input: Value) {
+    let Db::Fake(data) = db else { panic!("the test app's store is the fake") };
+    data.lock().await.seed_profile(input);
 }
 
 async fn profile_of(db: &Db, profile_id: &str) -> Value {
@@ -89,24 +85,27 @@ async fn season_ids(db: &Db) -> Vec<String> {
     seasons.iter().map(|season| js(season)["id"].as_str().unwrap_or_default().to_string()).collect()
 }
 
-/// Two rated players and their season — the state a mid-version bump finds. Answers `(A, B)`.
-async fn rated_pair(app: &std::sync::Arc<jackioh_server::app::App>) -> (String, String) {
-    let a = seed_profile(&app.db, "profile-a", 1200).await;
-    let b = seed_profile(&app.db, "profile-b", 800).await;
-    // One rated game between the two profiles: what `ratedPlayers` (and so the reset) reads.
+/// One rated game between the two profiles: what `ratedPlayers` (and so the reset) reads.
+async fn rate(app: &std::sync::Arc<jackioh_server::app::App>, at: i64) {
     let input = json!({
-        "id": "m-1",
+        "id": format!("m-{at}"),
         "kind": "match",
         "catalogVersion": "test-1",
-        "sides": [player(&a), player(&b)],
+        "sides": [player(A), player(B)],
         "winnerSide": 0,
         "reason": "hero-death",
-        "at": 1,
+        "at": at,
     });
     let mut tx = app.db.begin(None).await.expect("store.tx");
     rate_ranked_game(&mut tx, app, &de(input)).await.expect("rateRankedGame");
     tx.commit().await.expect("commit");
-    (a, b)
+}
+
+/// Two rated players and their season — the state a mid-version bump finds.
+async fn rated_pair(app: &std::sync::Arc<jackioh_server::app::App>) {
+    seed_profile(&app.db, json!({ "id": A, "rating": 1200, "ratingDeviation": 100 })).await;
+    seed_profile(&app.db, json!({ "id": B, "rating": 800, "ratingDeviation": 100 })).await;
+    rate(app, 1).await;
 }
 
 fn deps(patch_version: &str) -> SeasonDeps {
@@ -136,7 +135,7 @@ mod r609_start_season {
         let app = test_app().await;
         rated_pair(&app).await;
 
-        let opened = js(&start_season(&app.db, &deps("v0.2.0"), &SeasonStartOptions { dry_run: false })
+        let opened = js(&start_season(&app.db, &deps("v0.2.0"), SeasonStartOptions { dry_run: false })
             .await
             .expect("startSeason"));
         assert_eq!(opened["season"]["id"], "v0.2");
@@ -145,7 +144,7 @@ mod r609_start_season {
         assert_eq!(season_ids(&app.db).await, vec![season_id_of(TEST_PATCH_VERSION), "v0.2".to_string()]);
 
         // And it is idempotent: the season the server boot would open is already there.
-        let again = js(&start_season(&app.db, &deps("v0.2.0"), &SeasonStartOptions { dry_run: false })
+        let again = js(&start_season(&app.db, &deps("v0.2.0"), SeasonStartOptions { dry_run: false })
             .await
             .expect("startSeason again"));
         assert_eq!(again["opened"], false);
@@ -155,12 +154,12 @@ mod r609_start_season {
     #[tokio::test]
     async fn dry_run_reports_the_reset_and_rolls_every_write_back() {
         let app = test_app().await;
-        let (a_id, b_id) = rated_pair(&app).await;
-        let (a, b) = (profile_of(&app.db, &a_id).await, profile_of(&app.db, &b_id).await);
+        rated_pair(&app).await;
+        let (a, b) = (profile_of(&app.db, A).await, profile_of(&app.db, B).await);
         let rating = |profile: &Value| profile["rating"].as_f64().expect("a rating");
         let mean = (rating(&a) + rating(&b)) / 2.0;
 
-        let opened = js(&start_season(&app.db, &deps("v0.2.0"), &SeasonStartOptions { dry_run: true })
+        let opened = js(&start_season(&app.db, &deps("v0.2.0"), SeasonStartOptions { dry_run: true })
             .await
             .expect("startSeason --dry-run"));
 
@@ -176,20 +175,20 @@ mod r609_start_season {
 
         // …and nothing it described survives: no season row, untouched ratings.
         assert_eq!(season_ids(&app.db).await, vec![season_id_of(TEST_PATCH_VERSION)]);
-        let (a_after, b_after) = (profile_of(&app.db, &a_id).await, profile_of(&app.db, &b_id).await);
+        let (a_after, b_after) = (profile_of(&app.db, A).await, profile_of(&app.db, B).await);
         assert_eq!(a_after["rating"], a["rating"]);
         assert_eq!(a_after["ratingDeviation"], a["ratingDeviation"]);
         assert_eq!(b_after["rating"], b["rating"]);
         assert_eq!(b_after["ratingDeviation"], b["ratingDeviation"]);
 
         // A real run right after does exactly what the dry run reported.
-        let applied = js(&start_season(&app.db, &deps("v0.2.0"), &SeasonStartOptions { dry_run: false })
+        let applied = js(&start_season(&app.db, &deps("v0.2.0"), SeasonStartOptions { dry_run: false })
             .await
             .expect("startSeason"));
         assert_eq!(applied["opened"], true);
         assert_eq!(applied["reset"]["players"].as_i64(), Some(2));
         assert_close(
-            rating(&profile_of(&app.db, &a_id).await),
+            rating(&profile_of(&app.db, A).await),
             mean + (rating(&a) - mean) * (1.0 - SEASON_RESET_STRENGTH),
         );
     }
@@ -198,7 +197,7 @@ mod r609_start_season {
     async fn dry_run_on_an_already_open_season_reports_it_as_unopened_and_writes_nothing() {
         let app = test_app().await;
         rated_pair(&app).await;
-        let opened = js(&start_season(&app.db, &deps(TEST_PATCH_VERSION), &SeasonStartOptions { dry_run: true })
+        let opened = js(&start_season(&app.db, &deps(TEST_PATCH_VERSION), SeasonStartOptions { dry_run: true })
             .await
             .expect("startSeason --dry-run"));
         assert_eq!(opened["season"]["id"], season_id_of(TEST_PATCH_VERSION).as_str());

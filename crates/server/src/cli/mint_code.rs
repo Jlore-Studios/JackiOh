@@ -17,8 +17,8 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPoolOptions;
 
-use crate::api::codes::{MintDeps, MintInput, mint_invite_code};
-use crate::api::crypto::{Peppers, create_hashes};
+use crate::api::codes::{MintInviteCodeInput, mint_invite_code};
+use crate::api::crypto::create_hashes;
 use crate::db::store::Db;
 use crate::env::{Env, load_env};
 
@@ -99,20 +99,14 @@ async fn mint(db: &Db, env: &Env, options: &MintOptions) -> Result<()> {
         ),
     };
 
-    let minted = mint_invite_code(
-        &MintDeps {
-            db,
-            // §9.4, §9.8: one pepper in the environment, two domains — the same derivation
-            // `src/app.rs` uses, so this code hashes to what redemption will look up.
-            hashes: &create_hashes(Peppers {
-                code: format!("{}:code", env.code_pepper),
-                ip: format!("{}:ip", env.code_pepper),
-            }),
-        },
-        MintInput { max_uses: options.max_uses, expires_at },
-    )
-    .await
-    .map_err(|error| anyhow!("{error}"))?;
+    // §9.4, §9.8: one pepper in the environment, two domains — the same derivation `src/app.rs`
+    // uses, so this code hashes to what redemption will look up.
+    let hashes = create_hashes(&format!("{}:code", env.code_pepper), &format!("{}:ip", env.code_pepper));
+    // TS `MintDeps` was the store, ids, hashes and timers; ids and the clock are the server's own
+    // functions now (SURFACE §11.3), so minting takes the store and the hashes.
+    let minted = mint_invite_code(db, &hashes, MintInviteCodeInput { max_uses: options.max_uses, expires_at })
+        .await
+        .map_err(|error| anyhow!("{error}"))?;
 
     // The plaintext goes to stdout and the metadata to stderr, so `mint-code > code.txt`
     // captures the code alone.

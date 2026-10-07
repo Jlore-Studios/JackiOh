@@ -63,13 +63,6 @@ pub struct SeededAccount {
     pub created: bool,
 }
 
-/// TS `Pick<ServerEnv, "SUPABASE_URL" | "NODE_ENV">`: the two variables the gate reads.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct SeedAccountsEnv<'a> {
-    pub supabase_url: &'a str,
-    pub node_env: &'a str,
-}
-
 /// What the gate hands back: the password, once every check has passed.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -78,19 +71,21 @@ pub struct SeedAccountsSettings {
 }
 
 /// Checks the opt-in and reads the password, or fails with one error listing every problem. Pure,
-/// so a test can drive it without a project.
+/// so a test can drive it without a project. TS's `env: Pick<ServerEnv, "SUPABASE_URL" |
+/// "NODE_ENV">` is its two values.
 pub fn seed_accounts_settings(
     source: &IndexMap<String, String>,
-    env: SeedAccountsEnv<'_>,
+    supabase_url: &str,
+    node_env: &str,
 ) -> Result<SeedAccountsSettings> {
     let mut problems: Vec<String> = Vec::new();
 
-    if env.node_env == "production" {
+    if node_env == "production" {
         problems.push("NODE_ENV is production: these accounts skip the invite gate.".to_string());
     }
 
-    let url = reqwest::Url::parse(env.supabase_url)
-        .map_err(|error| anyhow!("SUPABASE_URL is not a URL ({error}): {}", json_text(env.supabase_url)))?;
+    let url = reqwest::Url::parse(supabase_url)
+        .map_err(|error| anyhow!("SUPABASE_URL is not a URL ({error}): {}", json_text(supabase_url)))?;
     let host = url.host_str().unwrap_or_default().to_string();
     let opt_in = source.get(SEED_PROJECT_VAR).map(|value| value.trim()).unwrap_or_default();
     if opt_in != host {
@@ -316,10 +311,7 @@ async fn save_starter_decks(client: &mut PgConnection, profile_id: &str, catalog
 pub async fn seed_accounts(count: i64) -> Result<Vec<SeededAccount>> {
     let source: IndexMap<String, String> = std::env::vars().collect();
     let env = load_env(&source).map_err(|error| anyhow!("{error}"))?;
-    let settings = seed_accounts_settings(
-        &source,
-        SeedAccountsEnv { supabase_url: env.supabase_url.as_str(), node_env: env.node_env.as_str() },
-    )?;
+    let settings = seed_accounts_settings(&source, env.supabase_url.as_str(), env.node_env.as_str())?;
 
     let mut client = PgConnection::connect(&env.database_url).await?;
     let seeded = seed_with(&mut client, &env, &settings.password, count).await;

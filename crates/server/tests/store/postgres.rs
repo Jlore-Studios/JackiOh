@@ -588,7 +588,7 @@ mod r250_r252_app_upsert_deck_and_app_upsert_trio {
     }
 
     /// `decks.upsert`, in its own transaction: the outcome's JSON, or the refusal's text.
-    async fn upsert(db: &Db, deck: Value, cap: i32) -> Result<Value, String> {
+    async fn upsert(db: &Db, deck: Value, cap: i64) -> Result<Value, String> {
         let profile_id = deck["profileId"].as_str().unwrap_or_default().to_string();
         once!(db, Some(profile_id.as_str()), |tx| tx.decks_upsert(&de(deck.clone()), cap)).map(|outcome| js(&outcome))
     }
