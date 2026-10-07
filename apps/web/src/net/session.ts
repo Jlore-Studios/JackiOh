@@ -26,7 +26,7 @@
 // the end). Neither is a secret. A recovery session never touches `localStorage`; `auth/redirect.ts`
 // holds it for this tab only until a new password is saved (R193).
 
-import { AUTH_PENDING_ADDRESS_TTL_SECONDS } from "../../../server/src/config.ts";
+import { AUTH_PENDING_ADDRESS_TTL_SECONDS } from "@jackioh/server-config";
 
 /** What a sign-in writes. Preferred when both keys are set. */
 export const SESSION_STORAGE_KEY = "jackioh.session";

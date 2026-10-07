@@ -8,7 +8,6 @@
 
 import { describe, expect, it } from "vitest";
 
-import { registerAll } from "@jackioh/cards";
 import { beginGame, createGame, hashState, registeredCatalog } from "@jackioh/engine";
 import { AI_TUTORIAL, DECK_SIZE, HERO_HEALTH } from "@jackioh/engine/config";
 import { SHADOW_BAN_IDS } from "@jackioh/ai";
@@ -21,7 +20,6 @@ import { TUTORIAL_LESSONS, lessonById, nextLessonOf, type TutorialLesson } from 
 import { lessonStartConfig } from "./start.ts";
 import { scriptFor } from "./scripts/index.ts";
 
-registerAll();
 const catalog = registeredCatalog();
 
 /** "Mostly Commons, Rares and Epics; a few fun cards": at most this many Legendary or Mythic cards in a human deck. */

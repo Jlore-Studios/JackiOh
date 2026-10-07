@@ -1,6 +1,6 @@
 // The match clock (BUILD M7-T1: `web/src/game/Clock.tsx`).
 //
-// IT DECIDES NOTHING. R79 fixes the behaviour and `apps/server/src/match/actor.ts` runs it: "the
+// IT DECIDES NOTHING. R79 fixes the behaviour and `crates/server/src/actor/match_actor.rs` runs it: "the
 // turn clock belongs to the active player ... a prompt held by the non-active player runs its own
 // `PROMPT_CLOCK_SECONDS` and pauses the turn clock". This component renders that — a paused turn
 // clock is a `turnDeadline` of `null` in the frame the server pushed, not an inference drawn here
@@ -17,11 +17,11 @@
 // THE NUMBERS COME FROM CONFIG. `TURN_CLOCK_MS`, `PROMPT_CLOCK_MS`, `MULLIGAN_CLOCK_MS`,
 // `DISCONNECT_GRACE_MS` and `MATCH_CEILING_MS` are `TURN_CLOCK_SECONDS`, `PROMPT_CLOCK_SECONDS`,
 // `MULLIGAN_CLOCK_SECONDS`, `DISCONNECT_GRACE_SECONDS` and `MATCH_CEILING_MINUTES` in milliseconds,
-// declared in `apps/server/src/config.ts` alongside them. They are the full length of each bar; no
+// declared in `crates/server/src/config.rs` alongside them. They are the full length of each bar; no
 // duration or threshold is spelled in this file.
 // (`TICK_MS` below is a repaint cadence, not a rule value: nothing in SPEC or BUILD depends on it.)
 //
-// TIME IS MEASURED MONOTONICALLY. `apps/server/src/match/protocol.ts` on the `clock` message:
+// TIME IS MEASURED MONOTONICALLY. `crates/server/src/actor/protocol.rs` on the `clock` message:
 // "`now` is the server's clock at send time, so the client computes remaining time as
 // `deadline - now` against its own monotonic delta instead of trusting its wall clock." So each
 // frame is anchored to a `performance.now()` reading when it arrives, and every repaint adds the
@@ -50,7 +50,7 @@ import {
   MULLIGAN_CLOCK_MS,
   PROMPT_CLOCK_MS,
   TURN_CLOCK_MS,
-} from "../../../server/src/config.ts";
+} from "@jackioh/server-config";
 import { prefersReducedMotion } from "./animations.ts";
 import {
   finalFraction,
@@ -73,7 +73,7 @@ export type Seat = "p1" | "p2";
 /** Viewer-relative, as everywhere else in the client (`game/contract.ts`). */
 export type ClockSide = "you" | "opponent";
 
-/** `apps/server/src/api/ports.ts` `MatchClocks`, restated structurally. */
+/** `crates/server/src/db/store.rs` `MatchClocks`, restated structurally. */
 export type MatchClocksView = {
   /** Epoch ms the active player's turn clock expires, or null while it is paused. */
   turnDeadline: number | null;
@@ -84,7 +84,7 @@ export type MatchClocksView = {
   ceilingAt: number;
 };
 
-/** The `clock` WebSocket frame (`apps/server/src/match/protocol.ts` `ClockMessage`). */
+/** The `clock` WebSocket frame (`crates/server/src/actor/protocol.rs` `ClockMessage`). */
 export type ClockFrame = { now: number; clocks: MatchClocksView };
 
 export type ClockProps = {

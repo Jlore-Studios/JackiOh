@@ -104,7 +104,7 @@
 
 import { useEffect, useRef, useState, type FormEvent, type ReactElement } from "react";
 
-import { AUTH_EMAIL_RESEND_COOLDOWN_SECONDS, GATE_SLOW_NOTICE_SECONDS } from "../../../server/src/config.ts";
+import { AUTH_EMAIL_RESEND_COOLDOWN_SECONDS, GATE_SLOW_NOTICE_SECONDS } from "@jackioh/server-config";
 import Address from "../auth/Address.tsx";
 import { addressKey, deadlineAfter, useAddressCooldown } from "../auth/cooldown.ts";
 import {

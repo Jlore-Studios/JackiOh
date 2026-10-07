@@ -47,7 +47,7 @@
 // Needs: M6 (server, match actor, WS protocol), M7-T1 (the clock), and a `build:e2e` client (the
 // dev handles). See e2e/README.md.
 
-import { MULLIGAN_CLOCK_MS } from "../../../apps/server/src/config.ts";
+import { MULLIGAN_CLOCK_MS } from "../../../apps/web/src/wire/serverConfig.ts";
 import { accounts, routes, seedFor, server, timeouts } from "../../support/config.ts";
 import {
   BOARD,

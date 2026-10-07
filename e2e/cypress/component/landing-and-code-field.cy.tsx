@@ -32,7 +32,7 @@ import {
   INVITE_CODE_GROUP_SIZE,
   INVITE_CODE_LENGTH,
   INVITE_CODE_SEPARATOR,
-} from "../../../apps/server/src/config.ts";
+} from "@jackioh/server-config";
 import CodeField from "../../../apps/web/src/auth/CodeField.tsx";
 import { holdRecoverySession, releaseRecoverySession } from "../../../apps/web/src/auth/redirect.ts";
 import {

@@ -10,7 +10,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AUTH_SESSION_REFRESH_MARGIN_SECONDS } from "../../../server/src/config.ts";
+import { AUTH_SESSION_REFRESH_MARGIN_SECONDS } from "@jackioh/server-config";
 import { clearConsumedAuthRedirect } from "../auth/redirect.ts";
 import { loginTestid } from "../auth/testids.ts";
 import { AUTH_NOTICES } from "./auth.ts";

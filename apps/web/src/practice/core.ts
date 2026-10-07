@@ -1,8 +1,10 @@
 // The practice game itself: the one `GameState`, both seats' actions and the AI (SPEC §9.9, R187).
 //
-// This is the ONLY practice file that imports `@jackioh/engine`, `@jackioh/cards` or `@jackioh/ai`,
-// and only two things load it: the worker entry (`practice.worker.ts`) and the in-thread host that
-// jsdom tests use (`host.ts`). The page never does. That is the whole of rule 7 here: the state,
+// This is the ONLY practice file that imports `@jackioh/engine`, `@jackioh/cards` or `@jackioh/ai`
+// — the Rust engine and AI, compiled to WebAssembly and reached through `src/wire/` (docs/v0.3.0/
+// SURFACE.md §10.4) — and only two things load it: the worker entry (`practice.worker.ts`) and the
+// in-thread host that jsdom tests use (`host.ts`), each of which loads the module (`loadWasm`)
+// before its first request. The page never does. That is the whole of rule 7 here: the state,
 // both hands and both libraries live on this side of `handle`, and what crosses it is a
 // `PracticeSnapshot` — `viewFor(state, human)`, the human's `legalActions`, whether the AI owes an
 // action, and the engine's refusal of the human's last action. The worker stands where §9.1 puts
@@ -12,6 +14,8 @@
 // actions the engine accepted, so a refused action spends nothing and the log folds exactly
 // (`fold({ seed, decks, handicaps, lastBoards, dealt, log })`, R187, R508, R433). The AI draws from its own stream,
 // `createRng(`${seed}:ai`)`, kept for the whole game; the match rng in state is never touched by it.
+// The Rust AI draws from that stream as `(seed, cursor)` and hands the cursor back, and `decide`
+// draws this object forward to it (`wire/ai.ts`), so `rng.cursor` is where the AI left it.
 //
 // Resume (R668). The worker dies with the page, so after every answer a free game in progress is
 // written to the env's save store (`saveStore.ts`, IndexedDB in a worker), as the match actor's log
@@ -21,7 +25,7 @@
 // through `apply`, action by action, under the same nonces, to the same hash; the AI picks its
 // stream up at the saved cursor.
 
-import { CATALOG_VERSION, registerAll } from "@jackioh/cards";
+import { CATALOG_VERSION } from "@jackioh/cards";
 import {
   beginGame,
   createGame,
@@ -54,12 +58,12 @@ import type {
   PracticeStartConfig,
 } from "./protocol.ts";
 
-// `createGame` reads card definitions from the engine's registry, and the card scripts must be
-// registered or every Cry fizzles differently than the replay does (SPEC §10.9). Idempotent.
-registerAll();
-
 export type PracticeCoreEnv = {
-  /** worker: performance.now */
+  /**
+   * The wall clock the AI's cap is measured on, in `Date.now()` terms (worker: `Date.now`), because
+   * that is the clock the WebAssembly side reads against the deadline. A clock that reads 0 is no
+   * clock: the tests' frozen `() => 0` never stops a search, so a decision is its budget's alone.
+   */
   now: () => number;
   /** answer `debug` only when true */
   dev: boolean;
@@ -312,7 +316,7 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
       const decision = decide(active.state, seat, {
         rng: active.rng,
         budget,
-        shouldStop: () => env.now() - t0 > PRACTICE_AI_CLOCK_MS,
+        ...(t0 > 0 ? { deadlineMs: t0 + PRACTICE_AI_CLOCK_MS } : {}),
       });
       chosen = decision?.action ?? null;
     } catch {

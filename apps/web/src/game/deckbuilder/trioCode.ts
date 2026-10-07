@@ -37,7 +37,7 @@ import {
   TRIO_CODE_CORE_ONLY_VERSION,
   TRIO_CODE_MAX_INPUT_LENGTH,
   TRIO_CODE_VERSION,
-} from "../../../../server/src/config.ts";
+} from "@jackioh/server-config";
 import {
   DECK_CODE_PREFIX,
   checkEnd,

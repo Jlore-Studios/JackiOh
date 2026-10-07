@@ -1,6 +1,6 @@
 // The numbers of the turn clock's last stretch (R439), and nothing else. CLAUDE.md rule 9: every
 // number the urgent readout and the fuse use is named here. The clock's own lengths (`TURN_CLOCK_MS`
-// and the rest) are the server's, in `apps/server/src/config.ts`; these are presentation only and
+// and the rest) are the server's, in `crates/server/src/config.rs`; these are presentation only and
 // decide nothing (CLAUDE.md rule 7).
 
 /** A second, in milliseconds: a unit, not configuration. */

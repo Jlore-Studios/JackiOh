@@ -30,7 +30,7 @@
 import {
   DECK_AUTOSAVE_RETRY_SECONDS,
   MAX_SAVED_DECKS,
-} from "../../../apps/server/src/config.ts";
+} from "../../../apps/web/src/wire/serverConfig.ts";
 import { allCardIds, cardId } from "../../support/cards.ts";
 import { mintId } from "../../support/commands.ts";
 import { accounts, constants, routes, seedFor, server, timeouts, type E2EAccount } from "../../support/config.ts";

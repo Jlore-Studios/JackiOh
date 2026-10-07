@@ -15,7 +15,7 @@
 // response — the successes and the breaker's 503 too — is padded to
 // `REDEMPTION_RESPONSE_FLOOR_MS`, a floor comfortably above the §9.4 transaction's own work, so
 // the work each branch did is invisible from outside. The floor is imported from
-// `apps/server/src/config.ts`; no number here is a literal.
+// `crates/server/src/config.rs`; no number here is a literal.
 //
 // BUILD M6-T1 owns the tight version of the timing claim ("the three failure responses within
 // 5 ms of each other over 50 samples") and that belongs in a unit test with an injected clock:
@@ -54,7 +54,7 @@ import {
   INVITE_CODE_SEPARATOR,
   REDEMPTION_IDENTICAL_ERROR,
   REDEMPTION_RESPONSE_FLOOR_MS,
-} from "../../../apps/server/src/config.ts";
+} from "../../../apps/web/src/wire/serverConfig.ts";
 import { CARD_NAMES, cardId } from "../../support/cards.ts";
 import { accounts, constants, inviteCodes, routes, seedFor, server } from "../../support/config.ts";
 import {
@@ -276,7 +276,7 @@ describe("10 invite gate — a pending account", () => {
     // before it reads, so the value the box settles on is the formatted code and nothing else.
     //
     // THE ATTEMPT BUDGET, which is why there is exactly one of these. §9.4 step 2 counts attempts
-    // per profile per hour and `apps/server/src/api/codes.ts` logs every attempt that gets past
+    // per profile per hour and `crates/server/src/api/codes.rs` logs every attempt that gets past
     // steps 2 and 3 — so this file now spends five: this one, the three failure kinds in the next
     // `it`, and the good code in the last. `CODE_ATTEMPTS_PER_PROFILE_PER_HOUR` is 5 and the check
     // is on the attempts already logged, so the fifth still goes through. A second typed code

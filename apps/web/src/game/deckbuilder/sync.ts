@@ -34,7 +34,7 @@ import {
   DECK_NAME_MAX_LENGTH,
   MAX_SAVED_DECKS,
   MAX_SAVED_TRIOS,
-} from "../../../../server/src/config.ts";
+} from "@jackioh/server-config";
 import {
   ApiRequestError,
   ApiUnreachableError,

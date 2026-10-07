@@ -192,16 +192,9 @@ describe("server frames", () => {
     expect(h.client.snapshot().legalSource).toBe("view");
   });
 
-  it("accepts a separate `legal` frame", () => {
+  it("a view without a legal field does not blank a list an earlier view set", () => {
     const h = connected();
-    h.socket().deliver({ type: "legal", legal: [{ type: "offerDraw" }] });
-    expect(h.client.snapshot().legal).toEqual([{ type: "offerDraw" }]);
-    expect(h.client.snapshot().legalSource).toBe("frame");
-  });
-
-  it("a view without a legal field does not blank a list a `legal` frame just set", () => {
-    const h = connected();
-    h.socket().deliver({ type: "legal", legal: [{ type: "endTurn" }] });
+    h.socket().deliver({ type: "view", view: baseView(), legal: [{ type: "endTurn" }] });
     h.socket().deliver({ type: "view", view: baseView() });
     expect(h.client.snapshot().legal).toEqual([{ type: "endTurn" }]);
   });

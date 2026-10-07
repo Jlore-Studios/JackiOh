@@ -16,7 +16,7 @@ import {
   INVITE_CODE_LENGTH,
   INVITE_CODE_SEPARATOR,
   REDEMPTION_IDENTICAL_ERROR,
-} from "../../../server/src/config.ts";
+} from "@jackioh/server-config";
 import { attemptsText, waitInWords } from "../auth/codeInput.ts";
 import { AUTH_NOTICES } from "../net/auth.ts";
 import { inviteTestid, shellTestid } from "../auth/testids.ts";

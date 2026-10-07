@@ -23,7 +23,7 @@
 // spans the viewport. Each measure sits inside `.should()`, so it retries while the fonts, the
 // procedural art and `useFitText` settle.
 
-import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "../../../apps/server/src/config.ts";
+import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import DeckWorkshop, { type WorkshopOpen } from "../../../apps/web/src/game/deckbuilder/DeckWorkshop.tsx";
 import type { DecksResponse } from "../../../apps/web/src/net/api.ts";
 import { CATALOG, CATALOG_VERSION } from "../../../packages/cards/src/catalog-data.ts";

@@ -4,7 +4,7 @@
 // shared function, `readCodeInput` in `@jackioh/shared`, so the field can never accept a code the
 // server would call malformed, or refuse one it would redeem. This module only turns a reading
 // into sentences. The shape of a code (alphabet, length, groups, separator) is config, imported
-// from `apps/server/src/config.ts` the way the screen has always imported `CODE_ALPHABET`
+// from `crates/server/src/config.rs` the way the screen has always imported `CODE_ALPHABET`
 // (CLAUDE.md rule 9); no number or character of the format is spelled here.
 //
 // R191 is also why the excluded-character sentence exists at all. R104's alphabet leaves out both
@@ -14,9 +14,9 @@
 
 import { excludedCharacters, type CodeFormat, type CodeInputProblem, type CodeInputReading } from "@jackioh/shared";
 
-import { INVITE_CODE_FORMAT } from "../../../server/src/config.ts";
+import { INVITE_CODE_FORMAT } from "@jackioh/server-config";
 
-export { INVITE_CODE_FORMAT } from "../../../server/src/config.ts";
+export { INVITE_CODE_FORMAT } from "@jackioh/server-config";
 
 /** §9.4's groups: `length / groupSize`, four for an invite code. */
 export const INVITE_CODE_GROUPS = groupCount(INVITE_CODE_FORMAT);

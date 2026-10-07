@@ -65,7 +65,7 @@
 // `turnDeadline` (the clock was not restarted), a later `now`, strictly less time remaining, and
 // seat 1's grace cleared because it came back inside `DISCONNECT_GRACE_SECONDS`.
 //
-// R79's values are never spelled here: they are imported from `apps/server/src/config.ts`, which
+// R79's values are never spelled here: they are imported from `crates/server/src/config.rs`, which
 // is where BUILD §2 and R79 put them.
 //
 // Needs: M6 (server, match actor, WS protocol) and M7-T1 (the clock). See e2e/README.md.
@@ -74,7 +74,7 @@ import {
   DISCONNECT_GRACE_SECONDS,
   PROMPT_CLOCK_SECONDS,
   TURN_CLOCK_SECONDS,
-} from "../../../apps/server/src/config.ts";
+} from "../../../apps/web/src/wire/serverConfig.ts";
 import { CARD_NAMES } from "../../support/cards.ts";
 import { accounts, routes, seedFor, server, timeouts } from "../../support/config.ts";
 import {
@@ -160,7 +160,7 @@ function visitAs(token: string, path: string): void {
 
 // --- reading seat 2's socket ------------------------------------------------------------------
 
-/** `apps/server/src/api/ports.ts` `MatchClocks`, restated structurally (see support/types.ts). */
+/** `crates/server/src/db/store.rs` `MatchClocks`, restated structurally (see support/types.ts). */
 type Clocks = {
   turnDeadline: number | null;
   promptDeadline: number | null;

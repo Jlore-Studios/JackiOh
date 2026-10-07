@@ -48,7 +48,7 @@ import {
 } from "react";
 import { createRoot } from "react-dom/client";
 
-import { GATE_SLOW_NOTICE_SECONDS } from "../../server/src/config.ts";
+import { GATE_SLOW_NOTICE_SECONDS } from "@jackioh/server-config";
 import { useSecondsUntil } from "./auth/cooldown.ts";
 import { adoptAuthRedirect, sessionIdFromToken } from "./auth/redirect.ts";
 import { shellTestid } from "./auth/testids.ts";
@@ -73,6 +73,7 @@ import AccountRoute, { signOut, signOutLabel, useSigningOut } from "./routes/acc
 import LandingRoute from "./routes/landing.tsx";
 import { followInApp } from "./routes/nav.tsx";
 import { readSettings } from "./settings/store.ts";
+import { loadWasm } from "./wasm/index.ts";
 
 import "./index.css";
 import "./auth/tavern.css";
@@ -553,6 +554,11 @@ export function App(): ReactElement {
 /**
  * `index.html` loads this module as its only script, so the mount is a module side effect.
  *
+ * The engine is WebAssembly (docs/v0.3.0/SURFACE.md §10.3), and the deck builder calls its validator
+ * synchronously, so the first render waits for `loadWasm()`. A module that fails to load still
+ * renders the app: the screens that need no engine (the landing, sign-in, the code screen) work, and
+ * one that does need it throws into the route's error panel, which offers a retry.
+ *
  * Vitest imports the module to reach `App`, `Gated` and `redirectFor`, and a second React root
  * mounted into the test's own document would duplicate every query and every `/api/auth/me` round
  * trip. `MODE` is `"test"` only under vitest (`routes/gate.test.tsx` asserts it, so a change in
@@ -565,11 +571,17 @@ if (import.meta.env.MODE !== "test") {
   // The settings store's first read puts `data-reduce-motion` on <html> (index.css), so the player's
   // "Reduce motion" holds from the first paint of every screen, not only once a board has read it.
   readSettings();
-  createRoot(host).render(
-    <StrictMode>
-      <App />
-    </StrictMode>,
-  );
+  const mount = (): void => {
+    createRoot(host).render(
+      <StrictMode>
+        <App />
+      </StrictMode>,
+    );
+  };
+  loadWasm().then(mount, (cause: unknown) => {
+    console.error("the engine's WebAssembly module did not load", cause);
+    mount();
+  });
   // Polish 2: UI ticks and the audio unlock on every screen, off the first paint (audio/appAudio.ts).
   void import("./audio/appAudio.ts").then((audio) => audio.retainAppAudio());
 }

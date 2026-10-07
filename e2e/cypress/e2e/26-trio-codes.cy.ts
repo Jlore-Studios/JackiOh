@@ -17,7 +17,7 @@
 // Needs: M6 (the deck endpoints), TASK 1's deck workshop and the trio import route
 // (`POST /api/trios/import`). See e2e/README.md.
 
-import { MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "../../../apps/server/src/config.ts";
+import { MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "../../../apps/web/src/wire/serverConfig.ts";
 import { INSTALLED_DECK_NAMES, INSTALLED_TRIO_NAME, mintId, type InstalledLoadout } from "../../support/commands.ts";
 import { accounts, constants, routes, server, timeouts, type E2EAccount } from "../../support/config.ts";
 import {
