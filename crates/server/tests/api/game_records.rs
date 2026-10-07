@@ -109,7 +109,7 @@ impl LogLines {
 fn log_lines() -> (LogLines, tracing::subscriber::DefaultGuard) {
     let lines = LogLines::default();
     let subscriber = tracing_subscriber::fmt().json().with_writer(lines.clone()).finish();
-    let guard = tracing::subscriber::set_default(subscriber);
+    let guard = crate::support::deps::set_log_default(subscriber);
     (lines, guard)
 }
 

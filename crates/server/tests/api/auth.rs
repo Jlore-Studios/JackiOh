@@ -52,8 +52,10 @@ use crate::support::deps::{call, test_app};
 
 pub(crate) const JWT_SECRET: &str = "hs256-secret-used-only-by-this-test";
 
-const ALICE: &str = "user-alice";
-const BOB: &str = "user-bob";
+/// GoTrue user ids are UUIDs, and the real admin client refuses anything else before it asks
+/// (supabase-js's `validateUUID`); TS's admin double took any string, so its ids were names.
+const ALICE: &str = "a11ce000-0000-4000-8000-000000000001";
+const BOB: &str = "b0b00000-0000-4000-8000-000000000002";
 
 /// 2100-01-01: an expiry no test run reaches.
 const FAR_FUTURE: i64 = 4_102_444_800;
@@ -113,10 +115,9 @@ fn counts(entries: &[(&str, u32)]) -> IndexMap<String, u32> {
 
 /// TS `createVirtualTimers()`: epoch ms that move only when a test says so.
 ///
-/// `charge` moves two clocks: this one, which the provider's `now` seam reads, and tokio's, which a
-/// test that charges runs paused (`#[tokio::test(start_paused = true)]`), so `app::now_ms()` — the
-/// server's one clock, which tokio's paused clock moves — moves with it, whichever the provider's
-/// caches read.
+/// The provider's caches read it through `SupabaseAuthInput.now` (TS `now: timers.now`). Tokio's
+/// clock is left alone: a test that paused it would see the provider's real requests to the scripted
+/// GoTrue time out, since a paused runtime jumps to the next timer whenever it waits on a socket.
 #[derive(Clone)]
 pub(crate) struct Clock(Arc<AtomicI64>);
 
@@ -129,11 +130,9 @@ impl Clock {
         self.0.load(Ordering::SeqCst)
     }
 
-    /// Advances the clock by `ms`, as work would. Only in a test whose tokio clock is paused.
+    /// Advances the clock by `ms`, as work would.
     pub(crate) async fn charge(&self, ms: i64) {
-        let ms = ms.max(0);
-        self.0.fetch_add(ms, Ordering::SeqCst);
-        tokio::time::advance(Duration::from_millis(u64::try_from(ms).expect("a duration"))).await;
+        self.0.fetch_add(ms.max(0), Ordering::SeqCst);
     }
 }
 
@@ -334,11 +333,12 @@ impl GoTrue {
 
 /// The Supabase provider under test, pointed at `gotrue`, with its caches on `clock`.
 pub(crate) fn supabase_auth(gotrue: &GoTrue, clock: &Clock) -> Auth {
-    let _ = clock;
+    let clock = clock.clone();
     Auth::Supabase(SupabaseAuth::new(SupabaseAuthInput {
         url: gotrue.url.clone(),
         secret_key: "secret-key".to_string(),
         jwt_secret: Some(JWT_SECRET.to_string()),
+        now: Some(Arc::new(move || clock.now())),
         ..SupabaseAuthInput::default()
     }))
 }
@@ -497,7 +497,7 @@ impl Captured {
     pub(crate) fn install(&self) -> tracing::subscriber::DefaultGuard {
         let writer = self.clone();
         let subscriber = tracing_subscriber::fmt().json().with_writer(move || writer.clone()).finish();
-        tracing::subscriber::set_default(subscriber)
+        crate::support::deps::set_log_default(subscriber)
     }
 }
 
@@ -509,7 +509,7 @@ impl Captured {
 mod r159_how_long_a_verified_email_stays_verified {
     use super::*;
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn r159_remembers_a_confirmed_email_briefly_and_per_user_id_and_asks_again_once_it_lapses() {
         let h = Harness::new().await;
         let alice = h.token_for(ALICE);
@@ -568,7 +568,7 @@ mod r159_how_long_a_verified_email_stays_verified {
         let outage = h.auth.verify(&alice).await.expect("the identity stands");
         // The signature proved who this is, so the identity survives…
         assert_eq!(outage.user_id, ALICE);
-        assert_eq!(outage.email.as_deref(), Some("user-alice@example.test"));
+        assert_eq!(outage.email.as_deref(), Some(format!("{ALICE}@example.test").as_str()));
         assert_eq!(serde_json::to_value(&outage.app_metadata).expect("JSON"), json!({ "provider": "email" }));
         // …but nothing proved the email, so §9.4 step 1 must not pass.
         assert!(!outage.email_verified);
@@ -626,7 +626,7 @@ mod r194_an_ended_sessions_access_token_is_refused_here_too {
         assert_eq!(status, 401);
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn r194_remembers_a_live_session_only_briefly_so_an_ending_takes_effect_within_the_window() {
         let h = with_sessions(|_| UserReply::Live(confirmed_user(ALICE))).await;
         let token = h.session_token_for(ALICE, "session-a");
@@ -1049,7 +1049,7 @@ mod r665_two_step_sign_in_an_account_with_an_authenticator_app_needs_an_aal2_tok
         assert_eq!(enrolled.auth.verify(&token).await.expect("aal2 verifies").user_id, ALICE);
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn r665_an_outage_cannot_lower_the_bar_the_last_answer_that_the_account_has_a_factor_stands() {
         let h = Harness::new().await;
         h.gotrue.answer_admin(|user_id| AdminReply::Ok(enrolled_user(user_id)));
@@ -1063,7 +1063,7 @@ mod r665_two_step_sign_in_an_account_with_an_authenticator_app_needs_an_aal2_tok
         assert_eq!(h.auth.verify(&h.token_at(ALICE, "aal2", None)).await.expect("aal2 verifies").user_id, ALICE);
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn r665_removing_the_factor_lowers_the_bar_again_once_the_provider_says_so() {
         let h = Harness::new().await;
         h.gotrue.answer_admin(|user_id| AdminReply::Ok(enrolled_user(user_id)));

@@ -113,7 +113,7 @@ struct Logged(Arc<std::sync::Mutex<Vec<IndexMap<String, String>>>>);
 
 impl Logged {
     fn install(&self) -> tracing::subscriber::DefaultGuard {
-        tracing::subscriber::set_default(tracing_subscriber::registry().with(self.clone()))
+        crate::support::deps::set_log_default(tracing_subscriber::registry().with(self.clone()))
     }
 
     /// The lines whose `event` (or, failing that, whose message) is `name`.

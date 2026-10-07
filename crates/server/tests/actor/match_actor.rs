@@ -261,7 +261,7 @@ mod log_capture {
         /// `#[tokio::test]` runs its actor tasks on this thread too (its runtime is current-thread).
         pub fn install() -> (Recorder, DefaultGuard) {
             let recorder = Recorder::default();
-            let guard = tracing::subscriber::set_default(tracing_subscriber::registry().with(recorder.clone()));
+            let guard = crate::support::deps::set_log_default(tracing_subscriber::registry().with(recorder.clone()));
             (recorder, guard)
         }
 

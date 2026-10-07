@@ -120,7 +120,7 @@ impl Logs {
             .with_max_level(tracing::Level::TRACE)
             .with_writer(logs.clone())
             .finish();
-        let guard = tracing::subscriber::set_default(subscriber);
+        let guard = crate::support::deps::set_log_default(subscriber);
         (logs, guard)
     }
 

@@ -32,9 +32,24 @@ struct Setup {
     token: String,
 }
 
-/// TS `profileWith`: a profile row seeded with `userId = user-<id>` and a token that verifies as it.
+/// The GoTrue user id behind a profile: TS wrote `user-<id>`, which its admin double took; the real
+/// admin client asks only for a UUID (supabase-js's `validateUUID`), so the id is one, derived from
+/// the profile id (FNV-1a) so each profile keeps its own.
+fn user_of(id: &str) -> String {
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+    for byte in id.bytes() {
+        hash ^= u64::from(byte);
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    format!("00000000-0000-4000-8000-{:012x}", hash & 0xffff_ffff_ffff)
+}
+
+/// GoTrue's id for TS's `user-a`.
+const USER_A: &str = "aaaaaaaa-0000-4000-8000-000000000001";
+
+/// TS `profileWith`: a profile row seeded with the profile's user id and a token that verifies as it.
 async fn profile_with(h: &Harness, app: &Arc<App>, id: &str, status: &str) -> String {
-    let user_id = format!("user-{id}");
+    let user_id = user_of(id);
     fake_of(app).lock().await.seed_profile(json!({ "id": id, "userId": user_id, "status": status }));
     h.token_for(&user_id)
 }
@@ -277,7 +292,7 @@ mod delete_api_account {
         setup.h.gotrue.answer_deletion(DeletionReply::Deleted);
         assert_eq!(remove(app, Some(&setup.token)).await.0, 204);
         let mut tx = app.db.begin(None).await.expect("a transaction");
-        assert!(tx.profiles_get_by_user_id(&format!("user-{PROFILE}")).await.expect("a read").is_none());
+        assert!(tx.profiles_get_by_user_id(&user_of(PROFILE)).await.expect("a read").is_none());
         tx.commit().await.expect("a commit");
         assert!(app.auth.verify(&setup.token).await.is_err());
     }
@@ -287,7 +302,7 @@ mod delete_api_account {
 mod the_supabase_providers_delete_user {
     use super::*;
 
-    /// TS `provider(deletion)`: the admin lookup answers `user-a`, confirmed.
+    /// TS `provider(deletion)`: the admin lookup answers `user-a` (`USER_A`), confirmed.
     async fn provider(deletion: DeletionReply) -> Harness {
         let h = Harness::new().await;
         h.gotrue.answer_admin(|user_id| AdminReply::Ok(confirmed_user(user_id)));
@@ -298,12 +313,12 @@ mod the_supabase_providers_delete_user {
     #[tokio::test]
     async fn deletes_through_the_admin_api_and_stops_honouring_the_users_token_at_once() {
         let h = provider(DeletionReply::Deleted).await;
-        let token = h.token_for("user-a");
+        let token = h.token_for(USER_A);
         // Verified once, so the confirmed email is remembered for a while.
         assert!(h.auth.verify(&token).await.expect("user-a verifies").email_verified);
 
-        h.auth.delete_user("user-a").await.expect("deleted");
-        assert_eq!(h.gotrue.deleted(), vec!["user-a".to_string()]);
+        h.auth.delete_user(USER_A).await.expect("deleted");
+        assert_eq!(h.gotrue.deleted(), vec![USER_A.to_string()]);
         // GoTrue now answers 404 for the user. Without forgetting the remembered email this would
         // still verify until the memory lapsed (the clock has not moved).
         assert!(h.auth.verify(&token).await.is_err());
@@ -312,13 +327,13 @@ mod the_supabase_providers_delete_user {
     #[tokio::test]
     async fn counts_a_user_that_is_already_gone_as_deleted() {
         let h = provider(DeletionReply::Missing).await;
-        assert!(h.auth.delete_user("user-a").await.is_ok());
+        assert!(h.auth.delete_user(USER_A).await.is_ok());
     }
 
     #[tokio::test]
     async fn throws_unavailable_when_the_provider_does_not_answer() {
         let h = provider(DeletionReply::Unavailable).await;
-        let refused = h.auth.delete_user("user-a").await;
+        let refused = h.auth.delete_user(USER_A).await;
         assert!(matches!(refused, Err(AuthError::Unavailable { .. })));
     }
 }

@@ -194,7 +194,7 @@ impl Logs {
             .with_max_level(tracing::Level::TRACE)
             .with_writer(move || writer.clone())
             .finish();
-        (logs, tracing::subscriber::set_default(subscriber))
+        (logs, crate::support::deps::set_log_default(subscriber))
     }
 
     fn lines(&self) -> Vec<String> {

@@ -280,6 +280,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
             jwks_url: Some(env.supabase_jwks_url.to_string()),
             jwt_secret: env.supabase_jwt_secret.clone(),
             key_set: None,
+            now: None,
         }));
         (db::store::Db::Pg(pool), auth)
     };

@@ -44,7 +44,7 @@
 //!    from the provider's user (the same answers as `email_confirmed_at`), never from the token, and
 //!    the last answer is remembered per user so an outage cannot lower the bar (`mfa_enrolled`).
 
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use indexmap::{IndexMap, IndexSet};
@@ -389,7 +389,16 @@ pub struct SupabaseAuthInput {
     /// Not in SPEC, and no R-row: test seam for the JWKS. Production leaves it unset and fetches
     /// `jwks_url`; a test hands it a local key set instead.
     pub key_set: Option<JwkSet>,
+    /// Not in SPEC, and no R-row: test seam for the clock behind the provider's caches
+    /// (`EMAIL_CONFIRMED_CACHE_TTL_MS`, R194's live sessions, the key set's age); defaults to the
+    /// server's clock (`app::now_ms`). TS `now?: () => number`. A test drives the caches with it
+    /// while the provider's requests run in real time: tokio's paused clock would jump to their
+    /// timeouts whenever the runtime waits on the socket.
+    pub now: Option<ProviderClock>,
 }
+
+/// The clock `SupabaseAuthInput.now` hands the provider: epoch milliseconds.
+pub type ProviderClock = Arc<dyn Fn() -> i64 + Send + Sync>;
 
 #[derive(Clone, Debug, PartialEq)]
 struct LocalClaims {
@@ -452,6 +461,8 @@ pub struct SupabaseAuth {
     mfa_enrolled: Mutex<IndexSet<String>>,
     /// session id -> when the provider last said that session is live (R194). Positives only.
     live_sessions: Mutex<IndexMap<String, i64>>,
+    /// The caches' clock (`SupabaseAuthInput.now`).
+    now: ProviderClock,
 }
 
 /// Neither the secret key nor the shared secret reaches a log line, `{:?}` included.
@@ -491,6 +502,7 @@ impl SupabaseAuth {
             confirmed: Mutex::new(IndexMap::new()),
             mfa_enrolled: Mutex::new(IndexSet::new()),
             live_sessions: Mutex::new(IndexMap::new()),
+            now: input.now.unwrap_or_else(|| Arc::new(crate::app::now_ms)),
         }
     }
 
@@ -592,7 +604,7 @@ impl SupabaseAuth {
         if cache.fixed {
             return cache.keys.as_ref().map(|keys| Self::candidates(keys, header)).unwrap_or_default();
         }
-        let now = crate::app::now_ms();
+        let now = (self.now)();
         if cache.keys.is_none() || now - cache.fetched_at >= JWKS_CACHE_MAX_AGE_MS {
             match self.fetch_key_set().await {
                 Some(keys) => {
@@ -685,7 +697,7 @@ impl SupabaseAuth {
             confirmed.get(user_id).cloned()
         };
         if let Some(cached) = cached
-            && crate::app::now_ms() - cached.at < EMAIL_CONFIRMED_CACHE_TTL_MS
+            && (self.now)() - cached.at < EMAIL_CONFIRMED_CACHE_TTL_MS
         {
             let mfa_enrolled = {
                 let enrolled = self.mfa_enrolled.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
@@ -707,7 +719,7 @@ impl SupabaseAuth {
         if let AdminLookup::Ok(user) = &lookup {
             self.learn_mfa(user);
             if is_email_confirmed(user) {
-                self.remember_confirmed(user_id, crate::app::now_ms(), user.email.clone());
+                self.remember_confirmed(user_id, (self.now)(), user.email.clone());
             }
         }
         lookup
@@ -724,7 +736,7 @@ impl SupabaseAuth {
             live.get(session_id).copied()
         };
         if let Some(at) = seen
-            && crate::app::now_ms() - at < live_session_ttl_ms
+            && (self.now)() - at < live_session_ttl_ms
         {
             return SessionCheck::Remembered;
         }
@@ -741,7 +753,7 @@ impl SupabaseAuth {
             }
         };
 
-        let checked_at = crate::app::now_ms();
+        let checked_at = (self.now)();
         {
             let mut live = self.live_sessions.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
             // Forget sessions whose answer has lapsed, so the map holds only the recently active ones.

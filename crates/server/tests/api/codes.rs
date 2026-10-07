@@ -310,7 +310,7 @@ impl<S: tracing::Subscriber> tracing_subscriber::Layer<S> for Recording {
 /// `deps.log`: every event this thread logs until the guard drops.
 fn record() -> (Recording, tracing::subscriber::DefaultGuard) {
     let recording = Recording::default();
-    let guard = tracing::subscriber::set_default(tracing_subscriber::registry().with(recording.clone()));
+    let guard = crate::support::deps::set_log_default(tracing_subscriber::registry().with(recording.clone()));
     (recording, guard)
 }
 

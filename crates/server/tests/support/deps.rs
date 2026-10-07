@@ -335,8 +335,28 @@ impl RecordingLogger {
 pub fn record_logs() -> RecordingLogger {
     let entries = Arc::new(Mutex::new(Vec::new()));
     let subscriber = tracing_subscriber::registry().with(Recorder { entries: entries.clone() });
-    let guard = tracing::subscriber::set_default(subscriber);
+    let guard = set_log_default(subscriber);
     RecordingLogger { entries, _guard: guard }
+}
+
+/// `tracing::subscriber::set_default` for a test's recorder, after a process-wide subscriber that
+/// takes every event and keeps none.
+///
+/// WHY. `tracing` caches each callsite's interest the first time it fires. While only one subscriber
+/// is registered it asks the firing thread's own default, so a callsite first reached by a test that
+/// records nothing (no default: tracing's no-op) is cached as never-enabled, and a recording test on
+/// another thread then misses that line — the suite's tests run on parallel threads and each records
+/// on its own. With the process-wide subscriber registered first, there are always two, the interest
+/// is asked of all of them, and the no-op answer can no longer win.
+pub fn set_log_default<S>(subscriber: S) -> tracing::subscriber::DefaultGuard
+where
+    S: tracing::Subscriber + Send + Sync + 'static,
+{
+    static GLOBAL: std::sync::Once = std::sync::Once::new();
+    GLOBAL.call_once(|| {
+        let _ = tracing::subscriber::set_global_default(tracing_subscriber::registry());
+    });
+    tracing::subscriber::set_default(subscriber)
 }
 
 struct Recorder {
