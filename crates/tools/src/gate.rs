@@ -103,7 +103,7 @@ const SHADOW_BAN_PROBES: i32 = 40;
 
 /// B29: the greedy-against-greedy game the frozen-weights check plays, and its action limit.
 const GREEDY_PROBE_GAME: i32 = 2;
-const GREEDY_PROBE_ACTIONS: i32 = 120;
+const GREEDY_PROBE_ACTIONS: usize = 120;
 /// B29: greedy has to have acted in its main phase more often than this for the check to mean anything.
 const GREEDY_PROBE_MIN_STATES: usize = 3;
 
