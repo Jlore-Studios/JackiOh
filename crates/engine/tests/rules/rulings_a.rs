@@ -20,21 +20,8 @@ use jackioh_engine::subsystems::rotation::{ROTATION_ROWS, rotate_rings};
 use jackioh_engine::subsystems::scorer::{ScorerOptions, ZEPHYRS_INDEX, candidate_defs, rank, top_three};
 use jackioh_engine::testkit::*;
 
-use super::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
+use super::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, sink_for, slot};
 use super::fixtures::scripts::infinite_reserves;
-
-/// TS `sinkFor(state)` (fixtures/harness.ts): a sink whose rng starts at the state's cursor, as
-/// reduce does. A Rust sink borrows its state, its event list and its rng, so it is built in the
-/// caller's scope: `sink_for!(state => sink);` declares `sink`, and while it is in use the state is
-/// read and written as `sink.state`. As in TS, the cursor is not written back to the state.
-macro_rules! sink_for {
-    ($state:ident => $sink:ident) => {
-        let mut sink_events: Vec<GameEvent> = Vec::new();
-        let mut sink_rng = Rng::new(&$state.seed, $state.rng_cursor);
-        #[allow(unused_mut)]
-        let mut $sink = EngineSink::new(&mut $state, &mut sink_events, &mut sink_rng);
-    };
-}
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
@@ -475,7 +462,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
 
 /// A fresh game whose catalog and script registry also carry this file's fixtures.
 fn game(seed: &str) -> GameState {
-    let state = new_game(&format!("rulings-a-{seed}"), Default::default());
+    let state = new_game(&format!("rulings-a-{seed}"), None);
     let mut catalog = registered_catalog().clone();
     for def in defs() {
         catalog.insert(def.id.clone(), def);
@@ -725,7 +712,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert_eq!(must(card_at(&state, slot(P1, UNITS, 2)), "recruited crier").def_id, CRIER);
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
 
-        let victim = put(&mut state, BODY, slot(P1, UNITS, 3), Default::default());
+        let victim = put(&mut state, BODY, slot(P1, UNITS, 3), json!({}));
         run(
             &mut state,
             effects::transform(json_as(json!({ "instanceId": victim.id, "defId": CRIER }))),
@@ -736,7 +723,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
         // A cast fires it (R70).
         let cast = at(&in_hand(&mut state, BOLT, P1, 1), 0);
-        sink_for!(state => sink);
+        let mut sink = sink_for(&mut state);
         cast_card(&mut sink, &cast, CastOptions::default());
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 2);
     }
@@ -750,8 +737,8 @@ mod spec_11_rulings_r1_r42_m3_gate {
         // seats hold #75 Infinite Reserves, whose empty-library draws never fatigue, and the cap is what
         // ends the game.
         let reserves = infinite_reserves().id;
-        put(&mut state, &reserves, slot(P1, BACKROW, 1), Default::default());
-        put(&mut state, &reserves, slot(P2, BACKROW, 1), Default::default());
+        put(&mut state, &reserves, slot(P1, BACKROW, 1), json!({}));
+        put(&mut state, &reserves, slot(P2, BACKROW, 1), json!({}));
         for step in 0..100 {
             if state.result.is_some() {
                 break;
@@ -782,7 +769,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
         let mut state = game("r3");
         state.players.p1.library = vec![];
-        sink_for!(state => sink);
+        let mut sink = sink_for(&mut state);
         let outcomes = draw::draw(&mut sink, P1, 3);
 
         assert_eq!(outcomes, vec![DrawOutcome::Fatigue, DrawOutcome::Fatigue, DrawOutcome::Fatigue]);
@@ -800,7 +787,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let mut state = game("r4");
         in_hand(&mut state, BODY, P1, HAND_CAP);
         let extra = must(set_library(&mut state, P1, &[OTHER_BODY]).into_iter().next(), "burned card");
-        sink_for!(state => sink);
+        let mut sink = sink_for(&mut state);
 
         assert_eq!(draw::draw(&mut sink, P1, 1), vec![DrawOutcome::Burned]);
         assert_eq!(sink.state.players.p1.hand.len(), HAND_CAP as usize);
@@ -813,8 +800,8 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert!(!LANE_RESTRICTED_ATTACKS);
 
         let mut state = game("r5");
-        let attacker = put(&mut state, BODY, slot(P1, UNITS, 1), Default::default());
-        let far = put(&mut state, BODY, slot(P2, UNITS, 5), Default::default());
+        let attacker = put(&mut state, BODY, slot(P1, UNITS, 1), json!({}));
+        let far = put(&mut state, BODY, slot(P2, UNITS, 5), json!({}));
 
         assert_eq!(refusal(why_cannot_attack(&state, &attacker, &unit_target(&far))), None);
         assert_eq!(refusal(why_cannot_attack(&state, &attacker, &hero(P2))), None);
@@ -824,7 +811,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
     #[test]
     fn r6_refuses_an_attack_from_defense_position_and_switching_to_attack_spends_the_exertion() {
         let mut state = playing("r6");
-        let unit = put(&mut state, BODY, slot(P1, UNITS, 1), Default::default());
+        let unit = put(&mut state, BODY, slot(P1, UNITS, 1), json!({}));
         edit(&mut state, &unit, |card| card.position = Some(Position::Def));
         let unit = instance_in(&state, &unit.id);
 
@@ -851,8 +838,8 @@ mod spec_11_rulings_r1_r42_m3_gate {
     #[test]
     fn r7_refuses_an_attack_declared_by_a_0_attack_unit() {
         let mut state = game("r7");
-        let idle = put(&mut state, ZERO_ATTACK, slot(P1, UNITS, 1), Default::default());
-        put(&mut state, BODY, slot(P2, UNITS, 1), Default::default());
+        let idle = put(&mut state, ZERO_ATTACK, slot(P1, UNITS, 1), json!({}));
+        put(&mut state, BODY, slot(P2, UNITS, 1), json!({}));
 
         assert_eq!(unit_view(&state, &idle).attack, 0);
         assert_eq!(
@@ -865,7 +852,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
     #[test]
     fn r8_fires_death_on_both_deaths_of_a_reborn_unit() {
         let mut state = game("r8");
-        let unit = put(&mut state, REBORN_PINGER, slot(P1, UNITS, 1), Default::default());
+        let unit = put(&mut state, REBORN_PINGER, slot(P1, UNITS, 1), json!({}));
 
         kill_and_check(&mut state, &unit);
         // First death: the Death trigger fired and Reborn brought it back at 1 health without Reborn.
@@ -955,7 +942,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
     fn r11_vanishes_a_unit_token_off_the_field_while_a_spell_token_reaches_the_graveyard() {
         let mut state = game("r11");
 
-        let mut on_field = put(&mut state, UNIT_TOKEN, slot(P1, UNITS, 1), Default::default());
+        let mut on_field = put(&mut state, UNIT_TOKEN, slot(P1, UNITS, 1), json!({}));
         assert!(is_unit_token(&state, &on_field));
         assert_eq!(
             move_to_zone(&mut state, &mut on_field, OffFieldZone::Graveyard, Default::default()),
@@ -967,7 +954,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         // A unit-token card may sit in a hand or a library, and being drawn is not "leaving".
         let from_library = set_library(&mut state, P1, &[UNIT_TOKEN]).into_iter().next();
         {
-            sink_for!(state => sink);
+            let mut sink = sink_for(&mut state);
             assert_eq!(draw::draw_one(&mut sink, P1, None), DrawOutcome::Drawn);
         }
         let drawn = must(from_library, "token from library");
@@ -991,7 +978,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
     #[test]
     fn r12_keeps_ownership_off_the_field_a_stolen_unit_dies_to_its_owner_s_graveyard() {
         let mut state = game("r12");
-        let victim = put(&mut state, BODY, slot(P2, UNITS, 2), Default::default());
+        let victim = put(&mut state, BODY, slot(P2, UNITS, 2), json!({}));
 
         run(&mut state, effects::steal(json_as(json!({ "instanceId": victim.id }))), by(P1));
         let stolen = instance_in(&state, &victim.id);
@@ -1010,7 +997,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
     #[test]
     fn r13_keeps_a_card_under_a_stack_off_the_field_it_neither_acts_nor_can_be_targeted() {
         let mut state = game("r13");
-        let buried = put(&mut state, BODY, slot(P1, UNITS, 1), Default::default());
+        let buried = put(&mut state, BODY, slot(P1, UNITS, 1), json!({}));
         let mut top = new_instance(&mut state, STACKER, P1, Zone::Hand { player: P1 });
         assert!(place_on_field(
             &mut state,
@@ -1025,7 +1012,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert_eq!(ids(active_units_of(&state, P1)), vec![top.id.clone()]);
         assert_eq!(ids(dormant_units_of(&state, P1)), vec![buried.id.clone()]);
 
-        let enemy = put(&mut state, BODY, slot(P2, UNITS, 1), Default::default());
+        let enemy = put(&mut state, BODY, slot(P2, UNITS, 1), json!({}));
         assert_eq!(
             refusal(why_cannot_attack(&state, &enemy, &unit_target(&buried))),
             says("that unit is not on the field")
@@ -1052,15 +1039,15 @@ mod spec_11_rulings_r1_r42_m3_gate {
         );
 
         let mut state = game("r14");
-        let crosser = put(&mut state, BODY, slot(P1, UNITS, 5), Default::default());
+        let crosser = put(&mut state, BODY, slot(P1, UNITS, 5), json!({}));
         edit(&mut state, &crosser, |card| {
             card.damage = 1;
             card.buffs = AttackHealth { attack: 2, health: 0 };
         });
-        let backrow_card = put(&mut state, ANTI_ONESHOT, slot(P1, BACKROW, 1), Default::default());
+        let backrow_card = put(&mut state, ANTI_ONESHOT, slot(P1, BACKROW, 1), json!({}));
 
         let result = {
-            sink_for!(state => sink);
+            let mut sink = sink_for(&mut state);
             rotate_rings(&mut sink, json_as(json!({ "direction": "right", "perspective": "p1" })))
         };
         assert_eq!(must(card_at(&state, slot(P2, UNITS, 5)), "crossed unit").id, crosser.id);
@@ -1078,10 +1065,10 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
         // A Locked destination bounces the card to its owner's hand instead.
         let mut locked = game("r14b");
-        let blocked = put(&mut locked, BODY, slot(P1, UNITS, 2), Default::default());
+        let blocked = put(&mut locked, BODY, slot(P1, UNITS, 2), json!({}));
         lock_zone(&mut locked, slot(P1, UNITS, 3));
         let locked_result = {
-            sink_for!(locked => sink);
+            let mut sink = sink_for(&mut locked);
             rotate_rings(&mut sink, json_as(json!({ "direction": "right", "perspective": "p1" })))
         };
         assert_eq!(locked_result.bounced, vec![blocked.id.clone()]);
@@ -1089,9 +1076,9 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
         // #52 radiant: a card that would cross bounces to its owner's hand at cost 0 (R12, R14).
         let mut radiant = game("r14c");
-        let bouncer = put(&mut radiant, BODY, slot(P1, UNITS, 5), Default::default());
+        let bouncer = put(&mut radiant, BODY, slot(P1, UNITS, 5), json!({}));
         let radiant_result = {
-            sink_for!(radiant => sink);
+            let mut sink = sink_for(&mut radiant);
             rotate_rings(
                 &mut sink,
                 json_as(json!({ "direction": "right", "perspective": "p1", "radiant": true })),
@@ -1106,19 +1093,19 @@ mod spec_11_rulings_r1_r42_m3_gate {
     fn r15_steals_into_the_same_lane_when_it_is_free_else_the_first_free_zone_leaving_the_excess() {
         let mut state = game("r15");
 
-        let same_lane = put(&mut state, BODY, slot(P2, UNITS, 3), Default::default());
+        let same_lane = put(&mut state, BODY, slot(P2, UNITS, 3), json!({}));
         run(&mut state, effects::steal(json_as(json!({ "instanceId": same_lane.id }))), by(P1));
         assert_eq!(must(card_at(&state, slot(P1, UNITS, 3)), "same-lane steal").id, same_lane.id);
 
-        put(&mut state, BODY, slot(P1, UNITS, 1), Default::default());
-        let displaced = put(&mut state, BODY, slot(P2, UNITS, 1), Default::default());
+        put(&mut state, BODY, slot(P1, UNITS, 1), json!({}));
+        let displaced = put(&mut state, BODY, slot(P2, UNITS, 1), json!({}));
         run(&mut state, effects::steal(json_as(json!({ "instanceId": displaced.id }))), by(P1));
         assert_eq!(must(card_at(&state, slot(P1, UNITS, 2)), "first free steal").id, displaced.id);
 
         // With no free zone left the card stays with its opponent.
-        put(&mut state, BODY, slot(P1, UNITS, 4), Default::default());
-        put(&mut state, BODY, slot(P1, UNITS, 5), Default::default());
-        let stays = put(&mut state, BODY, slot(P2, UNITS, 2), Default::default());
+        put(&mut state, BODY, slot(P1, UNITS, 4), json!({}));
+        put(&mut state, BODY, slot(P1, UNITS, 5), json!({}));
+        let stays = put(&mut state, BODY, slot(P2, UNITS, 2), json!({}));
         run(&mut state, effects::steal(json_as(json!({ "instanceId": stays.id }))), by(P1));
         assert_eq!(must(card_at(&state, slot(P2, UNITS, 2)), "unstolen unit").id, stays.id);
         assert_eq!(instance_in(&state, &stays.id).controller, P2);
@@ -1170,7 +1157,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
     fn r17_r427_fires_a_trap_after_the_played_card_resolves_its_cry_included_and_an_immutable_target_still_consumes_it(
     ) {
         let mut state = playing("r17");
-        let armed = put(&mut state, SHEEPISH, slot(P2, BACKROW, 1), Default::default());
+        let armed = put(&mut state, SHEEPISH, slot(P2, BACKROW, 1), json!({}));
         let card = at(&in_hand(&mut state, CRIER, P1, 1), 0);
         let health = state.players.p2.hero.health;
 
@@ -1198,7 +1185,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
         // R23: an Immutable target refuses the Transform, and the trap still fires and is consumed.
         let mut immune = playing("r17b");
-        let armed_again = put(&mut immune, SHEEPISH, slot(P2, BACKROW, 1), Default::default());
+        let armed_again = put(&mut immune, SHEEPISH, slot(P2, BACKROW, 1), json!({}));
         let tough = at(&in_hand(&mut immune, IMMUTABLE, P1, 1), 0);
         let second = play(&immune, &tough.id, "r17b-play");
         assert_eq!(second.error, None);
@@ -1218,8 +1205,8 @@ mod spec_11_rulings_r1_r42_m3_gate {
     fn r18_makes_a_health_loss_skip_armor_the_hero_cap_and_the_damage_pipeline() {
         let mut state = game("r18");
         state.players.p1.hero.armor = 5;
-        put(&mut state, ANTI_ONESHOT, slot(P1, BACKROW, 1), Default::default());
-        sink_for!(state => sink);
+        put(&mut state, ANTI_ONESHOT, slot(P1, BACKROW, 1), json!({}));
+        let mut sink = sink_for(&mut state);
 
         // Damage pays Armor and then the Anti-oneshot cap (§4.4 steps 2 and 3).
         assert_eq!(
@@ -1241,13 +1228,13 @@ mod spec_11_rulings_r1_r42_m3_gate {
     #[test]
     fn r19_lets_a_heal_name_any_unit_or_hero_on_either_side() {
         let mut state = game("r19");
-        let ally = put(&mut state, BODY, slot(P1, UNITS, 1), Default::default());
+        let ally = put(&mut state, BODY, slot(P1, UNITS, 1), json!({}));
         edit(&mut state, &ally, |card| card.damage = 2);
-        let foe = put(&mut state, BODY, slot(P2, UNITS, 1), Default::default());
+        let foe = put(&mut state, BODY, slot(P2, UNITS, 1), json!({}));
         edit(&mut state, &foe, |card| card.damage = 3);
 
         let scope = {
-            sink_for!(state => sink);
+            let mut sink = sink_for(&mut state);
             let ctx = make_context(&mut sink, None, controlled(P1));
             effects::targets_in_scope(&ctx, Some(&json_as(json!({ "side": "any", "of": ["unit", "hero"] }))))
         };
@@ -1269,7 +1256,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
     #[test]
     fn r20_spends_no_exertion_when_an_effect_switches_a_position() {
         let mut state = game("r20");
-        let unit = put(&mut state, BODY, slot(P1, UNITS, 1), Default::default());
+        let unit = put(&mut state, BODY, slot(P1, UNITS, 1), json!({}));
 
         run(
             &mut state,
@@ -1314,7 +1301,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         );
 
         let mut state = game("r21");
-        let unit = put(&mut state, BODY, slot(P1, UNITS, 1), Default::default());
+        let unit = put(&mut state, BODY, slot(P1, UNITS, 1), json!({}));
         run(
             &mut state,
             effects::grant_random_keywords(json_as(json!({
@@ -1351,7 +1338,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
     #[test]
     fn r22_swaps_the_base_layer_on_the_field_keeps_damage_and_buffs_and_re_fires_no_cry() {
         let mut state = game("r22");
-        let unit = put(&mut state, CRIER, slot(P1, UNITS, 1), Default::default());
+        let unit = put(&mut state, CRIER, slot(P1, UNITS, 1), json!({}));
         edit(&mut state, &unit, |card| {
             card.damage = 2;
             card.buffs = AttackHealth { attack: 1, health: 0 };
@@ -1377,7 +1364,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         );
 
         // Radiant Saintess includes itself: the effect may name the card that is running it.
-        let saintess = put(&mut state, BODY, slot(P1, UNITS, 2), Default::default());
+        let saintess = put(&mut state, BODY, slot(P1, UNITS, 2), json!({}));
         run(
             &mut state,
             effects::set_radiant(json_as(json!({ "target": { "of": "self" } }))),
@@ -1396,8 +1383,8 @@ mod spec_11_rulings_r1_r42_m3_gate {
     #[test]
     fn r23_blocks_vanilla_transform_and_fuse_onto_on_an_immutable_card_while_radiant_still_works() {
         let mut state = game("r23");
-        let warded = put(&mut state, IMMUTABLE, slot(P1, UNITS, 1), Default::default());
-        let ingredient = put(&mut state, BODY, slot(P1, UNITS, 2), Default::default());
+        let warded = put(&mut state, IMMUTABLE, slot(P1, UNITS, 1), json!({}));
+        let ingredient = put(&mut state, BODY, slot(P1, UNITS, 2), json!({}));
 
         run(&mut state, effects::vanilla(json_as(json!({ "instanceId": warded.id }))), by(P1));
         assert!(!instance_in(&state, &warded.id).vanilla);
@@ -1412,7 +1399,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let warded_now = instance_in(&state, &warded.id);
         let ingredient_now = instance_in(&state, &ingredient.id);
         let fused = {
-            sink_for!(state => sink);
+            let mut sink = sink_for(&mut state);
             fuse(
                 &mut sink,
                 json_as(json!({ "ingredients": [warded_now, ingredient_now], "target": warded_now })),
@@ -1527,9 +1514,9 @@ mod spec_11_rulings_r1_r42_m3_gate {
     #[test]
     fn r30_keeps_a_twinspell_echo_until_a_spell_is_played_then_sends_twinspell_to_the_graveyard() {
         let mut state = playing("r30");
-        let source = put(&mut state, TWINSPELL, slot(P1, BACKROW, 1), Default::default());
+        let source = put(&mut state, TWINSPELL, slot(P1, BACKROW, 1), json!({}));
         let echo = {
-            sink_for!(state => sink);
+            let mut sink = sink_for(&mut state);
             add_modifier(
                 &mut sink,
                 P1,
@@ -1543,7 +1530,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
         // Cleanup is not its expiry: a "this turn" sweep leaves it alone (§2.2).
         {
-            sink_for!(state => sink);
+            let mut sink = sink_for(&mut state);
             expire_modifiers(&mut sink, P1);
         }
         let mod_ids = |mods: &[PlayerModifier]| mods.iter().map(|m| m.id.clone()).collect::<Vec<_>>();
@@ -1597,8 +1584,8 @@ mod spec_11_rulings_r1_r42_m3_gate {
     #[test]
     fn r32_leaves_a_coin_stat_effect_alone_lucky_has_no_defined_best_so_it_changes_nothing() {
         let mut state = game("r32");
-        let plain = put(&mut state, GAMBLER, slot(P1, UNITS, 1), Default::default());
-        let lucky = put(&mut state, GAMBLER, slot(P1, UNITS, 2), Default::default());
+        let plain = put(&mut state, GAMBLER, slot(P1, UNITS, 1), json!({}));
+        let lucky = put(&mut state, GAMBLER, slot(P1, UNITS, 2), json!({}));
         run(
             &mut state,
             effects::grant_keyword(json_as(json!({ "target": { "of": "chosen" }, "keyword": { "kind": "Lucky", "n": 3 } }))),
@@ -1610,13 +1597,13 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let start = state.rng_cursor;
         let plain_now = instance_in(&state, &plain.id);
         let plain_cursor = {
-            sink_for!(state => sink);
+            let mut sink = sink_for(&mut state);
             run_hook(&mut sink, &plain_now, HookName::Cry, HookOptions::default());
             sink.rng.cursor()
         };
         let lucky_now = instance_in(&state, &lucky.id);
         let lucky_cursor = {
-            sink_for!(state => sink);
+            let mut sink = sink_for(&mut state);
             run_hook(&mut sink, &lucky_now, HookName::Cry, HookOptions::default());
             sink.rng.cursor()
         };
@@ -1633,7 +1620,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
     #[test]
     fn r33_shows_a_face_down_trap_to_its_current_controller_only_and_a_fired_field_trap_to_both() {
         let mut state = game("r33");
-        let hidden = put(&mut state, TRAP, slot(P2, BACKROW, 1), Default::default());
+        let hidden = put(&mut state, TRAP, slot(P2, BACKROW, 1), json!({}));
 
         assert_matches(
             to_json(&at(&view_for(&state, P2).you.backrow, 0)),
@@ -1659,9 +1646,9 @@ mod spec_11_rulings_r1_r42_m3_gate {
             json!({ "faceDown": true, "cost": 0 })
         );
 
-        let fired = put(&mut state, FIELD_TRAP, slot(P2, BACKROW, 2), Default::default());
+        let fired = put(&mut state, FIELD_TRAP, slot(P2, BACKROW, 2), json!({}));
         {
-            sink_for!(state => sink);
+            let mut sink = sink_for(&mut state);
             consume_trap(&mut sink, &fired);
         }
         assert_eq!(instance_in(&state, &fired.id).face_up, Some(true));
@@ -1704,7 +1691,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
     #[test]
     fn r35_replaces_a_board_card_in_place_with_its_own_type_and_the_replaced_card_ceases_to_exist() {
         let mut state = game("r35");
-        let unit = put(&mut state, BODY, slot(P1, UNITS, 2), Default::default());
+        let unit = put(&mut state, BODY, slot(P1, UNITS, 2), json!({}));
         edit(&mut state, &unit, |card| card.position = Some(Position::Def));
 
         run(
@@ -1733,7 +1720,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         );
 
         // Field Trap counts as Trap: both live in the backrow, so one replaces the other.
-        let armed = put(&mut state, TRAP, slot(P1, BACKROW, 1), Default::default());
+        let armed = put(&mut state, TRAP, slot(P1, BACKROW, 1), json!({}));
         run(
             &mut state,
             effects::transform(json_as(json!({ "instanceId": armed.id, "defId": FIELD_TRAP }))),
@@ -1765,7 +1752,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert!(!can_offer_draw(&state, P2));
 
         {
-            sink_for!(state => sink);
+            let mut sink = sink_for(&mut state);
             offer_draw(&mut sink, P1);
             assert!(!can_offer_draw(sink.state, P1));
 
@@ -1817,7 +1804,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
     fn r38_feeds_a_hand_trigger_from_a_unit_reaching_a_graveyard_and_never_from_a_token() {
         let mut state = game("r38");
         let hungry = at(&in_hand(&mut state, EATER, P1, 1), 0);
-        let meal = put(&mut state, BODY, slot(P2, UNITS, 1), Default::default());
+        let meal = put(&mut state, BODY, slot(P2, UNITS, 1), json!({}));
         let body = def(BODY);
         let fed = AttackHealth {
             attack: must(body.base.attack, "body attack"),
@@ -1827,18 +1814,18 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let max_health = unit_view(&state, &meal).max_health;
         edit(&mut state, &meal, |card| card.damage = max_health);
         {
-            sink_for!(state => sink);
+            let mut sink = sink_for(&mut state);
             state_check(&mut sink);
             settle(&mut sink, SettleOptions::default());
         }
         assert_eq!(instance_in(&state, &hungry.id).buffs, fed);
 
         // A unit token never reaches a graveyard, so it never feeds the trigger (R11).
-        let token = put(&mut state, UNIT_TOKEN, slot(P2, UNITS, 2), Default::default());
+        let token = put(&mut state, UNIT_TOKEN, slot(P2, UNITS, 2), json!({}));
         let max_health = unit_view(&state, &token).max_health;
         edit(&mut state, &token, |card| card.damage = max_health);
         let token_events = {
-            sink_for!(state => sink);
+            let mut sink = sink_for(&mut state);
             state_check(&mut sink);
             settle(&mut sink, SettleOptions::default());
             sink.events.clone()
@@ -1853,12 +1840,12 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert_eq!(FIENDER_STATS_MODE, "printed-plus-sum");
 
         let mut state = game("r39");
-        let boss = put(&mut state, FIENDER, slot(P1, UNITS, 1), Default::default());
+        let boss = put(&mut state, FIENDER, slot(P1, UNITS, 1), json!({}));
         assert_eq!(unit_view(&state, &boss).attack, 4);
 
-        put(&mut state, FELINOR, slot(P1, UNITS, 2), Default::default());
+        put(&mut state, FELINOR, slot(P1, UNITS, 2), json!({}));
         // R13's one exception: a Felinor dormant under a Stack still counts for Fiender.
-        let dormant = put(&mut state, FELINOR, slot(P1, UNITS, 3), Default::default());
+        let dormant = put(&mut state, FELINOR, slot(P1, UNITS, 3), json!({}));
         let mut top = new_instance(&mut state, STACKER, P1, Zone::Hand { player: P1 });
         assert!(place_on_field(
             &mut state,
@@ -1873,7 +1860,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert_eq!(view.max_health, 4 + 1 + 1);
 
         // The set-stat layer never takes a unit below its printed stats.
-        let shrunk = put(&mut state, SHRINKER, slot(P1, UNITS, 4), Default::default());
+        let shrunk = put(&mut state, SHRINKER, slot(P1, UNITS, 4), json!({}));
         assert_eq!(unit_view(&state, &shrunk).attack, 3);
         assert_eq!(unit_view(&state, &shrunk).max_health, 3);
         // M4: cards/test/92-felinor-fiender.test.ts proves the card half.
@@ -1889,7 +1876,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let mana_before = state.players.p1.mana.current;
 
         let events = {
-            sink_for!(state => sink);
+            let mut sink = sink_for(&mut state);
             assert_eq!(draw::draw_one(&mut sink, P1, None), DrawOutcome::Cast);
             sink.events.clone()
         };
@@ -1910,14 +1897,14 @@ mod spec_11_rulings_r1_r42_m3_gate {
     #[test]
     fn r41_r428_gives_carnivorous_cube_a_unit_meal_it_never_takes_from_itself_and_a_death_that_can_do_nothing() {
         let mut state = game("r41");
-        let hungry = put(&mut state, CUBE, slot(P1, UNITS, 1), Default::default());
-        let other = put(&mut state, BODY, slot(P1, UNITS, 2), Default::default());
+        let hungry = put(&mut state, CUBE, slot(P1, UNITS, 1), json!({}));
+        let other = put(&mut state, BODY, slot(P1, UNITS, 2), json!({}));
 
         // The Tribute choice never offers the Cube itself, and since R428 offers Units only: a backrow
         // card beside it is no meal.
-        let beside = put(&mut state, TRAP, slot(P1, BACKROW, 2), Default::default());
+        let beside = put(&mut state, TRAP, slot(P1, BACKROW, 2), json!({}));
         let options = {
-            sink_for!(state => sink);
+            let mut sink = sink_for(&mut state);
             let ctx = make_context(&mut sink, Some(&hungry), controlled(P1));
             effects::targets_in_scope(
                 &ctx,
@@ -1961,7 +1948,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
         // Nothing eaten: the Death hook returns no effects at all.
         let mut starved = game("r41b");
-        let empty = put(&mut starved, CUBE, slot(P1, UNITS, 1), Default::default());
+        let empty = put(&mut starved, CUBE, slot(P1, UNITS, 1), json!({}));
         let events = kill_and_check(&mut starved, &empty);
         assert!(of_type(&events, GameEventType::Summoned).is_empty());
         assert!(active_units_of(&starved, P1).is_empty());
@@ -1971,12 +1958,12 @@ mod spec_11_rulings_r1_r42_m3_gate {
     #[test]
     fn r42_records_the_unit_whose_damage_instance_was_lethal_cleave_hits_included() {
         let mut state = game("r42");
-        let attacker = put(&mut state, CLEAVER, slot(P1, UNITS, 1), Default::default());
-        let defender = put(&mut state, SMALL, slot(P2, UNITS, 2), Default::default());
-        let neighbour = put(&mut state, SMALL, slot(P2, UNITS, 1), Default::default());
-        let bystander = put(&mut state, BODY, slot(P2, UNITS, 5), Default::default());
+        let attacker = put(&mut state, CLEAVER, slot(P1, UNITS, 1), json!({}));
+        let defender = put(&mut state, SMALL, slot(P2, UNITS, 2), json!({}));
+        let neighbour = put(&mut state, SMALL, slot(P2, UNITS, 1), json!({}));
+        let bystander = put(&mut state, BODY, slot(P2, UNITS, 5), json!({}));
 
-        sink_for!(state => sink);
+        let mut sink = sink_for(&mut state);
         resolve_combat(&mut sink, &attacker, &unit_target(&defender));
 
         let struck = instance_in(sink.state, &defender.id);
