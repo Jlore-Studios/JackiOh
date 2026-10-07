@@ -184,11 +184,19 @@ pub const EMOTE_WINDOW_MAX: usize = 5;
 /// TS `EmoteGate = { ok: true; sentAt } | { ok: false; retryAfterMs; sentAt }`: `retry_after_ms`
 /// is `Some` exactly when `ok` is false, so the JSON is TS's either way.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct EmoteGate {
     pub ok: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "number"))]
     pub retry_after_ms: Option<i64>,
+    /// Milliseconds, a JS `number` (ts-rs would write an `i64` as `bigint`).
+    #[cfg_attr(feature = "ts", ts(type = "Array<number>"))]
     pub sent_at: Vec<i64>,
 }
 
@@ -212,6 +220,11 @@ pub fn emote_gate(sent_at: &[i64], now: i64) -> EmoteGate {
 
 /// The emote a seat sends, as the server relays it to the opponent (R643).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct EmoteRelay {
     pub from: PlayerId,
