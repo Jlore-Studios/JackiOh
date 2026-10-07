@@ -81,7 +81,7 @@ pub const ID: &str = "core-096";
 /// leave the trap armed is here (R61): a declaration (not a forced attack), by the opponent, whose
 /// projection lands on this trap's controller's hero, for at least that hero's health (R44). The
 /// condition is the same on both faces.
-fn would_be_lethal(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
+fn would_be_lethal(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     let GameEvent::AttackDeclared {
         attacker_id,
         target_id,
@@ -231,7 +231,7 @@ mod tests {
         let mut events: Vec<GameEvent> = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         let mut sink = EngineSink::new(&mut state, &mut events, &mut rng);
-        let ctx = make_context(
+        let mut ctx = make_context(
             &mut sink,
             Some(&trap),
             HookOptions {
@@ -240,7 +240,7 @@ mod tests {
             },
         );
         let when = trigger("base").when.expect("#96's trigger has no `when` predicate");
-        when(&ctx, event)
+        when(&mut ctx, event)
     }
 
     #[derive(Default)]

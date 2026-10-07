@@ -273,7 +273,7 @@ mod tests {
                 let mut s = with_toxins(false, json!([VANILLA, TIMMY]), json!([MENACE]));
                 s.activate(TOXINS, json!({}));
                 s.expect_refused(|s| {
-                    s.activate(TOXINS, json!({}));
+                    s.activate(TOXINS, json!({}))
                 });
             }
 

@@ -102,12 +102,6 @@ mod tests {
         json!([{ "pick": "instance", "instanceId": instance.id }])
     }
 
-    /// TS `s.card(ref).radiant = true` on the live card.
-    fn make_radiant(s: &mut Scenario, card: &str) {
-        let id = s.card(card).id.clone();
-        find_instance_mut(s.state_mut(), &id).expect("the card is in the state").radiant = true;
-    }
-
     mod base {
         use super::*;
 
@@ -208,7 +202,7 @@ mod tests {
                 "p1": { "hand": ["34"], "field": ["15"], "library": ["15"] },
                 "p2": { "field": ["15", "66", "43"], "library": ["15", "43", "13"] },
             }));
-            make_radiant(&mut s, "34");
+            s.card_mut("34").radiant = true;
             let left = must(s.unit("p2", 1), "p2 lane 1");
             let middle = must(s.unit("p2", 2), "p2 lane 2");
             let right = must(s.unit("p2", 3), "p2 lane 3");
@@ -230,7 +224,7 @@ mod tests {
                     "library": ["15", "43", "13"],
                 },
             }));
-            make_radiant(&mut s, "34");
+            s.card_mut("34").radiant = true;
             let edge = must(s.unit("p2", 1), "p2 lane 1");
             let neighbour = must(s.unit("p2", 2), "p2 lane 2");
             let faraway = must(s.unit("p2", 5), "p2 lane 5");
@@ -252,7 +246,7 @@ mod tests {
                 "p1": { "hand": ["34"], "field": ["15"], "library": ["15"] },
                 "p2": { "field": ["66"], "library": ["15", "43", "13"] },
             }));
-            make_radiant(&mut s, "34");
+            s.card_mut("34").radiant = true;
 
             let rock = must(s.unit("p2", 1), "p2 lane 1");
             s.play("34", json!({ "targets": at(&rock) }));
@@ -267,7 +261,7 @@ mod tests {
                 "p1": { "hand": ["34"], "field": ["15"], "library": ["15"] },
                 "p2": { "field": ["66"], "library": ["15", "43", "13"] },
             }));
-            make_radiant(&mut s, "34");
+            s.card_mut("34").radiant = true;
             let rock = must(s.unit("p2", 1), "p2 lane 1");
 
             s.play("34", json!({ "targets": at(&rock) }));

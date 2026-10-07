@@ -65,7 +65,7 @@ fn fire(side: &'static str, damage_per: i32, label: String) -> Script {
         })),
         preview: Some(condition_hook(move |ctx: ConditionContext<'_>| {
             let typed: FieldSpellSide = json_as(json!(side));
-            let doomed = field_spells_doomed(&SweepReader::of_condition(ctx), typed);
+            let doomed = field_spells_doomed(SweepReader::of_condition(ctx), typed);
             vec![PreviewValue {
                 label: label.clone(),
                 value: doomed.len() as i32 * damage_per,

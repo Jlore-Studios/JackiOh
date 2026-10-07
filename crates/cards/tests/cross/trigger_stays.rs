@@ -199,7 +199,7 @@ mod r212_a_reborn_body_does_not_answer_for_the_stay_that_died {
         assert_eq!(plain.hand(PlayerId::P1).len(), 3);
         // With Reborn the same trade happens, and the body back in lane 1 is a new arrival (R83) that
         // destroyed nothing — which draws the same 2 through the dead stay's owed hook.
-        let back = trade(true);
+        let mut back = trade(true);
         let body = unit_at(&back, PlayerId::P1, 1);
         back.expect_in_zone(&body.id, "field");
         assert_eq!(back.hand(PlayerId::P1).len(), plain.hand(PlayerId::P1).len());
@@ -273,7 +273,7 @@ fn must<T>(value: Option<T>, what: &str) -> T {
 }
 
 fn units_of(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
-    (1..=5).filter_map(|lane| s.unit(player, lane).cloned()).collect()
+    (1..=5).filter_map(|lane| s.unit(player, lane)).collect()
 }
 
 /// `registerScripts({ ...registeredScripts(), [id]: { base: script, radiant: script } })`.
@@ -380,7 +380,7 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
                 "library": LIBRARY,
             },
         }));
-        let trap = must(s.backrow(PlayerId::P2, 2).cloned(), "p2's Bear Honeypot");
+        let trap = must(s.backrow(PlayerId::P2, 2), "p2's Bear Honeypot");
         // A 2-cost Spell (so its own play is no "card costing 1 or less"): "Draw a card, then take
         // control of the enemy's backrow card in lane 2."
         fixture(
@@ -446,7 +446,7 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
                 "library": LIBRARY,
             },
         }));
-        let bread = must(s.backrow(PlayerId::P2, 2).cloned(), "p2's Bread and Butter");
+        let bread = must(s.backrow(PlayerId::P2, 2), "p2's Bread and Butter");
         // A Trap: "At the end of any turn: take control of the enemy's backrow card in lane 2."
         fixture(
             &mut s,
@@ -834,7 +834,7 @@ mod r174_only_the_card_a_queued_trigger_s_event_names_is_judged_from_when_the_ev
                             vec![effects::buff_all_units(json_as(json!({ "side": "self", "attack": 1 })))]
                         }
                         PerUnit::ById => vec![effects::for_each_card(effects::ForEachCardArgs {
-                            cards: Arc::new(|c: &EffectContext<'_>| {
+                            cards: Arc::new(|c: &mut EffectContext<'_>| {
                                 active_units_of(&*c.state, c.controller)
                                     .iter()
                                     .map(|card| card.id.clone())
@@ -859,7 +859,7 @@ mod r174_only_the_card_a_queued_trigger_s_event_names_is_judged_from_when_the_ev
         );
         unit_on_field(s, "edge-r11-striker", PlayerId::P1, 1);
         unit_on_field(s, &rally_id, PlayerId::P1, 2);
-        let victim = must(s.unit(PlayerId::P2, 1).cloned(), "p2's unit");
+        let victim = must(s.unit(PlayerId::P2, 1), "p2's unit");
         Board { reborn, victim }
     }
 

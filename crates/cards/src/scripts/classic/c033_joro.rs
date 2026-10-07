@@ -329,13 +329,7 @@ mod tests {
                 let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
                 let mut events = Vec::new();
                 let fused = {
-                    let mut sink = EngineSink {
-                        state: s.state_mut(),
-                        events: &mut events,
-                        rng: &mut rng,
-                        converting: 0,
-                        dry_running: false,
-                    };
+                    let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
                     subsystems::fuse(&mut sink, json_as(json!({ "ingredients": ingredients, "toHand": "p2" })))
                 };
                 let fused = fused.expect("the crafted two-target Spell").id;

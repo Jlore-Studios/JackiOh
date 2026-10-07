@@ -145,16 +145,6 @@ mod tests {
         card_pool().iter().any(|id| id == def_id)
     }
 
-    /// `g.card(ref).radiant = true`: the setup builder takes `radiant` on the field and the backrow only,
-    /// so a radiant card that has to be PLAYED is flagged on the hand instance (reported as a harness gap).
-    fn flag_radiant(g: &mut Scenario, card: &str) {
-        let id = g.card(card).id.clone();
-        match find_instance_mut(g.state_mut(), &id) {
-            Some(instance) => instance.radiant = true,
-            None => panic!("no instance {id}"),
-        }
-    }
-
     mod the_pool {
         use super::*;
 
@@ -354,7 +344,7 @@ mod tests {
 
             // The setup builder takes `radiant` on the field and the backrow only, so a radiant card that
             // has to be PLAYED is flagged on the hand instance (reported as a harness gap).
-            flag_radiant(&mut g, "core-059");
+            g.card_mut("core-059").radiant = true;
             g.play("core-059", json!({ "zone": 1, "embiggen": true }));
             g.start_turn();
 

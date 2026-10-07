@@ -343,12 +343,6 @@ mod tests {
             .collect()
     }
 
-    fn set_radiant(s: &mut Scenario, card: &CardInstance) {
-        find_instance_mut(s.state_mut(), &card.id)
-            .expect("the crafted card is in the state")
-            .radiant = true;
-    }
-
     // -------------------------------------------------------------------------------------------
     // The card and the Discover chain (§8.5, §10.6, R113).
     // -------------------------------------------------------------------------------------------
@@ -571,7 +565,7 @@ mod tests {
             let (base_attack, base_health) = face_sums(&picks, "base");
             s.expect_stats(&card, json!({ "attack": base_attack, "maxHealth": base_health }));
             // §5.2 is a flag on the instance, so the same card read as Radiant reads the fused radiant face.
-            set_radiant(&mut s, &card);
+            s.card_mut(&card).radiant = true;
             let (radiant_attack, radiant_health) = face_sums(&picks, "radiant");
             s.expect_stats(&card, json!({ "attack": radiant_attack, "maxHealth": radiant_health }));
         }

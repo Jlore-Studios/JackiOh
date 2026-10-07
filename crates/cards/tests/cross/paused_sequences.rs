@@ -137,7 +137,7 @@ fn fixture(s: &mut Scenario, id: &str, ty: &str, script: Script, stats: Option<V
 fn place_fixture(s: &mut Scenario, def_id: &str, player: PlayerId, row: Row, lane: i32) -> CardInstance {
     let card = new_instance(s.state_mut(), def_id, player, Zone::Hand { player });
     assert!(
-        place_on_field(s.state_mut(), card.clone(), ZoneSlot { player, row, lane }, Default::default()),
+        place_on_field(s.state_mut(), &mut card.clone(), ZoneSlot { player, row, lane }, Default::default()),
         "could not place {def_id}"
     );
     s.card(&card.id).clone()
@@ -209,12 +209,12 @@ fn types_of(events: &[GameEvent]) -> Vec<&'static str> {
 
 /// The `when` every "opponent plays a card" trap below shares: `ctx.event.type === "cardPlayed" &&
 /// ctx.event.player !== ctx.controller`.
-fn played_by_opponent(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
+fn played_by_opponent(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     matches!(event, GameEvent::CardPlayed { player, .. } if *player != ctx.controller)
 }
 
 /// `ctx.event.type === "cardResolved" && ctx.event.player !== ctx.controller && ctx.event.permanent`.
-fn permanent_resolved_by_opponent(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
+fn permanent_resolved_by_opponent(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     matches!(event, GameEvent::CardResolved { player, permanent, .. } if *player != ctx.controller && *permanent)
 }
 
@@ -276,7 +276,7 @@ mod r174_r59_a_delayed_effect_that_asks_is_still_followed_by_the_check_before_th
         delay_armed(&mut s, &pinger);
 
         // D2: #50's steal of the 3/3 Tempo Timmy, due at the same point and created after D1 (R68).
-        let timmy = must(s.unit(P2, 1).cloned(), "p2's Tempo Timmy");
+        let timmy = must(s.unit(P2, 1), "p2's Tempo Timmy");
         s.play(KPOP_FANATIC, json!({ "targets": [{ "pick": "instance", "instanceId": timmy.id }] }));
         s.start_turn();
         assert_eq!(pending_kind(&s), Some(PromptKind::Target));
@@ -303,7 +303,7 @@ mod r59_no_state_check_between_the_halves_of_one_delayed_effect_or_one_cast {
             "p1": { "hand": [RENO], "library": [RENO, RENO] },
             "p2": { "field": [TEMPO_TIMMY], "hand": [RENO] },
         }));
-        let timmy = must(s.unit(P2, 1).cloned(), "p2's Tempo Timmy");
+        let timmy = must(s.unit(P2, 1), "p2's Tempo Timmy");
         let timmy_id = timmy.id.clone();
         // One delayed effect: deal the 3/3 Timmy 5, then ask for a unit and give it +10 health.
         fixture(
@@ -356,7 +356,7 @@ mod r59_no_state_check_between_the_halves_of_one_delayed_effect_or_one_cast {
             "p1": { "hand": [RENO], "library": [RENO, RENO] },
             "p2": { "field": [TEMPO_TIMMY], "hand": [RENO] },
         }));
-        let timmy = must(s.unit(P2, 1).cloned(), "p2's Tempo Timmy");
+        let timmy = must(s.unit(P2, 1), "p2's Tempo Timmy");
         let timmy_id = timmy.id.clone();
         // A cast-on-draw Spell: deal the 3/3 Timmy 5, then ask for a unit and give it +10 health.
         fixture(
@@ -426,7 +426,7 @@ mod r127_a_continuation_with_no_instance_keeps_its_script_across_its_own_prompt 
         delay_armed(&mut s, &orphan);
         // The card that scheduled it is fused away onto p1's Mana Well and ceases to exist (R86, R102),
         // as a K-Pop Fanatic #85 fuses does; its delayed effect still fires, named by its def (R127).
-        let well = must(s.backrow(P1, 1).cloned(), "p1's Mana Well");
+        let well = must(s.backrow(P1, 1), "p1's Mana Well");
         must(
             with_sink(&mut s, |sink| {
                 subsystems::fuse(sink, json_as(json!({ "ingredients": [orphan], "target": well })))
@@ -435,7 +435,7 @@ mod r127_a_continuation_with_no_instance_keeps_its_script_across_its_own_prompt 
         );
         s.expect_in_zone(&orphan.id, "gone");
 
-        let timmy = must(s.unit(P2, 1).cloned(), "p2's Tempo Timmy");
+        let timmy = must(s.unit(P2, 1), "p2's Tempo Timmy");
         s.start_turn();
         must(s.state().pending.clone(), "the orphaned delayed effect's target prompt");
         s.answer(json!(timmy.id));
@@ -529,8 +529,8 @@ mod r53_r113_a_forced_run_waits_for_a_death_hook_s_question_before_its_next_comb
             Some(json!({ "attack": 1, "health": 1 })),
         );
         let last_word = place_fixture(&mut s, "edge-r5-last-word", P1, Row::Units, 1);
-        let timmy = must(s.unit(P1, 2).cloned(), "p1's Tempo Timmy");
-        let moths = must(s.unit(P2, 1).cloned(), "p2's Moths to the Flame");
+        let timmy = must(s.unit(P1, 2), "p1's Tempo Timmy");
+        let moths = must(s.unit(P2, 1), "p2's Moths to the Flame");
 
         // p2's start of turn: every p1 unit attacks Moths, lane 1 first (R53). Moths strikes the 1/1
         // back and it dies in that combat's check, whose Death hook asks p1 something.
@@ -665,12 +665,12 @@ mod r59_activating_a_power_whose_draw_s_cast_is_still_asking_runs_no_state_check
             "p1": { "backrow": [HEROIC_POWER], "hand": [RENO], "library": [RENO, RENO] },
             "p2": { "field": [TEMPO_TIMMY], "hand": [RENO] },
         }));
-        let power = must(s.backrow(P1, 1).cloned(), "p1's Heroic Power");
+        let power = must(s.backrow(P1, 1), "p1's Heroic Power");
         // R43: the power lives on the instance; this one is "lose 2 health, draw 1".
         must(find_instance_mut(s.state_mut(), &power.id), "p1's Heroic Power")
             .memory
             .insert("power".to_string(), json!("draw"));
-        let timmy = must(s.unit(P2, 1).cloned(), "p2's Tempo Timmy");
+        let timmy = must(s.unit(P2, 1), "p2's Tempo Timmy");
         let timmy_id = timmy.id.clone();
         // A cast-on-draw Spell: deal the 3/3 Timmy 5, then ask for a unit and give it +10 health.
         fixture(
@@ -724,7 +724,7 @@ mod r44_r113_my_pawn_s_ai_turn_is_a_sequence_and_the_other_player_s_prompt_only_
 
         // Timmy's 3 would be lethal: My Pawn cancels it and hands p1's turn to the AI (R44), whose play
         // sets off p2's trap, which asks p2.
-        let timmy = must(s.unit(P1, 1).cloned(), "p1's Tempo Timmy");
+        let timmy = must(s.unit(P1, 1), "p1's Tempo Timmy");
         s.attack(&timmy.id, "hero");
         assert!(s.state().players.p1.ai_turn);
         let pending = must(s.state().pending.clone(), "p2's trap question during the AI turn");
@@ -749,7 +749,7 @@ mod r70_r81_a_cast_asks_for_the_choices_its_card_declares {
             "p1": { "hand": [RENO], "library": [RENO, RENO] },
             "p2": { "field": [TEMPO_TIMMY], "hand": [RENO] },
         }));
-        let timmy = must(s.unit(P2, 1).cloned(), "p2's Tempo Timmy");
+        let timmy = must(s.unit(P2, 1), "p2's Tempo Timmy");
         let declared: Vec<TargetDecl> =
             vec![decl(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit"] } }))];
         fixture(
@@ -821,7 +821,7 @@ mod r87_r113_r423_call_to_chaos_s_play_waits_for_the_cast_its_recursion_is_still
         let mut at: u32 = 0;
         while at < 5000 && cursor.is_none() {
             let names: Vec<String> =
-                subsystems::roll_chaos_effects(&mut Rng::new(&seed, at), true, subsystems::CHAOS_EFFECTS)
+                subsystems::roll_chaos_effects(&mut Rng::new(&seed, at), true, Some(subsystems::CHAOS_EFFECTS))
                     .iter()
                     .map(|effect| effect.name.to_string())
                     .collect();
@@ -905,7 +905,7 @@ mod r174_a_trap_owed_an_event_behind_another_trap_s_question_meets_the_event_as_
             None,
         );
         place_fixture(&mut s, "edge-r6-l7-asks-then-kills", P2, Row::Backrow, 1);
-        let reno = must(s.unit(P2, 1).cloned(), "p2's Reno");
+        let reno = must(s.unit(P2, 1), "p2's Reno");
 
         s.play(TEMPO_TIMMY, json!({}));
         must(s.state().pending.clone(), "the first trap's question");
@@ -937,7 +937,7 @@ mod r174_r113_a_list_s_tail_after_a_prompt_still_meets_the_stay_the_play_chose {
             "p1": { "field": [RIGHT_HOUSE_DEFENDER], "hand": [RENO], "mana": 4 },
             "p2": { "hand": [RENO] },
         }));
-        let saintess = must(s.unit(P1, 1).cloned(), "p1's Right-house defender");
+        let saintess = must(s.unit(P1, 1), "p1's Right-house defender");
         // A 0-cost Spell: sacrifice your chosen unit, ask something, then deal the chosen unit 5.
         fixture(
             &mut s,
@@ -1015,7 +1015,7 @@ mod r156_r113_a_death_pass_whose_hook_ends_in_a_nested_death_that_asks_still_owe
             Some(json!({ "attack": 2, "health": 2 })),
         );
         let sacrificer = place_fixture(&mut s, "edge-r6-l7-sacrificing-death", P1, Row::Units, 1);
-        let defender = must(s.unit(P1, 2).cloned(), "p1's Right-house defender");
+        let defender = must(s.unit(P1, 2), "p1's Right-house defender");
 
         // Radiant Hit Job on the defender destroys it and the unit beside it in lane 1 (lane 3 is empty).
         s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": defender.id }] }));
@@ -1463,7 +1463,7 @@ mod r174_r17_sheepish_owed_the_play_behind_a_trap_that_took_the_unit_off_the_fie
             .iter()
             .any(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == unit.id)));
         // R174: the play Sheepish answers is no longer in play, so the body is not transformed.
-        let lane1 = s.unit(P1, 1).cloned();
+        let lane1 = s.unit(P1, 1);
         assert_eq!(
             lane1.as_ref().map(|card| card.def_id.as_str()),
             Some("edge-r7-l7-reborn-unit"),
@@ -1553,7 +1553,7 @@ mod r122_2_4_the_answer_to_a_cast_s_own_choice_goes_on_with_the_draw_chain_not_t
         assert!(sweep_cast > trap_fired, "events: {}", types.join(", "));
         let tokens: Vec<CardInstance> = [1, 2, 3, 4, 5]
             .into_iter()
-            .filter_map(|lane| s.unit(P2, lane).cloned())
+            .filter_map(|lane| s.unit(P2, lane))
             .filter(|unit| unit.def_id == RUSH_TOKEN)
             .collect();
         assert_eq!(tokens.len(), 2);
@@ -1603,9 +1603,9 @@ mod r136_r113_a_list_a_prompt_split_still_reads_the_events_its_own_head_emitted 
         place_fixture(&mut s, "edge-r7-l7-honeypot-asks", P2, Row::Backrow, 1);
 
         s.play(RENO, json!({ "zone": 1 }));
-        let reno = must(s.unit(P1, 1).cloned(), "p1's Reno");
+        let reno = must(s.unit(P1, 1), "p1's Reno");
         must(s.state().pending.clone(), "the trap's question");
-        let token = must(s.unit(P2, 1).cloned(), "the Rush Token the trap summoned");
+        let token = must(s.unit(P2, 1), "the Rush Token the trap summoned");
         assert_eq!(token.def_id, RUSH_TOKEN);
         s.answer(json!("ok"));
 
@@ -2134,7 +2134,7 @@ mod r174_r113_an_effect_naming_a_card_by_id_after_a_prompt_meets_the_stay_the_ru
 
         s.play(&played.id, json!({ "zone": 1 }));
         must(s.state().pending.clone(), "the trap's question");
-        let token = must(s.unit(P2, 1).cloned(), "the Rush Token the trap summoned");
+        let token = must(s.unit(P2, 1), "the Rush Token the trap summoned");
         s.answer(json!("ok"));
 
         // The answer's sacrifice is a death in full: the played unit's Reborn body came back in lane 1
@@ -2286,7 +2286,7 @@ mod r174_10_6_a_card_picked_at_a_prompt_is_aimed_at_the_stay_the_prompt_offered 
             &control_spell.id,
             json!({ "targets": [{ "pick": "instance", "instanceId": control_victim.id }] }),
         );
-        let timmy = must(control.unit(P2, 2).cloned(), "p2's Tempo Timmy");
+        let timmy = must(control.unit(P2, 2), "p2's Tempo Timmy");
         control.answer(json!(timmy.id));
         control.expect_in_zone(&timmy.id, "graveyard");
 
@@ -2475,7 +2475,7 @@ mod r59_10_5_step_4_a_trigger_that_answered_the_play_and_asked_is_followed_by_th
         // Control: the trigger deals its 5 at once. §10.5 step 4's loop runs it, then the check (R59),
         // and Tempo Timmy has died before the Cry counts the enemy's units: 0 damage.
         let mut control = scenario(json!({ "p1": { "hand": [RENO], "mana": 4 }, "p2": { "field": [TEMPO_TIMMY], "hand": [RENO] } }));
-        let timmy0 = must(control.unit(P2, 1).cloned(), "p2's Tempo Timmy");
+        let timmy0 = must(control.unit(P2, 1), "p2's Tempo Timmy");
         striker(&mut control, &timmy0.id, false);
         let counting = counter(&mut control);
         control.play(&counting.id, json!({ "zone": 2 }));
@@ -2484,7 +2484,7 @@ mod r59_10_5_step_4_a_trigger_that_answered_the_play_and_asked_is_followed_by_th
 
         // The same trigger, asking p1 first and dealing its 5 on the answer.
         let mut s = scenario(json!({ "p1": { "hand": [RENO], "mana": 4 }, "p2": { "field": [TEMPO_TIMMY], "hand": [RENO] } }));
-        let timmy = must(s.unit(P2, 1).cloned(), "p2's Tempo Timmy");
+        let timmy = must(s.unit(P2, 1), "p2's Tempo Timmy");
         striker(&mut s, &timmy.id, true);
         let counting = counter(&mut s);
         s.play(&counting.id, json!({ "zone": 2 }));
@@ -2550,7 +2550,7 @@ mod r102_r43_a_fused_heroic_power_s_prompted_power {
         must(find_instance_mut(g.state_mut(), &played.id), "p1's Heroic Power")
             .memory
             .insert(subsystems::POWER_KEY.to_string(), json!("burn"));
-        let kept = must(g.backrow(P2, 2).cloned(), "p2's Heroic Power");
+        let kept = must(g.backrow(P2, 2), "p2's Heroic Power");
         must(find_instance_mut(g.state_mut(), &kept.id), "p2's Heroic Power")
             .memory
             .insert(subsystems::POWER_KEY.to_string(), json!("discover"));
@@ -2713,7 +2713,7 @@ mod r70_r90_a_cast_unit_s_own_choices {
             "p1": { "hand": [RENO], "library": [RENO, RENO] },
             "p2": { "field": [SEVEN_SEVEN], "hand": [RENO] },
         }));
-        let enemy = must(g.unit(P2, 1).cloned(), "p2's 7/7");
+        let enemy = must(g.unit(P2, 1), "p2's 7/7");
         fixture_card(
             &mut g,
             "edge-r9-cod-unit-targeted",
@@ -3149,7 +3149,7 @@ mod r122_r113_the_engine_s_answer_called_directly_on_the_prompt_an_echo_repeat_o
         let refused = with_sink(&mut s, |sink| {
             answer_prompt(
                 sink,
-                AnswerInput {
+                &AnswerInput {
                     player_id: pending.player_id,
                     choice_id: pending.id.clone(),
                     selection: vec![Selection::Hero { player: P2 }],

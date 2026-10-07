@@ -165,12 +165,6 @@ mod tests {
         vec!["15"; 60]
     }
 
-    /// TS `s.card(ref).radiant = true` on the live card.
-    fn make_radiant(s: &mut Scenario, card: &str) {
-        let id = s.card(card).id.clone();
-        find_instance_mut(s.state_mut(), &id).expect("the card is in the state").radiant = true;
-    }
-
     fn distinct_ids(cards: &[CardInstance]) -> usize {
         cards.iter().map(|card| card.id.clone()).collect::<IndexSet<_>>().len()
     }
@@ -232,7 +226,7 @@ mod tests {
                 "p1": { "hand": ["15"], "backrow": ["33"], "field": ["43"], "library": [] },
                 "p2": { "field": ["15"] },
             }));
-            make_radiant(&mut s, "15");
+            s.card_mut("15").radiant = true;
 
             s.play("15", json!({}));
 

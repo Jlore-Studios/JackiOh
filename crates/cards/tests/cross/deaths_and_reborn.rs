@@ -395,7 +395,7 @@ mod section_4_5_step_4_10_1_reborn_never_leaves_one_card_in_two_zones {
             None,
         );
         place_fixture(&mut g, "edge-r6-grave-robber", P1, Row::Units, 2);
-        let saintess = must(g.unit(P1, 1).cloned(), "Radiant Saintess");
+        let saintess = must(g.unit(P1, 1), "Radiant Saintess");
 
         // Twisting Nether destroys both. §4.5 step 3 runs the grave-robber's Death in lane order after
         // the Saintess's, and it exiles her from the graveyard she was collected to, where step 4 would
@@ -476,7 +476,7 @@ fn death_pass_board() -> (Scenario, CardInstance) {
         "p1": { "hand": [{ "def": HIT_JOB, "radiant": true }, RENO], "field": [{ "def": VANILLA, "lane": 3 }], "library": LIBRARY },
         "p2": { "hand": [RENO], "library": LIBRARY },
     }));
-    let vanilla = must(s.unit(P1, 3).cloned(), "p1's Mr. Vanilla");
+    let vanilla = must(s.unit(P1, 3), "p1's Mr. Vanilla");
     (s, vanilla)
 }
 
@@ -539,7 +539,7 @@ mod r42_r89_a_unit_already_killed_is_not_killed_again {
             vec![],
         );
         let maul = in_hand(&mut s, "edge-r9-maul", P1);
-        let vanilla = must(s.unit(P2, 1).cloned(), "p2's Mr. Vanilla");
+        let vanilla = must(s.unit(P2, 1), "p2's Mr. Vanilla");
         let hand = s.hand(P1).len();
 
         s.play(&maul.id, json!({ "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }));

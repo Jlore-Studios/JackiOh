@@ -28,7 +28,7 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "classic-063";
 
 /// "At the start of your turn": its controller's `turnStarted`.
-fn your_turn_starts(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
+fn your_turn_starts(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     matches!(event, GameEvent::TurnStarted { player, .. } if *player == ctx.controller)
 }
 

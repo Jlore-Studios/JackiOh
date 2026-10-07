@@ -289,7 +289,7 @@ mod tests {
 
                 let stolen = s.card(&first_or_empty(&stolen_ids(&s))).id.clone();
                 s.expect_refused(|s| {
-                    s.attack(&stolen, "hero");
+                    s.attack(&stolen, "hero")
                 });
             }
 

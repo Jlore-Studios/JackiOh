@@ -116,7 +116,7 @@ mod r113_a_fused_cry_that_pauses_resumes_the_rest_of_every_ingredients_list {
             "p2": { "hand": [RENO] },
         }));
         let crafted = craft(&mut s, &[CARNIVOROUS_CUBE, JEWELOSCO_SCARAB, TWISTED_SORCERER]);
-        let meal = must(s.unit(P1, 1).cloned(), "p1's Mr. Vanilla, the Cube's meal");
+        let meal = must(s.unit(P1, 1), "p1's Mr. Vanilla, the Cube's meal");
 
         let targets = json!([
             { "pick": "instance", "instanceId": meal.id },
@@ -185,7 +185,7 @@ mod r113_r122_a_pause_inside_an_answered_step_is_owed_ahead_of_what_was_already_
             },
             "p2": { "hand": [RENO], "field": [MIDRANGE_MENACE] },
         }));
-        let kept = must(s.backrow(P1, 1).cloned(), "p1's radiant Mask");
+        let kept = must(s.backrow(P1, 1), "p1's radiant Mask");
         let ingredient = must(
             s.hand(P1).iter().find(|card| card.def_id == MASOCHISM_MASK).cloned(),
             "the Mask in hand",
@@ -233,7 +233,7 @@ fn kinds(g: &Scenario, card: &CardInstance) -> Vec<KeywordKind> {
 
 /// The keyword kinds a definition's base face prints.
 fn printed_kinds(g: &Scenario, def_id: &str) -> Vec<KeywordKind> {
-    def_of(g.state(), def_id).base.keywords.iter().map(Keyword::kind).collect()
+    def_of(Some(g.state()), def_id).base.keywords.iter().map(Keyword::kind).collect()
 }
 
 mod r41_r77_a_fused_crys_later_part_reads_the_board_its_earlier_parts_left {
@@ -253,13 +253,13 @@ mod r41_r77_a_fused_crys_later_part_reads_the_board_its_earlier_parts_left {
             g.hand(P1).iter().find(|held| held.def_id.starts_with("t-")).cloned(),
             "the crafted card",
         );
-        let gary = must(g.unit(P1, 1).cloned(), "Gary");
+        let gary = must(g.unit(P1, 1), "Gary");
 
         // The Void's part exiles every other permanent, Gary included (§8 #100), so the Cube's part has
         // nothing to tribute: the sacrifice fizzles (R174) and nothing is eaten (R41).
         g.play(&card.id, json!({ "zone": 3, "targets": [{ "pick": "instance", "instanceId": gary.id }] }));
         g.expect_in_zone(&gary.id, "exile");
-        let crafted = must(g.unit(P1, 3).cloned(), "the crafted unit");
+        let crafted = must(g.unit(P1, 3), "the crafted unit");
         let before = g.events().len();
 
         // R41: "nothing eaten → Death does nothing". The crafted card dies, and no Gary comes back.
@@ -562,7 +562,7 @@ mod r43_r151_r77_a_heroic_powers_text_fused_onto_another_permanent_has_a_power {
             "the live Heroic Power",
         );
         g.card_mut(&power.id).memory.insert(subsystems::POWER_KEY.to_string(), json!("burn"));
-        let well = must(g.backrow(P2, 2).cloned(), "p2's Mana Well");
+        let well = must(g.backrow(P2, 2), "p2's Mana Well");
 
         // p1 plays it (which uses nothing, R752), and after it resolves p2's #85 fuses it onto the Mana Well
         // (R61, R77): the Mana Well's instance is kept and now carries the Heroic Power's text.

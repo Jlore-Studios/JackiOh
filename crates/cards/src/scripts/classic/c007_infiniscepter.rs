@@ -98,7 +98,7 @@ pub fn script() -> CardScripts {
             has: None,
             run: hook(|_ctx| {
                 vec![cast_new(CastNewArgs {
-                    def: CastNewDef::Read(Arc::new(|ctx: &EffectContext<'_>| -> Option<CastDef> {
+                    def: CastNewDef::Read(Arc::new(|ctx: &mut EffectContext<'_>| -> Option<CastDef> {
                         held_spell(ctx.live_self(), &ctx.data)
                             .map(|held| json_as(json!({ "defId": held.def_id, "radiant": held.radiant })))
                     })),

@@ -120,13 +120,6 @@ mod tests {
         }
     }
 
-    /// TS `stepParam(s.card(ref), key, delta)`: the card's declared number moved on the live card.
-    fn step_param_of(s: &mut Scenario, card: &str, key: &str, delta: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(live, key, delta);
-    }
-
     fn unique(ids: impl IntoIterator<Item = String>) -> usize {
         ids.into_iter().collect::<IndexSet<String>>().len()
     }
@@ -485,12 +478,12 @@ mod tests {
             fn r386_the_count_is_param_ctx_cards_an_upgrade_adds_4_a_degrade_2() {
                 crate::register_all();
                 let mut up = game(&BOARD, true, 1);
-                step_param_of(&mut up, PORTAL, "cards", 1);
+                step_param(up.card_mut(PORTAL), "cards", 1);
                 up.play(PORTAL, json!({}));
                 assert_eq!(made(&up).len(), 4);
 
                 let mut down = game(&BOARD, true, 1);
-                step_param_of(&mut down, PORTAL, "cards", -1);
+                step_param(down.card_mut(PORTAL), "cards", -1);
                 down.play(PORTAL, json!({}));
                 assert_eq!(made(&down).len(), 2);
             }

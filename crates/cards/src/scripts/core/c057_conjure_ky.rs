@@ -101,16 +101,6 @@ mod tests {
         KY_POOL.contains(&def_id)
     }
 
-    /// `g.card(ref).radiant = true`: the setup builder takes `radiant` on the field and the backrow only,
-    /// so a radiant card that has to be PLAYED is flagged on the hand instance (reported as a harness gap).
-    fn flag_radiant(g: &mut Scenario, card: &str) {
-        let id = g.card(card).id.clone();
-        match find_instance_mut(g.state_mut(), &id) {
-            Some(instance) => instance.radiant = true,
-            None => panic!("no instance {id}"),
-        }
-    }
-
     mod the_pool {
         use super::*;
 
@@ -238,7 +228,7 @@ mod tests {
 
             // The setup builder takes `radiant` on the field and the backrow only, so a radiant card that
             // has to be PLAYED is flagged on the hand instance (reported as a harness gap).
-            flag_radiant(&mut g, "core-057");
+            g.card_mut("core-057").radiant = true;
             g.play("core-057", json!({}));
 
             assert_eq!(hand_defs(&g).len(), 4);
@@ -254,7 +244,7 @@ mod tests {
             crate::register_all();
             let mut g = scenario(json!({ "p1": { "hand": ["core-057"] } }));
 
-            flag_radiant(&mut g, "core-057");
+            g.card_mut("core-057").radiant = true;
             g.play("core-057", json!({}));
 
             assert_eq!(g.hand(P1).len(), 4);
@@ -265,7 +255,7 @@ mod tests {
             crate::register_all();
             let mut g = scenario(json!({ "p1": { "hand": ["core-057"] } }));
 
-            flag_radiant(&mut g, "core-057");
+            g.card_mut("core-057").radiant = true;
             g.play("core-057", json!({}));
 
             for card in g.hand(P1).iter().skip(2) {
@@ -283,7 +273,7 @@ mod tests {
                 },
             }));
 
-            flag_radiant(&mut g, "core-057");
+            g.card_mut("core-057").radiant = true;
             g.play("core-057", json!({}));
 
             assert_eq!(g.hand(P1).len(), 10);

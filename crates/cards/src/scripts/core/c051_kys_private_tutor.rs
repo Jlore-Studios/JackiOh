@@ -232,11 +232,6 @@ fn matches_bracket(ctx: &EffectContext<'_>, card: &CardInstance, bracket: Bracke
     range.max.is_none_or(|max| cost <= max)
 }
 
-/// A pile reader's card as an owned copy, whether the reader lends it or hands it over.
-fn owned<C: std::borrow::Borrow<CardInstance>>(card: C) -> CardInstance {
-    <C as std::borrow::Borrow<CardInstance>>::borrow(&card).clone()
-}
-
 /// "Your library" (§8 Conventions: "your" means the controller), top card first. Reading state,
 /// never touching it: `zone_cards` is the engine's read-only pile reader (engine/src/query.rs) and
 /// hands back a copy (BUILD M3-T1).
@@ -248,7 +243,6 @@ fn library_cards(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
     let state: &GameState = &*ctx.state;
     zone_cards(state, ctx.controller, OffFieldZone::Library)
         .into_iter()
-        .map(owned)
         .filter(|card| !is_unit_token(state, card))
         .collect()
 }

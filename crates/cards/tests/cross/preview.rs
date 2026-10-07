@@ -185,11 +185,6 @@ fn fuse_on(s: &mut Scenario, args: FuseArgs) -> Option<CardInstance> {
     subsystems::fuse(&mut sink, args)
 }
 
-/// TS `stepParam(s.card(ref), key, steps)`: a write to the live instance.
-fn step_live_param(s: &mut Scenario, id: &str, key: &str, steps: i32) {
-    step_param(must(find_instance_mut(s.state_mut(), id), id), key, steps);
-}
-
 // =============================================================================================
 // A read of what the controller may read, and nothing else
 // =============================================================================================
@@ -1286,7 +1281,7 @@ mod c_1_curse_of_the_forgotten_classic_previews_n_its_one_hit_r280 {
         jackioh_cards::register_all();
         let mut s = curse(FaceKind::Base, 3);
         let card = s.card(CURSE).id.clone();
-        step_live_param(&mut s, &card, "damage", 1);
+        step_param(s.card_mut(&card), "damage", 1);
         assert_eq!(value_of(&hand_card(&s.view(PlayerId::P1), &card)), 6);
         s.play(CURSE, json!({}));
         assert_eq!(hits_on(&s, PlayerId::P2), vec![6]);
@@ -1403,7 +1398,7 @@ mod c_43_plague_nuke_previews_the_mana_it_would_give_now_r280 {
         jackioh_cards::register_all();
         let mut s = nuke(FaceKind::Base, 1, 2);
         let card = s.card(PLAGUE_NUKE).id.clone();
-        step_live_param(&mut s, &card, "mana", 1);
+        step_param(s.card_mut(&card), "mana", 1);
         assert_eq!(value_of(&hand_card(&s.view(PlayerId::P1), &card)), 6);
 
         s.play(PLAGUE_NUKE, json!({}));
@@ -1709,7 +1704,7 @@ mod c_59_plague_doctor_previews_n_the_hit_its_cry_deals_r280 {
         jackioh_cards::register_all();
         let mut s = plagued(FaceKind::Radiant, PlayerId::P1);
         let card = s.card(PLAGUE_DOCTOR).id.clone();
-        step_live_param(&mut s, &card, "tokens", 1);
+        step_param(s.card_mut(&card), "tokens", 1);
         let value = value_of(&hand_card(&s.view(PlayerId::P1), &card));
         assert_eq!(value, 9);
 
@@ -1823,7 +1818,7 @@ mod c_88_siphon_squad_previews_x_the_attack_its_aura_takes_off_each_enemy_unit_r
         jackioh_cards::register_all();
         let mut s = siphon_board(Some(false), false, 2);
         let siphon = must(s.backrow(PlayerId::P1, 1).map(|card| card.id.clone()), "the Siphon");
-        step_live_param(&mut s, &siphon, "multiplier", 1);
+        step_param(s.card_mut(&siphon), "multiplier", 1);
 
         let value = value_of(&s.view(PlayerId::P1).you.backrow[0]);
         assert_eq!(value, 6);

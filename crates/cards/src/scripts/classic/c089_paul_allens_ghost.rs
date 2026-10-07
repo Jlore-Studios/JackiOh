@@ -143,16 +143,6 @@ mod tests {
             .unwrap_or_default()
     }
 
-    /// TS `stepParam(s.card(card), key, steps)`, on the card as it stands in the state.
-    fn step_param_on(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        jackioh_engine::params::step_param(
-            find_instance_mut(s.state_mut(), &id).expect("the card in the state"),
-            key,
-            steps,
-        );
-    }
-
     fn keyword_kinds(keywords: &[Keyword]) -> Vec<&'static str> {
         keywords.iter().map(|keyword| keyword.kind().as_str()).collect()
     }
@@ -476,14 +466,14 @@ mod tests {
             fn r386_its_discard_is_the_declared_number_an_upgrades_step_makes_it_3_and_2_others_no_longer_pay() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, SPARE, SPARE] }, "p2": { "field": [GHOST] } }));
-                step_param_on(&mut s, GHOST, "discard", 1);
+                step_param(s.card_mut(GHOST), "discard", 1);
                 let targets: Vec<Option<Selection>> = wildfire_plays(&s, P1).iter().map(first_target).collect();
                 assert!(!targets.contains(&Some(at(s.card(GHOST)))));
                 let mut rich = scenario(json!({
                     "p1": { "hand": [WILDFIRE, SPARE, SPARE, SPARE, SPARE] },
                     "p2": { "field": [GHOST] },
                 }));
-                step_param_on(&mut rich, GHOST, "discard", 1);
+                step_param(rich.card_mut(GHOST), "discard", 1);
                 // Three others now owed: offered with four others held — still carrying no discards.
                 let ghost = rich.card(GHOST).clone();
                 let at_ghost: Vec<ActionBody> = wildfire_plays(&rich, P1)

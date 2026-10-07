@@ -143,13 +143,6 @@ mod tests {
         }
     }
 
-    /// TS `s.card(ref).radiant = true` (the harness's "HARNESS GAP" note): the flag set on the hand
-    /// instance, since a radiant Cry only fires if the card is PLAYED (§5.2).
-    fn make_radiant(s: &mut Scenario, card: &str) {
-        let id = s.card(card).id.clone();
-        find_instance_mut(s.state_mut(), &id).expect("the card is in the game").radiant = true;
-    }
-
     /// TS `lockZone(s.state, { player, row: "units", lane })`.
     fn lock_unit_zone(s: &mut Scenario, player: PlayerId, lane: i32) {
         lock_zone(
@@ -347,7 +340,7 @@ mod tests {
             }));
             // HARNESS GAP (reported): `SideSetup.hand` takes no `{ def, radiant }` form, and a radiant Cry
             // only fires if the card is PLAYED, so the flag goes on the hand instance (§5.2).
-            make_radiant(&mut s, "core-052");
+            s.card_mut("core-052").radiant = true;
             let reno = unit_at(&s, P1, 5).id;
             let menace = unit_at(&s, P2, 1).id;
 
@@ -382,7 +375,7 @@ mod tests {
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-053", "lane": 3 }] },
             }));
-            make_radiant(&mut s, "core-052");
+            s.card_mut("core-052").radiant = true;
 
             s.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
 
@@ -398,7 +391,7 @@ mod tests {
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-t-felinor", "lane": 5 }] },
             }));
-            make_radiant(&mut s, "core-052");
+            s.card_mut("core-052").radiant = true;
             let felinor = unit_at(&s, P1, 5).id;
 
             s.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
@@ -412,7 +405,7 @@ mod tests {
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-053", "lane": 1 }] },
             }));
-            make_radiant(&mut s, "core-052");
+            s.card_mut("core-052").radiant = true;
             let reno = unit_at(&s, P1, 1).id;
 
             s.play("core-052", json!({ "zone": 3, "modes": ["left"] }));

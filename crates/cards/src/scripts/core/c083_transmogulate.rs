@@ -68,16 +68,16 @@ const OFF_FIELD_ZONES: [OffFieldZone; 4] = [
 /// #87, #92, #93, #95, proved by `test/query.test.ts`, not listed here.
 ///
 /// `type_` is TS's `CardType | CardType[]`, as the JSON the query takes.
-fn legendaries(type_: Option<Value>) -> Vec<CardDef> {
+fn legendaries(type_: Option<Value>) -> Vec<&'static CardDef> {
     let mut args = json!({ "rarity": "Legendary" });
     if let Some(type_) = type_ {
         args["type"] = type_;
     }
-    crate::query::pool(ID, json_as(args))
+    crate::query::pool(ID, &json_as(args))
 }
 
 /// R35 on the board: same type, with Field Trap counting as Trap in both directions.
-fn same_type_legendaries(type_: CardType) -> Vec<CardDef> {
+fn same_type_legendaries(type_: CardType) -> Vec<&'static CardDef> {
     legendaries(Some(if type_ == CardType::Trap || type_ == CardType::FieldTrap {
         json!(crate::query::TRAP_TYPES)
     } else {
@@ -125,7 +125,7 @@ fn pile_cards(ctx: &EffectContext<'_>, zone: OffFieldZone) -> Vec<CardInstance> 
 }
 
 /// §6.3 Replace: one card, one random Legendary from its pool, named by instance (R81 does not apply).
-fn replace(ctx: &mut EffectContext<'_>, card: &CardInstance, pool: &[CardDef], radiant_result: bool) -> Vec<Effect> {
+fn replace(ctx: &mut EffectContext<'_>, card: &CardInstance, pool: &[&'static CardDef], radiant_result: bool) -> Vec<Effect> {
     let Some(pick) = ctx.rng.pick(pool) else {
         return vec![];
     };
@@ -144,7 +144,7 @@ fn transmogulate(radiant_result: bool) -> Script {
             let mut effects: Vec<Effect> = Vec::new();
             // The board first, each card by its own type (R35); lane order, so the rng draws are fixed.
             for card in board_cards(ctx) {
-                let type_ = def_of(&ctx.state, &card.def_id).type_;
+                let type_ = def_of(Some(&*ctx.state), &card.def_id).type_;
                 let pool = same_type_legendaries(type_);
                 effects.extend(replace(ctx, &card, &pool, radiant_result));
             }
@@ -201,7 +201,7 @@ mod tests {
 
     /// TS `catalog.pool(TRANSMOGULATE, args).map((def) => def.id)`.
     fn pool_of(args: Value) -> Vec<String> {
-        crate::query::pool(TRANSMOGULATE, json_as(args))
+        crate::query::pool(TRANSMOGULATE, &json_as(args))
             .into_iter()
             .map(|def| def.id.clone())
             .collect()
@@ -543,7 +543,7 @@ mod tests {
             let mut s = board(true);
             s.play(TRANSMOGULATE, json!({}));
 
-            let immutable = s.unit(P1, 2).cloned();
+            let immutable = s.unit(P1, 2);
             assert_eq!(immutable.as_ref().map(|card| card.def_id.as_str()), Some(IMMUTABLE));
             // A refused Transform changes nothing about the card: it is the Menace it was.
             assert_eq!(immutable.map(|card| card.radiant), Some(true));

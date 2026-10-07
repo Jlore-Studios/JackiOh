@@ -143,7 +143,7 @@ mod r174_a_target_the_play_s_own_tribute_sacrificed_is_no_longer_a_target {
         );
         let first = must(g.unit(PlayerId::P1, 1), "Gary").id.clone();
         let second = must(g.unit(PlayerId::P1, 2), "Gary").id.clone();
-        let reno = must(g.unit(PlayerId::P2, 1).cloned(), "p2's Reno");
+        let reno = must(g.unit(PlayerId::P2, 1), "p2's Reno");
         let target = json!([{ "pick": "instance", "instanceId": reno.id }]);
         let before = g.events().len();
 
@@ -180,13 +180,13 @@ mod s6_3_vanilla_a_vanilla_sheep_token_has_no_text_so_it_is_worth_1_tribute {
             },
             "p2": { "hand": [STOCKPILE] },
         }));
-        let sheep = must(s.unit(PlayerId::P1, 1).cloned(), "Sheep Token");
-        let gary = must(s.unit(PlayerId::P1, 2).cloned(), "Gary");
+        let sheep = must(s.unit(PlayerId::P1, 1), "Sheep Token");
+        let gary = must(s.unit(PlayerId::P1, 2), "Gary");
         assert_eq!(tribute_value_of(s.state(), &sheep), 2);
 
         // Radiant Prejudiced Postdoc: "any unit" → a Vanilla copy of the Sheep in lane 3.
         s.play(POSTDOC, json!({ "zone": 4, "targets": [{ "pick": "instance", "instanceId": sheep.id }] }));
-        let copy = must(s.unit(PlayerId::P1, 3).cloned(), "the Vanilla copy");
+        let copy = must(s.unit(PlayerId::P1, 3), "the Vanilla copy");
         assert_eq!((copy.def_id.clone(), copy.vanilla), (SHEEP.to_string(), true));
 
         // §6.3 Vanilla "removes a unit's text", and "Worth 2 Tributes while on the field" is the Sheep's
@@ -332,9 +332,9 @@ fn quickstrikers_of(s: &Scenario, player: PlayerId) -> Vec<String> {
 /// R428: Carnivorous Cube eats Units only, so a backrow card reaches its Death's copies as the text of
 /// a Unit it was fused onto (R77: the target keeps its instance and its type, and carries the text).
 fn unit_carrying(s: &mut Scenario, player: PlayerId, unit_lane: i32, backrow_lane: i32) -> CardInstance {
-    let unit = must(s.unit(player, unit_lane).cloned(), &format!("{player}'s lane-{unit_lane} unit"));
+    let unit = must(s.unit(player, unit_lane), &format!("{player}'s lane-{unit_lane} unit"));
     let carried = must(
-        s.backrow(player, backrow_lane).cloned(),
+        s.backrow(player, backrow_lane),
         &format!("{player}'s backrow card in lane {backrow_lane}"),
     );
     // TS `{ state: s.state, events: [], rng: createRng(s.state.seed, s.state.rngCursor) }`: the live
@@ -389,7 +389,7 @@ mod r119_r210_what_a_tribute_s_death_puts_on_the_field_does_not_answer_the_play_
             CARNIVOROUS_CUBE,
             json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": carrier.id }] }),
         );
-        let cube = must(s.unit(PlayerId::P2, 1).cloned(), "p2's Carnivorous Cube");
+        let cube = must(s.unit(PlayerId::P2, 1), "p2's Carnivorous Cube");
         s.end_turn();
         assert_eq!(s.state().active, PlayerId::P1);
         assert_eq!(s.state().players.p2.units.iter().filter(|pile| pile.is_some()).count(), 1);
@@ -399,8 +399,8 @@ mod r119_r210_what_a_tribute_s_death_puts_on_the_field_does_not_answer_the_play_
             s.hand(PlayerId::P1).iter().find(|card| card.def_id == LAVA_GOLEM).cloned(),
             "p1's Lava Golem",
         );
-        let first = must(s.unit(PlayerId::P1, 1).cloned(), "p1's lane-1 Mr. Vanilla");
-        let second = must(s.unit(PlayerId::P1, 2).cloned(), "p1's lane-2 Mr. Vanilla");
+        let first = must(s.unit(PlayerId::P1, 1), "p1's lane-1 Mr. Vanilla");
+        let second = must(s.unit(PlayerId::P1, 2), "p1's lane-2 Mr. Vanilla");
         s.play(&golem.id, json!({ "zone": 4, "tributes": [cube.id, first.id, second.id] }));
 
         // Step 2 paid the Tribute and the Cube's Death summoned its two copies (R41, R210).
@@ -435,7 +435,7 @@ mod r119_r210_what_a_tribute_s_death_puts_on_the_field_does_not_answer_the_play_
             CARNIVOROUS_CUBE,
             json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": carrier.id }] }),
         );
-        let cube = must(s.unit(PlayerId::P1, 1).cloned(), "p1's Carnivorous Cube");
+        let cube = must(s.unit(PlayerId::P1, 1), "p1's Carnivorous Cube");
         assert_eq!(backrow_defs(&s, PlayerId::P1), vec![None::<String>, None, None, None, None]);
         let library = s.pile(PlayerId::P1, "library").len();
 
@@ -469,7 +469,7 @@ mod r119_r210_what_a_tribute_s_death_puts_on_the_field_does_not_answer_the_play_
             CARNIVOROUS_CUBE,
             json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": carrier.id }] }),
         );
-        let cube = must(s.unit(PlayerId::P1, 1).cloned(), "p1's Carnivorous Cube");
+        let cube = must(s.unit(PlayerId::P1, 1), "p1's Carnivorous Cube");
         s.play(TEMPO_TIMMY, json!({ "zone": 2 }));
         assert_eq!(quickstrikers_of(&s, PlayerId::P1), Vec::<String>::new());
         let rock = s.card(THE_ROCK).clone();

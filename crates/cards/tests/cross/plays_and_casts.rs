@@ -359,7 +359,7 @@ const MENACE: &str = "core-019"; // #19 Midrange Menace, a spare 3-cost Unit, so
 const CHAOS_SEED: &str = "chaos-card";
 fn chaos_cursor_for(effect: &str) -> u32 {
     for cursor in 0..500 {
-        let rolled = subsystems::roll_chaos_effects(&mut Rng::new(CHAOS_SEED, cursor), false, subsystems::CHAOS_EFFECTS)
+        let rolled = subsystems::roll_chaos_effects(&mut Rng::new(CHAOS_SEED, cursor), false, Some(subsystems::CHAOS_EFFECTS))
             .first()
             .map(|rolled| rolled.name.to_string());
         if rolled.as_deref() == Some(effect) {

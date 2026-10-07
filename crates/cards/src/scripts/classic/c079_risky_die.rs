@@ -57,7 +57,7 @@ fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
         remember(json_as(json!({ "key": LIBRARY_KEY, "value": library }))),
         draw(json_as(json!({ "count": param(&*ctx, "draw") }))),
         for_each_card(ForEachCardArgs {
-            cards: Arc::new(|now: &EffectContext<'_>| {
+            cards: Arc::new(|now: &mut EffectContext<'_>| {
                 drawn_into_hand(now).into_iter().map(|card| card.id).collect()
             }),
             each: Arc::new(|instance_id: &str| {
@@ -68,7 +68,7 @@ fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
             }),
         }),
         for_each_card(ForEachCardArgs {
-            cards: Arc::new(|now: &EffectContext<'_>| {
+            cards: Arc::new(|now: &mut EffectContext<'_>| {
                 drawn_into_hand(now)
                     .into_iter()
                     .filter(|card| effective_cost(&*now.state, card, Default::default()) > param(now, "threshold"))
@@ -133,13 +133,6 @@ mod tests {
 
     fn js<T: serde::Serialize>(value: &T) -> Value {
         serde_json::to_value(value).expect("serialisable")
-    }
-
-    fn must<T>(value: Option<T>, what: &str) -> T {
-        match value {
-            Some(found) => found,
-            None => panic!("missing: {what}"),
-        }
     }
 
     /// TS `drawnIds(events, player = "p1")`.

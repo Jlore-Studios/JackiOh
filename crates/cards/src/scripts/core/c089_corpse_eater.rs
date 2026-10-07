@@ -65,7 +65,7 @@ fn feed(factor: i32) -> TriggerDef {
             return vec![];
         };
 
-        let dead = def_of(&ctx.state, def_id);
+        let dead = def_of(Some(&*ctx.state), def_id);
         // A destroyed Field Spell or Trap emits the same event; only units feed it.
         if dead.type_ != CardType::Unit {
             return vec![];
@@ -235,8 +235,8 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": GARY, "lane": 1 }] },
             }));
 
-            let attacker = s.unit(P2, 1).cloned().expect("p2's Gary");
-            let defender = s.unit(P1, 1).cloned().expect("p1's Gary");
+            let attacker = s.unit(P2, 1).expect("p2's Gary");
+            let defender = s.unit(P1, 1).expect("p1's Gary");
             s.attack(&attacker, &defender);
 
             // Both 1/1s die in the same check, so the Eater eats twice: 2/2 + 1/1 + 1/1.

@@ -275,7 +275,7 @@ mod r214_a_plays_choices_are_the_choices_of_the_face_it_resolves_with {
         // alone, so a list built for the base face (Bigot's target, then the Sorcerer's) is refused.
         let refused = json!({ "zone": 2, "targets": [{ "pick": "instance", "instanceId": panther }, hero.clone()] });
         g.expect_refused(|g| {
-            g.play(card.as_str(), refused.clone());
+            g.play(card.as_str(), refused.clone())
         });
         g.play(card.as_str(), json!({ "zone": 2, "targets": [hero] }));
 

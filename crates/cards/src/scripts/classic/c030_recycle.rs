@@ -117,13 +117,6 @@ mod tests {
         all
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: a Degrade or Upgrade of the live card in the state.
-    fn step_card_param(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(live, key, steps);
-    }
-
     /// `Array.from({ length: LIBRARY_CAP - 1 }, () => X)`.
     fn nearly_full_library() -> Vec<&'static str> {
         (0..LIBRARY_CAP - 1).map(|_| X).collect()
@@ -293,7 +286,7 @@ mod tests {
             fn r386_an_upgrade_of_draw_makes_it_draw_2() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [RECYCLE], "library": [X, Y, A] }, "p2": { "hand": [FILLER] } }));
-                step_card_param(&mut s, RECYCLE, "draw", 1);
+                step_param(s.card_mut(RECYCLE), "draw", 1);
 
                 s.play(RECYCLE, json!({}));
 
@@ -395,7 +388,7 @@ mod tests {
                     "p2": { "hand": [FILLER] },
                 }));
                 let a = s.card(A).clone();
-                step_card_param(&mut s, RECYCLE, "discount", 1);
+                step_param(s.card_mut(RECYCLE), "discount", 1);
 
                 s.play(RECYCLE, json!({}));
 

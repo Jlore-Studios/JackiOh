@@ -235,9 +235,10 @@ mod registry_build_m4_t2 {
     #[test]
     fn gives_the_engine_each_module_s_own_base_and_radiant_script() {
         register_all();
+        let game = jackioh_engine::testkit::scenario(json!({}));
         for id in scripted_ids() {
             let module = module_for(&id);
-            let entry = jackioh_engine::scripts::scripts_for(&id);
+            let entry = jackioh_engine::scripts::scripts_for(game.state(), &id);
             assert_eq!(fingerprint(&entry.base), fingerprint(&module.base), "{id}: base script");
             assert_eq!(fingerprint(&entry.radiant), fingerprint(&module.radiant), "{id}: radiant script");
         }
@@ -252,7 +253,8 @@ mod registry_build_m4_t2 {
             .first()
             .cloned()
             .unwrap_or_else(|| "core-not-a-card".to_string());
-        let entry = jackioh_engine::scripts::scripts_for(&unscripted);
+        let game = jackioh_engine::testkit::scenario(json!({}));
+        let entry = jackioh_engine::scripts::scripts_for(game.state(), &unscripted);
         assert_eq!(fingerprint(&entry.base), fingerprint(&empty_script()));
         assert_eq!(fingerprint(&entry.radiant), fingerprint(&empty_script()));
     }

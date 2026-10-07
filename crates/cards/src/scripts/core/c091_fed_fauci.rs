@@ -66,7 +66,7 @@ const MANA_PER_TOKEN: PerFace<i32> = PerFace { base: 1, radiant: 2 };
 
 /// "Whenever THIS takes damage": the event carries the target, so a hit this card DEALT — its own
 /// strike-back, its Trample overflow — is not a hit it took.
-fn is_hit_on_self(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
+fn is_hit_on_self(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     let Some(self_) = ctx.self_.as_ref() else {
         return false;
     };

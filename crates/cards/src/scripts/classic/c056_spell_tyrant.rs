@@ -14,7 +14,7 @@ pub const ID: &str = "classic-056";
 
 /// R453: `castEach` with "then exile them" (`afterward: "exile"`), each cast's choices its caster's (R70).
 /// `cards` answers the instance ids to cast, read once as the list reaches it.
-fn cast_each_then_exile(cards: impl Fn(&EffectContext<'_>) -> Vec<String> + Send + Sync + 'static) -> Effect {
+fn cast_each_then_exile(cards: impl Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync + 'static) -> Effect {
     cast_each(CastEachArgs {
         cards: Arc::new(cards),
         how: json_as(json!({ "afterward": "exile" })),

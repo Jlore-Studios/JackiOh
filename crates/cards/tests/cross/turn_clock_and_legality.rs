@@ -188,13 +188,13 @@ mod r43_r103_what_an_activate_power_or_a_heroic_power_play_may_carry {
                 "backrow": [{ "def": SHEEPISH, "faceUp": false }],
             },
         }));
-        let heroic = must(g.backrow(PlayerId::P1, 1).cloned(), "the Heroic Power");
+        let heroic = must(g.backrow(PlayerId::P1, 1), "the Heroic Power");
         let power = with_power(&mut g, &heroic, "ping");
         let pile = must(g.state().players.p2.units[0].clone(), "p2's lane-1 pile");
         let dormant = must(pile.iter().find(|card| card.def_id == BIG_FELINOR).cloned(), "the dormant Big Felinor");
         let top = must(pile.iter().find(|card| card.def_id == FIENDER).cloned(), "the Fiender on top");
         let in_hand = must(g.state().players.p2.hand.first().cloned(), "p2's hand card");
-        let trap = must(g.backrow(PlayerId::P2, 1).cloned(), "p2's face-down trap");
+        let trap = must(g.backrow(PlayerId::P2, 1), "p2's face-down trap");
 
         for target in [&dormant, &in_hand, &trap] {
             let result = act(
@@ -234,7 +234,7 @@ mod r43_r103_what_an_activate_power_or_a_heroic_power_play_may_carry {
     #[test]
     fn r103_activate_power_cannot_carry_the_discover_s_answer_so_no_card_of_the_client_s_naming_reaches_the_hand_6_3_5_1() {
         let mut g = game(json!({ "p1": { "hand": [RENO], "mana": 8, "backrow": [HEROIC] } }));
-        let heroic = must(g.backrow(PlayerId::P1, 1).cloned(), "the Heroic Power");
+        let heroic = must(g.backrow(PlayerId::P1, 1), "the Heroic Power");
         let power = with_power(&mut g, &heroic, "discover");
         let hand_before: Vec<String> = g.state().players.p1.hand.iter().map(|card| card.def_id.clone()).collect();
 
@@ -403,7 +403,7 @@ mod s9_1_legal_actions_and_a_face_down_trap_s_instance_id {
         g.play(&back.id, json!({}));
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);
-        let set = must(g.backrow(PlayerId::P2, 1).cloned(), "Sheepish set in p2's backrow lane 1");
+        let set = must(g.backrow(PlayerId::P2, 1), "Sheepish set in p2's backrow lane 1");
         assert_eq!(set.def_id, SHEEPISH);
         assert_ne!(set.id, trap_id);
         assert!(!to_json(&g.view(PlayerId::P1)).contains(&format!("\"{trap_id}\"")));
@@ -481,7 +481,7 @@ mod r221_10_2_10_6_every_answer_reduce_accepts_is_one_legal_actions_offers {
         s.play(TWINSPELL, json!({ "zone": 1 }));
         let picks: Vec<Value> = [RENO, VANILLA]
             .iter()
-            .map(|id| json!({ "pick": "instance", "instanceId": s.card(id).id }))
+            .map(|id| json!({ "pick": "instance", "instanceId": s.card(*id).id }))
             .collect();
         s.play(JELLY_BEAN, json!({ "targets": picks }));
         let state = s.state().clone();
@@ -631,8 +631,8 @@ mod r123_a_declared_tribute_names_the_same_units_in_targets_and_tributes {
             },
         );
         let devourer = in_hand(&mut s, "edge-r8-devourer", PlayerId::P1);
-        let a = must(s.unit(PlayerId::P1, 1).cloned(), "p1's first unit");
-        let b = must(s.unit(PlayerId::P1, 2).cloned(), "p1's second unit");
+        let a = must(s.unit(PlayerId::P1, 1), "p1's first unit");
+        let b = must(s.unit(PlayerId::P1, 2), "p1's second unit");
 
         let plays = plays_of(&s, PlayerId::P1, &devourer);
         assert!(!plays.is_empty());
@@ -727,8 +727,8 @@ mod r221_r90_10_2_a_play_s_picks_for_one_declaration_are_a_set {
             },
         );
         let spell = in_hand(&mut s, "edge-r8-exile-two", PlayerId::P1);
-        let a = must(s.unit(PlayerId::P2, 1).cloned(), "p2's lane-1 unit");
-        let b = must(s.unit(PlayerId::P2, 2).cloned(), "p2's lane-2 unit");
+        let a = must(s.unit(PlayerId::P2, 1), "p2's lane-1 unit");
+        let b = must(s.unit(PlayerId::P2, 2), "p2's lane-2 unit");
 
         // legalActions offers the set {a, b} once, in the order the declaration offers its options.
         assert_eq!(

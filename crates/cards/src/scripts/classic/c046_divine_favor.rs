@@ -34,7 +34,7 @@ pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(hook(|_ctx| {
             vec![draw_while(DrawWhileArgs {
-                more: Arc::new(|now: &EffectContext<'_>| -> bool {
+                more: Arc::new(|now: &mut EffectContext<'_>| -> bool {
                     draws_wanted(&now.state, now.controller, param(now, "multiplier"), 0) > 0
                 }),
                 player: None,

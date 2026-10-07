@@ -157,15 +157,6 @@ mod tests {
         subsystems::ScorerOptions { radiant }
     }
 
-    /// Stands in for a missing `{ def, radiant }` form on `SideSetup.hand`; §5.2 makes the flag the
-    /// whole model, so setting it on the fixture is a legitimate starting state.
-    fn make_radiant(s: &mut Scenario, card: &str) {
-        let id = s.card(card).id.clone();
-        find_instance_mut(s.state_mut(), &id)
-            .expect("the card is in the state")
-            .radiant = true;
-    }
-
     fn priority_of(scored: &subsystems::Scored) -> Value {
         js(&scored.priority)
     }
@@ -296,7 +287,7 @@ mod tests {
         fn s8_5_a_perfect_radiant_card_the_pick_arrives_radiant() {
             crate::register_all();
             let mut s = scenario(json!({ "seed": "zephyrs-radiant", "p1": { "hand": [ZEPHYRS] } }));
-            make_radiant(&mut s, ZEPHYRS);
+            s.card_mut(ZEPHYRS).radiant = true;
             s.play(ZEPHYRS, json!({}));
 
             let picked = option_ids(&open(s.state())).into_iter().next().unwrap_or_default();
@@ -316,7 +307,7 @@ mod tests {
                 "p1": { "hand": [ZEPHYRS], "field": [BOARD] },
                 "p2": { "field": [BOARD], "health": 20 },
             }));
-            make_radiant(&mut s, ZEPHYRS);
+            s.card_mut(ZEPHYRS).radiant = true;
             s.play(ZEPHYRS, json!({}));
 
             let top: Vec<String> = subsystems::top_three(s.state(), P1, &options(Some(true)))
@@ -330,7 +321,7 @@ mod tests {
         fn s8_5_exile_this_is_kept_the_radiant_cell_restates_only_which_card_is_discovered() {
             crate::register_all();
             let mut s = scenario(json!({ "seed": "zephyrs-radiant-exile", "p1": { "hand": [ZEPHYRS] } }));
-            make_radiant(&mut s, ZEPHYRS);
+            s.card_mut(ZEPHYRS).radiant = true;
             s.play(ZEPHYRS, json!({}));
             let first = option_ids(&open(s.state())).into_iter().next().unwrap_or_default();
             s.answer(json!(first));

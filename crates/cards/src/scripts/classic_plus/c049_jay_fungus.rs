@@ -92,12 +92,6 @@ mod tests {
             .collect()
     }
 
-    /// TS `stepParam(s.card(FUNGUS), "discount", steps)`, on the live card on the field.
-    fn step_fungus(s: &mut Scenario, steps: i32) {
-        let id = s.card(FUNGUS).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the Fungus"), "discount", steps);
-    }
-
     fn js<T: serde::Serialize>(value: &T) -> Value {
         serde_json::to_value(value).expect("serialises")
     }
@@ -239,12 +233,12 @@ mod tests {
         fn r386_an_upgrade_makes_it_3_less_a_degrade_1_less_never_below_1() {
             crate::register_all();
             let mut up = grown(Grown::default());
-            step_fungus(&mut up, 1);
+            step_param(up.card_mut(FUNGUS), "discount", 1);
             up.end_turn();
             assert_eq!(up.card(THREE).cost_mod, -3);
 
             let mut down = grown(Grown::default());
-            step_fungus(&mut down, -5);
+            step_param(down.card_mut(FUNGUS), "discount", -5);
             down.end_turn();
             assert_eq!(down.card(THREE).cost_mod, -1);
         }

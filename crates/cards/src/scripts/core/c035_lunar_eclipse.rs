@@ -135,12 +135,6 @@ mod tests {
         json!({ "targets": [{ "pick": "instance", "instanceId": unit.id }] })
     }
 
-    /// TS `s.card(ref).radiant = true` on the live card.
-    fn make_radiant(s: &mut Scenario, card: &str) {
-        let id = s.card(card).id.clone();
-        find_instance_mut(s.state_mut(), &id).expect("the card is in the state").radiant = true;
-    }
-
     /// p1 holds the eclipse, a (3) Cost spell and a (1) Cost unit; both sides keep a unit on the board.
     fn board() -> Scenario {
         scn(json!({
@@ -253,7 +247,7 @@ mod tests {
         #[test]
         fn radiant_deals_6_damage() {
             let mut s = board();
-            make_radiant(&mut s, "35");
+            s.card_mut("35").radiant = true;
             s.play("35", json!({ "targets": at_enemy_hero() }));
             s.expect_health("p2", 24);
         }
@@ -261,7 +255,7 @@ mod tests {
         #[test]
         fn radiant_makes_the_next_spell_this_turn_cost_2_less() {
             let mut s = board();
-            make_radiant(&mut s, "35");
+            s.card_mut("35").radiant = true;
 
             s.play("35", json!({ "targets": at_enemy_hero() }));
             s.expect_mana("p1", 3);
@@ -275,7 +269,7 @@ mod tests {
         #[test]
         fn the_radiant_discount_expires_at_cleanup_too() {
             let mut s = board();
-            make_radiant(&mut s, "35");
+            s.card_mut("35").radiant = true;
             s.play("35", json!({ "targets": at_enemy_hero() }));
             assert_eq!(s.state().players.p1.mods.len(), 1);
 

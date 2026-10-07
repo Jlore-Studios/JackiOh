@@ -40,7 +40,7 @@ fn targets() -> Vec<TargetDecl> {
 }
 
 /// A placement of Plague Counters on this card: `counterChanged` for `plague` with `placed`, naming it.
-fn placed_on_this(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
+fn placed_on_this(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     let Some(me) = &ctx.self_ else {
         return false;
     };

@@ -8,7 +8,7 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "classicplus-001";
 
 /// A declared attack (a forced one opens no window, R121) by an enemy Unit on this trap's controller's hero.
-fn attacks_your_hero(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
+fn attacks_your_hero(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     let GameEvent::AttackDeclared { attacker_id, target_id, forced } = event else {
         return false;
     };

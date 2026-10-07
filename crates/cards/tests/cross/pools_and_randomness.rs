@@ -55,7 +55,7 @@ fn summoned(events: &[GameEvent]) -> Vec<(String, Row)> {
 
 /// The name of the first Call to Chaos effect the rng rolls at `cursor` of `seed` (base face).
 fn chaos_roll(seed: &str, cursor: u32) -> Option<String> {
-    subsystems::roll_chaos_effects(&mut Rng::new(seed, cursor), false)
+    subsystems::roll_chaos_effects(&mut Rng::new(seed, cursor), false, None)
         .first()
         .map(|effect| effect.name.to_string())
 }
@@ -224,7 +224,7 @@ mod s10_7_the_zephyrs_scorer_s_lethal_available {
             "p2": { "field": [MENACE], "health": 3 },
         }));
         assert_ne!(
-            subsystems::score_def(s.state(), PlayerId::P1, &card_def(DUELIST)).priority,
+            subsystems::score_def(s.state(), PlayerId::P1, &card_def(DUELIST), &subsystems::ScorerOptions::default(), None).priority,
             subsystems::ScorePriority::Lethal
         );
 
@@ -235,14 +235,14 @@ mod s10_7_the_zephyrs_scorer_s_lethal_available {
             "p2": { "health": 3 },
         }));
         assert_ne!(
-            subsystems::score_def(full.state(), PlayerId::P1, &card_def(DUELIST)).priority,
+            subsystems::score_def(full.state(), PlayerId::P1, &card_def(DUELIST), &subsystems::ScorerOptions::default(), None).priority,
             subsystems::ScorePriority::Lethal
         );
 
         // And on an open board with room it is lethal, which is what the priority is for.
         let open = scenario(json!({ "p1": { "hand": [ZEPHYRS], "mana": 4 }, "p2": { "health": 3 } }));
         assert_eq!(
-            subsystems::score_def(open.state(), PlayerId::P1, &card_def(DUELIST)).priority,
+            subsystems::score_def(open.state(), PlayerId::P1, &card_def(DUELIST), &subsystems::ScorerOptions::default(), None).priority,
             subsystems::ScorePriority::Lethal
         );
     }

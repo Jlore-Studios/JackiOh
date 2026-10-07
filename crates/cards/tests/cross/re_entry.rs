@@ -409,7 +409,7 @@ mod c8_52_r4_r78_a_rider_on_a_card_that_never_reached_the_hand {
         g.play(REMINISCE, json!({}));
         g.answer(json!(seven));
         g.expect_in_zone(seven.as_str(), "hand");
-        assert_eq!(effective_cost(g.state(), g.card(seven.as_str()), &CostOptions::default()), 3);
+        assert_eq!(effective_cost(g.state(), g.card(seven.as_str()), CostOptions::default()), 3);
         assert_eq!(g.card(seven.as_str()).cost_override, None);
     }
 
@@ -432,7 +432,7 @@ mod c8_52_r4_r78_a_rider_on_a_card_that_never_reached_the_hand {
         assert_eq!(g.card(seven.as_str()).controller, PlayerId::P1);
         assert_eq!(g.card(seven.as_str()).cost_override, Some(0));
         // It is p1's own card now, so it is priced and played as one (a held card is read by its holder).
-        assert_eq!(effective_cost(g.state(), g.card(seven.as_str()), &CostOptions::default()), 0);
+        assert_eq!(effective_cost(g.state(), g.card(seven.as_str()), CostOptions::default()), 0);
         g.play(SEVEN_SEVEN, json!({ "zone": 4 }));
         assert_eq!(g.unit(PlayerId::P1, 4).map(|card| card.id.clone()), Some(seven.clone()));
     }

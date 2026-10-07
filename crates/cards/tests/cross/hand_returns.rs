@@ -54,7 +54,7 @@ fn scenario(setup: Value) -> Scenario {
 /// A cursor at which a base #95's single roll is `effect`, the pick 095's own tests use (R28).
 fn chaos_cursor(seed: &str, effect: &str) -> u32 {
     for cursor in 0..500u32 {
-        if subsystems::roll_chaos_effects(&mut Rng::new(seed, cursor), false)
+        if subsystems::roll_chaos_effects(&mut Rng::new(seed, cursor), false, None)
             .first()
             .is_some_and(|rolled| rolled.name == effect)
         {
@@ -170,7 +170,7 @@ mod r215_a_hand_card_that_reaches_a_graveyard_is_the_printed_card_again {
             "p2": { "hand": [STOCKPILE], "field": [{ "def": VANILLA, "lane": 1 }], "library": [VANILLA, VANILLA, VANILLA] },
         }));
         let eater = g.card(CORPSE_EATER).clone();
-        let Some(prey) = g.unit(P2, 1).cloned() else {
+        let Some(prey) = g.unit(P2, 1) else {
             panic!("setup: p2's lane-1 unit");
         };
 

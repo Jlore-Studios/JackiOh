@@ -95,7 +95,7 @@ mod tests {
     /// The names of the entries `rollChaosEffects` rolls at `cursor` of `seed`, with this card's table.
     fn rolled_names(seed: &str, cursor: u32, radiant: bool) -> Vec<&'static str> {
         let mut rng = Rng::new(seed, cursor);
-        subsystems::roll_chaos_effects(&mut rng, radiant, subsystems::CHAOS_PLUS_EFFECTS)
+        subsystems::roll_chaos_effects(&mut rng, radiant, Some(subsystems::CHAOS_PLUS_EFFECTS))
             .iter()
             .map(|effect| effect.name)
             .collect()

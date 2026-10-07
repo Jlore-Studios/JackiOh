@@ -72,7 +72,7 @@ pub fn script() -> CardScripts {
         cry: Some(hook(|_ctx| {
             vec![
                 for_each_card(ForEachCardArgs {
-                    cards: Arc::new(|ctx: &EffectContext<'_>| -> Vec<String> {
+                    cards: Arc::new(|ctx: &mut EffectContext<'_>| -> Vec<String> {
                         graveyard_units(ctx).into_iter().map(|card| card.id).collect()
                     }),
                     each: Arc::new(|instance_id: &str| -> Effect {

@@ -88,13 +88,6 @@ mod tests {
         defs.into_iter().map(|def| def.map(str::to_string)).collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: a Degrade or Upgrade of the live card in the state.
-    fn step_card_param(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(live, key, steps);
-    }
-
     mod c_n31_cookie_guild {
         use super::*;
 
@@ -261,12 +254,12 @@ mod tests {
                     "p1": { "hand": [GUILD, ANCHOR], "library": [TEMPO, VANILLA, BIG_D] },
                     "p2": { "hand": [ANCHOR] },
                 }));
-                step_card_param(&mut units, GUILD, "units", 1);
+                step_param(units.card_mut(GUILD), "units", 1);
                 units.play(GUILD, json!({}));
                 assert_eq!(unit_defs(&units, P1), lanes([Some(GUILD), Some(TEMPO), Some(VANILLA), None, None]));
 
                 let mut limit = scenario(json!({ "p1": { "hand": [GUILD, ANCHOR], "library": [MENACE, TEMPO] }, "p2": { "hand": [ANCHOR] } }));
-                step_card_param(&mut limit, GUILD, "costLimit", 1);
+                step_param(limit.card_mut(GUILD), "costLimit", 1);
                 limit.play(GUILD, json!({}));
                 assert_eq!(unit_defs(&limit, P1), lanes([Some(GUILD), Some(MENACE), None, None, None]));
             }
@@ -275,7 +268,7 @@ mod tests {
             fn r386_a_degrade_of_the_cost_limit_to_1_passes_a_2_unit_over() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [GUILD, ANCHOR], "library": [FELINORS, TEMPO] }, "p2": { "hand": [ANCHOR] } }));
-                step_card_param(&mut s, GUILD, "costLimit", -1);
+                step_param(s.card_mut(GUILD), "costLimit", -1);
 
                 s.play(GUILD, json!({}));
 
@@ -355,7 +348,7 @@ mod tests {
                     "p1": { "hand": [{ "def": GUILD, "radiant": true }, ANCHOR], "library": [TEMPO, VANILLA, BIG_D] },
                     "p2": { "hand": [ANCHOR] },
                 }));
-                step_card_param(&mut s, GUILD, "units", -1);
+                step_param(s.card_mut(GUILD), "units", -1);
 
                 s.play(GUILD, json!({}));
 

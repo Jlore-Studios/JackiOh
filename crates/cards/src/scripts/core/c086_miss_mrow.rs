@@ -110,13 +110,13 @@ mod tests {
             );
             s.expect_refused_with(
                 |s| {
-                    s.attack(MROW, "hero");
+                    s.attack(MROW, "hero")
                 },
                 "cannot attack",
             );
             s.expect_refused_with(
                 |s| {
-                    s.attack(MROW, GARY);
+                    s.attack(MROW, GARY)
                 },
                 "cannot attack",
             );
@@ -137,14 +137,14 @@ mod tests {
             s.expect_in_zone(MROW, "graveyard")
                 .expect_events(json!(["destroyed", "controlChanged"]));
             // R15: p1's lane 1 was free, so the killer kept its lane.
-            assert_eq!(s.unit(P1, 1).map(|card| card.def_id.as_str()), Some(FELINORS));
+            assert_eq!(s.unit(P1, 1).as_ref().map(|card| card.def_id.as_str()), Some(FELINORS));
             assert!(s.unit(P2, 1).is_none());
             // R12: control, never ownership; R78: it never left the field, so its damage came along.
             assert_eq!(s.unit(P1, 1).map(|card| card.owner), Some(P2));
             assert_eq!(s.unit(P1, 1).map(|card| card.controller), Some(P1));
             assert_eq!(s.unit(P1, 1).map(|card| card.damage), Some(1));
             // The other enemy unit had no part in it and stays with p2.
-            assert_eq!(s.unit(P2, 2).map(|card| card.def_id.as_str()), Some(GARY));
+            assert_eq!(s.unit(P2, 2).as_ref().map(|card| card.def_id.as_str()), Some(GARY));
             assert_eq!(s.unit(P2, 2).map(|card| card.controller), Some(P2));
         }
 
@@ -172,7 +172,7 @@ mod tests {
 
             s.attack(FELINORS, MROW);
 
-            assert_eq!(s.unit(P1, 1).map(|card| card.def_id.as_str()), Some(FELINORS));
+            assert_eq!(s.unit(P1, 1).as_ref().map(|card| card.def_id.as_str()), Some(FELINORS));
             assert_eq!(s.unit(P1, 1).map(|card| card.owner), Some(P2));
             assert!(s.unit(P2, 2).is_none());
             assert_eq!(s.unit(P2, 1).map(|card| card.controller), Some(P2));
@@ -196,7 +196,7 @@ mod tests {
             );
 
             s.expect_in_zone(MROW, "graveyard");
-            assert_eq!(s.unit(P1, 2).map(|card| card.def_id.as_str()), Some(SORCERER));
+            assert_eq!(s.unit(P1, 2).as_ref().map(|card| card.def_id.as_str()), Some(SORCERER));
             assert_eq!(s.unit(P1, 2).map(|card| card.owner), Some(P2));
         }
 
@@ -263,8 +263,8 @@ mod tests {
             s.attack(FELINORS, MROW);
 
             s.expect_in_zone(MROW, "graveyard");
-            assert_eq!(s.unit(P1, 5).map(|card| card.def_id.as_str()), Some(GARY));
-            assert_eq!(s.unit(P2, 1).map(|card| card.def_id.as_str()), Some(FELINORS));
+            assert_eq!(s.unit(P1, 5).as_ref().map(|card| card.def_id.as_str()), Some(GARY));
+            assert_eq!(s.unit(P2, 1).as_ref().map(|card| card.def_id.as_str()), Some(FELINORS));
             assert_eq!(s.unit(P2, 1).map(|card| card.controller), Some(P2));
         }
     }
@@ -286,7 +286,7 @@ mod tests {
             s.expect_stats(MROW, json!({ "attack": 2, "maxHealth": 2 }));
             // Rush: units only on the turn it lands (§6.1).
             s.expect_refused(|s| {
-                s.attack(MROW, "hero");
+                s.attack(MROW, "hero")
             });
             s.attack(MROW, GARY);
             s.expect_in_zone(GARY, "graveyard");
@@ -319,10 +319,10 @@ mod tests {
             s.attack(MROW, SORCERER);
 
             s.expect_in_zone(MROW, "graveyard");
-            assert_eq!(s.unit(P1, 1).map(|card| card.def_id.as_str()), Some(SORCERER));
+            assert_eq!(s.unit(P1, 1).as_ref().map(|card| card.def_id.as_str()), Some(SORCERER));
             assert_eq!(s.unit(P1, 1).map(|card| card.damage), Some(2));
             assert_eq!(s.unit(P1, 1).map(|card| card.owner), Some(P2));
-            assert_eq!(s.unit(P2, 2).map(|card| card.def_id.as_str()), Some(GARY));
+            assert_eq!(s.unit(P2, 2).as_ref().map(|card| card.def_id.as_str()), Some(GARY));
         }
     }
 }

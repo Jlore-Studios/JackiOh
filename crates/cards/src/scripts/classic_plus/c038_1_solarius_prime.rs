@@ -20,7 +20,8 @@ fn cast_random_spells(count: i32, radiant: bool) -> Effect {
         query: CastRandomQuery::Fixed(json_as(json!({ "type": "Spell" }))),
         count: Some(CastRandomCount::Fixed(count)),
         radiant: Some(radiant),
-        how: json_as(json!({ "targetEnemies": true })),
+        target_enemies: Some(true),
+        afterward: None,
     })
 }
 

@@ -140,7 +140,7 @@ mod r43_r151_a_heroic_power_created_on_the_field_rolls_its_power {
 
         let powers: Vec<CardInstance> = [1, 2, 3, 4, 5]
             .into_iter()
-            .filter_map(|lane| g.backrow(P1, lane).cloned())
+            .filter_map(|lane| g.backrow(P1, lane))
             .filter(|card| card.def_id == HEROIC_POWER)
             .collect();
         assert!(!powers.is_empty());
@@ -199,7 +199,7 @@ mod r90_r102_a_fused_card_s_declarations_each_read_their_own_slice_of_the_play_s
             g.hand(P1).iter().find(|card| card.def_id.starts_with("t-")).cloned(),
             "the crafted card",
         );
-        let panther = must(g.unit(P2, 1).cloned(), "p2's Prem Panther (not a Human)");
+        let panther = must(g.unit(P2, 1), "p2's Prem Panther (not a Human)");
 
         // Bigot's declaration first, the Sorcerer's second: both targets travel in the one play.
         let choice = vec![
@@ -241,7 +241,7 @@ mod r90_r102_a_fused_card_s_declarations_each_read_their_own_slice_of_the_play_s
             g.hand(P1).iter().find(|card| card.def_id.starts_with("t-")).cloned(),
             "the crafted card",
         );
-        let theirs = must(g.unit(P2, 1).cloned(), "p2's Mr. Vanilla");
+        let theirs = must(g.unit(P2, 1), "p2's Mr. Vanilla");
 
         // Archivist's declaration first, Silas's second: "highest", then "right".
         let wanted = vec!["highest".to_string(), "right".to_string()];
@@ -365,7 +365,7 @@ const RUSH_TOKEN_FARM: &str = "core-058"; // a public Field Spell that acts only
 fn units_of(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
     [1, 2, 3, 4, 5]
         .into_iter()
-        .filter_map(|lane| s.unit(player, lane).cloned())
+        .filter_map(|lane| s.unit(player, lane))
         .collect()
 }
 

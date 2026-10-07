@@ -103,7 +103,7 @@ fn played_permanent(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<CardIn
 
     let card = find_instance(&ctx.state, instance_id)?;
 
-    let played = def_of(&ctx.state, &card.def_id);
+    let played = def_of(Some(&*ctx.state), &card.def_id);
     // R61: "tokens … never set it off", including a token card played from a hand.
     if played.token || played.tags.contains(&Tag::Token) {
         return None;
@@ -134,7 +134,7 @@ fn matching_permanents(ctx: &EffectContext<'_>, type_: CardType, played: &CardIn
                     if Some(&card.id) == self_id.as_ref() || card.id == played.id {
                         return None;
                     }
-                    if type_key(def_of(&ctx.state, &card.def_id).type_) == wanted {
+                    if type_key(def_of(Some(&*ctx.state), &card.def_id).type_) == wanted {
                         Some(card.clone())
                     } else {
                         None
@@ -163,7 +163,7 @@ fn experimentation(on_all: bool) -> TrapTrigger {
             };
 
             // R23: "Immutable permanents are never chosen" as the Fuse target.
-            let type_ = def_of(&ctx.state, &played.def_id).type_;
+            let type_ = def_of(Some(&*ctx.state), &played.def_id).type_;
             let target_ids: Vec<String> = matching_permanents(ctx, type_, &played)
                 .into_iter()
                 .filter(|card| !unit_has(&ctx.state, card, KeywordKind::Immutable))
@@ -198,7 +198,7 @@ fn experimentation(on_all: bool) -> TrapTrigger {
         };
         // §8: "whose type matches one you control". R61 counts an Immutable permanent of yours here,
         // so the trap fires and is consumed even though nothing can be fused onto it.
-        let type_ = def_of(&ctx.state, &played.def_id).type_;
+        let type_ = def_of(Some(&*ctx.state), &played.def_id).type_;
         !matching_permanents(ctx, type_, &played).is_empty()
     })
 }
@@ -435,8 +435,8 @@ mod tests {
                 "p1": { "backrow": [armed(false)], "field": [{ "def": TIMMY, "damage": 1, "position": "DEF" }] },
                 "p2": { "hand": [BIG_UNIT, STOCKPILE] },
             }));
-            let trap = s.backrow(P1, 3).cloned().expect("the trap");
-            let mine = s.unit(P1, 1).cloned().expect("p1's Timmy");
+            let trap = s.backrow(P1, 3).expect("the trap");
+            let mine = s.unit(P1, 1).expect("p1's Timmy");
             let played = first_of(&s, P2, BIG_UNIT);
 
             s.play(BIG_UNIT, json!({ "zone": 1 }));
@@ -468,7 +468,7 @@ mod tests {
                 "p1": { "backrow": [armed(false)], "field": [TIMMY] },
                 "p2": { "hand": [BIG_UNIT, STOCKPILE] },
             }));
-            let mine = s.unit(P1, 1).cloned().expect("p1's Timmy");
+            let mine = s.unit(P1, 1).expect("p1's Timmy");
 
             s.play(BIG_UNIT, json!({ "zone": 1 }));
 
@@ -487,7 +487,7 @@ mod tests {
                 "p1": { "backrow": [armed(false)], "field": [TIMMY] },
                 "p2": { "hand": [BIG_UNIT, STOCKPILE] },
             }));
-            let trap = s.backrow(P1, 3).cloned().expect("the trap");
+            let trap = s.backrow(P1, 3).expect("the trap");
 
             s.play(BIG_UNIT, json!({ "zone": 1 }));
 
@@ -509,8 +509,8 @@ mod tests {
             s.play(BIG_UNIT, json!({ "zone": 1 }));
 
             assert_eq!(count_of(&s, GameEventType::Fused), 1);
-            let first = s.unit(P1, 1).cloned().expect("lane 1");
-            let second = s.unit(P1, 2).cloned().expect("lane 2");
+            let first = s.unit(P1, 1).expect("lane 1");
+            let second = s.unit(P1, 2).expect("lane 2");
             let timmy_grew = s.stats(&first).attack == 10;
             let token_grew = s.stats(&second).attack == 8;
             assert_eq!([timmy_grew, token_grew].into_iter().filter(|grew| *grew).count(), 1);
@@ -525,7 +525,7 @@ mod tests {
                 "p1": { "backrow": [{ "def": MY_PAWN, "lane": 1 }, armed(false)] },
                 "p2": { "hand": [INTERN, STOCKPILE] },
             }));
-            let pawn = s.backrow(P1, 1).cloned().expect("My Pawn");
+            let pawn = s.backrow(P1, 1).expect("My Pawn");
             let played = first_of(&s, P2, INTERN);
 
             s.play(INTERN, json!({ "zone": 1 }));
@@ -547,8 +547,8 @@ mod tests {
                 "p1": { "backrow": [armed(false)], "field": [immutable()] },
                 "p2": { "hand": [BIG_UNIT, STOCKPILE] },
             }));
-            let trap = s.backrow(P1, 3).cloned().expect("the trap");
-            let vanilla = s.unit(P1, 1).cloned().expect("the Menace");
+            let trap = s.backrow(P1, 3).expect("the trap");
+            let vanilla = s.unit(P1, 1).expect("the Menace");
             let played = first_of(&s, P2, BIG_UNIT);
 
             s.play(BIG_UNIT, json!({ "zone": 1 }));
@@ -597,8 +597,8 @@ mod tests {
                 "p1": { "backrow": [armed(true)], "field": [TIMMY, MR_TOKEN] },
                 "p2": { "hand": [BIG_UNIT, STOCKPILE] },
             }));
-            let first = s.unit(P1, 1).cloned().expect("lane 1");
-            let second = s.unit(P1, 2).cloned().expect("lane 2");
+            let first = s.unit(P1, 1).expect("lane 1");
+            let second = s.unit(P1, 2).expect("lane 2");
             let played = first_of(&s, P2, BIG_UNIT);
 
             s.play(BIG_UNIT, json!({ "zone": 1 }));
@@ -620,7 +620,7 @@ mod tests {
                 "p1": { "backrow": [armed(true)], "field": [TIMMY] },
                 "p2": { "hand": [BIG_UNIT, STOCKPILE] },
             }));
-            let mine = s.unit(P1, 1).cloned().expect("p1's Timmy");
+            let mine = s.unit(P1, 1).expect("p1's Timmy");
 
             s.play(BIG_UNIT, json!({ "zone": 1 }));
 
@@ -649,8 +649,8 @@ mod tests {
                 "p1": { "backrow": [armed(true)], "field": [immutable(), TIMMY] },
                 "p2": { "hand": [BIG_UNIT, STOCKPILE] },
             }));
-            let vanilla = s.unit(P1, 1).cloned().expect("the Menace");
-            let timmy = s.unit(P1, 2).cloned().expect("Timmy");
+            let vanilla = s.unit(P1, 1).expect("the Menace");
+            let timmy = s.unit(P1, 2).expect("Timmy");
 
             s.play(BIG_UNIT, json!({ "zone": 1 }));
 

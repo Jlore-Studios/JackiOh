@@ -56,7 +56,7 @@ fn jungle(transfer: bool) -> Script {
                 each: Arc::new(move |instance_id: &str| {
                     let mut args = WithKillCreditArgs {
                         killer: json_as(json!({ "of": "instance", "instanceId": instance_id })),
-                        pairs: Arc::new(|ctx: &EffectContext<'_>, _killer: &CardInstance| {
+                        pairs: Arc::new(|ctx: &mut EffectContext<'_>, _killer: &CardInstance| {
                             across_from_bot_losers(&*ctx.state, ctx.controller)
                         }),
                         transfer,

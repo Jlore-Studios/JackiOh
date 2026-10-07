@@ -697,7 +697,7 @@ mod tests {
             assert_eq!(option_keys(&s, "the fuse prompt"), vec![format!("instance:{mutate}")]);
             s.answer(json!(mutate));
             let fused = s.card(&mutate).clone();
-            assert_eq!(js(&fused_id_parts(&fused.def_id)), json!([THRIVE, MUTATE]));
+            assert_eq!(js(&fused_id_parts(Some(s.state()), &fused.def_id)), json!([THRIVE, MUTATE]));
 
             s.activate(&mutate, json!({ "ability": "mutate", "targets": at(&fused) }));
 

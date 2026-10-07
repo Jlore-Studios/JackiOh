@@ -423,7 +423,7 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
                 "type": "drawn", "player": "p2", "instanceId": gone.id, "defId": gone.def_id, "turnDraw": 1,
             }))],
         }];
-        cease_to_exist(g.state_mut(), &gone);
+        cease_to_exist(g.state_mut(), &mut gone.clone());
         let mut view = view_for(g.state(), PlayerId::P1);
         view.events = g.state().applied.iter().flat_map(|entry| entry.events.iter().cloned()).collect();
         let sent = serde_json::to_string(&view.events).expect("events serialise");

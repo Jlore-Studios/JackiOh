@@ -50,7 +50,7 @@ fn audit(enemy_only: impl Fn(&EffectContext<'_>) -> bool + Send + Sync + 'static
     hook(move |_ctx| {
         let enemy_only = enemy_only.clone();
         vec![for_each_card(ForEachCardArgs {
-            cards: Arc::new(move |run: &EffectContext<'_>| -> Vec<String> {
+            cards: Arc::new(move |run: &mut EffectContext<'_>| -> Vec<String> {
                 let def_id = run
                     .self_
                     .as_ref()

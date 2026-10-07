@@ -167,12 +167,6 @@ mod tests {
         ids.iter().map(|id| id.map(str::to_string)).collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: a write through the live instance.
-    fn step_param_of(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     mod c_65_ace_in_the_hole {
         use super::*;
 
@@ -321,7 +315,7 @@ mod tests {
             fn r386_an_upgrade_recruits_2_on_heads() {
                 crate::register_all();
                 let mut s = with_coin(Coin::Heads, json!({}));
-                step_param_of(&mut s, ACE, "recruits", 1);
+                step_param(s.card_mut(ACE), "recruits", 1);
                 s.end_turn();
                 assert_eq!(units(&s), lanes([Some(VANILLA), Some(GARY), None, None, None]));
             }
@@ -445,7 +439,7 @@ mod tests {
             fn r386_a_degrade_recruits_2_on_heads() {
                 crate::register_all();
                 let mut s = with_coin(Coin::Heads, json!({ "radiant": true }));
-                step_param_of(&mut s, ACE, "recruits", -1);
+                step_param(s.card_mut(ACE), "recruits", -1);
                 s.end_turn();
                 assert_eq!(units(&s), lanes([Some(VANILLA), Some(GARY), None, None, None]));
             }

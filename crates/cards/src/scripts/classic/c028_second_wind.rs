@@ -189,13 +189,6 @@ mod tests {
         cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: a Degrade or Upgrade of the live card in the state.
-    fn step_card_param(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(live, key, steps);
-    }
-
     /// Second Wind standing, with a graveyard to play from. The Radiant face is set up standing (its Cry
     /// not run). The base face's "would go to your graveyard" replacement would exile any card a setup put
     /// in the graveyard once it stands, so there the graveyard comes the way the card makes it: Second Wind
@@ -521,7 +514,7 @@ mod tests {
             fn r386_a_degrade_of_the_minimum_price_makes_it_2_a_1_cost_card_is_no_longer_offered() {
                 crate::register_all();
                 let mut s = standing(true, &[STOCKPILE, MANA_WELL], json!({}));
-                step_card_param(&mut s, WIND, "minCost", 1);
+                step_param(s.card_mut(WIND), "minCost", 1);
                 assert_eq!(graveyard_defs_offered(&s), vec![MANA_WELL]);
             }
         }

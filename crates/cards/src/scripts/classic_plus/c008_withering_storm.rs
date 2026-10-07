@@ -7,6 +7,7 @@
 //! padded to {cards} (or the deck's size) with cues on cards no change reaches, which the Degrade leaves
 //! alone with the change `none` — the same cue R440 gives every unchangeable card of the Radiant sweep.
 
+use indexmap::IndexSet;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-008";

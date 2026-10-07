@@ -59,13 +59,6 @@ mod tests {
     /// Spell, so it adds no body to the board and nothing to a draw or a hand-size count but its own.
     const ANCHOR: &str = "core-010";
 
-    /// TS `s.card(ref).radiant = true` (the harness's "HARNESS GAP" note): the flag set on the instance
-    /// as it stands, the way §5.2 models it — Radiant is one flag on the card, in any zone.
-    fn make_radiant(s: &mut Scenario, card: &str) {
-        let id = s.card(card).id.clone();
-        find_instance_mut(s.state_mut(), &id).expect("the card is in the game").radiant = true;
-    }
-
     /// The ids a query answers, in its order (TS `.map((card) => card.id)`).
     fn ids<T: std::borrow::Borrow<CardDef>>(defs: Vec<T>) -> Vec<String> {
         defs.iter().map(|def| <T as std::borrow::Borrow<CardDef>>::borrow(def).id.clone()).collect()
@@ -137,7 +130,7 @@ mod tests {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-051-1"], "library": LIBRARY } }));
             // HARNESS GAP (reported): `SideSetup.hand` takes no `{ def, radiant }` form.
-            make_radiant(&mut s, "core-051-1");
+            s.card_mut("core-051-1").radiant = true;
 
             s.play("core-051-1", json!({}));
 
@@ -169,7 +162,7 @@ mod tests {
                     "library": LIBRARY,
                 },
             }));
-            make_radiant(&mut s, "core-051-1");
+            s.card_mut("core-051-1").radiant = true;
 
             s.play("core-051-1", json!({}));
 

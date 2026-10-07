@@ -212,7 +212,7 @@ mod r62_10_3_a_stage_of_the_turn_loop_settles_its_events_before_the_next_stage {
             None,
         );
         place_fixture(&mut s, "edge-r6-bounty", PlayerId::P1, Row::Units, 4);
-        let timmy = must(s.unit(PlayerId::P2, 1).cloned(), "p2's Tempo Timmy");
+        let timmy = must(s.unit(PlayerId::P2, 1), "p2's Tempo Timmy");
         s.play(
             KPOP_FANATIC,
             json!({ "targets": [{ "pick": "instance", "instanceId": timmy.id }] }),
@@ -392,8 +392,8 @@ mod r68_10_3_a_trap_answers_a_delayed_effect_before_the_next_delayed_effect_runs
             None,
         );
         place_fixture(&mut s, "edge-r7-reclaimer", PlayerId::P2, Row::Backrow, 1);
-        let vanilla = must(s.unit(PlayerId::P2, 1).cloned(), "p2's Mr. Vanilla");
-        let timmy = must(s.unit(PlayerId::P2, 2).cloned(), "p2's Tempo Timmy");
+        let vanilla = must(s.unit(PlayerId::P2, 1), "p2's Mr. Vanilla");
+        let timmy = must(s.unit(PlayerId::P2, 2), "p2's Tempo Timmy");
         s.play(
             KPOP_FANATIC,
             json!({ "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }),
@@ -460,7 +460,7 @@ mod r62_10_3_cleanup_s_events_are_answered_before_the_turn_cap_check_and_the_nex
             None,
         );
         place_fixture(&mut s, "edge-r7-grave-watcher", PlayerId::P2, Row::Units, 3);
-        let pawn = must(s.backrow(PlayerId::P2, 1).cloned(), "p2's My Pawn");
+        let pawn = must(s.backrow(PlayerId::P2, 1), "p2's My Pawn");
 
         s.attack(TEMPO_TIMMY, "hero");
 
@@ -519,8 +519,8 @@ mod r68_4_5_a_delayed_effect_s_check_is_answered_before_the_next_delayed_effect 
             None,
         );
         place_fixture(&mut s, "edge-r8-mourner", PlayerId::P2, Row::Backrow, 3);
-        let timmy = must(s.unit(PlayerId::P2, 1).cloned(), "p2's Tempo Timmy");
-        let vanilla = must(s.unit(PlayerId::P2, 2).cloned(), "p2's Mr. Vanilla");
+        let timmy = must(s.unit(PlayerId::P2, 1), "p2's Tempo Timmy");
+        let vanilla = must(s.unit(PlayerId::P2, 2), "p2's Mr. Vanilla");
         s.play(
             KPOP_FANATIC,
             json!({ "targets": [{ "pick": "instance", "instanceId": timmy.id }] }),

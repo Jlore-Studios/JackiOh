@@ -278,9 +278,9 @@ mod tests {
                 "p1": { "backrow": [GOING_LONG], "hand": [STOCKPILE] },
                 "p2": { "field": [BIGOT, BIGOT], "hand": [MAGIC_JAMMED, STOCKPILE] },
             }));
-            let going_long = s.backrow(P1, 1).cloned().expect("Going Long in the backrow");
-            let first = s.unit(P2, 1).cloned().expect("the first Bigot");
-            let second = s.unit(P2, 2).cloned().expect("the second Bigot");
+            let going_long = s.backrow(P1, 1).expect("Going Long in the backrow");
+            let first = s.unit(P2, 1).expect("the first Bigot");
+            let second = s.unit(P2, 2).expect("the second Bigot");
 
             s.attack(&first, "hero"); // 6 − 2 = 4
             s.play(MAGIC_JAMMED, json!({ "targets": targeting(&going_long.id) }));
@@ -371,7 +371,7 @@ mod tests {
 
             s.play(GOING_LONG, json!({ "zone": 2 }));
 
-            let placed = s.backrow(P1, 2).cloned();
+            let placed = s.backrow(P1, 2);
             assert!(placed.is_some());
             let placed = placed.unwrap();
             assert!(placed.radiant);

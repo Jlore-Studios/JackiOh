@@ -118,11 +118,6 @@ mod tests {
         s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": id }] }));
     }
 
-    fn step_flag(s: &mut Scenario, steps: i32) {
-        let id = s.card(FLAG).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the Flagbearer"), "aura", steps);
-    }
-
     fn js<T: serde::Serialize>(value: &T) -> Value {
         serde_json::to_value(value).expect("serialises")
     }
@@ -280,7 +275,7 @@ mod tests {
         fn r386_an_upgrade_makes_the_aura_2_2_no_armor_left_to_tune() {
             crate::register_all();
             let mut s = rally(Rally::default());
-            step_flag(&mut s, 1);
+            step_param(s.card_mut(FLAG), "aura", 1);
             s.play(FLAG, json!({}));
             assert_eq!(s.view(P1).you.hero.armor, 0);
             let mine = s.unit(P1, 1).expect("p1's lane 1");
@@ -340,7 +335,7 @@ mod tests {
                 radiant: true,
                 ..Rally::default()
             });
-            step_flag(&mut s, 1);
+            step_param(s.card_mut(FLAG), "aura", 1);
             s.play(FLAG, json!({}));
             assert_eq!(s.view(P1).you.hero.armor, 0);
             s.expect_stats(FLAG, json!({ "attack": 11, "health": 11 }));

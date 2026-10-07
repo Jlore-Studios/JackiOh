@@ -25,7 +25,8 @@ fn cast_spells(count: i32) -> Effect {
         query: CastRandomQuery::Fixed(json_as(json!({ "type": "Spell" }))),
         count: Some(CastRandomCount::Fixed(count)),
         radiant: None,
-        how: Default::default(),
+        target_enemies: None,
+        afterward: None,
     })
 }
 
@@ -192,12 +193,6 @@ mod tests {
             }
         }
         panic!("no quiet seed");
-    }
-
-    /// TS `stepParam(s.card(BOX), "casts", steps)`, on the live hand card.
-    fn step_box(s: &mut Scenario, steps: i32) {
-        let id = s.card(BOX).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the Box in hand"), "casts", steps);
     }
 
     /// TS `try { … } finally { … }`: runs its closure when dropped, on a panic too.
@@ -599,7 +594,7 @@ mod tests {
             let (_, up) = quiet_seed(
                 |seed| {
                     let mut s = box_(seeded(seed));
-                    step_box(&mut s, 1);
+                    step_param(s.card_mut(BOX), "casts", 1);
                     s
                 },
                 12,
@@ -609,7 +604,7 @@ mod tests {
             let (_, down) = quiet_seed(
                 |seed| {
                     let mut s = box_(seeded(seed));
-                    step_box(&mut s, -1);
+                    step_param(s.card_mut(BOX), "casts", -1);
                     s
                 },
                 8,
@@ -649,7 +644,7 @@ mod tests {
                         radiant: true,
                         ..seeded(seed)
                     });
-                    step_box(&mut s, 1);
+                    step_param(s.card_mut(BOX), "casts", 1);
                     s
                 },
                 24,

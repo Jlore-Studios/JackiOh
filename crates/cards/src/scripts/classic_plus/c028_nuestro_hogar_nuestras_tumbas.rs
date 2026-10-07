@@ -67,13 +67,6 @@ mod tests {
         s.unit(seat, lane).map(|card| card.id).unwrap_or_else(|| fallback.to_string())
     }
 
-    /// TS `stepParam(s.card(ref), key, delta)`: the card's declared number moved on the live card.
-    fn step_param_of(s: &mut Scenario, card: &str, key: &str, delta: i32) {
-        let id = s.card(card).id.clone();
-        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
-        step_param(live, key, delta);
-    }
-
     /// p1's two Menaces attack p2's #28 twice: its first death and its Reborn body's.
     fn kill_twice(radiant_face: bool, health: i32) -> Scenario {
         let mut s = scenario(json!({
@@ -178,7 +171,7 @@ mod tests {
                     "p1": { "hand": [FILLER], "field": [MENACE] },
                     "p2": { "hand": [FILLER], "field": [HOGAR], "health": 20 },
                 }));
-                step_param_of(&mut s, HOGAR, "heal", 1);
+                step_param(s.card_mut(HOGAR), "heal", 1);
                 let attacker = unit_or(&s, P1, 1, MENACE);
                 s.attack(&attacker, HOGAR);
                 s.expect_health(P2, 24);
@@ -191,7 +184,7 @@ mod tests {
                     "p1": { "hand": [FILLER], "field": [MENACE] },
                     "p2": { "hand": [FILLER], "field": [HOGAR], "health": 20 },
                 }));
-                step_param_of(&mut s, HOGAR, "heal", -1);
+                step_param(s.card_mut(HOGAR), "heal", -1);
                 let attacker = unit_or(&s, P1, 1, MENACE);
                 s.attack(&attacker, HOGAR);
                 s.expect_health(P2, 22);
@@ -226,7 +219,7 @@ mod tests {
                     "p1": { "hand": [FILLER], "field": [MENACE, MENACE] },
                     "p2": { "hand": [FILLER], "field": [{ "def": HOGAR, "radiant": true }], "health": 20 },
                 }));
-                step_param_of(&mut s, HOGAR, "heal", 1);
+                step_param(s.card_mut(HOGAR), "heal", 1);
                 let first = unit_or(&s, P1, 1, MENACE);
                 s.attack(&first, HOGAR);
                 let second = unit_or(&s, P1, 2, MENACE);

@@ -394,7 +394,7 @@ mod tests {
             // own guard; the script's fizzle is the second line of defence §8's Conventions ask for.
             s.expect_refused_with(
                 |s| {
-                    s.play(&this, json!({ "modes": [] }));
+                    s.play(&this, json!({ "modes": [] }))
                 },
                 "mode",
             );

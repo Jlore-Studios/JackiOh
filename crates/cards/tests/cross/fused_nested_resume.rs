@@ -68,7 +68,7 @@ mod r102_a_final_gambit_under_a_fusion_whose_other_ingredients_hold_no_table_of_
 
     #[test]
     fn r102_resumes_its_own_step_the_hit_is_re_aimed_the_hero_heals_10_and_draws_3_as_a_final_gambit_standing_alone_does() {
-        let s = lethal_against_nested();
+        let mut s = lethal_against_nested();
 
         s.expect_events(json!(["attackDeclared", "trapFired", "redirected", "damage", "healed"]));
         s.expect_health(P1, 14);

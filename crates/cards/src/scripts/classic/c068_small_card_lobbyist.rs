@@ -127,12 +127,6 @@ mod tests {
             .any(|action| action["type"] == "play" && action["instanceId"] == id.as_str())
     }
 
-    /// TS `stepParam(s.card(ref), key, steps)`: a write through the live instance.
-    fn step_param_of(s: &mut Scenario, card: &str, key: &str, steps: i32) {
-        let id = s.card(card).id.clone();
-        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
-    }
-
     /// A play action sent straight to `reduce` (the harness's `play` takes a hand card).
     fn play_action(player: &str, instance_id: &str, nonce: &str) -> Action {
         json_as(json!({ "type": "play", "playerId": player, "instanceId": instance_id, "nonce": nonce }))
@@ -325,7 +319,7 @@ mod tests {
             fn r386_its_surcharge_is_declared_an_upgrades_step_makes_3_cost_cards_cost_2_more() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [HIT_JOB], "field": [LOBBYIST] } }));
-                step_param_of(&mut s, LOBBYIST, "surcharge", 1);
+                step_param(s.card_mut(LOBBYIST), "surcharge", 1);
                 assert_eq!(hand_cost(&s, P1, HIT_JOB), Some(5));
             }
 
@@ -333,7 +327,7 @@ mod tests {
             fn r386_its_threshold_is_declared_and_a_degrade_moves_it_toward_harder_4_so_a_3_card_is_spared() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [HIT_JOB, NETHER], "field": [LOBBYIST] } }));
-                step_param_of(&mut s, LOBBYIST, "threshold", 1);
+                step_param(s.card_mut(LOBBYIST), "threshold", 1);
                 assert_eq!(hand_cost(&s, P1, HIT_JOB), Some(3));
                 assert_eq!(hand_cost(&s, P1, NETHER), Some(5));
             }
@@ -462,7 +456,7 @@ mod tests {
                     "active": "p2",
                 }));
                 assert!(!offered(&sp, P2, HIT_JOB));
-                step_param_of(&mut sp, LOBBYIST, "threshold", 1);
+                step_param(sp.card_mut(LOBBYIST), "threshold", 1);
                 assert!(offered(&sp, P2, HIT_JOB));
                 assert!(!offered(&sp, P2, NETHER));
             }

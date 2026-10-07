@@ -10,7 +10,6 @@
 //! the permanents it would exile now — never one its controller may not read (an enemy face-down card,
 //! R177), which the exile still takes; the base face marks nothing.
 
-use std::borrow::Borrow;
 
 use jackioh_engine::effects::{ForEachCardArgs, chosen_options, exile, for_each_card, unreadable_by};
 use jackioh_engine::prelude::*;
@@ -19,11 +18,6 @@ pub const ID: &str = "classicplus-044";
 
 const ALL: &str = "All permanents";
 const THEIRS: &str = "Only your opponent's";
-
-/// A card `auditTargets` answered with, as an owned copy (whether it lends or hands them over).
-fn owned(card: impl Borrow<CardInstance>) -> CardInstance {
-    card.borrow().clone()
-}
 
 /// The permanents whose card has fewer lines of code than `defId`'s.
 fn targets(
@@ -34,10 +28,7 @@ fn targets(
     enemy_only: bool,
 ) -> Vec<CardInstance> {
     let loc = subsystems::lines_of_code(state, def_id);
-    subsystems::audit_targets(state, &subsystems::AuditArgs { controller, active, loc, more: false, enemy_only })
-        .into_iter()
-        .map(owned)
-        .collect()
+    subsystems::audit_targets(state, subsystems::AuditArgs { controller, active, loc, more: false, enemy_only })
 }
 
 /// Which permanents a run of the Audit exiles: all of them, or only the opponent's.

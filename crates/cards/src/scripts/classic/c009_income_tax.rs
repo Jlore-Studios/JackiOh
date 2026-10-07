@@ -35,7 +35,7 @@ pub const ID: &str = "classic-009";
 /// Where the Radiant face's discount travels from the firing to the answer (§10.6).
 const DISCOUNT: &str = "discount";
 
-fn taxes(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
+fn taxes(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     matches!(
         event,
         GameEvent::Drawn { player, turn_draw, .. }
