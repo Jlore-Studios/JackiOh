@@ -17,7 +17,7 @@ use crate::rules::fixtures::ky_test::{
 };
 use crate::rules::fixtures::prompt_harness::{act, answer_keys, board, cast_now, must, open_as, round_trip};
 
-use KyTestDifficulty::{Easy, Hard, Medium};
+use jackioh_engine::config::KyTestDifficulty::{Easy, Hard, Medium};
 
 /// p1's main phase with KY's Test cast and its first prompt open.
 fn offered(seed: &str, radiant: bool) -> GameState {
