@@ -22,6 +22,7 @@ pub mod redact_board_history;
 pub mod redact_fusion;
 pub mod redact_last_boards;
 pub mod redact_live_face_down;
+pub mod redact_play_records;
 pub mod redact_twice;
 pub mod reply;
 pub mod search;

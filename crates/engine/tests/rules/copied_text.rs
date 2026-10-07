@@ -15,6 +15,7 @@ use jackioh_engine::resolve::{CastOptions, cast_card};
 use jackioh_engine::subsystems::copied_text::{
     COPIED_TEXT_KEY, copied_text_of, running_script_of, text_face_of,
 };
+use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
 use jackioh_engine::triggers::{SettleOptions, settle};
 use jackioh_engine::view_for::view_for;
@@ -377,6 +378,71 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
             ))
             .contains("X is above")
         );
+    }
+
+    /// The last Spell can be a fused card that has since gone where no player sees it: in part 40's
+    /// sweep (`sweep:easy:core-076:2`) a deck card fused by Classic+ #73, keeping its cost (R470), was
+    /// played and went back to the bottom of its deck by its own Pile On clause. The definition is the
+    /// state's (`transient_defs`, which nothing removes), so the copier still reads the copied X off it.
+    /// Only a state without that definition reaches `copied_chooses_x`'s `def_of` panic, and no action
+    /// makes one: the AI's `redact` did (`crates/ai/tests/ai/redact_play_records.rs`).
+    #[test]
+    fn r545_r399_a_fused_x_cost_last_spell_back_in_its_deck_keeps_its_definition_and_the_copier_chooses_its_x()
+     {
+        let mut state = game("ct-fused-home", 4);
+        let x_bolt = hand(&mut state, P1, &CT.x_bolt.id, false);
+        let dummy = hand(&mut state, P1, &CT.dummy.id, false);
+        let mut sink = Sink::for_state(&state);
+        let fused = fuse(
+            &mut sink.on(&mut state),
+            FuseArgs {
+                ingredients: vec![dummy],
+                into: Some(x_bolt),
+                keep_cost: Some(true),
+                ..FuseArgs::default()
+            },
+        )
+        .expect("the dummy fuses into the X bolt in hand");
+        assert_eq!(
+            find_def(Some(&state), &fused.def_id).map(|def| def.cost),
+            Some(CardCost::X)
+        );
+        state = act(
+            &state,
+            P1,
+            json!({ "type": "play", "instanceId": fused.id, "x": 1 }),
+        )
+        .state;
+        assert_eq!(
+            last_spell_played(&state).map(|record| record.def_id),
+            Some(fused.def_id.clone())
+        );
+        let mut played = find_instance(&state, &fused.id).cloned().expect("the fused card");
+        let options = MoveToZoneOptions {
+            position: Some(LibraryPosition::Bottom),
+            ..MoveToZoneOptions::default()
+        };
+        move_to_zone(&mut state, &mut played, OffFieldZone::Library, options);
+        assert_eq!(
+            state.players.p1.library.last().map(|card| card.id.clone()),
+            Some(fused.id.clone())
+        );
+        assert!(state.transient_defs.contains_key(&fused.def_id));
+
+        let echo = hand(&mut state, P1, &CT.echo.id, false);
+        // 3 mana once the fused bolt's X of 1 is paid: the copier costs 1, so X is 1 or 2.
+        for state in [state.clone(), round_trip(&state)] {
+            assert_eq!(
+                field_of_plays(&plays_of(&state, P1, &echo.id), "x"),
+                vec![json!(1), json!(2)]
+            );
+        }
+        let ReduceResult { events, .. } = act(
+            &state,
+            P1,
+            json!({ "type": "play", "instanceId": echo.id, "x": 2 }),
+        );
+        assert_eq!(hero_hits(&events, P2), vec![2]);
     }
 
     #[test]
