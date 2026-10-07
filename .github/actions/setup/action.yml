@@ -19,6 +19,10 @@ inputs:
     description: "true: Rust from rust-toolchain.toml (rustfmt, clippy, the wasm32 target) and Swatinem/rust-cache"
     required: false
     default: "true"
+  cache-key:
+    description: "A name for this job's Rust cache: a matrix whose entries build different crates gives each its own, or they share the job's one cache entry and only the first to finish writes it"
+    required: false
+    default: ""
 runs:
   using: composite
   steps:
@@ -46,4 +50,5 @@ runs:
       if: ${{ inputs.rust == 'true' }}
       with:
         cache-directories: .cache/bin
+        key: ${{ inputs.cache-key }}
         save-if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging' }}

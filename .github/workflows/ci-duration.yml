@@ -90,7 +90,7 @@ jobs:
             "|---|---|---|" \
             "$slow" \
             "" \
-            "Split the slow job further until every job finishes under the $TARGET_MINUTES-minute target, not just under the $ALERT_MINUTES-minute alert, so the fix has headroom: most splits only need a longer matrix list in \`.github/workflows/ci.yml\` (\`web (unit k/K)\`, \`e2e smoke (k/K)\`), or a Rust step split by crate (\`cargo test -p <crate>\` as a matrix); for e2e, also refresh the \`WEIGHTS\` in \`e2e/scripts/shard-specs.mjs\`. Anything that cannot be made fast belongs in the daily \`.github/workflows/super.yml\`, not in CI." \
+            "Split the slow job further until every job finishes under the $TARGET_MINUTES-minute target, not just under the $ALERT_MINUTES-minute alert, so the fix has headroom: most splits only need a longer matrix list in \`.github/workflows/ci.yml\` (\`web (unit k/K)\`, \`e2e smoke (k/K)\`, or \`rust (test <group>)\`, whose crate groups split further, a crate's test binaries apart with \`--lib\`/\`--test <name>\`); for e2e, also refresh the \`WEIGHTS\` in \`e2e/scripts/shard-specs.mjs\`. Anything that cannot be made fast belongs in the daily \`.github/workflows/super.yml\`, not in CI." \
             "" \
             "Night bot: you cannot change \`.github/\`. Make the part of the fix that lives elsewhere (the e2e \`WEIGHTS\`, a slow test made faster or split across files), and when the split needs \`ci.yml\`'s matrix, give the exact lines to change there and ask a person to make them." \
             "" \

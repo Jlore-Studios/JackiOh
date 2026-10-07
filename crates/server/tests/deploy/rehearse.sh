@@ -89,7 +89,16 @@ echo "image: $DOCKERFILE (context $CONTEXT)"
 echo "catalog version: $CATALOG_VERSION"
 
 echo "--- the image, built as Render builds it ---"
-docker build -f "$REPO/$DOCKERFILE" -t "$IMAGE" "$REPO/$CONTEXT"
+# REHEARSAL_CACHE_FROM (and REHEARSAL_CACHE_TO) give buildx a layer cache to read (and write), in its
+# `--cache-from`/`--cache-to` syntax: CI's GitHub Actions cache, so an unchanged image is not compiled
+# again on every run. Same Dockerfile, same context, same image either way.
+if [ -n "${REHEARSAL_CACHE_FROM:-}" ]; then
+  set -- --cache-from "$REHEARSAL_CACHE_FROM"
+  if [ -n "${REHEARSAL_CACHE_TO:-}" ]; then set -- "$@" --cache-to "$REHEARSAL_CACHE_TO"; fi
+  docker buildx build --load "$@" -f "$REPO/$DOCKERFILE" -t "$IMAGE" "$REPO/$CONTEXT"
+else
+  docker build -f "$REPO/$DOCKERFILE" -t "$IMAGE" "$REPO/$CONTEXT"
+fi
 
 docker network rm "$NETWORK" >/dev/null 2>&1 || true
 if [ -z "$PGHOST_" ]; then

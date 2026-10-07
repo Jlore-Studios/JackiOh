@@ -42,8 +42,13 @@ cleanup() {
 trap cleanup EXIT
 
 # Built before the container starts, so a cold compile is not counted against Postgres's readiness.
+# Built once: in the test profile, `cargo test`'s, and with the tests, so with the features the tests
+# turn on. A plain `cargo build` (the dev profile, which Cargo.toml's test-profile overrides make
+# different) or a `cargo run` (no tests, so other features) would compile the workspace again, so the
+# migrate step below runs the binary this build made.
 echo "--- build (jackioh-server and its tests) ---"
-cargo build --manifest-path "$REPO/Cargo.toml" -p jackioh-server --bins --tests
+cargo build --profile test --manifest-path "$REPO/Cargo.toml" -p jackioh-server --bins --tests
+SERVER_BIN="${CARGO_TARGET_DIR:-$REPO/target}/debug/jackioh-server"
 
 docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
 docker run -d --name "$CONTAINER" -e POSTGRES_PASSWORD=postgres -p "$PORT":5432 postgres:16 >/dev/null
@@ -73,7 +78,7 @@ docker cp "$HERE/bootstrap.sql" "$CONTAINER":/tmp/ >/dev/null
 docker exec "$CONTAINER" psql -U postgres -v ON_ERROR_STOP=1 -q -d jackioh -f /tmp/bootstrap.sql
 
 echo "--- migrations (src/db/migrate.rs) ---"
-DATABASE_URL="$URL" cargo run --quiet --manifest-path "$REPO/Cargo.toml" -p jackioh-server --bin jackioh-server -- migrate
+DATABASE_URL="$URL" "$SERVER_BIN" migrate
 
 echo "--- grants ---"
 docker cp "$HERE/grants.sql" "$CONTAINER":/tmp/ >/dev/null
