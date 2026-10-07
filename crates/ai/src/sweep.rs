@@ -495,53 +495,55 @@ fn play_sweep_game(
     let mut slow_decisions = 0;
 
     let played = {
-        let mut hooks = MatchHooks::default();
-        hooks.after_action = Some(Box::new(
-            |before: &GameState, after: &GameState, seat: PlayerId, action: &ActionBody| {
-                for stats in cards.iter_mut() {
-                    if stats.drawn_games == 0
-                        && (holds_card(before, ai_seat, &stats.def_id) || holds_card(after, ai_seat, &stats.def_id))
-                    {
-                        stats.drawn_games = 1;
-                    }
-                }
-
-                // The AI's turn start: the first main-phase state of a new AI turn.
-                if after.result.is_none()
-                    && after.active == ai_seat
-                    && after.phase == Phase::Main
-                    && counted_turn != Some(after.turn)
-                {
-                    counted_turn = Some(after.turn);
-                    let mana = after.players[ai_seat].mana.current;
-                    let hand = zone_cards(after, ai_seat, OffFieldZone::Hand);
+        let mut hooks = MatchHooks {
+            after_action: Some(Box::new(
+                |before: &GameState, after: &GameState, seat: PlayerId, action: &ActionBody| {
                     for stats in cards.iter_mut() {
-                        if hand.iter().any(|card| {
-                            card.def_id == stats.def_id && effective_cost(after, card, CostOptions::default()) <= mana
-                        }) {
-                            stats.affordable_turns += 1;
+                        if stats.drawn_games == 0
+                            && (holds_card(before, ai_seat, &stats.def_id) || holds_card(after, ai_seat, &stats.def_id))
+                        {
+                            stats.drawn_games = 1;
                         }
                     }
-                }
 
-                if seat == ai_seat
-                    && let ActionBody::Play { instance_id, .. } = action
-                {
-                    let played_def = zone_cards(before, ai_seat, OffFieldZone::Hand)
-                        .iter()
-                        .find(|instance| instance.id == *instance_id)
-                        .map(|card| card.def_id.clone());
-                    if let Some(played_def) = played_def
-                        && let Some(stats) = cards.iter_mut().find(|entry| entry.def_id == played_def)
+                    // The AI's turn start: the first main-phase state of a new AI turn.
+                    if after.result.is_none()
+                        && after.active == ai_seat
+                        && after.phase == Phase::Main
+                        && counted_turn != Some(after.turn)
                     {
-                        stats.plays += 1;
-                        stats.eval_delta_sum += evaluate(after, ai_seat, NextSwing::Enemy, &AI_EVAL)
-                            - evaluate(before, ai_seat, NextSwing::Enemy, &AI_EVAL);
-                        stats.eval_delta_count += 1;
+                        counted_turn = Some(after.turn);
+                        let mana = after.players[ai_seat].mana.current;
+                        let hand = zone_cards(after, ai_seat, OffFieldZone::Hand);
+                        for stats in cards.iter_mut() {
+                            if hand.iter().any(|card| {
+                                card.def_id == stats.def_id && effective_cost(after, card, CostOptions::default()) <= mana
+                            }) {
+                                stats.affordable_turns += 1;
+                            }
+                        }
                     }
-                }
-            },
-        ));
+
+                    if seat == ai_seat
+                        && let ActionBody::Play { instance_id, .. } = action
+                    {
+                        let played_def = zone_cards(before, ai_seat, OffFieldZone::Hand)
+                            .iter()
+                            .find(|instance| instance.id == *instance_id)
+                            .map(|card| card.def_id.clone());
+                        if let Some(played_def) = played_def
+                            && let Some(stats) = cards.iter_mut().find(|entry| entry.def_id == played_def)
+                        {
+                            stats.plays += 1;
+                            stats.eval_delta_sum += evaluate(after, ai_seat, NextSwing::Enemy, &AI_EVAL)
+                                - evaluate(before, ai_seat, NextSwing::Enemy, &AI_EVAL);
+                            stats.eval_delta_count += 1;
+                        }
+                    }
+                },
+            )),
+            ..MatchHooks::default()
+        };
         if let Some(now) = now {
             let slow = &mut slow_decisions;
             hooks.time_decision = Some(Box::new(move |seat: PlayerId, run: &mut dyn FnMut()| {
@@ -558,7 +560,7 @@ fn play_sweep_game(
 
     match played {
         Ok(record) => {
-            errors += record.thrown.len() as i32 + record.rejected.len() as i32 + record.fallbacks as i32;
+            errors += record.thrown.len() as i32 + record.rejected.len() as i32 + record.fallbacks;
             // A game still running at maxActions is a timeout; one a throw ended is already an error.
             if record.result.is_none() && record.thrown.is_empty() {
                 timeouts += 1;

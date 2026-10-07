@@ -10,6 +10,7 @@
 //!   2. Otherwise it is a static trader: of every attack it may declare, it takes the one with the
 //!      best value read off the layers (lethal, a kill it survives, a trade up, the face).
 //!   3. When neither is worth doing it ends its turn.
+//!
 //! It plays none of the cards it held unseen, because those are samples: a guessed hand would add
 //! noise, not information. Every step is a real `reduce` (one node each), so the engine decides what
 //! actually happens: traps, First Strike, Divine Shield, Taunt, Lifesteal, end-of-turn damage and the
@@ -151,7 +152,7 @@ enum Known {
     Cut,
     /// No such play is worth making (TS `undefined`).
     Nothing,
-    Played(GameState),
+    Played(Box<GameState>),
 }
 
 /// Step 1: the best play of a card the opponent holds that is not in `hidden`, by the opponent's own
@@ -175,7 +176,7 @@ fn known_play(state: &GameState, seat: PlayerId, hidden: &IndexSet<String>, coun
             Some(Ok(next)) => next,
         };
         if next.result.is_some_and(|result| result.winner.player() == Some(opp)) {
-            return Known::Played(next);
+            return Known::Played(Box::new(next));
         }
         let value = evaluate(&next, opp, NextSwing::Enemy, &AI_EVAL);
         // Strictly greater, so ties keep move order.
@@ -185,7 +186,7 @@ fn known_play(state: &GameState, seat: PlayerId, hidden: &IndexSet<String>, coun
         }
     }
     match best {
-        Some(state) => Known::Played(state),
+        Some(state) => Known::Played(Box::new(state)),
         None => Known::Nothing,
     }
 }
@@ -240,7 +241,7 @@ pub fn simulate_reply(
         match known_play(&current, seat, hidden, counter) {
             Known::Cut => return None,
             Known::Played(played) => {
-                current = played;
+                current = *played;
                 continue;
             }
             Known::Nothing => {}

@@ -16,6 +16,7 @@
 //!      reach on a wide board. The best-first walk tries each of the first lethalWidth moves and
 //!      ranks what they leave by `ready_gap`, so such a card is found when it is among those moves. A
 //!      move past the first lethalWidth of its position is never tried by either walk.
+//!
 //! A line counts only when it wins on every determinization.
 //!
 //! Port of `packages/ai/src/lethal.ts`. TS's frames shared one state object between the moves pushed

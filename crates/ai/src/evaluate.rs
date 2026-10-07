@@ -175,13 +175,13 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 /// `subsystems::projected_hero_damage`.
 pub fn damage_past_taunts(state: &GameState, defender: PlayerId, attacks: &[i32]) -> i32 {
     let mut sorted: Vec<i32> = attacks.to_vec();
-    sorted.sort_by(|a, b| a.cmp(b));
+    sorted.sort();
     let mut taunts: Vec<UnitView> = active_units_of(state, defender)
         .into_iter()
         .map(|unit| unit_view(state, unit))
         .filter(|view| has_keyword(&view.keywords, KeywordKind::Taunt))
         .collect();
-    taunts.sort_by(|a, b| (a.health + a.armor).cmp(&(b.health + b.armor)));
+    taunts.sort_by_key(|a| a.health + a.armor);
 
     let mut next = 0usize;
     for taunt in &taunts {

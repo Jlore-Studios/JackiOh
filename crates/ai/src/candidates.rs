@@ -139,13 +139,13 @@ fn source_cost(state: &GameState, action: &ActionBody) -> i32 {
         ActionBody::Play { .. } => effective_cost(state, card, CostOptions::default()),
         // R752: a Heroic Power's power is one of its Activate abilities; the alias names the rolled one.
         ActionBody::ActivatePower { .. } => subsystems::power_ability_of(state, card)
-            .and_then(|decl| decl.cost.clone())
+            .and_then(|decl| decl.cost)
             .and_then(|cost| cost.mana)
             .unwrap_or(0),
         ActionBody::Activate { ability, .. } => subsystems::abilities_of(state, card)
             .into_iter()
             .find(|decl| ability.as_deref() == Some(decl.id.as_str()))
-            .and_then(|decl| decl.cost.clone())
+            .and_then(|decl| decl.cost)
             .and_then(|cost| cost.mana)
             .unwrap_or(0),
         _ => 0,
