@@ -173,12 +173,12 @@ fn at_most(n: i32, count: usize) -> usize {
 
 /// The `targets` a card's running face declares (§10.9, R81); the empty list when it declares none.
 pub fn declared_targets(state: &GameState, card: &CardInstance) -> Vec<TargetDecl> {
-    crate::scripts::script_of(state, card).targets
+    crate::scripts::script_of(state, card).targets.clone()
 }
 
 /// The `modes` a card's running face declares: "Choose one" and Silly Silas's direction (R81).
 pub fn declared_modes(state: &GameState, card: &CardInstance) -> Vec<ModeDecl> {
-    crate::scripts::script_of(state, card).modes
+    crate::scripts::script_of(state, card).modes.clone()
 }
 
 /// The target declarations a play with these modes answers (R90, §8 Conventions). A declaration that

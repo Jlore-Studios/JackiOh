@@ -651,13 +651,13 @@ pub fn script_step_for(script: &Script, resume: &Resume) -> Option<Hook> {
 
 /// The step a card's script registers for this continuation, on the face the pause recorded.
 fn card_step_for(state: &GameState, resume: &Resume) -> Option<Hook> {
-    let scripts = crate::scripts::script_of(state, &resume.def_id);
+    let scripts = crate::scripts::scripts_ref(state, &resume.def_id);
     let script = if resume.radiant {
-        scripts.radiant.clone()
+        &scripts.radiant
     } else {
-        scripts.base.clone()
+        &scripts.base
     };
-    script_step_for(&script, resume)
+    script_step_for(script, resume)
 }
 
 /// The engine sequences `run_work_item` runs itself, by `resume.hook` (research A §2.7; TS's

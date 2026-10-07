@@ -16,18 +16,21 @@
 //!   definition id gives the card's two scripts (TS `scriptsFor`), an instance its running face's
 //!   script with the Vanilla guard below (TS `scriptOf`).
 
+use std::borrow::Cow;
 use std::sync::OnceLock;
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::catalog::IdHash;
 use crate::config::FUSE_MIN_INGREDIENTS;
 use crate::script::{CardScripts, Script, StaticFlags, empty_script};
 use crate::state::{CardInstance, GameState};
 
-/// The production registry (SURFACE §3: one of the two statics, set once).
-static REGISTERED: OnceLock<IndexMap<String, CardScripts>> = OnceLock::new();
+/// The production registry (SURFACE §3: one of the two statics, set once), hashed by `IdHasher`: an
+/// entry is looked up for nearly every card a rule or a view reads.
+static REGISTERED: OnceLock<IndexMap<String, CardScripts, IdHash>> = OnceLock::new();
 
 /// The testkit's thread-local registry, when a test has set one (SURFACE §8; `'static` as the catalog's
 /// override is, e.g. a leaked box per registration).
@@ -45,7 +48,7 @@ fn override_map() -> Option<&'static IndexMap<String, CardScripts>> {
 /// what `jackioh_cards::register_all()`'s idempotence needs. Tests swap scripts through the testkit's
 /// `register_scripts` instead.
 pub fn register_scripts(scripts: IndexMap<String, CardScripts>) {
-    let _ = REGISTERED.set(scripts);
+    let _ = REGISTERED.set(scripts.into_iter().collect());
 }
 
 /// One registered entry, borrowed: the testkit's override while one is set, else the production
@@ -64,7 +67,14 @@ pub fn registered_entry(def_id: &str) -> Option<&'static CardScripts> {
 pub fn registered_scripts() -> IndexMap<String, CardScripts> {
     match override_map() {
         Some(over) => over.clone(),
-        None => REGISTERED.get().cloned().unwrap_or_default(),
+        None => REGISTERED
+            .get()
+            .map(|map| {
+                map.iter()
+                    .map(|(id, entry)| (id.clone(), entry.clone()))
+                    .collect()
+            })
+            .unwrap_or_default(),
     }
 }
 
@@ -121,13 +131,46 @@ fn fused_scripts(state: &GameState, def_id: &str) -> Option<CardScripts> {
     Some(crate::subsystems::fuse::compose_fused_scripts(state, def))
 }
 
-/// A definition's two scripts: the registry's entry, a fused definition's built from the state, or
-/// none (`{ base: EMPTY_SCRIPT, radiant: EMPTY_SCRIPT }`).
-pub fn scripts_for(state: &GameState, def_id: &str) -> CardScripts {
-    if let Some(entry) = registered_entry(def_id) {
-        return entry.clone();
+/// One face of `fused_scripts(state, def_id)`, composed alone (`fuse::compose_fused_face`).
+fn fused_face(state: &GameState, def_id: &str, radiant: bool) -> Option<Script> {
+    if fused_ingredient_count(state, def_id)? < FUSE_MIN_INGREDIENTS {
+        return None;
     }
-    fused_scripts(state, def_id).unwrap_or_default()
+    let def = state.transient_defs.get(def_id)?;
+    Some(crate::subsystems::fuse::compose_fused_face(state, def, radiant))
+}
+
+/// A definition's two scripts: the registry's entry, a fused definition's built from the state, or
+/// none (`{ base: EMPTY_SCRIPT, radiant: EMPTY_SCRIPT }`). A copy; `scripts_ref` borrows.
+pub fn scripts_for(state: &GameState, def_id: &str) -> CardScripts {
+    scripts_ref(state, def_id).into_owned()
+}
+
+/// A script as a lookup answers it: borrowed from the registry (static data, SURFACE §3), or owned when
+/// it was composed for this lookup (a fused card's, R77) or is the empty script. Reads go through
+/// `Deref`; `into_owned()` is the copy `script_of` used to make of every entry.
+pub type ScriptRef = Cow<'static, Script>;
+
+/// `scripts_for` without the copy: the registry's entry borrowed, a fused definition's composed now.
+pub fn scripts_ref(state: &GameState, def_id: &str) -> Cow<'static, CardScripts> {
+    if let Some(entry) = registered_entry(def_id) {
+        return Cow::Borrowed(entry);
+    }
+    Cow::Owned(fused_scripts(state, def_id).unwrap_or_default())
+}
+
+/// One face of a definition's scripts (`radiant` or base), borrowed as `scripts_ref` borrows.
+pub fn face_ref(state: &GameState, def_id: &str, radiant: bool) -> ScriptRef {
+    if let Some(entry) = registered_entry(def_id) {
+        return Cow::Borrowed(if radiant { &entry.radiant } else { &entry.base });
+    }
+    Cow::Owned(fused_face(state, def_id, radiant).unwrap_or_default())
+}
+
+/// TS `EMPTY_SCRIPT`, one shared instance: what a Vanilla card runs (immutable, like the registry).
+fn shared_empty_script() -> &'static Script {
+    static EMPTY: OnceLock<Script> = OnceLock::new();
+    EMPTY.get_or_init(empty_script)
 }
 
 /// The face that is running: radiant text once the instance is Radiant (§5.2).
@@ -138,28 +181,18 @@ pub fn scripts_for(state: &GameState, def_id: &str) -> CardScripts {
 /// are gone with its text. This is the one place a card's script is read off an instance, so the
 /// guard lives here rather than in each reader; a continuation parked before the Vanilla landed is
 /// re-entered by its stored def id (`prompts::run_resume`), never through here, so it still finishes.
-fn instance_script(state: &GameState, instance: &CardInstance) -> Script {
+///
+/// Borrowed from the registry: nothing is copied for a registered card (only a fused card's script is
+/// composed, and owned, per lookup).
+fn instance_script(state: &GameState, instance: &CardInstance) -> ScriptRef {
     if instance.vanilla {
-        return empty_script();
+        return Cow::Borrowed(shared_empty_script());
     }
-    // Only the running face is copied out of the registry.
-    if let Some(entry) = registered_entry(&instance.def_id) {
-        return if instance.radiant {
-            entry.radiant.clone()
-        } else {
-            entry.base.clone()
-        };
-    }
-    let entry = fused_scripts(state, &instance.def_id).unwrap_or_default();
-    if instance.radiant {
-        entry.radiant
-    } else {
-        entry.base
-    }
+    face_ref(state, &instance.def_id, instance.radiant)
 }
 
 /// What `script_of` may be asked about: a definition id (the card's two scripts, SURFACE §6.6) or an
-/// instance (its running face's script, TS `scriptOf`).
+/// instance (its running face's script, TS `scriptOf`, borrowed: `ScriptRef`).
 pub trait ScriptKey {
     type Scripts;
     fn scripts_in(self, state: &GameState) -> Self::Scripts;
@@ -180,15 +213,15 @@ impl ScriptKey for &String {
 }
 
 impl ScriptKey for &CardInstance {
-    type Scripts = Script;
-    fn scripts_in(self, state: &GameState) -> Script {
+    type Scripts = ScriptRef;
+    fn scripts_in(self, state: &GameState) -> ScriptRef {
         instance_script(state, self)
     }
 }
 
 impl ScriptKey for &mut CardInstance {
-    type Scripts = Script;
-    fn scripts_in(self, state: &GameState) -> Script {
+    type Scripts = ScriptRef;
+    fn scripts_in(self, state: &GameState) -> ScriptRef {
         instance_script(state, self)
     }
 }

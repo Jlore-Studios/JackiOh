@@ -199,7 +199,7 @@ pub fn traps_in_order(state: &GameState) -> Vec<CardInstance> {
 }
 
 fn trap_triggers_of(state: &GameState, trap: &CardInstance) -> Vec<TrapTrigger> {
-    crate::scripts::script_of(state, trap).triggers
+    crate::scripts::script_of(state, trap).triggers.clone()
 }
 
 /// R119: the events that say a card arrived. A card does not answer the play that put it onto the

@@ -32,10 +32,61 @@ use crate::wire::{
     SHIPPED_SETS, SetName, Tag,
 };
 
-/// The registered catalog and its version (TS's two module `let`s, set together).
+/// A hasher for the registries' card ids (`catalog-NNN`, `classicplus-NNN`, …): short strings looked
+/// up thousands of times a turn, where SipHash's defence against chosen keys buys nothing, since the
+/// keys are the catalog's own. A map's iteration order is its insertion order whatever its hasher, so
+/// this changes how fast an id is found and nothing else.
+#[derive(Default, Clone, Copy)]
+pub struct IdHasher(u64);
+
+impl IdHasher {
+    fn mix(&mut self, word: u64) {
+        self.0 = (self.0.rotate_left(5) ^ word).wrapping_mul(0x517c_c1b7_2722_0a95);
+    }
+}
+
+impl std::hash::Hasher for IdHasher {
+    fn write(&mut self, bytes: &[u8]) {
+        let mut words = bytes.chunks_exact(8);
+        for word in &mut words {
+            let mut eight = [0u8; 8];
+            eight.copy_from_slice(word);
+            self.mix(u64::from_le_bytes(eight));
+        }
+        let rest = words.remainder();
+        if !rest.is_empty() {
+            let mut eight = [0u8; 8];
+            eight[..rest.len()].copy_from_slice(rest);
+            self.mix(u64::from_le_bytes(eight) ^ ((rest.len() as u64) << 56));
+        }
+    }
+    fn write_u8(&mut self, byte: u8) {
+        self.mix(u64::from(byte));
+    }
+    fn write_usize(&mut self, word: usize) {
+        self.mix(word as u64);
+    }
+    fn write_u64(&mut self, word: u64) {
+        self.mix(word);
+    }
+    /// splitmix64's finaliser, so the low bits a table indexes by depend on every byte.
+    fn finish(&self) -> u64 {
+        let mut hash = self.0;
+        hash = (hash ^ (hash >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+        hash = (hash ^ (hash >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+        hash ^ (hash >> 31)
+    }
+}
+
+/// `IdHasher` as a map's hasher.
+pub type IdHash = std::hash::BuildHasherDefault<IdHasher>;
+
+/// The registered catalog and its version (TS's two module `let`s, set together), and where each id
+/// sits in it, hashed with `IdHasher` (`find_def` reads through it).
 struct Registered {
     defs: CardDefs,
     version: String,
+    index: indexmap::IndexMap<String, usize, IdHash>,
 }
 
 static REGISTERED: OnceLock<Registered> = OnceLock::new();
@@ -69,9 +120,11 @@ fn registered() -> &'static CardDefs {
 /// ignored (the registry is a `OnceLock`, SURFACE §3); a test that needs another catalog sets the
 /// testkit's override instead (SURFACE §8).
 pub fn register_catalog(defs: CardDefs, catalog_version: &str) {
+    let index = defs.keys().enumerate().map(|(at, id)| (id.clone(), at)).collect();
     let _ = REGISTERED.set(Registered {
         defs,
         version: catalog_version.to_string(),
+        index,
     });
 }
 
@@ -106,7 +159,12 @@ pub fn find_def<'a>(state: Option<&'a GameState>, def_id: &str) -> Option<&'a Ca
     if let Some(def) = state.and_then(|state| state.transient_defs.get(def_id)) {
         return Some(def);
     }
-    registered().get(def_id)
+    if let Some(defs) = test_override() {
+        return defs.get(def_id);
+    }
+    let registered = REGISTERED.get()?;
+    let at = *registered.index.get(def_id)?;
+    registered.defs.get_index(at).map(|(_, def)| def)
 }
 
 /// Panics when a def is missing: a card instance always has a definition.

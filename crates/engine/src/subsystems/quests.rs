@@ -109,7 +109,7 @@ pub fn quest_goal_of(quest: &QuestDef) -> i32 {
 
 /// The quest tree a card's running face declares, or `None` (a Vanilla card has none, R115).
 pub fn quest_book_of(state: &GameState, card: &CardInstance) -> Option<QuestBook> {
-    crate::scripts::script_of(state, card).quests
+    crate::scripts::script_of(state, card).quests.clone()
 }
 
 pub fn quest_def_of<'b>(book: &'b QuestBook, id: &str) -> Option<&'b QuestDef> {

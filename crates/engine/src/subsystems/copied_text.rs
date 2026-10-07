@@ -45,7 +45,8 @@
 
 use serde_json::{Value, json};
 
-use crate::script::{Script, StaticFlags, empty_script};
+use crate::script::StaticFlags;
+use crate::scripts::ScriptRef;
 use crate::state::{CardInstance, GameState, PlayRecord};
 use crate::wire::CardCost;
 
@@ -72,12 +73,8 @@ fn registry_flags_of(card: &CardInstance) -> StaticFlags {
 /// TS `scripts.scriptOf(card)`: the face that is running, radiant text once the instance is Radiant
 /// (§5.2), and no script at all for a Vanilla instance (§6.3, R115). Read through
 /// `scripts::script_of(state, def_id)`, which composes a fused card's scripts on lookup (SURFACE §6.6).
-fn face_script_of(state: &GameState, card: &CardInstance) -> Script {
-    if card.vanilla {
-        return empty_script();
-    }
-    let entry = crate::scripts::script_of(state, &card.def_id);
-    if card.radiant { entry.radiant } else { entry.base }
+fn face_script_of(state: &GameState, card: &CardInstance) -> ScriptRef {
+    crate::scripts::script_of(state, card)
 }
 
 /// Whether this card's running face copies the last Spell's text (`staticFlags.copiesLastSpell`).
@@ -164,13 +161,10 @@ pub fn text_face_of(state: &GameState, card: &CardInstance) -> CardInstance {
 }
 
 /// The script a card's text runs now: the copied face's for a copier with a copy, its own otherwise.
-pub fn running_script_of(state: &GameState, card: &CardInstance) -> Script {
+pub fn running_script_of(state: &GameState, card: &CardInstance) -> ScriptRef {
     match copied_text_of(state, card) {
         None => face_script_of(state, card),
-        Some(copy) => {
-            let entry = crate::scripts::script_of(state, &copy.def_id);
-            if copy.radiant { entry.radiant } else { entry.base }
-        }
+        Some(copy) => crate::scripts::face_ref(state, &copy.def_id, copy.radiant),
     }
 }
 
@@ -181,6 +175,7 @@ pub fn copied_echo(state: &GameState, card: &CardInstance) -> i32 {
     }
     let echo = running_script_of(state, card)
         .static_flags
+        .as_ref()
         .and_then(|flags| flags.echo)
         .unwrap_or(0);
     echo.max(0)
@@ -193,6 +188,7 @@ pub fn copied_casts_on_draw(state: &GameState, card: &CardInstance) -> bool {
     }
     running_script_of(state, card)
         .static_flags
+        .as_ref()
         .and_then(|flags| flags.cast_on_draw)
         == Some(true)
 }

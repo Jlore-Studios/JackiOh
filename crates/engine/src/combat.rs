@@ -649,7 +649,7 @@ fn withhold_from_frontier(sink: &mut EngineSink<'_>, at: usize) {
 /// controlled it when the attack was declared (R171).
 fn queue_declaration_triggers(sink: &mut EngineSink<'_>, event: &GameEvent, since: &[GameEvent]) {
     let mut later: Option<crate::stays::LaterMoves> = None;
-    for holder in crate::triggers::cards_in_trigger_order(sink.state) {
+    for holder in crate::triggers::holders_answering(sink.state, event.event_type()) {
         if holder.is_trap {
             continue;
         }
@@ -1387,7 +1387,10 @@ fn owe_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack) {
 
 /// The attacker's hook, from `paused` when a question split it, then the check that follows it.
 fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: Option<PausedStep>) {
-    let Some(hook) = crate::scripts::script_of(sink.state, &owed.snapshot).after_attack else {
+    let Some(hook) = crate::scripts::script_of(sink.state, &owed.snapshot)
+        .after_attack
+        .clone()
+    else {
         return;
     };
     if sink.state.result.is_some() {

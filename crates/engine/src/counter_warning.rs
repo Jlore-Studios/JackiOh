@@ -18,22 +18,26 @@ use crate::play_choices::offered_play_costs;
 use crate::preview::backrow_is_public;
 use crate::script::WouldCounterArgs;
 use crate::state::{CardInstance, GameState};
-use crate::triggers::{TriggerHolder, TriggerZone, cards_in_trigger_order, triggers_on_event};
+use crate::triggers::{TriggerHolder, TriggerZone, field_holders_where, triggers_on_event};
 use crate::wire::{GameEventType, PlayerId};
 
 /// The cards on the field whose counter trigger would answer a play's announce, as `player` may read them.
+///
+/// Only a field holder can pass, and only one whose script has `wouldCounter`, so only those are built
+/// (`field_holders_where`): a view asks this for every hand card it shows.
 fn readable_counters(state: &GameState, player: PlayerId) -> Vec<TriggerHolder> {
-    cards_in_trigger_order(state)
-        .into_iter()
-        .filter(|holder| {
-            holder.script.would_counter.is_some()
-                && !holder.is_trap
-                && (holder.zone == TriggerZone::Field
-                    || (holder.zone == TriggerZone::Backrow
-                        && backrow_is_public(state, &holder.card, player)))
-                && !triggers_on_event(holder, GameEventType::CardAnnounced).is_empty()
-        })
-        .collect()
+    field_holders_where(state, |card| {
+        crate::scripts::script_of(state, card).would_counter.is_some()
+    })
+    .into_iter()
+    .filter(|holder| {
+        holder.script.would_counter.is_some()
+            && !holder.is_trap
+            && (holder.zone == TriggerZone::Field
+                || (holder.zone == TriggerZone::Backrow && backrow_is_public(state, &holder.card, player)))
+            && !triggers_on_event(holder, GameEventType::CardAnnounced).is_empty()
+    })
+    .collect()
 }
 
 /// R667: the ids of `player`'s hand cards that every price they could be played at now would see

@@ -271,8 +271,9 @@ fn answering(
 ) -> Option<ReplacementDef> {
     let defs: Vec<ReplacementDef> = crate::scripts::script_of(state, &cand.card)
         .replacements
-        .into_iter()
+        .iter()
         .filter(|def| def.on == moment)
+        .cloned()
         .collect();
     defs.into_iter().find(|def| {
         if !stands_where(state, cand, def.where_.unwrap_or(ReplacementWhere::Field), event) {

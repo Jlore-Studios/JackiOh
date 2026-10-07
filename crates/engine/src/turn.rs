@@ -80,7 +80,7 @@ fn has_hook(state: &GameState, card: &CardInstance, hook: HookName) -> bool {
     if card.vanilla {
         return false;
     }
-    let scripts = crate::scripts::script_of(state, &card.def_id);
+    let scripts = crate::scripts::scripts_ref(state, &card.def_id);
     let script = if card.radiant {
         &scripts.radiant
     } else {

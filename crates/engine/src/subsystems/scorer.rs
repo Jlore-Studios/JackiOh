@@ -406,7 +406,7 @@ fn may_act_now(state: &GameState, def: &CardDef, radiant: bool) -> bool {
         return true;
     }
     // TS `scriptsFor(def.id)`: a candidate is a catalog card, read through the one script lookup.
-    let scripts = crate::scripts::script_of(state, &def.id);
+    let scripts = crate::scripts::scripts_ref(state, &def.id);
     let script = if radiant { &scripts.radiant } else { &scripts.base };
     // A Tribute that may take the enemy's units (#55, R101) changes their board as it is paid.
     script

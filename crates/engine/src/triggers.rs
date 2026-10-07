@@ -101,8 +101,8 @@ pub struct TriggerHolder {
     pub is_trap: bool,
     /// The event triggers this zone registers; empty for a card whose script has none.
     pub triggers: Vec<TriggerDef>,
-    /// The face that is running, for the hook registry (§5.2).
-    pub script: Script,
+    /// The face that is running, for the hook registry (§5.2), borrowed from the registry.
+    pub script: crate::scripts::ScriptRef,
 }
 
 /// Every hook a script can register, in the registry's key order (BUILD M3-T2).
@@ -190,11 +190,16 @@ fn flagged_for_return(card: &CardInstance) -> bool {
 /// Rush Token onto a board it was never on) and #64 Gifted Program made a play Radiant from a hand —
 /// neither an error, both a different game.
 fn zone_registers_hook(_state: &GameState, holder: &TriggerHolder, hook: HookName) -> bool {
-    if holder.zone == TriggerZone::Hand || holder.zone == TriggerZone::Library {
+    zone_registers_hook_in(holder.zone, &holder.card, hook)
+}
+
+/// `zone_registers_hook` for a card in `zone`, before its holder is built.
+fn zone_registers_hook_in(zone: TriggerZone, card: &CardInstance, hook: HookName) -> bool {
+    if zone == TriggerZone::Hand || zone == TriggerZone::Library {
         return false;
     }
-    if holder.zone == TriggerZone::Graveyard {
-        return hook == GRAVEYARD_HOOK && flagged_for_return(&holder.card);
+    if zone == TriggerZone::Graveyard {
+        return hook == GRAVEYARD_HOOK && flagged_for_return(card);
     }
     true
 }
@@ -240,7 +245,7 @@ fn creation_number(id: &str) -> i64 {
 /// those, since a library card registers nothing else — in the order the instances were created. Never
 /// library order: that is hidden from both players (§9.1, R223), and a trigger order that followed it
 /// would act on it.
-fn library_holders(state: &GameState, player: PlayerId) -> Vec<TriggerHolder> {
+fn library_holders(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     let mut cards: Vec<&CardInstance> = state.players[player]
         .library
         .iter()
@@ -253,30 +258,102 @@ fn library_holders(state: &GameState, player: PlayerId) -> Vec<TriggerHolder> {
             .then_with(|| a.id.cmp(&b.id))
     });
     cards
-        .into_iter()
-        .map(|card| holder_of(state, card, TriggerZone::Library, player))
-        .collect()
+}
+
+/// The cards `trigger_holders_of` makes holders of, with their zones, in its order.
+fn holder_sites(state: &GameState, player: PlayerId) -> Vec<(&CardInstance, TriggerZone)> {
+    let side = &state.players[player];
+    let mut out: Vec<(&CardInstance, TriggerZone)> = Vec::new();
+    for card in crate::zones::active_units_of(state, player) {
+        out.push((card, TriggerZone::Field));
+    }
+    for slot in crate::zones::slots_of(player, Row::Backrow) {
+        if let Some(card) = crate::zones::card_at(state, slot) {
+            out.push((card, TriggerZone::Backrow));
+        }
+    }
+    for card in &side.hand {
+        out.push((card, TriggerZone::Hand));
+    }
+    for card in library_holders(state, player) {
+        out.push((card, TriggerZone::Library));
+    }
+    for card in &side.graveyard {
+        out.push((card, TriggerZone::Graveyard));
+    }
+    out
 }
 
 /// One side's holders in R68's within-a-side order: unit lanes, backrow lanes, hand, library (R464),
 /// graveyard. A library card is a holder only while it declares deck triggers (`library_holders`).
 pub fn trigger_holders_of(state: &GameState, player: PlayerId) -> Vec<TriggerHolder> {
-    let side = &state.players[player];
+    holder_sites(state, player)
+        .into_iter()
+        .map(|(card, zone)| holder_of(state, card, zone, player))
+        .collect()
+}
+
+/// `cards_in_trigger_order(state)` filtered by `keep(card, zone)`, building (and copying) only the
+/// holders it keeps: most dispatches are answered by a handful of the board's cards.
+fn holders_where(state: &GameState, keep: impl Fn(&CardInstance, TriggerZone) -> bool) -> Vec<TriggerHolder> {
     let mut out: Vec<TriggerHolder> = Vec::new();
-    for card in crate::zones::active_units_of(state, player) {
-        out.push(holder_of(state, card, TriggerZone::Field, player));
-    }
-    for slot in crate::zones::slots_of(player, Row::Backrow) {
-        if let Some(card) = crate::zones::card_at(state, slot) {
-            out.push(holder_of(state, card, TriggerZone::Backrow, player));
+    for player in sides_of(state) {
+        for (card, zone) in holder_sites(state, player) {
+            if keep(card, zone) {
+                out.push(holder_of(state, card, zone, player));
+            }
         }
     }
-    for card in &side.hand {
-        out.push(holder_of(state, card, TriggerZone::Hand, player));
+    out
+}
+
+/// Whether the holder `card` makes in `zone` registers a trigger on `event_type`: what
+/// `triggers_on_event(&holder_of(..), event_type)` answers, without building the holder.
+fn registers_trigger_on(
+    state: &GameState,
+    card: &CardInstance,
+    zone: TriggerZone,
+    event_type: GameEventType,
+) -> bool {
+    let script = crate::scripts::script_of(state, card);
+    let printed = registered_triggers(&script, zone);
+    let wakes = |def: &TriggerDef| def.on.contains(&event_type);
+    if zone == TriggerZone::Hand {
+        crate::book_swap::granted_hand_triggers(card, printed)
+            .iter()
+            .any(wakes)
+    } else {
+        printed.iter().any(wakes)
     }
-    out.extend(library_holders(state, player));
-    for card in &side.graveyard {
-        out.push(holder_of(state, card, TriggerZone::Graveyard, player));
+}
+
+/// Every holder with a trigger on `event_type`, in R68's order: `cards_in_trigger_order` filtered by
+/// `triggers_on_event`, traps included.
+pub fn holders_answering(state: &GameState, event_type: GameEventType) -> Vec<TriggerHolder> {
+    holders_where(state, |card, zone| {
+        registers_trigger_on(state, card, zone, event_type)
+    })
+}
+
+/// The field's holders — `trigger_holders_of`'s unit lanes and backrow lanes, both sides, in R68's
+/// order — of the cards `keep` accepts, the others never built. `cards_in_trigger_order` filtered to
+/// the `Field` and `Backrow` zones and to those cards is the same list; this one copies no hand,
+/// library or graveyard card, and no card `keep` turns away, to find it.
+pub fn field_holders_where(state: &GameState, keep: impl Fn(&CardInstance) -> bool) -> Vec<TriggerHolder> {
+    let mut out: Vec<TriggerHolder> = Vec::new();
+    for player in sides_of(state) {
+        for card in crate::zones::active_units_of(state, player) {
+            if keep(card) {
+                out.push(holder_of(state, card, TriggerZone::Field, player));
+            }
+        }
+        for slot in crate::zones::slots_of(player, Row::Backrow) {
+            if let Some(card) = crate::zones::card_at(state, slot)
+                && keep(card)
+            {
+                out.push(holder_of(state, card, TriggerZone::Backrow, player));
+            }
+        }
     }
     out
 }
@@ -335,10 +412,7 @@ pub fn triggers_on_event(holder: &TriggerHolder, event_type: GameEventType) -> V
 
 /// Every card that answers this event type, in R68's order. Traps included: they fire first.
 pub fn trigger_holders_for_event(state: &GameState, event_type: GameEventType) -> Vec<TriggerHolder> {
-    cards_in_trigger_order(state)
-        .into_iter()
-        .filter(|holder| holder.triggers.iter().any(|def| def.on.contains(&event_type)))
-        .collect()
+    holders_answering(state, event_type)
 }
 
 /// The registry keyed by hook: every card whose zone lets it carry that hook, in R68's order. `only`
@@ -354,16 +428,20 @@ pub fn trigger_holders_with_hook(
     hook: HookName,
     only: Option<PlayerId>,
 ) -> Vec<TriggerHolder> {
-    let holders = match only {
-        None => cards_in_trigger_order(state),
-        Some(player) => trigger_holders_of(state, player),
+    let carries = |card: &CardInstance, zone: TriggerZone| {
+        zone_registers_hook_in(zone, card, hook)
+            && crate::scripts::script_of(state, card)
+                .hook_named(hook.as_str())
+                .is_some()
     };
-    holders
-        .into_iter()
-        .filter(|holder| {
-            holder.script.hook_named(hook.as_str()).is_some() && zone_registers_hook(state, holder, hook)
-        })
-        .collect()
+    match only {
+        None => holders_where(state, carries),
+        Some(player) => holder_sites(state, player)
+            .into_iter()
+            .filter(|&(card, zone)| carries(card, zone))
+            .map(|(card, zone)| holder_of(state, card, zone, player))
+            .collect(),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -718,7 +796,7 @@ fn dispatch_event_at(sink: &mut EngineSink<'_>, event: &GameEvent, at: Option<us
     let wakes = event.event_type();
     let mut later: Option<LaterMoves> = None;
     let mut uncovered: Option<Vec<String>> = None;
-    for holder in cards_in_trigger_order(sink.state) {
+    for holder in holders_answering(sink.state, wakes) {
         // §10.3: the traps have already had this event; queueing them too would fire them twice.
         if holder.is_trap {
             continue;

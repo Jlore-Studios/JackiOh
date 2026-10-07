@@ -34,7 +34,7 @@ fn face_cost(script: &Script, state: &GameState, self_: &CardInstance) -> i32 {
 /// R102: a fused card carries every ingredient's text, so the stricter of their costs holds.
 fn fused_cost(state: &GameState, self_: &CardInstance, def_id: &str) -> i32 {
     let Some(parts) = crate::catalog::fused_id_parts(Some(state), def_id) else {
-        let entry = crate::scripts::script_of(state, def_id);
+        let entry = crate::scripts::scripts_ref(state, def_id);
         return face_cost(
             if self_.radiant {
                 &entry.radiant
@@ -103,10 +103,11 @@ pub fn may_target(
 fn hand_interpositions(state: &GameState, card: &CardInstance) -> Vec<TargetedReplacement> {
     crate::scripts::script_of(state, card)
         .replacements
-        .into_iter()
+        .iter()
         .filter(|entry| {
             entry.on == ReplacementMoment::Targeted && entry.where_ == Some(ReplacementWhere::Hand)
         })
+        .cloned()
         .collect()
 }
 

@@ -1285,11 +1285,12 @@ fn fused_plague_multiplier(scripts: &[&Script]) -> Option<PlagueMultiplierHook> 
     }))
 }
 
-/// One ingredient's face script (TS `type Face = { defId; script }`).
+/// One ingredient's face script (TS `type Face = { defId; script }`): a registered card's borrowed
+/// from the registry, a fused ingredient's composed.
 #[derive(Clone)]
 struct Face {
     def_id: String,
-    script: Script,
+    script: crate::scripts::ScriptRef,
 }
 
 /// An effect that resolves with one ingredient's own play choices, whatever context applies it.
@@ -1475,7 +1476,7 @@ fn fused_script(
             script: face_for(state, &spec.def_id, radiant || spec.radiant == Some(true), seen),
         })
         .collect();
-    let scripts: Vec<&Script> = faces.iter().map(|face| &face.script).collect();
+    let scripts: Vec<&Script> = faces.iter().map(|face| &*face.script).collect();
     let records: Vec<Script> = faces
         .iter()
         .enumerate()
@@ -1528,17 +1529,19 @@ fn fused_specs(state: &GameState, def_id: &str) -> Option<Vec<FusedIngredient>> 
 /// of fusions cost one composition per link; composing both forms of every ingredient on every lookup
 /// doubles the work at each link, and a Fuse of a Fuse of a Fuse … fourteen deep (golden seed 68) is
 /// then 2^14 compositions on every `script_of`.
-fn face_for(state: &GameState, def_id: &str, radiant: bool, seen: &IndexSet<String>) -> Script {
+fn face_for(
+    state: &GameState,
+    def_id: &str,
+    radiant: bool,
+    seen: &IndexSet<String>,
+) -> crate::scripts::ScriptRef {
     match fused_specs(state, def_id) {
-        None => {
-            let pair = crate::scripts::script_of(state, def_id);
-            if radiant { pair.radiant } else { pair.base }
-        }
-        Some(_) if seen.contains(def_id) => Script::default(),
+        None => crate::scripts::face_ref(state, def_id, radiant),
+        Some(_) if seen.contains(def_id) => std::borrow::Cow::Owned(Script::default()),
         Some(specs) => {
             let mut inside = seen.clone();
             inside.insert(def_id.to_string());
-            fused_script(state, &specs, radiant, &inside)
+            std::borrow::Cow::Owned(fused_script(state, &specs, radiant, &inside))
         }
     }
 }
@@ -1565,6 +1568,26 @@ fn compose_specs(
 /// (`CardDef.ingredients`), so a digest that names another digest finds both. A definition that names
 /// no fusion has no script, as TS's registry held none for it.
 pub fn compose_fused_scripts(state: &GameState, def: &CardDef) -> CardScripts {
+    match fused_def_specs(state, def) {
+        Some(specs) => compose_specs(state, &def.id, &specs, &IndexSet::new()),
+        None => CardScripts::default(),
+    }
+}
+
+/// One face of `compose_fused_scripts(state, def)` (`radiant`: its radiant script, else its base),
+/// composed alone: what a lookup of a fused instance's running face needs, at half the work.
+pub fn compose_fused_face(state: &GameState, def: &CardDef, radiant: bool) -> Script {
+    let Some(specs) = fused_def_specs(state, def) else {
+        return Script::default();
+    };
+    let mut inside: IndexSet<String> = IndexSet::new();
+    inside.insert(def.id.clone());
+    fused_script(state, &specs, radiant, &inside)
+}
+
+/// The ingredients `compose_fused_scripts` composes a definition from: its own list (R468) with R77's
+/// minimum, else the ones its id names; `None` when it names no fusion.
+fn fused_def_specs(state: &GameState, def: &CardDef) -> Option<Vec<FusedIngredient>> {
     let own = def
         .ingredients
         .as_ref()
@@ -1574,14 +1597,10 @@ pub fn compose_fused_scripts(state: &GameState, def: &CardDef) -> CardScripts {
                 .collect::<Vec<FusedIngredient>>()
         })
         .filter(|specs| specs.len() >= FUSE_MIN_INGREDIENTS);
-    let specs = match own {
-        Some(specs) => specs,
-        None => match fused_specs(state, &def.id) {
-            Some(specs) => specs,
-            None => return CardScripts::default(),
-        },
-    };
-    compose_specs(state, &def.id, &specs, &IndexSet::new())
+    match own {
+        Some(specs) => Some(specs),
+        None => fused_specs(state, &def.id),
+    }
 }
 
 /// R179, R417, R564: the definition `def_id` names in this state — a catalog card's, one the state

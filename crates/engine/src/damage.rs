@@ -155,14 +155,16 @@ fn acting_texts_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
 fn hero_guards_of(state: &GameState, player: PlayerId) -> Vec<HeroGuard> {
     acting_texts_of(state, player)
         .iter()
-        .flat_map(|card| match crate::scripts::script_of(state, card).hero_guard {
-            Some(guard) => guard(HookArgs {
-                state,
-                self_: card,
-                radiant: card.radiant,
-            }),
-            None => Vec::new(),
-        })
+        .flat_map(
+            |card| match crate::scripts::script_of(state, card).hero_guard.clone() {
+                Some(guard) => guard(HookArgs {
+                    state,
+                    self_: card,
+                    radiant: card.radiant,
+                }),
+                None => Vec::new(),
+            },
+        )
         .collect()
 }
 

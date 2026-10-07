@@ -1045,23 +1045,278 @@ fn draw_offer_view(state: &GameState) -> Option<DrawOfferView> {
 // Events (§10.10)
 // ---------------------------------------------------------------------------
 
+/// An event's JSON object, `{ ...event }`, as `redact_event` reads and changes it. Until something is
+/// changed it is not written out at all: a field is read off the event itself (`field_of`), and an
+/// event nothing was changed on is the event, cloned. Most events a view carries are shown as they
+/// are, and writing each one out as a `Map` and reading it back was most of a view's cost.
+struct Shown<'e> {
+    event: &'e GameEvent,
+    /// The event's JSON, once a change needed it.
+    map: Option<Map<String, Value>>,
+}
+
+impl<'e> Shown<'e> {
+    fn new(event: &'e GameEvent) -> Shown<'e> {
+        Shown { event, map: None }
+    }
+
+    /// The JSON, written out now if it was not yet.
+    fn map(&mut self) -> &mut Map<String, Value> {
+        let event = self.event;
+        self.map.get_or_insert_with(|| match serde_json::to_value(event) {
+            Ok(Value::Object(map)) => map,
+            _ => panic!("an event serialises to an object"),
+        })
+    }
+
+    /// The JSON value at `key` (absent: `None`).
+    fn get(&self, key: &str) -> Option<Value> {
+        match &self.map {
+            Some(map) => map.get(key).cloned(),
+            None => field_of(self.event, key),
+        }
+    }
+
+    fn insert(&mut self, key: String, value: Value) {
+        self.map().insert(key, value);
+    }
+
+    fn remove(&mut self, key: &str) -> Option<Value> {
+        if self.map.is_none() && self.get(key).is_none() {
+            return None;
+        }
+        self.map().remove(key)
+    }
+}
+
+/// One top-level field of `event`'s JSON, as `serde_json::to_value(event)?.get(key)` reads it, without
+/// writing out the rest.
+fn field_of(event: &GameEvent, key: &str) -> Option<Value> {
+    match serde::Serialize::serialize(event, field_capture::FieldOf { key }) {
+        Ok(found) => found,
+        Err(_) => serde_json::to_value(event)
+            .ok()
+            .and_then(|value| value.get(key).cloned()),
+    }
+}
+
+/// `field_of`'s serializer: an object's fields are passed over unwritten, but for the one asked for,
+/// which is written with `serde_json::to_value` (the last one, should a key come twice, as a `Map`
+/// keeps it). Anything but an object is an error, and `field_of` then writes the event out.
+mod field_capture {
+    use serde::ser::{self, Impossible, Serialize};
+    use serde_json::{Error, Value};
+
+    pub struct FieldOf<'k> {
+        pub key: &'k str,
+    }
+
+    pub struct Fields<'k> {
+        key: &'k str,
+        found: Option<Value>,
+        /// A map's last key was the one asked for.
+        matched: bool,
+    }
+
+    fn not_an_object<T>() -> Result<T, Error> {
+        Err(ser::Error::custom("not an object"))
+    }
+
+    impl<'k> ser::Serializer for FieldOf<'k> {
+        type Ok = Option<Value>;
+        type Error = Error;
+        type SerializeSeq = Impossible<Option<Value>, Error>;
+        type SerializeTuple = Impossible<Option<Value>, Error>;
+        type SerializeTupleStruct = Impossible<Option<Value>, Error>;
+        type SerializeTupleVariant = Impossible<Option<Value>, Error>;
+        type SerializeMap = Fields<'k>;
+        type SerializeStruct = Fields<'k>;
+        type SerializeStructVariant = Impossible<Option<Value>, Error>;
+
+        fn serialize_map(self, _len: Option<usize>) -> Result<Fields<'k>, Error> {
+            Ok(Fields {
+                key: self.key,
+                found: None,
+                matched: false,
+            })
+        }
+        fn serialize_struct(self, _name: &'static str, _len: usize) -> Result<Fields<'k>, Error> {
+            Ok(Fields {
+                key: self.key,
+                found: None,
+                matched: false,
+            })
+        }
+        fn serialize_bool(self, _v: bool) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_i8(self, _v: i8) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_i16(self, _v: i16) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_i32(self, _v: i32) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_i64(self, _v: i64) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_u8(self, _v: u8) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_u16(self, _v: u16) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_u32(self, _v: u32) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_u64(self, _v: u64) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_f32(self, _v: f32) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_f64(self, _v: f64) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_char(self, _v: char) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_str(self, _v: &str) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_bytes(self, _v: &[u8]) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_none(self) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_some<T: Serialize + ?Sized>(self, _value: &T) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_unit(self) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_unit_struct(self, _name: &'static str) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_unit_variant(
+            self,
+            _name: &'static str,
+            _index: u32,
+            _variant: &'static str,
+        ) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_newtype_struct<T: Serialize + ?Sized>(
+            self,
+            _name: &'static str,
+            _value: &T,
+        ) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_newtype_variant<T: Serialize + ?Sized>(
+            self,
+            _name: &'static str,
+            _index: u32,
+            _variant: &'static str,
+            _value: &T,
+        ) -> Result<Option<Value>, Error> {
+            not_an_object()
+        }
+        fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq, Error> {
+            not_an_object()
+        }
+        fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple, Error> {
+            not_an_object()
+        }
+        fn serialize_tuple_struct(
+            self,
+            _name: &'static str,
+            _len: usize,
+        ) -> Result<Self::SerializeTupleStruct, Error> {
+            not_an_object()
+        }
+        fn serialize_tuple_variant(
+            self,
+            _name: &'static str,
+            _index: u32,
+            _variant: &'static str,
+            _len: usize,
+        ) -> Result<Self::SerializeTupleVariant, Error> {
+            not_an_object()
+        }
+        fn serialize_struct_variant(
+            self,
+            _name: &'static str,
+            _index: u32,
+            _variant: &'static str,
+            _len: usize,
+        ) -> Result<Self::SerializeStructVariant, Error> {
+            not_an_object()
+        }
+    }
+
+    impl ser::SerializeStruct for Fields<'_> {
+        type Ok = Option<Value>;
+        type Error = Error;
+        fn serialize_field<T: Serialize + ?Sized>(
+            &mut self,
+            key: &'static str,
+            value: &T,
+        ) -> Result<(), Error> {
+            if key == self.key {
+                self.found = Some(serde_json::to_value(value)?);
+            }
+            Ok(())
+        }
+        fn end(self) -> Result<Option<Value>, Error> {
+            Ok(self.found)
+        }
+    }
+
+    impl ser::SerializeMap for Fields<'_> {
+        type Ok = Option<Value>;
+        type Error = Error;
+        fn serialize_key<T: Serialize + ?Sized>(&mut self, key: &T) -> Result<(), Error> {
+            self.matched = serde_json::to_value(key)?.as_str() == Some(self.key);
+            Ok(())
+        }
+        fn serialize_value<T: Serialize + ?Sized>(&mut self, value: &T) -> Result<(), Error> {
+            if self.matched {
+                self.found = Some(serde_json::to_value(value)?);
+            }
+            Ok(())
+        }
+        fn end(self) -> Result<Option<Value>, Error> {
+            Ok(self.found)
+        }
+    }
+}
+
 /// A string field of an event's JSON, or "" when it has none (every key read below is always set).
-fn text_at(shown: &Map<String, Value>, key: &str) -> String {
+fn text_at(shown: &Shown, key: &str) -> String {
     shown
         .get(key)
+        .as_ref()
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_string()
 }
 
 /// A nullable string field of an event's JSON: `None` for `null` or absent.
-fn nullable_at(shown: &Map<String, Value>, key: &str) -> Option<String> {
-    shown.get(key).and_then(Value::as_str).map(str::to_string)
+fn nullable_at(shown: &Shown, key: &str) -> Option<String> {
+    shown
+        .get(key)
+        .as_ref()
+        .and_then(Value::as_str)
+        .map(str::to_string)
 }
 
 /// A list of strings on an event's JSON (`targets`, `instanceIds`, `hiddenFrom`).
-fn texts_at(shown: &Map<String, Value>, key: &str) -> Option<Vec<String>> {
-    shown.get(key).and_then(Value::as_array).map(|items| {
+fn texts_at(shown: &Shown, key: &str) -> Option<Vec<String>> {
+    shown.get(key).as_ref().and_then(Value::as_array).map(|items| {
         items
             .iter()
             .filter_map(Value::as_str)
@@ -1071,15 +1326,18 @@ fn texts_at(shown: &Map<String, Value>, key: &str) -> Option<Vec<String>> {
 }
 
 /// `{ ...event, key: HIDDEN_ID, … }` for each key.
-fn hide(shown: &mut Map<String, Value>, keys: &[&str]) {
+fn hide(shown: &mut Shown, keys: &[&str]) {
     for key in keys {
         shown.insert((*key).to_string(), Value::String(HIDDEN_ID.to_string()));
     }
 }
 
-/// The redacted JSON, read back as the event it is.
-fn rebuild(shown: Map<String, Value>) -> GameEvent {
-    match serde_json::from_value(Value::Object(shown)) {
+/// The redacted JSON, read back as the event it is; the event itself when nothing was changed.
+fn rebuild(shown: Shown) -> GameEvent {
+    let Some(map) = shown.map else {
+        return shown.event.clone();
+    };
+    match serde_json::from_value(Value::Object(map)) {
         Ok(event) => event,
         Err(error) => panic!("a redacted event no longer reads as an event: {error}"),
     }
@@ -1100,10 +1358,7 @@ fn redact_event(
     replaced: &Replacements,
 ) -> GameEvent {
     let hidden = |id: &str| -> bool { !may_read(state, viewer, id, replaced) };
-    let mut shown: Map<String, Value> = match serde_json::to_value(event) {
-        Ok(Value::Object(map)) => map,
-        _ => panic!("an event serialises to an object"),
-    };
+    let mut shown = Shown::new(event);
     let instance = text_at(&shown, "instanceId");
 
     match event.event_type() {
@@ -1201,7 +1456,7 @@ fn redact_event(
         // that the hand still held a base-face card, or that the trap was base-face (R33). The zone is
         // given as that player's hand, the region this viewer is shown the player's unread cards in.
         GameEventType::RadiantSet => {
-            let zone = shown.get("zone").cloned().unwrap_or(Value::Null);
+            let zone = shown.get("zone").unwrap_or(Value::Null);
             let in_library = zone.get("z").and_then(Value::as_str) == Some("library");
             let unread = in_library || hidden(&instance);
             if !unread {
@@ -1397,7 +1652,7 @@ fn redact_event(
         // B5 E1: an announce shows what `cardPlayed` would. A card being set face-down is its zone only
         // to the other player (R97, R227): the identity and the targets it declared go, the zone stays.
         GameEventType::CardAnnounced => {
-            let face_down = shown.get("faceDown").and_then(Value::as_bool) == Some(true);
+            let face_down = shown.get("faceDown").as_ref().and_then(Value::as_bool) == Some(true);
             let unread = (face_down && text_at(&shown, "player") != viewer.as_str()) || hidden(&instance);
             let targets = texts_at(&shown, "targets").unwrap_or_default();
             if !unread {

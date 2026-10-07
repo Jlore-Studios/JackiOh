@@ -793,9 +793,8 @@ fn pick_answers(pending: &PendingChoice) -> Vec<ActionBody> {
 // Re-entering a script
 // ---------------------------------------------------------------------------
 
-fn face_of(state: &GameState, def_id: &str, radiant: bool) -> Script {
-    let scripts = crate::scripts::script_of(state, def_id);
-    if radiant { scripts.radiant } else { scripts.base }
+fn face_of(state: &GameState, def_id: &str, radiant: bool) -> crate::scripts::ScriptRef {
+    crate::scripts::face_ref(state, def_id, radiant)
 }
 
 /// The hook a continuation names: a step out of a table (`resume: { picked: … }`), a hook of the
