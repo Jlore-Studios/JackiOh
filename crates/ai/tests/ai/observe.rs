@@ -1,4 +1,4 @@
-//! What the AI may know (SPEC §9.9, R185; docs/polish/3-ai.md B9–B12).
+//! What the AI may know (SPEC §9.9, R185; docs/polish/3-ai.md B9–B12; docs/v0.3.0/README.md V11).
 //!
 //! `redact(state, seat)` is the only code that reads a true state, and `determinize` turns what it
 //! leaves into one concrete world. The proofs here are all observable: two true states that differ

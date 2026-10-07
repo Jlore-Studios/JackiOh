@@ -2,6 +2,9 @@
 //! (`src/api/catalog.rs`, and `jackioh_engine::validator`, which the handlers call directly): the two
 //! places the server reaches data and rules that live in other crates (SPEC §9.4).
 //!
+//! It is docs/v0.3.0/README.md V18's proof too: the server serves the catalog version of the newest
+//! `patches.json` entry, with `x-deployed-commit`.
+//!
 //! Two SPEC §11 rulings live here as well:
 //!   * R163 — the catalog endpoint a client that ships none can read: whole, unprojected,
 //!     unauthenticated, carrying R105's version.

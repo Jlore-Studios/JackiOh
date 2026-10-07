@@ -3,7 +3,7 @@
 # run super.yml --ref <branch>`). CI (ci.yml) keeps the essential checks per pull request; this keeps
 # the rest from rotting.
 #
-#   fuzz            `jackioh fuzz` seeds 1-10,000, plain and with the rotating handicap, in quarters
+#   fuzz            `jackioh fuzz` seeds 1-10,000, plain and with the rotating handicap, in quarters (V7, V9)
 #   ai gates        `jackioh gate --full` in shards, held together by `gate merge` (V10)
 #   golden          `jackioh golden check`: every recorded TypeScript trace replays identically (V4)
 #   coverage        cargo llvm-cov over engine, cards and ai, failing under .github/coverage-floor.txt

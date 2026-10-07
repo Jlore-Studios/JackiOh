@@ -122,7 +122,8 @@ jobs:
           node: "false"
       - name: cargo fmt --check
         run: cargo fmt --check
-      # Also after a formatting failure, so one run reports both.
+      # Also after a formatting failure, so one run reports both. Clippy builds the whole workspace
+      # (V1, docs/v0.3.0/README.md §6), and each pure crate's clippy.toml is rule 4's ban (V2).
       - name: cargo clippy
         if: ${{ !cancelled() }}
         run: cargo clippy --workspace --all-targets -- -D warnings
@@ -158,6 +159,7 @@ jobs:
             test: -p jackioh-engine --features jackioh-engine/testkit,jackioh-engine/ts --lib --test golden --test export_config
             doc: -p jackioh-engine --features jackioh-engine/testkit,jackioh-engine/ts
             binaries: jackioh-engine export_config golden rules
+          # Every card's tests, ported from TypeScript (V5), and the cross-card tests.
           - group: cards lib
             cache: cards-lib
             test: -p jackioh-cards --lib
@@ -263,6 +265,8 @@ jobs:
           path: ${{ runner.temp }}
       - name: unpack the binaries
         run: tar -xzf "$RUNNER_TEMP/rust-release.tgz"
+      # V8: the catalog and the patch history; V6: every ruling's proof; V7 and V9 at 200 seeds
+      # (super.yml plays 10,000): no invariant breach, and every game folds back to its hash.
       - name: catalog data (catalog check)
         run: target/release/jackioh catalog check
       - name: every catalog change claimed by a pending fragment (patches check)

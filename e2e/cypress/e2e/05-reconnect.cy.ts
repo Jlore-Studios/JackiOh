@@ -1,4 +1,5 @@
-// BUILD M8 spec 05 — "Networked game, reload mid-prompt".
+// BUILD M8 spec 05 — "Networked game, reload mid-prompt". With spec 06, the browser's half of
+// docs/v0.3.0/README.md V14 (the Rust server's WebSocket, end to end).
 //
 // Key assertions (BUILD M8, quoted verbatim):
 //

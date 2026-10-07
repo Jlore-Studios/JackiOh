@@ -438,6 +438,8 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// docs/v0.3.0/README.md V26: `promote` promotes exactly by §8's table and writes `generation.json`
+/// and the history line.
 #[cfg(test)]
 mod tests {
     use super::*;

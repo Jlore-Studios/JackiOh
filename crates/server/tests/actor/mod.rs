@@ -1,4 +1,6 @@
 //! The server's ported tests: `apps/server/test/match/*.test.ts` (`match/` is `actor/`), part 19.
+//! Every WebSocket message keeps TypeScript's shape, and a match plays end to end over the socket
+//! (docs/v0.3.0/README.md V14, with e2e specs 05 and 06).
 //! Written once by part 1 (SURFACE §1).
 
 pub mod aim;

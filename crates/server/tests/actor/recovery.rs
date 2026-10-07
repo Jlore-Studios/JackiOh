@@ -1,5 +1,6 @@
 //! BUILD M6-T4 acceptance, item 2: "killing the actor mid-game and reconnecting yields the same
-//! `viewFor` for both players".
+//! `viewFor` for both players". It is docs/v0.3.0/README.md §6's V15 (a match survives a restart by
+//! folding `(seed, log)`) and, on the server, V9 (the fold equals the live state).
 //!
 //! SPEC §9.5: "A crashed actor rebuilds its state by folding `(seed, log)`", and §9.3: "`(seed, log)`
 //! reconstructs any match". Dropping the actor out of the registry and leaving the log alone is

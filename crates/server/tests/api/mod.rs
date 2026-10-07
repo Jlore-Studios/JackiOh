@@ -1,4 +1,5 @@
-//! The server's ported tests: `apps/server/test/api/*.test.ts`, parts 18 and 19.
+//! The server's ported tests: `apps/server/test/api/*.test.ts`, parts 18 and 19. Every REST route
+//! answers as TypeScript's did (docs/v0.3.0/README.md V13).
 //! Written once by part 1 (SURFACE §1).
 
 pub mod account;

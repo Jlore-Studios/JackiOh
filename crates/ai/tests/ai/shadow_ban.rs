@@ -1068,3 +1068,76 @@ mod the_two_pass_sweep_r390 {
         assert_eq!(untimed(&plain["cards"]), untimed(&timed["cards"]));
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// V12 (docs/v0.3.0/README.md §6): the table at cutover
+// ---------------------------------------------------------------------------------------------
+
+/// `crates/ai/generation.json`: the AI generation this tree holds (training/README.md).
+const GENERATION_JSON: &str = include_str!("../../generation.json");
+
+/// `packages/ai/src/shadowBan.ts`'s `SHADOW_BAN` at 91cc43c, the source `generation.json` names for
+/// generation 0: TypeScript's eleven entries, in its order.
+const TS_SHADOW_BAN: &[(&str, &str)] = &[
+    (
+        "core-042",
+        "neverPlayed: hard: affordable in hand on 21 turns, never played",
+    ),
+    (
+        "core-051",
+        "neverPlayed: hard: affordable in hand on 20 turns, never played",
+    ),
+    (
+        "core-055",
+        "neverPlayed: hard: affordable in hand on 22 turns, never played",
+    ),
+    (
+        "core-057",
+        "neverPlayed: hard: affordable in hand on 4 turns, never played",
+    ),
+    (
+        "core-076",
+        "neverPlayed: hard: affordable in hand on 15 turns, never played",
+    ),
+    (
+        "core-078",
+        "neverPlayed: easy: affordable in hand on 31 turns, never played",
+    ),
+    (
+        "core-082",
+        "neverPlayed: hard: affordable in hand on 6 turns, never played",
+    ),
+    (
+        "core-091",
+        "neverPlayed: hard: affordable in hand on 19 turns, never played",
+    ),
+    (
+        "core-093",
+        "neverPlayed: hard: affordable in hand on 25 turns, never played",
+    ),
+    (
+        "core-094",
+        "neverPlayed: hard: affordable in hand on 13 turns, never played",
+    ),
+    (
+        "core-099",
+        "neverPlayed: easy: affordable in hand on 21 turns, never played; hard: affordable in hand on 13 turns, never played",
+    ),
+];
+
+mod v12 {
+    use super::*;
+
+    /// Generation 0 is the port: its shadow ban is TypeScript's, entry for entry, and its record
+    /// counts eleven. A promoted generation may change the table (the unban lane exists to shrink
+    /// it), so the pin holds while `generation.json` still names generation 0.
+    #[test]
+    fn v12_generation_zero_holds_typescripts_eleven_shadow_bans() {
+        let record: Value = serde_json::from_str(GENERATION_JSON).expect("generation.json is JSON");
+        if record["generation"].as_i64() == Some(0) {
+            assert_eq!(record["lane"].as_str(), Some("port"));
+            assert_eq!(record["shadowBan"].as_u64(), Some(11));
+            assert_eq!(SHADOW_BAN, TS_SHADOW_BAN);
+        }
+    }
+}

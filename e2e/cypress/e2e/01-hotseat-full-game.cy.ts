@@ -1,5 +1,5 @@
 // BUILD M8 `01-hotseat-full-game.cy.ts` — "Seeded game to completion via the UI with two aggro
-// decks".
+// decks". With spec 13, docs/v0.3.0/README.md V19: a hotseat game on the WASM engine.
 //
 // Key assertions (BUILD M8's table, verbatim):
 //
