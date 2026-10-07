@@ -144,8 +144,8 @@ mod b5_e22_flicker {
     #[test]
     fn r444_a_flickered_unit_token_comes_back_it_re_enters_its_zone_and_never_ceases_to_exist() {
         let mut state = playing("flicker-token");
-        let token = new_instance(&mut state, "fx-token-rush", PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
-        place_on_field(&mut state, &token, &slot(PlayerId::P1, Row::Units, 2), Default::default());
+        let mut token = new_instance(&mut state, "fx-token-rush", PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        place_on_field(&mut state, &mut token, &slot(PlayerId::P1, Row::Units, 2), Default::default());
         live_mut(&mut state, &token.id).damage = 1;
         let mut sink = sink_for(&state);
         assert!(sink.flicker_card(&mut state, &token.id));
@@ -211,9 +211,9 @@ mod b5_e22_flicker {
     fn flickers_every_card_a_scope_names_and_never_a_card_dormant_under_a_stack() {
         let mut state = playing("flicker-scope");
         let low = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
-        let top = put(&mut state, &stacker.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
+        let mut top = put(&mut state, &stacker.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
         state.players[PlayerId::P2].units[1] = None;
-        place_on_field(&mut state, &top, &slot(PlayerId::P2, Row::Units, 1), json_as(json!({ "stack": true })));
+        place_on_field(&mut state, &mut top, &slot(PlayerId::P2, Row::Units, 1), json_as(json!({ "stack": true })));
         let other = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 3), json!({}));
         let mut sink = sink_for(&state);
         sink.apply(&mut state, flicker(json_as(json!({ "scope": { "side": "enemy" } }))), PlayerId::P1);

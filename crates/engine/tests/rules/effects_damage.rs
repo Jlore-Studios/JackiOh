@@ -66,10 +66,13 @@ fn game(seed: &str) -> GameState {
 
 /// A context as a resolving card would see it, so the effect runs the way a script runs it. TS
 /// spread `extra` (here only ever `targets`) over the context `makeContext` built.
+/// `make_context` reborrows its sink, and the context outlives this function, so the sink is leaked
+/// for the test's length (as `fixtures::harness::sink_for` leaks its rng and events).
 fn ctx_for<'a>(sink: EngineSink<'a>, self_: Option<&CardInstance>, targets: Option<Vec<Selection>>) -> EffectContext<'a> {
+    let sink: &'a mut EngineSink<'a> = Box::leak(Box::new(sink));
     let mut ctx = make_context(
         sink,
-        self_.cloned(),
+        self_,
         HookOptions { controller: Some(P1), ..Default::default() },
     );
     if let Some(targets) = targets {

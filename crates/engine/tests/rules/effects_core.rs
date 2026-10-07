@@ -66,7 +66,7 @@ fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstanc
     let mut card = new_instance(state, def_id, player, Zone::Hand { player });
     card.radiant = true;
     let id = card.id.clone();
-    assert!(place_on_field(state, card, at, Default::default()), "could not place {def_id}");
+    assert!(place_on_field(state, &mut card, at, Default::default()), "could not place {def_id}");
     find_instance(state, &id).cloned().expect("the placed card")
 }
 
@@ -149,8 +149,9 @@ impl RunOptions {
 fn with_context<R>(state: &mut GameState, options: RunOptions, f: impl FnOnce(&mut EffectContext<'_>) -> R) -> R {
     let RunOptions { controller, self_, targets } = options;
     let self_ = self_.map(|card| find_instance(state, &card.id).cloned().unwrap_or(card));
-    let mut sink = sink_for(state);
-    let mut ctx = make_context(sink.sink(), self_, HookOptions { controller, targets, ..Default::default() });
+    let mut bench = sink_for(state);
+    let mut sink = bench.sink();
+    let mut ctx = make_context(&mut sink, self_.as_ref(), HookOptions { controller, targets, ..Default::default() });
     f(&mut ctx)
 }
 
@@ -161,7 +162,8 @@ fn run(state: &mut GameState, effects: Vec<Effect>, options: RunOptions) -> Vec<
     let self_ = self_.map(|card| find_instance(state, &card.id).cloned().unwrap_or(card));
     let mut sink = sink_for(state);
     {
-        let mut ctx = make_context(sink.sink(), self_, HookOptions { controller, targets, ..Default::default() });
+        let mut engine_sink = sink.sink();
+        let mut ctx = make_context(&mut engine_sink, self_.as_ref(), HookOptions { controller, targets, ..Default::default() });
         apply_effects(&effects, &mut ctx);
     }
     std::mem::take(&mut sink.events)
@@ -290,9 +292,9 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
             card.cost_override = Some(1);
         }
 
-        let moving = live(&state, &unit).clone();
+        let mut moving = live(&state, &unit).clone();
         assert_eq!(
-            move_to_zone(&mut state, &moving, ZoneName::Graveyard, Default::default()),
+            move_to_zone(&mut state, &mut moving, OffFieldZone::Graveyard, Default::default()),
             MoveResult::Moved
         );
 
@@ -333,9 +335,9 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
         }
 
         // Hand to library is not "leaving the field", so nothing is reset (R78).
-        let moving = live(&state, &card).clone();
+        let mut moving = live(&state, &card).clone();
         assert_eq!(
-            move_to_zone(&mut state, &moving, ZoneName::Library, Default::default()),
+            move_to_zone(&mut state, &mut moving, OffFieldZone::Library, Default::default()),
             MoveResult::Moved
         );
         assert_eq!(json_of(&live(&state, &card).memory), json!({ "note": "kept" }));
@@ -514,8 +516,8 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
         [plain.id.clone(), taunter.id.clone(), stockpile().id]
             .iter()
             .map(|def_id| {
-                let card = must(in_hand(state, def_id, P1, 1).into_iter().next(), def_id);
-                move_to_zone(state, &card, ZoneName::Graveyard, Default::default());
+                let mut card = must(in_hand(state, def_id, P1, 1).into_iter().next(), def_id);
+                move_to_zone(state, &mut card, OffFieldZone::Graveyard, Default::default());
                 card
             })
             .collect()

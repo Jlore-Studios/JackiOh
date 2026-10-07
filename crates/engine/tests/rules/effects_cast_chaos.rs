@@ -75,8 +75,8 @@ fn cast_from_box(state: &mut GameState) -> Vec<GameEvent> {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let self_ = new_instance(state, BOX, PlayerId::P1, Zone::Resolving { player: PlayerId::P1 });
     {
-        let sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(sink, Some(self_), HookOptions { controller: Some(PlayerId::P1), ..Default::default() });
+        let mut sink = EngineSink::new(state, &mut events, &mut rng);
+        let mut ctx = make_context(&mut sink, Some(&self_), HookOptions { controller: Some(PlayerId::P1), ..Default::default() });
         apply_effects(
             &[cast_random(json_as(json!({ "query": { "tags": ["Call to Chaos"] }, "count": 1 })))],
             &mut ctx,
