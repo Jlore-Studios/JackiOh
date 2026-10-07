@@ -3,10 +3,12 @@
 // BUILD M8 spec 01 asserts "final state hash equals the vitest replay of the recorded actions",
 // and BUILD M5-T3 asserts "the same seed and actions reproduce the same final state hash in the
 // browser and in vitest". Both are the same claim: fold (seed, decks, log) through
-// `packages/engine/src/replay.ts` outside the browser and compare `hashState`.
+// the Rust engine outside the browser (`jackioh replay`, docs/v0.3.0/SURFACE.md §12) and compare
+// `hashState`.
 //
-// The fold runs in a child process under the repo's own `tsx`, so this task needs neither a build
-// step nor a workspace entry for e2e/ — it is the same source the vitest suite imports. The
+// The fold runs in a child process: the repo's own `tsx` runs support/tasks/replay-runner.ts, which
+// runs `target/release/jackioh replay` (built by `cargo build --release -p jackioh-tools`), the same
+// fold the Rust tests and the server use, so e2e/ needs no workspace entry of its own. The
 // recorded log is also written to e2e/artifacts/<label>.json so the engine team can add a literal
 // vitest replay over it later.
 
@@ -67,7 +69,7 @@ export function replayHash(projectRoot: string, payload: ReplayHashPayload): Rep
   if (!existsSync(tsx)) {
     throw new Error(
       `replayHash: ${tsx} is missing. Run pnpm install at the repo root; the task folds the ` +
-        "recorded log through packages/engine with the repo's own tsx.",
+        "recorded log through the `jackioh` CLI (support/tasks/replay-runner.ts) with the repo's own tsx.",
     );
   }
   const runner = path.join(projectRoot, "support", "tasks", "replay-runner.ts");

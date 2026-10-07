@@ -52,7 +52,7 @@ const ON_SAPI =
   process.platform === "linux" &&
   existsSync(POWERSHELL_WSL) &&
   ["wslpath", "ffmpeg", "ffprobe"].every(hasTool);
-const CATALOG_PATH = resolve(WEB, "../../packages/cards/catalog.json");
+const CATALOG_PATH = resolve(WEB, "../../crates/cards/catalog.json");
 /** VOICE_FILE_MAX_MS in constants.ts, in seconds. */
 const MAX_SECONDS = 4;
 

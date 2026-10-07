@@ -26,7 +26,7 @@ import {
 } from "./landingFan.ts";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
-const CATALOG = JSON.parse(readFileSync(resolve(REPO, "packages/cards/catalog.json"), "utf8")) as Record<string, CardDef>;
+const CATALOG = JSON.parse(readFileSync(resolve(REPO, "crates/cards/catalog.json"), "utf8")) as Record<string, CardDef>;
 
 const SEEDS = Array.from({ length: 200 }, (_, i) => i + 1);
 

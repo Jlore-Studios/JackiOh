@@ -1,4 +1,4 @@
-// R388: the one seam onto packages/cards/patches/. Each file is its own lazy chunk, loaded once and
+// R388: the one seam onto crates/cards/patches/. Each file is its own lazy chunk, loaded once and
 // only when asked for; the order of patches is patches.json's; no data at all is an empty history.
 
 import { readFileSync } from "node:fs";
@@ -25,7 +25,7 @@ function spyLoaders(files: Record<string, unknown>): { loaders: Record<string, L
 
 describe("R388 the patch source", () => {
   it("R388 names a file by its stem, whatever the path the glob hands out", () => {
-    expect(fileStem("../../../../packages/cards/patches/v0.1.0d.json")).toBe("v0.1.0d");
+    expect(fileStem("../../../../crates/cards/patches/v0.1.0d.json")).toBe("v0.1.0d");
     expect(fileStem("/patches/patches.json")).toBe("patches");
     expect(Object.keys(loadersByStem({ "../a/v1.json": () => Promise.resolve(1), "../a/index.json": () => Promise.resolve(2) }))).toEqual([
       "v1",
@@ -75,10 +75,10 @@ describe("R388 the patch source", () => {
     expect(await EMPTY_PATCH_SOURCE.patches()).toEqual([]);
   });
 
-  it("R388 the real source reads packages/cards/patches/: the file's order, the index and every snapshot", async () => {
+  it("R388 the real source reads crates/cards/patches/: the file's order, the index and every snapshot", async () => {
     const patches = await realPatchSource.patches();
     const shipped = JSON.parse(
-      readFileSync(resolve(REPO, "packages/cards/patches/patches.json"), "utf8"),
+      readFileSync(resolve(REPO, "crates/cards/patches/patches.json"), "utf8"),
     ) as { version: string }[];
     expect(patches.map((patch) => patch.version)).toEqual(shipped.map((patch) => patch.version));
     // Promotions only ever append (R646): the six versions the brief checked stay the prefix.

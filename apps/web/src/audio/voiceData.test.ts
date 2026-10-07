@@ -49,7 +49,7 @@ import { baseView, card, emptySide, faceDownBackrow, faceUpBackrow, resetIds, un
 const here = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(here, "../../../..");
 const AUDIO_PATH = resolve(here, "card-audio.json5");
-const CATALOG_PATH = resolve(REPO, "packages/cards/catalog.json");
+const CATALOG_PATH = resolve(REPO, "crates/cards/catalog.json");
 
 const SHIPPED_CATALOG = JSON.parse(readFileSync(CATALOG_PATH, "utf8")) as CatalogTypes;
 

@@ -18,7 +18,7 @@ const REPO = resolve(WEB, "../..");
 const MUSIC_DIR = join(WEB, "public/audio/music");
 const GEN_MUSIC = join(WEB, "scripts/gen-music.mjs");
 const LICENSES = join(REPO, "assets/music/LICENSES.md");
-const CATALOG = JSON.parse(readFileSync(join(REPO, "packages/cards/catalog.json"), "utf8")) as Record<string, { rarity?: string; token?: boolean }>;
+const CATALOG = JSON.parse(readFileSync(join(REPO, "crates/cards/catalog.json"), "utf8")) as Record<string, { rarity?: string; token?: boolean }>;
 const BLOCK = 4096;
 const CHECK_TIMEOUT_MS = 60_000;
 

@@ -228,10 +228,10 @@ function asHandicap(raw: unknown, id: string): FixtureHandicap {
 const CORE_IDS: ReadonlySet<string> = new Set(Object.keys(CARD_NAMES).map((index) => catalogId(Number(index))));
 
 /** Where the catalog sits, from e2e/ (Cypress's project root), read at run time rather than imported. */
-const CATALOG_PATH = "../packages/cards/catalog.json";
+const CATALOG_PATH = "../crates/cards/catalog.json";
 
 /**
- * A9: every deckable id of every set (one format, R380), read off `packages/cards/catalog.json` at
+ * A9: every deckable id of every set (one format, R380), read off `crates/cards/catalog.json` at
  * run time, so `e2e/` stays self-contained at compile time (tsconfig.json) and a Classic or Classic+
  * fixture is checked against the catalog the build serves. Tokens are left out: L3 bans them.
  */
@@ -492,7 +492,7 @@ Cypress.Commands.add("seedGame", (options: SeedGameOptions) => {
  *
  * THE ANSWER NAMES THE CARDS KEPT, NOT THE CARDS RETURNED. The engine's prompt is "Choose the
  * cards to keep; the rest are returned and redrawn" with `min: 0` and one option per hand card
- * (`packages/engine/src/setup.ts`), and `answerMulligan` returns every card *not* in `keep`. So
+ * (`crates/engine/src/setup.rs`), and `answerMulligan` returns every card *not* in `keep`. So
  * keeping everything means every option selected when Confirm is pressed: submitting with nothing
  * toggled sends `keep: []`, which mulligans the entire hand — the opposite of this command's name,
  * and a silent change to the opening hand of every spec that seeds a game. The picker opens with
@@ -620,7 +620,7 @@ Cypress.Commands.add("answerPrompt", (kind: PromptKind | null, answer: PromptAns
 
   // §10.6: a Discover's three options are drawn by the match rng, so a spec cannot name a key —
   // it can only say "the first". Taken in DOM order, which is `PendingChoice.options` order and
-  // therefore the same on every machine (packages/engine/src/prompts.ts).
+  // therefore the same on every machine (crates/engine/src/prompts.rs).
   if (answer.first !== undefined) {
     const wanted = answer.first;
     cy.get(root)
@@ -1174,8 +1174,8 @@ Cypress.Commands.add("dragCardToDeck", (catalogCardId: string) => {
 /**
  * BUILD M8 spec 01: "final state hash equals the vitest replay of the recorded actions".
  * The browser hands over (seed, decks, log, final state); `cy.task("replayHash")` folds the log
- * through `packages/engine/src/replay.ts` in Node — the same code path the vitest replay uses —
- * and hashes both states with `hashState`.
+ * with the Rust engine (`jackioh replay`, support/tasks/replay-runner.ts) — the same fold the Rust
+ * tests use — and hashes both states with `hashState`.
  */
 Cypress.Commands.add("replayCheck", (label: string) => {
   cy.jackioh().then((handle) => {
