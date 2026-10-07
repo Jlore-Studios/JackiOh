@@ -1977,7 +1977,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let bystander = put(&mut state, BODY, slot(P2, UNITS, 5), Default::default());
 
         sink_for!(state => sink);
-        let _ = resolve_combat(&mut sink, &attacker, &unit_target(&defender));
+        resolve_combat(&mut sink, &attacker, &unit_target(&defender));
 
         let struck = instance_in(sink.state, &defender.id);
         assert!(unit_view(sink.state, &struck).health <= 0);
