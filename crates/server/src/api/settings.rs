@@ -32,6 +32,7 @@
 use std::sync::Arc;
 
 use indexmap::IndexMap;
+use jackioh_engine::wire::utf16_len;
 use serde::Serialize;
 use serde_json::{Value, json};
 
@@ -76,11 +77,6 @@ fn is_group_id_shape(id: &str) -> bool {
 fn is_setting_name_shape(name: &str) -> bool {
     let mut chars = name.chars();
     chars.next().is_some_and(|ch| ch.is_ascii_alphabetic()) && chars.all(|ch| ch.is_ascii_alphanumeric())
-}
-
-/// TS `string.length`: UTF-16 code units.
-fn utf16_len(text: &str) -> usize {
-    text.encode_utf16().count()
 }
 
 /// What the client reads: `PlayerSettingsAccountCopy` in `apps/web/src/net/api.ts`.

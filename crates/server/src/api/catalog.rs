@@ -202,23 +202,6 @@ fn patch_list() -> Result<Value, String> {
         .map_err(|cause| format!("the patch list could not be read from patches.json: {cause}"))
 }
 
-/// R376: the version every live game record is filed under — the newest patch of R388's list, which
-/// is the cards this build plays (the newest snapshot always equals `catalog.json`). Read as data,
-/// like the catalog above: the list's order is the order of versions, never a comparison of strings.
-pub async fn load_current_patch() -> Result<String, String> {
-    let parsed = patch_list()?;
-    let version = parsed
-        .as_array()
-        .and_then(|list| list.last())
-        .and_then(|newest| newest.get("version"))
-        .and_then(Value::as_str)
-        .unwrap_or("");
-    if version.is_empty() {
-        return Err("the patch list at patches.json names no newest version (R388)".to_string());
-    }
-    Ok(version.to_string())
-}
-
 /// All patch versions from patches.json in release order.
 pub async fn load_patch_versions() -> Vec<String> {
     let Ok(Value::Array(list)) = patch_list() else {

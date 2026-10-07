@@ -93,10 +93,6 @@ pub struct MalformedMessage {
     pub reason: String,
 }
 
-/// The client message types this endpoint serves (TS also listed `joinRoom`, which is now
-/// answered `malformed`, SURFACE §11.3).
-pub const CLIENT_MESSAGE_TYPES: &[&str] = &["hello", "action", "emote", "aim"];
-
 /// R79: `timeout`, `disconnectExpired` and `ceilingReached` are server-only — "never sent by a
 /// client" (`wire/actions.rs`). Accepting one from a socket would let a player end their
 /// opponent's turn or the match, so parsing rejects them outright.
@@ -207,18 +203,6 @@ pub enum ServerMessage {
     /// once the actor has checked that every end names something the receiver may see.
     Aim { from: PlayerId, aim: Option<Aim> },
 }
-
-/// TS `SERVER_MESSAGE_TYPES`.
-pub const SERVER_MESSAGE_TYPES: &[&str] = &[
-    "view",
-    "ack",
-    "error",
-    "prompt",
-    "clock",
-    "portraits",
-    "emote",
-    "aim",
-];
 
 // ---------------------------------------------------------------------------
 // Builders

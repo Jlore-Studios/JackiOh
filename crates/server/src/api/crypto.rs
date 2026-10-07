@@ -143,19 +143,6 @@ pub fn player_tag(profile_id: &str) -> String {
     code_from_bytes(&hash[..length])
 }
 
-/// Constant-time compare, for a secret that is not looked up by hash.
-pub fn safe_equal(a: &str, b: &str) -> bool {
-    let left = a.as_bytes();
-    let right = b.as_bytes();
-    if left.len() != right.len() {
-        return false;
-    }
-    left.iter()
-        .zip(right.iter())
-        .fold(0_u8, |diff, (x, y)| diff | (x ^ y))
-        == 0
-}
-
 /// TS `Ids`: every id and every seed comes from here.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct SystemIds;

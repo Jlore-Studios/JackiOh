@@ -6,9 +6,8 @@
 //! `config.rs` only, SURFACE §5.1).
 //!
 //! It reads only `./config` (for R190's two proxy-hop bounds), the compiled-in catalog version
-//! (SURFACE §11.3) and the map handed to it; `server_env()` alone reads the process environment.
-
-use std::sync::OnceLock;
+//! (SURFACE §11.3) and the map handed to it; its callers (`main.rs` and the CLIs) read the process
+//! environment.
 
 use indexmap::IndexMap;
 
@@ -178,24 +177,7 @@ const SUPABASE_DASHBOARD_HINT: &str =
 /// JS `String.prototype.trim`: strips JS's WhiteSpace and LineTerminator code points (which differ
 /// from Rust's `char::is_whitespace` at U+0085 and U+FEFF).
 fn js_trim(value: &str) -> &str {
-    fn is_js_space(c: char) -> bool {
-        matches!(
-            c,
-            '\u{0009}'
-                | '\u{000B}'
-                | '\u{000C}'
-                | '\u{0020}'
-                | '\u{00A0}'
-                | '\u{FEFF}'
-                | '\u{000A}'
-                | '\u{000D}'
-                | '\u{2028}'
-                | '\u{2029}'
-                | '\u{1680}'
-                | '\u{2000}'..='\u{200A}' | '\u{202F}' | '\u{205F}' | '\u{3000}'
-        )
-    }
-    value.trim_matches(is_js_space)
+    value.trim_matches(jackioh_engine::wire::is_js_space)
 }
 
 /// JS `JSON.stringify` of a string, for the `(got …)` part of a message.
@@ -495,17 +477,4 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
         trusted_proxy_hops,
         deployed_commit: parse_deployed_commit(read("RENDER_GIT_COMMIT")),
     })
-}
-
-static CACHED_ENV: OnceLock<Env> = OnceLock::new();
-
-/// Memoised accessor for the process's own environment. Reads the process environment until one
-/// read succeeds, then never again (TS caches only a successful `loadEnv`).
-pub fn server_env() -> Result<&'static Env, EnvError> {
-    if let Some(env) = CACHED_ENV.get() {
-        return Ok(env);
-    }
-    let source: IndexMap<String, String> = std::env::vars().collect();
-    let env = load_env(&source)?;
-    Ok(CACHED_ENV.get_or_init(|| env))
 }

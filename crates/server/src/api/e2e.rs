@@ -1,6 +1,6 @@
 //! BUILD M8's `E2E=1` test server: the fixture accounts, the fixture invite codes and R144's reseed
 //! at boot. Port of `apps/server/src/api/e2e.ts`; the auth provider that honours the fixture tokens
-//! is `crate::auth::E2eAuth` (SURFACE §11.1), built from `E2E_ACCOUNTS` and `auth_user_of` here.
+//! is `crate::auth::E2eAuth` (SURFACE §11.1), built from `E2E_ACCOUNTS` here.
 //!
 //! BUILD M8's preamble: "Cypress runs against `apps/web` in `E2E=1` mode (hotseat route and a test
 //! server with fixture accounts)." `e2e/README.md`'s assumption A6 spells out which accounts:
@@ -33,7 +33,6 @@ use serde_json::json;
 use crate::api::crypto::{hashes_for_pepper, is_well_formed_code, normalize_code, system_ids};
 use crate::api::http::{ApiError, log_info, now_ms};
 use crate::app::App;
-use crate::auth::{AuthUser, Session};
 use crate::config::{INVITE_CODE_LENGTH, RATING_START};
 use crate::db::store::{Db, InviteCode, ProfileCreateInput, ProfileStatus};
 
@@ -163,32 +162,6 @@ const EXPIRED_CODE_AGE_MS: i64 = 60 * 60 * 1000;
 /// is written out — and the db agent's `max_uses int not null default 1`, so the exhausted fixture
 /// is exhausted at one use. Restating the number is all this does; it decides nothing.
 const FIXTURE_CODE_MAX_USES: i64 = 1;
-
-// ---------------------------------------------------------------------------
-// The auth provider's halves (`crate::auth::E2eAuth` holds the provider itself)
-// ---------------------------------------------------------------------------
-
-/// The identity a fixture token verifies as.
-pub fn auth_user_of(account: &E2EAccount) -> AuthUser {
-    AuthUser {
-        user_id: account.user_id.to_string(),
-        email: Some(account.email.to_string()),
-        // §9.4 step 1's precondition. `app_metadata` stays empty: nothing here is an authorization
-        // claim, and `profiles.status` remains the only authority on what an account may do.
-        email_verified: true,
-        app_metadata: Default::default(),
-    }
-}
-
-/// The session a fixture email and password sign in to (`E2E=1` only).
-pub fn session_of(account: &E2EAccount) -> Session {
-    Session {
-        access_token: account.token.to_string(),
-        refresh_token: None,
-        expires_at: None,
-        user: auth_user_of(account),
-    }
-}
 
 // ---------------------------------------------------------------------------
 // R144: the reseed

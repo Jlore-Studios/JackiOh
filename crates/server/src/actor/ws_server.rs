@@ -75,9 +75,6 @@ pub const WS_CLOSE: WsClose = WsClose {
 /// RFC 6455's "message too big": what `ws` closes with when a frame passes `maxPayload`.
 const CLOSE_MESSAGE_TOO_BIG: u16 = 1009;
 
-/// RFC 6455's "going away": every live socket gets it when the server closes (`close_all`).
-const CLOSE_GOING_AWAY: u16 = 1001;
-
 /// RFC 6455's normal closure: `ws.close(code ?? 1000, …)`.
 const CLOSE_NORMAL: u16 = 1000;
 
@@ -574,18 +571,6 @@ fn register_client(app: usize, socket: &Socket) {
 fn unregister_client(app: usize, socket: &Socket) {
     if let Some(entry) = lock(&UPGRADES).get_mut(&app) {
         entry.clients.retain(|client| client != socket);
-    }
-}
-
-/// TS `AttachedSockets.close`: shuts every live socket of this server with 1001, so a server that is
-/// closing really does release its connections.
-pub fn close_all(app: &App) {
-    let clients: Vec<Socket> = lock(&UPGRADES)
-        .get(&app_key(app))
-        .map(|entry| entry.clients.clone())
-        .unwrap_or_default();
-    for client in clients {
-        client.close(Some(CLOSE_GOING_AWAY), Some("server closing"));
     }
 }
 

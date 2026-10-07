@@ -618,15 +618,6 @@ pub fn string_list(body: &Value, key: &str) -> Result<Vec<String>, ApiError> {
         .ok_or_else(|| bad_request(format!("\"{key}\" must be an array of strings")))
 }
 
-pub fn deck_list(body: &Value, key: &str) -> Result<Vec<Vec<String>>, ApiError> {
-    let bad = || bad_request(format!("\"{key}\" must be an array of arrays of card ids"));
-    let decks = body.get(key).and_then(Value::as_array).ok_or_else(bad)?;
-    decks
-        .iter()
-        .map(|deck| strings_of(deck).ok_or_else(bad))
-        .collect()
-}
-
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------

@@ -231,14 +231,7 @@ fn panic_message(error: tokio::task::JoinError) -> String {
     if !error.is_panic() {
         return error.to_string();
     }
-    let payload = error.into_panic();
-    if let Some(text) = payload.downcast_ref::<&str>() {
-        (*text).to_string()
-    } else if let Some(text) = payload.downcast_ref::<String>() {
-        text.clone()
-    } else {
-        "a task panicked".to_string()
-    }
+    jackioh_ai::panic_message(&*error.into_panic())
 }
 
 /// The serialized queue: one task at a time, so nothing interleaves (TS's `enqueue` chain).
