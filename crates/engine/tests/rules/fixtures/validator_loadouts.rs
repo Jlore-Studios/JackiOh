@@ -92,11 +92,6 @@ fn token_def() -> CardDef {
 /// Every deckable id in the catalog: the decks draw from these, the rest are spares.
 pub static POOL_IDS: LazyLock<Vec<CardId>> = LazyLock::new(|| (1..=POOL_SIZE).map(pool_id).collect());
 
-/// `POOL_IDS`, owned.
-pub fn pool_ids() -> Vec<CardId> {
-    POOL_IDS.clone()
-}
-
 pub fn catalog() -> CatalogSnapshot {
     let mut cards: CardDefs = CardDefs::new();
     for id in POOL_IDS.iter() {

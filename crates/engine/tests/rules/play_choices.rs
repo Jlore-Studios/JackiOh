@@ -377,10 +377,7 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
             &mut state,
             &mut top,
             slot(PlayerId::P1, Row::Units, 1),
-            PlaceOnFieldOptions {
-                stack: Some(true),
-                ..Default::default()
-            },
+            PlaceOnFieldOptions { stack: Some(true) },
         ));
         let pile: Vec<String> = state.players.p1.units[0]
             .as_ref()
@@ -737,7 +734,7 @@ mod r703_a_pick_the_play_needs {
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         {
             let mut sink = EngineSink::new(&mut state, &mut events, &mut rng);
-            let _ = resolve::cast_card(&mut sink, &card, CastOptions::default());
+            resolve::cast_card(&mut sink, &card, CastOptions::default());
         }
 
         assert!(state.pending.is_none());

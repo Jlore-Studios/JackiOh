@@ -265,7 +265,7 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
 
         assert_eq!(targeting_discards_of(&state, &ghost), 2);
         let plays: Vec<Value> =
-            play_actions_for(&state, PlayerId::P1, &bolt).iter().map(|play| play_json(play)).collect();
+            play_actions_for(&state, PlayerId::P1, &bolt).iter().map(play_json).collect();
         let at_ghost: Vec<&Value> = plays.iter().filter(|play| names_first(play, &ghost)).collect();
         let at_other: Vec<&Value> = plays.iter().filter(|play| names_first(play, &other)).collect();
         // R682: the discards are random at pay time, so one play, carrying none.
@@ -400,7 +400,7 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
         assert_eq!(after.players.p1.hand.len(), 1);
         assert!(after.players.p1.hand.first().is_some_and(|card| spare_ids.contains(&card.id)));
         assert_eq!(
-            card_at(&after, &slot(PlayerId::P2, Row::Units, 1)).map(|card| card.damage),
+            card_at(&after, slot(PlayerId::P2, Row::Units, 1)).map(|card| card.damage),
             Some(2)
         );
     }
@@ -462,7 +462,7 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
             assert!(spare_ids.contains(id));
         }
         assert_eq!(
-            card_at(&done, &slot(PlayerId::P2, Row::Units, 1)).map(|card| card.damage),
+            card_at(&done, slot(PlayerId::P2, Row::Units, 1)).map(|card| card.damage),
             Some(2)
         );
     }
@@ -502,11 +502,11 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
         assert_eq!(done.pending, None);
         assert_eq!(events_of_type(&events, GameEventType::Discarded).len(), 2);
         assert_eq!(
-            card_at(&done, &slot(PlayerId::P2, Row::Units, 1)).map(|card| card.damage),
+            card_at(&done, slot(PlayerId::P2, Row::Units, 1)).map(|card| card.damage),
             Some(1)
         );
         assert_eq!(
-            card_at(&done, &slot(PlayerId::P2, Row::Units, 2)).map(|card| card.damage),
+            card_at(&done, slot(PlayerId::P2, Row::Units, 2)).map(|card| card.damage),
             Some(1)
         );
         assert!(ids(&done.players.p1.graveyard).contains(&echo.id));
@@ -577,7 +577,7 @@ mod r450_an_interception_classic_33_joro {
         );
         assert_eq!(field_of(&events, GameEventType::Damage, "targetId"), vec![json!(joro.id)]);
         assert_eq!(
-            card_at(&after, &slot(PlayerId::P2, Row::Units, 1)).map(|card| card.damage),
+            card_at(&after, slot(PlayerId::P2, Row::Units, 1)).map(|card| card.damage),
             Some(0)
         );
         // The redirect is public on both seats.
@@ -598,7 +598,7 @@ mod r450_an_interception_classic_33_joro {
             PlayerId::P1,
             json!({ "type": "play", "instanceId": zapper.id, "targets": [at(&unit)] }),
         );
-        let standing = card_at(&after, &slot(PlayerId::P2, Row::Units, 2)).cloned();
+        let standing = card_at(&after, slot(PlayerId::P2, Row::Units, 2)).cloned();
         assert_eq!(standing.as_ref().map(|card| card.id.clone()), Some(joro.id.clone()));
         assert_eq!(standing.as_ref().and_then(|card| card.summoned_turn), Some(after.turn));
         assert_eq!(standing.as_ref().map(|card| card.damage), Some(1));
@@ -691,7 +691,7 @@ mod r450_an_interception_classic_33_joro {
             vec![spare.id.clone()]
         );
         assert_eq!(
-            card_at(&after, &slot(PlayerId::P2, Row::Units, 2)).map(|card| card.damage),
+            card_at(&after, slot(PlayerId::P2, Row::Units, 2)).map(|card| card.damage),
             Some(1)
         );
     }
@@ -707,7 +707,7 @@ mod r450_an_interception_classic_33_joro {
         assert_eq!(field_of(&events, GameEventType::Redirected, "toId"), vec![json!(joro.id)]);
         assert_eq!(field_of(&events, GameEventType::Damage, "targetId"), vec![json!(joro.id)]);
         assert_eq!(
-            card_at(&after, &slot(PlayerId::P2, Row::Units, 1)).map(|card| card.damage),
+            card_at(&after, slot(PlayerId::P2, Row::Units, 1)).map(|card| card.damage),
             Some(0)
         );
     }
@@ -730,7 +730,7 @@ mod r450_an_interception_classic_33_joro {
             Some(&json!(joro.id))
         );
         assert_eq!(
-            card_at(&after, &slot(PlayerId::P2, Row::Units, 1)).map(|card| card.damage),
+            card_at(&after, slot(PlayerId::P2, Row::Units, 1)).map(|card| card.damage),
             Some(0)
         );
     }

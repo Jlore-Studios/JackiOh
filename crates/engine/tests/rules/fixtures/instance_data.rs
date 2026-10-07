@@ -703,14 +703,3 @@ pub fn instance_deck(player: PlayerId) -> Vec<String> {
     own.extend(filler);
     own
 }
-
-/// Part 24's brief, step 2: this file's test catalog (`INSTANCE_DEFS` by id; `register_instance_fixtures`
-/// registers them over the shared fixture catalog).
-pub fn catalog() -> CardDefs {
-    INSTANCE_DEFS.iter().map(|card| (card.id.clone(), card.clone())).collect()
-}
-
-/// Part 24's brief, step 2: this file's scripts (`INSTANCE_SCRIPTS`).
-pub fn scripts() -> IndexMap<String, CardScripts> {
-    INSTANCE_SCRIPTS.clone()
-}

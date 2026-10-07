@@ -522,8 +522,8 @@ mod fuse_the_transient_definition_r77_m3_t7 {
             fuse_fresh(&mut under, json!({ "ingredients": [target_a, food_a], "target": target_a })),
             "a fusion",
         );
-        assert_eq!(json_of(&def_of(Some(&under), &cheap.def_id).cost), json!(3));
-        assert!(3 < FUSE_COST_CAP);
+        assert_eq!(json_of(def_of(Some(&under), &cheap.def_id).cost), json!(3));
+        const { assert!(3 < FUSE_COST_CAP) };
 
         let mut over = game("fuse-cost-capped");
         let target_b = put(&mut over, &ingredient_a().id, slot(P1, Row::Units, 1), json!({})); // cost 2
@@ -532,8 +532,8 @@ mod fuse_the_transient_definition_r77_m3_t7 {
             fuse_fresh(&mut over, json!({ "ingredients": [target_b, food_b], "target": target_b })),
             "a fusion",
         );
-        assert_eq!(json_of(&def_of(Some(&over), &capped.def_id).cost), json!(std::cmp::min(2 + 4, FUSE_COST_CAP)));
-        assert_eq!(json_of(&def_of(Some(&over), &capped.def_id).cost), json!(FUSE_COST_CAP));
+        assert_eq!(json_of(def_of(Some(&over), &capped.def_id).cost), json!(std::cmp::min(2 + 4, FUSE_COST_CAP)));
+        assert_eq!(json_of(def_of(Some(&over), &capped.def_id).cost), json!(FUSE_COST_CAP));
     }
 
     #[test]
@@ -550,7 +550,7 @@ mod fuse_the_transient_definition_r77_m3_t7 {
             fuse_fresh(&mut state, json!({ "ingredients": [target, embiggen], "target": target })),
             "a fusion",
         );
-        assert_eq!(json_of(&def_of(Some(&state), &base.def_id).cost), json!(3));
+        assert_eq!(json_of(def_of(Some(&state), &base.def_id).cost), json!(3));
 
         // The chosen embiggen price is the printed cost of the card that was played for it (R65).
         let mut other = game("fuse-cost-r65-embiggened");
@@ -565,7 +565,7 @@ mod fuse_the_transient_definition_r77_m3_t7 {
             fuse_fresh(&mut other, json!({ "ingredients": [target2, bigger], "target": target2 })),
             "a fusion",
         );
-        assert_eq!(json_of(&def_of(Some(&other), &capped.def_id).cost), json!(std::cmp::min(1 + 4, FUSE_COST_CAP)));
+        assert_eq!(json_of(def_of(Some(&other), &capped.def_id).cost), json!(std::cmp::min(1 + 4, FUSE_COST_CAP)));
     }
 
     #[test]
@@ -578,7 +578,7 @@ mod fuse_the_transient_definition_r77_m3_t7 {
             fuse_fresh(&mut state, json!({ "ingredients": [target, food], "target": target })),
             "a fusion",
         );
-        assert_eq!(json_of(&def_of(Some(&state), &result.def_id).type_), json!("Unit"));
+        assert_eq!(json_of(def_of(Some(&state), &result.def_id).type_), json!("Unit"));
     }
 
     #[test]
@@ -588,7 +588,7 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         let b = first_in_hand(&mut state, &spell_b().id, "another Spell");
 
         let crafted = must(fuse_fresh(&mut state, json!({ "ingredients": [a, b], "toHand": "p1" })), "a crafted card");
-        assert_eq!(json_of(&def_of(Some(&state), &crafted.def_id).type_), json!("Spell"));
+        assert_eq!(json_of(def_of(Some(&state), &crafted.def_id).type_), json!("Spell"));
     }
 
     #[test]
@@ -601,7 +601,7 @@ mod fuse_the_transient_definition_r77_m3_t7 {
             fuse_fresh(&mut state, json!({ "ingredients": [plain_trap, field], "toHand": "p1" })),
             "a crafted card",
         );
-        assert_eq!(json_of(&def_of(Some(&state), &crafted.def_id).type_), json!("Field Trap"));
+        assert_eq!(json_of(def_of(Some(&state), &crafted.def_id).type_), json!("Field Trap"));
 
         // Two plain Traps share their type and stay one (§5.1).
         let mut two = game("fuse-type-two-traps");
@@ -611,7 +611,7 @@ mod fuse_the_transient_definition_r77_m3_t7 {
             fuse_fresh(&mut two, json!({ "ingredients": [first, second], "toHand": "p1" })),
             "a crafted card",
         );
-        assert_eq!(json_of(&def_of(Some(&two), &plain_result.def_id).type_), json!("Trap"));
+        assert_eq!(json_of(def_of(Some(&two), &plain_result.def_id).type_), json!("Trap"));
     }
 }
 
@@ -674,7 +674,7 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
             }
         );
         assert_eq!(result.summoned_turn, Some(2));
-        assert_eq!(json_of(&result.counters), json!({ "plague": 3, "grade": 1 }));
+        assert_eq!(json_of(result.counters), json!({ "plague": 3, "grade": 1 }));
         assert_eq!(json_of(&result.memory), json!({ "meal": "felinor" }));
         assert!(result.radiant);
     }
@@ -887,7 +887,7 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
             ),
             "a fused Trap",
         );
-        assert_eq!(json_of(&def_of(Some(&consumed), &plain_result.def_id).type_), json!("Trap"));
+        assert_eq!(json_of(def_of(Some(&consumed), &plain_result.def_id).type_), json!("Trap"));
 
         fire_traps_for(&mut consumed_sink.on(&mut consumed), &played_by_p2());
         assert!(card_at(&consumed, slot(P1, Row::Backrow, 1)).is_none());
@@ -909,7 +909,7 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
             ),
             "a fused Field Trap",
         );
-        assert_eq!(json_of(&def_of(Some(&stays), &field_result.def_id).type_), json!("Field Trap"));
+        assert_eq!(json_of(def_of(Some(&stays), &field_result.def_id).type_), json!("Field Trap"));
 
         let played = played_by_p2();
         fire_traps_for(&mut stays_sink.on(&mut stays), &played);
@@ -958,7 +958,7 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
             fuse_fresh(&mut three, json!({ "ingredients": [x, y, z], "toHand": "p1" })),
             "a crafted card",
         );
-        assert_eq!(json_of(&def_of(Some(&three), &crafted.def_id).cost), json!(std::cmp::min(3, FUSE_COST_CAP)));
+        assert_eq!(json_of(def_of(Some(&three), &crafted.def_id).cost), json!(std::cmp::min(3, FUSE_COST_CAP)));
         assert_eq!(crafted.cost_override, Some(0));
         assert_eq!(
             three.players.p1.hand.iter().map(|card| card.id.clone()).collect::<Vec<_>>(),

@@ -721,7 +721,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
                 let other = zones::active_units_of(args.state, args.self_.controller)
                     .into_iter()
                     .find(|unit| unit.id != args.self_.id && unit.def_id == OTHER_SETTER);
-                let seen = other.map(|other| layers::stats_with_buffs(args.state, &other).attack).unwrap_or(0);
+                let seen = other.map(|other| layers::stats_with_buffs(args.state, other).attack).unwrap_or(0);
                 SetStat { attack: Some(seen), max_health: Some(seen) }
             })),
             ..Script::default()
@@ -734,7 +734,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
                 let other = zones::active_units_of(args.state, args.self_.controller)
                     .into_iter()
                     .find(|unit| unit.id != args.self_.id && unit.def_id == SETTER);
-                let seen = other.map(|other| layers::stats_with_buffs(args.state, &other).attack).unwrap_or(0);
+                let seen = other.map(|other| layers::stats_with_buffs(args.state, other).attack).unwrap_or(0);
                 SetStat { attack: Some(seen), max_health: Some(seen) }
             })),
             ..Script::default()
@@ -854,7 +854,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
                     if !catalog::def_of(Some(args.state), &other.def_id).tags.contains(&Tag::Felinor) {
                         continue;
                     }
-                    let stats = layers::stats_with_buffs(args.state, &other);
+                    let stats = layers::stats_with_buffs(args.state, other);
                     attack += stats.attack;
                     max_health += stats.max_health;
                 }
@@ -1184,7 +1184,6 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
                     SwitchPositionOptions {
                         to: Some(Position::Atk),
                         spend_exertion: Some(false),
-                        ..SwitchPositionOptions::default()
                     },
                 )
             })),
@@ -1245,8 +1244,8 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         assert!(zones::place_on_field(
             &mut state,
             &mut top,
-            &slot(P1, Row::Units, 1),
-            PlaceOnFieldOptions { stack: Some(true), ..PlaceOnFieldOptions::default() },
+            slot(P1, Row::Units, 1),
+            PlaceOnFieldOptions { stack: Some(true) },
         ));
         let mut dormant_events = SinkFor::new(&state);
         let dormant = live(&state, &under);
@@ -1412,7 +1411,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         let mut state = game("r95-cleave");
         let attacker = put(&mut state, CLEAVER, slot(P1, Row::Units, 3)); // 3/20 Cleave
         // The attacker's own neighbours, which adjacency never crosses sides to reach (§3.1).
-        let mine = vec![put(&mut state, BODY, slot(P1, Row::Units, 2)), put(&mut state, BODY, slot(P1, Row::Units, 4))];
+        let mine = [put(&mut state, BODY, slot(P1, Row::Units, 2)), put(&mut state, BODY, slot(P1, Row::Units, 4))];
         let left = put(&mut state, BODY, slot(P2, Row::Units, 1));
         let defender = put(&mut state, BODY, slot(P2, Row::Units, 2));
         let right = put(&mut state, BODY, slot(P2, Row::Units, 3));
@@ -1439,7 +1438,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         let mut back = game("r95-strike-back");
         let plain_attacker = put(&mut back, BODY, slot(P1, Row::Units, 2));
         let my_neighbours =
-            vec![put(&mut back, BODY, slot(P1, Row::Units, 1)), put(&mut back, BODY, slot(P1, Row::Units, 3))];
+            [put(&mut back, BODY, slot(P1, Row::Units, 1)), put(&mut back, BODY, slot(P1, Row::Units, 3))];
         let cleave_defender = put(&mut back, CLEAVER, slot(P2, Row::Units, 2));
         let mut back_events = SinkFor::new(&back);
         assert_eq!(
@@ -1458,7 +1457,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         let mut hero = game("r95-hero");
         let hero_cleaver = put(&mut hero, CLEAVER, slot(P1, Row::Units, 1));
         let bystanders =
-            vec![put(&mut hero, BODY, slot(P2, Row::Units, 1)), put(&mut hero, BODY, slot(P2, Row::Units, 2))];
+            [put(&mut hero, BODY, slot(P2, Row::Units, 1)), put(&mut hero, BODY, slot(P2, Row::Units, 2))];
         let mut hero_events = SinkFor::new(&hero);
         assert_eq!(
             refusal(hero_events.run(&mut hero, |sink| combat::declare_attack(sink, &hero_cleaver, &on_hero(P2)))),
@@ -1533,7 +1532,7 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
         let mut mine_sink = SinkFor::new(&state);
         assert!(mine_sink.run(&mut state, |sink| traps::fire_traps_for(sink, &played(P1))).fired.is_empty());
         assert!(trap_fired_ids(&mine_sink.events).is_empty());
-        assert_eq!(zones::card_at(&state, &slot(P1, Row::Backrow, 1)).map(|card| card.id.clone()), Some(trap.id.clone()));
+        assert_eq!(zones::card_at(&state, slot(P1, Row::Backrow, 1)).map(|card| card.id.clone()), Some(trap.id.clone()));
         assert_ne!(live(&state, &trap).face_up, Some(true));
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
 
@@ -1545,7 +1544,7 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
         );
         assert_eq!(trap_fired_ids(&theirs_sink.events), vec![trap.id.clone()]);
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 1);
-        assert!(zones::card_at(&state, &slot(P1, Row::Backrow, 1)).is_none());
+        assert!(zones::card_at(&state, slot(P1, Row::Backrow, 1)).is_none());
         assert_eq!(ids(&state.players.p1.graveyard), vec![trap.id.clone()]);
 
         // With the predicate satisfied, an empty effect list still spends the trap (R61).
@@ -1557,7 +1556,7 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
             vec![spent.id.clone()]
         );
         assert_eq!(trap_fired_ids(&empty_sink.events), vec![spent.id.clone()]);
-        assert!(zones::card_at(&empty, &slot(P1, Row::Backrow, 2)).is_none());
+        assert!(zones::card_at(&empty, slot(P1, Row::Backrow, 2)).is_none());
         assert_eq!(ids(&empty.players.p1.graveyard), vec![spent.id.clone()]);
 
         // A trap that declares no predicate answers every event it names, whichever side caused it.
@@ -1601,7 +1600,7 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
 
         // It is a Field Trap, so it is still armed; offering the same event to the immediate check
         // again still fires nothing, which is what "once per turn end rather than twice" means.
-        assert_eq!(zones::card_at(&state, &slot(P1, Row::Backrow, 1)).map(|card| card.id.clone()), Some(trap.id.clone()));
+        assert_eq!(zones::card_at(&state, slot(P1, Row::Backrow, 1)).map(|card| card.id.clone()), Some(trap.id.clone()));
         assert!(with_sink(&mut state, |sink| traps::fire_traps_for(sink, &turn_ended)).fired.is_empty());
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 1);
 
@@ -1839,7 +1838,7 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
         // second fusion that tried to re-find it would have nothing to fuse. (TS also read the consumed
         // object's own zone, `{ z: "gone" }`; a Rust copy has no live object to read: spec gap.)
         assert!(find_instance(&state, &shared.id).is_none());
-        assert!(zones::card_at(&state, &slot(P1, Row::Units, 3)).is_none());
+        assert!(zones::card_at(&state, slot(P1, Row::Units, 3)).is_none());
 
         // R102: the ingredients were resolved once, so the same resolved instance fuses again — which is
         // what lets radiant #85 fuse one played permanent onto every matching target, one at a time.
@@ -1880,7 +1879,7 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
         // R86: gone, not moved — no pile holds it and the lane it stood in is empty. (TS also read the
         // consumed object's zone, `{ z: "gone" }`: spec gap, as above.)
         assert!(find_instance(&state, &eaten.id).is_none());
-        assert!(zones::card_at(&state, &slot(P1, Row::Units, 2)).is_none());
+        assert!(zones::card_at(&state, slot(P1, Row::Units, 2)).is_none());
         assert!(!ids(&state.players.p1.graveyard).contains(&eaten.id));
         assert!(!ids(&state.players.p1.exile).contains(&eaten.id));
         // No Death trigger, and it does not count as destroyed.
@@ -2151,7 +2150,7 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
         });
         assert_eq!(live(&state, &victim).damage, 3);
         assert_eq!(layers::unit_view(&state, &live(&state, &victim)).health, 0);
-        assert_eq!(zones::card_at(&state, &slot(P2, Row::Units, 1)).map(|card| card.id.clone()), Some(victim.id.clone()));
+        assert_eq!(zones::card_at(&state, slot(P2, Row::Units, 1)).map(|card| card.id.clone()), Some(victim.id.clone()));
         assert_ne!(live(&state, &victim).marked_destroyed, Some(true));
         assert!(live(&state, &victim).last_damaged_by.is_none());
 
@@ -2369,7 +2368,7 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
         assert!(answered.work.is_empty());
         // And the card is where the play put it, so nothing about the pause unwound the play.
         assert_eq!(
-            zones::card_at(&answered, &slot(P1, Row::Units, 1)).map(|placed| placed.def_id.clone()),
+            zones::card_at(&answered, slot(P1, Row::Units, 1)).map(|placed| placed.def_id.clone()),
             Some(CRIER.to_string())
         );
         assert!(act_result(&answered, P1, ActionBody::EndTurn).error.is_none());
@@ -2384,7 +2383,7 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
         assert!(after.error.is_none());
         assert!(after.state.pending.is_none());
         assert_eq!(notes(&after.state), vec!["eaten"]);
-        assert!(zones::card_at(&after.state, &slot(P1, Row::Units, 1)).is_none());
+        assert!(zones::card_at(&after.state, slot(P1, Row::Units, 1)).is_none());
         assert!(after.state.work.is_empty());
     }
 }
@@ -2477,7 +2476,7 @@ mod spec_11_r122_r123_answering_a_prompt_and_a_declared_tribute_m3_gate {
 
         // `legalActions` enumerates them that way: every offered play carries both lists.
         let offered: Vec<Value> =
-            play_choices::play_actions_for(&state, P1, &card).iter().map(|action| as_json(action)).collect();
+            play_choices::play_actions_for(&state, P1, &card).iter().map(as_json).collect();
         assert!(!offered.is_empty());
         for action in &offered {
             assert_ne!(action.get("tributes").cloned().unwrap_or(json!([])), json!([]));
@@ -2579,7 +2578,7 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         assert_eq!(damage::hero_damage_cap(&capped, P2), Some(ANTI_ONESHOT_CAP.base));
         put_radiant(&mut capped, GUARD, slot(P2, Row::Backrow, 2)); // radiant: cap 3
         assert_eq!(damage::hero_damage_cap(&capped, P2), Some(ANTI_ONESHOT_CAP.radiant));
-        assert!(ANTI_ONESHOT_CAP.radiant < ANTI_ONESHOT_CAP.base);
+        const { assert!(ANTI_ONESHOT_CAP.radiant < ANTI_ONESHOT_CAP.base) };
         // Two cards, and a 10 is clamped to the smaller of the two — not to 8, and not to 5.
         assert_eq!(hit_hero(&mut capped, 10).0, ANTI_ONESHOT_CAP.radiant);
     }
@@ -2840,7 +2839,7 @@ mod spec_11_r128_r130_sweeps_fizzles_and_lucky_m3_gate {
         );
         assert_eq!(targets_hit(&lethal_sink.events), vec![doomed.id.clone(), after.id.clone()]);
         assert!(layers::unit_view(&lethal, &live(&lethal, &doomed)).health <= 0);
-        assert_eq!(zones::card_at(&lethal, &slot(P1, Row::Units, 1)).map(|card| card.id.clone()), Some(doomed.id.clone())); // still there: no state check yet
+        assert_eq!(zones::card_at(&lethal, slot(P1, Row::Units, 1)).map(|card| card.id.clone()), Some(doomed.id.clone())); // still there: no state check yet
     }
 
     #[test]
@@ -3239,8 +3238,8 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
         put(&mut roomy, LOG_CARD, slot(P1, Row::Backrow, NOTE_LANE));
         let mut roomy_sink = SinkFor::new(&roomy);
         // Cast it straight out of the hand: `castCard` takes it out of whatever pile holds it.
-        let mut lands = must(in_hand(&mut roomy, CRIER, P1, 1).into_iter().next(), "a permanent to cast");
-        roomy_sink.run(&mut roomy, |sink| resolve::cast_card(sink, &mut lands, CastOptions::default()));
+        let lands = must(in_hand(&mut roomy, CRIER, P1, 1).into_iter().next(), "a permanent to cast");
+        roomy_sink.run(&mut roomy, |sink| resolve::cast_card(sink, &lands, CastOptions::default()));
         assert!(unit_ids(&roomy, P1).contains(&lands.id));
         assert_eq!(notes(&roomy), vec!["cry"]);
 
@@ -3253,9 +3252,9 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
         assert_eq!(zones::active_units_of(&state, P1).len(), 5);
 
         let mut sink = SinkFor::new(&state);
-        let mut cast = must(in_hand(&mut state, CRIER, P1, 1).into_iter().next(), "a permanent to cast");
+        let cast = must(in_hand(&mut state, CRIER, P1, 1).into_iter().next(), "a permanent to cast");
         let played_before = state.players.p1.turn_log.cards_played;
-        sink.run(&mut state, |engine| resolve::cast_card(engine, &mut cast, CastOptions::default()));
+        sink.run(&mut state, |engine| resolve::cast_card(engine, &cast, CastOptions::default()));
 
         // A cast cannot be refused the way a play can (R70): it still counts as played...
         assert_eq!(state.players.p1.turn_log.cards_played, played_before + 1);
@@ -3346,7 +3345,7 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
         // "The leftmost empty, unlocked zone" is lane 4, not lane 1: lane 1 would accept a *named*
         // Stack play, and the convenience path deliberately does not take it.
         assert_eq!(zones::first_free_zone(&state, P1, Row::Units), Some(slot(P1, Row::Units, 4)));
-        assert_eq!(zones::card_at(&state, &slot(P1, Row::Units, 1)).map(|card| card.def_id.clone()), Some(BODY.to_string()));
+        assert_eq!(zones::card_at(&state, slot(P1, Row::Units, 1)).map(|card| card.def_id.clone()), Some(BODY.to_string()));
     }
 
     #[test]
@@ -3362,7 +3361,7 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
 
         // §8's "until end of turn": the end of THIS turn clears it, not that player's next turn start —
         // otherwise a player stays locked out of a turn that is no longer the one the effect took.
-        sink.run(&mut state, |engine| turn::end_turn(engine));
+        sink.run(&mut state, turn::end_turn);
         assert!(!state.players.p1.ai_turn);
 
         // And it was cleared by the end of the turn it was set for, not by p1 reaching another turn:
@@ -3471,8 +3470,8 @@ mod spec_11_r155_the_return_to_hand_flag_m3_gate {
 
         // The real call site: a cast goes through the same landing a play does (R70), so this is §10.5
         // step 7 doing the flagging rather than the setter being poked directly.
-        let mut spell = must(in_hand(&mut state, RETURN_SPELL, P1, 1).into_iter().next(), "a returning Spell");
-        sink.run(&mut state, |engine| resolve::cast_card(engine, &mut spell, CastOptions::default()));
+        let spell = must(in_hand(&mut state, RETURN_SPELL, P1, 1).into_iter().next(), "a returning Spell");
+        sink.run(&mut state, |engine| resolve::cast_card(engine, &spell, CastOptions::default()));
         assert!(ids(&state.players.p1.graveyard).contains(&spell.id));
         assert_eq!(live(&state, &spell).return_to_hand_at_end_of_turn, Some(true));
 
@@ -3506,7 +3505,7 @@ mod spec_11_r155_the_return_to_hand_flag_m3_gate {
 
         // The flag means "this turn": cleanup clears it at the end of the turn that set it.
         assert_eq!(state.active, P1);
-        sink.run(&mut state, |engine| turn::end_turn(engine));
+        sink.run(&mut state, turn::end_turn);
         assert_ne!(find_instance(&state, &spell.id).and_then(|card| card.return_to_hand_at_end_of_turn), Some(true));
     }
 

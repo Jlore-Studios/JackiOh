@@ -500,7 +500,7 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
         // A Stack card played on p1's lane 1, so `mine` lies dormant under it.
         let mut top = new_instance(state, &big_body.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
         assert!(
-            place_on_field(state, &mut top, &slot(PlayerId::P1, Row::Units, 1), PlaceOnFieldOptions { stack: Some(true) }),
+            place_on_field(state, &mut top, slot(PlayerId::P1, Row::Units, 1), PlaceOnFieldOptions { stack: Some(true) }),
             "expected a pile"
         );
         let mine_now = live(state, &mine.id).clone();

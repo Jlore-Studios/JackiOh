@@ -142,13 +142,3 @@ pub static CORE_PATCH_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLoc
         (quiet_trap.id.clone(), both(Script::default())),
     ])
 });
-
-/// Part 24's brief, step 2: this file's test catalog (`core_patch_catalog`).
-pub fn catalog() -> CardDefs {
-    core_patch_catalog()
-}
-
-/// Part 24's brief, step 2: this file's scripts (`CORE_PATCH_SCRIPTS`).
-pub fn scripts() -> IndexMap<String, CardScripts> {
-    CORE_PATCH_SCRIPTS.clone()
-}

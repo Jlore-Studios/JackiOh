@@ -122,7 +122,7 @@ fn play_glitch(state: &mut GameState) -> ReduceResult {
 
 fn catalog_query(body: Value) -> Vec<CardDef> {
     let args: CatalogQueryArgs = json_as(body);
-    query(&args).into_iter().map(|def| def.clone()).collect()
+    query(&args).into_iter().cloned().collect()
 }
 
 /// The state as `pickGenerated`'s odds: TS's `{ systemPlays }` literal, the state with that field set.

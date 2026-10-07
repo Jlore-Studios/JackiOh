@@ -100,13 +100,3 @@ pub fn register_board_history_fixtures() {
     merged.extend(SCRIPTS.clone());
     register_scripts(merged);
 }
-
-/// Part 24's brief, step 2: this file's test catalog (the two defs).
-pub fn catalog() -> CardDefs {
-    IndexMap::from([(rewind.id.clone(), rewind.clone()), (phoenix.id.clone(), phoenix.clone())])
-}
-
-/// Part 24's brief, step 2: this file's scripts.
-pub fn scripts() -> IndexMap<String, CardScripts> {
-    SCRIPTS.clone()
-}

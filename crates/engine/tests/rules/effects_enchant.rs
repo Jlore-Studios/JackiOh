@@ -63,7 +63,7 @@ mod b5_e39_enchant_r443 {
     #[test]
     fn r443_enchant_puts_an_enchantment_on_a_named_card_anywhere_never_twice_the_same_one_and_reports_nothing() {
         let mut state = game();
-        let Some(deck_card) = set_library(&mut state, PlayerId::P1, &[echo_bolt.id.clone()]).into_iter().next() else {
+        let Some(deck_card) = set_library(&mut state, PlayerId::P1, std::slice::from_ref(&echo_bolt.id)).into_iter().next() else {
             panic!("no card");
         };
         assert_eq!(run(&mut state, enchant_one(&deck_card.id, CAST), None, HookOptions::default()), vec![]);
@@ -116,7 +116,7 @@ mod b5_e39_enchant_r443 {
         // TS kept the live object after emptying the exile pile; here the copy taken just before.
         let mut exiled = live(&state, &unit.id).clone();
         state.players[PlayerId::P1].exile = vec![];
-        assert!(place_on_field(&mut state, &mut exiled, &slot(PlayerId::P1, Row::Units, 2), Default::default()));
+        assert!(place_on_field(&mut state, &mut exiled, slot(PlayerId::P1, Row::Units, 2), Default::default()));
         assert_eq!(on(&state, &unit.id), vec![RETURN]);
     }
 

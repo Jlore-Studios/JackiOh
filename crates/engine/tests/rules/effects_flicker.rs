@@ -58,7 +58,7 @@ impl Sink {
 
 /// `cardAt(state, ref)?.id`.
 fn id_at(state: &GameState, at: ZoneSlot) -> Option<String> {
-    card_at(state, &at).map(|card| card.id.clone())
+    card_at(state, at).map(|card| card.id.clone())
 }
 
 fn as_json<T: serde::Serialize>(value: &T) -> Value {
@@ -145,7 +145,7 @@ mod b5_e22_flicker {
     fn r444_a_flickered_unit_token_comes_back_it_re_enters_its_zone_and_never_ceases_to_exist() {
         let mut state = playing("flicker-token");
         let mut token = new_instance(&mut state, "fx-token-rush", PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
-        place_on_field(&mut state, &mut token, &slot(PlayerId::P1, Row::Units, 2), Default::default());
+        place_on_field(&mut state, &mut token, slot(PlayerId::P1, Row::Units, 2), Default::default());
         live_mut(&mut state, &token.id).damage = 1;
         let mut sink = sink_for(&state);
         assert!(sink.flicker_card(&mut state, &token.id));
@@ -213,7 +213,7 @@ mod b5_e22_flicker {
         let low = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let mut top = put(&mut state, &stacker.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
         state.players[PlayerId::P2].units[1] = None;
-        place_on_field(&mut state, &mut top, &slot(PlayerId::P2, Row::Units, 1), json_as(json!({ "stack": true })));
+        place_on_field(&mut state, &mut top, slot(PlayerId::P2, Row::Units, 1), json_as(json!({ "stack": true })));
         let other = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 3), json!({}));
         let mut sink = sink_for(&state);
         sink.apply(&mut state, flicker(json_as(json!({ "scope": { "side": "enemy" } }))), PlayerId::P1);
@@ -236,7 +236,7 @@ mod b5_e22_flicker {
         let mut sink = sink_for(&state);
         sink.flicker_card(&mut state, &trap.id);
         // TS's live object took the fresh id; here the card is the one now in its zone.
-        let trap = card_at(&state, &slot(PlayerId::P2, Row::Backrow, 2)).cloned().expect("the trap is back in its zone");
+        let trap = card_at(&state, slot(PlayerId::P2, Row::Backrow, 2)).cloned().expect("the trap is back in its zone");
         assert_ne!(trap.id, old_id);
         assert_eq!(trap.def_id, watcher.id.clone());
         assert!(find_instance(&state, &old_id).is_none());

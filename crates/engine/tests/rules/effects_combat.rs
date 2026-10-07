@@ -169,7 +169,7 @@ fn trap_script(on: GameEventType, run: fn() -> Vec<Effect>) -> CardScripts {
 /// TS `SCRIPTS`.
 fn fc_scripts() -> IndexMap<String, CardScripts> {
     let mut scripts = IndexMap::new();
-    scripts.insert(watcher().id, trap_script(GameEventType::AttackDeclared, || vec![]));
+    scripts.insert(watcher().id, trap_script(GameEventType::AttackDeclared, std::vec::Vec::new));
     scripts.insert(
         canceller().id,
         trap_script(GameEventType::AttackDeclared, || vec![cancel_attack(Default::default())]),
@@ -182,7 +182,7 @@ fn fc_scripts() -> IndexMap<String, CardScripts> {
             vec![cancel_attack(Default::default()), ai_plays_out_turn(json_as(json!({ "player": "enemy" })))]
         }),
     );
-    scripts.insert(meter().id, trap_script(GameEventType::ManaChanged, || vec![]));
+    scripts.insert(meter().id, trap_script(GameEventType::ManaChanged, std::vec::Vec::new));
     scripts
 }
 

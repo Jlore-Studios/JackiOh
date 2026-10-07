@@ -205,7 +205,8 @@ mod r310_the_viewer_s_own_library_without_its_order {
             sorted.sort_by(|x, y| y.id.cmp(&x.id));
             sorted
         }
-        let orders: [fn(&[CardInstance]) -> Vec<CardInstance>; 3] = [reversed, rotated, by_id_descending];
+        type Order = fn(&[CardInstance]) -> Vec<CardInstance>;
+        let orders: [Order; 3] = [reversed, rotated, by_id_descending];
         for reorder in orders {
             let mut b = clone_state(&a);
             b.players.p1.library = reorder(&b.players.p1.library);

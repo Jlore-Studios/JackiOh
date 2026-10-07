@@ -154,13 +154,3 @@ pub fn chaos_plus_catalog(base: CardDefs) -> CardDefs {
     }
     defs
 }
-
-/// Part 24's brief, step 2: this file's test catalog (`chaos_plus_catalog` over nothing).
-pub fn catalog() -> CardDefs {
-    chaos_plus_catalog(CardDefs::new())
-}
-
-/// Part 24's brief, step 2: this file's scripts. Its definitions are script-less: none.
-pub fn scripts() -> IndexMap<String, CardScripts> {
-    IndexMap::new()
-}

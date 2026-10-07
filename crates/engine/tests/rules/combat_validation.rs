@@ -405,7 +405,7 @@ mod attack_validation_the_target_4_2_steps_2_and_3_m2_t2 {
 
     #[test]
     fn r5_lets_a_lane_1_unit_attack_an_enemy_in_lane_5_since_attacks_are_not_lane_restricted() {
-        assert!(!LANE_RESTRICTED_ATTACKS);
+        const { assert!(!LANE_RESTRICTED_ATTACKS) };
 
         let mut state = new_game("no-lane-restriction", None);
         let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());

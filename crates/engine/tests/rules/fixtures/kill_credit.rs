@@ -43,7 +43,7 @@ fn across_from_bots(state: &GameState, controller: PlayerId) -> Vec<KillCredit> 
     slots_of(controller, Row::Units)
         .into_iter()
         .flat_map(|at| {
-            let Some(mine) = card_at(state, &at) else {
+            let Some(mine) = card_at(state, at) else {
                 return vec![];
             };
             if mine.def_id != bot.id {
@@ -54,7 +54,7 @@ fn across_from_bots(state: &GameState, controller: PlayerId) -> Vec<KillCredit> 
                 row: Row::Units,
                 lane: at.lane,
             };
-            match card_at(state, &across) {
+            match card_at(state, across) {
                 None => vec![],
                 Some(victim) => vec![KillCredit {
                     victim_id: victim.id.clone(),
@@ -160,17 +160,4 @@ pub fn register_kill_credit() {
     let mut merged: IndexMap<String, CardScripts> = registered_scripts().clone();
     merged.extend(KC_SCRIPTS.clone());
     register_scripts(merged);
-}
-
-/// Part 24's brief, step 2: this file's test catalog (the three defs).
-pub fn catalog() -> CardDefs {
-    [&*bot, &*jungle, &*tempo]
-        .into_iter()
-        .map(|card| (card.id.clone(), card.clone()))
-        .collect()
-}
-
-/// Part 24's brief, step 2: this file's scripts (`KC_SCRIPTS`).
-pub fn scripts() -> IndexMap<String, CardScripts> {
-    KC_SCRIPTS.clone()
 }

@@ -88,8 +88,6 @@ const PLAIN_SPELL: &str = "ra-plain-spell";
 const SPELL_TOKEN: &str = "ra-spell-token";
 /// #76 Field of Dreams' replacements (R31).
 const REMINISCE: &str = "ra-reminisce";
-/// #97 Zephyrs: the scorer's one excluded index (R29).
-const ZEPHYRS: &str = "ra-zephyrs";
 /// #41 Sheepish: a Trap that answers the opponent's summon (R17).
 const SHEEPISH: &str = "ra-sheepish";
 /// A script-less Trap, for the face-down rows (R33, R35).
@@ -110,7 +108,7 @@ fn spread(def: &mut Value, extra: Value) {
     }
 }
 
-/// TS `raUnit`: a Core unit fixture whose index is the next of this file's (R301 on).
+/// TS `raUnit`: a Core unit fixture whose index is the next of this file's (index 301 on).
 fn ra_unit(next: &mut i32, name: &str, attack: i32, health: i32, keywords: Value, extra: Value) -> CardDef {
     *next += 1;
     let index = *next;
@@ -692,7 +690,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
     #[test]
     fn r1_fires_cry_only_on_a_play_from_hand_or_a_cast_never_on_a_summon_recruit_or_transform() {
         // Decide row: the constant, then the behaviour it drives.
-        assert!(CRY_ON_PLAY_ONLY);
+        const { assert!(CRY_ON_PLAY_ONLY) };
 
         // Played from hand: the Cry resolves.
         let mut played = playing("r1");
@@ -797,7 +795,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
     #[test]
     fn r5_does_not_restrict_attacks_by_lane_any_unit_may_attack_any_enemy_unit_or_the_hero() {
-        assert!(!LANE_RESTRICTED_ATTACKS);
+        const { assert!(!LANE_RESTRICTED_ATTACKS) };
 
         let mut state = game("r5");
         let attacker = put(&mut state, BODY, slot(P1, UNITS, 1), json!({}));

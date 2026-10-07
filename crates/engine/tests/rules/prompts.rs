@@ -832,7 +832,7 @@ mod prompts_s10_6_m3_t3 {
         let started = begin_game(&new_game("enumeration-mulligan", None)).state;
         let mulligan = mulligan_prompt_for(&started, P1).expect("the mulligan prompt");
         assert_eq!(mulligan.kind, PromptKind::Mulligan);
-        assert!(prompt_answers(&mulligan).is_empty());
+        assert!(prompt_answers(mulligan).is_empty());
     }
 
     #[test]

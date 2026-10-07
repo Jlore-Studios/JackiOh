@@ -107,13 +107,3 @@ pub fn vanilla_catalog(count: i32, from: i32) -> CardDefs {
 pub fn vanilla_deck(size: i32, from: i32) -> Vec<String> {
     (0..size).map(|i| format!("fx-{}", from + i)).collect()
 }
-
-/// Part 24's brief, step 2: this file's test catalog, `vanilla_catalog(40, 1)` (TS's defaults).
-pub fn catalog() -> CardDefs {
-    vanilla_catalog(40, 1)
-}
-
-/// Part 24's brief, step 2: this file's scripts. Its definitions are script-less: none.
-pub fn scripts() -> IndexMap<String, CardScripts> {
-    IndexMap::new()
-}

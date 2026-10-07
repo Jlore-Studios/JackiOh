@@ -336,7 +336,7 @@ fn toxins_aura<'a>(state: &'a GameState, me: &'a CardInstance, per: i32) -> Vec<
     let mut entries: Vec<AuraEntry<'a>> = Vec::new();
     for player in [PlayerId::P1, PlayerId::P2] {
         for card in active_units_of(state, player) {
-            let tokens = tokens_on(&card);
+            let tokens = tokens_on(card);
             if tokens == 0 {
                 continue;
             }
@@ -788,14 +788,4 @@ pub fn pick(card: impl CardOrId) -> Selection {
     Selection::Instance {
         instance_id: card.instance_id(),
     }
-}
-
-/// Part 24's brief, step 2: this file's test catalog (`GEN_DEFS` by id).
-pub fn catalog() -> CardDefs {
-    GEN_DEFS.iter().map(|entry| (entry.id.clone(), entry.clone())).collect()
-}
-
-/// Part 24's brief, step 2: this file's scripts (`GEN_SCRIPTS`).
-pub fn scripts() -> IndexMap<String, CardScripts> {
-    SCRIPTS.clone()
 }

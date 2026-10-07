@@ -220,10 +220,10 @@ fn felinor_set_stat() -> AuraHook {
             health += face.health + unit.buffs.health;
         };
         for unit in zones::active_units_of(state, me.controller) {
-            count(&unit);
+            count(unit);
         }
         for unit in zones::dormant_units_of(state, me.controller) {
-            count(&unit);
+            count(unit);
         }
         let id = me.id.clone();
         // R39: "never below printed", so the contribution itself never goes negative.

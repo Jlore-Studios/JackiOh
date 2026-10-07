@@ -338,7 +338,7 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
                         radiant,
                     })
                 });
-                assert_eq!(has, Some(name_of(&power.name) == "ping"));
+                assert_eq!(has, Some(name_of(power.name) == "ping"));
             }
         }
         // R81: only Ping declares a target, any unit or hero.
@@ -396,7 +396,7 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
     fn r752_a_use_pays_x_once_per_turn_is_refused_unaffordable_and_the_next_turn_is_a_new_use() {
         let mut state = game("r752-once");
         let card = powered(&mut state, "recruit", false, 1); // X 3
-        set_library(&mut state, P1, &[plain.id.clone()]);
+        set_library(&mut state, P1, std::slice::from_ref(&plain.id));
         keep_turn(&mut state);
         state.players.p1.mana.current = 2;
         assert_eq!(
@@ -634,7 +634,7 @@ mod heroic_power_the_powers_r753_r758 {
         assert_eq!(after.players.p1.hero.armor, TANK_UP_ARMOR);
         let changed = on_field_now(&after, &card.id);
         let next = power_of(&changed).expect("a new power");
-        assert_ne!(name_of(&next.name), "armor");
+        assert_ne!(name_of(next.name), "armor");
         assert_eq!(uses_this_turn(&after, &changed), 0);
         assert!(!used_this_turn(&after, &changed));
         // The armor stays into the next turn: Tank Up's is the hero's own (R757).
@@ -765,15 +765,15 @@ mod heroic_power_rolling_the_power_r43_r78 {
         let mut state = game("r43-ensure");
         let mut card = in_hand(&mut state, &heroic().id, P1, 1).remove(0);
         let mut sink = sink_for(&mut state);
-        let rolled = name_of(&ensure_power(&mut sink, &mut card).expect("a rolled power").name);
+        let rolled = name_of(ensure_power(&mut sink, &mut card).expect("a rolled power").name);
         assert_eq!(card.memory.get(POWER_KEY), Some(&json!(rolled)));
         assert_eq!(
-            ensure_power(&mut sink, &mut card).map(|power| name_of(&power.name)),
+            ensure_power(&mut sink, &mut card).map(|power| name_of(power.name)),
             Some(rolled.clone())
         );
         card.memory.insert(POWER_KEY.to_string(), json!("recruit"));
         assert_eq!(
-            ensure_power(&mut sink, &mut card).map(|power| name_of(&power.name)),
+            ensure_power(&mut sink, &mut card).map(|power| name_of(power.name)),
             Some("recruit".to_string())
         );
     }

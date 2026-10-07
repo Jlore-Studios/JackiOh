@@ -162,11 +162,6 @@ pub static DATACENTER_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLoc
     ])
 });
 
-/// Part 24's brief, step 2: this file's test catalog (`datacenter_catalog` over nothing).
-pub fn catalog() -> CardDefs {
-    datacenter_catalog(CardDefs::new())
-}
-
 /// Part 24's brief, step 2: this file's scripts (`DATACENTER_SCRIPTS`).
 pub fn scripts() -> IndexMap<String, CardScripts> {
     DATACENTER_SCRIPTS.clone()

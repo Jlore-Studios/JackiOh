@@ -314,13 +314,3 @@ pub fn with_copied_text(state: GameState) -> GameState {
     register_copied_text();
     state
 }
-
-/// Part 24's brief, step 2: this file's test catalog (`CT_DEFS` by id).
-pub fn catalog() -> CardDefs {
-    CT_DEFS.iter().map(|card| (card.id.clone(), card.clone())).collect()
-}
-
-/// Part 24's brief, step 2: this file's scripts.
-pub fn scripts() -> IndexMap<String, CardScripts> {
-    SCRIPTS.clone()
-}

@@ -42,7 +42,7 @@ fn pile(state: &mut GameState, def_ids: &[String], owner: PlayerId) -> Vec<CardI
         if !place_on_field(
             &mut *state,
             &mut card,
-            &slot(PlayerId::P1, Row::Units, 1),
+            slot(PlayerId::P1, Row::Units, 1),
             json_as(json!({ "stack": true })),
         ) {
             panic!("could not stack");
@@ -139,7 +139,7 @@ mod e24_the_cards_beneath_a_stack_become_copies_of_its_top_classic_plus_4 {
         let mut start = playing("transform-beneath-immutable");
         let below = pile(&mut start.state, &[immutable.id.clone(), body.id.clone()], PlayerId::P1);
         let (locked, unlocked) = (below[0].clone(), must(below.get(1).cloned(), "a card"));
-        let top = must(pile(&mut start.state, &[juhan.id.clone()], PlayerId::P1).first().cloned(), "the top");
+        let top = must(pile(&mut start.state, std::slice::from_ref(&juhan.id), PlayerId::P1).first().cloned(), "the top");
         {
             let mut sink = sink_for(&mut start.state);
             run(&mut sink, transform_beneath(Default::default()), Some(&top));

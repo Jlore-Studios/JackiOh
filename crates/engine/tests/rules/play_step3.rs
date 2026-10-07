@@ -129,8 +129,8 @@ impl Sink {
 fn cast_and_settle(state: &mut GameState, card: &CardInstance) -> Vec<GameEvent> {
     let mut sink = Sink::for_state(state);
     sink.with(state, |s| {
-        let _ = resolve::cast_card(s, card, CastOptions::default());
-        let _ = triggers::settle(s, SettleOptions::default());
+        resolve::cast_card(s, card, CastOptions::default());
+        triggers::settle(s, SettleOptions::default());
     });
     sink.events
 }

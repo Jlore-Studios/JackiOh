@@ -159,13 +159,3 @@ pub static FRUIT_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::ne
         ),
     ])
 });
-
-/// Part 24's brief, step 2: this file's test catalog (`fruit_catalog` over nothing).
-pub fn catalog() -> CardDefs {
-    fruit_catalog(CardDefs::new())
-}
-
-/// Part 24's brief, step 2: this file's scripts (`FRUIT_SCRIPTS`).
-pub fn scripts() -> IndexMap<String, CardScripts> {
-    FRUIT_SCRIPTS.clone()
-}

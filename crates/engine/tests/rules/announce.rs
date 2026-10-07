@@ -104,7 +104,7 @@ impl Bench {
 }
 
 fn card_id_at(state: &GameState, at: ZoneSlot) -> Option<String> {
-    card_at(state, &at).map(|card| card.id.clone())
+    card_at(state, at).map(|card| card.id.clone())
 }
 
 mod r448_the_announce_between_s10_5_steps_3_and_4 {
@@ -228,7 +228,7 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
 
         assert_eq!(pluck(events, GameEventType::TrapFired, "instanceId"), vec![json!(first.id)]);
         assert_eq!(of_type(events, GameEventType::Countered).len(), 1);
-        let standing = card_at(after, &slot(PlayerId::P2, Row::Backrow, 2));
+        let standing = card_at(after, slot(PlayerId::P2, Row::Backrow, 2));
         assert_eq!(standing.map(|card| card.id.clone()), Some(second.id.clone()));
         assert_ne!(standing.and_then(|card| card.face_up), Some(true));
     }
@@ -680,7 +680,7 @@ mod r448_r97_r227_a_card_being_set_face_down_is_its_players_alone_while_it_waits
             json!({ "type": "answer", "choiceId": choice, "selection": [{ "pick": "mode", "option": "noted" }] }),
         )
         .state;
-        let set = card_at(&after, &slot(PlayerId::P1, Row::Backrow, 3));
+        let set = card_at(&after, slot(PlayerId::P1, Row::Backrow, 3));
         assert_eq!(set.map(|card| card.def_id.clone()), Some(PA.hidden_trap.id.clone()));
         assert_ne!(set.map(|card| card.id.clone()), Some(trap.id.clone()));
         let theirs = view_for(&after, PlayerId::P2);

@@ -10,7 +10,6 @@
 
 use jackioh_engine::effects::{damage, summon, summon_copy, summon_random};
 use jackioh_engine::testkit::*;
-use serde::Serialize;
 
 use super::fixtures::harness::{events_of_type, new_game, put, slot};
 
@@ -193,10 +192,6 @@ fn live(state: &GameState, id: &str) -> CardInstance {
 /// TS wrote through the live instance; Rust writes through the card found by id.
 fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id} in the state"))
-}
-
-fn to_json<T: Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialises")
 }
 
 /// `eventsOfType(events, "summoned").map((event) => event.lane)`.

@@ -201,7 +201,7 @@ fn first(cards: Vec<CardInstance>) -> CardInstance {
 }
 
 fn at(state: &GameState, player: PlayerId, row: Row, lane: i32) -> Option<String> {
-    card_at(state, &slot(player, row, lane)).map(|card| card.id.clone())
+    card_at(state, slot(player, row, lane)).map(|card| card.id.clone())
 }
 
 /// `newInstance` in `player`'s hand, then `placeOnField` on p1's unit lane 1: a unit p1 controls that
@@ -211,7 +211,7 @@ fn placed_from_hand_of(state: &mut GameState, def_id: &str, player: PlayerId) ->
     assert!(place_on_field(
         state,
         &mut card,
-        &slot(PlayerId::P1, Row::Units, 1),
+        slot(PlayerId::P1, Row::Units, 1),
         PlaceOnFieldOptions::default()
     ));
     card

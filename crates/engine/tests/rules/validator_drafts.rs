@@ -51,9 +51,12 @@ fn is_deckable() -> Arc<dyn Fn(&str) -> bool + Send + Sync> {
     })
 }
 
+/// TS `(portrait: unknown) => boolean`: the roster predicate a draft check is handed.
+type PortraitCheck = Arc<dyn Fn(&str) -> bool + Send + Sync>;
+
 /// The roster predicate a caller passes for D5: the wire's `is_portrait_id`, which reads any JSON
 /// value (TS's `unknown`).
-fn is_portrait() -> Arc<dyn Fn(&str) -> bool + Send + Sync> {
+fn is_portrait() -> PortraitCheck {
     Arc::new(|portrait: &str| is_portrait_id(&json!(portrait)))
 }
 
@@ -63,7 +66,7 @@ fn draft_issues(
     name: &str,
     cards: &[String],
     portrait: Option<&str>,
-    is_portrait: Option<Arc<dyn Fn(&str) -> bool + Send + Sync>>,
+    is_portrait: Option<PortraitCheck>,
 ) -> Value {
     let is_deckable = is_deckable();
     let input = DeckDraftInput {
@@ -248,7 +251,7 @@ mod r641_d5_a_saved_decks_portrait_is_null_or_a_known_portrait_id {
     /// A draft carrying `portrait`, D5-checked against the shared roster as the caller passes it.
     fn portrait_draft(
         portrait: Option<&str>,
-        is_portrait: Option<Arc<dyn Fn(&str) -> bool + Send + Sync>>,
+        is_portrait: Option<PortraitCheck>,
     ) -> Value {
         draft_issues("Aggro", &[], portrait, is_portrait)
     }

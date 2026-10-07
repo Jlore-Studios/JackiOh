@@ -544,13 +544,3 @@ pub fn flush(state: &mut GameState, player: PlayerId, mana: i32) {
     state.players[player].mana.current = mana;
     state.players[player].mana.max = mana;
 }
-
-/// Part 24's brief, step 2: this file's test catalog (`FIELD_DEFS` by id).
-pub fn catalog() -> CardDefs {
-    FIELD_DEFS.iter().map(|card| (card.id.clone(), card.clone())).collect()
-}
-
-/// Part 24's brief, step 2: this file's scripts (`FIELD_SCRIPTS`).
-pub fn scripts() -> IndexMap<String, CardScripts> {
-    FIELD_SCRIPTS.clone()
-}

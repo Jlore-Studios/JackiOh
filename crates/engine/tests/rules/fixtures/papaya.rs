@@ -89,7 +89,7 @@ pub fn curve_quickdraw() -> CardDef {
 fn curve_script() -> Script {
     Script {
         cry: Some(hook(|_ctx| papaya_begin())),
-        resume: IndexMap::from([(PAPAYA_STEP, hook(|ctx| papaya_answered(ctx)))]),
+        resume: IndexMap::from([(PAPAYA_STEP, hook(papaya_answered))]),
         ..Script::default()
     }
 }

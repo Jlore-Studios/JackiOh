@@ -502,11 +502,6 @@ pub fn combat_catalog(base: CardDefs) -> CardDefs {
     defs
 }
 
-/// Part 24's brief, step 2: this file's test catalog (`combat_catalog` over nothing).
-pub fn catalog() -> CardDefs {
-    combat_catalog(CardDefs::new())
-}
-
 /// Part 24's brief, step 2: this file's scripts (`COMBAT_SCRIPTS`).
 pub fn scripts() -> IndexMap<String, CardScripts> {
     COMBAT_SCRIPTS.clone()

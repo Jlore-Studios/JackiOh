@@ -51,8 +51,8 @@ mod card_scopes_r242_r440 {
     #[test]
     fn r242_walks_public_cards_first_then_hands_and_face_down_traps_then_decks_the_active_side_first_in_each_group() {
         let mut state = game(PlayerId::P2);
-        let deck1 = first_id(set_library(&mut state, PlayerId::P1, &[plain.id.clone()]));
-        let deck2 = first_id(set_library(&mut state, PlayerId::P2, &[plain.id.clone()]));
+        let deck1 = first_id(set_library(&mut state, PlayerId::P1, std::slice::from_ref(&plain.id)));
+        let deck2 = first_id(set_library(&mut state, PlayerId::P2, std::slice::from_ref(&plain.id)));
         let hand1 = first_id(in_hand(&mut state, &plain.id, PlayerId::P1, 1));
         let hand2 = first_id(in_hand(&mut state, &plain.id, PlayerId::P2, 1));
         let unit1 = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
@@ -66,7 +66,7 @@ mod card_scopes_r242_r440 {
                 Default::default(),
             );
             let ids: Vec<String> = walk.iter().map(|entry| entry.card.id.clone()).collect();
-            let readers: Vec<Value> = walk.iter().map(|entry| serde_json::to_value(&entry.readers).unwrap()).collect();
+            let readers: Vec<Value> = walk.iter().map(|entry| serde_json::to_value(entry.readers).unwrap()).collect();
             (ids, readers)
         });
         assert_eq!(ids, vec![field2.id.clone(), unit1.id.clone(), hand2, trap1.id.clone(), hand1, deck2, deck1]);
@@ -138,7 +138,7 @@ mod card_scopes_r242_r440 {
     fn r177_who_may_not_read_a_card_where_it_sits_both_for_a_deck_card_the_other_player_for_a_hand_card_or_a_face_down_trap(
     ) {
         let mut state = game(PlayerId::P1);
-        let deck = set_library(&mut state, PlayerId::P1, &[plain.id.clone()]).into_iter().next();
+        let deck = set_library(&mut state, PlayerId::P1, std::slice::from_ref(&plain.id)).into_iter().next();
         let held = in_hand(&mut state, &plain.id, PlayerId::P2, 1).into_iter().next();
         let trap = put(&mut state, &blood_moon.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
         let unit = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));

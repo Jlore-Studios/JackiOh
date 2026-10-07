@@ -32,10 +32,10 @@ mod config_constants_build_s2 {
 
     #[test]
     fn holds_the_spec_s11_decide_rows_at_their_recommended_values() {
-        assert!(CRY_ON_PLAY_ONLY); // R1
+        const { assert!(CRY_ON_PLAY_ONLY) }; // R1
         assert_eq!(TURN_CAP_PLAYER_TURNS, 60); // R2, R389 (patch v0.2.0 doubled it)
         assert_eq!(HAND_CAP, 10); // R4
-        assert!(!LANE_RESTRICTED_ATTACKS); // R5
+        const { assert!(!LANE_RESTRICTED_ATTACKS) }; // R5
         assert_eq!(ROTATION_RING, "two-rings"); // R14
         assert_eq!(GENN_GREED_EXILES, "odd"); // R26
         assert_eq!(FIENDER_STATS_MODE, "printed-plus-sum"); // R39

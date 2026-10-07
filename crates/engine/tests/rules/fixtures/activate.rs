@@ -397,7 +397,7 @@ fn heroic_face(radiant: bool) -> Script {
         static_flags: quickdraw(),
         start_of_game: Some(hook(|_ctx| vec![roll_power()])),
         activations: power_abilities(radiant),
-        resume: IndexMap::from([(POWER_RESUME, hook(|ctx| hero_power(ctx)))]),
+        resume: IndexMap::from([(POWER_RESUME, hook(hero_power))]),
         ..Script::default()
     }
 }
@@ -633,14 +633,4 @@ pub fn activate_catalog(base: CardDefs) -> CardDefs {
         defs.insert(entry.id.clone(), entry.clone());
     }
     defs
-}
-
-/// Part 24's brief, step 2: this file's test catalog (`activate_catalog` over nothing).
-pub fn catalog() -> CardDefs {
-    activate_catalog(CardDefs::new())
-}
-
-/// Part 24's brief, step 2: this file's scripts (`ACTIVATE_SCRIPTS`).
-pub fn scripts() -> IndexMap<String, CardScripts> {
-    ACTIVATE_SCRIPTS.clone()
 }

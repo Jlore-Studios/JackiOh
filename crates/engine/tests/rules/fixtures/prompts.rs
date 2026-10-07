@@ -281,7 +281,7 @@ fn papaya_script() -> Script {
                             row: if cell.row == Row::Units { Row::Units } else { Row::Backrow },
                             lane: cell.lane,
                         };
-                        zones::card_at(&*ctx.state, &slot).map(|card| card.id.clone())
+                        zones::card_at(&*ctx.state, slot).map(|card| card.id.clone())
                     })
                     .map(|id| effects::exile(json_as(json!({ "target": { "of": "instance", "instanceId": id } }))))
                     .collect()

@@ -154,15 +154,17 @@ fn check_snapshot(
     snapshot: &Value,
     state: &GameState,
     events: &[GameEvent],
-) -> Result<(), Mismatch> {
-    let mismatch = |which: &'static str, expected: String, actual: String, text: &str| Mismatch {
-        seed: seed.to_string(),
-        step: step.to_string(),
-        which,
-        expected,
-        actual,
-        action: action.map(str::to_string),
-        diff: Some(write_diff(seed, step, which, text)),
+) -> Result<(), Box<Mismatch>> {
+    let mismatch = |which: &'static str, expected: String, actual: String, text: &str| {
+        Box::new(Mismatch {
+            seed: seed.to_string(),
+            step: step.to_string(),
+            which,
+            expected,
+            actual,
+            action: action.map(str::to_string),
+            diff: Some(write_diff(seed, step, which, text)),
+        })
     };
 
     let s = hash_state(state);
@@ -194,7 +196,7 @@ fn check_snapshot(
 }
 
 /// Replays one line of `games.jsonl` (§13.3). `Ok` carries the number of steps replayed.
-fn replay_line(index: usize, line: &str) -> Result<usize, Mismatch> {
+fn replay_line(index: usize, line: &str) -> Result<usize, Box<Mismatch>> {
     let game: Value = serde_json::from_str(line)
         .unwrap_or_else(|error| panic!("games.jsonl line {}: not JSON: {error}", index + 1));
     let seed = game["seed"]
@@ -212,7 +214,7 @@ fn replay_line(index: usize, line: &str) -> Result<usize, Mismatch> {
 
     let begun = begin_game(&create_game(&args));
     if let Some(error) = begun.error {
-        return Err(Mismatch {
+        return Err(Box::new(Mismatch {
             seed,
             step: "begin".to_string(),
             which: "refused",
@@ -220,7 +222,7 @@ fn replay_line(index: usize, line: &str) -> Result<usize, Mismatch> {
             actual: format!("an error: {error}"),
             action: None,
             diff: None,
-        });
+        }));
     }
     let mut state = begun.state;
     check_snapshot(&seed, "begin", None, &game["begin"], &state, &begun.events)?;
@@ -237,7 +239,7 @@ fn replay_line(index: usize, line: &str) -> Result<usize, Mismatch> {
         let hash = fnv1a32_utf16(&text);
         let expected = recorded(step, "l");
         if hash != expected {
-            return Err(Mismatch {
+            return Err(Box::new(Mismatch {
                 seed: seed.clone(),
                 step: label.clone(),
                 which: "l",
@@ -245,12 +247,12 @@ fn replay_line(index: usize, line: &str) -> Result<usize, Mismatch> {
                 actual: hash,
                 action: Some(action_json),
                 diff: Some(write_diff(&seed, &label, "l", &text)),
-            });
+            }));
         }
 
         let result = reduce(&state, &action);
         if let Some(error) = result.error {
-            return Err(Mismatch {
+            return Err(Box::new(Mismatch {
                 seed: seed.clone(),
                 step: label.clone(),
                 which: "refused",
@@ -258,7 +260,7 @@ fn replay_line(index: usize, line: &str) -> Result<usize, Mismatch> {
                 actual: format!("a refusal: {error}"),
                 action: Some(action_json),
                 diff: Some(write_diff(&seed, &label, "refused", &hashed_state_text(&state))),
-            });
+            }));
         }
         state = result.state;
         check_snapshot(&seed, &label, Some(&action_json), step, &state, &result.events)?;
@@ -270,7 +272,7 @@ fn replay_line(index: usize, line: &str) -> Result<usize, Mismatch> {
         "steps": steps.len(),
     });
     if ending != game["end"] {
-        return Err(Mismatch {
+        return Err(Box::new(Mismatch {
             seed,
             step: "end".to_string(),
             which: "end",
@@ -278,7 +280,7 @@ fn replay_line(index: usize, line: &str) -> Result<usize, Mismatch> {
             actual: ending.to_string(),
             action: None,
             diff: None,
-        });
+        }));
     }
     Ok(steps.len())
 }
@@ -291,7 +293,7 @@ fn golden_lines() -> Vec<&'static str> {
 /// Replays every game of one shard and fails with every divergent game's first mismatch.
 fn replay_shard(shard: usize) {
     register_all();
-    let mut failures: Vec<Mismatch> = Vec::new();
+    let mut failures: Vec<Box<Mismatch>> = Vec::new();
     let mut games = 0usize;
     let mut steps = 0usize;
     for (index, line) in golden_lines().into_iter().enumerate() {
@@ -309,7 +311,7 @@ fn replay_shard(shard: usize) {
         "golden shard {shard}: {} of {games} games diverged from their TypeScript trace \
          ({steps} steps of the others replayed identically):\n{}",
         failures.len(),
-        failures.iter().map(Mismatch::report).collect::<Vec<_>>().join("\n")
+        failures.iter().map(|mismatch| mismatch.report()).collect::<Vec<_>>().join("\n")
     );
 }
 

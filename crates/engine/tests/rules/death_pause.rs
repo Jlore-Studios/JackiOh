@@ -397,7 +397,7 @@ mod a_prompt_inside_4_5_step_3s_death_hooks_r89_r113_r117_r122 {
         let second = doomed(&mut state, &ask_two().id, P1, 2);
         let far = doomed(&mut state, &quiet_unit().id, P2, 1);
 
-        let events = with_sink(&mut state, |sink| state_check(sink));
+        let events = with_sink(&mut state, state_check);
 
         // Step 1 collected all three at once and step 3 got exactly as far as the first question.
         assert_eq!(notes(&state), vec!["ask:one"]);
@@ -471,10 +471,10 @@ mod a_prompt_inside_4_5_step_3s_death_hooks_r89_r113_r117_r122 {
         let mut state = playing("deaths-snapshot");
         let dying = doomed(&mut state, &ask_one().id, P1, 1);
 
-        with_sink(&mut state, |sink| state_check(sink));
+        with_sink(&mut state, state_check);
         // R78 has already reset the instance on the board, so the buff is gone from every zone.
         assert_eq!(
-            state.players.p1.graveyard.iter().find(|card| card.id == dying.id).map(|card| card.buffs.clone()),
+            state.players.p1.graveyard.iter().find(|card| card.id == dying.id).map(|card| card.buffs),
             Some(AttackHealth { attack: 0, health: 0 })
         );
         // And the parked pass carries the snapshot instead, which is where the tail's `ctx.self` comes
@@ -494,7 +494,7 @@ mod a_prompt_inside_4_5_step_3s_death_hooks_r89_r113_r117_r122 {
         let mut state = playing("deaths-reborn");
         let dying = doomed(&mut state, &reborn_asker().id, P1, 3);
 
-        with_sink(&mut state, |sink| state_check(sink));
+        with_sink(&mut state, state_check);
         // Step 4 is behind the pause, so the zone is reserved and still empty (R64).
         assert!(state.pending.is_some());
         assert!(card_at(&state, slot(P1, Row::Units, 3)).is_none());
@@ -527,7 +527,7 @@ mod a_prompt_inside_4_5_step_3s_death_hooks_r89_r113_r117_r122 {
         let second = doomed(&mut state, &quiet_unit().id, P1, 2);
         let far = doomed(&mut state, &quiet_unit().id, P2, 1);
 
-        let events = with_sink(&mut state, |sink| state_check(sink));
+        let events = with_sink(&mut state, state_check);
 
         // Every hook ran, in R68's order, inside the one call — and each read its own snapshot.
         assert_eq!(
@@ -667,7 +667,7 @@ mod a_state_check_that_begins_while_a_prompt_is_already_open_4_5_r113_r117_r156 
         let mut state = playing("deaths-no-prompt-open");
         let dying = doomed(&mut state, &quiet_unit().id, P1, 1);
 
-        with_sink(&mut state, |sink| state_check(sink));
+        with_sink(&mut state, state_check);
 
         assert!(state.pending.is_none());
         assert_eq!(notes(&state), vec!["quiet:before", "quiet:tail:3"]);

@@ -773,11 +773,6 @@ pub static PB_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
     table
 });
 
-/// This file's definitions, by id (the brief's `catalog()`).
-pub fn catalog() -> CardDefs {
-    PB_DEFS.iter().map(|card| (card.id.clone(), card.clone())).collect()
-}
-
 /// This file's scripts, by id (the brief's `scripts()`).
 pub fn scripts() -> IndexMap<String, CardScripts> {
     PB_SCRIPTS.clone()

@@ -141,13 +141,3 @@ pub static TWICE_FORWARD_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = Lazy
     );
     table
 });
-
-/// This file's definitions, by id (the brief's `catalog()`).
-pub fn catalog() -> CardDefs {
-    twice_forward_catalog(CardDefs::new())
-}
-
-/// This file's scripts, by id (the brief's `scripts()`).
-pub fn scripts() -> IndexMap<String, CardScripts> {
-    TWICE_FORWARD_SCRIPTS.clone()
-}

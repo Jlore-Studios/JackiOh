@@ -295,7 +295,7 @@ mod r423_c_plus_73s_table {
                 .events
                 .iter()
                 .filter(|event| event.event_type() == GameEventType::Upgraded)
-                .map(|event| json_of(event))
+                .map(json_of)
                 .collect();
             assert!(!upgrades.is_empty());
             assert!(upgrades.iter().all(|event| event["instanceId"] == json!(HIDDEN_ID)));
@@ -472,7 +472,7 @@ mod r423_c_plus_73s_table {
                 .map(|name| {
                     CHAOS_PLUS_EFFECTS
                         .iter()
-                        .position(|effect| effect.name.to_string() == *name)
+                        .position(|effect| effect.name == name.as_str())
                         .map(|at| at as i64)
                         .unwrap_or(-1)
                 })

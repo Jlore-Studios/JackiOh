@@ -107,7 +107,7 @@ mod e7_set_health {
             "playerId": "p1",
         }));
         for viewer in [PlayerId::P1, PlayerId::P2] {
-            let seen: Vec<Value> = view_for(&game.state(), viewer)
+            let seen: Vec<Value> = view_for(game.state(), viewer)
                 .events
                 .iter()
                 .filter(|event| event.event_type() == GameEventType::HealthSet)
@@ -115,7 +115,7 @@ mod e7_set_health {
                 .collect();
             assert_eq!(seen, vec![json!({ "type": "healthSet", "player": "p2", "health": 13, "sourceId": spell.id })]);
         }
-        assert!(replays_to(&game.start, &game.log, &game.state()));
+        assert!(replays_to(&game.start, &game.log, game.state()));
     }
 }
 

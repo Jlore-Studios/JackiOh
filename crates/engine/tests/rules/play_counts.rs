@@ -109,8 +109,8 @@ mod r451_plays_by_type_this_turn_classic_plus_c37 {
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         {
             let mut sink = EngineSink::new(&mut state, &mut events, &mut rng);
-            let _ = resolve::cast_card(&mut sink, &ping, CastOptions::default());
-            let _ = triggers::settle(&mut sink, SettleOptions::default());
+            resolve::cast_card(&mut sink, &ping, CastOptions::default());
+            triggers::settle(&mut sink, SettleOptions::default());
         }
         assert_eq!(state.active, PlayerId::P1);
         assert_eq!(of_type(&state, PlayerId::P2, &[CardType::Spell]), 1);

@@ -12,6 +12,7 @@
 //!   - a unit on top of its pile, either seat's;
 //!   - a backrow card face-up to the viewer: a Field Spell and a fired Field Trap for both, a
 //!     face-down Trap or Field Trap for its controller alone (R33).
+//!
 //! Never: the opponent's hand, a library card, a card buried under a Stack, a graveyard, exile or
 //! resolving card — and the hook is not even asked about those. Absent, never `[]`, when the hook
 //! answers nothing or the card has none.
@@ -680,7 +681,7 @@ mod r280_preview_on_the_field {
         let mut state = game("r280-buried");
         let buried = put(&mut state, &pv_unit().id, slot(P1, Row::Units, 3), json!({}));
         let mut top = new_instance(&mut state, &plain_stack().id, P1, Zone::Hand { player: P1 });
-        assert!(place_on_field(&mut state, &mut top, &slot(P1, Row::Units, 3), json_as(json!({ "stack": true }))));
+        assert!(place_on_field(&mut state, &mut top, slot(P1, Row::Units, 3), json_as(json!({ "stack": true }))));
 
         for viewer in [P1, P2] {
             let view = view_for(&state, viewer);
@@ -700,7 +701,7 @@ mod r280_preview_on_the_field {
         assert!(place_on_field(
             &mut state,
             &mut hooked_top,
-            &slot(P1, Row::Units, 4),
+            slot(P1, Row::Units, 4),
             json_as(json!({ "stack": true }))
         ));
         clear_hooks();

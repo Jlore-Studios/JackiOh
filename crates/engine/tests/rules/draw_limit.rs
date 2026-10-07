@@ -427,7 +427,7 @@ mod r459_b5_e39_and_classic_plus_26_cast_on_draw {
     fn r459_the_cast_on_draw_enchantment_makes_a_drawn_card_cast_on_draw() {
         let mut state = playing("enchanted");
         let library = set_library(&mut state, PlayerId::P1, &[plain().id, "fx-6".to_string()]);
-        assert!(library.first().is_some(), "no card");
+        assert!(!library.is_empty(), "no card");
         let mut bench = Bench::new(&state);
         assert_eq!(draw_one(&mut bench.sink(&mut state), PlayerId::P1, None), DrawOutcome::Drawn);
         assert_eq!(notes(&state), Vec::<String>::new());

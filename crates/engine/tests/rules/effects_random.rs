@@ -660,8 +660,8 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
         assert_eq!(keys, vec!["t-1:rn-alpha+rn-beta", "t-2:rn-alpha+rn-beta"]);
 
         // Both targets survived as the fused cards, in their own lanes (R77 keeps the instance).
-        let kept_first = card_at(&state, &slot(PlayerId::P1, Row::Units, 2)).cloned();
-        let kept_second = card_at(&state, &slot(PlayerId::P1, Row::Units, 3)).cloned();
+        let kept_first = card_at(&state, slot(PlayerId::P1, Row::Units, 2)).cloned();
+        let kept_second = card_at(&state, slot(PlayerId::P1, Row::Units, 3)).cloned();
         assert_eq!(kept_first.as_ref().map(|c| c.id.clone()), Some(first.id.clone()));
         assert_eq!(kept_second.as_ref().map(|c| c.id.clone()), Some(second.id.clone()));
         // Each kept card now IS a fused card, and the two fusions are distinct definitions.
@@ -762,7 +762,7 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
         tags.sort();
         assert_eq!(tags, vec!["Felinor", "Human"]);
         // R77's cap: 3 + 2 is 5, which is more than FUSE_COST_CAP, so the definition costs 4.
-        assert_eq!(serde_json::to_value(&fused.cost).expect("a cost serialises"), json!(FUSE_COST_CAP));
+        assert_eq!(serde_json::to_value(fused.cost).expect("a cost serialises"), json!(FUSE_COST_CAP));
 
         // "the result costs 0 and goes to your hand": a fresh, non-Radiant instance with an override,
         // so the printed 4 stands on the definition and R65 reads 0 off the card.
@@ -866,7 +866,7 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
         let view = unit_view(&state, now);
         assert_eq!((view.attack, view.max_health, view.health), (3, 4, 3));
         // The other ingredient ceased to exist: no graveyard, no death, no pile.
-        assert!(card_at(&state, &slot(PlayerId::P1, Row::Units, 2)).is_none());
+        assert!(card_at(&state, slot(PlayerId::P1, Row::Units, 2)).is_none());
         assert!(find_instance(&state, &played.id).is_none());
         assert!(state.players.p1.graveyard.is_empty());
     }
@@ -963,7 +963,7 @@ mod r14_r88_rotate_s6_3_rotate_s3_1s_rotation_topology_s8_3_c52 {
     fn r14_r88_delegates_the_locked_destination_bounce_rather_than_walking_the_ring_itself() {
         let mut state = game("rotate-locked");
         let blocked = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        lock_zone(&mut state, &slot(PlayerId::P1, Row::Units, 2));
+        lock_zone(&mut state, slot(PlayerId::P1, Row::Units, 2));
 
         let ran = run(&mut state, &[turning("right")], as_p1());
 

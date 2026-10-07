@@ -49,7 +49,7 @@ fn locked_zones(state: &GameState) -> Vec<String> {
     for player in [PlayerId::P1, PlayerId::P2] {
         for row in [Row::Units, Row::Backrow] {
             for zone in slots_of(player, row) {
-                if is_locked(state, &zone) {
+                if is_locked(state, zone) {
                     zones.push(format!("{}:{}:{}", player.as_str(), row.as_str(), zone.lane));
                 }
             }
@@ -84,7 +84,7 @@ impl Sink {
 
 /// `cardAt(state, ref)?.id`.
 fn id_at(state: &GameState, at: ZoneSlot) -> Option<String> {
-    card_at(state, &at).map(|card| card.id.clone())
+    card_at(state, at).map(|card| card.id.clone())
 }
 
 fn pluck<T: serde::Serialize>(events: &T, key: &str) -> Vec<Value> {
@@ -227,7 +227,7 @@ mod b5_e20_lock_a_random_zone {
         let unit = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let mut sink = sink_for(&state);
         sink.apply_as_p1(&mut state, lock_random_zone(json_as(json!({ "side": "enemy" }))), None);
-        assert!(is_locked(&state, &slot(PlayerId::P2, Row::Units, 1)));
+        assert!(is_locked(&state, slot(PlayerId::P2, Row::Units, 1)));
         assert_eq!(id_at(&state, slot(PlayerId::P2, Row::Units, 1)), Some(unit.id.clone()));
     }
 }
@@ -240,7 +240,7 @@ mod b5_e20_lock_the_firing_trap_s_own_zone {
         let mut state = playing("lock-own");
         let trap = put(&mut state, &doom.id, slot(PlayerId::P2, Row::Backrow, 4), json!({}));
         let out = play(&mut state, &plain.id, Some((Row::Units, 1)), false);
-        assert!(is_locked(&out.state, &slot(PlayerId::P2, Row::Backrow, 4)));
+        assert!(is_locked(&out.state, slot(PlayerId::P2, Row::Backrow, 4)));
         assert_eq!(id_at(&out.state, slot(PlayerId::P2, Row::Backrow, 4)), None);
         let consumed = find_instance(&out.state, &trap.id);
         assert_eq!(consumed.map(|card| card.zone.z()), Some(ZoneName::Graveyard));

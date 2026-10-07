@@ -202,7 +202,7 @@ fn completed_quest(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String>
 
 fn tree_script(radiant: bool) -> Script {
     let answer = TriggerDef::new("quest-completed", &[GameEventType::QuestCompleted], move |ctx, event| {
-        let quest = completed_quest(ctx, event).and_then(|id| quest_def_of(&TREE, &id).map(|quest| QuestDef::clone(&quest)));
+        let quest = completed_quest(ctx, event).and_then(|id| quest_def_of(&TREE, &id).cloned());
         let Some(quest) = quest else {
             return vec![];
         };

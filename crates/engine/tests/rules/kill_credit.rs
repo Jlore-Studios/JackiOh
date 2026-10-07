@@ -101,7 +101,7 @@ mod r42_r412_with_kill_credit {
         assert_eq!(destroyed(&result.events), vec![(victim.id.clone(), Some(striker.id.clone()))]);
         let live = find_instance(&result.state, &credited.id);
         assert_eq!(live.map(|card| card.buffs.attack), Some(0));
-        assert!(live.is_some_and(|card| restrictions::is_berserk(card)));
+        assert!(live.is_some_and(restrictions::is_berserk));
     }
 
     #[test]

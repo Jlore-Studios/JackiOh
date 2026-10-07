@@ -77,7 +77,7 @@ fn field_spell() -> CardDef {
 
 /// TS `tokenDef("rush")` (its `tags` default, `["Token"]`, written out).
 fn rush_token() -> CardDef {
-    token_def("rush", &[Tag::Token])
+    token_def("rush", [Tag::Token])
 }
 
 fn defs() -> Vec<CardDef> {
@@ -198,7 +198,7 @@ fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
 
 /// `cardAt(state, ref)?.id`.
 fn id_at(state: &GameState, at: ZoneSlot) -> Option<String> {
-    card_at(state, &at).map(|card| card.id.clone())
+    card_at(state, at).map(|card| card.id.clone())
 }
 
 fn ids(cards: &[CardInstance]) -> Vec<String> {
@@ -298,7 +298,7 @@ mod destroy_m3_t1 {
     fn r12_a_stolen_unit_destroyed_goes_to_its_owner_s_graveyard() {
         let mut state = default_game();
         let mut theirs = new_instance(&mut state, "fx-4", PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
-        assert!(place_on_field(&mut state, &mut theirs, &slot(PlayerId::P1, Row::Units, 1), Default::default()));
+        assert!(place_on_field(&mut state, &mut theirs, slot(PlayerId::P1, Row::Units, 1), Default::default()));
         let theirs = live(&state, &theirs.id).clone();
         let mut run = runner(&state);
 
@@ -455,7 +455,7 @@ mod sacrifice_m3_t1 {
     fn r12_a_sacrificed_stolen_unit_goes_to_its_owner_s_graveyard() {
         let mut state = default_game();
         let mut theirs = new_instance(&mut state, "fx-4", PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
-        assert!(place_on_field(&mut state, &mut theirs, &slot(PlayerId::P1, Row::Units, 1), Default::default()));
+        assert!(place_on_field(&mut state, &mut theirs, slot(PlayerId::P1, Row::Units, 1), Default::default()));
         let theirs = live(&state, &theirs.id).clone();
         let mut run = runner(&state);
 

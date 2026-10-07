@@ -223,7 +223,7 @@ mod r27_combo_index_s8_93_m3_t7 {
 
         let card = super::card(sink.state, &card.id).clone();
         assert!(!grade_rises(sink.state, &card));
-        let effects = combo_index_end_of_turn(&mut sink, &card);
+        let effects = combo_index_end_of_turn(&sink, &card);
         assert!(effects.is_empty());
 
         run(&mut sink, &card, effects);
@@ -300,7 +300,7 @@ mod r27_combo_index_s8_93_m3_t7 {
             }
             let from = sink.events.len();
 
-            let effects = combo_index_end_of_turn(&mut sink, &card);
+            let effects = combo_index_end_of_turn(&sink, &card);
             run(&mut sink, &card, effects);
             (card.id, hand.len(), from)
         };
@@ -356,7 +356,7 @@ mod r27_combo_index_s8_93_m3_t7 {
 
         assert_eq!(plays_this_turn(sink.state, P1), 10);
         assert!(!grade_rises(sink.state, &card));
-        let effects = combo_index_end_of_turn(&mut sink, &card);
+        let effects = combo_index_end_of_turn(&sink, &card);
         assert!(effects.is_empty());
         run(&mut sink, &card, effects);
 
@@ -398,7 +398,7 @@ mod r27_combo_index_s8_93_m3_t7 {
         assert!(copy.radiant); // R27: the radiant flag is kept
         assert_eq!(copy.zone, Zone::Hand { player: P1 });
         assert_eq!(copy.damage, 0);
-        assert_eq!(json_of(&copy.counters), json!({}));
+        assert_eq!(json_of(copy.counters), json!({}));
         // The card it copied is untouched, still in the graveyard where its cast left it.
         assert_eq!(
             state.players.p1.graveyard.iter().map(|held| held.id.clone()).collect::<Vec<String>>(),
@@ -650,7 +650,7 @@ mod r27_combo_index_s8_93_m3_t7 {
         // E copied the played card and D discounted two hand cards, before the turn ended (§2.2).
         let added: Vec<Value> = events_of_type(sink.events, GameEventType::AddedToHand)
             .iter()
-            .map(|event| json_of(event))
+            .map(json_of)
             .filter(|event| event["player"] == json!("p1"))
             .collect();
         assert_eq!(added.len(), 1);

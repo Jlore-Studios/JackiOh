@@ -427,7 +427,7 @@ mod r361_r42_killer_of_the_unit_that_destroyed_a_card_as_its_death_hook_reads_it
 
         // Buried under a Stack pile, it is no longer acting on the field.
         let mut top = new_instance(&mut state, &plain.id, P2, Zone::Hand { player: P2 });
-        assert!(place_on_field(&mut state, &mut top, &slot(P2, Row::Units, 2), json_as(json!({ "stack": true }))));
+        assert!(place_on_field(&mut state, &mut top, slot(P2, Row::Units, 2), json_as(json!({ "stack": true }))));
         assert!(killer_of(&state, Some(&dying)).is_none());
 
         // And in a graveyard it is gone for good.

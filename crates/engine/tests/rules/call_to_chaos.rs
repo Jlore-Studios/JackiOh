@@ -518,7 +518,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
                 .map(|name| {
                     CHAOS_EFFECTS
                         .iter()
-                        .position(|effect| effect.name.to_string() == *name)
+                        .position(|effect| effect.name == name.as_str())
                         .map(|at| at as i64)
                         .unwrap_or(-1)
                 })
@@ -619,7 +619,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         // First, before the first rolled effect lands anything.
         assert_eq!(events.first().map(|event| event.event_type()), Some(GameEventType::ChaosRolled));
         // Every label is a clause of the card's printed list, readable as it stands.
-        assert!(expected.iter().all(|label| CHAOS_EFFECTS.iter().any(|effect| effect.label.to_string() == *label)));
+        assert!(expected.iter().all(|label| CHAOS_EFFECTS.iter().any(|effect| effect.label == label.as_str())));
         assert!(expected.contains(&"Heal your hero 30".to_string()));
 
         // The base face names its one.

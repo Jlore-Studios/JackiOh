@@ -357,11 +357,11 @@ mod e34_the_perfect_hand_ranking_r29_r387_r416 {
         state.players.p2.hero.health = 4;
         let lethal = rank_perfect_hand(&state, P1, json_as(json!({ "selfDefId": zealot().id })));
         assert_eq!(lethal.first().map(|scored| scored.def.id.clone()), Some(charger().id));
-        assert_eq!(lethal.first().map(|scored| json_of(&scored.priority)), Some(json!("lethal")));
+        assert_eq!(lethal.first().map(|scored| json_of(scored.priority)), Some(json!("lethal")));
         state.players.p2.hero.health = 30;
         let value = rank_perfect_hand(&state, P1, json_as(json!({ "selfDefId": zealot().id })));
         assert_eq!(value.first().map(|scored| scored.def.id.clone()), Some(big_body().id));
-        assert!(value.iter().all(|scored| json_of(&scored.priority) != json!("lethal")));
+        assert!(value.iter().all(|scored| json_of(scored.priority) != json!("lethal")));
     }
 
     #[test]

@@ -76,7 +76,7 @@ fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
 
 /// `cardAt(state, slot(player, row, lane))?.id`.
 fn id_at(state: &GameState, player: PlayerId, row: Row, lane: i32) -> Option<String> {
-    card_at(state, &slot(player, row, lane)).map(|card| card.id.clone())
+    card_at(state, slot(player, row, lane)).map(|card| card.id.clone())
 }
 
 mod r15_steal_s6_3_m3_t1 {
@@ -164,7 +164,7 @@ mod r15_steal_s6_3_m3_t1 {
         // An empty but Locked same lane is not free either, so the fallback applies again (§3.2).
         let mut locked = game();
         let other = put(&mut locked, &plain.id, slot(PlayerId::P2, Row::Units, 4), json!({}));
-        lock_zone(&mut locked, &slot(PlayerId::P1, Row::Units, 4));
+        lock_zone(&mut locked, slot(PlayerId::P1, Row::Units, 4));
 
         assert_eq!(of_type(&controls(&mut locked, &other), "controlChanged")[0]["lane"], json!(1));
         assert_eq!(id_at(&locked, PlayerId::P1, Row::Units, 1), Some(other.id.clone()));
@@ -232,7 +232,7 @@ mod r15_steal_s6_3_m3_t1 {
         assert!(place_on_field(
             &mut state,
             &mut top,
-            &slot(PlayerId::P2, Row::Units, 2),
+            slot(PlayerId::P2, Row::Units, 2),
             PlaceOnFieldOptions { stack: Some(true) }
         ));
 

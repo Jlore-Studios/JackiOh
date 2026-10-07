@@ -89,7 +89,7 @@ mod b3_3_rule_4_give_and_gain_r385 {
         let Some(held) = in_hand(&mut state, &plain.id, PlayerId::P1, 1).into_iter().next() else {
             panic!("no card");
         };
-        let Some(deck) = set_library(&mut state, PlayerId::P1, &[plain.id.clone()]).into_iter().next() else {
+        let Some(deck) = set_library(&mut state, PlayerId::P1, std::slice::from_ref(&plain.id)).into_iter().next() else {
             panic!("no card");
         };
         let events = run(

@@ -50,7 +50,7 @@ fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
 
 fn put(state: &mut GameState, def_id: &str, at: ZoneSlot, stack: bool) -> CardInstance {
     let mut card = new_instance(state, def_id, at.player, Zone::Hand { player: at.player });
-    let ok = place_on_field(state, &mut card, at, PlaceOnFieldOptions { stack: Some(stack), ..Default::default() });
+    let ok = place_on_field(state, &mut card, at, PlaceOnFieldOptions { stack: Some(stack) });
     assert!(ok);
     live(state, &card.id).clone()
 }

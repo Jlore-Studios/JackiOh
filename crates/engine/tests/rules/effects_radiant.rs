@@ -341,7 +341,7 @@ mod r60_make_radiant_at_random_m3_t1 {
         assert!(place_on_field(
             &mut state,
             &mut top,
-            &slot(PlayerId::P1, Row::Units, 3),
+            slot(PlayerId::P1, Row::Units, 3),
             PlaceOnFieldOptions { stack: Some(true) }
         ));
 

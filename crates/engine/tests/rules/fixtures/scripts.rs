@@ -23,10 +23,7 @@ fn spread(mut base: Value, extra: Value) -> Value {
 fn damage_all_enemies(amount: i32) -> Effect {
     Effect::new("fixture:damageAllEnemies", move |ctx| {
         let enemy = opponent_of(ctx.controller);
-        let units: Vec<CardInstance> = zones::active_units_of(&*ctx.state, enemy)
-            .iter()
-            .map(|unit| CardInstance::clone(unit))
-            .collect();
+        let units: Vec<CardInstance> = zones::active_units_of(&*ctx.state, enemy).into_iter().cloned().collect();
         for unit in units {
             let args = damage::DamageArgs {
                 source: ctx.self_.clone(),
@@ -283,10 +280,10 @@ fn heroic_power_script(radiant: bool) -> Script {
     Script {
         static_flags: flags(json!({ "quickdraw": true })),
         start_of_game: Some(hook(|_ctx| {
-            vec![effects::remember_random(json_as(json!({ "key": "power", "options": &*HERO_POWERS })))]
+            vec![effects::remember_random(json_as(json!({ "key": "power", "options": HERO_POWERS })))]
         })),
         activations: power_abilities(radiant),
-        resume: IndexMap::from([(POWER_RESUME, hook(|ctx| hero_power(ctx)))]),
+        resume: IndexMap::from([(POWER_RESUME, hook(hero_power))]),
         ..Script::default()
     }
 }
@@ -415,11 +412,6 @@ pub fn fixture_catalog(base: CardDefs) -> CardDefs {
         defs.insert(entry.id.clone(), entry.clone());
     }
     defs
-}
-
-/// This file's definitions, by id (the brief's `catalog()`): `fixtureCatalog({})`.
-pub fn catalog() -> CardDefs {
-    fixture_catalog(CardDefs::new())
 }
 
 /// This file's scripts, by id (the brief's `scripts()`): `FIXTURE_SCRIPTS`.

@@ -66,7 +66,7 @@ fn inline() -> IndexMap<String, CardScripts> {
             base: Script {
                 death: Some(hook(|_ctx| {
                     vec![discover_from_catalog(json_as(
-                        json!({ "step": "picked", "query": { "defId": &*DISCOVER_POOL } }),
+                        json!({ "step": "picked", "query": { "defId": DISCOVER_POOL } }),
                     ))]
                 })),
                 resume,
@@ -118,7 +118,7 @@ fn lanes(plays: &[Value]) -> Vec<Value> {
 }
 
 fn plays(state: &GameState, card: &CardInstance) -> Vec<Value> {
-    plays_of(state, &card.id, PlayerId::P1).iter().map(|play| play_json(play)).collect()
+    plays_of(state, &card.id, PlayerId::P1).iter().map(play_json).collect()
 }
 
 /// `whyChoicesRefused(state, "p1", card, { type: "play", instanceId, zone: { row: "units", lane }, tributes })`.
@@ -173,7 +173,7 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
         assert!(after.players.p1.graveyard.iter().any(|unit| unit.id == row[1].id));
         // Its Cry fired; the zone step 2 held is released.
         assert_eq!(after.players.p2.hero.health, before - 1);
-        assert!(!is_reserved(&after, &slot(PlayerId::P1, Row::Units, 2)));
+        assert!(!is_reserved(&after, slot(PlayerId::P1, Row::Units, 2)));
     }
 
     #[test]
@@ -197,7 +197,7 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
         assert!(place_on_field(
             &mut state,
             &mut top,
-            &slot(PlayerId::P1, Row::Units, 1),
+            slot(PlayerId::P1, Row::Units, 1),
             json_as(json!({ "stack": true }))
         ));
         assert_eq!(
@@ -205,7 +205,7 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
             Some(vec![top.id.clone(), row[0].id.clone()])
         );
         // Lane 3: Locked under its unit.
-        lock_zone(&mut state, &slot(PlayerId::P1, Row::Units, 3));
+        lock_zone(&mut state, slot(PlayerId::P1, Row::Units, 3));
 
         assert!(!freed_by_tribute(&state, &slot(PlayerId::P1, Row::Units, 1), &[top.id.clone()]));
         assert!(!freed_by_tribute(&state, &slot(PlayerId::P1, Row::Units, 2), &[row[1].id.clone()]));
@@ -276,7 +276,7 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
             json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 5 }, "tributes": [row[4].id], "playerId": "p1" }),
         );
         assert_eq!(paused.pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Discover));
-        assert!(is_reserved(&paused, &slot(PlayerId::P1, Row::Units, 5)));
+        assert!(is_reserved(&paused, slot(PlayerId::P1, Row::Units, 5)));
         let round: GameState =
             serde_json::from_value(serde_json::to_value(&paused).expect("serialises")).expect("deserialises");
         let answers: Vec<ActionBody> = legal_actions(&paused, PlayerId::P1)
@@ -301,7 +301,7 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
         );
         assert_eq!(hash_state(&again), hash_state(&live));
         assert_eq!(top_id(&live, 4), Some(card.id.clone()));
-        assert!(!is_reserved(&live, &slot(PlayerId::P1, Row::Units, 5)));
+        assert!(!is_reserved(&live, slot(PlayerId::P1, Row::Units, 5)));
     }
 
     #[test]

@@ -242,7 +242,7 @@ fn on_top_of_library(state: &mut GameState, player: PlayerId, def_ids: &[String]
         .map(|def_id| state::new_instance(state, def_id, player, Zone::Library { player }))
         .collect();
     let mut library = cards.clone();
-    library.extend(state.players[player].library.drain(..));
+    library.append(&mut state.players[player].library);
     state.players[player].library = library;
     cards
 }
@@ -1306,8 +1306,8 @@ mod r290_the_tutorial_handicap_ai_tutorial {
 
     #[test]
     fn r290_ai_tutorial_is_below_a_humans_resources_every_field_at_or_under_easys_and_the_three_it_changes_strictly_under() {
-        assert!(AI_TUTORIAL.deck_size < DECK_SIZE);
-        assert!(AI_TUTORIAL.mana_cap < MAX_MANA);
+        const { assert!(AI_TUTORIAL.deck_size < DECK_SIZE) };
+        const { assert!(AI_TUTORIAL.mana_cap < MAX_MANA) };
         assert!(tutorial_health() < HERO_HEALTH);
         assert_eq!(AI_TUTORIAL.mana_bonus, 0);
         assert_eq!(AI_TUTORIAL.extra_opening_cards, 0);
@@ -1420,7 +1420,7 @@ mod r290_the_tutorial_handicap_ai_tutorial {
             let h = AI_DIFFICULTY[difficulty];
             let decks = decks_for(Some(&on_p2(h)));
             let tier = game(&format!("r290-{difficulty}"), Some(on_p2(h)), Some(decks.clone()));
-            let stored = serde_json::to_value(&tier.players.p2.handicap).expect("a handicap serialises");
+            let stored = serde_json::to_value(tier.players.p2.handicap).expect("a handicap serialises");
             assert_eq!(keys_sorted(&stored), five_fields_sorted(), "{difficulty}");
             assert_eq!(tier.players.p2.handicap, Some(h), "{difficulty}");
             assert_eq!(tier.players.p2.hero.health, HERO_HEALTH, "{difficulty}");
@@ -1430,7 +1430,7 @@ mod r290_the_tutorial_handicap_ai_tutorial {
                 Some(on_p2(Handicap { hero_health: Some(HERO_HEALTH), ..h })),
                 Some(decks),
             );
-            let stored = serde_json::to_value(&explicit.players.p2.handicap).expect("a handicap serialises");
+            let stored = serde_json::to_value(explicit.players.p2.handicap).expect("a handicap serialises");
             assert_eq!(keys_sorted(&stored), five_fields_sorted(), "{difficulty}");
             assert_eq!(explicit.players.p2.handicap, Some(h), "{difficulty}");
             assert_eq!(hash_state(&explicit), hash_state(&tier), "{difficulty}");

@@ -615,11 +615,6 @@ pub fn turn_catalog(base: CardDefs) -> CardDefs {
     defs
 }
 
-/// This file's definitions, by id (the brief's `catalog()`): `turnCatalog({})`.
-pub fn catalog() -> CardDefs {
-    turn_catalog(CardDefs::new())
-}
-
 /// This file's scripts, by id (the brief's `scripts()`): `TURN_SCRIPTS`.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     TURN_SCRIPTS.clone()

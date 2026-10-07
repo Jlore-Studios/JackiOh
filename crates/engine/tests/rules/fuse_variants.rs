@@ -386,7 +386,7 @@ mod r469_an_ingredient_fused_on_its_radiant_face_goes_into_both_fused_forms {
         let trap_now = live(&state, &trap.id);
         let def = def_of(Some(&state), &trap_now.def_id).clone();
         // The kept instance and its type stay; the opponent's card ceases to exist (R77, R86).
-        assert_eq!(json_of(&def.type_), json!("Field Trap"));
+        assert_eq!(json_of(def.type_), json!("Field Trap"));
         assert_eq!(
             trap_now.zone,
             Zone::Field {
@@ -429,7 +429,7 @@ mod r470_a_fusion_keeps_a_hand_or_deck_card_where_it_is_and_its_cost_doesnt_chan
         assert_eq!(parts.len(), 2);
         assert_eq!(parts[1], fuse_b.id.clone());
         assert!(LAB_POOL.clone().into_iter().filter(|id| *id != lab.id).any(|id| id == parts[0]));
-        assert_eq!(json_of(&def.type_), json!("Unit"));
+        assert_eq!(json_of(def.type_), json!("Unit"));
         // Its own cost as it stood, printed 1, now its costOverride; its costMod is its own and stays.
         assert_eq!(kept.cost_override, Some(1));
         assert_eq!(kept.cost_mod, 1);
@@ -491,9 +491,9 @@ mod r470_a_fusion_keeps_a_hand_or_deck_card_where_it_is_and_its_cost_doesnt_chan
         let x = live(&state, &x.id);
         let big = live(&state, &big.id);
         let crafted = live(&state, &crafted.id);
-        assert_eq!(json_of(&def_of(Some(&state), &x.def_id).cost), json!("X"));
+        assert_eq!(json_of(def_of(Some(&state), &x.def_id).cost), json!("X"));
         assert!(x.cost_override.is_none());
-        assert_eq!(json_of(&def_of(Some(&state), &big.def_id).cost), json!({ "base": 2, "embiggen": 4 }));
+        assert_eq!(json_of(def_of(Some(&state), &big.def_id).cost), json!({ "base": 2, "embiggen": 4 }));
         assert!(big.cost_override.is_none());
         assert_eq!(crafted.cost_override, Some(0));
         assert_eq!(effective_cost(&state, &crafted, Default::default()), 0);
@@ -576,7 +576,7 @@ mod r470_a_fusion_keeps_a_hand_or_deck_card_where_it_is_and_its_cost_doesnt_chan
             costs
         );
         let second_def = after.get(1).map(|card| card.def_id.clone()).unwrap_or_default();
-        assert_eq!(json_of(&def_of(Some(&run1.state), &second_def).cost), json!("X"));
+        assert_eq!(json_of(def_of(Some(&run1.state), &second_def).cost), json!("X"));
         // Nobody reads a change made inside a library: the owner's list is as it was (R311), and every
         // `fused` event is the sentinel in both views.
         assert_eq!(json_of(view_for(&run1.state, P1))["you"]["ownLibrary"], list_before);
@@ -639,10 +639,10 @@ mod e23_fuse_three_generated_cards_into_the_hand_classic_plus_43 {
             .clone()
             .unwrap_or_default()
             .iter()
-            .map(|entry| json_of(&def_of(Some(&run1.state), &entry.def_id).type_))
+            .map(|entry| json_of(def_of(Some(&run1.state), &entry.def_id).type_))
             .collect();
         // R102: the shared type, else the first pick's — the first pick's either way.
-        assert_eq!(Some(json_of(&def.type_)), types.first().cloned());
+        assert_eq!(Some(json_of(def.type_)), types.first().cloned());
         assert_eq!(made.cost_override, Some(0));
         assert!(!made.radiant);
         assert_eq!(hash_state(&replayed(&run1)), hash_state(&run1.state));
@@ -810,7 +810,7 @@ mod e23_fuse_an_enemy_card_onto_one_of_yours_of_its_type_classic_78_radiant {
         );
         run1 = answer(&run1, pick(&mine_trap.id), None);
         let kept = must(find_instance(&run1.state, &mine_trap.id).cloned(), "the Field Trap");
-        assert_eq!(json_of(&def_of(Some(&run1.state), &kept.def_id).type_), json!("Field Trap"));
+        assert_eq!(json_of(def_of(Some(&run1.state), &kept.def_id).type_), json!("Field Trap"));
         assert_eq!(
             kept.zone,
             Zone::Field {

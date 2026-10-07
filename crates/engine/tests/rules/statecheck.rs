@@ -434,7 +434,7 @@ mod the_state_check_m2_t5 {
             for player in sides {
                 let mut mine: Vec<&(PlayerId, i32, String)> =
                     placed.iter().filter(|entry| entry.0 == player).collect();
-                mine.sort_by(|a, b| a.1.cmp(&b.1));
+                mine.sort_by_key(|a| a.1);
                 expected.extend(mine.into_iter().map(|entry| Some(entry.2.clone())));
             }
 

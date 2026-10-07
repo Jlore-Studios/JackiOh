@@ -299,10 +299,8 @@ mod view_for_10_8_m3_t6 {
             .collect();
         let library_ids: Vec<String> = d.secret_library.iter().map(|def| def.id.clone()).collect();
         let their_library = set_library(&mut state, PlayerId::P2, &library_ids);
-        let their_traps = vec![
-            put(&mut state, &d.secret_trap.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default()),
-            put(&mut state, &d.secret_field_trap.id, slot(PlayerId::P2, Row::Backrow, 2), Default::default()),
-        ];
+        let their_traps = [put(&mut state, &d.secret_trap.id, slot(PlayerId::P2, Row::Backrow, 1), Default::default()),
+            put(&mut state, &d.secret_field_trap.id, slot(PlayerId::P2, Row::Backrow, 2), Default::default())];
         assert_eq!(their_hand.len(), HAND_CAP as usize);
 
         // Public things on the same board, so the proof is not vacuous: an empty view hides everything.
@@ -709,7 +707,7 @@ mod view_for_10_8_m3_t6 {
             &mut state,
             &mut top,
             slot(PlayerId::P2, Row::Units, 1),
-            PlaceOnFieldOptions { stack: Some(true), ..Default::default() },
+            PlaceOnFieldOptions { stack: Some(true) },
         ));
 
         for viewer in [PlayerId::P1, PlayerId::P2] {
@@ -755,7 +753,7 @@ mod view_for_10_8_m3_t6 {
 
         state.result = Some(json_as(json!({ "winner": "p1", "reason": "hero-death" })));
         assert_eq!(
-            to_json(&view_for(&state, PlayerId::P1).result),
+            to_json(view_for(&state, PlayerId::P1).result),
             json!({ "winner": "p1", "reason": "hero-death" })
         );
     }

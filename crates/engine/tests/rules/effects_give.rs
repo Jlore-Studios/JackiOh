@@ -101,7 +101,7 @@ mod e16_e2_a_card_out_of_the_other_player_s_deck_classic_plus_12_3 {
         let mut state = board("fluffy");
         // A copy: the harness hands back the library array itself, which the steal splices.
         let library = set_library(&mut state, PlayerId::P2, &[glitch().id, plain.id.clone(), glitch().id]);
-        set_library(&mut state, PlayerId::P1, &[plain.id.clone()]);
+        set_library(&mut state, PlayerId::P1, std::slice::from_ref(&plain.id));
         assert_eq!(unknown_in_own_library(&state, PlayerId::P2), Some(0));
         let events = cast_now(&mut state, &fluffy_grip().id, PlayerId::P1, false).events;
         state.applied.push(AppliedAction { nonce: "fluffy".to_string(), events });
@@ -143,7 +143,7 @@ mod e16_e2_a_card_out_of_the_other_player_s_deck_classic_plus_12_3 {
     #[test]
     fn e16_radiant_makes_the_taken_card_radiant_with_no_unit_in_the_deck_nothing_is_taken() {
         let mut state = board("fluffy-radiant");
-        set_library(&mut state, PlayerId::P2, &[plain.id.clone()]);
+        set_library(&mut state, PlayerId::P2, std::slice::from_ref(&plain.id));
         cast_now(&mut state, &fluffy_grip().id, PlayerId::P1, true);
         assert_eq!(state.players[PlayerId::P1].hand.first().map(|card| card.radiant), Some(true));
         assert_eq!(state.players[PlayerId::P1].hand.first().and_then(|card| card.cost_override), Some(0));
@@ -169,7 +169,7 @@ mod e16_e2_a_card_out_of_the_other_player_s_deck_classic_plus_12_3 {
     fn e2_the_taker_s_hand_cap_burns_a_taken_card_into_the_taker_s_graveyard_and_no_price_rides_it_there() {
         let mut state = board("fluffy-burn");
         in_hand(&mut state, &plain.id, PlayerId::P1, HAND_CAP);
-        let card = set_library(&mut state, PlayerId::P2, &[plain.id.clone()]).into_iter().next().expect("the card");
+        let card = set_library(&mut state, PlayerId::P2, std::slice::from_ref(&plain.id)).into_iter().next().expect("the card");
         let events = cast_now(&mut state, &fluffy_grip().id, PlayerId::P1, false);
         assert_eq!(ids(&state.players[PlayerId::P1].graveyard), vec![card.id.clone()]);
         assert_eq!(live(&state, &card.id).owner, PlayerId::P1);
@@ -180,7 +180,7 @@ mod e16_e2_a_card_out_of_the_other_player_s_deck_classic_plus_12_3 {
     #[test]
     fn e16_a_fluffy_grip_game_replays_from_its_log() {
         let qd = quickdraw_of(&fluffy_grip()).id;
-        let dealt = replayable("fluffy-replay", &[qd.clone()], &[]);
+        let dealt = replayable("fluffy-replay", std::slice::from_ref(&qd), &[]);
         let mut log = dealt.log;
         let decks = dealt.decks;
         let mut state = dealt.state;

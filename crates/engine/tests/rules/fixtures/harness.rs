@@ -42,12 +42,6 @@ pub fn sink_for(state: &mut GameState) -> EngineSink<'_> {
     EngineSink::new(state, events, rng)
 }
 
-/// TS `sinkFor(state, events)`: the same, writing to the test's own event list.
-pub fn sink_for_events<'a>(state: &'a mut GameState, events: &'a mut Vec<GameEvent>) -> EngineSink<'a> {
-    let rng: &mut Rng = Box::leak(Box::new(Rng::new(&state.seed, state.rng_cursor)));
-    EngineSink::new(state, events, rng)
-}
-
 pub fn slot(player: PlayerId, row: Row, lane: i32) -> ZoneSlot {
     ZoneSlot { player, row, lane }
 }
@@ -60,7 +54,7 @@ pub fn put(state: &mut GameState, def_id: &str, at: ZoneSlot, options: Value) ->
     if options.get("radiant").and_then(Value::as_bool) == Some(true) {
         card.radiant = true;
     }
-    if !place_on_field(state, &mut card, &at, Default::default()) {
+    if !place_on_field(state, &mut card, at, Default::default()) {
         panic!("could not place {def_id} in {} {}", at.row, at.lane);
     }
     find_instance(state, &card.id).cloned().unwrap_or(card)
@@ -167,16 +161,4 @@ pub fn play_random_game(seed: &str, deck_pair: Option<(Vec<String>, Vec<String>)
     }
 
     RandomGame { state, log, decks }
-}
-
-/// Part 24's brief, step 2: the catalog `setup_catalog` registers.
-pub fn catalog() -> CardDefs {
-    combat_catalog(fixture_catalog(vanilla_catalog(40, 1)))
-}
-
-/// Part 24's brief, step 2: the scripts `setup_catalog` registers.
-pub fn scripts() -> IndexMap<String, CardScripts> {
-    let mut merged: IndexMap<String, CardScripts> = FIXTURE_SCRIPTS.clone();
-    merged.extend(COMBAT_SCRIPTS.clone());
-    merged
 }

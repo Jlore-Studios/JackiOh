@@ -97,14 +97,6 @@ pub fn note(entry: impl Into<String>) -> Effect {
     Effect::new("dc:note", move |ctx| write(ctx.state, entry.clone()))
 }
 
-/// TS `note((ctx) => string)`: the entry is read off the context as the effect applies.
-pub fn note_with(entry: impl Fn(&EffectContext<'_>) -> String + Send + Sync + 'static) -> Effect {
-    Effect::new("dc:note", move |ctx| {
-        let text = entry(&*ctx);
-        write(ctx.state, text);
-    })
-}
-
 /// A prompt for the running card's controller with one answer, so answering is trivial (§10.6).
 pub fn ask_controller(step: impl Into<String>) -> Effect {
     let step: String = step.into();
@@ -979,14 +971,4 @@ pub fn in_pile(state: &GameState, player: PlayerId, pile: impl ToString, id: &st
         other => panic!("in_pile: {other} is not a pile"),
     };
     cards.iter().any(|card| card.id == id)
-}
-
-/// Part 24's brief, step 2: this file's test catalog (`DC_DEFS` by id).
-pub fn catalog() -> CardDefs {
-    DC_DEFS.iter().map(|card| (card.id.clone(), card.clone())).collect()
-}
-
-/// Part 24's brief, step 2: this file's scripts (`DC_SCRIPTS`).
-pub fn scripts() -> IndexMap<String, CardScripts> {
-    DC_SCRIPTS.clone()
 }

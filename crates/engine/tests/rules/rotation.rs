@@ -258,7 +258,7 @@ mod r14_rotation_m3_t7 {
         let it = live(&state, &card);
         assert_eq!(it.damage, 1);
         assert_eq!(it.buffs, AttackHealth { attack: 3, health: 4 });
-        assert_eq!(serde_json::to_value(&it.counters).unwrap(), json!({ "plague": 2 }));
+        assert_eq!(serde_json::to_value(it.counters).unwrap(), json!({ "plague": 2 }));
         assert_eq!(it.granted_keywords, vec![Keyword::Taunt]);
         // A rotation never takes the card off the field, so R78's reset never runs.
         let view = unit_view(&state, it);

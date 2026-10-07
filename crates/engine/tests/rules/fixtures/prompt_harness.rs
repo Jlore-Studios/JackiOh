@@ -5,8 +5,8 @@
 //! replayable game whose opening hands hold the fixture under test (Quickdraw, R225).
 //!
 //! TS handed back the sink it ran (`{ state, events, rng }`); a Rust sink borrows the state, so
-//! `cast_now` and `answer_keys` answer what the sink held besides the state — its events and its rng —
-//! and the caller reads the state it passed in.
+//! `cast_now` and `answer_keys` answer the sink's events (the one part TS's callers read; the rng's
+//! cursor is written back to the state) and the caller reads the state it passed in.
 
 use std::cell::Cell;
 
@@ -52,7 +52,6 @@ pub fn resolving_card(state: &mut GameState, def_id: &str, player: PlayerId, rad
 /// events, the one part of the sink TS's callers read (`sink.events`).
 pub struct SinkResult {
     pub events: Vec<GameEvent>,
-    pub rng: Rng,
 }
 
 impl std::ops::Deref for SinkResult {
@@ -82,7 +81,7 @@ pub fn cast_now(state: &mut GameState, def_id: &str, player: PlayerId, radiant: 
         settle(&mut sink, SettleOptions::default());
     }
     state.rng_cursor = rng.cursor();
-    SinkResult { events, rng }
+    SinkResult { events }
 }
 
 /// `value`, or a panic naming what was expected (TS threw `expected …`).
@@ -93,10 +92,9 @@ pub fn must<T>(value: Option<T>, what: &str) -> T {
     }
 }
 
-/// What `answer_keys` answers: the sink's events and rng, and the refusal (`null` when accepted).
+/// What `answer_keys` answers: the sink's events, and the refusal (`null` when accepted).
 pub struct AnswerResult {
     pub events: Vec<GameEvent>,
-    pub rng: Rng,
     pub error: Option<String>,
 }
 
@@ -132,7 +130,7 @@ pub fn answer_keys(state: &mut GameState, keys: &[&str]) -> AnswerResult {
         }
     };
     state.rng_cursor = rng.cursor();
-    AnswerResult { events, rng, error }
+    AnswerResult { events, error }
 }
 
 /// The open prompt, asserted to be of this kind and held by this player.

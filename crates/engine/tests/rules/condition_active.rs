@@ -15,6 +15,7 @@
 //!   3. zone "hand" outside the viewer's own main phase with no prompt open -> false, hook not called
 //!   4. the running face has no hook (a transient def with no script included) -> false
 //!   5. otherwise the hook's answer, and only an answer of exactly `true` lights the card.
+//!
 //! The key is absent otherwise: never `false`, never on the opponent's cards.
 //!
 //! R196 is proved here too, through a real `fuse` (R77): a fused card's hook is its ingredients'
