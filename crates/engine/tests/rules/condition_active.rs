@@ -779,11 +779,11 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
     fn r195_b3_a_buried_card_is_never_asked_only_the_top_of_its_pile_is() {
         let (mut state, hooks) = game("r195-b3-buried");
         let buried = put(&mut state, &glow_unit().id, slot(P1, Row::Units, 3), json!({}));
-        let top = new_instance(&mut state, &plain_stack().id, P1, Zone::Hand { player: P1 });
+        let mut top = new_instance(&mut state, &plain_stack().id, P1, Zone::Hand { player: P1 });
         let top_id = top.id.clone();
         assert!(place_on_field(
             &mut state,
-            top,
+            &mut top,
             slot(P1, Row::Units, 3),
             json_as(json!({ "stack": true }))
         ));
@@ -803,11 +803,11 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
     fn r195_b3_a_hooked_top_of_a_stack_pile_carries_the_flag_while_the_hooked_card_under_it_is_not_asked() {
         let (mut state, hooks) = game("r195-b3-hooked-top");
         let buried = put(&mut state, &glow_unit().id, slot(P1, Row::Units, 4), json!({}));
-        let top = new_instance(&mut state, &glow_stack().id, P1, Zone::Hand { player: P1 });
+        let mut top = new_instance(&mut state, &glow_stack().id, P1, Zone::Hand { player: P1 });
         let top_id = top.id.clone();
         assert!(place_on_field(
             &mut state,
-            top,
+            &mut top,
             slot(P1, Row::Units, 4),
             json_as(json!({ "stack": true }))
         ));

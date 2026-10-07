@@ -238,8 +238,8 @@ mod add_to_hand_moves_an_existing_card_51_72 {
         let from_library = set_library(&mut state, PlayerId::P1, &[alpha().id, beta().id]).into_iter().next();
         let library = must(from_library, "the library card");
 
-        let buried = must(in_hand(&mut state, &gamma().id, PlayerId::P1, 1).into_iter().next(), "the graveyard card");
-        move_to_zone(&mut state, &buried, OffFieldZone::Graveyard, Default::default());
+        let mut buried = must(in_hand(&mut state, &gamma().id, PlayerId::P1, 1).into_iter().next(), "the graveyard card");
+        move_to_zone(&mut state, &mut buried, OffFieldZone::Graveyard, Default::default());
 
         // §10.6: a Discover's pick arrives in `ctx.targets`, which is what `{ of: "chosen" }` reads.
         let self_ = resolving_self(&mut state, &generator().id, PlayerId::P1);

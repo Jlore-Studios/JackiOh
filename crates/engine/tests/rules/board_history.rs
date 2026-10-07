@@ -157,44 +157,44 @@ mod e29_the_restore_r419 {
     fn r419_puts_back_cards_from_a_library_a_hand_a_graveyard_and_exile_rebuilds_a_stack_pile_a_backrow_pile_and_a_carried_unit_and_restores_the_locks()
      {
         let mut state = board("bh-restore");
-        let from_library = put(&mut state, PLAIN_UNIT, slot(P1, Row::Units, 1), json!({}));
-        let from_hand = put(&mut state, "fx-2", slot(P1, Row::Units, 2), json!({}));
-        let from_graveyard = put(&mut state, "fx-3", slot(P2, Row::Units, 1), json!({}));
-        let from_exile = put(&mut state, "fx-4", slot(P2, Row::Units, 2), json!({}));
-        let top = new_instance(&mut state, "fx-5", P1, Zone::Hand { player: P1 });
+        let mut from_library = put(&mut state, PLAIN_UNIT, slot(P1, Row::Units, 1), json!({}));
+        let mut from_hand = put(&mut state, "fx-2", slot(P1, Row::Units, 2), json!({}));
+        let mut from_graveyard = put(&mut state, "fx-3", slot(P2, Row::Units, 1), json!({}));
+        let mut from_exile = put(&mut state, "fx-4", slot(P2, Row::Units, 2), json!({}));
+        let mut top = new_instance(&mut state, "fx-5", P1, Zone::Hand { player: P1 });
         place_on_field(
             &mut state,
-            top.clone(),
+            &mut top,
             slot(P1, Row::Units, 1),
             PlaceOnFieldOptions { stack: Some(true) },
         );
         let carrier = put(&mut state, &tower.id, slot(P1, Row::Backrow, 1), json!({}));
-        let carried = new_instance(&mut state, "fx-6", P1, Zone::Hand { player: P1 });
+        let mut carried = new_instance(&mut state, "fx-6", P1, Zone::Hand { player: P1 });
         place_on_field(
             &mut state,
-            carried.clone(),
+            &mut carried,
             slot(P1, Row::Backrow, 1),
             PlaceOnFieldOptions::default(),
         );
         let trap = put(&mut state, &watcher.id, slot(P2, Row::Backrow, 3), json!({}));
         // A backrow pile (B5 E21): a face-up Field Spell over a face-down trap.
         let under = put(&mut state, &watcher.id, slot(P1, Row::Backrow, 2), json!({}));
-        let over = new_instance(&mut state, &banner.id, P1, Zone::Hand { player: P1 });
+        let mut over = new_instance(&mut state, &banner.id, P1, Zone::Hand { player: P1 });
         place_on_field(
             &mut state,
-            over.clone(),
+            &mut over,
             slot(P1, Row::Backrow, 2),
             PlaceOnFieldOptions { stack: Some(true) },
         );
         lock_zone(&mut state, slot(P2, Row::Units, 5));
         record_board_snapshot(&mut state);
 
-        move_to_zone(&mut state, &from_library.id, OffFieldZone::Library, MoveToZoneOptions::default());
-        move_to_zone(&mut state, &from_hand.id, OffFieldZone::Hand, MoveToZoneOptions::default());
-        move_to_zone(&mut state, &from_graveyard.id, OffFieldZone::Graveyard, MoveToZoneOptions::default());
-        move_to_zone(&mut state, &from_exile.id, OffFieldZone::Exile, MoveToZoneOptions::default());
-        move_to_zone(&mut state, &carried.id, OffFieldZone::Hand, MoveToZoneOptions::default());
-        move_to_zone(&mut state, &over.id, OffFieldZone::Hand, MoveToZoneOptions::default());
+        move_to_zone(&mut state, &mut from_library, OffFieldZone::Library, MoveToZoneOptions::default());
+        move_to_zone(&mut state, &mut from_hand, OffFieldZone::Hand, MoveToZoneOptions::default());
+        move_to_zone(&mut state, &mut from_graveyard, OffFieldZone::Graveyard, MoveToZoneOptions::default());
+        move_to_zone(&mut state, &mut from_exile, OffFieldZone::Exile, MoveToZoneOptions::default());
+        move_to_zone(&mut state, &mut carried, OffFieldZone::Hand, MoveToZoneOptions::default());
+        move_to_zone(&mut state, &mut over, OffFieldZone::Hand, MoveToZoneOptions::default());
         assert_eq!(
             card_at(&state, slot(P1, Row::Backrow, 2)).map(|card| card.id.clone()),
             Some(under.id.clone())
@@ -259,10 +259,10 @@ mod e29_the_restore_r419 {
     fn r227_a_card_that_takes_a_fresh_id_is_renamed_in_the_history_so_a_re_set_trap_goes_back_as_itself_not_as_a_second_copy()
      {
         let mut state = board("bh-rename");
-        let trap = put(&mut state, &watcher.id, slot(P1, Row::Backrow, 2), json!({}));
+        let mut trap = put(&mut state, &watcher.id, slot(P1, Row::Backrow, 2), json!({}));
         let first = trap.id.clone();
         record_board_snapshot(&mut state);
-        move_to_zone(&mut state, &trap.id, OffFieldZone::Hand, MoveToZoneOptions::default());
+        move_to_zone(&mut state, &mut trap, OffFieldZone::Hand, MoveToZoneOptions::default());
         // TS renamed and placed the very object the hand held; Rust takes that card out of the hand
         // first, so it is "a card that is in no pile" as `freshFaceDownId` asks, and is placed once.
         let at = state
@@ -275,7 +275,7 @@ mod e29_the_restore_r419 {
         let mut moved = state.players.p1.hand.remove(at);
         fresh_face_down_id(&mut state, &mut moved);
         let trap_id = moved.id.clone();
-        place_on_field(&mut state, moved, slot(P1, Row::Backrow, 4), PlaceOnFieldOptions::default());
+        place_on_field(&mut state, &mut moved, slot(P1, Row::Backrow, 4), PlaceOnFieldOptions::default());
         assert_eq!(
             state.board_history.as_ref().and_then(|history| history.first()).and_then(|snapshot| snapshot
                 .sides
@@ -299,9 +299,9 @@ mod e29_the_restore_r419 {
     #[test]
     fn r227_r97_a_card_going_back_face_down_from_a_public_zone_takes_a_fresh_id_its_views_follow_it_by_former_id() {
         let mut state = board("bh-fresh");
-        let trap = put(&mut state, &watcher.id, slot(P2, Row::Backrow, 1), json!({}));
+        let mut trap = put(&mut state, &watcher.id, slot(P2, Row::Backrow, 1), json!({}));
         record_board_snapshot(&mut state);
-        move_to_zone(&mut state, &trap.id, OffFieldZone::Graveyard, MoveToZoneOptions::default());
+        move_to_zone(&mut state, &mut trap, OffFieldZone::Graveyard, MoveToZoneOptions::default());
         let old = trap.id.clone();
         let mut events: Vec<GameEvent> = Vec::new();
         restore(&mut state, &mut events, P1, 1, &[P2]);
@@ -395,14 +395,14 @@ mod e29_the_restore_r419 {
     fn r566_r386_a_restored_card_takes_the_snapshots_tuning_cost_change_face_and_memory_a_degrade_or_a_make_radiant_made_since_off_the_field_is_undone()
      {
         let mut state = board("bh-tuning");
-        let unit = put(&mut state, PLAIN_UNIT, slot(P1, Row::Units, 1), json!({}));
+        let mut unit = put(&mut state, PLAIN_UNIT, slot(P1, Row::Units, 1), json!({}));
         {
             let live = card_mut(&mut state, &unit.id);
             live.tuning = Some(json_as(json!({ "attack": 1 })));
             live.memory = IndexMap::from([("meal".to_string(), json!("kept"))]);
         }
         record_board_snapshot(&mut state);
-        move_to_zone(&mut state, &unit.id, OffFieldZone::Hand, MoveToZoneOptions::default());
+        move_to_zone(&mut state, &mut unit, OffFieldZone::Hand, MoveToZoneOptions::default());
         // Since, in the hand (B3.4, §6.3): what R78 leaves alone on the way out, the restore still takes back.
         {
             let live = card_mut(&mut state, &unit.id);
@@ -422,19 +422,19 @@ mod e29_the_restore_r419 {
     fn r566_a_card_mid_play_stays_its_plays_and_its_place_stays_empty_a_unit_it_carried_left_with_no_carrier_goes_to_its_owners_hand()
      {
         let mut state = board("bh-resolving");
-        let carrier = put(&mut state, &tower.id, slot(P1, Row::Backrow, 1), json!({}));
-        let rider = new_instance(&mut state, "fx-6", P1, Zone::Hand { player: P1 });
+        let mut carrier = put(&mut state, &tower.id, slot(P1, Row::Backrow, 1), json!({}));
+        let mut rider = new_instance(&mut state, "fx-6", P1, Zone::Hand { player: P1 });
         place_on_field(
             &mut state,
-            rider.clone(),
+            &mut rider,
             slot(P1, Row::Backrow, 1),
             PlaceOnFieldOptions::default(),
         );
         record_board_snapshot(&mut state);
         // Since: both went back to the hand, and the carrier is being played again (§10.5's resolving zone).
-        move_to_zone(&mut state, &rider.id, OffFieldZone::Hand, MoveToZoneOptions::default());
+        move_to_zone(&mut state, &mut rider, OffFieldZone::Hand, MoveToZoneOptions::default());
         let mut resolving = card(&state, &carrier.id).clone();
-        remove_from_any_zone(&mut state, &carrier.id);
+        remove_from_any_zone(&mut state, &mut carrier);
         resolving.zone = Zone::Resolving { player: P1 };
         state.players.p1.resolving.push(resolving);
 
@@ -458,14 +458,14 @@ mod e29_the_restore_r419 {
      {
         let mut state = board("bh-turn-state");
         let stayed = put(&mut state, PLAIN_UNIT, slot(P1, Row::Units, 1), json!({}));
-        let away = put(&mut state, "fx-2", slot(P1, Row::Units, 2), json!({}));
+        let mut away = put(&mut state, "fx-2", slot(P1, Row::Units, 2), json!({}));
         record_board_snapshot(&mut state);
         card_mut(&mut state, &stayed.id).exertion = Exertion {
             attacked: true,
             switched: false,
             attacks: None,
         };
-        move_to_zone(&mut state, &away.id, OffFieldZone::Hand, MoveToZoneOptions::default());
+        move_to_zone(&mut state, &mut away, OffFieldZone::Hand, MoveToZoneOptions::default());
         let mut events: Vec<GameEvent> = Vec::new();
         restore(&mut state, &mut events, P1, 1, &[P1]);
         assert!(card(&state, &stayed.id).exertion.attacked);
@@ -485,9 +485,9 @@ mod r563_e29_held_zones {
     fn r563_a_reborn_unit_whose_zone_a_rollback_let_go_does_not_return_the_snapshots_occupant_stands_there() {
         let mut state = board("bh-reborn");
         state.turn = 2;
-        let occupant = put(&mut state, PLAIN_UNIT, slot(P1, Row::Units, 1), json!({}));
+        let mut occupant = put(&mut state, PLAIN_UNIT, slot(P1, Row::Units, 1), json!({}));
         record_board_snapshot(&mut state);
-        move_to_zone(&mut state, &occupant.id, OffFieldZone::Hand, MoveToZoneOptions::default());
+        move_to_zone(&mut state, &mut occupant, OffFieldZone::Hand, MoveToZoneOptions::default());
         let bird = put(&mut state, &phoenix.id, slot(P1, Row::Units, 1), json!({}));
         card_mut(&mut state, &bird.id).damage = 2;
 
