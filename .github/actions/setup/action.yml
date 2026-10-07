@@ -1,16 +1,49 @@
-# Every Node job's first three steps, after actions/checkout: pnpm, Node from .nvmrc with the pnpm
-# store cached, and the workspace install. One definition, so the dozen jobs CI splits into (#73)
-# cannot drift apart in how they install.
+# Every job's first steps after actions/checkout, in two halves a job switches off when it needs
+# neither: the web's (pnpm, Node from .nvmrc with the pnpm store cached, the workspace install) and
+# the Rust's (the toolchain rust-toolchain.toml pins, and Swatinem/rust-cache over target/ and
+# ~/.cargo). One definition, so the jobs CI and the super run split into cannot drift apart in how
+# they install. Both halves are on unless a job says otherwise: building the web runs
+# scripts/build-wasm.sh, which needs the Rust (promote-production.yml's deploy relies on that).
+#
+# The Rust cache is saved only from main and staging, and restored everywhere: a pull request starts
+# from its base branch's cache and never writes its own, so the repository's cache budget is not
+# spent on one entry per pull request, each evicting the next.
 name: setup
-description: pnpm, Node from .nvmrc with the pnpm cache, and `pnpm install --frozen-lockfile`
+description: pnpm, Node and the workspace install; the pinned Rust toolchain and its build cache
+inputs:
+  node:
+    description: "true: pnpm, Node from .nvmrc with the pnpm cache, and `pnpm install --frozen-lockfile`"
+    required: false
+    default: "true"
+  rust:
+    description: "true: Rust from rust-toolchain.toml (rustfmt, clippy, the wasm32 target) and Swatinem/rust-cache"
+    required: false
+    default: "true"
 runs:
   using: composite
   steps:
     - uses: pnpm/action-setup@v4
+      if: ${{ inputs.node == 'true' }}
     - uses: actions/setup-node@v4
+      if: ${{ inputs.node == 'true' }}
       with:
         node-version-file: .nvmrc
         cache: pnpm
     - name: install
+      if: ${{ inputs.node == 'true' }}
       shell: bash
       run: pnpm install --frozen-lockfile
+
+    # The version rust-toolchain.toml pins (docs/v0.3.0/SURFACE.md §2), with the components and target
+    # it lists, so rustup never installs anything mid-build.
+    - uses: dtolnay/rust-toolchain@1.97.0
+      if: ${{ inputs.rust == 'true' }}
+      with:
+        components: rustfmt, clippy
+        targets: wasm32-unknown-unknown
+    # .cache/bin holds the wasm-bindgen CLI scripts/build-wasm.sh downloads.
+    - uses: Swatinem/rust-cache@v2
+      if: ${{ inputs.rust == 'true' }}
+      with:
+        cache-directories: .cache/bin
+        save-if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging' }}

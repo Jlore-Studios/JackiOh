@@ -1,0 +1,410 @@
+# The daily super run (#306, docs/v0.3.0/README.md §7): everything too slow or too statistical to
+# hold every pull request to, once a day on main (07:17 UTC) and on demand on any branch (`gh workflow
+# run super.yml --ref <branch>`). CI (ci.yml) keeps the essential checks per pull request; this keeps
+# the rest from rotting.
+#
+#   fuzz            `jackioh fuzz` seeds 1-10,000, plain and with the rotating handicap, in quarters
+#   ai gates        `jackioh gate --full` in shards, held together by `gate merge` (V10)
+#   golden          `jackioh golden check`: every recorded TypeScript trace replays identically (V4)
+#   coverage        cargo llvm-cov over engine, cards and ai, failing under .github/coverage-floor.txt
+#                   (90% at the start, raised by hand as it climbs toward #306's 99%)
+#   e2e             all 35 e2e specs on Chrome, in shards, and the component specs (V21)
+#   web             the audio, fx and asset unit tests the pull requests leave out
+#   db              sql invariants, the store contract and the deploy rehearsal against a real Postgres
+#
+# On failure the `report` job opens one issue titled `CI: daily super run failed`, or comments on it
+# when it is already open, naming each failed job with a link to its log; a run that passes closes it
+# (V25). The run is long on purpose and ci-duration.yml does not watch it.
+#
+# The release binaries and the built client travel between jobs as artifacts, built once per run by
+# the same steps ci.yml uses (its `rust-build` and `wasm` jobs).
+name: super
+
+on:
+  schedule:
+    - cron: "17 7 * * *"
+  workflow_dispatch:
+
+# One run per branch at a time; a run is never cancelled for the next one, so every day reports.
+concurrency:
+  group: super-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  # The fuzz wave's size (README §7); `fuzz` splits it evenly over its matrix.
+  FUZZ_SEEDS: "10000"
+
+jobs:
+  # ------------------------------------------------------------------------------------------------
+  # builds, once per run
+  # ------------------------------------------------------------------------------------------------
+
+  rust-build:
+    name: release build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          node: "false"
+      - name: jackioh and jackioh-server
+        run: cargo build --release -p jackioh-server -p jackioh-tools
+      # A tarball keeps the executable bits an artifact would drop.
+      - name: pack them
+        run: tar -czf "$RUNNER_TEMP/rust-release.tgz" target/release/jackioh target/release/jackioh-server
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rust-release
+          path: ${{ runner.temp }}/rust-release.tgz
+          if-no-files-found: error
+          retention-days: 3
+
+  wasm:
+    name: wasm and client build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: the WASM module
+        run: sh scripts/build-wasm.sh
+      - name: the e2e client
+        run: pnpm build:e2e
+      - name: pack them
+        run: tar -czf "$RUNNER_TEMP/web-build.tgz" apps/web/src/wasm/pkg apps/web/dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: ${{ runner.temp }}/web-build.tgz
+          if-no-files-found: error
+          retention-days: 3
+
+  # ------------------------------------------------------------------------------------------------
+  # the engine at scale
+  # ------------------------------------------------------------------------------------------------
+
+  # Seeds 1-FUZZ_SEEDS, each quarter plain and then with the handicap (fuzz-handicap.test.ts's
+  # rotation), as `--from` and `--seeds` ranges: a seed is its own game whatever run it sits in, so
+  # the quarters together play exactly `fuzz --seeds 10000` and `fuzz --seeds 10000 --handicap`.
+  fuzz:
+    name: fuzz (${{ matrix.shard }}/${{ strategy.job-total }})
+    needs: rust-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rust-release
+          path: ${{ runner.temp }}
+      - name: unpack the binaries
+        run: tar -xzf "$RUNNER_TEMP/rust-release.tgz"
+      - name: this quarter's seeds, plain and handicapped
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ strategy.job-total }}
+        run: |
+          per=$(( FUZZ_SEEDS / SHARDS ))
+          from=$(( (SHARD - 1) * per + 1 ))
+          echo "seeds $from..$(( from + per - 1 ))"
+          target/release/jackioh fuzz --from "$from" --seeds "$per"
+          target/release/jackioh fuzz --from "$from" --seeds "$per" --handicap
+
+  # The three matchups at their full seed counts against gateNeeded, and the perf gate, every k-th
+  # game per shard. Wins are a property of the whole run, so each shard keeps its games and `gate
+  # merge` holds them together.
+  gate-shard:
+    name: ai gates (${{ matrix.shard }}/${{ strategy.job-total }})
+    needs: rust-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rust-release
+          path: ${{ runner.temp }}
+      - name: unpack the binaries
+        run: tar -xzf "$RUNNER_TEMP/rust-release.tgz"
+      - name: this shard's games
+        env:
+          SHARD: ${{ matrix.shard }}/${{ strategy.job-total }}
+        run: target/release/jackioh gate --full --shard "$SHARD" --out gate-shards
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ai-gate-${{ matrix.shard }}
+          path: gate-shards/
+          if-no-files-found: error
+          retention-days: 3
+
+  gate:
+    name: ai gates (full)
+    needs: [rust-build, gate-shard]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rust-release
+          path: ${{ runner.temp }}
+      - name: unpack the binaries
+        run: tar -xzf "$RUNNER_TEMP/rust-release.tgz"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ai-gate-*
+          path: gate-shards
+          merge-multiple: true
+      - name: each matchup's wins against gateNeeded, over every shard
+        run: target/release/jackioh gate merge gate-shards
+
+  golden:
+    name: golden check
+    needs: rust-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rust-release
+          path: ${{ runner.temp }}
+      - name: unpack the binaries
+        run: tar -xzf "$RUNNER_TEMP/rust-release.tgz"
+      - name: every recorded trace replays with the same hashes
+        run: target/release/jackioh golden check
+      # The Rust side of the first mismatch (SURFACE §13.3); scripts/golden/record.ts --dump-step
+      # writes the TypeScript side beside it.
+      - name: keep the diff when it fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-diff
+          path: target/golden-diff/
+          if-no-files-found: warn
+
+  coverage:
+    name: coverage (engine, cards, ai)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          node: "false"
+      - name: the LLVM tools
+        run: rustup component add llvm-tools-preview
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+      - name: line coverage, held to the floor in .github/coverage-floor.txt
+        run: |
+          floor=$(tr -d '[:space:]' < .github/coverage-floor.txt)
+          echo "floor: $floor% of lines"
+          cargo llvm-cov --package jackioh-engine --package jackioh-cards --package jackioh-ai \
+            --features jackioh-engine/testkit --summary-only --fail-under-lines "$floor"
+
+  # ------------------------------------------------------------------------------------------------
+  # the web and e2e
+  # ------------------------------------------------------------------------------------------------
+
+  e2e:
+    name: e2e (${{ matrix.shard }}/${{ strategy.job-total }})
+    needs: [rust-build, wasm]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          rust: "false"
+      - uses: ./.github/actions/e2e-shard
+        with:
+          specs: all
+          shard: ${{ matrix.shard }}
+          shards: ${{ strategy.job-total }}
+
+  # BUILD M5-T1's "without layout overflow at 1280x720 and 390x844": jsdom has no layout engine, so
+  # Cypress component testing mounts the 10-unit/10-backrow fixture board in a real browser. No
+  # client build and no server: the component dev server compiles apps/web/src itself, on port 5273,
+  # and only needs the WASM module.
+  component:
+    name: e2e component (chrome)
+    needs: wasm
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          rust: "false"
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: ${{ runner.temp }}
+      - name: unpack the WASM module
+        run: tar -xzf "$RUNNER_TEMP/web-build.tgz"
+      - name: the fixture board's layout, measured in a browser
+        run: pnpm --dir e2e exec cypress run --component --browser chrome
+      - name: keep the evidence when it fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-component
+          path: e2e/artifacts/component/screenshots
+          if-no-files-found: warn
+
+  # The unit tests ci.yml's `web (unit k/3)` leaves out: the audio and fx layers and the asset tests.
+  web-extra:
+    name: web (audio, fx and asset tests)
+    needs: wasm
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          rust: "false"
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: ${{ runner.temp }}
+      - name: unpack the WASM module
+        run: tar -xzf "$RUNNER_TEMP/web-build.tgz"
+      - name: vitest
+        run: pnpm exec vitest run --project web src/audio/ src/fx/ src/cards/art/convention.test.ts
+
+  # ------------------------------------------------------------------------------------------------
+  # db
+  # ------------------------------------------------------------------------------------------------
+
+  # ci.yml's db suites (its comment says what each measures), run whatever changed.
+  db:
+    name: db (${{ matrix.suite }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: sql invariants
+            script: crates/server/tests/sql/run.sh
+            rust: false
+          - suite: store contract
+            script: crates/server/tests/db/run.sh
+            rust: true
+          - suite: deploy rehearsal
+            script: crates/server/tests/deploy/rehearse.sh
+            rust: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        if: ${{ matrix.rust }}
+        with:
+          node: "false"
+      - name: pre-pull postgres
+        run: docker pull postgres:16
+      - name: ${{ matrix.suite }}
+        env:
+          SCRIPT: ${{ matrix.script }}
+        run: sh "$SCRIPT"
+
+  # ------------------------------------------------------------------------------------------------
+  # report
+  # ------------------------------------------------------------------------------------------------
+
+  # One issue, found by its exact title: opened (or commented on) when anything above did not pass,
+  # closed when everything did. It never checks out or runs code; the job names it quotes reach the
+  # shell through the API's JSON and env, never through `${{ }}` in the script.
+  report:
+    name: report
+    needs: [rust-build, wasm, fuzz, gate-shard, gate, golden, coverage, e2e, component, web-extra, db]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      issues: write
+    steps:
+      - name: open, update or close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REF: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          EVENT: ${{ github.event_name }}
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+          TITLE: "CI: daily super run failed"
+        run: |
+          set -euo pipefail
+          red=false
+          for result in $RESULTS; do
+            [ "$result" = success ] || red=true
+          done
+          echo "results: $RESULTS"
+
+          open=$(gh issue list --repo "$REPO" --state open --search "in:title \"$TITLE\"" \
+            --json number,title --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
+          where="[super run $RUN_ID]($RUN_URL) on \`$REF\` (\`${SHA:0:7}\`, $EVENT)"
+
+          if [ "$red" = false ]; then
+            if [ -n "$open" ]; then
+              gh issue close "$open" --repo "$REPO" --reason completed --comment "$where passed every job."
+              echo "closed #$open"
+            else
+              echo "every job passed; no issue open"
+            fi
+            exit 0
+          fi
+
+          # This attempt's jobs that ended badly. A job skipped because one it needs failed is left
+          # out: the one that failed is listed. The filter's `\(...)` is jq's, not the shell's.
+          failed=$(gh api --paginate "repos/$REPO/actions/runs/$RUN_ID/attempts/$RUN_ATTEMPT/jobs?per_page=100" --jq '
+            .jobs[]
+            | select(.status == "completed")
+            | select(.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral")
+            | "| [\(.name | gsub("\\|"; "\\|"))](\(.html_url)) | \(.conclusion) |"')
+          if [ -z "$failed" ]; then
+            failed="| [the run]($RUN_URL) | a job did not pass; see the run |"
+          fi
+          echo "$failed"
+
+          body=$(printf '%s\n' \
+            "$where failed:" \
+            "" \
+            "| Job | Result |" \
+            "|---|---|" \
+            "$failed" \
+            "" \
+            "Each link opens that job's log. This issue stays open while the run is red and the next run that passes every job closes it. \`gh workflow run super.yml --ref <branch>\` runs it again on demand." \
+            "" \
+            "---" \
+            "_Posted by \`.github/workflows/super.yml\`._")
+
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --repo "$REPO" --body "$body"
+            echo "commented on #$open"
+          else
+            url=$(gh issue create --repo "$REPO" --title "$TITLE" --body "$body")
+            echo "opened $url"
+          fi

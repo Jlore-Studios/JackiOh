@@ -4,6 +4,13 @@
 # seen and split before it grows into the old 19-minute wait. The night bot's own workflows are
 # exempt: a build legitimately runs for hours.
 #
+# Never the daily super run (super.yml): CI is what every pull request waits on, so its jobs are held
+# under five minutes (docs/v0.3.0/README.md §7, V24), while the super run carries what is slow on
+# purpose (10,000 fuzz seeds, the full AI gates, coverage, every e2e spec) and waits on nobody. It is
+# left off the list below by design; do not add it. Inside CI, `rust (training gate)`
+# is exempt too: it replays a training lane's 200 promotion games, runs only on an ai/* branch's
+# pull request, and is one command that no matrix can split.
+#
 # The report is handed to the night bot (.harness/config.json's bot_login): a new issue is assigned
 # to it and queued with bot:build, and an open one nobody is assigned to is handed over the same
 # way, so the bot starts on the split without anyone asking. A write by this job's token starts no
@@ -65,6 +72,7 @@ jobs:
           slow=$(gh api --paginate "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" --jq '
             .jobs[]
             | select(.started_at != null and .completed_at != null)
+            | select(.name != "rust (training gate)")
             | select(.conclusion == "success" or .conclusion == "failure" or .conclusion == "timed_out")
             | ((.completed_at | fromdateiso8601) - (.started_at | fromdateiso8601)) as $s
             | select($s > (env.LIMIT_SECONDS | tonumber))
@@ -82,7 +90,7 @@ jobs:
             "|---|---|---|" \
             "$slow" \
             "" \
-            "Split the slow job further until every job finishes under the $TARGET_MINUTES-minute target, not just under the $ALERT_MINUTES-minute alert, so the fix has headroom: most splits only need a longer matrix list in \`.github/workflows/ci.yml\`; for e2e, also refresh the \`WEIGHTS\` in \`e2e/scripts/shard-specs.mjs\`." \
+            "Split the slow job further until every job finishes under the $TARGET_MINUTES-minute target, not just under the $ALERT_MINUTES-minute alert, so the fix has headroom: most splits only need a longer matrix list in \`.github/workflows/ci.yml\` (\`web (unit k/K)\`, \`e2e smoke (k/K)\`), or a Rust step split by crate (\`cargo test -p <crate>\` as a matrix); for e2e, also refresh the \`WEIGHTS\` in \`e2e/scripts/shard-specs.mjs\`. Anything that cannot be made fast belongs in the daily \`.github/workflows/super.yml\`, not in CI." \
             "" \
             "Night bot: you cannot change \`.github/\`. Make the part of the fix that lives elsewhere (the e2e \`WEIGHTS\`, a slow test made faster or split across files), and when the split needs \`ci.yml\`'s matrix, give the exact lines to change there and ask a person to make them." \
             "" \

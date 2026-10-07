@@ -1,30 +1,50 @@
-# CI for JackiOh — BUILD.md §5's Definition of done, split so no job runs long (#73).
+# CI for JackiOh after v0.3.0 (#306, docs/v0.3.0/README.md §7): the essential checks on every pull
+# request, each job under five minutes; everything slow or statistical runs once a day in super.yml.
 #
-# The long checks used to run back to back in one job each (lint through coverage took 19 minutes,
-# the AI gates 15, each browser's e2e 14). They are now short jobs that run side by side: the unit
-# suites by project, and the fuzz gate, the coverage run, the AI gates and the e2e specs by shard.
-# A shard learns how many shards there are from `strategy.job-total`, so resizing a split is only
-# a change to its matrix list. Every job here aims to finish under 5 minutes; `ci-duration.yml`
-# opens an issue when one passes 7 (its TARGET_MINUTES and ALERT_MINUTES).
+# Branch protection and the bots' `required_checks` (.harness/config.json, .squishy/config.json)
+# wait on five names: `rust`, `web`, `e2e smoke` and `db` here, and `bot selftest` (bot-selftest.yml).
+# Each of the four is a summary job that needs its pieces and fails unless every piece passed. A
+# summary job runs `if: !cancelled()`, never on plain `needs`: a required check SKIPPED because a
+# piece failed would count as passing. The pieces run side by side and each aims to finish under
+# five minutes (ci-duration.yml opens an issue past seven, #73); a piece that grows is split further
+# (a longer matrix list, or the test step by crate), never folded back into one long job.
 #
-# The names branch protection requires stay, and so do their meanings. `.harness/config.json`'s
-# `required_checks` and branch protection wait on six names; each long one is now a summary job that
-# needs its pieces and fails unless every piece passed. A summary job runs `if: !cancelled()`, never
-# on plain `needs`: a required check SKIPPED because a piece failed would count as passing.
+#   rust       fmt and clippy; cargo test with the generated-types diff (V20); the release build of
+#              jackioh and jackioh-server, made once for the run; the catalog, patches and spec checks
+#              and 200 fuzz seeds on that build; and, on a pull request from a training lane's ai/*
+#              branch, the training gate (README §8).
+#   web        the WASM module and the e2e client, built once for the run; typecheck and eslint; the
+#              web's unit tests in thirds, without the audio, fx and asset tests.
+#   e2e smoke  Chrome only, specs 01, 06, 10, 13 and 19 (e2e/scripts/shard-specs.mjs SMOKE) against
+#              the release jackioh-server, in two shards that each boot their own server.
+#   db         sql, the store contract and the Render deploy rehearsal against a real Postgres, only
+#              when the pull request touches what they test (scripts/ci-scope.sh's `db`); a skip passes.
 #
-# A pull request that changes only the night bot's own files (`scripts/ci-scope.sh` lists them: bot/,
-# .harness/ and the workflows that run the bot) skips every job below except `bot selftest`, which
-# has its own workflow and always runs. Nothing else here reads those paths. The `changes` job
-# decides; each job below it runs `if: needs.changes.outputs.full == 'true'`, so a skip is a job-level
-# skip, which counts as passing for a required check (a workflow-level `paths:` filter would leave the
-# check pending forever), and the summary jobs accept "skipped" only on `full == 'false'`. A push to
-# main, and any doubt, runs everything.
+# The release build, the WASM module and the built client travel between jobs as artifacts
+# (`rust-release`, `web-build`), so each is compiled once per run, not once per job that uses it.
+#
+# Not run per pull request (README §7): e2e on Electron (dropped), the AI gates, coverage, the
+# 10,000-seed fuzz runs, `golden check` (cargo test replays the same traces), every e2e spec beyond
+# the smoke list, the component specs and the web's audio, fx and asset tests. super.yml runs them
+# daily, and opens an issue when they fail.
+#
+# A pull request that changes only files no job here reads (`scripts/ci-scope.sh` lists them: the
+# night bot's code and switches, the workflows that run the bot, the agent instruction files, the
+# training lanes' prompts) skips every job below except `bot selftest`, which has its own workflow and
+# always runs. The `changes` job decides; each job below it runs `if: needs.changes.outputs.full ==
+# 'true'`, so a skip is a job-level skip, which counts as passing for a required check (a
+# workflow-level `paths:` filter would leave the check pending forever), and the summary jobs accept
+# "skipped" only on `full == 'false'`. A push to main, a dispatch, and any doubt run everything.
+#
+# `workflow_dispatch` lets a person run all of it on any branch (`gh workflow run ci.yml --ref
+# staging`); the v0.3.0 rewrite's first full run is its cutover pull request (part 38).
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -35,21 +55,25 @@ concurrency:
   # and GitHub keeps only the newest waiting, so main is green at most a run or two behind.
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
+# No secret belongs in this file: SUPABASE_SECRET_KEY and CODE_PEPPER are the two that must never be
+# committed, which is why .gitignore carries `.env`. The catalog version is compiled into the binaries
+# from crates/cards/patches/patches.json, and the server refuses to boot on a different one, so it is
+# not set here either.
 env:
-  # Card data and rules only. No secret belongs in this file: SUPABASE_SECRET_KEY and CODE_PEPPER
-  # are the two that must never be committed, which is why .gitignore carries `.env`.
-  CATALOG_VERSION: v0.2.0
+  CARGO_TERM_COLOR: always
 
 jobs:
   # `full` is `false` only for a pull request whose every changed file is on scripts/ci-scope.sh's
-  # skip list. A failed `changes` job leaves `full` empty and skips every job below it, which fails
-  # each summary job (it accepts a skip only on `full == 'false'`).
+  # skip list, and `db` is `true` only when the db job's own paths changed. A failed `changes` job
+  # leaves both empty and skips every job below it, which fails each summary job (it accepts a skip
+  # only on `full == 'false'`, or for db on `db == 'false'`).
   changes:
     name: what the change touches
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       full: ${{ steps.scope.outputs.full }}
+      db: ${{ steps.scope.outputs.db }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -63,105 +87,274 @@ jobs:
           if [ "$EVENT" = pull_request ]; then
             sh scripts/ci-scope.sh "$BASE" "$HEAD" | tee -a "$GITHUB_OUTPUT"
           else
-            echo "full=true" | tee -a "$GITHUB_OUTPUT"
+            printf 'full=true\ndb=true\n' | tee -a "$GITHUB_OUTPUT"
           fi
 
   # ------------------------------------------------------------------------------------------------
-  # lint, typecheck, unit, fuzz, coverage
+  # rust
   # ------------------------------------------------------------------------------------------------
 
-  static:
-    name: lint, typecheck, catalog, rulings
+  # The pure crates' purity is their clippy.toml (SURFACE §3), so clippy is the purity gate too.
+  rust-lint:
+    name: rust (fmt, clippy)
     needs: changes
     if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      - name: lint
-        run: pnpm lint
-      - name: typecheck
-        run: pnpm typecheck
-      # BUILD §5 names these four by hand, so they run by hand rather than hiding inside `test`.
-      - name: catalog data (268 cards, 49 tokens, rarity counts per set)
-        run: pnpm validate:catalog
-      - name: every card has a test file
-        run: pnpm exec tsx packages/cards/scripts/missing-tests.ts
-      - name: every SPEC §11 row has a named test
-        run: pnpm rulings:coverage
+        with:
+          node: "false"
+      - name: cargo fmt --check
+        run: cargo fmt --check
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
-  # `pnpm test`, by project. Two parts of it run elsewhere instead, where a fuller run plays the
-  # same games: the AI gates' smoke size (seeds 1-20 of each matchup and the perf gate's first game)
-  # is a prefix of what the ai-gate shards play, and the engine and cards projects, the 100-seed
-  # fuzz wave included, run whole in the coverage shards.
-  # web is split by file as well: alone it took 4 minutes, too near the budget, and then 7m51s per
-  # half (#172), so it runs in quarters. ai alone took 7m28s (#172), so it runs in halves.
-  unit:
-    name: unit (${{ matrix.projects }}${{ matrix.shard && format(' {0}', matrix.shard) || '' }})
+  # Every crate's tests: the engine's rules and golden replay, every card, the AI's units, the server
+  # on the fake store, the tools. The two features are the engine's: testkit, which its `rules`
+  # binary requires, and ts, whose export_bindings tests write apps/web/src/wire/generated/ (SURFACE
+  # §5.1) in the same run as the export_config tests that write engineConfig.ts and serverConfig.ts.
+  # What they wrote must be what is committed (V20).
+  rust-test:
+    name: rust (test)
     needs: changes
     if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - projects: ai
-            shard: 1/2
-          - projects: ai
-            shard: 2/2
-          - projects: web
-            shard: 1/4
-          - projects: web
-            shard: 2/4
-          - projects: web
-            shard: 3/4
-          - projects: web
-            shard: 4/4
-          - projects: server shared validator
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      - name: vitest
+        with:
+          node: "false"
+      - name: cargo test --workspace
+        run: cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts
+      - name: the web's generated types and constants are what the Rust exports (V20)
+        run: |
+          changed=$(git status --porcelain -- apps/web/src/wire)
+          if [ -n "$changed" ]; then
+            echo "::error::apps/web/src/wire/ differs from what the Rust generates. Regenerate it with \`cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts\` and commit the result."
+            echo "$changed"
+            git --no-pager diff --stat -- apps/web/src/wire
+            exit 1
+          fi
+
+  # The release binaries, built once for the run: `jackioh` (the CLI, which e2e spec 01's replay
+  # check also runs) and `jackioh-server` (which e2e smoke boots). The checks run on them in their own
+  # job, so a failed check never keeps the binaries from e2e smoke.
+  rust-build:
+    name: rust (release build)
+    needs: changes
+    if: ${{ needs.changes.outputs.full == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          node: "false"
+      - name: jackioh and jackioh-server
+        run: cargo build --release -p jackioh-server -p jackioh-tools
+      # A tarball keeps the executable bits an artifact would drop.
+      - name: pack them
+        run: tar -czf "$RUNNER_TEMP/rust-release.tgz" target/release/jackioh target/release/jackioh-server
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rust-release
+          path: ${{ runner.temp }}/rust-release.tgz
+          if-no-files-found: error
+          retention-days: 1
+
+  # `cargo jackioh <command>` (SURFACE §12) without the cargo: the binary rust-build made.
+  rust-checks:
+    name: rust (checks, fuzz 200)
+    needs: [changes, rust-build]
+    if: ${{ needs.changes.outputs.full == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rust-release
+          path: ${{ runner.temp }}
+      - name: unpack the binaries
+        run: tar -xzf "$RUNNER_TEMP/rust-release.tgz"
+      - name: catalog data (catalog check)
+        run: target/release/jackioh catalog check
+      - name: every catalog change claimed by a pending fragment (patches check)
+        run: target/release/jackioh patches check
+      - name: every ruling has its proof, every cited R-id its note (spec check)
+        run: target/release/jackioh spec check
+      - name: fuzz, seeds 1-200
+        run: target/release/jackioh fuzz --seeds 200
+
+  # README §8: a pull request from a training lane's branch (ai/improve, ai/unban) may change only
+  # crates/ai/** and training/history/**, must be exactly one generation on from main, and must pass
+  # its lane's promotion gate again here, against main's AI with the same seeds. A lane's own claim is
+  # never trusted. Any other pull request skips this job and the `rust` summary accepts the skip, so
+  # it needs no required-check name of its own. It plays 200 games, so it may take longer than the
+  # other pieces; ci-duration.yml does not report it.
+  training-gate:
+    name: rust (training gate)
+    needs: changes
+    if: ${{ needs.changes.outputs.full == 'true' && github.event_name == 'pull_request' && startsWith(github.head_ref, 'ai/') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      # The branch's own commit, not the merge commit GitHub makes: promote seeds its games from
+      # `git rev-parse HEAD:crates/ai/src`, as the lane's run did. All history, for main's commit.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      # git and jq only, so a branch that may not promote fails before anything compiles.
+      - id: claim
+        name: only the AI and its history changed, one generation on from main
         env:
-          SHARD: ${{ matrix.shard }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD_REF: ${{ github.head_ref }}
         run: |
-          args=()
-          for project in ${{ matrix.projects }}; do args+=(--project "$project"); done
-          if [ -n "$SHARD" ]; then args+=("--shard=$SHARD"); fi
-          pnpm exec vitest run "${args[@]}" --exclude '**/gate-*.test.ts'
+          set -euo pipefail
+          lane=${HEAD_REF#ai/}
+          case "$lane" in
+            improve | unban) ;;
+            *) echo "::error::$HEAD_REF is not a training lane's branch (ai/improve or ai/unban)"; exit 1 ;;
+          esac
+          # --no-renames, so a file moved into crates/ai/ still shows where it came from.
+          outside=$(git diff --no-renames --name-only "$BASE...HEAD" | grep -Ev '^(crates/ai/|training/history/)' || true)
+          if [ -n "$outside" ]; then
+            echo "::error::a training lane may change only crates/ai/** and training/history/** (docs/v0.3.0/README.md §8). This branch also changes:"
+            echo "$outside"
+            exit 1
+          fi
+          parent=$(git show "$BASE:crates/ai/generation.json" | jq -er .generation)
+          generation=$(jq -er .generation crates/ai/generation.json)
+          if [ "$generation" -ne $((parent + 1)) ]; then
+            echo "::error::crates/ai/generation.json is generation $generation; main's is $parent, so a promotion from it is $((parent + 1))"
+            exit 1
+          fi
+          named=$(jq -er .lane crates/ai/generation.json)
+          if [ "$named" != "$lane" ]; then
+            echo "::error::crates/ai/generation.json names the lane $named, but the branch is $HEAD_REF"
+            exit 1
+          fi
+          history="training/history/$lane.jsonl"
+          if [ ! -s "$history" ] || [ "$(tail -n 1 "$history" | jq -cS .)" != "$(jq -cS . crates/ai/generation.json)" ]; then
+            echo "::error::$history must end with the record crates/ai/generation.json holds (promote writes both)"
+            exit 1
+          fi
+          echo "generation $generation of the $lane lane, on main's $parent"
+          echo "lane=$lane" >> "$GITHUB_OUTPUT"
+      - uses: ./.github/actions/setup
+        with:
+          node: "false"
+      # Built from main's commit in a worktree beside this one, into the same target directory so the
+      # dependencies compile once; copied out before the branch's own build replaces target/release.
+      - name: main's jackioh, the parent
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git worktree add --detach "$RUNNER_TEMP/main" "$BASE"
+          cargo build --release -p jackioh-tools --manifest-path "$RUNNER_TEMP/main/Cargo.toml" --target-dir "$GITHUB_WORKSPACE/target"
+          cp target/release/jackioh "$RUNNER_TEMP/parent-jackioh"
+      - name: the lane's gate, played again against the parent (promote --verify)
+        env:
+          LANE: ${{ steps.claim.outputs.lane }}
+        run: |
+          cargo build --release -p jackioh-tools
+          target/release/jackioh promote --lane "$LANE" --parent-bin "$RUNNER_TEMP/parent-jackioh" --verify
 
-  # The fuzz gate, seeds 1-1000 over the full card pool, in equal runs of seeds
-  # (JACKIOH_FUZZ_FROM / JACKIOH_FUZZ_SEEDS, which both fuzz files read). A seed is its own game
-  # whatever run it sits in, so the shards together play exactly `pnpm fuzz`.
-  fuzz:
-    name: fuzz (${{ matrix.shard }}/${{ strategy.job-total }})
+  rust:
+    name: rust
+    needs: [changes, rust-lint, rust-test, rust-build, rust-checks, training-gate]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: every piece passed
+        env:
+          FULL: ${{ needs.changes.outputs.full }}
+          LINT: ${{ needs.rust-lint.result }}
+          TEST: ${{ needs.rust-test.result }}
+          BUILD: ${{ needs.rust-build.result }}
+          CHECKS: ${{ needs.rust-checks.result }}
+          TRAINING: ${{ needs.training-gate.result }}
+          AI_BRANCH: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'ai/') }}
+        run: |
+          echo "full=$FULL lint=$LINT test=$TEST build=$BUILD checks=$CHECKS training-gate=$TRAINING (ai/* branch: $AI_BRANCH)"
+          if [ "$FULL" = false ]; then
+            echo "only files no job reads changed (scripts/ci-scope.sh)"
+            exit 0
+          fi
+          test "$LINT" = success
+          test "$TEST" = success
+          test "$BUILD" = success
+          test "$CHECKS" = success
+          if [ "$AI_BRANCH" = true ]; then
+            test "$TRAINING" = success
+          fi
+
+  # ------------------------------------------------------------------------------------------------
+  # web
+  # ------------------------------------------------------------------------------------------------
+
+  # The WASM module (scripts/build-wasm.sh, SURFACE §10.2) and the e2e client (`pnpm build:e2e`,
+  # which BUILD M5-T3's `window.__jackioh` needs: a plain `build` strips it), once for the run. The
+  # unit tests and the typecheck read the module; e2e smoke serves the client.
+  wasm:
+    name: web (wasm, client build)
     needs: changes
     if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4]
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      - name: this shard's seeds
-        run: |
-          per=$(( 1000 / ${{ strategy.job-total }} ))
-          export JACKIOH_FUZZ_FROM=$(( (${{ matrix.shard }} - 1) * per + 1 ))
-          export JACKIOH_FUZZ_SEEDS=$per
-          echo "seeds $JACKIOH_FUZZ_FROM..$(( JACKIOH_FUZZ_FROM + per - 1 ))"
-          pnpm fuzz
+      - name: the WASM module
+        run: sh scripts/build-wasm.sh
+      - name: the e2e client
+        run: pnpm build:e2e
+      - name: pack them
+        run: tar -czf "$RUNNER_TEMP/web-build.tgz" apps/web/src/wasm/pkg apps/web/dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: ${{ runner.temp }}/web-build.tgz
+          if-no-files-found: error
+          retention-days: 1
 
-  # BUILD §5's 90% line floor over engine and cards: `pnpm test:coverage`, split by file. Each shard
-  # leaves a blob report (Vitest writes it to .vitest/blob/) and the summary job merges them, so the
-  # threshold in vitest.config.ts is held against the merged total, never a shard's.
-  coverage:
-    name: coverage (${{ matrix.shard }}/${{ strategy.job-total }})
-    needs: changes
+  web-check:
+    name: web (typecheck, eslint)
+    needs: [changes, wasm]
+    if: ${{ needs.changes.outputs.full == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          rust: "false"
+      # Before the module is unpacked, so its generated JavaScript is never linted.
+      - name: eslint
+        run: pnpm exec eslint apps/web e2e
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: ${{ runner.temp }}
+      - name: unpack the WASM module
+        run: tar -xzf "$RUNNER_TEMP/web-build.tgz"
+      - name: typecheck the web
+        run: pnpm --dir apps/web typecheck
+      - name: typecheck the e2e specs and the component specs
+        run: pnpm --dir e2e typecheck && pnpm --dir e2e typecheck:component
+
+  # In thirds, by file. The audio and fx layers and the asset tests (the recorded voice and music,
+  # the card art convention) run in super.yml instead: cosmetic, large, and broken on Linux by every
+  # new card until its assets are rendered (docs/v0.3.0/research/D-ci-spec.md §2.4).
+  web-unit:
+    name: web (unit ${{ matrix.shard }}/${{ strategy.job-total }})
+    needs: [changes, wasm]
     if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -172,283 +365,153 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      # The floor is off in a shard (a third of the files covers less than the whole) and is held
-      # by the summary job on the merged report, at vitest.config.ts's value.
-      - name: this shard's files
-        run: >-
-          pnpm test:coverage --shard=${{ matrix.shard }}/${{ strategy.job-total }}
-          --coverage.thresholds.lines=0 --reporter=blob --reporter=default
-      - uses: actions/upload-artifact@v4
         with:
-          name: coverage-blob-${{ matrix.shard }}
-          path: .vitest/blob/
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 1
+          rust: "false"
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: ${{ runner.temp }}
+      - name: unpack the WASM module
+        run: tar -xzf "$RUNNER_TEMP/web-build.tgz"
+      - name: vitest
+        run: >-
+          pnpm exec vitest run --project web --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+          --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts'
 
-  checks:
-    name: lint, typecheck, unit, fuzz, coverage
-    needs: [changes, static, unit, fuzz, coverage]
+  web:
+    name: web
+    needs: [changes, wasm, web-check, web-unit]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - name: every piece passed
-        run: |
-          echo "full=${{ needs.changes.outputs.full }} static=${{ needs.static.result }} unit=${{ needs.unit.result }} fuzz=${{ needs.fuzz.result }} coverage=${{ needs.coverage.result }}"
-          if [ "${{ needs.changes.outputs.full }}" = false ]; then
-            echo "only the night bot's files changed (scripts/ci-scope.sh): no job here reads them"
-            exit 0
-          fi
-          test "${{ needs.static.result }}" = success
-          test "${{ needs.unit.result }}" = success
-          test "${{ needs.fuzz.result }}" = success
-          test "${{ needs.coverage.result }}" = success
-      - uses: actions/checkout@v4
-        if: ${{ needs.changes.outputs.full == 'true' }}
-      - uses: ./.github/actions/setup
-        if: ${{ needs.changes.outputs.full == 'true' }}
-      - uses: actions/download-artifact@v4
-        if: ${{ needs.changes.outputs.full == 'true' }}
-        with:
-          pattern: coverage-blob-*
-          path: .vitest/blob
-          merge-multiple: true
-      - name: coverage floor, over every shard
-        if: ${{ needs.changes.outputs.full == 'true' }}
-        run: pnpm exec vitest run --merge-reports --coverage --project engine --project cards
-
-  # ------------------------------------------------------------------------------------------------
-  # ai quality gates (full)
-  # ------------------------------------------------------------------------------------------------
-
-  # The practice AI's quality gates at their full seed counts (docs/polish/3-ai.md B28-B31, B42),
-  # every k-th game per shard (packages/ai/test/_shard.ts). A shard checks that each game it played
-  # is clean and times each of its perf decisions. Wins are a property of the whole run, so each
-  # shard uploads its games and the summary job holds them against `gateNeeded` together.
-  #
-  # Twelve shards, and fifteen minutes rather than ten: under patch v0.2.0 one hard-vs-easy game can
-  # take four to five minutes on its own (gate:v2:hard-vs-easy:12), so a shard that draws it runs
-  # long however finely the gate is split: over ci-duration.yml's 5-minute target, though under its
-  # 7-minute alert. If such a shard ever trips the alert, the cure is engine speed (#70), not more
-  # shards.
-  ai-gate-shard:
-    name: ai gates (${{ matrix.shard }}/${{ strategy.job-total }})
-    needs: changes
-    if: ${{ needs.changes.outputs.full == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
-      - name: this shard's games of the three matchups and the perf gate
         env:
-          JACKIOH_AI_GATE_SHARD: ${{ matrix.shard }}/${{ strategy.job-total }}
-          JACKIOH_AI_GATE_OUT: ${{ github.workspace }}/ai-gate-shards
-        run: pnpm ai:gate
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ai-gate-${{ matrix.shard }}
-          path: ai-gate-shards/
-          if-no-files-found: error
-          retention-days: 1
-
-  ai-gate:
-    name: ai quality gates (full)
-    needs: [changes, ai-gate-shard]
-    if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: every shard passed
+          FULL: ${{ needs.changes.outputs.full }}
+          WASM: ${{ needs.wasm.result }}
+          CHECK: ${{ needs.web-check.result }}
+          UNIT: ${{ needs.web-unit.result }}
         run: |
-          echo "full=${{ needs.changes.outputs.full }} shards=${{ needs.ai-gate-shard.result }}"
-          if [ "${{ needs.changes.outputs.full }}" = false ]; then
-            echo "only the night bot's files changed (scripts/ci-scope.sh): no job here reads them"
+          echo "full=$FULL wasm=$WASM check=$CHECK unit=$UNIT"
+          if [ "$FULL" = false ]; then
+            echo "only files no job reads changed (scripts/ci-scope.sh)"
             exit 0
           fi
-          test "${{ needs.ai-gate-shard.result }}" = success
-      - uses: actions/checkout@v4
-        if: ${{ needs.changes.outputs.full == 'true' }}
-      - uses: ./.github/actions/setup
-        if: ${{ needs.changes.outputs.full == 'true' }}
-      - uses: actions/download-artifact@v4
-        if: ${{ needs.changes.outputs.full == 'true' }}
-        with:
-          pattern: ai-gate-*
-          path: ai-gate-shards
-          merge-multiple: true
-      - name: each matchup's wins against gateNeeded, over every shard
-        if: ${{ needs.changes.outputs.full == 'true' }}
-        run: pnpm ai:gate:merge ai-gate-shards
+          test "$WASM" = success
+          test "$CHECK" = success
+          test "$UNIT" = success
 
   # ------------------------------------------------------------------------------------------------
-  # sql invariants, store contract
+  # e2e smoke
   # ------------------------------------------------------------------------------------------------
 
-  # BUILD M6-T3's acceptance names a **raw SQL test**: "the unique index rejects a duplicate across
-  # decks even when the application check is bypassed", CHECK 14 of
-  # apps/server/test/sql/01_schema_invariants.sql. RLS under the `authenticated` role, the
-  # append-only triggers, the SECURITY DEFINER boundaries and the L4 index can only be measured
-  # against a real Postgres, so it gets a gate of its own.
-  sql:
-    name: sql invariants (real Postgres)
-    needs: changes
+  # One smoke per user-facing flow, on Chrome, against this run's release jackioh-server and client
+  # (.github/actions/e2e-shard says why each shard boots its own server).
+  e2e-smoke-shard:
+    name: e2e smoke (${{ matrix.shard }}/${{ strategy.job-total }})
+    needs: [changes, wasm, rust-build]
     if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          rust: "false"
+      - uses: ./.github/actions/e2e-shard
+        with:
+          specs: smoke
+          shard: ${{ matrix.shard }}
+          shards: ${{ strategy.job-total }}
 
-      # NOT a `services:` block. run.sh starts and drives its own container over `docker exec` and
-      # never speaks TCP to Postgres. It needs a Docker daemon, no secret and no DATABASE_URL.
-      - name: pre-pull postgres
-        run: docker pull postgres:16
+  e2e-smoke:
+    name: e2e smoke
+    needs: [changes, e2e-smoke-shard]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: every shard passed
+        env:
+          FULL: ${{ needs.changes.outputs.full }}
+          SHARDS: ${{ needs.e2e-smoke-shard.result }}
+        run: |
+          echo "full=$FULL shards=$SHARDS"
+          if [ "$FULL" = false ]; then
+            echo "only files no job reads changed (scripts/ci-scope.sh)"
+            exit 0
+          fi
+          test "$SHARDS" = success
 
-      # The script directly rather than `pnpm test:sql`: it needs neither Node nor pnpm.
-      - name: schema, RLS and lifecycle invariants
-        run: sh apps/server/test/sql/run.sh
+  # ------------------------------------------------------------------------------------------------
+  # db
+  # ------------------------------------------------------------------------------------------------
 
-      - name: remove the container
-        if: always()
-        run: docker rm -f jackioh-pg-test || true
-
-  # The production `Store` against a real Postgres. `contract.ts` is one suite run against two
-  # stores, the in-memory one in `pnpm test` and this one here.
-  db:
-    name: store contract (real Postgres)
+  # What only a real Postgres can measure, each suite starting its own container (no `services:`
+  # block: the scripts drive Docker themselves and need no secret and no DATABASE_URL from here).
+  #   sql invariants   BUILD M6-T3's raw SQL test: RLS under `authenticated`, the append-only
+  #                    triggers, the SECURITY DEFINER boundaries, the unique indexes (V17).
+  #   store contract   the store contract suite against PgStore, as `cargo test` runs it against the
+  #                    fake (V16).
+  #   deploy rehearsal Render's deploy before it happens: the Docker image on render.yaml's settings,
+  #                    migrating as a role that is not a superuser, as Supabase's is not, then a
+  #                    production boot held to the readiness probe and the free instance's memory
+  #                    (V22). Migration 0013 passed every superuser suite and then failed Render's
+  #                    deploy: this is the suite that would have caught it.
+  # Per pull request only when it touches what they test (scripts/ci-scope.sh's `db`); daily in
+  # super.yml regardless.
+  db-suite:
+    name: db (${{ matrix.suite }})
     needs: changes
-    if: ${{ needs.changes.outputs.full == 'true' }}
+    if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.db == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: sql invariants
+            script: crates/server/tests/sql/run.sh
+            rust: false
+          - suite: store contract
+            script: crates/server/tests/db/run.sh
+            rust: true
+          - suite: deploy rehearsal
+            script: crates/server/tests/deploy/rehearse.sh
+            rust: false
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-
-      # Like the `sql` job, no `services:` block: run.sh starts and drives its own container, applies
-      # the Supabase stub, runs the real src/db/migrate.ts, applies the grants and then runs vitest.
+        if: ${{ matrix.rust }}
+        with:
+          node: "false"
       - name: pre-pull postgres
         run: docker pull postgres:16
+      - name: ${{ matrix.suite }}
+        env:
+          SCRIPT: ${{ matrix.script }}
+        run: sh "$SCRIPT"
 
-      - name: the store contract and the database-only tests
-        run: pnpm test:db
-
-      - name: remove the container
-        if: always()
-        run: docker rm -f jackioh-pg-store-test || true
-
-      # Render's deploy, rehearsed before it happens (apps/server/test/deploy/rehearse.sh):
-      # render.yaml's own start command, migrating as a role that is not a superuser, as Supabase's
-      # is not, then the reseed and a production boot, held to the readiness probe Render uses and
-      # to the free instance's memory. Migration 0013 passed every suite here, all of which migrate
-      # as a superuser, and then failed Render's deploy: this is the step that would have caught it.
-      - name: the Render deploy, rehearsed
-        run: pnpm test:deploy
-
-      - name: remove the rehearsal's container
-        if: always()
-        run: docker rm -f jackioh-pg-deploy || true
-
-  # ------------------------------------------------------------------------------------------------
-  # e2e (chrome), e2e (electron)
-  # ------------------------------------------------------------------------------------------------
-
-  # One run per browser, so M8's "Chrome and Electron" is two independent results, each split into
-  # shards that boot their own client and server (.github/actions/e2e-shard says why that matters).
-  e2e-chrome-shard:
-    name: e2e chrome (${{ matrix.shard }}/${{ strategy.job-total }})
-    needs: changes
-    if: ${{ needs.changes.outputs.full == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
-      - uses: ./.github/actions/e2e-shard
-        with:
-          browser: chrome
-          shard: ${{ matrix.shard }}
-          shards: ${{ strategy.job-total }}
-
-  e2e-electron-shard:
-    name: e2e electron (${{ matrix.shard }}/${{ strategy.job-total }})
-    needs: changes
-    if: ${{ needs.changes.outputs.full == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
-      - uses: ./.github/actions/e2e-shard
-        with:
-          browser: electron
-          shard: ${{ matrix.shard }}
-          shards: ${{ strategy.job-total }}
-
-  # BUILD M5-T1's "without layout overflow at 1280x720 and 390x844": jsdom has no layout engine, so
-  # Cypress component testing mounts the 10-unit/10-backrow fixture board in a real browser. Chrome
-  # only (one measurement, and Cypress 16 deprecates Electron), with no client build, no server and
-  # no E2E=1: the component dev server compiles apps/web/src itself, on port 5273.
-  component:
-    name: e2e component (chrome)
-    needs: changes
-    if: ${{ needs.changes.outputs.full == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
-      - name: the fixture board's layout, measured in a browser
-        run: pnpm --dir e2e exec cypress run --component --browser chrome
-      - name: keep the evidence when it fails
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cypress-component
-          path: e2e/artifacts/component/screenshots
-          if-no-files-found: warn
-
-  e2e-chrome:
-    name: e2e (chrome)
-    needs: [changes, e2e-chrome-shard, component]
+  db:
+    name: db
+    needs: [changes, db-suite]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: every shard passed
+      - name: every suite passed, or none was needed
+        env:
+          FULL: ${{ needs.changes.outputs.full }}
+          DB: ${{ needs.changes.outputs.db }}
+          SUITES: ${{ needs.db-suite.result }}
         run: |
-          echo "full=${{ needs.changes.outputs.full }} shards=${{ needs.e2e-chrome-shard.result }} component=${{ needs.component.result }}"
-          if [ "${{ needs.changes.outputs.full }}" = false ]; then
-            echo "only the night bot's files changed (scripts/ci-scope.sh): no job here reads them"
+          echo "full=$FULL db=$DB suites=$SUITES"
+          if [ "$FULL" = false ] || [ "$DB" = false ]; then
+            echo "nothing the db suites test changed (scripts/ci-scope.sh); super.yml runs them daily"
             exit 0
           fi
-          test "${{ needs.e2e-chrome-shard.result }}" = success
-          test "${{ needs.component.result }}" = success
-
-  e2e-electron:
-    name: e2e (electron)
-    needs: [changes, e2e-electron-shard]
-    if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: every shard passed
-        run: |
-          echo "full=${{ needs.changes.outputs.full }} shards=${{ needs.e2e-electron-shard.result }}"
-          if [ "${{ needs.changes.outputs.full }}" = false ]; then
-            echo "only the night bot's files changed (scripts/ci-scope.sh): no job here reads them"
-            exit 0
-          fi
-          test "${{ needs.e2e-electron-shard.result }}" = success
+          test "$SUITES" = success
