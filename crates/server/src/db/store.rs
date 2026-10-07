@@ -367,8 +367,9 @@ pub struct SavedDeck {
     pub updated_at: i64,
 }
 
-/// A trio's three slots, in order. `None` is an empty slot, which a saved trio may have (R252).
-pub type TrioSlots = [Option<String>; 3];
+/// A trio's three slots, in order. `None` is an empty slot, which a saved trio may have (R252). A TS
+/// tuple is a Rust tuple (SURFACE §4.3), serialised as the same 3-array.
+pub type TrioSlots = (Option<String>, Option<String>, Option<String>);
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -482,7 +483,7 @@ pub struct FrozenDeck {
 #[serde(rename_all = "camelCase")]
 pub struct FrozenTrio {
     pub name: String,
-    pub decks: [FrozenDeck; 3],
+    pub decks: (FrozenDeck, FrozenDeck, FrozenDeck),
 }
 
 // ---------------------------------------------------------------------------

@@ -293,7 +293,7 @@ fn side_of_mut(series: &mut SeriesRow, seat: SeriesSeat) -> &mut SeriesSide {
 
 /// `game.slots[index]` (the slots are a pair, SURFACE §4.3).
 fn slot_at(game: &SeriesGame, index: usize) -> usize {
-    if index == 0 { game.slots.0 } else { game.slots.1 }
+    (if index == 0 { game.slots.0 } else { game.slots.1 }) as usize
 }
 
 /// A frozen trio's three decks, in slot order.
@@ -403,7 +403,7 @@ fn begin(series: &mut SeriesRow) -> Result<(), SeriesRefusal> {
     for seat in SEATS {
         let pick = side_of(series, seat).pick;
         if let Some(pick) = pick {
-            if won_slots(seat, &series.games).contains(&pick) {
+            if won_slots(seat, &series.games).contains(&(pick as usize)) {
                 return refuse(
                     SeriesRefusalReason::SlotWon,
                     "That deck has already won a game in this series, so it is locked.",
@@ -414,7 +414,7 @@ fn begin(series: &mut SeriesRow) -> Result<(), SeriesRefusal> {
     let game_no = series.games.len() as i32 + FIRST_GAME;
     let match_id = series.next_match_id.clone();
     series.games.push(SeriesGame {
-        game_no,
+        game_no: i64::from(game_no),
         match_id,
         slots: (a_pick, b_pick),
         first: first_seat_of(game_no),
@@ -437,7 +437,7 @@ fn open_picks(series: &mut SeriesRow, match_id: &str, now: i64) -> Result<(), Se
     series.pick_deadline = Some(pick_deadline_from(now));
     for seat in SEATS {
         let pick = automatic_pick(series, seat);
-        side_of_mut(series, seat).pick = pick;
+        side_of_mut(series, seat).pick = pick.map(|slot| slot as i64);
     }
     if both_picked(series) {
         begin(series)?;
@@ -467,13 +467,15 @@ fn assert_picking(series: &SeriesRow, not_picking_message: &str) -> Result<(), S
 }
 
 /// One side of `NewSeriesInput.sides`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(serde::Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct NewSeriesSide {
     pub profile_id: String,
     pub trio: FrozenTrio,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(serde::Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct NewSeriesInput {
     pub series_id: String,
     /// The match id `tickets_claim_pair` or `rooms_claim` reserved: game 1's (R263).
@@ -561,7 +563,7 @@ pub fn pick_deck(
     }
 
     let mut next = copy(series);
-    side_of_mut(&mut next, seat).pick = Some(slot);
+    side_of_mut(&mut next, seat).pick = Some(slot as i64);
     if both_picked(&next) {
         begin(&mut next)?;
     }
@@ -607,7 +609,7 @@ pub fn game_ended(
         side_of_mut(&mut next, seat).wins += 1;
     }
 
-    let wins_needed = SERIES_WINS_NEEDED as i32;
+    let wins_needed = SERIES_WINS_NEEDED as i64;
     let p1_wins = next.sides.0.wins;
     let p2_wins = next.sides.1.wins;
     if p1_wins >= wins_needed || p2_wins >= wins_needed {
@@ -651,7 +653,7 @@ pub fn timeout_picks(series: &SeriesRow, now: i64) -> Result<SeriesRow, SeriesRe
         let Some(slot) = first_unwon(&next, seat, &next.games) else {
             return refuse(SeriesRefusalReason::PicksMissing, "Every deck of this trio has already won.");
         };
-        side_of_mut(&mut next, seat).pick = Some(slot);
+        side_of_mut(&mut next, seat).pick = Some(slot as i64);
     }
     begin(&mut next)?;
     Ok(stamp(next, series, now))
@@ -750,7 +752,7 @@ pub fn game_seats(series: &SeriesRow) -> Result<GameSeats, SeriesRefusal> {
             profile_id: side.profile_id.clone(),
             player,
             deck: deck.cards.clone(),
-            portrait: deck.portrait.clone(),
+            portrait: deck.portrait.clone().flatten(),
         }
     };
     Ok(GameSeats {
@@ -766,16 +768,16 @@ pub fn game_seats(series: &SeriesRow) -> Result<GameSeats, SeriesRefusal> {
 pub fn already_picked(series: &SeriesRow, seat: SeriesSeat, slot: i32, game_no: Option<i32>) -> bool {
     let wanted = if slot < 0 { None } else { Some(slot as usize) };
     if let Some(game_no) = game_no {
-        if let Some(begun) = series.games.iter().find(|game| game.game_no == game_no) {
+        if let Some(begun) = series.games.iter().find(|game| game.game_no == i64::from(game_no)) {
             return wanted == Some(slot_at(begun, seat_index(seat)));
         }
         return series.status == SeriesStatus::Picking
             && game_no == series.games.len() as i32 + FIRST_GAME
             && wanted.is_some()
-            && side_of(series, seat).pick == wanted;
+            && side_of(series, seat).pick.map(|pick| pick as usize) == wanted;
     }
     if series.status == SeriesStatus::Picking {
-        return wanted.is_some() && side_of(series, seat).pick == wanted;
+        return wanted.is_some() && side_of(series, seat).pick.map(|pick| pick as usize) == wanted;
     }
     match game_in_play(series) {
         Some(game) => wanted == Some(slot_at(game, seat_index(seat))),
@@ -834,7 +836,7 @@ pub fn project_series(series: &SeriesRow, viewer_profile_id: &str, now: i64) -> 
         ranked,
         you: SeriesViewYou {
             seat,
-            wins: you.wins,
+            wins: you.wins as i32,
             trio_name: you.trio.name.clone(),
             decks: trio_decks(&you.trio)
                 .iter()
@@ -847,11 +849,11 @@ pub fn project_series(series: &SeriesRow, viewer_profile_id: &str, now: i64) -> 
                     games: series.games.iter().filter(|game| slot_at(game, mine) == slot).count(),
                 })
                 .collect(),
-            pick: if picking { you.pick } else { None },
-            auto_pick: picking && you.pick.is_some() && automatic_pick(series, seat) == you.pick,
+            pick: if picking { you.pick.map(|pick| pick as usize) } else { None },
+            auto_pick: picking && you.pick.is_some() && automatic_pick(series, seat) == you.pick.map(|pick| pick as usize),
         },
         opponent: SeriesViewOpponent {
-            wins: opponent.wins,
+            wins: opponent.wins as i32,
             decks: trio_decks(&opponent.trio)
                 .iter()
                 .enumerate()
@@ -863,7 +865,7 @@ pub fn project_series(series: &SeriesRow, viewer_profile_id: &str, now: i64) -> 
             .games
             .iter()
             .map(|game| SeriesViewGame {
-                game_no: game.game_no,
+                game_no: game.game_no as i32,
                 match_id: game.match_id.clone(),
                 your_slot: slot_at(game, mine),
                 opponent_slot: slot_at(game, theirs),

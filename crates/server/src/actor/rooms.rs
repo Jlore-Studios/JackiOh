@@ -277,7 +277,7 @@ fn room_seats(
 }
 
 /// POST /api/rooms — create a room in a mode and return its code (§9.5, R264).
-pub async fn create(app: &App, req: Req) -> ApiResult {
+pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
     let profile_id = profile_of(&req)?;
     assert_not_in_match(&req)?;
     // R257, R264: the same choice the queue takes.
@@ -412,7 +412,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
         // of the queue and the room until the pick deadline ran it out (R333).
         let started: Result<SeriesRow, ApiError> = async {
             let mut tx = app.db.begin(None).await?;
-            let series = start_series(app, &input, &mut tx).await?;
+            let series = start_series(app, input, &mut tx).await?;
             tx.commit().await?;
             Ok(series)
         }

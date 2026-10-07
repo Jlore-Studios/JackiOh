@@ -43,7 +43,7 @@ use crate::api::decks::{FrozenChoice, ModeChoiceInput, assert_not_in_series, fre
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::api::series::start_series;
 use crate::api::series_rules::{NewSeriesInput, NewSeriesSide};
-use crate::app::App;
+use crate::app::{App, now_ms};
 use crate::config::{MATCHMAKER_SWEEP_INTERVAL_SECONDS, rating_window};
 use crate::db::store::{FrozenTrio, MatchSeat, Profile, QueueMode, SeriesRow, StartMatchInput, Ticket, TicketStatus};
 
@@ -53,21 +53,6 @@ const MS_PER_SECOND: f64 = 1000.0;
 // ---------------------------------------------------------------------------
 // Small private copies (fullsend rule 5): the clock, the id minters and the error shapes
 // ---------------------------------------------------------------------------
-
-/// TS `deps.timers.now()`: epoch milliseconds, on tokio's clock, so a test that pauses and advances
-/// time (`tokio::time::pause`, `advance`) moves it as TS's manual timers moved theirs. Unpaused, it
-/// is the system clock.
-fn now_ms() -> i64 {
-    let system = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_millis() as i64)
-        .unwrap_or(0);
-    let tokio_now = tokio::time::Instant::now().into_std();
-    let std_now = std::time::Instant::now();
-    let ahead = tokio_now.saturating_duration_since(std_now).as_millis() as i64;
-    let behind = std_now.saturating_duration_since(tokio_now).as_millis() as i64;
-    system + ahead - behind
-}
 
 /// TS `deps.ids.uuid()` (`systemIds.uuid`, `crypto.randomUUID()`).
 fn new_uuid() -> String {
@@ -369,7 +354,7 @@ async fn start_paired_series(app: &App, a: &Ticket, b: &Ticket, match_id: &str) 
         // or not at all: a 'picking' row that half-landed would hold both players out of the queue
         // (assert_not_in_series) until the pick deadline ran it out (R333).
         let mut tx = app.db.begin(None).await.map_err(internal)?;
-        let series = start_series(app, &input, &mut tx).await.map_err(internal)?;
+        let series = start_series(app, input, &mut tx).await.map_err(internal)?;
         tx.commit().await.map_err(internal)?;
         Ok::<SeriesRow, ApiError>(series)
     }
@@ -429,13 +414,13 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
             profile_id: a.profile_id.clone(),
             player: jackioh_engine::PlayerId::P1,
             deck: if random { dealt_deck(&seed, "p1") } else { a.deck.clone() },
-            portrait: if random { dealt_portrait(&seed, "p1") } else { a.portrait.clone() },
+            portrait: if random { dealt_portrait(&seed, "p1") } else { a.portrait.clone().flatten() },
         },
         MatchSeat {
             profile_id: b.profile_id.clone(),
             player: jackioh_engine::PlayerId::P2,
             deck: if random { dealt_deck(&seed, "p2") } else { b.deck.clone() },
-            portrait: if random { dealt_portrait(&seed, "p2") } else { b.portrait.clone() },
+            portrait: if random { dealt_portrait(&seed, "p2") } else { b.portrait.clone().flatten() },
         },
     );
 
@@ -697,7 +682,7 @@ async fn enqueue_route(app: &Arc<App>, req: Req) -> ApiResult {
 ///   Affects: §9.5, R108, R143; `api/queue.rs`, migration `0004_matches.sql`.
 ///
 /// `tickets.status = 'cancelled'` in migration 0004 is what this writes.
-pub async fn dequeue(app: &App, req: Req) -> ApiResult {
+pub async fn dequeue(app: &Arc<App>, req: Req) -> ApiResult {
     dequeue_route(app, req).await.map_err(hide_internal)
 }
 
@@ -727,7 +712,7 @@ async fn dequeue_route(app: &App, req: Req) -> ApiResult {
 /// reads §9.4's gate as covering even the count, this becomes `Active` and nothing else changes.
 ///
 /// R257: the total, and per mode, so the lobby can say how many are waiting for each.
-pub async fn population(app: &App, _req: Req) -> ApiResult {
+pub async fn population(app: &Arc<App>, _req: Req) -> ApiResult {
     population_route(app).await.map_err(hide_internal)
 }
 

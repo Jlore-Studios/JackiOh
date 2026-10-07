@@ -29,6 +29,8 @@
 //! `("GET", "/api/tutorial", get_tutorial)` and `("PUT", "/api/tutorial", put_tutorial)` in TS's
 //! order.
 
+use std::sync::Arc;
+
 use indexmap::IndexSet;
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -156,7 +158,7 @@ pub fn read_hidden_choice(body: &Value, now: i64) -> Result<Option<TutorialHidde
 }
 
 /// `GET /api/tutorial` (`active`, so a pending account gets 403, §9.4).
-pub async fn get_tutorial(app: &App, req: Req) -> ApiResult {
+pub async fn get_tutorial(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let mut tx = app.db.begin(Some(profile.id.as_str())).await.map_err(|error| internal("/api/tutorial", error))?;
     let row = tx.tutorial_get(&profile.id).await.map_err(|error| internal("/api/tutorial", error))?;
@@ -165,7 +167,7 @@ pub async fn get_tutorial(app: &App, req: Req) -> ApiResult {
 }
 
 /// `PUT /api/tutorial` (`active`, so a pending account gets 403, §9.4).
-pub async fn put_tutorial(app: &App, req: Req) -> ApiResult {
+pub async fn put_tutorial(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     // TS `deps.timers.now()`: the server's one clock (`app::now_ms`, which tokio's paused clock moves).
     let now = now_ms();
@@ -177,7 +179,7 @@ pub async fn put_tutorial(app: &App, req: Req) -> ApiResult {
     let input = TutorialMergeInput { profile_id: profile.id.clone(), completed, hidden_choice, at: now };
     let mut tx = app.db.begin(Some(profile.id.as_str())).await.map_err(|error| internal("/api/tutorial", error))?;
     let outcome = tx
-        .tutorial_merge(&input, TUTORIAL_LESSONS_MAX)
+        .tutorial_merge(&input, TUTORIAL_LESSONS_MAX as i64)
         .await
         .map_err(|error| internal("/api/tutorial", error))?;
     tx.commit().await.map_err(|error| internal("/api/tutorial", error))?;

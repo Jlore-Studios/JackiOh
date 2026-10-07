@@ -41,27 +41,12 @@ use crate::api::game_records::record_live_game;
 use crate::api::http::{ApiError, ApiErrorCode};
 use crate::api::ranked::{RankedGameInput, RankedSideInput, rate_ranked_game};
 use crate::api::series::{SeriesGameResult, advance_series_in_tx, resume_series};
-use crate::app::App;
+use crate::app::{App, now_ms};
 use crate::config::{MATCH_REAPER_INTERVAL_SECONDS, RATING_START, RESULT_WRITE_ATTEMPTS};
 use crate::db::store::{
     LastBoardKind, MatchRow, MatchSeat, Profile, RatedGameKind, RatedReason, ResultRow, SeriesRow, SeriesStatus,
     StoreError, Tx,
 };
-
-/// TS `deps.timers.now()`: epoch milliseconds, on tokio's clock, so a test that pauses and advances
-/// time (`tokio::time::pause`, `advance`) moves it as TS's manual timers moved theirs. Unpaused, it
-/// is the system clock.
-fn now_ms() -> i64 {
-    let system = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_millis() as i64)
-        .unwrap_or(0);
-    let tokio_now = tokio::time::Instant::now().into_std();
-    let std_now = std::time::Instant::now();
-    let ahead = tokio_now.saturating_duration_since(std_now).as_millis() as i64;
-    let behind = std_now.saturating_duration_since(tokio_now).as_millis() as i64;
-    system + ahead - behind
-}
 
 /// A failure this file reports to its caller (the actor, the reaper): TS rethrew the error itself,
 /// so the sentence is the error's own.
@@ -139,7 +124,7 @@ fn failed(error: impl std::fmt::Display) -> WriteError {
 
 /// `results_insert`'s error: the duplicate is told apart from every other failure.
 fn insert_error(error: StoreError) -> WriteError {
-    if matches!(error, StoreError::DuplicateResult { .. }) {
+    if matches!(error, StoreError::Duplicate(_)) {
         WriteError::Duplicate(error.to_string())
     } else {
         WriteError::Failed(error.to_string())
@@ -243,7 +228,7 @@ async fn write_once(
             let rated = rate_ranked_game(
                 tx,
                 app,
-                RankedGameInput {
+                &RankedGameInput {
                     id: input.match_id.clone(),
                     kind: RatedGameKind::Match,
                     catalog_version: match_row.catalog_version.clone(),
@@ -255,7 +240,7 @@ async fn write_once(
                     reason: RatedReason::Game(input.outcome.reason),
                     at: input.at,
                     // R672: a double-or-nothing rematch's stakes ride on its row; absent is a normal game.
-                    stake: if match_row.stake == Some(2) { match_row.stake } else { None },
+                    stake: if match_row.stake == Some(2) { Some(2) } else { None },
                 },
             )
             .await
@@ -274,7 +259,7 @@ async fn write_once(
         players: (seat_a.profile_id.clone(), seat_b.profile_id.clone()),
         winner_profile_id,
         reason: input.outcome.reason,
-        turns: input.turns,
+        turns: i64::from(input.turns),
         ended_at: input.at,
         rating_before: before,
         rating_after: after,
@@ -321,7 +306,7 @@ async fn write_once(
                 tx,
                 app,
                 &series,
-                SeriesGameResult {
+                &SeriesGameResult {
                     match_id: input.match_id.clone(),
                     seats: input.seats.clone(),
                     outcome: input.outcome.clone(),
@@ -354,7 +339,7 @@ pub async fn record_result(app: &Arc<App>, input: RecordResultInput) -> Result<R
     let written = write_result(app, &input, RatingPolicy::Rated).await?;
     // After the commit: a series whose next game began already (R332) gets its match. A
     // failure to start it is the sweeper's to heal (R263), never this result's.
-    resume_series(app, written.series).await;
+    resume_series(app, written.series.as_ref()).await;
     // R376: after the commit too, and never at the result's expense — it logs and swallows its
     // own failures, and a second write of the same match files nothing.
     record_live_game(app, &input.match_id).await;
@@ -384,7 +369,7 @@ pub async fn void_match(app: &Arc<App>, input: VoidMatchInput) -> Result<(), Api
         at = input.at,
         seriesId = series.as_ref().map(|series| series.id.as_str()),
     );
-    resume_series(app, series).await;
+    resume_series(app, series.as_ref()).await;
     Ok(())
 }
 
@@ -439,7 +424,7 @@ pub async fn reap_stuck_matches(app: &Arc<App>) -> Result<Vec<String>, ApiError>
         }
         // A reaped series game is a drawn game like any other (R334), and may leave the next game to
         // start (R332).
-        resume_series(app, advanced).await;
+        resume_series(app, advanced.as_ref()).await;
     }
 
     if !resolved.is_empty() {

@@ -36,7 +36,8 @@ use serde_json::{Value, json};
 use sqlx::postgres::{PgConnection, PgRow};
 use sqlx::{Connection, Row};
 
-use crate::api::loadout_validator::TRIO_DECKS;
+use jackioh_engine::validator::TRIO_DECKS;
+
 use crate::config::{AUTH_PASSWORD_MAX_LENGTH, AUTH_PASSWORD_MIN_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS};
 use crate::env::load_env;
 

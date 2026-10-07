@@ -16,19 +16,19 @@
 //! (SURFACE §11.3): a rematch's presence reads their sockets.
 
 use std::panic::AssertUnwindSafe;
-use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError, Weak};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use indexmap::IndexMap;
 use tokio::sync::OnceCell;
 
 use jackioh_engine::{PLAYER_IDS, PerPlayer, PlayerId, portrait_or_default};
 
-use crate::actor::clock::now_ms;
-use crate::actor::contracts::{Socket, one_tx};
+use crate::actor::contracts::one_tx;
+use crate::actor::ws_server::Socket;
 use crate::actor::engine;
 use crate::actor::match_actor::{MatchActor, MatchActorInput, create_match_actor, last_boards_of};
 use crate::api::http::{ApiError, ApiErrorCode};
-use crate::app::App;
+use crate::app::{App, now_ms};
 use crate::config::{GLITCH_BOARDS_SAMPLED, MATCH_CEILING_MINUTES};
 use crate::db::store::{LastBoardKind, MatchClocks, MatchRow, MatchStatus, QueueMode, StartMatchInput};
 
@@ -75,10 +75,6 @@ pub struct Registry {
     actors: Mutex<IndexMap<String, MatchActor>>,
     /// In-flight rebuilds, so two sockets arriving together fold the log once, not twice.
     rebuilding: Mutex<IndexMap<String, Rebuild>>,
-    /// The `App` this registry lives in, for callers that hold only `&App` (a handler) and must
-    /// start a match, whose actor keeps an `Arc<App>`. Set by `bind`, and by every call that is
-    /// handed the `Arc`.
-    app: OnceLock<Weak<App>>,
 }
 
 impl Default for Registry {
@@ -139,19 +135,7 @@ impl Registry {
         Registry {
             actors: Mutex::new(IndexMap::new()),
             rebuilding: Mutex::new(IndexMap::new()),
-            app: OnceLock::new(),
         }
-    }
-
-    /// Records the `Arc` the registry's `App` lives in (once; later calls change nothing).
-    pub fn bind(&self, app: &Arc<App>) {
-        let _ = self.app.set(Arc::downgrade(app));
-    }
-
-    /// The `Arc<App>` recorded by `bind`, for a caller that holds only `&App` and must `start` a
-    /// match; `None` before anything bound it.
-    pub fn app(&self) -> Option<Arc<App>> {
-        self.app.get().and_then(Weak::upgrade)
     }
 
     /// R679: a voided match is gone, so its actor leaves the map without `stop` (which waits on the
@@ -171,7 +155,6 @@ impl Registry {
     /// Writes the `matches` row and creates the actor (§9.2). Called by queue pairing, a room's
     /// join, a series' game and a rematch.
     pub async fn start(&self, app: &Arc<App>, input: StartMatchInput) -> Result<(), ApiError> {
-        self.bind(app);
         let (first, second) = &input.seats;
         let now = now_ms();
         let profile_ids = vec![first.profile_id.clone(), second.profile_id.clone()];
@@ -184,7 +167,7 @@ impl Registry {
             // R678: two other players' last server boards — never either seat's own — sampled once,
             // here, and frozen on the row beside the decks, so every rebuild folds the same Glitch. A
             // seat with no board to sample gets the empty one; with none at all the field is left off.
-            let sampled = t.last_boards_sample_others(&profile_ids, GLITCH_BOARDS_SAMPLED as usize).await?;
+            let sampled = t.last_boards_sample_others(&profile_ids, GLITCH_BOARDS_SAMPLED as i64).await?;
             // R433: the mode is read off what made the match — its tickets, its room or its series,
             // which the reserved `open` skeleton already links — so it reads the same before the row
             // is written as `rebuild` reads it after, and both fold the same setup. R672: a rematch
@@ -300,7 +283,6 @@ impl Registry {
 
     /// The live actor, folding `(seed, log)` when it is not in memory (§9.5).
     pub async fn actor_for(&self, app: &Arc<App>, match_id: &str) -> Result<MatchActor, AttachError> {
-        self.bind(app);
         if let Some(existing) = lock(&self.actors).get(match_id).cloned() {
             return Ok(existing);
         }

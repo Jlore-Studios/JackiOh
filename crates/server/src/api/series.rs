@@ -37,7 +37,6 @@ use serde_json::{Map, Value, json};
 
 use jackioh_engine::Winner;
 
-use crate::actor::clock::now_ms;
 use crate::actor::contracts::{TerminalOutcome, one_tx};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req};
 use crate::api::ranked::{RankedGameInput, RankedPlan, RankedSideInput, commit_ranked_game, plan_ranked_game};
@@ -45,12 +44,12 @@ use crate::api::series_rules::{
     RatingMove, SeriesRefusal, SeriesRefusalReason, abandon_unstarted, already_picked, forfeit_series, game_ended,
     game_seats, new_series, pick_deck, project_series, rate_series, seat_of, series_score, timeout_picks,
 };
-use crate::app::App;
+use crate::app::{App, now_ms};
 use crate::config::{
     SERIES_START_GIVE_UP_SECONDS, SERIES_START_GRACE_SECONDS, SERIES_SWEEP_INTERVAL_SECONDS, SERIES_WRITE_ATTEMPTS,
 };
 use crate::db::store::{
-    MatchSeat, Profile, RatedGameKind, SeriesRow, SeriesSeat, SeriesStatus, StartMatchInput, StoreError, Tx,
+    MatchSeat, Profile, RatedGameKind, RatedReason, SeriesRow, SeriesSeat, SeriesStatus, StartMatchInput, StoreError, Tx,
 };
 
 pub use crate::api::series_rules::NewSeriesInput;
@@ -181,12 +180,12 @@ pub async fn start_series(_app: &App, input: NewSeriesInput, t: &mut Tx<'_>) -> 
 /// places at once — the request whose pick completed both, the result whose next game both sides'
 /// automatic picks began (R332), the sweeper — because a start that loses to another start finds the
 /// row the winner wrote and stops.
-pub async fn ensure_series_game(app: &App, series: &SeriesRow) -> Result<(), SeriesError> {
+pub async fn ensure_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<(), SeriesError> {
     start_series_game(app, series).await.map(|_| ())
 }
 
 /// `ensure_series_game`, answering whether this call is the one that started the match.
-async fn start_series_game(app: &App, series: &SeriesRow) -> Result<bool, SeriesError> {
+async fn start_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<bool, SeriesError> {
     if !matches!(series.status, SeriesStatus::Playing) {
         return Ok(false);
     }
@@ -217,16 +216,10 @@ async fn start_series_game(app: &App, series: &SeriesRow) -> Result<bool, Series
         return Ok(false);
     }
 
-    // The registry's actor keeps the `Arc<App>` it runs in, which a handler's `&App` cannot give.
-    let Some(shared) = app.matches.app() else {
-        return Err(SeriesError::Other(
-            "the match registry is not bound to its App (Registry::bind)".to_string(),
-        ));
-    };
     let started = app
         .matches
         .start(
-            &shared,
+            app,
             StartMatchInput {
                 match_id: match_id.clone(),
                 seed: seed.clone(),
@@ -278,7 +271,7 @@ async fn mark_in_match(app: &App, seats: &(MatchSeat, MatchSeat), match_id: &str
 /// After a commit that may have left the series `playing`, start its game. A failure is logged and
 /// left to the sweeper (R263): the write that led here has committed and must not be reported as
 /// failed because the match behind it could not start yet.
-pub async fn resume_series(app: &App, series: Option<&SeriesRow>) {
+pub async fn resume_series(app: &Arc<App>, series: Option<&SeriesRow>) {
     let Some(series) = series else { return };
     if !matches!(series.status, SeriesStatus::Playing) {
         return;
@@ -325,7 +318,7 @@ async fn plan_series_rating(t: &mut Tx<'_>, app: &App, series: &SeriesRow) -> Re
         } else {
             Some(1)
         },
-        reason: end_reason.into(),
+        reason: RatedReason::Series(end_reason),
         at: series.ended_at.unwrap_or_else(now_ms),
         stake: None,
     };
@@ -396,7 +389,7 @@ pub struct Written {
 /// `SeriesRefusal` from the rules is answered as it is. After the commit, a series that has just
 /// begun a game gets that game started.
 async fn write_transition(
-    app: &App,
+    app: &Arc<App>,
     series_id: &str,
     transition: impl Fn(&SeriesRow) -> Result<SeriesRow, SeriesRefusal>,
 ) -> Result<Written, SeriesError> {
@@ -506,7 +499,7 @@ pub struct SeriesSweep {
 }
 
 /// One series of the sweep. `Ok(())` covers "nothing to do".
-async fn sweep_one(app: &App, series: &SeriesRow, now: i64, swept: &mut SeriesSweep) -> Result<(), SeriesError> {
+async fn sweep_one(app: &Arc<App>, series: &SeriesRow, now: i64, swept: &mut SeriesSweep) -> Result<(), SeriesError> {
     let grace_ms = SERIES_START_GRACE_SECONDS as i64 * MS_PER_SECOND;
     let give_up_ms = SERIES_START_GIVE_UP_SECONDS as i64 * MS_PER_SECOND;
 
@@ -561,7 +554,7 @@ async fn sweep_one(app: &App, series: &SeriesRow, now: i64, swept: &mut SeriesSw
 ///    unrated (R263): its game cannot be started, and its players are let go.
 ///
 /// One series that fails does not stop the sweep.
-pub async fn sweep_series(app: &App) -> Result<SeriesSweep, StoreError> {
+pub async fn sweep_series(app: &Arc<App>) -> Result<SeriesSweep, StoreError> {
     let now = now_ms();
     let mut swept = SeriesSweep::default();
 
@@ -582,10 +575,8 @@ pub async fn sweep_series(app: &App) -> Result<SeriesSweep, StoreError> {
 
 /// R263: the sweeper, every `SERIES_SWEEP_INTERVAL_SECONDS` (SURFACE §11.2's loop, which `app.rs`
 /// spawns at boot). The wait is `tokio::time`'s, so a test drives it with a paused clock, and a
-/// failed sweep never stops the next one. It also binds the registry to its `App`, so a handler's
-/// `&App` can start a series game (`Registry::bind`).
+/// failed sweep never stops the next one.
 pub async fn run_sweeper(app: Arc<App>) {
-    app.matches.bind(&app);
     let interval = Duration::from_millis(u64::try_from(SERIES_SWEEP_INTERVAL_SECONDS as i64 * MS_PER_SECOND).unwrap_or(0));
     loop {
         tokio::time::sleep(interval).await;
@@ -685,7 +676,7 @@ fn game_no_of(body: &Value) -> Result<Option<i32>, ApiError> {
 
 /// A transition requested by a player: refusals become their HTTP answers.
 async fn player_transition(
-    app: &App,
+    app: &Arc<App>,
     series_id: &str,
     transition: impl Fn(&SeriesRow) -> Result<SeriesRow, SeriesRefusal>,
 ) -> Result<SeriesRow, ApiError> {
@@ -707,7 +698,7 @@ fn ok(body: Value) -> Response {
 
 /// `GET /api/series/:id` (active): the caller's view of the series (R336). 404 when it does not
 /// exist or they are not in it.
-pub async fn get_series(app: &App, req: Req) -> ApiResult {
+pub async fn get_series(app: &Arc<App>, req: Req) -> ApiResult {
     let (series, _seat, profile_id) = callers_series(&req, app).await?;
     Ok(ok(view(&series, &profile_id)))
 }
@@ -720,7 +711,7 @@ pub async fn get_series(app: &App, req: Req) -> ApiResult {
 /// picked for is never applied to another game. 409 for a different slot once a pick is in, for
 /// another game's pick, while a game is being played, or after the pick clock ran out (R333); 400
 /// for a slot out of range or one whose deck has won (R330).
-pub async fn pick(app: &App, req: Req) -> ApiResult {
+pub async fn pick(app: &Arc<App>, req: Req) -> ApiResult {
     let slot = slot_of(&req.body)?;
     let game_no = game_no_of(&req.body)?;
     let (series, seat, profile_id) = callers_series(&req, app).await?;
@@ -750,7 +741,7 @@ pub async fn pick(app: &App, req: Req) -> ApiResult {
 
 /// `POST /api/series/:id/forfeit` (active): R334: leave the series between games; the other side
 /// wins it. 409 during a game.
-pub async fn forfeit(app: &App, req: Req) -> ApiResult {
+pub async fn forfeit(app: &Arc<App>, req: Req) -> ApiResult {
     let (series, seat, profile_id) = callers_series(&req, app).await?;
     let now = now_ms();
     let after = player_transition(app, &series.id, |row| forfeit_series(row, seat, now)).await?;
@@ -760,7 +751,7 @@ pub async fn forfeit(app: &App, req: Req) -> ApiResult {
 /// `GET /api/matches/:matchId/series` (active): the series a match was a game of, for the board's
 /// series banner once the game ends: `null` when the match is not a series game or the caller is not
 /// one of its players.
-pub async fn match_series(app: &App, req: Req) -> ApiResult {
+pub async fn match_series(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let match_id = param(&req, "matchId").to_string();
     let series = one_tx!(app.db, |t| t.series_with_game(&match_id).await?).map_err(|error| to_api(error.into()))?;

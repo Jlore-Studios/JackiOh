@@ -70,7 +70,7 @@ use crate::db::store::{
     BotRating, CodeAttempt, CollectionEntry, CollectionGrant, FrozenDeck, FrozenTrio, GameRecordQuery,
     InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, PlayerSettingsGroup,
     PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
-    PlayerStatsRow, Profile, ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow,
+    PerMode, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow,
     RatedSide, RedeemInviteCodeInput, RedeemResult, ResultRow, RetentionPurgeInput, RetentionPurgeResult,
     Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, SeriesSide, StoreError, Ticket,
     TicketStatus, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome,
@@ -235,9 +235,11 @@ fn frozen_trio_of(value: &Value) -> Result<FrozenTrio, StoreError> {
         let cards = card_list_of(entry.get("cards").unwrap_or(&Value::Null))?;
         // R642: the portrait freezes with the deck (ports.ts). Absent on rows frozen before
         // portraits existed, so absence stays absent and reads as `vanilla` downstream.
+        // R642: absent stays absent, null stays null (ports.ts's `portrait?: string | null`).
         let portrait = match entry.get("portrait") {
-            None | Some(Value::Null) => None,
-            Some(other) => Some(text_of(Some(other))?),
+            None => None,
+            Some(Value::Null) => Some(None),
+            Some(other) => Some(Some(text_of(Some(other))?)),
         };
         frozen.push(FrozenDeck { name, cards, portrait });
     }
@@ -499,7 +501,7 @@ fn to_profile(row: ProfileRow) -> Result<Profile, StoreError> {
         user_id: row.id.clone(),
         id: row.id,
         email: row.email.unwrap_or_default(),
-        display_name: row.display_name,
+        display_name: Some(row.display_name),
         status,
         rating: row.rating,
         // R603's Glicko triple, carried on the row since migration 0022.
@@ -715,7 +717,7 @@ fn to_ticket(row: TicketRow) -> Result<Ticket, StoreError> {
         rating: row.rating,
         mode: queue_mode_of(&row.mode)?,
         deck: card_list_of(&row.frozen_deck)?,
-        portrait: row.portrait,
+        portrait: Some(row.portrait),
         trio: trio_or_null(row.frozen_trio.as_ref())?,
         catalog_version: row.catalog_version,
         enqueued_at: ms_of(row.enqueued_at),
@@ -765,7 +767,7 @@ fn to_result(row: ResultDbRow) -> Result<ResultRow, StoreError> {
         // `results_reason_check` in migration 0004 pins this column to exactly the seven
         // `GameOverReason` strings of the engine's wire, so the parse restates a database constraint.
         reason: from_literal(&row.reason)?,
-        turns: row.turns,
+        turns: i64::from(row.turns),
         ended_at: ms_of(row.ended_at),
         rating_before: (row.p1_rating_before, row.p2_rating_before),
         rating_after: (row.p1_rating_after, row.p2_rating_after),
@@ -826,7 +828,7 @@ fn to_room(row: RoomRow) -> Result<Room, StoreError> {
         },
         host_deck: card_list_of(&row.p1_deck)?,
         // R642: the host's portrait waits in the open row beside the host's deck (migration 0019).
-        host_portrait: row.p1_portrait,
+        host_portrait: Some(row.p1_portrait),
         host_trio: trio_or_null(row.room_trio.as_ref())?,
         catalog_version: row.catalog_version,
         created_at: ms_of(row.created_at),
@@ -1182,7 +1184,7 @@ fn to_series(row: SeriesDbRow) -> Result<SeriesRow, StoreError> {
         created_at: ms_of(row.created_at),
         updated_at: ms_of(row.updated_at),
         ended_at: ms_or_null(row.ended_at),
-        version: row.version,
+        version: i64::from(row.version),
         // R604: the flag migration 0022 adds. Absent when false, exactly as `SeriesRow` types it —
         // `series.rs` reads a missing flag the same way (unranked, so it never rates).
         ranked: if row.ranked { Some(true) } else { None },
@@ -1291,7 +1293,7 @@ fn to_bot_rating(row: BotRatingDbRow) -> BotRating {
     BotRating {
         bot_id: row.bot_id,
         glicko: Glicko { rating: row.rating, deviation: row.deviation, volatility: row.volatility },
-        games: row.games,
+        games: i64::from(row.games),
         updated_at: ms_of(row.updated_at),
     }
 }
@@ -1695,14 +1697,11 @@ pub async fn profiles_get_many(t: &mut PgTx<'_>, profile_ids: &[String]) -> Resu
 /// provider owns it on `auth.users`, which is where every read here takes it from. The insert
 /// fails with a foreign-key violation if that user does not exist, which is the honest answer:
 /// a profile without a managed-auth identity is not a thing this schema can hold.
-pub async fn profiles_create(
-    t: &mut PgTx<'_>,
-    user_id: &str,
-    _email: &str,
-    rating: f64,
-    at: i64,
-    display_name: Option<&str>,
-) -> Result<Profile, StoreError> {
+pub async fn profiles_create(t: &mut PgTx<'_>, input: &ProfileCreateInput) -> Result<Profile, StoreError> {
+    let user_id = input.user_id.as_str();
+    let (rating, at) = (input.rating, input.at);
+    // TS `displayName ?? null`: absent and null both write NULL.
+    let display_name = input.display_name.as_ref().and_then(Option::as_deref);
     run_as(t, Some(user_id)).await?;
     sqlx::query(concat!(
         "insert into public.profiles (id, status, rating, created_at, display_name)
@@ -1932,7 +1931,7 @@ pub async fn codes_count_attempts_by_profile(
     t: &mut PgTx<'_>,
     profile_id: &str,
     since: i64,
-) -> Result<i32, StoreError> {
+) -> Result<i64, StoreError> {
     run_as(t, Some(profile_id)).await?;
     let row = sqlx::query(concat!(
         "select count(*)::int as n from public.code_attempts
@@ -1944,7 +1943,7 @@ pub async fn codes_count_attempts_by_profile(
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
-    row.map_or(Ok(0), |row| get::<i32>(&row, "n"))
+    row.map_or(Ok(0), |row| get::<i32>(&row, "n").map(i64::from))
 }
 
 pub async fn codes_oldest_attempt_at_by_profile(
@@ -1969,7 +1968,7 @@ pub async fn codes_oldest_attempt_at_by_profile(
     }
 }
 
-pub async fn codes_count_attempts_by_ip(t: &mut PgTx<'_>, ip_hash: &str, since: i64) -> Result<i32, StoreError> {
+pub async fn codes_count_attempts_by_ip(t: &mut PgTx<'_>, ip_hash: &str, since: i64) -> Result<i64, StoreError> {
     run_as(t, None).await?;
     let row = sqlx::query(concat!(
         "select count(*)::int as n from public.code_attempts
@@ -1981,10 +1980,10 @@ pub async fn codes_count_attempts_by_ip(t: &mut PgTx<'_>, ip_hash: &str, since: 
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
-    row.map_or(Ok(0), |row| get::<i32>(&row, "n"))
+    row.map_or(Ok(0), |row| get::<i32>(&row, "n").map(i64::from))
 }
 
-pub async fn codes_count_failures(t: &mut PgTx<'_>, since: i64) -> Result<i32, StoreError> {
+pub async fn codes_count_failures(t: &mut PgTx<'_>, since: i64) -> Result<i64, StoreError> {
     run_as(t, None).await?;
     let row = sqlx::query(concat!(
         "select count(*)::int as n from public.code_attempts
@@ -1995,7 +1994,7 @@ pub async fn codes_count_failures(t: &mut PgTx<'_>, since: i64) -> Result<i32, S
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
-    row.map_or(Ok(0), |row| get::<i32>(&row, "n"))
+    row.map_or(Ok(0), |row| get::<i32>(&row, "n").map(i64::from))
 }
 
 // ---------------------------------------------------------------------------
@@ -2129,7 +2128,8 @@ pub async fn decks_get(t: &mut PgTx<'_>, deck_id: &str) -> Result<Option<SavedDe
 /// new. It is handed `updated_at`, which is the save being made; see KNOWN DIVERGENCES (deck and
 /// trio timestamps). The cap passed is the caller's, and the function applies the smaller of it
 /// and `app.settings.max_saved_decks` (KNOWN DIVERGENCES, caps).
-pub async fn decks_upsert(t: &mut PgTx<'_>, deck: &SavedDeck, max_decks: i32) -> Result<UpsertOutcome, StoreError> {
+pub async fn decks_upsert(t: &mut PgTx<'_>, deck: &SavedDeck, max_decks: i64) -> Result<UpsertOutcome, StoreError> {
+    let max_decks = i32::try_from(max_decks).unwrap_or(i32::MAX);
     run_as(t, Some(deck.profile_id.as_str())).await?;
     let row = sqlx::query(concat!(
         "select app.upsert_deck($1::uuid, $2::uuid, $3::text, $4::jsonb, $5::text, ",
@@ -2215,8 +2215,9 @@ pub async fn trios_get(t: &mut PgTx<'_>, trio_id: &str) -> Result<Option<SavedTr
 pub async fn trios_upsert(
     t: &mut PgTx<'_>,
     trio: &SavedTrio,
-    max_trios: i32,
+    max_trios: i64,
 ) -> Result<TrioUpsertOutcome, StoreError> {
+    let max_trios = i32::try_from(max_trios).unwrap_or(i32::MAX);
     let (deck1, deck2, deck3) = &trio.deck_ids;
     if [deck1, deck2, deck3].into_iter().flatten().any(|deck_id| !is_uuid(deck_id)) {
         return from_literal("unknown_deck");
@@ -2699,7 +2700,7 @@ pub async fn rooms_create(t: &mut PgTx<'_>, room: &Room) -> Result<bool, StoreEr
     .bind(host_trio)
     .bind(room.host_profile_id.as_str())
     .bind(json(&room.host_deck)?)
-    .bind(room.host_portrait.as_deref())
+    .bind(room.host_portrait.as_ref().and_then(Option::as_deref))
     .bind(room.catalog_version.as_str())
     .bind(room.expires_at)
     .bind(room.created_at)
@@ -2793,7 +2794,7 @@ pub async fn tickets_insert(t: &mut PgTx<'_>, ticket: &Ticket) -> Result<(), Sto
     .bind(ticket.rating)
     .bind(literal(&ticket.mode)?)
     .bind(json(&ticket.deck)?)
-    .bind(ticket.portrait.as_deref())
+    .bind(ticket.portrait.as_ref().and_then(Option::as_deref))
     .bind(trio)
     .bind(ticket.catalog_version.as_str())
     .bind(from_ticket_status(&ticket.status)?)
@@ -2843,29 +2844,26 @@ pub async fn tickets_list_open(t: &mut PgTx<'_>) -> Result<Vec<Ticket>, StoreErr
     rows.iter().map(|row| TicketRow::read(row).and_then(to_ticket)).collect()
 }
 
-pub async fn tickets_count_open(t: &mut PgTx<'_>) -> Result<i32, StoreError> {
+pub async fn tickets_count_open(t: &mut PgTx<'_>) -> Result<i64, StoreError> {
     run_as(t, None).await?;
     let row = sqlx::query("select count(*)::int as n from public.tickets where status = 'queued'")
         .fetch_optional(&mut **t)
         .await
         .map_err(db_error)?;
-    row.map_or(Ok(0), |row| get::<i32>(&row, "n"))
+    row.map_or(Ok(0), |row| get::<i32>(&row, "n").map(i64::from))
 }
 
 /// R257: "the queue population is reported per mode". Every mode is present, at 0 if empty.
-pub async fn tickets_count_open_by_mode(t: &mut PgTx<'_>) -> Result<IndexMap<QueueMode, i32>, StoreError> {
+pub async fn tickets_count_open_by_mode(t: &mut PgTx<'_>) -> Result<PerMode<i64>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query("select mode, count(*)::int as n from public.tickets where status = 'queued' group by mode")
         .fetch_all(&mut **t)
         .await
         .map_err(db_error)?;
-    let mut counts: IndexMap<QueueMode, i32> = IndexMap::new();
-    for mode in QUEUE_MODES {
-        counts.insert(from_literal(mode)?, 0);
-    }
+    let mut counts: PerMode<i64> = PerMode::default();
     for row in &rows {
         let mode = queue_mode_of(&get::<String>(row, "mode")?)?;
-        counts.insert(mode, get::<i32>(row, "n")?);
+        counts[mode] = i64::from(get::<i32>(row, "n")?);
     }
     Ok(counts)
 }
@@ -2977,10 +2975,10 @@ pub async fn results_record_for(t: &mut PgTx<'_>, profile_id: &str) -> Result<Pr
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
-    let count = |column: &str| -> Result<i32, StoreError> {
+    let count = |column: &str| -> Result<i64, StoreError> {
         match &row {
             None => Ok(0),
-            Some(row) => Ok(get::<Option<i64>>(row, column)?.unwrap_or(0) as i32),
+            Some(row) => Ok(get::<Option<i64>>(row, column)?.unwrap_or(0)),
         }
     };
     Ok(ProfileRecord { wins: count("wins")?, losses: count("losses")?, draws: count("draws")? })
@@ -3071,7 +3069,7 @@ fn series_params(row: &SeriesRow) -> Result<SeriesParams, StoreError> {
         status: literal(&row.status)?,
         next_match_id: row.next_match_id.clone(),
         pick_deadline: row.pick_deadline,
-        version: row.version,
+        version: i32::try_from(row.version).unwrap_or(i32::MAX),
         catalog_version: row.catalog_version.clone(),
         winner: literal_or_null(&row.winner)?,
         state: json(&series_state_of(row))?,
@@ -3278,8 +3276,9 @@ pub async fn tutorial_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<Option<T
 pub async fn tutorial_merge(
     t: &mut PgTx<'_>,
     input: &TutorialMergeInput,
-    max_lessons: i32,
+    max_lessons: i64,
 ) -> Result<TutorialMergeOutcome, StoreError> {
+    let max_lessons = i32::try_from(max_lessons).unwrap_or(i32::MAX);
     run_as(t, Some(input.profile_id.as_str())).await?;
     let choice = input.hidden_choice.as_ref();
     let row = sqlx::query(concat!(
@@ -3456,8 +3455,9 @@ pub async fn last_boards_put(
 pub async fn last_boards_sample_others(
     t: &mut PgTx<'_>,
     exclude_profile_ids: &[String],
-    count: i32,
+    count: i64,
 ) -> Result<Vec<Vec<LastBoardEntry>>, StoreError> {
+    let count = i32::try_from(count).unwrap_or(i32::MAX);
     if count <= 0 {
         return Ok(Vec::new());
     }
@@ -3743,8 +3743,9 @@ pub async fn ranked_note_peak_jlorious(
     t: &mut PgTx<'_>,
     season_id: &str,
     profile_id: &str,
-    position: i32,
+    position: i64,
 ) -> Result<(), StoreError> {
+    let position = i32::try_from(position).unwrap_or(i32::MAX);
     run_as(t, Some(profile_id)).await?;
     sqlx::query(
         "update public.season_ranks set peak_jlorious = least(peak_jlorious, $3::int)
@@ -3911,11 +3912,12 @@ pub async fn player_stats_put(
 
 pub async fn player_stats_list_public(
     t: &mut PgTx<'_>,
-    search: Option<&str>,
-    limit: i32,
-    offset: i32,
+    options: &PlayerStatsListOptions,
 ) -> Result<Vec<PublicPlayerSummary>, StoreError> {
-    let term = search.map(str::trim).filter(|term| !term.is_empty());
+    let term = options.search.as_deref().map(str::trim).filter(|term| !term.is_empty());
+    // The SQL keeps TS's `$2::int`/`$3::int`, so the binds are `int4`.
+    let limit = i32::try_from(options.limit).unwrap_or(i32::MAX);
+    let offset = i32::try_from(options.offset).unwrap_or(i32::MAX);
     run_as(t, None).await?;
     let rows = sqlx::query(
         "select ps.profile_id, p.display_name, ps.stats, ps.updated_at

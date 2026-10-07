@@ -17,7 +17,7 @@
 
 use std::collections::VecDeque;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
 use axum::body::Body;
@@ -569,7 +569,7 @@ pub fn deck_list(body: &Value, key: &str) -> Result<Vec<Vec<String>>, ApiError> 
 // ---------------------------------------------------------------------------
 
 /// What a handler returns: its response, or the error `dispatch` answers with. Every handler, here
-/// and in part 19, is `pub async fn <name>(app: &App, req: Req) -> ApiResult`; `app.rs` boxes each
+/// and in part 19, is `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`; `app.rs` boxes each
 /// into its `Handler` with `h!` and lists them in `ROUTES` as `(method, path, AuthLevel, handler)`,
 /// in TS's `allRoutes()` order (TS's `Route`, `route()` and `create*Routes()`).
 pub type ApiResult = Result<Response, ApiError>;
@@ -882,7 +882,7 @@ impl Default for RateLimiter {
 /// hand the key back to the caller. So a line is logged each time a request carries fewer entries
 /// than any before it. Counts past `MAX_TRUSTED_PROXY_HOPS + 1` are all "too many", so a caller
 /// can cause at most a handful of lines per router. No address is ever logged: two numbers only.
-pub async fn dispatch(app: &App, routes: &[Route], request: Request) -> Response {
+pub async fn dispatch(app: &Arc<App>, routes: &[Route], request: Request) -> Response {
     let (parts, body) = request.into_parts();
     let path = parts.uri.path().to_string();
     let context = parts
@@ -938,7 +938,7 @@ pub async fn dispatch(app: &App, routes: &[Route], request: Request) -> Response
 /// One matched route, from the address hash to the handler (the body of TS's `try`).
 #[allow(clippy::too_many_arguments)]
 async fn run_route(
-    app: &App,
+    app: &Arc<App>,
     auth: AuthLevel,
     handler: Handler,
     params: IndexMap<String, String>,
@@ -960,7 +960,7 @@ async fn run_route(
     // bad tokens fills exactly this bucket (below), so without this check the limiter counted the
     // flood but still paid for every request of it. Only looked at, not counted: a request that
     // names an account is counted against the account, as R157 says.
-    if candidate.auth != AuthLevel::None {
+    if auth != AuthLevel::None {
         let key = address_key(&address);
         let wait = app.limiter.retry_after_ms(&key, now_ms());
         if wait > 0 {
@@ -974,7 +974,7 @@ async fn run_route(
     // of bad tokens is still counted — against its address, since it named no account.
     let mut caller: Option<Caller> = None;
     let mut auth_error: Option<ApiError> = None;
-    if candidate.auth != AuthLevel::None {
+    if auth != AuthLevel::None {
         match resolve_caller(app, &parts.headers).await {
             Ok(resolved) => caller = Some(resolved),
             // A failure that is not a refusal (the store) is TS's rethrown error: a 500 at once.

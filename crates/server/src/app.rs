@@ -152,17 +152,19 @@ pub fn browser_origins(env: &Env) -> Vec<String> {
 /// What a handler returns before it is awaited: boxed, so every route fits one table.
 pub type HandlerFuture<'a> = Pin<Box<dyn Future<Output = ApiResult> + Send + 'a>>;
 
-/// Every handler, boxed by `h!` (SURFACE §11.2: `pub async fn <name>(app: &App, req: Req) -> ApiResult`).
-pub type Handler = for<'a> fn(&'a App, Req) -> HandlerFuture<'a>;
+/// Every handler, boxed by `h!`: `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`. SURFACE
+/// §11.2 writes `&App`, but a handler that starts a match hands `Registry::start` the `&Arc<App>` its
+/// actor keeps, so every handler takes the `Arc` (part 31; `.fullsend/notes/spec-gaps.md`).
+pub type Handler = for<'a> fn(&'a Arc<App>, Req) -> HandlerFuture<'a>;
 
 /// One route: method, path (`:name` segments land in `req.params`), auth level, handler — TS's
 /// `route(method, path, auth, handler)`.
 pub type Route = (&'static str, &'static str, AuthLevel, Handler);
 
-/// Wraps `pub async fn name(app: &App, req: Req) -> ApiResult` into a `Handler`.
+/// Wraps `pub async fn name(app: &Arc<App>, req: Req) -> ApiResult` into a `Handler`.
 macro_rules! h {
     ($handler:path) => {{
-        fn boxed<'a>(app: &'a App, req: Req) -> HandlerFuture<'a> {
+        fn boxed<'a>(app: &'a Arc<App>, req: Req) -> HandlerFuture<'a> {
             Box::pin($handler(app, req))
         }
         boxed as Handler
@@ -256,7 +258,18 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
     // BUILD M8, R144: end-to-end mode swaps exactly two things — the store and the auth provider —
     // and nothing else about this file changes.
     let (db, auth) = if env.e2e {
-        (db::store::Db::Fake(Arc::new(tokio::sync::Mutex::new(db::fake::FakeData::default()))), Auth::E2e(E2eAuth::new()))
+        // TS `createE2EStore({ catalog, now: timers.now })`: R111's launch grant reads the catalog.
+        let (tokens, bans) = (catalog.clone(), catalog.clone());
+        let store = db::fake::create_e2e_store(db::fake::E2eStoreOptions {
+            catalog: db::fake::FakeCatalog {
+                card_ids: catalog.card_ids.clone(),
+                is_token: Arc::new(move |card_id: &str| tokens.is_token(card_id)),
+                is_banned: Arc::new(move |card_id: &str| bans.is_banned(card_id)),
+            },
+            now: Arc::new(now_ms),
+            redemption: None,
+        });
+        (store, Auth::E2e(E2eAuth::new()))
     } else {
         // The pool connects lazily, as `pg`'s did: a store that cannot be reached fails the first
         // request that needs it, loudly, rather than the boot.

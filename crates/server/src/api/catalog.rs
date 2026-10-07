@@ -14,6 +14,8 @@
 //! reader behind it (`catalogUrl`, `patchesUrl`, `readSnapshot`, `catalogAtVersion`, the
 //! `PATCH_VERSION` pattern and the snapshot cache).
 
+use std::sync::Arc;
+
 use axum::body::Body;
 use axum::response::Response;
 use jackioh_engine::{CardDef, CardDefs, Tag};
@@ -56,8 +58,10 @@ pub struct Catalog {
     pub card_ids: Vec<String>,
     /// `env.deployed_commit`: reported by `GET /api/catalog` in `x-deployed-commit`.
     pub commit: Option<String>,
+    /// R164: the ban list, server state beside the catalog data. Empty: nothing is banned at launch.
+    pub banned: Vec<String>,
     /// `JSON.stringify(defs)`, once: `GET /api/catalog` serves the same bytes to everybody (R163).
-    defs_json: String,
+    pub defs_json: String,
 }
 
 impl Catalog {
@@ -83,8 +87,8 @@ impl Catalog {
     //     therefore reads bannedness through `Catalog` and never off a `CardDef`, and the list
     //     is empty until there is something to ban.
     //   Affects: §9.4 (L6), R105; `api/catalog.ts`, `packages/validator`.
-    pub fn is_banned(&self, _card_id: &str) -> bool {
-        false
+    pub fn is_banned(&self, card_id: &str) -> bool {
+        self.banned.iter().any(|banned| banned == card_id)
     }
 
     /// `JSON.stringify(defs)`, as `GET /api/catalog` sends it.
@@ -123,7 +127,7 @@ pub fn catalog_from(defs: CardDefs, version: &str) -> Catalog {
     // CardDef's serde shape is the catalog's own (field order and absences included), so this is
     // TS's `JSON.stringify` of the parsed file.
     let defs_json = serde_json::to_string(&defs).unwrap_or_else(|error| panic!("CardDefs serialise: {error}"));
-    Catalog { version: version.to_string(), defs, card_ids, commit: None, defs_json }
+    Catalog { version: version.to_string(), defs, card_ids, commit: None, banned: Vec::new(), defs_json }
 }
 
 /// TS `loadCatalog`'s options. `json` stands where TS's `url` stood: the catalog text to read
@@ -230,7 +234,7 @@ pub const DEPLOYED_COMMIT_HEADER: &str = "x-deployed-commit";
 /// `commit` is the git commit this deploy runs (`env.rs` deployed_commit), sent as a header so the
 /// body stays the same bytes for everybody (R163). `deploy-watch.yml` reads it to tell a server that
 /// Render redeployed from one it left alone. Render's health check probes this route too.
-pub async fn get_catalog(app: &App, _req: Req) -> ApiResult {
+pub async fn get_catalog(app: &Arc<App>, _req: Req) -> ApiResult {
     let catalog = &app.catalog;
     let version = serde_json::to_string(&catalog.version).unwrap_or_else(|_| "\"\"".to_string());
     let body = format!("{{\"version\":{version},\"defs\":{}}}", catalog.defs_json());

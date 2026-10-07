@@ -36,17 +36,19 @@ use jackioh_engine::{
     PlayerView, PortraitId, aim_key, emote_gate, portrait_or_default,
 };
 
-use crate::actor::clock::{Timer, after, create_match_clock, now_ms};
+use crate::actor::clock::{Timer, after, create_match_clock};
 use crate::actor::contracts::{
-    ActorDeps, ClockExpiry, ClockView, CreateMatchClockInput, ExpiryHandler, MatchClock, RecordResultInput, Socket,
+    ActorDeps, ClockExpiry, ClockView, CreateMatchClockInput, ExpiryHandler, MatchClock, RecordResultInput,
     SocketHandlers, VoidMatchInput, one_tx,
 };
 use crate::actor::engine::{self, EngineState, LastBoards, MatchSnapshot};
+use crate::actor::ws_server::Socket;
 use crate::actor::protocol::{
     ClientMessage, MATCH_VOIDED_CLOSE_REASON, SERVER_NONCE_PREFIX, ServerMessage, SocketErrorCode, ack_message,
     aim_relay_message, clock_message, emote_relay_message, encode, error_message, parse_client_message,
     portraits_message, prompt_for_opponent, prompt_for_you, view_message,
 };
+use crate::app::now_ms;
 use crate::config::{AIM_RELAY_INTERVAL_MS, MATCH_ACTIONS_PER_SECOND, MATCH_VOIDED_CLOSE_CODE};
 use crate::db::store::{MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus};
 
@@ -429,9 +431,7 @@ impl MatchActor {
         if !socket.is_open() {
             return;
         }
-        if let Err(error) = socket.send(encode(message)) {
-            tracing::warn!(event = "match.send.failed", matchId = %self.match_id_str(), home = %home, message = %error);
-        }
+        socket.send(encode(message));
     }
 
     fn view_of(&self, core: &Core, player: PlayerId) -> PlayerView {
@@ -934,11 +934,12 @@ impl MatchActor {
         self.send(core, other(player), &aim_relay_message(player, None));
     }
 
-    fn on_socket_gone(&self, home: PlayerId, socket_id: u64) {
+    fn on_socket_gone(&self, home: PlayerId) {
         {
             let mut core = self.lock();
-            // A socket that has already been replaced or dropped by `stop()` is not a disconnect.
-            if core.sockets[home].as_ref().map(Socket::id) != Some(socket_id) {
+            // A socket that has already been replaced (the seat holds its open successor) or dropped
+            // by `stop()` is not a disconnect: only the seat's own socket, now closed, is.
+            if core.sockets[home].as_ref().is_none_or(Socket::is_open) {
                 return;
             }
             core.sockets[home] = None;
@@ -1013,7 +1014,6 @@ impl MatchActor {
 
         let on_message = Arc::downgrade(&self.shared);
         let on_close = on_message.clone();
-        let socket_id = socket.id();
         socket.attach(SocketHandlers {
             message: Box::new(move |text: String| {
                 if let Some(shared) = on_message.upgrade() {
@@ -1022,12 +1022,12 @@ impl MatchActor {
             }),
             close: Box::new(move || {
                 if let Some(shared) = on_close.upgrade() {
-                    MatchActor { shared }.on_socket_gone(home, socket_id);
+                    MatchActor { shared }.on_socket_gone(home);
                 }
             }),
         });
         if let Some(previous) = previous {
-            if !previous.same(&socket) {
+            if previous != socket {
                 previous.close(Some(1000), Some("replaced by a new socket"));
             }
         }
@@ -1045,7 +1045,7 @@ impl MatchActor {
             socket.close(Some(1000), Some("detached"));
         }
         // A transport that does not call back synchronously still leaves the seat empty.
-        self.on_socket_gone(home, socket.id());
+        self.on_socket_gone(home);
     }
 
     /// Applies one action as engine seat `player` — the seat is stamped here, never taken from the

@@ -22,6 +22,8 @@
 //! R257's legacy queue body (no `mode`, or a `deckIndex` in place of `deckId`) is not ported
 //! (SURFACE §11.3): `read_mode_choice` requires `mode`.
 
+use std::sync::Arc;
+
 use indexmap::{IndexMap, IndexSet};
 use serde::Serialize;
 use serde_json::{Map, Value, json};
@@ -234,7 +236,7 @@ fn deck_draft_issues(
     with_portrait: bool,
 ) -> Result<Vec<Value>, ApiError> {
     let is_deckable = deckable_in(app);
-    let is_portrait = |id: &str| is_portrait_id(id);
+    let is_portrait = |id: &str| is_portrait_id(&Value::from(id));
     let issues = validator::check_deck_draft(&validator::DeckDraftInput {
         name: name.to_string(),
         cards: cards.to_vec(),
@@ -416,7 +418,7 @@ fn trio_outcome_name(outcome: &TrioUpsertOutcome) -> &'static str {
 
 /// `GET /api/decks`. Everything the builder opens on, oldest first, with the server's catalog
 /// version so a stale client finds out before it builds rather than at save.
-pub async fn list_decks(app: &App, req: Req) -> ApiResult {
+pub async fn list_decks(app: &Arc<App>, req: Req) -> ApiResult {
     #[derive(Serialize)]
     #[serde(rename_all = "camelCase")]
     struct DecksBody {
@@ -440,7 +442,7 @@ pub async fn list_decks(app: &App, req: Req) -> ApiResult {
 
 /// `PUT /api/decks/:id`. R250, R256: create or replace one deck. D1–D5 only: a draft may be
 /// incomplete or unowned.
-pub async fn put_deck(app: &App, req: Req) -> ApiResult {
+pub async fn put_deck(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let id = path_id_of(req.params.get("id"), "deck")?;
     let raw_name = name_of(&req.body)?;
@@ -502,7 +504,7 @@ pub async fn put_deck(app: &App, req: Req) -> ApiResult {
 /// `DELETE /api/decks/:id`. Idempotent: `deleted: false` when this profile has no deck with that
 /// id, whoever else might. Every trio slot that named the deck becomes empty in the same statement
 /// (R252).
-pub async fn delete_deck(app: &App, req: Req) -> ApiResult {
+pub async fn delete_deck(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let id = path_id_of(req.params.get("id"), "deck")?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
@@ -518,7 +520,7 @@ pub async fn delete_deck(app: &App, req: Req) -> ApiResult {
 /// incomplete or share cards, which R253 judges at queue. A slot naming a deck this profile has not
 /// saved (yet) is a conflict the client resolves by saving that deck first — an offline draft
 /// syncing out of order.
-pub async fn put_trio(app: &App, req: Req) -> ApiResult {
+pub async fn put_trio(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let id = path_id_of(req.params.get("id"), "trio")?;
     let raw_name = name_of(&req.body)?;
@@ -583,7 +585,7 @@ pub async fn put_trio(app: &App, req: Req) -> ApiResult {
 /// others back. Sending the same ids again (a retry after a dropped answer) updates what the first
 /// attempt made and takes no new slot. Unowned cards and cards the decks share are kept: both are
 /// judged at queue (R253), and the workshop marks them.
-pub async fn import_trio(app: &App, req: Req) -> ApiResult {
+pub async fn import_trio(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let input = import_of(&req.body)?;
     assert_current_catalog(app, &input.catalog_version)?;
@@ -680,7 +682,7 @@ pub async fn import_trio(app: &App, req: Req) -> ApiResult {
 }
 
 /// `DELETE /api/trios/:id`. Idempotent, as the deck's. The decks it named are untouched.
-pub async fn delete_trio(app: &App, req: Req) -> ApiResult {
+pub async fn delete_trio(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let id = path_id_of(req.params.get("id"), "trio")?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
@@ -698,7 +700,8 @@ pub async fn delete_trio(app: &App, req: Req) -> ApiResult {
 
 /// What `POST /api/queue`, `POST /api/rooms` and `POST /api/rooms/:code/join` were asked for, parsed
 /// but not yet looked up (R257). The legacy `deckIndex` form is not ported (SURFACE §11.3).
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, Clone, Debug, PartialEq, Eq)]
+#[serde(tag = "mode", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ModeChoiceInput {
     Bo1 { deck_id: String },
     Bo3 { trio_id: String },
@@ -706,7 +709,8 @@ pub enum ModeChoiceInput {
 }
 
 /// What a ticket or a room freezes (§9.4: "Decks are frozen into the queue ticket").
-#[derive(Clone)]
+#[derive(serde::Serialize, Clone)]
+#[serde(tag = "mode", rename_all = "camelCase")]
 pub enum FrozenChoice {
     Bo1 { deck: FrozenDeck },
     Bo3 { trio: FrozenTrio },

@@ -16,6 +16,8 @@
 //! Nothing here ever sends a rating to a client (R612): the reads answer with `VisibleRank`s, tags,
 //! and the season's badges.
 
+use std::sync::Arc;
+
 use indexmap::{IndexMap, IndexSet};
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -68,7 +70,8 @@ pub fn build_season_id(deps: &SeasonDeps) -> String {
 }
 
 /// What opening a season did: the season, and the soft reset's report when this call opened it.
-#[derive(Clone, Debug)]
+#[derive(serde::Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct OpenedSeason {
     pub season: Season,
     pub opened: bool,
@@ -131,13 +134,15 @@ pub async fn open_season(app: &App) -> Result<OpenedSeason, StoreError> {
 // ---------------------------------------------------------------------------
 
 /// One side of a ranked game: a player's profile, or one of the AI bots (R610).
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum RankedSideInput {
     Player { profile_id: String },
     Bot { bot_id: String },
 }
 
-#[derive(Clone, Debug)]
+#[derive(serde::Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct RankedGameInput {
     /// The match's id, or the series' id: the rated game's id, and what makes rating it idempotent.
     pub id: String,
@@ -151,6 +156,7 @@ pub struct RankedGameInput {
     /// R672: a double-or-nothing rematch's stakes. Only 2 changes anything: each side's rating moves
     /// twice the single update's delta, with deviation and volatility from that single update.
     /// Absent (a normal game, a series) rates once.
+    #[serde(default)]
     pub stake: Option<i32>,
 }
 
@@ -716,14 +722,14 @@ fn caller_profile(req: &Req) -> Result<&Profile, ApiError> {
 
 /// `GET /api/ranked`: the caller's own rank, record, streak, tag and season badges. Never the
 /// rating (R612).
-pub async fn get_ranked(app: &App, req: Req) -> ApiResult {
+pub async fn get_ranked(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     ok_of(&own_rank(app, &profile.id).await?)
 }
 
 /// `GET /api/leaderboard`. R612: Jlorious #1–#100, then everyone else by Grape tier, then how many
 /// are still placing.
-pub async fn get_leaderboard(app: &App, req: Req) -> ApiResult {
+pub async fn get_leaderboard(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     ok_of(&leaderboard(app, &profile.id).await?)
 }
@@ -731,7 +737,7 @@ pub async fn get_leaderboard(app: &App, req: Req) -> ApiResult {
 /// `GET /api/matches/:matchId/ranks`. Both players' ranks for the match screen. 404 when the caller
 /// is not one of the match's players, exactly as for a match that does not exist (§9.1: a caller
 /// learns nothing about matches it is not in).
-pub async fn get_match_ranks(app: &App, req: Req) -> ApiResult {
+pub async fn get_match_ranks(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let match_id = req.params.get("matchId").map(String::as_str).unwrap_or("");
     match match_ranks(app, match_id, &profile.id).await? {

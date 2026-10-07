@@ -4,7 +4,7 @@
 //! fakes, `src/api/e2e-store.ts` and `test/fakes/store.ts`, sharing `memory-stores.ts` so they could
 //! not drift; Rust has one, so they cannot drift by construction. What only one of them did is an
 //! option here: R111's launch grant runs when the store is built with a catalog (`E2E=1`,
-//! [`create_e2e_store`]) and not otherwise ([`create_memory_store`], the unit tests' store, which
+//! [`create_e2e_store`]) and not otherwise (`FakeData::default()`, the unit tests' store, which
 //! "carries no launch grant, so the existing tests keep seeing the store their assertions were
 //! written against"); `on_call` is the unit fake's fault-injection seam; `seed_profile` and the
 //! public `tables` are its test helpers.
@@ -95,10 +95,10 @@ use crate::config::{
     RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START,
 };
 use crate::db::store::{
-    BotRating, CardCount, CodeAttempt, CodeAttemptResult, CollectionEntry, CollectionGrant, Db, FunStats,
-    GameRecordQuery, InviteCode, LastBoardEntry, LastBoardKind, ListPublicOptions, MatchActionRow, MatchClocks,
+    BotRating, CodeAttempt, CodeAttemptResult, CollectionEntry, CollectionGrant, Db, FavouriteCard, FunStats,
+    GameRecordQuery, InviteCode, LastBoardEntry, LastBoardKind, MatchActionRow, MatchClocks,
     MatchRow, MatchStatus, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
-    PlayerSettingsRow, PlayerStatsRow, Profile, ProfileCreateInput, ProfileRecord, ProfileStatus,
+    PerMode, PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileRecord, ProfileStatus,
     PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult, ResultRow,
     RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow,
     SeriesStatus, StoreError, Ticket, TicketStatus, TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome,
@@ -113,15 +113,17 @@ use crate::ranked::season::{ResetChange, ResetPlayer};
 // ---------------------------------------------------------------------------
 
 /// One collection row: a profile's quantity of one card (`public.collection`).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(serde::Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct CollectionRow {
     pub profile_id: String,
     pub card_id: String,
-    pub quantity: i32,
+    pub quantity: i64,
 }
 
 /// One row of `public.last_boards` (migration 0017): one per profile and kind (R565).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(serde::Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct LastBoardRow {
     pub profile_id: String,
     pub kind: LastBoardKind,
@@ -227,18 +229,6 @@ pub struct FakeData {
     pub on_call: Option<OnCall>,
 }
 
-/// TS `MemoryStoreOptions`: the unit tests' store.
-#[derive(Default)]
-pub struct MemoryStoreOptions {
-    /// The clock `redeem` reads — `Timers.now` of the deps this store belongs to, so a test on a
-    /// virtual clock sees its own time in `code_attempts.at` and in the attempt windows. Postgres
-    /// reads the database clock in the same place. `None` reads the wall clock.
-    pub now: Option<Clock>,
-    /// §9.4's attempt limits, the redemption kill switch and email verification. `None` is
-    /// [`default_redemption_settings`].
-    pub redemption: Option<RedemptionSettings>,
-}
-
 /// TS `E2EStoreOptions`.
 pub struct E2eStoreOptions {
     /// R111 needs to know which ids are non-token and unbanned; §9.4 L3 and L6 define both.
@@ -258,6 +248,14 @@ impl std::fmt::Debug for FakeData {
             .field("catalog", &self.catalog.as_ref().map(|catalog| catalog.card_ids.len()))
             .field("on_call", &self.on_call.is_some())
             .finish_non_exhaustive()
+    }
+}
+
+/// TS `createMemoryStore()`: the unit tests' empty store, on the wall clock, with the default
+/// redemption settings and no launch grant (`Db::fake()` wraps it).
+impl Default for FakeData {
+    fn default() -> FakeData {
+        FakeData::new(Arc::new(system_now), default_redemption_settings(), None)
     }
 }
 
@@ -298,7 +296,7 @@ impl FakeData {
             id: id.clone(),
             user_id: text("userId").unwrap_or_else(|| format!("user-{id}")),
             email: text("email").unwrap_or_else(|| format!("{id}@example.test")),
-            display_name: text("displayName"),
+            display_name: text("displayName").map(Some),
             status,
             rating: number("rating").unwrap_or(f64::from(RATING_START)),
             rating_deviation: number("ratingDeviation").unwrap_or(f64::from(RATING_DEVIATION_START)),
@@ -310,16 +308,6 @@ impl FakeData {
         self.next_profile += 1;
         profile
     }
-}
-
-/// TS `createMemoryStore(options)`: the unit tests' in-memory store, with no launch grant.
-pub fn create_memory_store(options: MemoryStoreOptions) -> Db {
-    let now: Clock = match options.now {
-        Some(now) => now,
-        None => Arc::new(system_now),
-    };
-    let redemption = options.redemption.unwrap_or_else(default_redemption_settings);
-    Db::Fake(Arc::new(Mutex::new(FakeData::new(now, redemption, None))))
 }
 
 /// TS `createE2EStore(options)`: the `E2E=1` server's store, with R111's launch grant. The app keeps
@@ -375,14 +363,13 @@ impl Drop for FakeTx<'_> {
 
 /// `Db::begin` for the fake: wait for the lock (TS `createTransactionQueue().run`: "a transaction
 /// waits for the one before it"), then snapshot every table.
-pub async fn begin(data: &Arc<Mutex<FakeData>>) -> Result<FakeTx<'_>, StoreError> {
-    Ok(FakeTx::new(data.lock().await))
+pub async fn begin(data: &Arc<Mutex<FakeData>>) -> FakeTx<'_> {
+    FakeTx::new(data.lock().await)
 }
 
 /// `Tx::commit` for the fake: keep what the transaction wrote and let the next one in.
-pub fn commit(mut f: FakeTx<'_>) -> Result<(), StoreError> {
+pub fn commit(mut f: FakeTx<'_>) {
     f.snapshot = None;
-    Ok(())
 }
 
 /// Charges `method` to the fault-injection hook, if one is set.
@@ -400,7 +387,7 @@ fn fail(message: String) -> StoreError {
 
 /// TS `new DuplicateResultError(matchId)`: `results_insert`'s refusal of a second row for one match.
 fn duplicate_result(match_id: &str) -> StoreError {
-    StoreError::Duplicate { match_id: match_id.to_string() }
+    StoreError::Duplicate(match_id.to_string())
 }
 
 // ---------------------------------------------------------------------------
@@ -726,7 +713,7 @@ pub fn profiles_set_display_name(
     let Some(row) = profile_of(f.tables(), profile_id) else {
         return Err(fail(format!("no profile {profile_id}")));
     };
-    row.display_name = display_name.map(str::to_string);
+    row.display_name = Some(display_name.map(str::to_string));
     Ok(())
 }
 
@@ -1056,13 +1043,12 @@ pub fn tickets_count_open(f: &mut FakeTx<'_>) -> Result<i64, StoreError> {
 
 /// R257: open tickets per mode, for the lobby's per-mode population. Every mode is present, in TS's
 /// order (`bo1`, `bo3`, `random`).
-pub fn tickets_count_open_by_mode(f: &mut FakeTx<'_>) -> Result<IndexMap<QueueMode, i64>, StoreError> {
+pub fn tickets_count_open_by_mode(f: &mut FakeTx<'_>) -> Result<PerMode<i64>, StoreError> {
     call(f, "tickets.countOpenByMode")?;
-    let mut counts: IndexMap<QueueMode, i64> =
-        [(QueueMode::Bo1, 0), (QueueMode::Bo3, 0), (QueueMode::Random, 0)].into_iter().collect();
+    let mut counts: PerMode<i64> = PerMode::default();
     for ticket in &f.tables().tickets {
         if ticket.status == TicketStatus::Open {
-            *counts.entry(ticket.mode).or_insert(0) += 1;
+            counts[ticket.mode] += 1;
         }
     }
     Ok(counts)
@@ -1177,7 +1163,8 @@ pub fn decks_get(f: &mut FakeTx<'_>, deck_id: &str) -> Result<Option<SavedDeck>,
 
 /// Inserts a deck whose id is new, or replaces `name`, `cards`, `portrait`, `catalog_version` and
 /// `updated_at` of the profile's own deck (its `created_at` is kept).
-pub fn decks_upsert(f: &mut FakeTx<'_>, deck: &SavedDeck, max_decks: usize) -> Result<UpsertOutcome, StoreError> {
+pub fn decks_upsert(f: &mut FakeTx<'_>, deck: &SavedDeck, max_decks: i64) -> Result<UpsertOutcome, StoreError> {
+    let max_decks = usize::try_from(max_decks).unwrap_or(0);
     call(f, "decks.upsert")?;
     let rows = &mut f.tables().decks;
     if let Some(existing) = rows.iter_mut().find(|row| row.id == deck.id) {
@@ -1236,7 +1223,8 @@ pub fn trios_get(f: &mut FakeTx<'_>, trio_id: &str) -> Result<Option<SavedTrio>,
 
 /// As `decks_upsert`, plus `unknown_deck` when a non-null slot names a deck that is not this
 /// profile's; one deck in two slots is refused by constraint.
-pub fn trios_upsert(f: &mut FakeTx<'_>, trio: &SavedTrio, max_trios: usize) -> Result<TrioUpsertOutcome, StoreError> {
+pub fn trios_upsert(f: &mut FakeTx<'_>, trio: &SavedTrio, max_trios: i64) -> Result<TrioUpsertOutcome, StoreError> {
+    let max_trios = usize::try_from(max_trios).unwrap_or(0);
     call(f, "trios.upsert")?;
     let t = f.tables();
     let existing = t.trios.iter().position(|row| row.id == trio.id);
@@ -1401,8 +1389,9 @@ pub fn tutorial_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Option<Tutor
 pub fn tutorial_merge(
     f: &mut FakeTx<'_>,
     input: &TutorialMergeInput,
-    max_lessons: usize,
+    max_lessons: i64,
 ) -> Result<TutorialMergeOutcome, StoreError> {
+    let max_lessons = usize::try_from(max_lessons).unwrap_or(0);
     call(f, "tutorial.merge")?;
     let rows = &mut f.tables().tutorial;
     let at = rows.iter().position(|existing| existing.profile_id == input.profile_id);
@@ -1488,7 +1477,7 @@ pub fn merge_player_settings_row(
         }
     }
     let bytes = jsonb_text_bytes(&serde_json::to_value(&groups).unwrap_or(Value::Null));
-    if groups.len() > limits.max_groups || bytes > limits.max_bytes {
+    if groups.len() as i64 > limits.max_groups || bytes as i64 > limits.max_bytes {
         return None;
     }
     Some(PlayerSettingsRow { profile_id: input.profile_id.clone(), groups })
@@ -1562,8 +1551,9 @@ pub fn last_boards_put(
 pub fn last_boards_sample_others(
     f: &mut FakeTx<'_>,
     exclude_profile_ids: &[String],
-    count: usize,
+    count: i64,
 ) -> Result<Vec<Vec<LastBoardEntry>>, StoreError> {
+    let count = usize::try_from(count).unwrap_or(0);
     call(f, "lastBoards.sampleOthers")?;
     let excluded: IndexSet<&String> = exclude_profile_ids.iter().collect();
     Ok(f
@@ -1668,8 +1658,8 @@ pub fn to_public_player_summary(
     let draws = count_number(stats.get("draws"));
     let win_rate = if games == 0 { None } else { Some(wins as f64 / games as f64) };
 
-    let mut played_counts: Vec<CardCount> = Vec::new();
-    let mut nemesis_counts: Vec<CardCount> = Vec::new();
+    let mut played_counts: Vec<FavouriteCard> = Vec::new();
+    let mut nemesis_counts: Vec<FavouriteCard> = Vec::new();
     let mut total_destroyed = 0;
     let mut total_defeated = 0;
 
@@ -1683,10 +1673,10 @@ pub fn to_public_player_summary(
         let defeated = count_number(counters.get("defeated"));
 
         if played > 0 {
-            played_counts.push(CardCount { id: id.clone(), count: played });
+            played_counts.push(FavouriteCard { id: id.clone(), count: played });
         }
         if played_against > 0 {
-            nemesis_counts.push(CardCount { id: id.clone(), count: played_against });
+            nemesis_counts.push(FavouriteCard { id: id.clone(), count: played_against });
         }
         total_destroyed += destroyed;
         total_defeated += defeated;
@@ -1756,13 +1746,13 @@ pub fn player_stats_put(
 
 pub fn player_stats_list_public(
     f: &mut FakeTx<'_>,
-    options: &ListPublicOptions,
+    options: &PlayerStatsListOptions,
 ) -> Result<Vec<PublicPlayerSummary>, StoreError> {
     call(f, "playerStats.listPublic")?;
     let term = options.search.clone().unwrap_or_default().trim().to_lowercase();
     let all = f.tables();
     let profile_map: IndexMap<&str, Option<&str>> =
-        all.profiles.iter().map(|p| (p.id.as_str(), p.display_name.as_deref())).collect();
+        all.profiles.iter().map(|p| (p.id.as_str(), p.display_name.as_ref().and_then(Option::as_deref))).collect();
 
     let mut public_rows: Vec<(&PlayerStatsTableRow, Option<&str>)> = all
         .player_stats
@@ -1788,8 +1778,8 @@ pub fn player_stats_list_public(
 
     Ok(public_rows
         .into_iter()
-        .skip(options.offset)
-        .take(options.limit)
+        .skip(usize::try_from(options.offset).unwrap_or(usize::MAX))
+        .take(usize::try_from(options.limit).unwrap_or(0))
         .map(|(row, display_name)| to_public_player_summary(&row.profile_id, display_name, &row.stats, row.updated_at))
         .collect())
 }
@@ -2030,8 +2020,9 @@ pub fn ranked_note_peak_jlorious(
     f: &mut FakeTx<'_>,
     season_id: &str,
     profile_id: &str,
-    position: i32,
+    position: i64,
 ) -> Result<(), StoreError> {
+    let position = i32::try_from(position).unwrap_or(i32::MAX);
     call(f, "ranked.notePeakJlorious")?;
     let Some(row) =
         f.tables().season_ranks.iter_mut().find(|rank| rank.season_id == season_id && rank.profile_id == profile_id)

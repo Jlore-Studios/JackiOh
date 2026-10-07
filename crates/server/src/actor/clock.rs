@@ -16,19 +16,20 @@
 //!    pause the turn clock — §9.5: "The clock keeps running while a player is disconnected";
 //!  - the hard wall-clock ceiling (R79: `MATCH_CEILING_MINUTES`), measured from `started_at`.
 //!
-//! Nothing in this file reads the system clock directly: `now_ms()` reads tokio's clock, which is
+//! Nothing in this file reads the system clock directly: `now_ms()` (`app::now_ms`) reads tokio's clock, which is
 //! what makes the M7-T1 tests exact rather than approximate (`tokio::time::pause()` and `advance()`
 //! replace TS's manual timers, SURFACE §11.2).
 //!
 //! Every number comes from `crate::config` (`src/config.ts`), so R79's values are stated once.
 
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError, Weak};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
+use std::time::Duration;
 
 use jackioh_engine::{PLAYER_IDS, PerPlayer, PlayerId};
 
 use crate::actor::contracts::{ClockExpiry, ClockView, CreateMatchClockInput, ExpiryHandler};
+use crate::app::now_ms;
 use crate::config::{
     DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, MULLIGAN_CLOCK_SECONDS, PROMPT_CLOCK_SECONDS, TURN_CLOCK_SECONDS,
 };
@@ -42,28 +43,6 @@ const MS_PER_MINUTE: i64 = 60 * MS_PER_SECOND;
 // ---------------------------------------------------------------------------
 // Time (TS's `Timers` port: `now()` and `after(ms, fn) → { cancel }`)
 // ---------------------------------------------------------------------------
-
-/// TS `timers.now()`: epoch milliseconds, read off tokio's clock so a paused test clock moves it
-/// only when the test advances it. Anchored once to the system clock; from then on it advances with
-/// `tokio::time::Instant`, never with the wall clock.
-pub fn now_ms() -> i64 {
-    static ANCHOR: OnceLock<(i64, tokio::time::Instant)> = OnceLock::new();
-    let (epoch_ms, at) = *ANCHOR.get_or_init(|| {
-        let epoch_ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|elapsed| i64::try_from(elapsed.as_millis()).unwrap_or(i64::MAX))
-            .unwrap_or(0);
-        (epoch_ms, tokio::time::Instant::now())
-    });
-    let now = tokio::time::Instant::now();
-    // Signed: a paused runtime's clock may stand before the anchor another thread set.
-    let offset = if now >= at {
-        i64::try_from(now.duration_since(at).as_millis()).unwrap_or(i64::MAX)
-    } else {
-        -i64::try_from(at.duration_since(now).as_millis()).unwrap_or(i64::MAX)
-    };
-    epoch_ms.saturating_add(offset)
-}
 
 static NEXT_TIMER_ID: AtomicU64 = AtomicU64::new(1);
 

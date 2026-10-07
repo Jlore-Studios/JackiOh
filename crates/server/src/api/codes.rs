@@ -34,7 +34,7 @@
 //!
 //! Every constant here comes from `crate::config`. Nothing in this file restates a value from SPEC.
 
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use hmac::{Hmac, KeyInit, Mac};
 use serde_json::{Value, json};
@@ -161,7 +161,7 @@ fn code_hash(code_pepper: &str, plain: &str) -> String {
 /// store, ids, hashes and timers). This is what lets `cli/mint_code.rs` open a store and a pepper
 /// and nothing else — no auth provider, no catalog, no match registry — to run the bring-up
 /// checklist's step 7.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub struct MintDeps<'a> {
     pub db: &'a Db,
     /// `env.code_pepper`.
@@ -214,7 +214,7 @@ pub async fn mint_invite_code(deps: MintDeps<'_>, input: MintInput) -> Result<Mi
     let code = InviteCode {
         id: uuid::Uuid::new_v4().to_string(),
         code_hash: code_hash(deps.code_pepper, &plain),
-        max_uses,
+        max_uses: i64::from(max_uses),
         uses: 0,
         revoked: false,
         expires_at: input.expires_at,
@@ -472,7 +472,7 @@ async fn redeem_for_request(app: &App, req: &Req, breaker: &Mutex<BreakerState>)
 ///
 /// §9.4's breaker lives in `app.breaker` rather than in module state: a fresh app means a fresh
 /// breaker, which is what lets each test drive it from a known state.
-pub async fn redeem(app: &App, req: Req) -> ApiResult {
+pub async fn redeem(app: &Arc<App>, req: Req) -> ApiResult {
     // Measured from the handler's first line: §9.4's "identical time" is about the response the
     // client sees, not about the lookup alone.
     let started_at = tokio::time::Instant::now();
@@ -503,7 +503,7 @@ pub async fn redeem(app: &App, req: Req) -> ApiResult {
 /// its oldest counted attempt leaves the window then. 0 while it has tries. The screen shows the
 /// wait and reads the status again when it runs out, so "no tries left" lifts by itself. Like the
 /// count, it is this profile's own: the per-IP window's wait would describe other accounts.
-pub async fn get_status(app: &App, req: Req) -> ApiResult {
+pub async fn get_status(app: &Arc<App>, req: Req) -> ApiResult {
     let limits = limits();
     let now = crate::app::now_ms();
     let open_until = lock(&app.breaker).open_until;

@@ -11,6 +11,7 @@
 //! `DELETE /api/account`, `GET /api/auth/me`. `POST /api/auth/signup` is not ported.
 
 use std::future::Future;
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::response::Response;
@@ -100,7 +101,7 @@ fn session_body(session: &Session) -> Value {
 /// `POST /api/auth/signin` (`AuthLevel::None`). §9.2 puts sign-in in the browser, against Supabase
 /// Auth; this is the server-side equivalent BUILD M8's fixture accounts use under `E2E=1`. On a
 /// Supabase deployment the provider answers 503 with where sign-in actually happens.
-pub async fn sign_in(app: &App, req: Req) -> ApiResult {
+pub async fn sign_in(app: &Arc<App>, req: Req) -> ApiResult {
     let email = required_str(&req.body, "email")?;
     let password = required_str(&req.body, "password")?;
     let session = call_provider("auth.signin_rejected", SIGN_IN_FAILED_MESSAGE, app.auth.sign_in(&email, &password)).await?;
@@ -121,7 +122,7 @@ pub async fn sign_in(app: &App, req: Req) -> ApiResult {
 /// every guarded route resolves through it — and counting a profile's whole results history on
 /// each of those would put a scan behind every page load. This one is `active`, so it is only
 /// reachable by an account that can actually have a record.
-pub async fn get_profile(app: &App, req: Req) -> ApiResult {
+pub async fn get_profile(app: &Arc<App>, req: Req) -> ApiResult {
     let caller = caller_of(&req)?;
     let profile = &caller.profile;
     let mut tx = app.db.begin(Some(&profile.id)).await.map_err(store_failure)?;
@@ -156,7 +157,7 @@ pub async fn get_profile(app: &App, req: Req) -> ApiResult {
 /// account. The profile goes first, so a provider that fails afterwards leaves nothing but a
 /// sign-in; the same request, retried, removes the fresh pending profile that sign-in gets and
 /// tries the provider again.
-pub async fn delete_account(app: &App, req: Req) -> ApiResult {
+pub async fn delete_account(app: &Arc<App>, req: Req) -> ApiResult {
     let caller = caller_of(&req)?;
     let profile = &caller.profile;
     if !app.auth.can_delete_users() {
@@ -191,7 +192,7 @@ pub async fn delete_account(app: &App, req: Req) -> ApiResult {
 /// `GET /api/auth/me` (`AuthLevel::User`). §9.4: declared `user`, not `active`, because this *is* the
 /// code screen's read — a pending account must be able to see that it needs a code. Every other
 /// authenticated endpoint is `active` and 403s for the same caller (BUILD M6-T1).
-pub async fn get_me(app: &App, req: Req) -> ApiResult {
+pub async fn get_me(app: &Arc<App>, req: Req) -> ApiResult {
     let caller = caller_of(&req)?;
     let profile = &caller.profile;
     // R259, R264: the Conquest series this profile is in, while it is not over. Between games

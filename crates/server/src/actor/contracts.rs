@@ -7,14 +7,13 @@
 //! (SURFACE §11.3) the ports go: `Timers` is `tokio::time` (a test pauses and advances it),
 //! `Logger` is `tracing`, the engine is called directly (`actor::engine`), and `RecordResult` /
 //! `VoidMatch` are `crate::api::results::{record_result, void_match}`. What stays here is the data
-//! that crosses the seams and the one transport type, `Socket`, which `ws_server.rs` builds over a
-//! real WebSocket and a test builds over a channel.
+//! that crosses the seams and the handlers the actor installs on a socket. The transport type,
+//! `Socket`, is `actor::ws_server::Socket` (SURFACE §11.2), which a WebSocket and a test channel
+//! both drive.
 
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc;
 
 use jackioh_engine::{GameResult, LastBoardEntry, PlayerId};
 
@@ -32,149 +31,6 @@ pub struct SocketHandlers {
     pub message: Box<dyn Fn(String) + Send + Sync>,
     /// The connection is gone (the client closed it, the transport dropped, or the server closed it).
     pub close: Box<dyn Fn() + Send + Sync>,
-}
-
-/// What travels from the actor to the transport: a text frame, or the close (code, reason).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum SocketFrame {
-    Text(String),
-    Close { code: u16, reason: String },
-}
-
-static NEXT_SOCKET_ID: AtomicU64 = AtomicU64::new(1);
-
-struct SocketInner {
-    id: u64,
-    open: AtomicBool,
-    /// `handlers.close` runs at most once, whichever of `close` and `gone` comes first.
-    gone: AtomicBool,
-    out: mpsc::UnboundedSender<SocketFrame>,
-    handlers: Mutex<Option<Arc<SocketHandlers>>>,
-}
-
-/// One player's connection. Text frames only: every protocol message is JSON. A WebSocket
-/// (`ws_server.rs`) and the in-memory test socket both are this, so the actor is
-/// transport-agnostic.
-///
-/// The transport owns the receiving end of the frame channel: it writes every `SocketFrame::Text`
-/// to the peer and closes the connection on `SocketFrame::Close`. It hands every text frame the peer
-/// sends to `receive`, and calls `gone` once the connection has ended. A `Socket` is a cheap handle
-/// (`Clone`); two handles are the same connection exactly when `same` says so (TS compared sockets
-/// by identity).
-#[derive(Clone)]
-pub struct Socket {
-    inner: Arc<SocketInner>,
-}
-
-impl std::fmt::Debug for Socket {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Socket").field("id", &self.inner.id).field("open", &self.is_open()).finish()
-    }
-}
-
-/// Why `Socket::send` did not deliver (TS `send` threw).
-#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
-pub enum SocketSendError {
-    #[error("send on a closed socket")]
-    Closed,
-}
-
-fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
-    mutex.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
-}
-
-impl Socket {
-    /// A socket whose frames go to `out`; its receiver is the transport's (or the test's).
-    pub fn new(out: mpsc::UnboundedSender<SocketFrame>) -> Socket {
-        Socket {
-            inner: Arc::new(SocketInner {
-                id: NEXT_SOCKET_ID.fetch_add(1, Ordering::Relaxed),
-                open: AtomicBool::new(true),
-                gone: AtomicBool::new(false),
-                out,
-                handlers: Mutex::new(None),
-            }),
-        }
-    }
-
-    /// A socket and the receiving end of its frames, for a transport or a test to drain.
-    pub fn channel() -> (Socket, mpsc::UnboundedReceiver<SocketFrame>) {
-        let (out, frames) = mpsc::unbounded_channel();
-        (Socket::new(out), frames)
-    }
-
-    /// This connection's identity, unique in the process.
-    pub fn id(&self) -> u64 {
-        self.inner.id
-    }
-
-    /// TS `===` on sockets.
-    pub fn same(&self, other: &Socket) -> bool {
-        Arc::ptr_eq(&self.inner, &other.inner)
-    }
-
-    /// TS `isOpen` (`ws.readyState === OPEN`): neither side has closed it and the transport still
-    /// reads its frames.
-    pub fn is_open(&self) -> bool {
-        self.inner.open.load(Ordering::SeqCst) && !self.inner.out.is_closed()
-    }
-
-    pub fn send(&self, text: String) -> Result<(), SocketSendError> {
-        if !self.is_open() {
-            return Err(SocketSendError::Closed);
-        }
-        self.inner.out.send(SocketFrame::Text(text)).map_err(|_| SocketSendError::Closed)
-    }
-
-    /// TS `close(code?, reason?)`: `ws.close(code ?? 1000, reason ?? "")`. The socket reads closed at
-    /// once, and the attached `close` handler runs (a WebSocket's close event; the TS fake called it
-    /// synchronously too). Closing twice does nothing more.
-    pub fn close(&self, code: Option<u16>, reason: Option<&str>) {
-        if !self.inner.open.swap(false, Ordering::SeqCst) {
-            return;
-        }
-        let _ = self.inner.out.send(SocketFrame::Close {
-            code: code.unwrap_or(1000),
-            reason: reason.unwrap_or("").to_string(),
-        });
-        self.notify_gone();
-    }
-
-    /// Installed once, by the actor, when the socket is attached to a seat.
-    pub fn attach(&self, handlers: SocketHandlers) {
-        *lock(&self.inner.handlers) = Some(Arc::new(handlers));
-    }
-
-    /// Transport → actor: the peer sent a text frame. Dropped while nothing is attached, and once
-    /// the socket is closed.
-    pub fn receive(&self, text: String) {
-        if !self.inner.open.load(Ordering::SeqCst) {
-            return;
-        }
-        let handlers = lock(&self.inner.handlers).clone();
-        if let Some(handlers) = handlers {
-            (handlers.message)(text);
-        }
-    }
-
-    /// Transport → actor: the connection ended (the peer closed it, or the transport dropped). A
-    /// transport error is a disconnect too; §9.5's grace is what handles it.
-    pub fn gone(&self) {
-        self.inner.open.store(false, Ordering::SeqCst);
-        self.notify_gone();
-    }
-
-    fn notify_gone(&self) {
-        if self.inner.gone.swap(true, Ordering::SeqCst) {
-            return;
-        }
-        // The handlers are cloned out first, so a handler that touches this socket again cannot
-        // deadlock on its lock.
-        let handlers = lock(&self.inner.handlers).clone();
-        if let Some(handlers) = handlers {
-            (handlers.close)();
-        }
-    }
 }
 
 // ---------------------------------------------------------------------------

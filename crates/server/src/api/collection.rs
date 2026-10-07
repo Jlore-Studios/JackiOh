@@ -23,6 +23,8 @@
 //! `collection_grants.delta` column, which carries `check (delta <> 0)`. So a grant that would
 //! change nothing writes no row at all.
 
+use std::sync::Arc;
+
 use indexmap::IndexMap;
 use serde_json::json;
 
@@ -43,7 +45,7 @@ use crate::db::store::{CollectionEntry, CollectionGrant, Profile, StoreError, Tx
 /// the `pending → active` transition"), so the end-to-end mode's in-memory store has to carry the
 /// same trigger — see `db/fake.rs`. It reads this value rather than restating it, so the
 /// application path and the trigger path cannot drift.
-pub const LAUNCH_COPIES: i32 = 1;
+pub const LAUNCH_COPIES: i64 = 1;
 
 /// Not in SPEC, and no R-row: this string is forced, not decided. `collection_grants.reason` carries
 /// a closed-set CHECK constraint in migration `0002_collection.sql`
@@ -94,8 +96,8 @@ pub fn caller_profile(req: &Req) -> Result<Profile, ApiError> {
 /// has no meaning this function could give it — rejecting it here only turns a constraint violation
 /// into a named 400. Revocation, if it ever lands, is its own path with its own `reason`, and that
 /// would be a ruling; this is not.
-fn deltas_from(entries: &[CollectionEntry]) -> Result<IndexMap<String, i32>, ApiError> {
-    let mut deltas: IndexMap<String, i32> = IndexMap::new();
+fn deltas_from(entries: &[CollectionEntry]) -> Result<IndexMap<String, i64>, ApiError> {
+    let mut deltas: IndexMap<String, i64> = IndexMap::new();
     for entry in entries {
         if entry.card_id.is_empty() {
             return Err(bad_request("a collection entry needs a card id"));
@@ -187,8 +189,8 @@ pub async fn grant_entire_catalog(app: &App, profile_id: &str, reason: Option<&s
 }
 
 /// Shared by `owned_map` and `grant_cards`, which needs the read inside its own transaction.
-async fn owned_in(tx: &mut Tx<'_>, profile_id: &str) -> Result<IndexMap<String, i32>, StoreError> {
-    let mut owned: IndexMap<String, i32> = IndexMap::new();
+async fn owned_in(tx: &mut Tx<'_>, profile_id: &str) -> Result<IndexMap<String, i64>, StoreError> {
+    let mut owned: IndexMap<String, i64> = IndexMap::new();
     for entry in tx.collection_get(profile_id).await? {
         *owned.entry(entry.card_id.clone()).or_insert(0) += entry.quantity;
     }
@@ -198,7 +200,7 @@ async fn owned_in(tx: &mut Tx<'_>, profile_id: &str) -> Result<IndexMap<String, 
 /// cardId → quantity owned. This is the `owned` input L5 is checked against ("copies across the
 /// loadout never exceed the quantity owned"), so `decks.rs` builds the validator's input from
 /// here and never reads `collection` itself.
-pub async fn owned_map(app: &App, profile_id: &str) -> Result<IndexMap<String, i32>, ApiError> {
+pub async fn owned_map(app: &App, profile_id: &str) -> Result<IndexMap<String, i64>, ApiError> {
     let mut tx = app.db.begin(Some(profile_id)).await.map_err(store_failure)?;
     let owned = owned_in(&mut tx, profile_id).await.map_err(store_failure)?;
     tx.commit().await.map_err(store_failure)?;
@@ -214,7 +216,7 @@ pub async fn owned_map(app: &App, profile_id: &str) -> Result<IndexMap<String, i
 /// "static, versioned, shipped with the client" (§9.4) and a client one release behind needs to
 /// find that out before it builds a loadout, not at save time. Only owned rows are sent; an id the
 /// client does not see here is owned zero times.
-pub async fn get_collection(app: &App, req: Req) -> ApiResult {
+pub async fn get_collection(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let mut tx = app.db.begin(Some(&profile.id)).await.map_err(store_failure)?;
     let mut entries = tx.collection_get(&profile.id).await.map_err(store_failure)?;

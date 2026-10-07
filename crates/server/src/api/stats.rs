@@ -9,6 +9,7 @@
 //!  - GET /api/stats/players: public player summaries (auth: `None`).
 
 use std::cmp::Ordering;
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{HeaderValue, StatusCode, header};
@@ -248,7 +249,7 @@ async fn records_for(app: &App, source: SourceFilter, patch: &str) -> Result<Vec
 /// - AI games pad the stats until the current patch has logged 1000 live games.
 /// - At and above 1000 live games, live games only, AI games ignored.
 /// - Minimum sample threshold: below 20 games, hasEnoughGames is false.
-pub async fn get_cards(app: &App, req: Req) -> ApiResult {
+pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     let versions = load_patch_versions();
     let current_patch = app.catalog.version.clone();
     let requested_patch = query_trimmed(&req, "patch").unwrap_or(current_patch);
@@ -439,7 +440,7 @@ struct Count {
 /// - Win rate by cleared patch over time.
 /// - Win rate by turn played.
 /// - Co-played synergy cards.
-pub async fn get_card(app: &App, req: Req) -> ApiResult {
+pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
     let card_id = req.params.get("id").cloned().unwrap_or_default();
     let def = if card_id.is_empty() { None } else { app.catalog.defs.get(&card_id) };
     let Some(def) = def else {
@@ -570,7 +571,7 @@ pub async fn get_card(app: &App, req: Req) -> ApiResult {
 
 /// GET /api/stats/player
 /// Signed-in player reads their own tracked statistics and privacy setting.
-pub async fn get_player(app: &App, req: Req) -> ApiResult {
+pub async fn get_player(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let row = tx.player_stats_get(&profile.id).await?;
@@ -590,7 +591,7 @@ fn stringified_length(body: &Value) -> usize {
 
 /// PUT /api/stats/player
 /// Signed-in player updates their tracked statistics and privacy setting.
-pub async fn put_player(app: &App, req: Req) -> ApiResult {
+pub async fn put_player(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     if stringified_length(&req.body) > PLAYER_STATS_BYTES_MAX as usize {
         return Err(bad_request(format!(
@@ -620,7 +621,7 @@ pub async fn put_player(app: &App, req: Req) -> ApiResult {
 /// GET /api/stats/players
 /// Public player summaries (games, win rate, favourite cards, fun stats).
 /// Excludes private players. Keeps Elo and rankings separate.
-pub async fn get_players(app: &App, req: Req) -> ApiResult {
+pub async fn get_players(app: &Arc<App>, req: Req) -> ApiResult {
     let search = query_trimmed(&req, "search");
     let page: u64 = match req.query.get("page") {
         Some(text) if !text.is_empty() && text.bytes().all(|byte| byte.is_ascii_digit()) => {

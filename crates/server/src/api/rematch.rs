@@ -30,7 +30,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
-use crate::app::App;
+use crate::app::{App, now_ms};
 use crate::config::REMATCH_OFFER_TTL_MS;
 use crate::db::store::{MatchRow, MatchSeat, MatchStatus, Profile, QueueMode, StartMatchInput};
 
@@ -93,21 +93,6 @@ pub fn rematch_offer_count() -> usize {
 // ---------------------------------------------------------------------------
 // Small private copies (fullsend rule 5): the clock, the id minters and the error shapes
 // ---------------------------------------------------------------------------
-
-/// TS `deps.timers.now()`: epoch milliseconds, on tokio's clock, so a test that pauses and advances
-/// time (`tokio::time::pause`, `advance`) moves it as TS's manual timers moved theirs. Unpaused, it
-/// is the system clock.
-fn now_ms() -> i64 {
-    let system = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_millis() as i64)
-        .unwrap_or(0);
-    let tokio_now = tokio::time::Instant::now().into_std();
-    let std_now = std::time::Instant::now();
-    let ahead = tokio_now.saturating_duration_since(std_now).as_millis() as i64;
-    let behind = std_now.saturating_duration_since(tokio_now).as_millis() as i64;
-    system + ahead - behind
-}
 
 /// TS `deps.ids.uuid()` (`systemIds.uuid`, `crypto.randomUUID()`).
 fn new_uuid() -> String {
@@ -272,7 +257,7 @@ async fn create_rematch(
                 mode: Some(mode),
                 // Absent reads as 1 downstream; only a double writes its stakes, and only ranked games
                 // reach here with 2 (`double_requires_ranked` above).
-                stake: if stakes == STAKE_DOUBLE { Some(stakes) } else { None },
+                stake: if stakes == STAKE_DOUBLE { Some(i64::from(stakes)) } else { None },
                 seats: seats.clone(),
             },
         )
@@ -431,7 +416,7 @@ async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
 /// `GET /api/matches/:matchId/rematch` (active): what each seat offered, whether the opponent is
 /// still on the match, and the created game. A seat's own row only: anyone else gets the same "no
 /// such match" as for a missing id (§9.1).
-pub async fn rematch_status(app: &App, req: Req) -> ApiResult {
+pub async fn rematch_status(app: &Arc<App>, req: Req) -> ApiResult {
     rematch_status_route(app, req).await.map_err(hide_internal)
 }
 

@@ -41,7 +41,7 @@ use crate::actor::protocol::{encode, error_message, SocketErrorCode, MAX_FRAME_B
 use crate::actor::registry::AttachError;
 use crate::api::http::{assert_active, client_address, rate_limit_address, ApiError, ApiErrorCode};
 use crate::app::{browser_origins, App};
-use crate::config::{DEFAULT_TRUSTED_PROXY_HOPS, IPV6_RATE_LIMIT_PREFIX_BITS, WS_MAX_CONNECTIONS_PER_ADDRESS};
+use crate::config::{DEFAULT_TRUSTED_PROXY_HOPS, WS_MAX_CONNECTIONS_PER_ADDRESS};
 
 /// SPEC §9.2: one WebSocket per player, upgraded on the same listener the API serves.
 pub const WS_PATH: &str = "/ws/match";
@@ -550,7 +550,7 @@ pub fn close_all(app: &App) {
 
 /// The address an upgrade is counted against: the peer, or R190's forwarded entry.
 fn upgrade_address(headers: &HeaderMap, peer: Option<&str>, trusted_proxy_hops: usize) -> String {
-    rate_limit_address(&client_address(&forwarded_headers(headers), peer, trusted_proxy_hops), IPV6_RATE_LIMIT_PREFIX_BITS)
+    rate_limit_address(&client_address(&forwarded_headers(headers), peer, trusted_proxy_hops))
 }
 
 /// The `/ws/match` upgrade (SURFACE §11.2), with `index.ts`'s options.

@@ -29,6 +29,8 @@
 //! `PLAYER_SETTINGS_BYTES_MAX` bytes of them. None of it is a rule: nothing the engine does reads
 //! a setting.
 
+use std::sync::Arc;
+
 use indexmap::IndexMap;
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -179,7 +181,7 @@ fn caller_profile(req: &Req) -> Result<&Profile, ApiError> {
 // (§9.4).
 
 /// `GET /api/settings`.
-pub async fn get_settings(app: &App, req: Req) -> ApiResult {
+pub async fn get_settings(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let row = tx.player_settings_get(&profile.id).await?;
@@ -188,7 +190,7 @@ pub async fn get_settings(app: &App, req: Req) -> ApiResult {
 }
 
 /// `PUT /api/settings`: the groups sent, merged into the account's (R634).
-pub async fn put_settings(app: &App, req: Req) -> ApiResult {
+pub async fn put_settings(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let now = now_ms();
     let groups = read_groups(&req.body, now)?;

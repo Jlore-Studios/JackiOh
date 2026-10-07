@@ -17,8 +17,8 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPoolOptions;
 
-use crate::api::codes::{MintInviteCodeInput, mint_invite_code};
-use crate::api::crypto::create_hashes;
+use crate::api::codes::{MintDeps, MintInput, mint_invite_code};
+use crate::app::now_ms;
 use crate::db::store::Db;
 use crate::env::{Env, load_env};
 
@@ -99,12 +99,12 @@ async fn mint(db: &Db, env: &Env, options: &MintOptions) -> Result<()> {
         ),
     };
 
-    // §9.4, §9.8: one pepper in the environment, two domains — the same derivation `src/app.rs`
-    // uses, so this code hashes to what redemption will look up.
-    let hashes = create_hashes(&format!("{}:code", env.code_pepper), &format!("{}:ip", env.code_pepper));
-    // TS `MintDeps` was the store, ids, hashes and timers; ids and the clock are the server's own
-    // functions now (SURFACE §11.3), so minting takes the store and the hashes.
-    let minted = mint_invite_code(db, &hashes, MintInviteCodeInput { max_uses: options.max_uses, expires_at })
+    // §9.4, §9.8: one pepper in the environment — the same one `src/app.rs` keys with, so this code
+    // hashes to what redemption will look up. TS `MintDeps` was the store, ids, hashes and timers; ids
+    // and the clock are the server's own functions now (SURFACE §11.3), so minting takes the store and
+    // the pepper (`api::codes::MintDeps`).
+    let max_uses = options.max_uses.map(|uses| i32::try_from(uses).unwrap_or(i32::MAX));
+    let minted = mint_invite_code(MintDeps { db, code_pepper: &env.code_pepper }, MintInput { max_uses, expires_at })
         .await
         .map_err(|error| anyhow!("{error}"))?;
 
@@ -181,11 +181,6 @@ fn js_number(raw: &str) -> f64 {
 /// JS `Number.isInteger`.
 fn is_integer(value: f64) -> bool {
     value.is_finite() && value.fract() == 0.0
-}
-
-/// `Date.now()`: the wall clock in epoch milliseconds (TS `systemTimers.now`).
-fn now_ms() -> i64 {
-    (time::OffsetDateTime::now_utc().unix_timestamp_nanos() / 1_000_000) as i64
 }
 
 /// `new Date(ms).toISOString()`: `2026-10-07T12:34:56.789Z`.

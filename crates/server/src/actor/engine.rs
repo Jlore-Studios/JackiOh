@@ -184,7 +184,7 @@ pub fn deal_random_deck(seed: &str) -> Vec<String> {
         &mut Rng::new(seed, 0),
         DECK_SIZE,
         &AiDeckOptions {
-            banned: vec![],
+            banned: Some(vec![]),
             ..AiDeckOptions::default()
         },
     )
