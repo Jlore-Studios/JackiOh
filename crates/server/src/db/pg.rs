@@ -1856,8 +1856,9 @@ pub async fn codes_find_by_hash(t: &mut PgTx<'_>, code_hash: &str) -> Result<Opt
     Ok(Some(InviteCode {
         id: uuid_text(&row, "id")?,
         code_hash: get(&row, "code_hash")?,
-        max_uses: get(&row, "max_uses")?,
-        uses: get(&row, "uses")?,
+        // `int` columns (migration 0001), widened to the store's i64 (store.rs's header).
+        max_uses: i64::from(get::<i32>(&row, "max_uses")?),
+        uses: i64::from(get::<i32>(&row, "uses")?),
         revoked: get::<Option<OffsetDateTime>>(&row, "revoked_at")?.is_some(),
         expires_at: ms_or_null(get(&row, "expires_at")?),
         created_at: ms_of(get(&row, "created_at")?),
@@ -1992,7 +1993,8 @@ pub async fn collection_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<Vec<Co
     .map_err(db_error)?;
     rows.iter()
         .map(|row| -> Result<CollectionEntry, StoreError> {
-            Ok(CollectionEntry { card_id: get(row, "card_id")?, quantity: get(row, "quantity")? })
+            // `quantity` is an `int` (migration 0002), widened to the store's i64.
+            Ok(CollectionEntry { card_id: get(row, "card_id")?, quantity: i64::from(get::<i32>(row, "quantity")?) })
         })
         .collect()
 }

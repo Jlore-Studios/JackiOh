@@ -421,7 +421,7 @@ begin
 end $$;
 rollback;
 
-\echo '### R604: a ranked match is ended only by the server's own write — app.end_match refuses it and the SQL reaper skips it ###'
+\echo '### R604: a ranked match is ended only by the server''s own write — app.end_match refuses it and the SQL reaper skips it ###'
 begin;
 -- A stale live match, ranked: the ending the flag names is the server's transaction (the hidden
 -- rating move, the ladder write and the rated_games record), never this path's unrated row.

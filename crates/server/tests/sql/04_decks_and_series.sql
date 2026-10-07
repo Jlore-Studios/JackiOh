@@ -740,7 +740,7 @@ begin
 end $$;
 rollback;
 
-\echo '### R263: a series' game in play is ended only by the server's own write — app.end_match refuses it and the SQL reaper skips it ###'
+\echo '### R263: a series'' game in play is ended only by the server''s own write — app.end_match refuses it and the SQL reaper skips it ###'
 begin;
 -- The series' game in play: a stale live match its series names through next_match_id. Ending
 -- it SQL-side writes the results row and nothing else, so the series would sit 'playing' on a
