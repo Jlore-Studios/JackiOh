@@ -225,8 +225,8 @@ pub fn line_status(state: &GameState, seat: PlayerId, root_turn: i32) -> LineSta
     LineStatus::Open
 }
 
-/// TS `{ ok: true; state } | { ok: false; error }`.
-type SimStep = Result<GameState, String>;
+/// TS `{ ok: true; state } | { ok: false; error }` (private in TS; public here, as `simulate`'s answer).
+pub type SimStep = Result<GameState, String>;
 
 /// One AI action on a determinized state: reduce (nonce `sim:${counter.used}`), then, while a prompt
 /// of the other seat is open, answer it with the first entry of legalActions (each answer one more

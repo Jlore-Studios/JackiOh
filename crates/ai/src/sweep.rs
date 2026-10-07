@@ -543,11 +543,12 @@ fn play_sweep_game(
             },
         ));
         if let Some(now) = now {
-            hooks.time_decision = Some(Box::new(|seat: PlayerId, run: &mut dyn FnMut()| {
+            let slow = &mut slow_decisions;
+            hooks.time_decision = Some(Box::new(move |seat: PlayerId, run: &mut dyn FnMut()| {
                 let started = now();
                 run();
                 if seat == ai_seat && now() - started > f64::from(AI_SWEEP.decision_ms) {
-                    slow_decisions += 1;
+                    *slow += 1;
                 }
             }));
         }
