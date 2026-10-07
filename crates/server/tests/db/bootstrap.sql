@@ -1,7 +1,7 @@
 -- The Supabase-managed pieces the migrations assume, for a throwaway Postgres container.
--- Applied by crates/server/tests/db/run.sh (`pnpm test:db`) BEFORE the migrations, and by
--- crates/server/tests/deploy/rehearse.sh (`pnpm test:deploy`) as the superuser, the way Supabase
--- installs them; never applied to a real project, where Supabase provides all of it.
+-- Applied by crates/server/tests/db/run.sh BEFORE the migrations, and by
+-- crates/server/tests/deploy/rehearse.sh as the superuser, the way Supabase installs them; never
+-- applied to a real project, where Supabase provides all of it.
 --
 -- This is deliberately a second copy of `tests/sql/00_supabase_stub.sql` (another agent's file)
 -- plus the piece that file does not need: the PRIVILEGES Supabase grants `service_role`. The SQL

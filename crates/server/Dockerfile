@@ -1,6 +1,6 @@
 # The server's image (docs/v0.3.0/SURFACE.md §11.3): what Render builds from render.yaml
 # (`runtime: docker`, `dockerfilePath: crates/server/Dockerfile`, `dockerContext: .`) and what
-# `pnpm test:deploy` (crates/server/tests/deploy/rehearse.sh) builds and boots before any deploy.
+# crates/server/tests/deploy/rehearse.sh (CI's `db` job) builds and boots before any deploy.
 #
 # Build from the repository root, because the server crate builds against the engine, the cards
 # and the AI crates beside it in the workspace:

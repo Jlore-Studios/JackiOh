@@ -54,8 +54,9 @@ services:
       # catalog version in from crates/cards/patches/patches.json and refuses to boot when this
       # value disagrees with it, so a value left stale in the dashboard, or one Render never synced,
       # stops the deploy instead of being served. deploy-watch.yml, promote-production.yml and
-      # `pnpm test:deploy` read this line as the version main should serve, and R388's test holds it
-      # equal to patches.json; the bump of the line below is the same patch commit's.
+      # crates/server/tests/deploy/rehearse.sh read this line as the version main should serve, and
+      # R388's test holds it equal to patches.json; the bump of the line below is the same patch
+      # commit's.
       - key: CATALOG_VERSION
         value: v0.2.11
       # SPEC §11 R190: how many X-Forwarded-For entries this deployment's own proxies append; the

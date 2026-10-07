@@ -35,7 +35,7 @@ begin
                               p1_rating_before, p1_rating_after, p2_rating_before, p2_rating_after, ended_at)
   values (old_m, p1, p2, p1, 'concede', 2, 1000, 1016, 1000, 984, now() - interval '91 days');
 
-  -- As service_role in `pnpm test:db` (the store's own call); here as the owner, since this
+  -- As service_role in `tests/db/run.sh` (the store's own call); here as the owner, since this
   -- database grants service_role no table privileges.
   select * into v_row from app.purge_expired_rows(now() - interval '30 days', cutoff);
 

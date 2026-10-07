@@ -4,10 +4,10 @@
 //! DATABASE: which role the store runs as, that `SET LOCAL` really is local, that the `app.*`
 //! functions are the ones doing the work, and the schema invariants the port leans on (§9.4, §9.5).
 //!
-//! The port of `apps/server/test/db/postgres.spec.ts`. Run with `pnpm test:db`
-//! (`tests/db/run.sh`), which stands a Postgres up and sets `DATABASE_URL`; without it every case
-//! here returns at once, so `cargo test` stays hermetic. The cases share one database and truncate
-//! it, so `run.sh` runs them one at a time (`--test-threads=1`).
+//! The port of `apps/server/test/db/postgres.spec.ts`. Run with `tests/db/run.sh`, which stands a
+//! Postgres up and sets `DATABASE_URL`; without it every case here returns at once, so `cargo test`
+//! stays hermetic. The cases share one database and truncate it, so `run.sh` runs them one at a time
+//! (`--test-threads=1`).
 //!
 //! Each store call that TS made outside `store.tx` is its own transaction here too: `once!` begins
 //! one (`Db::begin`), makes the call and commits, as TS's `session.run` did. Rows go in as the JSON

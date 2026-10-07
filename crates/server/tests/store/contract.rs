@@ -84,9 +84,9 @@ macro_rules! q {
     };
 }
 
-/// The cases listed, once against each store: `memory::<case>` always (`pnpm test`'s half,
-/// `contract.memory.test.ts`), `postgres::<case>` when `DATABASE_URL` is set (`test:db`'s half,
-/// `contract.postgres.spec.ts`). Each starts with the harness's `reset`, TS's `beforeEach`.
+/// The cases listed, once against each store: `memory::<case>` always (`cargo test`'s half,
+/// `contract.memory.test.ts`), `postgres::<case>` when `DATABASE_URL` is set (`tests/db/run.sh`'s
+/// half, `contract.postgres.spec.ts`). Each starts with the harness's `reset`, TS's `beforeEach`.
 macro_rules! both_stores {
     ($($case:ident),+ $(,)?) => {
         /// Against the in-memory fake (`db/fake.rs`). A failure here means the FIXTURE broke the

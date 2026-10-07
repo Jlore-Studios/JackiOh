@@ -529,7 +529,7 @@ fn reject_redeem(
 /// advisory lock before step 3's count, migration 0006) and the code row (step 5). Two redemptions by
 /// different profiles from different addresses for different codes run side by side there. So a
 /// race this fixture cannot lose still needs `tests/store/redeem_race.rs` against Postgres
-/// (`pnpm test:db`).
+/// (`tests/db/run.sh`).
 pub fn redeem(f: &mut FakeTx<'_>, input: &RedeemInviteCodeInput) -> Result<RedeemResult, StoreError> {
     call(f, "redeem")?;
     let settings = f.guard.redemption.clone();

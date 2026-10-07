@@ -16,8 +16,7 @@
 //!
 //! ONE suite, TWO stores, like `contract.rs` (the port of `apps/server/test/db/redeem-race.ts` and
 //! its two runners): every case runs against `Db::Fake` always, and against `Db::Pg` too when
-//! `DATABASE_URL` is set (`pnpm test:db`, `tests/db/run.sh`, which runs the cases one at a time over
-//! one database).
+//! `DATABASE_URL` is set (`tests/db/run.sh`, which runs the cases one at a time over one database).
 //!
 //! Every call is started before any is awaited (`join_all`, TS's `Promise.all`), so the stores see
 //! them overlap. The fake serialises them on its one lock (`FakeTx` holds it from `begin` to
