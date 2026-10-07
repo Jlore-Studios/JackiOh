@@ -117,3 +117,70 @@ Lines: before 0, after 0
 
 ## Checked, nothing to do
 No persona code in `crates/ai` (R645: `config.rs` and `lib.rs` only say where it went). `crates/ai/Cargo.toml` is pure (SURFACE §3). Every engine name the AI calls resolves with the arity and reference kinds it uses, against `staging` as pulled before the last push.
+
+# tools and wasm
+
+Measured by a shadow build (engine, cards and ai bodies stubbed; `.fullsend/damage/tools-wasm.md`): 3 errors before, 0 after, in `crates/tools` and `crates/wasm`, every target.
+
+## Cluster: the fuzz deal (pool, decks per seed, handicap rotation, R265 actor order)
+Winner: `crates/tools/src/fuzz.rs` (`FUZZ_POOL`, `decks_for_seed`, `handicap_for_seed` → `SeedHandicap`, `handicap_decks_for_seed`, `actor_of`) — score 36 (4 SURFACE §13.1 behaviours, 4 branches) — the port of fuzz.test.ts/fuzz-handicap.test.ts, which §13.1 says golden deals "exactly as"
+Losers: `crates/tools/src/golden.rs`'s copies (`POOL_EXCLUSIONS`, `deck_legal_ids`, `fuzz_pool`, `handicap_pool`, `decks_for_seed(seed, pool)`, `handicap_for_seed -> (seat, tier, handicap)`, `handicap_decks_for_seed(.., pool)`, the inline actor choice) — score 36, tie → more callers → deleted (record.ts copied them only because TS cannot import a vitest file; a Rust module can)
+Callers updated: 3 (golden.rs `spec_for_seed` ×2, `record_seed`); `actor_of` and `handicap_decks_for_seed` made `pub(crate)`
+Semantic conflicts: none (same seeds, streams and pools)
+Unresolved: none
+Lines: before 76, after 11
+
+## Cluster: the gate run's report
+Winner: `crates/ai/src/gate.rs` `GateReport` — owner (gate.ts's `GateReport`), same five fields
+Losers: `crates/tools/src/gate.rs` `GateRun` — deleted
+Callers updated: 5 (`play_gate`, `write_shard`, `losing_seeds`, `check_report`, `check_clean`); the tests read the same field names, unchanged
+Semantic conflicts: none
+Unresolved: none
+Lines: before 12, after 1
+
+## Cluster: the matchup list
+Winner: `crates/ai/src/gate.rs` `Matchup::ALL` / `Matchup::as_str` — owner
+Losers: `tools/src/gate.rs` `matchups()`'s parse of `MATCHUP_NAMES` and `matchup_name`'s serde round trip — bodies replaced by the owner's
+Callers updated: 0 (same signatures)
+Semantic conflicts: tools.matchup ("read only through serde", 22-1) → the owner's `as_str`/`ALL`, which serde mirrors
+Unresolved: `MATCHUP_NAMES` stays: `merge_holds_the_shards_together…` indexes it (tests are not edited); it is otherwise only `parse_matchup`'s error text
+Lines: before 9, after 5
+
+## Cluster: dates (unix days → YYYY-MM-DD, and today's UTC date)
+Winner: `crates/tools/src/patches.rs` `utc_date_of` — rule 2 (patches.ts's `utcDateOf`; R646's test pins it); scores tie at 8–9 (one behaviour, 1–3 branches each). For "today": `crates/tools/src/arena.rs` `utc_date` — 2 callers (arena, promote) against 1
+Losers: `arena.rs` `civil_date` and `SECONDS_PER_DAY`; `sweep.rs` `utc_date_today`, `SECONDS_PER_DAY`, `DAYS_FROM_0000_03_01_TO_EPOCH`, `DAYS_PER_ERA`, `YEARS_PER_ERA` — deleted
+Callers updated: 4 (`arena::utc_date`'s body, `sweep::report`, and two tests' subjects: arena's `civil_dates_count_from_the_epoch` now holds `utc_date_of(days × 86 400)` to the same four dates, sweep's `the_date_is_iso_shaped` calls `utc_date()`; no assertion changed)
+Semantic conflicts: year padding (`{year:04}` vs `{full_year}`) differs only before year 1000
+Unresolved: none
+Lines: before 41, after 6
+
+## Cluster: git and the repository root
+Winner: `crates/tools/src/patches.rs` `git(repo, args, env)` (now `pub(crate)`) and `repo_root()` — rule 2 (patches.ts's `execFileSync("git")` and `REPO_ROOT`)
+Losers: `promote.rs` `git` (trimmed, `-C`) and `repo_root` (git toplevel of the cwd); `spec.rs` `default_root` (cwd ancestor search) — deleted
+Callers updated: 5 (promote `ai_tree`, `ai_source_dirty`, `parent_commit` trim themselves; promote `run`; spec `run`, whose `--root` flag still overrides, doc updated)
+Semantic conflicts: paths.root (22-2) vs spec.root (28) vs promote's cwd → source-relative, as TS's `REPO_ROOT` and rulings-coverage.ts's `here` were (SURFACE silent). Every documented use (`cargo jackioh …` in the checkout, CI, training/loop.sh) runs the binary built from the checkout it reads, so nothing moves.
+Unresolved: none
+Lines: before 32, after 9
+
+## Cluster: small helpers written twice
+Winner: `spec.rs` `is_ident_char` (3 callers to 1, same body; now `pub(crate)`); `agent.rs` `panic_message` (6 callers to 2; identical but for the no-message fallback text, which no test reads); `gate.rs` `MS_PER_SECOND` (now `pub(crate)`)
+Losers: `catalog.rs` `is_ident_char`; `fuzz.rs` `panic_message`; `sweep.rs` `MS_PER_SECOND` and the bare `1000.0`s in arena.rs (1) and fuzz.rs (3) — deleted / named
+Callers updated: 7
+Semantic conflicts: none. (TS had no function for fuzz's message, a template literal; match.ts's `messageOf` is agent's, so rule 3's "TS had both" does not apply.)
+Unresolved: none
+Lines: before 20, after 5
+
+## Cluster: copies of the ai crate's and the engine's own exports
+Winner: `jackioh_ai::SHADOW_BAN_IDS`, `jackioh_ai::RejectedAction`, `jackioh_engine::subsystems::AI_SKIPPED_ACTIONS` — owners
+Losers: `agent.rs` `own_shadow_ban` (re-sorted `SHADOW_BAN`), `wasm` `constants()`'s sort, `arena.rs` `Rejected` and `SKIPPED_ACTIONS` — deleted
+Callers updated: 7 (agent `own_info`; arena's random entrant now takes `own_info().shadow_ban`, the same list; wasm `constants`; arena `ArenaOutcome.rejected`, `accept`, `play_game`, `replacements_for`); agent's tests import `SHADOW_BAN` themselves
+Semantic conflicts: none
+Unresolved: arena.rs's referee (`play_game`, `replacements_for`, `ARENA_MAX_ACTIONS`) is a second `playMatch` beside `jackioh_ai::play_match`. Kept: the ai crate's `SeatController` has no external-agent seat and `MatchHooks` no controller override, so arena cannot call it without a change in `crates/ai` (the ai reconciler's, or part 37's). The private ai pieces it mirrors (`replacements_for`, `AI_MATCH.max_actions`, `message_of`) are not exported.
+Lines: before 31, after 6
+
+## Decision: seams fixed to the owners' shapes
+`sweep.rs` passes `&SweepOptions` to `sweep_card`/`sweep_at_risk` (2 calls, E0308); `gate.rs`'s `GREEDY_PROBE_ACTIONS` is `usize` (`MatchConfig.max_actions`, E0308); `wasm` `validator("validateTrio")` calls the validator's `validate_trio` (was `validate_loadout`); `checkDeckDraft` reads `nameMaxLength` as `DeckDraftInput.name_max_length`'s `usize` (the `Value` hedge goes); `sweep.rs`'s unused `Difficulty` import dropped. Checked against the owners and unchanged (all match): `FoldArgs` camelCase serde (the engine has it) and `replay` printing `{hash, errors}` only, no `browserHash`; `AiOptions`, `Decision`, `SearchBudget`, `AiDeckOptions` (`Default`, `banned: Option<Vec<String>>`, `mana_cap: Option<i32>`); `SweepResult.stats` (flatten), `SweepOptions<'a>`, `MatchHooks<'a>`, `evaluate`'s four arguments, `AI_GATE` indexed by `Matchup`; `main.rs`'s dispatch against every module's `Args`/`run`. `DeckDraftInput` holds closures, so `checkDeckDraft` crosses as `{name, cards, deckable, portrait?, portraitKnown?, nameMaxLength}` and the binding builds them (spec-gaps).
+Lines: 6 changed
+
+## Not a collision
+`catalog::newest_version` (catalog-version.mjs) and `stats::newest_patch` (stats.ts): TS had both; each has its own test and message (rule 3). `tools/src/golden.rs` and `engine/tests/golden.rs`: SURFACE §13 mandates both, and neither can call the other (a bin crate, an integration test). `cards/tests/cross/registry.rs`'s private `naming` copy: out of scope, and a cards test cannot depend on the tools binary (part 37). `name_of` in trace.rs and sweep.rs, `describe` in catalog.rs and trace.rs, `play_game` in fuzz.rs and arena.rs: different TS functions, different jobs.

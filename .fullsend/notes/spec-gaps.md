@@ -42,3 +42,27 @@
   NodeCounter`, `&self` methods, tallies in `Cell`) is `types.rs`'s. `Cell` is allowed by §3's
   `clippy.toml` (only `RefCell` is banned); if §3 means "no interior mutability" generally, the
   counter is the one exception and should be named there.
+
+## tools and wasm
+
+- **SURFACE §14.2, the arena's records' `pilots`.** §14.2 says the records name the two agents in
+  `pilots`, but R376's `GameRecord.pilots` is `PerPlayer<Pilot>` with `Pilot` = `"human" | "ai"`, and
+  `jackioh-server stats-import` parses records as `GameRecord`. Decision kept (part 29.1): both
+  pilots are `"ai"`, and the agents are named in the record id,
+  `dev:<patch>:arena:<a label>-vs-<b label>:<seed>` (labels `self`, `random`, `bin-gen<N>`), which
+  also keeps a promotion's two series (same seeds) distinct. Suggested SURFACE wording: "`pilots`
+  both `ai`; the agents are named in the record's `id`".
+- **SURFACE §10.1 / §5.1, the web's engine constants.** `apps/web/src/wire/engineConfig.ts` carries
+  13 constants, not 12: `LIBRARY_CAP` was added because `apps/web/src/game/animations.window.test.ts`
+  imports it (part 21). Kept; §5.1's list should name it.
+- **SURFACE §10.1, `validator("checkDeckDraft", …)`.** "The input and output are those TS
+  functions' argument and result, as JSON" cannot hold for `checkDeckDraft`: its argument
+  (`DeckDraftInput`) holds two predicates (`is_deckable`, `is_portrait`). Decision kept (part 21):
+  it crosses as `{ name, cards, deckable: string[], portrait?, portraitKnown?, nameMaxLength }`, the
+  page answering the predicates for exactly the ids and portrait the rules ask about, and the
+  binding rebuilds them as closures.
+- **SURFACE §10.1, the bindings' Rust return types.** §10.1 writes `-> String` (and `ai_to_act ->
+  bool`); the bindings return `Result<String, JsError>` (`Result<bool, JsError>`), which
+  wasm-bindgen exposes with the same JS return type and throws an `Error` with the engine's message
+  where TS threw (bad JSON, a bad seat, an unknown validator call, a setup `create_game` would panic
+  on). Kept; §10.1 should say so.
