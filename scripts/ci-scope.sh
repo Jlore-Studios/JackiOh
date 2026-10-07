@@ -36,7 +36,8 @@ if [ -z "$base" ] || [ -z "$head" ]; then
   exit 0
 fi
 
-files=$(git diff --name-only "$base...$head" 2>/dev/null) || files=
+# --no-renames: a move lists both paths, so a file moved onto the skip list still counts where it was.
+files=$(git diff --no-renames --name-only "$base...$head" 2>/dev/null) || files=
 if [ -z "$files" ]; then
   echo "ci-scope: no readable diff for $base...$head, running everything" >&2
   echo "full=true"

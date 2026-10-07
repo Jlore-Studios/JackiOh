@@ -182,6 +182,20 @@ describe("scripts/vercel-ignore.sh", () => {
     expect(builds()).toBe(true);
   });
 
+  it("builds when a file the bundle reads is moved onto the skip list", () => {
+    commits(["apps/web/src/game/Board.tsx"]);
+    const built = git("rev-parse", "HEAD");
+    writeFileSync(join(repo, "apps/web/src/game/Board.tsx"), "export const board = 1;\n".repeat(20));
+    git("add", "-A");
+    git("commit", "-q", "-m", "board");
+    const withBoard = git("rev-parse", "HEAD");
+    mkdirSync(join(repo, "docs"), { recursive: true });
+    git("mv", "apps/web/src/game/Board.tsx", "docs/Board.tsx");
+    git("commit", "-q", "-m", "moved into docs");
+    expect(builds({ previous: withBoard })).toBe(true);
+    expect(builds({ previous: built })).toBe(true);
+  });
+
   it("never skips past a commit that was not built: it diffs against the last one that was", () => {
     // A changed the bundle and its build never ran (the daily cap); B only touched the bot.
     commits(["crates/engine/src/a.rs"], ["bot/harness/b.py"]);

@@ -181,6 +181,19 @@ describe("scripts/ci-scope.sh", () => {
     expect(answerFor("bot/harness/state.py", ".harness/config.json")).toEqual({ full: "full=false", db: "db=false" });
   });
 
+  it("counts a moved file's old path as well as its new one", () => {
+    git("checkout", "-q", "-B", "work", "base");
+    mkdirSync(join(repo, "crates/server/migrations"), { recursive: true });
+    writeFileSync(join(repo, "crates/server/migrations/0001_init.sql"), "create table t (id int);\n".repeat(20));
+    git("add", "-A");
+    git("commit", "-q", "-m", "migration");
+    const before = git("rev-parse", "HEAD");
+    mkdirSync(join(repo, "bot"), { recursive: true });
+    git("mv", "crates/server/migrations/0001_init.sql", "bot/0001_init.sql");
+    git("commit", "-q", "-m", "moved into the bot's directory");
+    expect(lines(before, git("rev-parse", "HEAD"))).toEqual({ full: "full=true", db: "db=true" });
+  });
+
   it("reads what the branch changed, not what main changed since it was cut", () => {
     git("checkout", "-q", "-B", "work", "base");
     mkdirSync(join(repo, "bot"), { recursive: true });

@@ -37,7 +37,8 @@ fi
 prev=$VERCEL_GIT_PREVIOUS_SHA
 [ -n "$prev" ] || exit 1
 git merge-base --is-ancestor "$prev" HEAD 2>/dev/null || exit 1
-files=$(git diff --name-only "$prev" HEAD 2>/dev/null) || exit 1
+# --no-renames: a move lists both paths, so a file moved onto the skip list still counts where it was.
+files=$(git diff --no-renames --name-only "$prev" HEAD 2>/dev/null) || exit 1
 [ -n "$files" ] || exit 1
 
 # The loop below splits `git diff`'s output on whitespace; no name may expand as a glob. The first
