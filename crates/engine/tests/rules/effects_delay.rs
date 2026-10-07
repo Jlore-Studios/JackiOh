@@ -58,7 +58,7 @@ fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstanc
     let mut card = new_instance(state, def_id, player, Zone::Hand { player });
     card.radiant = true;
     let id = card.id.clone();
-    assert!(place_on_field(state, card, at, Default::default()), "could not place {def_id}");
+    assert!(place_on_field(state, &mut card, at, Default::default()), "could not place {def_id}");
     find_instance(state, &id).cloned().expect("the placed card")
 }
 
@@ -182,7 +182,8 @@ fn run(state: &mut GameState, effects: Vec<Effect>, options: RunOptions) -> Vec<
     let self_ = self_.map(|card| find_instance(state, &card.id).cloned().unwrap_or(card));
     let mut sink = sink_for(state);
     {
-        let mut ctx = make_context(sink.sink(), self_, HookOptions { controller, ..Default::default() });
+        let mut inner = sink.sink();
+        let mut ctx = make_context(&mut inner, self_.as_ref(), HookOptions { controller, ..Default::default() });
         apply_effects(&effects, &mut ctx);
     }
     let cursor = sink.rng.cursor();
@@ -446,8 +447,8 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
         );
 
         // "Fires even if K-Pop Fanatic died" (§8.2 #50, R76).
-        let moving = find_instance(&state, &scribe.id).expect("the scribe").clone();
-        move_to_zone(&mut state, &moving, ZoneName::Graveyard, Default::default());
+        let mut moving = find_instance(&state, &scribe.id).expect("the scribe").clone();
+        move_to_zone(&mut state, &mut moving, OffFieldZone::Graveyard, Default::default());
         assert!(state.players.p1.graveyard.iter().any(|card| card.id == scribe.id));
 
         let back_to_p1 = end_turns(&state, 2);
@@ -467,8 +468,8 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
 
         // #39 Recycling Initiative arms the delay and then exiles itself, so the continuation has to
         // come back to a card in the exile pile.
-        let moving = find_instance(&state, &scribe.id).expect("the scribe").clone();
-        move_to_zone(&mut state, &moving, ZoneName::Exile, Default::default());
+        let mut moving = find_instance(&state, &scribe.id).expect("the scribe").clone();
+        move_to_zone(&mut state, &mut moving, OffFieldZone::Exile, Default::default());
         assert!(state.players.p1.exile.iter().any(|card| card.id == scribe.id));
 
         let ended = end_turns(&state, 1);
@@ -625,7 +626,7 @@ mod add_player_modifier_s2_2_s2_3_s6_3_cost_r30_r48_r65 {
         let mine = one(in_hand(&mut state, &indestructible.id, P1, 1));
         let theirs = one(in_hand(&mut state, &indestructible.id, P2, 1));
         let cost = |state: &GameState, card: &CardInstance| {
-            effective_cost(state, find_instance(state, &card.id).expect("a hand card"))
+            effective_cost(state, find_instance(state, &card.id).expect("a hand card"), CostOptions::default())
         };
         assert_eq!(cost(&state, &mine), 4);
 

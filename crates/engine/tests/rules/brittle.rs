@@ -104,7 +104,7 @@ fn tick_at(state: &mut GameState, turn: i32, player: PlayerId) -> Vec<GameEvent>
     state.active = player;
     let mut sink = sink_for(state);
     brittle_tick(&mut sink, player);
-    settle(&mut sink);
+    settle(&mut sink, SettleOptions::default());
     let cursor = sink.rng.cursor();
     sink.state.rng_cursor = cursor;
     sink.events.clone()
@@ -153,7 +153,7 @@ mod r385_b3_3_where_a_brittle_count_lives_and_when_it_starts {
         assert_eq!(by_id(&state, &trap.id).brittle, None);
         let trap = live(&state, &trap.id);
         // The count starts when the card reveals.
-        (reveal(Default::default()).apply)(&mut make_context(sink_for(&mut state), Some(&trap), Default::default()));
+        (reveal(Default::default()).apply)(&mut make_context(&mut sink_for(&mut state), Some(&trap), Default::default()));
         assert_eq!(by_id(&state, &trap.id).brittle, Some(counter(3, 4, true)));
     }
 
@@ -367,7 +367,8 @@ mod r385_r441_b3_3_rule_5_vanilla_and_the_count {
         given(&mut state, &mut given_to, 2, 5);
         by_id_mut(&mut state, &printed.id).brittle = Some(counter(2, 5, true));
         {
-            let mut ctx = make_context(sink_for(&mut state), None, by(P1));
+            let mut sink = sink_for(&mut state);
+            let mut ctx = make_context(&mut sink, None, by(P1));
             (vanilla(json_as(json!({ "instanceId": printed.id }))).apply)(&mut ctx);
             (vanilla(json_as(json!({ "instanceId": given_to.id }))).apply)(&mut ctx);
         }
@@ -521,7 +522,7 @@ mod r113_b3_3_a_crumble_that_pauses_the_settle_after_the_tick_9_3 {
 
         let mut sink = sink_for(&mut state);
         brittle_tick(&mut sink, P1);
-        settle(&mut sink);
+        settle(&mut sink, SettleOptions::default());
         let cursor = sink.rng.cursor();
         sink.state.rng_cursor = cursor;
         assert_eq!(

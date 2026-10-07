@@ -93,7 +93,7 @@ fn run(state: &mut GameState, effect: Effect, self_: Option<CardInstance>) -> Ve
             ..HookOptions::default()
         };
         {
-            let mut ctx = make_context(sink.reborrow(), Some(self_), options);
+            let mut ctx = make_context(&mut sink, Some(&self_), options);
             apply_effects(&[effect], &mut ctx);
         }
         state_check(&mut sink);
@@ -114,7 +114,7 @@ fn labels_of<D: std::borrow::Borrow<ChaosEffectDef>>(effects: &[D]) -> Vec<Strin
 fn seed_where(radiant: bool, accept: impl Fn(&[String]) -> bool, tag: &str) -> String {
     for i in 0..4000 {
         let seed = format!("{tag}-{i}");
-        if accept(&names_of(&roll_chaos_effects(&mut Rng::new(&seed, 0), radiant, CHAOS_PLUS_EFFECTS))) {
+        if accept(&names_of(&roll_chaos_effects(&mut Rng::new(&seed, 0), radiant, Some(CHAOS_PLUS_EFFECTS)))) {
             return seed;
         }
     }
@@ -231,7 +231,7 @@ mod r423_c_plus_73s_table {
             (0..CHAOS_PLUS_BOOKS).map(|_| book.id.clone()).collect::<Vec<String>>()
         );
         assert!(!state.players.p1.hand.iter().any(|card| card.def_id == book_token.id));
-        assert!(state.players.p1.hand.iter().all(|card| effective_cost(&state, card) == 0));
+        assert!(state.players.p1.hand.iter().all(|card| effective_cost(&state, card, CostOptions::default()) == 0));
     }
 
     #[test]
@@ -257,8 +257,8 @@ mod r423_c_plus_73s_table {
         let hand = &state.players.p1.hand;
         assert_eq!(hand.len() as i32, CHAOS_PLUS_CLASSIC_CARDS);
         for card in hand {
-            assert_eq!(def_of(&state, &card.def_id).set, SetName::Classic);
-            assert!(!def_of(&state, &card.def_id).token);
+            assert_eq!(def_of(Some(&state), &card.def_id).set, SetName::Classic);
+            assert!(!def_of(Some(&state), &card.def_id).token);
             assert_eq!(card.cost_override, Some(0));
         }
     }
@@ -312,14 +312,14 @@ mod r423_c_plus_73s_table {
         let library = state.players.p1.library.clone();
         let (first, second, third) = (&library[0], &library[1], &library[2]);
         assert_eq!(first.id, deck[0].id);
-        assert_eq!(def_of(&state, &first.def_id).type_, CardType::Unit);
-        assert_eq!(effective_cost(&state, first), 3);
-        assert_eq!(effective_cost(&state, second), 1);
+        assert_eq!(def_of(Some(&state), &first.def_id).type_, CardType::Unit);
+        assert_eq!(effective_cost(&state, first, CostOptions::default()), 3);
+        assert_eq!(effective_cost(&state, second, CostOptions::default()), 1);
         assert_eq!(third.def_id, immutable.id.clone());
         for each in [first, second] {
             assert!(state.transient_defs.contains_key(&each.def_id));
             assert!(
-                !def_of(&state, &each.def_id)
+                !def_of(Some(&state), &each.def_id)
                     .ingredients
                     .iter()
                     .flatten()
@@ -451,7 +451,7 @@ mod r423_c_plus_73s_table {
     fn r423_the_base_face_rolls_one_entry_and_all_ten_are_reachable() {
         let mut reached: IndexSet<String> = IndexSet::new();
         for i in 0..200 {
-            let rolled = roll_chaos_effects(&mut Rng::new(&format!("plus-base-{i}"), 0), false, CHAOS_PLUS_EFFECTS);
+            let rolled = roll_chaos_effects(&mut Rng::new(&format!("plus-base-{i}"), 0), false, Some(CHAOS_PLUS_EFFECTS));
             assert_eq!(rolled.len(), 1);
             reached.insert(names_of(&rolled).first().cloned().unwrap_or_default());
         }
@@ -464,7 +464,7 @@ mod r423_c_plus_73s_table {
             let names = names_of(&roll_chaos_effects(
                 &mut Rng::new(&format!("plus-radiant-{i}"), 0),
                 true,
-                CHAOS_PLUS_EFFECTS,
+                Some(CHAOS_PLUS_EFFECTS),
             ));
             assert_eq!(names.iter().collect::<IndexSet<_>>().len() as i32, CALL_TO_CHAOS_RADIANT_EFFECTS);
             let order: Vec<i64> = names
@@ -496,7 +496,7 @@ mod r423_c_plus_73s_table {
         let mut state = game(&seed, None, None);
         let me = plus_card(&mut state, true, None);
         let events = run(&mut state, call_to_chaos(plus_table()), Some(me.clone()));
-        let expected = labels_of(&roll_chaos_effects(&mut Rng::new(&seed, 0), true, CHAOS_PLUS_EFFECTS));
+        let expected = labels_of(&roll_chaos_effects(&mut Rng::new(&seed, 0), true, Some(CHAOS_PLUS_EFFECTS)));
         assert_eq!(
             events.first().map(json_of),
             Some(json!({ "type": "chaosRolled", "player": "p1", "instanceId": me.id, "defId": plus.id, "effects": expected }))

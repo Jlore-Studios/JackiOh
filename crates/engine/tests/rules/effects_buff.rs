@@ -93,7 +93,8 @@ impl Bench {
 
 /// Apply one effect the way the engine does: a context over the sink, then `apply` (§10.9).
 fn run(bench: &mut Bench, effect: Effect, self_: Option<CardInstance>, options: HookOptions) {
-    let mut ctx = make_context(bench.sink(), self_, options);
+    let mut sink = bench.sink();
+    let mut ctx = make_context(&mut sink, self_.as_ref(), options);
     (effect.apply)(&mut ctx);
 }
 
@@ -198,8 +199,8 @@ mod buff_s10_4_layer_4_m3_t1 {
         run(&mut b, buff(json_as(json!({ "target": { "of": "self" }, "attack": 4, "health": 4 }))), me, HookOptions::default());
         assert_eq!(b.card(&unit.id).buffs, AttackHealth { attack: 4, health: 4 });
 
-        let now = b.card(&unit.id);
-        move_to_zone(&mut b.state, &now, ZoneName::Hand, Default::default());
+        let mut now = b.card(&unit.id);
+        move_to_zone(&mut b.state, &mut now, OffFieldZone::Hand, Default::default());
         assert_eq!(b.card(&unit.id).buffs, NO_BUFF);
     }
 
@@ -295,8 +296,8 @@ mod grant_keyword_s6_1_s10_4_m3_t1 {
         assert_eq!(b.card(&unit.id).granted_keywords, vec![Keyword::Taunt]);
 
         // R78: the grant goes when the card leaves the field.
-        let now = b.card(&unit.id);
-        move_to_zone(&mut b.state, &now, ZoneName::Hand, Default::default());
+        let mut now = b.card(&unit.id);
+        move_to_zone(&mut b.state, &mut now, OffFieldZone::Hand, Default::default());
         assert_eq!(b.card(&unit.id).granted_keywords, Vec::<Keyword>::new());
     }
 

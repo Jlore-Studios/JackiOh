@@ -26,9 +26,9 @@ fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     {
-        let sink = EngineSink::new(&mut *state, &mut events, &mut rng);
+        let mut sink = EngineSink::new(&mut *state, &mut events, &mut rng);
         let mut ctx = make_context(
-            sink,
+            &mut sink,
             None,
             HookOptions {
                 controller: Some(P1),

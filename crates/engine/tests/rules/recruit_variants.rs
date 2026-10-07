@@ -19,7 +19,7 @@ use crate::rules::fixtures::harness::{events_of_type, put, set_library, sink_for
 
 fn run(sink: &mut EngineSink<'_>, effects: Vec<Effect>) {
     let mut ctx = make_context(
-        sink.reborrow(),
+        sink,
         None,
         HookOptions {
             controller: Some(P1),
@@ -115,7 +115,7 @@ mod e25_recruit_from_the_opponent_s_exile_classic_c1_radiant {
             sink.events.clone()
         };
 
-        let card = must(top_of(state, P1, 0), "the recruited card");
+        let mut card = must(top_of(state, P1, 0), "the recruited card");
         assert_eq!(card.id, newest.id);
         assert_eq!(card.owner, P2);
         assert_eq!(card.controller, P1);
@@ -128,7 +128,7 @@ mod e25_recruit_from_the_opponent_s_exile_classic_c1_radiant {
         );
 
         // It goes back to its owner's piles when it leaves the field (§3.2).
-        move_to_zone(state, &card, OffFieldZone::Graveyard, Default::default());
+        move_to_zone(state, &mut card, OffFieldZone::Graveyard, Default::default());
         assert!(ids(&state.players.p2.graveyard).contains(&newest.id));
     }
 

@@ -25,9 +25,9 @@ fn run(state: &mut GameState, effect: Effect, self_: Option<CardInstance>, hook:
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     {
-        let sink = EngineSink::new(state, &mut events, &mut rng);
+        let mut sink = EngineSink::new(state, &mut events, &mut rng);
         let controller = hook.controller.unwrap_or(PlayerId::P1);
-        let mut ctx = make_context(sink, self_, HookOptions { controller: Some(controller), ..hook });
+        let mut ctx = make_context(&mut sink, self_.as_ref(), HookOptions { controller: Some(controller), ..hook });
         (effect.apply)(&mut ctx);
     }
     state.rng_cursor = rng.cursor();

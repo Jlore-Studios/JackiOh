@@ -215,9 +215,10 @@ fn run_all(state: &mut GameState, effects: Vec<Effect>, options: RunOptions) -> 
     let self_ = self_.map(|card| find_instance(state, &card.id).cloned().unwrap_or(card));
     let mut sink = sink_for(state);
     {
+        let mut inner = sink.sink();
         let mut ctx = make_context(
-            sink.sink(),
-            self_,
+            &mut inner,
+            self_.as_ref(),
             HookOptions { controller: Some(controller.unwrap_or(P1)), targets, ..Default::default() },
         );
         for effect in &effects {
@@ -235,8 +236,8 @@ fn run(state: &mut GameState, effect: Effect, options: RunOptions) -> Vec<GameEv
 }
 
 /// `effect.apply(makeContext(sink, null, { controller }))` on a sink of the caller's.
-fn apply_as(sink: EngineSink<'_>, effect: Effect, controller: PlayerId) {
-    let mut ctx = make_context(sink, None, HookOptions { controller: Some(controller), ..Default::default() });
+fn apply_as(mut sink: EngineSink<'_>, effect: Effect, controller: PlayerId) {
+    let mut ctx = make_context(&mut sink, None, HookOptions { controller: Some(controller), ..Default::default() });
     (effect.apply)(&mut ctx);
 }
 
