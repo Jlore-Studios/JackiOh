@@ -239,8 +239,8 @@ async fn boot(from: Option<&Process>) -> Process {
             test_app_with(TestAppOptions { db: Some(previous.app.db.clone()), ..TestAppOptions::default() }).await
         }
     };
-    let alice = add_user(&app, &format!("user-{ALICE}"), "alice@example.test");
-    let bob = add_user(&app, &format!("user-{BOB}"), "bob@example.test");
+    let alice = add_user(&app, &format!("user-{ALICE}"), "alice@example.test", true);
+    let bob = add_user(&app, &format!("user-{BOB}"), "bob@example.test", true);
     let started_before = started(&app).await.len();
     let clock = from.map(|previous| previous.clock).unwrap_or(Clock { base_ms: 0, at: tokio::time::Instant::now() });
     Process { app, alice, bob, clock, started_before }
@@ -275,6 +275,7 @@ impl Process {
 /// Starts the series, and reads the server's clock off the row it wrote.
 async fn begin(process: &mut Process) -> Value {
     let at = tokio::time::Instant::now();
+    let mut tx = process.app.db.begin(None).await.expect("store.tx");
     let series = start_series(
         &process.app,
         from(json!({
@@ -288,9 +289,11 @@ async fn begin(process: &mut Process) -> Value {
             "catalogVersion": jackioh_cards::catalog_version(),
             "ranked": true,
         })),
+        &mut tx,
     )
     .await
     .expect("the series starts");
+    tx.commit().await.expect("the series commits");
     let series = to_json(&series);
     process.clock = Clock { base_ms: series["createdAt"].as_i64().expect("the row's creation"), at };
     series
@@ -303,7 +306,7 @@ async fn row(app: &Arc<App>) -> Value {
 
 async fn pick(process: &Process, token: &str, slot: usize) -> (u16, Value) {
     let (status, _headers, body) =
-        call(&process.app, "POST", &format!("/api/series/{SERIES_ID}/pick"), Some(token), Some(json!({ "slot": slot }))).await;
+        call(&process.app, "POST", &format!("/api/series/{SERIES_ID}/pick"), Some(token), json!({ "slot": slot })).await;
     (status, body)
 }
 
@@ -528,7 +531,7 @@ mod r263_a_series_survives_a_restart {
         // third process finds it there and only waits for Bob's.
         finish_game(&b, ALICE).await.expect("game 2's result");
         let c = boot(Some(&b)).await;
-        let (_, _, alice_sees) = call(&c.app, "GET", &format!("/api/series/{SERIES_ID}"), Some(c.alice.as_str()), None).await;
+        let (_, _, alice_sees) = call(&c.app, "GET", &format!("/api/series/{SERIES_ID}"), Some(c.alice.as_str()), Value::Null).await;
         assert_eq!(alice_sees["you"]["pick"], json!(2));
         assert_eq!(alice_sees["you"]["autoPick"], json!(true));
         assert_eq!(pick(&c, &c.bob, 0).await.0, 200);
@@ -549,7 +552,7 @@ mod r263_a_series_survives_a_restart {
         assert_eq!(pick(&a, &a.alice, 2).await.0, 200);
 
         let b = boot(Some(&a)).await;
-        let (_, _, bob_sees) = call(&b.app, "GET", &format!("/api/series/{SERIES_ID}"), Some(b.bob.as_str()), None).await;
+        let (_, _, bob_sees) = call(&b.app, "GET", &format!("/api/series/{SERIES_ID}"), Some(b.bob.as_str()), Value::Null).await;
         assert_eq!(bob_sees["opponent"]["picked"], json!(true));
         assert!(!bob_sees.to_string().contains("alice"), "{bob_sees}");
         // Sealed across the restart too: Alice cannot change it in the new process.

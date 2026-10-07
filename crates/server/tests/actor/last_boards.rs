@@ -129,7 +129,7 @@ async fn start(app: &Arc<App>, match_id: &str, seed: &str, decks: &(Vec<String>,
 }
 
 async fn view_of(actor: &MatchActor, player: PlayerId) -> Value {
-    to_json(&actor.view_for(player).await)
+    to_json(&actor.view_for(player))
 }
 
 /// TS's `submit`: one action as `player`, under the next `lb-<n>` nonce; a refusal fails the test.
@@ -200,10 +200,10 @@ mod r417_r565_last_boards_through_a_real_match {
             if face_down && unit {
                 break;
             }
-            let snapshot = actor.snapshot().await;
+            let snapshot = actor.snapshot();
             assert!(snapshot.result.is_none());
             let who = snapshot.pending_for.unwrap_or(snapshot.active);
-            let legal: Vec<Value> = jackioh_engine::legal_actions(&actor.engine_state().await, who).iter().map(to_json).collect();
+            let legal: Vec<Value> = jackioh_engine::legal_actions(&actor.engine_state(), who).iter().map(to_json).collect();
             let own_view = view_of(&actor, who).await;
             let wanted = |want: &[&str]| -> Option<Value> {
                 legal
@@ -256,13 +256,13 @@ mod r417_r565_last_boards_through_a_real_match {
             let keep: Vec<Value> = hand_of(&view_of(&next, player).await).iter().map(|card| card["instanceId"].clone()).collect();
             next_walk.submit(player, json!({ "type": "mulligan", "keep": keep })).await;
         }
-        let live = jackioh_engine::hash_state(&next.engine_state().await);
+        let live = jackioh_engine::hash_state(&next.engine_state());
         // A newer board stored meanwhile changes nothing: a rebuilt actor folds the match's own inputs.
         let empty: Vec<LastBoardEntry> = Vec::new();
         store!(app, t => t.last_boards_put(P1, from(json!("server")), &empty, AT as _).await.expect("lastBoards.put"));
         app.matches.stop("m-last-2").await;
         let rebuilt = app.matches.actor_for(&app, "m-last-2").await.expect("the rebuilt actor");
-        assert_eq!(jackioh_engine::hash_state(&rebuilt.engine_state().await), live);
+        assert_eq!(jackioh_engine::hash_state(&rebuilt.engine_state()), live);
     }
 }
 

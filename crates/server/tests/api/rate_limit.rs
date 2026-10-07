@@ -32,7 +32,7 @@ use tracing_subscriber::layer::SubscriberExt;
 
 use jackioh_server::api::http::{account_key, address_key, create_rate_limiter};
 use jackioh_server::app::{self, App};
-use jackioh_server::auth::{Auth, SupabaseAuthInput, create_supabase_auth};
+use jackioh_server::auth::{Auth, SupabaseAuth, SupabaseAuthInput};
 use jackioh_server::config::API_REQUESTS_PER_MINUTE;
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::Db;
@@ -346,7 +346,7 @@ mod a_flood_of_bad_tokens_costs_the_auth_provider_nothing_past_the_address_budge
     /// is no shared secret, so the only way a token reaches `GET /auth/v1/user` is tier 3.
     async fn flood_harness() -> (Arc<App>, Arc<AtomicUsize>) {
         let (url, calls) = upstream().await;
-        let auth = create_supabase_auth(SupabaseAuthInput {
+        let auth = SupabaseAuth::new(SupabaseAuthInput {
             url,
             secret_key: "secret-key".to_string(),
             ..SupabaseAuthInput::default()

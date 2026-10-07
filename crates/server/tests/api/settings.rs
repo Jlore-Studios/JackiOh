@@ -126,12 +126,12 @@ async fn stored(fixture: &Fixture) -> Vec<String> {
 }
 
 async fn get(app: &Arc<App>, bearer: &str) -> (u16, Value) {
-    let (status, _, body) = call(app, "GET", "/api/settings", Some(bearer), None).await;
+    let (status, _, body) = call(app, "GET", "/api/settings", Some(bearer), Value::Null).await;
     (status, body)
 }
 
 async fn put(app: &Arc<App>, body: Value, bearer: &str) -> (u16, Value) {
-    let (status, _, body) = call(app, "PUT", "/api/settings", Some(bearer), Some(body)).await;
+    let (status, _, body) = call(app, "PUT", "/api/settings", Some(bearer), body).await;
     (status, body)
 }
 
@@ -153,7 +153,7 @@ mod r633_the_routes_an_active_account_and_only_about_itself {
         assert_eq!(get(&f.app, TOKEN).await.0, 200);
         assert_eq!(put(&f.app, json!({ "groups": {} }), TOKEN).await.0, 200);
         for method in ["POST", "DELETE", "PATCH"] {
-            let (status, _, body) = call(&f.app, method, "/api/settings", Some(TOKEN), Some(json!({}))).await;
+            let (status, _, body) = call(&f.app, method, "/api/settings", Some(TOKEN), json!({})).await;
             assert_eq!(status, 404, "{method} /api/settings");
             assert_eq!(body["error"]["code"], "not_found");
         }
@@ -168,7 +168,7 @@ mod r633_the_routes_an_active_account_and_only_about_itself {
         let (pending, banned) = (PENDING_TOKEN, OTHER_TOKEN);
         let body = json!({ "groups": { "audio": { "at": 1, "values": { "master": 0.5 } } } });
 
-        let (no_token, _, _) = call(&f.app, "PUT", "/api/settings", None, Some(body.clone())).await;
+        let (no_token, _, _) = call(&f.app, "PUT", "/api/settings", None, body.clone()).await;
         assert_eq!(no_token, 401);
         for bearer in [pending, banned] {
             assert_eq!(get(&f.app, bearer).await.0, 403);

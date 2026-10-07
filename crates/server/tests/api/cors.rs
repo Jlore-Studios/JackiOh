@@ -132,7 +132,16 @@ fn wrapped(origins: &[&str]) -> Wrapped {
             ([(header::CONTENT_TYPE, "application/json")], BODY)
         }
     });
-    let service = with_cors(handler, CorsOptions { origins: origins.iter().map(|origin| origin.to_string()).collect() });
+    let options = Arc::new(CorsOptions { origins: origins.iter().map(|origin| origin.to_string()).collect() });
+    let service = axum::Router::new().fallback(move |request: axum::extract::Request| {
+        let (options, handler) = (options.clone(), handler.clone());
+        async move {
+            with_cors(&options, request, |request| async move {
+                handler.oneshot(request).await.unwrap_or_else(|never| match never {})
+            })
+            .await
+        }
+    });
     Wrapped { calls, service }
 }
 

@@ -102,7 +102,7 @@ fn names(tag: &str) -> (String, String, String) {
 async fn active_profile(app: &App, id: &str, rating: f64) -> String {
     let user_id = format!("user-{id}");
     fake(app).await.seed_profile(json!({ "id": id, "userId": user_id, "status": "active", "rating": rating }));
-    add_user(app, &user_id, &format!("{id}@example.test"))
+    add_user(app, &user_id, &format!("{id}@example.test"), true)
 }
 
 /// Two legal decks of real cards, so the real registry can start a rematch on them.
@@ -514,7 +514,7 @@ mod rematch_creation_guards {
         // of the store's calls stands in for the foreign key: no flag before the row is written.
         let calls: Arc<StdMutex<Vec<String>>> = Arc::default();
         let seen = Arc::clone(&calls);
-        fake(&app).await.on_call = Some(Box::new(move |method: &str| {
+        fake(&app).await.on_call = Some(Arc::new(move |method: &str| {
             seen.lock().expect("calls").push(method.to_string());
             Ok(())
         }));

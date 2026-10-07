@@ -157,7 +157,7 @@ async fn own_everything(app: &Arc<App>, profile_id: &str) {
 
 /// Seeds an active profile for a fresh user and answers its token.
 async fn player(app: &Arc<App>, profile_id: &str, user_id: &str, email: &str) -> String {
-    let token = add_user(app, user_id, email);
+    let token = add_user(app, user_id, email, true);
     fake(app).lock().await.seed_profile(json!({ "id": profile_id, "userId": user_id, "status": "active" }));
     own_everything(app, profile_id).await;
     token
@@ -172,7 +172,9 @@ struct Harness {
 }
 
 async fn harness(e2e: bool) -> Harness {
-    let app = if e2e { test_app_with(TestAppOptions { e2e: true, ..TestAppOptions::default() }).await } else { test_app().await };
+    // Every test app runs with E2E=1 (`support::deps::test_env`), so both arms are TS's `{ e2e: true }`
+    // deps; part 31 left the `false` arm for part 35 (spec-gaps.md).
+    let app = if e2e { test_app_with(TestAppOptions::default()).await } else { test_app().await };
     let host = player(&app, HOST, "user-host", "host@example.test").await;
     let guest = player(&app, GUEST, "user-guest", "guest@example.test").await;
     save_deck(&app, HOST, &uuid(1), &deck(), "host's deck").await;
@@ -192,7 +194,7 @@ fn with_deck(deck_id: &str, body: Value) -> Value {
 }
 
 async fn post(app: &Arc<App>, token: &str, path: &str, body: Option<Value>) -> (u16, Value) {
-    let (status, _headers, answer) = call(app, "POST", path, Some(token), body).await;
+    let (status, _headers, answer) = call(app, "POST", path, Some(token), body.unwrap_or(Value::Null)).await;
     (status, answer)
 }
 
@@ -409,7 +411,7 @@ mod the_hosts_deck_is_frozen_into_the_room {
             "PUT",
             &format!("/api/decks/{deck_id}"),
             Some(token),
-            Some(json!({ "name": "Deck", "cards": cards, "catalogVersion": jackioh_cards::catalog_version() })),
+            json!({ "name": "Deck", "cards": cards, "catalogVersion": jackioh_cards::catalog_version() }),
         )
         .await
         .0
@@ -777,7 +779,7 @@ mod r642_the_portraits_on_a_rooms_match {
                     "PUT",
                     &format!("/api/decks/{deck_id}"),
                     Some(token.as_str()),
-                    Some(json!({ "name": "Deck", "cards": deck(), "catalogVersion": jackioh_cards::catalog_version(), "portrait": portrait })),
+                    json!({ "name": "Deck", "cards": deck(), "catalogVersion": jackioh_cards::catalog_version(), "portrait": portrait }),
                 )
                 .await
                 .0

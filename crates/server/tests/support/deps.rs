@@ -93,7 +93,7 @@ pub fn test_env(overrides: &[(&str, &str)]) -> Env {
 }
 
 /// What `test_app_with` builds differently from `test_app`.
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct TestAppOptions {
     /// Environment variables over `test_env`'s.
     pub env: Vec<(String, String)>,
@@ -104,6 +104,9 @@ pub struct TestAppOptions {
     pub skip_fixtures: bool,
     /// What the auth provider's `delete_user` does; `E2eDeletion::Deletes` when absent.
     pub deletion: Option<E2eDeletion>,
+    /// A previous app's store, for a restart over it (19.6's series recovery). Used as it stands:
+    /// R144's reseed would wipe it, so no fixtures are written.
+    pub db: Option<jackioh_server::db::store::Db>,
 }
 
 /// SURFACE §11.2: the fake store, the fixture auth provider, the E2E fixtures (R144's reseed).
@@ -128,11 +131,11 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
     let auth = E2eAuth::new();
     auth.set_deletion(options.deletion.unwrap_or(E2eDeletion::Deletes));
 
+    let restarted = options.db.is_some();
+    let db = options.db.unwrap_or_else(jackioh_server::db::store::Db::fake);
     let app = Arc::new(App {
         env,
-        db: jackioh_server::db::store::Db::Fake(Arc::new(tokio::sync::Mutex::new(
-            jackioh_server::db::fake::FakeData::default(),
-        ))),
+        db,
         auth: Auth::E2e(auth),
         matches: jackioh_server::actor::registry::Registry::new(),
         limiter: jackioh_server::api::http::create_rate_limiter(
@@ -142,7 +145,7 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
         catalog,
         breaker: Mutex::new(jackioh_server::api::codes::create_breaker_state()),
     });
-    if !options.skip_fixtures {
+    if !options.skip_fixtures && !restarted {
         jackioh_server::api::e2e::seed_e2e_fixtures(&app)
             .await
             .unwrap_or_else(|error| panic!("R144's reseed: {error:?}"));

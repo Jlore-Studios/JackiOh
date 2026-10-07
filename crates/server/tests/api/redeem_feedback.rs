@@ -521,7 +521,7 @@ mod r192_b8_rate_limited_and_error_response {
 
     #[tokio::test]
     async fn r192_b8_turns_the_wait_into_a_429_with_details_retry_after_ms_and_whole_second_retry_after() {
-        let response = read_response(error_response(rate_limited("slow down", 1_500))).await;
+        let response = read_response(error_response(&rate_limited("slow down", 1_500))).await;
 
         assert_eq!(response.status, 429);
         assert_eq!(response.retry_after(), Some("2"));
@@ -542,7 +542,7 @@ mod r192_b8_rate_limited_and_error_response {
             (window_ms(), retry_after_header_for(window_ms())),
         ];
         for (ms, header) in cases {
-            let response = error_response(rate_limited("wait", ms));
+            let response = error_response(&rate_limited("wait", ms));
             let found = response.headers().get("retry-after").map(|value| value.to_str().expect("ASCII"));
             assert_eq!(found, Some(header.as_str()), "{ms}");
         }
@@ -553,7 +553,7 @@ mod r192_b8_rate_limited_and_error_response {
         // TS also tried NaN and Infinity; the wait is an `i64` here (`ApiError::retry_after_ms`), so
         // a negative one is the only wait without a header that the type can hold.
         for ms in [-1_i64] {
-            let response = error_response(rate_limited("wait", ms));
+            let response = error_response(&rate_limited("wait", ms));
             assert_eq!(response.status().as_u16(), 429, "{ms}");
             assert!(response.headers().get("retry-after").is_none(), "{ms}");
         }

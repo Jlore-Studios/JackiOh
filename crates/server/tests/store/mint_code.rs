@@ -59,7 +59,7 @@ mod parse_mint_args {
 }
 
 mod the_pepper_derivation_the_script_shares_with_app_rs {
-    use jackioh_server::api::codes::{mint_invite_code, MintInviteCodeInput};
+    use jackioh_server::api::codes::{mint_invite_code, MintDeps, MintInput};
     use jackioh_server::api::crypto::{create_hashes, Hashes};
     use jackioh_server::db::store::{Db, InviteCode};
 
@@ -81,7 +81,7 @@ mod the_pepper_derivation_the_script_shares_with_app_rs {
     async fn stores_a_hash_that_the_same_pepper_finds_again_by_the_printed_plaintext() {
         let db = Db::fake();
         let hashes = mint_hashes();
-        let minted = mint_invite_code(&db, &hashes, MintInviteCodeInput { max_uses: Some(2), ..Default::default() })
+        let minted = mint_invite_code(MintDeps { db: &db, code_pepper: CODE_PEPPER }, MintInput { max_uses: Some(2), ..Default::default() })
             .await
             .expect("a code is minted");
 
@@ -95,7 +95,7 @@ mod the_pepper_derivation_the_script_shares_with_app_rs {
     async fn stores_a_hash_a_different_pepper_cannot_find() {
         let db = Db::fake();
         let hashes = mint_hashes();
-        let minted = mint_invite_code(&db, &hashes, MintInviteCodeInput::default()).await.expect("a code is minted");
+        let minted = mint_invite_code(MintDeps { db: &db, code_pepper: CODE_PEPPER }, MintInput::default()).await.expect("a code is minted");
 
         let other = create_hashes("a-different-pepper-of-thirty-two-plus", "x");
         assert_eq!(find(&db, &other.code(&minted.formatted)).await, None);

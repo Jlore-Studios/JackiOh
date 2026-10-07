@@ -26,7 +26,7 @@ use jackioh_server::db::store::StartMatchInput;
 use serde_json::{Value, json};
 
 use crate::support::deps::test_app;
-use crate::support::engine::{create_fake_engine, fake_deck};
+use crate::support::engine::{fake_deck, install_test_cards};
 use crate::support::socket::{FakeSocket, create_fake_socket};
 
 const MATCH_ID: &str = "match-aim";
@@ -109,7 +109,7 @@ struct Harness {
 
 async fn harness() -> Harness {
     // The scripted cards, as real engine scripts under this thread's testkit override.
-    create_fake_engine();
+    install_test_cards();
     let app = test_app().await;
     let input: StartMatchInput = serde_json::from_value(json!({
         "matchId": MATCH_ID,
@@ -287,7 +287,7 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
     #[tokio::test(start_paused = true)]
     async fn r738_drops_an_aim_that_names_a_hand_card_past_the_senders_hand_or_the_opponents_hand_at_all() {
         let h = harness().await;
-        let p2_view = serde_json::to_value(h.actor.view_for(PlayerId::P2).await).expect("PlayerView serialises");
+        let p2_view = serde_json::to_value(h.actor.view_for(PlayerId::P2)).expect("PlayerView serialises");
         let count = hand_count(&p2_view, "opponent");
         assert!(count > 0);
 

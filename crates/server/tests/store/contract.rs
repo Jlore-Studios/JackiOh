@@ -44,7 +44,7 @@ use jackioh_engine::{Action, GameRecord, LastBoardEntry};
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
     BotRating, CodeAttempt, CollectionEntry, CollectionGrant, Db, FrozenTrio, GameRecordQuery,
-    InviteCode, LastBoardKind, ListPublicOptions, MatchActionRow, MatchClocks, MatchRow, PlayerSettingsLimits,
+    InviteCode, LastBoardKind, PlayerStatsListOptions, MatchActionRow, MatchClocks, MatchRow, PlayerSettingsLimits,
     PlayerSettingsMergeInput, PlayerSettingsRow, Profile, ProfileCreateInput, ProfileStatus, RatedGameRow,
     RedeemInviteCodeInput, ResultRow, RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeriesRow,
     StoreError, Ticket, Tx, TutorialMergeInput, TutorialProgressRow,
@@ -1801,7 +1801,7 @@ mod player_stats {
         from(value)
     }
 
-    fn list_options(value: Value) -> ListPublicOptions {
+    fn list_options(value: Value) -> PlayerStatsListOptions {
         from(value)
     }
 

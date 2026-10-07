@@ -106,7 +106,7 @@ async fn listen_with(matches: usize) -> (Listening, Vec<String>) {
         for (seat, k) in [("p1", 2 * m - 1), ("p2", 2 * m)] {
             let profile_id = format!("profile-{k}");
             let user_id = format!("user-{k}");
-            tokens.push(add_user(&app, &user_id, &format!("{user_id}@example.test")));
+            tokens.push(add_user(&app, &user_id, &format!("{user_id}@example.test"), true));
             fake(&app).lock().await.seed_profile(json!({
                 "id": profile_id,
                 "userId": user_id,

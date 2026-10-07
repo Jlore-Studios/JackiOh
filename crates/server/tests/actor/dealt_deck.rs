@@ -82,7 +82,7 @@ async fn start(app: &Arc<App>, match_id: &str, seed: &str) {
 /// A seat's view of the live actor, as its JSON (what a socket would carry, §10.8).
 async fn view_of(app: &Arc<App>, match_id: &str, player: PlayerId) -> Value {
     let actor = app.matches.actor_for(app, match_id).await.expect("the actor");
-    serde_json::to_value(actor.view_for(player).await).expect("PlayerView serialises")
+    serde_json::to_value(actor.view_for(player)).expect("PlayerView serialises")
 }
 
 /// How many cards the seat's own library list names (R310), the unknown ones aside.
@@ -108,17 +108,17 @@ mod r433_a_dealt_deck_lists_only_the_cards_its_owner_has_been_shown {
         let actor = app.matches.actor_for(&app, "m-random").await.expect("the actor");
 
         for player in PLAYER_IDS {
-            let view = serde_json::to_value(actor.view_for(player).await).expect("PlayerView serialises");
+            let view = serde_json::to_value(actor.view_for(player)).expect("PlayerView serialises");
             assert!(library_count(&view) > 0);
             assert_eq!(view["you"]["ownLibrary"], json!({ "cards": [], "unknown": library_count(&view) }));
         }
 
-        let live = jackioh_engine::hash_state(&actor.engine_state().await);
+        let live = jackioh_engine::hash_state(&actor.engine_state());
         app.matches.stop("m-random").await;
         let rebuilt = app.matches.actor_for(&app, "m-random").await.expect("the rebuilt actor");
-        assert_eq!(jackioh_engine::hash_state(&rebuilt.engine_state().await), live);
+        assert_eq!(jackioh_engine::hash_state(&rebuilt.engine_state()), live);
         for player in PLAYER_IDS {
-            let view = serde_json::to_value(rebuilt.view_for(player).await).expect("PlayerView serialises");
+            let view = serde_json::to_value(rebuilt.view_for(player)).expect("PlayerView serialises");
             assert_eq!(view["you"]["ownLibrary"], json!({ "cards": [], "unknown": library_count(&view) }));
         }
     }

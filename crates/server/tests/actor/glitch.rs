@@ -32,7 +32,7 @@ use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::Db;
 
 use crate::support::deps::{add_user, call, test_app};
-use crate::support::engine::{create_fake_engine, fake_deck, FakeEngineOptions};
+use crate::support::engine::{fake_deck, install_test_cards};
 use crate::support::socket::{create_fake_socket, FakeSocket};
 
 const MATCH_ID: &str = "match-glitch";
@@ -155,7 +155,7 @@ struct World {
     b: FakeSocket,
     /// The rows the opening's two mulligans wrote, ahead of everything a test sends.
     opening: usize,
-    /// Whatever `create_fake_engine` hands back (the testkit override), held for the test.
+    /// Whatever `install_test_cards` hands back (the testkit override), held for the test.
     _engine: Box<dyn Any>,
 }
 
@@ -191,9 +191,9 @@ fn seed_dealing(prefix: &str, decks: &(Vec<String>, Vec<String>), wanted: &[(Pla
 /// Both mulligans answered keeping the whole hand, in seat order: the real engine opens on them
 /// (R265), TS's scripted one opened on turn 1. Answers how many rows they wrote.
 async fn open_turn_one(actor: &MatchActor) -> usize {
-    let owed = actor.snapshot().await.mulligan_owed;
+    let owed = actor.snapshot().mulligan_owed;
     for seat in &owed {
-        let keep = hand_ids(&to_json(&actor.view_for(*seat).await));
+        let keep = hand_ids(&to_json(&actor.view_for(*seat)));
         let reply = to_json(&actor.submit(*seat, &format!("keep-{seat}"), from(json!({ "type": "mulligan", "keep": keep }))).await);
         assert_eq!(reply["type"], "ack", "the opening mulligan was refused: {reply}");
     }
@@ -218,7 +218,7 @@ fn hand_card(view: &Value, def_id: &str) -> String {
 }
 
 async fn world(options: WorldOptions) -> World {
-    let engine: Box<dyn Any> = Box::new(create_fake_engine(FakeEngineOptions { mulligan: false }));
+    let engine: Box<dyn Any> = Box::new(install_test_cards());
     let app = test_app().await;
     {
         let data = fake(&app);
@@ -400,9 +400,9 @@ mod glitchs_swap {
         let glitch = hand_card(&last_view(&w.a), "test-glitch-swap");
         frame(&w, &w.a, "n1", json!({ "type": "play", "instanceId": glitch })).await;
         let actor = w.app.matches.actor_for(&w.app, MATCH_ID).await.expect("the match's actor");
-        actor.detach(PlayerId::P1).await; // P1's connection: the account that began in p1
+        actor.detach(PlayerId::P1); // P1's connection: the account that began in p1
         actor.idle().await;
-        let clocks = to_json(&actor.clocks().await);
+        let clocks = to_json(&actor.clocks());
         assert!(!clocks["graceDeadline"]["p2"].is_null());
         assert!(clocks["graceDeadline"]["p1"].is_null());
     }
@@ -466,9 +466,9 @@ mod glitchs_boards {
         // A rebuild folds with the same boards (§9.3): TS spied on the port's `fold`; the rebuilt
         // state holds exactly the boards it was folded with, and folds to the same game.
         let actor = w.app.matches.actor_for(&w.app, MATCH_ID).await.expect("the match's actor");
-        let live = actor.engine_state().await;
+        let live = actor.engine_state();
         w.app.matches.stop(MATCH_ID).await;
-        let rebuilt = w.app.matches.actor_for(&w.app, MATCH_ID).await.expect("the rebuilt actor").engine_state().await;
+        let rebuilt = w.app.matches.actor_for(&w.app, MATCH_ID).await.expect("the rebuilt actor").engine_state();
         assert_eq!(to_json(&rebuilt)["glitchBoards"], json!({ "p1": frozen[0], "p2": frozen[1] }));
         assert_eq!(jackioh_engine::hash_state(&rebuilt), jackioh_engine::hash_state(&live));
     }
@@ -560,7 +560,7 @@ mod glitchs_void {
                 "status": "active",
                 "rating": 1000,
             }));
-            tokens.push(add_user(&app, &format!("user-{id}"), &format!("{id}@example.test")));
+            tokens.push(add_user(&app, &format!("user-{id}"), &format!("{id}@example.test"), true));
         }
         // TS's trios held one-card decks that the scripted directory never built a game from; the
         // real registry starts the game, so each deck is a legal one of real cards.
@@ -575,6 +575,7 @@ mod glitchs_void {
                 .collect();
             json!({ "name": owner, "decks": decks })
         };
+        let mut tx = app.db.begin(None).await.expect("store.tx");
         start_series(
             &app,
             from(json!({
@@ -588,12 +589,14 @@ mod glitchs_void {
                 "catalogVersion": jackioh_cards::catalog_version(),
                 "ranked": true,
             })),
+            &mut tx,
         )
         .await
         .expect("the series starts");
+        tx.commit().await.expect("the series commits");
         for token in &tokens {
             let (status, _, body) =
-                call(&app, "POST", "/api/series/series-glitch/pick", Some(token.as_str()), Some(json!({ "slot": 0 }))).await;
+                call(&app, "POST", "/api/series/series-glitch/pick", Some(token.as_str()), json!({ "slot": 0 })).await;
             assert_eq!(status, 200, "{body}");
         }
         assert_eq!(logs.of("match.started").len(), 1);

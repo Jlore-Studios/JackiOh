@@ -33,7 +33,7 @@ use tokio::sync::Mutex;
 use tower::ServiceExt;
 use tracing_subscriber::layer::SubscriberExt;
 
-use jackioh_server::api::codes::{DEFAULT_INVITE_CODE_MAX_USES, MintInviteCodeInput, mint_invite_code};
+use jackioh_server::api::codes::{DEFAULT_INVITE_CODE_MAX_USES, MintDeps, MintInput, mint_invite_code};
 use jackioh_server::api::crypto::{Hashes, create_hashes};
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
@@ -213,7 +213,8 @@ struct Minted {
 
 /// `mintInviteCode(deps, { maxUses, expiresAt })`.
 async fn mint(server: &Server, max_uses: Option<i64>, expires_at: Option<i64>) -> Minted {
-    let minted = mint_invite_code(&server.app.db, &hashes(), MintInviteCodeInput { max_uses, expires_at })
+    let max_uses = max_uses.map(|uses| i32::try_from(uses).expect("a use count"));
+    let minted = mint_invite_code(MintDeps { db: &server.app.db, code_pepper: &server.app.env.code_pepper }, MintInput { max_uses, expires_at })
         .await
         .expect("the code is minted");
     Minted { id: minted.id, formatted: minted.formatted }

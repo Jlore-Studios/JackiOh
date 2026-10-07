@@ -160,7 +160,7 @@ fn bot(bot_id: &str) -> Value {
 async fn rate(app: &App, input: Value) -> Value {
     let input: RankedGameInput = from(input);
     let mut t = app.db.begin(None).await.expect("begin");
-    let row = rate_ranked_game(&mut t, app, input).await.expect("rateRankedGame");
+    let row = rate_ranked_game(&mut t, app, &input).await.expect("rateRankedGame");
     t.commit().await.expect("commit");
     json_of(&row)
 }

@@ -193,10 +193,10 @@ mod r330_conquest_a_win_with_every_deck {
         let after_game1 = play(&fresh(), [0, 1], Winner::P1, "match-2");
         assert_eq!(j(&after_game1)["status"], "picking");
         assert_eq!(j(&won_slots(P1, &after_game1.games)), json!([0]));
-        assert_eq!(j(&unwon_slots(&after_game1, P1, None)), json!([1, 2]));
+        assert_eq!(j(&unwon_slots(&after_game1, P1, &after_game1.games)), json!([1, 2]));
         assert_eq!(refusal_of(pick_deck(&after_game1, P1, int(0), NOW, None)), Some(SeriesRefusalReason::SlotWon));
         // Bob lost with slot 1: it is his to pick again.
-        assert_eq!(j(&unwon_slots(&after_game1, P2, None)), json!([0, 1, 2]));
+        assert_eq!(j(&unwon_slots(&after_game1, P2, &after_game1.games)), json!([0, 1, 2]));
         assert_eq!(refusal_of(pick_deck(&after_game1, P2, int(1), NOW, None)), None);
 
         let alice = view_of(&after_game1, ALICE);
@@ -257,10 +257,10 @@ mod r330_conquest_a_win_with_every_deck {
                         if view["status"] != "picking" || !view["sides"][index]["pick"].is_null() {
                             continue;
                         }
-                        let open = unwon_slots(&row, seat, None);
+                        let open = unwon_slots(&row, seat, &row.games);
                         let at = (random() * open.len() as f64).floor() as usize;
                         let slot = open.get(at).copied().unwrap_or(int(0));
-                        row = pick_deck(&row, seat, slot, NOW, None).expect("the pick applies");
+                        row = pick_deck(&row, seat, i32::try_from(slot).expect("a slot"), NOW, None).expect("the pick applies");
                     }
                 }
                 let game = last(&j(&row)["games"]);
@@ -523,8 +523,8 @@ mod r333_the_pick_clock {
 
         // Game 2: alice won with slot 0, so her first unwon deck is 1; bob lost with 1, so his is 0.
         let after_game1 = play(&fresh(), [0, 1], Winner::P1, "match-2");
-        assert_eq!(j(&first_unwon(&after_game1, P1, None)), json!(1));
-        assert_eq!(j(&first_unwon(&after_game1, P2, None)), json!(0));
+        assert_eq!(j(&first_unwon(&after_game1, P1, &after_game1.games)), json!(1));
+        assert_eq!(j(&first_unwon(&after_game1, P2, &after_game1.games)), json!(0));
         let alice_picked = pick_deck(&after_game1, P1, int(2), NOW, None).expect("the pick applies");
         let game2 = timeout_picks(&alice_picked, NOW + PICK_MS).expect("the clock settles");
         assert_eq!(j(&game2)["games"][1]["slots"], json!([2, 0]));
@@ -705,8 +705,8 @@ mod r335_seats_and_seeds {
                 for (side, seat) in SEATS.into_iter().enumerate() {
                     let view = j(&row);
                     if view["status"] == "picking" && view["sides"][side]["pick"].is_null() {
-                        let slot = first_unwon(&row, seat, None).unwrap_or(int(0));
-                        row = pick_deck(&row, seat, slot, NOW, None).expect("the pick applies");
+                        let slot = first_unwon(&row, seat, &row.games).unwrap_or(int(0));
+                        row = pick_deck(&row, seat, i32::try_from(slot).expect("a slot"), NOW, None).expect("the pick applies");
                     }
                 }
             }
@@ -897,7 +897,7 @@ mod r337_a_series_begun_before_conquest {
         assert_eq!(j(&after)["status"], "picking");
         assert_eq!(map(&j(&after)["sides"], |side| side["wins"].clone()), json!([2, 1]));
         assert_eq!(map(&j(&after)["sides"], |side| side["pick"].clone()), json!([1, null]));
-        assert_eq!(j(&unwon_slots(&after, P2, None)), json!([1, 2]));
+        assert_eq!(j(&unwon_slots(&after, P2, &after.games)), json!([1, 2]));
         assert_eq!(map(&view_of(&after, ALICE)["you"]["decks"], |deck| deck["won"].clone()), json!([true, false, true]));
     }
 }

@@ -46,7 +46,7 @@ use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::support::deps::test_app;
-use crate::support::engine::{FakeEngineOptions, create_fake_engine, fake_deck};
+use crate::support::engine::{fake_deck, install_test_cards};
 
 const MINUTE: i64 = 60 * 1000;
 /// A minute past the ceiling (R79, R389), whatever it is.
@@ -167,14 +167,6 @@ async fn started_seats(app: &App, match_id: &str) -> (MatchSeat, MatchSeat) {
 
 fn seat_of(profile_id: Value, player: &str, deck: Value) -> MatchSeat {
     serde_json::from_value(json!({ "profileId": profile_id, "player": player, "deck": deck })).expect("a MatchSeat")
-}
-
-/// The scripted cards of `test/fakes/engine.ts` (`test-lethal`, `test-mutual-lethal` and the filler
-/// of `fake_deck`) as real engine scripts, installed for this thread with the testkit override
-/// (SURFACE §8, §11.2). Bound for the whole test: the registry's actors run on this thread too, and
-/// the decks every match here is created with are made of them.
-fn install_test_cards() -> impl Sized {
-    create_fake_engine(FakeEngineOptions::default())
 }
 
 /// TS's recording logger: every `tracing` line this thread writes (SURFACE §11.3: `Logger` →
@@ -857,7 +849,9 @@ mod results_m7_t2 {
                 "ranked": true,
             }))
             .expect("a NewSeriesInput");
-            start_series(&app, input, None).await.expect("the series starts");
+            let mut tx = app.db.begin(None).await.expect("store.tx");
+            start_series(&app, input, &mut tx).await.expect("the series starts");
+            tx.commit().await.expect("the series commits");
             play_next(&app, [0, 0]).await;
             app
         }

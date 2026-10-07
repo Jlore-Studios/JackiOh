@@ -12,8 +12,13 @@
 //! waits for the actor awaits `next_frame`/`next_of_type` (or `settle`), and a test that asserts that
 //! nothing happened reads `sent` after `settle`, never by waiting for a frame that never comes (with
 //! tokio's paused clock, an idle wait would let the clock auto-advance and fire the match's timers).
+//!
+//! Every method takes `&self`, as every test holds its sockets (part 31: the support file is shaped
+//! as its callers call it); the state sits behind locks.
 
 #![allow(dead_code)]
+
+use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use jackioh_server::actor::ws_server::{Socket, SocketFrame};
 use serde_json::Value;
@@ -37,9 +42,13 @@ pub async fn settle() {
 /// One fake client connection.
 pub struct FakeSocket {
     /// The server half, until a test takes it to attach (`socket()`).
-    socket: Option<Socket>,
+    socket: Mutex<Option<Socket>>,
     /// What the server sent: text frames and its close.
-    outgoing: mpsc::UnboundedReceiver<SocketFrame>,
+    outgoing: tokio::sync::Mutex<mpsc::UnboundedReceiver<SocketFrame>>,
+    state: Mutex<State>,
+}
+
+struct State {
     /// What the client sends; `None` once the transport is gone (closed or dropped).
     incoming: Option<mpsc::UnboundedSender<String>>,
     /// Every frame the server sent, in order.
@@ -48,21 +57,7 @@ pub struct FakeSocket {
     close_reason: Option<String>,
 }
 
-impl FakeSocket {
-    /// The server half of this connection, for `Registry::attach`. Taken once: one WebSocket is one
-    /// socket, and a reconnect is a new `FakeSocket`.
-    pub fn socket(&mut self) -> Socket {
-        self.socket.take().expect("this fake socket's server half was already attached")
-    }
-
-    /// Moves every frame the server has sent so far into `sent`, and notes its close. A frame sent
-    /// after the close is not delivered, as on a real connection.
-    fn drain(&mut self) {
-        while let Ok(frame) = self.outgoing.try_recv() {
-            self.record(frame);
-        }
-    }
-
+impl State {
     fn record(&mut self, frame: SocketFrame) {
         if self.close_code.is_some() {
             return;
@@ -78,52 +73,71 @@ impl FakeSocket {
             }
         }
     }
+}
 
-    pub fn is_open(&mut self) -> bool {
-        self.drain();
-        self.close_code.is_none()
+fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+impl FakeSocket {
+    /// The server half of this connection, for `Registry::attach`. Taken once: one WebSocket is one
+    /// socket, and a reconnect is a new `FakeSocket`.
+    pub fn socket(&self) -> Socket {
+        lock(&self.socket).take().expect("this fake socket's server half was already attached")
+    }
+
+    /// Moves every frame the server has sent so far into `sent`, and notes its close. A frame sent
+    /// after the close is not delivered, as on a real connection. A `next_frame` in flight holds the
+    /// receiver and records what it reads itself.
+    fn drain(&self) -> MutexGuard<'_, State> {
+        let mut state = lock(&self.state);
+        if let Ok(mut outgoing) = self.outgoing.try_lock() {
+            while let Ok(frame) = outgoing.try_recv() {
+                state.record(frame);
+            }
+        }
+        state
+    }
+
+    pub fn is_open(&self) -> bool {
+        self.drain().close_code.is_none()
     }
 
     /// The code the connection closed with: the server's close, `1006` after `drop()`, or `None`
     /// while it is open.
-    pub fn close_code(&mut self) -> Option<u16> {
-        self.drain();
-        self.close_code
+    pub fn close_code(&self) -> Option<u16> {
+        self.drain().close_code
     }
 
     /// The reason the server's close carried (`"voided"` for R679's 4410), or `None`.
-    pub fn close_reason(&mut self) -> Option<String> {
-        self.drain();
-        self.close_reason.clone()
+    pub fn close_reason(&self) -> Option<String> {
+        self.drain().close_reason.clone()
     }
 
     /// Every frame the server sent, in order.
-    pub fn sent(&mut self) -> &[String] {
-        self.drain();
-        &self.sent
+    pub fn sent(&self) -> Vec<String> {
+        self.drain().sent.clone()
     }
 
     /// Every frame the server sent, parsed.
-    pub fn messages(&mut self) -> Vec<Value> {
-        self.drain();
-        self.sent.iter().map(|text| parse(text)).collect()
+    pub fn messages(&self) -> Vec<Value> {
+        self.drain().sent.iter().map(|text| parse(text)).collect()
     }
 
     /// The last frame the server sent, parsed.
-    pub fn last(&mut self) -> Option<Value> {
-        self.drain();
-        self.sent.last().map(|text| parse(text))
+    pub fn last(&self) -> Option<Value> {
+        self.drain().sent.last().map(|text| parse(text))
     }
 
     /// Frames of one `type`, parsed.
-    pub fn of_type(&mut self, frame_type: &str) -> Vec<Value> {
+    pub fn of_type(&self, frame_type: &str) -> Vec<Value> {
         self.messages().into_iter().filter(|message| message["type"] == frame_type).collect()
     }
 
     /// Simulate the client sending a frame.
-    pub fn receive(&mut self, text: &str) {
-        self.drain();
-        let Some(incoming) = &self.incoming else {
+    pub fn receive(&self, text: &str) {
+        let state = self.drain();
+        let Some(incoming) = &state.incoming else {
             panic!("receive on a closed socket");
         };
         // The server half dropping its receiver is the actor letting the socket go; a frame sent
@@ -132,45 +146,46 @@ impl FakeSocket {
     }
 
     /// Simulate the client sending JSON.
-    pub fn receive_json(&mut self, value: &Value) {
+    pub fn receive_json(&self, value: Value) {
         self.receive(&value.to_string());
     }
 
     /// Simulate the transport dropping: no close frame, code 1006, and the actor sees the stream end.
     #[allow(clippy::should_implement_trait)]
-    pub fn drop(&mut self) {
-        self.drain();
-        if self.close_code.is_some() {
+    pub fn drop(&self) {
+        let mut state = self.drain();
+        if state.close_code.is_some() {
             return;
         }
-        self.close_code = Some(ABNORMAL_CLOSE);
-        self.incoming = None;
+        state.close_code = Some(ABNORMAL_CLOSE);
+        state.incoming = None;
     }
 
     /// Forget every frame received so far.
-    pub fn clear(&mut self) {
-        self.drain();
-        self.sent.clear();
+    pub fn clear(&self) {
+        self.drain().sent.clear();
     }
 
     /// Waits for the next text frame the server sends and answers it parsed, or `None` once the
     /// server has closed (or dropped) its half. The frame is also kept in `sent`.
-    pub async fn next_frame(&mut self) -> Option<Value> {
+    pub async fn next_frame(&self) -> Option<Value> {
+        let mut outgoing = self.outgoing.lock().await;
         loop {
-            if self.close_code.is_some() {
+            if lock(&self.state).close_code.is_some() {
                 return None;
             }
-            let frame = self.outgoing.recv().await?;
-            let before = self.sent.len();
-            self.record(frame);
-            if self.sent.len() > before {
-                return self.sent.last().map(|text| parse(text));
+            let frame = outgoing.recv().await?;
+            let mut state = lock(&self.state);
+            let before = state.sent.len();
+            state.record(frame);
+            if state.sent.len() > before {
+                return state.sent.last().map(|text| parse(text));
             }
         }
     }
 
     /// Waits for the next frame of one `type`, skipping (and keeping in `sent`) every other one.
-    pub async fn next_of_type(&mut self, frame_type: &str) -> Option<Value> {
+    pub async fn next_of_type(&self, frame_type: &str) -> Option<Value> {
         loop {
             let frame = self.next_frame().await?;
             if frame["type"] == frame_type {
@@ -188,12 +203,9 @@ pub fn create_fake_socket() -> FakeSocket {
     let (outgoing_tx, outgoing_rx) = mpsc::unbounded_channel::<SocketFrame>();
     let (incoming_tx, incoming_rx) = mpsc::unbounded_channel::<String>();
     FakeSocket {
-        socket: Some(Socket::new(outgoing_tx, incoming_rx)),
-        outgoing: outgoing_rx,
-        incoming: Some(incoming_tx),
-        sent: Vec::new(),
-        close_code: None,
-        close_reason: None,
+        socket: Mutex::new(Some(Socket::new(outgoing_tx, incoming_rx))),
+        outgoing: tokio::sync::Mutex::new(outgoing_rx),
+        state: Mutex::new(State { incoming: Some(incoming_tx), sent: Vec::new(), close_code: None, close_reason: None }),
     }
 }
 

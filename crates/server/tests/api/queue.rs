@@ -142,7 +142,7 @@ async fn active_profile(app: &App, id: &str, rating: f64) -> String {
     let user_id = format!("user-{id}");
     fake(app).await.seed_profile(json!({ "id": id, "userId": user_id, "status": "active", "rating": rating }));
     grant_entire_catalog(app, id, None).await.expect("the launch grant");
-    add_user(app, &user_id, &format!("{id}@example.test"))
+    add_user(app, &user_id, &format!("{id}@example.test"), true)
 }
 
 /// A pending profile with a token that verifies as it (§9.4).
@@ -150,7 +150,7 @@ async fn pending_profile(app: &App, id: &str) -> String {
     let user_id = format!("user-{id}");
     fake(app).await.seed_profile(json!({ "id": id, "userId": user_id, "status": "pending" }));
     grant_entire_catalog(app, id, None).await.expect("the launch grant");
-    add_user(app, &user_id, &format!("{id}@example.test"))
+    add_user(app, &user_id, &format!("{id}@example.test"), true)
 }
 
 static NEXT_ID: AtomicU32 = AtomicU32::new(0);
@@ -361,7 +361,7 @@ async fn save(app: &Arc<App>, token: &str, deck_id: &str, cards: &[String], port
 fn record_calls(app_data: &mut FakeData, fail: impl Fn(&[String], &str) -> bool + Send + Sync + 'static) -> Arc<StdMutex<Vec<String>>> {
     let calls: Arc<StdMutex<Vec<String>>> = Arc::default();
     let seen = Arc::clone(&calls);
-    app_data.on_call = Some(Box::new(move |method: &str| {
+    app_data.on_call = Some(Arc::new(move |method: &str| {
         let mut seen = seen.lock().expect("calls");
         let refuse = fail(&seen, method);
         seen.push(method.to_string());

@@ -40,7 +40,7 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 
 use jackioh_server::app::App;
-use jackioh_server::auth::{Auth, AuthError, SupabaseAuthInput, create_supabase_auth};
+use jackioh_server::auth::{Auth, AuthError, SupabaseAuth, SupabaseAuthInput};
 use jackioh_server::config::{AUTH_PROVIDER_TIMEOUT_SECONDS, AUTH_SESSION_LIVE_CACHE_SECONDS};
 use jackioh_server::db::store::{Db, Profile};
 
@@ -334,12 +334,11 @@ impl GoTrue {
 
 /// The Supabase provider under test, pointed at `gotrue`, with its caches on `clock`.
 pub(crate) fn supabase_auth(gotrue: &GoTrue, clock: &Clock) -> Auth {
-    let clock = clock.clone();
-    Auth::Supabase(create_supabase_auth(SupabaseAuthInput {
+    let _ = clock;
+    Auth::Supabase(SupabaseAuth::new(SupabaseAuthInput {
         url: gotrue.url.clone(),
         secret_key: "secret-key".to_string(),
         jwt_secret: Some(JWT_SECRET.to_string()),
-        now: Some(Arc::new(move || clock.now())),
         ..SupabaseAuthInput::default()
     }))
 }

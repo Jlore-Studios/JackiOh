@@ -78,7 +78,7 @@ fn args(list: &[&str]) -> Vec<String> {
 /// The ids the fake's `game_records` table holds, in table order (TS `store.tables.gameRecords`).
 async fn stored_ids(db: &Db) -> Vec<String> {
     let Db::Fake(data) = db else { panic!("these tests run on the fake store") };
-    data.lock().await.game_records.iter().map(|record| record.id.clone()).collect()
+    data.lock().await.tables.game_records.iter().map(|record| record.id.clone()).collect()
 }
 
 mod stats_cards_options {

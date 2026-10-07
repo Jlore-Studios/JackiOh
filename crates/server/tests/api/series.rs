@@ -316,7 +316,9 @@ async fn harness(ratings: (f64, f64)) -> Harness {
         "ranked": true,
     }))
     .expect("a NewSeriesInput");
-    start_series(&app, input, None).await.expect("the series starts");
+    let mut tx = app.db.begin(None).await.expect("store.tx");
+    start_series(&app, input, &mut tx).await.expect("the series starts");
+    tx.commit().await.expect("the series commits");
     Harness { app, tokens, discarded, fault, logs, _logging: logging }
 }
 
@@ -327,7 +329,7 @@ async fn harness_at_1000() -> Harness {
 
 /// One request through the app's router: its status and its JSON body.
 async fn request(h: &Harness, method: &str, path: &str, token: &str, body: Option<Value>) -> (u16, Value) {
-    let (status, _headers, body) = call(&h.app, method, path, Some(token), body).await;
+    let (status, _headers, body) = call(&h.app, method, path, Some(token), body.unwrap_or(Value::Null)).await;
     (status, body)
 }
 

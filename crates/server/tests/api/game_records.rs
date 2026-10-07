@@ -363,7 +363,7 @@ mod live_game_records {
     async fn r376_never_costs_a_result_a_failed_record_is_logged_and_the_result_stands() {
         let (logs, _guard) = log_lines();
         let mut h = live_match(Some("bo1")).await;
-        fake(&h.app).await.on_call = Some(Box::new(|method: &str| {
+        fake(&h.app).await.on_call = Some(Arc::new(|method: &str| {
             if method == "gameRecords.insert" {
                 return Err(StoreError::Other("the records table is gone".to_string()));
             }

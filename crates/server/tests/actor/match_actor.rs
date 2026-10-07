@@ -23,7 +23,7 @@
 //!
 //! Port of `apps/server/test/match/actor.test.ts`. How the TS test's seams map, all in one place:
 //!
-//!  - `createFakeEngine()` is `support::engine::create_fake_engine()`: the scripted cards
+//!  - `createFakeEngine()` is `support::engine::install_test_cards()`: the scripted cards
 //!    (`test-prompt-self`, `test-prompt-enemy`, `test-lethal`) as real engine scripts under this
 //!    thread's testkit override (SURFACE §8, §11.2). The real engine shuffles a deck and opens on both
 //!    mulligans (R265), where the scripted port dealt `fakeDeck`'s extras first and opened on turn 1,
@@ -67,7 +67,7 @@ use tracing::subscriber::DefaultGuard;
 
 use self::log_capture::Recorder;
 use crate::support::deps::test_app;
-use crate::support::engine::{create_fake_engine, fake_deck};
+use crate::support::engine::{fake_deck, install_test_cards};
 use crate::support::socket::{FakeSocket, create_fake_socket};
 
 /// R603: the move one ranked game makes between two players new to rating.
@@ -142,7 +142,7 @@ fn ceiling_ms() -> i64 {
 /// The server's own epoch-millisecond clock, the one the actor and the match clock read (TS
 /// `deps.timers.now()`).
 fn now() -> i64 {
-    jackioh_server::actor::clock::now_ms()
+    jackioh_server::app::now_ms()
 }
 
 /// Lets every task woken at this instant run: the actor, the clock's timers, the sockets' channels.
@@ -547,7 +547,7 @@ impl Harness {
 
     /// TS `actor.clocks()`, as `MatchClocks`' JSON.
     async fn clocks(&self) -> Value {
-        serde_json::to_value(self.actor.clocks().await).expect("MatchClocks serialises")
+        serde_json::to_value(self.actor.clocks()).expect("MatchClocks serialises")
     }
 
     /// TS `actor.viewFor(player)`, as JSON.
@@ -557,7 +557,7 @@ impl Harness {
 }
 
 async fn view_json(actor: &MatchActor, player: PlayerId) -> Value {
-    serde_json::to_value(actor.view_for(player).await).expect("PlayerView serialises")
+    serde_json::to_value(actor.view_for(player)).expect("PlayerView serialises")
 }
 
 /// One action through `submit`, which must be acked.
@@ -587,7 +587,7 @@ async fn walk_setup(actor: &MatchActor, walk: Walk) -> usize {
                 .await;
             rows += 1;
         }
-        let at = actor.snapshot().await;
+        let at = actor.snapshot();
         assert_eq!(
             (at.phase, at.turn, at.active, at.pending_for),
             (Phase::Main, 1, P1, None),
@@ -601,7 +601,7 @@ async fn harness(options: Options) -> Harness {
     let (log, log_guard) = Recorder::install();
     let (decks, seed) = match &options.decks {
         Decks::Scripted { p1, p2 } => {
-            create_fake_engine();
+            install_test_cards();
             let decks = (fake_deck(p1), fake_deck(p2));
             let seed = seed_dealing(&decks, [p1.as_slice(), p2.as_slice()]);
             (decks, seed)
@@ -951,13 +951,13 @@ mod m6_t4_the_match_actor {
 
         let row = h.last_row().await;
         assert_eq!(row["action"]["playerId"], json!("p1"));
-        assert_eq!(h.actor.snapshot().await.active, P1);
+        assert_eq!(h.actor.snapshot().active, P1);
 
         // And the other seat cannot act out of turn: the reducer's own refusal is relayed (§9.3). TS's
         // scripted port said "it is not your turn" here; the real reducer checks the open prompt first,
         // so the sentence relayed is whatever it says, read off the reducer itself.
         let refusal = jackioh_engine::reduce(
-            &h.actor.engine_state().await,
+            &h.actor.engine_state(),
             &Action::new(ActionBody::EndTurn, P2, "out-of-turn"),
         )
         .error
@@ -980,7 +980,7 @@ mod m6_t4_the_match_actor {
         assert_eq!(last["code"], json!("malformed"));
         assert!(last["message"].as_str().unwrap_or_default().contains("server-only"));
         assert_eq!(h.rows().await, Vec::<Value>::new());
-        assert_eq!(h.actor.snapshot().await.result, None);
+        assert_eq!(h.actor.snapshot().result, None);
     }
 
     #[tokio::test(start_paused = true)]
@@ -1081,18 +1081,18 @@ mod m6_t4_the_match_actor {
         advance(turn_ms()).await;
         h.idle().await;
         assert_match(&h.last_row().await["action"], &json!({ "type": "timeout", "playerId": "p1" }));
-        assert_eq!(h.actor.snapshot().await.active, P2);
+        assert_eq!(h.actor.snapshot().active, P2);
 
         // A prompt expiry answers only that prompt (the holder is the non-active player here).
         send(&h, &h.p2, "prompt-enemy", json!({ "type": "play", "instanceId": in_hand(&h.p2, "test-prompt-enemy") }))
             .await;
-        assert_eq!(h.actor.snapshot().await.pending_for, Some(P1));
+        assert_eq!(h.actor.snapshot().pending_for, Some(P1));
         advance(prompt_ms()).await;
         h.idle().await;
         assert_match(&h.last_row().await["action"], &json!({ "type": "timeout", "playerId": "p1" }));
-        assert_eq!(h.actor.snapshot().await.pending_for, None);
+        assert_eq!(h.actor.snapshot().pending_for, None);
         // R79: the non-active player's prompt clock does not end the active player's turn.
-        assert_eq!(h.actor.snapshot().await.active, P2);
+        assert_eq!(h.actor.snapshot().active, P2);
 
         // Grace expiry is a loss for the disconnected player. The real clock runs a grace only for a
         // seat whose socket has gone (TS fired one on demand with p1 still attached), so p1 drops; p2's
@@ -1103,9 +1103,9 @@ mod m6_t4_the_match_actor {
         h.idle().await;
         // R146: p2 is the active player by now, and the loss is still p1's — the result is stamped
         // with the seat it belongs to, never with whoever happened to be active.
-        assert_eq!(h.actor.snapshot().await.active, P2);
+        assert_eq!(h.actor.snapshot().active, P2);
         assert_match(&h.last_row().await["action"], &json!({ "type": "disconnectExpired", "player": "p1" }));
-        assert_eq!(h.actor.snapshot().await.result, result_of(Winner::P2, GameOverReason::Disconnect));
+        assert_eq!(h.actor.snapshot().result, result_of(Winner::P2, GameOverReason::Disconnect));
         assert!(result_row(&h.app, MATCH_ID).await.is_some());
         // The clock stopped: no deadline is armed any more (TS read its stub's `stopped` flag).
         let clocks = h.clocks().await;
@@ -1128,7 +1128,7 @@ mod m6_t4_the_match_actor {
         // (R389), so the match here is a stored row that began a ceiling ago, less a second: the
         // registry rebuilds its actor from it, whose clock then has one second left.
         let (_log, _guard) = Recorder::install();
-        create_fake_engine();
+        install_test_cards();
         let app = test_app().await;
         seed_profile(&app, json!({ "id": "profile-1", "rating": 1000, "inMatchId": MATCH_ID })).await;
         seed_profile(&app, json!({ "id": "profile-2", "rating": 1000, "inMatchId": MATCH_ID })).await;
@@ -1156,7 +1156,7 @@ mod m6_t4_the_match_actor {
         .await;
         let actor = app.matches.actor_for(&app, MATCH_ID).await.expect("the rebuilt actor");
         actor.idle().await;
-        let active = actor.snapshot().await.active;
+        let active = actor.snapshot().active;
 
         advance(SECOND).await;
         actor.idle().await;
@@ -1168,7 +1168,7 @@ mod m6_t4_the_match_actor {
             &log.last().cloned().expect("a log row")["action"],
             &json!({ "type": "ceilingReached", "playerId": active.as_str() }),
         );
-        assert_eq!(actor.snapshot().await.result, result_of(Winner::Draw, GameOverReason::MatchCeiling));
+        assert_eq!(actor.snapshot().result, result_of(Winner::Draw, GameOverReason::MatchCeiling));
         assert!(result_row(&app, MATCH_ID).await.is_some());
     }
 
@@ -1471,7 +1471,7 @@ mod r642_the_portraits_frame_9_5 {
         // A row written before migration 0019 carries no `portraits`; both seats read as the default
         // (R641's `null`-is-`vanilla`, one level up at the row).
         let (_log, _guard) = Recorder::install();
-        create_fake_engine();
+        install_test_cards();
         let app = test_app().await;
         let now = now();
         create_match_row(
@@ -1690,7 +1690,7 @@ mod m6_t4_acceptance_4_with_the_real_engine_10_8_claude_md_rule_7 {
 
         // Out of setup and into the first real turn (§2.1, R10: p1 draws), then a reconnect-style full
         // view push, so the scan covers a view built after play has started as well as the attach ones.
-        assert_eq!(h.actor.snapshot().await.phase, Phase::Main);
+        assert_eq!(h.actor.snapshot().phase, Phase::Main);
         send(&h, &h.p1, "t1", json!({ "type": "endTurn" })).await;
         h.p2.receive_json(json!({ "type": "hello" }));
         h.idle().await;
@@ -1854,7 +1854,7 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
                     }
                 }
             }
-            let at = h.actor.snapshot().await;
+            let at = h.actor.snapshot();
             assert_eq!((at.phase, at.turn, at.pending_for), (Phase::Mulligan, 0, None));
             assert_eq!(at.mulligan_owed, vec![P1, P2]);
 
@@ -1879,7 +1879,7 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
             );
             // That the other seat is ready is all the second seat is told: no `kept` of anyone's.
             assert_eq!(last_view(h.socket(second))["mulligan"], json!({ "youReady": false, "opponentReady": true }));
-            assert_eq!(h.actor.snapshot().await.mulligan_owed, vec![second]);
+            assert_eq!(h.actor.snapshot().mulligan_owed, vec![second]);
 
             // Each seat's prompt frame is the one that fits it, and both carry the one deadline, unmoved.
             assert_eq!(
@@ -1904,14 +1904,14 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
             // depends on the hands dealt — which is why the seats below are read, not assumed.
             let keep = ids(h.socket(second));
             send(&h, h.socket(second), &format!("mull-{second}"), json!({ "type": "mulligan", "keep": keep })).await;
-            let active = h.actor.snapshot().await.active;
+            let active = h.actor.snapshot().active;
             for seat in PLAYER_IDS {
                 let view = last_view(h.socket(seat));
                 assert_match(&view, &json!({ "phase": "main", "active": active.as_str(), "pending": null }));
                 assert!(view["turn"].as_i64().unwrap_or(0) >= 1);
                 assert!(view.get("mulligan").is_none());
             }
-            assert_eq!(h.actor.snapshot().await.mulligan_owed, Vec::<PlayerId>::new());
+            assert_eq!(h.actor.snapshot().mulligan_owed, Vec::<PlayerId>::new());
             // The first seat's two returned cards were replaced: same count, two new ids.
             assert!(ids(h.socket(first)).iter().filter(|id| !first_keep.contains(*id)).count() >= 2);
 
@@ -2011,7 +2011,7 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
         for id in &offered {
             assert!(ids(&h.p2).contains(id));
         }
-        let at = h.actor.snapshot().await;
+        let at = h.actor.snapshot();
         assert_eq!((at.phase, at.mulligan_owed.len(), at.result), (Phase::Main, 0, None));
 
         // And the mulligan clock hands over to the ordinary turn clock, from full.
@@ -2030,18 +2030,18 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
         assert_match(&refused, &json!({ "code": "malformed" }));
         assert!(refused["message"].as_str().unwrap_or_default().contains("R270"));
         assert_eq!(h.rows().await.len(), 0);
-        assert_eq!(h.actor.snapshot().await.mulligan_owed, vec![P1, P2]);
+        assert_eq!(h.actor.snapshot().mulligan_owed, vec![P1, P2]);
 
         // Under any other nonce the answer stands, and the expiry still times out the seat left.
         send(&h, &h.p1, "p1-ready", json!({ "type": "mulligan", "keep": ids(&h.p1) })).await;
-        assert_eq!(h.actor.snapshot().await.mulligan_owed, vec![P2]);
+        assert_eq!(h.actor.snapshot().mulligan_owed, vec![P2]);
         advance(mulligan_ms()).await;
         h.idle().await;
         assert_match(
             &h.last_row().await["action"],
             &json!({ "type": "timeout", "playerId": "p2", "nonce": "srv-mulligan-2" }),
         );
-        let at = h.actor.snapshot().await;
+        let at = h.actor.snapshot();
         assert_eq!((at.mulligan_owed.len(), at.result), (0, None));
         assert_eq!(errors(&h.p2), Vec::<Value>::new());
     }
@@ -2066,7 +2066,7 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
         for id in &hands.1 {
             assert!(ids(&h.p2).contains(id));
         }
-        let at = h.actor.snapshot().await;
+        let at = h.actor.snapshot();
         assert_eq!((at.phase, at.mulligan_owed.len(), at.result), (Phase::Main, 0, None));
         assert_eq!(h.clocks().await["turnDeadline"].as_i64(), Some(now() + turn_ms()));
     }
@@ -2085,7 +2085,7 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
         h.idle().await;
 
         assert_eq!(rows_by_type_and_seat(&h.rows().await), vec![pair("timeout", "p1"), pair("timeout", "p2")]);
-        let at = h.actor.snapshot().await;
+        let at = h.actor.snapshot();
         assert_eq!((at.phase, at.turn, at.active, at.mulligan_owed.len()), (Phase::Main, 1, P1, 0));
         let clocks = h.clocks().await;
         assert!(clocks["promptDeadline"].is_null());
@@ -2097,7 +2097,7 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
         advance(turn_ms()).await;
         h.idle().await;
         assert_match(&h.last_row().await["action"], &json!({ "type": "timeout", "playerId": "p1" }));
-        let at = h.actor.snapshot().await;
+        let at = h.actor.snapshot();
         assert_eq!((at.turn, at.active), (2, P2));
     }
 
@@ -2108,15 +2108,15 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
         // one fires at its deadline, and once only.
         let h = harness(Options { walk: Walk::AutoEndOff, ..Options::default() }).await;
         // The actor hands the clock the window, both seats owing, before anyone acts.
-        let at = h.actor.snapshot().await;
+        let at = h.actor.snapshot();
         assert_eq!((at.mulligan_owed.clone(), at.pending_for), (vec![P1, P2], None));
 
         send(&h, &h.p2, "p2-first", json!({ "type": "mulligan", "keep": [] })).await;
-        assert_eq!(h.actor.snapshot().await.mulligan_owed, vec![P1]);
+        assert_eq!(h.actor.snapshot().mulligan_owed, vec![P1]);
         advance(mulligan_ms()).await;
         h.idle().await;
         assert_eq!(rows_by_type_and_seat(&h.rows().await), vec![pair("mulligan", "p2"), pair("timeout", "p1")]);
-        let at = h.actor.snapshot().await;
+        let at = h.actor.snapshot();
         assert_eq!((at.mulligan_owed.len(), at.phase, at.turn), (0, Phase::Main, 1));
 
         // No second alarm, once both are in: the window's clock fires once (R268) and nothing more is
@@ -2227,27 +2227,27 @@ mod draw_offers_and_concede_through_the_actor_r36_r269_9_5 {
         }
         // A turn with nothing to do ends itself (§2.5, R82), so whose turn is at rest depends on the
         // hands dealt. Whose it is does not matter to R36, so it is read rather than assumed.
-        let at = h.actor.snapshot().await;
+        let at = h.actor.snapshot();
         assert_eq!((at.phase, at.pending_for, at.result), (Phase::Main, None, None));
         DrawHarness { offerer_seat: at.active, h }
     }
 
     /// Ends the turn of whoever is active, and says so if the engine refused.
     async fn end_turn(h: &Harness, nonce: &str) {
-        let active = h.actor.snapshot().await.active;
+        let active = h.actor.snapshot().active;
         let socket = h.socket(active);
         send(h, socket, nonce, json!({ "type": "endTurn" })).await;
         let refused: Vec<Value> = errors(socket).into_iter().filter(|error| error["nonce"] == nonce).collect();
         assert_eq!(refused, Vec::<Value>::new());
-        assert_eq!(h.actor.snapshot().await.pending_for, None);
+        assert_eq!(h.actor.snapshot().pending_for, None);
     }
 
     /// Ends turns until the offerer's next turn is at rest (a turn with nothing to do ends itself).
     async fn to_offerers_next_turn(d: &DrawHarness) {
-        let from = d.h.actor.snapshot().await.turn;
+        let from = d.h.actor.snapshot().turn;
         for step in 0..4 {
             end_turn(&d.h, &format!("to-next-{step}")).await;
-            let at = d.h.actor.snapshot().await;
+            let at = d.h.actor.snapshot();
             if at.active == d.offerer_seat && at.turn > from {
                 return;
             }
@@ -2309,7 +2309,7 @@ mod draw_offers_and_concede_through_the_actor_r36_r269_9_5 {
 
         send(h, d.offerer(), "offer", json!({ "type": "offerDraw" })).await;
         send(h, d.answerer(), "decline", json!({ "type": "answerDraw", "accept": false })).await;
-        assert_eq!(h.actor.snapshot().await.result, None);
+        assert_eq!(h.actor.snapshot().result, None);
         assert!(last_view(d.offerer()).get("drawOffer").is_none());
         assert!(last_view(d.answerer()).get("drawOffer").is_none());
         assert!(!legal_types(d.answerer()).contains(&"answerDraw".to_string()));
@@ -2354,7 +2354,7 @@ mod draw_offers_and_concede_through_the_actor_r36_r269_9_5 {
             &errors(d.answerer()).last().cloned().expect("an error frame"),
             &json!({ "code": "illegal_action", "message": "there is no draw offer to answer", "nonce": "late" }),
         );
-        assert_eq!(h.actor.snapshot().await.result, None);
+        assert_eq!(h.actor.snapshot().result, None);
 
         // A lapse is not a decline (R269): the offerer may offer again on its next turn.
         to_offerers_next_turn(&d).await;
@@ -2653,7 +2653,7 @@ mod the_automatic_turn_end_is_each_players_to_turn_off_r82_r345 {
         assert_eq!(p1_deck.len(), first.len(), "enough cards that cost two or more");
         let h = harness(real((p1_deck, p2_deck))).await;
         // PREMISE: the deal asks nothing (R635), so both mulligans are open.
-        let at = h.actor.snapshot().await;
+        let at = h.actor.snapshot();
         assert_eq!((at.phase, at.pending_for, at.mulligan_owed.clone()), (Phase::Mulligan, None, vec![P1, P2]));
         h
     }
@@ -2675,7 +2675,7 @@ mod the_automatic_turn_end_is_each_players_to_turn_off_r82_r345 {
         assert_eq!(errors(&h.p1), Vec::<Value>::new());
         keep_hands(&h).await;
 
-        let at = h.actor.snapshot().await;
+        let at = h.actor.snapshot();
         assert_eq!((at.phase, at.active, at.pending_for, at.result), (Phase::Main, P1, None, None));
         // PREMISE: nothing to do but what R82 discounts, so it is the preference alone that keeps the turn.
         assert!(legal_types(&h.p1).contains(&"endTurn".to_string()));
@@ -2688,7 +2688,7 @@ mod the_automatic_turn_end_is_each_players_to_turn_off_r82_r345 {
         assert!(last_view(&h.p2).get("autoEndTurn").is_none());
 
         send(&h, &h.p1, "end", json!({ "type": "endTurn" })).await;
-        assert_eq!(h.actor.snapshot().await.active, P2);
+        assert_eq!(h.actor.snapshot().active, P2);
     }
 
     #[tokio::test(start_paused = true)]
@@ -2697,7 +2697,7 @@ mod the_automatic_turn_end_is_each_players_to_turn_off_r82_r345 {
         send(&h, &h.p1, "bad", json!({ "type": "setAutoEndTurn", "enabled": "no" })).await;
         assert_eq!(errors(&h.p1).last().map(|error| error["code"].clone()), Some(json!("malformed")));
         keep_hands(&h).await;
-        let at = h.actor.snapshot().await;
+        let at = h.actor.snapshot();
         assert_eq!((at.phase, at.active), (Phase::Main, P2));
         assert!(last_view(&h.p1).get("autoEndTurn").is_none());
     }

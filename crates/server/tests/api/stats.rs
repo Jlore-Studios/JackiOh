@@ -156,7 +156,7 @@ async fn request(
     token: Option<&str>,
     body: Option<Value>,
 ) -> (u16, HeaderMap, Value) {
-    call(app, method, path, token, body).await
+    call(app, method, path, token, body.unwrap_or(Value::Null)).await
 }
 
 /// `GET <path>` with no token, answering the status, headers and body.

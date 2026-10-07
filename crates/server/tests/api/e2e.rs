@@ -30,7 +30,7 @@ use jackioh_server::api::collection::{LAUNCH_COPIES, LAUNCH_GRANT_REASON};
 use jackioh_server::api::cors::is_origin_allowed;
 use jackioh_server::api::crypto::normalize_code;
 use jackioh_server::api::e2e::{
-    E2E_ACCOUNTS, E2E_INVITE_CODES, E2eAccount, E2eInviteCodes, E2eSeedOptions, seed_e2e_fixtures,
+    E2E_ACCOUNTS, E2E_INVITE_CODES, E2EAccount, E2EInviteCodes, E2ESeedOptions, seed_e2e_fixtures,
     seed_e2e_fixtures_with,
 };
 use jackioh_server::api::queue::e2e_seed_count;
@@ -147,18 +147,18 @@ macro_rules! try_store {
     }};
 }
 
-fn account(user_id: &str) -> &'static E2eAccount {
+fn account(user_id: &str) -> &'static E2EAccount {
     E2E_ACCOUNTS
         .iter()
         .find(|candidate| candidate.user_id == user_id)
         .unwrap_or_else(|| panic!("no fixture account {user_id}"))
 }
 
-fn pending() -> &'static E2eAccount {
+fn pending() -> &'static E2EAccount {
     account("e2e-pending")
 }
 
-fn p1() -> &'static E2eAccount {
+fn p1() -> &'static E2EAccount {
     account("e2e-p1")
 }
 
@@ -519,9 +519,9 @@ mod r144_the_reseed_at_boot {
     #[tokio::test(start_paused = true)]
     async fn refuses_a_fixture_code_that_9_4_would_call_malformed_rather_than_seeding_a_dead_code() {
         let app = harness().await;
-        let options = E2eSeedOptions {
-            codes: Some(E2eInviteCodes { good: "OOOO-OOOO-OOOO-OOOO", ..E2E_INVITE_CODES }),
-            ..E2eSeedOptions::default()
+        let options = E2ESeedOptions {
+            codes: E2EInviteCodes { good: "OOOO-OOOO-OOOO-OOOO", ..E2E_INVITE_CODES },
+            ..E2ESeedOptions::default()
         };
         let refused = seed_e2e_fixtures_with(&app, options).await.expect_err("a malformed fixture code");
         assert!(refused.to_string().contains("CODE_ALPHABET"), "{refused}");
@@ -530,9 +530,9 @@ mod r144_the_reseed_at_boot {
     #[tokio::test(start_paused = true)]
     async fn refuses_two_fixture_codes_that_are_the_same_code() {
         let app = harness().await;
-        let options = E2eSeedOptions {
-            codes: Some(E2eInviteCodes { missing: E2E_INVITE_CODES.good, ..E2E_INVITE_CODES }),
-            ..E2eSeedOptions::default()
+        let options = E2ESeedOptions {
+            codes: E2EInviteCodes { missing: E2E_INVITE_CODES.good, ..E2E_INVITE_CODES },
+            ..E2ESeedOptions::default()
         };
         let refused = seed_e2e_fixtures_with(&app, options).await.expect_err("two equal fixture codes");
         assert!(refused.to_string().contains("same code"), "{refused}");

@@ -39,7 +39,7 @@ use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::Db;
 
 use crate::support::deps::test_app;
-use crate::support::engine::{create_fake_engine, fake_deck, FakeEngineOptions};
+use crate::support::engine::{fake_deck, install_test_cards};
 use crate::support::socket::{create_fake_socket, FakeSocket};
 
 const MATCH_ID: &str = "match-recovery";
@@ -224,7 +224,7 @@ fn in_hand(socket: &FakeSocket, def_id: &str) -> String {
 }
 
 async fn view_of(actor: &MatchActor, player: PlayerId) -> Value {
-    to_json(&actor.view_for(player).await)
+    to_json(&actor.view_for(player))
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -236,7 +236,7 @@ struct Harness {
     clock: Clock,
     /// The rows the opening's mulligans wrote before the test's first action (scripted cards only).
     opening: usize,
-    /// Whatever `create_fake_engine` hands back (the testkit override), held for the test.
+    /// Whatever `install_test_cards` hands back (the testkit override), held for the test.
     _engine: Box<dyn Any>,
 }
 
@@ -266,7 +266,7 @@ fn seed_dealing(prefix: &str, decks: &(Vec<String>, Vec<String>), wanted: &[(Pla
 
 /// Both mulligans answered keeping the whole hand, in seat order; answers the rows they wrote.
 async fn open_turn_one(actor: &MatchActor) -> usize {
-    let owed = actor.snapshot().await.mulligan_owed;
+    let owed = actor.snapshot().mulligan_owed;
     for seat in &owed {
         let keep = hand_of(&view_of(actor, *seat).await);
         let reply = to_json(&actor.submit(*seat, &format!("keep-{seat}"), from(json!({ "type": "mulligan", "keep": keep }))).await);
@@ -278,7 +278,7 @@ async fn open_turn_one(actor: &MatchActor) -> usize {
 async fn start_match(options: StartOptions) -> Harness {
     let scripted = options.real.is_none();
     let engine: Box<dyn Any> =
-        if scripted { Box::new(create_fake_engine(FakeEngineOptions { mulligan: false })) } else { Box::new(()) };
+        if scripted { Box::new(install_test_cards()) } else { Box::new(()) };
     let app = test_app().await;
     {
         let data = fake(&app);
@@ -375,8 +375,8 @@ mod m6_t4_crash_recovery {
         let actor = actor_of(&h).await;
         let p1 = create_fake_socket();
         let p2 = create_fake_socket();
-        actor.attach(PlayerId::P1, p1.socket()).await;
-        actor.attach(PlayerId::P2, p2.socket()).await;
+        actor.attach(PlayerId::P1, p1.socket());
+        actor.attach(PlayerId::P2, p2.socket());
         actor.idle().await;
 
         // Mid-game, and deliberately mid-*prompt*: p1 plays and answers its own prompt, ends the turn,
@@ -395,8 +395,8 @@ mod m6_t4_crash_recovery {
         // R79: the view carries a clock, and the paused turn clock and the prompt clock are both live.
         assert_eq!(before_p1["clockMs"], json!(PROMPT_CLOCK_SECONDS as i64 * 1000));
         assert_eq!(before_p2["clockMs"], json!(TURN_CLOCK_SECONDS as i64 * 1000));
-        let before_snapshot = actor.snapshot().await;
-        let before_hash = jackioh_engine::hash_state(&actor.engine_state().await);
+        let before_snapshot = actor.snapshot();
+        let before_hash = jackioh_engine::hash_state(&actor.engine_state());
 
         // The crash: the actor leaves memory, the log stays exactly where it was.
         h.app.matches.stop(MATCH_ID).await;
@@ -416,15 +416,15 @@ mod m6_t4_crash_recovery {
         let revived = actor_of(&h).await;
         assert!(logs.has("match.rebuilt"));
         assert!(!logs.has("match.fold.errors"));
-        assert_eq!(jackioh_engine::hash_state(&revived.engine_state().await), before_hash);
-        assert_eq!(revived.snapshot().await, before_snapshot);
+        assert_eq!(jackioh_engine::hash_state(&revived.engine_state()), before_hash);
+        assert_eq!(revived.snapshot(), before_snapshot);
 
         // §9.5: "Reconnect gets a fresh full view, never a log replay" — one view frame each, and the
         // same one both players had before the kill, `clockMs` included.
         let back_p1 = create_fake_socket();
         let back_p2 = create_fake_socket();
-        revived.attach(PlayerId::P1, back_p1.socket()).await;
-        revived.attach(PlayerId::P2, back_p2.socket()).await;
+        revived.attach(PlayerId::P1, back_p1.socket());
+        revived.attach(PlayerId::P2, back_p2.socket());
         revived.idle().await;
 
         assert_eq!(views(&back_p1).len(), 1);
@@ -445,7 +445,7 @@ mod m6_t4_crash_recovery {
         send(&revived, &back_p1, "n5", json!({ "type": "answer", "choiceId": open_choice(&back_p1), "selection": [{ "pick": "none" }] }))
             .await;
         assert_eq!(acks(&back_p1).last(), Some(&json!({ "type": "ack", "nonce": "n5", "seq": 5 + h.opening })));
-        assert_eq!(revived.snapshot().await.pending_for, None);
+        assert_eq!(revived.snapshot().pending_for, None);
         assert_eq!(results(&h).await, Vec::<Value>::new());
     }
 
@@ -537,8 +537,8 @@ mod m6_t4_crash_recovery_with_the_real_engine {
         let actor = actor_of(&h).await;
         let p1 = create_fake_socket();
         let p2 = create_fake_socket();
-        actor.attach(PlayerId::P1, p1.socket()).await;
-        actor.attach(PlayerId::P2, p2.socket()).await;
+        actor.attach(PlayerId::P1, p1.socket());
+        actor.attach(PlayerId::P2, p2.socket());
         actor.idle().await;
         RealMatch { h, actor, p1, p2, pool }
     }
@@ -556,7 +556,7 @@ mod m6_t4_crash_recovery_with_the_real_engine {
             // cards back" in seat order whichever order the answers were logged in — the one step in setup
             // where the rng is consulted *after* an action in the log, and so the step a fold that merely
             // re-dealt, or resolved in log order, would get wrong.
-            let snapshot = actor.snapshot().await;
+            let snapshot = actor.snapshot();
             assert_eq!(snapshot.phase, Phase::Mulligan);
             assert_eq!(snapshot.mulligan_owed, vec![PlayerId::P1, PlayerId::P2]);
             let keep = hand_ids(mine);
@@ -564,15 +564,15 @@ mod m6_t4_crash_recovery_with_the_real_engine {
             assert!(!hand_ids(theirs).is_empty());
             send(&actor, mine, &format!("m-{first}"), json!({ "type": "mulligan", "keep": keep })).await;
             send(&actor, theirs, &format!("m-{second}"), json!({ "type": "mulligan", "keep": [] })).await;
-            assert_eq!(actor.snapshot().await.phase, Phase::Main);
+            assert_eq!(actor.snapshot().phase, Phase::Main);
 
             let before_p1 = view_of(&actor, PlayerId::P1).await;
             let before_p2 = view_of(&actor, PlayerId::P2).await;
-            let before_hash = jackioh_engine::hash_state(&actor.engine_state().await);
+            let before_hash = jackioh_engine::hash_state(&actor.engine_state());
             h.app.matches.stop(MATCH_ID).await;
             let revived = actor_of(&h).await;
             assert!(!logs.has("match.fold.errors"));
-            assert_eq!(jackioh_engine::hash_state(&revived.engine_state().await), before_hash);
+            assert_eq!(jackioh_engine::hash_state(&revived.engine_state()), before_hash);
             assert_eq!(view_of(&revived, PlayerId::P1).await, before_p1);
             assert_eq!(view_of(&revived, PlayerId::P2).await, before_p2);
             h.app.matches.stop(MATCH_ID).await;
@@ -587,22 +587,22 @@ mod m6_t4_crash_recovery_with_the_real_engine {
         // p2 answers first and p1 has not: the answer is sealed, in the log, and in no hand yet.
         let p2_hand = hand_ids(&p2);
         send(&actor, &p2, "sealed", json!({ "type": "mulligan", "keep": p2_hand[1..] })).await;
-        assert_eq!(actor.snapshot().await.mulligan_owed, vec![PlayerId::P1]);
+        assert_eq!(actor.snapshot().mulligan_owed, vec![PlayerId::P1]);
         let before_p1 = view_of(&actor, PlayerId::P1).await;
         let before_p2 = view_of(&actor, PlayerId::P2).await;
         assert_eq!(before_p2["mulligan"], json!({ "youReady": true, "opponentReady": false, "kept": p2_hand[1..] }));
         assert_eq!(before_p1["mulligan"], json!({ "youReady": false, "opponentReady": true }));
-        let before_hash = jackioh_engine::hash_state(&actor.engine_state().await);
+        let before_hash = jackioh_engine::hash_state(&actor.engine_state());
 
         h.app.matches.stop(MATCH_ID).await;
         let revived = actor_of(&h).await;
-        assert_eq!(jackioh_engine::hash_state(&revived.engine_state().await), before_hash);
-        assert_eq!(revived.snapshot().await.mulligan_owed, vec![PlayerId::P1]);
+        assert_eq!(jackioh_engine::hash_state(&revived.engine_state()), before_hash);
+        assert_eq!(revived.snapshot().mulligan_owed, vec![PlayerId::P1]);
 
         let back_p1 = create_fake_socket();
         let back_p2 = create_fake_socket();
-        revived.attach(PlayerId::P1, back_p1.socket()).await;
-        revived.attach(PlayerId::P2, back_p2.socket()).await;
+        revived.attach(PlayerId::P1, back_p1.socket());
+        revived.attach(PlayerId::P2, back_p2.socket());
         revived.idle().await;
         // A rebuilt clock arms a fresh mulligan window (the NOT IN SPEC note in `clock.rs`), so `clockMs`
         // is the one field that could differ — and no time passed across this crash, so it does not.
@@ -612,7 +612,7 @@ mod m6_t4_crash_recovery_with_the_real_engine {
         // p1 answers on the rebuilt actor, and the sealed answer resolves with it at the next seq.
         send(&revived, &back_p1, "after-crash", json!({ "type": "mulligan", "keep": hand_ids(&back_p1) })).await;
         assert_eq!(acks(&back_p1).last(), Some(&json!({ "type": "ack", "nonce": "after-crash", "seq": 2 })));
-        let snapshot = revived.snapshot().await;
+        let snapshot = revived.snapshot();
         assert_eq!(snapshot.phase, Phase::Main);
         assert_eq!(snapshot.mulligan_owed, Vec::<PlayerId>::new());
         // Only now does p2's sealed answer act: the one card it did not keep has left its hand.
@@ -627,20 +627,20 @@ mod m6_t4_crash_recovery_with_the_real_engine {
 
         // §2.1, R265: both mulligans open at once. p1 keeps everything and p2 keeps nothing, so the
         // fold replays R9's replacement draws and shuffle-back (see the test above for either order).
-        assert_eq!(actor.snapshot().await.phase, Phase::Mulligan);
+        assert_eq!(actor.snapshot().phase, Phase::Mulligan);
         let p1_keep = hand_ids(&p1);
         assert!(!p1_keep.is_empty());
         send(&actor, &p1, "m1", json!({ "type": "mulligan", "keep": p1_keep })).await;
         assert!(!hand_ids(&p2).is_empty());
         send(&actor, &p2, "m2", json!({ "type": "mulligan", "keep": [] })).await;
 
-        assert_eq!(actor.snapshot().await.phase, Phase::Main);
+        assert_eq!(actor.snapshot().phase, Phase::Main);
         send(&actor, &p1, "t1", json!({ "type": "endTurn" })).await;
 
         let before_p1 = view_of(&actor, PlayerId::P1).await;
         let before_p2 = view_of(&actor, PlayerId::P2).await;
-        let before_snapshot = actor.snapshot().await;
-        let before_hash = jackioh_engine::hash_state(&actor.engine_state().await);
+        let before_snapshot = actor.snapshot();
+        let before_hash = jackioh_engine::hash_state(&actor.engine_state());
         // PREMISE: the views really carry the real game — hands of real ids and a redacted count for
         // the other side — so the deep-equals below are comparing something. p1 holds what it kept plus
         // the card §2.1's first turn drew for it (R10).
@@ -669,13 +669,13 @@ mod m6_t4_crash_recovery_with_the_real_engine {
         // The real engine accepted every action on the way back; an action it once took and now
         // refuses is the determinism break `registry.rebuild` shouts about.
         assert!(!logs.has("match.fold.errors"));
-        assert_eq!(jackioh_engine::hash_state(&revived.engine_state().await), before_hash);
-        assert_eq!(revived.snapshot().await, before_snapshot);
+        assert_eq!(jackioh_engine::hash_state(&revived.engine_state()), before_hash);
+        assert_eq!(revived.snapshot(), before_snapshot);
 
         let back_p1 = create_fake_socket();
         let back_p2 = create_fake_socket();
-        revived.attach(PlayerId::P1, back_p1.socket()).await;
-        revived.attach(PlayerId::P2, back_p2.socket()).await;
+        revived.attach(PlayerId::P1, back_p1.socket());
+        revived.attach(PlayerId::P2, back_p2.socket());
         revived.idle().await;
 
         // M6-T4, in full: the same `viewFor` for both players, built by the real `view_for` off a state
@@ -725,8 +725,8 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         let actor = actor_of(&h).await;
         let p1 = create_fake_socket();
         let p2 = create_fake_socket();
-        actor.attach(PlayerId::P1, p1.socket()).await;
-        actor.attach(PlayerId::P2, p2.socket()).await;
+        actor.attach(PlayerId::P1, p1.socket());
+        actor.attach(PlayerId::P2, p2.socket());
         actor.idle().await;
         h.app.matches.stop(MATCH_ID).await;
         h
@@ -746,7 +746,7 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         h.app.matches.attach(&h.app, MATCH_ID, "profile-2", back.socket()).await.expect("profile-2 attaches");
         let revived = actor_of(&h).await;
         revived.idle().await;
-        assert_eq!(to_json(&revived.clocks().await)["graceDeadline"], json!({ "p1": h.clock.now() + grace_ms, "p2": null }));
+        assert_eq!(to_json(&revived.clocks())["graceDeadline"], json!({ "p1": h.clock.now() + grace_ms, "p2": null }));
         assert_eq!(grace_deadline(&h).await["p1"], json!(h.clock.now() + grace_ms));
 
         advance(grace_ms - 1).await;
@@ -771,8 +771,8 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         let actor = actor_of(&h).await;
         let p1 = create_fake_socket();
         let p2 = create_fake_socket();
-        actor.attach(PlayerId::P1, p1.socket()).await;
-        actor.attach(PlayerId::P2, p2.socket()).await;
+        actor.attach(PlayerId::P1, p1.socket());
+        actor.attach(PlayerId::P2, p2.socket());
         actor.idle().await;
 
         // p1's socket drops, and the countdown is stored on the match (§9.5).
@@ -793,7 +793,7 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         let back = create_fake_socket();
         h.app.matches.attach(&h.app, MATCH_ID, "profile-2", back.socket()).await.expect("profile-2 attaches");
         revived.idle().await;
-        assert_eq!(to_json(&revived.clocks().await)["graceDeadline"]["p1"], stored);
+        assert_eq!(to_json(&revived.clocks())["graceDeadline"]["p1"], stored);
 
         advance(grace_ms / 2 - 1).await;
         revived.idle().await;
@@ -813,21 +813,21 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         h.app.matches.attach(&h.app, MATCH_ID, "profile-2", back_p2.socket()).await.expect("profile-2 attaches");
         let revived = actor_of(&h).await;
         revived.idle().await;
-        assert!(!to_json(&revived.clocks().await)["graceDeadline"]["p1"].is_null());
+        assert!(!to_json(&revived.clocks())["graceDeadline"]["p1"].is_null());
 
         advance(grace_ms - 1).await;
         revived.idle().await;
         let back_p1 = create_fake_socket();
         h.app.matches.attach(&h.app, MATCH_ID, "profile-1", back_p1.socket()).await.expect("profile-1 attaches");
         revived.idle().await;
-        assert_eq!(to_json(&revived.clocks().await)["graceDeadline"], json!({ "p1": null, "p2": null }));
+        assert_eq!(to_json(&revived.clocks())["graceDeadline"], json!({ "p1": null, "p2": null }));
         assert_eq!(grace_deadline(&h).await, json!({ "p1": null, "p2": null }));
 
         advance(1).await;
         revived.idle().await;
         assert_eq!(expired(&h).await, Vec::<Value>::new());
         assert_eq!(results(&h).await, Vec::<Value>::new());
-        assert!(revived.snapshot().await.result.is_none());
+        assert!(revived.snapshot().result.is_none());
     }
 
     #[tokio::test(start_paused = true)]
@@ -839,7 +839,7 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         h.app.matches.attach(&h.app, MATCH_ID, "profile-1", socket.socket()).await.expect("profile-1 attaches");
         let actor = actor_of(&h).await;
         actor.idle().await;
-        assert_eq!(to_json(&actor.clocks().await)["graceDeadline"], json!({ "p1": null, "p2": h.clock.now() + grace_ms }));
+        assert_eq!(to_json(&actor.clocks())["graceDeadline"], json!({ "p1": null, "p2": h.clock.now() + grace_ms }));
 
         advance(grace_ms).await;
         actor.idle().await;
@@ -861,13 +861,13 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         let actor = actor_of(&h).await;
         actor.idle().await;
         // The second client is still loading, and its seat is already counted away.
-        assert!(!to_json(&actor.clocks().await)["graceDeadline"]["p2"].is_null());
+        assert!(!to_json(&actor.clocks())["graceDeadline"]["p2"].is_null());
 
         advance(grace_ms / 10).await;
         let second = create_fake_socket();
         h.app.matches.attach(&h.app, MATCH_ID, "profile-2", second.socket()).await.expect("profile-2 attaches");
         actor.idle().await;
-        assert_eq!(to_json(&actor.clocks().await)["graceDeadline"], json!({ "p1": null, "p2": null }));
+        assert_eq!(to_json(&actor.clocks())["graceDeadline"], json!({ "p1": null, "p2": null }));
 
         advance(grace_ms).await;
         actor.idle().await;
@@ -884,8 +884,8 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         let actor = actor_of(&h).await;
         let p1 = create_fake_socket();
         let p2 = create_fake_socket();
-        actor.attach(PlayerId::P1, p1.socket()).await;
-        actor.attach(PlayerId::P2, p2.socket()).await;
+        actor.attach(PlayerId::P1, p1.socket());
+        actor.attach(PlayerId::P2, p2.socket());
         actor.idle().await;
         p1.drop();
         actor.idle().await;

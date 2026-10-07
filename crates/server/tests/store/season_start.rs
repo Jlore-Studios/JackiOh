@@ -14,7 +14,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
-use crate::support::deps::{TEST_PATCH_VERSION, test_app};
+use crate::support::deps::{TEST_CATALOG_VERSION, test_app};
 
 /// One transaction around one store call, as TS's store gave every method called outside
 /// `store.tx`: begin, the call, commit. Answers the call's value, or the first error's text.
@@ -141,7 +141,7 @@ mod r609_start_season {
         assert_eq!(opened["season"]["id"], "v0.2");
         assert_eq!(opened["opened"], true);
         assert_eq!(opened["reset"]["players"].as_i64(), Some(2));
-        assert_eq!(season_ids(&app.db).await, vec![season_id_of(TEST_PATCH_VERSION), "v0.2".to_string()]);
+        assert_eq!(season_ids(&app.db).await, vec![season_id_of(TEST_CATALOG_VERSION), "v0.2".to_string()]);
 
         // And it is idempotent: the season the server boot would open is already there.
         let again = js(&start_season(&app.db, &deps("v0.2.0"), SeasonStartOptions { dry_run: false })
@@ -174,7 +174,7 @@ mod r609_start_season {
         );
 
         // …and nothing it described survives: no season row, untouched ratings.
-        assert_eq!(season_ids(&app.db).await, vec![season_id_of(TEST_PATCH_VERSION)]);
+        assert_eq!(season_ids(&app.db).await, vec![season_id_of(TEST_CATALOG_VERSION)]);
         let (a_after, b_after) = (profile_of(&app.db, A).await, profile_of(&app.db, B).await);
         assert_eq!(a_after["rating"], a["rating"]);
         assert_eq!(a_after["ratingDeviation"], a["ratingDeviation"]);
@@ -197,12 +197,12 @@ mod r609_start_season {
     async fn dry_run_on_an_already_open_season_reports_it_as_unopened_and_writes_nothing() {
         let app = test_app().await;
         rated_pair(&app).await;
-        let opened = js(&start_season(&app.db, &deps(TEST_PATCH_VERSION), SeasonStartOptions { dry_run: true })
+        let opened = js(&start_season(&app.db, &deps(TEST_CATALOG_VERSION), SeasonStartOptions { dry_run: true })
             .await
             .expect("startSeason --dry-run"));
-        assert_eq!(opened["season"]["id"], season_id_of(TEST_PATCH_VERSION).as_str());
+        assert_eq!(opened["season"]["id"], season_id_of(TEST_CATALOG_VERSION).as_str());
         assert_eq!(opened["opened"], false);
         assert_eq!(opened["reset"], Value::Null);
-        assert_eq!(season_ids(&app.db).await, vec![season_id_of(TEST_PATCH_VERSION)]);
+        assert_eq!(season_ids(&app.db).await, vec![season_id_of(TEST_CATALOG_VERSION)]);
     }
 }

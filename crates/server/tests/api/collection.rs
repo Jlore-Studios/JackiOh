@@ -360,7 +360,7 @@ mod grant_entire_catalog_build_m6_t2_launch_mode_grants_every_card {
         let local = server_holding(catalog).await;
         active_profile(&local, PROFILE, USER).await;
 
-        grant_entire_catalog(&local.app, PROFILE, LAUNCH_GRANT_REASON).await.expect("the launch grant");
+        grant_entire_catalog(&local.app, PROFILE, Some(LAUNCH_GRANT_REASON)).await.expect("the launch grant");
 
         let catalog = &local.app.catalog;
         let mut expected: Vec<String> =
@@ -377,7 +377,7 @@ mod grant_entire_catalog_build_m6_t2_launch_mode_grants_every_card {
     #[tokio::test]
     async fn skips_tokens_section_9_4_l3_bans_them_from_a_deck_so_owning_one_is_meaningless() {
         let (server, _token) = setup().await;
-        grant_entire_catalog(&server.app, PROFILE, LAUNCH_GRANT_REASON).await.expect("the launch grant");
+        grant_entire_catalog(&server.app, PROFILE, Some(LAUNCH_GRANT_REASON)).await.expect("the launch grant");
         let owned = owned(&server, PROFILE).await;
         let catalog = &server.app.catalog;
         let tokens: Vec<&String> = catalog.card_ids.iter().filter(|id| catalog.is_token(id)).collect();
@@ -390,11 +390,11 @@ mod grant_entire_catalog_build_m6_t2_launch_mode_grants_every_card {
     #[tokio::test]
     async fn is_idempotent_a_second_call_neither_doubles_a_quantity_nor_appends_a_duplicate_row() {
         let (server, _token) = setup().await;
-        grant_entire_catalog(&server.app, PROFILE, LAUNCH_GRANT_REASON).await.expect("the launch grant");
+        grant_entire_catalog(&server.app, PROFILE, Some(LAUNCH_GRANT_REASON)).await.expect("the launch grant");
         let collection = collection_rows(&server).await;
         let grants = grant_rows(&server).await;
 
-        grant_entire_catalog(&server.app, PROFILE, LAUNCH_GRANT_REASON).await.expect("the second launch grant");
+        grant_entire_catalog(&server.app, PROFILE, Some(LAUNCH_GRANT_REASON)).await.expect("the second launch grant");
 
         assert_eq!(collection_rows(&server).await, collection);
         assert_eq!(grant_rows(&server).await, grants);
@@ -404,7 +404,7 @@ mod grant_entire_catalog_build_m6_t2_launch_mode_grants_every_card {
     async fn tops_up_a_profile_that_already_owns_part_of_the_catalog_without_re_granting_the_rest() {
         let (server, _token) = setup().await;
         grant(&server, PROFILE, json!([{ "cardId": "core-001", "quantity": 1 }]), "reward").await.expect("the grant");
-        grant_entire_catalog(&server.app, PROFILE, LAUNCH_GRANT_REASON).await.expect("the launch grant");
+        grant_entire_catalog(&server.app, PROFILE, Some(LAUNCH_GRANT_REASON)).await.expect("the launch grant");
 
         let for_core_001: Vec<Value> =
             grant_rows(&server).await.into_iter().filter(|row| row["cardId"] == json!("core-001")).collect();
@@ -416,7 +416,7 @@ mod grant_entire_catalog_build_m6_t2_launch_mode_grants_every_card {
     #[tokio::test]
     async fn records_the_reason_it_was_given_so_the_ledger_distinguishes_a_launch_grant() {
         let (server, _token) = setup().await;
-        grant_entire_catalog(&server.app, PROFILE, "admin").await.expect("the grant");
+        grant_entire_catalog(&server.app, PROFILE, Some("admin")).await.expect("the grant");
         let mut reasons: Vec<Value> = grant_rows(&server).await.iter().map(|row| row["reason"].clone()).collect();
         reasons.dedup();
         assert_eq!(reasons, vec![json!("admin")]);
