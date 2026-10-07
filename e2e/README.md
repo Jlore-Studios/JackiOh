@@ -1,7 +1,8 @@
 # `e2e/` — the thirty-five specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34` and the settings dialog's `35`, plus twelve component specs
 
 Cypress runs against `apps/web` in `E2E=1` mode: the `/dev/hotseat` route for the local specs and
-a test server with fixture accounts for the networked ones. BUILD M8's house rules hold
+a test server with fixture accounts for the networked ones, the Rust `jackioh-server` started with
+`E2E=1` (`crates/server`). BUILD M8's house rules hold
 everywhere in here:
 
 - every spec sets a seed;
@@ -92,10 +93,11 @@ e2e/
       wsPlayer.ts          `cy.task("wsPlayer")`: the second player, driven from Node (specs 05, 06, 19), and
                            the one-task connect-and-concede `cy.concedeAs` uses
       replay.ts            `cy.task("replayHash")`: fold the recorded log (and its handicaps: spec 13's, spec 25's) outside the browser
-      replay-runner.ts     runs under the repo's tsx; imports packages/* to fold the log
+      replay-runner.ts     runs under tsx; folds the log with `target/release/jackioh replay` (the Rust engine,
+                           built by `cargo build --release -p jackioh-tools`) and hashes the browser's state
       lessons.ts           `cy.task("tutorialLessons")`: the lessons, seeds and decks as apps/web states them
-      lessons-runner.ts    runs under the repo's tsx; reads apps/web/src/tutorial/lessons.ts, AI_TUTORIAL and
-                           the catalog's Quickdraw tag (excluded from tsconfig.json, like replay-runner.ts)
+      lessons-runner.ts    runs under tsx; reads apps/web/src/tutorial/lessons.ts, AI_TUTORIAL (the generated
+                           apps/web/src/wire/engineConfig.ts) and the catalog's Quickdraw tag (excluded from tsconfig.json)
       onlineReset.ts       spec 99's cleanup, and only its: leaves both accounts outside any live match
   scripts/check-fixtures.mjs  pre-flight for the deck fixtures; needs no browser and no client
   scripts/shard-specs.mjs     `node scripts/shard-specs.mjs <k> <K>`: the specs CI's shard k of K runs,
@@ -103,19 +105,21 @@ e2e/
   artifacts/               recorded logs, screenshots, videos (git-ignored)
 ```
 
-`e2e/` is its own pnpm root (`e2e/pnpm-workspace.yaml`): the root workspace globs only
-`packages/*` and `apps/*`, and nothing outside this directory should have to carry Cypress.
-`e2e/tsconfig.json` type-checks without `packages/*` or `apps/*` being buildable, on purpose —
-M8 is written before the client and server are finished.
+`e2e/` is a member of the root pnpm workspace, so the root `pnpm install` installs it as CI does, and
+it also carries its own `pnpm-workspace.yaml` and lockfile, so `cd e2e && pnpm install` works alone.
+`e2e/tsconfig.json` type-checks without the client or the Rust crates being buildable, on purpose: the
+`@jackioh/*` specifiers resolve to the client's wire layer (`apps/web/src/wire/`) as its Vite config
+resolves them, and the engine is reached only through the `jackioh` binary.
 
 ## Install
 
 ```
-pnpm install            # repo root: provides tsx, which the replayHash task uses
-cd e2e && pnpm install  # Cypress + ws; the postinstall fetches the Cypress binary
+pnpm install                              # repo root: e2e's packages, and tsx, which the replayHash task runs under
+cargo build --release -p jackioh-tools    # target/release/jackioh, whose `replay` the replayHash task runs
+cd e2e && pnpm install                    # on its own, as above; the postinstall fetches the Cypress binary
 pnpm exec cypress verify
 pnpm exec tsc -p tsconfig.json
-pnpm check:fixtures     # every deck fixture obeys L2/L3/L6 before a browser is involved
+pnpm check:fixtures                       # every deck fixture obeys L2/L3/L6 before a browser is involved
 ```
 
 ## Run
@@ -124,17 +128,25 @@ pnpm check:fixtures     # every deck fixture obeys L2/L3/L6 before a browser is 
 # 1. the client, in E2E mode
 E2E=1 pnpm --dir apps/web dev                  # must serve http://localhost:5173
 
-# 2. the server, in E2E mode, for specs 05, 06, 07(networked path), 09, 10, 18, 19, 20, 26, 27, 35
-E2E=1 pnpm --dir apps/server dev               # http://localhost:8787 and ws://…/ws/match (WS_PATH)
+# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35
+E2E=1 cargo run --release -p jackioh-server    # http://localhost:8787 and ws://…/ws/match (WS_PATH)
 
 # 3. the suite
 cd e2e
 pnpm test:e2e                                  # headless, default browser
-pnpm test:e2e:chrome                           # M8 gate: Chrome
-pnpm test:e2e:electron                         # M8 gate: Electron
+pnpm test:e2e:chrome                           # Chrome, as CI runs it
 pnpm open                                      # interactive
 pnpm exec cypress run --spec cypress/e2e/01-hotseat-full-game.cy.ts
 ```
+
+Under `E2E=1` the server needs no other variable: the Supabase, database and pepper settings fall
+back to fixture placeholders, the store is in memory, and `CATALOG_VERSION` defaults to the version
+compiled into it. It reseeds its fixture accounts and invite codes at every boot (R144), so restart it
+before re-running spec 10. CI (`.github/actions/e2e-shard`) boots one release `jackioh-server` and one
+`vite preview` of the `build:e2e` client per shard, waits for `/api/catalog` and the client to answer,
+then runs its shard's specs on Chrome: the smoke list (01, 06, 10, 13, 19,
+`scripts/shard-specs.mjs`'s `SMOKE`) on every pull request, every spec in the daily super run.
+Electron is no longer run.
 
 Endpoints are overridable, so nothing in a spec has to change when a port moves:
 
@@ -193,7 +205,7 @@ for contract reasons rather than rules reasons.
    `sessionStorage`, R632).
    `cy.signIn` / `cy.visitAs` write it, and `support/config.ts` is the only place it is spelled.
 7. **The socket path.** `ws://<host>/ws/match` — `WS_PATH` in
-   `apps/server/src/match/wsServer.ts`. A handshake off that path is never upgraded, so this is
+   `crates/server/src/actor/ws_server.rs`. A handshake off that path is never upgraded, so this is
    not a preference: `support/config.ts`, `cypress.config.ts` and the `wsPlayer` task all default
    to it.
 
@@ -207,12 +219,12 @@ place to change.
 | --- | --- | --- | --- |
 | A1 | In E2E mode the hotseat route resolves `a=`/`b=` from `window.__jackiohE2E = { seed, decks, handicaps? }` (also mirrored into `localStorage["jackioh.e2e.decks"]`, so a reload keeps it) before falling back to built-in dev decks. `seedGame` injects it in `onBeforeLoad`, with fixture A's `handicap` as `handicaps.p1` and fixture B's as `handicaps.p2` (R180); the route drops a seat's handicap that is not shaped like one, hands the rest to `createGame` (which validates the numbers, R184, and whose refusal it prints), and reports them on `window.__jackioh.handicaps` for `cy.replayCheck`. Development builds only, like the rest of the injection. | `support/commands.ts`, `support/types.ts` | `apps/web` |
 | A2 | `window.__jackioh` also carries `log: Action[]` (every action reduced, in order, with its nonce) and `decks: [string[], string[]]`. Only spec 01 needs them: they are the "recorded actions" BUILD M8 folds for the replay hash. | `support/types.ts`, `cy.replayCheck` | `apps/web` |
-| A3 | `<side>` in `zone-<side>-…` and `hero-<side>` is view-relative, `you` \| `opponent`, matching `PlayerView.you` / `.opponent`. Lanes are 1..5, as `packages/engine/src/zones.ts` numbers them (not an assumption — the engine fixes it). | `support/testids.ts` | `apps/web` |
+| A3 | `<side>` in `zone-<side>-…` and `hero-<side>` is view-relative, `you` \| `opponent`, matching `PlayerView.you` / `.opponent`. Lanes are 1..5, as `crates/engine/src/zones.rs` numbers them (not an assumption — the engine fixes it). | `support/testids.ts` | `apps/web` |
 | A4 | Prompt internals: one option per `PendingOption.key` at `prompt-option-<key>`, a `prompt-submit` confirm button for multi-select kinds, and `prompt-x` for the numeric input of `x`/`embiggen`. A chosen option is marked `aria-pressed="true"` (or `data-selected="true"`), which is how `keepMulligans` knows it does not have to click it again. `answerPrompt` prefers these and falls back to the board testids for pickers M5-T2 renders on the board (target, zone, tribute). | `support/testids.ts`, `support/commands.ts` | `apps/web` |
 | A5 | Chrome not in BUILD's list: `result-overlay`, `turn-banner`, `seat-switch`, `graveyard-count-<side>`, `exile-count-<side>`, `library-count-<side>`, `hand-count-<side>`, `mana-<side>` + `.mana-crystal`, `switch-<instanceId>`, and `data-legal="true|false"` for the highlighting M5-T2 describes. (`.damage-pop`, `.heal-pop`, `.loss-pop`, `.radiant`, `data-locked` are BUILD M5-T4's own.) Plus R169's badges inside `modifiers-<side>`: `.modifier-badge` carrying `data-modifier-id`, and `data-count` on the list itself — client vocabulary rather than BUILD's, and the list is rendered on both seats even when empty. Plus the shown stats as attributes — `data-attack`, `data-health`, `data-max-health`, `data-armor`, `data-keyword`, `data-position`, `data-radiant` — because M5-T4's `buffed` row is "shown stats equal the view" and a reformat of `{health}/{maxHealth}` must not break a spec; and the regions the animation table targets — `hand-<side>`, `library-<side>`, `graveyard-<side>`, `exile-<side>`, `modifiers-<side>`, `backrow-<side>`, `board`, `game`, `concede`, `log`, `action-error`, `draw-toast`, `prompt-modal`, `prompt-scrim`. Every one of those is a name `apps/web` already renders (`animTestid`, `contract.ts`), so this row documents them rather than asking for them. | `support/testids.ts` | `apps/web` |
-| A6 | Routes and fixtures for the non-hotseat specs: `/login`, `/invite`, `/decks`, `/play`, `/match/<id>`; `http://localhost:8787` + `ws://localhost:8787/ws/match` (the path is `WS_PATH`, not an assumption); fixture accounts `e2e-p1`, `e2e-p2` (active, own every card) and `e2e-pending` (pending, verified email); seeded invite codes — one good, one missing, one expired, one exhausted. | `support/config.ts` | `apps/web`, `apps/server` |
-| A7 | Catalog ids are the set (`core`, `classic`, `classicplus`) + `-` + SPEC §8 index zero-padded to three digits; a Token takes its parent's index with a `.k` suffix (`core-065-1`, `classicplus-012-1`) or a name (`core-t-sheep`, `classicplus-t-ai-01`). An index alone repeats across sets, so a fixture names cards by id. Confirmed against `packages/cards/catalog.json`, so this is documentation rather than an assumption. `CARD_NAMES` stays the 268 deckable cards of the three sets and `TOKEN_NAMES` the 49 Tokens, because `asDeck` checks a fixture against `CARD_NAMES` being exactly the deckable set (L3). | `support/cards.ts` | — |
-| A8 | The WS protocol `cy.task("wsPlayer")` speaks: `-> hello {token?,matchId?,roomCode?}`, `-> action {action:{…,nonce}}`; `<- view {view}`, `<- ack {nonce,seq}`, `<- error {code,message,nonce?}`, `<- prompt {forYou,…}`, `<- clock {now,clocks}`. Read off `apps/server/src/match/protocol.ts`, which fixes every shape, so this is documentation now rather than an assumption. Joining a room is **not** on the socket: `POST /api/rooms/:code/join` is, and the `joinRoom` frame exists only to answer a client that tries with `error {code:"unsupported"}`. | `support/tasks/wsPlayer.ts` | — |
+| A6 | Routes and fixtures for the non-hotseat specs: `/login`, `/invite`, `/decks`, `/play`, `/match/<id>`; `http://localhost:8787` + `ws://localhost:8787/ws/match` (the path is `WS_PATH`, not an assumption); fixture accounts `e2e-p1`, `e2e-p2` (active, own every card) and `e2e-pending` (pending, verified email); seeded invite codes — one good, one missing, one expired, one exhausted. | `support/config.ts` | `apps/web`, `crates/server` |
+| A7 | Catalog ids are the set (`core`, `classic`, `classicplus`) + `-` + SPEC §8 index zero-padded to three digits; a Token takes its parent's index with a `.k` suffix (`core-065-1`, `classicplus-012-1`) or a name (`core-t-sheep`, `classicplus-t-ai-01`). An index alone repeats across sets, so a fixture names cards by id. Confirmed against `crates/cards/catalog.json`, so this is documentation rather than an assumption. `CARD_NAMES` stays the 268 deckable cards of the three sets and `TOKEN_NAMES` the 49 Tokens, because `asDeck` checks a fixture against `CARD_NAMES` being exactly the deckable set (L3). | `support/cards.ts` | — |
+| A8 | The WS protocol `cy.task("wsPlayer")` speaks: `-> hello {token?,matchId?,roomCode?}`, `-> action {action:{…,nonce}}`; `<- view {view}`, `<- ack {nonce,seq}`, `<- error {code,message,nonce?}`, `<- prompt {forYou,…}`, `<- clock {now,clocks}`. Read off `crates/server/src/actor/protocol.rs`, which fixes every shape, so this is documentation now rather than an assumption. Joining a room is **not** on the socket: `POST /api/rooms/:code/join` is, and the `joinRoom` frame exists only to answer a client that tries with `error {code:"unsupported"}`. | `support/tasks/wsPlayer.ts` | — |
 | A9 | Fixture deck shape: `{ id, spec, description, cards, handicap? }` with `cards` holding exactly `DECK_SIZE` (20) distinct non-Token catalog ids, of any set (one format, R380) — or exactly `handicap.deckSize` when the fixture carries a handicap (R184) — and `id` equal to the filename. A `handicap` is five non-negative integers with 1 <= `deckSize` <= `LIBRARY_CAP` (60) and an optional positive `heroHealth`. `seedGame` and `pnpm check:fixtures` check all of it before visiting, so a bad fixture fails with a readable message instead of an engine throw. | `support/commands.ts`, `scripts/check-fixtures.mjs` | — |
 | A10 | A session is `localStorage["jackioh.e2e.session"] = {accessToken}`, installed in `cy.visit`'s `onBeforeLoad` so the first boot already has it. `cy.signIn(account)` remembers an account and every later visit carries it; `cy.visitAs(account, path)` is the two together. Confirmed against `apps/web/src/net/session.ts`, which reads that key. | `support/config.ts`, `support/commands.ts` | — |
 | A11 | Deck workshop testids, which BUILD names none of: `workshop` (`data-view`), `sync-status` (`data-state="saved\|saving\|offline\|error"`), `deck-list` / `deck-row-<deckId>` (`data-count`, `data-status`, `data-unsynced`), `deck-new`, `deck-cap` / `deck-cap-reason`, the trio rail's `trio-list` / `trio-row-<trioId>` (`data-ready`) / `trio-new` / `trio-cap`, the deck editor's `deck-editor` (`data-deck`), `deck-name-input`, `deck-count`, `deck-drop`, `deck-card-<cardId>` (`data-conflict`, `data-conflict-with`), `deck-status`, `deck-save-error`, `deck-copy-code` / `deck-code-output`, `deck-compare-select` (`trio:<id>`, `deck:<id>`, `none`), `deck-verdict` and `trio-verdict` (`data-ready`) around `loadout-errors` / `loadout-error-<rule>` (`data-rule`, `data-source`, `data-deck`, `data-card`), the trio editor's `trio-slot-<n>`, `trio-open-<n>`, `trio-card-<slot>-<cardId>`, and the import panel's `deck-import-*`; the pool's `card-pool-<cardId>` (`data-in-deck`, `data-unavailable`, `data-held-by`) and `db-add-<cardId>`; a drag carrying the catalog id on `application/x-jackioh-card` plus `text/plain`. The workshop replaced the three-deck loadout editor, so the per-deck `deck-tab-<n>` family and `loadout-save` are gone. These mirror `apps/web/src/game/deckbuilder/testids.ts` name for name; keep the two files identical. | `support/testids.ts`, `support/commands.ts` | — |
@@ -252,13 +264,13 @@ waiting helpers (`settled`, `expectAnimating`, `waitForPrompt`, `noPrompt`):
 
 | Spec | Needs |
 | --- | --- |
-| 01, 02, 03, 04, 11, 12 | M4 (the real catalog and card scripts) + M5 (board, prompts, hotseat loop, animations). 01 additionally needs `window.__jackioh.log`/`.decks` (A2) and the repo's `tsx` for the replay fold. |
+| 01, 02, 03, 04, 11, 12 | M4 (the real catalog and card scripts) + M5 (board, prompts, hotseat loop, animations). 01 additionally needs `window.__jackioh.log`/`.decks` (A2) and `target/release/jackioh` for the replay fold. |
 | 05, 06 | M6 (server, match actor, WS protocol) and, for the clock assertion in 05, M7-T1. |
 | 07 | M4 (card #96) + M5. The AI turn runs inside `reduce`, so no server is needed. |
 | 08 | M4 + M5 only: it ends turns until the cap. Since patch v0.2.0 the cap is 60 player-turns, 30 each (R2, R389), and two do-nothing 20-card decks fatigue out before it, at player-turn 48 (SPEC §2.5), so 08's decks never fatigue: both seats play #75 Infinite Reserves, whose draws from an empty deck give a Rush Token card instead of fatigue (a game seeded near the cap would serve as well). It asserts R2's arithmetic at 30 turns each, the Draw on the overlay after the 60th player-turn, and both heroes still at `HERO_HEALTH`, which is what makes it the cap's draw and not two heroes dying together. |
 | 09 | M6-T3 (validator, deck and queue endpoints) and TASK 1's deck workshop. L1, L2, L4 and L5 are shown in the workshop's verdict and in `POST /api/queue`'s 422; L3 and L6 cannot reach the queue (D3/D4 refuse them at save, R250), so they are shown on a draft restored from the device mirror (A17), with the save's refusal and the queue's "no longer saved". |
 | 10 | M6-T1 (auth, invite gate) and the code screen. |
-| 13 | Polish 3 (SPEC §9.9): `/practice`, the practice worker and `packages/ai`, against `build:e2e` with no server. The replay check passes the game's handicaps to the fold (R180, R187). |
+| 13 | Polish 3 (SPEC §9.9): `/practice`, the practice worker and the AI (`crates/ai`, as WebAssembly), against `build:e2e` with no server. The replay check passes the game's handicaps to the fold (R180, R187). |
 | 14 | A built client only (`pnpm build:e2e`, then `vite preview`): no server and no auth provider. Every `${apiUrl}/api/*` call is a `cy.intercept` stub, sessions are seeded under `jackioh.e2e.session` in `onBeforeLoad`, and emailed links are visited as `/login#…`. It covers the landing page, the segmented code field, rate-limit feedback, emailed-link handling, the reset screen and the gate's exits (`docs/polish/5-sign-in.md`). |
 | 15 | Polish 2 (SPEC §10.11): the audio layer on `/dev/hotseat`, M4 + M5, no server. Chrome for the audio context; it asserts the voice request in `window.__jackiohAudio`'s log, never the sound. |
 | 16 | Polish 7 (§10.8, R195): drag to play on `/dev/hotseat` with spec 04's decks and seed, M4 + M5, no server. The gestures are real pointer events from `support/ux.ts`, and the settings panel turns drag to play off. |
@@ -281,18 +293,7 @@ Spec 14 (`14-landing-and-sign-in.cy.ts`) never submits to the auth provider, bec
 bundle has no `VITE_SUPABASE_URL`. So it runs against a static preview with nothing else started:
 
 ```
-pnpm build:e2e
+pnpm --dir apps/web build:e2e
 pnpm --dir apps/web exec vite preview --port 5173 --strictPort
 E2E_BASE_URL=http://localhost:5173 pnpm --dir e2e exec cypress run --spec cypress/e2e/14-landing-and-sign-in.cy.ts
 ```
-
-## What the root still needs (not changed from here)
-
-`e2e/` deliberately touches nothing outside itself. Three edits belong to whoever owns the root:
-
-1. `package.json` → `"test:e2e": "pnpm --dir e2e test:e2e"`, which is the command CLAUDE.md
-   documents.
-2. `package.json` → add `tsc -p e2e/tsconfig.json` to the `typecheck` script, so the specs are
-   type-checked by `pnpm typecheck`.
-3. CI → run the suite on Chrome and on Electron (the M8 gate), after starting `apps/web` and
-   `apps/server` in `E2E=1` mode; a nightly job re-runs spec 01 over 20 seeds (BUILD §4).
