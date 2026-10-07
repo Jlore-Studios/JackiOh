@@ -1,6 +1,6 @@
 {
   "framework": null,
-  "installCommand": "pnpm install --frozen-lockfile",
+  "installCommand": "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none && . \"$HOME/.cargo/env\" && rustup toolchain install && rustup target add wasm32-unknown-unknown && pnpm install --frozen-lockfile",
   "buildCommand": "rm -rf dist && pnpm --filter @jackioh/web build && { [ -d dist ] || cp -r apps/web/dist dist; }",
   "outputDirectory": "dist",
   "git": {
@@ -31,7 +31,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://exmjdaswedxhnzmpzqrq.supabase.co https://jackioh-server.onrender.com wss://jackioh-server.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+          "value": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://exmjdaswedxhnzmpzqrq.supabase.co https://jackioh-server.onrender.com wss://jackioh-server.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
         },
         { "key": "X-Frame-Options", "value": "DENY" },
         { "key": "X-Content-Type-Options", "value": "nosniff" },

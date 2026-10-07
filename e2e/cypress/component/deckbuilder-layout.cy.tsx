@@ -26,7 +26,8 @@
 import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import DeckWorkshop, { type WorkshopOpen } from "../../../apps/web/src/game/deckbuilder/DeckWorkshop.tsx";
 import type { DecksResponse } from "../../../apps/web/src/net/api.ts";
-import { CATALOG, CATALOG_VERSION } from "../../../packages/cards/src/catalog-data.ts";
+import { CATALOG, CATALOG_VERSION } from "@jackioh/cards";
+import { loadWasm } from "../../../apps/web/src/wasm/index.ts";
 import { FIT_FLOOR_PX, TEXT_TIER_MAX } from "../../../apps/web/src/cards/constants.ts";
 import { faceModel } from "../../../apps/web/src/cards/model.ts";
 import {
@@ -152,6 +153,12 @@ function fitEveryPoolCard(): void {
 }
 
 describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
+  // The workshop calls the validator, which is the Rust one in WebAssembly (docs/v0.3.0/SURFACE.md
+  // §10.3): load the module once, as main.tsx does before the page's first render.
+  before(() => {
+    cy.wrap(loadWasm(), { timeout: 30_000 });
+  });
+
   beforeEach(() => {
     mountWorkshop(FULL_DECKS);
   });

@@ -16,9 +16,8 @@
 // `--expose shots=1` also saves pictures of every row, at the smallest and the largest size, three
 // times larger (CSS zoom), for a person to look at.
 
-import { CATALOG } from "../../../packages/cards/src/catalog-data.ts";
-import { KEYWORD_KINDS, type Keyword, type KeywordKind } from "../../../packages/shared/src/catalog-types.ts";
-import type { UnitView } from "../../../packages/shared/src/view.ts";
+import { CATALOG } from "@jackioh/cards";
+import { KEYWORD_KINDS, type Keyword, type KeywordKind, type UnitView } from "@jackioh/shared";
 import { MinionFace, faceModel } from "../../../apps/web/src/cards/index.ts";
 import { AMBIENT_MAX } from "../../../apps/web/src/cards/keywordVisuals.ts";
 import { writeSettings, __resetSettingsForTests } from "../../../apps/web/src/settings/index.ts";

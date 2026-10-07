@@ -1,16 +1,31 @@
 {
-  // e2e is deliberately self-contained: it type-checks without packages/* or apps/* being
-  // buildable, because M8 is written before the client and server are finished. The only places
-  // that touch engine or client source are support/tasks/replay-runner.ts and
-  // support/tasks/lessons-runner.ts, which run under tsx from the repo root and are excluded from
-  // this project.
+  // e2e is deliberately self-contained: it type-checks without the client or the Rust crates being
+  // buildable. The engine is the Rust one now: support/tasks/replay-runner.ts folds a recorded log
+  // with the `jackioh` CLI (docs/v0.3.0/SURFACE.md §12), so it reaches nothing outside e2e/ and is
+  // checked here. support/tasks/lessons-runner.ts imports the client's tutorial source at run time,
+  // under tsx from the repo root, and stays excluded from this project.
+  //
+  // The `@jackioh/*` specifiers resolve as apps/web/vite.config.ts's `jackiohAliases` resolve them
+  // (SURFACE §10.4), for any spec or support file that names one.
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["cypress", "node"],
     "allowImportingTsExtensions": true,
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "@jackioh/shared": ["../apps/web/src/wire/index.ts"],
+      "@jackioh/engine": ["../apps/web/src/wire/engine.ts"],
+      "@jackioh/engine/config": ["../apps/web/src/wire/engineConfig.ts"],
+      "@jackioh/validator": ["../apps/web/src/wire/validator.ts"],
+      "@jackioh/cards": ["../apps/web/src/wire/cards.ts"],
+      "@jackioh/cards/catalog.json": ["../crates/cards/catalog.json"],
+      "@jackioh/cards/flavour.json": ["../crates/cards/flavour.json"],
+      "@jackioh/ai": ["../apps/web/src/wire/ai.ts"],
+      "@jackioh/ai/config": ["../apps/web/src/wire/ai.ts"],
+      "@jackioh/server-config": ["../apps/web/src/wire/serverConfig.ts"]
+    }
   },
   "include": ["cypress.config.ts", "support/**/*.ts", "cypress/**/*.ts"],
-  "exclude": ["support/tasks/replay-runner.ts", "support/tasks/lessons-runner.ts", "node_modules"]
+  "exclude": ["support/tasks/lessons-runner.ts", "node_modules"]
 }
