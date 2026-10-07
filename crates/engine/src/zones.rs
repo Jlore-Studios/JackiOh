@@ -30,7 +30,7 @@ use crate::own_library::show_to_owner;
 use crate::script::EngineSink;
 use crate::scripts::flags_of;
 use crate::state::{
-    CardInstance, Exertion, GameState, HomeZone, Pile, PlayerState, QueuedTrigger, find_instance,
+    CardInstance, EngineError, Exertion, GameState, HomeZone, Pile, PlayerState, QueuedTrigger, find_instance,
     find_instance_mut, rename_in_board_history,
 };
 use crate::stays::{note_field_exit, note_moved, note_uncovered};
@@ -326,33 +326,33 @@ pub fn carried_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstanc
 pub fn carrier_zones_for(state: &GameState, player: PlayerId) -> Vec<ZoneSlot> {
     slots_of(player, Row::Backrow)
         .into_iter()
-        .filter(|slot| why_cannot_carry(state, slot).is_none())
+        .filter(|slot| why_cannot_carry(state, slot).is_ok())
         .collect()
 }
 
-/// R446: why a Unit played now could not name this backrow zone, or `None` when it can.
-pub fn why_cannot_carry(state: &GameState, slot: impl Into<ZoneSlot>) -> Option<&'static str> {
+/// R446: why a Unit played now could not name this backrow zone, or `Ok` when it can (SURFACE §4.4.9).
+pub fn why_cannot_carry(state: &GameState, slot: impl Into<ZoneSlot>) -> Result<(), EngineError> {
     let slot = slot.into();
     if slot.row != Row::Backrow {
-        return Some("only a backrow zone carries a Unit");
+        return Err(EngineError::new("only a backrow zone carries a Unit"));
     }
     let top = match card_at(state, slot) {
         Some(top) if is_carrier(state, top) => top,
-        _ => return Some("that zone holds no card a Unit may be played on top of"),
+        _ => return Err(EngineError::new("that zone holds no card a Unit may be played on top of")),
     };
     if carried_at(state, slot).is_some() {
-        return Some("that card already carries a Unit");
+        return Err(EngineError::new("that card already carries a Unit"));
     }
     if flags_of(state, top).fuses_carried == Some(true) && stacked_onto(top).is_some() {
-        return Some("that card has taken its one Unit");
+        return Err(EngineError::new("that card has taken its one Unit"));
     }
     if is_locked(state, slot) {
-        return Some("that zone is Locked");
+        return Err(EngineError::new("that zone is Locked"));
     }
     if is_reserved(state, slot) {
-        return Some("that zone is held for a card's return");
+        return Err(EngineError::new("that zone is held for a card's return"));
     }
-    None
+    Ok(())
 }
 
 /// `accepts_stack_card`'s options: `move_` is TS's `{ move: true }`, a move rather than a play.

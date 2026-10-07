@@ -27,7 +27,7 @@ use crate::catalog::def_of;
 use crate::damage::DamageTarget;
 use crate::layers::unit_has;
 use crate::script::{EffectContext, Script, StaticFlags, empty_script};
-use crate::state::{CardInstance, GameState};
+use crate::state::{CardInstance, EngineError, GameState};
 use crate::wire::{CardType, KeywordKind, Row, Zone};
 use crate::zones::{card_at, slot_of};
 
@@ -116,18 +116,18 @@ pub fn attackable_only_from_lane(state: &GameState, unit: &CardInstance) -> bool
 }
 
 /// E35: why the unit restrictions bar `attacker` from attacking `target` — a declared attack or a
-/// forced one alike (R53 waives position, sickness and Taunt, never these) — or `None` when nothing
-/// does. A hero carries no restriction of its own.
-pub fn attack_restriction(state: &GameState, attacker: &CardInstance, target: &DamageTarget) -> Option<&'static str> {
+/// forced one alike (R53 waives position, sickness and Taunt, never these) — or `Ok` when nothing
+/// does (SURFACE §4.4.9). A hero carries no restriction of its own.
+pub fn attack_restriction(state: &GameState, attacker: &CardInstance, target: &DamageTarget) -> Result<(), EngineError> {
     if cannot_attack(state, attacker) {
-        return Some("that unit cannot attack");
+        return Err(EngineError::new("that unit cannot attack"));
     }
     let defender = match target {
-        DamageTarget::Hero { .. } => return None,
+        DamageTarget::Hero { .. } => return Ok(()),
         DamageTarget::Unit { instance } => instance,
     };
     if cannot_be_attacked(state, defender) {
-        return Some("that unit cannot be attacked");
+        return Err(EngineError::new("that unit cannot be attacked"));
     }
     if attackable_only_from_lane(state, defender) {
         let from = slot_of(state, attacker);
@@ -137,10 +137,10 @@ pub fn attack_restriction(state: &GameState, attacker: &CardInstance, target: &D
             _ => false,
         };
         if !same_lane {
-            return Some("only a unit in its lane may attack that unit");
+            return Err(EngineError::new("only a unit in its lane may attack that unit"));
         }
     }
-    None
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------

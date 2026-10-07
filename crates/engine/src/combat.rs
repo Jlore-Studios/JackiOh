@@ -624,9 +624,9 @@ const ATTACK_COMBAT_STEP: &str = "combat";
 /// declaration again *after* the damage, against a hero the attack has already hit, and a Field Trap
 /// would answer one declaration twice.
 ///
-/// `triggers.rs` copies events out of `sink.events` into `state.dispatch` starting at
-/// `sink.dispatched`, so advancing that cursor past this event is precisely "the frontier has taken
-/// it" — it has, into this window. R100's own mechanism (`traps::TRAP_WINDOW_EVENTS`) cannot serve
+/// `triggers.rs` copies events out of `sink.events` into `state.dispatch` starting at the frontier's
+/// cursor (`triggers::dispatched`), so advancing it past this event is precisely "the frontier has
+/// taken it" — it has, into this window. R100's own mechanism (`traps::TRAP_WINDOW_EVENTS`) cannot serve
 /// here: it withholds an event *type*, and a forced attack's `attackDeclared` opens no window (R121)
 /// and must keep reaching the immediate check like any other event a card's effect list emits.
 ///
@@ -635,14 +635,11 @@ const ATTACK_COMBAT_STEP: &str = "combat";
 /// test has already run a combat on is the one other shape; there the cursor is behind, and moving
 /// it would silently drop the events in between, so the event is left on the frontier instead.
 fn withhold_from_frontier(sink: &mut EngineSink<'_>, at: usize) {
-    if sink.dispatched.unwrap_or(0) != at {
-        return;
-    }
-    sink.dispatched = Some(at + 1);
-    // A loop on another sink over the same list — a cast's step-4 window inside an effect the window's
-    // traps run (R70) — reads no cursor of this sink's, so the event is marked as delivered too.
-    if at < sink.events.len() {
-        crate::triggers::mark_dispatched(sink, &[at]);
+    // Every sink over the action's list shares the frontier (`EngineSink::frontier`), so a loop on
+    // another sink — a cast's step-4 window inside an effect the window's traps run (R70) — sees the
+    // cursor move too.
+    if crate::triggers::dispatched(sink) == at {
+        crate::triggers::set_dispatched(sink, at + 1);
     }
 }
 
@@ -912,7 +909,8 @@ pub fn declare_attack(sink: &mut EngineSink<'_>, attacker: &CardInstance, chosen
     // The interposer's `summoned` and `redirected` stand before the declaration on the frontier, which
     // the window's own dispatch delivers (R100) — the declaration is the window's alone all the same.
     if interposed {
-        crate::triggers::mark_dispatched(sink, &[at]);
+        let declaration = sink.events[at].clone();
+        crate::triggers::mark_dispatched(sink, &[declaration]);
     }
 
     // Step 4's second sentence: the traps answer the declaration, before any damage.

@@ -212,9 +212,9 @@ pub fn play_out_turn(sink: &mut EngineSink<'_>, player: PlayerId, options: Polic
         adopt_state(sink, result.state);
         // §10.3: `reduce` has already run these through its own resolution loop, so they are reported
         // (R168's window) but never offered to the traps and the trigger queue a second time.
-        let from = sink.events.len();
+        let delivered = result.events.clone();
         sink.events.extend(result.events);
-        crate::triggers::mark_dispatched(&sink.events[from..]);
+        crate::triggers::mark_dispatched(sink, &delivered);
         actions.push(action);
     }
 

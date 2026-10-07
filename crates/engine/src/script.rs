@@ -38,9 +38,9 @@ use crate::wire::{
 // ---------------------------------------------------------------------------------------------
 
 /// TS `resolve.ts`'s `EngineSink = { state, events, rng }` (SURFACE §6.5): what every mutator that
-/// emits events or draws writes to, plus the two per-call flags that were module `let`s in TS. A
-/// nested sink (`reborrow`) carries the flags down; a TS mutator that took a sink takes
-/// `&mut EngineSink`.
+/// emits events or draws writes to, plus the per-call facts that were module `let`s or transient sink
+/// fields in TS. A nested sink (`reborrow`) carries the flags down and shares the frontier; a TS
+/// mutator that took a sink takes `&mut EngineSink`.
 pub struct EngineSink<'a> {
     pub state: &'a mut GameState,
     pub events: &'a mut Vec<GameEvent>,
@@ -49,6 +49,11 @@ pub struct EngineSink<'a> {
     pub converting: u32,
     /// `subsystems/scorer.ts:225`'s flag, formerly a module `let`.
     pub dry_running: bool,
+    /// Which of the action's events the frontier has taken (TS `SettleSink.dispatched` and
+    /// `triggers.ts`'s `collected`/`dispatchedElsewhere`), shared by every sink over one event list.
+    pub frontier: crate::triggers::FrontierSlot<'a>,
+    /// R117: the owed items behind the one a drain is running (TS `work.ts`'s `DrainSink.owedBehind`).
+    pub owed_behind: Option<indexmap::IndexSet<String>>,
 }
 
 impl<'a> EngineSink<'a> {
@@ -60,10 +65,14 @@ impl<'a> EngineSink<'a> {
             rng,
             converting: 0,
             dry_running: false,
+            frontier: crate::triggers::FrontierSlot::default(),
+            owed_behind: None,
         }
     }
 
-    /// The same sink, borrowed again for a nested call: the flags travel with it.
+    /// The same sink, borrowed again for a nested call: the flags travel down with it (every change
+    /// to `converting` is undone before the call that made it returns, so a copy is exact) and the
+    /// frontier is shared, so a loop on a context and the action's own loop see one frontier.
     pub fn reborrow(&mut self) -> EngineSink<'_> {
         EngineSink {
             state: &mut *self.state,
@@ -71,6 +80,8 @@ impl<'a> EngineSink<'a> {
             rng: &mut *self.rng,
             converting: self.converting,
             dry_running: self.dry_running,
+            frontier: crate::triggers::FrontierSlot::Shared(self.frontier.get_mut()),
+            owed_behind: self.owed_behind.clone(),
         }
     }
 }
@@ -272,8 +283,9 @@ pub fn hook(f: impl Fn(&mut EffectContext<'_>) -> Vec<Effect> + Send + Sync + 's
     Arc::new(f)
 }
 
-/// `TriggerDef.when`: R99's condition, a pure read of the context and the event.
-pub type TriggerWhen = Arc<dyn Fn(&EffectContext<'_>, &GameEvent) -> bool + Send + Sync>;
+/// `TriggerDef.when`: R99's condition over the context and the event. `&mut`: Classic+ #74's
+/// predicate writes its own card while it declines (part 8.3).
+pub type TriggerWhen = Arc<dyn Fn(&mut EffectContext<'_>, &GameEvent) -> bool + Send + Sync>;
 
 /// `TriggerDef.run`: reads the event and the state; returns the effects to queue, or none.
 pub type TriggerRun = Arc<dyn Fn(&mut EffectContext<'_>, &GameEvent) -> Vec<Effect> + Send + Sync>;
@@ -311,7 +323,7 @@ impl TriggerDef {
     /// The same trigger with a `when`.
     pub fn with_when(
         mut self,
-        when: impl Fn(&EffectContext<'_>, &GameEvent) -> bool + Send + Sync + 'static,
+        when: impl Fn(&mut EffectContext<'_>, &GameEvent) -> bool + Send + Sync + 'static,
     ) -> TriggerDef {
         self.when = Some(Arc::new(when));
         self

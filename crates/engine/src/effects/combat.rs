@@ -311,7 +311,7 @@ pub fn ai_plays_out_turn(args: AiPlaysOutTurnArgs) -> Effect {
                 return;
             }
         }
-        play_out_turn(ctx, player, None);
+        play_out_turn(ctx, player, Default::default());
     })
 }
 
@@ -321,38 +321,23 @@ pub fn ai_plays_out_turn(args: AiPlaysOutTurnArgs) -> Effect {
 /// are. Only the triggers woken here run: whatever the enclosing action had queued before this list
 /// keeps its place and waits for that action's own loop (R117). Stops at a question or a result.
 fn settle_before_playout(ctx: &mut EffectContext<'_>) {
-    // TS `const sink: SettleSink = ctx`: the same sink, with the dispatch count the loop keeps on it.
-    let mut settle = SettleSink {
-        sink: ctx.sink.reborrow(),
-        dispatched: None,
-    };
-    let waiting: IndexSet<String> = settle
-        .sink
-        .state
-        .trigger_queue
-        .iter()
-        .map(|entry| entry.id.clone())
-        .collect();
+    // TS `const sink: SettleSink = ctx`: the same sink; the frontier it shares is the loop's count.
+    let settle: &mut SettleSink<'_> = &mut ctx.sink;
+    let waiting: IndexSet<String> = settle.state.trigger_queue.iter().map(|entry| entry.id.clone()).collect();
     for _pass in 0..SETTLE_PASS_CAP {
-        state_check(&mut settle.sink);
-        if settle.sink.state.result.is_some() || paused(&settle.sink) {
+        state_check(settle);
+        if settle.state.result.is_some() || paused(settle) {
             return;
         }
-        dispatch_pending(&mut settle);
-        if settle.sink.state.result.is_some() || paused(&settle.sink) {
+        dispatch_pending(settle);
+        if settle.state.result.is_some() || paused(settle) {
             return;
         }
-        let Some(at) = settle
-            .sink
-            .state
-            .trigger_queue
-            .iter()
-            .position(|entry| !waiting.contains(&entry.id))
-        else {
+        let Some(at) = settle.state.trigger_queue.iter().position(|entry| !waiting.contains(&entry.id)) else {
             return;
         };
-        let woken = settle.sink.state.trigger_queue.remove(at);
-        run_queued_trigger(&mut settle.sink, &woken);
+        let woken = settle.state.trigger_queue.remove(at);
+        run_queued_trigger(settle, &woken);
     }
     panic!("the board before the AI turn did not settle in {SETTLE_PASS_CAP} passes (R283)");
 }

@@ -410,7 +410,7 @@ pub fn fire_trap(
     let trap = &trap_match.trap;
     let controller = controller.unwrap_or(trap.controller);
     let armed: Vec<String> = {
-        let ctx = crate::resolve::make_context(
+        let mut ctx = crate::resolve::make_context(
             sink,
             Some(trap),
             crate::resolve::HookOptions {
@@ -421,7 +421,7 @@ pub fn fire_trap(
         trap_match
             .triggers
             .iter()
-            .filter(|trigger| trigger.when.as_ref().is_none_or(|when| when(&ctx, event)))
+            .filter(|trigger| trigger.when.as_ref().is_none_or(|when| when(&mut ctx, event)))
             .map(|trigger| trigger.id.clone())
             .collect()
     };

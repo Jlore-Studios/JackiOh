@@ -30,7 +30,7 @@ use crate::prompts::run_start_of_game;
 use crate::script::EngineSink;
 use crate::scripts::flags_of;
 use crate::state::{
-    CardInstance, GameState, MulliganSeat, PendingChoice, PromptOption, Resume, WorkItem, find_instance,
+    CardInstance, EngineError, GameState, MulliganSeat, PendingChoice, PromptOption, Resume, WorkItem, find_instance,
     find_instance_mut, handicap_of, new_instance,
 };
 use crate::state_check::state_check;
@@ -138,22 +138,23 @@ pub fn mulligan_prompt_for(state: &GameState, player: PlayerId) -> Option<&Pendi
     Some(&seat.prompt)
 }
 
-/// R265, R266: why this seat's mulligan answer is refused, or `None`. The reducer asks this before
-/// it answers, and `legal_actions` offers the mulligan exactly when there is no reason to refuse it.
-pub fn why_mulligan_refused(state: &GameState, player: PlayerId, keep: &[String]) -> Option<String> {
+/// R265, R266: why this seat's mulligan answer is refused, or `Ok` (SURFACE §4.4.9). The reducer asks
+/// this before it answers, and `legal_actions` offers the mulligan exactly when there is no reason to
+/// refuse it.
+pub fn why_mulligan_refused(state: &GameState, player: PlayerId, keep: &[String]) -> Result<(), EngineError> {
     if state.pending.is_some() || state.mulligan.is_none() {
-        return Some("no mulligan is open".to_string());
+        return Err(EngineError::new("no mulligan is open"));
     }
     let Some(prompt) = mulligan_prompt_for(state, player) else {
-        return Some("you have already answered your mulligan".to_string());
+        return Err(EngineError::new("you have already answered your mulligan"));
     };
     let offered: IndexSet<&str> = prompt.options.iter().map(|option| option.key.as_str()).collect();
     for id in keep {
         if !offered.contains(id.as_str()) {
-            return Some(format!("{id} is not in your hand"));
+            return Err(EngineError::new(format!("{id} is not in your hand")));
         }
     }
-    None
+    Ok(())
 }
 
 /// R113: the `resume.hook` of what setup still owes when a clause asks during it. A card setup deals
