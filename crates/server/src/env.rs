@@ -41,8 +41,10 @@ impl std::fmt::Display for NodeEnv {
 }
 
 /// The server's fully validated, typed environment (SPEC §9.1, §9.4, §9.5); TS `ServerEnv`, whose
-/// SCREAMING field names are snake_cased here (`SUPABASE_URL` → `supabase_url`).
-#[derive(Clone, Debug, PartialEq)]
+/// SCREAMING field names are snake_cased here (`SUPABASE_URL` → `supabase_url`). Its `Debug` names
+/// every field but prints no secret (the secret key, the connection string, the shared JWT secret,
+/// the pepper), so a `{:?}` in a log line cannot leak one.
+#[derive(Clone, PartialEq)]
 pub struct Env {
     /// Supabase project URL, e.g. https://<ref>.supabase.co. Server-only by convention (no VITE_ prefix).
     pub supabase_url: String,
@@ -79,6 +81,27 @@ pub struct Env {
     /// when a push leaves the catalog as it was. Only a hex string is kept, since it is echoed into a
     /// header.
     pub deployed_commit: Option<String>,
+}
+
+impl std::fmt::Debug for Env {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        const REDACTED: &str = "<redacted>";
+        f.debug_struct("Env")
+            .field("supabase_url", &self.supabase_url)
+            .field("supabase_secret_key", &REDACTED)
+            .field("database_url", &REDACTED)
+            .field("supabase_jwks_url", &self.supabase_jwks_url)
+            .field("supabase_jwt_secret", &self.supabase_jwt_secret.as_ref().map(|_| REDACTED))
+            .field("code_pepper", &REDACTED)
+            .field("port", &self.port)
+            .field("public_origins", &self.public_origins)
+            .field("node_env", &self.node_env)
+            .field("e2e", &self.e2e)
+            .field("catalog_version", &self.catalog_version)
+            .field("trusted_proxy_hops", &self.trusted_proxy_hops)
+            .field("deployed_commit", &self.deployed_commit)
+            .finish()
+    }
 }
 
 /// TS's name for [`Env`].

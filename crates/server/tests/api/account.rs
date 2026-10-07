@@ -17,7 +17,7 @@ use std::sync::Arc;
 use serde_json::{Value, json};
 
 use jackioh_server::app::App;
-use jackioh_server::auth::AuthError;
+use jackioh_server::auth::{Auth, AuthError, E2eDeletion};
 
 use super::auth::{AdminReply, Captured, DeletionReply, Harness, confirmed_user, fake_of, raw, row};
 use crate::support::deps::{call, test_app};
@@ -249,9 +249,14 @@ mod delete_api_account {
     #[tokio::test]
     async fn answers_503_on_a_server_whose_auth_provider_cannot_delete_users_and_deletes_nothing() {
         // The E2E fixture auth is that server: it has three accounts and no way to remove one, as
-        // TS's `createE2EAuth` had no `deleteUser`.
+        // TS's `createE2EAuth` had no `deleteUser`. `support::deps::test_app()` switches deletion on
+        // (TS's test fake had it), so it is switched back off here (TS: `delete deps.auth.deleteUser`).
         let app = test_app().await;
-        let (status, _, body) = call(&app, "DELETE", "/api/account", Some("e2e-token-p1"), None).await;
+        let Auth::E2e(fixtures) = &app.auth else {
+            panic!("support::deps::test_app() runs on the fixture auth");
+        };
+        fixtures.set_deletion(E2eDeletion::Unsupported);
+        let (status, _, body) = call(&app, "DELETE", "/api/account", Some("e2e-token-p1"), Value::Null).await;
         assert_eq!(status, 503);
         assert_eq!(body["error"]["code"], json!("unavailable"));
         let mut tx = app.db.begin(None).await.expect("a transaction");

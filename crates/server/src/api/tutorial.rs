@@ -34,7 +34,7 @@ use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
-use crate::app::App;
+use crate::app::{App, now_ms};
 use crate::config::{TUTORIAL_LESSON_ID_MAX_LENGTH, TUTORIAL_LESSONS_MAX};
 use crate::db::store::{Profile, TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow};
 
@@ -92,15 +92,6 @@ fn internal(path: &str, error: impl std::fmt::Display) -> ApiError {
         details: None,
         retry_after_ms: None,
     }
-}
-
-/// Epoch milliseconds now (TS `deps.timers.now()`; SURFACE §11.3 replaces the `Timers` port).
-fn now_ms() -> i64 {
-    let elapsed = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|duration| duration.as_millis())
-        .unwrap_or(0);
-    i64::try_from(elapsed).unwrap_or(i64::MAX)
 }
 
 /// TS `Number.isSafeInteger(at)` on a JSON number, as the integer it is.
@@ -176,6 +167,7 @@ pub async fn get_tutorial(app: &App, req: Req) -> ApiResult {
 /// `PUT /api/tutorial` (`active`, so a pending account gets 403, §9.4).
 pub async fn put_tutorial(app: &App, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
+    // TS `deps.timers.now()`: the server's one clock (`app::now_ms`, which tokio's paused clock moves).
     let now = now_ms();
     let completed = read_completed(&req.body)?;
     let hidden_choice = read_hidden_choice(&req.body, now)?;

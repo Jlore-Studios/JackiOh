@@ -254,7 +254,7 @@ pub fn percentile_of(rating: f64, others: &[f64]) -> Percentile {
 /// R606: the ladder position a percentile calls for. The tiers take `RANK_TIER_PERCENTS` of the
 /// range in order, a percentile exactly on a boundary belonging to the tier above it, and inside a
 /// tier the percentile is spread evenly over its pips.
-pub fn target_ladder(percentile: Percentile) -> i32 {
+pub fn target_ladder(percentile: &Percentile) -> i32 {
     let scaled = percentile.numerator * i64::from(PERCENT);
     let mut below: i64 = 0;
     for (tier_index, &tier) in GRAPE_TIERS.iter().enumerate() {
@@ -286,7 +286,7 @@ pub struct PipDeltaInput {
 /// a rank a division or more above; a loss takes `RANK_LOSS_PIPS`, plus the lean when the rating calls
 /// for a rank a division or more below; a draw moves nothing. `ladder` is the position before the
 /// game and `streak` the win streak counting this game.
-pub fn pip_delta(input: PipDeltaInput) -> i32 {
+pub fn pip_delta(input: &PipDeltaInput) -> i32 {
     let gap = input.target - input.ladder;
     match input.result {
         GameResult::Draw => 0,
@@ -308,7 +308,7 @@ pub fn pip_delta(input: PipDeltaInput) -> i32 {
 
 /// `apply_ranked_game`'s input (TS's anonymous `{ result, target, at }`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct RankedGameInput {
+pub struct ApplyRankedGameInput {
     pub result: GameResult,
     pub target: i32,
     pub at: i64,
@@ -318,7 +318,7 @@ pub struct RankedGameInput {
 /// once this game has moved it. A player still placing plays toward their placements, and the game
 /// that completes them puts them straight at the target; a placed player moves by `pip_delta`, never
 /// below the floor of the highest Grape tier they have reached this season, and never past the top.
-pub fn apply_ranked_game(rank: &SeasonRank, input: RankedGameInput) -> SeasonRank {
+pub fn apply_ranked_game(rank: &SeasonRank, input: &ApplyRankedGameInput) -> SeasonRank {
     let games = rank.games + 1;
     let streak = match input.result {
         GameResult::Win => rank.streak + 1,
@@ -348,7 +348,8 @@ pub fn apply_ranked_game(rank: &SeasonRank, input: RankedGameInput) -> SeasonRan
         };
     };
 
-    let moved = current + pip_delta(PipDeltaInput { result: input.result, ladder: current, target: input.target, streak });
+    let moved =
+        current + pip_delta(&PipDeltaInput { result: input.result, ladder: current, target: input.target, streak });
     let ladder = LADDER_TOP.min(tier_bottom(rank.floor).max(moved));
     SeasonRank {
         ladder: Some(ladder),

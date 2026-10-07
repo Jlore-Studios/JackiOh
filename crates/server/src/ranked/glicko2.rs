@@ -105,9 +105,8 @@ fn next_volatility(sigma: f64, phi: f64, v: f64, delta: f64, tau: f64) -> f64 {
 /// Glickman's steps 2–8 for one player over one rating period. A period with no games only widens
 /// the deviation (step 6 alone); the server never rates one, but the formula is defined there too.
 ///
-/// TS's `tau` defaulted to `GLICKO_TAU`; Rust has no default arguments, so `None` is that default.
-pub fn glicko2_period(player: &Glicko, games: &[RatedOpponent], tau: Option<f64>) -> Glicko {
-    let tau = tau.unwrap_or(GLICKO_TAU);
+/// TS's `tau` defaulted to `GLICKO_TAU`; Rust has no default arguments, so callers pass it.
+pub fn glicko2_period(player: &Glicko, games: &[RatedOpponent], tau: f64) -> Glicko {
     // Step 2: onto the Glicko-2 scale.
     let mu = (player.rating - RATING_START) / GLICKO_SCALE;
     let phi = player.deviation / GLICKO_SCALE;
@@ -161,7 +160,7 @@ pub struct RatedGame {
 pub fn rate_game(a: &Glicko, b: &Glicko, score_a: Score) -> RatedGame {
     let score_b: Score = 1.0 - score_a;
     RatedGame {
-        a: glicko2_period(a, &[RatedOpponent { opponent: *b, score: score_a }], None),
-        b: glicko2_period(b, &[RatedOpponent { opponent: *a, score: score_b }], None),
+        a: glicko2_period(a, &[RatedOpponent { opponent: *b, score: score_a }], GLICKO_TAU),
+        b: glicko2_period(b, &[RatedOpponent { opponent: *a, score: score_b }], GLICKO_TAU),
     }
 }
