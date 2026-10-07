@@ -140,12 +140,14 @@ mod play_match_b26 {
         let config = random_vs_random("match-hooks");
         let mut seen: Vec<(GameState, GameState, PlayerId, ActionBody)> = Vec::new();
         let record = {
-            let mut hooks = MatchHooks::default();
-            hooks.after_action = Some(Box::new(
-                |before: &GameState, after: &GameState, seat: PlayerId, action: &ActionBody| {
-                    seen.push((before.clone(), after.clone(), seat, action.clone()));
-                },
-            ));
+            let mut hooks = MatchHooks {
+                after_action: Some(Box::new(
+                    |before: &GameState, after: &GameState, seat: PlayerId, action: &ActionBody| {
+                        seen.push((before.clone(), after.clone(), seat, action.clone()));
+                    },
+                )),
+                ..MatchHooks::default()
+            };
             play_match(&config, &mut hooks)
         };
         assert_eq!(seen.len(), record.log.len());
@@ -165,11 +167,13 @@ mod play_match_b26 {
         let config = random_vs_random("match-timing");
         let mut calls = 0;
         let timed = {
-            let mut hooks = MatchHooks::default();
-            hooks.time_decision = Some(Box::new(|_seat: PlayerId, run: &mut dyn FnMut()| {
-                calls += 1;
-                run();
-            }));
+            let mut hooks = MatchHooks {
+                time_decision: Some(Box::new(|_seat: PlayerId, run: &mut dyn FnMut()| {
+                    calls += 1;
+                    run();
+                })),
+                ..MatchHooks::default()
+            };
             play_match(&config, &mut hooks)
         };
         assert!(calls > 0);

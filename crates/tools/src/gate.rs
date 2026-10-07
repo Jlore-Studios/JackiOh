@@ -151,12 +151,12 @@ pub(crate) fn subject_seat_of(n: i32) -> PlayerId {
 
 /// AI_GATE.fullSeeds[matchup].
 fn full_seeds(matchup: Matchup) -> i32 {
-    AI_GATE.full_seeds[matchup] as i32
+    AI_GATE.full_seeds[matchup]
 }
 
 /// AI_GATE.smokeSeeds.
 fn smoke_seeds() -> i32 {
-    AI_GATE.smoke_seeds as i32
+    AI_GATE.smoke_seeds
 }
 
 /// `gateNeeded(matchup, games)`.
@@ -266,7 +266,7 @@ fn games_to_play(total: i32, shard: Option<GateShard>) -> Vec<i32> {
         None => gate_shard_games(total, 1, 1),
         Some(shard) => gate_shard_games(total, shard.index, shard.count),
     };
-    numbers.into_iter().map(|n| n as i32).collect()
+    numbers.into_iter().collect()
 }
 
 /// One shard's games, as `gate merge` reads them.
@@ -309,7 +309,7 @@ fn write_shard(run: &GateReport, total: i32, shard: GateShard, played: &[i32], d
                 subject_seat: game.subject_seat.to_string(),
                 won: game.won,
                 turn_cap_draw: is_turn_cap_draw(&game.record.result),
-                result: serde_json::to_value(&game.record.result).unwrap_or(Value::Null),
+                result: serde_json::to_value(game.record.result).unwrap_or(Value::Null),
             })
             .collect(),
     };
@@ -826,7 +826,7 @@ fn wide_state(name: &str, setup: &Value) -> GameState {
 fn yardstick_ms() -> Result<f64> {
     let random = parse_matchup("ai-vs-random")?;
     let started = Instant::now();
-    for n in 1..=(AI_GATE.calibration_games as i32) {
+    for n in 1..=AI_GATE.calibration_games {
         let config = game_config(random, n, AI_BUDGET, AI_GATE.seed_series);
         let both_random =
             MatchConfig { controllers: PerPlayer { p1: SeatController::Random, p2: SeatController::Random }, ..config };
@@ -839,13 +839,13 @@ fn yardstick_ms() -> Result<f64> {
 /// the first under AI_GATE.maxDecisionMs: the smallest ratio of the two, in the development machine's
 /// milliseconds, with the node count (the same on every run: budgets count nodes).
 fn time_decision(state: &GameState, seat: PlayerId, rng_seed: &str) -> Result<Timing> {
-    let reference = AI_GATE.calibration_ref_ms as f64;
-    let limit = AI_GATE.max_decision_ms as f64;
+    let reference = AI_GATE.calibration_ref_ms;
+    let limit = AI_GATE.max_decision_ms;
     let mut ratio = f64::INFINITY;
     let mut raw_ms = f64::INFINITY;
     let mut nodes: i64 = 0;
     let mut reason = String::new();
-    for _ in 0..(AI_GATE.perf_repeats as i32) {
+    for _ in 0..AI_GATE.perf_repeats {
         let unit = yardstick_ms()?;
         let started = Instant::now();
         let mut options = AiOptions { rng: Rng::new(rng_seed, 0), budget: AI_BUDGET, should_stop: None };
@@ -868,9 +868,9 @@ fn time_decision(state: &GameState, seat: PlayerId, rng_seed: &str) -> Result<Ti
 /// every shard). `judge_time` false checks the node budget and the boards' width but not the clock
 /// (the unit tests' unoptimised build). Answers the problems found.
 fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<String> {
-    let games = if full { AI_GATE.perf_full_games as i32 } else { AI_GATE.perf_smoke_games as i32 };
+    let games = if full { AI_GATE.perf_full_games } else { AI_GATE.perf_smoke_games };
     let played = games_to_play(games, shard);
-    let limit = AI_GATE.max_decision_ms as f64;
+    let limit = AI_GATE.max_decision_ms;
     let budget_nodes = AI_BUDGET.nodes as i64;
     let shard_label = match shard {
         None => String::new(),

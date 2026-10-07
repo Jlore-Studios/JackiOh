@@ -26,7 +26,7 @@ use jackioh_engine::testkit::{
     opponent_of, query, reduce, seat_to_act, subsystems,
 };
 
-pub use jackioh_engine::testkit::{Scenario, ScenarioOptions, scenario};
+pub use jackioh_engine::testkit::scenario;
 
 /// TS `setup.ts`/`_support.ts`'s `registerAll()`: the real catalog and card scripts, once per process.
 pub fn register_cards() {

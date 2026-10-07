@@ -43,9 +43,9 @@ mod r185_the_ai_never_reads_a_hidden_cards_instance_data {
         let public = redact(&changed, AI);
         for id in &hidden {
             let card = card_by_id(&public, id);
-            assert!(card.as_ref().map_or(true, |card| card.tuning.is_none()), "{id}");
-            assert!(card.as_ref().map_or(true, |card| card.brittle.is_none()), "{id}");
-            assert!(card.as_ref().map_or(true, |card| card.enchantments.is_none()), "{id}");
+            assert!(card.as_ref().is_none_or(|card| card.tuning.is_none()), "{id}");
+            assert!(card.as_ref().is_none_or(|card| card.brittle.is_none()), "{id}");
+            assert!(card.as_ref().is_none_or(|card| card.enchantments.is_none()), "{id}");
         }
         assert_eq!(hash_state(&redact(&changed, AI)), hash_state(&redact(&base, AI)));
     }
@@ -77,7 +77,7 @@ mod r185_the_ai_never_reads_a_hidden_cards_instance_data {
             json!({ "attack": 1 })
         );
         assert_eq!(
-            js(card_by_id(&public, &unit_id).and_then(|card| card.brittle.clone())),
+            js(card_by_id(&public, &unit_id).and_then(|card| card.brittle)),
             json!({ "count": 1, "since": 1 })
         );
     }

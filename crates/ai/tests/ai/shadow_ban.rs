@@ -228,7 +228,7 @@ mod sweep_flags_b25 {
     #[test]
     fn b25_self_harm_needs_a_mean_evaluation_delta_strictly_below_self_harm_delta_over_at_least_min_harm_plays_plays() {
         // Counts stay integers (the fields are whole numbers); sums are the floats TS's arithmetic makes.
-        let bound = AI_SWEEP.self_harm_delta as f64;
+        let bound = AI_SWEEP.self_harm_delta;
         let plays = AI_SWEEP.min_harm_plays as i64;
         let base = |extra: Value| stats(spread(json!({ "affordableTurns": 5, "plays": plays }), Some(&extra)));
         assert_eq!(flags_of(&base(json!({ "evalDeltaSum": bound * plays as f64, "evalDeltaCount": plays }))), json!([]));
@@ -253,7 +253,7 @@ mod sweep_flags_b25 {
             "timeouts": 1,
             "affordableTurns": AI_SWEEP.min_affordable_turns,
             "plays": 0,
-            "evalDeltaSum": (AI_SWEEP.self_harm_delta as f64 - 10.0) * AI_SWEEP.min_harm_plays as f64,
+            "evalDeltaSum": (AI_SWEEP.self_harm_delta - 10.0) * AI_SWEEP.min_harm_plays as f64,
             "evalDeltaCount": AI_SWEEP.min_harm_plays,
         }));
         assert_eq!(flags_of(&all), json!(["error", "timeout", "neverPlayed", "selfHarm"]));
@@ -326,7 +326,7 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
     /// R186 AI_SWEEP sweeps at Easy and at Hard
     #[test]
     fn r186_ai_sweep_sweeps_at_easy_and_at_hard() {
-        let tiers: Vec<Difficulty> = AI_SWEEP.tiers.iter().copied().collect();
+        let tiers: Vec<Difficulty> = AI_SWEEP.tiers.to_vec();
         assert_eq!(tiers, vec![Difficulty::Easy, Difficulty::Hard]);
     }
 
@@ -442,7 +442,7 @@ mod the_two_pass_sweep_r390 {
         assert_eq!(half_of(&stats(json!({ "affordableTurns": at, "plays": 1, "evalDeltaCount": 1 }))), json!(["neverPlayed"]));
         assert_eq!(half_of(&stats(json!({ "affordableTurns": at, "plays": 2, "evalDeltaCount": 2 }))), json!([]));
         assert_eq!(half_of(&stats(json!({ "affordableTurns": at - 1, "plays": 0 }))), json!([]));
-        let half = AI_SWEEP.self_harm_delta as f64 / 2.0;
+        let half = AI_SWEEP.self_harm_delta / 2.0;
         assert_eq!(
             half_of(&stats(json!({ "affordableTurns": 9, "plays": 2, "evalDeltaSum": (half - 1.0) * 2.0, "evalDeltaCount": 2 }))),
             json!(["selfHarm"])
@@ -511,7 +511,7 @@ mod the_two_pass_sweep_r390 {
             "defId": "core-078",
             "affordableTurns": 30,
             "plays": 0,
-            "evalDeltaSum": AI_SWEEP.self_harm_delta as f64 * 100.0,
+            "evalDeltaSum": AI_SWEEP.self_harm_delta * 100.0,
             "evalDeltaCount": 10,
         }));
         assert_eq!(strong["flags"], json!(["neverPlayed", "selfHarm"]));
@@ -578,7 +578,7 @@ mod the_two_pass_sweep_r390 {
     #[test]
     fn r390_r601_self_harm_needs_8_plays_over_pass_2s_games_averaging_below_self_harm_delta() {
         let plays = AI_SWEEP.ban_harm_plays as i64;
-        let bound = AI_SWEEP.self_harm_delta as f64;
+        let bound = AI_SWEEP.self_harm_delta;
         let p1 = vec![result(json!({
             "defId": "core-078",
             "affordableTurns": 4,

@@ -10,18 +10,18 @@
 //!    message."
 //!
 //! Four assertions per seed, in this order:
-//!   1. NO THROW       — playing the game out raises nothing (a panic, here).
-//!   2. TERMINATION    — the game reaches a real `state.result` (hero death, both heroes dead, or
-//!                       the R2 turn cap at TURN_CAP_PLAYER_TURNS player-turns), inside a bounded
-//!                       number of actions. The bound is not a pass condition: hitting it is a
-//!                       reported failure, so a non-terminating game fails loudly instead of
-//!                       hanging CI (the policy never concedes or offers a draw, R84, so those
-//!                       endings cannot occur here).
-//!   3. REPLAY EQUALITY— folding `(seed, decks, log)` in a fresh `create_game` reproduces the same
-//!                       state hash, with no rejected actions. This is what makes SPEC §9.3's
-//!                       "(seed, log) reconstructs any match" true.
-//!   4. FAILURE DETAIL — every card id in the failing seed's two decks is named in the report,
-//!                       because a bare seed number is useless against a 100-card pool.
+//!   1. NO THROW: playing the game out raises nothing (a panic, here).
+//!   2. TERMINATION: the game reaches a real `state.result` (hero death, both heroes dead, or the R2
+//!      turn cap at TURN_CAP_PLAYER_TURNS player-turns), inside a bounded number of actions. The
+//!      bound is not a pass condition: hitting it is a reported failure, so a non-terminating game
+//!      fails loudly instead of hanging CI (the policy never concedes or offers a draw, R84, so those
+//!      endings cannot occur here).
+//!   3. REPLAY EQUALITY: folding `(seed, decks, log)` in a fresh `create_game` reproduces the same
+//!      state hash, with no rejected actions. This is what makes SPEC §9.3's "(seed, log)
+//!      reconstructs any match" true.
+//!   4. FAILURE DETAIL: every card id in the failing seed's two decks is named in the report, because
+//!      a bare seed number is useless against a 100-card pool.
+//!
 //! And at every step, INVARIANTS: `testkit::invariants`'s I1–I5 (summoning sickness and exertion,
 //! R171, and nothing after game over, R216) hold on the state each action is chosen in and on the
 //! state it produces (stage "invariant"), and I6 (no card a seat may not read in its view or legal
@@ -421,7 +421,7 @@ fn play_game(seed: u32) -> Result<GameRun, FuzzFailure> {
         state = result.state;
 
         let mut broken = monitor.after(&result.events, &state);
-        if log.len() % stride == 0 || state.result.is_some() {
+        if log.len().is_multiple_of(stride) || state.result.is_some() {
             broken.extend(monitor.hidden(&state));
         }
         if let Some(first) = broken.first() {
@@ -567,14 +567,7 @@ fn boundary_at(chars: &[char], at: usize) -> bool {
 }
 
 fn starts_with_at(chars: &[char], at: usize, needle: &str) -> bool {
-    let mut index = at;
-    for expected in needle.chars() {
-        if chars.get(index) != Some(&expected) {
-            return false;
-        }
-        index += 1;
-    }
-    true
+    needle.chars().enumerate().all(|(offset, expected)| chars.get(at + offset) == Some(&expected))
 }
 
 /// `.replace(/"[^"]*"/g, '"…"')`.
@@ -783,7 +776,7 @@ fn report(failures: &[Failure], ran: u32, elapsed_ms: f64) -> String {
         groups.entry(failure.signature.clone()).or_default().push(failure);
     }
     let mut ordered: Vec<(String, Vec<&Failure>)> = groups.into_iter().collect();
-    ordered.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+    ordered.sort_by_key(|group| std::cmp::Reverse(group.1.len()));
 
     let deck_size = usize::try_from(DECK_SIZE).unwrap_or(0);
     let mut lines: Vec<String> = Vec::new();
@@ -1071,7 +1064,7 @@ pub struct SeedHandicap {
 /// Which seat is handicapped, and how: seeds rotate over Medium and Hard and over p1 and p2.
 pub fn handicap_for_seed(seed: u32) -> SeedHandicap {
     let tier = if seed % 2 == 1 { Difficulty::Hard } else { Difficulty::Medium };
-    let seat = if (seed / 2) % 2 == 0 { PlayerId::P1 } else { PlayerId::P2 };
+    let seat = if (seed / 2).is_multiple_of(2) { PlayerId::P1 } else { PlayerId::P2 };
     SeedHandicap {
         seat,
         tier,
@@ -1162,7 +1155,7 @@ fn play_seed(seed: u32) -> Outcome {
             log.push(action);
             state = result.state;
             let mut broken = monitor.after(&result.events, &state);
-            if log.len() % stride == 0 || state.result.is_some() {
+            if log.len().is_multiple_of(stride) || state.result.is_some() {
                 broken.extend(monitor.hidden(&state));
             }
             if let Some(first) = broken.first() {

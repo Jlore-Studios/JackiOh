@@ -53,7 +53,7 @@ mod r602_the_ais_view_keeps_what_a_live_face_down_card_visibly_does {
             assert_eq!(card_by_id(&seen, &trap.id).map(|card| card.def_id.clone()), Some(HIDDEN_DEF_ID.to_string()));
             for unit in pile_bottoms(&state, AI) {
                 let truth = unit_view(&state, &unit);
-                let seen_unit = card_by_id(&seen, &unit.id).map(|card| card.clone()).expect("the unit is public");
+                let seen_unit = card_by_id(&seen, &unit.id).cloned().expect("the unit is public");
                 let shown = unit_view(&seen, &seen_unit);
                 assert_eq!(
                     (shown.attack, shown.health),
@@ -75,7 +75,7 @@ mod r602_the_ais_view_keeps_what_a_live_face_down_card_visibly_does {
     #[test]
     fn r602_every_move_the_ais_determinizations_offer_is_legal_on_the_true_board_and_so_is_its_decision() {
         let state = siphoned(true);
-        let legal: IndexSet<String> = legal_actions(&state, AI).iter().map(|action| action_key(action)).collect();
+        let legal: IndexSet<String> = legal_actions(&state, AI).iter().map(action_key).collect();
         assert!(!legal.iter().any(|key| key.contains("\"attack\"")));
         let seen = redact(&state, AI);
         for k in 0..8 {

@@ -310,7 +310,7 @@ mod redact_b9 {
         let public = redact(&state, AI);
         for card in every_card(&state) {
             let seen = card_by_id(&public, &card.id).expect("every card stays");
-            assert_eq!(readable(&seen), readable(&card));
+            assert_eq!(readable(seen), readable(card));
         }
     }
 
@@ -701,7 +701,7 @@ mod determinize_b12 {
             let after = card_by_id(&world, &card.id);
             assert!(after.is_some(), "{}", card.id);
             let after = after.expect("the card");
-            assert_eq!(readable(&after), readable(&card), "{}", card.id);
+            assert_eq!(readable(after), readable(card), "{}", card.id);
         }
     }
 
@@ -719,7 +719,7 @@ mod determinize_b12 {
                     let after = card_by_id(&world, &card.id);
                     assert!(after.is_some(), "{at} {seat} {}", card.id);
                     let after = after.expect("the card");
-                    assert_eq!(readable(&after), readable(&card), "{at} {seat} {}", card.id);
+                    assert_eq!(readable(after), readable(card), "{at} {seat} {}", card.id);
                 }
             }
         }
@@ -844,7 +844,7 @@ mod determinize_b12 {
         assert_eq!(every_card(&world).len(), every_card(&state).len());
         for card in every_card(&state) {
             let after = card_by_id(&world, &card.id).expect("every card stays");
-            assert_eq!(readable(&after), readable(&card), "{}", card.id);
+            assert_eq!(readable(after), readable(card), "{}", card.id);
         }
     }
 

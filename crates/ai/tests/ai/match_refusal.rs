@@ -85,15 +85,17 @@ mod surface_play_match_when_a_controller_misbehaves {
         let fired_on: OnceCell<GameState> = OnceCell::new();
         let mut replacement: Option<ActionBody> = None;
         let record = {
-            let mut hooks = MatchHooks::default();
-            hooks.override_choice = Some(Box::new(scripted(Misbehaviour::Refuse, &cfg, &fired_on)));
-            hooks.after_action = Some(Box::new(
-                |before: &GameState, _after: &GameState, seat: PlayerId, action: &ActionBody| {
-                    if fired_on.get() == Some(before) && seat == PlayerId::P1 {
-                        replacement = Some(action.clone());
-                    }
-                },
-            ));
+            let mut hooks = MatchHooks {
+                override_choice: Some(Box::new(scripted(Misbehaviour::Refuse, &cfg, &fired_on))),
+                after_action: Some(Box::new(
+                    |before: &GameState, _after: &GameState, seat: PlayerId, action: &ActionBody| {
+                        if fired_on.get() == Some(before) && seat == PlayerId::P1 {
+                            replacement = Some(action.clone());
+                        }
+                    },
+                )),
+                ..MatchHooks::default()
+            };
             play_match(&cfg, &mut hooks)
         };
 
@@ -119,8 +121,10 @@ mod surface_play_match_when_a_controller_misbehaves {
         let cfg = config("refusal-throw", SeatController::Random);
         let fired_on: OnceCell<GameState> = OnceCell::new();
         let record = {
-            let mut hooks = MatchHooks::default();
-            hooks.override_choice = Some(Box::new(scripted(Misbehaviour::Throw, &cfg, &fired_on)));
+            let mut hooks = MatchHooks {
+                override_choice: Some(Box::new(scripted(Misbehaviour::Throw, &cfg, &fired_on))),
+                ..MatchHooks::default()
+            };
             play_match(&cfg, &mut hooks)
         };
 
@@ -138,8 +142,10 @@ mod surface_play_match_when_a_controller_misbehaves {
         let cfg = config("refusal-null", SeatController::Greedy);
         let fired_on: OnceCell<GameState> = OnceCell::new();
         let record = {
-            let mut hooks = MatchHooks::default();
-            hooks.override_choice = Some(Box::new(scripted(Misbehaviour::Null, &cfg, &fired_on)));
+            let mut hooks = MatchHooks {
+                override_choice: Some(Box::new(scripted(Misbehaviour::Null, &cfg, &fired_on))),
+                ..MatchHooks::default()
+            };
             play_match(&cfg, &mut hooks)
         };
 

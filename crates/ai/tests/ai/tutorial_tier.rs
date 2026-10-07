@@ -224,7 +224,7 @@ mod r290_the_tutorial_tier_by_play {
     /// R290 tierGame seats greedy at a human's resources against the AI at AI_TUTORIAL or Easy, on the same seed, seats alternating
     #[test]
     fn r290_tier_game_seats_greedy_at_a_humans_resources_against_the_ai_at_ai_tutorial_or_easy_on_the_same_seed_seats_alternating() {
-        assert!(TUTORIAL_TIER.easy_games <= TUTORIAL_TIER.tutorial_games);
+        const { assert!(TUTORIAL_TIER.easy_games <= TUTORIAL_TIER.tutorial_games) };
         for n in [1, 2, 3] {
             let human_seat = human_seat_of(n);
             let ai_seat = human_seat.opponent();

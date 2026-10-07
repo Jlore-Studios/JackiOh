@@ -85,10 +85,7 @@ fn board(opts: Value) -> GameState {
 }
 
 fn units_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
-    active_units_of(state, player)
-        .into_iter()
-        .map(|card| CardInstance::clone(&card))
-        .collect()
+    active_units_of(state, player).into_iter().cloned().collect()
 }
 
 fn first_unit(state: &GameState, player: PlayerId) -> CardInstance {
@@ -147,7 +144,8 @@ mod evaluate_patch_v0_2_0s_mechanics {
             "p1": { "field": [VANILLA], "backrow": ["core-006"], "hand": ["core-053"] },
             "p2": { "hand": ["core-005"] },
         }));
-        let picks: [(&str, fn(&GameState) -> CardInstance); 3] = [
+        type Pick = fn(&GameState) -> CardInstance;
+        let picks: [(&str, Pick); 3] = [
             ("unit", |state| first_unit(state, AI)),
             ("backrow", first_backrow),
             ("hand", first_hand),
@@ -180,7 +178,7 @@ mod evaluate_patch_v0_2_0s_mechanics {
     fn b3_1_a_readable_animated_backrow_card_is_partly_a_unit_already_worth_animated_share_of_its_unit_face() {
         let mut no_share: EvalWeights = AI_EVAL;
         no_share.animated_share = 0.0;
-        assert!(AI_EVAL.animated_share > 0.0);
+        const { assert!(AI_EVAL.animated_share > 0.0) };
         for def_id in [TESLA, FROSTSPATULA] {
             let state = board(json!({ "p1": { "backrow": [def_id], "hand": ["core-053"] }, "p2": { "hand": ["core-005"] } }));
             let card = first_backrow(&state);
@@ -236,7 +234,7 @@ mod evaluate_patch_v0_2_0s_mechanics {
         };
         let mut none: EvalWeights = AI_EVAL;
         none.spell_damage = 0.0;
-        assert!(AI_EVAL.spell_damage > 0.0);
+        const { assert!(AI_EVAL.spell_damage > 0.0) };
         assert_close(
             worth(&state, base) - unit_worth(&state, base, &none),
             2.0 * AI_EVAL.spell_damage,
@@ -363,7 +361,7 @@ mod evaluate_patch_v0_2_0s_mechanics {
             board(json!({ "p1": { "hand": [{ "def": "core-053", "costMod": cost_mod }] }, "p2": p2 }))
         };
         let plain = eval(&hand(0, json!({})), AI);
-        assert!(AI_EVAL.hand_cost_delta > 0.0);
+        const { assert!(AI_EVAL.hand_cost_delta > 0.0) };
         assert_close(plain - eval(&hand(1, json!({})), AI), AI_EVAL.hand_cost_delta, 10, "dearer");
         assert_close(eval(&hand(-1, json!({})), AI) - plain, AI_EVAL.hand_cost_delta, 10, "cheaper");
 

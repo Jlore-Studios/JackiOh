@@ -132,7 +132,7 @@ mod simulate_reply {
         // Flood bounces Midrange Menace. p1 has nothing left to do, so R82 ends its turn on the spot and
         // p2 is into its turn 10, having drawn.
         let flood = s.hand(AI).first().map(|card| card.id.clone()).unwrap_or_default();
-        let ended = act(s.state(), AI, &body(json!({ "type": "play", "instanceId": flood })));
+        let ended = act(s.state(), AI, body(json!({ "type": "play", "instanceId": flood })));
         assert_eq!(ended.active, HUMAN);
         assert_eq!(ended.turn, TURN + 1);
         assert!(ended.players[HUMAN].hand.iter().any(|card| card.id == menace));

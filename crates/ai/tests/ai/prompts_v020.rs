@@ -112,7 +112,7 @@ fn install() {
     jackioh_cards::register_all();
     let mut catalog = registered_catalog().clone();
     catalog.insert(E18.to_string(), e18_def());
-    register_catalog_as(catalog, &catalog_version());
+    register_catalog_as(catalog, catalog_version());
     let mut scripts = registered_scripts().clone();
     let script = continuations();
     scripts.insert(E18.to_string(), CardScripts { base: script.clone(), radiant: script });

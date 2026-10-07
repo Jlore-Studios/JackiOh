@@ -113,14 +113,14 @@ fn name_of(def_id: &str) -> String {
 
 /// A sweep flag's name, as TS wrote it (`neverPlayed` …).
 fn flag_names(flags: &[SweepFlag]) -> String {
-    flags.iter().map(|flag| literal(flag)).collect::<Vec<_>>().join(", ")
+    flags.iter().map(literal).collect::<Vec<_>>().join(", ")
 }
 
 fn mean_delta(stats: &SweepStats) -> String {
     if stats.eval_delta_count == 0 {
         return "n/a".to_string();
     }
-    to_fixed(stats.eval_delta_sum / f64::from(stats.eval_delta_count as i32), DECIMALS)
+    to_fixed(stats.eval_delta_sum / f64::from(stats.eval_delta_count), DECIMALS)
 }
 
 fn row(stats: &SweepStats, tier: &str, flags: &str) -> String {

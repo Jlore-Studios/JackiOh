@@ -2007,7 +2007,7 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             at,
         });
     }
-    queued.sort_by(|a, b| b.at.cmp(&a.at));
+    queued.sort_by_key(|entry| std::cmp::Reverse(entry.at));
     // A commit's catalog is one snapshot, so it can ship one patch: two fragments added together
     // would have to split one diff between them.
     for pair in queued.windows(2) {
@@ -2350,7 +2350,7 @@ mod tests {
             assert_eq!(prefix_rank("001"), 1.0);
             assert_eq!(prefix_rank("051-1"), 51.1);
             assert_eq!(prefix_rank("t-rush"), f64::INFINITY);
-            let mut keys = vec![
+            let mut keys = [
                 sort_key("x", None),
                 sort_key("t-rush", Some("core-t-rush")),
                 sort_key("classic/001-a", Some("classic-001")),
@@ -3697,7 +3697,7 @@ mod tests {
                             .and_then(Json::as_array)
                             .is_some_and(|tags| tags.iter().any(|tag| tag.as_str() == Some("Token")))
                 };
-                let tokens = first.values().filter(|def| is_token(*def)).count();
+                let tokens = first.values().filter(|def| is_token(def)).count();
                 assert_eq!(first.len() - tokens, 100);
                 assert_eq!(tokens, 9);
                 assert!(!snapshot("v0.1.0").contains_key("core-t-coin"));

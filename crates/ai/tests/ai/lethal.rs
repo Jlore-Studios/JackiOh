@@ -155,12 +155,14 @@ mod the_lethal_solvers_walks {
         config.max_actions = Some(150);
         let mut played: Vec<GameState> = Vec::new();
         {
-            let mut hooks = MatchHooks::default();
-            hooks.after_action = Some(Box::new(
-                |before: &GameState, _after: &GameState, _seat: PlayerId, _action: &ActionBody| {
-                    played.push(before.clone());
-                },
-            ));
+            let mut hooks = MatchHooks {
+                after_action: Some(Box::new(
+                    |before: &GameState, _after: &GameState, _seat: PlayerId, _action: &ActionBody| {
+                        played.push(before.clone());
+                    },
+                )),
+                ..MatchHooks::default()
+            };
             play_match(&config, &mut hooks);
         }
         states.extend(played);

@@ -92,7 +92,7 @@ pub struct Args {
 
 /// `cargo jackioh stats`.
 pub fn run(args: Args) -> Result<()> {
-    let games = args.games.unwrap_or(AI_DEV_RUN.games as i32);
+    let games = args.games.unwrap_or(AI_DEV_RUN.games);
     let series = args.series.clone().unwrap_or_else(|| AI_DEV_RUN.series.to_string());
     jackioh_cards::register_all();
 

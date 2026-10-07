@@ -39,11 +39,11 @@ fn pile_game(seed: &str, trap_def: &str) -> (GameState, String, String) {
     let mut state = dealt_game(seed);
     let slot = ZoneSlot { player: PlayerId::P2, row: Row::Backrow, lane: 1 };
     let mut trap = new_instance(&mut state, trap_def, PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
-    if !place_on_field(&mut state, &mut trap, &slot, PlaceOnFieldOptions::default()) {
+    if !place_on_field(&mut state, &mut trap, slot, PlaceOnFieldOptions::default()) {
         panic!("no zone");
     }
     let mut top = new_instance(&mut state, &field_spell(), PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
-    if !place_on_field(&mut state, &mut top, &slot, PlaceOnFieldOptions { stack: Some(true) }) {
+    if !place_on_field(&mut state, &mut top, slot, PlaceOnFieldOptions { stack: Some(true) }) {
         panic!("no stack");
     }
     (state, trap.id.clone(), top.id.clone())

@@ -107,7 +107,7 @@ mod candidate_actions_b14 {
         let state = mid_game();
         let legal = legal_actions(&state, AI);
         let candidates = candidate_actions(&state, AI);
-        let legal_keys: IndexSet<String> = legal.iter().map(|action| action_key(action)).collect();
+        let legal_keys: IndexSet<String> = legal.iter().map(action_key).collect();
 
         // Nothing that is not legal, and none of the four skipped types.
         for action in &candidates {
@@ -115,7 +115,7 @@ mod candidate_actions_b14 {
             assert!(!SKIPPED.contains(&action.action_type()));
         }
         // No duplicates.
-        let candidate_keys: IndexSet<String> = candidates.iter().map(|action| action_key(action)).collect();
+        let candidate_keys: IndexSet<String> = candidates.iter().map(action_key).collect();
         assert_eq!(candidate_keys.len(), candidates.len());
 
         // Every legal non-play action of a kept type is a candidate.
@@ -141,7 +141,7 @@ mod candidate_actions_b14 {
             let lanes: Vec<i32> = group.iter().filter_map(lane_of).collect();
             if lanes.is_empty() {
                 let offered_keys: Vec<String> = offered.iter().map(|action| action_key(action)).collect();
-                let group_keys: Vec<String> = group.iter().map(|action| action_key(action)).collect();
+                let group_keys: Vec<String> = group.iter().map(action_key).collect();
                 assert_eq!(offered_keys, group_keys, "{key}");
                 continue;
             }
@@ -231,9 +231,9 @@ mod candidate_actions_b14 {
         // R211 offers concede beside the prompt's answers, and the AI never takes it (R84, R188).
         let answers: Vec<ActionBody> =
             legal_actions(&state, AI).into_iter().filter(|action| *action != ActionBody::Concede).collect();
-        let mut candidate_keys: Vec<String> = candidates.iter().map(|action| action_key(action)).collect();
+        let mut candidate_keys: Vec<String> = candidates.iter().map(action_key).collect();
         candidate_keys.sort();
-        let mut answer_keys: Vec<String> = answers.iter().map(|action| action_key(action)).collect();
+        let mut answer_keys: Vec<String> = answers.iter().map(action_key).collect();
         answer_keys.sort();
         assert_eq!(candidate_keys, answer_keys);
         assert!(candidates.iter().all(|action| matches!(action, ActionBody::Answer { .. })));

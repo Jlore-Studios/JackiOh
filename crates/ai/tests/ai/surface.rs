@@ -175,7 +175,7 @@ mod surface_score_line {
     #[test]
     fn a_line_whose_first_action_is_not_a_candidate_is_cut_there_and_scored_by_terminal_score() {
         let state = quiet_turn();
-        assert!(!is_legal(&state, AI, &bogus()));
+        assert!(!is_legal(&state, AI, bogus()));
         assert_eq!(
             score_line(&state, AI, &[bogus()], &create_node_counter(20, None), false, None),
             Some(terminal_score(&state, AI, TURN, &create_node_counter(20, None))),
@@ -233,10 +233,10 @@ mod surface_beam_search {
 
         assert!(!lines.is_empty());
         assert!(counter.used() <= AI_GATE_BUDGET.nodes);
-        let firsts: IndexSet<String> = candidate_actions(&det, AI).iter().map(|action| action_key(action)).collect();
+        let firsts: IndexSet<String> = candidate_actions(&det, AI).iter().map(action_key).collect();
         for (index, line) in lines.iter().enumerate() {
             assert!(!line.actions.is_empty());
-            assert!(line.actions.len() <= AI_GATE_BUDGET.max_depth as usize);
+            assert!(line.actions.len() <= AI_GATE_BUDGET.max_depth);
             assert!(firsts.contains(&action_key(&line.actions[0])));
             if index > 0 {
                 assert!(line.score <= lines[index - 1].score);
@@ -276,9 +276,9 @@ mod surface_find_lethal {
         for det in &dets {
             let mut state = det.clone();
             // One counter for the whole replay, so every step gets a nonce of its own.
-            let mut replay = create_node_counter(20, None);
+            let replay = create_node_counter(20, None);
             for action in line.iter().flatten() {
-                state = match simulate(&state, AI, action, &mut replay) {
+                state = match simulate(&state, AI, action, &replay) {
                     Some(Ok(next)) => next,
                     _ => panic!("the lethal line was refused at {}", action.action_type()),
                 };

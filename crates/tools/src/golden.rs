@@ -236,15 +236,17 @@ fn check_snapshot(
     snapshot: &Value,
     state: &GameState,
     events: &[GameEvent],
-) -> Result<(), Mismatch> {
-    let mismatch = |which: &'static str, expected: String, actual: String, text: &str| Mismatch {
-        seed: seed.to_string(),
-        step: step.to_string(),
-        which,
-        expected,
-        actual,
-        action: action.map(str::to_string),
-        diff: Some(write_diff(seed, step, which, text)),
+) -> Result<(), Box<Mismatch>> {
+    let mismatch = |which: &'static str, expected: String, actual: String, text: &str| {
+        Box::new(Mismatch {
+            seed: seed.to_string(),
+            step: step.to_string(),
+            which,
+            expected,
+            actual,
+            action: action.map(str::to_string),
+            diff: Some(write_diff(seed, step, which, text)),
+        })
     };
 
     let s = hash_state(state);
@@ -273,16 +275,21 @@ fn check_snapshot(
     Ok(())
 }
 
+/// One game's replay: the number of steps replayed, or where it diverged.
+type Replayed = Result<usize, Box<Mismatch>>;
+
 /// Replays one parsed line of `games.jsonl` (§13.3). `Ok` carries the number of steps replayed.
-fn replay_game(seed: &str, game: &Value) -> Result<usize, Mismatch> {
-    let fail = |step: &str, which: &'static str, expected: String, actual: String| Mismatch {
-        seed: seed.to_string(),
-        step: step.to_string(),
-        which,
-        expected,
-        actual,
-        action: None,
-        diff: None,
+fn replay_game(seed: &str, game: &Value) -> Replayed {
+    let fail = |step: &str, which: &'static str, expected: String, actual: String| {
+        Box::new(Mismatch {
+            seed: seed.to_string(),
+            step: step.to_string(),
+            which,
+            expected,
+            actual,
+            action: None,
+            diff: None,
+        })
     };
     if game["v"].as_u64() != Some(u64::from(FORMAT_VERSION)) {
         return Err(fail("begin", "line", format!("format version {FORMAT_VERSION}"), game["v"].to_string()));
@@ -308,10 +315,10 @@ fn replay_game(seed: &str, game: &Value) -> Result<usize, Mismatch> {
         let action: Action = match serde_json::from_value(step["a"].clone()) {
             Ok(action) => action,
             Err(error) => {
-                return Err(Mismatch {
+                return Err(Box::new(Mismatch {
                     action: Some(action_json),
-                    ..fail(&label, "line", "an Action".into(), error.to_string())
-                });
+                    ..*fail(&label, "line", "an Action".into(), error.to_string())
+                }));
             }
         };
 
@@ -320,20 +327,20 @@ fn replay_game(seed: &str, game: &Value) -> Result<usize, Mismatch> {
         let hash = fnv1a32_utf16(&text);
         let expected = recorded(step, "l");
         if hash != expected {
-            return Err(Mismatch {
+            return Err(Box::new(Mismatch {
                 action: Some(action_json),
                 diff: Some(write_diff(seed, &label, "l", &text)),
-                ..fail(&label, "l", expected, hash)
-            });
+                ..*fail(&label, "l", expected, hash)
+            }));
         }
 
         let result = reduce(&state, &action);
         if let Some(error) = result.error {
-            return Err(Mismatch {
+            return Err(Box::new(Mismatch {
                 action: Some(action_json),
                 diff: Some(write_diff(seed, &label, "refused", &hashed_state_text(&state))),
-                ..fail(&label, "refused", "reduce to apply the recorded action".into(), format!("a refusal: {error}"))
-            });
+                ..*fail(&label, "refused", "reduce to apply the recorded action".into(), format!("a refusal: {error}"))
+            }));
         }
         state = result.state;
         check_snapshot(seed, &label, Some(&action_json), step, &state, &result.events)?;
@@ -375,14 +382,14 @@ fn run_check(args: &CheckArgs) -> Result<()> {
     let lines: Vec<(usize, &str)> = text.lines().enumerate().filter(|(_, line)| !line.trim().is_empty()).collect();
 
     // `None` for a game the --seed filter leaves out.
-    let outcomes: Vec<Option<(String, Result<usize, Mismatch>)>> = lines
+    let outcomes: Vec<Option<(String, Replayed)>> = lines
         .par_iter()
         .map(|&(index, line)| {
             let game: Value = match serde_json::from_str(line) {
                 Ok(game) => game,
                 Err(error) => {
                     let seed = format!("line-{}", index + 1);
-                    let outcome = Err(Mismatch {
+                    let outcome = Err(Box::new(Mismatch {
                         seed: seed.clone(),
                         step: "begin".into(),
                         which: "line",
@@ -390,7 +397,7 @@ fn run_check(args: &CheckArgs) -> Result<()> {
                         actual: error.to_string(),
                         action: None,
                         diff: None,
-                    });
+                    }));
                     return Some((seed, outcome));
                 }
             };
@@ -405,7 +412,7 @@ fn run_check(args: &CheckArgs) -> Result<()> {
 
     let mut games = 0usize;
     let mut steps = 0usize;
-    let mut failures: Vec<Mismatch> = Vec::new();
+    let mut failures: Vec<Box<Mismatch>> = Vec::new();
     for (_, outcome) in outcomes.into_iter().flatten() {
         games += 1;
         match outcome {
