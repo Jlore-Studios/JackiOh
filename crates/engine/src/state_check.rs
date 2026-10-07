@@ -49,50 +49,6 @@ use crate::wire::{
 use crate::work::{PAUSE_KEY, PausedStep, WorkPlan, paused_of};
 use crate::zones::{MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot};
 
-/// A row's lanes (§3), 1 up (TS `zones.slotsOf`'s count).
-fn row_size(row: Row) -> i32 {
-    match row {
-        Row::Units => UNIT_ZONES,
-        Row::Backrow => BACKROW_ZONES,
-    }
-}
-
-/// TS `zones.slotOf(state, instance)`: the field zone a card stands in, or null off the field.
-fn slot_of(card: &CardInstance) -> Option<ZoneRef> {
-    match card.zone {
-        Zone::Field { player, row, lane } => Some(ZoneRef { player, row, lane }),
-        _ => None,
-    }
-}
-
-/// TS `zones.isReserved(state, ref)`: R64's hold for a dying Reborn unit, or B3.1's home zone.
-fn is_reserved(state: &GameState, at: &ZoneRef) -> bool {
-    if state
-        .reserved
-        .iter()
-        .any(|r| r.player == at.player && r.row == at.row && r.lane == at.lane)
-    {
-        return true;
-    }
-    state.homes.iter().flatten().any(|home| {
-        home.zone.player == at.player && home.zone.row == at.row && home.zone.lane == at.lane
-    })
-}
-
-/// TS `zones.reserveZone(state, ref)`.
-fn reserve_zone(state: &mut GameState, at: &ZoneRef) {
-    if !is_reserved(state, at) {
-        state.reserved.push(*at);
-    }
-}
-
-/// TS `zones.releaseZone(state, ref)`.
-fn release_zone(state: &mut GameState, at: &ZoneRef) {
-    state
-        .reserved
-        .retain(|r| !(r.player == at.player && r.row == at.row && r.lane == at.lane));
-}
-
 /// The card as it stands in the state now, by id; the copy itself when it is nowhere.
 fn live(state: &GameState, card: &CardInstance) -> CardInstance {
     find_instance(state, &card.id).cloned().unwrap_or_else(|| card.clone())
@@ -459,10 +415,10 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
     let mut back: Vec<(String, ZoneRef)> = Vec::new();
     for entry in &pass.reborn {
         // R563: a C+ #35 Rollback that let the zone go has given it to the snapshot's card; no return.
-        if !is_reserved(sink.state, &entry.at) {
+        if !crate::zones::is_reserved(sink.state, &entry.at) {
             continue;
         }
-        release_zone(sink.state, &entry.at);
+        crate::zones::release_zone(sink.state, &entry.at);
         // R127's shape at the level of a unit: the pass names it by id, so a Death hook that exiled or
         // unmade it in between leaves nothing to bring back rather than a stale object to resurrect.
         // A unit token is the exception R175 makes: it ceased to exist as it left (R11), so no pile
@@ -732,7 +688,7 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                 reborn: has_keyword(&view.keywords, KeywordKind::Reborn),
                 attack: view.attack,
                 max_health: view.max_health,
-                at: slot_of(&unit),
+                at: crate::zones::slot_of(sink.state, &unit),
                 token: crate::zones::is_unit_token(sink.state, &unit),
                 // R78 resets an instance as it leaves, so the Death hook of step 3 reads this snapshot (R89).
                 snapshot: unit.clone(),
@@ -765,7 +721,7 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
         if card.reborn
             && let Some(at) = card.at
         {
-            reserve_zone(sink.state, &at);
+            crate::zones::reserve_zone(sink.state, &at);
             // R175: a unit token ceases to exist below and no pile will hold it, so its return is
             // carried by the pass itself, with the X/X it was summoned as.
             // Read off the snapshot: the move above has already reset the instance (R78).
@@ -838,9 +794,9 @@ pub fn sacrifice_together(sink: &mut EngineSink<'_>, cards: &[CardInstance]) {
     let mut ordered: Vec<CardInstance> = Vec::new();
     for player in order {
         for row in [Row::Units, Row::Backrow] {
-            for lane in 1..=row_size(row) {
+            for lane in 1..=crate::zones::row_size(row) {
                 for card in cards {
-                    if let Some(at) = slot_of(card)
+                    if let Some(at) = crate::zones::slot_of(sink.state, card)
                         && at.player == player
                         && at.row == row
                         && at.lane == lane

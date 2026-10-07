@@ -18,11 +18,6 @@ use crate::script::{HookArgs, ReplacementMoment, ReplacementWhere, Script, Targe
 use crate::state::{CardInstance, EngineError, GameState, find_instance};
 use crate::wire::{CardType, PlayerId, Row, Selection, TargetAim, TargetDecl, Zone, opponent_of};
 
-/// A card acting on the field: a unit on top of its pile, or a backrow card (§3.2, R13).
-fn acts_on_field(state: &GameState, card: &CardInstance) -> bool {
-    matches!(card.zone, Zone::Field { .. }) && !crate::zones::is_buried(state, card)
-}
-
 /// One face's own targeting cost, read with the card as "this" (a pure read, §10.9).
 fn face_cost(script: &Script, state: &GameState, self_: &CardInstance) -> i32 {
     let Some(hook) = &script.targeting_discards else {
@@ -51,7 +46,7 @@ fn fused_cost(state: &GameState, self_: &CardInstance, def_id: &str) -> i32 {
 /// B5 E5, Classic #89: how many cards a player must also discard to target this card now — its
 /// `targetingDiscards`, while it acts on the field. A Vanilla card has no text (§6.3, R115).
 pub fn targeting_discards_of(state: &GameState, card: &CardInstance) -> i32 {
-    if card.vanilla || !acts_on_field(state, card) {
+    if card.vanilla || !crate::zones::acts_on_field(state, card) {
         return 0;
     }
     if crate::catalog::fused_id_parts(Some(state), &card.def_id).is_some() {

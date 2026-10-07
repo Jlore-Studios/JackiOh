@@ -33,11 +33,6 @@ pub struct HookOptions {
 /// `work.parkWork`), so the number survives a pause and a JSON round trip as the rest of the data does.
 pub const MANA_BEFORE_PLAY_KEY: &str = "__manaBeforePlay";
 
-/// TS `stays.exitMark(state)`: the field's departures so far (R174). A private copy.
-fn exit_mark(state: &GameState) -> u32 {
-    state.field_exits.as_ref().map_or(0, |exits| exits.count)
-}
-
 /// TS `makeContext(sink, self, options)`. The context borrows the sink for as long as it lives (it is
 /// the sink, plus this run's facts); `self_` is copied in as the card stands now.
 pub fn make_context<'b>(
@@ -57,7 +52,7 @@ pub fn make_context<'b>(
     // and what its first pass summoned in an earlier action comes with it (`EffectContext.summoned`).
     let events_from = sink.events.len();
     // R174: the stay every card on the field has as this script begins.
-    let exits_from = Some(exit_mark(sink.state));
+    let exits_from = Some(crate::stays::exit_mark(sink.state));
     // R98: a run that began in the resolving zone is the resolving card's while it stays there.
     let self_resolving = if self_.is_some_and(|card| card.zone.z() == ZoneName::Resolving) {
         Some(true)

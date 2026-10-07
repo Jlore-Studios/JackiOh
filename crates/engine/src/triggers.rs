@@ -139,11 +139,6 @@ fn sides_of(state: &GameState) -> [PlayerId; 2] {
     }
 }
 
-/// TS `stays.exitMark`: the field's departures so far (R174).
-fn exit_mark(state: &GameState) -> u32 {
-    state.field_exits.as_ref().map_or(0, |exits| exits.count)
-}
-
 // ---------------------------------------------------------------------------
 // 1. The registry.
 // ---------------------------------------------------------------------------
@@ -244,7 +239,7 @@ fn library_holders(state: &GameState, player: PlayerId) -> Vec<TriggerHolder> {
     let mut cards: Vec<&CardInstance> = state.players[player]
         .library
         .iter()
-        .filter(|card| !crate::scripts::script_of(state, card).deck_triggers.is_empty())
+        .filter(|card| !crate::scripts::script_of(state, *card).deck_triggers.is_empty())
         .collect();
     // Stable, as TS's `Array.prototype.sort` (SURFACE §4.4.1).
     cards.sort_by(|a, b| {
@@ -417,7 +412,7 @@ fn owed_mark_of(state: &GameState, entry: &QueuedTrigger) -> u32 {
         .get("exitsFrom")
         .and_then(Value::as_u64)
         .and_then(|mark| u32::try_from(mark).ok())
-        .unwrap_or_else(|| exit_mark(state))
+        .unwrap_or_else(|| crate::stays::exit_mark(state))
 }
 
 fn player_value(player: PlayerId) -> Value {

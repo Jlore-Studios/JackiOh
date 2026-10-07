@@ -89,36 +89,6 @@ fn has_hook(state: &GameState, card: &CardInstance, hook: HookName) -> bool {
     script.hook_named(hook.as_str()).is_some()
 }
 
-/// `work.paused`: a prompt is open or the game is over, so a sequence stops where it stands (§9.3).
-/// (A private copy, fullsend builder rule 5.)
-fn is_paused(sink: &EngineSink) -> bool {
-    sink.state.pending.is_some() || sink.state.result.is_some()
-}
-
-/// `triggers.settle(sink)` with TS's default options: dispatch, owed work, the state check and the
-/// trigger queue until all is quiet or a prompt stops it (§10.3).
-fn settle(sink: &mut EngineSink) {
-    crate::triggers::settle(sink, crate::triggers::SettleOptions::default());
-}
-
-/// `work.owe(sink, resume)` for one `Resume`, which TS parks through `work.pushWork`: a new item
-/// numbered from `state.nextSeq` (R68's creation order), owned by the active player, placed at
-/// `state.workCursor` and the cursor advanced past it (R113). (A private copy, fullsend builder
-/// rule 5: the boundary's two parks are its only callers here.)
-fn owe(sink: &mut EngineSink, resume: Resume) {
-    let state = &mut *sink.state;
-    let item = WorkItem {
-        id: format!("w{}", state.next_seq),
-        seq: state.next_seq,
-        owner: state.active,
-        resume,
-    };
-    state.next_seq += 1;
-    let at = state.work_cursor.min(state.work.len());
-    state.work.insert(at, item);
-    state.work_cursor = at + 1;
-}
-
 /// `prompts.runResume(sink, resume, { controller })`.
 fn run_resume_for(sink: &mut EngineSink, resume: &Resume, controller: PlayerId) {
     let _ = crate::prompts::run_resume(
@@ -162,7 +132,7 @@ fn run_delayed(sink: &mut EngineSink, phase: Phase, player: PlayerId, due_before
     // at, which a pause carries to the step that picks the stage up (R113).
     for entry in due_entries(&*sink.state, phase, player, due_before) {
         // One entry at a time in R68's order: a prompt, or a game that has just ended, stops the run.
-        if is_paused(sink) {
+        if crate::work::paused(sink) {
             return;
         }
         if !run_due_entry(sink, player, &entry) {
@@ -171,7 +141,7 @@ fn run_delayed(sink: &mut EngineSink, phase: Phase, player: PlayerId, due_before
         // R59: the check runs after the whole delayed effect, never between its parts. One that asked
         // is not whole yet — the answer finishes it — so the check is owed to the step that picks the
         // boundary up after it (`check_before_delayed`), before the next delayed effect runs (R174).
-        if is_paused(sink) {
+        if crate::work::paused(sink) {
             return;
         }
         if !check_after_delayed(sink) {
@@ -298,12 +268,12 @@ fn check_after_delayed(sink: &mut EngineSink) -> bool {
     // traps did is checked in turn, until nothing more is said (§4.5, R59).
     loop {
         crate::triggers::dispatch_pending(sink);
-        if is_paused(sink) {
+        if crate::work::paused(sink) {
             return false;
         }
         let emitted = sink.events.len();
         crate::state_check::state_check(sink);
-        if is_paused(sink) {
+        if crate::work::paused(sink) {
             return false;
         }
         if sink.events.len() == emitted {
@@ -367,7 +337,7 @@ const START_MAIN_STEP: &str = "main";
 
 /// Park the rest of the start of a turn (R113), exactly as `owe_end_of_turn` parks the rest of an end.
 fn owe_start_of_turn(sink: &mut EngineSink, player: PlayerId, step: &str, due_before: Option<u32>) {
-    owe(sink, boundary_resume(START_OF_TURN_WORK, player, step, due_before));
+    crate::work::owe(sink, boundary_resume(START_OF_TURN_WORK, player, step, due_before));
 }
 
 /// A parked boundary's record: whose turn, and for a delayed stage the mark it began at.
@@ -492,7 +462,7 @@ fn after_start_stage(sink: &mut EngineSink, player: PlayerId, step: &str, due_be
         return;
     }
     if sink.state.pending.is_none() {
-        settle(sink);
+        crate::triggers::settle(sink, crate::triggers::SettleOptions::default());
     }
     if sink.state.result.is_some() {
         return;
@@ -529,7 +499,7 @@ fn start_of_turn_delayed(sink: &mut EngineSink, player: PlayerId, due_before: u3
 /// the triggers' own loop, a trigger answering #50's steal was queued behind every start-of-turn hook,
 /// a backrow one included.
 fn start_of_turn_settle(sink: &mut EngineSink, player: PlayerId) {
-    settle(sink);
+    crate::triggers::settle(sink, crate::triggers::SettleOptions::default());
     if sink.state.result.is_some() {
         return;
     }
@@ -552,7 +522,7 @@ fn start_of_turn_triggers(sink: &mut EngineSink, player: PlayerId) {
         HookName::StartOfOpponentTurn,
         Some(opponent_of(player)),
     );
-    settle(sink);
+    crate::triggers::settle(sink, crate::triggers::SettleOptions::default());
     if sink.state.result.is_some() {
         return;
     }
@@ -584,10 +554,10 @@ fn start_of_turn_draw(sink: &mut EngineSink, player: PlayerId) {
     let _ = crate::draw::draw(sink, player, count);
     // R59: after the draw as a whole. A cast-on-draw card whose cast is asking something is not
     // whole yet: the chain it owes runs the check once the answer has finished the cast (§2.4, R158).
-    if !is_paused(sink) {
+    if !crate::work::paused(sink) {
         crate::state_check::state_check(sink);
     }
-    settle(sink);
+    crate::triggers::settle(sink, crate::triggers::SettleOptions::default());
     if sink.state.result.is_some() {
         return;
     }
@@ -636,7 +606,7 @@ pub fn run_owed_start_of_turn(sink: &mut EngineSink, item: &WorkItem) {
     }
 
     if step == START_TRIGGERS_STEP {
-        settle(sink);
+        crate::triggers::settle(sink, crate::triggers::SettleOptions::default());
         if sink.state.result.is_some() {
             return;
         }
@@ -744,7 +714,7 @@ fn turn_player_of(data: &IndexMap<String, Value>) -> Option<PlayerId> {
 /// take nor re-run the steps it is standing in. Pre-parking a sequence's continuation is what made
 /// a played card's Cry fire twice (§10.5's driver, R1).
 fn owe_end_of_turn(sink: &mut EngineSink, player: PlayerId, step: &str, due_before: Option<u32>) {
-    owe(sink, boundary_resume(END_OF_TURN_WORK, player, step, due_before));
+    crate::work::owe(sink, boundary_resume(END_OF_TURN_WORK, player, step, due_before));
 }
 
 /// End the active player's turn and start the next, unless the cap ends the game (§2.5, R2).
@@ -764,7 +734,7 @@ pub fn end_turn(sink: &mut EngineSink) {
 
     // R68: the hand and graveyard holders too (the `returnToHandAtEndOfTurn` spells of §5.1).
     let _ = crate::triggers::queue_hooks_in_trigger_order(sink, HookName::EndOfTurn, Some(player));
-    settle(sink);
+    crate::triggers::settle(sink, crate::triggers::SettleOptions::default());
     if sink.state.result.is_some() {
         return;
     }
@@ -815,7 +785,7 @@ fn end_of_turn_after_triggers(sink: &mut EngineSink, player: PlayerId) {
 /// start-of-turn hooks. A trigger answering Bread and Butter's token that finishes the opponent wins
 /// the game at the end of this turn (§4.5 step 2).
 fn end_of_turn_window_settle(sink: &mut EngineSink, player: PlayerId) {
-    settle(sink);
+    crate::triggers::settle(sink, crate::triggers::SettleOptions::default());
     if sink.state.result.is_some() {
         return;
     }
@@ -845,7 +815,7 @@ fn end_of_turn_after_window(sink: &mut EngineSink, player: PlayerId, due_before:
 
 /// §10.3 after the delayed effects, as after the window; then cleanup, the turn cap, the next turn.
 fn end_of_turn_delayed_settle(sink: &mut EngineSink, player: PlayerId) {
-    settle(sink);
+    crate::triggers::settle(sink, crate::triggers::SettleOptions::default());
     if sink.state.result.is_some() {
         return;
     }
@@ -865,7 +835,7 @@ fn end_of_turn_delayed_settle(sink: &mut EngineSink, player: PlayerId) {
 /// next turn's first loop, a trigger answering them resolved after that turn had begun, and at the
 /// cap the game was drawn before it could.
 fn end_of_turn_cleanup_settle(sink: &mut EngineSink, player: PlayerId) {
-    settle(sink);
+    crate::triggers::settle(sink, crate::triggers::SettleOptions::default());
     if sink.state.result.is_some() {
         return;
     }
@@ -903,7 +873,7 @@ pub fn run_owed_end_of_turn(sink: &mut EngineSink, item: &WorkItem) {
     let step = item.resume.step.as_str();
 
     if step == END_TRIGGERS_STEP {
-        settle(sink);
+        crate::triggers::settle(sink, crate::triggers::SettleOptions::default());
         if sink.state.result.is_some() {
             return;
         }

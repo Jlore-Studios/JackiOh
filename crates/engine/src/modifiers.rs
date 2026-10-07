@@ -14,28 +14,6 @@ use crate::state::{
 };
 use crate::wire::{GameEvent, PLAYER_IDS, PlayerId, Row, ZoneName};
 
-/// TS `zones.slotsOf(player, row)`'s lane count: a row's size (§3), lanes 1 up.
-fn row_size(row: Row) -> i32 {
-    match row {
-        Row::Units => UNIT_ZONES,
-        Row::Backrow => BACKROW_ZONES,
-    }
-}
-
-/// TS `zones.cardAt(state, { player, row, lane })`: the card that acts in this zone — the top of a
-/// unit pile, or the backrow card (§3.2).
-fn card_at(state: &GameState, player: PlayerId, row: Row, lane: i32) -> Option<&CardInstance> {
-    if lane < 1 {
-        return None;
-    }
-    let index = (lane - 1) as usize;
-    let side = &state.players[player];
-    match row {
-        Row::Units => side.units.get(index).and_then(|pile| pile.as_ref()).and_then(|pile| pile.first()),
-        Row::Backrow => side.backrow.get(index).and_then(|card| card.as_ref()),
-    }
-}
-
 /// `"sourceId" in mod ? mod.sourceId : undefined`: the permanent a modifier belongs to (#79
 /// Twinspell's rider is the one kind that carries one).
 fn source_id_of(modifier: &PlayerModifier) -> Option<&str> {
@@ -152,8 +130,8 @@ pub fn end_orphaned_modifiers(sink: &mut EngineSink<'_>) {
 pub fn install_lasting_modifiers(sink: &mut EngineSink<'_>) {
     for player in PLAYER_IDS {
         for row in [Row::Units, Row::Backrow] {
-            for lane in 1..=row_size(row) {
-                let Some(card) = card_at(sink.state, player, row, lane).cloned() else {
+            for lane in 1..=crate::zones::row_size(row) {
+                let Some(card) = crate::zones::card_at(sink.state, crate::wire::ZoneRef { player, row, lane }).cloned() else {
                     continue;
                 };
                 let amount = crate::scripts::flags_of(sink.state, &card).echo_grant.unwrap_or(0).max(0);

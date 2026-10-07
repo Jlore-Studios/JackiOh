@@ -220,11 +220,6 @@ pub fn held_quest_auras(card: &CardInstance) -> Vec<String> {
     quest_memory_of(card).map(|memory| memory.auras).unwrap_or_default()
 }
 
-/// The card acting where it is on the field: the top of its pile, or its backrow card (§3.2, R13).
-fn acts_on_field(state: &GameState, card: &CardInstance) -> bool {
-    card.zone.z() == ZoneName::Field && !is_buried(state, card)
-}
-
 // ---------------------------------------------------------------------------
 // The board goals, read now
 // ---------------------------------------------------------------------------
@@ -387,7 +382,7 @@ pub fn hold_quest_aura(reward_id: impl Into<String>) -> Effect {
 fn quest_card_of(ctx: &EffectContext<'_>) -> Option<CardInstance> {
     let on_stay = crate::effects::targets::self_on_its_stay(ctx)?;
     let self_ = find_instance(ctx.sink.state, &on_stay.id)?.clone();
-    if !acts_on_field(ctx.sink.state, &self_) || quest_book_of(ctx.sink.state, &self_).is_none() {
+    if !crate::zones::acts_on_field(ctx.sink.state, &self_) || quest_book_of(ctx.sink.state, &self_).is_none() {
         return None;
     }
     Some(self_)
@@ -685,7 +680,7 @@ pub fn notice_quests(sink: &mut EngineSink<'_>) {
 pub fn quest_view_of(state: &GameState, card: &CardInstance) -> Option<QuestView> {
     let book = quest_book_of(state, card)?;
     let memory = quest_memory_of(card)?;
-    if !acts_on_field(state, card) {
+    if !crate::zones::acts_on_field(state, card) {
         return None;
     }
     let reward_text = |id: &str| -> String {

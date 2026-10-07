@@ -25,28 +25,6 @@ use crate::zones::{ZoneSlot, first_entry_zone, is_open, slots_of, step_into_unit
 /// Memory, so R78 clears it when the card leaves the field.
 const STRANDED_KEY: &str = "__stranded";
 
-/// `zones::is_carrier`: a backrow card whose text lets a Unit be played on top of it (`carrier`, or
-/// Classic+ #33's `fusesCarried`, R653); a Vanilla carrier carries nothing more (§6.3, R115).
-fn is_carrier(state: &GameState, card: &CardInstance) -> bool {
-    let flags = crate::scripts::script_of(state, card).flags();
-    flags.carrier == Some(true) || flags.fuses_carried == Some(true)
-}
-
-/// `zones::carried_at`: the Unit a carrier in this backrow lane holds.
-fn carried_at(state: &GameState, slot: &ZoneSlot) -> Option<CardInstance> {
-    if slot.row != Row::Backrow {
-        return None;
-    }
-    let lane = usize::try_from(slot.lane - 1).ok()?;
-    state.players[slot.player].carried.as_ref()?.get(lane)?.clone()
-}
-
-/// `zones::card_at` for a backrow zone: the card that acts there.
-fn backrow_top(state: &GameState, slot: &ZoneSlot) -> Option<CardInstance> {
-    let lane = usize::try_from(slot.lane - 1).ok()?;
-    state.players[slot.player].backrow.get(lane)?.clone()
-}
-
 /// R446: every Unit whose backrow zone no longer carries it steps down into its side's unit zone in the
 /// same lane when that is open, else R64's leftmost open one — moving, not leaving the field: no Cry, no
 /// R78 reset, and not summoning sick, since it entered nothing (it was on the field all along). The move
@@ -59,11 +37,11 @@ pub fn settle_carried(sink: &mut FieldSink<'_>) {
             continue;
         }
         for slot in slots_of(player, Row::Backrow) {
-            let Some(unit) = carried_at(sink.state, &slot) else {
+            let Some(unit) = crate::zones::carried_at(sink.state, &slot).cloned() else {
                 continue;
             };
-            if let Some(top) = backrow_top(sink.state, &slot)
-                && is_carrier(sink.state, &top)
+            if let Some(top) = crate::zones::card_at(sink.state, &slot).cloned()
+                && crate::zones::is_carrier(sink.state, &top)
             {
                 continue;
             }

@@ -172,11 +172,6 @@ pub struct ResumeOptions {
     pub chosen_from: Option<u32>,
 }
 
-/// TS `stays.exitMark(state)`: the field's departures so far (R174). A private copy.
-fn exit_mark(state: &GameState) -> u32 {
-    state.field_exits.as_ref().map_or(0, |exits| exits.count)
-}
-
 // ---------------------------------------------------------------------------
 // The stored records
 // ---------------------------------------------------------------------------
@@ -277,7 +272,7 @@ pub fn summoned_so_far(ctx: &EffectContext<'_>) -> Vec<String> {
 fn run_marks(ctx: &EffectContext<'_>) -> RunMarks {
     let summoned = summoned_so_far(ctx);
     RunMarks {
-        exits_from: Some(ctx.exits_from.unwrap_or_else(|| exit_mark(&*ctx.state))),
+        exits_from: Some(ctx.exits_from.unwrap_or_else(|| crate::stays::exit_mark(&*ctx.state))),
         summoned: if summoned.is_empty() { None } else { Some(summoned) },
         resolving: if ctx.self_resolving == Some(true) { Some(true) } else { None },
         event_stay: ctx.event_stay.clone(),
@@ -553,7 +548,7 @@ pub fn continue_answer(sink: &mut EngineSink<'_>, pending: &PendingChoice, picks
     // so the cursor resets, and a pause inside it parks its own tail ahead of everything still owed,
     // not behind it at whatever place the action before this one left the cursor.
     begin_work_cascade(sink);
-    let chosen_from = exit_mark(sink.state);
+    let chosen_from = crate::stays::exit_mark(sink.state);
     run_resume(
         sink,
         &resume_of(&pending.resume),
@@ -1251,7 +1246,7 @@ fn answer_at_random(sink: &mut EngineSink<'_>, args: &OpenPromptArgs) {
         return;
     };
     let targets = in_offered_order(&probe, selection);
-    let chosen_from = exit_mark(sink.state);
+    let chosen_from = crate::stays::exit_mark(sink.state);
     run_resume(
         sink,
         &resume_of(&probe.resume),

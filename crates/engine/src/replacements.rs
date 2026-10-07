@@ -130,14 +130,6 @@ struct Candidate {
     zone: CandidateZone,
 }
 
-/// TS `zones.slotOf`: the zone a card on the field stands in.
-fn slot_in(card: &CardInstance) -> Option<ZoneRef> {
-    match card.zone {
-        Zone::Field { player, row, lane } => Some(ZoneRef { player, row, lane }),
-        _ => None,
-    }
-}
-
 /// The card as it stands now, found again by id (TS held the live object), or as it was handed over.
 fn live(state: &GameState, card: &CardInstance) -> CardInstance {
     find_instance(state, &card.id).cloned().unwrap_or_else(|| card.clone())
@@ -293,7 +285,7 @@ fn fire(sink: &mut EngineSink<'_>, cand: &mut Candidate) -> bool {
     if cand.zone != CandidateZone::Backrow || !is_trap_card(sink.state, &cand.card) {
         return false;
     }
-    let at = slot_in(&cand.card);
+    let at = crate::zones::slot_of(sink.state, &cand.card);
     sink.events.push(GameEvent::TrapFired {
         instance_id: cand.card.id.clone(),
         def_id: cand.card.def_id.clone(),
@@ -418,14 +410,6 @@ fn healed_ref_of(target: &DamageTarget) -> HealedRef {
     }
 }
 
-/// The unit acting in its zone (§3.2): only a unit on the field is healed.
-fn acts_on_field(state: &GameState, card: &CardInstance) -> bool {
-    let Some(at) = slot_in(card) else {
-        return false;
-    };
-    crate::zones::card_at(state, &at).is_some_and(|top| top.id == card.id)
-}
-
 /// E8: whether the card converts heals by its text, as it stands now (face-up, when a Trap).
 fn converts_by_text(state: &GameState, cand: &Candidate) -> bool {
     if crate::scripts::flags_of(state, &cand.card).heal_to_damage != Some(true) {
@@ -465,7 +449,7 @@ pub fn healing_replaced(sink: &mut EngineSink<'_>, target: &DamageTarget, amount
         return false;
     }
     if let DamageTarget::Unit { instance } = target
-        && !acts_on_field(sink.state, instance)
+        && !crate::zones::acts_on_field(sink.state, instance)
     {
         return false;
     }
@@ -670,7 +654,7 @@ pub fn answer_targeting(
     what: TargetedWhat,
 ) -> Option<CardInstance> {
     let defender = target.controller;
-    if by == defender || !acts_on_field(sink.state, target) {
+    if by == defender || !crate::zones::acts_on_field(sink.state, target) {
         return None;
     }
     let event = ReplacedEvent::Targeted {

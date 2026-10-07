@@ -145,44 +145,6 @@ pub fn is_trap_window_event(event: &GameEvent) -> bool {
     TRAP_WINDOW_EVENTS.contains(&event.event_type())
 }
 
-/// TS `work.paused`: a prompt is open, or the game is over (§9.3).
-fn is_paused(state: &GameState) -> bool {
-    state.pending.is_some() || state.result.is_some()
-}
-
-/// TS `stays.exitMark`: the field's departures so far (R174).
-fn exit_mark(state: &GameState) -> u32 {
-    state.field_exits.as_ref().map_or(0, |exits| exits.count)
-}
-
-/// TS `stays.eventMark`: the stays a play's event happened on, when it carries them (R174, R212).
-fn event_mark(event: &GameEvent) -> Option<u32> {
-    match event {
-        GameEvent::CardPlayed { exits_from, .. }
-        | GameEvent::Summoned { exits_from, .. }
-        | GameEvent::CardResolved { exits_from, .. } => *exits_from,
-        _ => None,
-    }
-}
-
-/// TS `stays.leftFieldAfter`: whether the card has left the field since the mark (R174).
-fn left_field_after(state: &GameState, mark: u32, instance_id: &str) -> bool {
-    state
-        .field_exits
-        .as_ref()
-        .and_then(|exits| exits.last.get(instance_id).copied())
-        .unwrap_or(0)
-        > mark
-}
-
-/// TS `zones.slotOf`: the zone a card on the field stands in.
-fn slot_in(card: &CardInstance) -> Option<ZoneRef> {
-    match card.zone {
-        Zone::Field { player, row, lane } => Some(ZoneRef { player, row, lane }),
-        _ => None,
-    }
-}
-
 /// §5.1: a Field Trap is a Trap that stays after firing, so both are "a Trap" (R61). Read off the
 /// running face's own type (B2.7, `animated::face_type_of`) and never off `faces::card_type_of`: an
 /// animated Field Trap is a Unit where it stands (R383) and still fires as the trap its face is.
@@ -416,7 +378,7 @@ pub fn fire_trap(
 
     // R154: the zone is read before the trap resolves, because firing it can move the card — a Trap
     // reaches its owner's graveyard on consumption and would then have no slot to report.
-    let at = slot_in(trap);
+    let at = crate::zones::slot_of(sink.state, trap);
     // `controller` names the seat that reads the trap's identity (R154), and a trap stolen since the
     // event is face-down on its new controller's side: the flip is announced to the seat it sits on.
     sink.events.push(GameEvent::TrapFired {
@@ -679,7 +641,7 @@ pub fn standing_event(sink: &EngineSink<'_>, event: &GameEvent, dispatch_mark: u
     // R212: the stay is the one the event happened on. A play's events carry the mark they were
     // emitted at (`stays::event_mark`), which a late dispatch — a cast's `cardResolved` after the rest of
     // the list that cast it, its sweep and the Reborn that put a body back — must not move forward.
-    let mark = dispatch_mark.min(event_mark(event).unwrap_or(dispatch_mark));
+    let mark = dispatch_mark.min(crate::stays::event_mark(event).unwrap_or(dispatch_mark));
     match event {
         GameEvent::CardPlayed { instance_id, .. } | GameEvent::Summoned { instance_id, .. } => {
             // The same for step 4's pair (#41 Sheepish's moment, R17): a trap answering the arrival of a card
@@ -687,7 +649,7 @@ pub fn standing_event(sink: &EngineSink<'_>, event: &GameEvent, dispatch_mark: u
             // offered the event at all, as #85 is not offered a play that is no longer a permanent in play
             // (R61). Sheepish does not reach into a hand to rewrite the unit the first trap bounced there, or
             // turn the Reborn body of the one it killed into a Sheep: that body is nobody's play (R83).
-            if left_field_after(state, mark, instance_id) {
+            if crate::stays::left_field_after(state, mark, instance_id) {
                 None
             } else {
                 Some(event.clone())
@@ -699,7 +661,7 @@ pub fn standing_event(sink: &EngineSink<'_>, event: &GameEvent, dispatch_mark: u
             ..
         } => {
             let stays = find_instance(state, instance_id).is_some_and(is_on_field)
-                && !left_field_after(state, mark, instance_id);
+                && !crate::stays::left_field_after(state, mark, instance_id);
             if stays {
                 return Some(event.clone());
             }
@@ -724,7 +686,7 @@ fn dispatch(
     for (index, trap_match) in matches.iter().enumerate() {
         // §9.3: a prompt is state, so the rest of the dispatch waits for the answer action — and the
         // traps from here on have not seen the event, which is precisely what is owed (R113).
-        if is_paused(sink.state) {
+        if crate::work::paused(sink) {
             return TrapRun {
                 fired,
                 paused: true,
@@ -741,7 +703,7 @@ fn dispatch(
         };
         // R174, R212: a trap that has left the field since the dispatch began and stands there again is
         // a new arrival, on a stay that did not see the event.
-        if left_field_after(sink.state, mark, &live.trap.id) {
+        if crate::stays::left_field_after(sink.state, mark, &live.trap.id) {
             continue;
         }
         let Some(met) = standing_event(sink, event, mark) else {
@@ -754,7 +716,7 @@ fn dispatch(
     }
     TrapRun {
         fired,
-        paused: is_paused(sink.state),
+        paused: crate::work::paused(sink),
         owed: Vec::new(),
     }
 }
@@ -784,7 +746,7 @@ pub fn offer_event_to_traps(
     event: &GameEvent,
     later: &dyn Fn(&EngineSink<'_>) -> LaterMoves,
 ) -> ImmediateDispatch {
-    let mark = exit_mark(sink.state);
+    let mark = crate::stays::exit_mark(sink.state);
     if is_trap_window_event(event) {
         return ImmediateDispatch {
             mark,
@@ -794,7 +756,7 @@ pub fn offer_event_to_traps(
     let watching = traps_watching(sink.state, event);
     if watching.is_empty() {
         return ImmediateDispatch {
-            paused: is_paused(sink.state),
+            paused: crate::work::paused(sink),
             mark,
             ..ImmediateDispatch::default()
         };
@@ -805,7 +767,7 @@ pub fn offer_event_to_traps(
         .filter(|trap_match| !moves.moved.contains(&trap_match.trap.id))
         .collect();
     let controllers = controllers_of(&matches, Some(&moves));
-    if is_paused(sink.state) {
+    if crate::work::paused(sink) {
         return ImmediateDispatch {
             fired: Vec::new(),
             paused: true,
@@ -873,7 +835,7 @@ pub fn fire_traps_for(sink: &mut EngineSink<'_>, event: &GameEvent) -> TrapDispa
             paused: false,
         };
     }
-    if is_paused(sink.state) {
+    if crate::work::paused(sink) {
         return TrapDispatch {
             fired: Vec::new(),
             paused: true,
@@ -883,7 +845,7 @@ pub fn fire_traps_for(sink: &mut EngineSink<'_>, event: &GameEvent) -> TrapDispa
     // is owed in front of the trigger queue (`OWED_TO_TRAPS`), not behind the interrupted sequence.
     // Handed an event with nothing owed behind it, the board it meets is the board it happened on.
     let matches = traps_watching(sink.state, event);
-    let mark = exit_mark(sink.state);
+    let mark = crate::stays::exit_mark(sink.state);
     let controllers = controllers_of(&matches, None);
     let run = dispatch(sink, event, &matches, mark, &controllers);
     TrapDispatch {
@@ -1022,7 +984,7 @@ pub fn run_trap_window(sink: &mut EngineSink<'_>, event: &GameEvent) -> TrapDisp
     // R212: the window's event has just happened, so each trap answers for its controller now — and
     // keeps answering for that player when an earlier trap of the window steals it before its turn.
     let controllers = controllers_of(&matches, None);
-    let mark = exit_mark(sink.state);
+    let mark = crate::stays::exit_mark(sink.state);
 
     // A prompt already open when the window opens means the window has delivered nothing at all:
     // every matched trap is owed the event. Returning without parking would lose the whole window.
@@ -1071,7 +1033,7 @@ fn resume_window(sink: &mut EngineSink<'_>, parked: OwedWindow) {
         })
         .collect();
     let controllers = controllers.unwrap_or_default();
-    let mark = mark.unwrap_or_else(|| exit_mark(sink.state));
+    let mark = mark.unwrap_or_else(|| crate::stays::exit_mark(sink.state));
     let run = dispatch(sink, &event, &matches, mark, &controllers);
     if sink.state.result.is_none() {
         owe_window(sink, &event, &run.owed, &controllers, mark);
