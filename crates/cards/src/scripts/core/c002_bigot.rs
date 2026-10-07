@@ -18,28 +18,26 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "core-002";
 
 pub fn script() -> CardScripts {
-    CardScripts {
-        base: Script {
-            targets: vec![json_as(json!({
-                "kind": "target",
-                "min": 1,
-                "max": 1,
-                "filter": { "side": "enemy", "of": ["unit"], "notTags": ["Human"] }
-            }))],
-            cry: Some(hook(|_ctx| vec![destroy(json_as(json!({ "target": { "of": "chosen" } })))])),
-            ..Script::default()
-        },
-        radiant: Script {
-            cry: Some(hook(|_ctx| {
-                vec![destroy_all(json_as(json!({
-                    "side": "enemy",
-                    "rows": ["units"],
-                    "notTags": ["Human"]
-                })))]
-            })),
-            ..Script::default()
-        },
-    }
+    let base = Script {
+        targets: vec![TargetDecl::target(
+            1,
+            1,
+            json!({ "side": "enemy", "of": ["unit"], "notTags": ["Human"] }),
+        )],
+        cry: Some(hook(|_ctx| vec![destroy(json_as(json!({ "target": { "of": "chosen" } })))])),
+        ..Script::default()
+    };
+    let radiant = Script {
+        cry: Some(hook(|_ctx| {
+            vec![destroy_all(json_as(json!({
+                "side": "enemy",
+                "rows": ["units"],
+                "notTags": ["Human"]
+            })))]
+        })),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
 }
 
 // SPEC §8.1 #2 Bigot. BUILD M4-T4 row 2: "Destroys chosen enemy non-Human, Human not targetable,
@@ -54,15 +52,14 @@ pub fn script() -> CardScripts {
 // Human units used here: #8 Mr. Vanilla and #20 Pointmaster.
 #[cfg(test)]
 mod tests {
-    use super::*;
     use jackioh_engine::testkit::*;
-    use serde_json::json;
 
-    mod c2_bigot {
+    mod n2_bigot {
         use super::*;
 
         #[test]
         fn destroys_the_chosen_enemy_non_human_unit() {
+            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-002"] },
                 "p2": { "field": ["core-025", "core-008"] }
@@ -76,13 +73,14 @@ mod tests {
 
         #[test]
         fn r90_a_human_is_not_targetable_the_play_is_refused() {
+            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-002"] },
                 "p2": { "field": ["core-008"] }
             }));
             let human = s.card("core-008").id.clone();
             s.expect_refused(|s| {
-                s.play("core-002", json!({ "targets": [{ "pick": "instance", "instanceId": human }] }));
+                s.play("core-002", json!({ "targets": [{ "pick": "instance", "instanceId": human }] }))
             });
             s.expect_in_zone("core-008", "field");
             s.expect_in_zone("core-002", "hand");
@@ -90,6 +88,7 @@ mod tests {
 
         #[test]
         fn r90_no_legal_target_the_play_is_still_legal_the_unit_enters_and_the_cry_fizzles() {
+            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-002"] },
                 "p2": { "field": ["core-008"] }
@@ -101,6 +100,7 @@ mod tests {
 
         #[test]
         fn radiant_clears_every_enemy_non_human_while_the_humans_survive() {
+            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": "core-002", "radiant": true }] },
                 "p2": { "field": ["core-025", "core-008", "core-012", "core-020"] }
@@ -115,6 +115,7 @@ mod tests {
 
         #[test]
         fn radiant_needs_no_target_and_destroys_nothing_when_every_enemy_unit_is_human() {
+            crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": "core-002", "radiant": true }] },
                 "p2": { "field": ["core-008", "core-020"] }

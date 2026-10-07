@@ -24,44 +24,43 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "core-004";
 
 pub fn script() -> CardScripts {
-    CardScripts {
-        base: Script {
-            cry: Some(hook(|_ctx| {
-                vec![
-                    flip_coins(json_as(json!({
-                        "target": { "of": "self" },
-                        "coins": 5,
-                        "perHeads": { "attack": 1 },
-                        "perTails": { "health": 1 }
-                    }))),
-                    flip_coin_keyword(json_as(json!({
-                        "target": { "of": "self" },
-                        "headsKeyword": { "kind": "Divine Shield" },
-                        "tailsKeyword": { "kind": "Rush" }
-                    }))),
-                ]
-            })),
-            ..Script::default()
-        },
-        radiant: Script {
-            cry: Some(hook(|_ctx| {
-                vec![
-                    flip_coins(json_as(json!({
-                        "target": { "of": "self" },
-                        "coins": 7,
-                        "perHeads": { "attack": 2 },
-                        "perTails": { "health": 2 }
-                    }))),
-                    flip_coin_keyword(json_as(json!({
-                        "target": { "of": "self" },
-                        "headsKeyword": { "kind": "Divine Shield" },
-                        "tailsKeyword": { "kind": "Rush" }
-                    }))),
-                ]
-            })),
-            ..Script::default()
-        },
-    }
+    let base = Script {
+        cry: Some(hook(|_ctx| {
+            vec![
+                flip_coins(json_as(json!({
+                    "target": { "of": "self" },
+                    "coins": 5,
+                    "perHeads": { "attack": 1 },
+                    "perTails": { "health": 1 }
+                }))),
+                flip_coin_keyword(json_as(json!({
+                    "target": { "of": "self" },
+                    "headsKeyword": { "kind": "Divine Shield" },
+                    "tailsKeyword": { "kind": "Rush" }
+                }))),
+            ]
+        })),
+        ..Script::default()
+    };
+    let radiant = Script {
+        cry: Some(hook(|_ctx| {
+            vec![
+                flip_coins(json_as(json!({
+                    "target": { "of": "self" },
+                    "coins": 7,
+                    "perHeads": { "attack": 2 },
+                    "perTails": { "health": 2 }
+                }))),
+                flip_coin_keyword(json_as(json!({
+                    "target": { "of": "self" },
+                    "headsKeyword": { "kind": "Divine Shield" },
+                    "tailsKeyword": { "kind": "Rush" }
+                }))),
+            ]
+        })),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
 }
 
 // SPEC §8.1 #4 Gary the Gambler. BUILD M4-T4 row 4: "Fixed seed → fixed stats; heads+tails = 5
@@ -76,32 +75,30 @@ pub fn script() -> CardScripts {
 // (§10.4 granted keywords), identical on both faces.
 #[cfg(test)]
 mod tests {
-    use super::*;
     use jackioh_engine::testkit::*;
-    use serde_json::json;
 
     /// The buff the Cry left, read back off the live instance (never off a captured one), as
     /// `(attack, health)`.
-    fn gains(s: &Scenario, card_ref: &str) -> (i32, i32) {
-        let gary = s.card(card_ref);
+    fn gains(s: &Scenario, card: &str) -> (i32, i32) {
+        let gary = s.card(card);
         (gary.buffs.attack, gary.buffs.health)
     }
 
     /// The keyword the rider coin granted, read back off the live instance.
-    fn granted_kind(s: &Scenario, card_ref: &str) -> Option<String> {
-        let granted = serde_json::to_value(&s.card(card_ref).granted_keywords).unwrap();
-        granted.get(0).and_then(|keyword| keyword["kind"].as_str()).map(str::to_string)
+    fn granted_kind(s: &Scenario, card: &str) -> Option<String> {
+        s.card(card)
+            .granted_keywords
+            .iter()
+            .map(|keyword| keyword.kind().as_str().to_string())
+            .next()
     }
 
-    fn both_faces() -> indexmap::IndexSet<String> {
-        indexmap::IndexSet::from(["Divine Shield".to_string(), "Rush".to_string()])
-    }
-
-    mod c4_gary_the_gambler {
+    mod n4_gary_the_gambler {
         use super::*;
 
         #[test]
         fn flips_5_coins_1_attack_per_heads_and_1_max_health_per_tails_so_the_two_gains_total_5() {
+            crate::register_all();
             let mut s = scenario(json!({ "seed": "core-004-base", "p1": { "hand": ["core-004"] } }));
             s.play("core-004", json!({}));
 
@@ -115,6 +112,7 @@ mod tests {
 
         #[test]
         fn a_fixed_seed_gives_fixed_stats() {
+            crate::register_all();
             let mut first = scenario(json!({ "seed": "core-004-fixed", "p1": { "hand": ["core-004"] } }));
             first.play("core-004", json!({}));
             let mut second = scenario(json!({ "seed": "core-004-fixed", "p1": { "hand": ["core-004"] } }));
@@ -125,6 +123,7 @@ mod tests {
 
         #[test]
         fn radiant_flips_7_coins_at_2_a_side_so_the_two_gains_total_14() {
+            crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-004-radiant",
                 "p1": { "hand": [{ "def": "core-004", "radiant": true }] }
@@ -142,25 +141,28 @@ mod tests {
         #[test]
         fn r32_r130_lucky_has_no_effect_5_coins_plus_the_rider_coin_take_exactly_6_seeded_rolls_with_no_reroll_for_a_best()
          {
-            // Lucky is `rng.lucky(x, roll, better)` (rng.rs): it rolls x extra times and keeps the best, so
-            // a Lucky flip would show up as extra draws on the cursor. No Core card can put Lucky on a unit
-            // before its own Cry resolves, so counting the draws is what R32/R130 are actually about: the
-            // flips never ask for a reroll. The control play cancels whatever a play costs in draws by itself.
+            crate::register_all();
+            // Lucky is `rng.lucky(x, roll, better)` (rng.rs): it rolls x extra times and keeps the best,
+            // so a Lucky flip would show up as extra draws on the cursor. No Core card can put Lucky on a
+            // unit before its own Cry resolves, so counting the draws is what R32/R130 are actually
+            // about: the flips never ask for a reroll. The control play cancels whatever a play costs in
+            // draws by itself.
             let mut control = scenario(json!({ "seed": "core-004-r32", "p1": { "hand": ["core-008"] } }));
-            let control_before = control.state().rng_cursor;
+            let control_before = i64::from(control.state().rng_cursor);
             control.play("core-008", json!({}));
-            let overhead = control.state().rng_cursor - control_before;
+            let overhead = i64::from(control.state().rng_cursor) - control_before;
 
             let mut s = scenario(json!({ "seed": "core-004-r32", "p1": { "hand": ["core-004"] } }));
-            let before = s.state().rng_cursor;
+            let before = i64::from(s.state().rng_cursor);
             s.play("core-004", json!({}));
             // 5 stat flips + 1 keyword coin.
-            assert_eq!(s.state().rng_cursor - before - overhead, 6);
+            assert_eq!(i64::from(s.state().rng_cursor) - before - overhead, 6);
         }
 
         #[test]
         fn base_the_second_coin_grants_divine_shield_on_heads_rush_on_tails_deterministically() {
-            let mut seen: indexmap::IndexSet<String> = indexmap::IndexSet::new();
+            crate::register_all();
+            let mut seen: IndexSet<String> = IndexSet::new();
             for n in 1..=200 {
                 let seed = format!("gary-key-{n}");
                 let mut s = scenario(json!({ "seed": seed, "p1": { "hand": ["core-004"] } }));
@@ -172,8 +174,8 @@ mod tests {
 
                 // Exactly one granted keyword, on one face of the coin or the other.
                 let kind = granted_kind(&s, "core-004");
-                assert!(matches!(kind.as_deref(), Some("Divine Shield") | Some("Rush")));
-                seen.insert(kind.clone().unwrap());
+                assert!(["Divine Shield", "Rush"].contains(&kind.as_deref().unwrap_or("")));
+                seen.insert(kind.clone().unwrap_or_default());
 
                 // The same seed played twice grants the same keyword.
                 let mut again = scenario(json!({ "seed": seed, "p1": { "hand": ["core-004"] } }));
@@ -181,12 +183,15 @@ mod tests {
                 assert_eq!(granted_kind(&again, "core-004"), kind);
             }
             // 200 seeds land on both faces: the rider really is a coin, not a fixed grant.
-            assert_eq!(seen, both_faces());
+            let mut kinds: Vec<String> = seen.into_iter().collect();
+            kinds.sort();
+            assert_eq!(kinds, vec!["Divine Shield".to_string(), "Rush".to_string()]);
         }
 
         #[test]
         fn radiant_the_same_exact_rider_on_top_of_7_coins_at_2() {
-            let mut seen: indexmap::IndexSet<String> = indexmap::IndexSet::new();
+            crate::register_all();
+            let mut seen: IndexSet<String> = IndexSet::new();
             for n in 1..=200 {
                 let seed = format!("gary-key-radiant-{n}");
                 let mut s = scenario(json!({
@@ -203,8 +208,8 @@ mod tests {
 
                 // Byte-identical rider: the same two keywords, one per face.
                 let kind = granted_kind(&s, "core-004");
-                assert!(matches!(kind.as_deref(), Some("Divine Shield") | Some("Rush")));
-                seen.insert(kind.clone().unwrap());
+                assert!(["Divine Shield", "Rush"].contains(&kind.as_deref().unwrap_or("")));
+                seen.insert(kind.clone().unwrap_or_default());
 
                 // The same seed played twice grants the same keyword.
                 let mut again = scenario(json!({
@@ -214,7 +219,9 @@ mod tests {
                 again.play("core-004", json!({}));
                 assert_eq!(granted_kind(&again, "core-004"), kind);
             }
-            assert_eq!(seen, both_faces());
+            let mut kinds: Vec<String> = seen.into_iter().collect();
+            kinds.sort();
+            assert_eq!(kinds, vec!["Divine Shield".to_string(), "Rush".to_string()]);
         }
     }
 }

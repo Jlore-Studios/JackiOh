@@ -1,4 +1,4 @@
-//! SPEC §5.1's one catalog query, as the `jackioh-cards` surface every card script writes against.
+//! SPEC §5.1's one catalog query, as the `packages/cards` surface every card script writes against.
 //!
 //! "The catalog needs one query function, `catalog.query({type, cost, costRange, tags, notTags,
 //! rarity, set, excludeDefId})`, that every random-generation and Discover effect uses" (§5.1).
@@ -11,10 +11,10 @@
 //! The contract (proved by `tests/cross/query.rs`, which is the reference for card agents):
 //!
 //!   1. Tokens are out unless you ask. §5.1: "Random pools ('a random card', 'Discover a (2) cost
-//!      card') never include Token-tagged cards". `query(&CardQuery::default())` is therefore every
-//!      non-token card of every set (R380); tokens arrive only for a query that names the token pool
-//!      — `tags: ["Token"]`, `rarity: "Token"`, `token: true`, `withTokens: true` (R382), or naming
-//!      members outright via `defId` — and a Fruit pool holds the Grapes (R382).
+//!      card') never include Token-tagged cards". `query({})` is therefore every non-token card of
+//!      every set (R380); tokens arrive only for a query that names the token pool — `tags:
+//!      ["Token"]`, `rarity: "Token"`, `token: true`, `withTokens: true` (R382), or naming members
+//!      outright via `defId` — and a Fruit pool holds the Grapes (R382).
 //!      BUILD M4-T4 row 51.1 ("absent from every random pool") needs no extra argument: KY's Empty
 //!      Notebook carries the KY tag, and `query({ tags: ["KY"] })` still leaves it out.
 //!   2. The generating card is out when the card says so. §5.1: pools "never include the generating
@@ -33,35 +33,28 @@
 //!      catalog before a game starts; until then every pool is empty. Fused and crafted definitions
 //!      live on `state.transient_defs`, so no pool can ever generate one.
 //!
-//! Card scripts get this whole surface through `use crate::query::*;`, so `catalog.query(...)`,
-//! `catalog.pool(...)`, `catalog.cost(...)` and `catalog.trap_types()` are always in reach even when
-//! only `catalog` is named, exactly as the TypeScript `catalog` object was.
+//! Card scripts get this whole surface through `use crate::query::*;` (and the crate root's
+//! re-export), so `catalog.query(...)`, `catalog.pool(...)`, `catalog.cost(...)` and
+//! `catalog.trap_types` are always in reach even when only `catalog` is named, as the TS `catalog`
+//! object was.
 
-use jackioh_engine::catalog::query as engine_query;
 use jackioh_engine::{CardDef, CardType, CatalogQueryArgs};
 use serde_json::Value;
 
-/// R65's out-of-play cost of a definition: an X-cost card reads 0, an embiggen card reads its base
-/// price, everything else its printed cost. This is what `cost` and `costRange` compare against, and
-/// what a card script must use whenever it sorts, brackets or counts costs in a library, hand,
-/// graveyard or pool. The in-play number is the engine's `mana::effective_cost`, which starts from an
-/// instance and adds `cost_mod`, discounts and Professor Curvature.
-pub use jackioh_engine::catalog::query_cost;
-
 /// §5.1's query arguments: `{ type, cost, costRange, tags, notTags, rarity, set, excludeDefId,
 /// withTokens }`, plus the engine's identity fields (`defId`, `token`) for a pool a card names card by
-/// card. `tags` means "has every listed tag"; `notTags` means "has none of them"; every field
-/// narrows, and `CardQuery::default()` (TS `{}`) is the whole non-token catalog.
+/// card. `tags` means "has every listed tag"; `notTags` means "has none of them"; every
+/// field narrows, and `{}` (`CardQuery::default()`) is the whole non-token catalog.
 pub type CardQuery = CatalogQueryArgs;
 
 /// §5.1's single pool source. Returns the matching definitions in §5 index order.
 ///
-/// Random effects pick from this with `rng` (never the OS, CLAUDE.md rule 4); Discover passes the
-/// result to a `PendingChoice`. A card that generates from a pool almost always wants `pool()`
+/// Random effects pick from this with `rng` (never the OS, CLAUDE.md rule 4); Discover passes
+/// the result to a `PendingChoice`. A card that generates from a pool almost always wants `pool()`
 /// instead, so that its own definition cannot come back out. TS's default argument `{}` is
 /// `&CardQuery::default()`.
-pub fn query(args: &CardQuery) -> Vec<CardDef> {
-    engine_query(args)
+pub fn query(args: &CardQuery) -> Vec<&'static CardDef> {
+    jackioh_engine::catalog::query(args)
 }
 
 /// §5.1's "never include the generating card's own definition": the pool for card `own_id`, which is
@@ -73,23 +66,28 @@ pub fn query(args: &CardQuery) -> Vec<CardDef> {
 /// pool("core-067", { type: TRAP_TYPES })     // #67 Zoomerbin Oomen -> Core #18, #41, #60, #71, #85, #96
 /// ```
 ///
-/// `excludeDefId` is TS's `string | string[]`; it is extended on the arguments' own JSON (the shape
-/// TS wrote), so the one string, the list and the absent field each keep TS's reading: absent becomes
-/// `[own_id]`, a string `s` becomes `[s, own_id]`, a list gets `own_id` appended.
-pub fn pool(own_id: &str, args: &CardQuery) -> Vec<CardDef> {
-    let mut json = serde_json::to_value(args).expect("CatalogQueryArgs serialises to JSON");
+/// TS's `excludeDefId` is `string | string[]`: absent becomes `[ownId]`, one string `s` becomes
+/// `[s, ownId]`, and a list gets `ownId` appended. The arguments are extended on their own JSON (the
+/// shape TS spread), so each of the three keeps TS's reading whatever Rust type holds the field.
+pub fn pool(own_id: &str, args: &CardQuery) -> Vec<&'static CardDef> {
+    let mut json = match serde_json::to_value(args) {
+        Ok(json) => json,
+        Err(error) => panic!("pool({own_id}): the query arguments are not JSON: {error}"),
+    };
     let already = json.get("excludeDefId").cloned();
-    let mut exclude: Vec<Value> = match already {
+    let mut exclude_def_id: Vec<Value> = match already {
         None | Some(Value::Null) => Vec::new(),
         Some(Value::Array(list)) => list,
         Some(one) => vec![one],
     };
-    exclude.push(Value::String(own_id.to_string()));
+    exclude_def_id.push(Value::String(own_id.to_string()));
     if let Value::Object(map) = &mut json {
-        map.insert("excludeDefId".to_string(), Value::Array(exclude));
+        map.insert("excludeDefId".to_string(), Value::Array(exclude_def_id));
     }
-    let with_own: CardQuery =
-        serde_json::from_value(json).expect("CatalogQueryArgs reads back the JSON it wrote");
+    let with_own: CardQuery = match serde_json::from_value(json) {
+        Ok(args) => args,
+        Err(error) => panic!("pool({own_id}): the query arguments do not read back: {error}"),
+    };
     query(&with_own)
 }
 
@@ -97,40 +95,64 @@ pub fn pool(own_id: &str, args: &CardQuery) -> Vec<CardDef> {
 /// §8 #51 (KY's Private Tutor's type choice), #85/R61 (Unlicensed Experimentation's type match) and
 /// R35 (Transmogulate's same-type replacement), so a `type: "Trap"` query — which matches the
 /// `type` field exactly — would silently drop #18 and #71. Ask for both.
+///
+/// TS typed it as a mutable array only because `CatalogQuery["type"]` is `CardType | CardType[]`; it
+/// is a constant here, and `query` never writes to it.
 pub const TRAP_TYPES: &[CardType] = &[CardType::Trap, CardType::FieldTrap];
 
-/// The TS `catalog` object's type: `{ query, pool, cost: queryCost, trapTypes: TRAP_TYPES }`, as
-/// methods, so a script writes `catalog.pool(ID, &args)` exactly as the TypeScript did.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct Catalog;
+/// R65's out-of-play cost of a definition: an X-cost card reads 0, an embiggen card reads its base
+/// price, everything else its printed cost. This is what `cost` and `costRange` compare against, and
+/// what a card script must use whenever it sorts, brackets or counts costs in a library, hand,
+/// graveyard or pool. The in-play number is the engine's `mana::effective_cost`, which starts from an
+/// instance and adds `cost_mod`, discounts and Professor Curvature.
+pub use jackioh_engine::catalog::query_cost;
 
-impl Catalog {
+/// The TS `catalog` object's type: `{ query, pool, cost: queryCost, trapTypes: TRAP_TYPES }`, so a
+/// script writes `catalog.pool(ID, &args)` and `catalog.trap_types` as the TypeScript did.
+#[derive(Clone, Copy, Debug)]
+pub struct CatalogSurface {
     /// §5.1's `catalog.query(...)`: [`query`].
-    pub fn query(&self, args: &CardQuery) -> Vec<CardDef> {
-        query(args)
-    }
-
+    pub query: fn(&CardQuery) -> Vec<&'static CardDef>,
     /// [`pool`]: the pool for card `own_id`, never offering `own_id` itself (R387).
-    pub fn pool(&self, own_id: &str, args: &CardQuery) -> Vec<CardDef> {
-        pool(own_id, args)
-    }
-
+    pub pool: fn(&str, &CardQuery) -> Vec<&'static CardDef>,
     /// [`query_cost`]: R65's out-of-play cost.
-    pub fn cost(&self, def: &CardDef) -> i32 {
-        query_cost(def)
+    pub cost: fn(&CardDef) -> i32,
+    /// [`TRAP_TYPES`]: both trap types.
+    pub trap_types: &'static [CardType],
+}
+
+impl CatalogSurface {
+    /// `catalog.query(args)`.
+    pub fn query(&self, args: &CardQuery) -> Vec<&'static CardDef> {
+        (self.query)(args)
     }
 
-    /// [`TRAP_TYPES`]: both trap types.
-    pub fn trap_types(&self) -> &'static [CardType] {
-        TRAP_TYPES
+    /// `catalog.pool(ownId, args)`.
+    pub fn pool(&self, own_id: &str, args: &CardQuery) -> Vec<&'static CardDef> {
+        (self.pool)(own_id, args)
+    }
+
+    /// `catalog.cost(def)`.
+    pub fn cost(&self, def: &CardDef) -> i32 {
+        (self.cost)(def)
     }
 }
 
-/// §5.1's `catalog.query(...)`, as the object 110 card scripts call. Lower-case because it is the TS
-/// name a script calls it by (SURFACE §4.2: a constant keeps its name), and a value, not a module, so
-/// it never collides with `jackioh_engine::catalog` in a script that globs both.
+/// R65's out-of-play cost, as a plain `fn` for the `catalog` object's `cost` slot.
+fn catalog_cost(def: &CardDef) -> i32 {
+    query_cost(def)
+}
+
+/// §5.1's `catalog.query(...)`, as the object 110 card scripts call. Lower-case because it is the
+/// TS name a script calls it by (SURFACE §4.2: a constant keeps its name); a value, not a module, so
+/// it never collides with `jackioh_engine::catalog` in a script that names both.
 #[allow(non_upper_case_globals)]
-pub const catalog: Catalog = Catalog;
+pub const catalog: CatalogSurface = CatalogSurface {
+    query,
+    pool,
+    cost: catalog_cost,
+    trap_types: TRAP_TYPES,
+};
 
 // Never sort, filter or de-duplicate a pool after calling `query`: a second sort here would be the
 // duplicated filter §5.1 forbids, and the ordering is the engine comparator's job. (It once

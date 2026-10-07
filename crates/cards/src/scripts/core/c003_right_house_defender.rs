@@ -19,14 +19,13 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "core-003";
 
 pub fn script() -> CardScripts {
-    CardScripts {
-        // Printed keywords only (§10.4); an empty Script is the whole base card.
-        base: Script::default(),
-        radiant: Script {
-            death: Some(hook(|_ctx| vec![summon(json_as(json!({ "defId": "core-003", "player": "self" })))])),
-            ..Script::default()
-        },
-    }
+    /* Printed keywords only (§10.4); an empty Script is the whole base card. */
+    let base = Script::default();
+    let radiant = Script {
+        death: Some(hook(|_ctx| vec![summon(json_as(json!({ "defId": "core-003", "player": "self" })))])),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
 }
 
 // SPEC §8.1 #3 Right-house defender. BUILD M4-T4 row 3: "Shield eats first hit; dies → returns at
@@ -44,71 +43,57 @@ pub fn script() -> CardScripts {
 // name Divine Shield, so this reading deserves its own ruling row.
 #[cfg(test)]
 mod tests {
-    use super::*;
     use jackioh_engine::testkit::*;
-    use serde_json::json;
 
     /// p2's attacker in `lane`, as an instance id: a string reference survives every later step.
-    fn foe(s: &Scenario, lane: usize) -> String {
+    fn foe(s: &Scenario, lane: i32) -> String {
         match s.unit(PlayerId::P2, lane) {
             Some(unit) => unit.id.clone(),
             None => panic!("the test needs a p2 unit in lane {lane}"),
         }
     }
 
-    const FOUR_VANILLAS: &[&str] = &["core-008", "core-008", "core-008", "core-008"];
+    const FOUR_VANILLAS: [&str; 4] = ["core-008", "core-008", "core-008", "core-008"];
 
-    mod c3_right_house_defender {
+    mod n3_right_house_defender {
         use super::*;
 
         /// Taunt on BOTH faces, added by the Core Set balance pass (issue #1, "it just makes sense").
         /// A 1-mana Divine Shield + Reborn body that could be walked past was a defender that did not
         /// defend; with Taunt the enemy has to spend the shield before anything behind it is reachable.
         #[test]
-        fn c6_1_taunt_is_printed_on_both_faces_so_the_enemy_must_come_through_it() {
+        fn s6_1_taunt_is_printed_on_both_faces_so_the_enemy_must_come_through_it() {
+            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "field": [{ "def": "core-003", "lane": 1 }, { "def": "core-008", "lane": 2 }] },
                 "p2": { "field": ["core-008"] }
             }));
 
-            assert!(
-                serde_json::to_value(keywords_of(s.state(), s.card("core-003")))
-                    .unwrap()
-                    .as_array()
-                    .unwrap()
-                    .contains(&json!({ "kind": "Taunt" }))
-            );
+            assert!(keywords_of(s.state(), s.card("core-003")).contains(&Keyword::Taunt));
 
             // The ally behind it cannot be reached while the Taunt stands (§4.2).
-            let ally = s.unit(PlayerId::P1, 2).cloned();
+            let ally = s.unit(PlayerId::P1, 2);
             assert!(ally.is_some());
-            let target = ally.map(|unit| unit.id).unwrap_or_else(|| "core-008".to_string());
-            s.expect_refused_with(
-                |s| {
-                    let attacker = foe(s, 1);
-                    s.attack(attacker.as_str(), target.as_str());
-                },
-                "Taunt",
-            );
+            let attacker = foe(&s, 1);
+            match ally {
+                Some(ally) => s.expect_refused_with(|s| s.attack(attacker.as_str(), ally), "Taunt"),
+                None => s.expect_refused_with(|s| s.attack(attacker.as_str(), "core-008"), "Taunt"),
+            };
         }
 
         #[test]
-        fn c6_1_the_radiant_face_keeps_taunt_too() {
+        fn s6_1_the_radiant_face_keeps_taunt_too() {
+            crate::register_all();
             let s = scenario(json!({ "p1": { "field": [{ "def": "core-003", "radiant": true }] } }));
 
             assert_eq!(s.unit(PlayerId::P1, 1).map(|unit| unit.radiant), Some(true));
-            assert!(
-                serde_json::to_value(keywords_of(s.state(), s.card("core-003")))
-                    .unwrap()
-                    .as_array()
-                    .unwrap()
-                    .contains(&json!({ "kind": "Taunt" }))
-            );
+            assert!(keywords_of(s.state(), s.card("core-003")).contains(&Keyword::Taunt));
         }
 
         #[test]
         fn the_divine_shield_eats_the_first_hit() {
+            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "field": ["core-003"] },
@@ -116,12 +101,13 @@ mod tests {
             }));
             let attacker = foe(&s, 1);
             s.attack(attacker.as_str(), "core-003");
-            s.expect_in_zone("core-003", "field");
-            s.expect_stats("core-003", json!({ "health": 1, "maxHealth": 1 }));
+            s.expect_in_zone("core-003", "field")
+                .expect_stats("core-003", json!({ "health": 1, "maxHealth": 1 }));
         }
 
         #[test]
         fn r64_r83_dies_returns_at_1_health_in_its_own_reserved_zone() {
+            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "field": [{ "def": "core-003", "lane": 3 }] },
@@ -134,14 +120,15 @@ mod tests {
             let second = foe(&s, 2);
             s.attack(second.as_str(), rhd.as_str()); // kills it; Reborn brings it straight back
 
-            s.expect_in_zone(rhd.as_str(), "field");
-            s.expect_stats(rhd.as_str(), json!({ "health": 1, "maxHealth": 1 }));
-            assert_eq!(s.unit(PlayerId::P1, 3).map(|unit| unit.id.clone()), Some(rhd.clone()));
+            s.expect_in_zone(rhd.as_str(), "field")
+                .expect_stats(rhd.as_str(), json!({ "health": 1, "maxHealth": 1 }));
+            assert_eq!(s.unit(PlayerId::P1, 3).map(|unit| unit.id), Some(rhd.clone()));
             assert!(s.unit(PlayerId::P1, 1).is_none());
         }
 
         #[test]
         fn r78_the_reborn_body_has_no_reborn_so_its_next_death_is_final() {
+            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "field": [{ "def": "core-003", "lane": 3 }] },
@@ -164,6 +151,7 @@ mod tests {
 
         #[test]
         fn r8_r64_radiant_death_summons_a_base_right_house_defender_beside_the_reserved_zone() {
+            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "field": [{ "def": "core-003", "radiant": true, "lane": 1 }] },
@@ -178,22 +166,23 @@ mod tests {
 
             // Lane 1 is reserved for the Reborn return (R64), so the summon takes lane 2, and what it
             // summons is a new BASE Right-house defender, not a copy of the radiant one.
-            let reborn = s.unit(PlayerId::P1, 1).cloned();
-            let summoned = s
-                .unit(PlayerId::P1, 2)
-                .cloned()
-                .unwrap_or_else(|| panic!("the radiant Death trigger summoned nothing in lane 2"));
+            let reborn = s.unit(PlayerId::P1, 1);
+            let summoned = match s.unit(PlayerId::P1, 2) {
+                Some(unit) => unit,
+                None => panic!("the radiant Death trigger summoned nothing in lane 2"),
+            };
             assert_eq!(reborn.as_ref().map(|unit| unit.id.clone()), Some(rhd.clone()));
             // R78: the radiant flag survives leaving the field
             assert_eq!(reborn.as_ref().map(|unit| unit.radiant), Some(true));
             s.expect_stats(rhd.as_str(), json!({ "health": 1, "maxHealth": 2 }));
             assert_eq!(summoned.def_id, "core-003");
             assert!(!summoned.radiant);
-            s.expect_stats(summoned.id.as_str(), json!({ "attack": 1, "maxHealth": 1 }));
+            s.expect_stats(&summoned, json!({ "attack": 1, "maxHealth": 1 }));
         }
 
         #[test]
         fn r8_radiant_death_fires_on_the_second_death_too_for_two_base_bodies_in_all() {
+            crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "field": [{ "def": "core-003", "radiant": true, "lane": 1 }] },
@@ -211,8 +200,7 @@ mod tests {
             s.attack(fourth.as_str(), rhd.as_str()); // second death → base body #2, lane 1 being free again
 
             s.expect_in_zone(rhd.as_str(), "graveyard");
-            let bodies: Vec<CardInstance> =
-                [1, 2, 3, 4, 5].into_iter().filter_map(|lane| s.unit(PlayerId::P1, lane).cloned()).collect();
+            let bodies: Vec<CardInstance> = (1..=5).filter_map(|lane| s.unit(PlayerId::P1, lane)).collect();
             assert_eq!(
                 bodies.iter().map(|unit| unit.def_id.as_str()).collect::<Vec<_>>(),
                 vec!["core-003", "core-003"]
