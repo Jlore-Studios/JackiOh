@@ -11,11 +11,8 @@
 //! `conditionMet` (R195) is the same `fewer` the Cry branches on, so the glow and the branch agree; its
 //! proofs are in packages/cards/test/condition-active.test.ts.
 
-use std::sync::Arc;
-
 use jackioh_engine::effects::buff_all_units;
 use jackioh_engine::prelude::*;
-use jackioh_engine::wire::catalog_types::opponent_of;
 
 pub const ID: &str = "classicplus-050";
 
@@ -25,34 +22,44 @@ fn fewer(state: &GameState, player: PlayerId) -> bool {
 }
 
 pub fn script() -> CardScripts {
-    let condition_met: ConditionHook = Arc::new(|ctx: &ConditionContext| {
-        ctx.zone == ConditionZone::Hand && fewer(&ctx.state, ctx.controller)
-    });
-    CardScripts {
-        base: Script {
-            static_flags: Some(StaticFlags { cast_on_draw: Some(true), ..StaticFlags::default() }),
-            cry: Some(hook(|ctx| {
-                let amount =
-                    if fewer(&ctx.state, ctx.controller) { -param(ctx, "debuff") } else { param(ctx, "buff") };
-                vec![buff_all_units(json_as(json!({ "side": "both", "attack": amount, "health": amount })))]
-            })),
-            condition_met: Some(condition_met.clone()),
-            ..Script::default()
-        },
-        radiant: Script {
-            static_flags: Some(StaticFlags { cast_on_draw: Some(true), ..StaticFlags::default() }),
-            cry: Some(hook(|ctx| {
-                if fewer(&ctx.state, ctx.controller) {
-                    let amount = -param(ctx, "debuff");
-                    return vec![buff_all_units(json_as(json!({ "side": "enemy", "attack": amount, "health": amount })))];
-                }
-                let amount = param(ctx, "buff");
-                vec![buff_all_units(json_as(json!({ "side": "self", "attack": amount, "health": amount })))]
-            })),
-            condition_met: Some(condition_met),
-            ..Script::default()
-        },
-    }
+    let condition_met: ConditionHook =
+        condition_hook(|c| c.zone == ConditionZone::Hand && fewer(c.state, c.controller));
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            cast_on_draw: Some(true),
+            ..StaticFlags::default()
+        }),
+        cry: Some(hook(|ctx| {
+            let amount = if fewer(&*ctx.state, ctx.controller) {
+                -param(&*ctx, "debuff")
+            } else {
+                param(&*ctx, "buff")
+            };
+            vec![buff_all_units(json_as(json!({ "side": "both", "attack": amount, "health": amount })))]
+        })),
+        condition_met: Some(condition_met.clone()),
+        ..Script::default()
+    };
+    let radiant = Script {
+        static_flags: Some(StaticFlags {
+            cast_on_draw: Some(true),
+            ..StaticFlags::default()
+        }),
+        cry: Some(hook(|ctx| {
+            if fewer(&*ctx.state, ctx.controller) {
+                let amount = -param(&*ctx, "debuff");
+                return vec![buff_all_units(json_as(
+                    json!({ "side": "enemy", "attack": amount, "health": amount }),
+                ))];
+            }
+            let amount = param(&*ctx, "buff");
+            vec![buff_all_units(json_as(json!({ "side": "self", "attack": amount, "health": amount })))]
+        })),
+        // TS `conditionMet: base.conditionMet`: the same hook.
+        condition_met: base.condition_met.clone(),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
 }
 
 // C+ #50 Adaptive Growth — SPEC §8.7 row 50, BUILD M9 Classic+ row C+ 50: "Cast on draw (R70, R58): if
@@ -65,7 +72,6 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
-    use serde_json::{json, Value};
 
     const GROWTH: &str = "classicplus-050";
     const VANILLA: &str = "core-008"; // Mr. Vanilla 4/4
@@ -80,8 +86,15 @@ mod tests {
     }
 
     /// TS `s.unit(p, lane) ?? ""`: the unit's instance id, or "" (which no card answers to).
-    fn unit_id(s: &Scenario, player: PlayerId, lane: usize) -> String {
-        s.unit(player, lane).map(|card| card.id.clone()).unwrap_or_default()
+    fn unit_id(s: &Scenario, player: PlayerId, lane: i32) -> String {
+        s.unit(player, lane).map(|card| card.id).unwrap_or_default()
+    }
+
+    /// TS `stepParam(s.card(ref), key, steps)`: TS stepped the live card; here the card under its id.
+    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
+        let id = s.card(card).id.clone();
+        let live = find_instance_mut(s.state_mut(), &id).expect("the card is in the state");
+        step_param(live, key, steps);
     }
 
     /// Adaptive Growth on top of p1's library, p2 about to end their turn so p1 draws it.
@@ -105,7 +118,7 @@ mod tests {
     #[test]
     fn is_a_1_spell_that_casts_itself_on_draw_on_both_faces() {
         crate::register_all();
-        assert_eq!(registered_catalog()[super::ID].r#type, CardType::Spell);
+        assert_eq!(crate::card_def(super::ID).type_, CardType::Spell);
         let scripts = super::script();
         assert_eq!(scripts.base.static_flags.as_ref().and_then(|flags| flags.cast_on_draw), Some(true));
         assert_eq!(scripts.radiant.static_flags.as_ref().and_then(|flags| flags.cast_on_draw), Some(true));
@@ -120,11 +133,9 @@ mod tests {
             s.end_turn();
             s.expect_in_zone(GROWTH, "graveyard");
             let growth = s.card(GROWTH).id.clone();
-            assert!(
-                s.events()
-                    .iter()
-                    .any(|event| matches!(event, GameEvent::CardPlayed { instance_id, .. } if *instance_id == growth))
-            );
+            assert!(s.events().iter().any(
+                |event| matches!(event, GameEvent::CardPlayed { instance_id, .. } if *instance_id == growth)
+            ));
             assert_eq!(s.hand(PlayerId::P1).iter().filter(|card| card.def_id == FILLER).count(), 2);
         }
 
@@ -142,7 +153,11 @@ mod tests {
 
         #[test]
         fn s4_5_a_unit_brought_to_0_max_health_dies_at_the_state_check() {
-            let mut s = drawn(false, json!([]), json!([{ "def": VANILLA, "statsOverride": { "attack": 2, "health": 2 } }]));
+            let mut s = drawn(
+                false,
+                json!([]),
+                json!([{ "def": VANILLA, "statsOverride": { "attack": 2, "health": 2 } }]),
+            );
             let token = unit_id(&s, PlayerId::P2, 1);
             s.end_turn();
             s.expect_in_zone(&token, "graveyard");
@@ -155,7 +170,11 @@ mod tests {
 
         #[test]
         fn r69_an_indestructible_unit_at_0_max_health_dies_too() {
-            let mut s = drawn(false, json!([]), json!([{ "def": ROCK, "statsOverride": { "attack": 10, "health": 2 } }]));
+            let mut s = drawn(
+                false,
+                json!([]),
+                json!([{ "def": ROCK, "statsOverride": { "attack": 10, "health": 2 } }]),
+            );
             let rock = unit_id(&s, PlayerId::P2, 1);
             s.end_turn();
             s.expect_in_zone(&rock, "graveyard");
@@ -169,8 +188,7 @@ mod tests {
             s.expect_stats(&mine, json!({ "attack": 6, "health": 6 }));
             let theirs = unit_id(&s, PlayerId::P2, 1);
             s.expect_stats(&theirs, json!({ "attack": 6, "health": 6 }));
-            s.end_turn();
-            s.end_turn();
+            s.end_turn().end_turn();
             let theirs = unit_id(&s, PlayerId::P2, 1);
             s.expect_stats(&theirs, json!({ "attack": 6, "health": 6 }));
         }
@@ -190,18 +208,21 @@ mod tests {
 
         #[test]
         fn s3_2_the_counts_read_the_tops_of_the_piles_a_stack_pile_is_one_unit() {
-            let mut s =
-                drawn(false, json!([VANILLA, { "def": FIENDER, "stack": true }]), json!([VANILLA, VANILLA]));
+            let mut s = drawn(
+                false,
+                json!([VANILLA, { "def": FIENDER, "stack": true }]),
+                json!([VANILLA, VANILLA]),
+            );
             let buried = s.state().players.p1.units[0]
-                .iter()
-                .find(|card| card.def_id == VANILLA)
+                .as_ref()
+                .and_then(|pile| pile.iter().find(|card| card.def_id == VANILLA))
                 .map(|card| card.id.clone())
                 .unwrap_or_else(|| panic!("no pile"));
             s.end_turn();
             let theirs = unit_id(&s, PlayerId::P2, 1);
             s.expect_stats(&theirs, json!({ "attack": 2, "health": 2 }));
             // The dormant card is not on the field for effects (R13): it keeps its 4/4.
-            assert_eq!(serde_json::to_value(&s.card(&buried).buffs).unwrap(), json!({ "attack": 0, "health": 0 }));
+            assert_eq!(s.card(&buried).buffs, AttackHealth { attack: 0, health: 0 });
         }
 
         #[test]
@@ -220,13 +241,13 @@ mod tests {
         #[test]
         fn r386_an_upgrade_moves_both_numbers_3_3_and_3_3() {
             let mut up = held(false, json!([VANILLA]), json!([]));
-            step_param(up.card_mut(GROWTH), "buff", 1);
+            step(&mut up, GROWTH, "buff", 1);
             up.play(GROWTH, json!({}));
             let mine = unit_id(&up, PlayerId::P1, 1);
             up.expect_stats(&mine, json!({ "attack": 7, "health": 7 }));
 
             let mut down = held(false, json!([VANILLA]), json!([VANILLA, VANILLA]));
-            step_param(down.card_mut(GROWTH), "debuff", 1);
+            step(&mut down, GROWTH, "debuff", 1);
             down.play(GROWTH, json!({}));
             let mine = unit_id(&down, PlayerId::P1, 1);
             down.expect_stats(&mine, json!({ "attack": 1, "health": 1 }));
@@ -264,13 +285,13 @@ mod tests {
                 json!([VANILLA]),
                 json!([{ "def": VANILLA, "statsOverride": { "attack": 9, "health": 9 } }, VANILLA]),
             );
-            step_param(fewer.card_mut(GROWTH), "debuff", 1);
+            step(&mut fewer, GROWTH, "debuff", 1);
             fewer.play(GROWTH, json!({}));
             let theirs = unit_id(&fewer, PlayerId::P2, 1);
             fewer.expect_stats(&theirs, json!({ "attack": 5, "health": 5 }));
 
             let mut more = held(true, json!([VANILLA]), json!([]));
-            step_param(more.card_mut(GROWTH), "buff", -1);
+            step(&mut more, GROWTH, "buff", -1);
             more.play(GROWTH, json!({}));
             let mine = unit_id(&more, PlayerId::P1, 1);
             more.expect_stats(&mine, json!({ "attack": 6, "health": 6 }));
