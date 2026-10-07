@@ -15,22 +15,28 @@
 //! of a turn), the step itself finds the enemy hero at 0 or less and does nothing. That is what stops a
 //! Final Gambit fused into a Field Trap that stays (C+ #74) from re-aiming its own fatigue for ever.
 
-use jackioh_engine::prelude::*;
 use jackioh_engine::effects::{draw, heal};
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-052";
 
 /// How many cards the follow-up draws: the declared number, or the deck as the step begins (R58).
-type DrawCount = fn(&EffectContext) -> i32;
+type DrawCount = Arc<dyn Fn(&EffectContext<'_>) -> i32 + Send + Sync>;
 
 fn final_gambit(draw_count: DrawCount) -> Script {
     Script {
-        replacements: vec![json_as(json!({
-            "id": "final-gambit",
-            "on": "lethalHit",
-            "instead": { "redirect": "enemyHero" },
-            "then": "afterRedirect",
-        }))],
+        replacements: vec![ReplacementDef {
+            id: "final-gambit".to_string(),
+            on: ReplacementMoment::LethalHit,
+            where_: None,
+            when: None,
+            instead: ReplacementInstead {
+                redirect: Some(InsteadRedirect::EnemyHero),
+                ..ReplacementInstead::default()
+            },
+            then: Some("afterRedirect".to_string()),
+            by: None,
+        }],
         resume: IndexMap::from([(
             "afterRedirect",
             hook(move |ctx| {
@@ -41,9 +47,11 @@ fn final_gambit(draw_count: DrawCount) -> Script {
                         return vec![];
                     }
                 }
+                let amount = param(&*ctx, "heal");
+                let count = draw_count(&*ctx);
                 vec![
-                    heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": param(ctx, "heal") }))),
-                    draw(json_as(json!({ "count": draw_count(ctx) }))),
+                    heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": amount }))),
+                    draw(json_as(json!({ "count": count }))),
                 ]
             }),
         )]),
@@ -52,9 +60,11 @@ fn final_gambit(draw_count: DrawCount) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    let base = final_gambit(|ctx| param(ctx, "draw"));
+    let base = final_gambit(Arc::new(|ctx: &EffectContext<'_>| -> i32 { param(ctx, "draw") }));
 
-    let radiant = final_gambit(|ctx| zone_count(&ctx.state, ctx.controller, OffFieldZone::Library));
+    let radiant = final_gambit(Arc::new(|ctx: &EffectContext<'_>| -> i32 {
+        zone_count(&ctx.state, ctx.controller, OffFieldZone::Library)
+    }));
 
     CardScripts { base, radiant }
 }
@@ -159,7 +169,13 @@ mod tests {
         if entry.is_string() { json!({ "def": entry }) } else { entry.clone() }
     }
 
-    mod c_52_final_gambit {
+    /// TS `stepParam(card, key, steps)` on a live card: the step written on the card under `id`.
+    fn step_id(s: &mut Scenario, id: &str, key: &str, steps: i32) {
+        let instance = find_instance_mut(s.state_mut(), id).expect("the card to step is in the state");
+        step_param(instance, key, steps);
+    }
+
+    mod c52_final_gambit {
         use super::*;
 
         #[test]
@@ -170,10 +186,15 @@ mod tests {
             assert_eq!(def["type"], "Trap");
             let scripts = script();
             for face in [&scripts.base, &scripts.radiant] {
-                assert_eq!(
-                    js(&face.replacements),
-                    json!([{ "id": "final-gambit", "on": "lethalHit", "instead": { "redirect": "enemyHero" }, "then": "afterRedirect" }]),
-                );
+                // TS `toEqual([{ id, on, instead, then }])`: a `ReplacementDef` holds a hook, so it is
+                // compared field by field, the absent ones absent.
+                assert_eq!(face.replacements.len(), 1);
+                let only = &face.replacements[0];
+                assert_eq!(only.id, "final-gambit");
+                assert_eq!(only.on, ReplacementMoment::LethalHit);
+                assert_eq!(js(&only.instead), json!({ "redirect": "enemyHero" }));
+                assert_eq!(only.then.as_deref(), Some("afterRedirect"));
+                assert!(only.where_.is_none() && only.when.is_none() && only.by.is_none());
                 assert!(face.resume.contains_key("afterRedirect"));
             }
         }
@@ -262,7 +283,7 @@ mod tests {
             }
 
             #[test]
-            fn c4_4_it_is_judged_after_armor_going_longs_2_off_a_7_is_a_5_lethal_at_5_not_at_6() {
+            fn s4_4_it_is_judged_after_armor_going_longs_2_off_a_7_is_a_5_lethal_at_5_not_at_6() {
                 crate::register_all();
                 let at5 = lethal_attack(json!({ "attacker": POINTMASTER, "health": 5, "p1Backrow": [GOING_LONG] }));
                 assert_eq!(fired(&at5).len(), 1);
@@ -272,7 +293,7 @@ mod tests {
             }
 
             #[test]
-            fn c4_4_it_is_judged_after_the_hero_damage_multipliers_argusland_halves_a_7_to_4_lethal_at_4_not_at_5() {
+            fn s4_4_it_is_judged_after_the_hero_damage_multipliers_argusland_halves_a_7_to_4_lethal_at_4_not_at_5() {
                 crate::register_all();
                 let at4 = lethal_attack(json!({ "attacker": POINTMASTER, "health": 4, "p1Backrow": [ARGUSLAND] }));
                 assert_eq!(fired(&at4).len(), 1);
@@ -282,7 +303,7 @@ mod tests {
             }
 
             #[test]
-            fn c4_4_it_is_judged_after_the_hit_caps_anti_oneshot_armor_caps_a_9_at_5_lethal_at_5_not_at_6() {
+            fn s4_4_it_is_judged_after_the_hit_caps_anti_oneshot_armor_caps_a_9_at_5_lethal_at_5_not_at_6() {
                 crate::register_all();
                 let at5 = lethal_attack(json!({ "attacker": MENACE, "health": 5, "p1Backrow": [ANTI_ONESHOT] }));
                 assert_eq!(fired(&at5).len(), 1);
@@ -292,7 +313,7 @@ mod tests {
             }
 
             #[test]
-            fn c6_3_redirect_the_re_aimed_hit_meets_the_enemy_heros_own_armor_and_multipliers_7_2_5_halved_to_3() {
+            fn s6_3_redirect_the_re_aimed_hit_meets_the_enemy_heros_own_armor_and_multipliers_7_2_5_halved_to_3() {
                 crate::register_all();
                 let mut s = lethal_attack(json!({
                     "attacker": POINTMASTER,
@@ -304,7 +325,7 @@ mod tests {
             }
 
             #[test]
-            fn c6_3_redirect_and_the_enemy_heros_caps_anti_oneshot_armor_caps_the_re_aimed_9_at_5() {
+            fn s6_3_redirect_and_the_enemy_heros_caps_anti_oneshot_armor_caps_the_re_aimed_9_at_5() {
                 crate::register_all();
                 let mut s = lethal_attack(json!({ "attacker": MENACE, "health": 4, "p2": { "backrow": [ANTI_ONESHOT] } }));
                 assert_eq!(hero_hits(&s, PlayerId::P2), vec![5]);
@@ -381,7 +402,7 @@ mod tests {
             }
 
             #[test]
-            fn c2_5_a_re_aimed_hit_that_kills_the_opponent_ends_the_game_at_the_state_check() {
+            fn s2_5_a_re_aimed_hit_that_kills_the_opponent_ends_the_game_at_the_state_check() {
                 crate::register_all();
                 let mut s = lethal_attack(json!({ "attacker": VANILLA, "health": 4, "p2": { "health": 4 } }));
                 assert_eq!(fired(&s).len(), 1);
@@ -390,7 +411,7 @@ mod tests {
             }
 
             #[test]
-            fn c2_5_a_draw_if_both_heroes_are_at_0_the_re_aimed_fatigue_kills_the_opponent_and_the_next_one_in_the_same_draw_kills_you() {
+            fn s2_5_a_draw_if_both_heroes_are_at_0_the_re_aimed_fatigue_kills_the_opponent_and_the_next_one_in_the_same_draw_kills_you() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [PANTHER], "backrow": [{ "def": GAMBIT, "faceUp": false }], "health": 1 },
@@ -452,8 +473,8 @@ mod tests {
                 assert_eq!(fired(&s).len(), 1);
                 let (first, second) = (s.backrow(PlayerId::P1, 1), s.backrow(PlayerId::P1, 2));
                 assert!(first.is_none());
-                assert_eq!(second.map(|card| card.def_id.as_str()), Some(GAMBIT));
-                assert_ne!(second.and_then(|card| card.face_up), Some(true));
+                assert_eq!(second.as_ref().map(|card| card.def_id.as_str()), Some(GAMBIT));
+                assert_ne!(second.as_ref().and_then(|card| card.face_up), Some(true));
                 s.expect_health(PlayerId::P1, 14);
             }
 
@@ -497,8 +518,8 @@ mod tests {
                     "active": "p2",
                 }));
                 let gambit = s.card(GAMBIT).id.clone();
-                step_param(s.card_mut(&gambit), "heal", 1);
-                step_param(s.card_mut(&gambit), "draw", 1);
+                step_id(&mut s, &gambit, "heal", 1);
+                step_id(&mut s, &gambit, "draw", 1);
                 s.attack(VANILLA, "hero");
                 s.expect_health(PlayerId::P1, 16);
                 assert_eq!(s.hand(PlayerId::P1).len(), 5);
@@ -513,8 +534,8 @@ mod tests {
                     "active": "p2",
                 }));
                 let gambit = s.card(GAMBIT).id.clone();
-                step_param(s.card_mut(&gambit), "heal", -1);
-                step_param(s.card_mut(&gambit), "draw", -1);
+                step_id(&mut s, &gambit, "heal", -1);
+                step_id(&mut s, &gambit, "draw", -1);
                 s.attack(VANILLA, "hero");
                 s.expect_health(PlayerId::P1, 12);
                 assert_eq!(s.hand(PlayerId::P1).len(), 3);
@@ -576,7 +597,7 @@ mod tests {
             }
 
             #[test]
-            fn c4_4_judged_after_armor_multipliers_and_caps_like_the_base_face() {
+            fn s4_4_judged_after_armor_multipliers_and_caps_like_the_base_face() {
                 crate::register_all();
                 let mut s = lethal_attack(json!({
                     "attacker": MENACE,
@@ -618,7 +639,8 @@ mod tests {
                     "p2": { "hand": [FILLER], "field": [VANILLA] },
                     "active": "p2",
                 }));
-                step_param(s.card_mut(GAMBIT), "heal", -1);
+                let gambit = s.card(GAMBIT).id.clone();
+                step_id(&mut s, &gambit, "heal", -1);
                 s.attack(VANILLA, "hero");
                 s.expect_health(PlayerId::P1, 22);
             }
