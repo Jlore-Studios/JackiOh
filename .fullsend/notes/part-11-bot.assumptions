@@ -1,0 +1,31 @@
+id.instance: String (TS "c<n>")
+num.game: i32
+num.cursor: u32
+map.ordered: IndexMap
+bag.data: IndexMap<String, serde_json::Value>
+error.style: Result<_, EngineError> with TS's message; panic only on invariants
+null.optional: Option + skip_serializing_if
+null.nullable: Option, serialised null
+case.json: camelCase via serde rename_all
+case.rust: snake_case
+state.mut: &mut GameState writes, &GameState reads, &mut EngineSink for TS sink mutators
+rng.source: Rng::new(&state.seed, state.rng_cursor) and write the cursor back
+hook.style: Arc<dyn Fn + Send + Sync> via hook(); no fn pointers, no Box
+registry.style: OnceLock set once by register_all; fused scripts built on lookup from state
+async.style: tokio in crates/server only; none in pure crates
+log.style: tracing JSON to stdout, server only
+script.list_fields: Vec, empty when TS omits it
+script.resume: IndexMap<&'static str, Hook>
+script.typed_hook: Some(Arc::new(|ctx: &TsArgType| -> TsReturn { .. }))
+trigger.ctx: &TriggerContext, ctx.event: GameEvent, derefs to EffectContext
+ctx.self: ctx.self_ (Option<CardInstance>; CardInstance in ConditionContext)
+ctx.state.read: &ctx.state
+effect.args: json_as(json!({ ..TS literal.. }))
+event.match: GameEvent::<PascalCaseType> { snake_fields, .. }
+enum.variant: PascalCase of the TS literal
+cards.card_def: crate::card_def(id) -> &'static CardDef
+cards.catalog: registered_catalog()
+cards.query: crate::query::*
+test.register: crate::register_all() first in every #[test]
+test.scenario: scenario(json!) -> Scenario; verbs return &mut Scenario
+test.name: title snake_cased, § -> s, # -> n, leading digit -> t_
