@@ -849,8 +849,8 @@ mod e17_the_other_players_hand_as_a_prompt_classic_11 {
         let mut events = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         {
-            let sink = EngineSink::new(&mut state, &mut events, &mut rng);
-            let mut ctx = make_context(sink, None, by(P1));
+            let mut sink = EngineSink::new(&mut state, &mut events, &mut rng);
+            let mut ctx = make_context(&mut sink, None, by(P1));
             (choose_from_hand(json_as(json!({ "of": "enemy", "step": "none", "prompt": "Look" }))).apply)(&mut ctx);
         }
         let pending = open_as(&state, PromptKind::Hand, P1);

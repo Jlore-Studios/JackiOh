@@ -66,7 +66,7 @@ fn at(card: &CardInstance) -> Selection {
 }
 
 fn offered(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<Selection> {
-    let decl = declared_targets(card).into_iter().next().expect("no declaration");
+    let decl = declared_targets(state, card).into_iter().next().expect("no declaration");
     legal_selections_for(state, player, card, &decl)
 }
 

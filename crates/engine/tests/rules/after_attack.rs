@@ -83,7 +83,7 @@ mod script_after_attack {
         let mut sink = sink_for(&mut state);
         apply_effects(
             &[forced_attacks_on(json_as(json!({ "target": { "of": "enemyHero" }, "attackers": "self" })))],
-            &mut make_context(sink.reborrow(), None, by(P1)),
+            &mut make_context(&mut sink, None, by(P1)),
         );
         assert_eq!(notes(sink.state), vec!["after:hero-p2::true:true:field"]);
 

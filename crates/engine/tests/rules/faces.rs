@@ -110,9 +110,9 @@ mod b2_7_a_face_with_its_own_type {
         find_instance_mut(&mut state, &radiant.id).expect("in hand").radiant = true;
         let mut events: Vec<GameEvent> = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
-        let sink = EngineSink::new(&mut state, &mut events, &mut rng);
+        let mut sink = EngineSink::new(&mut state, &mut events, &mut rng);
         let ctx = make_context(
-            sink,
+            &mut sink,
             None,
             HookOptions {
                 controller: Some(P1),
@@ -132,7 +132,7 @@ mod b2_7_a_face_with_its_own_type {
             cards_in_card_scope(&ctx, &json_as(json!({ "zones": ["hand"], "types": ["Trap"] })), Default::default())
                 .is_empty()
         );
-        let trap_ids: Vec<String> = query(json_as(json!({ "type": "Trap" }))).iter().map(|def| def.id.clone()).collect();
+        let trap_ids: Vec<String> = query(&json_as(json!({ "type": "Trap" }))).iter().map(|def| def.id.clone()).collect();
         assert!(trap_ids.contains(&blood_moon.id));
     }
 
@@ -275,7 +275,7 @@ mod b2_7_x_in_the_stats_buff_billy {
             let effect = summon(json_as(json!({ "defId": billy.id })));
             {
                 let mut ctx = make_context(
-                    sink.reborrow(),
+                    &mut sink,
                     None,
                     HookOptions {
                         controller: Some(P1),

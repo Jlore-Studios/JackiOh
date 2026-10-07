@@ -118,13 +118,13 @@ fn play(sink: &mut EngineSink<'_>, def_id: &str, radiant: bool) -> CardInstance 
         find_instance_mut(sink.state, &card.id).expect("in hand").radiant = true;
         card.radiant = true;
     }
-    cast_card(sink, card.clone(), CastOptions::default());
+    cast_card(sink, &card, CastOptions::default());
     card
 }
 
 fn run(sink: &mut EngineSink<'_>, self_: &CardInstance, effects: Vec<Effect>) {
     let current = find_instance(sink.state, &self_.id).cloned().unwrap_or_else(|| self_.clone());
-    let mut ctx = make_context(sink.reborrow(), Some(current), HookOptions::default());
+    let mut ctx = make_context(sink, Some(&current), HookOptions::default());
     apply_effects(&effects, &mut ctx);
 }
 
@@ -447,7 +447,7 @@ mod r27_combo_index_s8_93_m3_t7 {
             CardCost::Fixed(cost) => cost,
             other => panic!("trick costs {other:?}"),
         };
-        assert_eq!(effective_cost(&state, &discounted[0]), trick_cost - 1);
+        assert_eq!(effective_cost(&state, &discounted[0], CostOptions::default()), trick_cost - 1);
         assert_eq!(
             hand_ids.iter().filter(|id| card(&state, id).cost_mod == 0).count(),
             2
@@ -699,7 +699,7 @@ mod r86_what_a_pool_of_cards_played_this_turn_holds {
 
         // Make one cease to exist, as a unit token does when it leaves the field (R11): out of every
         // pile, and tagged `gone` rather than claiming a zone it is not in.
-        remove_from_any_zone(sink.state, &unit.id);
+        remove_from_any_zone(sink.state, &mut unit);
         unit.zone = Zone::Gone { player: P1 };
         assert!(find_instance(sink.state, &unit.id).is_none());
 

@@ -450,7 +450,8 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
 
         let mut sink = sink_for(&state);
         {
-            let mut ctx = make_context(sink.on(&mut state), None, controlled_by(PlayerId::P1));
+            let mut engine_sink = sink.on(&mut state);
+            let mut ctx = make_context(&mut engine_sink, None, controlled_by(PlayerId::P1));
             apply_effects(
                 &[effects::summon(json_as(json!({ "defId": crier().id })))],
                 &mut ctx,
@@ -524,7 +525,8 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
         // The contrast first: a check taken between the two hits would have ended it as a p1 win.
         let cry = script_of(&state, &card.def_id).base.cry.clone();
         let mut split = sink_for(&state);
-        let mut split_ctx = make_context(split.on(&mut state), Some(card.clone()), controlled_by(PlayerId::P1));
+        let mut split_sink = split.on(&mut state);
+        let mut split_ctx = make_context(&mut split_sink, Some(&card), controlled_by(PlayerId::P1));
         let cry_effects = match &cry {
             Some(run) => run(&mut split_ctx),
             None => vec![],
@@ -571,7 +573,8 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
 
         let mut sink = sink_for(&state);
         {
-            let mut ctx = make_context(sink.on(&mut state), None, controlled_by(PlayerId::P1));
+            let mut engine_sink = sink.on(&mut state);
+            let mut ctx = make_context(&mut engine_sink, None, controlled_by(PlayerId::P1));
             apply_effects(
                 &[effects::summon(json_as(json!({ "defId": crier().id })))],
                 &mut ctx,
@@ -666,7 +669,8 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
         let mut state = playing("r1-summon-vs-play");
         let mut sink = sink_for(&state);
         {
-            let mut ctx = make_context(sink.on(&mut state), None, controlled_by(PlayerId::P1));
+            let mut engine_sink = sink.on(&mut state);
+            let mut ctx = make_context(&mut engine_sink, None, controlled_by(PlayerId::P1));
             apply_effects(
                 &[effects::summon(json_as(json!({ "defId": crier().id })))],
                 &mut ctx,
@@ -703,7 +707,8 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
         set_library(&mut state, PlayerId::P1, &[draw_caster().id]);
         let before = state.counters.played;
         {
-            let mut ctx = make_context(sink.on(&mut state), None, controlled_by(PlayerId::P1));
+            let mut engine_sink = sink.on(&mut state);
+            let mut ctx = make_context(&mut engine_sink, None, controlled_by(PlayerId::P1));
             apply_effects(&[effects::draw(json_as(json!({ "count": 1 })))], &mut ctx);
         }
         assert_eq!(notes(&state), strings(&["cry:onDraw"]));

@@ -115,9 +115,9 @@ fn run(state: &mut GameState, effect: Effect, actor: PlayerId) -> Vec<GameEvent>
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     {
-        let sink = EngineSink::new(state, &mut events, &mut rng);
+        let mut sink = EngineSink::new(state, &mut events, &mut rng);
         let mut ctx = make_context(
-            sink,
+            &mut sink,
             None,
             HookOptions {
                 controller: Some(actor),
@@ -138,7 +138,7 @@ fn rotate(state: &mut GameState, direction: RotationDirection, radiant: bool) ->
         let mut sink = EngineSink::new(state, &mut events, &mut rng);
         rotate_rings(
             &mut sink,
-            RotationArgs {
+            &RotationArgs {
                 direction,
                 perspective,
                 radiant: Some(radiant),
@@ -375,11 +375,11 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         let mine = exhausted(&mut state, mine, turn - 1);
         let beneath = put(&mut state, &plain.id, slot(P1, Row::Units, 2), json!({}));
         let beneath = exhausted(&mut state, beneath, turn - 2);
-        let top = new_instance(&mut state, &stacker.id, P1, Zone::Hand { player: P1 });
+        let mut top = new_instance(&mut state, &stacker.id, P1, Zone::Hand { player: P1 });
         let top_id = top.id.clone();
         assert!(place_on_field(
             &mut state,
-            top,
+            &mut top,
             slot(P1, Row::Units, 2),
             json_as(json!({ "stack": true }))
         ));
