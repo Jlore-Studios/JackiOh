@@ -587,57 +587,13 @@ fn where_label(scope: Where) -> &'static str {
 // Setup
 // ---------------------------------------------------------------------------------------------
 
-/// The printed flag or the tag (TS `catalog.isToken`).
-fn is_token(def: &CardDef) -> bool {
-    def.token || def.tags.contains(&Tag::Token)
-}
-
-/// §5's index as a number, so "2" sorts before "10" and a token index ("T-rush") sorts last
-/// (SURFACE §4.4.4).
-fn index_rank(index: &str) -> f64 {
-    index
-        .parse::<f64>()
-        .ok()
-        .filter(|rank| rank.is_finite())
-        .unwrap_or(f64::INFINITY)
-}
-
-/// B2.2: a set's place in the catalog order; a set the order does not name sorts last.
-fn set_rank(set: SetName) -> usize {
-    SHIPPED_SETS
-        .iter()
-        .position(|shipped| *shipped == set)
-        .unwrap_or(SHIPPED_SETS.len())
-}
-
-/// `catalog::query`'s strict total order: set, index as a number, the index itself, the id.
-fn catalog_order(a: &CardDef, b: &CardDef) -> std::cmp::Ordering {
-    use std::cmp::Ordering;
-    let (set_a, set_b) = (set_rank(a.set), set_rank(b.set));
-    if set_a != set_b {
-        return set_a.cmp(&set_b);
-    }
-    let (rank_a, rank_b) = (index_rank(&a.index), index_rank(&b.index));
-    if rank_a != rank_b {
-        return if rank_a < rank_b { Ordering::Less } else { Ordering::Greater };
-    }
-    if a.index != b.index {
-        return a.index.cmp(&b.index);
-    }
-    a.id.cmp(&b.id)
-}
-
 /// `create_game` validates decks (§2.6: DECK_SIZE cards, no duplicates, no tokens), so the filler
 /// deck is the first DECK_SIZE non-token catalog ids in §5 index order — TS took them straight from
 /// `query({})`, whose filter (no token, R674's Glitch in no pool) and order this repeats. Both
 /// libraries are emptied again right afterwards and `nextId` is reset, so the ids a scenario hands
 /// out start at `c1` and follow the setup's own order.
 fn filler_deck() -> Result<Vec<String>, String> {
-    let mut defs: Vec<&CardDef> = registered()
-        .values()
-        .filter(|def| def.id != GLITCH_DEF_ID && !is_token(def))
-        .collect();
-    defs.sort_by(|a, b| catalog_order(a, b));
+    let defs: Vec<&CardDef> = crate::catalog::query(&crate::catalog::CatalogQueryArgs::default());
     let size = DECK_SIZE.max(0) as usize;
     if defs.len() < size {
         return Err(format!(
@@ -649,12 +605,9 @@ fn filler_deck() -> Result<Vec<String>, String> {
     Ok(defs.into_iter().take(size).map(|def| def.id.clone()).collect())
 }
 
-/// TS `defOf(state, defId)`: this state's transient defs (Fuse) win over the registry.
+/// TS `defOf(state, defId)` (`catalog::find_def`: transient defs first), as the harness's error.
 fn def_of(state: &GameState, def_id: &str) -> Result<CardDef, String> {
-    state
-        .transient_defs
-        .get(def_id)
-        .or_else(|| registered().get(def_id))
+    crate::catalog::find_def(Some(state), def_id)
         .cloned()
         .ok_or_else(|| format!("unknown defId \"{def_id}\": register the catalog first"))
 }
@@ -908,48 +861,10 @@ fn place_one(sink: &mut EngineSink<'_>, player: PlayerId, entry: &Placement) -> 
     Ok(())
 }
 
-/// TS `PileName`: the four off-field piles a side setup fills.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum PileZone {
-    Hand,
-    Library,
-    Graveyard,
-    Exile,
-}
-
-impl PileZone {
-    fn name(self) -> &'static str {
-        match self {
-            PileZone::Hand => "hand",
-            PileZone::Library => "library",
-            PileZone::Graveyard => "graveyard",
-            PileZone::Exile => "exile",
-        }
-    }
-
-    fn zone(self, player: PlayerId) -> Zone {
-        match self {
-            PileZone::Hand => Zone::Hand { player },
-            PileZone::Library => Zone::Library { player },
-            PileZone::Graveyard => Zone::Graveyard { player },
-            PileZone::Exile => Zone::Exile { player },
-        }
-    }
-
-    fn off_field(self) -> OffFieldZone {
-        match self {
-            PileZone::Hand => OffFieldZone::Hand,
-            PileZone::Library => OffFieldZone::Library,
-            PileZone::Graveyard => OffFieldZone::Graveyard,
-            PileZone::Exile => OffFieldZone::Exile,
-        }
-    }
-}
-
 fn place_pile(
     sink: &mut EngineSink<'_>,
     player: PlayerId,
-    zone: PileZone,
+    zone: OffFieldZone,
     refs: &[PileSetup],
     label: &str,
 ) -> Result<(), String> {
@@ -961,7 +876,7 @@ fn place_pile(
             PileSetup::Entry(fields) => (fields.radiant == Some(true), Some(&fields.cost)),
         };
 
-        if zone == PileZone::Hand {
+        if zone == OffFieldZone::Hand {
             let _ = crate::setup::create_in_hand(&mut *sink, player, &def_id);
             // `create_in_hand` pushes the new card onto the end of the hand.
             if let Some(card) = sink.state.players[player].hand.last_mut() {
@@ -973,7 +888,7 @@ fn place_pile(
             continue;
         }
 
-        let mut card = new_instance(&mut *sink.state, &def_id, player, zone.zone(player));
+        let mut card = new_instance(&mut *sink.state, &def_id, player, zone.zone_for(player));
         if radiant {
             card.radiant = true;
         }
@@ -983,7 +898,7 @@ fn place_pile(
         let result = crate::zones::move_to_zone(
             &mut *sink.state,
             &mut card,
-            zone.off_field(),
+            zone,
             MoveToZoneOptions {
                 position: Some(LibraryPosition::Bottom),
                 ..MoveToZoneOptions::default()
@@ -992,7 +907,7 @@ fn place_pile(
         // R311: a scenario's library stands for its owner's deck, which they know card by card. A deck
         // is dealt on its base face, so a card set Radiant here became Radiant where nobody saw it
         // (#28, #42): what its owner was shown is the base face.
-        if zone == PileZone::Library
+        if zone == OffFieldZone::Library
             && result == MoveResult::Moved
             && let Some(card) = find_instance_mut(&mut *sink.state, &id)
         {
@@ -1006,7 +921,7 @@ fn place_pile(
             return Err(format!(
                 "{at_}: \"{name}\" is a unit token, and R11 makes one cease to exist on the way to a {}; put it \
                  in a hand or a library instead",
-                zone.name()
+                zone.as_str()
             ));
         }
     }
@@ -1015,7 +930,7 @@ fn place_pile(
 
 fn place_side(sink: &mut EngineSink<'_>, player: PlayerId, setup: &SideSetup) -> Result<(), String> {
     let seat = player.as_str();
-    place_pile(sink, player, PileZone::Hand, setup.hand.as_deref().unwrap_or(&[]), &format!("{seat}.hand"))?;
+    place_pile(sink, player, OffFieldZone::Hand, setup.hand.as_deref().unwrap_or(&[]), &format!("{seat}.hand"))?;
 
     // `field` and `backrow` are one board: each entry's row comes from its def's type (or its own
     // `row`), and lanes are then handed out per row over the whole board, `field` entries first.
@@ -1041,9 +956,9 @@ fn place_side(sink: &mut EngineSink<'_>, player: PlayerId, setup: &SideSetup) ->
         place_one(sink, player, entry)?;
     }
 
-    place_pile(sink, player, PileZone::Library, setup.library.as_deref().unwrap_or(&[]), &format!("{seat}.library"))?;
-    place_pile(sink, player, PileZone::Graveyard, setup.graveyard.as_deref().unwrap_or(&[]), &format!("{seat}.graveyard"))?;
-    place_pile(sink, player, PileZone::Exile, setup.exile.as_deref().unwrap_or(&[]), &format!("{seat}.exile"))?;
+    place_pile(sink, player, OffFieldZone::Library, setup.library.as_deref().unwrap_or(&[]), &format!("{seat}.library"))?;
+    place_pile(sink, player, OffFieldZone::Graveyard, setup.graveyard.as_deref().unwrap_or(&[]), &format!("{seat}.graveyard"))?;
+    place_pile(sink, player, OffFieldZone::Exile, setup.exile.as_deref().unwrap_or(&[]), &format!("{seat}.exile"))?;
     Ok(())
 }
 
@@ -1583,13 +1498,13 @@ impl Scenario {
     pub fn unit(&self, player: impl SeatRef, lane: i32) -> Option<CardInstance> {
         Scenario::check_lane("unit", Row::Units, lane);
         let player = player.seat_or(self.current.active);
-        card_at(&self.current, player, Row::Units, lane).cloned()
+        crate::zones::card_at(&self.current, ZoneSlot { player, row: Row::Units, lane }).cloned()
     }
 
     pub fn backrow(&self, player: impl SeatRef, lane: i32) -> Option<CardInstance> {
         Scenario::check_lane("backrow", Row::Backrow, lane);
         let player = player.seat_or(self.current.active);
-        card_at(&self.current, player, Row::Backrow, lane).cloned()
+        crate::zones::card_at(&self.current, ZoneSlot { player, row: Row::Backrow, lane }).cloned()
     }
 
     pub fn hand(&self, player: impl SeatRef) -> Vec<CardInstance> {
@@ -1750,17 +1665,6 @@ impl Scenario {
             Some(_) => {}
         }
         self
-    }
-}
-
-/// The card that acts in this zone: the top of a Stack pile, or the backrow card (§3.2) — TS
-/// `zones.cardAt`, which the harness's `unit`/`backrow` read.
-fn card_at(state: &GameState, player: PlayerId, row: Row, lane: i32) -> Option<&CardInstance> {
-    let at = usize::try_from(lane - 1).ok()?;
-    let side = &state.players[player];
-    match row {
-        Row::Units => side.units.get(at)?.as_ref()?.first(),
-        Row::Backrow => side.backrow.get(at)?.as_ref(),
     }
 }
 
