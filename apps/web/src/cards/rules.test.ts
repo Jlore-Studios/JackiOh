@@ -11,6 +11,8 @@
 // own section. A row added without a glossary entry fails; a reworded rule fails nothing.
 
 import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -33,15 +35,19 @@ import { termsIn, tokenizeRules, type RulesToken } from "./rules.ts";
 
 /* -------------------------------------------------------------------------------------- helpers */
 
-/** The spec's keyword note (§6) and its card-types note (§5), read for ids only (#133). */
-const KEYWORDS_NOTE = new URL("../../../../spec/06-keywords.md", import.meta.url);
-const CARD_TYPES_NOTE = new URL("../../../../spec/05-card-types.md", import.meta.url);
+/**
+ * The spec's keyword note (§6) and its card-types note (§5), read for ids only (#133). Paths, not
+ * `new URL("…", import.meta.url)`, which Vite rewrites into an asset URL `readFileSync` refuses.
+ */
+const SPEC_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../../../spec");
+const KEYWORDS_NOTE = join(SPEC_DIR, "06-keywords.md");
+const CARD_TYPES_NOTE = join(SPEC_DIR, "05-card-types.md");
 
 type TableSection = "§6.1" | "§6.2" | "§6.3";
 const TABLE_SECTIONS: readonly TableSection[] = ["§6.1", "§6.2", "§6.3"];
 
 /** The `### N.M` heading ids of a spec note. */
-function headingIds(note: URL): string[] {
+function headingIds(note: string): string[] {
   return readFileSync(note, "utf8")
     .split("\n")
     .flatMap((line) => /^### (\d+\.\d+) /.exec(line)?.slice(1, 2) ?? []);

@@ -9,11 +9,15 @@
 
 import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { beforeEach } from "vitest";
 
 import { loadWasmSync } from "../wasm/index.ts";
 
-loadWasmSync(readFileSync(new URL("../wasm/pkg/jackioh_wasm_bg.wasm", import.meta.url)));
+// A path, not `new URL("../wasm/pkg/…", import.meta.url)`: Vite rewrites that literal pattern into an
+// asset URL against the page's origin, which `readFileSync` refuses ("The URL must be of scheme file").
+loadWasmSync(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../wasm/pkg/jackioh_wasm_bg.wasm")));
 
 let reducedMotion = false;
 
