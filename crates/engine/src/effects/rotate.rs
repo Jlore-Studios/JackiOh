@@ -1,0 +1,62 @@
+//! Rotate as a verb (SPEC §6.3 Rotate, §3.1's rotation-topology ruling, §3.2; R14, R88; §8.3 #52).
+//!
+//! `subsystems/rotation.rs` is that ruling in full: the two rings (the rotating player's lanes 1 to
+//! 5, then the opponent's 5 down to 1, and back), both turning together one step; the whole board
+//! read before anything is placed, so one rotation is atomic; a Stack pile travelling whole with its
+//! top card on top (§3.2, R13); `controller` changing only across the centre line while `owner`
+//! never does (R12); a Locked or Reborn-reserved destination bouncing the card to its OWNER's hand
+//! (R14, R88, with R4's hand cap and R11's vanishing token on the way); and #52's radiant face
+//! replacing an outbound crossing — a card leaving the rotating player's side for the opponent's —
+//! with that same bounce at `costOverride` 0, while a card crossing onto that side still crosses.
+//!
+//! None of that is here, and the ring walk in particular is never rewritten: the subsystem's
+//! `ring_order`/`ring_neighbor` are the topology, and a second walk would be a second topology. This
+//! file is the wrapper the effects barrel was missing — the barrel's own header lists Rotate among
+//! the verbs living outside it — because `rotate_rings` takes an `EngineSink` and mutates the board,
+//! which a card script may not do (CLAUDE.md rule 5).
+//!
+//! THE TWO DEFAULTS ARE THE WHOLE OF ITS CLEVERNESS. §3.1 reads "left" and "right" from the ROTATING
+//! player's seat, so `perspective` is the controller; and #52's two faces are one hook whose only
+//! difference is `ctx.radiant`, which `rotate_rings` already honours through its own `radiant`
+//! argument. So `rotate({ direction })` is the complete call, and the radiant bounce comes from the
+//! running face rather than from anything the card has to pass.
+//!
+//! Port of `packages/engine/src/effects/rotate.ts`.
+
+use serde::{Deserialize, Serialize};
+
+use crate::script::Effect;
+use crate::subsystems::rotation::{RotationArgs, rotate_rings};
+use crate::wire::RotationDirection;
+
+use super::targets::{PlayerSpec, player_of};
+
+/// `rotate`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RotateArgs {
+    pub direction: RotationDirection,
+    /// Whose seat "left" and "right" are read from (§3.1). Default the controller.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub perspective: Option<PlayerSpec>,
+    /// #52's radiant bounce. Default the face that is running (§5.2), which is what #52 wants.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub radiant: Option<bool>,
+}
+
+/// §6.3 Rotate: every card on the field moves one step around its ring, in the direction the play
+/// declared (R81 makes #52's direction a play choice, never a prompt).
+///
+/// There is no fizzle case to write: a board with nothing on it rotates nothing, and the subsystem
+/// still emits its one `rotated` event, which is what §10.10 animates.
+pub fn rotate(args: RotateArgs) -> Effect {
+    Effect::new("rotate", move |ctx| {
+        let rotation = RotationArgs {
+            direction: args.direction,
+            perspective: player_of(ctx, args.perspective.unwrap_or(PlayerSpec::SelfSide)),
+            radiant: Some(args.radiant.unwrap_or(ctx.radiant)),
+        };
+        // `EffectContext` derefs to `EngineSink`, so the subsystem takes the context as it stands.
+        let _ = rotate_rings(ctx, &rotation);
+    })
+}
