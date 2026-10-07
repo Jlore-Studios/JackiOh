@@ -615,10 +615,11 @@ jobs:
           node: "false"
       # The rehearsal's image is built by buildx with its layer cache in GitHub's cache service, so an
       # image whose Dockerfile and context have not changed is not compiled again: read everywhere,
-      # written only from main and staging, as the Rust cache is. Only the image's own layers
-      # (mode=min): the compile stage's layer (a gigabyte, over a minute to export) is reused only
-      # when nothing under crates/ changed, and then the image's layers are reused anyway. The build
-      # is the same Dockerfile and context either way (rehearse.sh's REHEARSAL_CACHE_FROM and _TO).
+      # written only from main and staging, as the Rust cache is. Every stage's layers (mode=max):
+      # the Dockerfile's dependency layer (`cargo chef cook`, about 1.2 GB) changes only with a
+      # manifest or Cargo.lock, so a pull request that changes only sources reuses it and compiles
+      # just the workspace's crates. The build is the same Dockerfile and context either way
+      # (rehearse.sh's REHEARSAL_CACHE_FROM and _TO).
       - uses: docker/setup-buildx-action@v3
         if: ${{ matrix.image-cache }}
       # The cache service's URL and token, which only an action sees, for the script's buildx.
@@ -630,7 +631,7 @@ jobs:
         env:
           SCRIPT: ${{ matrix.script }}
           REHEARSAL_CACHE_FROM: ${{ matrix.image-cache && 'type=gha,scope=deploy-rehearsal' || '' }}
-          REHEARSAL_CACHE_TO: ${{ matrix.image-cache && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging') && 'type=gha,mode=min,scope=deploy-rehearsal' || '' }}
+          REHEARSAL_CACHE_TO: ${{ matrix.image-cache && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging') && 'type=gha,mode=max,scope=deploy-rehearsal' || '' }}
         run: sh "$SCRIPT"
 
   db:
