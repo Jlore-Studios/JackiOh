@@ -9,8 +9,28 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::{PlayerId::P1, Row::Units};
 
 use super::fixtures::combat::plain;
-use super::fixtures::harness::{events_of_type, new_game, put, sink_for, slot};
+use super::fixtures::harness::{events_of_type, new_game, put, slot};
 use super::fixtures::scripts::x_bolt;
+
+/// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
+/// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
+/// out, built from part 1's frozen `EngineSink::new` and `Rng::new`.
+struct Bench<'a> {
+    state: &'a mut GameState,
+    events: Vec<GameEvent>,
+    rng: Rng,
+}
+
+impl Bench<'_> {
+    fn sink(&mut self) -> EngineSink<'_> {
+        EngineSink::new(self.state, &mut self.events, &mut self.rng)
+    }
+}
+
+fn sink_for(state: &mut GameState) -> Bench<'_> {
+    let rng = Rng::new(&state.seed, state.rng_cursor);
+    Bench { state, events: Vec::new(), rng }
+}
 
 /// TS `run`'s options: `{ self?: CardInstance | null; controller?: PlayerId; targets?: Selection[] }`.
 #[derive(Default)]
@@ -279,7 +299,7 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
     #[test]
     fn r78_cost_mod_and_cost_override_persist_when_the_card_leaves_the_field_while_buffs_reset() {
         let mut state = new_game("cost-persists", None);
-        let unit = put(&mut state, &plain().id, slot(P1, Units, 1), Default::default());
+        let unit = put(&mut state, &plain().id, slot(P1, Units, 1));
         let mut sink = sink_for(&mut state);
 
         run(
@@ -295,7 +315,7 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
         find_instance_mut(sink.state, &unit.id).unwrap().buffs = AttackHealth { attack: 1, health: 1 };
 
         let moving = live(sink.state, &unit).clone();
-        move_to_zone(sink.state, &moving, OffFieldZone::Graveyard, Default::default());
+        move_to_zone(sink.state, &moving, ZoneName::Graveyard, Default::default());
 
         let after = live(sink.state, &unit);
         assert_eq!(after.cost_mod, 2);

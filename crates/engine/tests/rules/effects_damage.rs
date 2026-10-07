@@ -13,7 +13,27 @@ use jackioh_engine::{
 };
 
 use super::fixtures::combat::{armoured, plain, shielded};
-use super::fixtures::harness::{events_of_type, new_game, put, sink_for, slot};
+use super::fixtures::harness::{events_of_type, new_game, put, slot};
+
+/// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
+/// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
+/// out, built from part 1's frozen `EngineSink::new` and `Rng::new`.
+struct Bench<'a> {
+    state: &'a mut GameState,
+    events: Vec<GameEvent>,
+    rng: Rng,
+}
+
+impl Bench<'_> {
+    fn sink(&mut self) -> EngineSink<'_> {
+        EngineSink::new(self.state, &mut self.events, &mut self.rng)
+    }
+}
+
+fn sink_for(state: &mut GameState) -> Bench<'_> {
+    let rng = Rng::new(&state.seed, state.rng_cursor);
+    Bench { state, events: Vec::new(), rng }
+}
 
 /// A Spell, so a damage effect can run with the resolving card as its source.
 fn bolt_def() -> CardDef {
@@ -95,8 +115,8 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
     #[test]
     fn declares_its_target_and_amount_and_deals_one_instance_through_the_pipeline_s4_4() {
         let mut state = game("damage-args");
-        let self_card = put(&mut state, &plain().id, slot(P1, Units, 1), Default::default());
-        let enemy = put(&mut state, &plain().id, slot(P2, Units, 1), Default::default());
+        let self_card = put(&mut state, &plain().id, slot(P1, Units, 1));
+        let enemy = put(&mut state, &plain().id, slot(P2, Units, 1));
 
         let effect = damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 3 })));
         assert_eq!(effect.kind, "damage");
@@ -115,7 +135,7 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
     #[test]
     fn reads_every_target_spec_the_effect_can_name_a_hero_on_either_side_and_itself() {
         let mut state = game("damage-targets");
-        let self_card = put(&mut state, &plain().id, slot(P1, Units, 1), Default::default());
+        let self_card = put(&mut state, &plain().id, slot(P1, Units, 1));
         let mut sink = sink_for(&mut state);
         let mut ctx = ctx_for(sink.sink(), Some(&self_card), None);
 
@@ -138,7 +158,7 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
     fn s4_4_step_2_ignore_armor_puts_the_whole_amount_through_on_a_unit_and_on_a_hero() {
         let mut state = game("damage-ignore-armor");
         let self_card = resolving_bolt(&mut state);
-        let armoured_unit = put(&mut state, &armoured().id, slot(P2, Units, 1), Default::default()); // Armor 7
+        let armoured_unit = put(&mut state, &armoured().id, slot(P2, Units, 1)); // Armor 7
         state.players.p2.hero.armor = 3;
 
         // Without the flag Armor eats the hit, and a hit reduced to 0 emits nothing (R63).
@@ -174,8 +194,8 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
     #[test]
     fn marks_the_instance_as_combat_damage_only_when_the_effect_says_so_s4_4() {
         let mut state = game("damage-combat-flag");
-        let self_card = put(&mut state, &plain().id, slot(P1, Units, 1), Default::default());
-        let enemy = put(&mut state, &plain().id, slot(P2, Units, 1), Default::default());
+        let self_card = put(&mut state, &plain().id, slot(P1, Units, 1));
+        let enemy = put(&mut state, &plain().id, slot(P2, Units, 1));
         let mut sink = sink_for(&mut state);
         let mut ctx = ctx_for(sink.sink(), Some(&self_card), on_instance(&enemy));
 
@@ -192,7 +212,7 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
     #[test]
     fn r85_heals_the_sources_controller_when_the_effects_own_text_has_lifesteal() {
         let mut state = game("damage-lifesteal");
-        let self_card = put(&mut state, &plain().id, slot(P1, Units, 1), Default::default()); // no Lifesteal keyword of its own
+        let self_card = put(&mut state, &plain().id, slot(P1, Units, 1)); // no Lifesteal keyword of its own
         state.players.p1.hero.health = 20;
 
         {
@@ -219,7 +239,7 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
     #[test]
     fn r85_heals_the_amount_actually_dealt_and_heals_nobody_when_the_effect_has_no_source() {
         let mut state = game("damage-lifesteal-amount");
-        let self_card = put(&mut state, &plain().id, slot(P1, Units, 1), Default::default());
+        let self_card = put(&mut state, &plain().id, slot(P1, Units, 1));
         state.players.p1.hero.health = 20;
         state.players.p2.hero.armor = 4;
 
@@ -236,7 +256,7 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
         }
 
         // A Divine Shield negates the hit at step 1, so there is nothing to steal.
-        let shielded_unit = put(&mut state, &shielded().id, slot(P2, Units, 1), Default::default());
+        let shielded_unit = put(&mut state, &shielded().id, slot(P2, Units, 1));
         {
             let mut sink = sink_for(&mut state);
             let mut negated = ctx_for(sink.sink(), Some(&self_card), on_instance(&shielded_unit));
@@ -266,7 +286,7 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
     #[test]
     fn s6_3_fizzles_with_no_legal_target_nothing_dealt_nothing_emitted() {
         let mut state = game("damage-fizzle");
-        let enemy = put(&mut state, &plain().id, slot(P2, Units, 1), Default::default());
+        let enemy = put(&mut state, &plain().id, slot(P2, Units, 1));
         let mut seen: Vec<Vec<GameEvent>> = Vec::new();
 
         // A chosen target the play never carried, one that is nowhere, and a mode pick.
@@ -311,8 +331,8 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
     #[test]
     fn r63_an_amount_of_0_or_less_is_not_a_damage_instance_at_all() {
         let mut state = game("damage-zero");
-        let self_card = put(&mut state, &plain().id, slot(P1, Units, 1), Default::default());
-        let shielded_unit = put(&mut state, &shielded().id, slot(P2, Units, 1), Default::default());
+        let self_card = put(&mut state, &plain().id, slot(P1, Units, 1));
+        let shielded_unit = put(&mut state, &shielded().id, slot(P2, Units, 1));
         let mut sink = sink_for(&mut state);
         let mut ctx = ctx_for(sink.sink(), Some(&self_card), on_instance(&shielded_unit));
 

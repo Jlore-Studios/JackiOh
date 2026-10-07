@@ -30,14 +30,44 @@ use jackioh_engine::{
 };
 
 use super::fixtures::combat::indestructible;
-use super::fixtures::harness::{events_of_type, in_hand, new_game, put, sink_for, slot};
+use super::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
+
+/// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
+/// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
+/// out, built from part 1's frozen `EngineSink::new` and `Rng::new`.
+struct Bench<'a> {
+    state: &'a mut GameState,
+    events: Vec<GameEvent>,
+    rng: Rng,
+}
+
+impl Bench<'_> {
+    fn sink(&mut self) -> EngineSink<'_> {
+        EngineSink::new(self.state, &mut self.events, &mut self.rng)
+    }
+}
+
+fn sink_for(state: &mut GameState) -> Bench<'_> {
+    let rng = Rng::new(&state.seed, state.rng_cursor);
+    Bench { state, events: Vec::new(), rng }
+}
+
+/// TS `put(state, defId, ref, { radiant: true })`: the card is made Radiant before it is placed.
+fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
+    let player = at.player;
+    let mut card = new_instance(state, def_id, player, Zone::Hand { player });
+    card.radiant = true;
+    let id = card.id.clone();
+    assert!(place_on_field(state, card, at, Default::default()), "could not place {def_id}");
+    find_instance(state, &id).cloned().expect("the placed card")
+}
 
 // ---------------------------------------------------------------------------
 // Fixture cards. Indices start above 1500 so they never collide with another test file's locals.
 // ---------------------------------------------------------------------------
 
 /// TS `unitDefOf(name, overrides)`, whose module counter handed out 1501 to the first (and only) def;
-/// the index is passed in here, since a test file keeps no mutable statics.
+/// the index is written out here, as the order of the TS definitions fixed it.
 fn unit_def_of(name: &str, index: u32) -> CardDef {
     json_as(json!({
         "id": format!("dl-{name}"),
@@ -207,7 +237,7 @@ mod delay_scheduling_s10_1_s10_6_r62_r68 {
     #[test]
     fn r62_stores_one_entry_at_the_named_phase_and_player_owned_by_the_controller_carrying_the_captured_data() {
         let mut state = playing("delay-schedule");
-        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), Default::default());
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1));
 
         run(
             &mut state,
@@ -240,7 +270,7 @@ mod delay_scheduling_s10_1_s10_6_r62_r68 {
     #[test]
     fn s10_6_reads_at_player_as_a_player_spec_so_enemy_waits_for_the_opponents_boundary() {
         let mut state = playing("delay-enemy");
-        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), Default::default());
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1));
 
         run(
             &mut state,
@@ -257,7 +287,7 @@ mod delay_scheduling_s10_1_s10_6_r62_r68 {
     #[test]
     fn r350_this_turn_waits_for_the_end_of_the_turn_that_is_running_whoever_s_it_is_and_r241_does_not_drop_it() {
         let mut state = playing("delay-this-turn");
-        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), Default::default());
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1));
         assert_eq!(state.active, P1);
 
         // Made by p1 on p2's turn: an end-of-turn clause of p1's own would be dropped (R241), but "the
@@ -289,7 +319,7 @@ mod delay_scheduling_s10_1_s10_6_r62_r68 {
     #[test]
     fn s5_2_records_the_face_that_is_running_so_a_radiant_scheduler_resumes_its_radiant_text() {
         let mut state = playing("delay-radiant");
-        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 2), json_as(json!({ "radiant": true })));
+        let scribe = put_radiant(&mut state, &bolt().id, slot(P1, Units, 2));
 
         run(
             &mut state,
@@ -303,7 +333,7 @@ mod delay_scheduling_s10_1_s10_6_r62_r68 {
     #[test]
     fn r68_keeps_two_delays_scheduled_in_one_effect_list_in_creation_order_by_seq() {
         let mut state = playing("delay-order");
-        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), Default::default());
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1));
 
         run(
             &mut state,
@@ -335,7 +365,7 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
     #[test]
     fn r62_the_hook_delayed_form_round_trips_a_real_end_of_turn_boundary_with_its_captured_data() {
         let mut state = playing("delay-round-trip");
-        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), Default::default());
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1));
         run(
             &mut state,
             vec![delay(json_as(json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 3 } })))],
@@ -364,7 +394,7 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
     #[test]
     fn r126_the_step_table_form_re_enters_too_one_reader_resolves_a_hook_or_a_resume_step() {
         let mut state = playing("delay-step-table");
-        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), Default::default());
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1));
         run(
             &mut state,
             vec![delay(json_as(json!({
@@ -386,7 +416,7 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
     #[test]
     fn r62_a_start_of_turn_delay_fires_at_its_own_controllers_next_start_not_the_opponents() {
         let mut state = playing("delay-start");
-        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), Default::default());
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1));
         run(
             &mut state,
             vec![delay(json_as(json!({ "at": { "phase": "start", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 2 } })))],
@@ -408,7 +438,7 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
     #[test]
     fn r76_c50_still_fires_after_its_scheduler_has_died_the_continuation_is_found_in_the_graveyard() {
         let mut state = playing("delay-graveyard");
-        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), Default::default());
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1));
         run(
             &mut state,
             vec![delay(json_as(json!({ "at": { "phase": "start", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 5 } })))],
@@ -417,7 +447,7 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
 
         // "Fires even if K-Pop Fanatic died" (§8.2 #50, R76).
         let moving = find_instance(&state, &scribe.id).expect("the scribe").clone();
-        move_to_zone(&mut state, &moving, OffFieldZone::Graveyard, Default::default());
+        move_to_zone(&mut state, &moving, ZoneName::Graveyard, Default::default());
         assert!(state.players.p1.graveyard.iter().any(|card| card.id == scribe.id));
 
         let back_to_p1 = end_turns(&state, 2);
@@ -428,7 +458,7 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
     #[test]
     fn r86_c39_still_fires_after_its_scheduler_has_exiled_itself_in_the_same_effect_list() {
         let mut state = playing("delay-exile");
-        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 3), Default::default());
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 3));
         run(
             &mut state,
             vec![delay(json_as(json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 6 } })))],
@@ -438,7 +468,7 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
         // #39 Recycling Initiative arms the delay and then exiles itself, so the continuation has to
         // come back to a card in the exile pile.
         let moving = find_instance(&state, &scribe.id).expect("the scribe").clone();
-        move_to_zone(&mut state, &moving, OffFieldZone::Exile, Default::default());
+        move_to_zone(&mut state, &moving, ZoneName::Exile, Default::default());
         assert!(state.players.p1.exile.iter().any(|card| card.id == scribe.id));
 
         let ended = end_turns(&state, 1);

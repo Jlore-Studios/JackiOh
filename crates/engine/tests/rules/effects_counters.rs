@@ -11,8 +11,28 @@ use jackioh_engine::{
 };
 
 use super::fixtures::combat::plain;
-use super::fixtures::harness::{events_of_type, new_game, put, sink_for, slot};
+use super::fixtures::harness::{events_of_type, new_game, put, slot};
 use super::fixtures::scripts::mana_well;
+
+/// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
+/// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
+/// out, built from part 1's frozen `EngineSink::new` and `Rng::new`.
+struct Bench<'a> {
+    state: &'a mut GameState,
+    events: Vec<GameEvent>,
+    rng: Rng,
+}
+
+impl Bench<'_> {
+    fn sink(&mut self) -> EngineSink<'_> {
+        EngineSink::new(self.state, &mut self.events, &mut self.rng)
+    }
+}
+
+fn sink_for(state: &mut GameState) -> Bench<'_> {
+    let rng = Rng::new(&state.seed, state.rng_cursor);
+    Bench { state, events: Vec::new(), rng }
+}
 
 /// TS `run`'s options: `{ self?: CardInstance | null; controller?: PlayerId; targets?: Selection[] }`.
 #[derive(Default)]
@@ -71,7 +91,7 @@ mod plague_s6_3_plague_counter_m3_t1 {
     #[test]
     fn c91_adds_plague_counters_any_number_of_them_and_reports_the_new_count() {
         let mut state = new_game("plague-add", None);
-        let unit = put(&mut state, &plain().id, slot(P1, Units, 1), Default::default());
+        let unit = put(&mut state, &plain().id, slot(P1, Units, 1));
         let mut sink = sink_for(&mut state);
 
         run(
@@ -105,7 +125,7 @@ mod plague_s6_3_plague_counter_m3_t1 {
     #[test]
     fn takes_tokens_off_floors_the_count_at_0_and_clears_the_counter_outright() {
         let mut state = new_game("plague-clear", None);
-        let card = put(&mut state, &mana_well().id, slot(P1, Backrow, 1), Default::default());
+        let card = put(&mut state, &mana_well().id, slot(P1, Backrow, 1));
         let mut sink = sink_for(&mut state);
         let as_self = || RunOptions { self_: Some(card.clone()), ..Default::default() };
 
@@ -132,7 +152,7 @@ mod plague_s6_3_plague_counter_m3_t1 {
     #[test]
     fn r78_plague_counters_reset_when_the_card_leaves_the_field() {
         let mut state = new_game("plague-leaves", None);
-        let unit = put(&mut state, &plain().id, slot(P1, Units, 1), Default::default());
+        let unit = put(&mut state, &plain().id, slot(P1, Units, 1));
         let mut sink = sink_for(&mut state);
 
         run(
@@ -143,14 +163,14 @@ mod plague_s6_3_plague_counter_m3_t1 {
         assert_eq!(live(sink.state, &unit).counters.plague, Some(3));
 
         let moving = live(sink.state, &unit).clone();
-        move_to_zone(sink.state, &moving, OffFieldZone::Graveyard, Default::default());
+        move_to_zone(sink.state, &moving, ZoneName::Graveyard, Default::default());
         assert_eq!(live(sink.state, &unit).counters.plague, None);
     }
 
     #[test]
     fn does_nothing_without_a_card_a_hero_selection_an_empty_selection_or_a_zero_amount() {
         let mut state = new_game("plague-fizzle", None);
-        let unit = put(&mut state, &plain().id, slot(P1, Units, 1), Default::default());
+        let unit = put(&mut state, &plain().id, slot(P1, Units, 1));
         let mut sink = sink_for(&mut state);
 
         run(
@@ -180,7 +200,7 @@ mod lock_s3_2_m3_t1 {
     #[test]
     fn s3_2_the_current_occupant_is_unaffected_and_the_lock_outlives_it() {
         let mut state = new_game("lock-occupant", None);
-        let occupant = put(&mut state, &plain().id, slot(P2, Units, 2), Default::default());
+        let occupant = put(&mut state, &plain().id, slot(P2, Units, 2));
         let mut sink = sink_for(&mut state);
 
         run(
@@ -202,11 +222,11 @@ mod lock_s3_2_m3_t1 {
         // Once it leaves, the lock lasts until the game ends — but R688 lets placements in: a Lock
         // refuses plays, never summons or moves.
         let moving = live(sink.state, &occupant).clone();
-        move_to_zone(sink.state, &moving, OffFieldZone::Graveyard, Default::default());
+        move_to_zone(sink.state, &moving, ZoneName::Graveyard, Default::default());
         assert!(card_at(sink.state, slot(P2, Units, 2)).is_none());
         assert!(is_locked(sink.state, slot(P2, Units, 2)));
         let newcomer = new_instance(&mut *sink.state, &plain().id, P2, Zone::Hand { player: P2 });
-        assert!(place_on_field(sink.state, &newcomer, slot(P2, Units, 2), Default::default()));
+        assert!(place_on_field(sink.state, newcomer.clone(), slot(P2, Units, 2), Default::default()));
         assert_eq!(card_at(sink.state, slot(P2, Units, 2)).map(|card| card.id.clone()), Some(newcomer.id.clone()));
         assert!(is_locked(sink.state, slot(P2, Units, 2)));
     }
@@ -214,7 +234,7 @@ mod lock_s3_2_m3_t1 {
     #[test]
     fn c36_magic_jammed_locks_a_named_backrow_zone_and_locking_it_again_changes_nothing() {
         let mut state = new_game("lock-backrow", None);
-        let trap = put(&mut state, &mana_well().id, slot(P2, Backrow, 4), Default::default());
+        let trap = put(&mut state, &mana_well().id, slot(P2, Backrow, 4));
         let mut sink = sink_for(&mut state);
 
         run(
@@ -223,7 +243,7 @@ mod lock_s3_2_m3_t1 {
             RunOptions { targets: Some(on_instance(&trap)), controller: Some(P1), ..Default::default() },
         );
         let moving = live(sink.state, &trap).clone();
-        move_to_zone(sink.state, &moving, OffFieldZone::Graveyard, Default::default());
+        move_to_zone(sink.state, &moving, ZoneName::Graveyard, Default::default());
 
         assert!(is_locked(sink.state, slot(P2, Backrow, 4)));
         // Only that row and lane: the unit zone in the same lane is untouched.
@@ -260,7 +280,7 @@ mod lock_s3_2_m3_t1 {
     #[test]
     fn locks_the_zone_the_card_running_the_effect_sits_in_s3_1_this_lane() {
         let mut state = new_game("lock-self", None);
-        let self_card = put(&mut state, &plain().id, slot(P1, Units, 3), Default::default());
+        let self_card = put(&mut state, &plain().id, slot(P1, Units, 3));
         let mut sink = sink_for(&mut state);
 
         run(

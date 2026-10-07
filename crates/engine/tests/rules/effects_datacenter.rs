@@ -21,8 +21,28 @@ use super::fixtures::datacenter::{
     field_trap, free, guard, hard_field, one, runner, scripts as datacenter_scripts, trap, two, x_cost,
 };
 use super::fixtures::field::{act_result, flush, playing, tower};
-use super::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, sink_for, slot};
+use super::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
 use super::fixtures::scripts::{fixture_catalog, scripts as fixture_scripts};
+
+/// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
+/// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
+/// out, built from part 1's frozen `EngineSink::new` and `Rng::new`.
+struct Bench<'a> {
+    state: &'a mut GameState,
+    events: Vec<GameEvent>,
+    rng: Rng,
+}
+
+impl Bench<'_> {
+    fn sink(&mut self) -> EngineSink<'_> {
+        EngineSink::new(self.state, &mut self.events, &mut self.rng)
+    }
+}
+
+fn sink_for(state: &mut GameState) -> Bench<'_> {
+    let rng = Rng::new(&state.seed, state.rng_cursor);
+    Bench { state, events: Vec::new(), rng }
+}
 
 fn game(seed: &str) -> GameState {
     let mut state = new_game(seed, None);
@@ -193,10 +213,10 @@ mod destroy_field_spells_and_hit_t_ai_6_datacenter_fire {
     #[test]
     fn r59_destroys_every_field_spell_on_both_sides_together_and_no_trap_or_field_trap() {
         let mut state = game("fire-all");
-        let mine = put(&mut state, &field().id, slot(P1, Backrow, 1), Default::default());
-        let theirs = put(&mut state, &field().id, slot(P2, Backrow, 2), Default::default());
-        let kept_trap = put(&mut state, &trap().id, slot(P2, Backrow, 3), Default::default());
-        let kept_field_trap = put(&mut state, &field_trap().id, slot(P1, Backrow, 4), Default::default());
+        let mine = put(&mut state, &field().id, slot(P1, Backrow, 1));
+        let theirs = put(&mut state, &field().id, slot(P2, Backrow, 2));
+        let kept_trap = put(&mut state, &trap().id, slot(P2, Backrow, 3));
+        let kept_field_trap = put(&mut state, &field_trap().id, slot(P1, Backrow, 4));
         run(&mut state, fire("any", 1), P1);
         assert_eq!(
             [zone_of(&state, &mine), zone_of(&state, &theirs)],
@@ -211,9 +231,9 @@ mod destroy_field_spells_and_hit_t_ai_6_datacenter_fire {
     #[test]
     fn s4_4_one_hit_per_hero_of_damage_per_times_the_count_the_active_players_hero_first_r68() {
         let mut state = game("fire-hits");
-        put(&mut state, &field().id, slot(P1, Backrow, 1), Default::default());
-        put(&mut state, &field().id, slot(P2, Backrow, 1), Default::default());
-        put(&mut state, &field().id, slot(P2, Backrow, 2), Default::default());
+        put(&mut state, &field().id, slot(P1, Backrow, 1));
+        put(&mut state, &field().id, slot(P2, Backrow, 1));
+        put(&mut state, &field().id, slot(P2, Backrow, 2));
         let events = run(&mut state, fire("any", 1), P1);
         assert_eq!(hero_hits(&events, P1), vec![3]);
         assert_eq!(hero_hits(&events, P2), vec![3]);
@@ -231,10 +251,10 @@ mod destroy_field_spells_and_hit_t_ai_6_datacenter_fire {
     #[test]
     fn s4_4_e6_each_heros_hit_is_one_instance_a_per_hit_cap_of_1_caps_the_whole_sweep_at_1() {
         let mut state = game("fire-cap");
-        put(&mut state, &guard().id, slot(P1, Units, 1), Default::default());
-        put(&mut state, &field().id, slot(P1, Backrow, 1), Default::default());
-        put(&mut state, &field().id, slot(P2, Backrow, 1), Default::default());
-        put(&mut state, &field().id, slot(P2, Backrow, 2), Default::default());
+        put(&mut state, &guard().id, slot(P1, Units, 1));
+        put(&mut state, &field().id, slot(P1, Backrow, 1));
+        put(&mut state, &field().id, slot(P2, Backrow, 1));
+        put(&mut state, &field().id, slot(P2, Backrow, 2));
         run(&mut state, fire("any", 1), P1);
         assert_eq!(state.players.p1.hero.health, 30 - GUARD_CAP);
         assert_eq!(state.players.p2.hero.health, 27);
@@ -243,8 +263,8 @@ mod destroy_field_spells_and_hit_t_ai_6_datacenter_fire {
     #[test]
     fn r46_an_indestructible_field_spell_survives_and_doesnt_count() {
         let mut state = game("fire-hard");
-        let hard = put(&mut state, &hard_field().id, slot(P1, Backrow, 1), Default::default());
-        put(&mut state, &field().id, slot(P2, Backrow, 1), Default::default());
+        let hard = put(&mut state, &hard_field().id, slot(P1, Backrow, 1));
+        put(&mut state, &field().id, slot(P2, Backrow, 1));
         let events = run(&mut state, fire("any", 1), P1);
         assert_eq!(zone_of(&state, &hard), ZoneName::Field);
         assert_eq!(hero_hits(&events, P1), vec![1]);
@@ -253,8 +273,8 @@ mod destroy_field_spells_and_hit_t_ai_6_datacenter_fire {
     #[test]
     fn r129_none_doomed_no_damage_at_all() {
         let mut state = game("fire-none");
-        put(&mut state, &hard_field().id, slot(P1, Backrow, 1), Default::default());
-        put(&mut state, &trap().id, slot(P2, Backrow, 1), Default::default());
+        put(&mut state, &hard_field().id, slot(P1, Backrow, 1));
+        put(&mut state, &trap().id, slot(P2, Backrow, 1));
         let events = run(&mut state, fire("any", 2), P1);
         assert!(events_of_type(&events, GameEventType::Damage).is_empty());
     }
@@ -262,9 +282,9 @@ mod destroy_field_spells_and_hit_t_ai_6_datacenter_fire {
     #[test]
     fn the_enemy_side_only_your_field_spells_stay_and_only_the_enemy_hero_is_hit() {
         let mut state = game("fire-enemy");
-        let mine = put(&mut state, &field().id, slot(P1, Backrow, 1), Default::default());
-        let theirs = put(&mut state, &field().id, slot(P2, Backrow, 1), Default::default());
-        put(&mut state, &field().id, slot(P2, Backrow, 2), Default::default());
+        let mine = put(&mut state, &field().id, slot(P1, Backrow, 1));
+        let theirs = put(&mut state, &field().id, slot(P2, Backrow, 1));
+        put(&mut state, &field().id, slot(P2, Backrow, 2));
         let events = run(&mut state, fire("enemy", 2), P1);
         assert_eq!(zone_of(&state, &mine), ZoneName::Field);
         assert_eq!(zone_of(&state, &theirs), ZoneName::Graveyard);
@@ -275,7 +295,7 @@ mod destroy_field_spells_and_hit_t_ai_6_datacenter_fire {
     #[test]
     fn s4_5_a_destroyed_field_spell_that_prints_death_fires_it() {
         let mut state = game("fire-death");
-        put(&mut state, &dying_field().id, slot(P2, Backrow, 1), Default::default());
+        put(&mut state, &dying_field().id, slot(P2, Backrow, 1));
         run(&mut state, fire("any", 1), P1);
         // 1 from the fire, and the dying Field Spell's Death hits its enemy, p1, for 3.
         assert_eq!(state.players.p1.hero.health, 30 - 1 - DYING_FIELD_DAMAGE);
@@ -285,9 +305,9 @@ mod destroy_field_spells_and_hit_t_ai_6_datacenter_fire {
     #[test]
     fn r588_r383_an_animated_field_spell_standing_in_a_unit_zone_is_a_unit_there_neither_destroyed_nor_counted() {
         let mut state = game("fire-animated");
-        let animated = put(&mut state, &animated_field().id, slot(P2, Backrow, 1), Default::default());
+        let animated = put(&mut state, &animated_field().id, slot(P2, Backrow, 1));
         assert!(animate_card(&mut sink_for(&mut state).sink(), &animated, Default::default()));
-        let backrow = put(&mut state, &field().id, slot(P2, Backrow, 2), Default::default());
+        let backrow = put(&mut state, &field().id, slot(P2, Backrow, 2));
         let events = run(&mut state, fire("any", 1), P1);
         let standing = find_instance(&state, &animated.id).expect("the animated Field Spell");
         assert!(matches!(standing.zone, Zone::Field { row: Row::Units, .. }), "{:?}", standing.zone);
@@ -298,7 +318,7 @@ mod destroy_field_spells_and_hit_t_ai_6_datacenter_fire {
     #[test]
     fn r418_r446_a_carrier_field_spell_holding_a_unit_is_destroyed_and_counted_and_the_unit_it_holds_is_not() {
         let mut begun = playing("fire-tower");
-        put(&mut begun, &tower().id, slot(P1, Backrow, 2), Default::default());
+        put(&mut begun, &tower().id, slot(P1, Backrow, 2));
         let rider = in_hand(&mut begun, &plain().id, P1, 1).into_iter().next();
         flush(&mut begun, P1, 10);
         let rider_id = rider.as_ref().map(|card| card.id.clone()).unwrap_or_default();
@@ -328,9 +348,9 @@ mod destroy_field_spells_and_hit_t_ai_6_datacenter_fire {
     #[test]
     fn r280_field_spells_doomed_is_the_count_the_sweep_hits_with_read_without_writing() {
         let mut state = game("fire-read");
-        put(&mut state, &field().id, slot(P1, Backrow, 1), Default::default());
-        put(&mut state, &hard_field().id, slot(P2, Backrow, 1), Default::default());
-        put(&mut state, &field().id, slot(P2, Backrow, 2), Default::default());
+        put(&mut state, &field().id, slot(P1, Backrow, 1));
+        put(&mut state, &hard_field().id, slot(P2, Backrow, 1));
+        put(&mut state, &field().id, slot(P2, Backrow, 2));
         let me = resolving(&mut state, P1);
         let reader = SweepReader { state: &state, self_: Some(&me), def_id: None, radiant: false, controller: P1 };
         let before = serde_json::to_string(&state).expect("serialises");

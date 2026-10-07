@@ -15,7 +15,7 @@ use jackioh_engine::{
 };
 
 use super::fixtures::combat::plain;
-use super::fixtures::harness::{events_of_type, put, sink_for, slot};
+use super::fixtures::harness::{events_of_type, put, slot};
 use super::fixtures::prompt_harness::{
     act, answer_keys, board, cast_now, event_types, expect_replays, hand_card, must, open_as, replayable,
     resolving_card, round_trip,
@@ -23,6 +23,26 @@ use super::fixtures::prompt_harness::{
 use super::fixtures::prompts::{
     aimer, asker, crier, grave_rewind, moder, quickdraw_of, rewind, spark, tribute_crier,
 };
+
+/// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
+/// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
+/// out, built from part 1's frozen `EngineSink::new` and `Rng::new`.
+struct Bench<'a> {
+    state: &'a mut GameState,
+    events: Vec<GameEvent>,
+    rng: Rng,
+}
+
+impl Bench<'_> {
+    fn sink(&mut self) -> EngineSink<'_> {
+        EngineSink::new(self.state, &mut self.events, &mut self.rng)
+    }
+}
+
+fn sink_for(state: &mut GameState) -> Bench<'_> {
+    let rng = Rng::new(&state.seed, state.rng_cursor);
+    Bench { state, events: Vec::new(), rng }
+}
 
 /// Rewind resolving with its declared target (R81), as the play pipeline hands it over.
 fn rewind_on(state: &mut GameState, target: &CardInstance, player: PlayerId, radiant: bool) -> Vec<String> {
@@ -33,7 +53,7 @@ fn rewind_on(state: &mut GameState, target: &CardInstance, player: PlayerId, rad
         &mut sink.sink(),
         &card,
         "cry",
-        HookOptions { controller: Some(player), targets: Some(targets), ..Default::default() },
+        json_as(json!({ "controller": player, "targets": targets })),
     );
     settle(&mut sink.sink(), Default::default());
     let cursor = sink.rng.cursor();
@@ -67,7 +87,7 @@ mod e13_trigger_a_cry {
     #[test]
     fn r467_on_the_field_the_cry_runs_as_the_unit_for_the_triggering_cards_controller_and_is_no_play() {
         let mut state = board("cry-field");
-        let unit = put(&mut state, &crier().id, slot(P1, Units, 2), Default::default());
+        let unit = put(&mut state, &crier().id, slot(P1, Units, 2));
         let played = state.counters.played;
         let log = state.players.p1.turn_log.clone();
         let events = rewind_on(&mut state, &unit, P1, false);
@@ -98,7 +118,7 @@ mod e13_trigger_a_cry {
     #[test]
     fn r467_the_triggering_cards_controller_runs_the_cry_of_the_other_players_unit() {
         let mut state = board("cry-enemy");
-        let theirs = put(&mut state, &crier().id, slot(P2, Units, 1), Default::default());
+        let theirs = put(&mut state, &crier().id, slot(P2, Units, 1));
         rewind_on(&mut state, &theirs, P1, true);
         // Radiant: twice. "The enemy hero" is the triggering controller's enemy both times.
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 4);
@@ -109,8 +129,8 @@ mod e13_trigger_a_cry {
     #[test]
     fn r467_a_crys_declared_target_is_asked_of_the_triggering_controller_and_the_other_seat_sees_only_that() {
         let mut state = board("cry-target");
-        let unit = put(&mut state, &aimer().id, slot(P1, Units, 1), Default::default());
-        let enemy = put(&mut state, &plain().id, slot(P2, Units, 3), Default::default());
+        let unit = put(&mut state, &aimer().id, slot(P1, Units, 1));
+        let enemy = put(&mut state, &plain().id, slot(P2, Units, 3));
         rewind_on(&mut state, &unit, P1, false);
         let pending = open_as(&state, PromptKind::Target, P1);
         assert_eq!(pending.resume.hook, TRIGGER_CRY_HOOK);
@@ -142,8 +162,8 @@ mod e13_trigger_a_cry {
     #[test]
     fn r467_radiant_triggers_twice_each_run_with_its_own_choices() {
         let mut state = board("cry-twice");
-        let theirs = put(&mut state, &aimer().id, slot(P2, Units, 1), Default::default());
-        let other = put(&mut state, &plain().id, slot(P2, Units, 4), Default::default());
+        let theirs = put(&mut state, &aimer().id, slot(P2, Units, 1));
+        let other = put(&mut state, &plain().id, slot(P2, Units, 4));
         rewind_on(&mut state, &theirs, P1, true);
         open_as(&state, PromptKind::Target, P1);
         answer_keys(&mut state, &[format!("instance:{}", other.id).as_str()]);
@@ -159,7 +179,7 @@ mod e13_trigger_a_cry {
     #[test]
     fn r467_r90_modes_are_asked_first_when_a_target_belongs_to_a_mode_and_a_target_only_for_its_mode() {
         let mut hit = board("cry-mode-hit");
-        let unit = put(&mut hit, &moder().id, slot(P1, Units, 1), Default::default());
+        let unit = put(&mut hit, &moder().id, slot(P1, Units, 1));
         rewind_on(&mut hit, &unit, P1, false);
         let mode = open_as(&hit, PromptKind::Mode, P1);
         let keys: Vec<String> = mode.options.iter().map(|option| option.key.clone()).collect();
@@ -170,7 +190,7 @@ mod e13_trigger_a_cry {
         assert_eq!(hit.players.p2.hero.health, HERO_HEALTH - 4);
 
         let mut heal = board("cry-mode-heal");
-        let healer = put(&mut heal, &moder().id, slot(P1, Units, 1), Default::default());
+        let healer = put(&mut heal, &moder().id, slot(P1, Units, 1));
         rewind_on(&mut heal, &healer, P1, false);
         answer_keys(&mut heal, &["mode:heal"]);
         assert!(heal.pending.is_none());
@@ -180,7 +200,7 @@ mod e13_trigger_a_cry {
     #[test]
     fn r467_r113_a_cry_that_asks_parks_its_own_tail_ahead_of_the_triggering_lists() {
         let mut state = board("cry-asks");
-        let unit = put(&mut state, &asker().id, slot(P1, Units, 1), Default::default());
+        let unit = put(&mut state, &asker().id, slot(P1, Units, 1));
         rewind_on(&mut state, &unit, P1, false);
         open_as(&state, PromptKind::Mode, P1);
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 1);
@@ -203,8 +223,8 @@ mod e13_trigger_a_cry {
     #[test]
     fn r467_r90_r123_a_crys_tribute_is_a_plays_price_nothing_is_asked_or_paid_and_its_slot_stays_empty() {
         let mut state = board("cry-tribute");
-        let unit = put(&mut state, &tribute_crier().id, slot(P1, Units, 1), Default::default());
-        let mine = put(&mut state, &plain().id, slot(P1, Units, 2), Default::default());
+        let unit = put(&mut state, &tribute_crier().id, slot(P1, Units, 1));
+        let mine = put(&mut state, &plain().id, slot(P1, Units, 2));
         rewind_on(&mut state, &unit, P1, false);
         let pending = open_as(&state, PromptKind::Target, P1);
         let selections: Vec<Selection> = pending.options.iter().map(|option| option.selection.clone()).collect();
@@ -219,11 +239,11 @@ mod e13_trigger_a_cry {
     #[test]
     fn r467_r174_a_unit_that_leaves_the_field_while_its_crys_choices_are_asked_triggers_nothing() {
         let mut state = board("cry-left");
-        let unit = put(&mut state, &aimer().id, slot(P1, Units, 1), Default::default());
+        let unit = put(&mut state, &aimer().id, slot(P1, Units, 1));
         rewind_on(&mut state, &unit, P1, false);
         open_as(&state, PromptKind::Target, P1);
         let moving = live(&state, &unit).clone();
-        move_to_zone(&mut state, &moving, OffFieldZone::Graveyard, Default::default());
+        move_to_zone(&mut state, &moving, ZoneName::Graveyard, Default::default());
         answer_keys(&mut state, &["hero:p2"]);
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
         // The triggering list goes on.
@@ -233,10 +253,10 @@ mod e13_trigger_a_cry {
     #[test]
     fn r467_no_cry_is_triggered_for_a_dormant_card_a_card_with_no_cry_or_a_card_that_is_not_a_unit() {
         let mut state = board("cry-none");
-        let buried = put(&mut state, &crier().id, slot(P1, Units, 1), Default::default());
+        let buried = put(&mut state, &crier().id, slot(P1, Units, 1));
         let top = new_instance(&mut state, &plain().id, P1, Zone::Hand { player: P1 });
-        assert!(place_on_field(&mut state, &top, slot(P1, Units, 1), json_as(json!({ "stack": true }))));
-        let plain_unit = put(&mut state, &plain().id, slot(P1, Units, 2), Default::default());
+        assert!(place_on_field(&mut state, top.clone(), slot(P1, Units, 1), json_as(json!({ "stack": true }))));
+        let plain_unit = put(&mut state, &plain().id, slot(P1, Units, 2));
         let spell = grave_unit(&mut state, P1, &spark().id);
         let dead = grave_unit(&mut state, P1, &crier().id);
         assert!(!has_triggerable_cry(&state, live(&state, &buried)));
