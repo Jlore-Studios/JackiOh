@@ -62,7 +62,7 @@ use crate::subsystems::activate::{activate_ability, activate_actions_for};
 use crate::subsystems::ai_policy::play_out_turn;
 use crate::subsystems::glitch::reset_match;
 use crate::subsystems::hero_power::power_ability_of;
-use crate::triggers::settle;
+use crate::triggers::{SettleOptions, settle};
 use crate::turn::{answer_draw, can_offer_draw, concede, end_turn, has_standing_draw_offer, offer_draw};
 use crate::wire::{
     Action, ActionBody, ActionType, GameEvent, GameOverReason, NON_ACTIVE_ACTION_TYPES, PROMPT_OPEN_ACTION_TYPES,
@@ -176,7 +176,7 @@ fn switch_action(sink: &mut EngineSink<'_>, player: PlayerId, instance_id: &str)
     let Some(unit) = attacker_of(sink.state, player, instance_id) else {
         return Err(EngineError::new(format!("no unit {instance_id} you control")));
     };
-    switch_position(sink, &unit).map(|_| ())
+    switch_position(sink, &unit, Default::default()).map(|_| ())
 }
 
 /// B3.2 rule 10, R384, R752: `activate` and its alias `activatePower`, one routing for both. Since the
@@ -355,7 +355,7 @@ fn timeout(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError
                 return Ok(());
             }
             // The answer's own resolution loop, so a prompt it leads to is open before the next look.
-            settle(sink);
+            settle(sink, SettleOptions::default());
             continue;
         }
 
@@ -363,7 +363,7 @@ fn timeout(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError
             return Ok(());
         }
         end_turn(sink);
-        settle(sink);
+        settle(sink, SettleOptions::default());
     }
     Ok(())
 }
@@ -386,7 +386,7 @@ fn answer_for_locked_out(sink: &mut EngineSink<'_>) {
         if !sink.state.players[holder].ai_turn {
             return;
         }
-        if play_out_turn(sink, holder).actions.is_empty() {
+        if play_out_turn(sink, holder, Default::default()).actions.is_empty() {
             return;
         }
     }
@@ -495,7 +495,7 @@ fn end_due_turns(sink: &mut EngineSink<'_>) {
                 by_instance_id: cut.by_instance_id,
             });
             end_turn(sink);
-            settle(sink);
+            settle(sink, SettleOptions::default());
             continue;
         }
         if !auto_end_due(sink.state) {
@@ -504,7 +504,7 @@ fn end_due_turns(sink: &mut EngineSink<'_>) {
         let (player, turn) = (sink.state.active, sink.state.turn);
         sink.events.push(GameEvent::TurnAutoEnded { player, turn });
         end_turn(sink);
-        settle(sink);
+        settle(sink, SettleOptions::default());
     }
 }
 
@@ -600,7 +600,7 @@ pub fn reduce(state: &GameState, action: &Action) -> ReduceResult {
 
         // §10.3: the resolution loop finishes the action — the events it emitted, the work a prompt left
         // owed, the state check and the trigger queue — and stops where a prompt is waiting.
-        settle(&mut sink);
+        settle(&mut sink, SettleOptions::default());
         answer_for_locked_out(&mut sink);
         end_due_turns(&mut sink);
         // R676: a Glitch's reset goes once the action that drew it has settled.

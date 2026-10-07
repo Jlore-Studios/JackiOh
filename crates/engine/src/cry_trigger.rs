@@ -37,7 +37,7 @@ use crate::play_choices::{
     legal_selections_for, targets_follow_modes,
 };
 use crate::prompts::{
-    AnswerInput, OpenPromptArgs, ResumeAtArgs, ResumeOptions, RunHookOptions, cell_option_label, close_prompt,
+    AnswerInput, OpenPromptArgs, ResumeAtArgs, ResumeOptions, HookResumableOptions, cell_option_label, close_prompt,
     hero_option_label, in_offered_order, open_prompt, resume_at, run_hook_resumable, run_resume,
     why_answer_refused,
 };
@@ -325,7 +325,7 @@ fn run_cry(sink: &mut EngineSink, run: &CryRun, card: &CardInstance) {
             sink,
             card,
             "cry",
-            RunHookOptions {
+            HookResumableOptions {
                 controller: Some(run.controller),
                 targets: Some(run.targets.clone()),
                 modes: Some(run.modes.clone()),

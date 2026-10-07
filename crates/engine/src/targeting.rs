@@ -48,7 +48,7 @@ fn face_cost(script: &Script, state: &GameState, self_: &CardInstance) -> i32 {
 
 /// R102: a fused card carries every ingredient's text, so the stricter of their costs holds.
 fn fused_cost(state: &GameState, self_: &CardInstance, def_id: &str) -> i32 {
-    let Some(parts) = crate::catalog::fused_id_parts(def_id) else {
+    let Some(parts) = crate::catalog::fused_id_parts(Some(state), def_id) else {
         let entry = crate::scripts::script_of(state, def_id);
         return face_cost(if self_.radiant { &entry.radiant } else { &entry.base }, state, self_);
     };
@@ -64,7 +64,7 @@ pub fn targeting_discards_of(state: &GameState, card: &CardInstance) -> i32 {
     if card.vanilla || !acts_on_field(state, card) {
         return 0;
     }
-    if crate::catalog::fused_id_parts(&card.def_id).is_some() {
+    if crate::catalog::fused_id_parts(Some(state), &card.def_id).is_some() {
         return fused_cost(state, card, &card.def_id);
     }
     face_cost(&face_script(state, card), state, card)

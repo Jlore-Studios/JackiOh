@@ -123,11 +123,9 @@ pub fn damage_enemy_or_heal_friend(args: DamageEnemyOrHealFriendArgs) -> Effect 
         };
         let spec = TargetSpec::Chosen { index: None };
         let effect = if side == ctx.controller {
-            heal(HealArgs {
+            heal(HealArgs::Amount {
                 target: spec,
-                amount: Some(args.amount),
-                to_full: None,
-                up_to: None,
+                amount: args.amount,
             })
         } else {
             damage(DamageEffectArgs {

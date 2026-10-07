@@ -30,7 +30,7 @@ use crate::state::{CardInstance, EchoItem, GameState, ModifierKind, PlayerModifi
 use crate::stays::{exit_mark, left_field_after};
 use crate::subsystems::copied_text::copied_echo;
 use crate::wire::{CardType, GameEvent, PlayerId, Zone};
-use crate::zones::{MoveOptions, MoveResult, OffFieldZone, move_to_zone, report_graveyard_landing};
+use crate::zones::{MoveToZoneOptions, MoveResult, OffFieldZone, move_to_zone, report_graveyard_landing};
 
 /// TS `scripts.flagsOf(instance)`, a private copy (fullsend rule 5): the running face's static flags —
 /// the radiant text's once the instance is Radiant (§5.2), none at all for a Vanilla instance (R115).
@@ -225,7 +225,7 @@ pub fn granted_echo(sink: &mut EngineSink<'_>, player: PlayerId, card: &CardInst
             continue;
         }
         // B5 E5: to its graveyard, or wherever a replacement sends it.
-        let moved = move_to_zone(sink.state, &mut source, OffFieldZone::Graveyard, MoveOptions::default());
+        let moved = move_to_zone(sink.state, &mut source, OffFieldZone::Graveyard, MoveToZoneOptions::default());
         let landed = snapshot(sink.state, &source.id).unwrap_or(source);
         report_graveyard_landing(sink, &landed, moved);
     }
@@ -340,7 +340,7 @@ pub fn land_after_resolution(sink: &mut EngineSink<'_>, resolved: &ResolvedCard)
                 live.memory.shift_remove(EXILE_ON_LANDING);
             }
             let mut card = snapshot(sink.state, &card.id).unwrap_or(card);
-            if move_to_zone(sink.state, &mut card, OffFieldZone::Exile, MoveOptions::default()) == MoveResult::Moved {
+            if move_to_zone(sink.state, &mut card, OffFieldZone::Exile, MoveToZoneOptions::default()) == MoveResult::Moved {
                 sink.state.counters.exiled += 1;
             }
             sink.events.push(GameEvent::Exiled {
@@ -350,7 +350,7 @@ pub fn land_after_resolution(sink: &mut EngineSink<'_>, resolved: &ResolvedCard)
             });
         } else {
             // B5 E5: its graveyard, or wherever a replacement sends it (Classic #50's exile, #60's library).
-            let moved = move_to_zone(sink.state, &mut card, OffFieldZone::Graveyard, MoveOptions::default());
+            let moved = move_to_zone(sink.state, &mut card, OffFieldZone::Graveyard, MoveToZoneOptions::default());
             let landed = snapshot(sink.state, &card.id).unwrap_or(card);
             report_graveyard_landing(sink, &landed, moved);
         }

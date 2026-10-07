@@ -155,7 +155,7 @@ use crate::wire::{
     Action, ActionBody, AttackHealth, CardDef, CardDefs, CardType, Counters, GameEvent, PLAYER_IDS, Phase,
     PlayerId, PlayerView, Position, Row, SHIPPED_SETS, Selection, SetName, Tag, Zone, ZoneChoice, opponent_of,
 };
-use crate::zones::{LibraryPosition, MoveOptions, MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot};
+use crate::zones::{LibraryPosition, MoveToZoneOptions, MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot};
 
 pub const DEFAULT_SEED: &str = "jackioh-harness";
 /// A mid-game board: both sides at MAX_MANA. See the file header.
@@ -984,9 +984,9 @@ fn place_pile(
             &mut *sink.state,
             &mut card,
             zone.off_field(),
-            MoveOptions {
+            MoveToZoneOptions {
                 position: Some(LibraryPosition::Bottom),
-                ..MoveOptions::default()
+                ..MoveToZoneOptions::default()
             },
         );
         // R311: a scenario's library stands for its owner's deck, which they know card by card. A deck

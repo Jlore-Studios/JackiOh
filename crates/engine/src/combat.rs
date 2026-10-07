@@ -1439,7 +1439,7 @@ fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: O
             }
         }
         let effects = hook(&mut ctx);
-        crate::prompts::run_resumable_list(&mut ctx, &plan, &effects, paused.as_ref())
+        crate::prompts::run_resumable_list(&mut ctx, &plan, effects, paused)
     };
     match status {
         crate::prompts::ListStatus::Done => crate::state_check::state_check(sink),

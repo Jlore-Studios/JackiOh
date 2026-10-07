@@ -121,7 +121,7 @@ pub fn projected_board_damage(state: &GameState, viewer: PlayerId) -> i32 {
     let mut sum = 0;
     for unit in crate::zones::active_units_of(state, viewer).iter() {
         if crate::combat::can_attack(state, unit, &at_hero) {
-            sum += hero_hit(state, enemy, unit_view(state, unit).attack, crate::damage::pierces(state, unit));
+            sum += hero_hit(state, enemy, unit_view(state, unit).attack, crate::damage::pierces(state, Some(unit), None));
         }
     }
     sum

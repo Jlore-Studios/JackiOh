@@ -291,7 +291,7 @@ pub struct BuffCardsArgs {
 pub fn buff_cards(args: BuffCardsArgs) -> Effect {
     Effect::new("buffCards", move |ctx| {
         let amount = amount_of(args.attack, args.health);
-        let scoped = cards_in_card_scope(ctx, &args.scope, Default::default());
+        let scoped = cards_in_card_scope(ctx, &args.scope, None);
         for entry in &scoped {
             apply_buff(ctx, &entry.card, &amount, entry.readers == Readers::Everyone);
         }
@@ -311,7 +311,7 @@ pub struct GrantKeywordCardsArgs {
 /// carried onto the field as `buffCards`' stats are and reported the same way (R440).
 pub fn grant_keyword_cards(args: GrantKeywordCardsArgs) -> Effect {
     Effect::new("grantKeywordCards", move |ctx| {
-        let scoped = cards_in_card_scope(ctx, &args.scope, Default::default());
+        let scoped = cards_in_card_scope(ctx, &args.scope, None);
         for entry in scoped {
             let mut card = entry.card.clone();
             grant_to(ctx, &mut card, &args.keyword, entry.readers == Readers::Everyone);

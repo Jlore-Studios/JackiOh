@@ -61,7 +61,7 @@ use crate::wire::{
 };
 
 use super::buff::random_pool_keywords;
-use super::card_scope::{CardScope, CardsInCardScopeOptions, cards_in_card_scope, unreadable_by};
+use super::card_scope::{CardScope, CardScopeOptions, cards_in_card_scope, unreadable_by};
 use super::targets::{TargetSpec, instance_on_its_stay, resolve_target};
 use crate::damage::DamageTarget;
 
@@ -619,9 +619,9 @@ pub fn reached_cards(ctx: &mut EffectContext<'_>, args: &TuneArgs) -> Vec<Reache
     let pool: Vec<ReachedCard> = cards_in_card_scope(
         ctx,
         scope,
-        CardsInCardScopeOptions {
+        Some(&CardScopeOptions {
             whole_hidden_piles: Some(true),
-        },
+        }),
     )
     .into_iter()
     .map(|entry| ReachedCard {

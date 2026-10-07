@@ -623,15 +623,9 @@ pub fn would_die_window(sink: &mut EngineSink<'_>, dying: &[CardInstance]) -> Ve
 // Every move into a graveyard (E5)
 // ---------------------------------------------------------------------------
 
-/// `zones.GraveyardRedirect` (`{ to: "exile" } | { to: "library"; position: "bottom" }`) built from
-/// its TS shape, so this module names none of its variants.
+/// `zones.GraveyardRedirect`: TS's `{ to: "exile" } | { to: "library"; position: "bottom" }`.
 fn redirect_to(exile: bool) -> GraveyardRedirect {
-    let shape = if exile {
-        json!({ "to": "exile" })
-    } else {
-        json!({ "to": "library", "position": "bottom" })
-    };
-    serde_json::from_value(shape).expect("zones::GraveyardRedirect reads TS's shape")
+    if exile { GraveyardRedirect::Exile } else { GraveyardRedirect::LibraryBottom }
 }
 
 /// `zones::move_to_zone`'s check (TS registered it with `registerGraveyardRedirect`; Rust calls it

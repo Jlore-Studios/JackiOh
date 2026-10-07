@@ -506,8 +506,8 @@ fn run_armed_triggers(sink: &mut EngineSink<'_>, firing: TrapFiring) {
             serde_json::to_value(&firing.event).expect("an event is plain JSON (§10.1)"),
         );
         let before = sink.state.pending.clone();
-        let plan = crate::work::WorkPlan {
-            resume: Resume {
+        let plan = crate::work::WorkPlan::new(
+            Resume {
                 def_id: trap.def_id.clone(),
                 hook: trigger.id.clone(),
                 step: String::new(),
@@ -515,8 +515,8 @@ fn run_armed_triggers(sink: &mut EngineSink<'_>, firing: TrapFiring) {
                 instance_id: Some(trap.id.clone()),
                 data: data.clone(),
             },
-            owner: firing.controller,
-        };
+            firing.controller,
+        );
         {
             let mut ctx = crate::resolve::make_context(
                 sink,
@@ -528,7 +528,7 @@ fn run_armed_triggers(sink: &mut EngineSink<'_>, firing: TrapFiring) {
                 },
             );
             let effects = (trigger.run)(&mut ctx, &firing.event);
-            crate::prompts::apply_resumable(&mut ctx, &plan, &effects, None);
+            crate::prompts::apply_resumable(&mut ctx, &plan, effects, None);
         }
         if sink.state.result.is_some() {
             return;

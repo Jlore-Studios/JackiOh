@@ -38,7 +38,7 @@ pub fn projected_hero_damage(state: &GameState, player: PlayerId, amount: i32, p
 
 /// R346: a striking unit with Pierce skips §4.4 step 2 on every hit it makes, the pipeline's own reading.
 fn piercing(state: &GameState, unit: &CardInstance) -> bool {
-    crate::damage::pierces(state, unit)
+    crate::damage::pierces(state, Some(unit), None)
 }
 
 /// §4.4 step 9: what a Trample source's hit on a unit passes on to that unit's hero. Steps 1, 2, 4

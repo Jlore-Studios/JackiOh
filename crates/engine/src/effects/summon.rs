@@ -34,7 +34,7 @@ use crate::wire::{
     AttackHealth, CardType, CostRange, Enchantment, GameEvent, OneOrMany, PlayerId, Row, Tag, Zone, ZoneName,
 };
 use crate::zones::{
-    PlaceOptions, ZoneSlot, fill_board_zones, first_entry_zone, fresh_face_down_id, is_empty, is_reserved,
+    PlaceOnFieldOptions, ZoneSlot, fill_board_zones, first_entry_zone, fresh_face_down_id, is_empty, is_reserved,
     is_unit_token, lands_face_down, place_on_field, remove_from_any_zone, row_size,
 };
 
@@ -194,7 +194,7 @@ fn summon_onto(
         ctx.state,
         card,
         slot,
-        PlaceOptions {
+        PlaceOnFieldOptions {
             stack: Some(at.stack == Some(true)),
         },
     ) {
@@ -533,7 +533,7 @@ pub fn summon_random(args: SummonRandomArgs) -> Effect {
             .map(|me| me.def_id.clone())
             .or_else(|| ctx.def_id.clone());
         let asked: CatalogQueryArgs = args.query.clone().unwrap_or_default();
-        let pool = query(&excluding_def_id(&asked, own.as_deref()));
+        let pool = query(&excluding_def_id(Some(&*ctx.state), &asked, own.as_deref()));
         let player = player_or_self(ctx, args.player);
         let at = args.placement();
         let rows: IndexSet<Row> = pool.iter().filter_map(|def| row_of(def.type_)).collect();

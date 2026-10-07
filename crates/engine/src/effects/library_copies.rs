@@ -14,7 +14,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::draw::{AddToHandResult, add_to_hand};
+use crate::draw::{AddToHandOutcome, add_to_hand};
 use crate::effects::brittle::give_brittle;
 use crate::effects::targets::{PlayerSpec, player_of};
 use crate::prelude::json_as;
@@ -58,7 +58,7 @@ pub fn add_library_copies(args: AddLibraryCopiesArgs) -> Effect {
                 copy.tuning = Some(tuning);
             }
             let landed = add_to_hand(ctx, &mut copy);
-            if matches!(landed, AddToHandResult::Hand)
+            if matches!(landed, AddToHandOutcome::Hand)
                 && let Some(brittle) = args.brittle
             {
                 let effect = give_brittle(json_as(json!({ "instanceId": copy.id, "n": brittle })));

@@ -41,6 +41,7 @@
 //! beside it, and the context *is* that sink (it derefs to it), so Rust's borrow of it is the one.
 
 use indexmap::{IndexMap, IndexSet};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::config::MAX_PROMPT_ANSWERS;
@@ -207,14 +208,19 @@ pub fn resume_of(resume: &Resume) -> Resume {
     }
 }
 
-/// `resumeAt`'s argument.
-#[derive(Clone, Debug, Default, PartialEq)]
+/// `resumeAt`'s argument (data: a card builds it from TS's literal with `json_as`).
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct ResumeAtArgs {
     pub def_id: String,
     pub step: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hook: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub radiant: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub instance_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub data: Option<IndexMap<String, Value>>,
 }
 
@@ -1045,13 +1051,13 @@ pub fn run_resume(sink: &mut EngineSink<'_>, resume: &Resume, options: ResumeOpt
         ctx.event_stay = Some(event_stay);
     }
 
-    let plan: ResumePlan = WorkPlan {
-        resume: Resume {
+    let plan: ResumePlan = WorkPlan::new(
+        Resume {
             data,
             ..resume.clone()
         },
-        owner: ctx.controller,
-    };
+        ctx.controller,
+    );
     // A composed list (a fused hook, R102) continues in the part it stood in, then the rest.
     let effects = hook(&mut ctx);
     apply_resumable(&mut ctx, &plan, effects, paused)

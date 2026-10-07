@@ -146,11 +146,13 @@ pub struct CastDef {
 
 /// `castNew`'s `def`: a definition id, a `CastDef`, or a read of the context as the effect applies
 /// (#7's remembered Spell), where `None` casts nothing (TS `string | CastDef | ((ctx) => string |
-/// CastDef | null)`).
-#[derive(Clone)]
+/// CastDef | null)`). A card's `json!` literal reads as `Id` or `Def`; `Read` is set in Rust.
+#[derive(Clone, Deserialize)]
+#[serde(untagged)]
 pub enum CastNewDef {
     Id(String),
     Def(CastDef),
+    #[serde(skip)]
     Read(Arc<dyn Fn(&mut EffectContext<'_>) -> Option<CastDef> + Send + Sync>),
 }
 
@@ -173,10 +175,13 @@ impl From<CastDef> for CastNewDef {
 }
 
 /// `castNew`'s argument: `{ def; radiant? } & CastHow`.
-#[derive(Clone)]
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CastNewArgs {
     pub def: CastNewDef,
+    #[serde(default)]
     pub radiant: Option<bool>,
+    #[serde(flatten)]
     pub how: CastHow,
 }
 

@@ -37,7 +37,7 @@ fn candidates_for(ctx: &EffectContext<'_>) -> Vec<LastBoardEntry> {
     };
     let exclude: Vec<String> = match &own {
         None => Vec::new(),
-        Some(own) => self_def_ids(own),
+        Some(own) => self_def_ids(Some(&*ctx.state), own),
     };
     last_board_candidates(ctx.state, ctx.controller, &exclude)
 }

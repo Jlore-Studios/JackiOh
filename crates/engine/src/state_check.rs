@@ -400,8 +400,8 @@ pub fn owed_deaths_of(resume: &Resume) -> Option<DeathPass> {
 fn plan_for(pass: &DeathPass, owner: PlayerId) -> ResumePlan {
     let mut data: IndexMap<String, Value> = IndexMap::new();
     data.insert(PASS_KEY.to_string(), pass_json(pass));
-    WorkPlan {
-        resume: Resume {
+    WorkPlan::new(
+        Resume {
             def_id: String::new(),
             hook: DEATHS_WORK.to_string(),
             step: DEATHS_STEP.to_string(),
@@ -410,7 +410,7 @@ fn plan_for(pass: &DeathPass, owner: PlayerId) -> ResumePlan {
             data,
         },
         owner,
-    }
+    )
 }
 
 /// Park the rest of the pass (R113). `work.ts` owns `state.work`, so this only ever calls `owe`: the

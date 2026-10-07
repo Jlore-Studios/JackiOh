@@ -1022,7 +1022,7 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
             .as_ref()
             .map(|card| card.def_id.clone())
             .or_else(|| ctx.def_id.clone());
-        let pool = query(&excluding_def_id(&asked, generating.as_deref()));
+        let pool = query(&excluding_def_id(Some(&*ctx.state), &asked, generating.as_deref()));
         if pool.is_empty() {
             return;
         }

@@ -37,7 +37,7 @@ use crate::state_check::state_check;
 use crate::turn::{clear_return_flags, start_turn};
 use crate::wire::{GameEvent, PLAYER_IDS, PerPlayer, Phase, PlayerId, PromptKind, Selection, Zone};
 use crate::work::{owe, paused};
-use crate::zones::{MoveOptions, MovePosition, OffFieldZone, move_to_zone};
+use crate::zones::{MoveToZoneOptions, LibraryPosition, OffFieldZone, move_to_zone};
 
 fn seat_of(player: PlayerId) -> usize {
     player.seat()
@@ -303,7 +303,7 @@ fn dealt_quickdraw(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
 /// R225: the seat's dealt Quickdraw cards, each as the opening draw it replaces, in the library's order.
 fn deal_quickdraw(sink: &mut EngineSink, player: PlayerId) {
     for card in dealt_quickdraw(sink.state, player) {
-        move_to_zone(sink.state, &card, OffFieldZone::Hand, MoveOptions::default());
+        move_to_zone(sink.state, &card, OffFieldZone::Hand, MoveToZoneOptions::default());
         sink.state.counters.drawn += 1;
         sink.events.push(GameEvent::Drawn {
             player,
@@ -340,7 +340,7 @@ fn deal_suspended(sink: &mut EngineSink, player: PlayerId, count: i32) {
             .collect()
     };
     for card in waiting {
-        move_to_zone(sink.state, &card, OffFieldZone::Hand, MoveOptions::default());
+        move_to_zone(sink.state, &card, OffFieldZone::Hand, MoveToZoneOptions::default());
         if let Some(live) = find_instance_mut(sink.state, &card.id) {
             live.memory.insert(SUSPENDED_CAST_KEY.to_string(), Value::Bool(true));
         }
@@ -492,9 +492,9 @@ fn finish_mulligan(
             sink.state,
             &card,
             OffFieldZone::Library,
-            MoveOptions {
-                position: Some(MovePosition::At(position)),
-                ..MoveOptions::default()
+            MoveToZoneOptions {
+                position: Some(LibraryPosition::At(position)),
+                ..MoveToZoneOptions::default()
             },
         );
         // R311: the player returned it from their own hand, so they know what went back.
@@ -548,17 +548,14 @@ fn owe_setup(sink: &mut EngineSink, owed: Value) {
     data.insert("owed".to_string(), owed);
     owe(
         sink,
-        vec![
-            Resume {
+        Resume {
                 def_id: String::new(),
                 hook: SETUP_WORK.to_string(),
                 step,
                 radiant: false,
                 instance_id: None,
                 data,
-            }
-            .into(),
-        ],
+        },
     );
 }
 

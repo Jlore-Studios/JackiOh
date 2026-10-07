@@ -192,7 +192,7 @@ pub fn shuffle_into_library(
         sink.state,
         instance,
         crate::zones::OffFieldZone::Library,
-        crate::zones::MoveOptions {
+        crate::zones::MoveToZoneOptions {
             position: Some(crate::zones::LibraryPosition::At(position)),
             ..Default::default()
         },
@@ -572,7 +572,7 @@ fn owe_chain(sink: &mut EngineSink, player: PlayerId, link: &ChainLink) {
         instance_id: None,
         data,
     };
-    crate::work::owe(sink, vec![resume.into()]);
+    crate::work::owe(sink, resume);
 }
 
 /// A chain stopped where it stands: owed to the answer, or closed for a game that is over.
@@ -600,7 +600,7 @@ fn owe_draws(sink: &mut EngineSink, player: PlayerId, count: i32) {
         instance_id: None,
         data,
     };
-    crate::work::owe(sink, vec![resume.into()]);
+    crate::work::owe(sink, resume);
 }
 
 /// §2.4's draw from the moment the card has left the library: the game draw counter, the `drawn`

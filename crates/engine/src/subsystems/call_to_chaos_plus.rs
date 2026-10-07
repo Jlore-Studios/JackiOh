@@ -115,7 +115,7 @@ fn add_free(name: &'static str, pool: Value, count: i32) -> Effect {
 pub fn replace_deck_with_call_to_chaos() -> Effect {
     entry("replace", |ctx| {
         let deck: Vec<CardInstance> = ctx.sink.state.players[ctx.controller].library.clone();
-        let pool: Arc<Vec<CardDef>> = Arc::new(owned_defs(crate::catalog::query(json_as(
+        let pool: Arc<Vec<CardDef>> = Arc::new(owned_defs(crate::catalog::query(&json_as(
             json!({ "tags": [CHAOS_TAG.as_str()] }),
         ))));
         deck.into_iter()

@@ -41,7 +41,7 @@ pub fn enchant(args: EnchantArgs) -> Effect {
     Effect::new("enchant", move |ctx| {
         let mut cards: Vec<CardInstance> = Vec::new();
         if let Some(scope) = &args.scope {
-            cards = cards_in_card_scope(ctx, scope, Default::default())
+            cards = cards_in_card_scope(ctx, scope, None)
                 .into_iter()
                 .map(|entry| entry.card)
                 .collect();

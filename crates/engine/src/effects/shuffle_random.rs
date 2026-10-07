@@ -8,7 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::catalog::{CatalogQueryArgs, GlitchOdds, excluding_def_id, pick_generated, query};
+use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated, query};
 use crate::draw::shuffle_into_library;
 use crate::effects::targets::{PlayerSpec, player_of};
 use crate::script::{Effect, EffectContext};
@@ -57,15 +57,12 @@ pub fn shuffle_random_from_catalog(args: ShuffleRandomFromCatalogArgs) -> Effect
             .as_ref()
             .map(|me| me.def_id.clone())
             .or_else(|| ctx.def_id.clone());
-        let pool = query(&excluding_def_id(&args.query, own.as_deref()));
+        let pool = query(&excluding_def_id(Some(&*ctx.state), &args.query, own.as_deref()));
         let player = player_or_self(ctx, args.player);
         let mut at = 0;
         while at < args.count && !pool.is_empty() {
-            // R673: a card generated into a deck may be Glitch.
-            let glitch = GlitchOdds {
-                system_plays: ctx.sink.state.system_plays,
-            };
-            let Some(def_id) = pick_generated(ctx.sink.rng, &pool, Some(glitch)).map(|def| def.id.clone()) else {
+            // R673: a card generated into a deck may be Glitch (`catalog::GlitchOdds` is the state).
+            let Some(def_id) = pick_generated(ctx.sink.rng, &pool, Some(&*ctx.sink.state)).map(|def| def.id.clone()) else {
                 return;
             };
             let mut card = new_instance(&mut *ctx.state, &def_id, player, Zone::Library { player });

@@ -12,21 +12,21 @@
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::catalog::{CatalogQueryArgs, GlitchOdds, def_of, excluding_def_id, pick_generated, query};
+use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, pick_generated, query};
 use crate::damage::DamageTarget;
 use crate::enchantments::add_enchantment;
 use crate::faces::card_type_of;
 use crate::layers::unit_has;
 use crate::prelude::json_as;
 use crate::script::{Effect, EffectContext};
-use crate::state::{CardInstance, find_instance, find_instance_mut, new_instance};
+use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
 use crate::temporary::is_temporary_card;
 use crate::wire::{
     CardDef, CardType, Enchantment, GameEvent, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Row, Zone, ZoneName,
     opponent_of,
 };
 use crate::zones::{
-    MoveToZoneOptions, MoveToZonePosition, OffFieldZone, cease_to_exist, is_carried, move_to_zone, pile_at,
+    MoveToZoneOptions, LibraryPosition, OffFieldZone, cease_to_exist, is_carried, move_to_zone, pile_at,
     replace_in_zone, slot_of, zone_of,
 };
 
@@ -168,7 +168,7 @@ fn replace_off_field(
         replacement,
         at,
         MoveToZoneOptions {
-            position: Some(MoveToZonePosition::Index(index)),
+            position: Some(LibraryPosition::At(index as i32)),
             ..MoveToZoneOptions::default()
         },
     );
@@ -366,7 +366,7 @@ pub fn transform_random(args: TransformRandomArgs) -> Effect {
             Some(this) => Some(this.def_id.clone()),
             None => ctx.def_id.clone(),
         };
-        let asked = excluding_def_id(&args.query.clone().unwrap_or_default(), own.as_deref());
+        let asked = excluding_def_id(Some(&*ctx.state), &args.query.clone().unwrap_or_default(), own.as_deref());
         let pool: Vec<CardDef> = query(&asked)
             .into_iter()
             .filter(|def| can_replace(&old, def))
@@ -375,14 +375,8 @@ pub fn transform_random(args: TransformRandomArgs) -> Effect {
         // R673: a card transformed in a hand or a deck is generated there and may be Glitch; one on the
         // field may not, since Glitch is only ever played.
         let held = matches!(old.zone, Zone::Hand { .. } | Zone::Library { .. });
-        let glitch = if held {
-            Some(GlitchOdds {
-                system_plays: ctx.state.system_plays,
-            })
-        } else {
-            None
-        };
-        let Some(def) = pick_generated(ctx.sink.rng, &pool, glitch.as_ref()) else {
+        let glitch: Option<&GameState> = if held { Some(&*ctx.sink.state) } else { None };
+        let Some(def) = pick_generated(ctx.sink.rng, &pool, glitch) else {
             return;
         };
         let radiant = match args.radiant {

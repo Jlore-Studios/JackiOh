@@ -19,7 +19,7 @@ use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, find_instance};
 use crate::wire::{GameEvent, PlayerId, Row, opponent_of};
 use crate::zones::{
-    PlaceOptions, ZoneSlot, card_at, first_entry_zone, is_open, place_on_field, remove_from_field, slot_of,
+    PlaceOnFieldOptions, ZoneSlot, card_at, first_entry_zone, is_open, place_on_field, remove_from_field, slot_of,
     slots_of,
 };
 
@@ -91,7 +91,7 @@ fn take_control(ctx: &mut EffectContext<'_>, card: &CardInstance) -> bool {
     if !place_on_field(ctx.state, &mut moving, &to, Default::default()) {
         // `to` was open a line ago and the card came off the other side of the field, so this cannot
         // happen; putting the card back keeps the board legal rather than losing it to a refusal.
-        place_on_field(ctx.state, &mut moving, &from, PlaceOptions { stack: Some(true) });
+        place_on_field(ctx.state, &mut moving, &from, PlaceOnFieldOptions { stack: Some(true) });
         return false;
     }
 

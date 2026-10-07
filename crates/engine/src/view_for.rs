@@ -286,7 +286,7 @@ fn card_view(state: &GameState, card: &CardInstance) -> CardView {
     // B5 E33, R404: a quest line on the field, public as the card is.
     let quest = quest_view_of(state, card);
     let data = instance_data_view(state, card);
-    let mut view = bare_card_view(card.id.clone(), card.def_id.clone(), card.radiant, effective_cost(state, card));
+    let mut view = bare_card_view(card.id.clone(), card.def_id.clone(), card.radiant, effective_cost(state, card, Default::default()));
     view.type_ = data.type_;
     view.brittle = data.brittle;
     view.params = data.params;
@@ -487,7 +487,7 @@ fn backrow_view(state: &GameState, card: Option<&CardInstance>, viewer: PlayerId
     if !backrow_is_public(state, card, viewer) {
         return Some(BackrowView::FaceDown(FaceDownBackrowView {
             face_down: true,
-            cost: Some(effective_cost(state, card)),
+            cost: Some(effective_cost(state, card, Default::default())),
             plague: plague_shown,
             buried,
             marks: with_marks(state, &card.id),

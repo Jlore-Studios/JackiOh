@@ -801,7 +801,7 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
             sink,
             &card,
             hook.as_str(),
-            crate::prompts::RunHookOptions {
+            crate::prompts::HookResumableOptions {
                 controller: Some(holder.controller),
                 ..Default::default()
             },
@@ -841,15 +841,15 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
     // and a paused list goes on in the list it began, so its tail is rebuilt from that same face and
     // definition — not the ones the entry recorded when it was queued, which an earlier trigger in the
     // same queue can have made Radiant since.
-    let plan = crate::work::WorkPlan {
-        resume: Resume {
+    let plan = crate::work::WorkPlan::new(
+        Resume {
             hook: def.id.clone(),
             def_id: card.def_id.clone(),
             radiant: card.radiant,
             ..entry.resume.clone()
         },
-        owner: controller,
-    };
+        controller,
+    );
     let mut ctx = crate::resolve::make_context(
         sink,
         Some(&card),
@@ -863,7 +863,7 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
         ctx.event_stay = event_stay;
     }
     let effects = (def.run)(&mut ctx, &event);
-    crate::prompts::apply_resumable(&mut ctx, &plan, &effects, None);
+    crate::prompts::apply_resumable(&mut ctx, &plan, effects, None);
 }
 
 /// The trigger a queue entry names, on the card as it stands now. R77 keeps the instance a Fuse

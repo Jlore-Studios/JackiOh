@@ -12,7 +12,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::targets::{PlayerSpec, TargetSpec, instance_of, player_of};
-use crate::catalog::{CatalogQueryArgs, GlitchOdds, excluding_def_id, pick_generated, query};
+use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated, query};
 use crate::config::HAND_CAP;
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, find_instance_mut, new_instance};
@@ -169,7 +169,7 @@ fn pool_query(ctx: &EffectContext<'_>, args: Option<&CatalogQueryArgs>) -> Catal
         .as_ref()
         .map(|card| card.def_id.as_str())
         .or(ctx.def_id.as_deref());
-    excluding_def_id(args, generating)
+    excluding_def_id(Some(&*ctx.state), args, generating)
 }
 
 /// `add_random_from_catalog`'s arguments (TS's inline object).
@@ -226,11 +226,8 @@ pub fn add_random_from_catalog(args: AddRandomFromCatalogArgs) -> Effect {
         let riders = args.riders();
         let count = args.count.unwrap_or(1).max(0);
         for _ in 0..count {
-            // R673: a card generated into a hand may be Glitch.
-            let glitch = GlitchOdds {
-                system_plays: ctx.state.system_plays,
-            };
-            let Some(def) = pick_generated(&mut *ctx.rng, &pool, Some(&glitch)) else {
+            // R673: a card generated into a hand may be Glitch (`catalog::GlitchOdds` is the state).
+            let Some(def) = pick_generated(&mut *ctx.sink.rng, &pool, Some(&*ctx.sink.state)) else {
                 return;
             };
             let def_id = def.id.clone();

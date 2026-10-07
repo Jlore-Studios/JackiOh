@@ -83,7 +83,7 @@ fn face_script_of(state: &GameState, card: &CardInstance) -> Script {
 
 /// Whether this card's running face copies the last Spell's text (`staticFlags.copiesLastSpell`).
 pub fn copies_text(card: &CardInstance) -> bool {
-    if crate::catalog::fused_id_parts(&card.def_id).is_some() {
+    if crate::catalog::fused_id_parts(None, &card.def_id).is_some() {
         return false;
     }
     registry_flags_of(card).copies_last_spell == Some(true)
