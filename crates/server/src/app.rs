@@ -455,8 +455,12 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         (store, Auth::E2e(E2eAuth::new()))
     } else {
         // The pool connects lazily, as `pg`'s did: a store that cannot be reached fails the first
-        // request that needs it, loudly, rather than the boot.
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy(&env.database_url)?;
+        // request that needs it, loudly, rather than the boot. `create_postgres_store` is TS's
+        // `createPostgresStore`: its idle timeout closes a connection before Supavisor drops it.
+        let pool = db::pg::create_postgres_store(&db::pg::PostgresStoreOptions {
+            connection_string: env.database_url.to_string(),
+            max: None,
+        })?;
         let auth = Auth::Supabase(SupabaseAuth::new(SupabaseAuthInput {
             url: env.supabase_url.to_string(),
             secret_key: env.supabase_secret_key.to_string(),
