@@ -249,7 +249,7 @@ async fn before_of(
         RankedSideInput::Bot { bot_id } => {
             let bot = t.ranked_bot(bot_id).await?;
             Ok(match bot {
-                Some(bot) => Before { glicko: bot.glicko.clone(), games: bot.games as i64 },
+                Some(bot) => Before { glicko: bot.glicko, games: bot.games },
                 None => Before { glicko: START_GLICKO, games: 0 },
             })
         }
@@ -289,11 +289,10 @@ pub async fn plan_ranked_game(t: &mut Tx<'_>, _app: &App, input: &RankedGameInpu
     }
 
     let (first, second) = (&input.sides.0, &input.sides.1);
-    if let (RankedSideInput::Player { profile_id: a }, RankedSideInput::Player { profile_id: b }) = (first, second) {
-        if a == b {
+    if let (RankedSideInput::Player { profile_id: a }, RankedSideInput::Player { profile_id: b }) = (first, second)
+        && a == b {
             return Err(StoreError::Other(format!("rated game {} names one profile on both sides", input.id)));
         }
-    }
     let sides = [first, second];
 
     let deps = SeasonDeps::current();
@@ -320,15 +319,15 @@ pub async fn plan_ranked_game(t: &mut Tx<'_>, _app: &App, input: &RankedGameInpu
         [
             Glicko {
                 rating: before[0].glicko.rating + 2.0 * (rated.a.rating - before[0].glicko.rating),
-                ..rated.a.clone()
+                ..rated.a
             },
             Glicko {
                 rating: before[1].glicko.rating + 2.0 * (rated.b.rating - before[1].glicko.rating),
-                ..rated.b.clone()
+                ..rated.b
             },
         ]
     } else {
-        [rated.a.clone(), rated.b.clone()]
+        [rated.a, rated.b]
     };
 
     // The season with both new ratings in it, and each player's row as it stood.
@@ -389,11 +388,10 @@ pub async fn plan_ranked_game(t: &mut Tx<'_>, _app: &App, input: &RankedGameInpu
             continue;
         }
         let standing = standings_after.iter().find(|candidate| candidate.rank.profile_id == *profile_id);
-        if let Some(standing) = standing {
-            if standing.rank.peak_jlorious.is_none_or(|peak| position < peak) {
+        if let Some(standing) = standing
+            && standing.rank.peak_jlorious.is_none_or(|peak| position < peak) {
                 peaks.push(PeakWrite { profile_id: profile_id.clone(), position });
             }
-        }
     }
 
     let side_of = |side: &RankedSideInput, index: usize| -> RatedSide {
@@ -402,8 +400,8 @@ pub async fn plan_ranked_game(t: &mut Tx<'_>, _app: &App, input: &RankedGameInpu
                 profile_id: None,
                 bot_id: Some(bot_id.clone()),
                 pilot: Pilot::Ai,
-                before: before[index].glicko.clone(),
-                after: after[index].clone(),
+                before: before[index].glicko,
+                after: after[index],
                 rank_before: None,
                 rank_after: None,
             },
@@ -413,8 +411,8 @@ pub async fn plan_ranked_game(t: &mut Tx<'_>, _app: &App, input: &RankedGameInpu
                     profile_id: Some(profile_id.clone()),
                     bot_id: None,
                     pilot: Pilot::Human,
-                    before: before[index].glicko.clone(),
-                    after: after[index].clone(),
+                    before: before[index].glicko,
+                    after: after[index],
                     rank_before: Some(visible_rank(
                         rank.and_then(|rank| rank.before.as_ref()),
                         position_in(&jlorious_before, profile_id),
@@ -430,13 +428,13 @@ pub async fn plan_ranked_game(t: &mut Tx<'_>, _app: &App, input: &RankedGameInpu
 
     let row = RatedGameRow {
         id: input.id.clone(),
-        kind: input.kind.clone(),
+        kind: input.kind,
         season_id: season.id.clone(),
         patch_version: deps.patch_version.clone(),
         catalog_version: input.catalog_version.clone(),
         sides: (side_of(first, 0), side_of(second, 1)),
         winner_side: input.winner_side,
-        reason: input.reason.clone(),
+        reason: input.reason,
         ended_at: input.at,
     };
     let glickos = sides
@@ -444,7 +442,7 @@ pub async fn plan_ranked_game(t: &mut Tx<'_>, _app: &App, input: &RankedGameInpu
         .enumerate()
         .map(|(index, side)| GlickoWrite {
             side: (*side).clone(),
-            glicko: after[index].clone(),
+            glicko: after[index],
             games: before[index].games + 1,
         })
         .collect();
@@ -465,7 +463,7 @@ pub async fn commit_ranked_game(t: &mut Tx<'_>, plan: &RankedPlan, at: i64) -> R
             RankedSideInput::Bot { bot_id } => {
                 t.ranked_put_bot(&BotRating {
                     bot_id: bot_id.clone(),
-                    glicko: write.glicko.clone(),
+                    glicko: write.glicko,
                     games: write.games as _,
                     updated_at: at,
                 })
@@ -543,7 +541,7 @@ pub async fn own_rank(app: &App, profile_id: &str) -> Result<OwnRankBody, ApiErr
             losses: mine.map(|rank| rank.losses as i64).unwrap_or(0),
             draws: mine.map(|rank| rank.draws as i64).unwrap_or(0),
         },
-        badges: history.iter().filter_map(|rank| peak_badge(rank)).rev().collect(),
+        badges: history.iter().filter_map(peak_badge).rev().collect(),
     })
 }
 

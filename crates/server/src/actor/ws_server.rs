@@ -226,7 +226,7 @@ impl std::fmt::Debug for Socket {
 
 /// The error frame every refusal and the binary-frame answer send (`encode(errorMessage(…))`).
 fn error_frame(code: SocketErrorCode, message: &str) -> String {
-    encode(&error_message(code, message, None).into())
+    encode(&error_message(code, message, None))
 }
 
 /// Whether a read failed because a frame or a message passed the size cap (tungstenite's capacity
@@ -435,11 +435,10 @@ fn forwarded_headers(headers: &HeaderMap) -> HeaderMap {
     let joined: Vec<&str> =
         headers.get_all("x-forwarded-for").iter().filter_map(|value| value.to_str().ok()).collect();
     let mut forwarded = HeaderMap::new();
-    if !joined.is_empty() {
-        if let Ok(value) = HeaderValue::from_str(&joined.join(",")) {
+    if !joined.is_empty()
+        && let Ok(value) = HeaderValue::from_str(&joined.join(",")) {
             forwarded.insert("x-forwarded-for", value);
         }
-    }
     forwarded
 }
 

@@ -212,13 +212,13 @@ async fn write_once(
             matchId = %input.match_id,
             profileId = %seat.profile_id,
         );
-        RATING_START as f64
+        RATING_START
     };
 
     let mut before: (f64, f64) = (rating_of(seat_a), rating_of(seat_b));
     let mut after: (f64, f64) = (before.0, before.1);
-    if rating_policy == RatingPolicy::Rated {
-        if let Some(match_row) = &match_row {
+    if rating_policy == RatingPolicy::Rated
+        && let Some(match_row) = &match_row {
             // R603–R611: both hidden ratings, both ranks and the record of the rated game, in this
             // transaction, so the result and its rating move commit together or not at all.
             let rated = rate_ranked_game(
@@ -244,12 +244,8 @@ async fn write_once(
             before = (rated.sides.0.before.rating, rated.sides.1.before.rating);
             after = (rated.sides.0.after.rating, rated.sides.1.after.rating);
         }
-    }
 
-    let winner_profile_id = match input.outcome.winner.player() {
-        None => None,
-        Some(winner) => Some((if winner == seat_a.player { seat_a } else { seat_b }).profile_id.clone()),
-    };
+    let winner_profile_id = input.outcome.winner.player().map(|winner| (if winner == seat_a.player { seat_a } else { seat_b }).profile_id.clone());
     let row = ResultRow {
         match_id: input.match_id.clone(),
         players: (seat_a.profile_id.clone(), seat_b.profile_id.clone()),
@@ -305,7 +301,7 @@ async fn write_once(
                 &SeriesGameResult {
                     match_id: input.match_id.clone(),
                     seats: input.seats.clone(),
-                    outcome: input.outcome.clone(),
+                    outcome: input.outcome,
                     at: input.at,
                 },
             )

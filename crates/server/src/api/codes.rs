@@ -101,12 +101,12 @@ struct Limits {
 
 fn limits() -> Limits {
     Limits {
-        redeem_per_profile_per_hour: CODE_ATTEMPTS_PER_PROFILE_PER_HOUR as i64,
-        redeem_window_ms: CODE_ATTEMPT_WINDOW_SECONDS as i64 * MS_PER_SECOND,
+        redeem_per_profile_per_hour: CODE_ATTEMPTS_PER_PROFILE_PER_HOUR,
+        redeem_window_ms: CODE_ATTEMPT_WINDOW_SECONDS * MS_PER_SECOND,
         redeem_constant_ms: REDEMPTION_RESPONSE_FLOOR_MS as u64,
-        breaker_failure_threshold: REDEMPTION_CIRCUIT_FAILURE_THRESHOLD as i64,
-        breaker_window_ms: REDEMPTION_CIRCUIT_WINDOW_SECONDS as i64 * MS_PER_SECOND,
-        breaker_cooldown_ms: REDEMPTION_CIRCUIT_WINDOW_SECONDS as i64 * MS_PER_SECOND,
+        breaker_failure_threshold: REDEMPTION_CIRCUIT_FAILURE_THRESHOLD,
+        breaker_window_ms: REDEMPTION_CIRCUIT_WINDOW_SECONDS * MS_PER_SECOND,
+        breaker_cooldown_ms: REDEMPTION_CIRCUIT_WINDOW_SECONDS * MS_PER_SECOND,
     }
 }
 

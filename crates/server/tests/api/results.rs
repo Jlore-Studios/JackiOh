@@ -50,7 +50,7 @@ use crate::support::engine::{fake_deck, install_test_cards};
 
 const MINUTE: i64 = 60 * 1000;
 /// A minute past the ceiling (R79, R389), whatever it is.
-const PAST_CEILING_MS: i64 = (MATCH_CEILING_MINUTES as i64 + 1) * MINUTE;
+const PAST_CEILING_MS: i64 = (MATCH_CEILING_MINUTES + 1) * MINUTE;
 const MATCH_ID: &str = "match-1";
 const A: &str = "profile-a";
 const B: &str = "profile-b";
@@ -267,7 +267,7 @@ fn play_from(turn: i32, inputs: &[Value]) -> (TerminalOutcome, i32) {
         }
         state = result.state;
     }
-    let Some(result) = state.result.clone() else {
+    let Some(result) = state.result else {
         panic!("the scripted game did not end");
     };
     (TerminalOutcome { winner: result.winner, reason: result.reason }, state.turn)
@@ -278,8 +278,8 @@ fn play_from(turn: i32, inputs: &[Value]) -> (TerminalOutcome, i32) {
 fn rating_move(rating_a: f64, rating_b: f64, score_a: f64) -> (f64, f64) {
     let fresh = |rating: f64| Glicko {
         rating,
-        deviation: RATING_DEVIATION_START as f64,
-        volatility: RATING_VOLATILITY_START as f64,
+        deviation: RATING_DEVIATION_START,
+        volatility: RATING_VOLATILITY_START,
     };
     let next = rate_game(&fresh(rating_a), &fresh(rating_b), score_a);
     (next.a.rating, next.b.rating)
@@ -407,7 +407,7 @@ mod results_m7_t2 {
 
     #[tokio::test]
     async fn hero_death_the_winner_is_rated_up_and_the_loser_down() {
-        let _engine = install_test_cards();
+        install_test_cards();
         let (win, loss) = win_loss();
         let app = scenario(ScenarioOptions::default()).await;
         let row = j(&record(&app, &[json!({ "type": "play", "card": "test-lethal", "playerId": "p1" })]).await);
@@ -424,7 +424,7 @@ mod results_m7_t2 {
         // to prove is that the writer scores it 0.5/0.5 and names no winner — `scoreForSeat` decides
         // that on `outcome.winner === "draw"` alone, and a writer that read the reason instead (or
         // that treated "somebody died" as a win) would name A here.
-        let _engine = install_test_cards();
+        install_test_cards();
         let app = scenario(ScenarioOptions { ratings: Some((1200.0, 1000.0)), ..Default::default() }).await;
         let row = j(&record(&app, &[json!({ "type": "play", "card": "test-mutual-lethal", "playerId": "p1" })]).await);
 
@@ -443,7 +443,7 @@ mod results_m7_t2 {
 
     #[tokio::test]
     async fn concede_the_conceding_player_loses_2_5() {
-        let _engine = install_test_cards();
+        install_test_cards();
         let (win, loss) = win_loss();
         let app = scenario(ScenarioOptions::default()).await;
         record(&app, &[json!({ "type": "concede", "playerId": "p2" })]).await;
@@ -452,7 +452,7 @@ mod results_m7_t2 {
 
     #[tokio::test]
     async fn draw_accepted_a_draw_moves_both_ratings_toward_each_other() {
-        let _engine = install_test_cards();
+        install_test_cards();
         let app = scenario(ScenarioOptions { ratings: Some((1200.0, 1000.0)), ..Default::default() }).await;
         let row = j(&record(
             &app,
@@ -473,7 +473,7 @@ mod results_m7_t2 {
     /// TS: "turn-cap: the 30th player-turn is a draw" (its scripted engine's cap, `FAKE_TURN_CAP`).
     #[tokio::test]
     async fn turn_cap_the_last_player_turn_is_a_draw() {
-        let _engine = install_test_cards();
+        install_test_cards();
         let app = scenario(ScenarioOptions::default()).await;
         let (outcome, turns) = play_from(TURN_CAP_PLAYER_TURNS - 1, &to_the_turn_cap());
         let row = j(&record_result(&app, RecordResultInput {
@@ -492,7 +492,7 @@ mod results_m7_t2 {
 
     #[tokio::test]
     async fn disconnect_the_disconnected_player_loses_9_5() {
-        let _engine = install_test_cards();
+        install_test_cards();
         let (win, loss) = win_loss();
         let app = scenario(ScenarioOptions::default()).await;
         record(&app, &[json!({ "type": "disconnectExpired", "player": "p1", "playerId": "p1" })]).await;
@@ -501,7 +501,7 @@ mod results_m7_t2 {
 
     #[tokio::test]
     async fn match_ceiling_an_actor_resolved_ceiling_is_a_draw_with_the_ordinary_rating_move_r112() {
-        let _engine = install_test_cards();
+        install_test_cards();
         let app = scenario(ScenarioOptions { ratings: Some((1200.0, 1000.0)), ..Default::default() }).await;
         let row = j(&record(&app, &[json!({ "type": "ceilingReached", "playerId": "p1" })]).await);
         let expected = rating_move(1200.0, 1000.0, 0.5);
@@ -511,7 +511,7 @@ mod results_m7_t2 {
 
     #[tokio::test]
     async fn writes_one_row_and_rates_once_when_it_is_called_twice_for_the_same_match_9_5() {
-        let _engine = install_test_cards();
+        install_test_cards();
         let (win, loss) = win_loss();
         let app = scenario(ScenarioOptions::default()).await;
         let first = record(&app, &[json!({ "type": "concede", "playerId": "p2" })]).await;
@@ -532,7 +532,7 @@ mod results_m7_t2 {
 
     #[tokio::test]
     async fn returns_the_racing_first_writers_row_when_two_writes_collide_on_the_result_key_9_5() {
-        let _engine = install_test_cards();
+        install_test_cards();
         let app = scenario(ScenarioOptions::default()).await;
         // Two writers — an actor and the reaper — pass `getByMatch` together, each inside its own
         // transaction. The first commits; the second's insert meets `results_pkey`, which the port
@@ -602,7 +602,7 @@ mod results_m7_t2 {
 
     #[tokio::test]
     async fn clears_a_stray_open_queue_ticket_so_both_players_can_queue_again_9_5() {
-        let _engine = install_test_cards();
+        install_test_cards();
         let app = scenario(ScenarioOptions::default()).await;
         let ticket: Ticket = serde_json::from_value(json!({
             "id": "ticket-a",
@@ -627,7 +627,7 @@ mod results_m7_t2 {
 
         #[tokio::test]
         async fn r604_a_room_challenge_moves_neither_rating_nor_rank_and_records_both_ratings_unchanged() {
-            let _engine = install_test_cards();
+            install_test_cards();
             let app = scenario(ScenarioOptions {
                 ratings: Some((1200.0, 1000.0)),
                 ranked: Some(false),
@@ -644,16 +644,16 @@ mod results_m7_t2 {
             assert_eq!(table(&app, |data| j(&data.tables.season_ranks)).await, json!([]));
             assert_eq!(table(&app, |data| j(&data.tables.rated_games)).await, json!([]));
             // Deviation and volatility do not move either.
-            assert_eq!(profile(&app, A).await["ratingDeviation"].as_f64(), Some(RATING_DEVIATION_START as f64));
+            assert_eq!(profile(&app, A).await["ratingDeviation"].as_f64(), Some(RATING_DEVIATION_START));
         }
 
         #[tokio::test]
         async fn r604_a_ranked_match_moves_both_hidden_ratings_their_deviations_and_both_players_seasons() {
-            let _engine = install_test_cards();
+            install_test_cards();
             let app = scenario(ScenarioOptions::default()).await;
             record(&app, &[json!({ "type": "concede", "playerId": "p2" })]).await;
             let profile_a = profile(&app, A).await;
-            assert!(profile_a["ratingDeviation"].as_f64().unwrap_or(f64::INFINITY) < RATING_DEVIATION_START as f64);
+            assert!(profile_a["ratingDeviation"].as_f64().unwrap_or(f64::INFINITY) < RATING_DEVIATION_START);
             let ranks = table(&app, |data| j(&data.tables.season_ranks)).await;
             assert_eq!(
                 map(&ranks, |rank| json!([rank["profileId"], rank["games"], rank["wins"], rank["losses"]])),
@@ -663,7 +663,7 @@ mod results_m7_t2 {
 
         #[tokio::test]
         async fn r611_records_the_rated_game_version_pilots_result_and_both_ratings_and_ranks_before_and_after() {
-            let _engine = install_test_cards();
+            install_test_cards();
             let app = scenario(ScenarioOptions { ratings: Some((1200.0, 1000.0)), ..Default::default() }).await;
             record(&app, &[json!({ "type": "disconnectExpired", "player": "p1", "playerId": "p1" })]).await;
             let expected = rating_move(1200.0, 1000.0, 0.0);
@@ -703,7 +703,7 @@ mod results_m7_t2 {
 
         #[tokio::test]
         async fn resolves_a_match_past_its_ceiling_as_a_draw_and_leaves_both_ratings_unchanged_r112() {
-            let _engine = install_test_cards();
+            install_test_cards();
             let app = scenario(ScenarioOptions {
                 ratings: Some((1200.0, 1000.0)),
                 started_offset_ms: Some(PAST_CEILING_MS),
@@ -728,7 +728,7 @@ mod results_m7_t2 {
 
         #[tokio::test]
         async fn leaves_a_match_that_has_not_reached_its_ceiling_alone() {
-            let _engine = install_test_cards();
+            install_test_cards();
             let app = scenario(ScenarioOptions::default()).await;
             assert_eq!(reap(&app).await, Vec::<String>::new());
             assert_eq!(table(&app, |data| json!(data.tables.results.len())).await, json!(0));
@@ -737,7 +737,7 @@ mod results_m7_t2 {
 
         #[tokio::test]
         async fn is_a_no_op_once_the_actor_has_already_recorded_the_ending() {
-            let _engine = install_test_cards();
+            install_test_cards();
             let (win, loss) = win_loss();
             let app = scenario(ScenarioOptions { started_offset_ms: Some(PAST_CEILING_MS), ..Default::default() }).await;
             record(&app, &[json!({ "type": "concede", "playerId": "p2" })]).await;
@@ -747,7 +747,7 @@ mod results_m7_t2 {
 
         #[tokio::test]
         async fn keeps_its_own_row_when_an_actor_reports_the_same_match_afterwards() {
-            let _engine = install_test_cards();
+            install_test_cards();
             let app = scenario(ScenarioOptions {
                 ratings: Some((1200.0, 1000.0)),
                 started_offset_ms: Some(PAST_CEILING_MS),
@@ -862,7 +862,7 @@ mod results_m7_t2 {
 
         #[tokio::test]
         async fn r262_a_series_games_row_leaves_both_ratings_unchanged_and_the_series_records_the_game_in_the_same_write() {
-            let _engine = install_test_cards();
+            install_test_cards();
             let (logs, _logging) = Logs::capture();
             let app = series_scenario().await;
             // Game 1: series p1 (A) goes first, so the match's p1 is A, as in `seats`.
@@ -892,7 +892,7 @@ mod results_m7_t2 {
 
         #[tokio::test]
         async fn r263_the_reapers_ceiling_draw_counts_for_neither_side_and_a_next_game_both_sides_last_decks_begin_is_started_r332() {
-            let _engine = install_test_cards();
+            install_test_cards();
             let app = series_scenario().await;
             finish(&app, A).await;
             play_next(&app, [1, 0]).await;
@@ -949,7 +949,7 @@ mod results_m7_t2 {
 
         #[tokio::test]
         async fn r262_the_game_that_ends_the_series_moves_both_ratings_once_from_the_ratings_at_the_time_it_ends() {
-            let _engine = install_test_cards();
+            install_test_cards();
             let app = series_scenario().await;
             record(&app, &[json!({ "type": "concede", "playerId": "p2" })]).await;
             play_next(&app, [1, 1]).await;

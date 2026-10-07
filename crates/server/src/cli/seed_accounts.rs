@@ -105,13 +105,13 @@ pub fn seed_accounts_settings(
     let secret = source.get(SEED_PASSWORD_VAR).cloned().unwrap_or_default();
     // `.length` in TS counts UTF-16 code units; the upper bound is in bytes, as TextEncoder counts.
     let units = secret.encode_utf16().count();
-    if units < AUTH_PASSWORD_MIN_LENGTH as usize {
+    if units < AUTH_PASSWORD_MIN_LENGTH {
         problems.push(format!(
             "{SEED_PASSWORD_VAR} must be at least {AUTH_PASSWORD_MIN_LENGTH} characters{} \
              Generate one with: openssl rand -base64 18",
             if units == 0 { " (it is not set)." } else { "." },
         ));
-    } else if secret.len() > AUTH_PASSWORD_MAX_LENGTH as usize {
+    } else if secret.len() > AUTH_PASSWORD_MAX_LENGTH {
         problems.push(format!("{SEED_PASSWORD_VAR} must be at most {AUTH_PASSWORD_MAX_LENGTH} bytes."));
     }
 
@@ -246,7 +246,7 @@ async fn save_starter_decks(client: &mut PgConnection, profile_id: &str, catalog
         return Err(anyhow!("app.settings has no deck_size: is migration 0003 applied?"));
     };
     let deck_size = deck_size as usize;
-    let trio_decks = TRIO_DECKS as usize;
+    let trio_decks = TRIO_DECKS;
 
     let needed = deck_size * trio_decks;
     if ids.len() < needed {

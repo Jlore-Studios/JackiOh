@@ -227,11 +227,10 @@ fn retry_after_ms_of(error: &ApiError) -> Option<f64> {
     if error.code != ApiErrorCode::RateLimited {
         return None;
     }
-    if let Some(wait) = error.retry_after_ms {
-        if wait >= 0 {
+    if let Some(wait) = error.retry_after_ms
+        && wait >= 0 {
             return Some(wait as f64);
         }
-    }
     let wait = error.details.as_ref()?.as_object()?.get("retryAfterMs")?.as_f64()?;
     if !wait.is_finite() || wait < 0.0 {
         return None;
@@ -250,11 +249,10 @@ fn json_response(status: u16, text: String, cache_control: &str, retry_after: Op
     if let Ok(value) = HeaderValue::from_str(cache_control) {
         headers.insert(header::CACHE_CONTROL, value);
     }
-    if let Some(wait) = retry_after {
-        if let Ok(value) = HeaderValue::from_str(&wait) {
+    if let Some(wait) = retry_after
+        && let Ok(value) = HeaderValue::from_str(&wait) {
             headers.insert(header::RETRY_AFTER, value);
         }
-    }
     response
 }
 
@@ -359,11 +357,10 @@ fn forwarded_entries(headers: &HeaderMap) -> Vec<String> {
 /// address, or on `UNKNOWN_CLIENT_ADDRESS` when the host gave none.
 pub fn client_address(headers: &HeaderMap, peer_address: Option<&str>, trusted_proxy_hops: usize) -> String {
     let entries = forwarded_entries(headers);
-    if trusted_proxy_hops >= 1 && entries.len() >= trusted_proxy_hops {
-        if let Some(entry) = entries.get(entries.len() - trusted_proxy_hops) {
+    if trusted_proxy_hops >= 1 && entries.len() >= trusted_proxy_hops
+        && let Some(entry) = entries.get(entries.len() - trusted_proxy_hops) {
             return entry.clone();
         }
-    }
     let peer = peer_address.map(str::trim).unwrap_or("");
     if peer.is_empty() { UNKNOWN_CLIENT_ADDRESS.to_string() } else { peer.to_string() }
 }
@@ -491,14 +488,12 @@ fn body_too_large() -> ApiError {
 /// the cap is refused without reading; otherwise the body is read up to the cap and abandoned the
 /// moment it passes it, so a huge body is never buffered whole.
 async fn read_body_text(headers: &HeaderMap, body: Body) -> Result<String, ApiError> {
-    let cap = API_MAX_BODY_BYTES as usize;
-    if let Some(declared) = header_text(headers, "content-length") {
-        if let Ok(length) = declared.trim().parse::<f64>() {
-            if length > cap as f64 {
+    let cap = API_MAX_BODY_BYTES;
+    if let Some(declared) = header_text(headers, "content-length")
+        && let Ok(length) = declared.trim().parse::<f64>()
+            && length > cap as f64 {
                 return Err(body_too_large());
             }
-        }
-    }
     let bytes = axum::body::to_bytes(body, cap).await.map_err(|_| body_too_large())?;
     let text = String::from_utf8_lossy(&bytes).into_owned();
     // TS's `TextDecoder` drops a leading byte-order mark.
@@ -701,7 +696,7 @@ pub async fn resolve_caller(app: &App, headers: &HeaderMap) -> Result<Caller, Ap
         .profiles_create(&ProfileCreateInput {
             user_id: user.user_id.clone(),
             email: user.email.clone().unwrap_or_default(),
-            rating: f64::from(RATING_START),
+            rating: RATING_START,
             at: now_ms(),
             display_name: None,
         })
@@ -847,7 +842,7 @@ pub fn create_rate_limiter(limit: usize, window_ms: i64) -> RateLimiter {
 /// §9.8's "per-account rate limit at the API": `API_REQUESTS_PER_MINUTE` a minute, the limiter
 /// every `App` holds.
 pub fn api_rate_limiter() -> RateLimiter {
-    create_rate_limiter(API_REQUESTS_PER_MINUTE as usize, API_RATE_WINDOW_MS)
+    create_rate_limiter(API_REQUESTS_PER_MINUTE, API_RATE_WINDOW_MS)
 }
 
 impl Default for RateLimiter {
@@ -895,11 +890,11 @@ pub async fn dispatch(app: &Arc<App>, routes: &[Route], request: Request) -> Res
                 .map(|info| RequestContext { peer_address: Some(info.0.ip().to_string()) })
         })
         .unwrap_or_default();
-    let trusted_proxy_hops = app.env.trusted_proxy_hops as usize;
+    let trusted_proxy_hops = app.env.trusted_proxy_hops;
 
     if parts.headers.contains_key("x-forwarded-for") {
         let entries = forwarded_entries(&parts.headers).len();
-        let capped = entries.min(MAX_TRUSTED_PROXY_HOPS as usize + 1);
+        let capped = entries.min(MAX_TRUSTED_PROXY_HOPS + 1);
         if app.limiter.note_forwarded(capped) {
             log_info("api.forwarded_for", json!({ "fewestEntries": entries, "trustedProxyHops": trusted_proxy_hops }));
         }
@@ -999,11 +994,10 @@ async fn run_route(
     if let Some(error) = auth_error {
         return Err(error);
     }
-    if auth == AuthLevel::Active {
-        if let Some(resolved) = &caller {
+    if auth == AuthLevel::Active
+        && let Some(resolved) = &caller {
             assert_active(&resolved.profile)?;
         }
-    }
 
     let req = Req {
         caller,

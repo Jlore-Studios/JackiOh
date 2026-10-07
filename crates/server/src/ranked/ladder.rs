@@ -339,7 +339,7 @@ pub fn apply_ranked_game(rank: &SeasonRank, input: &ApplyRankedGameInput) -> Sea
         if games < RANK_PLACEMENT_GAMES {
             return tally;
         }
-        let placed = input.target.max(0).min(LADDER_TOP);
+        let placed = input.target.clamp(0, LADDER_TOP);
         return SeasonRank {
             ladder: Some(placed),
             floor: rank.floor.max(tier_index_of(placed)),

@@ -93,8 +93,12 @@ pub fn test_env(overrides: &[(&str, &str)]) -> Env {
 }
 
 /// What `test_app_with` builds differently from `test_app`.
-#[derive(Default)]
 pub struct TestAppOptions {
+    /// TS `createTestDeps({ e2e })`: whether the server runs in end-to-end mode (`env.e2e`, R143's
+    /// seeds, R144's fixtures). True by default (SURFACE §11.2's `test_app()` is the `E2E=1` server);
+    /// false builds the same fake store and fixture auth with `env.e2e` off, as a production server
+    /// would read it, and with no fixtures (a server outside end-to-end mode never seeds them).
+    pub e2e: bool,
     /// Environment variables over `test_env`'s.
     pub env: Vec<(String, String)>,
     /// A catalog instead of the real one (`create_test_catalog`).
@@ -109,15 +113,31 @@ pub struct TestAppOptions {
     pub db: Option<jackioh_server::db::store::Db>,
 }
 
+impl Default for TestAppOptions {
+    fn default() -> TestAppOptions {
+        TestAppOptions { e2e: true, env: Vec::new(), catalog: None, skip_fixtures: false, deletion: None, db: None }
+    }
+}
+
 /// SURFACE §11.2: the fake store, the fixture auth provider, the E2E fixtures (R144's reseed).
 pub async fn test_app() -> Arc<App> {
     test_app_with(TestAppOptions::default()).await
 }
 
+/// TS `createTestDeps()`: the test app over an empty store. R144's fixtures are the end-to-end
+/// server's; a test that seeds its own profiles (`profile-1`, `profile-2`, …, the ids the fake store
+/// also gives the fixtures) and reads whole tables starts from none, as TS's did.
+pub async fn empty_test_app() -> Arc<App> {
+    test_app_with(TestAppOptions { skip_fixtures: true, ..TestAppOptions::default() }).await
+}
+
 /// TS `createTestDeps(overrides)`: the test app with the overrides `TestAppOptions` names.
 pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
     let overrides: Vec<(&str, &str)> = options.env.iter().map(|(key, value)| (key.as_str(), value.as_str())).collect();
-    let env = test_env(&overrides);
+    let mut env = test_env(&overrides);
+    // Outside end-to-end mode `load_env` would demand Supabase and Postgres; the test app keeps the
+    // fake store and the fixture auth either way, so the flag is the one thing that changes.
+    env.e2e = options.e2e;
     let mut catalog = match options.catalog {
         Some(catalog) => catalog,
         None => load_catalog(LoadCatalogOptions { version: Some(env.catalog_version.to_string()), json: None })
@@ -145,7 +165,7 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
         catalog,
         breaker: Mutex::new(jackioh_server::api::codes::create_breaker_state()),
     });
-    if !options.skip_fixtures && !restarted {
+    if options.e2e && !options.skip_fixtures && !restarted {
         jackioh_server::api::e2e::seed_e2e_fixtures(&app)
             .await
             .unwrap_or_else(|error| panic!("R144's reseed: {error:?}"));

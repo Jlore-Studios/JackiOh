@@ -190,7 +190,7 @@ async fn set_status(db: &Db, profile_id: &str, status: &str) {
 
 async fn redeem(app: &Arc<App>, code: &str) -> (u16, Value) {
     let (status, _headers, body) =
-        call(app, "POST", "/api/codes/redeem", Some(&*pending().token), json!({ "code": code })).await;
+        call(app, "POST", "/api/codes/redeem", Some(pending().token), json!({ "code": code })).await;
     (status, body)
 }
 
@@ -507,7 +507,7 @@ mod r144_the_reseed_at_boot {
 
         // ...and the freshly activated account owns exactly one copy of everything, once.
         let (status, _headers, owned) =
-            call(&app, "GET", "/api/collection", Some(&*pending().token), Value::Null).await;
+            call(&app, "GET", "/api/collection", Some(pending().token), Value::Null).await;
         assert_eq!(status, 200);
         let entries = owned["entries"].as_array().expect("entries");
         assert_eq!(entries.len(), PLAYABLE.len());
@@ -550,9 +550,9 @@ mod the_fixture_auth_provider {
     async fn verifies_each_static_token_from_e2e_support_config_ts_and_nothing_else() {
         let app = test_app().await;
         for fixture in E2E_ACCOUNTS.iter() {
-            let user = app.auth.verify(&fixture.token).await.unwrap_or_else(|_| panic!("{} verifies", fixture.token));
+            let user = app.auth.verify(fixture.token).await.unwrap_or_else(|_| panic!("{} verifies", fixture.token));
             assert_eq!(user.user_id, fixture.user_id);
-            assert_eq!(user.email.as_deref(), Some(&*fixture.email));
+            assert_eq!(user.email.as_deref(), Some(fixture.email));
             // §9.4 makes a verified email a precondition of redemption, and spec 10 asserts it on the
             // pending account.
             assert!(user.email_verified);
@@ -565,12 +565,12 @@ mod the_fixture_auth_provider {
     #[tokio::test(start_paused = true)]
     async fn signs_in_with_the_fixture_email_and_password_and_refuses_anything_else() {
         let app = test_app().await;
-        let session = app.auth.sign_in(&p1().email, &p1().password).await.expect("the fixture signs in");
+        let session = app.auth.sign_in(p1().email, p1().password).await.expect("the fixture signs in");
         assert_eq!(session.access_token, p1().token);
         assert_eq!(session.user.user_id, p1().user_id);
 
-        assert!(app.auth.sign_in(&p1().email, "wrong").await.is_err());
-        assert!(app.auth.sign_in("nobody@jackioh.test", &p1().password).await.is_err());
+        assert!(app.auth.sign_in(p1().email, "wrong").await.is_err());
+        assert!(app.auth.sign_in("nobody@jackioh.test", p1().password).await.is_err());
     }
 
     #[tokio::test(start_paused = true)]
@@ -588,7 +588,7 @@ mod the_fixture_auth_provider {
     async fn carries_a_pending_account_through_api_auth_me_exactly_as_the_code_screen_reads_it() {
         let app = harness().await;
         seed_e2e_fixtures(&app).await.expect("the reseed");
-        let (status, _headers, body) = call(&app, "GET", "/api/auth/me", Some(&*pending().token), Value::Null).await;
+        let (status, _headers, body) = call(&app, "GET", "/api/auth/me", Some(pending().token), Value::Null).await;
         assert_eq!(status, 200);
         assert_matches(
             &body,
@@ -602,7 +602,7 @@ mod the_fixture_auth_provider {
         let app = harness().await;
         seed_e2e_fixtures(&app).await.expect("the reseed");
         let (status, _headers, body) =
-            call(&app, "GET", "/api/collection", Some(&*pending().token), Value::Null).await;
+            call(&app, "GET", "/api/collection", Some(pending().token), Value::Null).await;
         assert_eq!(status, 403);
         assert_matches(&body, &json!({ "error": { "code": "account_pending" } }), "body");
     }

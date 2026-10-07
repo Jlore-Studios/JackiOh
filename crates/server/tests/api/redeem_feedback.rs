@@ -48,7 +48,7 @@ use crate::support::deps::{add_user, test_app};
 const MS_PER_SECOND: i64 = 1000;
 
 /// R109's allowance, as the server carries it.
-const LIMIT: usize = API_REQUESTS_PER_MINUTE as usize;
+const LIMIT: usize = API_REQUESTS_PER_MINUTE;
 
 /// A well-formed code inside R104's alphabet that is never minted.
 const UNMINTED_CODE: &str = "ABCD-EFGH-JKMN-PQRT";
@@ -67,22 +67,22 @@ fn identical_body() -> String {
 
 /// §9.4 step 2's allowance (TS `deps.limits.redeemPerProfilePerHour`).
 fn per_profile() -> i64 {
-    CODE_ATTEMPTS_PER_PROFILE_PER_HOUR as i64
+    CODE_ATTEMPTS_PER_PROFILE_PER_HOUR
 }
 
 /// §9.4 step 3's allowance (TS `deps.limits.redeemPerIpPerHour`).
 fn per_ip() -> i64 {
-    CODE_ATTEMPTS_PER_IP_PER_HOUR as i64
+    CODE_ATTEMPTS_PER_IP_PER_HOUR
 }
 
 /// The attempt window (TS `deps.limits.redeemWindowMs`).
 fn window_ms() -> i64 {
-    CODE_ATTEMPT_WINDOW_SECONDS as i64 * MS_PER_SECOND
+    CODE_ATTEMPT_WINDOW_SECONDS * MS_PER_SECOND
 }
 
 /// The breaker's cooldown (TS `deps.limits.breakerCooldownMs`, `defaultLimits()`'s value).
 fn breaker_cooldown_ms() -> i64 {
-    REDEMPTION_CIRCUIT_WINDOW_SECONDS as i64 * MS_PER_SECOND
+    REDEMPTION_CIRCUIT_WINDOW_SECONDS * MS_PER_SECOND
 }
 
 fn retry_after_header_for(ms: i64) -> String {
@@ -481,7 +481,7 @@ mod r192_b8_refusals_at_9_4_steps_2_and_3 {
         // and the caller's own miss is the one that crosses it.
         let app = code_app().await;
         let caller = seed_caller(&app, "trips-breaker").await;
-        flood_address(&app, REDEMPTION_CIRCUIT_FAILURE_THRESHOLD as i64 - 1, "earlier", "hash-elsewhere", now_ms())
+        flood_address(&app, REDEMPTION_CIRCUIT_FAILURE_THRESHOLD - 1, "earlier", "hash-elsewhere", now_ms())
             .await;
 
         assert_eq!(redeem(&app, &caller.token, UNMINTED_CODE, DEFAULT_IP).await.status, 400);
@@ -552,7 +552,8 @@ mod r192_b8_rate_limited_and_error_response {
     fn r192_b8_adds_no_retry_after_for_a_negative_or_non_finite_wait() {
         // TS also tried NaN and Infinity; the wait is an `i64` here (`ApiError::retry_after_ms`), so
         // a negative one is the only wait without a header that the type can hold.
-        for ms in [-1_i64] {
+        {
+            let ms = -1_i64;
             let response = error_response(&rate_limited("wait", ms));
             assert_eq!(response.status().as_u16(), 429, "{ms}");
             assert!(response.headers().get("retry-after").is_none(), "{ms}");
@@ -692,7 +693,7 @@ mod b13_a_request_body_larger_than_api_max_body_bytes {
     const TOO_LARGE_MESSAGE: &str = "the request body is too large";
 
     fn cap() -> usize {
-        API_MAX_BODY_BYTES as usize
+        API_MAX_BODY_BYTES
     }
 
     async fn raw_redeem(app: &Arc<App>, token: &str, body: String, ip: &str) -> Reply {

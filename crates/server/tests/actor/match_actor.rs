@@ -66,7 +66,7 @@ use serde_json::{Value, json};
 use tracing::subscriber::DefaultGuard;
 
 use self::log_capture::Recorder;
-use crate::support::deps::test_app;
+use crate::support::deps::{empty_test_app, test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
 use crate::support::socket::{FakeSocket, create_fake_socket};
 
@@ -611,7 +611,7 @@ async fn harness(options: Options) -> Harness {
             ((p1.clone(), p2.clone()), SEED.to_string())
         }
     };
-    let app = test_app().await;
+    let app = empty_test_app().await;
     let [first, second] = options.ratings;
     seed_profile(&app, json!({ "id": "profile-1", "rating": first, "inMatchId": MATCH_ID })).await;
     seed_profile(&app, json!({ "id": "profile-2", "rating": second, "inMatchId": MATCH_ID })).await;
@@ -791,11 +791,10 @@ fn scan(sent: &[String], secrets: &[String]) -> (Vec<String>, Vec<String>) {
             if STATE_ONLY_KEYS.contains(&key) {
                 state_shaped.push(format!("{key} in {}", frame.chars().take(40).collect::<String>()));
             }
-            if let Some(text) = value.as_str() {
-                if secrets.iter().any(|secret| secret == text) {
+            if let Some(text) = value.as_str()
+                && secrets.iter().any(|secret| secret == text) {
                     leaked.push(text.to_string());
                 }
-            }
         });
     }
     (leaked, state_shaped)
@@ -1129,7 +1128,7 @@ mod m6_t4_the_match_actor {
         // registry rebuilds its actor from it, whose clock then has one second left.
         let (_log, _guard) = Recorder::install();
         install_test_cards();
-        let app = test_app().await;
+        let app = empty_test_app().await;
         seed_profile(&app, json!({ "id": "profile-1", "rating": 1000, "inMatchId": MATCH_ID })).await;
         seed_profile(&app, json!({ "id": "profile-2", "rating": 1000, "inMatchId": MATCH_ID })).await;
         let created_at = now() - ceiling_ms() + SECOND;
@@ -1190,7 +1189,8 @@ mod m6_t4_the_match_actor {
         let h = harness(Options::default()).await;
         h.p1.receive_json(json!({ "type": "joinRoom", "roomCode": "ABCDEF" }));
         h.idle().await;
-        assert_match(&errors(&h.p1).last().cloned().expect("an error frame"), &json!({ "code": "unsupported" }));
+        // SURFACE §11.3: a `joinRoom` frame is answered `malformed` (TS answered `unsupported`).
+        assert_match(&errors(&h.p1).last().cloned().expect("an error frame"), &json!({ "code": "malformed" }));
     }
 }
 
@@ -1472,7 +1472,7 @@ mod r642_the_portraits_frame_9_5 {
         // (R641's `null`-is-`vanilla`, one level up at the row).
         let (_log, _guard) = Recorder::install();
         install_test_cards();
-        let app = test_app().await;
+        let app = empty_test_app().await;
         let now = now();
         create_match_row(
             &app,

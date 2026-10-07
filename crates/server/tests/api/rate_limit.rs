@@ -40,7 +40,7 @@ use jackioh_server::db::store::Db;
 use crate::support::deps::{add_user, test_app};
 
 /// R109's allowance, as the server itself carries it.
-const LIMIT: usize = API_REQUESTS_PER_MINUTE as usize;
+const LIMIT: usize = API_REQUESTS_PER_MINUTE;
 const MINUTE_MS: u64 = 60_000;
 
 /// `jsonRequest`'s default `x-forwarded-for`, the entry one proxy hop writes (`render.yaml`).

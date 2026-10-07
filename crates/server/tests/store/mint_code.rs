@@ -38,7 +38,7 @@ mod parse_mint_args {
     }
 
     fn refusal(argv: &[&str]) -> String {
-        parse_mint_args(&args(argv)).err().expect("the arguments are refused").to_string()
+        parse_mint_args(&args(argv)).expect_err("the arguments are refused").to_string()
     }
 
     #[test]

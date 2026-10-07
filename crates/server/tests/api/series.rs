@@ -53,8 +53,8 @@ const BOB: &str = "profile-bob";
 const STRANGER: &str = "profile-stranger";
 const SERIES_ID: &str = "series-1";
 const FIRST_MATCH: &str = "match-1";
-const PICK_MS: i64 = SERIES_PICK_SECONDS as i64 * 1000;
-const SWEEP_MS: i64 = SERIES_SWEEP_INTERVAL_SECONDS as i64 * 1000;
+const PICK_MS: i64 = SERIES_PICK_SECONDS * 1000;
+const SWEEP_MS: i64 = SERIES_SWEEP_INTERVAL_SECONDS * 1000;
 
 /// The E2E fixture accounts (`src/api/e2e.ts`'s `E2E_ACCOUNTS`, a contract with
 /// `e2e/support/config.ts`): the user id a profile is seeded under, and the token that signs in as it.
@@ -258,8 +258,8 @@ fn trio(owner: &str) -> Value {
 fn rating_move(rating_a: f64, rating_b: f64, score_a: f64) -> (f64, f64) {
     let fresh = |rating: f64| Glicko {
         rating,
-        deviation: RATING_DEVIATION_START as f64,
-        volatility: RATING_VOLATILITY_START as f64,
+        deviation: RATING_DEVIATION_START,
+        volatility: RATING_VOLATILITY_START,
     };
     let next = rate_game(&fresh(rating_a), &fresh(rating_b), score_a);
     (next.a.rating, next.b.rating)

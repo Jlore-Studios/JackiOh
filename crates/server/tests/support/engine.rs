@@ -29,23 +29,29 @@
 //!  - `test-prompt-enemy`  opens a prompt for the other player (a trap firing on your turn, R79);
 //!  - `test-lethal`        ends the match: the player who played it wins by `hero-death`;
 //!  - `test-mutual-lethal` ends the match: both heroes die in the same check, a draw by
-//!                         `both-heroes-dead` (§2.5's second row — the one ending no other scripted
-//!                         card can reach, and the seventh of the reasons `api/results.rs` writes).
+//!    `both-heroes-dead` (§2.5's second row — the one ending no other scripted
+//!    card can reach, and the seventh of the reasons `api/results.rs` writes);
+//!  - `test-glitch-swap`   a Glitch's swap (R677): `seat_swaps` goes up by one, `glitched` announces it;
+//!  - `test-glitch-void`   a Glitch's void (R679): the game ends, no winner, reason `voided`.
 //!
 //! Their prompts are the engine's own (`choose_mode`): kind `mode`, where TS's fake opened kind
 //! `target`. The filler `test-card-<n>` cards are 0-cost Spells that do nothing.
 //!
 //! Not ported: `createFakeEngine` itself (the real engine stands where it stood), `FAKE_HAND_SIZE`
 //! (the real opening hands are `OPENING_DRAW`'s, three for p1 and four for p2), the fake's
-//! `dealRandomDeck` (`actor::engine::deal_random_deck` is the real R258 deal), and the two Glitch
-//! cards `test-glitch-swap` and `test-glitch-void` (a Glitch's outcome is drawn by the engine's
-//! own Glitch, `subsystems::glitch`, which no effect argument forces).
+//! `dealRandomDeck` (`actor::engine::deal_random_deck` is the real R258 deal). The two Glitch cards
+//! force one outcome each where the engine's own Glitch (`subsystems::glitch`) draws it from the
+//! match rng: each is a test-made `Effect` that writes exactly what that outcome writes (TS's fake
+//! wrote the same two fields and events).
 
 #![allow(dead_code)]
 
 use indexmap::IndexMap;
 use jackioh_engine::config::{DECK_SIZE, HERO_HEALTH, TURN_CAP_PLAYER_TURNS};
 use jackioh_engine::effects::{choose_mode, lose_health};
+use jackioh_engine::game_over::end_game;
+use jackioh_engine::script::Effect;
+use jackioh_engine::wire::{GameEvent, GameOverReason, GlitchOutcome, Winner};
 use jackioh_engine::prelude::json_as;
 use jackioh_engine::state::validate_deck;
 use jackioh_engine::testkit::{register_catalog, register_scripts};
@@ -63,6 +69,10 @@ pub const TEST_PROMPT_ENEMY: &str = "test-prompt-enemy";
 pub const TEST_LETHAL: &str = "test-lethal";
 /// Both heroes die in the same check: a draw by `both-heroes-dead` (§2.5).
 pub const TEST_MUTUAL_LETHAL: &str = "test-mutual-lethal";
+/// A Glitch's swap (R677): the accounts now play each other's seat.
+pub const TEST_GLITCH_SWAP: &str = "test-glitch-swap";
+/// A Glitch's void (R679): the game ends with no winner, reason `voided`.
+pub const TEST_GLITCH_VOID: &str = "test-glitch-void";
 
 /// Mirrors `TURN_CAP_PLAYER_TURNS` (§2.5) so a test can reach the `turn-cap` ending; the real
 /// engine's own cap, not a copy of it.
@@ -115,6 +125,10 @@ pub fn test_card_defs() -> Vec<CardDef> {
     for n in 0..DECK_SIZE {
         defs.push(test_def(&format!("{FILLER_PREFIX}{n}"), fillers + n, "Does nothing."));
     }
+    // After the fillers, so the indexes above stay where they were.
+    let glitches = fillers + DECK_SIZE;
+    defs.push(test_def(TEST_GLITCH_SWAP, glitches, "Quickdraw. Glitch: swap."));
+    defs.push(test_def(TEST_GLITCH_VOID, glitches + 1, "Quickdraw. Glitch: void."));
     defs
 }
 
@@ -138,6 +152,27 @@ fn prompt_script(by: &'static str) -> Script {
             })))]
         })),
         resume,
+        ..Script::default()
+    }
+}
+
+/// A Glitch forced to one outcome (`subsystems::glitch::glitch`'s swap or void arm, without its
+/// draw): the public `glitched` event, then the outcome's write.
+fn glitch_script(outcome: GlitchOutcome) -> Script {
+    Script {
+        static_flags: quickdraw(),
+        cry: Some(hook(move |_ctx| {
+            vec![Effect::new("test-glitch", move |ctx| {
+                ctx.sink.events.push(GameEvent::Glitched { player: ctx.controller, outcome });
+                match outcome {
+                    GlitchOutcome::Swap => {
+                        ctx.sink.state.seat_swaps = Some(ctx.sink.state.seat_swaps.unwrap_or(0) + 1);
+                    }
+                    GlitchOutcome::Void => end_game(&mut ctx.sink, Winner::Draw, GameOverReason::Voided),
+                    GlitchOutcome::Reset | GlitchOutcome::Boards => unreachable!("the server tests force swap and void only"),
+                }
+            })]
+        })),
         ..Script::default()
     }
 }
@@ -178,6 +213,8 @@ fn test_card_scripts() -> Vec<(String, Script)> {
     for n in 0..DECK_SIZE {
         scripts.push((format!("{FILLER_PREFIX}{n}"), Script::default()));
     }
+    scripts.push((TEST_GLITCH_SWAP.to_string(), glitch_script(GlitchOutcome::Swap)));
+    scripts.push((TEST_GLITCH_VOID.to_string(), glitch_script(GlitchOutcome::Void)));
     scripts
 }
 

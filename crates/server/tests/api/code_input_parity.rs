@@ -168,7 +168,7 @@ fn hmac_sha256_hex(key: &str, message: &str) -> String {
 fn formatted(raw: &str) -> String {
     let chars: Vec<char> = raw.chars().collect();
     chars
-        .chunks(INVITE_CODE_GROUP_SIZE as usize)
+        .chunks(INVITE_CODE_GROUP_SIZE)
         .map(|group| group.iter().collect::<String>())
         .collect::<Vec<_>>()
         .join(INVITE_CODE_SEPARATOR)
@@ -364,7 +364,7 @@ mod r191_b6_a_code_longer_than_code_input_max_length {
         let minted = mint_exactly(&server, BASE_CODE).await;
 
         // The code itself is good; only the whitespace around it pushes the input over the cap.
-        let input = pad_end(&minted, CODE_INPUT_MAX_LENGTH as usize + 1);
+        let input = pad_end(&minted, CODE_INPUT_MAX_LENGTH + 1);
         let response = redeem(&server, &caller.token, &input, "198.51.100.201").await;
 
         assert_eq!(response.status, 400);
@@ -383,8 +383,8 @@ mod r191_b6_a_code_longer_than_code_input_max_length {
         let caller = seed_caller(&server, "padded-to-cap", "pending").await;
         let minted = mint_exactly(&server, BASE_CODE).await;
 
-        let input = pad_end(&minted, CODE_INPUT_MAX_LENGTH as usize);
-        assert_eq!(input.len(), CODE_INPUT_MAX_LENGTH as usize);
+        let input = pad_end(&minted, CODE_INPUT_MAX_LENGTH);
+        assert_eq!(input.len(), CODE_INPUT_MAX_LENGTH);
         let response = redeem(&server, &caller.token, &input, "198.51.100.202").await;
 
         assert_eq!(response.status, 200);
@@ -399,8 +399,8 @@ mod r191_b6_a_code_longer_than_code_input_max_length {
         mint_exactly(&server, BASE_CODE).await;
 
         // Well inside the body limit, far past the input cap.
-        let huge_code = BASE_CODE.repeat(API_MAX_BODY_BYTES as usize / (2 * BASE_CODE.len()));
-        assert!(huge_code.len() > CODE_INPUT_MAX_LENGTH as usize);
+        let huge_code = BASE_CODE.repeat(API_MAX_BODY_BYTES / (2 * BASE_CODE.len()));
+        assert!(huge_code.len() > CODE_INPUT_MAX_LENGTH);
         let huge_response = redeem(&server, &huge.token, &huge_code, "198.51.100.203").await;
         let missing_response = redeem(&server, &missing.token, "ABCD-EFGH-JKMN-PQRT", "198.51.100.204").await;
 
@@ -426,7 +426,7 @@ mod r191_b6_a_code_longer_than_code_input_max_length {
 
         let started_too_long = tokio::time::Instant::now();
         let too_long_response =
-            redeem(&server, &too_long.token, &pad_end(&minted, CODE_INPUT_MAX_LENGTH as usize + 1), "198.51.100.205").await;
+            redeem(&server, &too_long.token, &pad_end(&minted, CODE_INPUT_MAX_LENGTH + 1), "198.51.100.205").await;
         let too_long_elapsed = started_too_long.elapsed().as_millis() as u64;
 
         let started_missing = tokio::time::Instant::now();

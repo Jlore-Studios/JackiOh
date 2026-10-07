@@ -31,7 +31,7 @@ use jackioh_server::config::{GLITCH_BOARDS_SAMPLED, MATCH_VOIDED_CLOSE_CODE};
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::Db;
 
-use crate::support::deps::{add_user, call, test_app};
+use crate::support::deps::{add_user, call, empty_test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
 use crate::support::socket::{create_fake_socket, FakeSocket};
 
@@ -218,8 +218,9 @@ fn hand_card(view: &Value, def_id: &str) -> String {
 }
 
 async fn world(options: WorldOptions) -> World {
-    let engine: Box<dyn Any> = Box::new(install_test_cards());
-    let app = test_app().await;
+    install_test_cards();
+    let engine: Box<dyn Any> = Box::new(());
+    let app = empty_test_app().await;
     {
         let data = fake(&app);
         let mut data = data.lock().await;
@@ -524,7 +525,7 @@ mod glitchs_void {
         play_the_void(&w).await;
         for socket in [&w.a, &w.b] {
             assert!(!socket.is_open());
-            assert_eq!(socket.close_code(), Some(MATCH_VOIDED_CLOSE_CODE as u16));
+            assert_eq!(socket.close_code(), Some(MATCH_VOIDED_CLOSE_CODE));
         }
         assert_eq!(last_view(&w.b)["result"], json!({ "winner": "draw", "reason": "voided" }));
         // A socket that arrives later finds no match.
@@ -551,7 +552,7 @@ mod glitchs_void {
     #[tokio::test]
     async fn r679_a_voided_conquest_game_never_happened_the_series_plays_the_same_game_again() {
         let (logs, _recording) = Logs::record();
-        let app = test_app().await;
+        let app = empty_test_app().await;
         let mut tokens = Vec::new();
         for id in [P1, P2] {
             fake(&app).lock().await.seed_profile(json!({

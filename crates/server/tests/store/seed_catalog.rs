@@ -152,7 +152,7 @@ fn file_holding(contents: &Value) -> String {
 }
 
 async fn refusal(path: &str) -> String {
-    read_catalog(path).await.err().expect("the file is refused").to_string()
+    read_catalog(path).await.expect_err("the file is refused").to_string()
 }
 
 mod read_catalog_ {
@@ -360,7 +360,7 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         let first = entries.first().expect("the catalog is not empty").clone();
         let mut misspelt = first.clone();
         misspelt.tags = vec!["Jlocked".to_owned()];
-        let refused = seed_catalog(url, CATALOG_VERSION, &[misspelt]).await.err().expect("the unknown tag is refused");
+        let refused = seed_catalog(url, CATALOG_VERSION, &[misspelt]).await.expect_err("the unknown tag is refused");
         assert!(format!("{refused:#}").contains("cards_tags_check"), "{refused:#}");
         // One transaction: the refused seed left the row as the real catalog wrote it.
         let (tags,): (Vec<String>,) = sqlx::query_as("select tags from public.cards where id = $1")

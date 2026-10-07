@@ -298,9 +298,9 @@ impl FakeData {
             email: text("email").unwrap_or_else(|| format!("{id}@example.test")),
             display_name: text("displayName").map(Some),
             status,
-            rating: number("rating").unwrap_or(f64::from(RATING_START)),
-            rating_deviation: number("ratingDeviation").unwrap_or(f64::from(RATING_DEVIATION_START)),
-            rating_volatility: number("ratingVolatility").unwrap_or(f64::from(RATING_VOLATILITY_START)),
+            rating: number("rating").unwrap_or(RATING_START),
+            rating_deviation: number("ratingDeviation").unwrap_or(RATING_DEVIATION_START),
+            rating_volatility: number("ratingVolatility").unwrap_or(RATING_VOLATILITY_START),
             in_match_id: text("inMatchId"),
             created_at: input.get("createdAt").and_then(Value::as_i64).unwrap_or(0),
         };
@@ -326,13 +326,13 @@ pub fn create_e2e_store(options: E2eStoreOptions) -> Db {
 /// puts the snapshot back: a rolled-back transaction leaves nothing behind.
 pub struct FakeTx<'a> {
     guard: MutexGuard<'a, FakeData>,
-    snapshot: Option<FakeTables>,
+    snapshot: Option<Box<FakeTables>>,
 }
 
 impl<'a> FakeTx<'a> {
     /// A transaction over an already-held lock; the tables as they are now are its snapshot.
     pub fn new(guard: MutexGuard<'a, FakeData>) -> FakeTx<'a> {
-        let snapshot = Some(guard.tables.clone());
+        let snapshot = Some(Box::new(guard.tables.clone()));
         FakeTx { guard, snapshot }
     }
 
@@ -356,7 +356,7 @@ impl std::fmt::Debug for FakeTx<'_> {
 impl Drop for FakeTx<'_> {
     fn drop(&mut self) {
         if let Some(snapshot) = self.snapshot.take() {
-            self.guard.tables = snapshot;
+            self.guard.tables = *snapshot;
         }
     }
 }
@@ -417,9 +417,9 @@ pub struct RedemptionSettings {
 /// `RedemptionSettings { enabled: …, ..default_redemption_settings() }`.
 pub fn default_redemption_settings() -> RedemptionSettings {
     RedemptionSettings {
-        attempts_per_profile_per_hour: i64::from(CODE_ATTEMPTS_PER_PROFILE_PER_HOUR),
-        attempts_per_ip_per_hour: i64::from(CODE_ATTEMPTS_PER_IP_PER_HOUR),
-        attempt_window_ms: i64::from(CODE_ATTEMPT_WINDOW_SECONDS) * 1000,
+        attempts_per_profile_per_hour: CODE_ATTEMPTS_PER_PROFILE_PER_HOUR,
+        attempts_per_ip_per_hour: CODE_ATTEMPTS_PER_IP_PER_HOUR,
+        attempt_window_ms: CODE_ATTEMPT_WINDOW_SECONDS * 1000,
         enabled: Arc::new(|| true),
         email_verified: Arc::new(|_profile_id| true),
     }
@@ -661,8 +661,8 @@ pub fn profiles_create(f: &mut FakeTx<'_>, input: &ProfileCreateInput) -> Result
         display_name: input.display_name.clone(),
         status: ProfileStatus::Pending,
         rating: input.rating,
-        rating_deviation: f64::from(RATING_DEVIATION_START),
-        rating_volatility: f64::from(RATING_VOLATILITY_START),
+        rating_deviation: RATING_DEVIATION_START,
+        rating_volatility: RATING_VOLATILITY_START,
         in_match_id: None,
         created_at: input.at,
     };
@@ -903,7 +903,7 @@ pub fn matches_actions(f: &mut FakeTx<'_>, match_id: &str) -> Result<Vec<MatchAc
     call(f, "matches.actions")?;
     let mut rows: Vec<MatchActionRow> =
         f.tables().match_actions.iter().filter(|row| row.match_id == match_id).cloned().collect();
-    rows.sort_by(|a, b| a.seq.cmp(&b.seq));
+    rows.sort_by_key(|a| a.seq);
     Ok(rows)
 }
 
@@ -1027,7 +1027,7 @@ pub fn tickets_list_open(f: &mut FakeTx<'_>) -> Result<Vec<Ticket>, StoreError> 
     call(f, "tickets.listOpen")?;
     let mut rows: Vec<Ticket> =
         f.tables().tickets.iter().filter(|ticket| ticket.status == TicketStatus::Open).cloned().collect();
-    rows.sort_by(|a, b| a.enqueued_at.cmp(&b.enqueued_at));
+    rows.sort_by_key(|a| a.enqueued_at);
     Ok(rows)
 }
 
@@ -1223,11 +1223,10 @@ pub fn trios_upsert(f: &mut FakeTx<'_>, trio: &SavedTrio, max_trios: i64) -> Res
     call(f, "trios.upsert")?;
     let t = f.tables();
     let existing = t.trios.iter().position(|row| row.id == trio.id);
-    if let Some(at) = existing {
-        if t.trios[at].profile_id != trio.profile_id {
+    if let Some(at) = existing
+        && t.trios[at].profile_id != trio.profile_id {
             return Ok(TrioUpsertOutcome::NotOwner);
         }
-    }
 
     let filled: Vec<&String> = [&trio.deck_ids.0, &trio.deck_ids.1, &trio.deck_ids.2].into_iter().flatten().collect();
     let distinct: IndexSet<&String> = filled.iter().copied().collect();
@@ -1362,8 +1361,8 @@ pub fn merge_tutorial_row(
     if completed.len() > max_lessons {
         return None;
     }
-    let stored = existing.and_then(|row| row.hidden_choice.clone());
-    let incoming = input.hidden_choice.clone();
+    let stored = existing.and_then(|row| row.hidden_choice);
+    let incoming = input.hidden_choice;
     let hidden_choice = match (incoming, stored) {
         (Some(incoming), None) => Some(incoming),
         (Some(incoming), Some(stored)) if incoming.at > stored.at => Some(incoming),
@@ -1985,7 +1984,7 @@ pub fn ranked_ranks_of(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<Seaso
     let order: IndexMap<&str, i64> = tables.seasons.iter().map(|season| (season.id.as_str(), season.started_at)).collect();
     let started = |season_id: &str| order.get(season_id).copied().unwrap_or(0);
     let mut rows: Vec<SeasonRank> = tables.season_ranks.iter().filter(|row| row.profile_id == profile_id).cloned().collect();
-    rows.sort_by(|a, b| started(&a.season_id).cmp(&started(&b.season_id)));
+    rows.sort_by_key(|a| started(&a.season_id));
     Ok(rows)
 }
 

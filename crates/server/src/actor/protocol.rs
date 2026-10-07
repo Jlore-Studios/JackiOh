@@ -164,7 +164,7 @@ pub enum ServerMessage {
     /// targets the same `PlayerView` already shows. The actor passes the viewer as the player
     /// (`push_view`), so a socket never sees the other seat's array — which would leak the
     /// opponent's hand by naming every `play` in it (§9.1's "Hidden: ... opponent hand").
-    View { view: PlayerView, legal: Vec<ActionBody> },
+    View { view: Box<PlayerView>, legal: Vec<ActionBody> },
     /// §9.3: the nonce that was accepted and the append-only log seq it was written at.
     Ack { nonce: String, seq: i64 },
     /// `nonce` is present exactly when the failure belongs to an action the client sent.
@@ -212,7 +212,7 @@ pub const SERVER_MESSAGE_TYPES: &[&str] = &["view", "ack", "error", "prompt", "c
 /// `legal` must be `legal_actions(state, view.viewer)`; the actor is the only caller (`push_view`).
 pub fn view_message(view: PlayerView, legal: &[ActionBody]) -> ServerMessage {
     ServerMessage::View {
-        view,
+        view: Box::new(view),
         legal: legal.to_vec(),
     }
 }
@@ -549,7 +549,7 @@ pub fn parse_client_message(text: &str) -> Result<ClientMessage, MalformedMessag
     let Ok(parsed) = serde_json::from_str::<Value>(text) else {
         return Err(malformed("every frame must be JSON"));
     };
-    let Some(parsed) = (&parsed).as_object() else {
+    let Some(parsed) = parsed.as_object() else {
         return Err(malformed("every frame must be a JSON object"));
     };
 

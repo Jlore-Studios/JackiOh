@@ -151,7 +151,7 @@ pub const LIMITS: DeckLimits = DeckLimits {
 /// most `DRAFT_ISSUES_REPORTED_MAX` of them so a body of junk cannot buy an answer many times its
 /// own size.
 fn draft_refused(message: &str, issues: &[Value]) -> ApiError {
-    let reported: Vec<Value> = issues.iter().take(DRAFT_ISSUES_REPORTED_MAX as usize).cloned().collect();
+    let reported: Vec<Value> = issues.iter().take(DRAFT_ISSUES_REPORTED_MAX).cloned().collect();
     ApiError::with_details(ApiErrorCode::BadRequest, message, Value::Array(reported))
 }
 
@@ -236,7 +236,7 @@ fn deck_draft_issues(
         name: name.to_string(),
         cards: cards.to_vec(),
         is_deckable: &is_deckable,
-        name_max_length: DECK_NAME_MAX_LENGTH as usize,
+        name_max_length: DECK_NAME_MAX_LENGTH,
         portrait: portrait.map(str::to_string),
         is_portrait: if with_portrait { Some(&is_portrait) } else { None },
     });
@@ -304,7 +304,7 @@ fn import_of(body: &Value) -> Result<TrioImportInput, ApiError> {
         return Err(bad_request(IMPORT_SHAPE));
     };
     let raw_slots = match body.get("slots").and_then(Value::as_array) {
-        Some(slots) if slots.len() == validator::TRIO_DECKS as usize => slots,
+        Some(slots) if slots.len() == validator::TRIO_DECKS => slots,
         _ => return Err(bad_request(IMPORT_SHAPE)),
     };
     let slots = raw_slots
@@ -613,10 +613,8 @@ pub async fn import_trio(app: &Arc<App>, req: Req) -> ApiResult {
     // Each deck one millisecond after the one before: the list is oldest first with ties broken on
     // the id, and the ids are random, so one instant for all three would list them in any order
     // rather than in their slots' (R341).
-    let mut order = 0;
-    for deck in decks.iter().flatten() {
+    for (order, deck) in (0_i64..).zip(decks.iter().flatten()) {
         let at = now + order;
-        order += 1;
         let outcome = tx
             .decks_upsert(
                 &SavedDeck {

@@ -249,7 +249,7 @@ pub async fn seed_e2e_fixtures_with(app: &App, options: E2ESeedOptions) -> Resul
             .profiles_create(&ProfileCreateInput {
                 user_id: account.user_id.to_string(),
                 email: account.email.to_string(),
-                rating: f64::from(RATING_START),
+                rating: RATING_START,
                 at: now,
                 display_name: None,
             })
@@ -316,7 +316,7 @@ fn assert_fixture_codes_are_redeemable(codes: &E2EInviteCodes) -> Result<(), Api
     let mut seen: IndexMap<String, E2EInviteCodeKind> = IndexMap::new();
     for (kind, plain) in codes.entries() {
         let normalized = normalize_code(plain);
-        if !is_well_formed_code(&normalized, INVITE_CODE_LENGTH as usize) {
+        if !is_well_formed_code(&normalized, INVITE_CODE_LENGTH) {
             return Err(ApiError::internal(format!(
                 "the {} end-to-end invite code is not a code §9.4 would mint: {} characters from CODE_ALPHABET (R104) are required",
                 kind.as_str(),

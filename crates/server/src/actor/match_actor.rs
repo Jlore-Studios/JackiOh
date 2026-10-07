@@ -276,7 +276,6 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
 
     let portraits = match_row
         .portraits
-        .clone()
         .unwrap_or((portrait_or_default(None), portrait_or_default(None)));
     let opening = engine::snapshot(&state);
 
@@ -324,7 +323,11 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
     let actor = MatchActor { shared };
 
     // The clock has to be armed before the first action, not on the first one (R79: the turn clock
-    // is already running when the match opens).
+    // is already running when the match opens). TS's arm task ran its synchronous half (the sync)
+    // in the microtask after `createMatchActor` returned, so the actor a caller got back was already
+    // armed: the same here, before anything can read it; the queued half persists the clocks and
+    // resolves a match that was already over.
+    actor.shared.clock.sync(&clock_view_for(&opening));
     actor.enqueue(Task::Arm);
     tokio::spawn(run_queue(Arc::downgrade(&actor.shared), inbox_rx));
     actor
@@ -609,15 +612,14 @@ impl MatchActor {
 
         // §10.6: one prompt at a time; the player who does not hold it learns only that it is open.
         let pending_for = snapshot.pending_for;
-        if let Some(holder) = pending_for {
-            if Some(holder) != core.last_pending_for {
+        if let Some(holder) = pending_for
+            && Some(holder) != core.last_pending_for {
                 let view = engine::view_for(&core.state, holder);
                 if let Some(PendingView::ForYou(pending)) = &view.pending {
                     self.send(core, holder, &prompt_for_you(holder, &pending.choice_id, pending.kind, deadline));
                 }
                 self.send(core, holder.opponent(), &prompt_for_opponent(holder, deadline));
             }
-        }
         core.last_pending_for = pending_for;
     }
 
@@ -671,7 +673,7 @@ impl MatchActor {
         };
         for socket in sockets.into_iter().flatten() {
             if socket.is_open() {
-                socket.close(Some(MATCH_VOIDED_CLOSE_CODE as u16), Some(MATCH_VOIDED_CLOSE_REASON));
+                socket.close(Some(MATCH_VOIDED_CLOSE_CODE), Some(MATCH_VOIDED_CLOSE_REASON));
             }
         }
         if let Some(on_voided) = &self.shared.on_voided {
@@ -871,7 +873,7 @@ impl MatchActor {
         }
         let wait = match slot.last_at {
             None => -1,
-            Some(last_at) => last_at + AIM_RELAY_INTERVAL_MS as i64 - now_ms(),
+            Some(last_at) => last_at + AIM_RELAY_INTERVAL_MS - now_ms(),
         };
         if wait <= 0 {
             self.flush_aim(core, player);
@@ -1008,7 +1010,7 @@ impl MatchActor {
         };
         let Some(previous) = previous else {
             // R679: the match no longer exists; a socket that arrives late hears only that.
-            socket.close(Some(MATCH_VOIDED_CLOSE_CODE as u16), Some(MATCH_VOIDED_CLOSE_REASON));
+            socket.close(Some(MATCH_VOIDED_CLOSE_CODE), Some(MATCH_VOIDED_CLOSE_REASON));
             return;
         };
 
@@ -1026,11 +1028,10 @@ impl MatchActor {
                 }
             }),
         });
-        if let Some(previous) = previous {
-            if previous != socket {
+        if let Some(previous) = previous
+            && previous != socket {
                 previous.close(Some(1000), Some("replaced by a new socket"));
             }
-        }
 
         let player = playing(&self.lock(), home);
         tracing::info!(event = "match.socket.attached", matchId = %self.match_id_str(), player = %player, home = %home);
@@ -1135,7 +1136,7 @@ fn flood_exceeded(core: &mut Core, player: PlayerId, now: i64) -> bool {
     while recent.front().is_some_and(|at| *at <= now - FLOOD_WINDOW_MS) {
         recent.pop_front();
     }
-    if recent.len() >= MATCH_ACTIONS_PER_SECOND as usize {
+    if recent.len() >= MATCH_ACTIONS_PER_SECOND {
         return true;
     }
     recent.push_back(now);

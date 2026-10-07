@@ -30,8 +30,8 @@ pub async fn purge_expired(app: &App) -> Result<RetentionPurgeResult, StoreError
     let mut tx = app.db.begin(None).await?;
     let purged = tx
         .purge_expired(&RetentionPurgeInput {
-            code_attempts_before: now - CODE_ATTEMPT_RETENTION_DAYS as i64 * MS_PER_DAY,
-            match_actions_ended_before: now - MATCH_ACTION_RETENTION_DAYS as i64 * MS_PER_DAY,
+            code_attempts_before: now - CODE_ATTEMPT_RETENTION_DAYS * MS_PER_DAY,
+            match_actions_ended_before: now - MATCH_ACTION_RETENTION_DAYS * MS_PER_DAY,
         })
         .await?;
     tx.commit().await?;

@@ -390,7 +390,7 @@ fn stamp(mut next: SeriesRow, from: &SeriesRow, now: i64) -> SeriesRow {
 }
 
 fn pick_deadline_from(now: i64) -> i64 {
-    now + SERIES_PICK_SECONDS as i64 * MS_PER_SECOND
+    now + SERIES_PICK_SECONDS * MS_PER_SECOND
 }
 
 /// Records the next game from both picks and starts playing it (R331, R335). Mutates `series`.
@@ -402,14 +402,13 @@ fn begin(series: &mut SeriesRow) -> Result<(), SeriesRefusal> {
     };
     for seat in SEATS {
         let pick = side_of(series, seat).pick;
-        if let Some(pick) = pick {
-            if won_slots(seat, &series.games).contains(&(pick as usize)) {
+        if let Some(pick) = pick
+            && won_slots(seat, &series.games).contains(&(pick as usize)) {
                 return refuse(
                     SeriesRefusalReason::SlotWon,
                     "That deck has already won a game in this series, so it is locked.",
                 );
             }
-        }
     }
     let game_no = series.games.len() as i32 + FIRST_GAME;
     let match_id = series.next_match_id.clone();
@@ -534,23 +533,21 @@ pub fn pick_deck(
 ) -> Result<SeriesRow, SeriesRefusal> {
     assert_picking(series, "A game of this series is being played; pick your next deck when it ends.")?;
     let picking_for = series.games.len() as i32 + FIRST_GAME;
-    if let Some(game_no) = game_no {
-        if game_no != picking_for {
+    if let Some(game_no) = game_no
+        && game_no != picking_for {
             return refuse(
                 SeriesRefusalReason::StalePick,
                 format!("That pick was for game {game_no}; this is game {picking_for}'s pick."),
             );
         }
-    }
     let side = side_of(series, seat);
     if side.pick.is_some() {
         return refuse(SeriesRefusalReason::PickSealed, "Your pick for this game is already in, and it is final.");
     }
-    if let Some(deadline) = series.pick_deadline {
-        if now >= deadline {
+    if let Some(deadline) = series.pick_deadline
+        && now >= deadline {
             return refuse(SeriesRefusalReason::PickClosed, "The pick clock has run out for this game.");
         }
-    }
     if slot < 0 || slot as usize >= trio_decks(&side.trio).len() {
         return refuse(SeriesRefusalReason::SlotOutOfRange, "Pick one of the three decks in your trio.");
     }
@@ -824,8 +821,8 @@ pub fn project_series(series: &SeriesRow, viewer_profile_id: &str, now: i64) -> 
         id: series.id.clone(),
         status: series.status,
         game_no,
-        wins_needed: SERIES_WINS_NEEDED as i32,
-        max_games: SERIES_MAX_GAMES as i32,
+        wins_needed: SERIES_WINS_NEEDED,
+        max_games: SERIES_MAX_GAMES,
         pick_deadline: if picking { series.pick_deadline } else { None },
         now,
         current_match_id: if series.status == SeriesStatus::Playing {

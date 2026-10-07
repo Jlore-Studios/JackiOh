@@ -502,7 +502,7 @@ mod b14_concurrent_redemptions {
     async fn b14_serves_the_next_redemption_normally_once_a_race_has_settled() {
         for h in harnesses().await {
             let racer = pending_profile(&h).await;
-            let raced = vec![mint(&h, 1).await, mint(&h, 1).await];
+            let raced = [mint(&h, 1).await, mint(&h, 1).await];
             join_all(
                 raced
                     .iter()

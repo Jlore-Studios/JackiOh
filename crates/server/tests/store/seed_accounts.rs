@@ -13,7 +13,7 @@ const SUPABASE_URL: &str = "https://dev-project.supabase.co";
 const NODE_ENV: &str = "development";
 
 fn password() -> String {
-    "p".repeat(AUTH_PASSWORD_MIN_LENGTH as usize)
+    "p".repeat(AUTH_PASSWORD_MIN_LENGTH)
 }
 
 fn source(pairs: &[(&str, &str)]) -> IndexMap<String, String> {
@@ -21,14 +21,14 @@ fn source(pairs: &[(&str, &str)]) -> IndexMap<String, String> {
 }
 
 fn refusal(source: &IndexMap<String, String>, node_env: &str) -> String {
-    seed_accounts_settings(source, SUPABASE_URL, node_env).err().expect("the gate refuses").to_string()
+    seed_accounts_settings(source, SUPABASE_URL, node_env).expect_err("the gate refuses").to_string()
 }
 
 #[test]
 fn reads_the_password_from_the_environment_once_the_named_project_matches() {
     let password = password();
     let source = source(&[(SEED_PROJECT_VAR, "dev-project.supabase.co"), (SEED_PASSWORD_VAR, password.as_str())]);
-    let settings = seed_accounts_settings(&source, SUPABASE_URL, NODE_ENV).ok().expect("the gate opens");
+    let settings = seed_accounts_settings(&source, SUPABASE_URL, NODE_ENV).expect("the gate opens");
     assert_eq!(settings.password, password);
 }
 
@@ -54,7 +54,7 @@ fn refuses_a_missing_or_short_password() {
         .lines()
         .any(|line| line.find("SEED_ACCOUNTS_PASSWORD ").is_some_and(|at| line[at..].contains("it is not set"))));
 
-    let short = "p".repeat(AUTH_PASSWORD_MIN_LENGTH as usize - 1);
+    let short = "p".repeat(AUTH_PASSWORD_MIN_LENGTH - 1);
     let source = source(&[(SEED_PROJECT_VAR, "dev-project.supabase.co"), (SEED_PASSWORD_VAR, short.as_str())]);
     assert!(refusal(&source, NODE_ENV).contains("at least 12 characters"));
 }

@@ -100,7 +100,7 @@ pub(crate) fn after(ms: i64, f: impl FnOnce(u64) + Send + 'static) -> Timer {
 
 /// R79: the ceiling is one deadline measured from the moment the match started.
 pub fn match_ceiling_at(started_at: i64) -> i64 {
-    started_at + MATCH_CEILING_MINUTES as i64 * MS_PER_MINUTE
+    started_at + MATCH_CEILING_MINUTES * MS_PER_MINUTE
 }
 
 /// The `MatchClocks` a match row carries before its actor has synced once (§9.5: the deadlines are
@@ -452,16 +452,14 @@ impl ClockState {
         }
         let now = now_ms();
         // R268: one clock for both seats, the one that has answered included — it is waiting on it.
-        if self.mulligan_open {
-            if let Some(deadline) = self.mulligan.deadline {
+        if self.mulligan_open
+            && let Some(deadline) = self.mulligan.deadline {
                 return Some((deadline - now).max(0));
             }
-        }
-        if self.holder == Some(player) {
-            if let Some(deadline) = self.prompt.deadline {
+        if self.holder == Some(player)
+            && let Some(deadline) = self.prompt.deadline {
                 return Some((deadline - now).max(0));
             }
-        }
         if self.owner != Some(player) {
             return None;
         }
@@ -524,15 +522,15 @@ pub fn create_match_clock(input: CreateMatchClockInput) -> MatchClock {
         Mutex::new(ClockState {
             me: me.clone(),
             on_expire,
-            turn_ms: TURN_CLOCK_SECONDS as i64 * MS_PER_SECOND,
-            prompt_ms: PROMPT_CLOCK_SECONDS as i64 * MS_PER_SECOND,
-            mulligan_ms: MULLIGAN_CLOCK_SECONDS as i64 * MS_PER_SECOND,
-            grace_ms: DISCONNECT_GRACE_SECONDS as i64 * MS_PER_SECOND,
+            turn_ms: TURN_CLOCK_SECONDS * MS_PER_SECOND,
+            prompt_ms: PROMPT_CLOCK_SECONDS * MS_PER_SECOND,
+            mulligan_ms: MULLIGAN_CLOCK_SECONDS * MS_PER_SECOND,
+            grace_ms: DISCONNECT_GRACE_SECONDS * MS_PER_SECOND,
             ceiling_at: match_ceiling_at(started_at),
             stopped: false,
             owner: None,
             turn_key: None,
-            remaining: TURN_CLOCK_SECONDS as i64 * MS_PER_SECOND,
+            remaining: TURN_CLOCK_SECONDS * MS_PER_SECOND,
             turn: idle(),
             holder: None,
             prompt: idle(),

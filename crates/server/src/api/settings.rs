@@ -103,7 +103,7 @@ fn read_value(group: &str, name: &str, value: &Value) -> Result<PlayerSettingVal
     let accepted = match value {
         Value::Bool(_) => true,
         Value::Number(number) => number.as_f64().is_some_and(f64::is_finite),
-        Value::String(text) => utf16_len(text) <= PLAYER_SETTINGS_TEXT_MAX_LENGTH as usize,
+        Value::String(text) => utf16_len(text) <= PLAYER_SETTINGS_TEXT_MAX_LENGTH,
         _ => false,
     };
     if !accepted {
@@ -118,7 +118,7 @@ fn read_value(group: &str, name: &str, value: &Value) -> Result<PlayerSettingVal
 fn epoch_ms_of(value: Option<&Value>) -> Option<i64> {
     const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
     let number = value?.as_f64()?;
-    if number.fract() != 0.0 || number < 0.0 || number > MAX_SAFE_INTEGER {
+    if number.fract() != 0.0 || !(0.0..=MAX_SAFE_INTEGER).contains(&number) {
         return None;
     }
     Some(number as i64)
@@ -133,12 +133,12 @@ pub fn read_groups(body: &Value, now: i64) -> Result<IndexMap<String, PlayerSett
     let Some(raw) = body.get("groups").filter(|raw| (raw).is_object()).and_then(Value::as_object) else {
         return Err(bad_request("\"groups\" must be an object of setting groups"));
     };
-    if raw.len() > PLAYER_SETTINGS_GROUPS_MAX as usize {
+    if raw.len() > PLAYER_SETTINGS_GROUPS_MAX {
         return Err(bad_request(format!("at most {PLAYER_SETTINGS_GROUPS_MAX} setting groups can be saved")));
     }
     let mut groups: IndexMap<String, PlayerSettingsGroup> = IndexMap::new();
     for (id, group) in raw {
-        if utf16_len(id) > PLAYER_SETTINGS_NAME_MAX_LENGTH as usize || !is_group_id_shape(id) {
+        if utf16_len(id) > PLAYER_SETTINGS_NAME_MAX_LENGTH || !is_group_id_shape(id) {
             return Err(bad_request(format!(
                 "every group id must be a lower-case slug of at most {PLAYER_SETTINGS_NAME_MAX_LENGTH} characters"
             )));
@@ -150,12 +150,12 @@ pub fn read_groups(body: &Value, now: i64) -> Result<IndexMap<String, PlayerSett
         let Some(at) = epoch_ms_of(group.get("at")) else {
             return Err(bad_request(format!("\"{id}.at\" must be a whole number of epoch milliseconds")));
         };
-        if values_raw.len() > PLAYER_SETTINGS_KEYS_MAX as usize {
+        if values_raw.len() > PLAYER_SETTINGS_KEYS_MAX {
             return Err(bad_request(format!("\"{id}\" can hold at most {PLAYER_SETTINGS_KEYS_MAX} settings")));
         }
         let mut values: IndexMap<String, PlayerSettingValue> = IndexMap::new();
         for (name, value) in values_raw {
-            if utf16_len(name) > PLAYER_SETTINGS_NAME_MAX_LENGTH as usize || !is_setting_name_shape(name) {
+            if utf16_len(name) > PLAYER_SETTINGS_NAME_MAX_LENGTH || !is_setting_name_shape(name) {
                 return Err(bad_request(format!(
                     "every setting name must be letters and digits, at most {PLAYER_SETTINGS_NAME_MAX_LENGTH} characters"
                 )));

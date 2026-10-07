@@ -59,7 +59,7 @@ const DEFAULT_IP: &str = "203.0.113.7"; // `jsonRequest`'s default `x-forwarded-
 const PEPPER: &str = "codes-test-pepper-of-at-least-thirty-two-characters";
 
 /// §9.4's attempt window, in the milliseconds `code_attempts.at` is stamped in.
-const WINDOW_MS: i64 = CODE_ATTEMPT_WINDOW_SECONDS as i64 * 1000;
+const WINDOW_MS: i64 = CODE_ATTEMPT_WINDOW_SECONDS * 1000;
 
 /// The environment `createTestDeps()` stood for: `E2E=1` (the fake store and fixture auth), the
 /// compiled-in catalog version (SURFACE §11.3) and one trusted proxy hop, the deployed server behind
@@ -746,7 +746,7 @@ mod section_9_4_step_6_claiming_the_code {
             assert_eq!(group.len(), 4, "{}", minted.formatted);
             assert!(group.chars().all(|ch| ch.is_ascii_digit() || ch.is_ascii_uppercase()), "{}", minted.formatted);
         }
-        assert_eq!(minted.formatted.replace('-', "").len(), INVITE_CODE_LENGTH as usize);
+        assert_eq!(minted.formatted.replace('-', "").len(), INVITE_CODE_LENGTH);
     }
 }
 

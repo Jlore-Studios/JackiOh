@@ -76,13 +76,12 @@ fn safe_integer(value: &Value) -> Option<i64> {
     const MAX_SAFE_INTEGER: i64 = 9_007_199_254_740_991;
     let number = if let Some(integer) = value.as_i64() {
         integer
-    } else if let Some(float) = value.as_f64() {
+    } else {
+        let float = value.as_f64()?;
         if !float.is_finite() || float.fract() != 0.0 || float.abs() > MAX_SAFE_INTEGER as f64 {
             return None;
         }
         float as i64
-    } else {
-        return None;
     };
     (number.abs() <= MAX_SAFE_INTEGER).then_some(number)
 }

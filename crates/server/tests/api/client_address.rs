@@ -56,7 +56,7 @@ use crate::support::deps;
 // ---------------------------------------------------------------------------------------------
 
 /// R109's allowance, as the server carries it.
-const LIMIT: usize = API_REQUESTS_PER_MINUTE as usize;
+const LIMIT: usize = API_REQUESTS_PER_MINUTE;
 
 /// A well-formed code inside R104's alphabet that is never minted.
 const UNMINTED_CODE: &str = "ABCD-EFGH-JKMN-PQRT";
@@ -794,7 +794,7 @@ mod r190_b12_the_api_forwarded_for_log {
             server.send(open_request(&[("x-forwarded-for", &chain.join(", "))]), Some(PEER)).await;
         }
 
-        assert!(log.forwarded().len() <= MAX_TRUSTED_PROXY_HOPS as usize + 2, "{:?}", log.forwarded());
+        assert!(log.forwarded().len() <= MAX_TRUSTED_PROXY_HOPS + 2, "{:?}", log.forwarded());
         assert_eq!(log.forwarded().last().map(|entry| entry.data["fewestEntries"].clone()), Some(json!(1)));
     }
 

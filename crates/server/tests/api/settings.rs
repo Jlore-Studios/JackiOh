@@ -197,7 +197,7 @@ mod r633_the_routes_an_active_account_and_only_about_itself {
             json!({ "groups": { "audio": { "at": 5, "values": { "master": 0.5 } } } })
         );
         assert_eq!(settings_of(get(&f.app, OTHER_TOKEN).await), json!({ "groups": {} }));
-        assert_eq!(stored(&f).await, [f.profile.clone()]);
+        assert_eq!(stored(&f).await, std::slice::from_ref(&f.profile));
     }
 }
 

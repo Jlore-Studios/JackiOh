@@ -573,11 +573,13 @@ impl SupabaseAuth {
                 None => true,
             })
             .filter(|jwk| !matches!(jwk.common.public_key_use, Some(PublicKeyUse::Encryption | PublicKeyUse::Other(_))))
-            .filter(|jwk| match (&jwk.algorithm, header.alg.family()) {
-                (AlgorithmParameters::RSA(_), AlgorithmFamily::Rsa) => true,
-                (AlgorithmParameters::EllipticCurve(_), AlgorithmFamily::Ec) => true,
-                (AlgorithmParameters::OctetKeyPair(_), AlgorithmFamily::Ed) => true,
-                _ => false,
+            .filter(|jwk| {
+                matches!(
+                    (&jwk.algorithm, header.alg.family()),
+                    (AlgorithmParameters::RSA(_), AlgorithmFamily::Rsa)
+                        | (AlgorithmParameters::EllipticCurve(_), AlgorithmFamily::Ec)
+                        | (AlgorithmParameters::OctetKeyPair(_), AlgorithmFamily::Ed)
+                )
             })
             .filter_map(|jwk| DecodingKey::from_jwk(jwk).ok())
             .collect()
@@ -716,7 +718,7 @@ impl SupabaseAuth {
     /// user) is gone. Only a live answer is remembered, per session, so a session ended at the
     /// provider is refused here within `AUTH_SESSION_LIVE_CACHE_SECONDS`.
     async fn check_session(&self, session_id: &str, sub: &str, token: &str) -> SessionCheck {
-        let live_session_ttl_ms = AUTH_SESSION_LIVE_CACHE_SECONDS as i64 * MS_PER_SECOND;
+        let live_session_ttl_ms = AUTH_SESSION_LIVE_CACHE_SECONDS * MS_PER_SECOND;
         let seen = {
             let live = self.live_sessions.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
             live.get(session_id).copied()
@@ -1047,7 +1049,11 @@ impl E2eAuth {
 // ---------------------------------------------------------------------------
 
 /// The auth provider: Supabase in production, the fixtures under `E2E=1` and in the tests.
+///
+/// SURFACE §11.2 freezes the variants unboxed; there is one `Auth` per `App`, so a `Box` would buy
+/// nothing for the size difference clippy reports.
 #[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum Auth {
     Supabase(SupabaseAuth),
     E2e(E2eAuth),

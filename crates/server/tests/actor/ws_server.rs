@@ -368,7 +368,7 @@ mod a_frame_is_capped_before_it_is_buffered {
         assert_eq!(client.first_view().await["viewer"], "p1");
 
         let frame = "x".repeat(65 * 1024);
-        assert!(65 * 1024 > MAX_FRAME_BYTES as usize);
+        const { assert!(65 * 1024 > MAX_FRAME_BYTES) };
         client.send_text(&frame).await;
         assert_eq!(client.close_code().await, 1009);
     }
@@ -380,7 +380,7 @@ mod a_frame_is_capped_before_it_is_buffered {
         let mut client = open(listening.port, &query("match-1", &token), &[WS_SUBPROTOCOL]).await.open();
         assert_eq!(client.first_view().await["viewer"], "p1");
 
-        client.send_text(&"x".repeat(MAX_FRAME_BYTES as usize)).await;
+        client.send_text(&"x".repeat(MAX_FRAME_BYTES)).await;
         assert!(client.still_open_after(Duration::from_millis(50)).await);
     }
 }
@@ -392,7 +392,7 @@ mod sockets_per_client_address {
     #[tokio::test]
     async fn refuses_the_upgrade_past_the_cap_with_429_and_frees_the_slot_when_a_socket_closes() {
         let _serial = SERIAL.lock().await;
-        let cap = WS_MAX_CONNECTIONS_PER_ADDRESS as usize;
+        let cap = WS_MAX_CONNECTIONS_PER_ADDRESS;
         // Every socket is its own account's, so the registry replaces none of them: `cap` live
         // sockets from one address, two seats a match.
         let (listening, tokens) = listen_with(cap.div_ceil(2)).await;
@@ -416,7 +416,7 @@ mod sockets_per_client_address {
     #[tokio::test]
     async fn counts_a_socket_refused_for_a_bad_token_only_until_it_closes() {
         let _serial = SERIAL.lock().await;
-        let cap = WS_MAX_CONNECTIONS_PER_ADDRESS as usize;
+        let cap = WS_MAX_CONNECTIONS_PER_ADDRESS;
         let (listening, _token) = listen().await;
         // More refused sockets than the cap, one after another: each holds its slot only until it
         // closes, so none of them meets a 429.

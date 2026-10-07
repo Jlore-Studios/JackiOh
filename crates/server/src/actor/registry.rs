@@ -178,7 +178,7 @@ impl Registry {
             status: MatchStatus::Live,
             created_at: now,
             finished_at: None,
-            clocks: initial_clocks(now, MATCH_CEILING_MINUTES as i64),
+            clocks: initial_clocks(now, MATCH_CEILING_MINUTES),
             last_boards: if boards.0.len() + boards.1.len() > 0 { Some(boards) } else { None },
             glitch_boards: if sampled.is_empty() { None } else { Some(glitch_boards) },
             // R642: the portraits the seats were dealt, frozen on the row so a rebuilt actor (and a

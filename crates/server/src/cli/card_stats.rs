@@ -130,11 +130,10 @@ pub fn render_card_stats(
         return serde_json::to_string_pretty(report).unwrap_or_default();
     }
     let table = format_card_stats(report, name_of);
-    if let Some(card) = &options.card {
-        if report.cards.is_empty() {
+    if let Some(card) = &options.card
+        && report.cards.is_empty() {
             return format!("{table}\nNo deck the filter counts held {card}.");
         }
-    }
     table
 }
 

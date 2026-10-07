@@ -26,7 +26,7 @@ use serde::Serialize;
 use serde_json::{json, Value};
 
 const NOW: i64 = 1_700_000_000_000;
-const PICK_MS: i64 = SERIES_PICK_SECONDS as i64 * 1000;
+const PICK_MS: i64 = SERIES_PICK_SECONDS * 1000;
 const ALICE: &str = "profile-alice";
 const BOB: &str = "profile-bob";
 
@@ -294,7 +294,7 @@ mod r330_conquest_a_win_with_every_deck {
                 .as_array()
                 .map(|games| games.iter().filter(|game| game["winner"] != "draw").count())
                 .unwrap_or(0);
-            assert!(decisive <= 2 * SERIES_WINS_NEEDED as usize - 1);
+            assert!(decisive < 2 * SERIES_WINS_NEEDED as usize);
             if j(&row)["endReason"] == "decided" {
                 let wins = j(&row)["sides"]
                     .as_array()

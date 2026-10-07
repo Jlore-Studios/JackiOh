@@ -176,7 +176,7 @@ mod r320_the_routes_an_active_account_and_only_about_itself {
         progress_of(put(&f.app, json!({ "completed": ["basics"], "profileId": f.other }), TOKEN).await);
         assert_eq!(progress_of(get(&f.app, TOKEN).await), json!({ "completed": ["basics"], "hiddenChoice": null }));
         assert_eq!(progress_of(get(&f.app, OTHER_TOKEN).await), json!({ "completed": [], "hiddenChoice": null }));
-        assert_eq!(stored(&f).await, [f.profile.clone()]);
+        assert_eq!(stored(&f).await, std::slice::from_ref(&f.profile));
     }
 }
 

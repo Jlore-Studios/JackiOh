@@ -292,7 +292,7 @@ mod loadout_validator_binding_section_9_4_one_module_shared {
         let owned = one_of_each(&legal);
 
         // One legal deck: as a trio it fails L1 (one deck, not three); as a deck it passes.
-        assert_eq!(rules(&validate_trio(decks(&[legal.clone()]), &app.catalog, owned.clone())), vec!["L1"]);
+        assert_eq!(rules(&validate_trio(decks(std::slice::from_ref(&legal)), &app.catalog, owned.clone())), vec!["L1"]);
         assert_eq!(validate_one(json!({ "cards": legal }), &app.catalog, owned.clone()), Vec::<Value>::new());
 
         // One card short: L2, naming the deck by the name the player gave it.

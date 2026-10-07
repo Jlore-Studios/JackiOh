@@ -118,7 +118,7 @@ mod stats_cards_options {
     }
 
     fn refusal(argv: &[&str]) -> String {
-        parse_card_stats_args(&args(argv)).err().expect("the arguments are refused").to_string()
+        parse_card_stats_args(&args(argv)).expect_err("the arguments are refused").to_string()
     }
 
     #[test]
@@ -253,7 +253,7 @@ mod stats_import {
     }
 
     async fn refusal(db: &Db, contents: &str) -> String {
-        import_dev_records(db, contents).await.err().expect("the file is refused").to_string()
+        import_dev_records(db, contents).await.expect_err("the file is refused").to_string()
     }
 
     #[tokio::test]

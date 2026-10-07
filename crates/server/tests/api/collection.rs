@@ -176,7 +176,6 @@ async fn owned(server: &Server, profile_id: &str) -> IndexMap<String, i64> {
         .await
         .expect("the collection reads")
         .into_iter()
-        .map(|(card_id, quantity)| (card_id, quantity as i64))
         .collect()
 }
 

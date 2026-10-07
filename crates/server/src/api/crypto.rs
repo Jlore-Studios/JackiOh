@@ -35,7 +35,7 @@ pub fn random_code(length: usize) -> String {
 /// `XXXX-XXXX-XXXX-XXXX` (§9.4).
 pub fn format_code(raw: &str) -> String {
     let characters: Vec<char> = raw.chars().collect();
-    let size = (INVITE_CODE_GROUP_SIZE as usize).max(1);
+    let size = INVITE_CODE_GROUP_SIZE.max(1);
     let groups: Vec<String> = characters.chunks(size).map(|group| group.iter().collect()).collect();
     groups.join(INVITE_CODE_SEPARATOR)
 }
@@ -124,7 +124,7 @@ pub fn hashes_for_pepper(pepper: &str) -> Hashes {
 /// the same on every screen, and no way back to the id or the account's email.
 pub fn player_tag(profile_id: &str) -> String {
     let hash = Sha256::digest(profile_id.as_bytes());
-    let length = (PLAYER_TAG_LENGTH as usize).min(hash.len());
+    let length = PLAYER_TAG_LENGTH.min(hash.len());
     code_from_bytes(&hash[..length])
 }
 

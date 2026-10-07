@@ -194,11 +194,10 @@ async fn start_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<bool, S
         // the series in the same transaction as the result, so this is a result that was never
         // written. Re-read first: the row we were handed may simply be older than the result.
         let fresh = one_tx!(app.db, |t| t.series_get(&series.id).await?)?;
-        if let Some(fresh) = fresh {
-            if matches!(fresh.status, SeriesStatus::Playing) && fresh.next_match_id == match_id {
+        if let Some(fresh) = fresh
+            && matches!(fresh.status, SeriesStatus::Playing) && fresh.next_match_id == match_id {
                 tracing::error!(event = "series.game_unrecorded", seriesId = %series.id, matchId = %match_id);
             }
-        }
         return Ok(false);
     }
 
@@ -280,7 +279,7 @@ pub async fn resume_series(app: &Arc<App>, series: Option<&SeriesRow>) {
 /// a series that does not move the rating: unranked, abandoned, or not over.
 async fn plan_series_rating(t: &mut Tx<'_>, app: &App, series: &SeriesRow) -> Result<Option<RankedPlan>, SeriesError> {
     let score = series_score(series);
-    let (Some(score), Some(end_reason), true) = (score, series.end_reason.clone(), series.ranked.unwrap_or(false))
+    let (Some(score), Some(end_reason), true) = (score, series.end_reason, series.ranked.unwrap_or(false))
     else {
         return Ok(None);
     };
@@ -486,8 +485,8 @@ pub struct SeriesSweep {
 
 /// One series of the sweep. `Ok(())` covers "nothing to do".
 async fn sweep_one(app: &Arc<App>, series: &SeriesRow, now: i64, swept: &mut SeriesSweep) -> Result<(), SeriesError> {
-    let grace_ms = SERIES_START_GRACE_SECONDS as i64 * MS_PER_SECOND;
-    let give_up_ms = SERIES_START_GIVE_UP_SECONDS as i64 * MS_PER_SECOND;
+    let grace_ms = SERIES_START_GRACE_SECONDS * MS_PER_SECOND;
+    let give_up_ms = SERIES_START_GIVE_UP_SECONDS * MS_PER_SECOND;
 
     if matches!(series.status, SeriesStatus::Picking) {
         match series.pick_deadline {
@@ -563,7 +562,7 @@ pub async fn sweep_series(app: &Arc<App>) -> Result<SeriesSweep, StoreError> {
 /// spawns at boot). The wait is `tokio::time`'s, so a test drives it with a paused clock, and a
 /// failed sweep never stops the next one.
 pub async fn run_sweeper(app: Arc<App>) {
-    let interval = Duration::from_millis(u64::try_from(SERIES_SWEEP_INTERVAL_SECONDS as i64 * MS_PER_SECOND).unwrap_or(0));
+    let interval = Duration::from_millis(u64::try_from(SERIES_SWEEP_INTERVAL_SECONDS * MS_PER_SECOND).unwrap_or(0));
     loop {
         tokio::time::sleep(interval).await;
         if let Err(error) = sweep_series(&app).await {
@@ -699,11 +698,10 @@ pub async fn pick(app: &Arc<App>, req: Req) -> ApiResult {
                 SeriesRefusalReason::PickSealed | SeriesRefusalReason::NotPicking | SeriesRefusalReason::StalePick
             ) {
                 let current = one_tx!(app.db, |t| t.series_get(&series.id).await?).map_err(|error| to_api(error.into()))?;
-                if let Some(current) = current {
-                    if already_picked(&current, seat, slot, game_no) {
+                if let Some(current) = current
+                    && already_picked(&current, seat, slot, game_no) {
                         return Ok(ok(view(&current, &profile_id)));
                     }
-                }
             }
             Err(refusal_to_api(&refusal))
         }

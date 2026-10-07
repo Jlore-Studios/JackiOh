@@ -38,7 +38,7 @@ use jackioh_server::config::{DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, PR
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::Db;
 
-use crate::support::deps::test_app;
+use crate::support::deps::empty_test_app;
 use crate::support::engine::{fake_deck, install_test_cards};
 use crate::support::socket::{create_fake_socket, FakeSocket};
 
@@ -190,6 +190,21 @@ async fn send(actor: &MatchActor, socket: &FakeSocket, nonce: &str, body: Value)
     actor.idle().await;
 }
 
+/// The answer to the seat's open prompt, read off the seat's own legal array. TS sent
+/// `{ type: "answer", choiceId, selection: [{ pick: "none" }] }`, its scripted port's one answer; the
+/// scripted card's prompt is the engine's own now (`choose_mode`), which takes one of its options.
+fn answer_of(socket: &FakeSocket) -> Value {
+    let choice = open_choice(socket);
+    socket
+        .of_type("view")
+        .pop()
+        .and_then(|frame| frame["legal"].as_array().cloned())
+        .unwrap_or_default()
+        .into_iter()
+        .find(|action| action["type"] == "answer" && action["choiceId"] == choice.as_str())
+        .unwrap_or_else(|| panic!("the seat may answer its prompt {choice}"))
+}
+
 /// The choiceId of the prompt this player holds; §10.6 sends it to nobody else.
 fn open_choice(socket: &FakeSocket) -> String {
     let pending = last_view(socket)["pending"].clone();
@@ -277,9 +292,11 @@ async fn open_turn_one(actor: &MatchActor) -> usize {
 
 async fn start_match(options: StartOptions) -> Harness {
     let scripted = options.real.is_none();
-    let engine: Box<dyn Any> =
-        if scripted { Box::new(install_test_cards()) } else { Box::new(()) };
-    let app = test_app().await;
+    if scripted {
+        install_test_cards();
+    }
+    let engine: Box<dyn Any> = Box::new(());
+    let app = empty_test_app().await;
     {
         let data = fake(&app);
         let mut data = data.lock().await;
@@ -344,7 +361,7 @@ mod m6_t4_crash_recovery {
         // `(seed, decks, log)` reconstructs nothing the engine refuses — and nothing but the ceiling
         // reaper could ever end it. TS made `beginGame` throw; here the engine refuses the decks.
         let (logs, _recording) = Logs::record();
-        let app = test_app().await;
+        let app = empty_test_app().await;
         let refused = app
             .matches
             .start(
@@ -383,7 +400,7 @@ mod m6_t4_crash_recovery {
         // and p2 then opens a prompt p1 still owes an answer to (a trap firing on your turn, R79). A
         // rebuild has to bring back the open choice, not just the board (§10.6, e2e `05`).
         send(&actor, &p1, "n1", json!({ "type": "play", "instanceId": in_hand(&p1, "test-prompt-self") })).await;
-        send(&actor, &p1, "n2", json!({ "type": "answer", "choiceId": open_choice(&p1), "selection": [{ "pick": "none" }] })).await;
+        send(&actor, &p1, "n2", answer_of(&p1)).await;
         send(&actor, &p1, "n3", json!({ "type": "endTurn" })).await;
         send(&actor, &p2, "n4", json!({ "type": "play", "instanceId": in_hand(&p2, "test-prompt-enemy") })).await;
 
@@ -393,8 +410,8 @@ mod m6_t4_crash_recovery {
         assert_eq!(before_p2["pending"]["forYou"], json!(false));
         assert_eq!(before_p2["pending"]["pendingFor"], "p1");
         // R79: the view carries a clock, and the paused turn clock and the prompt clock are both live.
-        assert_eq!(before_p1["clockMs"], json!(PROMPT_CLOCK_SECONDS as i64 * 1000));
-        assert_eq!(before_p2["clockMs"], json!(TURN_CLOCK_SECONDS as i64 * 1000));
+        assert_eq!(before_p1["clockMs"], json!(PROMPT_CLOCK_SECONDS * 1000));
+        assert_eq!(before_p2["clockMs"], json!(TURN_CLOCK_SECONDS * 1000));
         let before_snapshot = actor.snapshot();
         let before_hash = jackioh_engine::hash_state(&actor.engine_state());
 
@@ -442,8 +459,7 @@ mod m6_t4_crash_recovery {
         assert_eq!(table(&h.app, |data| json!(data.tables.match_actions)).await.len(), 4 + h.opening);
 
         // And the rebuilt actor carries the match on at the next gapless seq.
-        send(&revived, &back_p1, "n5", json!({ "type": "answer", "choiceId": open_choice(&back_p1), "selection": [{ "pick": "none" }] }))
-            .await;
+        send(&revived, &back_p1, "n5", answer_of(&back_p1)).await;
         assert_eq!(acks(&back_p1).last(), Some(&json!({ "type": "ack", "nonce": "n5", "seq": 5 + h.opening })));
         assert_eq!(revived.snapshot().pending_for, None);
         assert_eq!(results(&h).await, Vec::<Value>::new());
@@ -695,7 +711,7 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
     use super::*;
 
     fn grace_of() -> i64 {
-        DISCONNECT_GRACE_SECONDS as i64 * 1000
+        DISCONNECT_GRACE_SECONDS * 1000
     }
 
     async fn expired(h: &Harness) -> Vec<Value> {
@@ -892,7 +908,7 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         h.app.matches.stop(MATCH_ID).await;
 
         // Nobody comes back: no actor is rebuilt, so no grace runs and nobody loses by it.
-        advance(MATCH_CEILING_MINUTES as i64 * 60_000).await;
+        advance(MATCH_CEILING_MINUTES * 60_000).await;
         assert_eq!(reap_stuck_matches(&h.app).await.expect("the reaper runs"), vec![MATCH_ID.to_string()]);
         let rows = results(&h).await;
         assert_eq!(rows[0]["matchId"], MATCH_ID);

@@ -172,9 +172,8 @@ struct Harness {
 }
 
 async fn harness(e2e: bool) -> Harness {
-    // Every test app runs with E2E=1 (`support::deps::test_env`), so both arms are TS's `{ e2e: true }`
-    // deps; part 31 left the `false` arm for part 35 (spec-gaps.md).
-    let app = if e2e { test_app_with(TestAppOptions::default()).await } else { test_app().await };
+    // TS `createTestDeps({ e2e })`: the empty store either way, end-to-end mode only when asked.
+    let app = test_app_with(TestAppOptions { e2e, skip_fixtures: true, ..TestAppOptions::default() }).await;
     let host = player(&app, HOST, "user-host", "host@example.test").await;
     let guest = player(&app, GUEST, "user-guest", "guest@example.test").await;
     save_deck(&app, HOST, &uuid(1), &deck(), "host's deck").await;
@@ -247,7 +246,7 @@ mod the_room_code_challenge {
         let h = harness(false).await;
         let (code, _) = play_through(&h, json!({}), json!({})).await;
 
-        assert_eq!(code.chars().count(), ROOM_CODE_LENGTH as usize);
+        assert_eq!(code.chars().count(), ROOM_CODE_LENGTH);
         let row = started(&h.app).await.remove(0);
         // The frozen decks, host first: the row's seat order is p1, p2.
         assert_eq!(row["decks"], json!([deck(), deck()]));

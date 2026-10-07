@@ -84,8 +84,8 @@ mod the_retention_purge {
         // those two cutoffs and for no others.
         let app = test_app().await;
         let now = now_ms();
-        let code_attempts_before = now - CODE_ATTEMPT_RETENTION_DAYS as i64 * DAY_MS;
-        let match_actions_ended_before = now - MATCH_ACTION_RETENTION_DAYS as i64 * DAY_MS;
+        let code_attempts_before = now - CODE_ATTEMPT_RETENTION_DAYS * DAY_MS;
+        let match_actions_ended_before = now - MATCH_ACTION_RETENTION_DAYS * DAY_MS;
 
         log_attempt(&app, "at-cutoff", code_attempts_before).await;
         log_attempt(&app, "past-cutoff", code_attempts_before - 1).await;
@@ -112,8 +112,8 @@ mod the_retention_purge {
         let app = test_app().await;
         let now = now_ms();
         let at = |days: i64| now - days * DAY_MS;
-        let code_days = CODE_ATTEMPT_RETENTION_DAYS as i64;
-        let match_days = MATCH_ACTION_RETENTION_DAYS as i64;
+        let code_days = CODE_ATTEMPT_RETENTION_DAYS;
+        let match_days = MATCH_ACTION_RETENTION_DAYS;
         for (ip_hash, days) in [("old", code_days + 1), ("recent", code_days - 1)] {
             log_attempt(&app, ip_hash, at(days)).await;
         }

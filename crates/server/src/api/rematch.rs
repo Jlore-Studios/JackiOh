@@ -126,9 +126,9 @@ fn live_entry<'a>(
     match_id: &str,
     now: i64,
 ) -> Option<&'a mut OfferEntry> {
-    let stale = match offers.get(match_id) {
-        None => return None,
-        Some(entry) => entry.match_id.is_none() && now - entry.at > REMATCH_OFFER_TTL_MS as i64,
+    let stale = {
+        let entry = offers.get(match_id)?;
+        entry.match_id.is_none() && now - entry.at > REMATCH_OFFER_TTL_MS
     };
     if stale {
         offers.shift_remove(match_id);
@@ -194,7 +194,7 @@ async fn create_rematch(
     {
         let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
         for seat in [&seats.0, &seats.1] {
-            let found = tx.profiles_get_many(&[seat.profile_id.clone()]).await.map_err(|error| ApiError::internal(error.to_string()))?;
+            let found = tx.profiles_get_many(std::slice::from_ref(&seat.profile_id)).await.map_err(|error| ApiError::internal(error.to_string()))?;
             if found.first().is_some_and(|profile| profile.in_match_id.is_some()) {
                 return Err(ApiError::new(ApiErrorCode::AlreadyInMatch, "finish your current match first"));
             }
@@ -229,7 +229,7 @@ async fn create_rematch(
     let flagged = async {
         let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
         for seat in [&seats.0, &seats.1] {
-            let found = tx.profiles_get_many(&[seat.profile_id.clone()]).await.map_err(|error| ApiError::internal(error.to_string()))?;
+            let found = tx.profiles_get_many(std::slice::from_ref(&seat.profile_id)).await.map_err(|error| ApiError::internal(error.to_string()))?;
             let taken = found
                 .first()
                 .is_some_and(|profile| profile.in_match_id.as_deref().is_some_and(|current| current != match_id));
@@ -358,11 +358,10 @@ async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
             .await;
             if let Err(error) = created {
                 let mut map = offers();
-                if let Some(entry) = map.get_mut(&match_row.id) {
-                    if entry.generation == generation {
+                if let Some(entry) = map.get_mut(&match_row.id)
+                    && entry.generation == generation {
                         entry.match_id = None;
                     }
-                }
                 return Err(error);
             }
             Some(new_id)

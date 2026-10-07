@@ -48,11 +48,11 @@ const SERIES_ID: &str = "series-1";
 const FIRST_MATCH: &str = "match-1";
 
 fn grace_ms() -> i64 {
-    SERIES_START_GRACE_SECONDS as i64 * 1000
+    SERIES_START_GRACE_SECONDS * 1000
 }
 
 fn give_up_ms() -> i64 {
-    SERIES_START_GIVE_UP_SECONDS as i64 * 1000
+    SERIES_START_GIVE_UP_SECONDS * 1000
 }
 
 /// One store call in its own transaction, as TS's `deps.store.<sub>.<method>(…)` was.
@@ -613,8 +613,8 @@ mod r263_a_series_survives_a_restart {
         finish_game(&a, ALICE).await.expect("the deciding result lands");
         let fresh = Glicko {
             rating: 1000.0,
-            deviation: RATING_DEVIATION_START as f64,
-            volatility: RATING_VOLATILITY_START as f64,
+            deviation: RATING_DEVIATION_START,
+            volatility: RATING_VOLATILITY_START,
         };
         let expected = rate_game(&fresh, &fresh, 1.0);
         assert_eq!(table(&a.app, |data| json!(data.tables.results)).await.len(), 3);
@@ -658,7 +658,7 @@ mod r263_every_write_is_a_compare_and_set {
                 "turnDeadline": null,
                 "promptDeadline": null,
                 "graceDeadline": { "p1": null, "p2": null },
-                "ceilingAt": now + MATCH_CEILING_MINUTES as i64 * 60_000,
+                "ceilingAt": now + MATCH_CEILING_MINUTES * 60_000,
             },
         }));
         store!(a.app, t => t.matches_create(&winner).await.expect("matches.create"));

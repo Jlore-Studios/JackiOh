@@ -239,7 +239,7 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
         );
         let Ok(ClientMessage::Aim(AimMessage { aim })) = parsed else { panic!("the frame did not parse as an aim") };
         assert_eq!(
-            serde_json::to_value(&aim).expect("Aim serialises"),
+            serde_json::to_value(aim).expect("Aim serialises"),
             json!({
                 "source": { "at": "hand", "player": "p1", "index": 0 },
                 "target": { "at": "zone", "player": "p2", "row": "backrow", "lane": 1 },

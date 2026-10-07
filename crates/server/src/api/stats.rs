@@ -160,7 +160,7 @@ fn cached_ok(body: Value, max_age_seconds: i64) -> Response {
 
 /// R654: tutorial games are never counted. No game mode is `tutorial` today; the guard is TS's.
 fn is_tutorial(record: &GameRecord) -> bool {
-    serde_json::to_value(&record.mode).ok().as_ref().and_then(Value::as_str) == Some("tutorial")
+    serde_json::to_value(record.mode).ok().as_ref().and_then(Value::as_str) == Some("tutorial")
 }
 
 /// A card's cost as a number: its printed cost, the base of an embiggen cost, 0 for X.
@@ -232,7 +232,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     let live_games_count = live_records.len() as i64;
 
     // R654 publication gate: exactly 1000 live games required to clear the gate
-    let cleared = live_games_count >= PUBLIC_STATS_MIN_LIVE_GAMES as i64;
+    let cleared = live_games_count >= PUBLIC_STATS_MIN_LIVE_GAMES;
 
     let (source, source_label, records_to_count): (PublicStatsSource, &str, Vec<GameRecord>) = if cleared {
         // When cleared, strictly ignore AI development games (no toggle to bring them back)
@@ -281,19 +281,17 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         if card_param.as_ref().is_some_and(|card| id != card) {
             continue;
         }
-        if let Some(set) = &set_param {
-            if def.set.as_str().to_lowercase() != *set && !id.to_lowercase().starts_with(set.as_str()) {
+        if let Some(set) = &set_param
+            && def.set.as_str().to_lowercase() != *set && !id.to_lowercase().starts_with(set.as_str()) {
                 continue;
             }
-        }
-        if let Some(rarity) = &rarity_param {
-            if def.rarity.as_str().to_lowercase() != *rarity {
+        if let Some(rarity) = &rarity_param
+            && def.rarity.as_str().to_lowercase() != *rarity {
                 continue;
             }
-        }
         let cost = numeric_cost(def);
-        if let Some(cost_text) = cost_param.as_deref().filter(|text| !text.is_empty()) {
-            if let Some(parsed_cost) = Some(js_number(&cost_text.replacen('+', "", 1))).filter(|number| !number.is_nan()) {
+        if let Some(cost_text) = cost_param.as_deref().filter(|text| !text.is_empty())
+            && let Some(parsed_cost) = Some(js_number(&cost_text.replacen('+', "", 1))).filter(|number| !number.is_nan()) {
                 if parsed_cost >= CARD_STATS_CURVE_TOP as f64 {
                     if (cost as f64) < CARD_STATS_CURVE_TOP as f64 {
                         continue;
@@ -302,7 +300,6 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
                     continue;
                 }
             }
-        }
 
         let stat = stats_map.get(id.as_str()).copied();
         let (in_deck_games, _) = stat.map(|stat| tally_of(&stat.in_deck)).unwrap_or((0, 0));
@@ -314,7 +311,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         let drawn_rate = if drawn_games > 0 { Some(drawn_wins as f64 / drawn_games as f64) } else { None };
         let played_rate = stat.and_then(|stat| win_rate(&stat.played));
         let play_rate = if total_decks > 0 { in_deck_games as f64 / total_decks as f64 } else { 0.0 };
-        let has_enough_games = in_deck_games >= CARD_STATS_MIN_SAMPLE as i64;
+        let has_enough_games = in_deck_games >= CARD_STATS_MIN_SAMPLE;
 
         cards.push(PublicCardStat {
             id: id.clone(),
@@ -341,11 +338,10 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         if !a.has_enough_games && b.has_enough_games {
             return Ordering::Greater;
         }
-        if let (Some(a_rate), Some(b_rate)) = (a.win_rate, b.win_rate) {
-            if a_rate != b_rate {
+        if let (Some(a_rate), Some(b_rate)) = (a.win_rate, b.win_rate)
+            && a_rate != b_rate {
                 return b_rate.partial_cmp(&a_rate).unwrap_or(Ordering::Equal);
             }
-        }
         b.games.cmp(&a.games).then_with(|| locale_compare(&a.name, &b.name))
     });
 
@@ -358,8 +354,8 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         win_rate: card.win_rate.unwrap_or(0.0),
         games: card.games,
     };
-    let best_card = qualifying.first().map(|card| extreme(*card));
-    let worst_card = qualifying.last().map(|card| extreme(*card));
+    let best_card = qualifying.first().map(|card| extreme(card));
+    let worst_card = qualifying.last().map(|card| extreme(card));
 
     let response = PublicStatsCardsResponse {
         patch: requested_patch.clone(),
@@ -367,11 +363,11 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         gate: PublicStatsGate {
             cleared,
             live_games: live_games_count,
-            min_live_games: PUBLIC_STATS_MIN_LIVE_GAMES as i64,
+            min_live_games: PUBLIC_STATS_MIN_LIVE_GAMES,
         },
         source,
         source_label: source_label.to_string(),
-        min_sample: CARD_STATS_MIN_SAMPLE as i64,
+        min_sample: CARD_STATS_MIN_SAMPLE,
         total_games: report.games as i64,
         cards,
         summary: PublicStatsSummary {
@@ -384,7 +380,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         },
     };
 
-    Ok(cached_ok(to_json(&response)?, CARD_STATS_CACHE_TTL_SECONDS as i64))
+    Ok(cached_ok(to_json(&response)?, CARD_STATS_CACHE_TTL_SECONDS))
 }
 
 /// A turn's or a co-played card's games and wins.
@@ -412,7 +408,7 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
     for version in &versions {
         let records: Vec<GameRecord> =
             records_for(app, SourceFilter::Live, version).await?.into_iter().filter(|record| !is_tutorial(record)).collect();
-        if records.len() as i64 >= PUBLIC_STATS_MIN_LIVE_GAMES as i64 {
+        if records.len() as i64 >= PUBLIC_STATS_MIN_LIVE_GAMES {
             let report = card_stats(
                 &records,
                 &CardStatsFilter {
@@ -436,7 +432,7 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
     let all_records = records_for(app, SourceFilter::All, &current_patch).await?;
     let live_records: Vec<&GameRecord> =
         all_records.iter().filter(|record| record.source == GameSource::Live && !is_tutorial(record)).collect();
-    let records_to_count: Vec<&GameRecord> = if live_records.len() as i64 >= PUBLIC_STATS_MIN_LIVE_GAMES as i64 {
+    let records_to_count: Vec<&GameRecord> = if live_records.len() as i64 >= PUBLIC_STATS_MIN_LIVE_GAMES {
         live_records
     } else {
         all_records.iter().filter(|record| !is_tutorial(record)).collect()
@@ -450,7 +446,7 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
     for record in &records_to_count {
         for seat in PLAYER_IDS {
             let summary = &record.game.seats[seat];
-            if !summary.deck.iter().any(|card| *card == card_id) {
+            if !summary.deck.contains(&card_id) {
                 continue;
             }
 
@@ -460,13 +456,11 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
             let mut turns_played_in_game: IndexSet<i32> = IndexSet::new();
             if let Some(played_turns) = summary.played_turns.as_ref().filter(|turns| turns.len() == summary.played.len()) {
                 for (index, played) in summary.played.iter().enumerate() {
-                    if *played == card_id {
-                        if let Some(turn) = played_turns.get(index).map(|turn| *turn as i32) {
-                            if turn > 0 {
+                    if *played == card_id
+                        && let Some(turn) = played_turns.get(index).copied()
+                            && turn > 0 {
                                 turns_played_in_game.insert(turn);
                             }
-                        }
-                    }
                 }
             }
             for turn in turns_played_in_game {
@@ -500,7 +494,7 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
             win_rate: if tally.games > 0 { Some(tally.wins as f64 / tally.games as f64) } else { None },
         })
         .collect();
-    by_turn.sort_by(|a, b| a.turn.cmp(&b.turn));
+    by_turn.sort_by_key(|a| a.turn);
 
     let mut co_played: Vec<CoPlayedRate> = co_played_tallies
         .iter()
@@ -511,7 +505,7 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
             win_rate: if tally.games > 0 { Some(tally.wins as f64 / tally.games as f64) } else { None },
         })
         .collect();
-    co_played.sort_by(|a, b| b.games.cmp(&a.games));
+    co_played.sort_by_key(|rate| std::cmp::Reverse(rate.games));
     co_played.truncate(10);
 
     let body = CardDrillDownResponse {
@@ -525,7 +519,7 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
         by_turn,
         co_played,
     };
-    Ok(cached_ok(to_json(&body)?, CARD_STATS_CACHE_TTL_SECONDS as i64))
+    Ok(cached_ok(to_json(&body)?, CARD_STATS_CACHE_TTL_SECONDS))
 }
 
 /// GET /api/stats/player
@@ -552,7 +546,7 @@ fn stringified_length(body: &Value) -> usize {
 /// Signed-in player updates their tracked statistics and privacy setting.
 pub async fn put_player(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
-    if stringified_length(&req.body) > PLAYER_STATS_BYTES_MAX as usize {
+    if stringified_length(&req.body) > PLAYER_STATS_BYTES_MAX {
         return Err(bad_request(format!(
             "player stats exceeds maximum payload size of {PLAYER_STATS_BYTES_MAX} bytes"
         )));
@@ -602,6 +596,6 @@ pub async fn get_players(app: &Arc<App>, req: Req) -> ApiResult {
     tx.commit().await?;
     Ok(cached_ok(
         json!({ "players": to_json(&players)?, "page": page, "limit": limit }),
-        PLAYER_STATS_CACHE_TTL_SECONDS as i64,
+        PLAYER_STATS_CACHE_TTL_SECONDS,
     ))
 }
