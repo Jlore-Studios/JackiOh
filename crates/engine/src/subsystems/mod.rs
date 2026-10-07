@@ -51,3 +51,16 @@ pub use quests::*;
 pub use rotation::*;
 pub use scorer::*;
 pub use twice_forward::*;
+
+// The numbers these modules stated in TS live in `crate::config` now (CLAUDE.md rule 9, SURFACE
+// §6.4); re-exported here so TS's `subsystems.X` path still names them (a card reads
+// `subsystems::FUSE_MIN_INGREDIENTS`). A module of this directory uses them from `crate::config`
+// and does not redefine them.
+pub use crate::config::{
+    AI_PLAYOUT_STEP_CAP, ARMOR_UP_ARMOR, BRAINSTORM_DISCOUNT, CHAOS_ADDED_CARDS, CHAOS_BACKROW_CARDS,
+    CHAOS_COST_DISCOUNT, CHAOS_HEAL, CHAOS_MANA, CHAOS_RUSH_TOKENS, CHAOS_UNIT_COST, CHAOS_UNIT_COUNT,
+    CRAFTED_CARD_COST, DIE_INSECT_DAMAGE, DIE_INSECT_LUCKY, FIRST_GRADE, FUSE_MIN_INGREDIENTS,
+    GRADE_A_DAMAGE, GRADE_D_CARDS, GRADE_D_DISCOUNT, LIFE_TAP_DAMAGE, PING_DAMAGE, PLUCK_COST,
+    SCORER_DRY_RUN_PLAYS, SCORER_LOW_HEALTH, SCORER_WEIGHTS, STEADY_SHOT_RAISE, STITCHING_INGREDIENTS,
+    STITCHING_MAX_COST, TANK_UP_ARMOR,
+};
