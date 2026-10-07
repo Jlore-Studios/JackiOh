@@ -270,12 +270,19 @@ fn is_uuid(id: &str) -> bool {
 
 /// The admin half (secret key only): §9.4 step 1's authoritative `email_confirmed_at`, and
 /// `DELETE /api/account`'s last step. GoTrue's admin API, as `@supabase/supabase-js` called it.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct AdminAuthClient {
     http: reqwest::Client,
     /// `${SUPABASE_URL}/auth/v1`.
     auth_base: String,
     secret_key: String,
+}
+
+/// The secret key never reaches a log line, `{:?}` included.
+impl std::fmt::Debug for AdminAuthClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AdminAuthClient").field("auth_base", &self.auth_base).finish_non_exhaustive()
+    }
 }
 
 impl AdminAuthClient {
@@ -345,8 +352,8 @@ pub struct SupabaseAuthClients {
     pub admin: Option<AdminAuthClient>,
 }
 
-/// TS `SupabaseAuthClientInput`.
-#[derive(Clone, Debug)]
+/// TS `SupabaseAuthClientInput`. No `Debug`: it holds the secret key.
+#[derive(Clone)]
 pub struct SupabaseAuthClientInput {
     pub url: String,
     pub secret_key: String,
@@ -368,8 +375,8 @@ pub fn create_real_clients(input: &SupabaseAuthClientInput, http: &reqwest::Clie
 // The provider
 // ---------------------------------------------------------------------------
 
-/// TS `SupabaseAuthInput`.
-#[derive(Clone, Debug, Default)]
+/// TS `SupabaseAuthInput`. No `Debug`: it holds the secret key and the shared secret.
+#[derive(Clone, Default)]
 pub struct SupabaseAuthInput {
     /// `env.supabase_url`, e.g. `https://<ref>.supabase.co`.
     pub url: String,
@@ -425,7 +432,6 @@ struct KeyCache {
 
 /// TS `createSupabaseAuth`'s closure, as a struct. The caches are behaviour (R194, R665, the
 /// proposed ruling above), not optimisations.
-#[derive(Debug)]
 pub struct SupabaseAuth {
     auth_base: String,
     jwks_url: String,
@@ -446,6 +452,17 @@ pub struct SupabaseAuth {
     mfa_enrolled: Mutex<IndexSet<String>>,
     /// session id -> when the provider last said that session is live (R194). Positives only.
     live_sessions: Mutex<IndexMap<String, i64>>,
+}
+
+/// Neither the secret key nor the shared secret reaches a log line, `{:?}` included.
+impl std::fmt::Debug for SupabaseAuth {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SupabaseAuth")
+            .field("auth_base", &self.auth_base)
+            .field("jwks_url", &self.jwks_url)
+            .field("shared_secret", &self.hs_key.is_some())
+            .finish_non_exhaustive()
+    }
 }
 
 impl SupabaseAuth {
@@ -931,7 +948,7 @@ impl E2eAuth {
                 deletion: E2eDeletion::Unsupported,
             }),
         };
-        for (user_id, email, password, token) in E2E_FIXTURE_ACCOUNTS {
+        for &(user_id, email, password, token) in E2E_FIXTURE_ACCOUNTS {
             auth.register(user_id, email, true, Some(password), token);
         }
         auth
