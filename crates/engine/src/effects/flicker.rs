@@ -64,7 +64,7 @@ pub fn flicker_card(sink: &mut EngineSink<'_>, card: &CardInstance) -> bool {
     } else {
         None
     };
-    if was_animated || def_of(sink.state, &card.def_id).type_ == CardType::FieldSpell {
+    if was_animated || def_of(Some(&*sink.state), &card.def_id).type_ == CardType::FieldSpell {
         if let Some(live) = find_instance_mut(sink.state, &card.id) {
             live.face_up = Some(true);
         }

@@ -17,7 +17,7 @@ use crate::effects::cost::{SetCostModArgs, SetCostOverrideArgs, set_cost_mod, se
 use crate::effects::damage::{DamageEffectArgs, DamageFlagArgs, damage};
 use crate::effects::heal::{HealArgs, heal};
 use crate::effects::targets::{PlayerSpec, TargetSpec, player_of};
-use crate::numbers::numbered_keywords_on;
+use crate::numbers::{NumberedKey, numbered_keywords_on};
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, find_instance};
 use crate::wire::{GameEvent, PlayerId, Selection, ZoneName};
@@ -39,7 +39,7 @@ fn lucky_of(ctx: &EffectContext<'_>) -> i32 {
     };
     numbered_keywords_on(ctx.sink.state, own)
         .into_iter()
-        .find(|keyword| keyword.key.as_str() == "Lucky")
+        .find(|keyword| keyword.key == NumberedKey::Lucky)
         .map(|keyword| keyword.value)
         .unwrap_or(0)
 }
@@ -276,7 +276,7 @@ pub fn replace_hand_with_random(args: ReplaceHandWithRandomArgs) -> Effect {
             .as_ref()
             .map(|card| card.def_id.clone())
             .or_else(|| ctx.def_id.clone());
-        let pool = query(&excluding_def_id(&args.query, own.as_deref()));
+        let pool = query(&excluding_def_id(Some(&*ctx.sink.state), &args.query, own.as_deref()));
         if pool.is_empty() {
             return;
         }

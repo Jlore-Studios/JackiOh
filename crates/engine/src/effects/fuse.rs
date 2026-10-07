@@ -246,14 +246,14 @@ pub fn fuse_cards(args: FuseCardsArgs) -> Effect {
 
 /// B4.1, R387: a random pool never offers the card generating from it — nor, for a fused card, any of
 /// its ingredients (`catalog.selfDefIds`).
-fn pool_for(ctx: &EffectContext<'_>, asked: Option<&CatalogQueryArgs>) -> Vec<CardDef> {
+fn pool_for(ctx: &EffectContext<'_>, asked: Option<&CatalogQueryArgs>) -> Vec<&'static CardDef> {
     let own = ctx
         .self_
         .as_ref()
         .map(|card| card.def_id.clone())
         .or_else(|| ctx.def_id.clone());
     let asked = asked.cloned().unwrap_or_default();
-    query(&excluding_def_id(&asked, own.as_deref()))
+    query(&excluding_def_id(Some(&*ctx.sink.state), &asked, own.as_deref()))
 }
 
 /// R23, R470: a card a Fuse may keep — on the field and acting (R77's target), or in a hand or a
@@ -482,7 +482,7 @@ fn fuse_candidates(
     if piles.contains(&FuseOntoPile::Field) {
         for row in [Row::Units, Row::Backrow] {
             for slot in slots_of(player, row) {
-                if let Some(card) = card_at(state, slot) {
+                if let Some(card) = card_at(state, &slot) {
                     let card: &CardInstance = &card;
                     if fits(card) {
                         out.push(card.clone());
@@ -499,8 +499,8 @@ fn fuse_candidates(
         let mut library: Vec<CardInstance> = side.library.iter().filter(|&card| fits(card)).cloned().collect();
         // Stable, as `Array.prototype.sort` is (SURFACE §4.4.1).
         library.sort_by(|a, b| {
-            let left = def_of(state, &a.def_id);
-            let right = def_of(state, &b.def_id);
+            let left = def_of(Some(state), &a.def_id);
+            let right = def_of(Some(state), &b.def_id);
             compare_text(&left.name, &right.name)
                 .then_with(|| compare_text(&a.def_id, &b.def_id))
                 .then_with(|| i32::from(a.radiant).cmp(&i32::from(b.radiant)))
@@ -585,7 +585,7 @@ pub fn fuse_onto_your_card(args: FuseOntoYourCardArgs) -> Effect {
             .iter()
             .map(|card| PromptOption {
                 key: format!("instance:{}", card.id),
-                label: def_of(ctx.sink.state, &card.def_id).name.clone(),
+                label: def_of(Some(&*ctx.sink.state), &card.def_id).name.clone(),
                 selection: Selection::Instance {
                     instance_id: card.id.clone(),
                 },

@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::effects::choose::{LibraryFilter, matches_library_filter};
 use crate::effects::targets::{PlayerSpec, player_of};
-use crate::ownership::{LibraryEnd, draw_from_library_of, take_into_hand};
+use crate::ownership::{LibraryEnd, TakenTo, draw_from_library_of, take_into_hand};
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, find_instance_mut};
 use crate::wire::{PlayerId, Selection, opponent_of};
@@ -41,9 +41,8 @@ fn take_with(ctx: &mut EffectContext<'_>, card: &CardInstance, taker: PlayerId, 
         }
         card.radiant = true;
     }
-    // `ownership.takeIntoHand` answers where the card landed: "hand", "burned", or nothing at all.
-    let landed = take_into_hand(ctx, &card, taker);
-    if landed.map(|place| place.as_str() == "hand") != Some(true) {
+    // `ownership.takeIntoHand` answers where the card landed: in the hand, burned, or nothing at all.
+    if !matches!(take_into_hand(ctx, &card, taker), Some(TakenTo::Hand)) {
         return;
     }
     if let Some(live) = find_instance_mut(ctx.sink.state, &card.id) {

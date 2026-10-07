@@ -129,7 +129,7 @@ fn reader_is_spell(reader: &SweepReader<'_>) -> bool {
     let Some(def_id) = reader.def_id.filter(|id| !id.is_empty()) else {
         return false;
     };
-    let def = def_of(reader.state, def_id);
+    let def = def_of(Some(reader.state), def_id);
     let face = if reader.radiant { &def.radiant } else { &def.base };
     face.type_.unwrap_or(def.type_) == CardType::Spell
 }
@@ -155,7 +155,7 @@ pub fn field_spells_doomed(reader: SweepReader<'_>, side: FieldSpellSide) -> Vec
     let mut out: Vec<CardInstance> = Vec::new();
     for player in sides {
         for slot in slots_of(player, Row::Backrow) {
-            let Some(card) = card_at(reader.state, slot) else {
+            let Some(card) = card_at(reader.state, &slot) else {
                 continue;
             };
             if card_type_of(reader.state, &card) != CardType::FieldSpell {

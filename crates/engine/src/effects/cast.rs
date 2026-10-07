@@ -225,7 +225,7 @@ fn cast_one_random(asked: CatalogQueryArgs, radiant: bool, how: CastHow) -> Effe
             .as_ref()
             .map(|card| card.def_id.clone())
             .or_else(|| ctx.def_id.clone());
-        let pool = query(&excluding_def_id(&asked, own.as_deref()));
+        let pool = query(&excluding_def_id(Some(&*ctx.sink.state), &asked, own.as_deref()));
         let Some(def) = pick_generated(&mut *ctx.sink.rng, &pool, None) else {
             return;
         };
