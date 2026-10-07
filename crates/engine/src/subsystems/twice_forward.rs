@@ -18,7 +18,7 @@
 //!
 //! Port of `packages/engine/src/subsystems/twiceForward.ts`. The predicate writes the card (its memory,
 //! its face, its Brittle), so its `when` takes `&mut EffectContext` — the one `TriggerDef.when` that
-//! must (see `.fullsend/notes/part-08-3.md`, GAPS). TS's live `ctx.self` is the card as it stands in
+//! must (see `78f131c^:.fullsend/notes/part-08-3.md`, GAPS). TS's live `ctx.self` is the card as it stands in
 //! the state, read and written here by its id.
 
 use std::sync::Arc;

@@ -655,7 +655,7 @@ mod exile_random_from_library_34_42 {
         assert_eq!(state.players[PlayerId::P1].library.len(), 0);
         // R11/R86: it is in no pile and its zone says so. (The zone half, `{ z: "gone" }` on TS's live
         // object, has no Rust counterpart: a card in no pile is not reachable from the state.
-        // `.fullsend/notes/spec-gaps-part-24-3.md`.)
+        // `78f131c^:.fullsend/notes/spec-gaps-part-24-3.md`.)
         assert!(find_instance(&state, &token.id).is_none());
         assert!(!ids(&state.players[PlayerId::P1].exile).contains(&token.id));
         assert_eq!(state.players[PlayerId::P1].exile.len(), 2);
@@ -746,7 +746,7 @@ mod exile_bottom_of_library_40_65 {
         );
 
         // TS: `token.zone` is `{ z: "gone", player: "p1" }`. A card that is gone is in no pile, so it is
-        // no longer reachable from the state (`.fullsend/notes/spec-gaps-part-24-3.md`).
+        // no longer reachable from the state (`78f131c^:.fullsend/notes/spec-gaps-part-24-3.md`).
         assert!(find_instance(&state, &token.id).is_none());
         assert_eq!(state.players[PlayerId::P1].exile.len(), 0);
         assert_eq!(state.counters.exiled, 0);

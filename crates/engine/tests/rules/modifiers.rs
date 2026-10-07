@@ -15,7 +15,7 @@
 //! Port of `packages/engine/test/modifiers.test.ts`. The TS fixtures' delayed steps live on a
 //! script's `activate` hook, which SURFACE §7.2 does not port; here they are the script's `delayed`
 //! hook (`Resume.hook` "delayed", `Script::hook_named`'s name for the same step) — see
-//! `.fullsend/notes/spec-gaps-part-25-3.md`.
+//! `78f131c^:.fullsend/notes/spec-gaps-part-25-3.md`.
 
 use std::cell::Cell;
 use std::sync::atomic::{AtomicU32, Ordering};

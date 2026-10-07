@@ -820,7 +820,7 @@ fn assert_matches(actual: Value, expected: Value) {
 // R79: the server owns these, in apps/server/src/config.ts (BUILD §2, M7) — the match lifecycle,
 // and the ranked ladder's R603–R612 numbers. TS's `SERVER_CONSTANTS` list fed one assertion that
 // `config.ts` exports none of them; Rust cannot list a module's names at run time, so that assertion
-// is in `.fullsend/notes/spec-gaps-part-25-5.md` and the list is not ported.
+// is in `78f131c^:.fullsend/notes/spec-gaps-part-25-5.md` and the list is not ported.
 
 mod spec_11_rulings_r43_r84_m3_gate {
     use super::*;
@@ -2454,7 +2454,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert_eq!(view_for(&clean, P1).clock_ms, None);
         // TS also asserted that `config.ts` exports none of the server's constant names (its
         // `Object.keys(engineConfig)` over SERVER_CONSTANTS); Rust has no run-time list of a module's
-        // names, so that one assertion is in `.fullsend/notes/spec-gaps-part-25-5.md`.
+        // names, so that one assertion is in `78f131c^:.fullsend/notes/spec-gaps-part-25-5.md`.
         // M6/M7: apps/server/src/config.ts carries the clock, grace, ceiling, room-code and rating values.
     }
 

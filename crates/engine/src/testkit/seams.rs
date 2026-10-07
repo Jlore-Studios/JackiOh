@@ -1,5 +1,5 @@
 //! Test seams for two TS test files that replaced engine code from outside (part 32's decision,
-//! `.fullsend/notes/reconcile-decisions.md` `# engine green`). Compiled under the `testkit` feature
+//! `78f131c^:.fullsend/notes/reconcile-decisions.md` `# engine green`). Compiled under the `testkit` feature
 //! alone, beside SURFACE §8's registry override and in its spirit: each is a thread-local the engine
 //! consults only under that feature, and each `#[test]` is its own thread, so a seam a test sets
 //! never reaches another test.

@@ -285,7 +285,7 @@ mod e35_attack_restrictions_section_4_2_step_2 {
         );
         // TS l.114–120 registered a test-only attack bar with `registerAttackBar`, which SURFACE §6.6
         // does not port (it was never registered by the engine): those assertions are in
-        // `.fullsend/notes/spec-gaps-part-26-5.md`. With no bar, both targets stay.
+        // `78f131c^:.fullsend/notes/spec-gaps-part-26-5.md`. With no bar, both targets stay.
         assert_eq!(attack_targets(&state, &attacker).len(), 2);
     }
 }

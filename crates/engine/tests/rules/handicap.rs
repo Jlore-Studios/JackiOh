@@ -18,7 +18,7 @@
 //! handed `validateHandicap` objects its type does not allow — a missing field, a string, `null`, a
 //! fraction, `NaN`, `Infinity`. Rust's `Handicap` holds `i32`s, so such a value is built as JSON and
 //! counts as refused when it does not even deserialise into a `Handicap` (`handicap_refused`); see
-//! `.fullsend/notes/spec-gaps-part-26-3.md` for the three that JSON cannot carry.)
+//! `78f131c^:.fullsend/notes/spec-gaps-part-26-3.md` for the three that JSON cannot carry.)
 
 use std::sync::atomic::{AtomicU32, Ordering};
 

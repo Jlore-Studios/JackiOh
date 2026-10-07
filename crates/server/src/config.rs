@@ -15,7 +15,7 @@
 //! as a ruling (R104-R112, added per CLAUDE.md rule 3). The comment is the cross-reference between
 //! this file and that table.
 //!
-//! Types (part 18's choice, recorded in `.fullsend/notes/part-18-3.md`): durations, epoch-ms
+//! Types (part 18's choice, recorded in `78f131c^:.fullsend/notes/part-18-3.md`): durations, epoch-ms
 //! quantities and counts compared with store counts are `i64`; lengths, caps and limits that bound a
 //! collection are `usize`; game and ladder quantities are `i32`; ratings and Glicko numbers are
 //! `f64`.

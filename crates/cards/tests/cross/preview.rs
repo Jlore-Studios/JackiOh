@@ -26,7 +26,7 @@
 //! Not previewed, on purpose (R280): #92's stats, #100's cost and #89's hand stats are on the face
 //! already, and #24's and #74's X is chosen at play. The set test pins the six.
 //!
-//! Rust port note (recorded in `.fullsend/notes/spec-gaps-part-27-5.md`): TS proved "a pure read" by
+//! Rust port note (recorded in `78f131c^:.fullsend/notes/spec-gaps-part-27-5.md`): TS proved "a pure read" by
 //! handing the hook a deep-frozen `structuredClone` whose libraries, hands and `state.active` throw on
 //! access (`Proxy`, `Object.defineProperty`). Rust has neither. A preview hook takes `&GameState`, so
 //! it cannot write; the reads are fenced by perturbation instead (`fenced` below): the hook is handed

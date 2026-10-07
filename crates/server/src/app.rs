@@ -177,7 +177,7 @@ pub type HandlerFuture<'a> = Pin<Box<dyn Future<Output = ApiResult> + Send + 'a>
 
 /// Every handler, boxed by `h!`: `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`. SURFACE
 /// §11.2 writes `&App`, but a handler that starts a match hands `Registry::start` the `&Arc<App>` its
-/// actor keeps, so every handler takes the `Arc` (part 31; `.fullsend/notes/spec-gaps.md`).
+/// actor keeps, so every handler takes the `Arc` (part 31; `78f131c^:.fullsend/notes/spec-gaps.md`).
 pub type Handler = for<'a> fn(&'a Arc<App>, Req) -> HandlerFuture<'a>;
 
 /// One route: method, path (`:name` segments land in `req.params`), auth level, handler — TS's

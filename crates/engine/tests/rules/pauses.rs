@@ -25,7 +25,7 @@
 //! SURFACE §17 on §8), registered by `game()` on the test's own thread. TS also re-registered the
 //! default handler; in Rust that is `work.rs`'s default arm and needs no registering. The
 //! spinning-sequence test owes a card continuation instead of a registered handler
-//! (`.fullsend/notes/spec-gaps-part-25-3.md`).
+//! (`78f131c^:.fullsend/notes/spec-gaps-part-25-3.md`).
 
 use serde::Serialize;
 use serde::de::DeserializeOwned;

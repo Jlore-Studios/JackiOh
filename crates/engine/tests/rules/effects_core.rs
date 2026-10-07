@@ -21,7 +21,7 @@
 //! Port of `packages/engine/test/effects-core.test.ts`. The TS file's three "M3-T1 structural
 //! acceptance" tests read the source tree (`readdirSync` of `src/effects` and `test/`, `readFileSync`
 //! of every card script), so they are not ported (part 24's brief, Risks: #133's rule): they are
-//! listed in `.fullsend/notes/spec-gaps-part-24-2.md`, and the checks belong to the structural
+//! listed in `78f131c^:.fullsend/notes/spec-gaps-part-24-2.md`, and the checks belong to the structural
 //! spec checks (part 28), not to a rules test.
 
 use jackioh_engine::effects::{
