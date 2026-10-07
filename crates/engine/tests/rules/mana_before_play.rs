@@ -143,7 +143,7 @@ mod the_players_mana_as_the_play_began_classic_22 {
             .collect();
         let answer = only(&answers);
         let live = pb_act(&paused, with_player(&answer, PlayerId::P1));
-        let again = pb_act(&round, json_as(with_player(&answer, PlayerId::P1)));
+        let again = pb_act(&round, with_player(&answer, PlayerId::P1));
         assert_eq!(hash_state(&again), hash_state(&live));
         assert_eq!(live.players.p2.hero.health, state.players.p2.hero.health - 4);
     }

@@ -246,14 +246,14 @@ mod r455_e15_price_rules_on_a_player {
         run(&mut after, vec![cast_new_of(cast_trap().id)], PlayerId::P1);
         assert!(after.players.p1.mods.iter().any(|modifier| modifier.id == rule.id));
         // It waits across turns ("next" has no "this turn").
-        after = pb_act(&after, json_as(json!({ "type": "endTurn", "playerId": "p1" })));
-        after = pb_act(&after, json_as(json!({ "type": "endTurn", "playerId": "p2" })));
+        after = pb_act(&after, json!({ "type": "endTurn", "playerId": "p1" }));
+        after = pb_act(&after, json!({ "type": "endTurn", "playerId": "p2" }));
         assert!(after.players.p1.mods.iter().any(|modifier| modifier.id == rule.id));
         // The Field Spell it prices spends it.
         let mana = after.players.p1.mana.current;
         after = pb_act(
             &after,
-            json_as(json!({ "type": "play", "instanceId": field.id, "zone": { "row": "backrow", "lane": 3 }, "playerId": "p1" })),
+            json!({ "type": "play", "instanceId": field.id, "zone": { "row": "backrow", "lane": 3 }, "playerId": "p1" }),
         );
         assert_eq!(after.players.p1.mana.current, mana);
         assert!(!after.players.p1.mods.iter().any(|modifier| modifier.id == rule.id));
@@ -296,7 +296,7 @@ mod r455_e15_price_rules_on_a_player {
         // On their next turn: +1.
         assert_eq!(after.active, PlayerId::P2);
         assert_eq!(cost(&after, &only(&held(&after.players.p2.hand, &theirs.id))), 2);
-        after = pb_act(&after, json_as(json!({ "type": "endTurn", "playerId": "p2" })));
+        after = pb_act(&after, json!({ "type": "endTurn", "playerId": "p2" }));
         // Gone at their cleanup.
         assert!(!after.players.p2.mods.iter().any(is_cost_rule));
     }
@@ -349,7 +349,7 @@ mod r455_e39_return_after_resolving_and_its_floor {
         add_modifier_to(&mut after, PlayerId::P1, ModifierExpiry::ThisTurn { turn }, cost_discount(5, None));
         assert_eq!(cost(&after, &back), 2);
         // And it comes back again, and in any pile it keeps the floor.
-        after = pb_act(&after, json_as(json!({ "type": "play", "instanceId": back.id, "playerId": "p1" })));
+        after = pb_act(&after, json!({ "type": "play", "instanceId": back.id, "playerId": "p1" }));
         assert!(ids(&after.players.p1.hand).contains(&back.id));
     }
 

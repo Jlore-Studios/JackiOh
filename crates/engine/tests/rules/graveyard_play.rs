@@ -272,25 +272,25 @@ mod r454_e11_play_from_the_graveyard {
         .contains("at least 1 Plague Counter"));
         assert!(refusal(&pb_reduce(
             &state,
-            json_as(json!({ "type": "play", "instanceId": body.id, "plague": { "from": field.id, "tokens": 3 }, "playerId": "p1" }))
+            json!({ "type": "play", "instanceId": body.id, "plague": { "from": field.id, "tokens": 3 }, "playerId": "p1" })
         ))
         .contains("not that many"));
         // A hand card never spends tokens.
         let hand_card = only(&state.players.p1.hand);
         let hand_play = pb_reduce(
             &state,
-            json_as(json!({
+            json!({
                 "type": "play",
                 "instanceId": hand_card.id,
                 "plague": { "from": field.id, "tokens": 1 },
                 "playerId": "p1",
-            })),
+            }),
         );
         assert!(refusal(&hand_play).contains("only a play from your graveyard can spend Plague Counters"));
 
         let result = pb_reduce(
             &state,
-            json_as(json!({ "type": "play", "instanceId": body.id, "plague": { "from": field.id, "tokens": 1 }, "playerId": "p1" })),
+            json!({ "type": "play", "instanceId": body.id, "plague": { "from": field.id, "tokens": 1 }, "playerId": "p1" }),
         );
         assert_eq!(result.error, None);
         let after = &result.state;
@@ -449,7 +449,7 @@ mod r454_e11_play_from_the_graveyard {
             .collect();
         let answer = serde_json::to_value(only(&answers)).expect("an answer serialises");
         let live = pb_act(&paused, with_player(answer.clone(), PlayerId::P1));
-        let replayed = pb_act(&round, json_as(with_player(answer, PlayerId::P1)));
+        let replayed = pb_act(&round, with_player(answer, PlayerId::P1));
         assert_eq!(hash_state(&replayed), hash_state(&live));
         assert_eq!(live.pending, None);
         assert!(ids(&live.players.p1.graveyard).contains(&asker.id));

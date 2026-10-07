@@ -276,7 +276,7 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
         assert!(named.is_some_and(|error| error.contains("not one of the options")));
         let wrong_seat = refusal(
             &run,
-            json_as(json!({ "type": "answer", "choiceId": pending.id, "selection": [pick(&mine)], "playerId": "p2" })),
+            json!({ "type": "answer", "choiceId": pending.id, "selection": [pick(&mine)], "playerId": "p2" }),
         );
         assert!(wrong_seat.is_some_and(|error| error.contains("other player")));
         assert_eq!(run.state, refused);

@@ -309,10 +309,10 @@ mod e13_trigger_a_cry {
         let pending = open_as(&state, PromptKind::Target, P1);
         state = act(
             &state,
-            json_as(json!({
+            json!({
                 "type": "answer", "playerId": "p1", "choiceId": pending.id,
                 "selection": [{ "pick": "hero", "player": "p2" }],
-            })),
+            }),
             Some(&mut log),
         );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 6);
