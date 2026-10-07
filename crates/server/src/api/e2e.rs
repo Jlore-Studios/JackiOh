@@ -160,7 +160,7 @@ const EXPIRED_CODE_AGE_MS: i64 = 60 * 60 * 1000;
 /// matches `DEFAULT_INVITE_CODE_MAX_USES` in `codes.rs` — where the proposed ruling for that default
 /// is written out — and the db agent's `max_uses int not null default 1`, so the exhausted fixture
 /// is exhausted at one use. Restating the number is all this does; it decides nothing.
-const FIXTURE_CODE_MAX_USES: i32 = 1;
+const FIXTURE_CODE_MAX_USES: i64 = 1;
 
 // ---------------------------------------------------------------------------
 // The auth provider's halves (`crate::auth::E2eAuth` holds the provider itself)

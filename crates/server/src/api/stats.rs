@@ -22,13 +22,13 @@ use jackioh_engine::wire::stats::{
 };
 use jackioh_engine::{CardCost, CardDef, PLAYER_IDS, Winner};
 
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, AuthLevel, Req, Route, bad_request, handler, now_ms, ok_of, route, to_json};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, now_ms, ok_of, to_json};
 use crate::app::App;
 use crate::config::{
     CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_CURVE_TOP, CARD_STATS_MIN_SAMPLE, PLAYER_STATS_BYTES_MAX,
     PLAYER_STATS_CACHE_TTL_SECONDS, PLAYER_STATS_PAGE_LIMIT, PUBLIC_STATS_MIN_LIVE_GAMES,
 };
-use crate::db::store::{GameRecordQuery, ListPublicOptions, Profile};
+use crate::db::store::{GameRecordQuery, PlayerStatsListOptions, Profile};
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -238,23 +238,17 @@ async fn records_for(app: &App, source: SourceFilter, patch: &str) -> Result<Vec
     Ok(records)
 }
 
-/// The five statistics routes, in TS's order.
-pub fn create_stats_routes() -> Vec<Route> {
-    vec![
-        route("GET", "/api/stats/cards", AuthLevel::None, handler!(get_card_stats)),
-        route("GET", "/api/stats/cards/:id", AuthLevel::None, handler!(get_card_drill_down)),
-        route("GET", "/api/stats/player", AuthLevel::Active, handler!(get_player_stats)),
-        route("PUT", "/api/stats/player", AuthLevel::Active, handler!(put_player_stats)),
-        route("GET", "/api/stats/players", AuthLevel::None, handler!(get_players)),
-    ]
-}
+// TS's `createStatsRoutes()`, in its order, is five rows of `app.rs`'s `ROUTES`:
+//   GET /api/stats/cards → get_cards (None);      GET /api/stats/cards/:id → get_card (None);
+//   GET /api/stats/player → get_player (Active);  PUT /api/stats/player → put_player (Active);
+//   GET /api/stats/players → get_players (None).
 
 /// GET /api/stats/cards
 /// Public card win-rate data. Applies R654 publication gate:
 /// - AI games pad the stats until the current patch has logged 1000 live games.
 /// - At and above 1000 live games, live games only, AI games ignored.
 /// - Minimum sample threshold: below 20 games, hasEnoughGames is false.
-pub async fn get_card_stats(app: &App, req: Req) -> ApiResult {
+pub async fn get_cards(app: &App, req: Req) -> ApiResult {
     let versions = load_patch_versions();
     let current_patch = app.catalog.version.clone();
     let requested_patch = query_trimmed(&req, "patch").unwrap_or(current_patch);
@@ -445,7 +439,7 @@ struct Count {
 /// - Win rate by cleared patch over time.
 /// - Win rate by turn played.
 /// - Co-played synergy cards.
-pub async fn get_card_drill_down(app: &App, req: Req) -> ApiResult {
+pub async fn get_card(app: &App, req: Req) -> ApiResult {
     let card_id = req.params.get("id").cloned().unwrap_or_default();
     let def = if card_id.is_empty() { None } else { app.catalog.defs.get(&card_id) };
     let Some(def) = def else {
@@ -576,7 +570,7 @@ pub async fn get_card_drill_down(app: &App, req: Req) -> ApiResult {
 
 /// GET /api/stats/player
 /// Signed-in player reads their own tracked statistics and privacy setting.
-pub async fn get_player_stats(app: &App, req: Req) -> ApiResult {
+pub async fn get_player(app: &App, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let row = tx.player_stats_get(&profile.id).await?;
@@ -596,7 +590,7 @@ fn stringified_length(body: &Value) -> usize {
 
 /// PUT /api/stats/player
 /// Signed-in player updates their tracked statistics and privacy setting.
-pub async fn put_player_stats(app: &App, req: Req) -> ApiResult {
+pub async fn put_player(app: &App, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     if stringified_length(&req.body) > PLAYER_STATS_BYTES_MAX as usize {
         return Err(bad_request(format!(
@@ -639,10 +633,10 @@ pub async fn get_players(app: &App, req: Req) -> ApiResult {
 
     let mut tx = app.db.begin(None).await?;
     let players = tx
-        .player_stats_list_public(&ListPublicOptions {
+        .player_stats_list_public(&PlayerStatsListOptions {
             search,
-            limit: limit as usize,
-            offset: usize::try_from(offset).unwrap_or(usize::MAX),
+            limit: limit as i64,
+            offset: i64::try_from(offset).unwrap_or(i64::MAX),
         })
         .await?;
     tx.commit().await?;

@@ -30,8 +30,8 @@ use jackioh_engine::validator;
 use jackioh_engine::wire::emotes::is_portrait_id;
 
 use crate::api::http::{
-    ApiError, ApiErrorCode, ApiResult, AuthLevel, Req, Route, bad_request, handler, log_info, now_ms, ok_of,
-    optional_str, route, str, string_list, to_json,
+    ApiError, ApiErrorCode, ApiResult, Req, bad_request, log_info, now_ms, ok_of, optional_str, str, string_list,
+    to_json,
 };
 use crate::app::App;
 use crate::config::{DECK_NAME_MAX_LENGTH, DRAFT_ISSUES_REPORTED_MAX, MAX_SAVED_DECKS, MAX_SAVED_TRIOS};
@@ -407,23 +407,16 @@ fn trio_outcome_name(outcome: &TrioUpsertOutcome) -> &'static str {
 // Routes
 // ---------------------------------------------------------------------------
 
-/// `GET /api/decks`, `PUT`/`DELETE /api/decks/:id`, `PUT`/`DELETE /api/trios/:id` and
-/// `POST /api/trios/import` (R341), in TS's order. All `Active`, so a pending account gets 403 from
-/// each (§9.4: "no collection, loadout, queue or match").
-pub fn create_deck_routes() -> Vec<Route> {
-    vec![
-        route("GET", "/api/decks", AuthLevel::Active, handler!(get_decks)),
-        route("PUT", "/api/decks/:id", AuthLevel::Active, handler!(put_deck)),
-        route("DELETE", "/api/decks/:id", AuthLevel::Active, handler!(delete_deck)),
-        route("PUT", "/api/trios/:id", AuthLevel::Active, handler!(put_trio)),
-        route("POST", "/api/trios/import", AuthLevel::Active, handler!(import_trio)),
-        route("DELETE", "/api/trios/:id", AuthLevel::Active, handler!(delete_trio)),
-    ]
-}
+// TS's `createDeckRoutes()`, in its order, is six rows of `app.rs`'s `ROUTES`, every one
+// `AuthLevel::Active`, so a pending account gets 403 from each (§9.4: "no collection, loadout,
+// queue or match"):
+//   GET /api/decks → list_decks;           PUT /api/decks/:id → put_deck;
+//   DELETE /api/decks/:id → delete_deck;   PUT /api/trios/:id → put_trio;
+//   POST /api/trios/import → import_trio;  DELETE /api/trios/:id → delete_trio.
 
 /// `GET /api/decks`. Everything the builder opens on, oldest first, with the server's catalog
 /// version so a stale client finds out before it builds rather than at save.
-pub async fn get_decks(app: &App, req: Req) -> ApiResult {
+pub async fn list_decks(app: &App, req: Req) -> ApiResult {
     #[derive(Serialize)]
     #[serde(rename_all = "camelCase")]
     struct DecksBody {
@@ -477,7 +470,7 @@ pub async fn put_deck(app: &App, req: Req) -> ApiResult {
                 created_at: now,
                 updated_at: now,
             },
-            MAX_SAVED_DECKS as usize,
+            MAX_SAVED_DECKS as i64,
         )
         .await?;
     match outcome {
@@ -551,7 +544,7 @@ pub async fn put_trio(app: &App, req: Req) -> ApiResult {
                 created_at: now,
                 updated_at: now,
             },
-            MAX_SAVED_TRIOS as usize,
+            MAX_SAVED_TRIOS as i64,
         )
         .await?;
     match outcome {
@@ -639,7 +632,7 @@ pub async fn import_trio(app: &App, req: Req) -> ApiResult {
                     created_at: at,
                     updated_at: at,
                 },
-                MAX_SAVED_DECKS as usize,
+                MAX_SAVED_DECKS as i64,
             )
             .await?;
         if !matches!(outcome, UpsertOutcome::Created | UpsertOutcome::Updated) {
@@ -657,7 +650,7 @@ pub async fn import_trio(app: &App, req: Req) -> ApiResult {
                 created_at: now,
                 updated_at: now,
             },
-            MAX_SAVED_TRIOS as usize,
+            MAX_SAVED_TRIOS as i64,
         )
         .await?;
     if !matches!(outcome, TrioUpsertOutcome::Created | TrioUpsertOutcome::Updated) {
@@ -851,7 +844,8 @@ fn assert_legal(
 
 /// A copy, so a frozen deck can never alias the stored one.
 fn freeze(deck: &SavedDeck) -> FrozenDeck {
-    FrozenDeck { name: deck.name.clone(), cards: deck.cards.clone(), portrait: deck.portrait.clone() }
+    // R642: the portrait freezes with the deck, present (a saved deck always has one, or null).
+    FrozenDeck { name: deck.name.clone(), cards: deck.cards.clone(), portrait: Some(deck.portrait.clone()) }
 }
 
 /// Loads the chosen deck or trio, checks it by R253 and returns the frozen copy the ticket or the

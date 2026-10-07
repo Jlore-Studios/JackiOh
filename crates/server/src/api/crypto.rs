@@ -64,17 +64,19 @@ pub fn is_well_formed_code(normalized: &str, length: usize) -> bool {
     normalized.chars().all(|ch| CODE_ALPHABET.contains(ch))
 }
 
-/// The two keys TS's `createHashes` takes: one pepper, two domains (`<pepper>:code`, `<pepper>:ip`).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Peppers {
-    pub code: String,
-    pub ip: String,
+/// TS `Hashes`: the keyed digests of an invite code and of a client address, each under its own
+/// key (TS's `peppers: { code, ip }`).
+#[derive(Clone, PartialEq, Eq)]
+pub struct Hashes {
+    code_pepper: String,
+    ip_pepper: String,
 }
 
-/// TS `Hashes`: the keyed digests of an invite code and of a client address.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Hashes {
-    peppers: Peppers,
+/// Never prints the peppers.
+impl std::fmt::Debug for Hashes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Hashes { .. }")
+    }
 }
 
 /// HMAC-SHA256 of `value` under `key`, as lower-case hex.
@@ -91,27 +93,29 @@ fn hex(bytes: &[u8]) -> String {
 impl Hashes {
     /// §9.4: an invite code's hash, after `normalize_code`.
     pub fn code(&self, plain: &str) -> String {
-        digest(&self.peppers.code, &normalize_code(plain))
+        digest(&self.code_pepper, &normalize_code(plain))
     }
 
     /// §9.4, §9.8: a client address's hash, trimmed and lower-cased first.
     pub fn ip(&self, raw: &str) -> String {
-        digest(&self.peppers.ip, &raw.trim().to_lowercase())
+        digest(&self.ip_pepper, &raw.trim().to_lowercase())
     }
 }
 
 /// §9.4: codes are stored hashed. A keyed SHA-256 rather than a password hash, because redemption
 /// must find a code *by hash* and 80 bits of entropy needs no work factor; the pepper keeps a
-/// stolen table from being brute-forced offline.
-pub fn create_hashes(peppers: Peppers) -> Hashes {
-    Hashes { peppers }
+/// stolen table from being brute-forced offline. The two arguments are TS's `peppers.code` and
+/// `peppers.ip`, each already in its domain (`hashes_for_pepper` builds both from one pepper).
+pub fn create_hashes(code_pepper: &str, ip_pepper: &str) -> Hashes {
+    Hashes { code_pepper: code_pepper.to_string(), ip_pepper: ip_pepper.to_string() }
 }
 
-/// §9.4, §9.8: one pepper in the environment (`CODE_PEPPER`), two domains. Separating them means an
-/// invite-code hash and an IP hash can never collide, and neither is reversible without the pepper.
-/// (TS's composition root built this; every caller here builds it from `app.env.code_pepper`.)
+/// §9.4, §9.8: one pepper in the environment (`CODE_PEPPER`), two domains, `<pepper>:code` and
+/// `<pepper>:ip`. Separating them means an invite-code hash and an IP hash can never collide, and
+/// neither is reversible without the pepper. (TS's composition root built this; every caller here
+/// builds it from `app.env.code_pepper`.)
 pub fn hashes_for_pepper(pepper: &str) -> Hashes {
-    create_hashes(Peppers { code: format!("{pepper}:code"), ip: format!("{pepper}:ip") })
+    create_hashes(&format!("{pepper}:code"), &format!("{pepper}:ip"))
 }
 
 /// SPEC §11 R612: a player's public tag on the leaderboard and the match screen, `PLAYER_TAG_LENGTH`

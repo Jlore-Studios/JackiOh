@@ -23,10 +23,7 @@ use serde_json::{Value, json};
 use jackioh_engine::PerPlayer;
 
 use crate::api::crypto::player_tag;
-use crate::api::http::{
-    ApiError, ApiErrorCode, ApiResult, AuthLevel, Req, Route, bad_request, handler, log_alert, log_info, now_ms,
-    ok_of, route,
-};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, log_alert, log_info, now_ms, ok_of};
 use crate::app::App;
 use crate::db::store::{
     BotRating, Pilot, Profile, RatedGameKind, RatedGameRow, RatedReason, RatedSide, Season, SeasonStanding,
@@ -308,7 +305,7 @@ pub async fn plan_ranked_game(t: &mut Tx<'_>, _app: &App, input: &RankedGameInpu
         before_of(t, &profiles, first, &input.id).await?,
         before_of(t, &profiles, second, &input.id).await?,
     ];
-    let rated = rate_game(before[0].glicko.clone(), before[1].glicko.clone(), score_of(input.winner_side, 0));
+    let rated = rate_game(&before[0].glicko, &before[1].glicko, score_of(input.winner_side, 0));
     // R672: a double-or-nothing rematch doubles each side's rating movement around its own before:
     // one update, then the delta twice. Deviation and volatility are the single update's — a doubled
     // game moves the rating twice without sharpening the confidence twice.
@@ -358,11 +355,11 @@ pub async fn plan_ranked_game(t: &mut Tx<'_>, _app: &App, input: &RankedGameInpu
             .filter(|candidate| candidate.rank.profile_id != *profile_id && candidate.rank.ladder.is_some())
             .map(|candidate| candidate.rating)
             .collect();
-        let target = target_ladder(percentile_of(after[index].rating, &others));
+        let target = target_ladder(&percentile_of(after[index].rating, &others));
         let start = row_before.clone().unwrap_or_else(|| fresh_rank(&season.id, profile_id, input.at));
         let row_after = apply_ranked_game(
             &start,
-            ApplyRankedGameInput { result: result_of(input.winner_side, index), target, at: input.at },
+            &ApplyRankedGameInput { result: result_of(input.winner_side, index), target, at: input.at },
         );
         ranks.insert(profile_id.clone(), RankChange { before: row_before, after: row_after });
     }
@@ -473,7 +470,7 @@ pub async fn commit_ranked_game(t: &mut Tx<'_>, plan: &RankedPlan, at: i64) -> R
         t.ranked_put_rank(rank).await?;
     }
     for peak in &writes.peaks {
-        t.ranked_note_peak_jlorious(&plan.row.season_id, &peak.profile_id, peak.position).await?;
+        t.ranked_note_peak_jlorious(&plan.row.season_id, &peak.profile_id, i64::from(peak.position)).await?;
     }
     t.ranked_record_game(&plan.row).await?;
     Ok(())
@@ -713,14 +710,9 @@ fn caller_profile(req: &Req) -> Result<&Profile, ApiError> {
     req.caller.as_ref().map(|caller| &caller.profile).ok_or_else(|| bad_request("this endpoint needs a signed-in profile"))
 }
 
-/// `GET /api/ranked`, `GET /api/leaderboard` and `GET /api/matches/:matchId/ranks`, in TS's order.
-pub fn create_ranked_routes() -> Vec<Route> {
-    vec![
-        route("GET", "/api/ranked", AuthLevel::Active, handler!(get_ranked)),
-        route("GET", "/api/leaderboard", AuthLevel::Active, handler!(get_leaderboard)),
-        route("GET", "/api/matches/:matchId/ranks", AuthLevel::Active, handler!(get_match_ranks)),
-    ]
-}
+// TS's `createRankedRoutes()`, in its order, is three `AuthLevel::Active` rows of `app.rs`'s
+// `ROUTES`: GET /api/ranked → get_ranked; GET /api/leaderboard → get_leaderboard;
+// GET /api/matches/:matchId/ranks → get_match_ranks.
 
 /// `GET /api/ranked`: the caller's own rank, record, streak, tag and season badges. Never the
 /// rating (R612).

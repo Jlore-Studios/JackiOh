@@ -33,9 +33,7 @@ use indexmap::IndexMap;
 use serde::Serialize;
 use serde_json::{Value, json};
 
-use crate::api::http::{
-    ApiError, ApiErrorCode, ApiResult, AuthLevel, Req, Route, bad_request, handler, log_info, now_ms, ok_of, route,
-};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, log_info, now_ms, ok_of};
 use crate::app::App;
 use crate::config::{
     PLAYER_SETTINGS_BYTES_MAX, PLAYER_SETTINGS_GROUPS_MAX, PLAYER_SETTINGS_KEYS_MAX, PLAYER_SETTINGS_NAME_MAX_LENGTH,
@@ -176,14 +174,9 @@ fn caller_profile(req: &Req) -> Result<&Profile, ApiError> {
     req.caller.as_ref().map(|caller| &caller.profile).ok_or_else(|| bad_request("this endpoint needs a signed-in profile"))
 }
 
-/// `GET` and `PUT /api/settings`, in TS's order. Both `Active`, so a pending account gets 403 from
-/// each (§9.4).
-pub fn create_settings_routes() -> Vec<Route> {
-    vec![
-        route("GET", "/api/settings", AuthLevel::Active, handler!(get_settings)),
-        route("PUT", "/api/settings", AuthLevel::Active, handler!(put_settings)),
-    ]
-}
+// TS's `createSettingsRoutes()` is two rows of `app.rs`'s `ROUTES`, `GET` and `PUT /api/settings`
+// (→ get_settings, put_settings). Both `AuthLevel::Active`, so a pending account gets 403 from each
+// (§9.4).
 
 /// `GET /api/settings`.
 pub async fn get_settings(app: &App, req: Req) -> ApiResult {
@@ -206,8 +199,8 @@ pub async fn put_settings(app: &App, req: Req) -> ApiResult {
         .player_settings_merge(
             &PlayerSettingsMergeInput { profile_id: profile.id.clone(), groups, at: now },
             &PlayerSettingsLimits {
-                max_groups: PLAYER_SETTINGS_GROUPS_MAX as usize,
-                max_bytes: PLAYER_SETTINGS_BYTES_MAX as usize,
+                max_groups: PLAYER_SETTINGS_GROUPS_MAX as i64,
+                max_bytes: PLAYER_SETTINGS_BYTES_MAX as i64,
             },
         )
         .await?;

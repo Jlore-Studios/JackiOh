@@ -16,11 +16,9 @@
 //! `consoleLogger` is `log_info`/`log_warn`/`log_alert` below over `tracing`.
 
 use std::collections::VecDeque;
-use std::future::Future;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
-use std::pin::Pin;
-use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::sync::{Mutex, MutexGuard};
+use std::time::Duration;
 
 use axum::body::Body;
 use axum::extract::{ConnectInfo, Request};
@@ -30,7 +28,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
-use crate::app::App;
+use crate::app::{App, Handler, Route};
 use crate::auth::AuthUser;
 use crate::config::{API_MAX_BODY_BYTES, API_REQUESTS_PER_MINUTE, IPV6_RATE_LIMIT_PREFIX_BITS, MAX_TRUSTED_PROXY_HOPS, RATING_START};
 use crate::db::store::{Profile, ProfileCreateInput, ProfileStatus, StoreError};
@@ -570,15 +568,11 @@ pub fn deck_list(body: &Value, key: &str) -> Result<Vec<Vec<String>>, ApiError> 
 // Routes
 // ---------------------------------------------------------------------------
 
-/// What a handler returns: its response, or the error `dispatch` answers with.
+/// What a handler returns: its response, or the error `dispatch` answers with. Every handler, here
+/// and in part 19, is `pub async fn <name>(app: &App, req: Req) -> ApiResult`; `app.rs` boxes each
+/// into its `Handler` with `h!` and lists them in `ROUTES` as `(method, path, AuthLevel, handler)`,
+/// in TS's `allRoutes()` order (TS's `Route`, `route()` and `create*Routes()`).
 pub type ApiResult = Result<Response, ApiError>;
-
-/// A handler's future, boxed so one table can hold every handler (SURFACE §11.2).
-pub type HandlerFuture<'a> = Pin<Box<dyn Future<Output = ApiResult> + Send + 'a>>;
-
-/// A handler as the route table holds it: `pub async fn <name>(app: &App, req: Req) -> ApiResult`
-/// wrapped by `handler!`.
-pub type Handler = for<'a> fn(&'a App, Req) -> HandlerFuture<'a>;
 
 /// TS `RouteAuth`.
 ///
@@ -592,36 +586,6 @@ pub enum AuthLevel {
     User,
     Active,
 }
-
-/// One row of the route table.
-#[derive(Clone, Copy)]
-pub struct Route {
-    /// `GET`, `POST`, `PUT`, `PATCH` or `DELETE`.
-    pub method: &'static str,
-    /// `/api/rooms/:code/join`; `:name` segments land in `req.params`.
-    pub path: &'static str,
-    pub auth: AuthLevel,
-    pub handler: Handler,
-}
-
-pub const fn route(method: &'static str, path: &'static str, auth: AuthLevel, handler: Handler) -> Route {
-    Route { method, path, auth, handler }
-}
-
-/// Wraps `pub async fn name(app: &App, req: Req) -> ApiResult` into a `Handler`:
-/// `route("GET", "/api/decks", AuthLevel::Active, handler!(get_decks))`.
-macro_rules! handler {
-    ($f:path) => {{
-        fn boxed<'a>(
-            app: &'a $crate::app::App,
-            req: $crate::api::http::Req,
-        ) -> $crate::api::http::HandlerFuture<'a> {
-            ::std::boxed::Box::pin($f(app, req))
-        }
-        boxed as $crate::api::http::Handler
-    }};
-}
-pub(crate) use handler;
 
 /// TS `decodeURIComponent`, or none where it would throw: a `%` not followed by two hex digits, or
 /// bytes that are not UTF-8.
@@ -796,7 +760,7 @@ struct RateLimiterState {
 /// not hold a timestamp list for every account that ever called it.
 ///
 /// The limiter is the router's state (TS held it in `createRouter`'s closure), so it also holds the
-/// router's R190 signal, the fewest `X-Forwarded-For` entries seen (see `dispatch_with`). One lives
+/// router's R190 signal, the fewest `X-Forwarded-For` entries seen (see `dispatch`). One lives
 /// on each `App`: a fresh app starts with an empty window, so one test's flood cannot leak into
 /// the next.
 pub struct RateLimiter {
@@ -893,13 +857,9 @@ impl Default for RateLimiter {
     }
 }
 
-/// The router (TS `createRouter(allRoutes(), deps)`'s closure) over `app.rs`'s `ROUTES`: the one
-/// fallback of `app::router`, behind the CORS layer, which answers preflights first.
-pub async fn dispatch(app: Arc<App>, request: Request) -> Response {
-    dispatch_with(&app, &crate::app::ROUTES[..], request).await
-}
-
-/// The router over any route table, in its order.
+/// The router (TS `createRouter(allRoutes(), deps)`'s closure): `routes` (`app.rs`'s `ROUTES`) tried
+/// in order. It is the one fallback of `app::router`, behind the CORS layer, which answers
+/// preflights first.
 ///
 /// §9.8's "per-account rate limit at the API" is `app.limiter`. R137's reasoning applies to this
 /// half of §9.8 as much as to the actor's: a single shared counter lets one caller spend everybody
@@ -922,7 +882,7 @@ pub async fn dispatch(app: Arc<App>, request: Request) -> Response {
 /// hand the key back to the caller. So a line is logged each time a request carries fewer entries
 /// than any before it. Counts past `MAX_TRUSTED_PROXY_HOPS + 1` are all "too many", so a caller
 /// can cause at most a handful of lines per router. No address is ever logged: two numbers only.
-pub async fn dispatch_with(app: &App, routes: &[Route], request: Request) -> Response {
+pub async fn dispatch(app: &App, routes: &[Route], request: Request) -> Response {
     let (parts, body) = request.into_parts();
     let path = parts.uri.path().to_string();
     let context = parts
@@ -948,16 +908,17 @@ pub async fn dispatch_with(app: &App, routes: &[Route], request: Request) -> Res
 
     let mut path_matched = false;
     let mut body = Some(body);
-    for candidate in routes {
-        let Some(params) = match_path(candidate.path, &path) else {
+    for (method, pattern, auth, handler) in routes {
+        let Some(params) = match_path(pattern, &path) else {
             continue;
         };
         path_matched = true;
-        if candidate.method != parts.method.as_str() {
+        if *method != parts.method.as_str() {
             continue;
         }
         let body = body.take().unwrap_or_else(Body::empty);
-        let outcome = run_route(app, candidate, params, &parts, body, &context, trusted_proxy_hops, &path).await;
+        let outcome =
+            run_route(app, *auth, *handler, params, &parts, body, &context, trusted_proxy_hops, &path).await;
         return match outcome {
             Ok(response) => response,
             Err(error) if error.code == ApiErrorCode::Internal => {
@@ -978,7 +939,8 @@ pub async fn dispatch_with(app: &App, routes: &[Route], request: Request) -> Res
 #[allow(clippy::too_many_arguments)]
 async fn run_route(
     app: &App,
-    candidate: &Route,
+    auth: AuthLevel,
+    handler: Handler,
     params: IndexMap<String, String>,
     parts: &axum::http::request::Parts,
     body: Body,
@@ -1038,7 +1000,7 @@ async fn run_route(
     if let Some(error) = auth_error {
         return Err(error);
     }
-    if candidate.auth == AuthLevel::Active {
+    if auth == AuthLevel::Active {
         if let Some(resolved) = &caller {
             assert_active(&resolved.profile)?;
         }
@@ -1052,24 +1014,17 @@ async fn run_route(
         address,
         headers: parts.headers.clone(),
     };
-    (candidate.handler)(app, req).await
+    handler(app, req).await
 }
 
 // ---------------------------------------------------------------------------
 // Timing
 // ---------------------------------------------------------------------------
 
-/// TS `timers.now()`: epoch milliseconds, read off tokio's clock so a test's `tokio::time::pause()`
-/// and `advance()` move it (SURFACE §11.3: `Timers` → `tokio::time`). The wall clock is read once,
-/// the first time anything asks; every later reading is that instant plus tokio's elapsed time.
-pub fn now_ms() -> i64 {
-    static BASE: OnceLock<(i64, tokio::time::Instant)> = OnceLock::new();
-    let (epoch, at) = *BASE.get_or_init(|| {
-        let wall = SystemTime::now().duration_since(UNIX_EPOCH).map(|elapsed| elapsed.as_millis() as i64).unwrap_or(0);
-        (wall, tokio::time::Instant::now())
-    });
-    epoch + tokio::time::Instant::now().saturating_duration_since(at).as_millis() as i64
-}
+/// TS `timers.now()`: epoch milliseconds, the server's one clock (`app::now_ms`: the wall clock
+/// anchored once and advanced by tokio's, so a test's `tokio::time::pause()` and `advance()` move it;
+/// SURFACE §11.3: `Timers` → `tokio::time`). Re-exported so every API module reads the same clock.
+pub use crate::app::now_ms;
 
 pub async fn sleep(ms: i64) {
     if ms <= 0 {
