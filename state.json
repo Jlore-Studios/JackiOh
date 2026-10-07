@@ -3338,8 +3338,10 @@
     "what": "build #436 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-07T15:21:31Z",
-    "notes": [],
+    "at": "2026-10-07T15:34:36Z",
+    "notes": [
+      "#438: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
