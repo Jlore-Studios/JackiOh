@@ -104,7 +104,11 @@ async fn record_live_game_inner(app: &App, match_id: &str) -> Result<Option<Game
         entries.push(serde_json::to_value(&entry.action).map_err(message_of)?);
     }
     let args = fold_args_of(&row, entries).map_err(message_of)?;
-    let Some(game) = jackioh_engine::summarize_game(&args) else {
+    // TS's `createGame` threw on decks it refused, inside this function's `try`; the engine panics,
+    // and the panic is that error (as `actor::registry` reads it at a start).
+    let summarized = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| jackioh_engine::summarize_game(&args)))
+        .map_err(crate::actor::registry::panic_text)?;
+    let Some(game) = summarized else {
         // The result came from this log's own last action, so a fold that does not reach it is a
         // determinism break (§9.3), and says so as loudly as the registry's fold errors do.
         tracing::error!(event = "game.record.unfinished", matchId = %match_id, actions = actions);

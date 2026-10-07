@@ -112,6 +112,22 @@ fn deps(patch_version: &str) -> SeasonDeps {
     SeasonDeps { patch_version: patch_version.to_string() }
 }
 
+/// The version of the next season's build: one minor past the compiled-in catalog version, which
+/// is the season the test app rates in. TS rated its tests in `TEST_PATCH_VERSION` (`v0.1.1`) and
+/// opened `v0.2.0`'s season over it; the Rust server rates in `jackioh_cards::catalog_version()`'s
+/// season (SURFACE §11.3), so the season these tests open is the one after that.
+fn next_patch() -> String {
+    let current = season_id_of(TEST_CATALOG_VERSION);
+    let (major, minor) = current.trim_start_matches('v').split_once('.').expect("v<major>.<minor>");
+    let minor: u64 = minor.parse().expect("a minor version");
+    format!("v{major}.{}.0", minor + 1)
+}
+
+/// `next_patch`'s season (TS's `"v0.2"`).
+fn next_season() -> String {
+    season_id_of(&next_patch())
+}
+
 mod season_start_args {
     use super::*;
 
@@ -135,16 +151,16 @@ mod r609_start_season {
         let app = test_app().await;
         rated_pair(&app).await;
 
-        let opened = js(&start_season(&app.db, &deps("v0.2.0"), SeasonStartOptions { dry_run: false })
+        let opened = js(&start_season(&app.db, &deps(&next_patch()), SeasonStartOptions { dry_run: false })
             .await
             .expect("startSeason"));
-        assert_eq!(opened["season"]["id"], "v0.2");
+        assert_eq!(opened["season"]["id"], next_season().as_str());
         assert_eq!(opened["opened"], true);
         assert_eq!(opened["reset"]["players"].as_i64(), Some(2));
-        assert_eq!(season_ids(&app.db).await, vec![season_id_of(TEST_CATALOG_VERSION), "v0.2".to_string()]);
+        assert_eq!(season_ids(&app.db).await, vec![season_id_of(TEST_CATALOG_VERSION), next_season()]);
 
         // And it is idempotent: the season the server boot would open is already there.
-        let again = js(&start_season(&app.db, &deps("v0.2.0"), SeasonStartOptions { dry_run: false })
+        let again = js(&start_season(&app.db, &deps(&next_patch()), SeasonStartOptions { dry_run: false })
             .await
             .expect("startSeason again"));
         assert_eq!(again["opened"], false);
@@ -159,12 +175,12 @@ mod r609_start_season {
         let rating = |profile: &Value| profile["rating"].as_f64().expect("a rating");
         let mean = (rating(&a) + rating(&b)) / 2.0;
 
-        let opened = js(&start_season(&app.db, &deps("v0.2.0"), SeasonStartOptions { dry_run: true })
+        let opened = js(&start_season(&app.db, &deps(&next_patch()), SeasonStartOptions { dry_run: true })
             .await
             .expect("startSeason --dry-run"));
 
         // The report is the real reset's: two players, pulled toward their mean by the strength.
-        assert_eq!(opened["season"]["id"], "v0.2");
+        assert_eq!(opened["season"]["id"], next_season().as_str());
         assert_eq!(opened["opened"], true);
         assert_eq!(opened["reset"]["players"].as_i64(), Some(2));
         assert_close(opened["reset"]["mean"].as_f64().expect("a mean"), mean);
@@ -182,7 +198,7 @@ mod r609_start_season {
         assert_eq!(b_after["ratingDeviation"], b["ratingDeviation"]);
 
         // A real run right after does exactly what the dry run reported.
-        let applied = js(&start_season(&app.db, &deps("v0.2.0"), SeasonStartOptions { dry_run: false })
+        let applied = js(&start_season(&app.db, &deps(&next_patch()), SeasonStartOptions { dry_run: false })
             .await
             .expect("startSeason"));
         assert_eq!(applied["opened"], true);

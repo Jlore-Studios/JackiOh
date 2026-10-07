@@ -19,7 +19,11 @@ jackioh-engine = { workspace = true }
 jackioh-cards = { workspace = true }
 jackioh-ai = { workspace = true }
 serde = { workspace = true }
-serde_json = { workspace = true }
+# `float_roundtrip`: JSON numbers parse to the nearest double, as `JSON.parse` does (serde_json's
+# default parser may land one ulp off: `0.22727272727272727`, 10/44, read back as
+# `0.2272727272727273`), so a body, a stored JSON column or a test's read of a response holds the
+# number that was written.
+serde_json = { workspace = true, features = ["float_roundtrip"] }
 # SURFACE §11.2's `Req` carries `indexmap::IndexMap` params and query.
 indexmap = { workspace = true }
 axum = { workspace = true }

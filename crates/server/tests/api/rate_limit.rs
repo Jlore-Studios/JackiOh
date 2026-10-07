@@ -133,7 +133,16 @@ impl<S: tracing::Subscriber> tracing_subscriber::Layer<S> for Logged {
     fn on_event(&self, event: &tracing::Event<'_>, _context: tracing_subscriber::layer::Context<'_, S>) {
         let mut fields = Fields::default();
         event.record(&mut fields);
-        self.0.lock().expect("log lock").push(fields.0);
+        // `api::http::log_warn(event, data)` writes TS's data object as one `data` field of JSON
+        // text; its keys are the line's fields, as TS's logger kept them.
+        let mut line = fields.0;
+        if let Some(Ok(Value::Object(data))) = line.get("data").map(|text| serde_json::from_str::<Value>(text)) {
+            line.shift_remove("data");
+            for (key, value) in data {
+                line.insert(key, value.to_string());
+            }
+        }
+        self.0.lock().expect("log lock").push(line);
     }
 }
 

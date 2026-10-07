@@ -84,7 +84,7 @@ impl Default for Registry {
 }
 
 /// What a panic carried, as TS's thrown message.
-fn panic_text(payload: Box<dyn std::any::Any + Send>) -> String {
+pub(crate) fn panic_text(payload: Box<dyn std::any::Any + Send>) -> String {
     if let Some(text) = payload.downcast_ref::<&str>() {
         (*text).to_string()
     } else if let Some(text) = payload.downcast_ref::<String>() {
