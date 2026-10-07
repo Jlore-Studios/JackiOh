@@ -104,7 +104,8 @@ fn both(script: Script) -> CardScripts {
 pub static PAPAYA_DEFS: LazyLock<Vec<CardDef>> =
     LazyLock::new(|| vec![curve(), body(), snare(), field(), token(), curve_quickdraw()]);
 
-fn papaya_scripts() -> IndexMap<String, CardScripts> {
+/// TS `PAPAYA_SCRIPTS` (module-private there), as a call.
+pub fn papaya_scripts() -> IndexMap<String, CardScripts> {
     let mut table = IndexMap::new();
     table.insert(curve().id, both(curve_script()));
     table.insert(

@@ -48,10 +48,19 @@ pub fn resolving_card(state: &mut GameState, def_id: &str, player: PlayerId, rad
     card
 }
 
-/// What the sink a helper ran held besides the state (TS returned the sink itself).
+/// What the sink a helper ran held besides the state (TS returned the sink itself). It derefs to its
+/// events, the one part of the sink TS's callers read (`sink.events`).
 pub struct SinkResult {
     pub events: Vec<GameEvent>,
     pub rng: Rng,
+}
+
+impl std::ops::Deref for SinkResult {
+    type Target = Vec<GameEvent>;
+
+    fn deref(&self) -> &Vec<GameEvent> {
+        &self.events
+    }
 }
 
 /// Run a resolving card's Cry the resumable way and settle, as the pipeline does; returns the sink.
@@ -182,13 +191,13 @@ pub struct Replayable {
 /// opening hands hold them whatever the shuffle; both mulligans keep everything, and it is p1's first
 /// main phase. The log and decks go to `fold`, which must rebuild the very same state. TS's default:
 /// `p2Cards = []`.
-pub fn replayable(seed: &str, p1_cards: &[&str], p2_cards: &[&str]) -> Replayable {
+pub fn replayable(seed: &str, p1_cards: &[String], p2_cards: &[String]) -> Replayable {
     setup_catalog();
     register_prompt_fixtures();
     let mut first = vanilla_deck(DECK_SIZE - p1_cards.len() as i32, 1);
-    first.extend(p1_cards.iter().map(|id| id.to_string()));
+    first.extend(p1_cards.iter().cloned());
     let mut second = vanilla_deck(DECK_SIZE - p2_cards.len() as i32, 21);
-    second.extend(p2_cards.iter().map(|id| id.to_string()));
+    second.extend(p2_cards.iter().cloned());
     let decks = (first, second);
     let mut log: Vec<Action> = Vec::new();
     let mut state = begin_game(&create_game(&CreateGameOptions {

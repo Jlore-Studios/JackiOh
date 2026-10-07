@@ -624,3 +624,13 @@ pub fn catalog() -> CardDefs {
 pub fn scripts() -> IndexMap<String, CardScripts> {
     TURN_SCRIPTS.clone()
 }
+
+/// `TURN_SCRIPTS` as a call, for a caller that names the TS constant as a function.
+pub fn turn_scripts() -> IndexMap<String, CardScripts> {
+    TURN_SCRIPTS.clone()
+}
+
+/// `TURN_DEFS` as a call.
+pub fn turn_defs() -> Vec<CardDef> {
+    TURN_DEFS.clone()
+}

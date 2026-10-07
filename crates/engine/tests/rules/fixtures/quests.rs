@@ -459,7 +459,8 @@ pub static QUEST_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     defs
 });
 
-fn quest_scripts() -> IndexMap<String, CardScripts> {
+/// TS `QUEST_SCRIPTS` (module-private there), as a call.
+pub fn quest_scripts() -> IndexMap<String, CardScripts> {
     let mut table: IndexMap<String, CardScripts> = IndexMap::new();
     table.insert(
         tree().id,
