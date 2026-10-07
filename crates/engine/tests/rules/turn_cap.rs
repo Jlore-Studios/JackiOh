@@ -27,7 +27,7 @@ fn act(state: &GameState, body: Value) -> GameState {
 
 /// Past both mulligans, in p1's main phase on turn 1, with nothing ending a turn but End turn.
 fn playing(seed: &str) -> GameState {
-    let decks = (vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 21));
+    let decks = (vanilla_deck(Some(DECK_SIZE), Some(1)), vanilla_deck(Some(DECK_SIZE), Some(21)));
     let mut state = begin_game(&new_game(&format!("turn-cap-{seed}"), Some(decks))).state;
     for player in [PlayerId::P1, PlayerId::P2] {
         let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();
@@ -55,8 +55,8 @@ mod r389_b4_3_the_turn_cap {
         assert_eq!(TURN_CAP_PLAYER_TURNS, 60);
         let mut state = playing("reserves");
         // #75 Infinite Reserves turns every empty-library draw into a card, so no hero ever fatigues.
-        put(&mut state, &infinite_reserves.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
-        put(&mut state, &infinite_reserves.id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        put(&mut state, &infinite_reserves().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
+        put(&mut state, &infinite_reserves().id, slot(PlayerId::P2, Row::Backrow, 1), Default::default());
         let over = pass_until_over(state);
         assert_eq!(
             over.result,

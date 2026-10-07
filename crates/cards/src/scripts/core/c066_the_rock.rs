@@ -83,8 +83,14 @@ mod tests {
     /// open by itself.)
     const ANCHOR: &str = "core-010"; // Rapid Replenish, Spell, cost 0 — always an affordable play.
 
-    /// `scenario(opts)` with ANCHOR appended to p1's hand.
+    /// TS `toThrow(/[Tt]ribute/)`, as a hand check (no regex crate): the refusal names the Tribute,
+    /// capitalised or not, so the word's common tail is what is matched.
+    const TRIBUTE_TEXT: &str = "ribute";
+
+    /// `scenario(opts)` with ANCHOR appended to p1's hand. The shipped cards are registered first (the
+    /// TS globalSetup's `registerAll()`; idempotent).
     fn board(opts: Value) -> Scenario {
+        crate::register_all();
         let mut opts = opts;
         let mut p1 = opts.get("p1").cloned().unwrap_or_else(|| json!({}));
         let mut hand = p1.get("hand").and_then(Value::as_array).cloned().unwrap_or_default();
@@ -96,7 +102,7 @@ mod tests {
 
     /// The keyword set §10.4 computes for a unit, as the engine's own view reports it.
     fn keywords_of(s: &Scenario, player: PlayerId, lane: usize) -> Vec<String> {
-        let view = s.view(Some(PlayerId::P1));
+        let view = s.view(PlayerId::P1);
         let side = if player == PlayerId::P1 { &view.you } else { &view.opponent };
         side.units
             .get(lane - 1)
@@ -112,6 +118,7 @@ mod tests {
 
     #[test]
     fn s8_3_the_script_carries_only_the_tribute_cost_both_keywords_are_catalog_data_s10_4_layer_1() {
+        crate::register_all();
         // Granting Indestructible or Immutable here would be a second source of truth (see #25).
         let scripts = super::script();
         let def = crate::card_def(super::ID);
@@ -130,6 +137,7 @@ mod tests {
 
     #[test]
     fn r81_r90_the_tribute_travels_in_the_play_actions_own_list_so_the_card_declares_no_targets() {
+        crate::register_all();
         let scripts = super::script();
         assert!(scripts.base.targets.is_empty());
         assert!(scripts.base.modes.is_empty());
@@ -137,6 +145,7 @@ mod tests {
 
     #[test]
     fn s8_conventions_the_radiant_cell_adds_a_keyword_only_so_the_radiant_script_keeps_tribute_1() {
+        crate::register_all();
         let scripts = super::script();
         // TS `toBe(base)`: the radiant face is the base script, so every part of it matches.
         assert_eq!(scripts.radiant.static_flags, scripts.base.static_flags);
@@ -152,15 +161,14 @@ mod tests {
     #[test]
     fn build_row_66_refuses_the_play_with_no_unit_on_the_board_to_tribute_s6_3() {
         let mut s = board(json!({ "p1": { "hand": [ROCK] } }));
-        s.expect_refused_with(|s| { s.play(ROCK, json!({})); }, "Tribute");
-        s.expect_in_zone(ROCK, "hand");
-        s.expect_mana(PlayerId::P1, 4);
+        s.expect_refused_with(|s| s.play(ROCK, json!({})), TRIBUTE_TEXT);
+        s.expect_in_zone(ROCK, "hand").expect_mana(PlayerId::P1, 4);
     }
 
     #[test]
     fn build_row_66_refuses_the_play_when_a_unit_is_available_but_the_play_names_none() {
         let mut s = board(json!({ "p1": { "hand": [ROCK], "field": [TIMMY] } }));
-        s.expect_refused_with(|s| { s.play(ROCK, json!({})); }, "Tribute");
+        s.expect_refused_with(|s| s.play(ROCK, json!({})), TRIBUTE_TEXT);
         s.expect_in_zone(TIMMY, "field");
     }
 
@@ -168,11 +176,11 @@ mod tests {
     fn s6_3_plays_for_the_printed_4_once_a_unit_pays_the_tribute_and_that_unit_dies() {
         let mut s = board(json!({ "p1": { "hand": [ROCK], "field": [TIMMY] } }));
         s.play(ROCK, json!({ "tributes": [TIMMY] }));
-        s.expect_in_zone(ROCK, "field");
-        s.expect_stats(ROCK, json!({ "attack": 10, "health": 10, "maxHealth": 10 }));
-        s.expect_in_zone(TIMMY, "graveyard");
-        s.expect_mana(PlayerId::P1, 0);
-        s.expect_events(json!(["destroyed", "cardPlayed"]));
+        s.expect_in_zone(ROCK, "field")
+            .expect_stats(ROCK, json!({ "attack": 10, "health": 10, "maxHealth": 10 }))
+            .expect_in_zone(TIMMY, "graveyard")
+            .expect_mana(PlayerId::P1, 0)
+            .expect_events(json!(["destroyed", "cardPlayed"]));
     }
 
     #[test]
@@ -180,8 +188,7 @@ mod tests {
         let mut s = board(json!({ "p1": { "hand": [ROCK], "field": [SHEEP] } }));
         let sheep = s.card(SHEEP).clone();
         s.play(ROCK, json!({ "tributes": [SHEEP] }));
-        s.expect_in_zone(ROCK, "field");
-        s.expect_mana(PlayerId::P1, 0);
+        s.expect_in_zone(ROCK, "field").expect_mana(PlayerId::P1, 0);
         // R11: a unit token that leaves the field ceases to exist rather than entering a graveyard.
         s.expect_in_zone(&sheep, "gone");
         assert!(!s.pile(PlayerId::P1, "graveyard").iter().any(|card| card.def_id == SHEEP));
@@ -192,10 +199,10 @@ mod tests {
         // Two copies: the string form resolves the hand one for `play` and the field one for `tributes`,
         // because each search is narrowed to its own place.
         let mut s = board(json!({ "p1": { "hand": [ROCK], "field": [ROCK] } }));
-        let on_field = s.unit(PlayerId::P1, 1).cloned();
+        let on_field = s.unit(PlayerId::P1, 1);
         s.play(ROCK, json!({ "tributes": [ROCK] }));
         assert!(on_field.is_some());
-        s.expect_in_zone(on_field.as_ref().expect("setup: p1 should hold The Rock in lane 1"), "graveyard");
+        s.expect_in_zone(on_field.as_ref().expect("setup: p1 holds The Rock in lane 1"), "graveyard");
     }
 
     // -------------------------------------------------------------------------------------------
@@ -206,23 +213,27 @@ mod tests {
     fn s4_4_step_4_indestructible_takes_no_damage_at_all_and_the_attacker_takes_the_full_10_back() {
         let mut s = board(json!({ "p1": { "field": [TIMMY] }, "p2": { "field": [ROCK] } }));
         s.attack(TIMMY, ROCK);
-        s.expect_stats(ROCK, json!({ "health": 10, "maxHealth": 10 }));
-        s.expect_in_zone(TIMMY, "graveyard");
+        s.expect_stats(ROCK, json!({ "health": 10, "maxHealth": 10 }))
+            .expect_in_zone(TIMMY, "graveyard");
     }
 
     #[test]
     fn r46_an_indestructible_unit_ignores_a_destroy_mark_switching_to_attack_position_for_the_turn() {
-        let mut s = board(json!({ "p1": { "field": [{ "def": ROCK, "position": "DEF", "lane": 1 }, { "def": RUSH, "lane": 2 }] } }));
+        let mut s = board(json!({
+            "p1": { "field": [{ "def": ROCK, "position": "DEF", "lane": 1 }, { "def": RUSH, "lane": 2 }] }
+        }));
         // §6.3 Destroy "only marks the card"; `effects/destroy.rs` sets exactly this flag and stops, and
         // §4.5 step 1 collects the mark at the next state check. No harness step and no card whose
         // script is green applies a destroy to a chosen unit today (#16 Hit Job is blocked on its own
         // `destroy_adjacent_to`), so the mark is set here directly — reported as a harness gap
-        // (`s.destroy(card)`); reaching into `s.state()` is a test-only liberty.
-        s.card_mut(ROCK).marked_destroyed = Some(true);
+        // (`s.destroy(card)`); reaching into `s.state_mut()` is a test-only liberty.
+        let rock = s.card(ROCK).id.clone();
+        find_instance_mut(s.state_mut(), &rock)
+            .expect("setup: The Rock is on the field")
+            .marked_destroyed = Some(true);
         s.switch_position(RUSH); // Any action runs the state check (R59).
 
-        s.expect_in_zone(ROCK, "field");
-        s.expect_events(json!(["positionSwitched"]));
+        s.expect_in_zone(ROCK, "field").expect_events(json!(["positionSwitched"]));
         assert_ne!(s.card(ROCK).marked_destroyed, Some(true));
         assert_eq!(s.card(ROCK).position, Some(Position::Atk));
         // R46's other half: Taunt is suppressed for this turn. The Rock prints no Taunt, so the stamp is
@@ -231,7 +242,7 @@ mod tests {
     }
 
     #[test]
-    fn r69_an_indestructible_unit_whose_max_health_falls_to_0_dies_anyway_46_radiant() {
+    fn r69_an_indestructible_unit_whose_max_health_falls_to_0_dies_anyway_n46_radiant_3_2_2_then_paid_4_4_4() {
         // (#46 radiant: 3 × −2/−2, then paid 4 → −4/−4)
         let radiant_aura = json!({ "def": AURA, "radiant": true });
         let mut s = board(json!({
@@ -242,8 +253,7 @@ mod tests {
         s.play(AURA, json!({ "embiggen": true }));
         // No destroy effect is involved, so Indestructible has nothing to ignore: it is collected like
         // any other unit and fires Death (R69, Hearthstone).
-        s.expect_in_zone(ROCK, "graveyard");
-        s.expect_events(json!(["destroyed"]));
+        s.expect_in_zone(ROCK, "graveyard").expect_events(json!(["destroyed"]));
     }
 
     // -------------------------------------------------------------------------------------------
@@ -260,7 +270,11 @@ mod tests {
     fn r23_the_radiant_face_computes_as_indestructible_plus_immutable_s8_conventions_plus() {
         let s = board(json!({ "p1": { "field": [{ "def": ROCK, "radiant": true }] } }));
         let kinds = keywords_of(&s, PlayerId::P1, 1);
-        assert!(["Indestructible", "Immutable"].iter().all(|wanted| kinds.iter().any(|kind| kind == wanted)));
+        // TS `expect.arrayContaining`: both are there, whatever else is.
+        assert!(
+            ["Indestructible", "Immutable"].iter().all(|wanted| kinds.iter().any(|kind| kind == wanted)),
+            "keywords {kinds:?}"
+        );
         // R23's blocking itself lives in `effects/transform.rs` (`transform` and `vanilla` both return
         // early on an Immutable card) and in `traps.rs` for #41 Sheepish. No verb a card test can reach
         // applies Vanilla or Transform to a chosen unit yet — #83 Transmogulate is Wave 3 and #61's
@@ -270,14 +284,17 @@ mod tests {
     #[test]
     fn s8_conventions_the_radiant_face_still_costs_tribute_1_a_clause_the_cell_does_not_restate() {
         let mut s = board(json!({ "p1": { "hand": [{ "def": ROCK, "radiant": true }] } }));
-        s.expect_refused_with(|s| { s.play(ROCK, json!({})); }, "Tribute");
+        s.expect_refused_with(|s| s.play(ROCK, json!({})), TRIBUTE_TEXT);
     }
 
     #[test]
     fn s4_4_step_4_the_radiant_face_is_still_indestructible_under_damage() {
-        let mut s = board(json!({ "p1": { "field": [TIMMY] }, "p2": { "field": [{ "def": ROCK, "radiant": true }] } }));
+        let mut s = board(json!({
+            "p1": { "field": [TIMMY] },
+            "p2": { "field": [{ "def": ROCK, "radiant": true }] }
+        }));
         s.attack(TIMMY, ROCK);
-        s.expect_stats(ROCK, json!({ "health": 20, "maxHealth": 20 }));
-        s.expect_in_zone(TIMMY, "graveyard");
+        s.expect_stats(ROCK, json!({ "health": 20, "maxHealth": 20 }))
+            .expect_in_zone(TIMMY, "graveyard");
     }
 }

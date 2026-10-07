@@ -61,9 +61,9 @@ mod r637_temporary {
     #[test]
     fn r637_each_temporary_card_in_the_ending_players_hand_is_discarded_at_the_end_of_their_turn_in_hand_order() {
         let mut state = playing("temporary-end");
-        let temporaries = in_hand(&mut state, &temporary_body.id, PlayerId::P1, 2);
+        let temporaries = in_hand(&mut state, &temporary_body().id, PlayerId::P1, Some(2));
         let (first, second) = (temporaries[0].clone(), temporaries[1].clone());
-        let kept = in_hand(&mut state, &plain.id, PlayerId::P1, 1)[0].clone();
+        let kept = in_hand(&mut state, &plain().id, PlayerId::P1, None)[0].clone();
         let hand_before = state.players.p1.hand.len();
 
         let (after, events) = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
@@ -83,7 +83,7 @@ mod r637_temporary {
     #[test]
     fn r637_it_waits_for_its_owners_own_turn_end_a_temporary_card_in_the_other_players_hand_stays() {
         let mut state = playing("temporary-other-hand");
-        let theirs = in_hand(&mut state, &temporary_body.id, PlayerId::P2, 1)[0].clone();
+        let theirs = in_hand(&mut state, &temporary_body().id, PlayerId::P2, None)[0].clone();
 
         let after_mine = act(&state, json!({ "type": "endTurn", "playerId": "p1" })).0;
         assert!(ids(&after_mine.players.p2.hand).contains(&theirs.id));
@@ -96,7 +96,7 @@ mod r637_temporary {
     #[test]
     fn r637_a_temporary_card_played_before_the_end_of_the_turn_escapes_and_it_does_nothing_on_the_field() {
         let mut state = playing("temporary-played");
-        let card = in_hand(&mut state, &temporary_body.id, PlayerId::P1, 1)[0].clone();
+        let card = in_hand(&mut state, &temporary_body().id, PlayerId::P1, None)[0].clone();
 
         let mut next = act(
             &state,
@@ -116,7 +116,7 @@ mod r637_temporary {
     #[test]
     fn r637_it_does_nothing_in_a_deck_a_temporary_card_is_drawn_like_any_other() {
         let mut state = playing("temporary-deck");
-        let deck_card = set_library(&mut state, PlayerId::P1, &[temporary_body.id.clone(), plain.id.clone()])[0].clone();
+        let deck_card = set_library(&mut state, PlayerId::P1, &[temporary_body().id, plain().id])[0].clone();
         assert!(is_temporary_card(&state, &live(&state, &deck_card.id)));
         let after = act(&state, json!({ "type": "endTurn", "playerId": "p1" })).0;
         assert!(ids(&after.players.p1.library).contains(&deck_card.id));
@@ -126,9 +126,9 @@ mod r637_temporary {
     #[test]
     fn r637_a_granted_temporary_counts_and_a_vanilla_card_loses_a_printed_one_but_keeps_a_given_one_10_4() {
         let mut state = playing("temporary-granted");
-        let granted = in_hand(&mut state, &plain.id, PlayerId::P1, 1)[0].clone();
-        let printed_vanilla = in_hand(&mut state, &temporary_body.id, PlayerId::P1, 1)[0].clone();
-        let given_vanilla = in_hand(&mut state, &temporary_body.id, PlayerId::P1, 1)[0].clone();
+        let granted = in_hand(&mut state, &plain().id, PlayerId::P1, None)[0].clone();
+        let printed_vanilla = in_hand(&mut state, &temporary_body().id, PlayerId::P1, None)[0].clone();
+        let given_vanilla = in_hand(&mut state, &temporary_body().id, PlayerId::P1, None)[0].clone();
         assert!(!is_temporary_card(&state, &live(&state, &granted.id)));
         find_instance_mut(&mut state, &granted.id)
             .expect("granted")
