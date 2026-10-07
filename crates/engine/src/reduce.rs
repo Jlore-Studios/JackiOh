@@ -624,6 +624,9 @@ pub fn reduce(state: &GameState, action: &Action) -> ReduceResult {
     }
 
     let mut next = state.clone();
+    // R179: the state's fused scripts, composed on entry when it holds none (it came through JSON), as
+    // TS's `syncFusedScripts` registered them; a Fuse composes the ones it mints as it mints them.
+    crate::scripts::sync_fused_scripts(&mut next);
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&next.seed, next.rng_cursor);
     {

@@ -9,19 +9,21 @@
 //! `legalActions` or `viewFor`.
 //!
 //! In Rust a fused script is never registered at all: `scripts::script_of(state, def_id)` composes it
-//! from the state's fused definition on every lookup (SURFACE §6.6), so `syncFusedScripts` is gone and
-//! "the registry lacks it" is the permanent condition the TS tests set up by hand. Each test keeps its
-//! steps: what TS read off the registry after a rebuild is read here off `script_of`, and where TS
-//! showed the registry empty before the rebuild, this shows the registry holds no entry for the id.
+//! from the state's fused definition (SURFACE §6.6), and the state keeps what it composed
+//! (`GameState::fused_scripts`, SURFACE §17), so `syncFusedScripts` is gone and "the registry lacks
+//! it" is the permanent condition the TS tests set up by hand. Each test keeps its steps: what TS
+//! read off the registry after a rebuild is read here off `script_of`, and where TS showed the
+//! registry empty before the rebuild, this shows the registry holds no entry for the id.
 //!
 //! Port of `packages/engine/test/fuse-registry.test.ts`.
 
 use std::cell::Cell;
+use std::sync::Arc;
 
 use jackioh_engine::effects::fuse_cards;
 use jackioh_engine::reduce::{legal_actions, reduce};
 use jackioh_engine::resolve::{HookOptions, apply_effects, make_context};
-use jackioh_engine::scripts::script_of;
+use jackioh_engine::scripts::{ScriptRef, face_ref, script_of};
 use jackioh_engine::subsystems::fuse::fused_ingredients;
 use jackioh_engine::testkit::*;
 use jackioh_engine::view_for::view_for;
@@ -337,5 +339,36 @@ mod fused_scripts_belong_to_the_state_that_fused_them {
         assert_eq!(fused_ingredients(&state, "core-085"), None);
         assert_eq!(fused_ingredients(&state, "t-1"), None);
         assert_eq!(fused_ingredients(&state, "t-1:a"), None);
+    }
+
+    #[test]
+    fn r179_a_state_keeps_the_scripts_a_fuse_composed_and_reduce_composes_them_for_a_state_from_json() {
+        let [alpha, beta, _, _] = cards();
+        let first = crafted_game("fuse-registry-kept", &alpha, &beta);
+        let id = only_fused(&first);
+        let composed = |state: &GameState| match face_ref(state, &id, false) {
+            ScriptRef::Composed(script) => script,
+            ScriptRef::Static(_) => panic!("a fused id's script is composed"),
+        };
+
+        // The Fuse composed the scripts as it minted the id, so every lookup reads that one script, which
+        // runs its ingredients' texts.
+        assert!(Arc::ptr_eq(&composed(&first), &composed(&first)));
+        assert_eq!(markers(&first, &id), marker_list(&[&alpha, &beta]));
+
+        // A state that came through JSON holds none: each lookup composes its own, which runs the same.
+        let copy: GameState =
+            serde_json::from_value(serde_json::to_value(&first).expect("a state serialises")).expect("JSON");
+        assert!(!Arc::ptr_eq(&composed(&copy), &composed(&copy)));
+        assert_eq!(markers(&copy, &id), marker_list(&[&alpha, &beta]));
+
+        // Entering `reduce` (any action: here a concession) composes them, and its state keeps them.
+        let next = reduce(&copy, &Action::new(ActionBody::Concede, P1, "fuse-registry-kept"));
+        assert_eq!(next.error, None);
+        assert!(Arc::ptr_eq(&composed(&next.state), &composed(&next.state)));
+
+        // A registry replaced wholesale is not the one they were composed from: the lookup composes anew.
+        drop_scripts(&[&id]);
+        assert!(!Arc::ptr_eq(&composed(&next.state), &composed(&next.state)));
     }
 }

@@ -7,17 +7,19 @@
 //!   and read-only after. Under the `testkit` feature the testkit's thread-local override
 //!   (`testkit::scenario::register_scripts`) is consulted first and, while set, stands for the whole
 //!   registry, as TS's `registerScripts` replaced it wholesale.
-//! - A fused or crafted id (R77, R179) that the registry does not hold is built on lookup from the
-//!   definition in `state.transient_defs` (`subsystems::fuse::compose_fused_scripts`), so `scripts_for`
-//!   and `script_of` take the state. TS's `syncFusedScripts`, which re-registered fused scripts on every
-//!   `reduce`, is not ported.
+//! - A fused or crafted id (R77, R179) that the registry does not hold is built from the definition in
+//!   `state.transient_defs` (`subsystems::fuse::compose_fused_scripts`), so `scripts_for` and
+//!   `script_of` take the state. TS's `syncFusedScripts` registered each fused id's scripts in the
+//!   process's registry on entry to `reduce`; here the state keeps them instead
+//!   (`GameState::fused_scripts`, `sync_fused_scripts`), composed once and shared by every state cloned
+//!   from it, and a lookup the state holds none for composes them then and there.
 //! - SURFACE §6.6 names `script_of(state, def_id) -> CardScripts`, and TS's `scriptOf(instance)` is the
 //!   running face's `Script`: `script_of` answers both, by its second argument (`ScriptKey`) — a
 //!   definition id gives the card's two scripts (TS `scriptsFor`), an instance its running face's
 //!   script with the Vanilla guard below (TS `scriptOf`).
 
 use std::borrow::Cow;
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -27,6 +29,7 @@ use crate::catalog::IdHash;
 use crate::config::FUSE_MIN_INGREDIENTS;
 use crate::script::{CardScripts, Script, StaticFlags, empty_script};
 use crate::state::{CardInstance, GameState};
+use crate::wire::catalog_types::FusedIngredient;
 
 /// The production registry (SURFACE §3: one of the two statics, set once), hashed by `IdHasher`: an
 /// entry is looked up for nearly every card a rule or a view reads.
@@ -120,24 +123,133 @@ fn fused_ingredient_count(state: &GameState, def_id: &str) -> Option<usize> {
     Some(count)
 }
 
-/// R77, R179: a fused definition's two scripts, built now from its ingredients' — for an id with
-/// R77's two ingredients or more whose definition is in the state. `None` otherwise (TS's registry
-/// then answered with no entry: the empty scripts).
+/// Which registry a composition read its ingredients' scripts from: the testkit's override (each one a
+/// leaked box of its own) or the production registry, by address; 0 before either is set.
+fn registry_identity() -> usize {
+    match override_map() {
+        Some(over) => std::ptr::from_ref(over) as usize,
+        None => REGISTERED
+            .get()
+            .map_or(0, |registered| std::ptr::from_ref(registered) as usize),
+    }
+}
+
+/// One fused definition's two scripts as `fuse::compose_fused_scripts` composed them, and the
+/// ingredient list they were composed from.
+#[derive(Clone)]
+struct FusedEntry {
+    ingredients: Option<Vec<FusedIngredient>>,
+    base: Arc<Script>,
+    radiant: Arc<Script>,
+}
+
+/// R179: the scripts of a state's fused definitions, composed once and shared, as TS's registry held
+/// them once `syncFusedScripts` had registered them. A fused card's script is read for every event,
+/// aura, cost and declaration that looks at it, and composing it again for each read cost a card fused
+/// onto again and again (C+ #74) seconds per AI decision late in a game.
+///
+/// Derived data, never part of what a state is: serde skips it (no wire, view or hash sees it), every
+/// state compares equal on it, and a state that came through JSON has none until `reduce` composes it
+/// (`sync_fused_scripts`, run on entry to `reduce` and by a Fuse as it mints a definition). An entry
+/// answers only while its definition is in the state with the ingredient list it was composed from and
+/// the registry it read is still the one in force: R179, "the fused scripts depend on the ingredients'
+/// ids and on nothing else". Otherwise the lookup composes, exactly as it did with no entry.
+#[derive(Clone, Default)]
+pub struct FusedScripts {
+    registry: usize,
+    entries: Arc<IndexMap<String, FusedEntry, IdHash>>,
+}
+
+impl FusedScripts {
+    fn entry(&self, def_id: &str, ingredients: &Option<Vec<FusedIngredient>>) -> Option<&FusedEntry> {
+        let entry = self.entries.get(def_id)?;
+        (self.registry == registry_identity() && entry.ingredients == *ingredients).then_some(entry)
+    }
+}
+
+impl PartialEq for FusedScripts {
+    fn eq(&self, _other: &FusedScripts) -> bool {
+        true
+    }
+}
+
+impl std::fmt::Debug for FusedScripts {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "FusedScripts({} composed)", self.entries.len())
+    }
+}
+
+/// R179 (TS `syncFusedScripts`, `ensureFused`): compose the scripts of every fused definition in the
+/// state that `state.fused_scripts` holds none for, so a lookup reads them instead of composing them
+/// again. `reduce` runs it on entry, for a state that came through JSON, and a Fuse as it mints or
+/// rebuilds a definition. It changes no answer: an entry answers what composing would.
+pub fn sync_fused_scripts(state: &mut GameState) {
+    let registry = registry_identity();
+    let fresh = state.fused_scripts.registry != registry;
+    let mut composed: Vec<(String, FusedEntry)> = Vec::new();
+    for (def_id, def) in &state.transient_defs {
+        if !fresh && state.fused_scripts.entry(def_id, &def.ingredients).is_some() {
+            continue;
+        }
+        if fused_ingredient_count(state, def_id).is_none_or(|count| count < FUSE_MIN_INGREDIENTS) {
+            continue;
+        }
+        let scripts = crate::subsystems::fuse::compose_fused_scripts(state, def);
+        composed.push((
+            def_id.clone(),
+            FusedEntry {
+                ingredients: def.ingredients.clone(),
+                base: Arc::new(scripts.base),
+                radiant: Arc::new(scripts.radiant),
+            },
+        ));
+    }
+    if !fresh && composed.is_empty() {
+        return;
+    }
+    let mut entries = if fresh {
+        IndexMap::default()
+    } else {
+        (*state.fused_scripts.entries).clone()
+    };
+    entries.extend(composed);
+    state.fused_scripts = FusedScripts {
+        registry,
+        entries: Arc::new(entries),
+    };
+}
+
+/// R77, R179: a fused definition's two scripts — the state's (`sync_fused_scripts`), or built now from
+/// its ingredients' — for an id with R77's two ingredients or more whose definition is in the state.
+/// `None` otherwise (TS's registry then answered with no entry: the empty scripts).
 fn fused_scripts(state: &GameState, def_id: &str) -> Option<CardScripts> {
     if fused_ingredient_count(state, def_id)? < FUSE_MIN_INGREDIENTS {
         return None;
     }
     let def = state.transient_defs.get(def_id)?;
+    if let Some(entry) = state.fused_scripts.entry(def_id, &def.ingredients) {
+        return Some(CardScripts {
+            base: Script::clone(&entry.base),
+            radiant: Script::clone(&entry.radiant),
+        });
+    }
     Some(crate::subsystems::fuse::compose_fused_scripts(state, def))
 }
 
-/// One face of `fused_scripts(state, def_id)`, composed alone (`fuse::compose_fused_face`).
-fn fused_face(state: &GameState, def_id: &str, radiant: bool) -> Option<Script> {
+/// One face of `fused_scripts(state, def_id)`: the state's, shared, or composed alone
+/// (`fuse::compose_fused_face`).
+fn fused_face(state: &GameState, def_id: &str, radiant: bool) -> Option<ScriptRef> {
     if fused_ingredient_count(state, def_id)? < FUSE_MIN_INGREDIENTS {
         return None;
     }
     let def = state.transient_defs.get(def_id)?;
-    Some(crate::subsystems::fuse::compose_fused_face(state, def, radiant))
+    if let Some(entry) = state.fused_scripts.entry(def_id, &def.ingredients) {
+        let face = if radiant { &entry.radiant } else { &entry.base };
+        return Some(ScriptRef::Composed(face.clone()));
+    }
+    Some(ScriptRef::Composed(Arc::new(
+        crate::subsystems::fuse::compose_fused_face(state, def, radiant),
+    )))
 }
 
 /// A definition's two scripts: the registry's entry, a fused definition's built from the state, or
@@ -146,10 +258,37 @@ pub fn scripts_for(state: &GameState, def_id: &str) -> CardScripts {
     scripts_ref(state, def_id).into_owned()
 }
 
-/// A script as a lookup answers it: borrowed from the registry (static data, SURFACE §3), or owned when
-/// it was composed for this lookup (a fused card's, R77) or is the empty script. Reads go through
-/// `Deref`; `into_owned()` is the copy `script_of` used to make of every entry.
-pub type ScriptRef = Cow<'static, Script>;
+/// A script as a lookup answers it: borrowed from the registry (static data, SURFACE §3), or a fused
+/// card's (R77), shared with the state's composed scripts or composed for this lookup. Reads go
+/// through `Deref`; `into_owned()` is the copy `script_of` used to make of every entry.
+#[derive(Clone)]
+pub enum ScriptRef {
+    /// The registry's entry, or the shared empty script.
+    Static(&'static Script),
+    /// A fused card's: `GameState::fused_scripts`'s, or composed for this lookup.
+    Composed(Arc<Script>),
+}
+
+impl std::ops::Deref for ScriptRef {
+    type Target = Script;
+
+    fn deref(&self) -> &Script {
+        match self {
+            ScriptRef::Static(script) => script,
+            ScriptRef::Composed(script) => script,
+        }
+    }
+}
+
+impl ScriptRef {
+    /// The script, owned: a copy of a borrowed or a shared one.
+    pub fn into_owned(self) -> Script {
+        match self {
+            ScriptRef::Static(script) => script.clone(),
+            ScriptRef::Composed(script) => Arc::unwrap_or_clone(script),
+        }
+    }
+}
 
 /// `scripts_for` without the copy: the registry's entry borrowed, a fused definition's composed now.
 pub fn scripts_ref(state: &GameState, def_id: &str) -> Cow<'static, CardScripts> {
@@ -162,9 +301,9 @@ pub fn scripts_ref(state: &GameState, def_id: &str) -> Cow<'static, CardScripts>
 /// One face of a definition's scripts (`radiant` or base), borrowed as `scripts_ref` borrows.
 pub fn face_ref(state: &GameState, def_id: &str, radiant: bool) -> ScriptRef {
     if let Some(entry) = registered_entry(def_id) {
-        return Cow::Borrowed(if radiant { &entry.radiant } else { &entry.base });
+        return ScriptRef::Static(if radiant { &entry.radiant } else { &entry.base });
     }
-    Cow::Owned(fused_face(state, def_id, radiant).unwrap_or_default())
+    fused_face(state, def_id, radiant).unwrap_or_else(|| ScriptRef::Static(shared_empty_script()))
 }
 
 /// TS `EMPTY_SCRIPT`, one shared instance: what a Vanilla card runs (immutable, like the registry).
@@ -182,11 +321,11 @@ fn shared_empty_script() -> &'static Script {
 /// guard lives here rather than in each reader; a continuation parked before the Vanilla landed is
 /// re-entered by its stored def id (`prompts::run_resume`), never through here, so it still finishes.
 ///
-/// Borrowed from the registry: nothing is copied for a registered card (only a fused card's script is
-/// composed, and owned, per lookup).
+/// Borrowed from the registry: nothing is copied for a registered card (a fused card's script is shared
+/// with the state's, or composed for the lookup).
 fn instance_script(state: &GameState, instance: &CardInstance) -> ScriptRef {
     if instance.vanilla {
-        return Cow::Borrowed(shared_empty_script());
+        return ScriptRef::Static(shared_empty_script());
     }
     face_ref(state, &instance.def_id, instance.radiant)
 }

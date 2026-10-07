@@ -996,6 +996,14 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub glitch_boards: Option<PerPlayerOpt<Vec<LastBoardEntry>>>,
+    // ---- derived, never sent, stored or hashed ----
+    /// R179: the scripts of `transient_defs`' fused definitions, composed once (as a Fuse mints one, and
+    /// on entry to `reduce`: `scripts::sync_fused_scripts`) and shared by every state cloned from this
+    /// one, so a lookup does not compose them again. Serde skips it and every state compares equal on
+    /// it; a state that came through JSON has none, and its lookups compose until its next `reduce`.
+    #[serde(skip)]
+    #[cfg_attr(feature = "ts", ts(skip))]
+    pub fused_scripts: crate::scripts::FusedScripts,
 }
 
 /// R676: what a Glitch reset deals again — `create_game`'s decks and dealt seats.
@@ -1609,6 +1617,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameS
         reset_owed: None,
         seat_swaps: None,
         glitch_boards: None,
+        fused_scripts: crate::scripts::FusedScripts::default(),
     };
 
     // R223: the numbers each deck's cards take are drawn in an order of the seed's own, so a card's id
