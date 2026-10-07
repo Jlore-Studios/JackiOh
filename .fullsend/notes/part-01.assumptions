@@ -1,0 +1,21 @@
+id.instance: String (TS "c<n>")
+num.game: i32
+num.cursor: u32
+map.ordered: IndexMap
+bag.data: IndexMap<String, serde_json::Value>
+error.style: Result<_, EngineError> with TS's message; panic only on invariants (create_game panics with TS's message where TS threw)
+null.optional: Option + #[serde(default, skip_serializing_if = "Option::is_none")] + #[cfg_attr(feature = "ts", ts(optional))]
+null.nullable: Option, serialised null
+case.json: camelCase via serde rename_all
+case.rust: snake_case
+state.mut: &mut GameState writes, &GameState reads, &mut EngineSink for TS sink mutators
+rng.source: Rng::new(&state.seed, state.rng_cursor) and write the cursor back
+hook.style: Arc<dyn Fn(&mut EffectContext) -> Vec<Effect> + Send + Sync> via hook(); typed hooks take a Copy argument bundle (HookArgs, ConditionContext, …) by value; one Box (AuraEntry.applies); no fn pointers
+registry.style: OnceLock set once by register_all (guarded by a cards-local OnceLock<()>); fused scripts built on lookup from state
+async.style: tokio in crates/server only; none in pure crates
+log.style: tracing JSON to stdout, server only
+sink.home: EngineSink in script.rs; EffectContext derefs to it
+error.home: EngineError in state.rs
+ts.export_to: ../../../apps/web/src/wire/generated/
+root.reexports: every top-level engine module globbed, wire globbed; UnitView=layers, HeroView=query, PlayAction=play_choices
+config.ints: i32 game quantities, usize loop and length bounds, u32 DAMAGE_REDIRECT_CAP
