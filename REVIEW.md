@@ -69,25 +69,44 @@ Inputs: the repository, `SPEC.md`, `BUILD.md`. Run everything from a clean check
 ### B0 Setup
 
 ```
+cargo fmt --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts
+git status --porcelain -- apps/web/src/wire
+cargo jackioh catalog check
+cargo jackioh patches check
+cargo jackioh spec check
+cargo jackioh fuzz
+cargo jackioh golden check
 pnpm install
-pnpm lint
-pnpm typecheck
-pnpm test:coverage
-pnpm test:e2e
+pnpm --dir apps/web typecheck
+pnpm exec eslint apps/web e2e
+pnpm --dir apps/web test
+pnpm --dir e2e test:e2e
 ```
-Record the exit code and summary of each. Any non-zero exit is a BLOCKER on its own, but continue the audit.
+Record the exit code and summary of each. Any non-zero exit is a BLOCKER on its own, but continue the audit; so is any output from the `git status` line (the generated TypeScript differs from what is committed). The e2e run needs the client and the E2E server up first (CLAUDE.md, E2E). Line coverage is measured by the daily super run's `coverage` job (`super.yml`: `cargo llvm-cov` over engine, cards and ai against `.github/coverage-floor.txt`): record its last run's result and date from the repository's Actions page.
 
 ### B1 Architecture invariants (SPEC §9.3, §10)
 
 | Check | Method | Acceptance condition |
 | --- | --- | --- |
-| B1.1 Reducer purity | `grep -rn "Math.random\|Date.now\|new Date\|fetch(\|require(\"fs\|from \"fs\|setTimeout" packages/engine/src packages/cards/src` | Zero hits. `eslint.config.js` contains the ban and `pnpm lint` fails on a fixture using `Math.random` (BUILD M1-T2). |
-| B1.2 Seeded RNG | Read `engine/src/rng.ts`; check `rngCursor` lives in `GameState` and every random helper advances it. | `replay.test.ts` folds ≥ 100 recorded logs to identical hashes. |
-| B1.3 Prompts are state | `grep -rn "Promise\|async \|callback" packages/engine/src` | No promise or callback inside `reduce` or any effect; `PendingChoice.resume` is serializable (test from BUILD M3-T3 exists and passes). |
+| B1.1 Reducer purity | The B1.1 commands below; read the `[dependencies]` of the three crates' `Cargo.toml` | The three `clippy.toml` are identical and ban the clock, file, environment, thread and process calls and `HashMap`, `HashSet`, `Mutex`, `RwLock`, `RefCell` (CLAUDE.md rule 4); the dependencies are `serde`, `serde_json`, `indexmap`, each other and (the engine's `ts` feature) `ts-rs` only; B0's clippy run is clean; every `allow` is in test or build code and says why. |
+| B1.2 Seeded RNG | Read `crates/engine/src/rng.rs`; check `rng_cursor` lives in `GameState`, every random helper advances it, and `reduce` rebuilds the rng from `(state.seed, state.rng_cursor)`. | `cargo jackioh fuzz` folds every game to its live hash; `cargo jackioh golden check` replays every recorded trace. |
+| B1.3 Prompts are state | The B1.3 command below; read `crates/engine/src/work.rs` | No async code in the pure crates; what `state.work` holds is plain data (`Resume` records, no closures), so a paused state survives a JSON round trip (test from BUILD M3-T3 exists and passes). |
 | B1.4 Nonce dedupe | Test from BUILD M1-T3 exists and passes. | Replayed nonce returns the original result. |
 | B1.5 Illegal actions | `reduce` returns `error` and an unchanged state for the cases in BUILD M1-T3; no client-side legality logic beyond calling `legalActions` (`grep -rn "canAttack\|isLegal" apps/web/src` should only find calls into the engine). | Zero client-side rule logic. |
 | B1.6 Hidden information | Test from BUILD M3-T6; additionally serialize a mid-game `viewFor(state, P1)` from a fixture with face-down P2 traps and search the JSON for every P2 hand and library `defId`. | Zero leaks. Protocol test in M6-T4 passes. |
-| B1.7 Effects only | `grep -rn "state.players\|\.hand\.push\|\.library\.\(push\|splice\)\|\.graveyard\.push" packages/cards/src` | Zero hits; scripts only return `Effect[]`. |
+| B1.7 Effects only | The B1.7 command below: each card script, above its tests | Zero hits; scripts only return `Vec<Effect>`. |
+
+```
+# B1.1
+diff crates/engine/clippy.toml crates/cards/clippy.toml && diff crates/engine/clippy.toml crates/ai/clippy.toml
+grep -rn "allow(clippy::disallowed" crates/engine crates/cards crates/ai
+# B1.3
+grep -rnwE "async|await" crates/engine/src crates/cards/src crates/ai/src
+# B1.7
+for f in crates/cards/src/scripts/*/*.rs; do awk '/#\[cfg\(test\)\]/{exit} /\.players\[|\.hand\.push|\.library\.(push|insert|remove)|\.graveyard\.push|&mut GameState/{print FILENAME": "FNR": "$0}' "$f"; done
+```
 
 ### B2 Rules conformance (SPEC §2–§7)
 
@@ -107,21 +126,21 @@ For each row, name the test(s) that prove it, or trace a fixture state through t
 | §4.5 State check | Simultaneous deaths, Death order, Reborn, Indestructible would-destroy | M2-T5 tests; R8, R46, R47 |
 | §5 Catalog | `catalog.test.ts` diffs against §8 including rarity counts per set: Core 35/37/16/7/5, Classic 42/25/13/9/1, Classic+ 13/25/25/13/2 and §5.3 corrections | Green |
 | §5.2 Radiant | On-field conversion keeps damage and buffs, no Cry re-fire, copies inherit flag | R22, R57 tests |
-| §6 Keywords | Every state-changing §6.3 verb is exported from the effects barrel (BUILD M3-T1); keyword set computation per §10.4 | M3-T1, M3-T4 tests; `grep -c "^  [a-z]" packages/engine/src/effects/index.ts` against §6.3's verb list — files are grouped by family, so check the barrel and not the directory listing |
+| §6 Keywords | Every state-changing §6.3 verb is exported from the effects module (BUILD M3-T1); keyword set computation per §10.4 | M3-T1, M3-T4 tests; `grep -h "^pub fn" crates/engine/src/effects/*.rs` against §6.3's verb list — files are grouped by family, so check the functions and not the file names |
 | §6.2 Triggers | Ordering (active player, lanes, backrow), traps first, opponent-turn prompts pause the action | M3-T2 tests |
 | §7 Tokens | Only created by name; stat overrides; fill-board; spell tokens in GY | Token tests (BUILD table row "T") |
 
 ### B3 Card conformance (SPEC §8, BUILD §3 M4)
 
-1. `pnpm exec tsx packages/cards/scripts/missing-tests.ts` prints nothing.
-2. Count test files: one per catalog entry, 318 since issue #170 (111 in `packages/cards/test/`, the rest in `test/classic/` and `test/classic-plus/`; `pnpm --filter @jackioh/cards missing-tests` prints nothing).
-3. For every card in the BUILD M4-T4 table, open its test file and confirm each "must-pass" clause is a distinct `it(...)`, base and radiant both present. A card whose test skips a clause is MAJOR; a card whose implementation contradicts its §8 row is BLOCKER.
+1. `cargo build -p jackioh-cards` succeeds: `crates/cards/build.rs` refuses a catalog id with no script file and a script whose `ID` the catalog lacks.
+2. Count script files: one per catalog entry, 318 since issue #170 (`ls crates/cards/src/scripts/*/*.rs | wc -l`: 111 in `core/`, the rest in `classic/` and `classic_plus/`). Each holds its tests in a `#[cfg(test)] mod tests`; `grep -L "mod tests" crates/cards/src/scripts/*/*.rs` lists the files without one, and each listed token must be tested in the file of the card that makes it.
+3. For every card in the BUILD M4-T4 table, open its script file and confirm each "must-pass" clause is a distinct `#[test]` in its `mod tests`, base and radiant both present. A card whose tests skip a clause is MAJOR; a card whose implementation contradicts its §8 row is BLOCKER.
 4. Deep-read 15 scripts against their §8 rows: the fixed set #3, #9, #12, #18, #22, #31, #41, #52, #60, #85, #92, #93, #95, #96, #98, plus 5 more chosen with `seed % 100` from the current commit hash. Record for each: hook used, primitives used, prompt kinds declared, any behaviour not in the spec.
-5. Subsystems: `fuse`, `rotation`, `scorer`, `aiPolicy`, `heroPower`, `comboIndex`, `callToChaos`, `lethal` each have a test file and the acceptance cases in BUILD M3-T7.
+5. Subsystems: `fuse`, `rotation`, `scorer`, `ai_policy`, `hero_power`, `combo_index`, `call_to_chaos`, `lethal` (`crates/engine/src/subsystems/`) each have a test module in `crates/engine/tests/rules/` and the acceptance cases in BUILD M3-T7.
 
 ### B4 Rulings (SPEC §11)
 
-`grep -o "R[0-9]\+ " packages/engine/test/rulings.test.ts packages/cards/test/*.test.ts | sort -u` must contain every row id in SPEC §11 (R1 through R168 as of 2026-09-17). Each "decide" row (R1, R4, R5, R14, R26, R39; R2's cap is still a constant, R389) is a named constant in `engine/src/config.ts` with the spec's value. Any ruling found in a code comment but not in §11 is MAJOR.
+`cargo jackioh spec check` must print `ok`: every SPEC §11 row is a note in `spec/rulings/` whose `proven_in` files hold a test named after it, and every `R<n>` cited in `crates/`, `apps/web/src/` or `e2e/` has a note (CLAUDE.md rule 3). Open five notes at random and confirm the named test asserts what the ruling says, not merely carries its name. Each "decide" row (R1, R4, R5, R14, R26, R39; R2's cap is still a constant, R389) is a named constant in `crates/engine/src/config.rs` with the spec's value. Any ruling found in a code comment but not in §11 is MAJOR.
 
 ### B5 Client and animations (SPEC §10.8, §10.10; BUILD M5)
 
@@ -144,8 +163,9 @@ Every spec BUILD M8 lists exists under `e2e/cypress/e2e/` with the listed assert
 
 ### B8 Determinism and fuzz
 
-- `engine/test/replay.test.ts` and `cards/test/fuzz.test.ts` green; the fuzz run reports 1,000 seeds, 0 throws, 0 hash mismatches, 0 games exceeding the cap.
-- Pick 3 recorded logs from the fuzz artefacts, fold them in a fresh process, and confirm the hashes.
+- `cargo jackioh fuzz` green: it reports 1,000 seeds, 0 panics, 0 replay mismatches, 0 invariant violations, 0 games over the action bound; `cargo jackioh fuzz --handicap` the same.
+- `cargo jackioh golden check` green: the 240 traces recorded from the TypeScript engine and the hotseat fixture replay with the same hashes.
+- Pick 3 recorded logs (the `e2e/artifacts/*.json` an e2e run writes, and `crates/engine/tests/golden/01-hotseat-full-game.json`, which folds to `a798906b`), fold each in a fresh process with `target/release/jackioh replay < <log>.json`, and confirm the hashes.
 
 ---
 
