@@ -758,7 +758,7 @@ wasm32-unknown-unknown` and downloads `wasm-bindgen-cli` 0.2.129's release tarba
 `.cache/bin/`; then `cargo build -p jackioh-wasm --release --target wasm32-unknown-unknown` and
 `wasm-bindgen --target web --out-dir apps/web/src/wasm/pkg target/wasm32-unknown-unknown/release/jackioh_wasm.wasm`.
 `apps/web/package.json`'s `predev`, `prebuild`, `prebuild:e2e` and `pretest` run it. On Vercel,
-`vercel.json`'s `installCommand` installs rustup (minimal profile) before `pnpm install`.
+`vercel.json`'s `installCommand` (`scripts/vercel-install.sh`) uses the build image's rustup (Vercel ships one under `/rust`), installs rustup (minimal profile) only where there is none, then the pinned toolchain, before `pnpm install`.
 
 ### 10.3 The TS wrapper (`apps/web/src/wasm/index.ts`, part 21)
 

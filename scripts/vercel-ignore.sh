@@ -23,7 +23,8 @@
 # Adding a path to the list means checking that apps/web, the four crates the WASM module is built
 # from (and the root files pnpm and cargo read) do not read it. A name alone is not proof:
 # crates/cards/src/scripts/ holds the card scripts, which ARE compiled in, and scripts/build-wasm.sh
-# builds the module, so it is carved out of scripts/ above the line that skips the rest.
+# builds the module and scripts/vercel-install.sh installs its toolchain, so both are carved out of
+# scripts/ above the line that skips the rest.
 # apps/web/src/net/vercel-ignore.test.ts holds the list in place.
 
 if printf '%s' "$VERCEL_GIT_COMMIT_MESSAGE" | grep -qiF '[vercel]'; then
@@ -46,7 +47,7 @@ files=$(git diff --no-renames --name-only "$prev" HEAD 2>/dev/null) || exit 1
 set -f
 for file in $files; do
   case "$file" in
-    scripts/build-wasm.sh | crates/server/Cargo.toml | crates/tools/Cargo.toml) exit 1 ;;
+    scripts/build-wasm.sh | scripts/vercel-install.sh | crates/server/Cargo.toml | crates/tools/Cargo.toml) exit 1 ;;
     bot/* | .harness/* | .squishy/* | .github/* | docs/* | reviews/* | e2e/* | spec/* | training/* | scripts/*) ;;
     crates/server/* | crates/tools/* | render.yaml) ;;
     crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/wasm/tests/*) ;;

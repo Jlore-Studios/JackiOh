@@ -15,9 +15,10 @@
 # jackioh_wasm_bg.wasm.d.ts}, gitignored; `--target web` makes the glue an ES module whose default
 # export fetches the .wasm and whose `initSync` takes its bytes (apps/web/src/wasm/index.ts).
 #
-# Needs a Rust toolchain (rust-toolchain.toml pins it). On Vercel, vercel.json's installCommand
-# installs rustup first; a shell that installed it in an earlier step but never re-read its profile
-# is covered by sourcing ~/.cargo/env below.
+# Needs a Rust toolchain (rust-toolchain.toml pins it). On Vercel, scripts/vercel-install.sh (the
+# installCommand) uses the build image's own rustup, under /rust and already on PATH, and installs
+# rustup only where there is none; a shell that installed it in an earlier step but never re-read
+# its profile is covered by sourcing ~/.cargo/env below.
 
 set -eu
 
