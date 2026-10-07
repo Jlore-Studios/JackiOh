@@ -581,7 +581,7 @@ fn as_list<T: Clone + PartialEq>(value: Option<&OneOrMany<T>>) -> Vec<T> {
 /// `costMod` and `costOverride` travel with it into every zone (R78), so a printed-3 Unit #95 made
 /// "cost 2 less" is a Unit costing 1 for #69 Call to Arms. The definition's printed cost would miss it.
 fn matches_filter(ctx: &EffectContext<'_>, card: &CardInstance, filter: &RecruitFilter) -> bool {
-    let def = def_of(ctx.state, &card.def_id);
+    let def = def_of(Some(&*ctx.state), &card.def_id);
     let types = as_list(filter.type_.as_ref());
     if !types.is_empty() && !types.contains(&card_type_of(ctx.state, card)) {
         return false;

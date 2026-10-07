@@ -952,7 +952,7 @@ pub fn run_resumable_list(
             resolving: marks.resolving,
             event_stay: marks.event_stay,
         };
-        park_work(ctx, plan, step);
+        park_work(ctx, plan, &step);
         return ListStatus::Parked;
     }
 }

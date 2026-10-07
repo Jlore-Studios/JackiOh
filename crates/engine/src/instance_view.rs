@@ -64,7 +64,7 @@ pub fn instance_data_view(state: &GameState, card: &CardInstance) -> InstanceDat
     let mut out = InstanceData::default();
     // B2.7: the type now, where the running face's differs from the definition's (Blood Moon's Radiant).
     let type_ = crate::faces::card_type_of(state, card);
-    if type_ != crate::catalog::def_of(state, &card.def_id).type_ {
+    if type_ != crate::catalog::def_of(Some(&*state), &card.def_id).type_ {
         out.type_ = Some(type_);
     }
     // B3.3 rule 6: public on the field, the owner's in a hand — both are where this view is built.

@@ -141,7 +141,7 @@ pub fn matches_card_scope(ctx: &EffectContext<'_>, card: &CardInstance, scope: &
     {
         return false;
     }
-    let tags = &def_of(ctx.state, &card.def_id).tags;
+    let tags = &def_of(Some(&*ctx.state), &card.def_id).tags;
     if let Some(wanted) = &scope.tags
         && !wanted.iter().any(|tag| tags.contains(tag))
     {

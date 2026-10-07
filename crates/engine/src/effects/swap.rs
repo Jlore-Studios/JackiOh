@@ -61,7 +61,7 @@ struct SwapEntry {
 /// under the top are in the zone too, so they swap with it (§3.2).
 fn contents_of(state: &GameState, slot: &ZoneSlot) -> Vec<CardInstance> {
     // B5 E21, R446: a backrow zone's pile and a carrier's Unit travel whole too (`zones::zone_contents`).
-    zone_contents(state, slot).into_iter().cloned().collect()
+    zone_contents(state, slot)
 }
 
 /// R73: "lane-preserving" — the same row and lane on the other side of the centre line.

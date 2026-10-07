@@ -213,7 +213,7 @@ pub fn transform(args: TransformArgs) -> Effect {
         if !transformable(ctx, &old) {
             return;
         }
-        let def = def_of(ctx.state, &args.def_id).clone();
+        let def = def_of(Some(&*ctx.state), &args.def_id).clone();
         let _ = replace_card(ctx, &old, &def, args.radiant == Some(true));
     })
 }

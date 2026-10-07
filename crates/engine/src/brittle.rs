@@ -83,7 +83,7 @@ fn crumble(sink: &mut EngineSink<'_>, card: &CardInstance) {
         controller: Some(card.controller),
         ..Default::default()
     };
-    let mut ctx = crate::resolve::make_context(sink.reborrow(), None, options);
+    let mut ctx = crate::resolve::make_context(sink, None, options);
     let effect = crate::effects::destroy::destroy(json_as(json!({
         "target": { "of": "instance", "instanceId": card.id }
     })));

@@ -101,7 +101,7 @@ pub fn cast(args: CastArgs) -> Effect {
         }
         card.controller = controller;
         let options = options_of(&args.how);
-        cast_card(&mut sink_of(ctx), card, options);
+        cast_card(&mut sink_of(ctx), &card, options);
     })
 }
 
@@ -214,7 +214,7 @@ pub fn cast_new(args: CastNewArgs) -> Effect {
         );
         card.radiant = def.radiant.or(args.radiant).unwrap_or(false);
         let options = options_of(&args.how);
-        cast_card(&mut sink_of(ctx), card, options);
+        cast_card(&mut sink_of(ctx), &card, options);
     })
 }
 
@@ -254,7 +254,7 @@ fn cast_one_random(asked: CatalogQueryArgs, radiant: bool, how: CastHow) -> Effe
             random: Some(true),
             ..options_of(&how)
         };
-        cast_card(&mut sink_of(ctx), card, options);
+        cast_card(&mut sink_of(ctx), &card, options);
     })
 }
 

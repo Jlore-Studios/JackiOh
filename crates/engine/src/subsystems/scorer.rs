@@ -281,28 +281,12 @@ struct PlayFields<'a> {
 }
 
 fn play_fields(action: &PlayAction) -> PlayFields<'_> {
-    match action {
-        ActionBody::Play {
-            x,
-            embiggen,
-            tributes,
-            zone,
-            targets,
-            ..
-        } => PlayFields {
-            x: x.unwrap_or(0),
-            embiggen: *embiggen == Some(true),
-            tributes: tributes.as_deref().unwrap_or(&[]),
-            zone: zone.as_ref(),
-            first_target: targets.as_ref().and_then(|targets| targets.first()),
-        },
-        _ => PlayFields {
-            x: 0,
-            embiggen: false,
-            tributes: &[],
-            zone: None,
-            first_target: None,
-        },
+    PlayFields {
+        x: action.x.unwrap_or(0),
+        embiggen: action.embiggen == Some(true),
+        tributes: action.tributes.as_deref().unwrap_or(&[]),
+        zone: action.zone.as_ref(),
+        first_target: action.targets.as_ref().and_then(|targets| targets.first()),
     }
 }
 
@@ -461,7 +445,7 @@ pub fn dry_run(
             if crate::play_steps::run_play_steps(&mut sink, viewer, &action).is_err() {
                 continue;
             }
-            crate::triggers::settle(&mut sink, &crate::triggers::SettleOptions::default());
+            crate::triggers::settle(&mut sink, crate::triggers::SettleOptions::default());
         }
 
         let enemy_health = trial.players[enemy].hero.health;

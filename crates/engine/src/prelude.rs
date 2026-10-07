@@ -19,7 +19,13 @@
 pub use crate::animated::*;
 pub use crate::book_swap::*;
 pub use crate::cast_on_draw_now::*;
-pub use crate::catalog::*;
+// `catalog` but its `register_catalog`, which is `jackioh_cards::register_all`'s to call (by path) and
+// whose test twin the testkit exports: a card's `mod tests` globs both the prelude and the testkit.
+pub use crate::catalog::{
+    CatalogQueryArgs, FUSED_DIGEST_MARK, GlitchOdds, RADIANT_INGREDIENT_MARK, TransientHolder, catalog_version,
+    def_by_index, def_of, excluding_def_id, find_def, fused_id_parts, fused_id_specs, glitch_or_not, is_digest_id,
+    pick_generated, query, query_cost, registered_catalog, roll_grape, self_def_ids,
+};
 pub use crate::combat::*;
 pub use crate::config::*;
 pub use crate::cost_rules::*;

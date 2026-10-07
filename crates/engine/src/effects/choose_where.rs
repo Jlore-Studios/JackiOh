@@ -91,7 +91,7 @@ pub fn choose_target_where(args: ChooseTargetWhereArgs) -> Effect {
                     _ => None,
                 };
                 let label = match (card, &selection) {
-                    (Some(card), _) => def_of(reader.state, &card.def_id).name.clone(),
+                    (Some(card), _) => def_of(Some(&*reader.state), &card.def_id).name.clone(),
                     (None, Selection::Hero { player }) => hero_option_label(*player, reader.controller),
                     (None, _) => "nothing".to_string(),
                 };
@@ -105,7 +105,7 @@ pub fn choose_target_where(args: ChooseTargetWhereArgs) -> Effect {
             })
             .collect();
         let player = ctx.controller;
-        let resume = resume_self(ctx, &args.step, args.data.clone());
+        let resume = resume_self(ctx, &args.step, args.data.clone().unwrap_or_default());
         open_prompt(
             ctx,
             OpenPromptArgs {

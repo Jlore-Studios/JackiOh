@@ -204,7 +204,7 @@ fn placement_data(data: &IndexMap<String, Value>) -> Option<PlacementData> {
 
 /// The label a placement option shows its chooser; `view_for` hides a card the chooser may not read (R177).
 fn label_of(state: &GameState, card: &CardInstance) -> String {
-    def_of(state, &card.def_id).name.clone()
+    def_of(Some(&*state), &card.def_id).name.clone()
 }
 
 /// Open the one placement prompt for `resume`'s placer over every permanent on the field (R68's

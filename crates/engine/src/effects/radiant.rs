@@ -124,7 +124,7 @@ fn gain_printed_shield(ctx: &mut EffectContext<'_>, card: &CardInstance) {
     if card.zone.z() != ZoneName::Field || card.divine_shield_spent != Some(true) || card.vanilla {
         return;
     }
-    let def = def_of(ctx.state, &card.def_id);
+    let def = def_of(Some(&*ctx.state), &card.def_id);
     let prints = |keywords: &[Keyword]| keywords.iter().any(|keyword| matches!(keyword, Keyword::DivineShield));
     let newly = prints(def.radiant.keywords.as_slice()) && !prints(def.base.keywords.as_slice());
     if newly && let Some(live) = find_instance_mut(ctx.state, &card.id) {

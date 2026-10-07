@@ -138,7 +138,7 @@ fn label(ctx: &EffectContext<'_>, selection: &Selection) -> String {
         Selection::Hero { player } => hero_option_label(*player, ctx.controller),
         Selection::Instance { instance_id } => match find_on_board(ctx, instance_id) {
             None => instance_id.clone(),
-            Some(card) => def_of(ctx.state, &card.def_id).name.clone(),
+            Some(card) => def_of(Some(&*ctx.state), &card.def_id).name.clone(),
         },
         Selection::Mode { option } => option.clone(),
         _ => "nothing".to_string(),
@@ -220,7 +220,7 @@ pub fn choose_mode(args: ChooseModeArgs) -> Effect {
                 mode_option(option, caption)
             })
             .collect();
-        let resume = resume_self(ctx, &args.step, args.data.clone());
+        let resume = resume_self(ctx, &args.step, args.data.clone().unwrap_or_default());
         let mut asked = ask(
             player,
             PromptKind::Mode,
@@ -278,7 +278,7 @@ pub fn choose_target(args: ChooseTargetArgs) -> Effect {
             })
             .collect();
         let player = ctx.controller;
-        let resume = resume_self(ctx, &args.step, args.data.clone());
+        let resume = resume_self(ctx, &args.step, args.data.clone().unwrap_or_default());
         open_prompt(
             ctx,
             ask(
@@ -365,7 +365,7 @@ pub fn choose_from_hand(args: ChooseFromHandArgs) -> Effect {
             .iter()
             .map(|card| PromptOption {
                 key: format!("instance:{}", card.id),
-                label: def_of(reader.state, &card.def_id).name.clone(),
+                label: def_of(Some(&*reader.state), &card.def_id).name.clone(),
                 selection: Selection::Instance {
                     instance_id: card.id.clone(),
                 },
@@ -375,7 +375,7 @@ pub fn choose_from_hand(args: ChooseFromHandArgs) -> Effect {
             .collect();
         let player = player_of(ctx, args.by.unwrap_or(PlayerSpec::SelfSide));
         let owner = ctx.controller;
-        let resume = resume_self(ctx, &args.step, args.data.clone());
+        let resume = resume_self(ctx, &args.step, args.data.clone().unwrap_or_default());
         let mut asked = ask(
             player,
             PromptKind::Hand,
@@ -422,11 +422,11 @@ pub fn choose_cost_in_hand(args: ChooseCostInHandArgs) -> Effect {
         let state: &GameState = &*ctx.state;
         let mut groups: IndexMap<i32, Vec<String>> = IndexMap::new();
         for card in &state.players[whose].hand {
-            let cost = effective_cost(state, card, None);
+            let cost = effective_cost(state, card, Default::default());
             groups
                 .entry(cost)
                 .or_default()
-                .push(def_of(state, &card.def_id).name.clone());
+                .push(def_of(Some(&*state), &card.def_id).name.clone());
         }
         let mut costs: Vec<i32> = groups.keys().copied().collect();
         costs.sort();
@@ -439,7 +439,7 @@ pub fn choose_cost_in_hand(args: ChooseCostInHandArgs) -> Effect {
             .collect();
         let player = player_of(ctx, args.by.unwrap_or(PlayerSpec::SelfSide));
         let owner = ctx.controller;
-        let resume = resume_self(ctx, &args.step, args.data.clone());
+        let resume = resume_self(ctx, &args.step, args.data.clone().unwrap_or_default());
         let mut asked = ask(
             player,
             PromptKind::Mode,
@@ -482,7 +482,7 @@ pub fn choose_number(args: ChooseNumberArgs) -> Effect {
             .collect();
         let player = player_of(ctx, args.by.unwrap_or(PlayerSpec::SelfSide));
         let owner = ctx.controller;
-        let resume = resume_self(ctx, &args.step, args.data.clone());
+        let resume = resume_self(ctx, &args.step, args.data.clone().unwrap_or_default());
         let mut asked = ask(
             player,
             PromptKind::Number,
@@ -581,7 +581,7 @@ pub fn choose_answer(args: ChooseAnswerArgs) -> Effect {
         data.insert(ANSWER_KEY.to_string(), Value::String(key));
         let player = player_of(ctx, args.by.unwrap_or(PlayerSpec::SelfSide));
         let owner = ctx.controller;
-        let resume = resume_self(ctx, &args.step, Some(data));
+        let resume = resume_self(ctx, &args.step, data);
         let mut asked = ask(player, PromptKind::Answer, args.statement.clone(), options, resume);
         asked.owner = Some(owner);
         open_prompt(ctx, asked);
@@ -696,7 +696,7 @@ pub fn choose_cell(args: ChooseCellArgs) -> Effect {
             });
         }
         let owner = ctx.controller;
-        let resume = resume_self(ctx, &args.step, args.data.clone());
+        let resume = resume_self(ctx, &args.step, args.data.clone().unwrap_or_default());
         let mut asked = ask(
             chooser,
             PromptKind::Cell,
@@ -755,7 +755,7 @@ pub fn choose_reward(args: ChooseRewardArgs) -> Effect {
             .map(|reward| mode_option(&reward.id, &reward.label))
             .collect();
         let player = ctx.controller;
-        let resume = resume_self(ctx, &args.step, args.data.clone());
+        let resume = resume_self(ctx, &args.step, args.data.clone().unwrap_or_default());
         open_prompt(
             ctx,
             ask(
@@ -852,12 +852,12 @@ fn pickable(state: &GameState, card: &CardInstance, filter: &PickFilter) -> bool
         return false;
     }
     if let Some(tags) = &filter.tags {
-        let printed = &def_of(state, &card.def_id).tags;
+        let printed = &def_of(Some(&*state), &card.def_id).tags;
         if !tags.iter().all(|tag| printed.contains(tag)) {
             return false;
         }
     }
-    let cost = effective_cost(state, card, None);
+    let cost = effective_cost(state, card, Default::default());
     let range = filter.cost_range.unwrap_or_default();
     if let Some(min) = range.min
         && cost < min
@@ -920,11 +920,11 @@ pub fn choose_pick(args: ChoosePickArgs) -> Effect {
                 seen.insert(card.id.clone());
                 options.push(PromptOption {
                     key: format!("instance:{}", card.id),
-                    label: def_of(state, &card.def_id).name.clone(),
+                    label: def_of(Some(&*state), &card.def_id).name.clone(),
                     selection: Selection::Instance {
                         instance_id: card.id.clone(),
                     },
-                    cost: Some(effective_cost(state, card, None)),
+                    cost: Some(effective_cost(state, card, Default::default())),
                     radiant: if card.radiant { Some(true) } else { None },
                 });
             }
@@ -935,7 +935,7 @@ pub fn choose_pick(args: ChoosePickArgs) -> Effect {
         let max = args.max.min(options.len() as i32).max(0);
         let min = args.min.unwrap_or(0).max(0).min(max);
         let player = ctx.controller;
-        let resume = resume_self(ctx, &args.step, args.data.clone());
+        let resume = resume_self(ctx, &args.step, args.data.clone().unwrap_or_default());
         let mut asked = ask(
             player,
             PromptKind::Pick,
@@ -1045,7 +1045,7 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
             })
             .collect();
         let player = ctx.controller;
-        let resume = resume_self(ctx, &args.step, args.data.clone());
+        let resume = resume_self(ctx, &args.step, args.data.clone().unwrap_or_default());
         open_prompt(
             ctx,
             ask(
@@ -1115,7 +1115,7 @@ pub fn matches_library_filter(state: &GameState, card: &CardInstance, filter: &L
         return false;
     }
 
-    let cost = effective_cost(state, card, None);
+    let cost = effective_cost(state, card, Default::default());
     let range = filter.cost_range.unwrap_or_default();
     if let Some(min) = range.min
         && cost < min
@@ -1186,7 +1186,7 @@ pub fn discover_from_library(args: DiscoverFromLibraryArgs) -> Effect {
             .iter()
             .map(|card| PromptOption {
                 key: format!("instance:{}", card.id),
-                label: def_of(ctx.state, &card.def_id).name.clone(),
+                label: def_of(Some(&*ctx.state), &card.def_id).name.clone(),
                 selection: Selection::Instance {
                     instance_id: card.id.clone(),
                 },
@@ -1195,7 +1195,7 @@ pub fn discover_from_library(args: DiscoverFromLibraryArgs) -> Effect {
             })
             .collect();
         let chooser = ctx.controller;
-        let resume = resume_self(ctx, &args.step, args.data.clone());
+        let resume = resume_self(ctx, &args.step, args.data.clone().unwrap_or_default());
         open_prompt(
             ctx,
             ask(
@@ -1239,7 +1239,7 @@ pub fn discover_from_graveyard(args: DiscoverFromGraveyardArgs) -> Effect {
             .iter()
             .map(|card| PromptOption {
                 key: format!("instance:{}", card.id),
-                label: def_of(ctx.state, &card.def_id).name.clone(),
+                label: def_of(Some(&*ctx.state), &card.def_id).name.clone(),
                 selection: Selection::Instance {
                     instance_id: card.id.clone(),
                 },
@@ -1247,7 +1247,7 @@ pub fn discover_from_graveyard(args: DiscoverFromGraveyardArgs) -> Effect {
                 radiant: None,
             })
             .collect();
-        let resume = resume_self(ctx, &args.step, args.data.clone());
+        let resume = resume_self(ctx, &args.step, args.data.clone().unwrap_or_default());
         open_prompt(
             ctx,
             ask(

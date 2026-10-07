@@ -50,7 +50,7 @@ use crate::combat::{AttackTarget, ExertionKind, attack_targets, declare_attack, 
 use crate::config::{MAX_MULLIGAN_SUBSETS, NONCE_HISTORY, TIMEOUT_ANSWER_CAP, TURN_CAP_PLAYER_TURNS};
 use crate::game_over::end_game;
 use crate::modifiers::remove_modifier;
-use crate::play_choices::{graveyard_play_actions_for, play_actions_for};
+use crate::play_choices::{PlayAction, graveyard_play_actions_for, play_actions_for};
 use crate::play_steps::run_play_steps;
 use crate::prompts::{AnswerInput, answer_prompt, prompt_answers};
 use crate::rng::Rng;
@@ -58,7 +58,7 @@ use crate::script::EngineSink;
 use crate::scripts::flags_of;
 use crate::setup::{answer_mulligan, begin_setup, mulligan_owed, mulligan_prompt_for, why_mulligan_refused};
 use crate::state::{AppliedAction, CardInstance, EngineError, GameState, ModifierExpiry, ModifierKind, find_instance};
-use crate::subsystems::activate::{activate_ability, activate_actions_for};
+use crate::subsystems::activate::{ActivateAction, activate_ability, activate_actions_for};
 use crate::subsystems::ai_policy::play_out_turn;
 use crate::subsystems::glitch::reset_match;
 use crate::subsystems::hero_power::power_ability_of;
@@ -204,7 +204,7 @@ fn activate_card(sink: &mut EngineSink<'_>, player: PlayerId, action: &ActionBod
     if is_power && let Some(card) = &card {
         named = power_ability_of(sink.state, card).map(|ability| ability.id.to_string());
     }
-    let activation = ActionBody::Activate {
+    let activation = ActivateAction {
         instance_id,
         ability: named,
         targets,
@@ -238,7 +238,10 @@ fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), Engine
             answer_mulligan(sink, action.player_id, keep);
             Ok(())
         }
-        ActionBody::Play { .. } => run_play_steps(sink, action.player_id, &action.body).map(|_| ()),
+        ActionBody::Play { .. } => {
+            let play = PlayAction::from_body(&action.body).expect("a play action body is a PlayAction");
+            run_play_steps(sink, action.player_id, &play).map(|_| ())
+        }
         ActionBody::SwitchPosition { instance_id } => switch_action(sink, action.player_id, instance_id),
         ActionBody::Attack {
             attacker_id,

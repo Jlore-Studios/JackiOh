@@ -410,7 +410,7 @@ pub fn refresh_scope_marks(sink: &mut EngineSink<'_>) {
     for (id, owner, scope, mark) in waiting {
         let ids: Vec<String> = {
             let ctx = make_context(
-                sink.reborrow(),
+                sink,
                 None,
                 HookOptions {
                     controller: Some(owner),
@@ -430,7 +430,7 @@ pub fn refresh_scope_marks(sink: &mut EngineSink<'_>) {
 /// step, which the caller re-enters through the card's script instead (R126).
 pub fn run_engine_delayed(sink: &mut EngineSink<'_>, effect: &DelayedEffect) -> bool {
     let mut ctx = make_context(
-        sink.reborrow(),
+        sink,
         None,
         HookOptions {
             controller: Some(effect.owner),

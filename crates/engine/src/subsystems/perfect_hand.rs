@@ -81,7 +81,7 @@ pub fn rank_perfect_hand(state: &GameState, viewer: PlayerId, options: RankPerfe
     };
     let pool: crate::catalog::CatalogQueryArgs = json_as(pool);
     let radiant = options.radiant == Some(true);
-    let mut ranked: Vec<Scored> = owned_defs(crate::catalog::query(pool))
+    let mut ranked: Vec<Scored> = owned_defs(crate::catalog::query(&pool))
         .iter()
         .map(|def| {
             let scorer_options = ScorerOptions {

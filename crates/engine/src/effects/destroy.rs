@@ -81,7 +81,7 @@ pub fn destroy(args: DestroyArgs) -> Effect {
 /// `rows` defaults to `["units"]`; a sweep over permanents passes `["units", "backrow"]` (§6.3).
 pub fn destroy_all(args: BoardScope) -> Effect {
     Effect::new("destroyAll", move |ctx| {
-        for card in cards_in_scope(ctx, Some(&args)) {
+        for card in cards_in_scope(ctx, &args) {
             mark_destroyed(&mut *ctx.state, &card);
         }
     })
@@ -106,7 +106,7 @@ pub struct DestroyAdjacentToArgs {
 pub fn destroy_adjacent_to(args: DestroyAdjacentToArgs) -> Effect {
     Effect::new("destroyAdjacentTo", move |ctx| {
         let DestroyAdjacentToArgs { target, scope } = &args;
-        for card in adjacent_to(ctx, target, Some(scope)) {
+        for card in adjacent_to(ctx, target, scope) {
             mark_destroyed(&mut *ctx.state, &card);
         }
     })

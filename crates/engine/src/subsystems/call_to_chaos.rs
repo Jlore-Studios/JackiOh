@@ -274,7 +274,7 @@ pub fn cast_random_call_to_chaos() -> Effect {
         let controller = ctx.controller;
         let mut card = new_instance(&mut *ctx.sink.state, &def_id, controller, Zone::Resolving { player: controller });
         card.memory.insert(CHAOS_CHAIN_KEY.to_string(), json!(depth + 1));
-        crate::resolve::cast_card(&mut sink_of(ctx), card, &crate::resolve::CastOptions::default());
+        crate::resolve::cast_card(&mut sink_of(ctx), &card, crate::resolve::CastOptions::default());
     })
 }
 

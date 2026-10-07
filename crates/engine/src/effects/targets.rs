@@ -275,7 +275,7 @@ pub fn matches_scope(ctx: &EffectContext<'_>, card: &CardInstance, scope: &Board
     if unaffected_by(ctx, card) {
         return false;
     }
-    let def = def_of(ctx.state, &card.def_id);
+    let def = def_of(Some(&*ctx.state), &card.def_id);
     if let Some(types) = &scope.types
         && !types.contains(&card_type_of(ctx.state, card))
     {

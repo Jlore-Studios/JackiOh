@@ -314,7 +314,7 @@ fn standing_of(
             // R11: a token that ceased to exist (it left the field, was discarded or burned) was public when
             // it went. Any other card in no pile went unseen (a Glitch's reset or boards, R676, R678) and
             // stays as hidden as it was.
-            let token = defs.iter().all(|def| crate::catalog::def_of(state, def).token);
+            let token = defs.iter().all(|def| crate::catalog::def_of(Some(&*state), def).token);
             return Some(Standing {
                 reads: token,
                 where_: "no pile (it ceased to exist)".to_string(),
