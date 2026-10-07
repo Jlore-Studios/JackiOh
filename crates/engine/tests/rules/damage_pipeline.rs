@@ -280,7 +280,7 @@ mod e6_hero_divisors_and_caps_s4_4_steps_2_and_3 {
         assert_eq!(find_instance(sink.state, &body.id).expect("on the field").damage, 7);
         sink.state.players[P1].library = vec![];
         sink.state.players[P1].fatigue_count = 2;
-        draw_one(&mut sink, P1);
+        draw_one(&mut sink, P1, None);
         // The 3rd fatigue draw deals 3, halved and rounded up to 2 (R125).
         assert_eq!(sink.state.players[P1].hero.health, 24);
         // R18: losing health is no hit, so nothing divides it.
