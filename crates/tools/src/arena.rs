@@ -184,8 +184,9 @@ pub(crate) struct ArenaGame {
     pub labels: (String, String),
 }
 
-/// One rejected action: match.ts's `rejected` entry.
-#[derive(Clone, Debug)]
+/// One rejected action: match.ts's `rejected` entry (serialisable, for whoever dumps a game).
+#[derive(Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct Rejected {
     pub seat: PlayerId,
     pub action: ActionBody,

@@ -191,7 +191,7 @@ fn ai_source_dirty(repo: &Path) -> anyhow::Result<bool> {
 /// cut from it and rebased on it), else with `main`; `None` when neither is known.
 fn parent_commit(repo: &Path) -> Option<String> {
     ["origin/main", "main"]
-        .iter()
+        .into_iter()
         .find_map(|base| git(repo, &["merge-base", "HEAD", base]).ok())
 }
 
@@ -368,10 +368,9 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     let mut games = arena::setups(&candidate, &random, TRAINING_GAMES, seed_of)?;
     games.extend(arena::setups(&candidate, &parent, TRAINING_GAMES, seed_of)?);
     eprintln!(
-        "promote: {} lane, {} games against random and {} against gen {parent_generation}, on seeds {} to {}",
+        "promote: {} lane, {TRAINING_GAMES} games against random and {TRAINING_GAMES} against gen \
+         {parent_generation}, on seeds {} to {}",
         args.lane.as_str(),
-        TRAINING_GAMES,
-        TRAINING_GAMES,
         game_seed(args.lane, &tree, 1),
         game_seed(args.lane, &tree, TRAINING_GAMES)
     );
