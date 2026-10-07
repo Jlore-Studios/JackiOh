@@ -66,7 +66,7 @@ fn non_token() -> Vec<&'static CardDef> {
 /// TS `beforeAll(() => registerCatalog(CATALOG, CATALOG_VERSION))`: each Rust test runs on its own
 /// thread, and the override is the thread's, so each test registers it first.
 fn register() {
-    register_catalog(CATALOG.clone());
+    register_catalog((*CATALOG).clone());
 }
 
 /// `Object.fromEntries(Object.entries(CATALOG).reverse())`.
@@ -578,7 +578,7 @@ mod s9_3_r60_pool_order_is_deterministic_so_a_seeded_pick_replays {
         register_catalog(reversed_catalog());
         let reversed = ids(query(&q(json!({}))));
         let ky = core_indices(query(&q(json!({ "tags": ["KY"], "excludeDefId": "core-057" }))));
-        register_catalog(CATALOG.clone());
+        register_catalog((*CATALOG).clone());
 
         assert_eq!(reversed, forward);
         assert_eq!(ky, strings(&["31", "51", "82"]));
@@ -599,7 +599,7 @@ mod s9_3_r60_pool_order_is_deterministic_so_a_seeded_pick_replays {
 
         register_catalog(reversed_catalog());
         let reversed = ids(query(&q(json!({ "tags": ["Token"] }))));
-        register_catalog(CATALOG.clone());
+        register_catalog((*CATALOG).clone());
 
         assert_eq!(reversed, forward);
     }
