@@ -13,26 +13,22 @@
 //! no `trapFired`, so the trap stays face-down. The window's check (R99) only reads that memory, so no
 //! predicate draws from the rng, and a memory from another turn or another stay (R78) arms nothing.
 
-use jackioh_engine::prelude::*;
 use jackioh_engine::effects::{recruit, remember, reveal};
-use std::sync::Arc;
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-065";
 
 const HEADS: &str = "headsOnTurn";
 
+/// TS `const fire: TriggerDef` (a function here: a closure cannot be a `const`).
 fn fire() -> TriggerDef {
-    TriggerDef {
-        id: "ace-in-the-hole".into(),
-        on: vec![GameEventType::TurnEnded],
-        when: Some(Arc::new(|ctx: &EffectContext, event: &GameEvent| -> bool {
-            matches!(event, GameEvent::TurnEnded { player, .. } if *player == ctx.controller)
-                && recalled(ctx, HEADS).and_then(|v| v.as_i64()) == Some(i64::from(ctx.state.turn))
-        })),
-        run: Arc::new(|ctx: &EffectContext, _event: &GameEvent| -> Vec<Effect> {
-            vec![recruit(json_as(json!({ "count": param(ctx, "recruits") })))]
-        }),
-    }
+    TriggerDef::new("ace-in-the-hole", &[GameEventType::TurnEnded], |ctx, _event| {
+        vec![recruit(json_as(json!({ "count": param(&*ctx, "recruits") })))]
+    })
+    .with_when(|ctx, event| {
+        matches!(event, GameEvent::TurnEnded { player, .. } if *player == ctx.controller)
+            && recalled(ctx, HEADS).and_then(|value| value.as_i64()) == Some(i64::from(ctx.state.turn))
+    })
 }
 
 fn flip(on_tails: bool) -> Hook {
@@ -40,25 +36,24 @@ fn flip(on_tails: bool) -> Hook {
         if ctx.rng.coin() {
             return vec![remember(json_as(json!({ "key": HEADS, "value": ctx.state.turn })))];
         }
-        if on_tails {
-            vec![recruit(Default::default())]
-        } else {
-            vec![]
-        }
+        if on_tails { vec![recruit(json_as(json!({})))] } else { vec![] }
     })
 }
 
 pub fn script() -> CardScripts {
-    let base = Script { end_of_turn: Some(flip(false)), triggers: vec![fire()], ..Script::default() };
+    let base = Script {
+        end_of_turn: Some(flip(false)),
+        triggers: vec![fire()],
+        ..Script::default()
+    };
 
     // The Radiant face is Revealed regardless of the coin flip (balance patch 1, R686): the end of turn
     // shows its face to both players first, then flips as usual. Revealed is not face-up, so a tails
     // that recruits without firing leaves the trap armed and still answering.
     let radiant = Script {
         end_of_turn: Some(hook(|ctx| {
-            let flip_tails = flip(true);
-            let tails = flip_tails(ctx);
-            let mut effects = vec![reveal(Default::default())];
+            let tails = flip(true)(ctx);
+            let mut effects = vec![reveal(json_as(json!({})))];
             effects.extend(tails);
             effects
         })),
@@ -84,8 +79,11 @@ pub fn script() -> CardScripts {
 // Sheepish (a Trap), Lunar Eclipse (a Spell, which a Recruit passes by).
 #[cfg(test)]
 mod tests {
-    use super::{script, ID};
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
+
+    const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
 
     const ACE: &str = "classic-065";
     const VANILLA: &str = "core-008";
@@ -94,6 +92,7 @@ mod tests {
     const LUNAR: &str = "core-035";
     const FILLER: &str = "core-005";
 
+    /// TS `type Coin = "heads" | "tails"`.
     #[derive(Clone, Copy, PartialEq, Debug)]
     enum Coin {
         Heads,
@@ -101,7 +100,7 @@ mod tests {
     }
 
     impl Coin {
-        /// The TS literal: "heads" | "tails".
+        /// The TS literal.
         fn as_str(self) -> &'static str {
             match self {
                 Coin::Heads => "heads",
@@ -121,7 +120,7 @@ mod tests {
     }
 
     /// A board with an Ace in the Hole set in p1's backrow, on the first seed whose next coin is `coin`.
-    /// `opts`: `radiant`, `p1` (a partial side, spread over the default), `active`, as the TS helper's.
+    /// `opts`: `{ radiant?, p1? (a partial side, spread over the default), active? }`, as the TS helper's.
     fn with_coin(coin: Coin, opts: Value) -> Scenario {
         for attempt in 0..64 {
             let mut ace = json!({ "def": ACE, "faceUp": false });
@@ -159,8 +158,19 @@ mod tests {
     }
 
     /// p1's unit row, lanes 1–5: each lane's def id, or null.
-    fn units(s: &Scenario) -> Value {
-        Value::Array((1..=5).map(|lane| s.unit(PlayerId::P1, lane).map_or(Value::Null, |unit| json!(unit.def_id))).collect())
+    fn units(s: &Scenario) -> Vec<Option<String>> {
+        (1..=5).map(|lane| s.unit(P1, lane).map(|unit| unit.def_id.clone())).collect()
+    }
+
+    /// The expected `units(s)`: a def id per lane, `None` for an empty one.
+    fn lanes(ids: [Option<&str>; 5]) -> Vec<Option<String>> {
+        ids.iter().map(|id| id.map(str::to_string)).collect()
+    }
+
+    /// TS `stepParam(s.card(ref), key, steps)`: a write through the live instance.
+    fn step_param_of(s: &mut Scenario, card: &str, key: &str, steps: i32) {
+        let id = s.card(card).id.clone();
+        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
     }
 
     mod c_65_ace_in_the_hole {
@@ -169,14 +179,20 @@ mod tests {
         #[test]
         fn is_a_trap_that_flips_at_the_end_of_a_turn_and_fires_in_the_window_its_number_is_recruits() {
             crate::register_all();
-            let def = js(&registered_catalog()[ID]);
+            let def = js(&crate::card_def(ID));
             assert_eq!(def["id"], ACE);
             assert_eq!(def["type"], "Trap");
-            assert_eq!(def["params"], json!([{ "key": "recruits", "base": 1, "radiant": 3, "better": "up", "step": 1, "min": 1 }]));
+            assert_eq!(
+                def["params"],
+                json!([{ "key": "recruits", "base": 1, "radiant": 3, "better": "up", "step": 1, "min": 1 }]),
+            );
             let scripts = script();
             for face in [&scripts.base, &scripts.radiant] {
                 assert!(face.end_of_turn.is_some());
-                assert_eq!(face.triggers.iter().map(|trigger| js(&trigger.on)).collect::<Vec<Value>>(), vec![json!(["turnEnded"])]);
+                assert_eq!(
+                    face.triggers.iter().map(|trigger| js(&trigger.on)).collect::<Vec<Value>>(),
+                    vec![json!(["turnEnded"])],
+                );
             }
         }
 
@@ -189,23 +205,24 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [ACE, FILLER] }, "p2": { "hand": [FILLER] } }));
                 s.play(ACE, json!({}));
                 assert_ne!(s.card(ACE).face_up, Some(true));
-                assert_eq!(js(&s.view(PlayerId::P2))["opponent"]["backrow"][0]["faceDown"], true);
-                assert!(!js(&s.view(PlayerId::P2)).to_string().contains(ACE));
+                assert_eq!(js(&s.view(P2))["opponent"]["backrow"][0]["faceDown"], true);
+                assert!(!js(&s.view(P2)).to_string().contains(ACE));
             }
 
             #[test]
-            fn r62_heads_at_the_end_of_your_turn_it_fires_face_up_to_the_graveyard_and_recruits_the_first_permanent_from_the_top_of_your_deck() {
+            fn r62_heads_at_the_end_of_your_turn_it_fires_face_up_to_the_graveyard_and_recruits_the_first_permanent_from_the_top_of_your_deck()
+             {
                 crate::register_all();
                 let mut s = with_coin(Coin::Heads, json!({}));
-                let ace = s.card(ACE).id.clone();
+                let ace = s.card(ACE).clone();
                 let cursor = s.state().rng_cursor;
                 s.end_turn();
                 assert!(s.state().rng_cursor > cursor);
                 s.expect_events(json!(["turnEnded", "trapFired", "summoned"]));
-                assert_eq!(units(&s), json!([VANILLA, null, null, null, null]));
+                assert_eq!(units(&s), lanes([Some(VANILLA), None, None, None, None]));
                 s.expect_in_zone(&ace, "graveyard");
                 assert_eq!(
-                    s.pile(PlayerId::P1, "library").iter().map(|card| card.def_id.as_str()).collect::<Vec<&str>>(),
+                    s.pile(P1, "library").iter().map(|card| card.def_id.clone()).collect::<Vec<String>>(),
                     vec![LUNAR, GARY, VANILLA],
                 );
             }
@@ -214,28 +231,33 @@ mod tests {
             fn tails_nothing_happens_and_it_stays_set_face_down_never_named_to_the_opponent() {
                 crate::register_all();
                 let mut s = with_coin(Coin::Tails, json!({}));
-                let ace = s.card(ACE).id.clone();
+                let ace = s.card(ACE).clone();
                 s.end_turn();
                 assert_eq!(fired(&s), 0);
                 assert!(!s.events().iter().map(js).any(|event| event["type"] == "summoned"));
                 s.expect_in_zone(&ace, "field");
                 assert_ne!(s.card(&ace).face_up, Some(true));
-                assert!(!js(&s.view(PlayerId::P2)).to_string().contains(ACE));
+                assert!(!js(&s.view(P2)).to_string().contains(ACE));
             }
 
             #[test]
-            fn r177_tails_leaves_the_opponent_nothing_to_read_their_events_and_the_shared_counter_match_a_face_down_sheepishs() {
+            fn r177_tails_leaves_the_opponent_nothing_to_read_their_events_and_the_shared_counter_match_a_face_down_sheepishs()
+             {
                 crate::register_all();
                 let mut s = with_coin(Coin::Tails, json!({}));
                 let mut plain = scenario(json!({
                     "seed": s.state().seed.clone(),
-                    "p1": { "hand": [FILLER], "backrow": [{ "def": SHEEPISH, "faceUp": false }], "library": [LUNAR, VANILLA, GARY, VANILLA] },
+                    "p1": {
+                        "hand": [FILLER],
+                        "backrow": [{ "def": SHEEPISH, "faceUp": false }],
+                        "library": [LUNAR, VANILLA, GARY, VANILLA],
+                    },
                     "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
                 }));
                 s.end_turn();
                 plain.end_turn();
                 assert_eq!(s.state().next_seq, plain.state().next_seq);
-                assert_eq!(s.view(PlayerId::P2).events, plain.view(PlayerId::P2).events);
+                assert_eq!(s.view(P2).events, plain.view(P2).events);
             }
 
             #[test]
@@ -274,11 +296,14 @@ mod tests {
             #[test]
             fn heads_with_the_unit_row_full_it_fires_and_the_unit_stays_on_top_of_the_deck() {
                 crate::register_all();
-                let mut s = with_coin(Coin::Heads, json!({ "p1": { "field": [GARY, GARY, GARY, GARY, GARY], "library": [VANILLA, LUNAR] } }));
+                let mut s = with_coin(
+                    Coin::Heads,
+                    json!({ "p1": { "field": [GARY, GARY, GARY, GARY, GARY], "library": [VANILLA, LUNAR] } }),
+                );
                 s.end_turn();
                 assert_eq!(fired(&s), 1);
                 assert!(!s.events().iter().map(js).any(|event| event["type"] == "summoned"));
-                assert_eq!(s.pile(PlayerId::P1, "library").first().map(|card| card.def_id.as_str()), Some(VANILLA));
+                assert_eq!(s.pile(P1, "library").first().map(|card| card.def_id.clone()), Some(VANILLA.to_string()));
             }
 
             #[test]
@@ -286,26 +311,27 @@ mod tests {
                 crate::register_all();
                 let mut s = with_coin(Coin::Heads, json!({ "p1": { "library": [SHEEPISH, VANILLA] } }));
                 s.end_turn();
-                let sheepish = s.card(SHEEPISH);
+                let sheepish = s.card(SHEEPISH).clone();
                 assert_eq!(js(&sheepish.zone)["z"], "field");
                 assert_ne!(sheepish.face_up, Some(true));
-                assert!(!js(&s.view(PlayerId::P2)).to_string().contains(SHEEPISH));
+                assert!(!js(&s.view(P2)).to_string().contains(SHEEPISH));
             }
 
             #[test]
             fn r386_an_upgrade_recruits_2_on_heads() {
                 crate::register_all();
                 let mut s = with_coin(Coin::Heads, json!({}));
-                step_param(s.card_mut(ACE), "recruits", 1);
+                step_param_of(&mut s, ACE, "recruits", 1);
                 s.end_turn();
-                assert_eq!(units(&s), json!([VANILLA, GARY, null, null, null]));
+                assert_eq!(units(&s), lanes([Some(VANILLA), Some(GARY), None, None, None]));
             }
 
             #[test]
             fn the_coin_is_seeded_a_round_tripped_state_flips_the_same_coin_and_replays_the_same_turn_end() {
                 crate::register_all();
                 let s = with_coin(Coin::Heads, json!({}));
-                let thawed: GameState = serde_json::from_value(js(s.state())).expect("the state round-trips through JSON");
+                let thawed: GameState =
+                    serde_json::from_value(js(s.state())).expect("the state round-trips through JSON");
                 let end: Action = json_as(json!({ "type": "endTurn", "playerId": "p1", "nonce": "ace-roundtrip" }));
                 let live = reduce(s.state(), &end);
                 let frozen = reduce(&thawed, &end);
@@ -325,7 +351,7 @@ mod tests {
                 let mut s = with_coin(Coin::Heads, json!({ "radiant": true }));
                 s.end_turn();
                 assert_eq!(fired(&s), 1);
-                assert_eq!(units(&s), json!([VANILLA, GARY, VANILLA, null, null]));
+                assert_eq!(units(&s), lanes([Some(VANILLA), Some(GARY), Some(VANILLA), None, None]));
                 s.expect_in_zone(ACE, "graveyard");
             }
 
@@ -333,15 +359,15 @@ mod tests {
             fn r686_tails_it_recruits_1_without_firing_and_stays_set_revealed_readable_still_armed() {
                 crate::register_all();
                 let mut s = with_coin(Coin::Tails, json!({ "radiant": true }));
-                let ace = s.card(ACE).id.clone();
+                let ace = s.card(ACE).clone();
                 s.end_turn();
                 assert_eq!(fired(&s), 0);
-                assert_eq!(units(&s), json!([VANILLA, null, null, null, null]));
+                assert_eq!(units(&s), lanes([Some(VANILLA), None, None, None, None]));
                 s.expect_in_zone(&ace, "field");
                 assert_ne!(s.card(&ace).face_up, Some(true));
                 // R686: Revealed regardless of the coin flip — the opponent reads its face, but it never fired.
                 assert_eq!(s.card(&ace).revealed, Some(true));
-                let theirs = js(&s.view(PlayerId::P2));
+                let theirs = js(&s.view(P2));
                 assert!(theirs.to_string().contains(ACE));
                 assert_eq!(theirs["opponent"]["backrow"][0]["faceDown"], false);
             }
@@ -349,17 +375,20 @@ mod tests {
             #[test]
             fn tails_a_recruited_trap_lands_face_down_r33_and_the_set_trap_flips_again_at_your_next_end_of_turn() {
                 crate::register_all();
-                let mut s = with_coin(Coin::Tails, json!({ "radiant": true, "p1": { "library": [SHEEPISH, VANILLA, GARY, VANILLA] } }));
+                let mut s = with_coin(
+                    Coin::Tails,
+                    json!({ "radiant": true, "p1": { "library": [SHEEPISH, VANILLA, GARY, VANILLA] } }),
+                );
                 s.end_turn(); // p1's end: tails, Sheepish recruited.
                 assert_eq!(js(&s.card(SHEEPISH).zone)["z"], "field");
                 assert_ne!(s.card(SHEEPISH).face_up, Some(true));
-                assert!(!js(&s.view(PlayerId::P2)).to_string().contains(SHEEPISH));
+                assert!(!js(&s.view(P2)).to_string().contains(SHEEPISH));
                 s.end_turn(); // p2's end: no coin.
                 let second = next_coin(s.state());
                 s.end_turn(); // p1's end again: a fresh coin — heads recruits 3, tails 1.
                 assert_eq!(fired(&s), if second == Coin::Heads { 1 } else { 0 });
                 assert_eq!(
-                    units(&s).as_array().map_or(0, |lanes| lanes.iter().filter(|unit| !unit.is_null()).count()),
+                    units(&s).iter().filter(|unit| unit.is_some()).count(),
                     if second == Coin::Heads { 3 } else { 1 },
                 );
                 s.expect_in_zone(ACE, if second == Coin::Heads { "graveyard" } else { "field" });
@@ -369,8 +398,10 @@ mod tests {
             fn tails_replays_the_same_from_a_round_tripped_state_one_coin_one_recruit_no_firing() {
                 crate::register_all();
                 let s = with_coin(Coin::Tails, json!({ "radiant": true }));
-                let thawed: GameState = serde_json::from_value(js(s.state())).expect("the state round-trips through JSON");
-                let end: Action = json_as(json!({ "type": "endTurn", "playerId": "p1", "nonce": "ace-radiant-roundtrip" }));
+                let thawed: GameState =
+                    serde_json::from_value(js(s.state())).expect("the state round-trips through JSON");
+                let end: Action =
+                    json_as(json!({ "type": "endTurn", "playerId": "p1", "nonce": "ace-radiant-roundtrip" }));
                 let live = reduce(s.state(), &end);
                 let frozen = reduce(&thawed, &end);
                 assert!(live.error.is_none());
@@ -407,16 +438,16 @@ mod tests {
                 let mut s = with_coin(Coin::Heads, json!({ "radiant": true, "p1": { "library": [SHEEPISH] } }));
                 s.end_turn();
                 assert_ne!(s.card(SHEEPISH).face_up, Some(true));
-                assert!(!js(&s.view(PlayerId::P2)).to_string().contains(SHEEPISH));
+                assert!(!js(&s.view(P2)).to_string().contains(SHEEPISH));
             }
 
             #[test]
             fn r386_a_degrade_recruits_2_on_heads() {
                 crate::register_all();
                 let mut s = with_coin(Coin::Heads, json!({ "radiant": true }));
-                step_param(s.card_mut(ACE), "recruits", -1);
+                step_param_of(&mut s, ACE, "recruits", -1);
                 s.end_turn();
-                assert_eq!(units(&s), json!([VANILLA, GARY, null, null, null]));
+                assert_eq!(units(&s), lanes([Some(VANILLA), Some(GARY), None, None, None]));
             }
         }
     }
