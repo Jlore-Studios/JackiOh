@@ -38,8 +38,45 @@ e2e/scripts/shard-specs.mjs — `export const SMOKE = ["01", "06", "10", "13", "
 ## GAPS
 - Nothing here has run. The first real run of ci.yml is the cutover pull request (part 38); a person can try it earlier with `gh workflow run ci.yml --ref staging` (ci.yml is known to GitHub from main, and the dispatch reads staging's copy, which has `workflow_dispatch`).
 - super.yml exists only on staging, so GitHub may refuse `gh workflow run super.yml --ref staging` (404) until a workflow of that name has been seen on the default branch; then V25's check (a dispatched run opens the issue while red and closes it once green) waits for the cutover. Its schedule fires only from main, i.e. after cutover.
-- Step 5 / V24 (every per-PR job under 5 minutes) is unmeasured. Likeliest to run long: `rust (test)` (debug build of the whole workspace plus 240 golden games in debug), `rust (release build)` (`lto = "thin"`), `web (wasm, client build)`. Fixes in order: a cargo test matrix by crate; `CARGO_PROFILE_RELEASE_LTO=false` in CI's env for the e2e build only; more `web (unit k/K)` shards. `db (deploy rehearsal)` builds the Docker image from scratch each time and may pass five minutes on the pull requests that run it; if so, rehearse.sh could take a prebuilt image or buildx's GHA cache.
+- Step 5 / V24 (every per-PR job under 5 minutes) was unmeasured when this was written; it is measured and met now, see `## V24` below. Likeliest to run long: `rust (test)` (debug build of the whole workspace plus 240 golden games in debug), `rust (release build)` (`lto = "thin"`), `web (wasm, client build)`. Fixes in order: a cargo test matrix by crate; `CARGO_PROFILE_RELEASE_LTO=false` in CI's env for the e2e build only; more `web (unit k/K)` shards. `db (deploy rehearsal)` builds the Docker image from scratch each time and may pass five minutes on the pull requests that run it; if so, rehearse.sh could take a prebuilt image or buildx's GHA cache.
 - Deviations from the brief, each deliberate: (1) the e2e-shard action no longer compiles: `rust (release build)` and `web (wasm, client build)` build once per run in the brief's order (build-wasm.sh before build:e2e; `cargo build --release -p jackioh-server -p jackioh-tools`) and every shard downloads the result, or each of 2 smoke and 8 daily shards would compile the workspace twice; (2) the ts-rs/config export diff (V20) runs in `rust (test)`, where the engine and server are compiled anyway, not in `web`; (3) the db gate also fires on its own test files, `crates/server/Cargo.toml` and `Cargo.lock`, and lives in ci-scope.sh (tested) instead of inline YAML; (4) ci-duration.yml keeps watching `bot selftest` and `deploy watch` (only super is kept off); (5) the stale workflow-level `CATALOG_VERSION: v0.2.0` is gone, since the Rust server refuses a version other than its compiled one; (6) super.yml also runs the web's audio, fx and asset tests, which no other job would; (7) `--no-renames` in both scope scripts: a move onto a skip list used to hide its old path (pre-existing, now tested).
 - The audio, fx and asset web tests no longer gate a pull request. If super keeps catching regressions there, give them a ci-scope output like `db` (`apps/web/src/audio/`, `apps/web/src/fx/`, `apps/web/public/audio/`) and run them per pull request when touched.
 - Left stale, not in my table: CLAUDE.md's Commands and CI paragraphs (seven checks, Electron, `pnpm fuzz`, `pnpm ai:gate`, `test:coverage`), e2e/README.md's Electron and sharding notes, bot-night.yml / squishy-run.yml toolchain setup (part 38), BUILD.md's CI wording.
 - promote-production.yml is untouched; its deploy job uses the setup action, which now installs Rust by default, so its `pnpm --filter @jackioh/web build` (prebuild runs build-wasm.sh) keeps working.
+
+## V24
+Every per-pull-request job of ci.yml finishes under five minutes on a warm cache. Final warm run: workflow_dispatch run 37632766405 on staging at 425011a, all green; the slowest job is 3:46.
+
+| job | total | main step |
+|---|---|---|
+| e2e smoke (2/2) | 3:46 | e2e-shard 3:08 |
+| rust (test engine) | 3:44 | cargo test 3:16 |
+| rust (test engine rules) | 3:36 | cargo test 3:08 |
+| rust (release build) | 3:06 | cargo build --release 2:37 |
+| db (store contract) | 2:59 | run.sh 2:24 |
+| rust (test cards lib) | 2:56 | cargo test 2:33 |
+| web (unit 3/3) | 2:56 | vitest 2:11 |
+| rust (test ai) | 2:54 | cargo test 2:34 |
+| rust (test tools, wasm) | 2:46 | cargo test 2:17 |
+| rust (test cards) | 2:37 | cargo test 2:12 |
+| e2e smoke (1/2) | 2:33 | e2e-shard 2:01 |
+| rust (test server) | 2:19 | cargo test 1:49 |
+| web (wasm, client build) | 2:06 | build-wasm.sh 1:13 |
+| web (unit 1/3), (unit 2/3) | 1:58, 1:56 | |
+| rust (fmt, clippy) | 1:34 | clippy 1:01 |
+| web (typecheck, eslint) | 1:17 | |
+| rust (checks, fuzz 200) | 0:35 | |
+| db (deploy rehearsal) | 0:32 | the image from buildx's cache |
+| db (sql invariants) | 0:28 | |
+
+Before (run 37620287774): rust (test) 14:36, rust (release build) 5:51, db (deploy rehearsal) 5:25, db (store contract) 4:44.
+
+What changed:
+- `rust (test)` is a matrix, `rust (test <group>)`: engine rules (`--test rules`, testkit only), engine (`--lib --test golden --test export_config`, testkit and ts, then `--doc`), cards lib (`--lib`), cards (`--test cards`, then `--doc`), server, ai, and tools, wasm (`--workspace --exclude` the other four, so a new crate lands there). Measured with `--timings` on GitHub's 4 vCPUs: the engine and the cards at opt-level 2 cost about 80 s in every group; `rules` alone takes 118 s to compile, the engine's unit tests 115 s, the cards' unit tests 166 s, `tests/cards.rs` 58 s. A guard step checks the split crates' test binaries against `cargo metadata`, so a new `tests/*.rs` cannot go unrun. Every group runs the V20 diff. Each group has its own rust-cache entry (the setup action's new `cache-key` input; a cache key may not hold a comma).
+- `CARGO_PROFILE_TEST_DEBUG=0` workflow-wide, and `CARGO_PROFILE_RELEASE_LTO=false` in `rust (release build)` only (e2e and the checks; Render's image keeps thin LTO). Cargo.toml is untouched.
+- The setup action uninstalls every rustup toolchain but the pinned one before rust-cache keys itself. rust-cache hashes every installed toolchain into its key, and the runner image's own `stable` differed between runners of one run (1.98.1 on one, 1.99.0 on the next) during an image rollout, so about half the jobs missed their cache and compiled every dependency. That is why the brief's warm and cold runs looked alike.
+- `crates/server/tests/db/run.sh` builds once, in the test profile with the tests, and runs that binary for `migrate`. Before, `cargo build` (dev), `cargo run` (dev, without the dev-dependency features) and `cargo test` (test) compiled the workspace up to three times.
+- The deploy rehearsal builds its image with `docker buildx build --load` and the GitHub Actions cache (rehearse.sh's `REHEARSAL_CACHE_FROM` and `REHEARSAL_CACHE_TO`, set by ci.yml; written only from main and staging, `mode=min`, about 45 MB). Same Dockerfile and context; without the variables rehearse.sh runs the plain `docker build` it did.
+- `workflow_dispatch` input `e2e: smoke | all`. `all` runs every spec in eight shards (`e2e all (k/8)`) and `e2e component (chrome)`, as super.yml does, and its summary is named `e2e all`, so it never reports under the required `e2e smoke`. Pull requests and pushes are unchanged. ci-duration exempts `e2e all (…)` and the component job. All-specs runs: 37628675555 (05 and 20 sent the legacy `{ deckIndex }` room body; fixed in e7f6aac), then 37630374228, every shard and the component specs green.
+
+Still over five minutes: `db (deploy rehearsal)` when the image's inputs changed. The Dockerfile copies all of `crates/` and compiles in one `RUN`, so any change under `crates/` (every pull request that runs the db suites has one, except a render.yaml-only change) recompiles every dependency and the server with thin LTO, about 270 s of build: 5:31 in run 37631639361 and 5:45 in run 37628675555, under the seven-minute alert. Getting it under five needs crates/server/Dockerfile, which part 30 does not own: a dependency layer before `COPY crates` (cargo-chef, or the manifests with stub sources), so only the workspace crates rebuild, or an `ARG` the rehearsal sets to skip LTO (default `thin`, so Render's build is unchanged), or both.
