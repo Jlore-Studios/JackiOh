@@ -41,8 +41,12 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use jackioh_engine::catalog::query;
     use jackioh_engine::effects::{fuse_cards, set_radiant, summon};
+    use jackioh_engine::layers::{face_of, unit_view};
+    use jackioh_engine::resolve::{HookOptions, apply_effects, make_context};
     use jackioh_engine::testkit::*;
+    use jackioh_engine::zones::is_unit_token;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -75,20 +79,68 @@ mod tests {
         }
     }
 
+    /// TS `Object.keys(script)`: the TS names of the fields a script sets.
+    fn set_fields(script: &Script) -> Vec<&'static str> {
+        let mut keys = Vec::new();
+        let mut put = |set: bool, key: &'static str| {
+            if set {
+                keys.push(key);
+            }
+        };
+        put(script.cost.is_some(), "cost");
+        put(script.cry.is_some(), "cry");
+        put(script.death.is_some(), "death");
+        put(script.start_of_game.is_some(), "startOfGame");
+        put(!script.resume.is_empty(), "resume");
+        put(script.delayed.is_some(), "delayed");
+        put(script.set_stat.is_some(), "setStat");
+        put(script.start_of_turn.is_some(), "startOfTurn");
+        put(script.end_of_turn.is_some(), "endOfTurn");
+        put(script.aura.is_some(), "aura");
+        put(!script.triggers.is_empty(), "triggers");
+        put(script.on_play_hook.is_some(), "onPlayHook");
+        put(!script.hand_triggers.is_empty(), "handTriggers");
+        put(script.static_flags.is_some(), "staticFlags");
+        put(!script.targets.is_empty(), "targets");
+        put(!script.modes.is_empty(), "modes");
+        put(script.condition_met.is_some(), "conditionMet");
+        put(script.preview.is_some(), "preview");
+        put(!script.activations.is_empty(), "activations");
+        put(!script.target_checks.is_empty(), "targetChecks");
+        put(script.cost_aura.is_some(), "costAura");
+        put(script.graveyard_play.is_some(), "graveyardPlay");
+        put(script.targeting_discards.is_some(), "targetingDiscards");
+        put(script.records_play_as.is_some(), "recordsPlayAs");
+        put(script.draw_limit.is_some(), "drawLimit");
+        put(!script.replacements.is_empty(), "replacements");
+        put(script.hero_guard.is_some(), "heroGuard");
+        put(script.conditional_keywords.is_some(), "conditionalKeywords");
+        put(script.after_attack.is_some(), "afterAttack");
+        put(script.plague_multiplier.is_some(), "plagueMultiplier");
+        put(!script.deck_triggers.is_empty(), "deckTriggers");
+        put(!script.graveyard_triggers.is_empty(), "graveyardTriggers");
+        put(script.quests.is_some(), "quests");
+        put(script.tribute_when.is_some(), "tributeWhen");
+        put(script.would_counter.is_some(), "wouldCounter");
+        put(script.start_of_opponent_turn.is_some(), "startOfOpponentTurn");
+        keys
+    }
+
     /// Apply engine effects as p1, the way the card that summons the token would (#74 owns the call).
     fn run(s: &mut Scenario, effects: Vec<Effect>) {
         let state = s.state_mut();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         let mut events: Vec<GameEvent> = Vec::new();
         {
-            let mut sink = EngineSink {
-                state: &mut *state,
-                events: &mut events,
-                rng: &mut rng,
-                converting: 0,
-                dry_running: false,
-            };
-            let mut ctx = make_context(&mut sink, None, json_as(json!({ "controller": "p1" })));
+            let mut sink = EngineSink::new(&mut *state, &mut events, &mut rng);
+            let mut ctx = make_context(
+                &mut sink,
+                None,
+                HookOptions {
+                    controller: Some(P1),
+                    ..Default::default()
+                },
+            );
             apply_effects(&effects, &mut ctx);
         }
         state.rng_cursor = rng.cursor();
@@ -105,7 +157,7 @@ mod tests {
             args["radiant"] = json!(true);
         }
         run(s, vec![summon(json_as(args))]);
-        let token = s.unit(P1, 1).cloned();
+        let token = s.unit(P1, 1);
         assert_eq!(
             token.as_ref().map(|card| card.def_id.as_str()),
             Some(ID),
@@ -151,12 +203,10 @@ mod tests {
             #[test]
             fn s7_needs_no_script_for_either_face_and_the_radiant_script_is_the_base_script() {
                 crate::register_all();
-                // TS `toEqual({})` and `toBe(base)`: both faces are the default (empty) Script.
+                // TS `toEqual({})` and `toBe(base)`: both faces are the empty Script.
                 let scripts = script();
-                for face in [&scripts.base, &scripts.radiant] {
-                    assert!(face.cry.is_none() && face.death.is_none() && face.resume.is_empty());
-                    assert!(face.triggers.is_empty() && face.static_flags.is_none() && face.set_stat.is_none());
-                }
+                assert!(set_fields(&scripts.base).is_empty());
+                assert!(set_fields(&scripts.radiant).is_empty());
             }
 
             #[test]
@@ -194,8 +244,8 @@ mod tests {
                     "p1": { "field": [{ "def": ID, "statsOverride": { "attack": 3, "health": 3 } }] },
                     "p2": { "field": [WALL] },
                 }));
-                let wall = s.unit(P2, 1).cloned().unwrap();
-                let ghoul = s.unit(P1, 1).cloned().unwrap();
+                let wall = s.unit(P2, 1).unwrap();
+                let ghoul = s.unit(P1, 1).unwrap();
                 s.attack(&ghoul, &wall);
                 s.expect_stats(&wall, json!({ "health": 4, "maxHealth": 7 }));
                 let hit = s
@@ -215,7 +265,7 @@ mod tests {
                     "p2": { "backrow": [GOING_LONG] },
                 }));
                 assert_eq!(js(&s.view(Some(P2)))["you"]["hero"]["armor"], json!(2));
-                let ghoul = s.unit(P1, 1).cloned().unwrap();
+                let ghoul = s.unit(P1, 1).unwrap();
                 s.attack(&ghoul, "hero");
                 s.expect_health(P2, 27);
             }
@@ -230,8 +280,8 @@ mod tests {
                     "p1": { "field": [{ "def": ID, "statsOverride": { "attack": 9, "health": 9 } }] },
                     "p2": { "field": [WALL] },
                 }));
-                let ghoul = s.unit(P1, 1).cloned().unwrap();
-                let wall = s.unit(P2, 1).cloned().unwrap();
+                let ghoul = s.unit(P1, 1).unwrap();
+                let wall = s.unit(P2, 1).unwrap();
                 s.attack(&ghoul, &wall);
                 s.expect_stats(&ghoul, json!({ "health": 2 }));
                 let wall_card = s.card(WALL).clone();
@@ -246,9 +296,9 @@ mod tests {
                     "p1": { "field": [{ "def": ID, "statsOverride": { "attack": 1, "health": 1 } }] },
                     "p2": { "field": [WALL] },
                 }));
-                let ghoul = s.unit(P1, 1).cloned().unwrap();
+                let ghoul = s.unit(P1, 1).unwrap();
                 assert!(is_unit_token(s.state(), &ghoul));
-                let wall = s.unit(P2, 1).cloned().unwrap();
+                let wall = s.unit(P2, 1).unwrap();
                 s.attack(&ghoul, &wall);
                 s.expect_in_zone(&ghoul, "gone");
                 assert!(s.pile(P1, "graveyard").is_empty());
@@ -275,7 +325,7 @@ mod tests {
                     "seed": SEED,
                     "p1": { "field": [{ "def": ID, "statsOverride": { "attack": 4, "health": 4 }, "damage": 1 }] },
                 }));
-                let ghoul = s.unit(P1, 1).cloned().unwrap();
+                let ghoul = s.unit(P1, 1).unwrap();
                 s.expect_stats(&ghoul, json!({ "attack": 4, "health": 3, "maxHealth": 4 }));
                 run(&mut s, vec![set_radiant(json_as(json!({ "instanceId": ghoul.id })))]);
                 s.expect_stats(&ghoul, json!({ "attack": 8, "health": 7, "maxHealth": 8 }));
@@ -294,8 +344,8 @@ mod tests {
                     "p1": { "field": [{ "def": ID, "radiant": true, "statsOverride": { "attack": 2, "health": 2 } }] },
                     "p2": { "field": [WALL] },
                 }));
-                let wall = s.unit(P2, 1).cloned().unwrap();
-                let ghoul = s.unit(P1, 1).cloned().unwrap();
+                let wall = s.unit(P2, 1).unwrap();
+                let ghoul = s.unit(P1, 1).unwrap();
                 s.attack(&ghoul, &wall);
                 s.expect_stats(&wall, json!({ "health": 3 }));
             }
@@ -310,13 +360,13 @@ mod tests {
                         "hand": ["core-011"],
                     },
                 }));
-                let ghoul = s.unit(P1, 1).cloned().unwrap();
+                let ghoul = s.unit(P1, 1).unwrap();
                 let timmy = s.hand(Some(P1))[0].clone();
                 run(
                     &mut s,
                     vec![fuse_cards(json_as(json!({ "instanceIds": [timmy.id], "targetInstanceId": ghoul.id })))],
                 );
-                let fused = s.unit(P1, 1).cloned().unwrap();
+                let fused = s.unit(P1, 1).unwrap();
                 let fused_def = s.state().transient_defs.get(&fused.def_id).map(js).unwrap_or(Value::Null);
                 // #11 Tempo Timmy is 3/3 → 6/6; the Ghoul adds 3/3 on the base face and 6/6 on the Radiant one.
                 assert!(matches_object(&fused_def["base"], &json!({ "attack": 6, "health": 6 })));
