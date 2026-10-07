@@ -183,8 +183,17 @@ impl<'a> EffectContext<'a> {
 
     /// The running card as it stands now (TS's live `ctx.self`): looked up by id, or the card the
     /// context was built with when it is no longer anywhere (a Death hook's card that ceased to exist).
+    ///
+    /// R89: a context whose data carries the card's snapshot (`prompts::SELF_KEY`: a Death hook, a dead
+    /// attacker's After Attack, and every continuation of either) runs as that snapshot, never as the
+    /// card R78 has reset on the board under the same id: TS's `ctx.self` was the snapshot object there
+    /// (`stateCheck.runDeathPass`, `combat.runAfterAttack`, `prompts.runResume`), so a Death hook reads
+    /// the memory its card died with (#22 Carnivorous Cube's meal, R41).
     pub fn live_self(&self) -> Option<&CardInstance> {
         let snapshot = self.self_.as_ref()?;
+        if self.data.contains_key(crate::prompts::SELF_KEY) {
+            return Some(snapshot);
+        }
         crate::state::find_instance(self.sink.state, &snapshot.id).or(Some(snapshot))
     }
 }

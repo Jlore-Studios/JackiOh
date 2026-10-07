@@ -49,7 +49,8 @@ pub fn refresh_some_mana(side: &mut PlayerState, amount: i32) {
     if amount <= 0 || side.mana.current >= side.mana.max {
         return;
     }
-    side.mana.current = side.mana.max.min(side.mana.current + amount);
+    // Saturating: "refresh all your mana" (Classic+ #27) passes `i32::MAX`, TS's `Infinity`.
+    side.mana.current = side.mana.max.min(side.mana.current.saturating_add(amount));
 }
 
 /// Temporary mana may take current above max (§2.3).

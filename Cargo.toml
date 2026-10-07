@@ -45,6 +45,21 @@ thiserror = { version = "2.0.21" }
 clap = { version = "4.6.7", features = ["derive"] }
 rayon = { version = "1.12.0" }
 
+# `cargo test` optimises the rules and the cards (and the JSON they hash), keeping debug assertions
+# and overflow checks: the golden traces (SURFACE §13, V4) replay 240 games through `reduce`,
+# `legal_actions`, `view_for` and `hash_state` at every step, which takes hours unoptimised.
+[profile.test.package.jackioh-engine]
+opt-level = 2
+
+[profile.test.package.jackioh-cards]
+opt-level = 2
+
+[profile.test.package.serde_json]
+opt-level = 2
+
+[profile.test.package.indexmap]
+opt-level = 2
+
 [profile.release]
 lto = "thin"
 

@@ -1396,12 +1396,9 @@ fn fused_would_counter(scripts: &[&Script]) -> Option<WouldCounterHook> {
 fn fused_script(state: &GameState, specs: &[FusedIngredient], radiant: bool, seen: &IndexSet<String>) -> Script {
     let faces: Vec<Face> = specs
         .iter()
-        .map(|spec| {
-            let pair = scripts_for(state, &spec.def_id, seen);
-            Face {
-                def_id: spec.def_id.clone(),
-                script: if radiant || spec.radiant == Some(true) { pair.radiant } else { pair.base },
-            }
+        .map(|spec| Face {
+            def_id: spec.def_id.clone(),
+            script: face_for(state, &spec.def_id, radiant || spec.radiant == Some(true), seen),
         })
         .collect();
     let scripts: Vec<&Script> = faces.iter().map(|face| &face.script).collect();
@@ -1441,14 +1438,26 @@ fn fused_specs(state: &GameState, def_id: &str) -> Option<Vec<FusedIngredient>> 
     if specs.len() >= FUSE_MIN_INGREDIENTS { Some(specs) } else { None }
 }
 
-/// The scripts an ingredient runs: a fused ingredient's composed here, its fused ingredients first
-/// (TS `ensureFused`); any other id's from the registry (`scripts::script_of`). `seen` stops a malformed
-/// id that names itself: TS left such an id unregistered, so it ran no script.
-fn scripts_for(state: &GameState, def_id: &str, seen: &IndexSet<String>) -> CardScripts {
+/// The script an ingredient runs on one form: a fused ingredient's composed here on that form, its
+/// fused ingredients first (TS `ensureFused`); any other id's from the registry (`scripts::script_of`).
+/// `seen` stops a malformed id that names itself: TS left such an id unregistered, so it ran no script.
+///
+/// Only the form asked for is composed. TS composed each fused id once, into its registry, so a chain
+/// of fusions cost one composition per link; composing both forms of every ingredient on every lookup
+/// doubles the work at each link, and a Fuse of a Fuse of a Fuse … fourteen deep (golden seed 68) is
+/// then 2^14 compositions on every `script_of`.
+fn face_for(state: &GameState, def_id: &str, radiant: bool, seen: &IndexSet<String>) -> Script {
     match fused_specs(state, def_id) {
-        None => crate::scripts::script_of(state, def_id),
-        Some(_) if seen.contains(def_id) => CardScripts::default(),
-        Some(specs) => compose_specs(state, def_id, &specs, seen),
+        None => {
+            let pair = crate::scripts::script_of(state, def_id);
+            if radiant { pair.radiant } else { pair.base }
+        }
+        Some(_) if seen.contains(def_id) => Script::default(),
+        Some(specs) => {
+            let mut inside = seen.clone();
+            inside.insert(def_id.to_string());
+            fused_script(state, &specs, radiant, &inside)
+        }
     }
 }
 
