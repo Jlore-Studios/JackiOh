@@ -40,15 +40,15 @@ use serde_json::{Value, json};
 
 use crate::brittle_count::active_brittle_count;
 use crate::config::{
-    TUNE_ATTACK_FLOOR, TUNE_COST_CAP, TUNE_COST_FLOOR, TUNE_COST_STEP, TUNE_HARMFUL_KEYWORDS, TUNE_HEALTH_FLOOR,
-    TUNE_STAT_TOTAL, TUNE_X_STEP,
+    TUNE_ATTACK_FLOOR, TUNE_COST_CAP, TUNE_COST_FLOOR, TUNE_COST_STEP, TUNE_HARMFUL_KEYWORDS,
+    TUNE_HEALTH_FLOOR, TUNE_STAT_TOTAL, TUNE_X_STEP,
 };
 use crate::faces::card_type_of;
 use crate::layers::{card_keywords, printed_keywords_of, stats_with_buffs, unclamped_attack, unit_view};
 use crate::mana::is_x_cost;
 use crate::numbers::{
-    NumberRef, current_stats, number_key, number_on, number_ref_id, numbered_keywords_on, numbers_on, own_cost,
-    parse_number_ref,
+    NumberRef, current_stats, number_key, number_on, number_ref_id, numbered_keywords_on, numbers_on,
+    own_cost, parse_number_ref,
 };
 use crate::params::{set_param, step_param, steppable_params};
 use crate::prompts::{OpenPromptArgs, open_prompt, resume_self};
@@ -122,7 +122,10 @@ enum MenuApply {
     /// A split drawn as it applies, floored by the stats the card had (`attack`, `health`).
     Stats { attack: i32, health: i32 },
     /// A Degrade's keyword: one of `kinds` drawn, `own` naming the keyword the event shows.
-    RemoveKeyword { own: Vec<Keyword>, kinds: Vec<KeywordKind> },
+    RemoveKeyword {
+        own: Vec<Keyword>,
+        kinds: Vec<KeywordKind>,
+    },
     /// An Upgrade's keyword: one of `candidates` drawn and added.
     AddKeyword { candidates: Vec<Keyword> },
     /// One of the X row's items drawn and written.
@@ -185,7 +188,9 @@ fn cost_row(state: &GameState, card: &CardInstance, direction: TuneDirection) ->
         TuneDirection::Degrade => TUNE_COST_STEP.min(TUNE_COST_CAP - own),
         TuneDirection::Upgrade => 0 - TUNE_COST_STEP.min(own - TUNE_COST_FLOOR),
     };
-    if (direction == TuneDirection::Degrade && delta <= 0) || (direction == TuneDirection::Upgrade && delta >= 0) {
+    if (direction == TuneDirection::Degrade && delta <= 0)
+        || (direction == TuneDirection::Upgrade && delta >= 0)
+    {
         return None;
     }
     Some(MenuRow {
@@ -200,7 +205,10 @@ fn cost_row(state: &GameState, card: &CardInstance, direction: TuneDirection) ->
 /// moves max health, damage staying, so current health moves with it (B3.4 rule 6).
 fn stats_row(state: &GameState, card: &CardInstance, direction: TuneDirection) -> Option<MenuRow> {
     let stats = current_stats(state, card)?;
-    if direction == TuneDirection::Degrade && stats.attack <= TUNE_ATTACK_FLOOR && stats.health <= TUNE_HEALTH_FLOOR {
+    if direction == TuneDirection::Degrade
+        && stats.attack <= TUNE_ATTACK_FLOOR
+        && stats.health <= TUNE_HEALTH_FLOOR
+    {
         return None;
     }
     Some(MenuRow {
@@ -326,7 +334,11 @@ fn write_x(state: &mut GameState, card_id: &str, write: &XWrite) {
 /// (TS built a bare `{ tuning }`; the readers take a card, so this is the card with that tuning.)
 fn with_x_step(card: &CardInstance, key: &str, delta: i32) -> CardInstance {
     let mut tuning = card.tuning.clone().unwrap_or_default();
-    tuning.x = Some(add_step(card.tuning.as_ref().and_then(|t| t.x.as_ref()), key, delta));
+    tuning.x = Some(add_step(
+        card.tuning.as_ref().and_then(|t| t.x.as_ref()),
+        key,
+        delta,
+    ));
     CardInstance {
         tuning: Some(tuning),
         ..card.clone()
@@ -377,7 +389,11 @@ fn x_items(state: &GameState, card: &CardInstance, direction: TuneDirection) -> 
 
     for entry in numbered_keywords_on(state, card) {
         let key: String = entry.key.as_str().to_string();
-        let delta = if entry.better.as_str() == "up" { better } else { -better };
+        let delta = if entry.better.as_str() == "up" {
+            better
+        } else {
+            -better
+        };
         match entry.printed {
             None => {
                 let Some(brittle) = card.brittle else {
@@ -391,7 +407,10 @@ fn x_items(state: &GameState, card: &CardInstance, direction: TuneDirection) -> 
                     key,
                     before: entry.value,
                     after,
-                    write: XWrite::Brittle { brittle, count: after },
+                    write: XWrite::Brittle {
+                        brittle,
+                        count: after,
+                    },
                 });
             }
             Some(printed) => {
@@ -438,7 +457,12 @@ fn number_row(state: &GameState, card: &CardInstance, direction: TuneDirection) 
 }
 
 /// A drawn row's change, written onto the card (`card_id`) and reported.
-fn apply_row(ctx: &mut EffectContext<'_>, card_id: &str, direction: TuneDirection, row: &MenuRow) -> TuningChange {
+fn apply_row(
+    ctx: &mut EffectContext<'_>,
+    card_id: &str,
+    direction: TuneDirection,
+    row: &MenuRow,
+) -> TuningChange {
     match &row.apply {
         MenuApply::Cost { delta } => {
             if let Some(card) = find_instance_mut(ctx.state, card_id) {
@@ -446,7 +470,10 @@ fn apply_row(ctx: &mut EffectContext<'_>, card_id: &str, direction: TuneDirectio
             }
             TuningChange::Cost { delta: *delta }
         }
-        MenuApply::Stats { attack: had_attack, health: had_health } => {
+        MenuApply::Stats {
+            attack: had_attack,
+            health: had_health,
+        } => {
             let k = ctx.rng.int(TUNE_STAT_TOTAL + 1);
             let rest = TUNE_STAT_TOTAL - k;
             // TS wrote `0 - n`, never `-n`, so a share the floors refuse whole is 0, not −0; integers
@@ -534,7 +561,10 @@ fn menu_of(state: &GameState, card: &CardInstance, direction: TuneDirection) -> 
 /// B3.4 rule 3: the rows that can change the card now, in the menu's order — a pure read, for a
 /// `conditionMet` or a `targetChecks` predicate (a Degrade with nothing to change) and for the tests.
 pub fn applicable_changes(state: &GameState, card: &CardInstance, direction: TuneDirection) -> Vec<TuneRow> {
-    menu_of(state, card, direction).into_iter().map(|row| row.row).collect()
+    menu_of(state, card, direction)
+        .into_iter()
+        .map(|row| row.row)
+        .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -548,7 +578,9 @@ pub fn applicable_changes(state: &GameState, card: &CardInstance, direction: Tun
 /// TS read the live card on every application; the card is read again by its id here, so a second
 /// application of the same card draws from the menu the first one left.
 pub fn tune_once(ctx: &mut EffectContext<'_>, card: &CardInstance, direction: TuneDirection, matches: bool) {
-    let card = find_instance(ctx.state, &card.id).cloned().unwrap_or_else(|| card.clone());
+    let card = find_instance(ctx.state, &card.id)
+        .cloned()
+        .unwrap_or_else(|| card.clone());
     // R177: who could not read the card where it changed, judged before the change moves anything.
     let hidden_from = unreadable_by(ctx.state, &card);
     let menu = if matches {
@@ -565,7 +597,11 @@ pub fn tune_once(ctx: &mut EffectContext<'_>, card: &CardInstance, direction: Tu
         let row = pick_one(ctx, &menu);
         apply_row(ctx, &card.id, direction, row)
     };
-    let hidden_from = if hidden_from.is_empty() { None } else { Some(hidden_from) };
+    let hidden_from = if hidden_from.is_empty() {
+        None
+    } else {
+        Some(hidden_from)
+    };
     ctx.events.push(match direction {
         TuneDirection::Upgrade => GameEvent::Upgraded {
             instance_id: card.id.clone(),
@@ -583,7 +619,11 @@ pub fn tune_once(ctx: &mut EffectContext<'_>, card: &CardInstance, direction: Tu
 }
 
 /// The one card a verb names, by id or by spec, in whatever zone it is (B3.4 rule 2).
-fn named_card(ctx: &EffectContext<'_>, target: Option<&TargetSpec>, instance_id: Option<&str>) -> Option<CardInstance> {
+fn named_card(
+    ctx: &EffectContext<'_>,
+    target: Option<&TargetSpec>,
+    instance_id: Option<&str>,
+) -> Option<CardInstance> {
     // R174: a card named by id is aimed at the stay it had when the run began (`instance_on_its_stay`).
     if let Some(instance_id) = instance_id {
         return instance_on_its_stay(ctx, instance_id);
@@ -641,7 +681,9 @@ pub fn reached_cards(ctx: &mut EffectContext<'_>, args: &TuneArgs) -> Vec<Reache
     }
     let ids: Vec<String> = pool.iter().map(|entry| entry.card.id.clone()).collect();
     let picked: IndexSet<String> = ctx.rng.shuffle(&ids).into_iter().take(count).collect();
-    pool.into_iter().filter(|entry| picked.contains(&entry.card.id)).collect()
+    pool.into_iter()
+        .filter(|entry| picked.contains(&entry.card.id))
+        .collect()
 }
 
 fn tune_effect(kind: &'static str, direction: TuneDirection, args: TuneArgs) -> Effect {
@@ -800,13 +842,22 @@ pub fn set_number(args: SetNumberArgs) -> Effect {
             def_id: card.def_id.clone(),
             key: number_key(&number),
             value: came_to,
-            hidden_from: if hidden_from.is_empty() { None } else { Some(hidden_from) },
+            hidden_from: if hidden_from.is_empty() {
+                None
+            } else {
+                Some(hidden_from)
+            },
         });
     })
 }
 
 /// The number `which` names on the card, or `None` when the card has no such number to change.
-fn ref_for(ctx: &mut EffectContext<'_>, card: &CardInstance, which: &NumberWhich, value: i32) -> Option<NumberRef> {
+fn ref_for(
+    ctx: &mut EffectContext<'_>,
+    card: &CardInstance,
+    which: &NumberWhich,
+    value: i32,
+) -> Option<NumberRef> {
     let numbers = numbers_on(ctx.state, card);
     if let NumberWhich::Id(id) = which
         && id == "random"
@@ -873,7 +924,9 @@ pub fn discover_number(args: DiscoverNumberArgs) -> Effect {
         } else {
             let ids: Vec<String> = open.iter().map(|entry| entry.id.clone()).collect();
             let picked: IndexSet<String> = ctx.rng.shuffle(&ids).into_iter().take(count).collect();
-            open.into_iter().filter(|entry| picked.contains(&entry.id)).collect()
+            open.into_iter()
+                .filter(|entry| picked.contains(&entry.id))
+                .collect()
         };
         let options: Vec<PromptOption> = offered
             .iter()
@@ -897,7 +950,10 @@ pub fn discover_number(args: DiscoverNumberArgs) -> Effect {
                 player: controller,
                 kind: PromptKind::Discover,
                 aim: None,
-                prompt: args.prompt.clone().unwrap_or_else(|| "Choose a number".to_string()),
+                prompt: args
+                    .prompt
+                    .clone()
+                    .unwrap_or_else(|| "Choose a number".to_string()),
                 options,
                 min: None,
                 max: None,

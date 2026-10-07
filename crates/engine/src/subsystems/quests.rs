@@ -87,7 +87,9 @@ pub use crate::script::{QuestBook, QuestDef, QuestGoal, QuestRewardDef};
 fn is_board_goal(goal: &QuestGoal) -> bool {
     matches!(
         goal,
-        QuestGoal::PermanentsControlled { .. } | QuestGoal::UnitTotals { .. } | QuestGoal::UnitsInGraveyard { .. }
+        QuestGoal::PermanentsControlled { .. }
+            | QuestGoal::UnitTotals { .. }
+            | QuestGoal::UnitsInGraveyard { .. }
     )
 }
 
@@ -153,7 +155,10 @@ fn string_list(raw: Option<&Value>) -> Vec<String> {
 
 /// A finite number in the bag, as TS's `typeof value === "number" && Number.isFinite(value)`.
 fn finite_count(value: &Value) -> Option<i32> {
-    value.as_f64().filter(|number| number.is_finite()).map(|number| number as i32)
+    value
+        .as_f64()
+        .filter(|number| number.is_finite())
+        .map(|number| number as i32)
 }
 
 /// The card's quest line, read back defensively (it may have come through JSON), or `None`.
@@ -207,17 +212,23 @@ fn store_memory(state: &mut GameState, card_id: &str, memory: &QuestMemory) {
 
 /// The open quests of a card, in the order they opened.
 pub fn open_quests_of(card: &CardInstance) -> Vec<String> {
-    quest_memory_of(card).map(|memory| memory.active).unwrap_or_default()
+    quest_memory_of(card)
+        .map(|memory| memory.active)
+        .unwrap_or_default()
 }
 
 /// The quests a card has completed, in order.
 pub fn completed_quests_of(card: &CardInstance) -> Vec<String> {
-    quest_memory_of(card).map(|memory| memory.done).unwrap_or_default()
+    quest_memory_of(card)
+        .map(|memory| memory.done)
+        .unwrap_or_default()
 }
 
 /// The auras a card's quest line holds (rewards L and M): a pure read for its `aura` and `graveyard_play`.
 pub fn held_quest_auras(card: &CardInstance) -> Vec<String> {
-    quest_memory_of(card).map(|memory| memory.auras).unwrap_or_default()
+    quest_memory_of(card)
+        .map(|memory| memory.auras)
+        .unwrap_or_default()
 }
 
 // ---------------------------------------------------------------------------
@@ -382,7 +393,8 @@ pub fn hold_quest_aura(reward_id: impl Into<String>) -> Effect {
 fn quest_card_of(ctx: &EffectContext<'_>) -> Option<CardInstance> {
     let on_stay = crate::effects::targets::self_on_its_stay(ctx)?;
     let self_ = find_instance(ctx.sink.state, &on_stay.id)?.clone();
-    if !crate::zones::acts_on_field(ctx.sink.state, &self_) || quest_book_of(ctx.sink.state, &self_).is_none() {
+    if !crate::zones::acts_on_field(ctx.sink.state, &self_) || quest_book_of(ctx.sink.state, &self_).is_none()
+    {
         return None;
     }
     Some(self_)
@@ -401,9 +413,7 @@ fn quest_cards_in_order(state: &GameState) -> Vec<CardInstance> {
     };
     let mut out: Vec<CardInstance> = Vec::new();
     for player in sides {
-        let units: Vec<CardInstance> = active_units_of(state, player)
-            .into_iter().cloned()
-            .collect();
+        let units: Vec<CardInstance> = active_units_of(state, player).into_iter().cloned().collect();
         let backrow: Vec<CardInstance> = backrow_cards_of(state, player).into_iter().cloned().collect();
         for card in units.into_iter().chain(backrow) {
             if quest_book_of(state, &card).is_some() {
@@ -474,7 +484,13 @@ fn entered_exile(state: &GameState, def_id: &str) -> bool {
 
 /// What one event adds to a quest of `goal` for a card controlled by `me`, or 0. `after` is the events
 /// that followed this one (TS read them lazily; the caller has them already).
-fn credit_of(state: &GameState, goal: &QuestGoal, event: &GameEvent, me: PlayerId, after: &[GameEvent]) -> i32 {
+fn credit_of(
+    state: &GameState,
+    goal: &QuestGoal,
+    event: &GameEvent,
+    me: PlayerId,
+    after: &[GameEvent],
+) -> i32 {
     match (goal, event) {
         (QuestGoal::Draws { .. }, GameEvent::Drawn { player, .. }) => i32::from(*player == me),
         (QuestGoal::DeckEmptiedByDraw, GameEvent::Drawn { player, emptied, .. }) => {
@@ -489,7 +505,9 @@ fn credit_of(state: &GameState, goal: &QuestGoal, event: &GameEvent, me: PlayerI
                 player, unspent_mana, ..
             },
         ) => i32::from(*player == me && *unspent_mana >= *mana),
-        (QuestGoal::CardsExiled { .. }, GameEvent::Exiled { def_id, .. }) => i32::from(entered_exile(state, def_id)),
+        (QuestGoal::CardsExiled { .. }, GameEvent::Exiled { def_id, .. }) => {
+            i32::from(entered_exile(state, def_id))
+        }
         (
             QuestGoal::DamageToEnemies { .. },
             GameEvent::Damage {
@@ -582,7 +600,11 @@ pub fn observe_quest_event(
         let Some(mut memory) = quest_memory_of(&live) else {
             continue;
         };
-        let me = moves.controller_before.get(&card.id).copied().unwrap_or(live.controller);
+        let me = moves
+            .controller_before
+            .get(&card.id)
+            .copied()
+            .unwrap_or(live.controller);
         let mut changed = false;
         for id in memory.active.clone() {
             if memory.waiting.contains(&id) {
@@ -644,7 +666,9 @@ pub fn notice_quests(sink: &mut EngineSink<'_>) {
         let completed: Vec<String> = memory
             .active
             .iter()
-            .filter(|id| quest_def_of(&book, id).is_some_and(|quest| complete(sink.state, &live, quest, &memory)))
+            .filter(|id| {
+                quest_def_of(&book, id).is_some_and(|quest| complete(sink.state, &live, quest, &memory))
+            })
             .cloned()
             .collect();
         if completed.is_empty() {
@@ -653,9 +677,19 @@ pub fn notice_quests(sink: &mut EngineSink<'_>) {
         let mut done = memory.done.clone();
         done.extend(completed.iter().cloned());
         let next = QuestMemory {
-            active: memory.active.iter().filter(|id| !completed.contains(id)).cloned().collect(),
+            active: memory
+                .active
+                .iter()
+                .filter(|id| !completed.contains(id))
+                .cloned()
+                .collect(),
             done,
-            waiting: memory.waiting.iter().filter(|id| !completed.contains(id)).cloned().collect(),
+            waiting: memory
+                .waiting
+                .iter()
+                .filter(|id| !completed.contains(id))
+                .cloned()
+                .collect(),
             ..memory.clone()
         };
         store_memory(sink.state, &live.id, &next);

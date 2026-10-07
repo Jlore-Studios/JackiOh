@@ -37,9 +37,9 @@ use crate::play_choices::{
     legal_selections_for, targets_follow_modes,
 };
 use crate::prompts::{
-    AnswerInput, OpenPromptArgs, ResumeAtArgs, ResumeOptions, HookResumableOptions, cell_option_label, close_prompt,
-    hero_option_label, in_offered_order, open_prompt, resume_at, run_hook_resumable, run_resume,
-    why_answer_refused,
+    AnswerInput, HookResumableOptions, OpenPromptArgs, ResumeAtArgs, ResumeOptions, cell_option_label,
+    close_prompt, hero_option_label, in_offered_order, open_prompt, resume_at, run_hook_resumable,
+    run_resume, why_answer_refused,
 };
 use crate::script::EngineSink;
 use crate::state::{CardInstance, EngineError, GameState, PromptOption, Resume, find_instance};
@@ -383,7 +383,13 @@ fn run_of(data: &IndexMap<String, Value>) -> Option<CryRun> {
         modes: raw
             .get("modes")
             .and_then(Value::as_array)
-            .map(|items| items.iter().filter_map(Value::as_str).map(str::to_string).collect())
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_string)
+                    .collect()
+            })
             .unwrap_or_default(),
         decl_at: number("declAt").map_or(0, |n| n.max(0.0) as usize),
         mode_at: number("modeAt").map_or(0, |n| n.max(0.0) as usize),
@@ -414,7 +420,9 @@ pub fn answer_cry_prompt(sink: &mut EngineSink, answer: &AnswerInput) -> Result<
         let picks = in_offered_order(&pending, &answer.selection);
         for pick in picks {
             match pick {
-                Selection::Mode { option } if run.awaiting == Some(CryAwaiting::Mode) => run.modes.push(option),
+                Selection::Mode { option } if run.awaiting == Some(CryAwaiting::Mode) => {
+                    run.modes.push(option)
+                }
                 other => run.targets.push(other),
             }
         }

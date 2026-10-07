@@ -60,7 +60,9 @@ pub fn params_of(state: &GameState, def_id: &str) -> Vec<Param> {
 
 /// The declaration of one key, or `None` when the definition declares no such number.
 pub fn param_decl_of(state: &GameState, def_id: &str, key: &str) -> Option<Param> {
-    params_of(state, def_id).into_iter().find(|param| param.key == key)
+    params_of(state, def_id)
+        .into_iter()
+        .find(|param| param.key == key)
 }
 
 /// B3.4 rule 5: how far one Degrade or Upgrade moves a declared number — the `step` it declares, else
@@ -143,7 +145,10 @@ pub fn param_value(
     key: &str,
     options: ParamValueOptions,
 ) -> i32 {
-    let def_id = match options.def_id.or_else(|| instance.map(|card| card.def_id.clone())) {
+    let def_id = match options
+        .def_id
+        .or_else(|| instance.map(|card| card.def_id.clone()))
+    {
         Some(def_id) => def_id,
         None => panic!("param \"{key}\": no card to read it on (B3.4 rule 5)"),
     };
@@ -154,7 +159,12 @@ pub fn param_value(
         .radiant
         .or_else(|| instance.map(|card| card.radiant))
         .unwrap_or(false);
-    value_with(&param, radiant, instance.and_then(|card| card.tuning.as_ref()), None)
+    value_with(
+        &param,
+        radiant,
+        instance.and_then(|card| card.tuning.as_ref()),
+        None,
+    )
 }
 
 /// What `param` reads off its context (TS's structural `{ state, self, radiant, data?, defId? }`):
@@ -287,7 +297,8 @@ pub fn param<C: ParamContext + ?Sized>(ctx: &C, key: &str) -> i32 {
     };
     let path = ctx.param_data().and_then(crate::work::part_path_of);
     for index in path.iter().flatten() {
-        let part = crate::catalog::fused_id_parts(Some(state), &def_id).and_then(|parts| parts.get(*index).cloned());
+        let part =
+            crate::catalog::fused_id_parts(Some(state), &def_id).and_then(|parts| parts.get(*index).cloned());
         match part {
             Some(part) => def_id = part,
             None => {
@@ -339,7 +350,11 @@ pub struct SteppableParam {
 /// B3.4 rule 3's "Number" row: the declared numbers one step in `direction` would change — up moves a
 /// number the way its `better` says for an Upgrade, the other way for a Degrade — with how far each
 /// would move, in declaration order. A number already at the bound it would move past is not one.
-pub fn steppable_params(state: &GameState, instance: &CardInstance, change: TuneDirection) -> Vec<SteppableParam> {
+pub fn steppable_params(
+    state: &GameState,
+    instance: &CardInstance,
+    change: TuneDirection,
+) -> Vec<SteppableParam> {
     params_of(state, &instance.def_id)
         .into_iter()
         .filter_map(|param| {

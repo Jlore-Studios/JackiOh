@@ -41,7 +41,9 @@ pub fn shuffle_random_from_catalog(args: ShuffleRandomFromCatalogArgs) -> Effect
         let mut at = 0;
         while at < args.count && !pool.is_empty() {
             // R673: a card generated into a deck may be Glitch (`catalog::GlitchOdds` is the state).
-            let Some(def_id) = pick_generated(ctx.sink.rng, &pool, Some(&*ctx.sink.state)).map(|def| def.id.clone()) else {
+            let Some(def_id) =
+                pick_generated(ctx.sink.rng, &pool, Some(&*ctx.sink.state)).map(|def| def.id.clone())
+            else {
                 return;
             };
             let mut card = new_instance(&mut *ctx.state, &def_id, player, Zone::Library { player });

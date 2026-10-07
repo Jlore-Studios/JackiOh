@@ -63,10 +63,12 @@ use crate::play_choices::{
 };
 use crate::play_counts::record_play;
 use crate::prompts::{
-    AnswerInput, OpenPromptArgs, HookResumableOptions, cell_option_label, close_prompt, hero_option_label,
+    AnswerInput, HookResumableOptions, OpenPromptArgs, cell_option_label, close_prompt, hero_option_label,
     in_offered_order, open_prompt, run_hook_resumable, why_answer_refused,
 };
-use crate::random_cast::{count_chain_cast, prefer_enemies, prefer_friends, random_cast_of, random_picks, with_cast_mode};
+use crate::random_cast::{
+    count_chain_cast, prefer_enemies, prefer_friends, random_cast_of, random_picks, with_cast_mode,
+};
 use crate::resolve::{CastOptions, HookName, MANA_BEFORE_PLAY_KEY, flag_return_to_hand_at_end_of_turn};
 use crate::script::{EngineSink, FlagOrCount};
 use crate::state::{
@@ -86,8 +88,8 @@ use crate::triggers::{
     run_queued_trigger, settle, trigger_holder_for, trigger_holders_with_hook,
 };
 use crate::wire::{
-    CardCost, CardType, Enchantment, GameEvent, PLAYER_IDS, PlagueSpend, PlayedFrom, PlayerId, PromptKind, Row,
-    Selection, TargetAim, TargetDecl, Zone, opponent_of,
+    CardCost, CardType, Enchantment, GameEvent, PLAYER_IDS, PlagueSpend, PlayedFrom, PlayerId, PromptKind,
+    Row, Selection, TargetAim, TargetDecl, Zone, opponent_of,
 };
 use crate::work::{begin_work_cascade, drain_work, drop_work, paused, paused_of, push_work};
 use crate::zones::{
@@ -229,7 +231,11 @@ pub enum ResolvePart {
 }
 
 /// The named parts of step 5, in order.
-pub const RESOLVE_PARTS: &[ResolvePart] = &[ResolvePart::Quickstriker, ResolvePart::ComboDraw, ResolvePart::Script];
+pub const RESOLVE_PARTS: &[ResolvePart] = &[
+    ResolvePart::Quickstriker,
+    ResolvePart::ComboDraw,
+    ResolvePart::Script,
+];
 
 /// `resume.hook` for an owed play pipeline: the sequence name `work.rs` documents (`"play"`).
 pub const PLAY_WORK_KIND: &str = "play";
@@ -448,7 +454,11 @@ pub struct PlayRun {
     /// (null: nothing had been played), and written on the card as the announce moves it into the
     /// resolving zone (`subsystems::copied_text::fix_copied_text`). Absent for every other card.
     /// (TS `copied?: PlayRecord | null`: `None` absent, `Some(None)` null.)
-    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "present")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "present"
+    )]
     pub copied: Option<Option<PlayRecord>>,
 }
 
@@ -548,7 +558,10 @@ pub fn run_of(resume: &Resume) -> Option<PlayRun> {
 // ---------------------------------------------------------------------------
 
 fn hand_card<'a>(state: &'a GameState, player: PlayerId, instance_id: &str) -> Option<&'a CardInstance> {
-    state.players[player].hand.iter().find(|card| card.id == instance_id)
+    state.players[player]
+        .hand
+        .iter()
+        .find(|card| card.id == instance_id)
 }
 
 /// Where a play takes its card from (`playSourceOf`'s `from`).
@@ -560,7 +573,11 @@ enum PlayFrom {
 
 /// E11, R454: where a play takes its card from — the player's hand, or their own graveyard, where a
 /// permission may let them play it (`graveyard_play.rs`). Undefined when the card is in neither.
-fn play_source_of(state: &GameState, player: PlayerId, instance_id: &str) -> Option<(CardInstance, PlayFrom)> {
+fn play_source_of(
+    state: &GameState,
+    player: PlayerId,
+    instance_id: &str,
+) -> Option<(CardInstance, PlayFrom)> {
     if let Some(in_hand) = hand_card(state, player, instance_id) {
         return Some((in_hand.clone(), PlayFrom::Hand));
     }
@@ -596,7 +613,11 @@ struct PlayBegins {
 /// X and embiggen are stamped on the instance before the cost is read, because that is where R65's
 /// calculation looks for them. `reduce` clones the state and throws the clone away on a refusal, so
 /// a refused play leaves nothing behind (§9.3).
-pub fn validate_play(sink: &mut EngineSink<'_>, player: PlayerId, action: &PlayAction) -> Result<PlayRun, EngineError> {
+pub fn validate_play(
+    sink: &mut EngineSink<'_>,
+    player: PlayerId,
+    action: &PlayAction,
+) -> Result<PlayRun, EngineError> {
     let Some((card, from)) = play_source_of(sink.state, player, &action.instance_id) else {
         return Err(EngineError::new(format!(
             "no card {} in {}'s hand",
@@ -613,7 +634,10 @@ pub fn validate_play(sink: &mut EngineSink<'_>, player: PlayerId, action: &PlayA
     why_choices_refused(sink.state, player, &card, action)?;
 
     let chooses = chooses_x(sink.state, &card);
-    let embiggens = matches!(def_of(Some(&*sink.state), &card.def_id).cost, CardCost::Embiggen { .. });
+    let embiggens = matches!(
+        def_of(Some(&*sink.state), &card.def_id).cost,
+        CardCost::Embiggen { .. }
+    );
     if let Some(stamped) = find_instance_mut(sink.state, &card.id) {
         if chooses {
             stamped.x = Some(action.x.unwrap_or(0));
@@ -1339,7 +1363,12 @@ fn place_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
     // step 5: a Sheepish owed the play's `cardPlayed` behind a trap that asked still turns the unit
     // into a Sheep before its Cry (R17).
     if run.cast != Some(true) {
-        settle(sink, SettleOptions { hold_check: Some(!resumed) });
+        settle(
+            sink,
+            SettleOptions {
+                hold_check: Some(!resumed),
+            },
+        );
         return;
     }
     // R70: a cast is a play, so its step 4 is a window too, and a Sheepish answering a cast Unit turns
@@ -1467,7 +1496,12 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     let placed = match run.zone {
         Some(zone) => {
             let stack = plays_on_stack(sink.state, &card);
-            place_on_field(sink.state, &mut card, zone, PlaceOnFieldOptions { stack: Some(stack) })
+            place_on_field(
+                sink.state,
+                &mut card,
+                zone,
+                PlaceOnFieldOptions { stack: Some(stack) },
+            )
         }
         None => false,
     };
@@ -1874,7 +1908,14 @@ fn cast_choices_made(sink: &mut EngineSink<'_>, run: &mut PlayRun, step: PlaySte
     run.exits_from = Some(exit_mark(sink.state));
     // A fused card's Cry splits the choices by its ingredients' declarations (R90, R102).
     let card = live(sink.state, &card);
-    if let Some(slices) = slices_for(sink.state, run.player, &card, run.cost_paid, &run.targets, &run.modes) {
+    if let Some(slices) = slices_for(
+        sink.state,
+        run.player,
+        &card,
+        run.cost_paid,
+        &run.targets,
+        &run.modes,
+    ) {
         run.target_slices = Some(slices);
     }
     true
@@ -1885,7 +1926,12 @@ fn cast_choices_made(sink: &mut EngineSink<'_>, run: &mut PlayRun, step: PlaySte
 /// number as a mode (`{ pick: "mode", option: "3" }`). A cast pays nothing, so the X costs nothing; it
 /// is stored on the instance, where the card's script and R396 read it. A random cast's X was set as the
 /// cast began: the caster's current mana (`cast_through_pipeline`). False while the prompt waits.
-fn cast_x_chosen(sink: &mut EngineSink<'_>, run: &mut PlayRun, card: &CardInstance, step: PlayStepName) -> bool {
+fn cast_x_chosen(
+    sink: &mut EngineSink<'_>,
+    run: &mut PlayRun,
+    card: &CardInstance,
+    step: PlayStepName,
+) -> bool {
     if !chooses_x(sink.state, card) || card.x.is_some() {
         return true;
     }
@@ -1970,7 +2016,12 @@ fn label_of(selection: &Selection, chooser: PlayerId) -> String {
 /// board cannot satisfy is skipped rather than refused: the effect fizzles (R90, §8's conventions).
 ///
 /// TS's `step` defaulted to "echo"; every Rust caller names it.
-fn ask_repeat_choices(sink: &mut EngineSink<'_>, run: &mut PlayRun, played: &CardInstance, step: PlayStepName) -> bool {
+fn ask_repeat_choices(
+    sink: &mut EngineSink<'_>,
+    run: &mut PlayRun,
+    played: &CardInstance,
+    step: PlayStepName,
+) -> bool {
     if run.repeat.is_none() {
         return false;
     }
@@ -2011,21 +2062,43 @@ fn cast_choices_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
 /// The options one declaration offers a pick the pipeline makes itself — an Echo repeat's or a cast's
 /// (R81, R70) — narrowed to enemies when the run targets enemies and one is legal (R452), or to friendly
 /// targets when the declaration is beneficial (aim "help", R656).
-fn cast_target_options(state: &GameState, run: &PlayRun, card: &CardInstance, decl: &TargetDecl) -> Vec<Selection> {
+fn cast_target_options(
+    state: &GameState,
+    run: &PlayRun,
+    card: &CardInstance,
+    decl: &TargetDecl,
+) -> Vec<Selection> {
     let options = legal_selections_for(state, run.player, card, decl);
     if run.target_enemies != Some(true) {
         return options;
     }
     let required = decl.min.min(options.len() as i32);
     if target_aim(decl) == TargetAim::Help {
-        prefer_friends(state, run.player, &options, |selection: &Selection| selection.clone(), required)
+        prefer_friends(
+            state,
+            run.player,
+            &options,
+            |selection: &Selection| selection.clone(),
+            required,
+        )
     } else {
-        prefer_enemies(state, run.player, &options, |selection: &Selection| selection.clone(), required)
+        prefer_enemies(
+            state,
+            run.player,
+            &options,
+            |selection: &Selection| selection.clone(),
+            required,
+        )
     }
 }
 
 /// The repeat's target declarations, each offered in turn; false while one is waiting (R81).
-fn ask_repeat_targets(sink: &mut EngineSink<'_>, run: &mut PlayRun, card: &CardInstance, step: PlayStepName) -> bool {
+fn ask_repeat_targets(
+    sink: &mut EngineSink<'_>,
+    run: &mut PlayRun,
+    card: &CardInstance,
+    step: PlayStepName,
+) -> bool {
     let name = def_of(Some(&*sink.state), &card.def_id).name.clone();
     let chosen_modes: Vec<String> = run
         .repeat
@@ -2086,7 +2159,12 @@ fn ask_repeat_targets(sink: &mut EngineSink<'_>, run: &mut PlayRun, card: &CardI
 }
 
 /// The repeat's mode declarations, each offered in turn; false while one is waiting (R81).
-fn ask_repeat_modes(sink: &mut EngineSink<'_>, run: &mut PlayRun, card: &CardInstance, step: PlayStepName) -> bool {
+fn ask_repeat_modes(
+    sink: &mut EngineSink<'_>,
+    run: &mut PlayRun,
+    card: &CardInstance,
+    step: PlayStepName,
+) -> bool {
     let name = def_of(Some(&*sink.state), &card.def_id).name.clone();
     let modes = declared_modes(sink.state, card);
     let start = run.repeat.as_ref().map_or(0, |repeat| repeat.mode_at);
@@ -2458,7 +2536,6 @@ fn cast_mode_of(run: &PlayRun) -> Option<CastMode> {
 /// `drive`'s loop over the steps from `run.at`; true when the pipeline is finished with.
 fn drive_steps(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     for (at, step) in STEP_TABLE.iter().enumerate().skip(run.at) {
-
         // Where a pause would pick up. A `repeats` step is re-entered at itself, because it holds its
         // own place inside the record — and the record is read when the pause is parked, after the step
         // has moved that cursor, never before.
@@ -2509,10 +2586,12 @@ fn file_selection(run: &mut PlayRun, selection: &[Selection]) {
         repeat.targets.extend(selection.iter().cloned());
     }
     if awaiting == Some(Awaiting::EchoMode) {
-        repeat.modes.extend(selection.iter().filter_map(|pick| match pick {
-            Selection::Mode { option } => Some(option.clone()),
-            _ => None,
-        }));
+        repeat
+            .modes
+            .extend(selection.iter().filter_map(|pick| match pick {
+                Selection::Mode { option } => Some(option.clone()),
+                _ => None,
+            }));
     }
 }
 
@@ -2656,7 +2735,11 @@ pub fn cast_through_pipeline(sink: &mut EngineSink<'_>, instance: &CardInstance,
 
 /// §10.5, all eight steps: validate the play, then run steps 2 to 8, pausing wherever a prompt
 /// opens. Returns the refusal, or `Ok` once the play has run (or has owed itself the rest).
-pub fn run_play_steps(sink: &mut EngineSink<'_>, player: PlayerId, action: &PlayAction) -> Result<(), EngineError> {
+pub fn run_play_steps(
+    sink: &mut EngineSink<'_>,
+    player: PlayerId,
+    action: &PlayAction,
+) -> Result<(), EngineError> {
     let mut run = validate_play(sink, player, action)?;
     intercept_declared_targets(sink, &mut run);
     drive(sink, &mut run);
@@ -2732,7 +2815,8 @@ pub fn answer_play_prompt(sink: &mut EngineSink<'_>, answer: &AnswerInput) -> Re
     // The answered prompt is this run's, so any tail owed for it earlier would repeat this step.
     let instance_id = run.instance_id.clone();
     drop_work(sink.state, |item: &WorkItem| {
-        is_play_resume(&item.resume) && run_of(&item.resume).is_some_and(|owed| owed.instance_id == instance_id)
+        is_play_resume(&item.resume)
+            && run_of(&item.resume).is_some_and(|owed| owed.instance_id == instance_id)
     });
     // B5 E5, E9, R450: the targeting point of an Echo repeat's or a cast's fresh pick — a random
     // discard cost it pays first, and an interception.

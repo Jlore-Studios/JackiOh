@@ -179,7 +179,10 @@ pub fn copied_echo(state: &GameState, card: &CardInstance) -> i32 {
     if copied_text_of(state, card).is_none() {
         return 0;
     }
-    let echo = running_script_of(state, card).static_flags.and_then(|flags| flags.echo).unwrap_or(0);
+    let echo = running_script_of(state, card)
+        .static_flags
+        .and_then(|flags| flags.echo)
+        .unwrap_or(0);
     echo.max(0)
 }
 
@@ -188,7 +191,10 @@ pub fn copied_casts_on_draw(state: &GameState, card: &CardInstance) -> bool {
     if copied_text_of(state, card).is_none() {
         return false;
     }
-    running_script_of(state, card).static_flags.and_then(|flags| flags.cast_on_draw) == Some(true)
+    running_script_of(state, card)
+        .static_flags
+        .and_then(|flags| flags.cast_on_draw)
+        == Some(true)
 }
 
 /// R545: whether a play of this copier chooses an X for the text it copies — an X-cost Spell's whose X

@@ -173,7 +173,10 @@ pub fn cards_in_card_scope(
         .unwrap_or_else(|| vec![Row::Units, Row::Backrow]);
     let whole_hidden_piles = options.and_then(|options| options.whole_hidden_piles) == Some(true);
     let mut out: Vec<ScopedCard> = Vec::new();
-    for player in super::targets::sides_of(ctx, Some(scope.side.unwrap_or(super::targets::ScopeSide::SelfSide))) {
+    for player in super::targets::sides_of(
+        ctx,
+        Some(scope.side.unwrap_or(super::targets::ScopeSide::SelfSide)),
+    ) {
         let side = &state.players[player];
         let piles: [(CardZone, Vec<CardInstance>); 3] = [
             (

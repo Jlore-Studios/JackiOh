@@ -39,7 +39,11 @@ pub struct ReplaceHandWithPerfectArgs {
 }
 
 /// R416: every non-token Classic and Classic+ card but `selfDefId`'s (R387), best first, ties by id.
-pub fn rank_perfect_hand(state: &GameState, viewer: PlayerId, options: RankPerfectHandOptions) -> Vec<Scored> {
+pub fn rank_perfect_hand(
+    state: &GameState,
+    viewer: PlayerId,
+    options: RankPerfectHandOptions,
+) -> Vec<Scored> {
     let mut base = dry_run_base(state, viewer);
     // TS `excludingDefId({ set: ["Classic", "Classic+"] }, selfDefId)`: the running card's ids added to
     // the pool's exclusions, none when there is no running card.

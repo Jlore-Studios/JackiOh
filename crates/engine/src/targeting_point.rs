@@ -103,7 +103,8 @@ pub fn intercept_targeting(sink: &mut EngineSink<'_>, args: InterceptArgs<'_>) -
             })));
             (effect.apply)(&mut ctx);
         }
-        let on_field = find_instance(sink.state, &interceptor.id).is_some_and(|card| card.zone.z() == ZoneName::Field);
+        let on_field =
+            find_instance(sink.state, &interceptor.id).is_some_and(|card| card.zone.z() == ZoneName::Field);
         if !on_field {
             return picks;
         }
@@ -178,7 +179,11 @@ fn source_of(state: &GameState, instance_id: Option<&str>) -> Option<CardType> {
 
 /// R450, R682: the targeting point of a `target` prompt's answer, which the caller has validated and
 /// closed. A costly answer pays its random discards first, then the interception answers.
-pub fn target_answer(sink: &mut EngineSink<'_>, pending: &PendingChoice, picks: &[Selection]) -> Vec<Selection> {
+pub fn target_answer(
+    sink: &mut EngineSink<'_>,
+    pending: &PendingChoice,
+    picks: &[Selection],
+) -> Vec<Selection> {
     if pending.kind != PromptKind::Target {
         return picks.to_vec();
     }

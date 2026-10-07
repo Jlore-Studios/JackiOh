@@ -47,11 +47,13 @@ use serde_json::Value;
 use crate::config::MAX_PROMPT_ANSWERS;
 use crate::resolve::{HookOptions, make_context};
 use crate::script::{Effect, EffectContext, EffectPart, EngineSink, Hook, Memo, Script};
-use crate::state::{CardInstance, EngineError, GameState, PendingChoice, PromptOption, Resume, WorkItem, find_instance};
+use crate::state::{
+    CardInstance, EngineError, GameState, PendingChoice, PromptOption, Resume, WorkItem, find_instance,
+};
 use crate::wire::{ActionBody, GameEvent, PlayerId, PromptKind, Row, Selection, TargetAim, ZoneName};
 use crate::work::{
-    PausedStep, RUN_MARKS_KEY, RunMarks, WorkPlan, begin_work_cascade, card_data, drain_work, park_work, paused_of,
-    run_marks_of, script_step_for,
+    PausedStep, RUN_MARKS_KEY, RunMarks, WorkPlan, begin_work_cascade, card_data, drain_work, park_work,
+    paused_of, run_marks_of, script_step_for,
 };
 
 /// Where a Death hook's context keeps the snapshot of the unit as it died (R89), so a continuation
@@ -274,9 +276,16 @@ pub fn summoned_so_far(ctx: &EffectContext<'_>) -> Vec<String> {
 fn run_marks(ctx: &EffectContext<'_>) -> RunMarks {
     let summoned = summoned_so_far(ctx);
     RunMarks {
-        exits_from: Some(ctx.exits_from.unwrap_or_else(|| crate::stays::exit_mark(&*ctx.state))),
+        exits_from: Some(
+            ctx.exits_from
+                .unwrap_or_else(|| crate::stays::exit_mark(&*ctx.state)),
+        ),
         summoned: if summoned.is_empty() { None } else { Some(summoned) },
-        resolving: if ctx.self_resolving == Some(true) { Some(true) } else { None },
+        resolving: if ctx.self_resolving == Some(true) {
+            Some(true)
+        } else {
+            None
+        },
         event_stay: ctx.event_stay.clone(),
     }
 }
@@ -318,9 +327,10 @@ pub fn open_prompt(sink: &mut EngineSink<'_>, args: OpenPromptArgs) -> Option<Pe
     let resume = match args.owner {
         Some(owner) if owned => {
             let mut resume = args.resume.clone();
-            resume
-                .data
-                .insert(PROMPT_OWNER_KEY.to_string(), Value::String(owner.as_str().to_string()));
+            resume.data.insert(
+                PROMPT_OWNER_KEY.to_string(),
+                Value::String(owner.as_str().to_string()),
+            );
             resume
         }
         _ => args.resume.clone(),
@@ -418,10 +428,15 @@ fn name_of(selection: &Selection, chooser: PlayerId) -> String {
 /// TS answered the refusal text or null; here `Err` carries that text verbatim (SURFACE §4.4.9).
 pub fn why_answer_refused(pending: &PendingChoice, answer: &AnswerInput) -> Result<(), EngineError> {
     if pending.kind == PromptKind::Mulligan {
-        return Err(EngineError::new("a mulligan is answered with the mulligan action (§2.1)"));
+        return Err(EngineError::new(
+            "a mulligan is answered with the mulligan action (§2.1)",
+        ));
     }
     if answer.choice_id != pending.id {
-        return Err(EngineError::new(format!("no prompt {} is open", answer.choice_id)));
+        return Err(EngineError::new(format!(
+            "no prompt {} is open",
+            answer.choice_id
+        )));
     }
     if pending.player_id != answer.player_id {
         return Err(EngineError::new("that prompt belongs to the other player"));
@@ -437,7 +452,10 @@ pub fn why_answer_refused(pending: &PendingChoice, answer: &AnswerInput) -> Resu
                 if pending.min == 1 { "" } else { "s" },
             )
         } else {
-            format!("that prompt takes {} to {} picks, got {count}", pending.min, pending.max)
+            format!(
+                "that prompt takes {} to {} picks, got {count}",
+                pending.min, pending.max
+            )
         }));
     }
 
@@ -457,7 +475,10 @@ pub fn why_answer_refused(pending: &PendingChoice, answer: &AnswerInput) -> Resu
             )));
         }
         let Some(free) = matches.into_iter().find(|index| !used.contains(index)) else {
-            return Err(EngineError::new(format!("{} is picked twice", name_of(pick, pending.player_id))));
+            return Err(EngineError::new(format!(
+                "{} is picked twice",
+                name_of(pick, pending.player_id)
+            )));
         };
         used.insert(free);
     }
@@ -465,7 +486,13 @@ pub fn why_answer_refused(pending: &PendingChoice, answer: &AnswerInput) -> Resu
     if let Some(budget) = pending.budget {
         let spent: i32 = used
             .iter()
-            .map(|&index| pending.options.get(index).and_then(|option| option.cost).unwrap_or(0))
+            .map(|&index| {
+                pending
+                    .options
+                    .get(index)
+                    .and_then(|option| option.cost)
+                    .unwrap_or(0)
+            })
             .sum();
         if spent > budget {
             return Err(EngineError::new(format!(
@@ -492,7 +519,11 @@ fn has_answerer(hook: &str) -> bool {
 
 /// The answer of the engine sequence a prompt's hook names, or `None` when no engine sequence owns
 /// it and the prompt re-enters a card's own script step.
-fn answer_owned(sink: &mut EngineSink<'_>, hook: &str, answer: &AnswerInput) -> Option<Result<(), EngineError>> {
+fn answer_owned(
+    sink: &mut EngineSink<'_>,
+    hook: &str,
+    answer: &AnswerInput,
+) -> Option<Result<(), EngineError>> {
     match hook {
         // `playSteps.PLAY_WORK_KIND`: the play pipeline's own questions (§10.5).
         "play" => Some(crate::play_steps::answer_play_prompt(sink, answer)),
@@ -585,11 +616,10 @@ pub fn in_offered_order(pending: &PendingChoice, selection: &[Selection]) -> Vec
     let mut used: IndexSet<usize> = IndexSet::new();
     let mut placed: Vec<(usize, Selection)> = Vec::with_capacity(selection.len());
     for pick in selection {
-        let at = pending
-            .options
-            .iter()
-            .enumerate()
-            .position(|(index, option)| !used.contains(&index) && same_selection(&option.selection, pick));
+        let at =
+            pending.options.iter().enumerate().position(|(index, option)| {
+                !used.contains(&index) && same_selection(&option.selection, pick)
+            });
         if let Some(at) = at {
             used.insert(at);
         }
@@ -668,7 +698,11 @@ struct PickWalk<'a> {
 
 impl PickWalk<'_> {
     fn cost_of(&self, index: usize) -> i32 {
-        self.pending.options.get(index).and_then(|option| option.cost).unwrap_or(0)
+        self.pending
+            .options
+            .get(index)
+            .and_then(|option| option.cost)
+            .unwrap_or(0)
     }
 
     fn fits(&self, spent: i32) -> bool {
@@ -779,7 +813,8 @@ fn hook_for(script: &Script, resume: &Resume) -> Option<Hook> {
 fn self_snapshot_of(data: &IndexMap<String, Value>) -> Option<CardInstance> {
     let raw = data.get(SELF_KEY)?;
     let card = raw.as_object()?;
-    let named = card.get("id").is_some_and(Value::is_string) && card.get("defId").is_some_and(Value::is_string);
+    let named =
+        card.get("id").is_some_and(Value::is_string) && card.get("defId").is_some_and(Value::is_string);
     if !named {
         return None;
     }
@@ -859,7 +894,10 @@ pub fn run_resumable_list(
         }
     }
     let from = paused.as_ref().map_or(0, |step| step.from);
-    stack.push(Frame { effects: list, at: from });
+    stack.push(Frame {
+        effects: list,
+        at: from,
+    });
 
     loop {
         let Some(top) = stack.last() else {
@@ -929,7 +967,12 @@ pub fn run_resumable_list(
                 None
             },
             memo: if nested {
-                Some(memos.iter().map(|memo| memo.clone().unwrap_or(Value::Null)).collect())
+                Some(
+                    memos
+                        .iter()
+                        .map(|memo| memo.clone().unwrap_or(Value::Null))
+                        .collect(),
+                )
             } else {
                 None
             },
@@ -987,8 +1030,14 @@ pub fn run_resume(sink: &mut EngineSink<'_>, resume: &Resume, options: ResumeOpt
     let instance: Option<CardInstance> = match self_snapshot_of(&data) {
         Some(snapshot) => Some(snapshot),
         None => {
-            let still_resolving = found.as_ref().is_some_and(|card| card.zone.z() == ZoneName::Resolving);
-            if resolving && !still_resolving { None } else { found }
+            let still_resolving = found
+                .as_ref()
+                .is_some_and(|card| card.zone.z() == ZoneName::Resolving);
+            if resolving && !still_resolving {
+                None
+            } else {
+                found
+            }
         }
     };
 
@@ -1010,7 +1059,9 @@ pub fn run_resume(sink: &mut EngineSink<'_>, resume: &Resume, options: ResumeOpt
         sink,
         instance.as_ref(),
         HookOptions {
-            controller: options.controller.or(instance.as_ref().map(|card| card.controller)),
+            controller: options
+                .controller
+                .or(instance.as_ref().map(|card| card.controller)),
             targets: Some(targets),
             modes: Some(modes),
             data: Some(data.clone()),
@@ -1134,7 +1185,10 @@ pub fn run_hook_resumable(
 /// caller running a sequence of its own (setup, a draw loop) owes its remainder behind.
 pub fn run_start_of_game(sink: &mut EngineSink<'_>, card: &CardInstance, controller: PlayerId) -> bool {
     // A Vanilla card carries no text (§6.3), and a card without the clause has nothing to run.
-    if crate::scripts::script_of(sink.state, card).start_of_game.is_none() {
+    if crate::scripts::script_of(sink.state, card)
+        .start_of_game
+        .is_none()
+    {
         return true;
     }
     run_hook_resumable(
@@ -1245,7 +1299,9 @@ fn answer_at_random(sink: &mut EngineSink<'_>, args: &OpenPromptArgs) {
         return;
     }
     let drawn = sink.rng.int(answers.len() as i32);
-    let Some(ActionBody::Answer { selection, .. }) = usize::try_from(drawn).ok().and_then(|at| answers.get(at)) else {
+    let Some(ActionBody::Answer { selection, .. }) =
+        usize::try_from(drawn).ok().and_then(|at| answers.get(at))
+    else {
         return;
     };
     let targets = in_offered_order(&probe, selection);

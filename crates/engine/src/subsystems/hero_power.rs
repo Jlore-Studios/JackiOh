@@ -73,7 +73,11 @@ const STITCHING_PICKS_KEY: &str = "picks";
 
 /// R756: Ping reaches any unit or hero, either side, declared with the activation (R81).
 fn ping_targets() -> Vec<TargetDecl> {
-    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
+    vec![TargetDecl::target(
+        1,
+        1,
+        json!({ "side": "any", "of": ["unit", "hero"] }),
+    )]
 }
 
 /// R761: Terminus Tricks Discovers a Trap; a Field Trap is a Trap.
@@ -211,7 +215,9 @@ fn life_tap(_ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     }
     vec![
         crate::effects::draw(json_as(json!({ "count": 1 }))),
-        crate::effects::damage(json_as(json!({ "to": { "of": "selfHero" }, "amount": LIFE_TAP_DAMAGE }))),
+        crate::effects::damage(json_as(
+            json!({ "to": { "of": "selfHero" }, "amount": LIFE_TAP_DAMAGE }),
+        )),
     ]
 }
 
@@ -311,7 +317,10 @@ fn witness_value(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
 fn stitched_so_far(ctx: &EffectContext<'_>) -> Vec<String> {
     match ctx.data.get(STITCHING_PICKS_KEY).and_then(Value::as_array) {
         None => vec![],
-        Some(stored) => stored.iter().filter_map(|entry| entry.as_str().map(str::to_string)).collect(),
+        Some(stored) => stored
+            .iter()
+            .filter_map(|entry| entry.as_str().map(str::to_string))
+            .collect(),
     }
 }
 
@@ -366,13 +375,16 @@ pub fn refresh_power() -> Effect {
             return;
         };
         let current = power_of(&card).map(|power| power.name);
-        let others: Vec<&'static HeroPower> =
-            HERO_POWERS.iter().filter(|power| Some(power.name) != current).collect();
+        let others: Vec<&'static HeroPower> = HERO_POWERS
+            .iter()
+            .filter(|power| Some(power.name) != current)
+            .collect();
         let Some(next) = ctx.sink.rng.pick(&others).copied() else {
             return;
         };
         let id = card.id.clone();
-        card.memory.insert(POWER_KEY.to_string(), json!(next.name.as_str()));
+        card.memory
+            .insert(POWER_KEY.to_string(), json!(next.name.as_str()));
         write_memory(ctx, &id, POWER_KEY, json!(next.name.as_str()));
         let used = uses_this_turn(&*ctx.sink.state, &card);
         if used > 0 {
@@ -412,7 +424,9 @@ fn better_insect_pick(state: &GameState) -> impl Fn(InsectPick, InsectPick) -> I
         view.attack + view.health
     };
     // TS `slotOf(state, card)?.lane ?? Number.MAX_SAFE_INTEGER`: past every lane.
-    let lane = move |card: &CardInstance| -> i64 { crate::zones::slot_of(state, card).map_or(i64::MAX, |at| i64::from(at.lane)) };
+    let lane = move |card: &CardInstance| -> i64 {
+        crate::zones::slot_of(state, card).map_or(i64::MAX, |at| i64::from(at.lane))
+    };
     move |a, b| {
         let (a, b) = match (a, b) {
             (None, b) => return b,
@@ -435,10 +449,11 @@ fn better_insect_pick(state: &GameState) -> impl Fn(InsectPick, InsectPick) -> I
 /// and the enemy hero, each as likely. The Radiant face is Lucky 1: two picks, the better kept.
 fn die_insect(radiant: bool) -> Effect {
     Effect::new("dieInsect", move |ctx| {
-        let mut pool: Vec<InsectPick> = crate::effects::cards_in_scope(ctx, &json_as(json!({ "side": "enemy" })))
-            .iter()
-            .map(|card| Some(CardInstance::clone(card)))
-            .collect();
+        let mut pool: Vec<InsectPick> =
+            crate::effects::cards_in_scope(ctx, &json_as(json!({ "side": "enemy" })))
+                .iter()
+                .map(|card| Some(CardInstance::clone(card)))
+                .collect();
         pool.push(None);
         let roll = |rng: &mut Rng| -> InsectPick { rng.pick(&pool).cloned().flatten() };
         let pick = if radiant {
@@ -486,11 +501,11 @@ fn ky_brainstorm(_ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
         crate::effects::each::for_each_card(crate::effects::each::ForEachCardArgs {
             cards: std::sync::Arc::new(|ctx: &mut EffectContext<'_>| spells_in_hand(ctx)),
             each: std::sync::Arc::new(|instance_id: &str| {
-            crate::effects::set_cost_mod(json_as(json!({
-                "target": { "of": "instance", "instanceId": instance_id },
-                "amount": -BRAINSTORM_DISCOUNT,
-                "inHandOnly": true
-            })))
+                crate::effects::set_cost_mod(json_as(json!({
+                    "target": { "of": "instance", "instanceId": instance_id },
+                    "amount": -BRAINSTORM_DISCOUNT,
+                    "inHandOnly": true
+                })))
             }),
         }),
     ]
@@ -673,7 +688,11 @@ pub fn power_by_name(name: &str) -> Option<&'static HeroPower> {
 
 /// The power this card rolled, or null for a card that has not rolled one yet.
 pub fn power_of(instance: &CardInstance) -> Option<&'static HeroPower> {
-    instance.memory.get(POWER_KEY).and_then(Value::as_str).and_then(power_by_name)
+    instance
+        .memory
+        .get(POWER_KEY)
+        .and_then(Value::as_str)
+        .and_then(power_by_name)
 }
 
 /// The power's name on the card's face (R752): Armor Up reads Tank Up on a Radiant card.
@@ -690,7 +709,9 @@ pub fn ensure_power(sink: &mut EngineSink<'_>, instance: &mut CardInstance) -> O
         return Some(existing);
     }
     let rolled = sink.rng.pick(HERO_POWERS)?;
-    instance.memory.insert(POWER_KEY.to_string(), json!(rolled.name.as_str()));
+    instance
+        .memory
+        .insert(POWER_KEY.to_string(), json!(rolled.name.as_str()));
     Some(rolled)
 }
 
@@ -748,7 +769,11 @@ pub fn power_abilities(radiant: bool) -> Vec<ActivationDecl> {
 /// (§10.6). The power's own builder finishes the activation, so the prompted and the unprompted path
 /// are one piece of code.
 pub fn hero_power(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    let named = ctx.data.get(POWER_DATA_KEY).and_then(Value::as_str).and_then(power_by_name);
+    let named = ctx
+        .data
+        .get(POWER_DATA_KEY)
+        .and_then(Value::as_str)
+        .and_then(power_by_name);
     let power = named.or_else(|| ctx.live_self().and_then(power_of));
     let Some(power) = power else {
         return vec![];

@@ -24,8 +24,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
 use crate::config::{
-    HAND_CAP, KY_TEST_DIFFICULTIES, KY_TEST_EASY_ADDENDS, KY_TEST_EASY_MISSES, KY_TEST_OPTIONS, KY_TEST_REWARDS,
-    KyTestRewardCount,
+    HAND_CAP, KY_TEST_DIFFICULTIES, KY_TEST_EASY_ADDENDS, KY_TEST_EASY_MISSES, KY_TEST_OPTIONS,
+    KY_TEST_REWARDS, KyTestRewardCount,
 };
 use crate::prelude::json_as;
 use crate::rng::Rng;
@@ -109,7 +109,11 @@ pub fn ky_test_script(bank: &[KyTestProblem]) -> KyTestScript {
         for &difficulty in KY_TEST_DIFFICULTIES {
             let list = KY_TEST_REWARDS.of(difficulty);
             // R129: one entry, no draw
-            let reward = if list.len() == 1 { list.first() } else { ctx.sink.rng.pick(list) };
+            let reward = if list.len() == 1 {
+                list.first()
+            } else {
+                ctx.sink.rng.pick(list)
+            };
             rolled.insert(
                 difficulty.as_str().to_string(),
                 json!(reward.map(|reward| reward.id).unwrap_or("")),
@@ -123,7 +127,10 @@ pub fn ky_test_script(bank: &[KyTestProblem]) -> KyTestScript {
                 )),
             );
         }
-        let options: Vec<&str> = KY_TEST_DIFFICULTIES.iter().map(|difficulty| difficulty.as_str()).collect();
+        let options: Vec<&str> = KY_TEST_DIFFICULTIES
+            .iter()
+            .map(|difficulty| difficulty.as_str())
+            .collect();
         let prompt = crate::effects::choose_mode(json_as(json!({
             "options": options,
             "labels": Value::Object(labels),
@@ -137,12 +144,16 @@ pub fn ky_test_script(bank: &[KyTestProblem]) -> KyTestScript {
     let ask = {
         let bank = Arc::clone(&bank);
         Effect::new("kyTestAsk", move |ctx| {
-            let Some(difficulty) = crate::effects::chosen_options(ctx).iter().find_map(|option| is_difficulty(option))
+            let Some(difficulty) = crate::effects::chosen_options(ctx)
+                .iter()
+                .find_map(|option| is_difficulty(option))
             else {
                 return;
             };
-            let problems: Vec<&KyTestProblem> =
-                bank.iter().filter(|problem| problem.difficulty == difficulty).collect();
+            let problems: Vec<&KyTestProblem> = bank
+                .iter()
+                .filter(|problem| problem.difficulty == difficulty)
+                .collect();
             let problem: Option<KyTestProblem> = if difficulty == KyTestDifficulty::Easy {
                 Some(easy_problem(&mut *ctx.sink.rng))
             } else if problems.len() == 1 {
@@ -170,11 +181,19 @@ pub fn ky_test_script(bank: &[KyTestProblem]) -> KyTestScript {
     };
 
     let grade: Hook = hook(|ctx| {
-        let difficulty = ctx.data.get(CHOSEN).and_then(Value::as_str).and_then(is_difficulty);
+        let difficulty = ctx
+            .data
+            .get(CHOSEN)
+            .and_then(Value::as_str)
+            .and_then(is_difficulty);
         let Some(difficulty) = difficulty.filter(|_| crate::effects::answered_correctly(ctx)) else {
             return vec![];
         };
-        let id = ctx.data.get(ROLLED).and_then(|rolled| rolled.get(difficulty.as_str())).cloned();
+        let id = ctx
+            .data
+            .get(ROLLED)
+            .and_then(|rolled| rolled.get(difficulty.as_str()))
+            .cloned();
         let Some(reward) = KY_TEST_REWARDS
             .of(difficulty)
             .iter()
@@ -206,7 +225,9 @@ pub fn ky_test_script(bank: &[KyTestProblem]) -> KyTestScript {
         let mut args = riders;
         args.insert("query".to_string(), pool_query(reward.pool));
         args.insert("count".to_string(), json!(count));
-        vec![crate::effects::add_random_from_catalog(json_as(Value::Object(args)))]
+        vec![crate::effects::add_random_from_catalog(json_as(Value::Object(
+            args,
+        )))]
     });
 
     let mut resume: IndexMap<&'static str, Hook> = IndexMap::new();

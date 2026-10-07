@@ -619,7 +619,10 @@ fn name_issue<Rule>(rule: Rule, what: &str, raw: &str, limits: NameLimits) -> Op
     if name_length(&name) > limits.name_max_length {
         return Some(DraftIssue {
             rule,
-            message: format!("A {what} name can be at most {} characters.", limits.name_max_length),
+            message: format!(
+                "A {what} name can be at most {} characters.",
+                limits.name_max_length
+            ),
             card_id: None,
         });
     }
@@ -823,7 +826,11 @@ fn free(count: i32, what: &str) -> String {
 
 /// R340: whether an import fits under both caps, and the sentence when it does not.
 pub fn check_import_room(input: &ImportRoomInput) -> ImportRoom {
-    let ImportRoomInput { saved, limits, adding } = *input;
+    let ImportRoomInput {
+        saved,
+        limits,
+        adding,
+    } = *input;
     let free_decks = 0_i32.max(limits.decks - saved.decks);
     let free_trios = 0_i32.max(limits.trios - saved.trios);
     let decks_short = 0_i32.max(adding.decks - free_decks);

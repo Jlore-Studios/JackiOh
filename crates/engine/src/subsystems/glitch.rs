@@ -19,15 +19,13 @@
 //!
 //! Port of `packages/engine/src/subsystems/glitch.ts`.
 
-
 use crate::config::{GLITCH_OUTCOMES, SETUP_TURN, SYSTEM_CARD_DEF_IDS};
-use crate::script::{EngineSink, Effect};
+use crate::script::{Effect, EngineSink};
 use crate::state::{
     CardInstance, CreateGameOptions, GameState, create_game_for_reset, find_instance_mut, new_instance,
 };
 use crate::wire::{
-    CardType, GameEvent, GameOverReason, GlitchOutcome, PLAYER_IDS, PerPlayerOpt, PlayerId, Row, Winner,
-    Zone,
+    CardType, GameEvent, GameOverReason, GlitchOutcome, PLAYER_IDS, PerPlayerOpt, PlayerId, Row, Winner, Zone,
 };
 
 /// R673: count one play of `card` if it is a "… in the System" card (a fused one counts once).
@@ -51,7 +49,11 @@ pub fn seat_played_by(state: &GameState, seat: PlayerId) -> PlayerId {
     if !seats_swapped(state) {
         return seat;
     }
-    if seat == PlayerId::P1 { PlayerId::P2 } else { PlayerId::P1 }
+    if seat == PlayerId::P1 {
+        PlayerId::P2
+    } else {
+        PlayerId::P1
+    }
 }
 
 /// R676: Glitch's text — one of its four outcomes, drawn by the match rng.
@@ -114,7 +116,11 @@ fn place_glitch_boards(state: &mut GameState) {
             if card_type == CardType::Spell {
                 continue;
             }
-            let row = if card_type == CardType::Unit { Row::Units } else { Row::Backrow };
+            let row = if card_type == CardType::Unit {
+                Row::Units
+            } else {
+                Row::Backrow
+            };
             let Some(slot) = crate::zones::first_free_zone(state, player, row) else {
                 continue;
             };

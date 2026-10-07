@@ -27,9 +27,9 @@ impl HealArgs {
     /// The target every shape names.
     fn target(&self) -> &TargetSpec {
         match self {
-            HealArgs::Amount { target, .. } | HealArgs::ToFull { target, .. } | HealArgs::UpTo { target, .. } => {
-                target
-            }
+            HealArgs::Amount { target, .. }
+            | HealArgs::ToFull { target, .. }
+            | HealArgs::UpTo { target, .. } => target,
         }
     }
 }
@@ -41,16 +41,14 @@ pub fn heal(args: HealArgs) -> Effect {
         };
 
         match &args {
-            HealArgs::Amount { amount, .. } => {
-                match target {
-                    DamageTarget::Hero { player } => {
-                        heal_hero(ctx, player, *amount);
-                    }
-                    DamageTarget::Unit { instance } => {
-                        heal_unit(ctx, &instance, *amount);
-                    }
+            HealArgs::Amount { amount, .. } => match target {
+                DamageTarget::Hero { player } => {
+                    heal_hero(ctx, player, *amount);
                 }
-            }
+                DamageTarget::Unit { instance } => {
+                    heal_unit(ctx, &instance, *amount);
+                }
+            },
             HealArgs::ToFull { .. } => {
                 // §3 gives a hero no maximum health, so a hero has no "full" to be healed to; no Core card
                 // asks for one. The hero form of this reading is `upTo` (§6.3's "Heal up to 30").

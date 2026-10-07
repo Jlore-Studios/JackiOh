@@ -44,7 +44,9 @@ fn stolen_from(instance: &CardInstance) -> Option<StolenFrom> {
 /// The card as it stands in the state now, or as the caller holds it when the state has no card of
 /// its id (TS read the live object either way).
 fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    find_instance(state, &card.id).cloned().unwrap_or_else(|| card.clone())
+    find_instance(state, &card.id)
+        .cloned()
+        .unwrap_or_else(|| card.clone())
 }
 
 /// E2, E16: `card` becomes `thief`'s — owner and controller — and `stolen` says so, naming the pile it

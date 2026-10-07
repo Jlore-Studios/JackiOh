@@ -76,7 +76,9 @@ pub fn effect_is_from_spell(ctx: &EffectContext<'_>) -> bool {
 /// a Spell's effects pass an immune unit on the field by. A card in a hand or a deck is no unit, and
 /// its printed keyword protects nothing there.
 pub fn unaffected_by(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
-    matches!(card.zone, Zone::Field { .. }) && effect_is_from_spell(ctx) && immune_to_spells(ctx.sink.state, card)
+    matches!(card.zone, Zone::Field { .. })
+        && effect_is_from_spell(ctx)
+        && immune_to_spells(ctx.sink.state, card)
 }
 
 // ---------------------------------------------------------------------------
@@ -103,7 +105,11 @@ pub fn attackable_only_from_lane(state: &GameState, unit: &CardInstance) -> bool
 /// E35: why the unit restrictions bar `attacker` from attacking `target` — a declared attack or a
 /// forced one alike (R53 waives position, sickness and Taunt, never these) — or `Ok` when nothing
 /// does (SURFACE §4.4.9). A hero carries no restriction of its own.
-pub fn attack_restriction(state: &GameState, attacker: &CardInstance, target: &DamageTarget) -> Result<(), EngineError> {
+pub fn attack_restriction(
+    state: &GameState,
+    attacker: &CardInstance,
+    target: &DamageTarget,
+) -> Result<(), EngineError> {
     if cannot_attack(state, attacker) {
         return Err(EngineError::new("that unit cannot attack"));
     }

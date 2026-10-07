@@ -21,7 +21,8 @@ use crate::wire::{GameEvent, ZoneName};
 
 /// `with_kill_credit`'s `pairs`: read before `during`, each victim that matters and the unit it is
 /// paired with.
-pub type KillCreditPairs = Arc<dyn Fn(&mut EffectContext<'_>, &CardInstance) -> Vec<KillCredit> + Send + Sync>;
+pub type KillCreditPairs =
+    Arc<dyn Fn(&mut EffectContext<'_>, &CardInstance) -> Vec<KillCredit> + Send + Sync>;
 
 /// `with_kill_credit`'s `then`: the effects for one pair whose victim `during` destroyed.
 pub type KillCreditThen = Arc<dyn Fn(&KillCredit) -> Vec<Effect> + Send + Sync>;
@@ -71,7 +72,8 @@ pub fn with_kill_credit(args: WithKillCreditArgs) -> Effect {
                 .map(|pair| json!({ "victimId": pair.victim_id, "toId": pair.to_id }))
                 .collect();
             if let Some(live) = find_instance_mut(&mut *ctx.state, &card.id) {
-                live.memory.insert(KILL_CREDIT_KEY.to_string(), Value::Array(credits));
+                live.memory
+                    .insert(KILL_CREDIT_KEY.to_string(), Value::Array(credits));
             }
         }
         let from = ctx.events.len();

@@ -144,10 +144,18 @@ fn instance_script(state: &GameState, instance: &CardInstance) -> Script {
     }
     // Only the running face is copied out of the registry.
     if let Some(entry) = registered_entry(&instance.def_id) {
-        return if instance.radiant { entry.radiant.clone() } else { entry.base.clone() };
+        return if instance.radiant {
+            entry.radiant.clone()
+        } else {
+            entry.base.clone()
+        };
     }
     let entry = fused_scripts(state, &instance.def_id).unwrap_or_default();
-    if instance.radiant { entry.radiant } else { entry.base }
+    if instance.radiant {
+        entry.radiant
+    } else {
+        entry.base
+    }
 }
 
 /// What `script_of` may be asked about: a definition id (the card's two scripts, SURFACE §6.6) or an
@@ -198,7 +206,11 @@ pub fn flags_of(state: &GameState, instance: &CardInstance) -> StaticFlags {
         return StaticFlags::default();
     }
     if let Some(entry) = registered_entry(&instance.def_id) {
-        let face = if instance.radiant { &entry.radiant } else { &entry.base };
+        let face = if instance.radiant {
+            &entry.radiant
+        } else {
+            &entry.base
+        };
         return face.flags();
     }
     instance_script(state, instance).flags()

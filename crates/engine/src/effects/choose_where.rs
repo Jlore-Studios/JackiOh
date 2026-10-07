@@ -70,7 +70,8 @@ impl std::fmt::Debug for ChooseTargetWhereArgs {
 pub fn choose_target_where(args: ChooseTargetWhereArgs) -> Effect {
     Effect::new("chooseTargetWhere", move |ctx| {
         let reader: &EffectContext<'_> = &*ctx;
-        let admits = |card: Option<&CardInstance>| args.where_.as_ref().is_none_or(|admits| admits(reader, card));
+        let admits =
+            |card: Option<&CardInstance>| args.where_.as_ref().is_none_or(|admits| admits(reader, card));
         let selections: Vec<Selection> = targets_in_scope(reader, args.scope.as_ref())
             .into_iter()
             .filter(|selection| match selection {
@@ -112,7 +113,10 @@ pub fn choose_target_where(args: ChooseTargetWhereArgs) -> Effect {
                 player,
                 kind: PromptKind::Target,
                 aim: None,
-                prompt: args.prompt.clone().unwrap_or_else(|| "Choose a target".to_string()),
+                prompt: args
+                    .prompt
+                    .clone()
+                    .unwrap_or_else(|| "Choose a target".to_string()),
                 options,
                 min: None,
                 max: None,

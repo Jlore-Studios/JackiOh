@@ -44,7 +44,10 @@ pub fn buff_random_unit(args: BuffRandomUnitArgs) -> Effect {
         // `buff`'s argument as the TS literal `{ target: { of: "instance", instanceId }, ...amount }`,
         // with only the halves this call was given.
         let mut literal = Map::new();
-        literal.insert("target".into(), json!({ "of": "instance", "instanceId": unit.id }));
+        literal.insert(
+            "target".into(),
+            json!({ "of": "instance", "instanceId": unit.id }),
+        );
         if let Some(attack) = args.attack {
             literal.insert("attack".into(), json!(attack));
         }

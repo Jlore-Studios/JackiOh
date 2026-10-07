@@ -42,11 +42,13 @@ use crate::catalog::def_of;
 use crate::layers::unit_view;
 use crate::preview::is_face_down;
 use crate::script::EngineSink;
-use crate::state::{CardInstance, Exertion, GameState, Position, find_instance, find_instance_mut, is_turn_of};
+use crate::state::{
+    CardInstance, Exertion, GameState, Position, find_instance, find_instance_mut, is_turn_of,
+};
 use crate::wire::{CardType, GameEvent, KeywordKind, PlayerId, Row, Zone, has_keyword};
 use crate::zones::{
-    ZoneSlot, acts_on_field, card_at, first_entry_zone, home_of, is_carried, is_open, release_home, reserve_home,
-    slot_of, slots_of, step_into_backrow, step_into_unit_zone,
+    ZoneSlot, acts_on_field, card_at, first_entry_zone, home_of, is_carried, is_open, release_home,
+    reserve_home, slot_of, slots_of, step_into_backrow, step_into_unit_zone,
 };
 
 /// What the moves here need: the state and the event list — an `EngineSink`, or an effect's context
@@ -74,7 +76,9 @@ pub struct AnimateOptions {
 /// The card as it stands in the state now, or as the caller holds it when the state has no card of
 /// its id (TS read the live object either way).
 fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    find_instance(state, &card.id).cloned().unwrap_or_else(|| card.clone())
+    find_instance(state, &card.id)
+        .cloned()
+        .unwrap_or_else(|| card.clone())
 }
 
 /// B2.7: the type the card's running face is printed as, wherever it stands. An animated card is a Unit

@@ -21,8 +21,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::config::{MIN_PLAGUE_PAYMENT, PLAGUE_TOKEN_MANA};
-use crate::script::{GraveyardPlayPermission, HookArgs};
 use crate::script::EngineSink;
+use crate::script::{GraveyardPlayPermission, HookArgs};
 use crate::state::{CardInstance, EngineError, GameState};
 use crate::wire::{CardType, CounterKind, GameEvent, PlayerId, Row, Zone};
 
@@ -82,7 +82,10 @@ pub fn graveyard_grants_of(state: &GameState, player: PlayerId) -> Vec<Graveyard
 pub fn in_own_graveyard(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
     // By id: a price is often read off a copy of the card with a probe's X or embiggen (`play_choices`).
     matches!(card.zone, Zone::Graveyard { player: owner } if owner == player)
-        && state.players[player].graveyard.iter().any(|held| held.id == card.id)
+        && state.players[player]
+            .graveyard
+            .iter()
+            .any(|held| held.id == card.id)
 }
 
 /// The grants that admit this card at all: the right type (Units only, or every type).
@@ -194,7 +197,9 @@ pub fn why_graveyard_play_refused(
             ));
         }
         if price > mana {
-            return Err(EngineError::new(format!("that card costs {price}, more than your mana")));
+            return Err(EngineError::new(format!(
+                "that card costs {price}, more than your mana"
+            )));
         }
         return Ok(());
     };
@@ -234,7 +239,8 @@ pub fn mana_due(price: i32, plague: Option<&PlagueSpend>) -> i32 {
 /// TS wrote through the live card it was handed; here the card is found in the state by id and its
 /// counters changed there.
 pub fn spend_plague_tokens(sink: &mut EngineSink, card: &CardInstance, tokens: i32) {
-    let current = crate::state::find_instance(sink.state, &card.id).map_or_else(|| plague_on(card), plague_on);
+    let current =
+        crate::state::find_instance(sink.state, &card.id).map_or_else(|| plague_on(card), plague_on);
     let next = (current - tokens.max(0)).max(0);
     if next == current {
         return;

@@ -199,7 +199,12 @@ fn zone_registers_hook(_state: &GameState, holder: &TriggerHolder, hook: HookNam
     true
 }
 
-fn holder_of(state: &GameState, card: &CardInstance, zone: TriggerZone, controller: PlayerId) -> TriggerHolder {
+fn holder_of(
+    state: &GameState,
+    card: &CardInstance,
+    zone: TriggerZone,
+    controller: PlayerId,
+) -> TriggerHolder {
     let script = crate::scripts::script_of(state, card);
     // R383: an animated Field Trap in a unit zone is a trap too — `traps.rs` fires it, and it is never
     // also queued (§10.3).
@@ -344,7 +349,11 @@ pub fn trigger_holders_for_event(state: &GameState, event_type: GameEventType) -
 /// spells are found (R68) — but carrying a hook is not the same as being allowed to answer it, so a
 /// card in a hand answers none and a card in a graveyard answers only that one return. Reading the
 /// hook off the script alone was the bug: it let a Field Spell in a hand act on the board.
-pub fn trigger_holders_with_hook(state: &GameState, hook: HookName, only: Option<PlayerId>) -> Vec<TriggerHolder> {
+pub fn trigger_holders_with_hook(
+    state: &GameState,
+    hook: HookName,
+    only: Option<PlayerId>,
+) -> Vec<TriggerHolder> {
     let holders = match only {
         None => cards_in_trigger_order(state),
         Some(player) => trigger_holders_of(state, player),
@@ -399,7 +408,10 @@ pub fn event_of_queued(entry: &QueuedTrigger) -> Option<GameEvent> {
 
 fn owed_traps_of(entry: &QueuedTrigger) -> Vec<String> {
     match entry.resume.data.get("owed").and_then(Value::as_array) {
-        Some(owed) => owed.iter().filter_map(|id| id.as_str().map(str::to_string)).collect(),
+        Some(owed) => owed
+            .iter()
+            .filter_map(|id| id.as_str().map(str::to_string))
+            .collect(),
         None => Vec::new(),
     }
 }
@@ -439,13 +451,17 @@ pub fn queue_trigger(
     let (id, seq) = next_entry_id(sink.state, hidden, "h");
     // TS `const marks: RunMarks = { eventStay: eventStayOf(state, event) }`, written as its JSON.
     let stay = crate::stays::event_stay_of(sink.state, event);
-    let marks = json!({ "eventStay": serde_json::to_value(&stay).expect("an event stay is plain JSON (§10.1)") });
+    let marks =
+        json!({ "eventStay": serde_json::to_value(&stay).expect("an event stay is plain JSON (§10.1)") });
     let mut data: IndexMap<String, Value> = IndexMap::new();
     data.insert(
         "event".to_string(),
         serde_json::to_value(event).expect("an event is plain JSON (§10.1)"),
     );
-    data.insert("zone".to_string(), Value::String(holder.zone.as_str().to_string()));
+    data.insert(
+        "zone".to_string(),
+        Value::String(holder.zone.as_str().to_string()),
+    );
     data.insert("controller".to_string(), player_value(holder.controller));
     data.insert(crate::work::RUN_MARKS_KEY.to_string(), marks);
     let entry = QueuedTrigger {
@@ -474,10 +490,14 @@ pub fn queue_trigger(
 /// entry too, so it borrows the counter like a hand card's: a number it took would tell the other seat
 /// the face-down card carries that hook.
 pub fn queue_hook(sink: &mut EngineSink<'_>, holder: &TriggerHolder, hook: HookName) -> QueuedTrigger {
-    let hidden = holder.zone == TriggerZone::Backrow && crate::preview::is_face_down(sink.state, &holder.card);
+    let hidden =
+        holder.zone == TriggerZone::Backrow && crate::preview::is_face_down(sink.state, &holder.card);
     let (id, seq) = next_entry_id(sink.state, hidden, "h");
     let mut data: IndexMap<String, Value> = IndexMap::new();
-    data.insert("zone".to_string(), Value::String(holder.zone.as_str().to_string()));
+    data.insert(
+        "zone".to_string(),
+        Value::String(holder.zone.as_str().to_string()),
+    );
     data.insert("controller".to_string(), player_value(holder.controller));
     let entry = QueuedTrigger {
         id,
@@ -505,7 +525,10 @@ pub fn queue_hooks_in_trigger_order(
     only: Option<PlayerId>,
 ) -> Vec<QueuedTrigger> {
     let holders = trigger_holders_with_hook(sink.state, hook, only);
-    holders.iter().map(|holder| queue_hook(sink, holder, hook)).collect()
+    holders
+        .iter()
+        .map(|holder| queue_hook(sink, holder, hook))
+        .collect()
 }
 
 /// Queue one hook across the board and resolve it, in R68's order (§6.2, R62, R59).
@@ -517,7 +540,11 @@ pub fn run_hooks_in_trigger_order(sink: &mut SettleSink<'_>, hook: HookName, onl
 /// Park an event the traps have not finished answering. `owed` names the traps that still have to
 /// see it, so a resume neither re-fires one that already fired nor wakes a Field Trap twice (§5.1).
 /// It goes in front of every queued card trigger, because a trap is a response (§10.3).
-fn owed_to_traps(sink: &mut EngineSink<'_>, event: &GameEvent, run: &ImmediateDispatch) -> Option<QueuedTrigger> {
+fn owed_to_traps(
+    sink: &mut EngineSink<'_>,
+    event: &GameEvent,
+    run: &ImmediateDispatch,
+) -> Option<QueuedTrigger> {
     if run.owed.is_empty() {
         return None;
     }
@@ -624,7 +651,11 @@ fn events_after_dispatched(sink: &EngineSink<'_>, at: Option<usize>) -> Vec<Game
     let list: &[GameEvent] = &sink.events[..];
     let frontier = sink.frontier.get();
     let listed = |item: &DispatchItem| -> bool {
-        if frontier.positions.get(&item.seq).is_some_and(|&position| position < list.len()) {
+        if frontier
+            .positions
+            .get(&item.seq)
+            .is_some_and(|&position| position < list.len())
+        {
             return true;
         }
         frontier
@@ -752,7 +783,11 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
 
     let Some(event) = event else {
         // A hook entry: §6.2's start-of-turn and end-of-turn triggers, queued in R68's order.
-        let Some(hook) = TRIGGER_HOOKS.iter().copied().find(|name| name.as_str() == entry.hook) else {
+        let Some(hook) = TRIGGER_HOOKS
+            .iter()
+            .copied()
+            .find(|name| name.as_str() == entry.hook)
+        else {
             return;
         };
         if holder.script.hook_named(hook.as_str()).is_none() {
@@ -848,7 +883,11 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
 /// definition's namespace: Fed Fauci hit by the Cry that Unlicensed Experimentation then fused onto
 /// it still owes its Plague Counter (R212).
 fn queued_trigger_def(holder: &TriggerHolder, entry: &QueuedTrigger) -> Option<TriggerDef> {
-    if let Some(exact) = holder.triggers.iter().find(|candidate| candidate.id == entry.hook) {
+    if let Some(exact) = holder
+        .triggers
+        .iter()
+        .find(|candidate| candidate.id == entry.hook)
+    {
         return Some(exact.clone());
     }
     let namespaced = format!("{}:{}", entry.resume.def_id, entry.hook);
@@ -978,9 +1017,9 @@ pub fn mark_dispatched(sink: &mut EngineSink<'_>, events: &[GameEvent]) {
         return;
     }
     for event in events {
-        let found = (0..len).rev().find(|&at| {
-            sink.events[at] == *event && !sink.frontier.get().elsewhere.contains(&at)
-        });
+        let found = (0..len)
+            .rev()
+            .find(|&at| sink.events[at] == *event && !sink.frontier.get().elsewhere.contains(&at));
         if let Some(at) = found {
             sink.frontier.get_mut().elsewhere.insert(at);
         }
@@ -1016,7 +1055,10 @@ fn collect_events(sink: &mut SettleSink<'_>) {
 
 /// Whether an event's own trap dispatch is unfinished, so the frontier may not advance (§10.3).
 fn traps_still_owed(state: &GameState) -> bool {
-    state.trigger_queue.iter().any(|entry| entry.hook == OWED_TO_TRAPS)
+    state
+        .trigger_queue
+        .iter()
+        .any(|entry| entry.hook == OWED_TO_TRAPS)
 }
 
 /// Turn the frontier into trap firings and queue entries (§10.3 steps B, C, D), oldest event first,

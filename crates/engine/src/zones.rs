@@ -30,13 +30,13 @@ use crate::own_library::show_to_owner;
 use crate::script::EngineSink;
 use crate::scripts::flags_of;
 use crate::state::{
-    CardInstance, EngineError, Exertion, GameState, HomeZone, Pile, PlayerState, QueuedTrigger, find_instance,
-    find_instance_mut, rename_in_board_history,
+    CardInstance, EngineError, Exertion, GameState, HomeZone, Pile, PlayerState, QueuedTrigger,
+    find_instance, find_instance_mut, rename_in_board_history,
 };
 use crate::stays::{note_field_exit, note_moved, note_uncovered};
 use crate::wire::{
-    AttackHealth, CardType, Counters, GameEvent, PLAYER_IDS, PlayerId, Position, RotationDirection, Row, Zone,
-    ZoneName, ZoneRef, opponent_of,
+    AttackHealth, CardType, Counters, GameEvent, PLAYER_IDS, PlayerId, Position, RotationDirection, Row,
+    Zone, ZoneName, ZoneRef, opponent_of,
 };
 
 /// `{ player, row, lane }`: a field zone (TS `ZoneSlot`), the same shape as the wire's `ZoneRef`.
@@ -57,7 +57,9 @@ fn lane_index(lane: i32) -> Option<usize> {
 /// The card under `card`'s id as it stands in the state now, or `card` itself when it is in no zone
 /// (TS held the live object; a caller holds a copy, which may be older than the state).
 fn live_or(state: &GameState, card: &CardInstance) -> CardInstance {
-    find_instance(state, &card.id).cloned().unwrap_or_else(|| card.clone())
+    find_instance(state, &card.id)
+        .cloned()
+        .unwrap_or_else(|| card.clone())
 }
 
 /// Make `row` long enough to hold `index` (JS grows an array assigned past its end).
@@ -68,7 +70,11 @@ fn ensure_len<T>(row: &mut Vec<Option<T>>, index: usize) {
 }
 
 pub fn row_size(row: Row) -> i32 {
-    if row == Row::Units { UNIT_ZONES } else { BACKROW_ZONES }
+    if row == Row::Units {
+        UNIT_ZONES
+    } else {
+        BACKROW_ZONES
+    }
 }
 
 /// §3.1, Classic #22: the midlane lanes of a board `lanes` wide — the center lane of an odd count,
@@ -134,16 +140,27 @@ pub fn ring_order(row: Row, perspective: PlayerId) -> Vec<ZoneSlot> {
     mine.chain(theirs).collect()
 }
 
-pub fn ring_neighbor(slot: impl Into<ZoneSlot>, direction: RotationDirection, perspective: PlayerId) -> ZoneSlot {
+pub fn ring_neighbor(
+    slot: impl Into<ZoneSlot>,
+    direction: RotationDirection,
+    perspective: PlayerId,
+) -> ZoneSlot {
     let slot = slot.into();
     let ring = ring_order(slot.row, perspective);
     let Some(at) = ring
         .iter()
         .position(|other| other.player == slot.player && other.lane == slot.lane)
     else {
-        panic!("zone not on the {} ring: {} lane {}", slot.row, slot.player, slot.lane);
+        panic!(
+            "zone not on the {} ring: {} lane {}",
+            slot.row, slot.player, slot.lane
+        );
     };
-    let step: i32 = if direction == RotationDirection::Right { 1 } else { -1 };
+    let step: i32 = if direction == RotationDirection::Right {
+        1
+    } else {
+        -1
+    };
     let len = ring.len() as i32;
     let next = (at as i32 + step + len) % len;
     match ring.get(next as usize) {
@@ -242,9 +259,7 @@ pub fn is_empty(state: &GameState, slot: impl Into<ZoneSlot>) -> bool {
 pub fn beneath_at(state: &GameState, slot: impl Into<ZoneSlot>) -> &[CardInstance] {
     let slot = slot.into();
     if slot.row != Row::Backrow {
-        return pile_at(state, slot)
-            .and_then(|pile| pile.get(1..))
-            .unwrap_or(&[]);
+        return pile_at(state, slot).and_then(|pile| pile.get(1..)).unwrap_or(&[]);
     }
     lane_index(slot.lane)
         .and_then(|index| {
@@ -338,7 +353,11 @@ pub fn why_cannot_carry(state: &GameState, slot: impl Into<ZoneSlot>) -> Result<
     }
     let top = match card_at(state, slot) {
         Some(top) if is_carrier(state, top) => top,
-        _ => return Err(EngineError::new("that zone holds no card a Unit may be played on top of")),
+        _ => {
+            return Err(EngineError::new(
+                "that zone holds no card a Unit may be played on top of",
+            ));
+        }
     };
     if carried_at(state, slot).is_some() {
         return Err(EngineError::new("that card already carries a Unit"));
@@ -366,7 +385,11 @@ pub struct AcceptsStackCardOptions {
 /// (R64, B3.1 rule 6) takes no Stack card either — plus, in a backrow zone, a carrier's Unit: a zone
 /// carrying one takes nothing more (R446). A play's Stack entry still honors a Lock (R688: only plays
 /// are refused one); a move's does not, via `{ move: true }`.
-pub fn accepts_stack_card(state: &GameState, slot: impl Into<ZoneSlot>, options: AcceptsStackCardOptions) -> bool {
+pub fn accepts_stack_card(
+    state: &GameState,
+    slot: impl Into<ZoneSlot>,
+    options: AcceptsStackCardOptions,
+) -> bool {
     let slot = slot.into();
     if is_reserved(state, slot) {
         return false;
@@ -821,7 +844,13 @@ pub fn replace_in_zone(state: &mut GameState, old: &CardInstance, replacement: &
         OldPlace::Beneath => {
             let beneath: Vec<CardInstance> = beneath_at(state, slot)
                 .iter()
-                .map(|card| if card.id == old.id { placed.clone() } else { card.clone() })
+                .map(|card| {
+                    if card.id == old.id {
+                        placed.clone()
+                    } else {
+                        card.clone()
+                    }
+                })
                 .collect();
             set_beneath(&mut state.players[player], lane, beneath);
         }
@@ -839,7 +868,11 @@ pub struct RemoveFromFieldOptions {
 /// the card that left (`stays::note_uncovered`, R212): no event reports a resume. `with_pile` is for a
 /// move that lifts whole piles and sets each down whole elsewhere (#87's board swap, #52's rotation):
 /// its cards come off one at a time, but nothing beneath any of them resumes, so no resume is noted.
-pub fn remove_from_field(state: &mut GameState, instance: &CardInstance, options: RemoveFromFieldOptions) -> bool {
+pub fn remove_from_field(
+    state: &mut GameState,
+    instance: &CardInstance,
+    options: RemoveFromFieldOptions,
+) -> bool {
     let with_pile = options.with_pile == Some(true);
     for player in PLAYER_IDS {
         let units = state.players[player].units.len();
@@ -1419,7 +1452,13 @@ pub fn step_into_unit_zone(state: &mut GameState, card: &CardInstance, to: impl 
     if from.player != to.player || !acts_on_field(state, &moving) || !takes_move(state, to) {
         return false;
     }
-    remove_from_field(state, &moving, RemoveFromFieldOptions { with_pile: Some(true) });
+    remove_from_field(
+        state,
+        &moving,
+        RemoveFromFieldOptions {
+            with_pile: Some(true),
+        },
+    );
     place_on_field(state, &mut moving, to, PlaceOnFieldOptions::default())
 }
 
@@ -1429,7 +1468,12 @@ pub fn step_into_unit_zone(state: &mut GameState, card: &CardInstance, to: impl 
 /// changing nothing, when it cannot go.
 ///
 /// `card` names the card, as in `step_into_unit_zone`; `stack` is TS's `{ stack?: boolean }`.
-pub fn step_into_backrow(state: &mut GameState, card: &CardInstance, to: impl Into<ZoneSlot>, stack: bool) -> bool {
+pub fn step_into_backrow(
+    state: &mut GameState,
+    card: &CardInstance,
+    to: impl Into<ZoneSlot>,
+    stack: bool,
+) -> bool {
     let to = to.into();
     let mut moving = live_or(state, card);
     let Some(from) = slot_of(state, &moving) else {
@@ -1449,7 +1493,13 @@ pub fn step_into_backrow(state: &mut GameState, card: &CardInstance, to: impl In
     if !takes {
         return false;
     }
-    remove_from_field(state, &moving, RemoveFromFieldOptions { with_pile: Some(true) });
+    remove_from_field(
+        state,
+        &moving,
+        RemoveFromFieldOptions {
+            with_pile: Some(true),
+        },
+    );
     place_on_field(state, &mut moving, to, PlaceOnFieldOptions { stack: Some(stack) })
 }
 

@@ -96,7 +96,8 @@ pub fn place_plague_on(sink: &mut EngineSink<'_>, card: &CardInstance, amount: i
         return 0;
     }
     let placed = base * plague_multiplier_of(sink.state, card);
-    let live_plague = crate::state::find_instance(sink.state, &card.id).map_or_else(|| plague_on(card), plague_on);
+    let live_plague =
+        crate::state::find_instance(sink.state, &card.id).map_or_else(|| plague_on(card), plague_on);
     let value = live_plague + placed;
     if let Some(live) = find_instance_mut(sink.state, &card.id) {
         live.counters.plague = Some(value);

@@ -45,7 +45,11 @@ fn damage_flags(args: &DamageFlagArgs) -> DamageFlags {
         ignore_armor: Some(args.ignore_armor == Some(true)),
         combat: Some(args.combat == Some(true)),
         lifesteal: Some(args.lifesteal == Some(true)),
-        trample: if args.trample == Some(true) { Some(true) } else { None },
+        trample: if args.trample == Some(true) {
+            Some(true)
+        } else {
+            None
+        },
     }
 }
 

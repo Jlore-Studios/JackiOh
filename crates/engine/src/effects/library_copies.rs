@@ -44,11 +44,21 @@ pub fn add_library_copies(args: AddLibraryCopiesArgs) -> Effect {
             sorted.sort_by(|a, b| a.def_id.cmp(&b.def_id));
             sorted
         } else {
-            ctx.sink.rng.shuffle(&library).into_iter().take(count as usize).collect()
+            ctx.sink
+                .rng
+                .shuffle(&library)
+                .into_iter()
+                .take(count as usize)
+                .collect()
         };
         let controller = ctx.controller;
         for source in &picked {
-            let mut copy = new_instance(&mut *ctx.state, &source.def_id, controller, Zone::Hand { player: controller });
+            let mut copy = new_instance(
+                &mut *ctx.state,
+                &source.def_id,
+                controller,
+                Zone::Hand { player: controller },
+            );
             copy.radiant = source.radiant;
             if let Some(stats) = source.stats_override {
                 copy.stats_override = Some(stats);

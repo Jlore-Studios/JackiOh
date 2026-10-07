@@ -26,7 +26,9 @@ use serde::{Deserialize, Serialize};
 use crate::config::{ANTI_ONESHOT_CAP, DAMAGE_REDIRECT_CAP, HERO_ARMOR};
 use crate::script::{EngineSink, HeroGuard, HookArgs};
 use crate::state::{CardInstance, GameState, ModifierKind, find_instance, find_instance_mut};
-use crate::wire::{CardType, GameEvent, Keyword, KeywordKind, PlayerId, Row, ZoneName, armor_of, has_keyword, opponent_of};
+use crate::wire::{
+    CardType, GameEvent, Keyword, KeywordKind, PlayerId, Row, ZoneName, armor_of, has_keyword, opponent_of,
+};
 
 /// TS `{ kind: "unit"; instance } | { kind: "hero"; player }`. The unit is carried by value, as TS's
 /// object was: a target is built once per hit and matched at every card and test that aims one, and a
@@ -118,10 +120,13 @@ pub fn hero_armor_of(state: &GameState, player: PlayerId) -> i32 {
 
 /// R757: the Armor a player's `heroArmor` modifiers add, each until its expiry takes it off.
 fn modifier_armor_of(state: &GameState, player: PlayerId) -> i32 {
-    state.players[player].mods.iter().fold(0, |sum, modifier| match modifier.kind {
-        ModifierKind::HeroArmor { amount } => sum + amount.max(0),
-        _ => sum,
-    })
+    state.players[player]
+        .mods
+        .iter()
+        .fold(0, |sum, modifier| match modifier.kind {
+            ModifierKind::HeroArmor { amount } => sum + amount.max(0),
+            _ => sum,
+        })
 }
 
 /// The cards acting on a player's side of the field (§3.2): the top of each unit pile and each backrow
@@ -286,7 +291,10 @@ pub fn pierces(state: &GameState, source: Option<&CardInstance>, flags: Option<&
         return true;
     }
     source.is_some_and(|source| {
-        has_keyword(&crate::layers::unit_view(state, source).keywords, KeywordKind::Pierce)
+        has_keyword(
+            &crate::layers::unit_view(state, source).keywords,
+            KeywordKind::Pierce,
+        )
     })
 }
 

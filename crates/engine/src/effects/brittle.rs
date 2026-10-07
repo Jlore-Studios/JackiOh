@@ -98,7 +98,11 @@ fn report(ctx: &mut EffectContext<'_>, card: &CardInstance) {
 
 /// Change the count of the card as it stands in the state (TS wrote through the live object the scope or
 /// target handed back): the verb runs on a copy of the live card, and the count it leaves is written back.
-fn write_count(ctx: &mut EffectContext<'_>, card: &CardInstance, change: impl FnOnce(&GameState, &mut CardInstance)) {
+fn write_count(
+    ctx: &mut EffectContext<'_>,
+    card: &CardInstance,
+    change: impl FnOnce(&GameState, &mut CardInstance),
+) {
     let mut live = find_instance(ctx.state, &card.id)
         .cloned()
         .unwrap_or_else(|| card.clone());

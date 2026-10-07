@@ -82,7 +82,11 @@ pub fn add_rolled_grapes(args: AddRolledGrapesArgs) -> Effect {
             let add = add_to_hand(AddToHandArgs {
                 def_id: Some(def_id),
                 player: args.player,
-                radiant: if args.radiant == Some(true) { Some(true) } else { None },
+                radiant: if args.radiant == Some(true) {
+                    Some(true)
+                } else {
+                    None
+                },
                 ..AddToHandArgs::default()
             });
             (add.apply)(ctx);
@@ -265,7 +269,12 @@ pub fn replace_hand_with_random(args: ReplaceHandWithRandomArgs) -> Effect {
             if card.zone.z() != ZoneName::Hand {
                 continue;
             }
-            let moved = move_to_zone(ctx.sink.state, &mut card, OffFieldZone::Graveyard, Default::default());
+            let moved = move_to_zone(
+                ctx.sink.state,
+                &mut card,
+                OffFieldZone::Graveyard,
+                Default::default(),
+            );
             let landed = find_instance(ctx.sink.state, &card.id).cloned().unwrap_or(card);
             report_graveyard_landing(ctx, &landed, moved);
         }
@@ -274,7 +283,11 @@ pub fn replace_hand_with_random(args: ReplaceHandWithRandomArgs) -> Effect {
             .as_ref()
             .map(|card| card.def_id.clone())
             .or_else(|| ctx.def_id.clone());
-        let pool = query(&excluding_def_id(Some(&*ctx.sink.state), &args.query, own.as_deref()));
+        let pool = query(&excluding_def_id(
+            Some(&*ctx.sink.state),
+            &args.query,
+            own.as_deref(),
+        ));
         if pool.is_empty() {
             return;
         }
@@ -290,7 +303,11 @@ pub fn replace_hand_with_random(args: ReplaceHandWithRandomArgs) -> Effect {
             let add = add_to_hand(AddToHandArgs {
                 def_id: Some(def_id),
                 player: args.player,
-                radiant: if args.radiant == Some(true) { Some(true) } else { None },
+                radiant: if args.radiant == Some(true) {
+                    Some(true)
+                } else {
+                    None
+                },
                 cost_override: args.cost_override,
                 ..AddToHandArgs::default()
             });

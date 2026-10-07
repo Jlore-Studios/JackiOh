@@ -91,33 +91,41 @@ fn check_now() -> Effect {
 /// §4.5, R59: run the state check here, then build the rest of the text with `build` and apply it,
 /// on a stay that begins after the check (R174). `build` is called once the check is over — after the
 /// answer, when a Death hook in it asked (R113) — with a context whose `exits_from` is that stay's.
-pub fn after_state_check(build: impl Fn(&mut EffectContext<'_>) -> Vec<Effect> + Send + Sync + 'static) -> Effect {
+pub fn after_state_check(
+    build: impl Fn(&mut EffectContext<'_>) -> Vec<Effect> + Send + Sync + 'static,
+) -> Effect {
     let build: AfterCheckBuild = Arc::new(build);
-    lazy_part("afterStateCheck", move |_ctx: &mut EffectContext<'_>, _memo: &Memo| {
-        let build = build.clone();
-        EffectPart {
-            effects: vec![
-                check_now(),
-                lazy_part("afterStateCheck:rest", move |ctx: &mut EffectContext<'_>, memo: &Memo| {
-                    // TS `typeof memo === "number" ? memo : exitMark(ctx.state)`.
-                    let exits_from = match memo {
-                        Some(value @ Value::Number(_)) => value.as_f64().map(|mark| mark as u32),
-                        _ => None,
-                    }
-                    .unwrap_or_else(|| exit_mark(ctx.state));
-                    let effects = with_exits_from(ctx, exits_from, |ctx| build(ctx))
-                        .into_iter()
-                        .map(|effect| at_mark(effect, exits_from))
-                        .collect();
-                    EffectPart {
-                        effects,
-                        memo: Some(Value::from(exits_from)),
-                    }
-                }),
-            ],
-            // A memo that survives JSON as it is (a pause records one per part it stands in, and a bare
-            // `undefined` there would come back from a round trip as `null`); the part's shape needs none.
-            memo: Some(Value::String(PART_MEMO.to_string())),
-        }
-    })
+    lazy_part(
+        "afterStateCheck",
+        move |_ctx: &mut EffectContext<'_>, _memo: &Memo| {
+            let build = build.clone();
+            EffectPart {
+                effects: vec![
+                    check_now(),
+                    lazy_part(
+                        "afterStateCheck:rest",
+                        move |ctx: &mut EffectContext<'_>, memo: &Memo| {
+                            // TS `typeof memo === "number" ? memo : exitMark(ctx.state)`.
+                            let exits_from = match memo {
+                                Some(value @ Value::Number(_)) => value.as_f64().map(|mark| mark as u32),
+                                _ => None,
+                            }
+                            .unwrap_or_else(|| exit_mark(ctx.state));
+                            let effects = with_exits_from(ctx, exits_from, |ctx| build(ctx))
+                                .into_iter()
+                                .map(|effect| at_mark(effect, exits_from))
+                                .collect();
+                            EffectPart {
+                                effects,
+                                memo: Some(Value::from(exits_from)),
+                            }
+                        },
+                    ),
+                ],
+                // A memo that survives JSON as it is (a pause records one per part it stands in, and a bare
+                // `undefined` there would come back from a round trip as `null`); the part's shape needs none.
+                memo: Some(Value::String(PART_MEMO.to_string())),
+            }
+        },
+    )
 }

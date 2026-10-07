@@ -38,7 +38,10 @@ pub fn credited_killer_id(source: &CardInstance, victim: &CardInstance) -> Strin
                 .iter()
                 .find(|each| each.get("victimId").and_then(|id| id.as_str()) == Some(victim.id.as_str()))
         });
-    match credit.and_then(|credit| credit.get("toId")).and_then(|id| id.as_str()) {
+    match credit
+        .and_then(|credit| credit.get("toId"))
+        .and_then(|id| id.as_str())
+    {
         Some(to_id) => to_id.to_string(),
         None => source.id.clone(),
     }

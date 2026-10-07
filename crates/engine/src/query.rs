@@ -184,7 +184,11 @@ pub fn was_played_this_turn<'a>(state: &GameState, player: PlayerId, card: impl 
         CardOrId::Id(id) => id,
         CardOrId::Nothing => return false,
     };
-    state.players[player].turn_log.played_ids.iter().any(|played| played == id)
+    state.players[player]
+        .turn_log
+        .played_ids
+        .iter()
+        .any(|played| played == id)
 }
 
 /// R427, R174: whether the card a play's `cardResolved` names has left the field since the play
@@ -212,7 +216,9 @@ pub fn left_field_since_resolved(state: &GameState, event: &GameEvent) -> bool {
 pub fn recalled(ctx: &EffectContext<'_>, key: &str) -> Option<Value> {
     // TS read the live `ctx.self`, so a memory an earlier effect of the list wrote is read here.
     let card = ctx.live_self()?;
-    card.memory.get(&crate::work::part_memory_key(&ctx.data, key)).cloned()
+    card.memory
+        .get(&crate::work::part_memory_key(&ctx.data, key))
+        .cloned()
 }
 
 /// R42, R361: the Unit that destroyed a card, asked by the card's own Death hook (#86 "Miss" Mrow's
@@ -261,7 +267,12 @@ pub fn played_this_turn_of_type(state: &GameState, player: PlayerId, types: &[Ca
     let wanted: IndexSet<CardType> = types.iter().copied().collect();
     wanted
         .iter()
-        .map(|card_type| counts.and_then(|counts| counts.get(card_type)).copied().unwrap_or(0))
+        .map(|card_type| {
+            counts
+                .and_then(|counts| counts.get(card_type))
+                .copied()
+                .unwrap_or(0)
+        })
         .sum()
 }
 
@@ -333,13 +344,13 @@ pub fn granted_combo_live(state: &GameState, player: PlayerId) -> bool {
     if cards_played_this_turn(state, player) < 1 {
         return false;
     }
-    let granted = permanents_held_by(state, player)
-        .iter()
-        .any(|held| match crate::scripts::flags_of(state, held).quickstriker {
+    let granted = permanents_held_by(state, player).iter().any(|held| {
+        match crate::scripts::flags_of(state, held).quickstriker {
             Some(FlagOrCount::Flag(flag)) => flag,
             Some(FlagOrCount::Count(count)) => count > 0,
             None => false,
-        });
+        }
+    });
     if granted {
         return true;
     }
@@ -370,7 +381,9 @@ pub fn gifted_would_make_radiant(state: &GameState, player: PlayerId, card: &Car
 pub fn lethal_attackers_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let target = DamageTarget::Hero { player };
     active_units_of(state, opponent_of(player))
-        .into_iter().filter(|&unit| crate::subsystems::lethal::is_lethal(state, unit, &target)).cloned()
+        .into_iter()
+        .filter(|&unit| crate::subsystems::lethal::is_lethal(state, unit, &target))
+        .cloned()
         .collect()
 }
 

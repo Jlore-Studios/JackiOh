@@ -78,8 +78,8 @@ use crate::preview::{backrow_is_public, is_face_down, preview_of};
 use crate::script::ConditionZone;
 use crate::setup::{mulligan_prompt_for, returned_awaiting_shuffle};
 use crate::state::{
-    CardInstance, GameState, ModifierExpiry, ModifierKind, PendingChoice, PlayerModifier, PlayerState, PromptOption,
-    find_instance,
+    CardInstance, GameState, ModifierExpiry, ModifierKind, PendingChoice, PlayerModifier, PlayerState,
+    PromptOption, find_instance,
 };
 use crate::subsystems::activate::activation_views_for;
 use crate::subsystems::combo_index::grade_name;
@@ -88,11 +88,11 @@ use crate::subsystems::hero_power::{power_of, power_title_of, used_this_turn};
 use crate::subsystems::quests::quest_view_of;
 use crate::turn::standing_draw_offer;
 use crate::wire::{
-    AnimatedView, BackrowCounters, BackrowView, CardDef, CardMark, CardType, CardView, CopiedTextView, DrawOfferView,
-    FaceDownBackrowView, GameEvent, GameEventType, GameResult, GlitchOutcome, HandView, HeroPowerView, HeroView,
-    ManaView, ModifierView, MulliganView, PLAYER_IDS, PendingElsewhereView, PendingOption, PendingPromptView,
-    PendingView, PlayerId, PlayerView, PreviewValue, PublicBackrowView, Row, RowFlags, Selection, SideView,
-    TuningChange, UnitView, Zone, ZoneName, opponent_of,
+    AnimatedView, BackrowCounters, BackrowView, CardDef, CardMark, CardType, CardView, CopiedTextView,
+    DrawOfferView, FaceDownBackrowView, GameEvent, GameEventType, GameResult, GlitchOutcome, HandView,
+    HeroPowerView, HeroView, ManaView, ModifierView, MulliganView, PLAYER_IDS, PendingElsewhereView,
+    PendingOption, PendingPromptView, PendingView, PlayerId, PlayerView, PreviewValue, PublicBackrowView,
+    Row, RowFlags, Selection, SideView, TuningChange, UnitView, Zone, ZoneName, opponent_of,
 };
 use crate::zones::{beneath_at, carried_at, carried_units_of, home_of, is_reserved, slot_of, slots_of};
 
@@ -121,7 +121,13 @@ pub const HIDDEN_OPTION_LABEL: &str = "Face-down card";
 
 /// §10.8, R33: a card in the backrow that this viewer sees only as a face-down card.
 fn is_face_down_to(state: &GameState, card: &CardInstance, viewer: PlayerId) -> bool {
-    matches!(card.zone, Zone::Field { row: Row::Backrow, .. }) && !backrow_is_public(state, card, viewer)
+    matches!(
+        card.zone,
+        Zone::Field {
+            row: Row::Backrow,
+            ..
+        }
+    ) && !backrow_is_public(state, card, viewer)
 }
 
 /// R177: the card that took each vanished card's place, read off the events that replaced it — a
@@ -144,8 +150,12 @@ struct Replacements {
 }
 
 fn replacements_of(events: &[&GameEvent], state: Option<&GameState>) -> Replacements {
-    let to_library: Option<IndexSet<String>> =
-        state.map(|state| returned_awaiting_shuffle(state).into_iter().map(|id| id.to_string()).collect());
+    let to_library: Option<IndexSet<String>> = state.map(|state| {
+        returned_awaiting_shuffle(state)
+            .into_iter()
+            .map(|id| id.to_string())
+            .collect()
+    });
     let mut replaced_by: IndexMap<String, String> = IndexMap::new();
     let mut hidden_from: IndexMap<String, Vec<PlayerId>> = IndexMap::new();
     for event in events {
@@ -223,7 +233,11 @@ fn may_read(state: &GameState, viewer: PlayerId, instance_id: &str, replaced: &R
         // R177: a card that ceased to exist where this viewer could not read it — a library card, an
         // enemy face-down trap — stays unread for good. Its replacement may reach a public pile later,
         // and judged by that pile alone the card it replaced would read, though it never was public.
-        if replaced.hidden_from.get(&id).is_some_and(|players| players.contains(&viewer)) {
+        if replaced
+            .hidden_from
+            .get(&id)
+            .is_some_and(|players| players.contains(&viewer))
+        {
             return false;
         }
         let Some(next) = replaced.replaced_by.get(&id) else {
@@ -242,7 +256,9 @@ fn may_read(state: &GameState, viewer: PlayerId, instance_id: &str, replaced: &R
     match &card.zone {
         Zone::Library { .. } => false,
         Zone::Hand { player } => *player == viewer,
-        Zone::Field { row: Row::Backrow, .. } => backrow_is_public(state, card, viewer),
+        Zone::Field {
+            row: Row::Backrow, ..
+        } => backrow_is_public(state, card, viewer),
         // R448: a card waiting in the resolving zone to be set face-down is its player's alone (R33, R227).
         // Units, graveyard, exile, `resolving` (R98) and `gone` (R11, R86) are all public.
         _ => !announced_face_down_to(state, card, viewer),
@@ -286,7 +302,12 @@ fn card_view(state: &GameState, card: &CardInstance) -> CardView {
     // B5 E33, R404: a quest line on the field, public as the card is.
     let quest = quest_view_of(state, card);
     let data = instance_data_view(state, card);
-    let mut view = bare_card_view(card.id.clone(), card.def_id.clone(), card.radiant, effective_cost(state, card, Default::default()));
+    let mut view = bare_card_view(
+        card.id.clone(),
+        card.def_id.clone(),
+        card.radiant,
+        effective_cost(state, card, Default::default()),
+    );
     view.type_ = data.type_;
     view.brittle = data.brittle;
     view.params = data.params;
@@ -311,7 +332,11 @@ fn with_marks(state: &GameState, instance_id: &str) -> Option<Vec<CardMark>> {
 /// R151), which its cost alone does not.
 fn hand_card_view(state: &GameState, card: &CardInstance) -> CardView {
     let mut view = with_copies(card_view(state, card), state, card);
-    let stats = if card_type_of(state, card) == CardType::Unit { Some(stats_with_buffs(state, card)) } else { None };
+    let stats = if card_type_of(state, card) == CardType::Unit {
+        Some(stats_with_buffs(state, card))
+    } else {
+        None
+    };
     let power = power_of(card);
     // B5 E38: the keywords it gained in the hand or the deck, which it carries onto the field.
     let keywords = hand_keywords_view(state, card);
@@ -374,7 +399,12 @@ fn with_preview(mut view: CardView, values: Option<Vec<PreviewValue>>) -> CardVi
 
 /// B3.2, R384: a card's Activate abilities ride its controller's own view of it on the field
 /// (`activate::activation_views_for` owns where), or not at all — never `[]`.
-fn with_activations(mut view: CardView, state: &GameState, card: &CardInstance, viewer: PlayerId) -> CardView {
+fn with_activations(
+    mut view: CardView,
+    state: &GameState,
+    card: &CardInstance,
+    viewer: PlayerId,
+) -> CardView {
     if let Some(activations) = activation_views_for(state, viewer, card) {
         view.activations = Some(activations);
     }
@@ -386,7 +416,10 @@ fn with_activations(mut view: CardView, state: &GameState, card: &CardInstance, 
 fn field_card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> CardView {
     with_activations(
         with_preview(
-            with_condition(card_view(state, card), condition_active(state, card, viewer, ConditionZone::Field)),
+            with_condition(
+                card_view(state, card),
+                condition_active(state, card, viewer, ConditionZone::Field),
+            ),
             preview_of(state, card, viewer, ConditionZone::Field),
         ),
         state,
@@ -402,8 +435,16 @@ fn unit_view_of(state: &GameState, pile: &[CardInstance], viewer: PlayerId) -> O
     let layers = unit_layers(state, top);
     // B3.1, R383: a Field Spell, Trap or Field Trap standing here as a Unit, and the backrow lane an
     // "Animated on your turn" card will go back to (that zone is `reserved` meanwhile).
-    let home: Option<i32> = if is_animated(state, top) { home_of(state, &top.id).map(|home| home.zone.lane) } else { None };
-    let animated = if is_animated(state, top) { Some(AnimatedView { home }) } else { None };
+    let home: Option<i32> = if is_animated(state, top) {
+        home_of(state, &top.id).map(|home| home.zone.lane)
+    } else {
+        None
+    };
+    let animated = if is_animated(state, top) {
+        Some(AnimatedView { home })
+    } else {
+        None
+    };
     let card = field_card_view(state, top, viewer);
     Some(UnitView {
         instance_id: card.instance_id,
@@ -438,7 +479,11 @@ fn unit_view_of(state: &GameState, pile: &[CardInstance], viewer: PlayerId) -> O
         vanilla: if top.vanilla { Some(true) } else { None },
         animated,
         // B5 E35: a status, public on the field like the unit itself.
-        berserk: if top.berserk == Some(true) { Some(true) } else { None },
+        berserk: if top.berserk == Some(true) {
+            Some(true)
+        } else {
+            None
+        },
     })
 }
 
@@ -526,7 +571,11 @@ fn backrow_view(state: &GameState, card: Option<&CardInstance>, viewer: PlayerId
         owner: card.owner,
         controller: card.controller,
         // R351, R371: the controller reads a face-down trap, and the view says the other player cannot.
-        unrevealed: if is_face_down(state, card) { Some(true) } else { None },
+        unrevealed: if is_face_down(state, card) {
+            Some(true)
+        } else {
+            None
+        },
         // R243, §6.3 Vanilla: a backrow card's text can be gone too, and the stamp renders off the
         // unit prop, so the flag travels here as it does on a unit view.
         vanilla: if card.vanilla { Some(true) } else { None },
@@ -588,7 +637,12 @@ fn hero_powers_of(state: &GameState, player: PlayerId) -> Vec<HeroPowerView> {
 /// The discount half of `modifier_label`, split out because `costDiscount` is the one kind whose
 /// caption has to say *what* it applies to: R48's current-cost gate (#77), §8 #35's "next Spell",
 /// and #78's flat "your cards" are three different sentences off one kind.
-fn discount_label(amount: i32, only_type: Option<CardType>, min_current_cost: Option<i32>, once_per_turn: Option<bool>) -> String {
+fn discount_label(
+    amount: i32,
+    only_type: Option<CardType>,
+    min_current_cost: Option<i32>,
+    once_per_turn: Option<bool>,
+) -> String {
     let once = once_per_turn == Some(true);
     let less = format!("cost{} {amount} less", if once { "s" } else { "" });
     // R363, R432: #77's own words, "(4)+ Cost cards cost (1) less".
@@ -596,15 +650,26 @@ fn discount_label(amount: i32, only_type: Option<CardType>, min_current_cost: Op
         return format!("({min})+ Cost cards cost ({amount}) less");
     }
     if let Some(only) = only_type {
-        return if once { format!("Next {only} {less}") } else { format!("{only}s {less}") };
+        return if once {
+            format!("Next {only} {less}")
+        } else {
+            format!("{only}s {less}")
+        };
     }
-    if once { format!("Next card {less}") } else { format!("Your cards {less}") }
+    if once {
+        format!("Next card {less}")
+    } else {
+        format!("Your cards {less}")
+    }
 }
 
 /// R449: a definition by id, the match-made ones first, as `catalog::find_def` reads it. A private
 /// copy (fullsend rule 5).
 fn find_def_in<'a>(state: &'a GameState, def_id: &str) -> Option<&'a CardDef> {
-    state.transient_defs.get(def_id).or_else(|| registered_catalog().get(def_id))
+    state
+        .transient_defs
+        .get(def_id)
+        .or_else(|| registered_catalog().get(def_id))
 }
 
 /// A badge caption for one modifier, built from the modifier alone. The match is exhaustive over
@@ -627,7 +692,9 @@ fn modifier_label(state: &GameState, modifier: &PlayerModifier, echo: i32) -> St
             format!("First card costing {max_cost} or less becomes Radiant")
         }
         ModifierKind::ComboDraw { amount } => format!("Your cards gain \"Combo: draw {amount}\""),
-        ModifierKind::QuickstrikerDamage => "Your cards gain \"Combo X: X damage to the enemy hero\"".to_string(),
+        ModifierKind::QuickstrikerDamage => {
+            "Your cards gain \"Combo X: X damage to the enemy hero\"".to_string()
+        }
         // B5 E10, R456: how much of the turn is left.
         ModifierKind::TurnEnds { actions_left, .. } => {
             if *actions_left == 0 {
@@ -643,16 +710,23 @@ fn modifier_label(state: &GameState, modifier: &PlayerModifier, echo: i32) -> St
         ModifierKind::StartOfTurnEffect { label, .. } => label.clone(),
         // B5 E15, E39 (R455): the play pipeline's price rules and Forever&'s rider, worded by their owner:
         // `costRuleModifierLabel` is `costRuleText(rule, expiry.until === "used")`.
-        ModifierKind::CostRule { rule } => cost_rule_text(rule, matches!(modifier.expiry, ModifierExpiry::Used)).to_string(),
+        ModifierKind::CostRule { rule } => {
+            cost_rule_text(rule, matches!(modifier.expiry, ModifierExpiry::Used)).to_string()
+        }
         ModifierKind::EnchantNextSpell { enchantment } => enchant_next_spell_label(enchantment).to_string(),
         // B5 E8: Classic+ #22 Blood Moon's base face, read off the modifier alone.
-        ModifierKind::HealToDamage { .. } => "Healing on your enemies deals Pierce damage instead".to_string(),
+        ModifierKind::HealToDamage { .. } => {
+            "Healing on your enemies deals Pierce damage instead".to_string()
+        }
         // R449: Classic #23 Devil's Pact's replacement, named as the card every play becomes.
         // R757: #98's Armor Up, until the player's next turn.
         ModifierKind::HeroArmor { amount } => format!("Your hero has {amount} Armor until your next turn"),
         ModifierKind::ReplacePlays { def_id, radiant } => {
             let name = find_def_in(state, def_id).map_or_else(|| def_id.clone(), |def| def.name.clone());
-            format!("Each card you play becomes {}{name}", if *radiant { "a Radiant " } else { "a " })
+            format!(
+                "Each card you play becomes {}{name}",
+                if *radiant { "a Radiant " } else { "a " }
+            )
         }
     }
 }
@@ -676,7 +750,11 @@ fn modifier_views(state: &GameState, player: PlayerId) -> Vec<ModifierView> {
             let label = modifier_label(state, modifier, echo_grant_of(state, player, modifier));
             ModifierView {
                 id: modifier.id.clone(),
-                label: if modifier_is_live(state, modifier) { label } else { format!("{label} (next turn)") },
+                label: if modifier_is_live(state, modifier) {
+                    label
+                } else {
+                    format!("{label} (next turn)")
+                },
             }
         })
         .collect();
@@ -686,7 +764,11 @@ fn modifier_views(state: &GameState, player: PlayerId) -> Vec<ModifierView> {
     if rider != 0 {
         views.push(ModifierView {
             id: NEXT_REFRESH_MODIFIER_ID.to_string(),
-            label: format!("Next refresh {}{} mana", if rider > 0 { "+" } else { "−" }, rider.abs()),
+            label: format!(
+                "Next refresh {}{} mana",
+                if rider > 0 { "+" } else { "−" },
+                rider.abs()
+            ),
         });
     }
     views
@@ -700,7 +782,10 @@ fn modifier_views(state: &GameState, player: PlayerId) -> Vec<ModifierView> {
 /// backrow zones held for an animated "Animated on your turn" card's return (`zones::is_reserved`).
 fn reserved_mask(state: &GameState, player: PlayerId) -> RowFlags {
     let mask = |row: Row| -> Vec<bool> {
-        slots_of(player, row).into_iter().map(|zone_ref| is_reserved(state, zone_ref)).collect()
+        slots_of(player, row)
+            .into_iter()
+            .map(|zone_ref| is_reserved(state, zone_ref))
+            .collect()
     };
     RowFlags {
         units: mask(Row::Units),
@@ -713,7 +798,10 @@ fn side_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> SideView 
     let powers = hero_powers_of(state, player);
     // R667: asked only for the viewer's own hand, the one hand a warning may ride.
     let countered: IndexSet<String> = if player == viewer {
-        countered_hand_cards(state, viewer).into_iter().map(|id| id.to_string()).collect()
+        countered_hand_cards(state, viewer)
+            .into_iter()
+            .map(|id| id.to_string())
+            .collect()
     } else {
         IndexSet::new()
     };
@@ -767,7 +855,11 @@ fn side_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> SideView 
         // else. R310–R312: the viewer's own is a list without order as well, of what they were shown
         // going in (`own_library.rs`), with no instance id or position in it.
         library_count: side.library.len() as i32,
-        own_library: if player == viewer { Some(own_library_view(state, player)) } else { None },
+        own_library: if player == viewer {
+            Some(own_library_view(state, player))
+        } else {
+            None
+        },
         graveyard: side.graveyard.iter().map(|card| card_view(state, card)).collect(),
         exile: side.exile.iter().map(|card| card_view(state, card)).collect(),
         // §10.5 step 4, R98: a Spell between its play and its graveyard. Playing it was public. R448: a
@@ -788,7 +880,11 @@ fn side_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> SideView 
             .iter()
             .map(|pile| pile.as_ref().and_then(|pile| unit_view_of(state, pile, viewer)))
             .collect(),
-        backrow: side.backrow.iter().map(|card| backrow_view(state, card.as_ref(), viewer)).collect(),
+        backrow: side
+            .backrow
+            .iter()
+            .map(|card| backrow_view(state, card.as_ref(), viewer))
+            .collect(),
         carried: carried_view(state, player, viewer),
         locks: RowFlags {
             units: side.locks.units.clone(),
@@ -825,7 +921,11 @@ fn option_view(state: &GameState, viewer: PlayerId, option: &PromptOption) -> Pe
     // B5 E18: a `pick` option's cost against the budget, and the face an option shows when it is Radiant.
     let mut base = bare_option(option.key.clone(), option.label.clone());
     base.cost = option.cost;
-    base.radiant = if option.radiant == Some(true) { Some(true) } else { None };
+    base.radiant = if option.radiant == Some(true) {
+        Some(true)
+    } else {
+        None
+    };
     match &option.selection {
         Selection::Instance { instance_id } => {
             let card = find_instance(state, instance_id);
@@ -838,7 +938,8 @@ fn option_view(state: &GameState, viewer: PlayerId, option: &PromptOption) -> Pe
             if let Some(card) = card
                 && is_face_down_to(state, card, viewer)
             {
-                let mut hidden = bare_option(format!("instance:{instance_id}"), HIDDEN_OPTION_LABEL.to_string());
+                let mut hidden =
+                    bare_option(format!("instance:{instance_id}"), HIDDEN_OPTION_LABEL.to_string());
                 hidden.instance_id = Some(instance_id.clone());
                 return hidden;
             }
@@ -894,7 +995,11 @@ fn prompt_view(state: &GameState, viewer: PlayerId, pending: &PendingChoice) -> 
         for_you: true,
         choice_id: pending.id.clone(),
         kind: pending.kind,
-        options: pending.options.iter().map(|option| option_view(state, viewer, option)).collect(),
+        options: pending
+            .options
+            .iter()
+            .map(|option| option_view(state, viewer, option))
+            .collect(),
         min: pending.min,
         max: pending.max,
         prompt: pending.prompt.clone(),
@@ -942,7 +1047,11 @@ fn draw_offer_view(state: &GameState) -> Option<DrawOfferView> {
 
 /// A string field of an event's JSON, or "" when it has none (every key read below is always set).
 fn text_at(shown: &Map<String, Value>, key: &str) -> String {
-    shown.get(key).and_then(Value::as_str).unwrap_or_default().to_string()
+    shown
+        .get(key)
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string()
 }
 
 /// A nullable string field of an event's JSON: `None` for `null` or absent.
@@ -952,10 +1061,13 @@ fn nullable_at(shown: &Map<String, Value>, key: &str) -> Option<String> {
 
 /// A list of strings on an event's JSON (`targets`, `instanceIds`, `hiddenFrom`).
 fn texts_at(shown: &Map<String, Value>, key: &str) -> Option<Vec<String>> {
-    shown
-        .get(key)
-        .and_then(Value::as_array)
-        .map(|items| items.iter().filter_map(Value::as_str).map(str::to_string).collect())
+    shown.get(key).and_then(Value::as_array).map(|items| {
+        items
+            .iter()
+            .filter_map(Value::as_str)
+            .map(str::to_string)
+            .collect()
+    })
 }
 
 /// `{ ...event, key: HIDDEN_ID, … }` for each key.
@@ -981,7 +1093,12 @@ fn rebuild(shown: Map<String, Value>) -> GameEvent {
 ///
 /// The match is exhaustive over every event type on purpose (§10.3): with no wildcard, adding an
 /// event type does not compile until someone decides what it reveals.
-fn redact_event(state: &GameState, viewer: PlayerId, event: &GameEvent, replaced: &Replacements) -> GameEvent {
+fn redact_event(
+    state: &GameState,
+    viewer: PlayerId,
+    event: &GameEvent,
+    replaced: &Replacements,
+) -> GameEvent {
     let hidden = |id: &str| -> bool { !may_read(state, viewer, id, replaced) };
     let mut shown: Map<String, Value> = match serde_json::to_value(event) {
         Ok(Value::Object(map)) => map,
@@ -1046,7 +1163,9 @@ fn redact_event(state: &GameState, viewer: PlayerId, event: &GameEvent, replaced
         // none — #33's copy of a Trap set face-down names the trap no more than the trap does. `copyOf`
         // is the engine's bookkeeping and never travels.
         GameEventType::LibraryOverflow => {
-            let copy_of = shown.remove("copyOf").and_then(|value| value.as_str().map(str::to_string));
+            let copy_of = shown
+                .remove("copyOf")
+                .and_then(|value| value.as_str().map(str::to_string));
             let unread = hidden(&instance) || copy_of.is_some_and(|copied| hidden(&copied));
             if unread {
                 // The face it would have had is the card's too, so it goes with the identity.
@@ -1088,7 +1207,11 @@ fn redact_event(state: &GameState, viewer: PlayerId, event: &GameEvent, replaced
             if !unread {
                 return event.clone();
             }
-            let owner = zone.get("player").and_then(Value::as_str).unwrap_or_default().to_string();
+            let owner = zone
+                .get("player")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string();
             let shown_zone = if owner == viewer.as_str() {
                 zone
             } else {
@@ -1204,7 +1327,9 @@ fn redact_event(state: &GameState, viewer: PlayerId, event: &GameEvent, replaced
         GameEventType::CostChanged => {
             let hidden_from = texts_at(&shown, "hiddenFrom");
             shown.remove("hiddenFrom");
-            if hidden_from.is_some_and(|players| players.iter().any(|p| p == viewer.as_str())) || hidden(&instance) {
+            if hidden_from.is_some_and(|players| players.iter().any(|p| p == viewer.as_str()))
+                || hidden(&instance)
+            {
                 hide(&mut shown, &["instanceId"]);
                 shown.insert("cost".to_string(), Value::from(HIDDEN_COST));
             }
@@ -1286,10 +1411,16 @@ fn redact_event(state: &GameState, viewer: PlayerId, event: &GameEvent, replaced
             // R448: whether a face-down card is a Trap or a Field Trap is the card's too (R33), so the
             // other player reads every one as a Trap, as its backrow will show it.
             if face_down {
-                shown.insert("cardType".to_string(), Value::String(CardType::Trap.as_str().to_string()));
+                shown.insert(
+                    "cardType".to_string(),
+                    Value::String(CardType::Trap.as_str().to_string()),
+                );
             }
             hide(&mut shown, &["instanceId", "defId"]);
-            let hidden_targets: Vec<Value> = targets.iter().map(|_| Value::String(HIDDEN_ID.to_string())).collect();
+            let hidden_targets: Vec<Value> = targets
+                .iter()
+                .map(|_| Value::String(HIDDEN_ID.to_string()))
+                .collect();
             shown.insert("targets".to_string(), Value::Array(hidden_targets));
             rebuild(shown)
         }
@@ -1341,7 +1472,9 @@ fn redact_event(state: &GameState, viewer: PlayerId, event: &GameEvent, replaced
         GameEventType::Degraded | GameEventType::Upgraded => {
             let hidden_from = texts_at(&shown, "hiddenFrom");
             shown.remove("hiddenFrom");
-            if hidden_from.is_some_and(|players| players.iter().any(|p| p == viewer.as_str())) || hidden(&instance) {
+            if hidden_from.is_some_and(|players| players.iter().any(|p| p == viewer.as_str()))
+                || hidden(&instance)
+            {
                 hide(&mut shown, &["instanceId", "defId"]);
                 let change = serde_json::to_value(hidden_tuning_change()).unwrap_or(Value::Null);
                 shown.insert("change".to_string(), change);
@@ -1352,7 +1485,9 @@ fn redact_event(state: &GameState, viewer: PlayerId, event: &GameEvent, replaced
         GameEventType::NumberChanged => {
             let hidden_from = texts_at(&shown, "hiddenFrom");
             shown.remove("hiddenFrom");
-            if hidden_from.is_some_and(|players| players.iter().any(|p| p == viewer.as_str())) || hidden(&instance) {
+            if hidden_from.is_some_and(|players| players.iter().any(|p| p == viewer.as_str()))
+                || hidden(&instance)
+            {
                 hide(&mut shown, &["instanceId", "defId", "key"]);
                 shown.insert("value".to_string(), Value::from(0));
             }
@@ -1376,7 +1511,10 @@ fn redact_event(state: &GameState, viewer: PlayerId, event: &GameEvent, replaced
 
         // A card on the field acting face-up (an ability, an animation, a quest, a flicker, a mark): public
         // while it is readable, the sentinel once it has gone somewhere hidden (R97).
-        GameEventType::Activated | GameEventType::Animated | GameEventType::Deanimated | GameEventType::Flickered => {
+        GameEventType::Activated
+        | GameEventType::Animated
+        | GameEventType::Deanimated
+        | GameEventType::Flickered => {
             if !hidden(&instance) {
                 return event.clone();
             }
@@ -1430,7 +1568,12 @@ fn redact_event(state: &GameState, viewer: PlayerId, event: &GameEvent, replaced
 /// without the record is judged by its pile alone — a hand is its holder's (§9.1), a library nobody's,
 /// a graveyard, an exile pile or the resolving zone everyone's (a play is public, R98), and a card off
 /// the field nobody's, since whether it stood face-down there is not otherwise on the event.
-fn readable_where_stolen(zone: ZoneName, from: PlayerId, readable_from: Option<&[PlayerId]>, viewer: PlayerId) -> bool {
+fn readable_where_stolen(
+    zone: ZoneName,
+    from: PlayerId,
+    readable_from: Option<&[PlayerId]>,
+    viewer: PlayerId,
+) -> bool {
     if let Some(readable_from) = readable_from {
         return readable_from.contains(&viewer);
     }
@@ -1465,7 +1608,11 @@ fn hidden_tuning_change() -> TuningChange {
 ///
 /// This is SPEC §11 R168, which states the floor and records the measurement above.
 fn recent_events(state: &GameState, viewer: PlayerId) -> Vec<GameEvent> {
-    let all: Vec<&GameEvent> = state.applied.iter().flat_map(|entry| entry.events.iter()).collect();
+    let all: Vec<&GameEvent> = state
+        .applied
+        .iter()
+        .flat_map(|entry| entry.events.iter())
+        .collect();
     let newest = state.applied.last().map_or(0, |entry| entry.events.len());
     let window = VIEW_EVENT_LIMIT.max(newest);
     let replaced = replacements_of(&all, Some(state));
@@ -1497,7 +1644,18 @@ fn recent_events(state: &GameState, viewer: PlayerId) -> Vec<GameEvent> {
     all[from..]
         .iter()
         .enumerate()
-        .map(|(at, event)| redact_event(state, viewer, event, if from + at < voided_until { &earlier } else { &replaced }))
+        .map(|(at, event)| {
+            redact_event(
+                state,
+                viewer,
+                event,
+                if from + at < voided_until {
+                    &earlier
+                } else {
+                    &replaced
+                },
+            )
+        })
         .collect()
 }
 
@@ -1533,7 +1691,11 @@ pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Opt
         mulligan: mulligan_view(state, player_id),
         draw_offer: draw_offer_view(state),
         // R345: the viewer's own preference, and only when it is off, so every other view is unchanged.
-        auto_end_turn: if state.players[player_id].auto_end_turn == Some(false) { Some(false) } else { None },
+        auto_end_turn: if state.players[player_id].auto_end_turn == Some(false) {
+            Some(false)
+        } else {
+            None
+        },
         defs: None,
     };
     let defs = match_defs_in(state, &view);

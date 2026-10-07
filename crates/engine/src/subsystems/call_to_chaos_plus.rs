@@ -61,11 +61,13 @@ fn entry(
 /// Entries 1, 2 and 4: N independent picks of a pool (R60), each a fresh hand card that costs (0); a full hand burns it (§2.4).
 fn add_free(name: &'static str, pool: Value, count: i32) -> Effect {
     entry(name, move |_ctx| {
-        vec![crate::effects::add_to_hand::add_random_from_catalog(json_as(json!({
-            "query": pool,
-            "count": count,
-            "costOverride": CHAOS_PLUS_COST,
-        })))]
+        vec![crate::effects::add_to_hand::add_random_from_catalog(json_as(
+            json!({
+                "query": pool,
+                "count": count,
+                "costOverride": CHAOS_PLUS_COST,
+            }),
+        ))]
     })
 }
 
@@ -94,7 +96,8 @@ pub fn replace_deck_with_call_to_chaos() -> Effect {
                         return;
                     };
                     // R673: into a deck.
-                    let picked = crate::catalog::pick_generated(inner.sink.rng, &pool, Some(&*inner.sink.state));
+                    let picked =
+                        crate::catalog::pick_generated(inner.sink.rng, &pool, Some(&*inner.sink.state));
                     let Some(def) = picked else {
                         return;
                     };
@@ -176,7 +179,9 @@ fn build_golem() -> Effect {
         let def_id = crate::catalog::def_by_index(GOLEM_SET, GOLEM_INDEX).map(|def| def.id.clone());
         match def_id {
             None => vec![],
-            Some(def_id) => vec![crate::effects::summon::summon(json_as(json!({ "defId": def_id })))],
+            Some(def_id) => vec![crate::effects::summon::summon(json_as(
+                json!({ "defId": def_id }),
+            ))],
         }
     })
 }

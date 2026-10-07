@@ -60,7 +60,10 @@ pub fn start_brittle_on_field(state: &GameState, card: &mut CardInstance, from_o
         }
         return;
     }
-    if let Zone::Field { row: Row::Backrow, .. } = card.zone {
+    if let Zone::Field {
+        row: Row::Backrow, ..
+    } = card.zone
+    {
         let kind = card_type_of(state, card);
         if (kind == CardType::Trap || kind == CardType::FieldTrap)
             && card.face_up != Some(true)

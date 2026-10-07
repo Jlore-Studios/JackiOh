@@ -29,13 +29,8 @@ fn mark_destroyed(state: &mut GameState, card: &CardInstance) {
     let Some(current) = find_instance(state, &card.id) else {
         return;
     };
-    let killed = matches!(
-        current.zone,
-        Zone::Field {
-            row: Row::Units,
-            ..
-        }
-    ) && already_killed(state, current);
+    let killed =
+        matches!(current.zone, Zone::Field { row: Row::Units, .. }) && already_killed(state, current);
     let Some(live) = find_instance_mut(state, &card.id) else {
         return;
     };

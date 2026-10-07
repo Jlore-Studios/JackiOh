@@ -195,7 +195,10 @@ mod tests {
     #[test]
     fn canonical_sorts_keys_and_writes_json_stringify_text() {
         let value = json!({ "b": [1, "x\n", null, true], "a": { "z": 0, "y": "×" } });
-        assert_eq!(canonical(&value), r#"{"a":{"y":"×","z":0},"b":[1,"x\n",null,true]}"#);
+        assert_eq!(
+            canonical(&value),
+            r#"{"a":{"y":"×","z":0},"b":[1,"x\n",null,true]}"#
+        );
         assert_eq!(canonical(&json!(2.0)), "2");
         assert_eq!(canonical(&json!("\u{1}")), r#""\u0001""#);
     }

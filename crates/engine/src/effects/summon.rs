@@ -11,7 +11,6 @@
 //! function and wrote through it; here a card travels as an owned copy while it is off the board,
 //! and once it is placed every write goes to the card in the state, found by its id.
 
-
 use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -33,8 +32,8 @@ use crate::wire::{
     AttackHealth, CardType, CostRange, GameEvent, OneOrMany, PlayerId, Row, Tag, Zone, ZoneName,
 };
 use crate::zones::{
-    PlaceOnFieldOptions, ZoneSlot, fill_board_zones, first_entry_zone, fresh_face_down_id, is_empty, is_reserved,
-    is_unit_token, lands_face_down, place_on_field, remove_from_any_zone, row_size,
+    PlaceOnFieldOptions, ZoneSlot, fill_board_zones, first_entry_zone, fresh_face_down_id, is_empty,
+    is_reserved, is_unit_token, lands_face_down, place_on_field, remove_from_any_zone, row_size,
 };
 
 /// TS `{ defId, radiant }`, the partial instance `faces.cardTypeOf` reads a definition's running face
@@ -198,7 +197,9 @@ fn summon_onto(
             });
         }
     }
-    let placed = find_instance(ctx.state, &card.id).cloned().unwrap_or_else(|| card.clone());
+    let placed = find_instance(ctx.state, &card.id)
+        .cloned()
+        .unwrap_or_else(|| card.clone());
     if card_type_of(ctx.state, &placed) == CardType::FieldSpell
         && let Some(live) = find_instance_mut(ctx.state, &card.id)
     {
@@ -233,7 +234,12 @@ fn summon_onto(
 }
 
 /// A fresh card of `def_id`, created only once a zone is known so a fizzle creates nothing.
-fn summon_fresh(ctx: &mut EffectContext<'_>, def_id: &str, player: PlayerId, at: &SummonPlacement) -> Option<CardInstance> {
+fn summon_fresh(
+    ctx: &mut EffectContext<'_>,
+    def_id: &str,
+    player: PlayerId,
+    at: &SummonPlacement,
+) -> Option<CardInstance> {
     let probe = face_probe(def_id, player, at.radiant == Some(true));
     let row = row_of(card_type_of(ctx.state, &probe))?;
     let slot = zone_for(ctx, player, row, at)?;
@@ -323,7 +329,7 @@ pub fn summon(args: SummonArgs) -> Effect {
             let Some(DamageTarget::Unit { instance }) = resolve_target(ctx, spec) else {
                 return;
             };
-            
+
             if let Some(moved) = summon_existing(ctx, &instance, player, &at) {
                 roll_random_keywords(ctx, &moved, args.random_keywords);
             }
@@ -387,7 +393,12 @@ pub fn clone_of(
     player: PlayerId,
     args: &SummonCopyArgs,
 ) -> CardInstance {
-    let mut copy = new_instance(&mut *ctx.state, &source.def_id, player, Zone::Resolving { player });
+    let mut copy = new_instance(
+        &mut *ctx.state,
+        &source.def_id,
+        player,
+        Zone::Resolving { player },
+    );
     copy.radiant = source.radiant;
     copy.buffs = AttackHealth {
         attack: source.buffs.attack,
@@ -624,7 +635,11 @@ fn skip_x_cost(ctx: &EffectContext<'_>, cards: Vec<CardInstance>) -> Vec<CardIns
     if cards.is_empty() {
         return cards;
     }
-    let solid: Vec<CardInstance> = cards.iter().filter(|card| !is_x_cost(ctx.state, card)).cloned().collect();
+    let solid: Vec<CardInstance> = cards
+        .iter()
+        .filter(|card| !is_x_cost(ctx.state, card))
+        .cloned()
+        .collect();
     if solid.is_empty() { cards } else { solid }
 }
 
@@ -752,7 +767,10 @@ pub fn recruit_all(args: RecruitAllArgs) -> Effect {
         let filter = args.filter.clone().unwrap_or_default();
         let pile = args.from.unwrap_or(RecruitSource::Library);
         let ids: Vec<String> = match memo.as_ref().and_then(Value::as_array) {
-            Some(listed) => listed.iter().filter_map(|id| id.as_str().map(str::to_string)).collect(),
+            Some(listed) => listed
+                .iter()
+                .filter_map(|id| id.as_str().map(str::to_string))
+                .collect(),
             None => skip_x_cost(ctx, valid_in_pile(ctx, pile, whose, &filter))
                 .into_iter()
                 .map(|card| card.id)
@@ -763,7 +781,10 @@ pub fn recruit_all(args: RecruitAllArgs) -> Effect {
             .map(|id| {
                 let id = id.clone();
                 Effect::new("recruitOne", move |at| {
-                    let Some(card) = recruit_pile(at, pile, whose).into_iter().find(|candidate| candidate.id == id) else {
+                    let Some(card) = recruit_pile(at, pile, whose)
+                        .into_iter()
+                        .find(|candidate| candidate.id == id)
+                    else {
                         return;
                     };
                     let Some(row) = row_of(card_type_of(at.state, &card)) else {

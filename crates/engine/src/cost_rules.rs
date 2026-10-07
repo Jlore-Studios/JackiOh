@@ -294,7 +294,13 @@ pub fn why_play_banned(
 fn types_text(types: Option<&[CardType]>, plural: bool) -> String {
     let types = match types {
         Some(types) if !types.is_empty() => types,
-        _ => return if plural { "cards".to_string() } else { "card".to_string() },
+        _ => {
+            return if plural {
+                "cards".to_string()
+            } else {
+                "card".to_string()
+            };
+        }
     };
     // "Trap" says "Field Trap" too, so a list holding both is read as the one word.
     let shown: Vec<CardType> = types

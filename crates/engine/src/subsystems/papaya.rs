@@ -245,6 +245,10 @@ pub fn papaya_answered(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     }
     cards_on_curve(ctx.sink.state, ctx.controller, &points, ctx.radiant)
         .into_iter()
-        .map(|instance_id| exile(json_as(json!({ "target": { "of": "instance", "instanceId": instance_id } }))))
+        .map(|instance_id| {
+            exile(json_as(
+                json!({ "target": { "of": "instance", "instanceId": instance_id } }),
+            ))
+        })
         .collect()
 }

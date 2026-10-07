@@ -35,7 +35,15 @@ fn face_cost(script: &Script, state: &GameState, self_: &CardInstance) -> i32 {
 fn fused_cost(state: &GameState, self_: &CardInstance, def_id: &str) -> i32 {
     let Some(parts) = crate::catalog::fused_id_parts(Some(state), def_id) else {
         let entry = crate::scripts::script_of(state, def_id);
-        return face_cost(if self_.radiant { &entry.radiant } else { &entry.base }, state, self_);
+        return face_cost(
+            if self_.radiant {
+                &entry.radiant
+            } else {
+                &entry.base
+            },
+            state,
+            self_,
+        );
     };
     parts
         .iter()
@@ -58,7 +66,12 @@ pub fn targeting_discards_of(state: &GameState, card: &CardInstance) -> i32 {
 /// R450: whether `chooser` could pay to target `card`: at least its cost in OTHER cards in their hand —
 /// `leaving` is the card a play is taking out of that hand, which cannot pay for its own target. It
 /// binds both players, the card's own controller included.
-pub fn can_pay_to_target(state: &GameState, chooser: PlayerId, card: &CardInstance, leaving: Option<&str>) -> bool {
+pub fn can_pay_to_target(
+    state: &GameState,
+    chooser: PlayerId,
+    card: &CardInstance,
+    leaving: Option<&str>,
+) -> bool {
     let cost = targeting_discards_of(state, card);
     if cost == 0 {
         return true;
@@ -91,7 +104,9 @@ fn hand_interpositions(state: &GameState, card: &CardInstance) -> Vec<TargetedRe
     crate::scripts::script_of(state, card)
         .replacements
         .into_iter()
-        .filter(|entry| entry.on == ReplacementMoment::Targeted && entry.where_ == Some(ReplacementWhere::Hand))
+        .filter(|entry| {
+            entry.on == ReplacementMoment::Targeted && entry.where_ == Some(ReplacementWhere::Hand)
+        })
         .collect()
 }
 
@@ -120,7 +135,9 @@ pub fn interceptor_for<'a>(
     targeted: &CardInstance,
     source: Option<CardType>,
 ) -> Option<&'a CardInstance> {
-    if !matches!(targeted.zone, Zone::Field { row: Row::Units, .. }) || crate::zones::is_buried(state, targeted) {
+    if !matches!(targeted.zone, Zone::Field { row: Row::Units, .. })
+        || crate::zones::is_buried(state, targeted)
+    {
         return None;
     }
     let defender = targeted.controller;

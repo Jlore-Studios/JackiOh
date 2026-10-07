@@ -200,7 +200,10 @@ mod tests {
         );
         assert_eq!(aim_key(open.unwrap().as_ref()), "hero:p2>none");
         // A missing target is not null.
-        assert_eq!(parse_aim(&json!({ "source": { "at": "hero", "player": "p2" } })), None);
+        assert_eq!(
+            parse_aim(&json!({ "source": { "at": "hero", "player": "p2" } })),
+            None
+        );
         // A hand is never a target.
         assert_eq!(
             parse_aim(&json!({
@@ -210,8 +213,14 @@ mod tests {
             None
         );
         // Lanes count from 1; indexes from 0; whole numbers only.
-        assert_eq!(parse_aim_end(&json!({ "at": "zone", "player": "p1", "row": "units", "lane": 0 })), None);
-        assert_eq!(parse_aim_end(&json!({ "at": "hand", "player": "p1", "index": 1.5 })), None);
+        assert_eq!(
+            parse_aim_end(&json!({ "at": "zone", "player": "p1", "row": "units", "lane": 0 })),
+            None
+        );
+        assert_eq!(
+            parse_aim_end(&json!({ "at": "hand", "player": "p1", "index": 1.5 })),
+            None
+        );
         assert_eq!(parse_aim_end(&json!({ "at": "hero", "player": "p3" })), None);
         assert_eq!(parse_aim(&json!([1, 2])), None);
         assert_eq!(parse_aim(&json!("aim")), None);

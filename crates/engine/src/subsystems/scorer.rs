@@ -121,7 +121,12 @@ pub fn projected_board_damage(state: &GameState, viewer: PlayerId) -> i32 {
     let mut sum = 0;
     for unit in crate::zones::active_units_of(state, viewer).iter() {
         if crate::combat::can_attack(state, unit, &at_hero) {
-            sum += hero_hit(state, enemy, unit_view(state, unit).attack, crate::damage::pierces(state, Some(unit), None));
+            sum += hero_hit(
+                state,
+                enemy,
+                unit_view(state, unit).attack,
+                crate::damage::pierces(state, Some(unit), None),
+            );
         }
     }
     sum
@@ -159,7 +164,12 @@ fn lethal_contribution(state: &GameState, viewer: PlayerId, def: &CardDef, face:
     if taunted {
         return 0;
     }
-    hero_hit(state, enemy, face.attack.unwrap_or(0), has_keyword(&face.keywords, KeywordKind::Pierce))
+    hero_hit(
+        state,
+        enemy,
+        face.attack.unwrap_or(0),
+        has_keyword(&face.keywords, KeywordKind::Pierce),
+    )
 }
 
 /// §3.2: whether a Unit with this face could be played into the viewer's unit row now.
@@ -192,7 +202,9 @@ fn killable_units<C: Borrow<CardInstance>>(state: &GameState, enemy_units: &[C],
             if has_keyword(&view.keywords, KeywordKind::Indestructible) {
                 return false;
             }
-            if has_keyword(&view.keywords, KeywordKind::DivineShield) && unit.divine_shield_spent != Some(true) {
+            if has_keyword(&view.keywords, KeywordKind::DivineShield)
+                && unit.divine_shield_spent != Some(true)
+            {
                 return false;
             }
             if poisonous {
@@ -202,7 +214,11 @@ fn killable_units<C: Borrow<CardInstance>>(state: &GameState, enemy_units: &[C],
         })
         .count() as i32;
 
-    let reach = if has_keyword(&face.keywords, KeywordKind::Cleave) { 3 } else { 1 };
+    let reach = if has_keyword(&face.keywords, KeywordKind::Cleave) {
+        3
+    } else {
+        1
+    };
     answered.min(reach)
 }
 
@@ -232,7 +248,10 @@ fn draw_value(def: &CardDef, face: &CardFace) -> f64 {
     if has_keyword(&face.keywords, KeywordKind::DivineShield) {
         value += 0.5;
     }
-    if matches!(def.type_, CardType::FieldSpell | CardType::Trap | CardType::FieldTrap) {
+    if matches!(
+        def.type_,
+        CardType::FieldSpell | CardType::Trap | CardType::FieldTrap
+    ) {
         value += 0.5;
     }
     value
@@ -390,7 +409,11 @@ fn may_act_now(state: &GameState, def: &CardDef, radiant: bool) -> bool {
     let scripts = crate::scripts::script_of(state, &def.id);
     let script = if radiant { &scripts.radiant } else { &scripts.base };
     // A Tribute that may take the enemy's units (#55, R101) changes their board as it is paid.
-    script.static_flags.as_ref().and_then(|flags| flags.tribute_enemies) == Some(true)
+    script
+        .static_flags
+        .as_ref()
+        .and_then(|flags| flags.tribute_enemies)
+        == Some(true)
         || script.cry.is_some()
         || script.aura.is_some()
         || script.set_stat.is_some()
@@ -449,7 +472,10 @@ pub fn dry_run(
         }
 
         let enemy_health = trial.players[enemy].hero.health;
-        let won = trial.result.as_ref().is_some_and(|result| result.winner == Winner::from(viewer));
+        let won = trial
+            .result
+            .as_ref()
+            .is_some_and(|result| result.winner == Winner::from(viewer));
         if won || (trial.result.is_none() && enemy_health <= projected_board_damage(&trial, viewer)) {
             outcome.lethal = true;
         }
@@ -476,7 +502,11 @@ pub fn dry_run(
 /// other seat has no dry run, and the printed signals alone score it). The copy leaves the history
 /// of actions behind (§9.3's nonce dedupe, §10.8's event window), which nothing a play reads is in.
 pub fn dry_run_base(state: &GameState, viewer: PlayerId) -> Option<GameState> {
-    if state.result.is_some() || state.pending.is_some() || state.active != viewer || state.phase != Phase::Main {
+    if state.result.is_some()
+        || state.pending.is_some()
+        || state.active != viewer
+        || state.phase != Phase::Main
+    {
         return None;
     }
     let mut base = state.clone();
@@ -543,10 +573,14 @@ fn hide(card: &mut CardInstance, def_id: &str) {
 /// Sheep before its Cry, and a cast on draw at the top of the viewer's library would hurt the viewer,
 /// and the three cards offered would say what the trap is or what is on top of the library.
 fn conceal_from(base: &mut GameState, viewer: PlayerId) {
-    base.transient_defs
-        .insert(HIDDEN_CARD_DEF_ID.to_string(), stand_in(HIDDEN_CARD_DEF_ID, CardType::Spell));
-    base.transient_defs
-        .insert(HIDDEN_TRAP_DEF_ID.to_string(), stand_in(HIDDEN_TRAP_DEF_ID, CardType::Trap));
+    base.transient_defs.insert(
+        HIDDEN_CARD_DEF_ID.to_string(),
+        stand_in(HIDDEN_CARD_DEF_ID, CardType::Spell),
+    );
+    base.transient_defs.insert(
+        HIDDEN_TRAP_DEF_ID.to_string(),
+        stand_in(HIDDEN_TRAP_DEF_ID, CardType::Trap),
+    );
     let opponent = opponent_of(viewer);
     for card in base.players[opponent].hand.iter_mut() {
         hide(card, HIDDEN_CARD_DEF_ID);
@@ -566,7 +600,10 @@ fn conceal_from(base: &mut GameState, viewer: PlayerId) {
                 .chain(side.backrow_piles.iter().flatten().flatten())
                 .filter(|card| card.controller != viewer && card.face_up != Some(true))
                 .filter(|card| {
-                    matches!(crate::faces::card_type_of(state, card), CardType::Trap | CardType::FieldTrap)
+                    matches!(
+                        crate::faces::card_type_of(state, card),
+                        CardType::Trap | CardType::FieldTrap
+                    )
                 })
                 .map(|card| card.id.clone())
                 .collect()
@@ -609,7 +646,11 @@ pub fn score_def(
 
     // With a dry run to read, a Charge body's swing is the one it plays (`mayActNow`), through the
     // viewer's auras; the printed attack stands in for it only when the viewer cannot play now.
-    let contribution = if has_base { 0 } else { lethal_contribution(state, viewer, def, face) };
+    let contribution = if has_base {
+        0
+    } else {
+        lethal_contribution(state, viewer, def, face)
+    };
     let lethal = played.lethal
         || (contribution > 0
             && projected_board_damage(state, viewer) + contribution >= state.players[enemy].hero.health);
@@ -671,12 +712,24 @@ pub fn compare_scored(a: &Scored, b: &Scored) -> Ordering {
         return Ordering::Equal;
     }
     if by_index != 0.0 {
-        return if by_index > 0.0 { Ordering::Greater } else { Ordering::Less };
+        return if by_index > 0.0 {
+            Ordering::Greater
+        } else {
+            Ordering::Less
+        };
     }
     if a.def.index != b.def.index {
-        return if a.def.index < b.def.index { Ordering::Less } else { Ordering::Greater };
+        return if a.def.index < b.def.index {
+            Ordering::Less
+        } else {
+            Ordering::Greater
+        };
     }
-    if a.def.id < b.def.id { Ordering::Less } else { Ordering::Greater }
+    if a.def.id < b.def.id {
+        Ordering::Less
+    } else {
+        Ordering::Greater
+    }
 }
 
 /// R29: every non-token Core definition except #97, best first, as a total order.

@@ -104,8 +104,14 @@ pub fn give_from_hand(args: GiveFromHandArgs) -> Effect {
         let which = args.cards.unwrap_or(GiveFromHandCards::Chosen);
         let taken: Vec<CardInstance> = match which {
             GiveFromHandCards::All => hand,
-            GiveFromHandCards::Chosen => hand.into_iter().filter(|card| chosen.contains(&card.id)).collect(),
-            GiveFromHandCards::Unchosen => hand.into_iter().filter(|card| !chosen.contains(&card.id)).collect(),
+            GiveFromHandCards::Chosen => hand
+                .into_iter()
+                .filter(|card| chosen.contains(&card.id))
+                .collect(),
+            GiveFromHandCards::Unchosen => hand
+                .into_iter()
+                .filter(|card| !chosen.contains(&card.id))
+                .collect(),
             GiveFromHandCards::Random => {
                 let count = args.count.unwrap_or(1).max(0) as usize;
                 ctx.sink.rng.shuffle(&hand).into_iter().take(count).collect()
@@ -166,7 +172,10 @@ pub fn take_from_library(args: TakeFromLibraryArgs) -> Effect {
         let pick = args.pick.unwrap_or(TakeFromLibraryPick::Random);
         let chosen = chosen_ids(ctx);
         let taken: Vec<CardInstance> = match pick {
-            TakeFromLibraryPick::Chosen => pool.into_iter().filter(|card| chosen.contains(&card.id)).collect(),
+            TakeFromLibraryPick::Chosen => pool
+                .into_iter()
+                .filter(|card| chosen.contains(&card.id))
+                .collect(),
             TakeFromLibraryPick::Top => pool.into_iter().take(count).collect(),
             TakeFromLibraryPick::Bottom => {
                 let start = pool.len().saturating_sub(count);

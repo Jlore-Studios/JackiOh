@@ -59,7 +59,9 @@ pub fn settle_carried(sink: &mut FieldSink<'_>) {
                     continue;
                 }
                 if let Some(stranded) = find_instance_mut(sink.state, &unit.id) {
-                    stranded.memory.insert(STRANDED_KEY.to_string(), Value::Bool(true));
+                    stranded
+                        .memory
+                        .insert(STRANDED_KEY.to_string(), Value::Bool(true));
                     stranded.marked_destroyed = Some(true);
                     // R42: a destroy names no killer, and clears an older hit's credit as it marks.
                     stranded.last_damaged_by = None;

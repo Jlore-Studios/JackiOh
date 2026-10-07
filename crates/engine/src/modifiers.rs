@@ -9,8 +9,8 @@
 use crate::config::SETUP_TURN;
 use crate::script::EngineSink;
 use crate::state::{
-    DelayedAt, DelayedEffect, GameState, ModifierExpiry, ModifierKind, Phase, PlayerModifier,
-    Resume, find_instance,
+    DelayedAt, DelayedEffect, GameState, ModifierExpiry, ModifierKind, Phase, PlayerModifier, Resume,
+    find_instance,
 };
 use crate::wire::{GameEvent, PLAYER_IDS, PlayerId, Row, ZoneName};
 
@@ -75,7 +75,8 @@ pub fn move_sourced_modifiers(sink: &mut EngineSink<'_>, source_id: &str, from: 
     if moving.is_empty() {
         return;
     }
-    side.mods.retain(|modifier| source_id_of(modifier) != Some(source_id));
+    side.mods
+        .retain(|modifier| source_id_of(modifier) != Some(source_id));
     for modifier in moving {
         sink.events.push(GameEvent::ModifierChanged {
             player: from,
@@ -106,7 +107,8 @@ pub fn end_orphaned_modifiers(sink: &mut EngineSink<'_>) {
             let Some(source_id) = source_id_of(modifier) else {
                 continue;
             };
-            let on_field = find_instance(sink.state, source_id).is_some_and(|source| source.zone.z() == ZoneName::Field);
+            let on_field =
+                find_instance(sink.state, source_id).is_some_and(|source| source.zone.z() == ZoneName::Field);
             if on_field {
                 continue;
             }
@@ -131,10 +133,15 @@ pub fn install_lasting_modifiers(sink: &mut EngineSink<'_>) {
     for player in PLAYER_IDS {
         for row in [Row::Units, Row::Backrow] {
             for lane in 1..=crate::zones::row_size(row) {
-                let Some(card) = crate::zones::card_at(sink.state, crate::wire::ZoneRef { player, row, lane }).cloned() else {
+                let Some(card) =
+                    crate::zones::card_at(sink.state, crate::wire::ZoneRef { player, row, lane }).cloned()
+                else {
                     continue;
                 };
-                let amount = crate::scripts::flags_of(sink.state, &card).echo_grant.unwrap_or(0).max(0);
+                let amount = crate::scripts::flags_of(sink.state, &card)
+                    .echo_grant
+                    .unwrap_or(0)
+                    .max(0);
                 if amount <= 0 {
                     continue;
                 }
@@ -178,7 +185,10 @@ pub fn expire_modifiers(sink: &mut EngineSink<'_>, player: PlayerId) {
                 // over by the next cleanup, whoever's it is, and dead from the next turn on (`modifierIsLive`).
                 ModifierExpiry::ThisTurn { turn: made } => *made > turn,
                 // R48: it covers that player's *next* turn, so it survives the turn it was created on.
-                ModifierExpiry::NextTurnOf { player: of, from_turn } => !(*of == player && turn > *from_turn),
+                ModifierExpiry::NextTurnOf {
+                    player: of,
+                    from_turn,
+                } => !(*of == player && turn > *from_turn),
                 _ => true,
             })
             .collect();
@@ -232,7 +242,9 @@ pub fn due_delayed(state: &GameState, phase: Phase, player: PlayerId) -> Vec<Del
         .filter(|effect| {
             effect.at.phase == phase
                 && effect.at.player == player
-                && effect.not_before.is_none_or(|not_before| state.turn >= not_before)
+                && effect
+                    .not_before
+                    .is_none_or(|not_before| state.turn >= not_before)
         })
         .cloned()
         .collect();
@@ -282,7 +294,11 @@ pub fn cut_turn_short(
     by_instance_id: Option<String>,
 ) {
     let state = &*sink.state;
-    if state.turn == SETUP_TURN || state.active != player || state.phase == Phase::End || state.result.is_some() {
+    if state.turn == SETUP_TURN
+        || state.active != player
+        || state.phase == Phase::End
+        || state.result.is_some()
+    {
         return;
     }
     let left = actions_left.max(0);

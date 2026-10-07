@@ -7,7 +7,6 @@
 //! Port of `packages/engine/src/subsystems/audit.ts`. Since v0.3.0 `loc` is frozen data in
 //! `catalog.json` (SURFACE §7.5): nothing here, or anywhere in Rust, recomputes it.
 
-
 use serde::{Deserialize, Serialize};
 
 use crate::state::{CardInstance, GameState};
@@ -45,7 +44,10 @@ pub fn audit_targets(state: &GameState, args: AuditArgs) -> Vec<CardInstance> {
     sides
         .into_iter()
         .flat_map(|player| {
-            let mut cards = crate::zones::active_units_of(state, player).into_iter().cloned().collect::<Vec<_>>();
+            let mut cards = crate::zones::active_units_of(state, player)
+                .into_iter()
+                .cloned()
+                .collect::<Vec<_>>();
             for slot in crate::zones::slots_of(player, Row::Backrow) {
                 cards.extend(crate::zones::card_at(state, slot).cloned());
             }

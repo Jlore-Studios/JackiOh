@@ -39,7 +39,9 @@ fn fresh_face_down_id_in_place(state: &mut GameState, instance_id: &str) -> Opti
 /// `summoned` it counts as. False, changing nothing, for a card not acting on the field.
 pub fn flicker_card(sink: &mut EngineSink<'_>, card: &CardInstance) -> bool {
     // The card as it stands now (TS held the live object).
-    let card = find_instance(sink.state, &card.id).cloned().unwrap_or_else(|| card.clone());
+    let card = find_instance(sink.state, &card.id)
+        .cloned()
+        .unwrap_or_else(|| card.clone());
     let Zone::Field { player, row, lane } = card.zone.clone() else {
         return false;
     };

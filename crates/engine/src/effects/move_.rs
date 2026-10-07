@@ -8,14 +8,15 @@
 //!
 //! Port of `packages/engine/src/effects/move.ts` (`move` is a Rust keyword, hence `move_`).
 
-
 use serde::{Deserialize, Serialize};
 
 use crate::announce::{innermost_live_announce, is_announce_live, mark_countered};
 use crate::config::HAND_CAP;
 use crate::draw::add_to_hand;
 use crate::echo::exile_on_landing;
-use crate::effects::targets::{BoardScope, PlayerSpec, TargetSpec, adjacent_to, cards_in_scope, instance_of, player_of};
+use crate::effects::targets::{
+    BoardScope, PlayerSpec, TargetSpec, adjacent_to, cards_in_scope, instance_of, player_of,
+};
 use crate::mana::{effective_cost, is_x_cost};
 use crate::ownership::take_into_hand;
 use crate::query::zone_cards;

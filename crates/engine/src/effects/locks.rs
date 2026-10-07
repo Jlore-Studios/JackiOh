@@ -126,14 +126,18 @@ pub fn lock_lane(args: LockLaneArgs) -> Effect {
 /// play put it on (R174, R212). A Spell's play puts nothing anywhere.
 fn zone_played_into(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<ZoneSlot> {
     let instance_id = match event {
-        GameEvent::Summoned { player, row, lane, .. } => {
+        GameEvent::Summoned {
+            player, row, lane, ..
+        } => {
             return Some(ZoneSlot {
                 player: *player,
                 row: *row,
                 lane: *lane,
             });
         }
-        GameEvent::CardPlayed { instance_id, .. } | GameEvent::CardResolved { instance_id, .. } => instance_id,
+        GameEvent::CardPlayed { instance_id, .. } | GameEvent::CardResolved { instance_id, .. } => {
+            instance_id
+        }
         _ => return None,
     };
     let card = find_instance(ctx.state, instance_id)?;

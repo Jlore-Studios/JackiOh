@@ -66,7 +66,10 @@ pub fn tuned_count_with_min(instance: &CardInstance, key: &str, printed: i32, mi
         return printed;
     }
     let tuning = instance.tuning.as_ref();
-    let set = tuning.and_then(|t| t.set.as_ref()).and_then(|set| set.get(key)).copied();
+    let set = tuning
+        .and_then(|t| t.set.as_ref())
+        .and_then(|set| set.get(key))
+        .copied();
     let step = tuning
         .and_then(|t| t.x.as_ref())
         .and_then(|x| x.get(key))
@@ -106,12 +109,7 @@ pub fn tuned_keywords(keywords: &[Keyword], instance: &CardInstance) -> Vec<Keyw
     for &kind in LAYERED_NUMBERED_KEYWORDS {
         let key = kind.as_str();
         let set = tuning.set.as_ref().and_then(|set| set.get(key));
-        let step = tuning
-            .x
-            .as_ref()
-            .and_then(|x| x.get(key))
-            .copied()
-            .unwrap_or(0);
+        let step = tuning.x.as_ref().and_then(|x| x.get(key)).copied().unwrap_or(0);
         if set.is_none() && step == 0 {
             continue;
         }
@@ -165,9 +163,16 @@ pub fn is_tuned(instance: &CardInstance) -> bool {
     tuning.attack.unwrap_or(0) != 0
         || tuning.health.unwrap_or(0) != 0
         || tuning.add_keywords.as_ref().is_some_and(|list| !list.is_empty())
-        || tuning.remove_keywords.as_ref().is_some_and(|list| !list.is_empty())
+        || tuning
+            .remove_keywords
+            .as_ref()
+            .is_some_and(|list| !list.is_empty())
         || tuning.x.iter().flat_map(|x| x.values()).any(|step| *step != 0)
-        || tuning.numbers.iter().flat_map(|n| n.values()).any(|step| *step != 0)
+        || tuning
+            .numbers
+            .iter()
+            .flat_map(|n| n.values())
+            .any(|step| *step != 0)
         || tuning.set.as_ref().is_some_and(|set| !set.is_empty())
 }
 
@@ -248,7 +253,9 @@ pub fn sum_tunings(tunings: &[Option<Tuning>]) -> Option<Tuning> {
                 .flatten()
                 .any(|held| held.kind() == keyword.kind());
             if stacks || !held {
-                out.add_keywords.get_or_insert_with(Vec::new).push(keyword.clone());
+                out.add_keywords
+                    .get_or_insert_with(Vec::new)
+                    .push(keyword.clone());
             }
         }
         for kind in tuning.remove_keywords.iter().flatten() {
@@ -265,7 +272,9 @@ pub fn sum_tunings(tunings: &[Option<Tuning>]) -> Option<Tuning> {
         for (key, value) in tuning.set.iter().flatten() {
             let held = out.set.as_ref().is_some_and(|set| set.contains_key(key));
             if !held {
-                out.set.get_or_insert_with(IndexMap::new).insert(key.clone(), *value);
+                out.set
+                    .get_or_insert_with(IndexMap::new)
+                    .insert(key.clone(), *value);
             }
         }
     }

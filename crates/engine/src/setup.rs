@@ -30,14 +30,14 @@ use crate::prompts::run_start_of_game;
 use crate::script::EngineSink;
 use crate::scripts::flags_of;
 use crate::state::{
-    CardInstance, EngineError, GameState, MulliganSeat, PendingChoice, PromptOption, Resume, WorkItem, find_instance,
-    find_instance_mut, handicap_of, new_instance,
+    CardInstance, EngineError, GameState, MulliganSeat, PendingChoice, PromptOption, Resume, WorkItem,
+    find_instance, find_instance_mut, handicap_of, new_instance,
 };
 use crate::state_check::state_check;
 use crate::turn::{clear_return_flags, start_turn};
 use crate::wire::{GameEvent, PLAYER_IDS, PerPlayer, Phase, PlayerId, PromptKind, Selection, Zone};
 use crate::work::{owe, paused};
-use crate::zones::{MoveToZoneOptions, LibraryPosition, OffFieldZone, move_to_zone};
+use crate::zones::{LibraryPosition, MoveToZoneOptions, OffFieldZone, move_to_zone};
 
 fn seat_of(player: PlayerId) -> usize {
     player.seat()
@@ -302,7 +302,12 @@ fn dealt_quickdraw(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
 /// R225: the seat's dealt Quickdraw cards, each as the opening draw it replaces, in the library's order.
 fn deal_quickdraw(sink: &mut EngineSink, player: PlayerId) {
     for mut card in dealt_quickdraw(sink.state, player) {
-        move_to_zone(sink.state, &mut card, OffFieldZone::Hand, MoveToZoneOptions::default());
+        move_to_zone(
+            sink.state,
+            &mut card,
+            OffFieldZone::Hand,
+            MoveToZoneOptions::default(),
+        );
         sink.state.counters.drawn += 1;
         sink.events.push(GameEvent::Drawn {
             player,
@@ -339,9 +344,15 @@ fn deal_suspended(sink: &mut EngineSink, player: PlayerId, count: i32) {
             .collect()
     };
     for mut card in waiting {
-        move_to_zone(sink.state, &mut card, OffFieldZone::Hand, MoveToZoneOptions::default());
+        move_to_zone(
+            sink.state,
+            &mut card,
+            OffFieldZone::Hand,
+            MoveToZoneOptions::default(),
+        );
         if let Some(live) = find_instance_mut(sink.state, &card.id) {
-            live.memory.insert(SUSPENDED_CAST_KEY.to_string(), Value::Bool(true));
+            live.memory
+                .insert(SUSPENDED_CAST_KEY.to_string(), Value::Bool(true));
         }
         sink.state.counters.drawn += 1;
         sink.events.push(GameEvent::Drawn {
@@ -416,7 +427,11 @@ fn resolve_mulligans(sink: &mut EngineSink) {
                 .map(|option| option.key.clone())
                 .collect();
             let keep = open[player].keep.clone().unwrap_or_else(|| offered.clone());
-            SealedMulligan { player, offered, keep }
+            SealedMulligan {
+                player,
+                offered,
+                keep,
+            }
         })
         .collect();
     sink.state.mulligan = None;
@@ -542,18 +557,22 @@ pub fn returned_awaiting_shuffle(state: &GameState) -> Vec<String> {
 
 /// TS `oweSetup(sink, owed)`: `owed` is the `OwedSetup` record, its `step` among its keys.
 fn owe_setup(sink: &mut EngineSink, owed: Value) {
-    let step = owed.get("step").and_then(Value::as_str).unwrap_or_default().to_string();
+    let step = owed
+        .get("step")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
     let mut data = indexmap::IndexMap::new();
     data.insert("owed".to_string(), owed);
     owe(
         sink,
         Resume {
-                def_id: String::new(),
-                hook: SETUP_WORK.to_string(),
-                step,
-                radiant: false,
-                instance_id: None,
-                data,
+            def_id: String::new(),
+            hook: SETUP_WORK.to_string(),
+            step,
+            radiant: false,
+            instance_id: None,
+            data,
         },
     );
 }
@@ -606,7 +625,11 @@ pub fn run_owed_setup(sink: &mut EngineSink, item: &WorkItem) {
         let ids: Vec<String> = owed
             .get("ids")
             .and_then(Value::as_array)
-            .map(|ids| ids.iter().filter_map(|id| id.as_str().map(str::to_string)).collect())
+            .map(|ids| {
+                ids.iter()
+                    .filter_map(|id| id.as_str().map(str::to_string))
+                    .collect()
+            })
             .unwrap_or_default();
         start_of_game_from(sink, &ids);
         return;
@@ -624,7 +647,11 @@ fn sealed_in(raw: Option<&Value>) -> Vec<SealedMulligan> {
     let ids = |value: Option<&Value>| -> Vec<String> {
         value
             .and_then(Value::as_array)
-            .map(|ids| ids.iter().filter_map(|id| id.as_str().map(str::to_string)).collect())
+            .map(|ids| {
+                ids.iter()
+                    .filter_map(|id| id.as_str().map(str::to_string))
+                    .collect()
+            })
             .unwrap_or_default()
     };
     entries
@@ -736,7 +763,10 @@ fn start_of_game_from(sink: &mut EngineSink, ids: &[String]) {
         run_start_of_game(sink, &card, player);
         if paused(sink) {
             if sink.state.result.is_none() {
-                owe_setup(sink, json!({ "step": START_OF_GAME_STEP, "ids": ids[at + 1..].to_vec() }));
+                owe_setup(
+                    sink,
+                    json!({ "step": START_OF_GAME_STEP, "ids": ids[at + 1..].to_vec() }),
+                );
             }
             return;
         }

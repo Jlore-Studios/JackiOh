@@ -61,7 +61,9 @@ pub fn enchantments_of_kind(instance: &CardInstance, kind: EnchantmentKind) -> V
 }
 
 pub fn has_enchantment(instance: &CardInstance, kind: EnchantmentKind) -> bool {
-    enchantments_of(instance).iter().any(|entry| enchantment_kind(entry) == kind)
+    enchantments_of(instance)
+        .iter()
+        .any(|entry| enchantment_kind(entry) == kind)
 }
 
 /// Two enchantments are one when every field agrees, so a card is never given the same one twice.

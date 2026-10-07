@@ -256,7 +256,9 @@ pub fn step_e() -> Effect {
         let Some((def_id, radiant)) = picked else {
             return;
         };
-        let copy = add_to_hand(json_as(json!({ "defId": def_id, "player": "self", "radiant": radiant })));
+        let copy = add_to_hand(json_as(
+            json!({ "defId": def_id, "player": "self", "radiant": radiant }),
+        ));
         (copy.apply)(ctx);
     })
 }
@@ -281,8 +283,9 @@ pub fn step_d() -> Effect {
                 .collect()
         };
         for id in picked {
-            let discount =
-                set_cost_mod(json_as(json!({ "target": { "of": "chosen" }, "amount": -GRADE_D_DISCOUNT })));
+            let discount = set_cost_mod(json_as(
+                json!({ "target": { "of": "chosen" }, "amount": -GRADE_D_DISCOUNT }),
+            ));
             naming(ctx, &id, &discount);
         }
     })
@@ -316,7 +319,9 @@ pub fn step_b() -> Effect {
 /// controller by the amount that actually landed, after Armor and the Anti-oneshot cap (§4.4 steps 2
 /// and 3), and by nothing at all when the hit was reduced to 0 (R63).
 pub fn step_a() -> Effect {
-    damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": GRADE_A_DAMAGE, "lifesteal": true })))
+    damage(json_as(
+        json!({ "to": { "of": "enemyHero" }, "amount": GRADE_A_DAMAGE, "lifesteal": true }),
+    ))
 }
 
 /// The steps E–A, in cascade order; S is "run E–A again", so it is these five once more.

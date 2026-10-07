@@ -22,11 +22,11 @@ use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
 use crate::temporary::is_temporary_card;
 use crate::wire::{
-    CardDef, CardType, Enchantment, GameEvent, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Row, Zone, ZoneName,
-    opponent_of,
+    CardDef, CardType, Enchantment, GameEvent, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Row, Zone,
+    ZoneName, opponent_of,
 };
 use crate::zones::{
-    MoveToZoneOptions, LibraryPosition, OffFieldZone, cease_to_exist, is_carried, move_to_zone, pile_at,
+    LibraryPosition, MoveToZoneOptions, OffFieldZone, cease_to_exist, is_carried, move_to_zone, pile_at,
     replace_in_zone, slot_of, zone_of,
 };
 
@@ -80,7 +80,11 @@ fn replace_on_field(
 ) -> Option<CardInstance> {
     let at = slot_of(ctx.state, old)?;
     // R446: a Unit a carrier holds stands in a backrow zone as a Unit, and a Unit may take its place there.
-    let row_here = if is_carried(ctx.state, old) { Row::Units } else { at.row };
+    let row_here = if is_carried(ctx.state, old) {
+        Row::Units
+    } else {
+        at.row
+    };
     if row_for(def.type_) != Some(row_here) {
         return None;
     }
@@ -142,12 +146,15 @@ fn replace_off_field(
     };
     // R11: a unit-token card cannot sit in a graveyard or exile, so a replacement that would cease
     // to exist on arrival is refused instead of thinning the zone.
-    if matches!(at, OffFieldZone::Graveyard | OffFieldZone::Exile) && def.token && def.type_ == CardType::Unit {
+    if matches!(at, OffFieldZone::Graveyard | OffFieldZone::Exile) && def.token && def.type_ == CardType::Unit
+    {
         return None;
     }
 
     let owner = old.owner;
-    let index = off_field_pile(ctx, owner, at).iter().position(|card| card.id == old.id)?;
+    let index = off_field_pile(ctx, owner, at)
+        .iter()
+        .position(|card| card.id == old.id)?;
 
     let mut retired = old.clone();
     cease_to_exist(&mut *ctx.state, &mut retired);
@@ -246,7 +253,11 @@ fn replace_card(
         from_def_id,
         to_def_id: replacement.def_id.clone(),
         new_instance_id: replacement.id.clone(),
-        hidden_from: if hidden_from.is_empty() { None } else { Some(hidden_from) },
+        hidden_from: if hidden_from.is_empty() {
+            None
+        } else {
+            Some(hidden_from)
+        },
     });
     Some(replacement)
 }
@@ -259,7 +270,9 @@ fn unreadable_by(ctx: &EffectContext<'_>, card: &CardInstance) -> Vec<PlayerId> 
     match card.zone {
         Zone::Library { .. } => PLAYER_IDS.to_vec(),
         Zone::Hand { player } => vec![opponent_of(player)],
-        Zone::Field { row: Row::Backrow, .. } if card.face_up != Some(true) => {
+        Zone::Field {
+            row: Row::Backrow, ..
+        } if card.face_up != Some(true) => {
             let type_ = card_type_of(ctx.state, card);
             if type_ == CardType::Trap || type_ == CardType::FieldTrap {
                 vec![opponent_of(card.controller)]
@@ -366,7 +379,11 @@ pub fn transform_random(args: TransformRandomArgs) -> Effect {
             Some(this) => Some(this.def_id.clone()),
             None => ctx.def_id.clone(),
         };
-        let asked = excluding_def_id(Some(&*ctx.state), &args.query.clone().unwrap_or_default(), own.as_deref());
+        let asked = excluding_def_id(
+            Some(&*ctx.state),
+            &args.query.clone().unwrap_or_default(),
+            own.as_deref(),
+        );
         let pool: Vec<&CardDef> = query(&asked)
             .into_iter()
             .filter(|def| can_replace(&old, def))
@@ -452,7 +469,11 @@ pub fn transform_beneath(args: TransformBeneathArgs) -> Effect {
                 from_def_id: old.def_id.clone(),
                 to_def_id: copy_def_id,
                 new_instance_id: copy_id,
-                hidden_from: if hidden_from.is_empty() { None } else { Some(hidden_from) },
+                hidden_from: if hidden_from.is_empty() {
+                    None
+                } else {
+                    Some(hidden_from)
+                },
             });
         }
     })

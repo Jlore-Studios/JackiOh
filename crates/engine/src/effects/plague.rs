@@ -26,7 +26,6 @@
 //!
 //! Port of `packages/engine/src/effects/plague.ts`.
 
-
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -205,7 +204,10 @@ fn label_of(state: &GameState, card: &CardInstance) -> String {
 /// order, the placer's side first), or return false when there is none — the placements fizzle
 /// then, and draw nothing (R129).
 fn ask_placement(sink: &mut EngineSink<'_>, player: PlayerId, resume: Resume) -> bool {
-    let cards: Vec<CardInstance> = permanents_on_field(sink.state, player).into_iter().cloned().collect();
+    let cards: Vec<CardInstance> = permanents_on_field(sink.state, player)
+        .into_iter()
+        .cloned()
+        .collect();
     if cards.is_empty() {
         return false;
     }
@@ -221,7 +223,10 @@ fn ask_placement(sink: &mut EngineSink<'_>, player: PlayerId, resume: Resume) ->
     if let Some(mode) = mode
         && mode.random
     {
-        let now: Vec<CardInstance> = permanents_on_field(sink.state, player).into_iter().cloned().collect();
+        let now: Vec<CardInstance> = permanents_on_field(sink.state, player)
+            .into_iter()
+            .cloned()
+            .collect();
         let pool: Vec<CardInstance> = if mode.target_enemies {
             prefer_enemies(
                 sink.state,

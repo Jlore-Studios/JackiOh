@@ -56,11 +56,9 @@ const POOL_KEYWORDS: &[(&str, Keyword)] = &[
 pub fn random_pool_keywords() -> Vec<Keyword> {
     RANDOM_KEYWORD_POOL
         .iter()
-        .map(|entry| {
-            match POOL_KEYWORDS.iter().find(|(key, _)| key == entry) {
-                Some((_, keyword)) => keyword.clone(),
-                None => panic!("RANDOM_KEYWORD_POOL entry \"{entry}\" has no keyword (R21)"),
-            }
+        .map(|entry| match POOL_KEYWORDS.iter().find(|(key, _)| key == entry) {
+            Some((_, keyword)) => keyword.clone(),
+            None => panic!("RANDOM_KEYWORD_POOL entry \"{entry}\" has no keyword (R21)"),
         })
         .collect()
 }
@@ -145,7 +143,10 @@ pub fn buff_all_units(args: BuffAllUnitsArgs) -> Effect {
     Effect::new("buffAllUnits", move |ctx| {
         let players: Vec<PlayerId> = match args.side {
             Some(BuffAllSide::Both(_)) => {
-                vec![player_of(ctx, PlayerSpec::SelfSide), player_of(ctx, PlayerSpec::Enemy)]
+                vec![
+                    player_of(ctx, PlayerSpec::SelfSide),
+                    player_of(ctx, PlayerSpec::Enemy),
+                ]
             }
             Some(BuffAllSide::One(side)) => vec![player_of(ctx, side)],
             None => vec![player_of(ctx, PlayerSpec::SelfSide)],
@@ -153,7 +154,8 @@ pub fn buff_all_units(args: BuffAllUnitsArgs) -> Effect {
         let amount = amount_of(args.attack, args.health);
         for player in players {
             let units: Vec<CardInstance> = active_units_of(ctx.sink.state, player)
-                .into_iter().cloned()
+                .into_iter()
+                .cloned()
                 .collect();
             for unit in &units {
                 apply_buff(ctx, unit, &amount, true);

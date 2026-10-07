@@ -50,9 +50,7 @@ use serde_json::Value;
 
 use crate::config::{DAMAGE_REDIRECT_CAP, LIBRARY_CAP};
 use crate::damage::{DamageArgs, DamageTarget};
-use crate::script::{
-    EffectContext, EngineSink, InsteadLasting, InsteadTo,
-};
+use crate::script::{EffectContext, EngineSink, InsteadLasting, InsteadTo};
 use crate::state::{
     CardInstance, GameState, ModifierExpiry, ModifierKind, Resume, find_instance, find_instance_mut,
 };
@@ -68,8 +66,8 @@ use crate::zones::GraveyardRedirect;
 /// replacement a card makes; and THE declaration of "a friendly unit is targeted". All part 1's
 /// (`script.rs`), under the path TS exported them from.
 pub use crate::script::{
-    DyingUnit, HealedRef, ReplacedEvent, ReplacementBy, ReplacementContext, ReplacementDef, ReplacementMoment,
-    ReplacementWhere, ReplacementWhen, TargetedReplacement, TargetedWhat,
+    DyingUnit, HealedRef, ReplacedEvent, ReplacementBy, ReplacementContext, ReplacementDef,
+    ReplacementMoment, ReplacementWhen, ReplacementWhere, TargetedReplacement, TargetedWhat,
 };
 
 /// One unit a `wouldDie` replacement flickered, as its follow-up reads it.
@@ -130,7 +128,9 @@ struct Candidate {
 
 /// The card as it stands now, found again by id (TS held the live object), or as it was handed over.
 fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    find_instance(state, &card.id).cloned().unwrap_or_else(|| card.clone())
+    find_instance(state, &card.id)
+        .cloned()
+        .unwrap_or_else(|| card.clone())
 }
 
 fn sides_of(state: &GameState) -> [PlayerId; 2] {
@@ -181,7 +181,13 @@ fn candidates(state: &GameState, about: Option<&CardInstance>) -> Vec<Candidate>
         if let Some(about) = about
             && about.owner == player
         {
-            add_candidate(&mut out, &mut seen, about, about.controller, CandidateZone::Elsewhere);
+            add_candidate(
+                &mut out,
+                &mut seen,
+                about,
+                about.controller,
+                CandidateZone::Elsewhere,
+            );
         }
     }
     out
@@ -214,7 +220,12 @@ fn event_names(event: &ReplacedEvent, id: &str) -> bool {
 /// Whether the card stands where its replacement says. On the field a Trap answers face-down and fires
 /// (§5.1), a Field Trap face-down or up, anything else as it stands; a replacement into a graveyard is
 /// static and never fires, so a Trap offers one only once it is face-up.
-fn stands_where(state: &GameState, cand: &Candidate, where_: ReplacementWhere, event: &ReplacedEvent) -> bool {
+fn stands_where(
+    state: &GameState,
+    cand: &Candidate,
+    where_: ReplacementWhere,
+    event: &ReplacedEvent,
+) -> bool {
     if where_ == ReplacementWhere::SelfCard {
         return event_names(event, &cand.card.id);
     }
@@ -242,7 +253,13 @@ fn targeted_source_matches(def: &TargetedReplacement, event: &ReplacedEvent) -> 
     if def.by.is_none() {
         return true;
     }
-    matches!(event, ReplacedEvent::Targeted { source: Some(CardType::Spell), .. })
+    matches!(
+        event,
+        ReplacedEvent::Targeted {
+            source: Some(CardType::Spell),
+            ..
+        }
+    )
 }
 
 /// The first of the card's replacements for this moment that stands where it must and whose `when` holds.
@@ -465,7 +482,8 @@ pub fn healing_replaced(sink: &mut EngineSink<'_>, target: &DamageTarget, amount
             .mods
             .iter()
             .find(|each| {
-                matches!(each.kind, ModifierKind::HealToDamage { .. }) && crate::mana::modifier_is_live(state, each)
+                matches!(each.kind, ModifierKind::HealToDamage { .. })
+                    && crate::mana::modifier_is_live(state, each)
             })
             .cloned();
         let Some(modifier) = found else {
@@ -594,7 +612,11 @@ pub fn would_die_window(sink: &mut EngineSink<'_>, dying: &[CardInstance]) -> Ve
 
 /// `zones.GraveyardRedirect`: TS's `{ to: "exile" } | { to: "library"; position: "bottom" }`.
 fn redirect_to(exile: bool) -> GraveyardRedirect {
-    if exile { GraveyardRedirect::Exile } else { GraveyardRedirect::LibraryBottom }
+    if exile {
+        GraveyardRedirect::Exile
+    } else {
+        GraveyardRedirect::LibraryBottom
+    }
 }
 
 /// `zones::move_to_zone`'s check (TS registered it with `registerGraveyardRedirect`; Rust calls it

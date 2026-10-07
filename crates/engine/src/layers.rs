@@ -7,11 +7,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::brittle_count::active_brittle_count;
 use crate::catalog::def_of;
-use crate::config::{ANIMATED_FALLBACK_ATTACK, ANIMATED_FALLBACK_HEALTH, BACKROW_ZONES, RADIANT_FALLBACK_FACTOR, UNIT_ZONES};
+use crate::config::{
+    ANIMATED_FALLBACK_ATTACK, ANIMATED_FALLBACK_HEALTH, BACKROW_ZONES, RADIANT_FALLBACK_FACTOR, UNIT_ZONES,
+};
 use crate::script::{HookArgs, StatMod};
 use crate::state::{CardInstance, GameState, Position};
 use crate::tuning::{tuned_keywords, x_of};
-use crate::wire::{AttackHealth, CardDef, CardFace, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Row, Zone, armor_of, has_keyword};
+use crate::wire::{
+    AttackHealth, CardDef, CardFace, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Row, Zone, armor_of,
+    has_keyword,
+};
 
 /// §10.4: a unit's layered stats and keywords (`unit_view`). Not the view's `wire::UnitView`, which
 /// `view_for` builds from this; `lib.rs` resolves the root name to this one.
@@ -90,8 +95,16 @@ pub fn face_of(state: &GameState, instance: &CardInstance) -> FaceStats {
             .iter()
             .chain(instance.granted_keywords.iter())
             .any(|keyword| matches!(keyword, Keyword::Animated | Keyword::AnimatedOnYourTurn));
-    let tuning_attack = instance.tuning.as_ref().and_then(|tuning| tuning.attack).unwrap_or(0);
-    let tuning_health = instance.tuning.as_ref().and_then(|tuning| tuning.health).unwrap_or(0);
+    let tuning_attack = instance
+        .tuning
+        .as_ref()
+        .and_then(|tuning| tuning.attack)
+        .unwrap_or(0);
+    let tuning_health = instance
+        .tuning
+        .as_ref()
+        .and_then(|tuning| tuning.health)
+        .unwrap_or(0);
     let attack = stats
         .map(|stats| stats.attack)
         .or(face.attack)
@@ -245,7 +258,10 @@ fn as_set(keywords: &[Keyword]) -> Vec<Keyword> {
         .filter(|keyword| {
             let kind = keyword.kind();
             // B5 E6: Spell Damage is numbered too, and sums across its sources like Armor.
-            if matches!(kind, KeywordKind::Armor | KeywordKind::Lucky | KeywordKind::SpellDamage) {
+            if matches!(
+                kind,
+                KeywordKind::Armor | KeywordKind::Lucky | KeywordKind::SpellDamage
+            ) {
                 return true;
             }
             if seen.contains(&kind) {
@@ -383,7 +399,9 @@ fn compute_layers(state: &GameState, instance: &CardInstance) -> Layered {
     // Position — so Indestructible, from whichever source, takes Taunt out of the set.
     // A spent Divine Shield and a used Reborn are gone until granted again (§6.1, §4.5 step 4).
     let taunt_suppressed = instance.taunt_suppressed_turn == Some(state.turn)
-        || keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Indestructible);
+        || keywords
+            .iter()
+            .any(|keyword| keyword.kind() == KeywordKind::Indestructible);
     let shield_spent = instance.divine_shield_spent == Some(true);
     let reborn_spent = instance.reborn_spent == Some(true);
     let kept: Vec<Keyword> = keywords

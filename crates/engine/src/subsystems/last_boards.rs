@@ -46,7 +46,9 @@ pub fn rebuildable_from_id(def_id: &str, catalog: &CardDefs) -> bool {
     if specs.len() < FUSED_MIN_PARTS {
         return false;
     }
-    specs.iter().all(|spec| rebuildable_from_id(&spec.def_id, catalog))
+    specs
+        .iter()
+        .all(|spec| rebuildable_from_id(&spec.def_id, catalog))
 }
 
 /// R417, R564: what `create_game` keeps of its `lastBoards` input — per seat, in order, each entry as
@@ -122,7 +124,10 @@ pub fn last_board_candidates(state: &GameState, player: PlayerId, exclude: &[Str
         if exclude.contains(&entry.def_id) {
             continue;
         }
-        match candidates.iter_mut().find(|candidate| candidate.def_id == entry.def_id) {
+        match candidates
+            .iter_mut()
+            .find(|candidate| candidate.def_id == entry.def_id)
+        {
             None => candidates.push(entry.clone()),
             Some(held) => held.radiant = held.radiant || entry.radiant,
         }

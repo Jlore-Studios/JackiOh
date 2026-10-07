@@ -54,7 +54,12 @@ pub struct CastHow {
 }
 
 /// The piles a card that exists may be cast from: never the field, where it already is.
-const CASTABLE_ZONES: &[ZoneName] = &[ZoneName::Hand, ZoneName::Library, ZoneName::Graveyard, ZoneName::Exile];
+const CASTABLE_ZONES: &[ZoneName] = &[
+    ZoneName::Hand,
+    ZoneName::Library,
+    ZoneName::Graveyard,
+    ZoneName::Exile,
+];
 
 fn sink_of<'b>(ctx: &'b mut EffectContext<'_>) -> EngineSink<'b> {
     ctx.sink.reborrow()
@@ -62,8 +67,16 @@ fn sink_of<'b>(ctx: &'b mut EffectContext<'_>) -> EngineSink<'b> {
 
 fn options_of(how: &CastHow) -> CastOptions {
     CastOptions {
-        random: if how.random == Some(true) { Some(true) } else { None },
-        target_enemies: if how.target_enemies == Some(true) { Some(true) } else { None },
+        random: if how.random == Some(true) {
+            Some(true)
+        } else {
+            None
+        },
+        target_enemies: if how.target_enemies == Some(true) {
+            Some(true)
+        } else {
+            None
+        },
         afterward: how.afterward,
         ..CastOptions::default()
     }

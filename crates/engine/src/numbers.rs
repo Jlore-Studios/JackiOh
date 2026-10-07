@@ -16,7 +16,9 @@ use crate::brittle_count::active_brittle_count;
 use crate::layers::{card_keywords, printed_keywords_of, stats_with_buffs, unit_view};
 use crate::script::{ActivationUses, Script};
 use crate::state::{CardInstance, GameState};
-use crate::wire::{AttackHealth, CardType, Keyword, KeywordKind, ParamBetter, ParamTunedOn, Row, Zone, has_keyword};
+use crate::wire::{
+    AttackHealth, CardType, Keyword, KeywordKind, ParamBetter, ParamTunedOn, Row, Zone, has_keyword,
+};
 
 /// B3.4 rule 3: the numbered keywords, by the tuning key each is read under (`tuning::tuned_count`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -169,7 +171,12 @@ pub fn numbered_keywords_on(state: &GameState, card: &CardInstance) -> Vec<Numbe
     };
     for &(key, kind) in PRINTED_NUMBERED {
         if !removed.contains(&kind) {
-            add(&mut out, key, crate::tuning::numbered_sum(&keywords, kind).unwrap_or(0), ParamBetter::Up);
+            add(
+                &mut out,
+                key,
+                crate::tuning::numbered_sum(&keywords, kind).unwrap_or(0),
+                ParamBetter::Up,
+            );
         }
     }
     match active_brittle_count(card) {
@@ -192,14 +199,24 @@ pub fn numbered_keywords_on(state: &GameState, card: &CardInstance) -> Vec<Numbe
     }
     let script = crate::scripts::script_of(state, card);
     let flags = script.flags();
-    add(&mut out, NumberedKey::Echo, flags.echo.unwrap_or(0), ParamBetter::Up);
+    add(
+        &mut out,
+        NumberedKey::Echo,
+        flags.echo.unwrap_or(0),
+        ParamBetter::Up,
+    );
     add(
         &mut out,
         NumberedKey::Activate,
         activate_uses(&script).unwrap_or(0),
         ParamBetter::Up,
     );
-    add(&mut out, NumberedKey::Tribute, flags.tribute.unwrap_or(0), ParamBetter::Down);
+    add(
+        &mut out,
+        NumberedKey::Tribute,
+        flags.tribute.unwrap_or(0),
+        ParamBetter::Down,
+    );
     out
 }
 
@@ -313,7 +330,9 @@ pub fn numbers_on(state: &GameState, card: &CardInstance) -> Vec<NumberOnCard> {
         let value = crate::params::param_value(state, Some(card), &param.key, Default::default());
         add(
             &mut out,
-            NumberRef::Param { key: param.key.clone() },
+            NumberRef::Param {
+                key: param.key.clone(),
+            },
             param.key.clone(),
             value,
         );

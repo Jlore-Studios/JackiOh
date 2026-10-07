@@ -19,8 +19,8 @@ use crate::prompts::{
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, GameState, PromptOption, Resume};
 use crate::wire::{
-    CardType, CostRange, FilterOf, FilterSide, OneOrMany, PLAYER_IDS, PlayerId, PromptKind, Row, Selection, Tag,
-    ZoneRef, opponent_of,
+    CardType, CostRange, FilterOf, FilterSide, OneOrMany, PLAYER_IDS, PlayerId, PromptKind, Row, Selection,
+    Tag, ZoneRef, opponent_of,
 };
 use crate::zones::{active_units_of, card_at, is_unit_token, row_size, slots_of};
 
@@ -28,7 +28,13 @@ use crate::zones::{active_units_of, card_at, is_unit_token, row_size, slots_of};
 type StepData = Option<IndexMap<String, Value>>;
 
 /// `OpenPromptArgs` with every optional field absent; a verb sets the ones it asks for.
-fn ask(player: PlayerId, kind: PromptKind, prompt: String, options: Vec<PromptOption>, resume: Resume) -> OpenPromptArgs {
+fn ask(
+    player: PlayerId,
+    kind: PromptKind,
+    prompt: String,
+    options: Vec<PromptOption>,
+    resume: Resume,
+) -> OpenPromptArgs {
     OpenPromptArgs {
         player,
         kind,
@@ -284,7 +290,9 @@ pub fn choose_target(args: ChooseTargetArgs) -> Effect {
             ask(
                 player,
                 PromptKind::Target,
-                args.prompt.clone().unwrap_or_else(|| "Choose a target".to_string()),
+                args.prompt
+                    .clone()
+                    .unwrap_or_else(|| "Choose a target".to_string()),
                 options,
                 resume,
             ),
@@ -486,7 +494,9 @@ pub fn choose_number(args: ChooseNumberArgs) -> Effect {
         let mut asked = ask(
             player,
             PromptKind::Number,
-            args.prompt.clone().unwrap_or_else(|| "Choose a number".to_string()),
+            args.prompt
+                .clone()
+                .unwrap_or_else(|| "Choose a number".to_string()),
             options,
             resume,
         );
@@ -582,7 +592,13 @@ pub fn choose_answer(args: ChooseAnswerArgs) -> Effect {
         let player = player_of(ctx, args.by.unwrap_or(PlayerSpec::SelfSide));
         let owner = ctx.controller;
         let resume = resume_self(ctx, &args.step, data);
-        let mut asked = ask(player, PromptKind::Answer, args.statement.clone(), options, resume);
+        let mut asked = ask(
+            player,
+            PromptKind::Answer,
+            args.statement.clone(),
+            options,
+            resume,
+        );
         asked.owner = Some(owner);
         open_prompt(ctx, asked);
     })
@@ -653,8 +669,16 @@ pub fn choose_cell(args: ChooseCellArgs) -> Effect {
     Effect::new("chooseCell", move |ctx| {
         let chooser = player_of(ctx, args.by.unwrap_or(PlayerSpec::SelfSide));
         let scope = args.cells.clone().unwrap_or_default();
-        let rows: Vec<Row> = scope.rows.clone().unwrap_or_else(|| vec![Row::Units, Row::Backrow]);
-        let except: IndexSet<i32> = scope.except_lanes.clone().unwrap_or_default().into_iter().collect();
+        let rows: Vec<Row> = scope
+            .rows
+            .clone()
+            .unwrap_or_else(|| vec![Row::Units, Row::Backrow]);
+        let except: IndexSet<i32> = scope
+            .except_lanes
+            .clone()
+            .unwrap_or_default()
+            .into_iter()
+            .collect();
         let mut sides: Vec<(PlayerId, [Row; 2])> = Vec::new();
         if scope.side != Some(CellSide::Enemy) {
             sides.push((ctx.controller, [Row::Backrow, Row::Units]));
@@ -761,7 +785,9 @@ pub fn choose_reward(args: ChooseRewardArgs) -> Effect {
             ask(
                 player,
                 PromptKind::Reward,
-                args.prompt.clone().unwrap_or_else(|| "Choose a reward".to_string()),
+                args.prompt
+                    .clone()
+                    .unwrap_or_else(|| "Choose a reward".to_string()),
                 options,
                 resume,
             ),
@@ -1022,7 +1048,11 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
             .as_ref()
             .map(|card| card.def_id.clone())
             .or_else(|| ctx.def_id.clone());
-        let pool = query(&excluding_def_id(Some(&*ctx.state), &asked, generating.as_deref()));
+        let pool = query(&excluding_def_id(
+            Some(&*ctx.state),
+            &asked,
+            generating.as_deref(),
+        ));
         if pool.is_empty() {
             return;
         }
@@ -1034,10 +1064,18 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
             .iter()
             .map(|def| {
                 // R247: a number is offered as itself, so nothing in the option names the card it stands for.
-                let option = if by_index { def.index.clone() } else { def.id.clone() };
+                let option = if by_index {
+                    def.index.clone()
+                } else {
+                    def.id.clone()
+                };
                 PromptOption {
                     key: format!("mode:{option}"),
-                    label: if by_index { def.index.clone() } else { def.name.clone() },
+                    label: if by_index {
+                        def.index.clone()
+                    } else {
+                        def.name.clone()
+                    },
                     selection: Selection::Mode { option },
                     cost: None,
                     radiant: None,
@@ -1051,7 +1089,9 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
             ask(
                 player,
                 PromptKind::Discover,
-                args.prompt.clone().unwrap_or_else(|| "Discover a card".to_string()),
+                args.prompt
+                    .clone()
+                    .unwrap_or_else(|| "Discover a card".to_string()),
                 options,
                 resume,
             ),

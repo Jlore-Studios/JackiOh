@@ -34,8 +34,8 @@ use crate::game_over::end_game;
 use crate::resolve::HookName;
 use crate::script::EngineSink;
 use crate::state::{
-    CardInstance, DelayedEffect, Exertion, GameState, ModifierKind, Resume, TurnLog, WorkItem, find_instance_mut,
-    handicap_of,
+    CardInstance, DelayedEffect, Exertion, GameState, ModifierKind, Resume, TurnLog, WorkItem,
+    find_instance_mut, handicap_of,
 };
 use crate::wire::{GameEvent, GameOverReason, PLAYER_IDS, Phase, PlayerId, Winner, opponent_of};
 
@@ -61,7 +61,8 @@ pub fn trigger_order(sink: &EngineSink, hook: HookName, only: Option<PlayerId>) 
         .into_iter()
         .flat_map(|player| {
             let mut cards: Vec<CardInstance> = crate::zones::active_units_of(state, player)
-                .into_iter().cloned()
+                .into_iter()
+                .cloned()
                 .collect();
             // `slotsOf(player, "backrow")` read through `cardAt`: the backrow's cards by lane.
             cards.extend(state.players[player].backrow.iter().flatten().cloned());
@@ -160,7 +161,9 @@ struct DueEntry {
 enum Due {
     Delayed(Box<DelayedEffect>),
     /// The `startOfTurnEffect` modifier's id, found again on the player as it runs.
-    Recurring { id: String },
+    Recurring {
+        id: String,
+    },
 }
 
 fn due_entries(state: &GameState, phase: Phase, player: PlayerId, due_before: u32) -> Vec<DueEntry> {
@@ -172,7 +175,9 @@ fn due_entries(state: &GameState, phase: Phase, player: PlayerId, due_before: u3
         .filter(|effect| {
             effect.at.phase == phase
                 && effect.at.player == player
-                && effect.not_before.is_none_or(|not_before| state.turn >= not_before)
+                && effect
+                    .not_before
+                    .is_none_or(|not_before| state.turn >= not_before)
         })
         .collect();
     delayed.sort_by_key(|a| a.seq);
@@ -237,7 +242,11 @@ fn run_due_entry(sink: &mut EngineSink, player: PlayerId, entry: &DueEntry) -> b
         }
         Due::Recurring { id } => {
             let turn = sink.state.turn;
-            let Some(held) = sink.state.players[player].mods.iter_mut().find(|held| held.id == *id) else {
+            let Some(held) = sink.state.players[player]
+                .mods
+                .iter_mut()
+                .find(|held| held.id == *id)
+            else {
                 return false;
             };
             let ModifierKind::StartOfTurnEffect { resume, ran_turn, .. } = &mut held.kind else {
@@ -336,7 +345,10 @@ const START_MAIN_STEP: &str = "main";
 
 /// Park the rest of the start of a turn (R113), exactly as `owe_end_of_turn` parks the rest of an end.
 fn owe_start_of_turn(sink: &mut EngineSink, player: PlayerId, step: &str, due_before: Option<u32>) {
-    crate::work::owe(sink, boundary_resume(START_OF_TURN_WORK, player, step, due_before));
+    crate::work::owe(
+        sink,
+        boundary_resume(START_OF_TURN_WORK, player, step, due_before),
+    );
 }
 
 /// A parked boundary's record: whose turn, and for a delayed stage the mark it began at.
@@ -657,7 +669,12 @@ pub fn clear_return_flags(state: &mut GameState) {
     // "End of turn" its controller's own turn end, which this is not — so its return is over with this
     // turn as well (R155). `start_turn` empties both logs, so these are still this turn's lists.
     for player in PLAYER_IDS {
-        let ids: IndexSet<String> = state.players[player].turn_log.played_ids.iter().cloned().collect();
+        let ids: IndexSet<String> = state.players[player]
+            .turn_log
+            .played_ids
+            .iter()
+            .cloned()
+            .collect();
         for id in ids {
             if let Some(card) = find_instance_mut(state, &id)
                 && card.return_to_hand_at_end_of_turn == Some(true)

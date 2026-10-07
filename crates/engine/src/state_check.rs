@@ -43,14 +43,17 @@ use crate::resolve::{HookOptions, make_context};
 use crate::script::{EngineSink, HookArgs};
 use crate::state::{CardInstance, GameState, Resume, WorkItem, find_instance, find_instance_mut};
 use crate::wire::{
-    AttackHealth, GameEvent, GameOverReason, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Position, Row, Winner, ZoneName, ZoneRef, has_keyword,
+    AttackHealth, GameEvent, GameOverReason, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Position, Row,
+    Winner, ZoneName, ZoneRef, has_keyword,
 };
 use crate::work::{PAUSE_KEY, PausedStep, WorkPlan, paused_of};
 use crate::zones::{MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot};
 
 /// The card as it stands in the state now, by id; the copy itself when it is nowhere.
 fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    find_instance(state, &card.id).cloned().unwrap_or_else(|| card.clone())
+    find_instance(state, &card.id)
+        .cloned()
+        .unwrap_or_else(|| card.clone())
 }
 
 /// Every unit on the field: the card that acts in each unit zone, the top of its pile (§3.2).
@@ -126,7 +129,11 @@ fn hero_check(sink: &mut EngineSink<'_>) -> bool {
 fn backrow_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let side = &state.players[player];
     (1..=BACKROW_ZONES)
-        .filter_map(|lane| side.backrow.get((lane - 1) as usize).and_then(|card| card.clone()))
+        .filter_map(|lane| {
+            side.backrow
+                .get((lane - 1) as usize)
+                .and_then(|card| card.clone())
+        })
         .collect()
 }
 
@@ -169,7 +176,10 @@ fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
             // so there is none here to report; the stamp still matters if it stops being Indestructible
             // before the turn ends (a Vanilla).
             let now = live(sink.state, &unit);
-            let had_taunt = has_keyword(&crate::layers::unit_view(sink.state, &now).keywords, KeywordKind::Taunt);
+            let had_taunt = has_keyword(
+                &crate::layers::unit_view(sink.state, &now).keywords,
+                KeywordKind::Taunt,
+            );
             let turn = sink.state.turn;
             if let Some(card) = find_instance_mut(sink.state, &unit.id) {
                 card.taunt_suppressed_turn = Some(turn);
@@ -186,7 +196,10 @@ fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
             if card.marked_destroyed != Some(true) {
                 continue;
             }
-            if !has_keyword(&crate::layers::unit_view(sink.state, &card).keywords, KeywordKind::Indestructible) {
+            if !has_keyword(
+                &crate::layers::unit_view(sink.state, &card).keywords,
+                KeywordKind::Indestructible,
+            ) {
                 continue;
             }
             if let Some(live_card) = find_instance_mut(sink.state, &card.id) {
@@ -300,7 +313,10 @@ fn instances_of(raw: Option<&Value>) -> Vec<CardInstance> {
     };
     items
         .iter()
-        .filter(|card| card.as_object().is_some_and(|card| card.get("id").is_some_and(Value::is_string)))
+        .filter(|card| {
+            card.as_object()
+                .is_some_and(|card| card.get("id").is_some_and(Value::is_string))
+        })
         .filter_map(|card| serde_json::from_value::<CardInstance>(card.clone()).ok())
         .collect()
 }
@@ -389,7 +405,8 @@ fn owe_deaths(sink: &mut EngineSink<'_>, pass: &DeathPass, step: Option<&PausedS
 /// What §4.5 step 4 and R175 do to a body on its way back: no Reborn, no Vanilla, and an X/X token's
 /// X/X kept as its printed face.
 fn prepare_body(card: &mut CardInstance, entry: &RebornEntry) {
-    card.granted_keywords.retain(|keyword| keyword.kind() != KeywordKind::Reborn);
+    card.granted_keywords
+        .retain(|keyword| keyword.kind() != KeywordKind::Reborn);
     card.vanilla = false;
     // R175: an X/X token's X/X is its printed face, so the body keeps it through the reset.
     if let Some(face) = &entry.face {
@@ -453,7 +470,12 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
             row: entry.at.row,
             lane: entry.at.lane,
         };
-        if !crate::zones::place_on_field(sink.state, &mut copy, slot, PlaceOnFieldOptions { stack: Some(true) }) {
+        if !crate::zones::place_on_field(
+            sink.state,
+            &mut copy,
+            slot,
+            PlaceOnFieldOptions { stack: Some(true) },
+        ) {
             continue;
         }
         let owner = copy.owner;
@@ -577,7 +599,12 @@ fn run_death_pass(sink: &mut EngineSink<'_>, pass: &mut DeathPass, at: Option<Pa
                 Some(&snapshot),
                 HookOptions {
                     controller: Some(snapshot.controller),
-                    targets: Some(paused.as_ref().map(|step| step.targets.clone()).unwrap_or_default()),
+                    targets: Some(
+                        paused
+                            .as_ref()
+                            .map(|step| step.targets.clone())
+                            .unwrap_or_default(),
+                    ),
                     modes: Some(paused.as_ref().map(|step| step.modes.clone()).unwrap_or_default()),
                     // R89: a prompt this hook opens is answered in a later action, when the instance on the board
                     // is R78's reset one; the step it re-enters reads this snapshot instead (`prompts.runResume`).
@@ -704,7 +731,12 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
     }
 
     for mut card in read {
-        let landed = crate::zones::move_to_zone(sink.state, &mut card.unit, OffFieldZone::Graveyard, Default::default());
+        let landed = crate::zones::move_to_zone(
+            sink.state,
+            &mut card.unit,
+            OffFieldZone::Graveyard,
+            Default::default(),
+        );
         if matches!(landed, MoveResult::Replaced) {
             // R461: a card exiled (or sent to its library) instead of reaching a graveyard has not died: no
             // Death hook, no Reborn, no `destroyed` for "destroys a Unit" (R42) or the destroyed count (R55).
@@ -728,7 +760,11 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             pass.reborn.push(RebornEntry {
                 id: card.unit.id.clone(),
                 at,
-                token: if card.token { Some(card.snapshot.clone()) } else { None },
+                token: if card.token {
+                    Some(card.snapshot.clone())
+                } else {
+                    None
+                },
                 face,
             });
         }
@@ -866,13 +902,16 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
             permanents_in_play(state)
                 .into_iter()
                 .filter(|card| {
-                    crate::scripts::script_of(state, card).tribute_when.as_ref().is_some_and(|when| {
-                        when(HookArgs {
-                            state,
-                            self_: card,
-                            radiant: card.radiant,
+                    crate::scripts::script_of(state, card)
+                        .tribute_when
+                        .as_ref()
+                        .is_some_and(|when| {
+                            when(HookArgs {
+                                state,
+                                self_: card,
+                                radiant: card.radiant,
+                            })
                         })
-                    })
                 })
                 .collect()
         };
@@ -889,7 +928,10 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         } else {
             [PlayerId::P2, PlayerId::P1]
         };
-        let units: Vec<CardInstance> = order.iter().flat_map(|player| units_of(sink.state, *player)).collect();
+        let units: Vec<CardInstance> = order
+            .iter()
+            .flat_map(|player| units_of(sink.state, *player))
+            .collect();
         let dying_ids: Vec<String> = units
             .iter()
             .filter(|unit| is_dying(sink, unit))

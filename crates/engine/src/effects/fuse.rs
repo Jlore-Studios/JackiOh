@@ -34,7 +34,9 @@ use crate::effects::move_::{ExileArgs, exile};
 use crate::effects::targets::{PlayerSpec, TargetSpec, instance_of, player_of};
 use crate::faces::card_type_of;
 use crate::layers::unit_has;
-use crate::prompts::{AnswerInput, OpenPromptArgs, close_prompt, in_offered_order, open_prompt, why_answer_refused};
+use crate::prompts::{
+    AnswerInput, OpenPromptArgs, close_prompt, in_offered_order, open_prompt, why_answer_refused,
+};
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, EngineError, GameState, PromptOption, Resume, find_instance, new_instance};
 use crate::subsystems::fuse::{FuseArgs, HandPrice, fuse};
@@ -162,7 +164,14 @@ pub fn fuse_cards(args: FuseCardsArgs) -> Effect {
 
         let to_hand: Option<PlayerId> = args.to_hand.map(|spec| player_of(ctx, spec));
         let (hand_price, radiant) = if to_hand.is_some() {
-            (args.hand_price, if args.radiant == Some(true) { Some(true) } else { None })
+            (
+                args.hand_price,
+                if args.radiant == Some(true) {
+                    Some(true)
+                } else {
+                    None
+                },
+            )
         } else {
             (None, None)
         };
@@ -172,7 +181,11 @@ pub fn fuse_cards(args: FuseCardsArgs) -> Effect {
         } else {
             None
         };
-        let keep_cost = if args.keep_cost == Some(true) { Some(true) } else { None };
+        let keep_cost = if args.keep_cost == Some(true) {
+            Some(true)
+        } else {
+            None
+        };
 
         // R470: a kept card in a hand or a library, which stays where it is.
         if let Some(into_id) = &args.into_instance_id {
@@ -365,7 +378,11 @@ pub fn fuse_random_into(args: FuseRandomIntoArgs) -> Effect {
             } else {
                 None
             };
-            let (target, into) = if on_field { (Some(card), None) } else { (None, Some(card)) };
+            let (target, into) = if on_field {
+                (Some(card), None)
+            } else {
+                (None, Some(card))
+            };
             fuse(
                 ctx,
                 FuseArgs {
@@ -373,7 +390,11 @@ pub fn fuse_random_into(args: FuseRandomIntoArgs) -> Effect {
                     target,
                     into,
                     radiant_ingredients,
-                    keep_cost: if args.keep_cost == Some(false) { None } else { Some(true) },
+                    keep_cost: if args.keep_cost == Some(false) {
+                        None
+                    } else {
+                        Some(true)
+                    },
                     ..FuseArgs::default()
                 },
             );
@@ -420,7 +441,12 @@ pub fn fuse_generated(args: FuseGeneratedArgs) -> Effect {
                 return;
             };
             let picked_id = picked.id.clone();
-            ingredients.push(new_instance(&mut *ctx.sink.state, &picked_id, player, Zone::Gone { player }));
+            ingredients.push(new_instance(
+                &mut *ctx.sink.state,
+                &picked_id,
+                player,
+                Zone::Gone { player },
+            ));
         }
         let radiant_ingredients = if args.radiant == Some(true) {
             Some(ingredients.iter().map(|card| card.id.clone()).collect())
@@ -496,7 +522,8 @@ fn fuse_candidates(
         out.extend(side.hand.iter().filter(|&card| fits(card)).cloned());
     }
     if piles.contains(&FuseOntoPile::Library) {
-        let mut library: Vec<CardInstance> = side.library.iter().filter(|&card| fits(card)).cloned().collect();
+        let mut library: Vec<CardInstance> =
+            side.library.iter().filter(|&card| fits(card)).cloned().collect();
         // Stable, as `Array.prototype.sort` is (SURFACE §4.4.1).
         library.sort_by(|a, b| {
             let left = def_of(Some(state), &a.def_id);
@@ -655,7 +682,11 @@ pub fn answer_fuse_onto(sink: &mut EngineSink<'_>, answer: &AnswerInput) -> Resu
         && ingredient.zone.z() == ZoneName::Field
     {
         let on_field = onto.zone.z() == ZoneName::Field;
-        let (target, into) = if on_field { (Some(onto), None) } else { (None, Some(onto)) };
+        let (target, into) = if on_field {
+            (Some(onto), None)
+        } else {
+            (None, Some(onto))
+        };
         fuse(
             sink,
             FuseArgs {

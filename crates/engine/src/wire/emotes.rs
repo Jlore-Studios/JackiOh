@@ -39,11 +39,21 @@ string_union! {
 }
 
 /// The five voice lines (R643).
-pub const VOICE_EMOTE_IDS: &[EmoteId] =
-    &[EmoteId::Greetings, EmoteId::WellPlayed, EmoteId::Oops, EmoteId::Thanks, EmoteId::Threaten];
+pub const VOICE_EMOTE_IDS: &[EmoteId] = &[
+    EmoteId::Greetings,
+    EmoteId::WellPlayed,
+    EmoteId::Oops,
+    EmoteId::Thanks,
+    EmoteId::Threaten,
+];
 /// The five shared animated emoji (R643).
-pub const EMOJI_EMOTE_IDS: &[EmoteId] =
-    &[EmoteId::Sob, EmoteId::Yawn, EmoteId::Laugh, EmoteId::Angry, EmoteId::WahWah];
+pub const EMOJI_EMOTE_IDS: &[EmoteId] = &[
+    EmoteId::Sob,
+    EmoteId::Yawn,
+    EmoteId::Laugh,
+    EmoteId::Angry,
+    EmoteId::WahWah,
+];
 /// `[...VOICE_EMOTE_IDS, ...EMOJI_EMOTE_IDS]`: `EmoteId`'s declaration order is exactly that.
 pub const EMOTE_IDS: &[EmoteId] = EmoteId::ALL;
 
@@ -96,7 +106,11 @@ pub fn is_portrait_id(value: &Value) -> bool {
 /// `null` means `vanilla` (R641): the column, the deck view and imports all read through this.
 pub fn portrait_or_default(portrait: Option<&str>) -> PortraitId {
     match portrait {
-        Some(text) => PORTRAIT_IDS.iter().copied().find(|id| id.as_str() == text).unwrap_or(DEFAULT_PORTRAIT),
+        Some(text) => PORTRAIT_IDS
+            .iter()
+            .copied()
+            .find(|id| id.as_str() == text)
+            .unwrap_or(DEFAULT_PORTRAIT),
         None => DEFAULT_PORTRAIT,
     }
 }
@@ -116,15 +130,48 @@ pub struct PortraitEntry {
 ///
 /// TS's `Record<PortraitId, …>`, in its key order (`PORTRAIT_IDS`'s).
 pub const PORTRAITS: &[(PortraitId, PortraitEntry)] = &[
-    (PortraitId::Vanilla, PortraitEntry { card_name: "Mr. Vanilla", flavour: "Flat, polite, unbothered" }),
-    (PortraitId::Gary, PortraitEntry { card_name: "Gary the Gambler", flavour: "Fast-talking card sharp" }),
-    (PortraitId::Timmy, PortraitEntry { card_name: "Tempo Timmy", flavour: "Hyper, rushed" }),
-    (PortraitId::Dfender, PortraitEntry { card_name: "Big D-fender", flavour: "Low, steady bodyguard" }),
+    (
+        PortraitId::Vanilla,
+        PortraitEntry {
+            card_name: "Mr. Vanilla",
+            flavour: "Flat, polite, unbothered",
+        },
+    ),
+    (
+        PortraitId::Gary,
+        PortraitEntry {
+            card_name: "Gary the Gambler",
+            flavour: "Fast-talking card sharp",
+        },
+    ),
+    (
+        PortraitId::Timmy,
+        PortraitEntry {
+            card_name: "Tempo Timmy",
+            flavour: "Hyper, rushed",
+        },
+    ),
+    (
+        PortraitId::Dfender,
+        PortraitEntry {
+            card_name: "Big D-fender",
+            flavour: "Low, steady bodyguard",
+        },
+    ),
     (
         PortraitId::Felinors,
-        PortraitEntry { card_name: "Duplicating Felinors", flavour: "Two cats talking at once" },
+        PortraitEntry {
+            card_name: "Duplicating Felinors",
+            flavour: "Two cats talking at once",
+        },
     ),
-    (PortraitId::Shredder, PortraitEntry { card_name: "Jlockeed Shredder-10", flavour: "Robot, all caps" }),
+    (
+        PortraitId::Shredder,
+        PortraitEntry {
+            card_name: "Jlockeed Shredder-10",
+            flavour: "Robot, all caps",
+        },
+    ),
 ];
 
 /// TS `PORTRAITS[id]`: the roster entry of `id` (every id has one).
@@ -140,7 +187,11 @@ pub fn pick_portrait(mut rng: impl FnMut() -> f64) -> PortraitId {
     let len = PORTRAIT_IDS.len();
     let drawn = (rng() * len as f64).floor();
     // `Math.min(length - 1, Math.floor(...))`; a negative draw (no rng gives one) lands on index 0.
-    let index = if drawn < 0.0 { 0 } else { (drawn as usize).min(len - 1) };
+    let index = if drawn < 0.0 {
+        0
+    } else {
+        (drawn as usize).min(len - 1)
+    };
     PORTRAIT_IDS.get(index).copied().unwrap_or(DEFAULT_PORTRAIT)
 }
 
@@ -205,16 +256,33 @@ pub struct EmoteGate {
 /// so the two can never disagree (R643). `sent_at` is returned pruned to the window, so a caller
 /// can keep one rolling array per player.
 pub fn emote_gate(sent_at: &[i64], now: i64) -> EmoteGate {
-    let kept: Vec<i64> = sent_at.iter().copied().filter(|at| now - at < EMOTE_WINDOW_MS).collect();
+    let kept: Vec<i64> = sent_at
+        .iter()
+        .copied()
+        .filter(|at| now - at < EMOTE_WINDOW_MS)
+        .collect();
     if let Some(&last) = kept.last()
-        && now - last < EMOTE_COOLDOWN_MS {
-            return EmoteGate { ok: false, retry_after_ms: Some(EMOTE_COOLDOWN_MS - (now - last)), sent_at: kept };
-        }
+        && now - last < EMOTE_COOLDOWN_MS
+    {
+        return EmoteGate {
+            ok: false,
+            retry_after_ms: Some(EMOTE_COOLDOWN_MS - (now - last)),
+            sent_at: kept,
+        };
+    }
     if kept.len() >= EMOTE_WINDOW_MAX {
         let oldest = kept.first().copied().unwrap_or(now);
-        return EmoteGate { ok: false, retry_after_ms: Some(EMOTE_WINDOW_MS - (now - oldest)), sent_at: kept };
+        return EmoteGate {
+            ok: false,
+            retry_after_ms: Some(EMOTE_WINDOW_MS - (now - oldest)),
+            sent_at: kept,
+        };
     }
-    EmoteGate { ok: true, retry_after_ms: None, sent_at: kept }
+    EmoteGate {
+        ok: true,
+        retry_after_ms: None,
+        sent_at: kept,
+    }
 }
 
 /// The emote a seat sends, as the server relays it to the opponent (R643).
@@ -255,9 +323,19 @@ mod tests {
 
         #[test]
         fn r643_admits_exactly_the_ten_ids_the_five_voice_lines_then_the_five_emoji() {
-            assert_eq!(ids(VOICE_EMOTE_IDS), vec!["greetings", "wellPlayed", "oops", "thanks", "threaten"]);
-            assert_eq!(ids(EMOJI_EMOTE_IDS), vec!["sob", "yawn", "laugh", "angry", "wahWah"]);
-            let both: Vec<EmoteId> = VOICE_EMOTE_IDS.iter().chain(EMOJI_EMOTE_IDS.iter()).copied().collect();
+            assert_eq!(
+                ids(VOICE_EMOTE_IDS),
+                vec!["greetings", "wellPlayed", "oops", "thanks", "threaten"]
+            );
+            assert_eq!(
+                ids(EMOJI_EMOTE_IDS),
+                vec!["sob", "yawn", "laugh", "angry", "wahWah"]
+            );
+            let both: Vec<EmoteId> = VOICE_EMOTE_IDS
+                .iter()
+                .chain(EMOJI_EMOTE_IDS.iter())
+                .copied()
+                .collect();
             assert_eq!(EMOTE_IDS.to_vec(), both);
             for id in EMOTE_IDS {
                 assert!(is_emote_id(&json!(id.as_str())), "{id}");
@@ -270,7 +348,15 @@ mod tests {
                 assert!(!is_emote_id(&json!(bad)), "{bad:?}");
             }
             // TS's `undefined` and `null` are both `Value::Null` here.
-            for not_string in [json!(null), json!(0), json!(5), json!(true), json!({}), json!([]), json!(["greetings"])] {
+            for not_string in [
+                json!(null),
+                json!(0),
+                json!(5),
+                json!(true),
+                json!({}),
+                json!([]),
+                json!(["greetings"]),
+            ] {
                 assert!(!is_emote_id(&not_string), "{not_string}");
             }
         }
@@ -283,7 +369,11 @@ mod tests {
             for id in EMOJI_EMOTE_IDS {
                 assert!(!is_voice_emote(*id), "{id}");
             }
-            let voices: Vec<EmoteId> = EMOTE_IDS.iter().copied().filter(|id| is_voice_emote(*id)).collect();
+            let voices: Vec<EmoteId> = EMOTE_IDS
+                .iter()
+                .copied()
+                .filter(|id| is_voice_emote(*id))
+                .collect();
             assert_eq!(voices, VOICE_EMOTE_IDS.to_vec());
         }
     }
@@ -293,7 +383,10 @@ mod tests {
 
         #[test]
         fn r641_holds_exactly_the_six_issue_portraits_each_with_a_card_name_and_a_flavour() {
-            assert_eq!(portrait_ids(PORTRAIT_IDS), vec!["vanilla", "gary", "timmy", "dfender", "felinors", "shredder"]);
+            assert_eq!(
+                portrait_ids(PORTRAIT_IDS),
+                vec!["vanilla", "gary", "timmy", "dfender", "felinors", "shredder"]
+            );
             let keys: Vec<PortraitId> = PORTRAITS.iter().map(|(id, _)| *id).collect();
             assert_eq!(keys, PORTRAIT_IDS.to_vec());
             for id in PORTRAIT_IDS {
@@ -353,7 +446,10 @@ mod tests {
 
         #[test]
         fn r642_pick_portrait_from_seed_is_deterministic_and_deals_each_seat_a_roster_id() {
-            assert_eq!(pick_portrait_from_seed("match-42:portrait:p1"), pick_portrait_from_seed("match-42:portrait:p1"));
+            assert_eq!(
+                pick_portrait_from_seed("match-42:portrait:p1"),
+                pick_portrait_from_seed("match-42:portrait:p1")
+            );
             let mut differ = 0;
             for i in 0..60 {
                 let p1 = pick_portrait_from_seed(&format!("match-{i}:portrait:p1"));
@@ -400,15 +496,29 @@ mod tests {
 
         #[test]
         fn r643_admits_the_first_emote_a_player_sends() {
-            assert_eq!(emote_gate(&[], 1_000), EmoteGate { ok: true, retry_after_ms: None, sent_at: vec![] });
-            assert_eq!(serde_json::to_value(emote_gate(&[], 1_000)).expect("json"), json!({ "ok": true, "sentAt": [] }));
+            assert_eq!(
+                emote_gate(&[], 1_000),
+                EmoteGate {
+                    ok: true,
+                    retry_after_ms: None,
+                    sent_at: vec![]
+                }
+            );
+            assert_eq!(
+                serde_json::to_value(emote_gate(&[], 1_000)).expect("json"),
+                json!({ "ok": true, "sentAt": [] })
+            );
         }
 
         #[test]
         fn r643_rejects_an_emote_inside_the_cooldown_with_the_time_left_to_wait() {
             assert_eq!(
                 emote_gate(&[10_000], 10_500),
-                EmoteGate { ok: false, retry_after_ms: Some(EMOTE_COOLDOWN_MS - 500), sent_at: vec![10_000] },
+                EmoteGate {
+                    ok: false,
+                    retry_after_ms: Some(EMOTE_COOLDOWN_MS - 500),
+                    sent_at: vec![10_000]
+                },
             );
         }
 
@@ -416,7 +526,11 @@ mod tests {
         fn r643_admits_an_emote_exactly_at_the_cooldown_boundary() {
             assert_eq!(
                 emote_gate(&[10_000], 10_000 + EMOTE_COOLDOWN_MS),
-                EmoteGate { ok: true, retry_after_ms: None, sent_at: vec![10_000] },
+                EmoteGate {
+                    ok: true,
+                    retry_after_ms: None,
+                    sent_at: vec![10_000]
+                },
             );
         }
 
@@ -436,7 +550,10 @@ mod tests {
             assert!(!sixth.ok);
             // The wait is the time until the window's oldest emote ages out.
             let retry = sixth.retry_after_ms.expect("a refusal carries the wait");
-            assert_eq!(retry, EMOTE_WINDOW_MS - (10_000 - sent_at.first().copied().unwrap_or(0)));
+            assert_eq!(
+                retry,
+                EMOTE_WINDOW_MS - (10_000 - sent_at.first().copied().unwrap_or(0))
+            );
             assert!(retry > 0);
             // A refused emote does not join the rolling list.
             assert_eq!(sixth.sent_at, sent_at);
@@ -447,7 +564,11 @@ mod tests {
             // At t = EMOTE_WINDOW_MS the t = 0 emote is exactly a window old: the boundary drops it.
             assert_eq!(
                 emote_gate(&[0, 18_000], 20_000),
-                EmoteGate { ok: true, retry_after_ms: None, sent_at: vec![18_000] },
+                EmoteGate {
+                    ok: true,
+                    retry_after_ms: None,
+                    sent_at: vec![18_000]
+                },
             );
         }
 
@@ -455,7 +576,14 @@ mod tests {
         fn r643_does_not_count_emotes_outside_the_window_toward_the_cap() {
             // Five recorded emotes, but the oldest has aged out: four in the window, the send is admitted.
             let gate = emote_gate(&[1_000, 16_000, 18_000, 20_000, 22_000], 24_000);
-            assert_eq!(gate, EmoteGate { ok: true, retry_after_ms: None, sent_at: vec![16_000, 18_000, 20_000, 22_000] });
+            assert_eq!(
+                gate,
+                EmoteGate {
+                    ok: true,
+                    retry_after_ms: None,
+                    sent_at: vec![16_000, 18_000, 20_000, 22_000]
+                }
+            );
         }
     }
 }

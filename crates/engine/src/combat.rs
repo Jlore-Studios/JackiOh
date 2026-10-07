@@ -30,8 +30,8 @@ use crate::config::{LANE_RESTRICTED_ATTACKS, WINDFURY_ATTACKS};
 use crate::damage::{DamageArgs, DamageFlags, DamageTarget, deal_damage};
 use crate::script::{EngineSink, TargetedWhat};
 use crate::state::{
-    CardInstance, DeclaredAttack, EngineError, Exertion, GameState, Position, Resume, WorkItem, find_instance,
-    find_instance_mut,
+    CardInstance, DeclaredAttack, EngineError, Exertion, GameState, Position, Resume, WorkItem,
+    find_instance, find_instance_mut,
 };
 use crate::wire::{GameEvent, KeywordKind, PLAYER_IDS, PlayerId, has_keyword, opponent_of};
 use crate::work::{PausedStep, WorkPlan, owe, paused as is_paused, paused_of};
@@ -302,7 +302,10 @@ fn taunt_wall(state: &GameState, attacker: &CardInstance, enemy: PlayerId) -> Ve
         .into_iter()
         .filter(|unit| {
             !carried_out_of_combat(state, unit)
-                && has_keyword(&crate::layers::unit_view(state, unit).keywords, KeywordKind::Taunt)
+                && has_keyword(
+                    &crate::layers::unit_view(state, unit).keywords,
+                    KeywordKind::Taunt,
+                )
                 && crate::restrictions::attack_restriction(
                     state,
                     attacker,
@@ -319,7 +322,11 @@ fn taunt_wall(state: &GameState, attacker: &CardInstance, enemy: PlayerId) -> Ve
 /// Steps 1 to 3 of §4.2, as the reason the attack is refused, or `Ok` when it is legal. The action
 /// layer surfaces this string as the error of an `attack` action, and `attack_targets` filters with
 /// it, so the two can never disagree.
-pub fn why_cannot_attack(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> Result<(), EngineError> {
+pub fn why_cannot_attack(
+    state: &GameState,
+    attacker: &CardInstance,
+    target: &AttackTarget,
+) -> Result<(), EngineError> {
     why_cannot_declare(state, attacker)?;
 
     // Step 2: an enemy unit, or the enemy hero.
@@ -361,7 +368,10 @@ pub fn why_cannot_attack(state: &GameState, attacker: &CardInstance, target: &At
     // already established that a sick attacker has one of the two.
     if matches!(target, DamageTarget::Hero { .. })
         && is_sick(state, attacker)
-        && !has_keyword(&crate::layers::unit_view(state, attacker).keywords, KeywordKind::Charge)
+        && !has_keyword(
+            &crate::layers::unit_view(state, attacker).keywords,
+            KeywordKind::Charge,
+        )
     {
         return Err(EngineError::new("Rush cannot hit the hero on its summon turn"));
     }
@@ -831,7 +841,11 @@ pub fn run_owed_attack(sink: &mut EngineSink<'_>, item: &WorkItem) {
 /// are parked on `state.work` too, in front of the combat — which is why the window uses
 /// `run_trap_window` rather than `triggers::dispatch_event`, whose remainder would wait *behind* the
 /// combat in the trigger queue and so fire after the damage it exists to pre-empt.
-pub fn declare_attack(sink: &mut EngineSink<'_>, attacker: &CardInstance, chosen: &AttackTarget) -> CombatResult {
+pub fn declare_attack(
+    sink: &mut EngineSink<'_>,
+    attacker: &CardInstance,
+    chosen: &AttackTarget,
+) -> CombatResult {
     let attacker = live_or_given(sink.state, attacker);
     let chosen = live_target_or_given(sink.state, chosen);
     why_cannot_attack(sink.state, &attacker, &chosen)?;
@@ -897,7 +911,11 @@ pub fn declare_attack(sink: &mut EngineSink<'_>, attacker: &CardInstance, chosen
 
     // Step 4's second sentence: the traps answer the declaration, before any damage.
     crate::traps::run_trap_window(sink, &event);
-    let since: Vec<GameEvent> = sink.events.get(at + 1..).map(<[GameEvent]>::to_vec).unwrap_or_default();
+    let since: Vec<GameEvent> = sink
+        .events
+        .get(at + 1..)
+        .map(<[GameEvent]>::to_vec)
+        .unwrap_or_default();
     queue_declaration_triggers(sink, &event, &since);
 
     if sink.state.result.is_some() {
@@ -1120,7 +1138,11 @@ pub fn run_owed_forced_run(sink: &mut EngineSink<'_>, item: &WorkItem) {
 /// enemy units in lane order and then (for "an enemy", not "an enemy Unit") the enemy hero. R53 waives
 /// position, sickness and Taunt, so none of those narrows the list; the unit restrictions do, and so
 /// does a carrier (R446): a carried Unit neither attacks nor is drawn, so no roll is spent on it.
-pub fn random_attack_targets(state: &GameState, attacker: &CardInstance, among: AttackAmong) -> Vec<AttackTarget> {
+pub fn random_attack_targets(
+    state: &GameState,
+    attacker: &CardInstance,
+    among: AttackAmong,
+) -> Vec<AttackTarget> {
     if carried_out_of_combat(state, attacker) {
         return Vec::new();
     }
@@ -1162,7 +1184,9 @@ pub fn force_attacks_random(
         let Some(live) = live_card(sink.state, attacker) else {
             return;
         };
-        if !is_active_on_field(sink.state, &live) || crate::stays::left_field_after(sink.state, since, &live.id) {
+        if !is_active_on_field(sink.state, &live)
+            || crate::stays::left_field_after(sink.state, since, &live.id)
+        {
             return;
         }
         if is_paused(sink) {
@@ -1320,7 +1344,11 @@ fn close_combat(sink: &mut EngineSink<'_>, attacker: &CardInstance, target: &Att
     let since = crate::stays::exit_mark(sink.state);
     let from = sink.events.len();
     crate::state_check::state_check(sink);
-    if crate::scripts::script_of(sink.state, &snapshot).after_attack.is_none() || sink.state.result.is_some() {
+    if crate::scripts::script_of(sink.state, &snapshot)
+        .after_attack
+        .is_none()
+        || sink.state.result.is_some()
+    {
         return;
     }
     let destroyed_ids: Vec<String> = sink.events[from.min(sink.events.len())..]
@@ -1368,7 +1396,8 @@ fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: O
     let live = find_instance(sink.state, &owed.attacker_id).cloned();
     let survived = owed.survived.unwrap_or_else(|| {
         live.as_ref().is_some_and(|live| {
-            is_active_on_field(sink.state, live) && !crate::stays::left_field_after(sink.state, owed.since, &live.id)
+            is_active_on_field(sink.state, live)
+                && !crate::stays::left_field_after(sink.state, owed.since, &live.id)
         })
     });
     let judged = OwedAfterAttack {

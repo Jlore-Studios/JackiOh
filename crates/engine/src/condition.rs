@@ -34,7 +34,12 @@ use crate::subsystems::copied_text::{running_script_of, text_face_of};
 use crate::wire::{Phase, PlayerId};
 
 /// R195: whether `viewer` sees `card` glowing yellow. Pure; calls the hook at most once.
-pub fn condition_active(state: &GameState, card: &CardInstance, viewer: PlayerId, zone: ConditionZone) -> bool {
+pub fn condition_active(
+    state: &GameState,
+    card: &CardInstance,
+    viewer: PlayerId,
+    zone: ConditionZone,
+) -> bool {
     if state.result.is_some() {
         return false;
     }

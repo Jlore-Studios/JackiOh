@@ -709,7 +709,10 @@ fn dispatch(
         let Some(met) = standing_event(sink, event, mark) else {
             continue;
         };
-        let controller = controllers.get(&live.trap.id).copied().unwrap_or(live.trap.controller);
+        let controller = controllers
+            .get(&live.trap.id)
+            .copied()
+            .unwrap_or(live.trap.controller);
         if fire_trap(sink, &live, &met, Some(controller)) {
             fired.push(live.trap.id.clone());
         }
@@ -726,7 +729,10 @@ fn controllers_of(matches: &[TrapMatch], later: Option<&LaterMoves>) -> TrapCont
     let mut out: TrapControllers = IndexMap::new();
     for trap_match in matches {
         let before = later.and_then(|moves| moves.controller_before.get(&trap_match.trap.id).copied());
-        out.insert(trap_match.trap.id.clone(), before.unwrap_or(trap_match.trap.controller));
+        out.insert(
+            trap_match.trap.id.clone(),
+            before.unwrap_or(trap_match.trap.controller),
+        );
     }
     out
 }
@@ -771,7 +777,10 @@ pub fn offer_event_to_traps(
         return ImmediateDispatch {
             fired: Vec::new(),
             paused: true,
-            owed: matches.iter().map(|trap_match| trap_match.trap.id.clone()).collect(),
+            owed: matches
+                .iter()
+                .map(|trap_match| trap_match.trap.id.clone())
+                .collect(),
             controllers,
             mark,
         };
@@ -872,7 +881,10 @@ fn window_event_of(data: &IndexMap<String, Value>) -> Option<GameEvent> {
 
 fn owed_traps_of(data: &IndexMap<String, Value>) -> Vec<String> {
     match data.get("owed").and_then(Value::as_array) {
-        Some(owed) => owed.iter().filter_map(|id| id.as_str().map(str::to_string)).collect(),
+        Some(owed) => owed
+            .iter()
+            .filter_map(|id| id.as_str().map(str::to_string))
+            .collect(),
         None => Vec::new(),
     }
 }
@@ -949,7 +961,10 @@ fn owe_window(
         "owed".to_string(),
         Value::Array(owed.iter().map(|id| Value::String(id.clone())).collect()),
     );
-    data.insert("controllers".to_string(), Value::Object(kept.into_iter().collect()));
+    data.insert(
+        "controllers".to_string(),
+        Value::Object(kept.into_iter().collect()),
+    );
     data.insert("mark".to_string(), Value::from(mark));
     let resume = Resume {
         def_id: String::new(),
@@ -989,7 +1004,10 @@ pub fn run_trap_window(sink: &mut EngineSink<'_>, event: &GameEvent) -> TrapDisp
     // A prompt already open when the window opens means the window has delivered nothing at all:
     // every matched trap is owed the event. Returning without parking would lose the whole window.
     if sink.state.pending.is_some() {
-        let owed: Vec<String> = matches.iter().map(|trap_match| trap_match.trap.id.clone()).collect();
+        let owed: Vec<String> = matches
+            .iter()
+            .map(|trap_match| trap_match.trap.id.clone())
+            .collect();
         owe_window(sink, event, &owed, &controllers, mark);
         return TrapDispatch {
             fired: Vec::new(),

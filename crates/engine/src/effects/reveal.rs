@@ -10,7 +10,6 @@
 //!
 //! Port of `packages/engine/src/effects/reveal.ts`.
 
-
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -41,7 +40,13 @@ pub fn reveal(args: RevealArgs) -> Effect {
         let Some(card) = instance_of(ctx, &spec) else {
             return;
         };
-        if !matches!(card.zone, Zone::Field { row: Row::Backrow, .. }) {
+        if !matches!(
+            card.zone,
+            Zone::Field {
+                row: Row::Backrow,
+                ..
+            }
+        ) {
             return;
         }
         let Some(mut shown) = find_instance(ctx.state, &card.id).cloned() else {

@@ -161,7 +161,9 @@ pub fn field_spells_doomed(reader: SweepReader<'_>, side: FieldSpellSide) -> Vec
             if card_type_of(reader.state, card) != CardType::FieldSpell {
                 continue;
             }
-            if unit_has(reader.state, card, KeywordKind::Indestructible) || reader_unaffected_by(&reader, card) {
+            if unit_has(reader.state, card, KeywordKind::Indestructible)
+                || reader_unaffected_by(&reader, card)
+            {
                 continue;
             }
             out.push(card.clone());

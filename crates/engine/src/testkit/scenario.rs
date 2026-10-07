@@ -155,7 +155,9 @@ use crate::wire::{
     Action, ActionBody, AttackHealth, CardDef, CardDefs, CardType, Counters, GameEvent, PLAYER_IDS, Phase,
     PlayerId, PlayerView, Position, Row, Selection, Zone, ZoneChoice, opponent_of,
 };
-use crate::zones::{LibraryPosition, MoveToZoneOptions, MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot};
+use crate::zones::{
+    LibraryPosition, MoveResult, MoveToZoneOptions, OffFieldZone, PlaceOnFieldOptions, ZoneSlot,
+};
 
 pub const DEFAULT_SEED: &str = "jackioh-harness";
 /// A mid-game board: both sides at MAX_MANA. See the file header.
@@ -504,7 +506,12 @@ fn describe_instance(state: &GameState, card: &CardInstance) -> String {
     let name = registered()
         .get(&card.def_id)
         .map(|def| def.name.as_str())
-        .or_else(|| state.transient_defs.get(&card.def_id).map(|def| def.name.as_str()))
+        .or_else(|| {
+            state
+                .transient_defs
+                .get(&card.def_id)
+                .map(|def| def.name.as_str())
+        })
         .unwrap_or("?");
     format!(
         "{} {} \"{}\"{}",
@@ -517,7 +524,10 @@ fn describe_instance(state: &GameState, card: &CardInstance) -> String {
 
 /// Every def the engine can see: the registered catalog plus this state's transient defs (Fuse).
 fn visible_defs(state: &GameState) -> Vec<&CardDef> {
-    registered().values().chain(state.transient_defs.values()).collect()
+    registered()
+        .values()
+        .chain(state.transient_defs.values())
+        .collect()
 }
 
 /// Steps 2-4 of the header's resolution order: catalog id, then §5 index, then name (exact, then
@@ -675,13 +685,22 @@ struct Placement {
 }
 
 fn row_size_of(row: Row) -> i32 {
-    if row == Row::Units { UNIT_ZONES } else { BACKROW_ZONES }
+    if row == Row::Units {
+        UNIT_ZONES
+    } else {
+        BACKROW_ZONES
+    }
 }
 
 /// §3.2: a Unit goes in the unit zones and a Field Spell, Trap or Field Trap in the backrow, so the
 /// def's type picks the row and `row` on the entry overrides it. `field` and `backrow` therefore
 /// accept the same entries: naming the list is a convenience, not a second rule.
-fn normalize_placement(state: &GameState, entry: &FieldSetup, fallback: Row, label: &str) -> Result<Placement, String> {
+fn normalize_placement(
+    state: &GameState,
+    entry: &FieldSetup,
+    fallback: Row,
+    label: &str,
+) -> Result<Placement, String> {
     let fields: FieldEntry = match entry {
         FieldSetup::Name(name) => FieldEntry {
             card: DefRef {
@@ -694,10 +713,16 @@ fn normalize_placement(state: &GameState, entry: &FieldSetup, fallback: Row, lab
     };
     let def_id = setup_def_id(state, &ref_of(field_ref(entry), label)?, label)?;
     let def = def_of(state, &def_id)?;
-    let implied = if def.type_ == CardType::Unit { Row::Units } else { Row::Backrow };
-    let row = fields
-        .row
-        .unwrap_or(if def.type_ == CardType::Spell { fallback } else { implied });
+    let implied = if def.type_ == CardType::Unit {
+        Row::Units
+    } else {
+        Row::Backrow
+    };
+    let row = fields.row.unwrap_or(if def.type_ == CardType::Spell {
+        fallback
+    } else {
+        implied
+    });
 
     if def.type_ == CardType::Spell {
         return Err(format!(
@@ -744,7 +769,9 @@ fn assign_lanes(entries: &[(Option<i32>, bool)], size: i32, label: &str) -> Resu
             continue;
         };
         if lane < 1 || lane > size {
-            return Err(format!("{label}: lane {lane} is out of range; lanes are 1..{size}"));
+            return Err(format!(
+                "{label}: lane {lane} is out of range; lanes are 1..{size}"
+            ));
         }
         if taken.contains(&lane) && !stack {
             return Err(format!(
@@ -813,7 +840,12 @@ fn place_one(sink: &mut EngineSink<'_>, player: PlayerId, entry: &Placement) -> 
     let lane = entry.lane.unwrap_or_default();
     let def = def_of(sink.state, &entry.def_id)?;
 
-    let mut card = new_instance(&mut *sink.state, &entry.def_id, player, Zone::Field { player, row, lane });
+    let mut card = new_instance(
+        &mut *sink.state,
+        &entry.def_id,
+        player,
+        Zone::Field { player, row, lane },
+    );
     if entry.entry.radiant == Some(true) {
         card.radiant = true;
     }
@@ -830,7 +862,11 @@ fn place_one(sink: &mut EngineSink<'_>, player: PlayerId, entry: &Placement) -> 
     // arriving card on top, so the pile reads top-first and the list reads bottom-first.
     let slot = ZoneSlot { player, row, lane };
     let options = PlaceOnFieldOptions {
-        stack: if entry.entry.stack == Some(true) { Some(true) } else { None },
+        stack: if entry.entry.stack == Some(true) {
+            Some(true)
+        } else {
+            None
+        },
     };
     if !crate::zones::place_on_field(&mut *sink.state, &mut card, slot, options) {
         return Err(format!(
@@ -930,19 +966,37 @@ fn place_pile(
 
 fn place_side(sink: &mut EngineSink<'_>, player: PlayerId, setup: &SideSetup) -> Result<(), String> {
     let seat = player.as_str();
-    place_pile(sink, player, OffFieldZone::Hand, setup.hand.as_deref().unwrap_or(&[]), &format!("{seat}.hand"))?;
+    place_pile(
+        sink,
+        player,
+        OffFieldZone::Hand,
+        setup.hand.as_deref().unwrap_or(&[]),
+        &format!("{seat}.hand"),
+    )?;
 
     // `field` and `backrow` are one board: each entry's row comes from its def's type (or its own
     // `row`), and lanes are then handed out per row over the whole board, `field` entries first.
     let mut placements: Vec<Placement> = Vec::new();
     for (at, entry) in setup.field.iter().flatten().enumerate() {
-        placements.push(normalize_placement(sink.state, entry, Row::Units, &format!("{seat}.field[{at}]"))?);
+        placements.push(normalize_placement(
+            sink.state,
+            entry,
+            Row::Units,
+            &format!("{seat}.field[{at}]"),
+        )?);
     }
     for (at, entry) in setup.backrow.iter().flatten().enumerate() {
-        placements.push(normalize_placement(sink.state, entry, Row::Backrow, &format!("{seat}.backrow[{at}]"))?);
+        placements.push(normalize_placement(
+            sink.state,
+            entry,
+            Row::Backrow,
+            &format!("{seat}.backrow[{at}]"),
+        )?);
     }
     for row in [Row::Units, Row::Backrow] {
-        let in_row: Vec<usize> = (0..placements.len()).filter(|&at| placements[at].row == row).collect();
+        let in_row: Vec<usize> = (0..placements.len())
+            .filter(|&at| placements[at].row == row)
+            .collect();
         let entries: Vec<(Option<i32>, bool)> = in_row
             .iter()
             .map(|&at| (placements[at].lane, placements[at].entry.stack == Some(true)))
@@ -956,9 +1010,27 @@ fn place_side(sink: &mut EngineSink<'_>, player: PlayerId, setup: &SideSetup) ->
         place_one(sink, player, entry)?;
     }
 
-    place_pile(sink, player, OffFieldZone::Library, setup.library.as_deref().unwrap_or(&[]), &format!("{seat}.library"))?;
-    place_pile(sink, player, OffFieldZone::Graveyard, setup.graveyard.as_deref().unwrap_or(&[]), &format!("{seat}.graveyard"))?;
-    place_pile(sink, player, OffFieldZone::Exile, setup.exile.as_deref().unwrap_or(&[]), &format!("{seat}.exile"))?;
+    place_pile(
+        sink,
+        player,
+        OffFieldZone::Library,
+        setup.library.as_deref().unwrap_or(&[]),
+        &format!("{seat}.library"),
+    )?;
+    place_pile(
+        sink,
+        player,
+        OffFieldZone::Graveyard,
+        setup.graveyard.as_deref().unwrap_or(&[]),
+        &format!("{seat}.graveyard"),
+    )?;
+    place_pile(
+        sink,
+        player,
+        OffFieldZone::Exile,
+        setup.exile.as_deref().unwrap_or(&[]),
+        &format!("{seat}.exile"),
+    )?;
     Ok(())
 }
 
@@ -993,7 +1065,11 @@ fn build_state(opts: &ScenarioOptions) -> Result<GameState, String> {
     let turn = match opts.turn {
         None => DEFAULT_TURN,
         Some(turn) if turn.is_finite() && turn.fract() == 0.0 && turn >= 0.0 => turn as i32,
-        Some(turn) => return Err(format!("scenario: turn must be a non-negative integer, got {turn}")),
+        Some(turn) => {
+            return Err(format!(
+                "scenario: turn must be a non-negative integer, got {turn}"
+            ));
+        }
     };
     state.active = active;
     state.turn = turn;
@@ -1070,7 +1146,9 @@ pub fn expect_throw(run: impl FnOnce()) {
 /// TS `expect(() => …).toThrow(/text/)`: the refusal's message contains `text`.
 pub fn expect_throw_with(run: impl FnOnce(), text: &str) {
     match refusal_of(run) {
-        None => panic!("expect_throw_with: the call ran through; it should have been refused with \"{text}\""),
+        None => {
+            panic!("expect_throw_with: the call ran through; it should have been refused with \"{text}\"")
+        }
         Some(message) if !message.contains(text) => {
             panic!("expect_throw_with: the refusal \"{message}\" does not contain \"{text}\"")
         }
@@ -1223,7 +1301,13 @@ impl Scenario {
             if side.backrow.iter().flatten().any(|card| card.id == id) {
                 return "field";
             }
-            if side.backrow_piles.iter().flatten().flatten().any(|card| card.id == id) {
+            if side
+                .backrow_piles
+                .iter()
+                .flatten()
+                .flatten()
+                .any(|card| card.id == id)
+            {
                 return "field";
             }
         }
@@ -1332,12 +1416,17 @@ impl Scenario {
             if def.type_ == CardType::Spell {
                 panic!("{what}: a Spell takes no zone, and zone {lane} was given");
             }
-            let row = opts
-                .row
-                .unwrap_or(if def.type_ == CardType::Unit { Row::Units } else { Row::Backrow });
+            let row = opts.row.unwrap_or(if def.type_ == CardType::Unit {
+                Row::Units
+            } else {
+                Row::Backrow
+            });
             let size = row_size_of(row);
             if lane < 1 || lane > size {
-                panic!("{what}: zone {lane} is out of range; {} lanes are 1..{size}", row.as_str());
+                panic!(
+                    "{what}: zone {lane} is out of range; {} lanes are 1..{size}",
+                    row.as_str()
+                );
             }
             zone = Some(ZoneChoice { row, lane });
         }
@@ -1345,7 +1434,11 @@ impl Scenario {
         let tributes: Option<Vec<String>> = opts.tributes.as_ref().map(|refs| {
             refs.iter()
                 .map(|reference| {
-                    or_fail(self.resolve(&CardRef::from(reference), Where::Field, &format!("{what} (tribute)")))
+                    or_fail(self.resolve(
+                        &CardRef::from(reference),
+                        Where::Field,
+                        &format!("{what} (tribute)"),
+                    ))
                 })
                 .collect()
         });
@@ -1376,7 +1469,10 @@ impl Scenario {
             CardRef::Text(text) if text == "hero" => format!("hero-{}", enemy.as_str()),
             other => or_fail(self.resolve(&other, Where::Field, "attack (target)")),
         };
-        let what = format!("attack {} → {target_id}", describe_instance(&self.current, &source));
+        let what = format!(
+            "attack {} → {target_id}",
+            describe_instance(&self.current, &source)
+        );
 
         self.action(
             ActionBody::Attack {
@@ -1422,7 +1518,11 @@ impl Scenario {
 
     pub fn end_turn(&mut self) -> &mut Scenario {
         let active = self.current.active;
-        self.action(ActionBody::EndTurn, active, &format!("endTurn for {}", active.as_str()));
+        self.action(
+            ActionBody::EndTurn,
+            active,
+            &format!("endTurn for {}", active.as_str()),
+        );
         self
     }
 
@@ -1459,7 +1559,11 @@ impl Scenario {
             let tributes: Option<Vec<String>> = opts.tributes.as_ref().map(|refs| {
                 refs.iter()
                     .map(|reference| {
-                        or_fail(self.resolve(&CardRef::from(reference), Where::Field, &format!("{what} (tribute)")))
+                        or_fail(self.resolve(
+                            &CardRef::from(reference),
+                            Where::Field,
+                            &format!("{what} (tribute)"),
+                        ))
                     })
                     .collect()
             });
@@ -1498,17 +1602,35 @@ impl Scenario {
     pub fn unit(&self, player: impl SeatRef, lane: i32) -> Option<CardInstance> {
         Scenario::check_lane("unit", Row::Units, lane);
         let player = player.seat_or(self.current.active);
-        crate::zones::card_at(&self.current, ZoneSlot { player, row: Row::Units, lane }).cloned()
+        crate::zones::card_at(
+            &self.current,
+            ZoneSlot {
+                player,
+                row: Row::Units,
+                lane,
+            },
+        )
+        .cloned()
     }
 
     pub fn backrow(&self, player: impl SeatRef, lane: i32) -> Option<CardInstance> {
         Scenario::check_lane("backrow", Row::Backrow, lane);
         let player = player.seat_or(self.current.active);
-        crate::zones::card_at(&self.current, ZoneSlot { player, row: Row::Backrow, lane }).cloned()
+        crate::zones::card_at(
+            &self.current,
+            ZoneSlot {
+                player,
+                row: Row::Backrow,
+                lane,
+            },
+        )
+        .cloned()
     }
 
     pub fn hand(&self, player: impl SeatRef) -> Vec<CardInstance> {
-        self.current.players[player.seat_or(self.current.active)].hand.clone()
+        self.current.players[player.seat_or(self.current.active)]
+            .hand
+            .clone()
     }
 
     /// `zone`: "hand", "library", "graveyard" or "exile" (TS `PileName`).
@@ -1519,14 +1641,19 @@ impl Scenario {
             "library" => side.library.clone(),
             "graveyard" => side.graveyard.clone(),
             "exile" => side.exile.clone(),
-            other => panic!("pile(): \"{other}\" is not a pile; piles are hand, library, graveyard and exile"),
+            other => {
+                panic!("pile(): \"{other}\" is not a pile; piles are hand, library, graveyard and exile")
+            }
         }
     }
 
     fn check_lane(what: &str, row: Row, lane: i32) {
         let size = row_size_of(row);
         if lane < 1 || lane > size {
-            panic!("{what}(): lane {lane} is out of range; {} lanes are 1..{size}", row.as_str());
+            panic!(
+                "{what}(): lane {lane} is out of range; {} lanes are 1..{size}",
+                row.as_str()
+            );
         }
     }
 
@@ -1638,7 +1765,10 @@ impl Scenario {
 
     /// TS `expect(() => s.step(…)).toThrow()`: the step is refused (it panics), and the scenario goes
     /// on from the state the refusal left — a refused action leaves it untouched.
-    pub fn expect_refused(&mut self, step: impl for<'a> FnOnce(&'a mut Scenario) -> &'a mut Scenario) -> &mut Scenario {
+    pub fn expect_refused(
+        &mut self,
+        step: impl for<'a> FnOnce(&'a mut Scenario) -> &'a mut Scenario,
+    ) -> &mut Scenario {
         if refusal_of(|| {
             step(&mut *self);
         })
@@ -1658,7 +1788,9 @@ impl Scenario {
         match refusal_of(|| {
             step(&mut *self);
         }) {
-            None => panic!("expect_refused_with: the step ran through; it should have been refused with \"{text}\""),
+            None => panic!(
+                "expect_refused_with: the step ran through; it should have been refused with \"{text}\""
+            ),
             Some(message) if !message.contains(text) => {
                 panic!("expect_refused_with: the refusal \"{message}\" does not contain \"{text}\"")
             }
@@ -1672,7 +1804,11 @@ impl Scenario {
 /// `state.pending.options` by `key`, then `label`, then a mode option, then the option's
 /// `instanceId`, then that instance's `defId`, then the label case-insensitively, and finally by
 /// resolving the string the way every other harness reference is resolved.
-fn to_selections(state: &GameState, selection: &Value, pending: &PendingChoice) -> Result<Vec<Selection>, String> {
+fn to_selections(
+    state: &GameState,
+    selection: &Value,
+    pending: &PendingChoice,
+) -> Result<Vec<Selection>, String> {
     match selection {
         Value::String(text) => Ok(vec![match_option(state, text, pending)?]),
         Value::Array(items) if items.is_empty() => Ok(Vec::new()),
@@ -1806,7 +1942,9 @@ mod tests {
     /// A whole §3.2 Stack pile, top-first, which `unit()` cannot give: it answers with the card on top.
     /// `state.players[p].units[lane - 1]` is the pile itself (`Pile = Vec<CardInstance>`, §10.1).
     fn pile_at(s: &Scenario, player: PlayerId, lane: usize) -> Vec<CardInstance> {
-        s.state().players[player].units[lane - 1].clone().unwrap_or_default()
+        s.state().players[player].units[lane - 1]
+            .clone()
+            .unwrap_or_default()
     }
 
     fn def_ids(cards: &[CardInstance]) -> Vec<String> {
@@ -1875,7 +2013,12 @@ mod tests {
             // §4.1: Defense Position grants Taunt and Armor +1 on top of the printed Armor 7.
             s.expect_stats(&seven, json!({ "attack": 7, "maxHealth": 7, "health": 4 }));
             assert_eq!(s.stats(&seven).armor, 8);
-            assert!(s.stats(&seven).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Taunt));
+            assert!(
+                s.stats(&seven)
+                    .keywords
+                    .iter()
+                    .any(|keyword| keyword.kind() == KeywordKind::Taunt)
+            );
             assert_eq!(s.stats(&seven).position, Position::Def);
 
             assert_eq!(def_id_at(s.backrow("p1", 1)), some("core-041"));
@@ -1887,7 +2030,8 @@ mod tests {
 
         #[test]
         fn library_0_is_the_next_card_drawn() {
-            let mut s = scenario(json!({ "p1": { "field": [anchor()], "library": ["core-056", "core-002"] } }));
+            let mut s =
+                scenario(json!({ "p1": { "field": [anchor()], "library": ["core-056", "core-002"] } }));
             s.start_turn();
             assert_eq!(def_ids(&s.hand("p1")), ["core-056"]);
             assert_eq!(def_ids(&s.pile("p1", "library")), ["core-002"]);
@@ -1895,7 +2039,9 @@ mod tests {
 
         #[test]
         fn starts_in_the_main_phase_with_the_asked_for_active_player_turn_mana_health_and_armor() {
-            let mut s = scenario(json!({ "turn": 5, "active": "p2", "p1": { "health": 12, "armor": 2 }, "p2": { "mana": 1 } }));
+            let mut s = scenario(
+                json!({ "turn": 5, "active": "p2", "p1": { "health": 12, "armor": 2 }, "p2": { "mana": 1 } }),
+            );
 
             assert_eq!(s.state().phase, Phase::Main);
             assert_eq!(s.state().active, PlayerId::P2);
@@ -1947,7 +2093,9 @@ mod tests {
             );
             expect_throw_with(
                 || {
-                    scenario(json!({ "p1": { "field": [{ "def": "core-025", "lane": 2 }, { "def": "core-056", "lane": 2 }] } }));
+                    scenario(
+                        json!({ "p1": { "field": [{ "def": "core-025", "lane": 2 }, { "def": "core-056", "lane": 2 }] } }),
+                    );
                 },
                 "two cards were given lane 2",
             );
@@ -2006,12 +2154,24 @@ mod tests {
                     "field": [{ "defId": "core-056", "lane": 2 }],
                 },
             }));
-            assert_eq!(s.hand("p1").first().map(|card| card.def_id.clone()), some("core-025"));
+            assert_eq!(
+                s.hand("p1").first().map(|card| card.def_id.clone()),
+                some("core-025")
+            );
             assert_eq!(s.hand("p1").first().map(|card| card.radiant), Some(true));
             // #21/#23 want a Radiant card sitting on top of a library.
-            assert_eq!(s.pile("p1", "library").first().map(|card| card.radiant), Some(true));
-            assert_eq!(s.pile("p1", "library").get(1).map(|card| card.radiant), Some(false));
-            assert_eq!(s.pile("p1", "graveyard").first().map(|card| card.def_id.clone()), some("core-005"));
+            assert_eq!(
+                s.pile("p1", "library").first().map(|card| card.radiant),
+                Some(true)
+            );
+            assert_eq!(
+                s.pile("p1", "library").get(1).map(|card| card.radiant),
+                Some(false)
+            );
+            assert_eq!(
+                s.pile("p1", "graveyard").first().map(|card| card.def_id.clone()),
+                some("core-005")
+            );
             assert_eq!(def_id_at(s.unit("p1", 2)), some("core-056"));
         }
 
@@ -2115,7 +2275,9 @@ mod tests {
             // The refusal names the fix: the only legal way to repeat a lane is a §3.2 pile.
             expect_throw_with(
                 || {
-                    scenario(json!({ "p1": { "field": [{ "def": "core-025", "lane": 2 }, { "def": "core-056", "lane": 2 }] } }));
+                    scenario(
+                        json!({ "p1": { "field": [{ "def": "core-025", "lane": 2 }, { "def": "core-056", "lane": 2 }] } }),
+                    );
                 },
                 "add `stack: true` to entry [1]",
             );
@@ -2130,7 +2292,9 @@ mod tests {
             // Same with a lane that names an empty zone: the card it buries goes EARLIER in the list.
             expect_throw_with(
                 || {
-                    scenario(json!({ "p1": { "field": [{ "def": "core-025", "lane": 1 }, { "def": "core-056", "stack": true, "lane": 3 }] } }));
+                    scenario(
+                        json!({ "p1": { "field": [{ "def": "core-025", "lane": 1 }, { "def": "core-056", "stack": true, "lane": 3 }] } }),
+                    );
                 },
                 "`stack: true` but lane 3 holds nothing yet",
             );
@@ -2138,7 +2302,8 @@ mod tests {
 
         #[test]
         fn b5_e21_builds_a_backrow_pile_the_later_entry_on_top_the_one_beneath_dormant_and_still_found_r13() {
-            let mut s = scenario(json!({ "p1": { "backrow": ["core-084", { "def": "core-006", "stack": true }] } }));
+            let mut s =
+                scenario(json!({ "p1": { "backrow": ["core-084", { "def": "core-006", "stack": true }] } }));
             assert_eq!(def_id_at(s.backrow("p1", 1)), some("core-006"));
             assert!(s.backrow("p1", 2).is_none());
             let beneath = s.card("core-084").clone();
@@ -2169,7 +2334,8 @@ mod tests {
                 },
             }));
 
-            let counters = |lane: i32| serde_json::to_value(s.unit("p1", lane).map(|card| card.counters)).ok();
+            let counters =
+                |lane: i32| serde_json::to_value(s.unit("p1", lane).map(|card| card.counters)).ok();
             assert_eq!(counters(1), Some(json!({ "plague": 2 })));
             assert_eq!(counters(2), Some(json!({ "grade": 3 })));
             assert_eq!(counters(3), Some(json!({})));
@@ -2226,7 +2392,9 @@ mod tests {
 
         #[test]
         fn honours_stats_override_s10_4_layer_1_r41() {
-            let mut s = scenario(json!({ "p1": { "field": [{ "defId": "core-043", "statsOverride": { "attack": 3, "health": 3 } }] } }));
+            let mut s = scenario(
+                json!({ "p1": { "field": [{ "defId": "core-043", "statsOverride": { "attack": 3, "health": 3 } }] } }),
+            );
             s.expect_stats("core-043", json!({ "attack": 3, "maxHealth": 3, "health": 3 }));
         }
 
@@ -2257,7 +2425,9 @@ mod tests {
 
         #[test]
         fn prefers_the_active_players_copy() {
-            let s = scenario(json!({ "active": "p2", "p1": { "field": ["core-025"] }, "p2": { "field": ["core-025"] } }));
+            let s = scenario(
+                json!({ "active": "p2", "p1": { "field": ["core-025"] }, "p2": { "field": ["core-025"] } }),
+            );
             assert_eq!(s.card("core-025").controller, PlayerId::P2);
         }
 
@@ -2332,7 +2502,8 @@ mod tests {
 
         #[test]
         fn throws_the_engines_own_refusal() {
-            let mut poor = scenario(json!({ "p1": { "hand": ["core-025"], "mana": 3, "field": [anchor()] } }));
+            let mut poor =
+                scenario(json!({ "p1": { "hand": ["core-025"], "mana": 3, "field": [anchor()] } }));
             poor.expect_refused_with(|s| s.play("core-025", json!({})), "more than your mana");
             // The refusal leaves the state alone: the card is still in hand and the mana unspent.
             poor.expect_in_zone("core-025", "hand").expect_mana("p1", 3);
@@ -2350,15 +2521,23 @@ mod tests {
             taken.expect_refused_with(|s| s.play("core-025", json!({ "zone": 5 })), "not open");
 
             let mut wrong = scenario(json!({ "p1": { "hand": ["core-010"], "field": [anchor()] } }));
-            wrong.expect_refused_with(|s| s.play("core-010", json!({ "zone": 1 })), "a Spell takes no zone");
+            wrong.expect_refused_with(
+                |s| s.play("core-010", json!({ "zone": 1 })),
+                "a Spell takes no zone",
+            );
 
             let mut absent = scenario(json!({ "p1": { "hand": ["core-025"], "field": [anchor()] } }));
-            absent.expect_refused_with(|s| s.play("core-056", json!({})), "nothing matching \"core-056\" is in a hand");
+            absent.expect_refused_with(
+                |s| s.play("core-056", json!({})),
+                "nothing matching \"core-056\" is in a hand",
+            );
         }
 
         #[test]
         fn refuses_a_play_on_the_other_players_turn() {
-            let mut s = scenario(json!({ "p1": { "field": [anchor()] }, "p2": { "hand": ["core-025"], "field": [anchor()] } }));
+            let mut s = scenario(
+                json!({ "p1": { "field": [anchor()] }, "p2": { "hand": ["core-025"], "field": [anchor()] } }),
+            );
             s.expect_refused_with(|s| s.play("core-025", json!({})), "not your turn");
         }
     }
@@ -2371,7 +2550,9 @@ mod tests {
             // R82: with an empty hand and its one unit exerted, p1 would have nothing but `endTurn` left
             // and the turn would auto-end under the assertion — taking the opponent's turn with it and
             // charging §2.4 fatigue to both empty libraries. The hand anchor keeps the turn open.
-            let mut s = scenario(json!({ "p1": { "field": ["core-056"], "hand": [HAND_ANCHOR] }, "p2": { "health": 20 } }));
+            let mut s = scenario(
+                json!({ "p1": { "field": ["core-056"], "hand": [HAND_ANCHOR] }, "p2": { "health": 20 } }),
+            );
             s.attack("core-056", "hero");
             // Jilliax is 3/2 with Lifesteal, so §4.4 step 8 heals p1 by the 3 it dealt.
             s.expect_health("p2", 17)
@@ -2383,7 +2564,9 @@ mod tests {
         fn resolves_a_unit_exchange_and_spends_the_exertion_s4_1_s4_3() {
             // R82 again: the second attack must be refused for having ALREADY ACTED, which it can only be
             // while it is still p1's turn (see the hero test above).
-            let mut s = scenario(json!({ "p1": { "field": ["core-025"], "hand": [HAND_ANCHOR] }, "p2": { "field": ["core-056"] } }));
+            let mut s = scenario(
+                json!({ "p1": { "field": ["core-025"], "hand": [HAND_ANCHOR] }, "p2": { "field": ["core-056"] } }),
+            );
             let target = s.unit("p2", 1).expect("p2's unit");
             s.attack("core-025", target);
             // Divine Shield eats the 7 (§4.4 step 1); the strike-back of 3 is stopped by Armor 7 (step 2).
@@ -2406,7 +2589,8 @@ mod tests {
 
         #[test]
         fn start_turn_re_starts_the_active_players_turn_turn_plus_1_mana_refresh_triggers_one_draw() {
-            let mut s = scenario(json!({ "p1": { "field": [anchor()], "library": ["core-002"], "mana": 1 } }));
+            let mut s =
+                scenario(json!({ "p1": { "field": [anchor()], "library": ["core-002"], "mana": 1 } }));
             s.start_turn();
 
             assert_eq!(s.state().active, PlayerId::P1);
@@ -2438,7 +2622,9 @@ mod tests {
         fn exertion_resets_at_the_controllers_own_turn_start_s4_1() {
             // R82: without the hand anchor the first attack auto-ends the turn, and the refusal below comes
             // back as "it is not your turn" instead of the exertion message this test is about.
-            let mut s = scenario(json!({ "p1": { "field": ["core-056"], "hand": [HAND_ANCHOR] }, "p2": { "health": 20 } }));
+            let mut s = scenario(
+                json!({ "p1": { "field": ["core-056"], "hand": [HAND_ANCHOR] }, "p2": { "health": 20 } }),
+            );
             s.attack("core-056", "hero");
             s.expect_refused_with(|s| s.attack("core-056", "hero"), "already acted");
             s.start_turn();
@@ -2481,7 +2667,10 @@ mod tests {
             // makes it vanish, which needs card scripts. Here: a live card is not "gone".
             let mut s = scenario(json!({ "p1": { "field": ["core-025", anchor()] } }));
             let unit = s.unit("p1", 1).expect("a unit in lane 1");
-            s.expect_refused_with(|s| s.expect_in_zone(unit, "gone"), "should be in gone but is in field");
+            s.expect_refused_with(
+                |s| s.expect_in_zone(unit, "gone"),
+                "should be in gone but is in field",
+            );
         }
 
         #[test]
@@ -2501,7 +2690,10 @@ mod tests {
             s.expect_events(json!(["cardPlayed", "summoned"]));
             // A subsequence, not contiguous: manaChanged sits between them in the log.
             s.expect_events(json!(["manaChanged", "summoned"]));
-            s.expect_refused_with(|s| s.expect_events(json!(["summoned", "cardPlayed"])), "not a subsequence");
+            s.expect_refused_with(
+                |s| s.expect_events(json!(["summoned", "cardPlayed"])),
+                "not a subsequence",
+            );
             s.expect_refused_with(|s| s.expect_events(json!(["gameOver"])), "not a subsequence");
         }
 
@@ -2515,7 +2707,9 @@ mod tests {
 
         #[test]
         fn unit_backrow_hand_and_pile() {
-            let s = scenario(json!({ "p1": { "hand": ["core-010"], "field": [{ "def": "core-025", "lane": 2 }], "backrow": ["core-041"] } }));
+            let s = scenario(
+                json!({ "p1": { "hand": ["core-010"], "field": [{ "def": "core-025", "lane": 2 }], "backrow": ["core-041"] } }),
+            );
             assert_eq!(def_id_at(s.unit("p1", 2)), some("core-025"));
             assert!(s.unit("p1", 1).is_none());
             assert!(s.unit("p2", 2).is_none());
@@ -2566,7 +2760,9 @@ mod tests {
             }));
             let attacker = s.unit("p1", 5).expect("p1's lane 5");
             let defender = s.unit("p2", 1).expect("p2's lane 1");
-            s.play("core-025", json!({})).attack(attacker, defender).start_turn();
+            s.play("core-025", json!({}))
+                .attack(attacker, defender)
+                .start_turn();
             s
         }
 
@@ -2615,7 +2811,9 @@ mod tests {
 
         #[test]
         fn never_leaks_the_other_sides_hand_s10_8() {
-            let s = scenario(json!({ "p1": { "hand": ["core-025"] }, "p2": { "hand": ["core-043", "core-010"] } }));
+            let s = scenario(
+                json!({ "p1": { "hand": ["core-025"] }, "p2": { "hand": ["core-043", "core-010"] } }),
+            );
             let view = serde_json::to_value(s.view("p1")).expect("a view serialises");
             assert!(view["you"]["hand"].is_array());
             assert!(!view["opponent"]["hand"].is_array());

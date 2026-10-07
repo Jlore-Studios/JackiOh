@@ -11,7 +11,7 @@ use serde_json::json;
 
 use crate::effects::transform::{book_swap_source_of, swap_book};
 use crate::prelude::json_as;
-use crate::script::{EffectContext, Effect, TriggerDef};
+use crate::script::{Effect, EffectContext, TriggerDef};
 use crate::state::CardInstance;
 use crate::wire::{GameEvent, GameEventType, ZoneName};
 
@@ -40,7 +40,9 @@ fn run_book_swap(ctx: &mut EffectContext<'_>, event: &GameEvent) -> Vec<Effect> 
     let from = book_swap_source_of(&self_)
         .map(|source| source.to_string())
         .unwrap_or_else(|| self_.def_id.clone());
-    vec![swap_book(json_as(json!({ "instanceId": self_.id, "from": from })))]
+    vec![swap_book(json_as(
+        json!({ "instanceId": self_.id, "from": from }),
+    ))]
 }
 
 /// R671: the hand triggers a card's enchantments grant it — the swap, once, unless its text prints it.

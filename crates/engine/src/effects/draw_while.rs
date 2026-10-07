@@ -42,7 +42,10 @@ pub fn draw_while(args: DrawWhileArgs) -> Effect {
             if now != asked {
                 return;
             }
-            let added = matches!(outcomes.first(), Some(DrawOutcome::Drawn) | Some(DrawOutcome::Token));
+            let added = matches!(
+                outcomes.first(),
+                Some(DrawOutcome::Drawn) | Some(DrawOutcome::Token)
+            );
             if !added || ctx.sink.state.players[player].hand.len() <= held {
                 return;
             }

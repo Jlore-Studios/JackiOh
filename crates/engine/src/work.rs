@@ -190,7 +190,10 @@ pub fn run_marks_of(data: &IndexMap<String, Value>) -> Option<RunMarks> {
     let marks = data.get(RUN_MARKS_KEY)?.as_object()?;
     Some(RunMarks {
         exits_from: number_u32(marks.get("exitsFrom")),
-        summoned: marks.get("summoned").and_then(Value::as_array).map(|ids| strings_in(ids)),
+        summoned: marks
+            .get("summoned")
+            .and_then(Value::as_array)
+            .map(|ids| strings_in(ids)),
         resolving: if marks.get("resolving").and_then(Value::as_bool) == Some(true) {
             Some(true)
         } else {
@@ -212,7 +215,10 @@ pub fn paused(sink: &EngineSink<'_>) -> bool {
 pub fn paused_of(data: &IndexMap<String, Value>) -> Option<PausedStep> {
     let step = data.get(PAUSE_KEY)?.as_object()?;
     Some(PausedStep {
-        from: step.get("from").and_then(Value::as_u64).map_or(0, |from| from as usize),
+        from: step
+            .get("from")
+            .and_then(Value::as_u64)
+            .map_or(0, |from| from as usize),
         targets: step
             .get("targets")
             .and_then(Value::as_array)
@@ -236,7 +242,10 @@ pub fn paused_of(data: &IndexMap<String, Value>) -> Option<PausedStep> {
         memo: step.get("memo").and_then(Value::as_array).cloned(),
         exits_from: number_u32(step.get("exitsFrom")),
         chosen_from: number_u32(step.get("chosenFrom")),
-        summoned: step.get("summoned").and_then(Value::as_array).map(|ids| strings_in(ids)),
+        summoned: step
+            .get("summoned")
+            .and_then(Value::as_array)
+            .map(|ids| strings_in(ids)),
         resolving: if step.get("resolving").and_then(Value::as_bool) == Some(true) {
             Some(true)
         } else {
@@ -295,7 +304,12 @@ fn noted_keys(memory: &IndexMap<String, Value>) -> Vec<String> {
 }
 
 /// Write what a card's text remembers, under its ingredient's own key (R102), and note the key.
-pub fn remember_on(memory: &mut IndexMap<String, Value>, data: &IndexMap<String, Value>, key: &str, value: Value) {
+pub fn remember_on(
+    memory: &mut IndexMap<String, Value>,
+    data: &IndexMap<String, Value>,
+    key: &str,
+    value: Value,
+) {
     memory.insert(part_memory_key(data, key), value);
     let noted: Vec<Value> = memory
         .get(REMEMBERED_KEY)

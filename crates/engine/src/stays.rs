@@ -130,10 +130,9 @@ pub fn left_field_since(events: &[GameEvent], from: usize, instance_id: &str) ->
                 instance_id: id,
                 new_instance_id,
                 ..
+            } if id == instance_id && new_instance_id != instance_id => {
+                return true;
             }
-                if id == instance_id && new_instance_id != instance_id => {
-                    return true;
-                }
             _ => {}
         }
     }
@@ -324,7 +323,10 @@ fn moved_by(event: &GameEvent) -> Vec<String> {
 /// Stack pile's top because a card the events report leaving it (`uncovered_by`) counts as moved too:
 /// it was dormant when the event happened, registering nothing (§3.2, R153), and it comes back into
 /// play the way a Reborn body does.
-pub fn moves_in<'a>(events: impl IntoIterator<Item = &'a GameEvent>, state: Option<&GameState>) -> LaterMoves {
+pub fn moves_in<'a>(
+    events: impl IntoIterator<Item = &'a GameEvent>,
+    state: Option<&GameState>,
+) -> LaterMoves {
     let mut moved: IndexSet<String> = IndexSet::new();
     let mut controller_before: IndexMap<String, PlayerId> = IndexMap::new();
     for event in events {

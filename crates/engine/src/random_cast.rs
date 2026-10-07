@@ -120,7 +120,9 @@ pub fn cast_mode_for_prompt(
         });
     }
     let own = cast_modes_of(state).iter().find(|entry| {
-        entry.player == player && entry.target_enemies && Some(entry.instance_id.as_str()) == resume_instance_id
+        entry.player == player
+            && entry.target_enemies
+            && Some(entry.instance_id.as_str()) == resume_instance_id
     });
     own.map(|_| CastPromptMode {
         random: false,

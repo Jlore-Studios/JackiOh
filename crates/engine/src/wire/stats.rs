@@ -548,7 +548,11 @@ fn to_fixed(x: f64, digits: usize) -> String {
         .chain(fraction.bytes().take(digits))
         .map(|digit| digit - b'0')
         .collect();
-    if fraction.as_bytes().get(digits).is_some_and(|digit| *digit >= b'5') {
+    if fraction
+        .as_bytes()
+        .get(digits)
+        .is_some_and(|digit| *digit >= b'5')
+    {
         let mut at = kept.len();
         loop {
             if at == 0 {
@@ -618,7 +622,11 @@ fn pad_start(text: &str, width: usize) -> String {
 /// default, `() => undefined`, is `|_| None`).
 pub fn format_card_stats(report: &CardStatsReport, name_of: impl Fn(&str) -> Option<String>) -> String {
     let mut header: Vec<String> = vec!["Card".to_string()];
-    header.extend(BREAKDOWNS.iter().map(|breakdown| BREAKDOWN_TITLES[*breakdown].to_string()));
+    header.extend(
+        BREAKDOWNS
+            .iter()
+            .map(|breakdown| BREAKDOWN_TITLES[*breakdown].to_string()),
+    );
     header.push("Played Δ".to_string());
     let rows: Vec<Vec<String>> = report
         .cards
@@ -629,7 +637,11 @@ pub fn format_card_stats(report: &CardStatsReport, name_of: impl Fn(&str) -> Opt
                 None => stats.card.clone(),
                 Some(name) => format!("{} {}", stats.card, name),
             }];
-            row.extend(BREAKDOWNS.iter().map(|breakdown| format_tally(&stats[*breakdown])));
+            row.extend(
+                BREAKDOWNS
+                    .iter()
+                    .map(|breakdown| format_tally(&stats[*breakdown])),
+            );
             row.push(format_delta(played_delta(stats)));
             row
         })
@@ -694,9 +706,11 @@ fn whole_number(value: &Value) -> Option<i64> {
 }
 
 fn ids(value: Option<&Value>, at: &str) -> Result<Vec<String>, EngineError> {
-    let list = value
-        .and_then(Value::as_array)
-        .filter(|items| items.iter().all(|item| item.as_str().is_some_and(|id| !id.is_empty())));
+    let list = value.and_then(Value::as_array).filter(|items| {
+        items
+            .iter()
+            .all(|item| item.as_str().is_some_and(|id| !id.is_empty()))
+    });
     match list {
         Some(items) => Ok(items
             .iter()
@@ -706,14 +720,21 @@ fn ids(value: Option<&Value>, at: &str) -> Result<Vec<String>, EngineError> {
     }
 }
 
-fn one_of<T: Copy + std::fmt::Display>(value: Option<&Value>, allowed: &[T], at: &str) -> Result<T, EngineError> {
+fn one_of<T: Copy + std::fmt::Display>(
+    value: Option<&Value>,
+    allowed: &[T],
+    at: &str,
+) -> Result<T, EngineError> {
     if let Some(text) = value.and_then(Value::as_str)
         && let Some(found) = allowed.iter().find(|candidate| candidate.to_string() == text)
     {
         return Ok(*found);
     }
     let names: Vec<String> = allowed.iter().map(T::to_string).collect();
-    Err(EngineError::new(format!("{at} is not one of {}", names.join(", "))))
+    Err(EngineError::new(format!(
+        "{at} is not one of {}",
+        names.join(", ")
+    )))
 }
 
 fn text(value: Option<&Value>, at: &str) -> Result<String, EngineError> {
@@ -737,7 +758,10 @@ fn seat_summary(value: Option<&Value>, at: &str) -> Result<SeatSummary, EngineEr
     if let Some(Value::Array(turns)) = record.get("playedTurns") {
         let mut out: Vec<i32> = Vec::with_capacity(turns.len());
         for (idx, turn) in turns.iter().enumerate() {
-            match whole_number(turn).filter(|t| *t >= 1).and_then(|t| i32::try_from(t).ok()) {
+            match whole_number(turn)
+                .filter(|t| *t >= 1)
+                .and_then(|t| i32::try_from(t).ok())
+            {
                 Some(turn) => out.push(turn),
                 None => {
                     return Err(EngineError::new(format!(
@@ -871,7 +895,13 @@ mod tests {
         record_won_by(Winner::P1)
     }
 
-    fn game(winner: Winner, reason: GameOverReason, turns: i32, p1: SeatSummary, p2: SeatSummary) -> GameSummary {
+    fn game(
+        winner: Winner,
+        reason: GameOverReason,
+        turns: i32,
+        p1: SeatSummary,
+        p2: SeatSummary,
+    ) -> GameSummary {
         GameSummary {
             first: PlayerId::P1,
             winner,
@@ -1147,15 +1177,7 @@ mod tests {
             assert_eq!(games(Some(GameMode::Bo1), Some("v0.2.5")), 0);
 
             // Pilots count seats: record 4's human seat holds a, its AI seat z.
-            let by_pilot = |pilot: PilotFilter| {
-                card_stats(
-                    &records,
-                    &CardStatsFilter {
-                        pilot,
-                        ..live()
-                    },
-                )
-            };
+            let by_pilot = |pilot: PilotFilter| card_stats(&records, &CardStatsFilter { pilot, ..live() });
             let human = by_pilot(PilotFilter::Human);
             assert_eq!(human.decks, 7);
             let human_cards: Vec<&str> = human.cards.iter().map(|stats| stats.card.as_str()).collect();
@@ -1195,7 +1217,10 @@ mod tests {
             let text = format_card_stats(&report, |card| names.get(card).map(|name| name.to_string()));
             let lines: Vec<&str> = text.split('\n').collect();
 
-            assert_eq!(lines[0], "Card win rates: live games, Best of 1, patch v0.1.1, human pilots.");
+            assert_eq!(
+                lines[0],
+                "Card win rates: live games, Best of 1, patch v0.1.1, human pilots."
+            );
             assert_eq!(lines[1], "1 games, 2 decks.");
             // The table starts after the blank line under the legend.
             let blank = lines.iter().position(|line| line.is_empty()).unwrap();
@@ -1210,7 +1235,15 @@ mod tests {
             // In deck, opening hand, going first, going second, played, drawn-not-played; then the delta.
             assert_eq!(
                 split_wide(alpha)[1..],
-                ["100.0% (1)", "100.0% (1)", "100.0% (1)", "— (0)", "100.0% (1)", "— (0)", "—"]
+                [
+                    "100.0% (1)",
+                    "100.0% (1)",
+                    "100.0% (1)",
+                    "— (0)",
+                    "100.0% (1)",
+                    "— (0)",
+                    "—"
+                ]
             );
             let beta = lines.iter().find(|line| line.starts_with("b ")).unwrap();
             assert_eq!(
@@ -1264,16 +1297,29 @@ mod tests {
             let json = serde_json::to_value(&written).unwrap();
             assert_eq!(parse_game_record(&json).unwrap(), written);
 
-            assert!(refusal(&with(&json, "source", json!("practice"))).contains("source is not one of live, dev"));
+            assert!(
+                refusal(&with(&json, "source", json!("practice"))).contains("source is not one of live, dev")
+            );
             assert!(refusal(&with(&json, "mode", json!("bo5"))).contains("mode"));
             assert!(refusal(&with(&json, "patch", json!(""))).contains("patch"));
-            assert!(refusal(&with(&json, "pilots", json!({ "p1": "ai", "p2": "robot" }))).contains("pilots.p2"));
+            assert!(
+                refusal(&with(&json, "pilots", json!({ "p1": "ai", "p2": "robot" }))).contains("pilots.p2")
+            );
             let game = &json["game"];
-            assert!(refusal(&with(&json, "game", with(game, "reason", json!("rage-quit")))).contains("game.reason"));
+            assert!(
+                refusal(&with(&json, "game", with(game, "reason", json!("rage-quit"))))
+                    .contains("game.reason")
+            );
             assert!(refusal(&with(&json, "game", with(game, "turns", json!(-1)))).contains("game.turns"));
-            let bad_seat = with(&serde_json::to_value(seat_default()).unwrap(), "played", json!([7]));
+            let bad_seat = with(
+                &serde_json::to_value(seat_default()).unwrap(),
+                "played",
+                json!([7]),
+            );
             let seats = with(&game["seats"], "p2", bad_seat);
-            assert!(refusal(&with(&json, "game", with(game, "seats", seats))).contains("game.seats.p2.played"));
+            assert!(
+                refusal(&with(&json, "game", with(game, "seats", seats))).contains("game.seats.p2.played")
+            );
             assert!(refusal(&json!([json])).contains("an object"));
         }
 

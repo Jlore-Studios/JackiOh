@@ -5,7 +5,6 @@
 //!
 //! Port of `packages/engine/src/effects/radiant.ts`.
 
-
 use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
 
@@ -57,7 +56,9 @@ fn instance_of(ctx: &EffectContext<'_>, args: &RadiantTarget) -> Option<CardInst
 fn hidden_from_someone(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
     match card.zone {
         Zone::Hand { .. } | Zone::Library { .. } => return true,
-        Zone::Field { row: Row::Backrow, .. } => {}
+        Zone::Field {
+            row: Row::Backrow, ..
+        } => {}
         _ => return false,
     }
     if card.face_up == Some(true) {
@@ -76,7 +77,9 @@ fn hidden_from_someone(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
 ///
 /// `card` is a snapshot; the card is read again by its id, as it stands now, and written there.
 fn make_radiant(ctx: &mut EffectContext<'_>, card: &CardInstance) -> bool {
-    let card = find_instance(ctx.state, &card.id).cloned().unwrap_or_else(|| card.clone());
+    let card = find_instance(ctx.state, &card.id)
+        .cloned()
+        .unwrap_or_else(|| card.clone());
     if card.radiant {
         if hidden_from_someone(ctx, &card) {
             ctx.events.push(GameEvent::RadiantSet {
@@ -111,7 +114,11 @@ fn gain_printed_shield(ctx: &mut EffectContext<'_>, card: &CardInstance) {
         return;
     }
     let def = def_of(Some(&*ctx.state), &card.def_id);
-    let prints = |keywords: &[Keyword]| keywords.iter().any(|keyword| matches!(keyword, Keyword::DivineShield));
+    let prints = |keywords: &[Keyword]| {
+        keywords
+            .iter()
+            .any(|keyword| matches!(keyword, Keyword::DivineShield))
+    };
     let newly = prints(def.radiant.keywords.as_slice()) && !prints(def.base.keywords.as_slice());
     if newly && let Some(live) = find_instance_mut(ctx.state, &card.id) {
         live.divine_shield_spent = None;

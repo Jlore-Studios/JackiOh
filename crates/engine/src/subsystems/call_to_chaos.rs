@@ -58,7 +58,9 @@ pub const CHAOS_CHAIN_KEY: &str = "chaosChain";
 pub fn chaos_chain_of(instance: Option<&CardInstance>) -> i32 {
     // TS: `typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.trunc(value) : 0`
     // (SURFACE §4.4.10: the bag is re-read defensively).
-    let value = instance.and_then(|card| card.memory.get(CHAOS_CHAIN_KEY)).and_then(Value::as_f64);
+    let value = instance
+        .and_then(|card| card.memory.get(CHAOS_CHAIN_KEY))
+        .and_then(Value::as_f64);
     match value {
         Some(n) if n.is_finite() && n > 0.0 => n.trunc() as i32,
         _ => 0,
@@ -229,9 +231,11 @@ pub fn discount_hand_and_library() -> Effect {
 
 /// 8. "Summon a Chaos Golem": the 10/10 token of §7 (index 95.1), placed per R64.
 pub fn summon_chaos_golem() -> Effect {
-    chaos_effect(ChaosEffectName::Golem, |_ctx| match token_def_id(CHAOS_GOLEM_INDEX) {
-        None => vec![],
-        Some(def_id) => vec![crate::effects::summon(json_as(json!({ "defId": def_id })))],
+    chaos_effect(ChaosEffectName::Golem, |_ctx| {
+        match token_def_id(CHAOS_GOLEM_INDEX) {
+            None => vec![],
+            Some(def_id) => vec![crate::effects::summon(json_as(json!({ "defId": def_id })))],
+        }
     })
 }
 
@@ -266,13 +270,19 @@ pub fn cast_random_call_to_chaos() -> Effect {
         }
 
         let pool = crate::catalog::query(&json_as(json!({ "tags": [CHAOS_TAG] })));
-        let Some(def_id) = crate::catalog::pick_generated(&mut *ctx.sink.rng, &pool, None).map(|def| def.id.clone())
+        let Some(def_id) =
+            crate::catalog::pick_generated(&mut *ctx.sink.rng, &pool, None).map(|def| def.id.clone())
         else {
             return;
         };
 
         let controller = ctx.controller;
-        let mut card = new_instance(&mut *ctx.sink.state, &def_id, controller, Zone::Resolving { player: controller });
+        let mut card = new_instance(
+            &mut *ctx.sink.state,
+            &def_id,
+            controller,
+            Zone::Resolving { player: controller },
+        );
         card.memory.insert(CHAOS_CHAIN_KEY.to_string(), json!(depth + 1));
         crate::resolve::cast_card(&mut sink_of(ctx), &card, crate::resolve::CastOptions::default());
     })
@@ -419,7 +429,11 @@ pub fn chaos_effect_by_name(name: &str) -> Option<&'static ChaosEffectDef> {
 /// were drawn in. The recursion is an entry like any other: it is rolled only when it falls among the
 /// three, and resolves where the list puts it (R87's "the recursion where it falls"). `table` is the
 /// edition's list (Core #95's by default; Classic+ #73 brings its own), so one roll serves both.
-pub fn roll_chaos_effects(rng: &mut Rng, radiant: bool, table: Option<&[ChaosEffectDef]>) -> Vec<ChaosEffectDef> {
+pub fn roll_chaos_effects(
+    rng: &mut Rng,
+    radiant: bool,
+    table: Option<&[ChaosEffectDef]>,
+) -> Vec<ChaosEffectDef> {
     let table = table.unwrap_or(CHAOS_EFFECTS);
     let wanted = if radiant { CALL_TO_CHAOS_RADIANT_EFFECTS } else { 1 };
     let count = (wanted.max(0) as usize).min(table.len());
@@ -433,7 +447,11 @@ pub fn roll_chaos_effects(rng: &mut Rng, radiant: bool, table: Option<&[ChaosEff
         }
     }
     // Names are unique within a list, so "is this entry drawn" is a name match (TS: identity).
-    table.iter().filter(|effect| drawn.contains(&effect.name)).copied().collect()
+    table
+        .iter()
+        .filter(|effect| drawn.contains(&effect.name))
+        .copied()
+        .collect()
 }
 
 /// R436: tell both players what was rolled, before any of it resolves — the rolled clauses by their
@@ -501,5 +519,9 @@ pub fn call_to_chaos(args: CallToChaosArgs) -> Effect {
 /// A roll kept across a pause (`EffectPart.memo`), read back defensively: it came through JSON.
 fn rolled_names(memo: &Memo) -> Option<Vec<String>> {
     let list = memo.as_ref()?.as_array()?;
-    Some(list.iter().filter_map(|name| name.as_str().map(str::to_string)).collect())
+    Some(
+        list.iter()
+            .filter_map(|name| name.as_str().map(str::to_string))
+            .collect(),
+    )
 }

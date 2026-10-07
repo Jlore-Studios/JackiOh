@@ -25,7 +25,11 @@ pub fn glows<T: Serialize>(card: Option<&T>) -> bool {
     let Some(active) = card.get("conditionActive") else {
         return false;
     };
-    assert_eq!(active, &Value::Bool(true), "conditionActive is present and not true");
+    assert_eq!(
+        active,
+        &Value::Bool(true),
+        "conditionActive is present and not true"
+    );
     true
 }
 
@@ -49,7 +53,11 @@ pub fn hand_glows(s: &Scenario, instance_id: &str, viewer: PlayerId) -> bool {
 /// Does the card in this backrow lane (1-based) glow in its controller's own view right now?
 pub fn backrow_glows(s: &Scenario, lane: usize, viewer: PlayerId) -> bool {
     let view = view_json(s, viewer);
-    glows(view["you"]["backrow"].as_array().and_then(|row| row.get(lane.wrapping_sub(1))))
+    glows(
+        view["you"]["backrow"]
+            .as_array()
+            .and_then(|row| row.get(lane.wrapping_sub(1))),
+    )
 }
 
 /// The other seat's view of that backrow lane: a face-down trap is a bare back, with no glow on it.

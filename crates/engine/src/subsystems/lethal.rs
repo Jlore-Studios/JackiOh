@@ -99,9 +99,11 @@ pub fn projected_damage(state: &GameState, attacker: &CardInstance, target: &Att
         return 0;
     }
     // Each hit is its own damage instance on the hero, so Armor and the cap apply to each (§4.4).
-    struck_by(state, attacker, defender).iter().fold(0, |total, unit| {
-        total + projected_hero_damage(state, hero, trample_excess(state, attacker, unit, attack), pierce)
-    })
+    struck_by(state, attacker, defender)
+        .iter()
+        .fold(0, |total, unit| {
+            total + projected_hero_damage(state, hero, trample_excess(state, attacker, unit, attack), pierce)
+        })
 }
 
 /// The units one attack on `defender` strikes: the defender, then — §4.4 step 10 — each unit

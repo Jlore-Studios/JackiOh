@@ -56,9 +56,12 @@ use crate::preview::is_face_down;
 use crate::prompts::{HookInstance, HookResumableOptions, run_hook_resumable};
 use crate::resolve::{HookOptions, make_context};
 use crate::script::{
-    ActivationDecl, ActivationUses, ConditionContext, ConditionZone, EffectContext, EngineSink, HookArgs, activation_decls, activation_hook,
+    ActivationDecl, ActivationUses, ConditionContext, ConditionZone, EffectContext, EngineSink, HookArgs,
+    activation_decls, activation_hook,
 };
-use crate::state::{CardInstance, EngineError, GameState, Resume, WorkItem, find_instance, find_instance_mut};
+use crate::state::{
+    CardInstance, EngineError, GameState, Resume, WorkItem, find_instance, find_instance_mut,
+};
 use crate::state_check::{sacrifice_together, state_check};
 use crate::stays::exit_mark;
 use crate::targeting::why_targeting_discards_unpayable;
@@ -169,7 +172,11 @@ pub fn abilities_of(state: &GameState, card: &CardInstance) -> Vec<ActivationDec
 }
 
 /// The ability an action names, or the refusal: none named picks the card's only one.
-fn find_ability(state: &GameState, card: &CardInstance, ability: Option<&str>) -> Result<ActivationDecl, EngineError> {
+fn find_ability(
+    state: &GameState,
+    card: &CardInstance,
+    ability: Option<&str>,
+) -> Result<ActivationDecl, EngineError> {
     let abilities = abilities_of(state, card);
     if abilities.is_empty() {
         return Err("that card has no Activate ability".into());
@@ -276,10 +283,13 @@ fn mark_use(state: &mut GameState, card_id: &str) {
 // ---------------------------------------------------------------------------
 
 /// B3.2 rule 4: the units a Tribute cost may take — the controller's acting units, the card too.
-fn tribute_units_for(state: &GameState, player: PlayerId, card: &CardInstance, decl: &ActivationDecl) -> Vec<CardInstance> {
-    let units: Vec<CardInstance> = active_units_of(state, player)
-        .into_iter().cloned()
-        .collect();
+fn tribute_units_for(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    decl: &ActivationDecl,
+) -> Vec<CardInstance> {
+    let units: Vec<CardInstance> = active_units_of(state, player).into_iter().cloned().collect();
     // "Tribute this" pays with the card itself, so it is not also one of the units a Tribute counts.
     // R683: a cost that excludes itself (Classic #21) never lists the card either.
     let cost = decl.cost.unwrap_or_default();
@@ -342,7 +352,9 @@ fn why_ability_unusable(
     let cost = decl.cost.unwrap_or_default();
     let mana = cost.mana.unwrap_or(0).max(0);
     if mana > side.mana.current {
-        return Err(EngineError::new(format!("that ability costs {mana}, more than your mana")));
+        return Err(EngineError::new(format!(
+            "that ability costs {mana}, more than your mana"
+        )));
     }
     let discards = cost.discard_random.unwrap_or(0).max(0);
     if discards > side.hand.len() as i32 {
@@ -413,7 +425,9 @@ fn refuse_tributes(
     let mut seen: Vec<&str> = Vec::new();
     for id in picked {
         if !legal.contains(id) {
-            return Err(EngineError::new(format!("{id} cannot be tributed for that ability")));
+            return Err(EngineError::new(format!(
+                "{id} cannot be tributed for that ability"
+            )));
         }
         if seen.contains(&id.as_str()) {
             return Err("that ability cannot tribute the same Unit twice".into());
@@ -423,14 +437,21 @@ fn refuse_tributes(
     if picked.len() as i32 == need {
         Ok(())
     } else {
-        Err(EngineError::new(format!("that ability tributes {}", plural(need, "Unit"))))
+        Err(EngineError::new(format!(
+            "that ability tributes {}",
+            plural(need, "Unit")
+        )))
     }
 }
 
 /// §9.3 "reduce refuses illegal actions itself", for everything an `activate` carries: the card and
 /// the ability (`why_cannot_activate_ability`), the targets and modes it declares (R81, R90, through the
 /// same `play_choices` rules a play is read by), and the units a Tribute cost takes.
-pub fn why_activate_refused(state: &GameState, player: PlayerId, action: &ActivateAction) -> Result<(), EngineError> {
+pub fn why_activate_refused(
+    state: &GameState,
+    player: PlayerId,
+    action: &ActivateAction,
+) -> Result<(), EngineError> {
     why_cannot_activate_ability(state, player, &action.instance_id, action.ability.as_deref())?;
     let Some(card) = find_instance(state, &action.instance_id) else {
         return Err(EngineError::new(format!("no card {}", action.instance_id)));
@@ -439,7 +460,13 @@ pub fn why_activate_refused(state: &GameState, player: PlayerId, action: &Activa
     let targets: &[Selection] = action.targets.as_deref().unwrap_or(&[]);
     let modes: &[String] = action.modes.as_deref().unwrap_or(&[]);
     why_declared_choices_refused(state, player, card, &declared_of(&decl), targets, modes)?;
-    refuse_tributes(state, player, card, &decl, action.tributes.as_deref().unwrap_or(&[]))?;
+    refuse_tributes(
+        state,
+        player,
+        card,
+        &decl,
+        action.tributes.as_deref().unwrap_or(&[]),
+    )?;
     // B5 E5, R450, R682: a declared target that costs discards needs that many other cards held —
     // the discards are random at pay time, so the action carries none.
     why_targeting_discards_unpayable(
@@ -455,7 +482,13 @@ fn unit_sets(units: &[CardInstance], size: i32) -> Vec<Vec<String>> {
     if size <= 0 {
         return vec![Vec::new()];
     }
-    fn walk(units: &[CardInstance], size: usize, from: usize, chosen: &mut Vec<String>, out: &mut Vec<Vec<String>>) {
+    fn walk(
+        units: &[CardInstance],
+        size: usize,
+        from: usize,
+        chosen: &mut Vec<String>,
+        out: &mut Vec<Vec<String>>,
+    ) {
         if chosen.len() == size {
             out.push(chosen.clone());
             return;
@@ -544,7 +577,9 @@ pub struct ActivationPaid {
 /// The units a JSON list holds, read back defensively (TS kept whatever the array held).
 fn tributed_from(raw: Option<&Value>) -> Vec<TributedUnit> {
     match raw {
-        Some(list @ Value::Array(_)) => serde_json::from_value::<Vec<TributedUnit>>(list.clone()).unwrap_or_default(),
+        Some(list @ Value::Array(_)) => {
+            serde_json::from_value::<Vec<TributedUnit>>(list.clone()).unwrap_or_default()
+        }
         _ => Vec::new(),
     }
 }
@@ -632,7 +667,9 @@ fn pay_costs(
     let random = cost.discard_random.unwrap_or(0).max(0);
     if random > 0 {
         // TS handed the context the live card; it is read again here, as it stands after the discards.
-        let live = find_instance(sink.state, &card.id).cloned().unwrap_or_else(|| card.clone());
+        let live = find_instance(sink.state, &card.id)
+            .cloned()
+            .unwrap_or_else(|| card.clone());
         let discard = discard_random(json_as(json!({ "count": random })));
         let mut ctx = make_context(
             sink,
@@ -656,7 +693,8 @@ fn pay_costs(
     run.tributed = units.iter().map(|unit| snapshot_of(sink.state, unit)).collect();
     let mut paying = units;
     if cost.tribute_self == Some(true)
-        && let Some(live) = find_instance(sink.state, &card.id).filter(|live| live.zone.z() == ZoneName::Field)
+        && let Some(live) =
+            find_instance(sink.state, &card.id).filter(|live| live.zone.z() == ZoneName::Field)
     {
         paying.push(live.clone());
     }
@@ -771,7 +809,11 @@ pub fn run_owed_activation(sink: &mut EngineSink<'_>, item: &WorkItem) {
 /// costs, run the effect. The use is counted before anything can pause, so an ability that asks has
 /// spent its use and the answer cannot buy another (as R43's power does). Not a play (rule 6): no turn
 /// log, no play counter, no `cardPlayed`.
-pub fn activate_ability(sink: &mut EngineSink<'_>, player: PlayerId, action: &ActivateAction) -> Result<(), EngineError> {
+pub fn activate_ability(
+    sink: &mut EngineSink<'_>,
+    player: PlayerId,
+    action: &ActivateAction,
+) -> Result<(), EngineError> {
     why_activate_refused(sink.state, player, action)?;
     let Some(card) = find_instance(sink.state, &action.instance_id).cloned() else {
         return Err(EngineError::new(format!("no card {}", action.instance_id)));
@@ -806,7 +848,13 @@ pub fn activate_ability(sink: &mut EngineSink<'_>, player: PlayerId, action: &Ac
         def_id: card.def_id.clone(),
         ability: decl.id.clone(),
     });
-    pay_costs(sink, &mut run, &card, &decl, action.tributes.as_deref().unwrap_or(&[]));
+    pay_costs(
+        sink,
+        &mut run,
+        &card,
+        &decl,
+        action.tributes.as_deref().unwrap_or(&[]),
+    );
     if paused(sink) {
         if sink.state.result.is_none() {
             owe_effect(sink, &run);
@@ -824,7 +872,11 @@ pub fn activate_ability(sink: &mut EngineSink<'_>, player: PlayerId, action: &Ac
 /// R384: the card's abilities as its controller's client needs them — on the controller's own view
 /// of a card acting on the field, and nowhere else (the other player reads the card's text; whether it
 /// could be used is its controller's business). `usable` is exactly whether `legal_actions` lists it.
-pub fn activation_views_for(state: &GameState, viewer: PlayerId, card: &CardInstance) -> Option<Vec<ActivationView>> {
+pub fn activation_views_for(
+    state: &GameState,
+    viewer: PlayerId,
+    card: &CardInstance,
+) -> Option<Vec<ActivationView>> {
     if card.controller != viewer || !is_acting_on_field(state, card) {
         return None;
     }
@@ -841,7 +893,9 @@ pub fn activation_views_for(state: &GameState, viewer: PlayerId, card: &CardInst
                     .map(|error| error.message);
                 let uses_left = match decl.uses {
                     ActivationUses::Unlimited => None,
-                    ActivationUses::Count(_) => Some((uses_allowed(card, decl) - uses_this_turn(state, card)).max(0)),
+                    ActivationUses::Count(_) => {
+                        Some((uses_allowed(card, decl) - uses_this_turn(state, card)).max(0))
+                    }
                 };
                 ActivationView {
                     ability: decl.id.clone(),

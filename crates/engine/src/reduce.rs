@@ -46,7 +46,9 @@ use std::ops::ControlFlow;
 
 use serde::{Deserialize, Serialize};
 
-use crate::combat::{AttackTarget, ExertionKind, attack_targets, declare_attack, has_exertion, switch_position};
+use crate::combat::{
+    AttackTarget, ExertionKind, attack_targets, declare_attack, has_exertion, switch_position,
+};
 use crate::config::{MAX_MULLIGAN_SUBSETS, NONCE_HISTORY, TIMEOUT_ANSWER_CAP, TURN_CAP_PLAYER_TURNS};
 use crate::game_over::end_game;
 use crate::modifiers::remove_modifier;
@@ -57,7 +59,9 @@ use crate::rng::Rng;
 use crate::script::EngineSink;
 use crate::scripts::flags_of;
 use crate::setup::{answer_mulligan, begin_setup, mulligan_owed, mulligan_prompt_for, why_mulligan_refused};
-use crate::state::{AppliedAction, CardInstance, EngineError, GameState, ModifierExpiry, ModifierKind, find_instance};
+use crate::state::{
+    AppliedAction, CardInstance, EngineError, GameState, ModifierExpiry, ModifierKind, find_instance,
+};
 use crate::subsystems::activate::{ActivateAction, activate_ability, activate_actions_for};
 use crate::subsystems::ai_policy::play_out_turn;
 use crate::subsystems::glitch::reset_match;
@@ -65,8 +69,8 @@ use crate::subsystems::hero_power::power_ability_of;
 use crate::triggers::{SettleOptions, settle};
 use crate::turn::{answer_draw, can_offer_draw, concede, end_turn, has_standing_draw_offer, offer_draw};
 use crate::wire::{
-    Action, ActionBody, ActionType, GameEvent, GameOverReason, NON_ACTIVE_ACTION_TYPES, PROMPT_OPEN_ACTION_TYPES,
-    Phase, PlayerId, Position, Row, Winner, opponent_of,
+    Action, ActionBody, ActionType, GameEvent, GameOverReason, NON_ACTIVE_ACTION_TYPES,
+    PROMPT_OPEN_ACTION_TYPES, Phase, PlayerId, Position, Row, Winner, opponent_of,
 };
 use crate::zones::{active_units_of, card_at, carried_units_of, slots_of};
 
@@ -141,7 +145,8 @@ fn attacker_of(state: &GameState, player: PlayerId, instance_id: &str) -> Option
     }
     carried_units_of(state, player)
         .into_iter()
-        .find(|card| card.id == instance_id).cloned()
+        .find(|card| card.id == instance_id)
+        .cloned()
 }
 
 /// The target an `attack` action names, looked up among the enemy's active units and the enemy hero
@@ -153,11 +158,17 @@ fn attack_target_of(state: &GameState, player: PlayerId, target_id: &str) -> Opt
     }
     let unit = active_units_of(state, enemy)
         .into_iter()
-        .find(|card| card.id == target_id).cloned()?;
+        .find(|card| card.id == target_id)
+        .cloned()?;
     Some(AttackTarget::Unit { instance: unit })
 }
 
-fn attack(sink: &mut EngineSink<'_>, player: PlayerId, attacker_id: &str, target_id: &str) -> Result<(), EngineError> {
+fn attack(
+    sink: &mut EngineSink<'_>,
+    player: PlayerId,
+    attacker_id: &str,
+    target_id: &str,
+) -> Result<(), EngineError> {
     let Some(attacker) = attacker_of(sink.state, player, attacker_id) else {
         return Err(EngineError::new(format!("no unit {attacker_id} you control")));
     };
@@ -184,7 +195,11 @@ fn switch_action(sink: &mut EngineSink<'_>, player: PlayerId, instance_id: &str)
 /// card rolled, and on any other card the card's only ability, as an `activate` naming none is.
 ///
 /// `action` is TS's `ActivationAction`: the `activate` or the `activatePower` body.
-fn activate_card(sink: &mut EngineSink<'_>, player: PlayerId, action: &ActionBody) -> Result<(), EngineError> {
+fn activate_card(
+    sink: &mut EngineSink<'_>,
+    player: PlayerId,
+    action: &ActionBody,
+) -> Result<(), EngineError> {
     let (instance_id, mut named, targets, modes, tributes, is_power) = match action {
         ActionBody::Activate {
             instance_id,
@@ -192,7 +207,14 @@ fn activate_card(sink: &mut EngineSink<'_>, player: PlayerId, action: &ActionBod
             targets,
             modes,
             tributes,
-        } => (instance_id.clone(), ability.clone(), targets.clone(), modes.clone(), tributes.clone(), false),
+        } => (
+            instance_id.clone(),
+            ability.clone(),
+            targets.clone(),
+            modes.clone(),
+            tributes.clone(),
+            false,
+        ),
         ActionBody::ActivatePower { instance_id, targets } => {
             (instance_id.clone(), None, targets.clone(), None, None, true)
         }
@@ -216,7 +238,10 @@ fn activate_card(sink: &mut EngineSink<'_>, player: PlayerId, action: &ActionBod
 /// ability with its choices (`activate.activateActionsFor`), a Heroic Power's rolled power among them,
 /// listed once per target it may be dragged to (R81).
 fn activation_actions(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<ActionBody> {
-    activate_actions_for(state, player, card).into_iter().map(ActionBody::from).collect()
+    activate_actions_for(state, player, card)
+        .into_iter()
+        .map(ActionBody::from)
+        .collect()
 }
 
 /// §4.1 and R49: whether this unit's own switch is on offer at all.
@@ -225,7 +250,8 @@ fn can_switch(state: &GameState, unit: &CardInstance) -> bool {
         return false;
     }
     // §4.1: Spikey Pillow can never be in Defense Position, so a unit in Attack has nowhere to go.
-    unit.position.unwrap_or(Position::Atk) == Position::Def || flags_of(state, unit).never_defense != Some(true)
+    unit.position.unwrap_or(Position::Atk) == Position::Def
+        || flags_of(state, unit).never_defense != Some(true)
 }
 
 fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError> {
@@ -292,7 +318,11 @@ fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), Engine
         }
         ActionBody::Timeout => timeout(sink, action),
         ActionBody::DisconnectExpired { player } => {
-            end_game(sink, Winner::from(opponent_of(*player)), GameOverReason::Disconnect);
+            end_game(
+                sink,
+                Winner::from(opponent_of(*player)),
+                GameOverReason::Disconnect,
+            );
             Ok(())
         }
         ActionBody::CeilingReached => {
@@ -448,7 +478,11 @@ fn turn_action_counted(state: &GameState, action: &Action) -> Option<String> {
         return None;
     }
     let rider = turn_ends_rider(state, action.player_id)?;
-    if rider.actions_left <= 0 { None } else { Some(rider.id) }
+    if rider.actions_left <= 0 {
+        None
+    } else {
+        Some(rider.id)
+    }
 }
 
 /// R456: spend one of the actions a rider leaves, once the action it counted was accepted.
@@ -479,7 +513,11 @@ fn turn_cut_due(state: &GameState) -> Option<TurnEndsRider> {
         return None;
     }
     let rider = turn_ends_rider(state, state.active)?;
-    if rider.actions_left <= 0 { Some(rider) } else { None }
+    if rider.actions_left <= 0 {
+        Some(rider)
+    } else {
+        None
+    }
 }
 
 /// R82, R456: end every turn that is due to end once the action has resolved — one an effect cut

@@ -81,7 +81,10 @@ pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance)
         }
         let log = GameLog {
             played_by_tag: by_tag,
-            last_face_up_play: side.game_log.as_ref().and_then(|log| log.last_face_up_play.clone()),
+            last_face_up_play: side
+                .game_log
+                .as_ref()
+                .and_then(|log| log.last_face_up_play.clone()),
         };
         side.game_log = Some(log);
     }

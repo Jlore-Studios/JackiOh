@@ -95,7 +95,13 @@ fn snapshot_zone(side: &SideSnapshot, slot: &ZoneSlot) -> Vec<CardInstance> {
         return side.units.get(i).cloned().flatten().unwrap_or_default();
     }
     let mut out: Vec<CardInstance> = Vec::new();
-    if let Some(carried) = side.carried.as_ref().and_then(|carried| carried.get(i)).cloned().flatten() {
+    if let Some(carried) = side
+        .carried
+        .as_ref()
+        .and_then(|carried| carried.get(i))
+        .cloned()
+        .flatten()
+    {
         out.push(carried);
     }
     if let Some(top) = side.backrow.get(i).cloned().flatten() {
@@ -172,8 +178,16 @@ fn stamp_turn_state(sink: &mut EngineSink<'_>, placement: &Placement, card_id: &
 
 /// R419: return `only`'s sides of the field to the snapshot `turns_ago` names (R562). Returns how many
 /// turns it went back, or `None` with no history, when nothing happens.
-pub fn restore_board(sink: &mut EngineSink<'_>, by: PlayerId, turns_ago: i32, only: &[PlayerId]) -> Option<i32> {
-    let sides: Vec<PlayerId> = PLAYER_IDS.into_iter().filter(|player| only.contains(player)).collect();
+pub fn restore_board(
+    sink: &mut EngineSink<'_>,
+    by: PlayerId,
+    turns_ago: i32,
+    only: &[PlayerId],
+) -> Option<i32> {
+    let sides: Vec<PlayerId> = PLAYER_IDS
+        .into_iter()
+        .filter(|player| only.contains(player))
+        .collect();
     // A copy: the fresh ids handed out below rename the stored history's cards (R227), not these.
     let snapshot: BoardSnapshot = snapshot_for(sink.state, turns_ago)?.clone();
     if sides.is_empty() {
@@ -219,14 +233,19 @@ pub fn restore_board(sink: &mut EngineSink<'_>, by: PlayerId, turns_ago: i32, on
             for card in snapshot_zone(&snapshot.sides[*player], &slot) {
                 let live = find_instance(sink.state, &card.id).cloned();
                 // R566: a card mid-play stays its play's (§10.5); its place in the snapshot is left empty.
-                if live.as_ref().is_some_and(|live| live.zone.z() == ZoneName::Resolving) {
+                if live
+                    .as_ref()
+                    .is_some_and(|live| live.zone.z() == ZoneName::Resolving)
+                {
                     continue;
                 }
                 let (from, was_face_down) = match &live {
-                    Some(standing @ CardInstance {
-                        zone: Zone::Field { player, row, .. },
-                        ..
-                    }) => (
+                    Some(
+                        standing @ CardInstance {
+                            zone: Zone::Field { player, row, .. },
+                            ..
+                        },
+                    ) => (
                         Some(*player),
                         *row == Row::Backrow && is_face_down(sink.state, standing),
                     ),
@@ -272,7 +291,10 @@ pub fn restore_board(sink: &mut EngineSink<'_>, by: PlayerId, turns_ago: i32, on
         .cloned()
         .collect();
     sink.state.homes = Some(homes_now);
-    let locks_before: Vec<RowFlags> = sides.iter().map(|player| sink.state.players[*player].locks.clone()).collect();
+    let locks_before: Vec<RowFlags> = sides
+        .iter()
+        .map(|player| sink.state.players[*player].locks.clone())
+        .collect();
     for player in &sides {
         let locks = &mut sink.state.players[*player].locks;
         locks.units = locks.units.iter().map(|_| false).collect();
@@ -351,7 +373,11 @@ pub fn restore_board(sink: &mut EngineSink<'_>, by: PlayerId, turns_ago: i32, on
         sink.state.players[*player].locks = after.clone();
         for slot in zones_of(*player) {
             let now = locked_at(&after, &slot);
-            if now != locks_before.get(at).is_some_and(|before| locked_at(before, &slot)) {
+            if now
+                != locks_before
+                    .get(at)
+                    .is_some_and(|before| locked_at(before, &slot))
+            {
                 sink.events.push(if now {
                     GameEvent::Locked {
                         player: *player,
@@ -398,7 +424,8 @@ pub fn roll_back(args: RollBackArgs) -> Effect {
         let sides: Vec<PlayerId> = PLAYER_IDS
             .into_iter()
             .filter(|player| {
-                args.sides == RollBackSides::Both || (*player == controller) == (args.sides == RollBackSides::SelfSide)
+                args.sides == RollBackSides::Both
+                    || (*player == controller) == (args.sides == RollBackSides::SelfSide)
             })
             .collect();
         restore_board(ctx, controller, args.turns_ago, &sides);

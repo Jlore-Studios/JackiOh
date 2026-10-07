@@ -23,7 +23,9 @@ use serde::{Deserialize, Serialize};
 
 use super::destroy::{DestroyArgs, destroy};
 use super::targets::{PlayerSpec, TargetSpec, instance_of, player_of, resolve_target};
-use crate::combat::{AttackAmong, AttackTarget, force_attack_own_hero, force_attacks_on, force_attacks_random};
+use crate::combat::{
+    AttackAmong, AttackTarget, force_attack_own_hero, force_attacks_on, force_attacks_random,
+};
 use crate::prompts::summoned_so_far;
 use crate::script::{Effect, EffectContext};
 use crate::state::CardInstance;
@@ -69,7 +71,11 @@ fn attackers_of(ctx: &EffectContext<'_>, side: ForcedSide) -> Vec<CardInstance> 
     }
     let first = ctx.state.active;
     let mut out: Vec<CardInstance> = active_units_of(ctx.state, first).into_iter().cloned().collect();
-    out.extend(active_units_of(ctx.state, opponent_of(first)).into_iter().cloned());
+    out.extend(
+        active_units_of(ctx.state, opponent_of(first))
+            .into_iter()
+            .cloned(),
+    );
     out
 }
 
@@ -177,17 +183,18 @@ pub fn forced_attacks(args: ForcedAttacksArgs) -> Effect {
         } else {
             None
         };
-        let attackers: Vec<CardInstance> = attackers_of(ctx, args.attackers.side.unwrap_or(ForcedSide::SelfSide))
-            .into_iter()
-            .filter(|unit| {
-                if let Some(def_id) = &args.attackers.def_id
-                    && unit.def_id != *def_id
-                {
-                    return false;
-                }
-                fresh.as_ref().is_none_or(|fresh| fresh.contains(&unit.id))
-            })
-            .collect();
+        let attackers: Vec<CardInstance> =
+            attackers_of(ctx, args.attackers.side.unwrap_or(ForcedSide::SelfSide))
+                .into_iter()
+                .filter(|unit| {
+                    if let Some(def_id) = &args.attackers.def_id
+                        && unit.def_id != *def_id
+                    {
+                        return false;
+                    }
+                    fresh.as_ref().is_none_or(|fresh| fresh.contains(&unit.id))
+                })
+                .collect();
 
         // R174, R53: the run is the list's, so its stays are the ones the list began with — the tokens
         // it summoned are on them, and a target it took off the field is gone (`force_attacks_on`).
@@ -323,7 +330,12 @@ pub fn ai_plays_out_turn(args: AiPlaysOutTurnArgs) -> Effect {
 fn settle_before_playout(ctx: &mut EffectContext<'_>) {
     // TS `const sink: SettleSink = ctx`: the same sink; the frontier it shares is the loop's count.
     let settle: &mut SettleSink<'_> = &mut ctx.sink;
-    let waiting: IndexSet<String> = settle.state.trigger_queue.iter().map(|entry| entry.id.clone()).collect();
+    let waiting: IndexSet<String> = settle
+        .state
+        .trigger_queue
+        .iter()
+        .map(|entry| entry.id.clone())
+        .collect();
     for _pass in 0..SETTLE_PASS_CAP {
         state_check(settle);
         if settle.state.result.is_some() || paused(settle) {
@@ -333,7 +345,12 @@ fn settle_before_playout(ctx: &mut EffectContext<'_>) {
         if settle.state.result.is_some() || paused(settle) {
             return;
         }
-        let Some(at) = settle.state.trigger_queue.iter().position(|entry| !waiting.contains(&entry.id)) else {
+        let Some(at) = settle
+            .state
+            .trigger_queue
+            .iter()
+            .position(|entry| !waiting.contains(&entry.id))
+        else {
             return;
         };
         let woken = settle.state.trigger_queue.remove(at);

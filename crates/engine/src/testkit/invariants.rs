@@ -78,8 +78,8 @@ use crate::config::WINDFURY_ATTACKS;
 use crate::damage::DamageTarget;
 use crate::state::{CardInstance, GameState, PendingChoice, find_instance};
 use crate::wire::{
-    ActionBody, CardType, Enchantment, GameEvent, KeywordKind, PLAYER_IDS, Phase, PlayerId, PlayerView, Selection,
-    ZoneName, has_keyword, opponent_of,
+    ActionBody, CardType, Enchantment, GameEvent, KeywordKind, PLAYER_IDS, Phase, PlayerId, PlayerView,
+    Selection, ZoneName, has_keyword, opponent_of,
 };
 
 /// I6 under the 1,000-seed gate: every this-many-th state, setup's and the last always (the monitor
@@ -133,7 +133,9 @@ struct Returned {
 
 /// R224: the cards a mulligan returned that wait in a work item for their shuffle-back: in no pile.
 fn awaiting_shuffle(state: &GameState) -> Vec<Returned> {
-    let waiting: IndexSet<String> = crate::setup::returned_awaiting_shuffle(state).into_iter().collect();
+    let waiting: IndexSet<String> = crate::setup::returned_awaiting_shuffle(state)
+        .into_iter()
+        .collect();
     let mut out: Vec<Returned> = Vec::new();
     for item in &state.work {
         let returned = item
@@ -152,7 +154,11 @@ fn awaiting_shuffle(state: &GameState) -> Vec<Returned> {
             }
             out.push(Returned {
                 id: id.to_string(),
-                def_id: card.get("defId").and_then(Value::as_str).unwrap_or_default().to_string(),
+                def_id: card
+                    .get("defId")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string(),
                 owner: card
                     .get("owner")
                     .and_then(Value::as_str)
@@ -197,22 +203,26 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
     let mut next: IndexMap<String, String> = IndexMap::new();
     let mut unread: IndexSet<String> = IndexSet::new();
     let mut ties: IndexMap<String, IndexSet<String>> = IndexMap::new();
-    let tie = |ties: &mut IndexMap<String, IndexSet<String>>, id: Option<&Value>, values: &[Option<&Value>]| {
-        let Some(id) = id.and_then(Value::as_str) else {
-            return;
+    let tie =
+        |ties: &mut IndexMap<String, IndexSet<String>>, id: Option<&Value>, values: &[Option<&Value>]| {
+            let Some(id) = id.and_then(Value::as_str) else {
+                return;
+            };
+            let tied = ties.entry(id.to_string()).or_default();
+            for def in strings_of(values) {
+                tied.insert(def);
+            }
         };
-        let tied = ties.entry(id.to_string()).or_default();
-        for def in strings_of(values) {
-            tied.insert(def);
-        }
-    };
     for event in state.applied.iter().flat_map(|entry| entry.events.iter()) {
         let value = serde_json::to_value(event).expect("a GameEvent serialises");
         walk_objects(&value, &mut |object| {
             let id = object.get("instanceId");
             let hidden_to = object.get("hiddenFrom").and_then(Value::as_array);
-            let unread_here =
-                hidden_to.is_some_and(|players| players.iter().any(|player| player.as_str() == Some(viewer.as_str())));
+            let unread_here = hidden_to.is_some_and(|players| {
+                players
+                    .iter()
+                    .any(|player| player.as_str() == Some(viewer.as_str()))
+            });
             // A card transformed where the viewer could not read it was never this viewer's to read (R177).
             tie(
                 &mut ties,
@@ -314,7 +324,9 @@ fn standing_of(
             // R11: a token that ceased to exist (it left the field, was discarded or burned) was public when
             // it went. Any other card in no pile went unseen (a Glitch's reset or boards, R676, R678) and
             // stays as hidden as it was.
-            let token = defs.iter().all(|def| crate::catalog::def_of(Some(&*state), def).token);
+            let token = defs
+                .iter()
+                .all(|def| crate::catalog::def_of(Some(&*state), def).token);
             return Some(Standing {
                 reads: token,
                 where_: "no pile (it ceased to exist)".to_string(),
@@ -338,12 +350,13 @@ fn hidden_from(state: &GameState, viewer: PlayerId) -> HiddenSet {
     let mut ids: IndexMap<String, String> = IndexMap::new();
     let mut defs: IndexMap<String, String> = IndexMap::new();
     let mut bare: IndexSet<String> = IndexSet::new();
-    let mut hide = |ids: &mut IndexMap<String, String>, id: &str, def_id: &str, where_: String, with_def: bool| {
-        ids.insert(id.to_string(), where_.clone());
-        if with_def {
-            defs.insert(def_id.to_string(), where_);
-        }
-    };
+    let mut hide =
+        |ids: &mut IndexMap<String, String>, id: &str, def_id: &str, where_: String, with_def: bool| {
+            ids.insert(id.to_string(), where_.clone());
+            if with_def {
+                defs.insert(def_id.to_string(), where_);
+            }
+        };
     let rival = opponent_of(viewer);
     if state.result.is_none() {
         for card in &state.players[rival].hand {
@@ -354,13 +367,25 @@ fn hidden_from(state: &GameState, viewer: PlayerId) -> HiddenSet {
         let side = &state.players[player];
         // R312: the owner reads a library card's definition only as `knownAs` records it, below.
         for card in &side.library {
-            hide(&mut ids, &card.id, &card.def_id, format!("{player}'s library"), true);
+            hide(
+                &mut ids,
+                &card.id,
+                &card.def_id,
+                format!("{player}'s library"),
+                true,
+            );
         }
         for card in side.backrow.iter().flatten() {
             if !face_down_to(state, card, viewer) {
                 continue;
             }
-            hide(&mut ids, &card.id, &card.def_id, format!("{player}'s face-down trap"), true);
+            hide(
+                &mut ids,
+                &card.id,
+                &card.def_id,
+                format!("{player}'s face-down trap"),
+                true,
+            );
             bare.insert(card.id.clone());
         }
         // B5 E21: the dormant cards under a backrow top keep their backrow zone, so a Trap among them is
@@ -592,7 +617,11 @@ pub fn hidden_information_violations(
     } = hidden_from(state, viewer);
 
     // The view's events are the tail of the log's, in order: line them up to find a `stolen` among them.
-    let raw: Vec<&GameEvent> = state.applied.iter().flat_map(|entry| entry.events.iter()).collect();
+    let raw: Vec<&GameEvent> = state
+        .applied
+        .iter()
+        .flat_map(|entry| entry.events.iter())
+        .collect();
     let offset = raw.len() as isize - view.events.len() as isize;
     let events: Vec<&GameEvent> = view
         .events
@@ -778,7 +807,12 @@ impl InvariantMonitor {
     }
 
     /// I1 for one unit and one would-be target set.
-    fn sick_attack(state: &GameState, unit: &CardInstance, target_ids: &[String], what: &str) -> Option<String> {
+    fn sick_attack(
+        state: &GameState,
+        unit: &CardInstance,
+        target_ids: &[String],
+        what: &str,
+    ) -> Option<String> {
         if target_ids.is_empty() {
             return None;
         }
@@ -829,7 +863,11 @@ impl InvariantMonitor {
         }
 
         // I1: only where attacks can be offered at all.
-        if state.result.is_some() || state.pending.is_some() || state.phase != Phase::Main || player != state.active {
+        if state.result.is_some()
+            || state.pending.is_some()
+            || state.phase != Phase::Main
+            || player != state.active
+        {
             return found;
         }
         for unit in crate::zones::active_units_of(state, player) {
@@ -961,7 +999,8 @@ impl InvariantMonitor {
                     }
                     let current = self.stint_of(attacker_id);
                     let previous = self.last_attack.get(attacker_id).copied();
-                    let repeat = previous.is_some_and(|previous| previous.turn == self.turn && previous.stint == current);
+                    let repeat = previous
+                        .is_some_and(|previous| previous.turn == self.turn && previous.stint == current);
                     let mark = AttackMark {
                         turn: self.turn,
                         stint: current,

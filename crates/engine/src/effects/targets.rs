@@ -31,7 +31,9 @@ pub enum TargetSpec {
     /// Fanatic), or one an enclosing scope enumerated. `transform`, `vanilla`, `setRadiant` and
     /// `steal` each grew a private `instanceId` argument for want of this; it belongs here, so every
     /// verb that takes a `TargetSpec` can name such a card without one of its own.
-    Instance { instance_id: String },
+    Instance {
+        instance_id: String,
+    },
     /// The n-th selection the play carried (R81), default the first.
     Chosen {
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -60,7 +62,11 @@ pub fn resolve_target(ctx: &EffectContext<'_>, spec: &TargetSpec) -> Option<Dama
         TargetSpec::SelfCard => {
             return self_on_its_stay(ctx).map(|instance| DamageTarget::Unit { instance });
         }
-        TargetSpec::SelfHero => return Some(DamageTarget::Hero { player: ctx.controller }),
+        TargetSpec::SelfHero => {
+            return Some(DamageTarget::Hero {
+                player: ctx.controller,
+            });
+        }
         TargetSpec::EnemyHero => {
             return Some(DamageTarget::Hero {
                 player: opponent_of(ctx.controller),
@@ -180,9 +186,9 @@ fn left_field_since(ctx: &EffectContext<'_>, instance_id: &str) -> bool {
 /// began (`ctx.exits_from`) — a card a trigger reads off the board as it resolves included.
 fn stay_mark_of(ctx: &EffectContext<'_>, instance_id: &str) -> u32 {
     let picked = ctx.chosen_from.is_some()
-        && ctx.targets.iter().any(|selection| {
-            matches!(selection, Selection::Instance { instance_id: id } if id == instance_id)
-        });
+        && ctx.targets.iter().any(
+            |selection| matches!(selection, Selection::Instance { instance_id: id } if id == instance_id),
+        );
     if picked && let Some(chosen_from) = ctx.chosen_from {
         return chosen_from;
     }

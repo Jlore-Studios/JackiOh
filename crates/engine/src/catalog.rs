@@ -22,7 +22,9 @@ use std::sync::OnceLock;
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::{GLITCH_DEF_ID, GLITCH_ODDS_DENOMINATOR, GLITCH_ODDS_PER_SYSTEM_PLAY, GRAPE_ODDS, POOL_TOKEN_TAGS};
+use crate::config::{
+    GLITCH_DEF_ID, GLITCH_ODDS_DENOMINATOR, GLITCH_ODDS_PER_SYSTEM_PLAY, GRAPE_ODDS, POOL_TOKEN_TAGS,
+};
 use crate::rng::Rng;
 use crate::state::GameState;
 use crate::wire::{
@@ -80,7 +82,9 @@ pub fn registered_catalog() -> &'static CardDefs {
 /// Tokens and cards are also reachable by their §5 index ("43", "51.1", "T-rush") — within their set,
 /// since an index is unique only there (B2.2: Core's "43" and Classic's "43" are two cards).
 pub fn def_by_index(set: SetName, index: &str) -> Option<&'static CardDef> {
-    registered().values().find(|def| def.set == set && def.index == index)
+    registered()
+        .values()
+        .find(|def| def.set == set && def.index == index)
 }
 
 /// The registered catalog's version: "0" before one is registered, and TS's default "test" while a
@@ -299,7 +303,10 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
 pub fn self_def_ids(state: Option<&GameState>, def_id: &str) -> Vec<String> {
     match fused_id_parts(state, def_id) {
         None => vec![def_id.to_string()],
-        Some(ingredients) => ingredients.iter().flat_map(|id| self_def_ids(state, id)).collect(),
+        Some(ingredients) => ingredients
+            .iter()
+            .flat_map(|id| self_def_ids(state, id))
+            .collect(),
     }
 }
 
@@ -339,7 +346,11 @@ pub fn is_digest_id(def_id: &str) -> bool {
 pub(crate) fn copy_spec(entry: &FusedIngredient) -> FusedIngredient {
     FusedIngredient {
         def_id: entry.def_id.clone(),
-        radiant: if entry.radiant == Some(true) { Some(true) } else { None },
+        radiant: if entry.radiant == Some(true) {
+            Some(true)
+        } else {
+            None
+        },
     }
 }
 
@@ -393,7 +404,11 @@ pub fn fused_id_specs(state: Option<&GameState>, def_id: &str) -> Option<Vec<Fus
 /// card's ids (`self_def_ids`) are ADDED to whatever the caller already excludes, never put in its
 /// place: a card whose text names its own exclusion keeps it when the card running that text is a
 /// fused one (R77, R102).
-pub fn excluding_def_id(state: Option<&GameState>, args: &CatalogQueryArgs, def_id: Option<&str>) -> CatalogQueryArgs {
+pub fn excluding_def_id(
+    state: Option<&GameState>,
+    args: &CatalogQueryArgs,
+    def_id: Option<&str>,
+) -> CatalogQueryArgs {
     let Some(def_id) = def_id else {
         return args.clone();
     };
@@ -457,7 +472,11 @@ pub fn query(args: &CatalogQueryArgs) -> Vec<&'static CardDef> {
         let rank_a = index_rank(&a.index);
         let rank_b = index_rank(&b.index);
         if rank_a != rank_b {
-            return if rank_a < rank_b { Ordering::Less } else { Ordering::Greater };
+            return if rank_a < rank_b {
+                Ordering::Less
+            } else {
+                Ordering::Greater
+            };
         }
         if a.index != b.index {
             return a.index.cmp(&b.index);
@@ -512,7 +531,11 @@ pub type GlitchOdds = GameState;
 /// rarity pool persists across every kind of Grape generation. One extra rng draw, only when a
 /// Grape was picked; every other pick draws exactly as before. A caller generating into a hand or a
 /// deck passes the state as `glitch`, and the pick may then become Glitch (R673).
-pub fn pick_generated<'a>(rng: &mut Rng, pool: &[&'a CardDef], glitch: Option<&GlitchOdds>) -> Option<&'a CardDef> {
+pub fn pick_generated<'a>(
+    rng: &mut Rng,
+    pool: &[&'a CardDef],
+    glitch: Option<&GlitchOdds>,
+) -> Option<&'a CardDef> {
     let picked: Option<&'a CardDef> = rng.pick(pool).copied();
     let def = match picked {
         Some(grape) if is_grape_def_id(&grape.id) => {

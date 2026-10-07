@@ -83,7 +83,8 @@ pub fn discover_from_last_board(args: DiscoverFromLastBoardArgs) -> Effect {
         let controller = ctx.controller;
         let mut options: Vec<PromptOption> = Vec::new();
         for entry in shuffled.into_iter().take(count) {
-            let Some(name) = rebuild_fused_def(&mut *ctx.state, &entry.def_id, controller).map(|def| def.name.clone())
+            let Some(name) =
+                rebuild_fused_def(&mut *ctx.state, &entry.def_id, controller).map(|def| def.name.clone())
             else {
                 continue;
             };
@@ -154,7 +155,12 @@ pub fn add_random_from_last_board(args: AddRandomFromLastBoardArgs) -> Effect {
         if pool.is_empty() || args.count < 1 {
             return;
         }
-        let picked: Vec<LastBoardEntry> = ctx.rng.shuffle(&pool).into_iter().take(args.count as usize).collect();
+        let picked: Vec<LastBoardEntry> = ctx
+            .rng
+            .shuffle(&pool)
+            .into_iter()
+            .take(args.count as usize)
+            .collect();
         for entry in picked {
             add_entry(ctx, &entry, args.cost_override);
         }

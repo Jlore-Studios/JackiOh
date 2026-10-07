@@ -43,7 +43,12 @@ fn ticked_cards(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     // `zones::active_units_of`: each unit zone's top card in lane order, then the Units its carriers
     // hold, in backrow lane order (R446).
     for lane in 0..UNIT_ZONES.max(0) as usize {
-        if let Some(top) = side.units.get(lane).and_then(|pile| pile.as_ref()).and_then(|pile| pile.first()) {
+        if let Some(top) = side
+            .units
+            .get(lane)
+            .and_then(|pile| pile.as_ref())
+            .and_then(|pile| pile.first())
+        {
             cards.push(top.clone());
         }
     }
@@ -108,7 +113,10 @@ pub fn brittle_tick(sink: &mut EngineSink<'_>, player: PlayerId) {
         if count > 0 {
             let next = (count - BRITTLE_TICK).max(0);
             if let Some(live) = find_instance_mut(sink.state, &card.id) {
-                live.brittle = Some(BrittleCounter { count: next, ..brittle });
+                live.brittle = Some(BrittleCounter {
+                    count: next,
+                    ..brittle
+                });
             }
             if !is_face_down(sink.state, &card) {
                 sink.events.push(GameEvent::CounterChanged {

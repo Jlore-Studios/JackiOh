@@ -54,7 +54,7 @@ use crate::config::{CRAFTED_CARD_COST, FUSE_COST_CAP, FUSE_MIN_INGREDIENTS, FUSE
 use crate::script::{
     ActivationDecl, AuraEntry, AuraHook, CardScripts, ConditionContext, ConditionHook, Effect, EffectApply,
     EffectContext, EffectPart, EngineSink, FlagOrCount, Hook, HookArgs, PlagueMultiplierHook, QuestBook,
-    Script, SetStat, SetStatHook, StatMod, StaticFlags, TargetCheck, TriggerDef, TriggerRun, TributeWhenHook,
+    Script, SetStat, SetStatHook, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef, TriggerRun,
     WouldCounterHook, aura_hook, condition_hook, hook, read_hook, target_check, would_counter_hook,
 };
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
@@ -195,14 +195,22 @@ fn union_refs(defs: &[CardDef]) -> Option<Vec<String>> {
             seen.insert(reference.clone());
         }
     }
-    if seen.is_empty() { None } else { Some(seen.into_iter().collect()) }
+    if seen.is_empty() {
+        None
+    } else {
+        Some(seen.into_iter().collect())
+    }
 }
 
 /// A stat the fused face has only if some ingredient had it: two fused Spells or Traps keep a face
 /// with no attack and no health rather than gaining a printed 0/0 (§5, `CardFace`).
 fn sum_defined(values: impl IntoIterator<Item = Option<i32>>) -> Option<i32> {
     let defined: Vec<i32> = values.into_iter().flatten().collect();
-    if defined.is_empty() { None } else { Some(defined.iter().sum()) }
+    if defined.is_empty() {
+        None
+    } else {
+        Some(defined.iter().sum())
+    }
 }
 
 /// One ingredient's face as its instance wears it. §7 and R175: a token summoned X/X carries its X as
@@ -254,7 +262,10 @@ fn fused_face(ingredients: &[CardInstance], defs: &[CardDef], radiant: bool, for
         .collect();
     let attack = sum_defined(faces.iter().map(|face| face.attack));
     let health = sum_defined(faces.iter().map(|face| face.health));
-    let keywords: Vec<Keyword> = faces.iter().flat_map(|face| face.keywords.iter().cloned()).collect();
+    let keywords: Vec<Keyword> = faces
+        .iter()
+        .flat_map(|face| face.keywords.iter().cloned())
+        .collect();
     CardFace {
         type_: None,
         attack,
@@ -279,7 +290,11 @@ fn fused_face(ingredients: &[CardInstance], defs: &[CardDef], radiant: bool, for
 fn fused_type(defs: &[CardDef], target_def: Option<&CardDef>) -> CardType {
     let types: Vec<CardType> = defs.iter().map(|def| def.type_).collect();
     let first = types.first().copied().unwrap_or(CardType::Unit);
-    let shared = if types.iter().all(|t| *t == first) { Some(first) } else { None };
+    let shared = if types.iter().all(|t| *t == first) {
+        Some(first)
+    } else {
+        None
+    };
     let base = target_def.map(|def| def.type_).or(shared).unwrap_or(first);
     if (base == CardType::Trap || base == CardType::FieldTrap) && types.contains(&CardType::FieldTrap) {
         return CardType::FieldTrap;
@@ -354,7 +369,11 @@ fn next_transient_id(state: &GameState, specs: &[FusedIngredient]) -> String {
     if body.encode_utf16().count() <= FUSED_ID_CAP {
         format!("t-{n}:{body}")
     } else {
-        format!("t-{n}:{}{}", crate::catalog::FUSED_DIGEST_MARK, fused_digest(&body))
+        format!(
+            "t-{n}:{}{}",
+            crate::catalog::FUSED_DIGEST_MARK,
+            fused_digest(&body)
+        )
     }
 }
 
@@ -402,19 +421,31 @@ pub fn fused_ingredients(state: &GameState, def_id: &str) -> Option<Vec<String>>
         .into_iter()
         .map(|spec| spec.def_id)
         .collect();
-    if parts.len() >= FUSE_MIN_INGREDIENTS { Some(parts) } else { None }
+    if parts.len() >= FUSE_MIN_INGREDIENTS {
+        Some(parts)
+    } else {
+        None
+    }
 }
 
 /// R179, R468, R469: `fused_ingredients` with each ingredient's Radiant mark.
 pub fn fused_ingredient_specs(state: &GameState, def_id: &str) -> Option<Vec<FusedIngredient>> {
     let specs = crate::catalog::fused_id_specs(Some(state), def_id)?;
-    if specs.len() >= FUSE_MIN_INGREDIENTS { Some(specs) } else { None }
+    if specs.len() >= FUSE_MIN_INGREDIENTS {
+        Some(specs)
+    } else {
+        None
+    }
 }
 
 /// E36: a fused definition's lines of code are its ingredients' sum, absent when none has any.
 fn summed_loc(defs: &[CardDef]) -> Option<i32> {
     let counted: Vec<i32> = defs.iter().filter_map(|def| def.loc).collect();
-    if counted.is_empty() { None } else { Some(counted.iter().sum()) }
+    if counted.is_empty() {
+        None
+    } else {
+        Some(counted.iter().sum())
+    }
 }
 
 fn build_def(
@@ -431,7 +462,11 @@ fn build_def(
         .enumerate()
         .map(|(at, def)| FusedIngredient {
             def_id: def.id.clone(),
-            radiant: if forced.get(at) == Some(&true) { Some(true) } else { None },
+            radiant: if forced.get(at) == Some(&true) {
+                Some(true)
+            } else {
+                None
+            },
         })
         .collect();
     let id = match fixed_id {
@@ -609,7 +644,8 @@ fn fused_aura(faces: &[Face]) -> Option<AuraHook> {
             let Some(aura) = aura else {
                 continue;
             };
-            let recorded = crate::scripts::ingredients_of(args.self_).is_some_and(|records| records.len() > index);
+            let recorded =
+                crate::scripts::ingredients_of(args.self_).is_some_and(|records| records.len() > index);
             if !recorded {
                 out.extend(aura(args));
                 continue;
@@ -891,7 +927,10 @@ fn combine_target_checks(records: &[Script]) -> IndexMap<&'static str, TargetChe
             }
             let mut out = IndexMap::new();
             for key in keys {
-                let checks: Vec<TargetCheck> = defined.iter().filter_map(|table| table.get(key).cloned()).collect();
+                let checks: Vec<TargetCheck> = defined
+                    .iter()
+                    .filter_map(|table| table.get(key).cloned())
+                    .collect();
                 if !checks.is_empty() {
                     out.insert(key, combined_checks(checks));
                 }
@@ -904,7 +943,11 @@ fn combine_target_checks(records: &[Script]) -> IndexMap<&'static str, TargetChe
 /// A flag of the combined static flags: true when any ingredient set it (TS `combineValues` on booleans).
 fn any_flag(values: impl IntoIterator<Item = Option<bool>>) -> Option<bool> {
     let defined: Vec<bool> = values.into_iter().flatten().collect();
-    if defined.is_empty() { None } else { Some(defined.iter().any(|flag| *flag)) }
+    if defined.is_empty() {
+        None
+    } else {
+        Some(defined.iter().any(|flag| *flag))
+    }
 }
 
 /// A number of the combined static flags: the larger, which is the one stricter requirement rather
@@ -932,7 +975,11 @@ fn summed_count(values: impl IntoIterator<Item = Option<FlagOrCount>>) -> Option
 /// `summed_count` for a flag that holds only a number (`echoGrant`).
 fn summed_number(values: impl IntoIterator<Item = Option<i32>>) -> Option<i32> {
     let defined: Vec<i32> = values.into_iter().flatten().collect();
-    if defined.is_empty() { None } else { Some(defined.iter().sum()) }
+    if defined.is_empty() {
+        None
+    } else {
+        Some(defined.iter().sum())
+    }
 }
 
 /// `staticFlags`, a nested object, combined key by key by the same rules: a flag is true when any
@@ -990,7 +1037,10 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
 /// quests and the rewards are the lists in order, and `first`, a string, is the last ingredient's
 /// (TS: "nothing in `Script` mixes kinds under one key; the last ingredient wins").
 fn combine_quests(records: &[Script]) -> Option<QuestBook> {
-    let defined: Vec<&QuestBook> = records.iter().filter_map(|record| record.quests.as_ref()).collect();
+    let defined: Vec<&QuestBook> = records
+        .iter()
+        .filter_map(|record| record.quests.as_ref())
+        .collect();
     match defined.len() {
         0 => None,
         1 => Some(defined[0].clone()),
@@ -1180,7 +1230,10 @@ fn in_trigger_ingredient(trigger: &TriggerDef, index: usize) -> TriggerRun {
 /// printed stats, so a fusion of two set-stat cards sums what they set, and a stat only one of them
 /// sets is that one's.
 fn fused_set_stat(scripts: &[&Script]) -> Option<SetStatHook> {
-    let fns: Vec<SetStatHook> = scripts.iter().filter_map(|script| script.set_stat.clone()).collect();
+    let fns: Vec<SetStatHook> = scripts
+        .iter()
+        .filter_map(|script| script.set_stat.clone())
+        .collect();
     match fns.len() {
         0 => None,
         1 => fns.into_iter().next(),
@@ -1214,18 +1267,21 @@ fn fused_plague_multiplier(scripts: &[&Script]) -> Option<PlagueMultiplierHook> 
         return None;
     }
     Some(read_hook(move |args| {
-        hooks.iter().enumerate().fold(1, |product, (index, multiplier)| match multiplier {
-            None => product,
-            Some(multiplier) => {
-                let card = crate::scripts::as_ingredient(args.self_, index);
-                product
-                    * multiplier(HookArgs {
-                        state: args.state,
-                        self_: &card,
-                        radiant: args.radiant,
-                    })
-            }
-        })
+        hooks
+            .iter()
+            .enumerate()
+            .fold(1, |product, (index, multiplier)| match multiplier {
+                None => product,
+                Some(multiplier) => {
+                    let card = crate::scripts::as_ingredient(args.self_, index);
+                    product
+                        * multiplier(HookArgs {
+                            state: args.state,
+                            self_: &card,
+                            radiant: args.radiant,
+                        })
+                }
+            })
     }))
 }
 
@@ -1284,7 +1340,9 @@ fn fused_cry(faces: &[Face]) -> Option<Hook> {
         let decls_of: Vec<Vec<TargetDecl>> = faces
             .iter()
             .enumerate()
-            .map(|(index, face)| crate::play_choices::active_target_decls(&face.script.targets, &modes_of[index]))
+            .map(|(index, face)| {
+                crate::play_choices::active_target_decls(&face.script.targets, &modes_of[index])
+            })
             .collect();
         let decls: Vec<TargetDecl> = decls_of.iter().flatten().cloned().collect();
         let stored = crate::play_choices::stored_declaration_slices(&ctx.data);
@@ -1365,7 +1423,10 @@ fn cut_slices(selections: &[Selection], lengths: &[usize]) -> Vec<Vec<Selection>
 /// (the fused instance as `self`, the face it runs), and only an answer of exactly `true` counts,
 /// as `conditionActive` counts it. One hooked ingredient's hook is the fusion's unchanged.
 fn fused_condition_met(scripts: &[&Script]) -> Option<ConditionHook> {
-    let hooks: Vec<ConditionHook> = scripts.iter().filter_map(|script| script.condition_met.clone()).collect();
+    let hooks: Vec<ConditionHook> = scripts
+        .iter()
+        .filter_map(|script| script.condition_met.clone())
+        .collect();
     match hooks.len() {
         0 => None,
         1 => hooks.into_iter().next(),
@@ -1375,7 +1436,10 @@ fn fused_condition_met(scripts: &[&Script]) -> Option<ConditionHook> {
 
 /// R403, R102: a fusion carries every ingredient's "When …, Tribute this", so any one that holds takes it.
 fn fused_tribute_when(scripts: &[&Script]) -> Option<TributeWhenHook> {
-    let hooks: Vec<TributeWhenHook> = scripts.iter().filter_map(|script| script.tribute_when.clone()).collect();
+    let hooks: Vec<TributeWhenHook> = scripts
+        .iter()
+        .filter_map(|script| script.tribute_when.clone())
+        .collect();
     if hooks.len() <= 1 {
         return hooks.into_iter().next();
     }
@@ -1384,16 +1448,26 @@ fn fused_tribute_when(scripts: &[&Script]) -> Option<TributeWhenHook> {
 
 /// R667, R102: a fusion carries every ingredient's counter trigger, so it would counter what any of them would.
 fn fused_would_counter(scripts: &[&Script]) -> Option<WouldCounterHook> {
-    let hooks: Vec<WouldCounterHook> = scripts.iter().filter_map(|script| script.would_counter.clone()).collect();
+    let hooks: Vec<WouldCounterHook> = scripts
+        .iter()
+        .filter_map(|script| script.would_counter.clone())
+        .collect();
     if hooks.len() <= 1 {
         return hooks.into_iter().next();
     }
-    Some(would_counter_hook(move |args| hooks.iter().any(|hook| hook(args))))
+    Some(would_counter_hook(move |args| {
+        hooks.iter().any(|hook| hook(args))
+    }))
 }
 
 /// One form's script of a fusion: each ingredient's script on that form — or on its Radiant form
 /// whichever form this is, for an ingredient that went in on it (R469) — combined member by member.
-fn fused_script(state: &GameState, specs: &[FusedIngredient], radiant: bool, seen: &IndexSet<String>) -> Script {
+fn fused_script(
+    state: &GameState,
+    specs: &[FusedIngredient],
+    radiant: bool,
+    seen: &IndexSet<String>,
+) -> Script {
     let faces: Vec<Face> = specs
         .iter()
         .map(|spec| Face {
@@ -1430,12 +1504,20 @@ fn fused_specs(state: &GameState, def_id: &str) -> Option<Vec<FusedIngredient>> 
         .transient_defs
         .get(def_id)
         .and_then(|def| def.ingredients.as_ref())
-        .map(|list| list.iter().map(crate::catalog::copy_spec).collect::<Vec<FusedIngredient>>());
+        .map(|list| {
+            list.iter()
+                .map(crate::catalog::copy_spec)
+                .collect::<Vec<FusedIngredient>>()
+        });
     let specs = match from_def {
         Some(specs) => specs,
         None => crate::catalog::fused_id_specs(Some(state), def_id)?,
     };
-    if specs.len() >= FUSE_MIN_INGREDIENTS { Some(specs) } else { None }
+    if specs.len() >= FUSE_MIN_INGREDIENTS {
+        Some(specs)
+    } else {
+        None
+    }
 }
 
 /// The script an ingredient runs on one form: a fused ingredient's composed here on that form, its
@@ -1462,7 +1544,12 @@ fn face_for(state: &GameState, def_id: &str, radiant: bool, seen: &IndexSet<Stri
 }
 
 /// TS `{ base: fusedScript(from, false), radiant: fusedScript(from, true) }`, with `def_id` marked seen.
-fn compose_specs(state: &GameState, def_id: &str, specs: &[FusedIngredient], seen: &IndexSet<String>) -> CardScripts {
+fn compose_specs(
+    state: &GameState,
+    def_id: &str,
+    specs: &[FusedIngredient],
+    seen: &IndexSet<String>,
+) -> CardScripts {
     let mut inside = seen.clone();
     inside.insert(def_id.to_string());
     CardScripts {
@@ -1481,7 +1568,11 @@ pub fn compose_fused_scripts(state: &GameState, def: &CardDef) -> CardScripts {
     let own = def
         .ingredients
         .as_ref()
-        .map(|list| list.iter().map(crate::catalog::copy_spec).collect::<Vec<FusedIngredient>>())
+        .map(|list| {
+            list.iter()
+                .map(crate::catalog::copy_spec)
+                .collect::<Vec<FusedIngredient>>()
+        })
         .filter(|specs| specs.len() >= FUSE_MIN_INGREDIENTS);
     let specs = match own {
         Some(specs) => specs,
@@ -1593,7 +1684,9 @@ fn keep_instance(
         }
         crate::zones::cease_to_exist(state, &mut card.clone());
     }
-    find_instance(state, &kept.id).cloned().unwrap_or_else(|| kept.clone())
+    find_instance(state, &kept.id)
+        .cloned()
+        .unwrap_or_else(|| kept.clone())
 }
 
 /// §5.2: "newly gained keywords apply at once". The fused face can print a keyword the kept card's
@@ -1623,7 +1716,10 @@ fn gain_printed_keywords(kept: &mut CardInstance, before: &CardDef, after: &Card
 /// tuning summed (`tuning::sum_tunings`) and their enchantments united. A Brittle count is a counter,
 /// which a Fuse keeps only on the kept card as it keeps its other counters (R77).
 fn carry_instance_data(card: &mut CardInstance, ingredients: &[CardInstance]) {
-    let tunings: Vec<_> = ingredients.iter().map(|ingredient| ingredient.tuning.clone()).collect();
+    let tunings: Vec<_> = ingredients
+        .iter()
+        .map(|ingredient| ingredient.tuning.clone())
+        .collect();
     card.tuning = crate::tuning::sum_tunings(&tunings);
     card.enchantments = crate::enchantments::united_enchantments(ingredients);
 }
@@ -1747,7 +1843,10 @@ pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
         .unwrap_or_default()
         .into_iter()
         .collect();
-    let forced: Vec<bool> = ingredients.iter().map(|card| radiant_ids.contains(&card.id)).collect();
+    let forced: Vec<bool> = ingredients
+        .iter()
+        .map(|card| radiant_ids.contains(&card.id))
+        .collect();
     // R470: read before the kept card becomes the fusion, whose own cost is R77's.
     let kept_cost = match &target {
         Some(target) if args.keep_cost == Some(true) => Some(kept_cost_of(state, target)),

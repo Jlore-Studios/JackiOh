@@ -29,7 +29,8 @@ fn readable_counters(state: &GameState, player: PlayerId) -> Vec<TriggerHolder> 
             holder.script.would_counter.is_some()
                 && !holder.is_trap
                 && (holder.zone == TriggerZone::Field
-                    || (holder.zone == TriggerZone::Backrow && backrow_is_public(state, &holder.card, player)))
+                    || (holder.zone == TriggerZone::Backrow
+                        && backrow_is_public(state, &holder.card, player)))
                 && !triggers_on_event(holder, GameEventType::CardAnnounced).is_empty()
         })
         .collect()

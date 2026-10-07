@@ -26,7 +26,8 @@ use crate::wire::{Action, ActionBody, ActionType, Phase, PlayerId};
 /// (reduce.rs), so §10.7's "ending the turn when it is the only option" only ever reads on a set
 /// with these removed, and R44's AI plays the opponent's turn out rather than resigning it for them.
 /// The M1-gate helper `playRandomGame` filters exactly the same three. R84 rules it.
-pub const AI_SKIPPED_ACTIONS: &[ActionType] = &[ActionType::Concede, ActionType::OfferDraw, ActionType::AnswerDraw];
+pub const AI_SKIPPED_ACTIONS: &[ActionType] =
+    &[ActionType::Concede, ActionType::OfferDraw, ActionType::AnswerDraw];
 
 /// TS `PolicyOptions`.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]

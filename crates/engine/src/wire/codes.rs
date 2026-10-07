@@ -227,14 +227,22 @@ pub fn read_code_input(raw: &str, format: &CodeFormat) -> CodeInputReading {
 /// `read_code_input(raw, format).complete ? characters : null`
 pub fn canonical_code(raw: &str, format: &CodeFormat) -> Option<String> {
     let reading = read_code_input(raw, format);
-    if reading.complete { Some(reading.characters) } else { None }
+    if reading.complete {
+        Some(reading.characters)
+    } else {
+        None
+    }
 }
 
 /// Caret index in `formatted` after `character_count` characters:
 /// n + (n > 0 ? Math.floor((n - 1) / groupSize) : 0).
 pub fn formatted_caret(character_count: usize, format: &CodeFormat) -> usize {
     let n = character_count;
-    n + if n > 0 { (n - 1) / format.group_size.max(1) } else { 0 }
+    n + if n > 0 {
+        (n - 1) / format.group_size.max(1)
+    } else {
+        0
+    }
 }
 
 /// Which letters a word of pasted text is written in; digits have no case. "sentence" is a first
@@ -295,7 +303,11 @@ fn letter_case_of(original: &str) -> LetterCase {
         letters += 1;
     }
     if upper && lower {
-        return if sentence { LetterCase::Sentence } else { LetterCase::Mixed };
+        return if sentence {
+            LetterCase::Sentence
+        } else {
+            LetterCase::Mixed
+        };
     }
     if upper {
         return LetterCase::Upper;
@@ -464,7 +476,11 @@ fn codes_in_chain(chain: &Chain, format: &CodeFormat) -> Vec<String> {
                 continue;
             }
             if utf16_len(&characters) == format.length && end > start {
-                let left_word = if start > 0 { chain.words.get(start - 1) } else { None };
+                let left_word = if start > 0 {
+                    chain.words.get(start - 1)
+                } else {
+                    None
+                };
                 let right_word = chain.words.get(end + 1);
                 let left_blocks = left_word.is_some_and(|word| {
                     start > 0 && chain.joins.get(start - 1) == internal && could_belong_to_code(word, format)
@@ -558,7 +574,10 @@ mod nfkc {
             decompose_into(character as u32, &mut decomposed);
         }
         reorder(&mut decomposed);
-        compose(&decomposed).into_iter().filter_map(char::from_u32).collect()
+        compose(&decomposed)
+            .into_iter()
+            .filter_map(char::from_u32)
+            .collect()
     }
 
     fn decompose_into(code: u32, out: &mut Vec<u32>) {
@@ -2694,7 +2713,10 @@ mod tests {
                 let (problem, character) = match field("problem") {
                     Some(Value::Object(problem)) => (
                         problem.get("kind").and_then(Value::as_str).map(str::to_string),
-                        problem.get("character").and_then(Value::as_str).map(str::to_string),
+                        problem
+                            .get("character")
+                            .and_then(Value::as_str)
+                            .map(str::to_string),
                     ),
                     Some(Value::String(kind)) => (Some(kind.clone()), text("character")),
                     _ => (None, text("character")),
@@ -2800,7 +2822,12 @@ mod tests {
                 }
                 // Whatever it finds is a whole code, never a fragment.
                 if let Some(found) = &found {
-                    assert_eq!(canonical_code(found, &FORMAT).as_ref(), Some(found), "{}", row.name);
+                    assert_eq!(
+                        canonical_code(found, &FORMAT).as_ref(),
+                        Some(found),
+                        "{}",
+                        row.name
+                    );
                 }
             }
         }
@@ -2883,7 +2910,10 @@ mod tests {
 
         #[test]
         fn r191_b1_applies_nfkc_first_so_fullwidth_forms_and_ligatures_read_as_ascii() {
-            assert_eq!(normalize_code_text("\u{FF41}\u{FF42}\u{FF0D}\u{FF23}\u{FF24}"), "ABCD");
+            assert_eq!(
+                normalize_code_text("\u{FF41}\u{FF42}\u{FF0D}\u{FF23}\u{FF24}"),
+                "ABCD"
+            );
             // U+FB01 LATIN SMALL LIGATURE FI is "fi" under NFKC.
             assert_eq!(normalize_code_text("\u{FB01}"), "FI");
         }
@@ -2909,7 +2939,12 @@ mod tests {
                 let Some(canonical) = row.canonical.as_ref() else {
                     continue;
                 };
-                assert_eq!(canonical_code(canonical, &FORMAT).as_ref(), Some(canonical), "{}", row.name);
+                assert_eq!(
+                    canonical_code(canonical, &FORMAT).as_ref(),
+                    Some(canonical),
+                    "{}",
+                    row.name
+                );
                 assert_eq!(
                     canonical_code(&format_code_characters(canonical, &FORMAT), &FORMAT).as_ref(),
                     Some(canonical),
@@ -2946,7 +2981,10 @@ mod tests {
 
         #[test]
         fn r191_b1_reads_a_room_code_with_the_same_rules_and_its_own_length() {
-            assert_eq!(canonical_code(" ab-c2 34 ", &ROOM_CODE_FORMAT).as_deref(), Some("ABC234"));
+            assert_eq!(
+                canonical_code(" ab-c2 34 ", &ROOM_CODE_FORMAT).as_deref(),
+                Some("ABC234")
+            );
             assert_eq!(read_code_input("abc234", &ROOM_CODE_FORMAT).formatted, "ABC234");
             assert_eq!(canonical_code("ABC23", &ROOM_CODE_FORMAT), None);
         }
@@ -3016,8 +3054,12 @@ mod tests {
         fn r191_b2_refuses_each_excluded_character_in_every_position_of_a_code() {
             for excluded_character in excluded_characters(&FORMAT) {
                 for position in 0..FORMAT.length {
-                    let input =
-                        format!("{}{}{}", &BASE[..position], excluded_character, &BASE[position + 1..]);
+                    let input = format!(
+                        "{}{}{}",
+                        &BASE[..position],
+                        excluded_character,
+                        &BASE[position + 1..]
+                    );
                     let reading = read_code_input(&input, &FORMAT);
                     let place = format!("{excluded_character} at {position}");
 
@@ -3054,7 +3096,12 @@ mod tests {
             assert_eq!(format_code_characters(&BASE[..group], &FORMAT), &BASE[..group]);
             assert_eq!(
                 format_code_characters(&BASE[..group + 1], &FORMAT),
-                format!("{}{}{}", &BASE[..group], FORMAT.separator, &BASE[group..group + 1])
+                format!(
+                    "{}{}{}",
+                    &BASE[..group],
+                    FORMAT.separator,
+                    &BASE[group..group + 1]
+                )
             );
             assert_eq!(format_code_characters(BASE, &FORMAT), BASE_FORMATTED);
             assert!(!format_code_characters(BASE, &FORMAT).ends_with(FORMAT.separator));
@@ -3245,7 +3292,10 @@ mod tests {
         #[test]
         fn r191_b4_returns_null_for_two_codes_on_one_line_and_the_code_for_one_code_written_twice() {
             assert_eq!(find("ABCD-EFGH-JKMN-PQRS ABCD-EFGH-JKMN-PQRT"), None);
-            assert_eq!(find("ABCD-EFGH-JKMN-PQRS ABCD-EFGH-JKMN-PQRS").as_deref(), Some(BASE));
+            assert_eq!(
+                find("ABCD-EFGH-JKMN-PQRS ABCD-EFGH-JKMN-PQRS").as_deref(),
+                Some(BASE)
+            );
         }
 
         #[test]

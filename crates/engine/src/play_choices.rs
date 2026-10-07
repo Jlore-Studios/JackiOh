@@ -233,7 +233,11 @@ fn permanents_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
 /// count. A Vanilla one has no text (`flags_of`). It never catches its own play: step 3 runs before
 /// step 4 puts it on the field (R119).
 pub fn gifted_makes_radiant(state: &GameState, player: PlayerId, cost_paid: i32) -> bool {
-    let earlier: &[i32] = state.players[player].turn_log.costs_paid.as_deref().unwrap_or(&[]);
+    let earlier: &[i32] = state.players[player]
+        .turn_log
+        .costs_paid
+        .as_deref()
+        .unwrap_or(&[]);
     permanents_of(state, player).into_iter().any(|held| {
         let Some(threshold) = crate::scripts::script_of(state, held).flags().gifted_program else {
             return false;
@@ -251,7 +255,12 @@ pub fn gifted_makes_radiant(state: &GameState, player: PlayerId, cost_paid: i32)
 /// hand: #87's "you may skip adding it", #48's "all enemy units, or all units", a crafted card whose
 /// radiant Bigot names no target. So step 1 checks, and `legal_actions` offers, the choices of the
 /// face step 5 will run, which is known at step 1: the cost it pays is.
-pub fn resolving_face(state: &GameState, player: PlayerId, card: &CardInstance, cost_paid: i32) -> CardInstance {
+pub fn resolving_face(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    cost_paid: i32,
+) -> CardInstance {
     let face = if card.radiant || !play_made_radiant(state, player, card, cost_paid) {
         card.clone()
     } else {
@@ -276,7 +285,10 @@ pub fn tagged_play_radiant(state: &GameState, player: PlayerId, card: &CardInsta
         return false;
     }
     permanents_of(state, player).into_iter().any(|held| {
-        match crate::scripts::script_of(state, held).flags().radiant_plays_tagged {
+        match crate::scripts::script_of(state, held)
+            .flags()
+            .radiant_plays_tagged
+        {
             None => false,
             Some(wanted) => wanted.iter().any(|tag| tags.contains(tag)),
         }
@@ -461,7 +473,12 @@ pub fn chooses_x(state: &GameState, instance: &CardInstance) -> bool {
 /// "X is chosen at play time, 1 ≤ X ≤ current mana" (`MIN_CHOSEN_X`). `legal_x_values` offers exactly
 /// the values this passes and `refuse_x` refuses exactly the ones it names, so the picker and the
 /// reducer's refusal cannot disagree. `most` defaults to the player's current mana.
-pub fn why_x_refused(state: &GameState, player: PlayerId, value: i32, most: Option<i32>) -> Result<(), EngineError> {
+pub fn why_x_refused(
+    state: &GameState,
+    player: PlayerId,
+    value: i32,
+    most: Option<i32>,
+) -> Result<(), EngineError> {
     let mana = state.players[player].mana.current;
     let most = most.unwrap_or(mana);
     // TS also refused an X that is not a whole number ("X must be a whole number"); an `i32` always is.
@@ -557,7 +574,12 @@ pub fn tribute_value_of(state: &GameState, unit: &CardInstance) -> i32 {
     // B3.4 rule 5, R386: a card that declares its worth as a number (C #82 Sheeople's `worth`) is worth
     // what Degrade, Upgrade and KY's Constant have left it, read off the instance like any declared number.
     let worth = if flag.is_some() && crate::params::param_decl_of(state, &unit.def_id, "worth").is_some() {
-        Some(crate::params::param_value(state, Some(unit), "worth", Default::default()))
+        Some(crate::params::param_value(
+            state,
+            Some(unit),
+            "worth",
+            Default::default(),
+        ))
     } else {
         flag
     };
@@ -568,7 +590,11 @@ pub fn tribute_value_of(state: &GameState, unit: &CardInstance) -> i32 {
 }
 
 /// §6.3: your own units, plus the enemy's for a card that says so (#55). Dormant cards never.
-pub fn legal_tribute_units<'a>(state: &'a GameState, player: PlayerId, card: &CardInstance) -> Vec<&'a CardInstance> {
+pub fn legal_tribute_units<'a>(
+    state: &'a GameState,
+    player: PlayerId,
+    card: &CardInstance,
+) -> Vec<&'a CardInstance> {
     let sides: Vec<PlayerId> = if may_tribute_enemy_units(state, card) {
         vec![player, opponent_of(player)]
     } else {
@@ -663,15 +689,15 @@ fn selection_key(selection: &Selection) -> String {
 /// forced to the chooser whatever it says (§9.1: the opponent's hand is hidden), which the hand case of
 /// `legal_selections_for` enforces rather than this.
 fn sides_for(player: PlayerId, decl: &TargetDecl) -> Vec<PlayerId> {
-    let side = decl
-        .filter
-        .as_ref()
-        .and_then(|filter| filter.side)
-        .unwrap_or(if decl.kind == PromptKind::Tribute {
-            FilterSide::Ally
-        } else {
-            FilterSide::Any
-        });
+    let side =
+        decl.filter
+            .as_ref()
+            .and_then(|filter| filter.side)
+            .unwrap_or(if decl.kind == PromptKind::Tribute {
+                FilterSide::Ally
+            } else {
+                FilterSide::Any
+            });
     match side {
         FilterSide::Ally => vec![player],
         FilterSide::Enemy => vec![opponent_of(player)],
@@ -1160,7 +1186,10 @@ pub fn in_declared_order(
             .unwrap_or_default();
         let rank = |selection: &Selection| -> usize {
             let key = selection_key(selection);
-            order.iter().position(|offered| *offered == key).unwrap_or(usize::MAX)
+            order
+                .iter()
+                .position(|offered| *offered == key)
+                .unwrap_or(usize::MAX)
         };
         let mut entries: Vec<(Selection, usize, usize)> = slice
             .into_iter()
@@ -1247,7 +1276,11 @@ fn subsets_for(options: &[Selection], decl: &TargetDecl, is_last: bool) -> Vec<V
         return Vec::new();
     }
     let low = take_for(decl, options.len());
-    let high = if is_last { at_most(decl.max, options.len()) } else { low };
+    let high = if is_last {
+        at_most(decl.max, options.len())
+    } else {
+        low
+    };
     let mut out: Vec<Vec<Selection>> = Vec::new();
 
     fn walk(
@@ -1500,7 +1533,11 @@ pub fn play_actions_for(state: &GameState, player: PlayerId, card: &CardInstance
 /// E11, R454: every `play` action `legal_actions` lists for a card in the player's graveyard — R81's
 /// choices crossed exactly as for a hand card, each with the ways a permission lets it be paid
 /// (`graveyard_play::graveyard_payments_for`). Nothing without a permission that admits it.
-pub fn graveyard_play_actions_for(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<PlayAction> {
+pub fn graveyard_play_actions_for(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+) -> Vec<PlayAction> {
     if !crate::graveyard_play::playable_from_graveyard(state, card) || card.zone.player() != player {
         return Vec::new();
     }
@@ -1523,12 +1560,18 @@ struct PlayPrice {
 /// `priced_play_actions` lists plays at, with the ones a ban forbids left out, before any is paid for.
 fn play_prices(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<PlayPrice> {
     let x_values: Vec<Option<i32>> = if chooses_x(state, card) {
-        legal_x_values(state, player, card).into_iter().map(Some).collect()
+        legal_x_values(state, player, card)
+            .into_iter()
+            .map(Some)
+            .collect()
     } else {
         vec![None]
     };
     let embiggens: Vec<Option<bool>> = if has_embiggen_price(state, card) {
-        legal_embiggen_choices(state, card).into_iter().map(Some).collect()
+        legal_embiggen_choices(state, card)
+            .into_iter()
+            .map(Some)
+            .collect()
     } else {
         vec![None]
     };
@@ -1582,7 +1625,10 @@ pub fn priced_play_actions(
     let mut out: Vec<PlayAction> = Vec::new();
     let tribute_sets = legal_tribute_sets(state, player, card);
 
-    for PlayPrice { x, embiggen, cost, .. } in play_prices(state, player, card) {
+    for PlayPrice {
+        x, embiggen, cost, ..
+    } in play_prices(state, player, card)
+    {
         let paid = payments(cost);
         if paid.is_empty() {
             continue;
@@ -1730,7 +1776,12 @@ fn refuse_zone(
     Ok(())
 }
 
-fn refuse_x(state: &GameState, player: PlayerId, card: &CardInstance, x: Option<i32>) -> Result<(), EngineError> {
+fn refuse_x(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    x: Option<i32>,
+) -> Result<(), EngineError> {
     let name = name_of(state, &card.def_id);
     // B5 E14, R545: a copier's X is its copied text's, up to the mana left once its own price is paid.
     if crate::subsystems::copied_text::copies_text(card) {
@@ -1757,7 +1808,11 @@ fn refuse_x(state: &GameState, player: PlayerId, card: &CardInstance, x: Option<
     why_x_refused(state, player, x.unwrap_or(0), None)
 }
 
-fn refuse_embiggen(state: &GameState, card: &CardInstance, embiggen: Option<bool>) -> Result<(), EngineError> {
+fn refuse_embiggen(
+    state: &GameState,
+    card: &CardInstance,
+    embiggen: Option<bool>,
+) -> Result<(), EngineError> {
     if has_embiggen_price(state, card) {
         return Ok(());
     }

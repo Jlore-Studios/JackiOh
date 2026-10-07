@@ -57,7 +57,10 @@ fn run_arrival_hooks(sink: &mut EngineSink, instance: &CardInstance) {
 fn infinite_reserves_source(sink: &EngineSink, player: PlayerId) -> Option<CardInstance> {
     for slot in crate::zones::slots_of(player, Row::Backrow) {
         if let Some(card) = crate::zones::card_at(sink.state, slot)
-            && crate::scripts::script_of(sink.state, card).flags().infinite_reserves == Some(true)
+            && crate::scripts::script_of(sink.state, card)
+                .flags()
+                .infinite_reserves
+                == Some(true)
         {
             return Some(card.clone());
         }
@@ -117,7 +120,11 @@ pub enum ShuffleInOutcome {
 }
 
 /// R316: the `libraryOverflow` a full library reports for `instance`.
-fn library_overflow(instance: &CardInstance, outcome: LibraryOverflowOutcome, copy_of: Option<&str>) -> GameEvent {
+fn library_overflow(
+    instance: &CardInstance,
+    outcome: LibraryOverflowOutcome,
+    copy_of: Option<&str>,
+) -> GameEvent {
     GameEvent::LibraryOverflow {
         player: instance.owner,
         instance_id: instance.id.clone(),
@@ -150,8 +157,11 @@ pub fn shuffle_into_library(
     let library_len = sink.state.players[instance.owner].library.len() as i32;
     if library_len >= LIBRARY_CAP {
         if !existing {
-            sink.events
-                .push(library_overflow(instance, LibraryOverflowOutcome::NotCreated, copy_of));
+            sink.events.push(library_overflow(
+                instance,
+                LibraryOverflowOutcome::NotCreated,
+                copy_of,
+            ));
             return ShuffleInOutcome::Dropped;
         }
         if crate::zones::is_unit_token(sink.state, instance) {
@@ -161,8 +171,11 @@ pub fn shuffle_into_library(
                 crate::zones::OffFieldZone::Exile,
                 Default::default(),
             );
-            sink.events
-                .push(library_overflow(instance, LibraryOverflowOutcome::Ceased, copy_of));
+            sink.events.push(library_overflow(
+                instance,
+                LibraryOverflowOutcome::Ceased,
+                copy_of,
+            ));
             return ShuffleInOutcome::Dropped;
         }
         let landed = crate::zones::move_to_zone(
@@ -171,8 +184,11 @@ pub fn shuffle_into_library(
             crate::zones::OffFieldZone::Graveyard,
             Default::default(),
         );
-        sink.events
-            .push(library_overflow(instance, LibraryOverflowOutcome::Graveyard, copy_of));
+        sink.events.push(library_overflow(
+            instance,
+            LibraryOverflowOutcome::Graveyard,
+            copy_of,
+        ));
         crate::zones::report_graveyard_landing(sink, instance, landed);
         return ShuffleInOutcome::Dropped;
     }
@@ -731,7 +747,11 @@ fn continue_chain(sink: &mut EngineSink, player: PlayerId, owns: bool, before: &
         return;
     }
     let chain = sink.state.cast_chain.unwrap_or(link.chain);
-    draw_one(sink, player, Some(ChainLinkOrCount::Link(ChainLink { chain, owns })));
+    draw_one(
+        sink,
+        player,
+        Some(ChainLinkOrCount::Link(ChainLink { chain, owns })),
+    );
     // A pause further down the chain parked its own repeat with `owns`, and that item closes it.
     if !stopped(sink, before) || sink.state.result.is_some() {
         close_chain(sink.state, &link);
@@ -749,7 +769,8 @@ pub fn draw_one(sink: &mut EngineSink, player: PlayerId, link: Option<ChainLinkO
 
     if sink.state.players[player].library.is_empty() {
         if infinite_reserves_source(sink, player).is_some() {
-            let token_def_id = crate::catalog::def_by_index(SetName::Core, "T-rush").map(|def| def.id.clone());
+            let token_def_id =
+                crate::catalog::def_by_index(SetName::Core, "T-rush").map(|def| def.id.clone());
             if let Some(token_def_id) = token_def_id {
                 let mut token = new_instance(sink.state, &token_def_id, player, Zone::Hand { player });
                 sink.state.counters.drawn += 1;

@@ -26,11 +26,13 @@ use crate::faces::card_type_of;
 use crate::mana::modifier_is_live;
 use crate::modifiers::{install_lasting_modifiers, remove_modifier};
 use crate::script::EngineSink;
-use crate::state::{CardInstance, EchoItem, GameState, ModifierKind, PlayerModifier, find_instance, find_instance_mut};
+use crate::state::{
+    CardInstance, EchoItem, GameState, ModifierKind, PlayerModifier, find_instance, find_instance_mut,
+};
 use crate::stays::{exit_mark, left_field_after};
 use crate::subsystems::copied_text::copied_echo;
 use crate::wire::{CardType, GameEvent, PlayerId, Zone};
-use crate::zones::{MoveToZoneOptions, MoveResult, OffFieldZone, move_to_zone, report_graveyard_landing};
+use crate::zones::{MoveResult, MoveToZoneOptions, OffFieldZone, move_to_zone, report_graveyard_landing};
 
 /// TS `tuning.tunedCount(card, "Echo", printed)`, a private copy (fullsend rule 5). B3.4, R386: the
 /// value a numbered keyword has now — its printed value (or the value KY's Constant set outright,
@@ -85,7 +87,12 @@ pub fn echo_repeats_owed(state: &GameState, instance_id: &str) -> i32 {
 /// Add repeats to this instance's entry, creating it when it has none. The id and `seq` come from
 /// `state.nextId`/`state.nextSeq`, as every queue entry's do, so a replay builds the queue the live
 /// game had (R68).
-pub fn add_echo_repeats(sink: &mut EngineSink<'_>, card: &CardInstance, controller: PlayerId, count: i32) -> i32 {
+pub fn add_echo_repeats(
+    sink: &mut EngineSink<'_>,
+    card: &CardInstance,
+    controller: PlayerId,
+    count: i32,
+) -> i32 {
     let state = &mut *sink.state;
     if count <= 0 {
         return echo_repeats_owed(state, &card.id);
@@ -141,7 +148,10 @@ pub fn drop_echo_repeats(state: &mut GameState, instance_id: &str) {
 /// (fused scripts are built from the state, SURFACE §6.6), so it is required here.
 pub fn printed_echo(card: &CardInstance, state: &GameState) -> i32 {
     // B3.4: Echo X is a numbered keyword Degrade and Upgrade move, read through the card's tuning.
-    let own = 0.max(tuned_echo(card, crate::scripts::flags_of(state, card).echo.unwrap_or(0)));
+    let own = 0.max(tuned_echo(
+        card,
+        crate::scripts::flags_of(state, card).echo.unwrap_or(0),
+    ));
     own + copied_echo(state, card)
 }
 
@@ -165,7 +175,11 @@ pub fn echo_grant_of(state: &GameState, player: PlayerId, modifier: &PlayerModif
     if !matches!(source.zone, Zone::Field { .. }) || source.controller != player {
         return 0;
     }
-    0.max(crate::scripts::flags_of(state, source).echo_grant.unwrap_or(*amount))
+    0.max(
+        crate::scripts::flags_of(state, source)
+            .echo_grant
+            .unwrap_or(*amount),
+    )
 }
 
 /// R30: Twinspell grants Echo to the next Spell and "stays until a spell is played, then goes to the
@@ -213,7 +227,12 @@ pub fn granted_echo(sink: &mut EngineSink<'_>, player: PlayerId, card: &CardInst
             continue;
         }
         // B5 E5: to its graveyard, or wherever a replacement sends it.
-        let moved = move_to_zone(sink.state, &mut source, OffFieldZone::Graveyard, MoveToZoneOptions::default());
+        let moved = move_to_zone(
+            sink.state,
+            &mut source,
+            OffFieldZone::Graveyard,
+            MoveToZoneOptions::default(),
+        );
         let landed = snapshot(sink.state, &source.id).unwrap_or(source);
         report_graveyard_landing(sink, &landed, moved);
     }
@@ -248,7 +267,8 @@ pub const EXILE_ON_LANDING: &str = "@exileOnLanding";
 
 /// R178: send this resolving Spell to exile when §10.5 step 7 lands it, rather than now.
 pub fn exile_on_landing(card: &mut CardInstance) {
-    card.memory.insert(EXILE_ON_LANDING.to_string(), Value::Bool(true));
+    card.memory
+        .insert(EXILE_ON_LANDING.to_string(), Value::Bool(true));
 }
 
 /// Which resolution is finishing, so the event can be emitted for a card that no longer exists.
@@ -328,7 +348,13 @@ pub fn land_after_resolution(sink: &mut EngineSink<'_>, resolved: &ResolvedCard)
                 live.memory.shift_remove(EXILE_ON_LANDING);
             }
             let mut card = snapshot(sink.state, &card.id).unwrap_or(card);
-            if move_to_zone(sink.state, &mut card, OffFieldZone::Exile, MoveToZoneOptions::default()) == MoveResult::Moved {
+            if move_to_zone(
+                sink.state,
+                &mut card,
+                OffFieldZone::Exile,
+                MoveToZoneOptions::default(),
+            ) == MoveResult::Moved
+            {
                 sink.state.counters.exiled += 1;
             }
             sink.events.push(GameEvent::Exiled {
@@ -338,14 +364,20 @@ pub fn land_after_resolution(sink: &mut EngineSink<'_>, resolved: &ResolvedCard)
             });
         } else {
             // B5 E5: its graveyard, or wherever a replacement sends it (Classic #50's exile, #60's library).
-            let moved = move_to_zone(sink.state, &mut card, OffFieldZone::Graveyard, MoveToZoneOptions::default());
+            let moved = move_to_zone(
+                sink.state,
+                &mut card,
+                OffFieldZone::Graveyard,
+                MoveToZoneOptions::default(),
+            );
             let landed = snapshot(sink.state, &card.id).unwrap_or(card);
             report_graveyard_landing(sink, &landed, moved);
         }
     }
 
     let permanent = still_in_play(sink, resolved);
-    let radiant = find_instance(sink.state, &resolved.instance_id).map_or(resolved.radiant, |card| card.radiant);
+    let radiant =
+        find_instance(sink.state, &resolved.instance_id).map_or(resolved.radiant, |card| card.radiant);
     let arrived_during = match &resolved.arrived_during {
         Some(arrived) if !arrived.is_empty() => Some(arrived.clone()),
         _ => None,

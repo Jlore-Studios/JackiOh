@@ -97,7 +97,10 @@ fn place_contents(state: &mut GameState, cards: &[CardInstance], to: &ZoneSlot) 
                 stack: Some(placed > 0),
             },
         ) {
-            panic!("swap could not place {} in {} {} {}", card.id, to.player, to.row, to.lane);
+            panic!(
+                "swap could not place {} in {} {} {}",
+                card.id, to.player, to.row, to.lane
+            );
         }
     }
 }
@@ -116,7 +119,9 @@ fn swap_health_now(ctx: &mut EffectContext<'_>) {
     let keep = ctx.state.players[me].hero.health;
     ctx.state.players[me].hero.health = ctx.state.players[them].hero.health;
     ctx.state.players[them].hero.health = keep;
-    ctx.events.push(GameEvent::Swapped { what: SwapWhat::Health });
+    ctx.events.push(GameEvent::Swapped {
+        what: SwapWhat::Health,
+    });
 }
 
 /// R73 board: every zone's contents change sides, lane by lane, in both rows.
@@ -147,7 +152,9 @@ fn swap_board_now(ctx: &mut EffectContext<'_>) {
         }
     }
 
-    ctx.events.push(GameEvent::Swapped { what: SwapWhat::Board });
+    ctx.events.push(GameEvent::Swapped {
+        what: SwapWhat::Board,
+    });
 
     // Read first, then place: every card comes off the field before any card lands.
     for entry in &entries {
@@ -155,7 +162,9 @@ fn swap_board_now(ctx: &mut EffectContext<'_>) {
             remove_from_field(
                 &mut *ctx.state,
                 card,
-                RemoveFromFieldOptions { with_pile: Some(true) },
+                RemoveFromFieldOptions {
+                    with_pile: Some(true),
+                },
             );
         }
     }
@@ -176,7 +185,9 @@ fn swap_board_now(ctx: &mut EffectContext<'_>) {
         // entered its new side (R171).
         for (at, card) in entry.cards.iter().enumerate() {
             // TS wrote through the object it had just placed: the card as it stands in its new zone.
-            let landed = find_instance(ctx.state, &card.id).cloned().unwrap_or_else(|| card.clone());
+            let landed = find_instance(ctx.state, &card.id)
+                .cloned()
+                .unwrap_or_else(|| card.clone());
             let from = before.get(at).copied().unwrap_or(card.owner);
             enter_new_side(ctx, &landed, from);
             ctx.events.push(GameEvent::ControlChanged {
