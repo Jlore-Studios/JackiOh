@@ -121,7 +121,9 @@ impl Logged {
         let lines = self.0.lock().expect("log lock");
         lines
             .iter()
-            .filter(|line| line.get("event").or_else(|| line.get("message")).map(String::as_str) == Some(name))
+            .filter(|line| {
+                line.get("event").or_else(|| line.get("message")).map(|event| event.trim_matches('"')) == Some(name)
+            })
             .cloned()
             .collect()
     }
@@ -193,7 +195,8 @@ mod the_per_account_api_rate_limit_r109 {
         // §9.8: "Every rejected action is logged with its reason."
         let lines = logged.events("api.rate_limited");
         assert_eq!(lines.len(), 1);
-        assert_eq!(lines[0].get("key").map(String::as_str), Some(account_key("regular").as_str()));
+        let key = lines[0].get("key").map(|key| key.trim_matches('"'));
+        assert_eq!(key, Some(account_key("regular").as_str()));
     }
 
     #[tokio::test(start_paused = true)]

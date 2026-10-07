@@ -160,7 +160,7 @@ fn bot(bot_id: &str) -> Value {
 async fn rate(app: &App, input: Value) -> Value {
     let input: RankedGameInput = from(input);
     let mut t = app.db.begin(None).await.expect("begin");
-    let row = rate_ranked_game(&mut t, app, &input).await.expect("rateRankedGame");
+    let row = rate_ranked_game(&mut t, app, input).await.expect("rateRankedGame");
     t.commit().await.expect("commit");
     json_of(&row)
 }
@@ -513,7 +513,7 @@ mod r612_what_the_client_reads {
     }
 
     async fn get(app: &Arc<App>, path: &str, token: &str) -> Got {
-        let (status, _headers, body) = call(app, "GET", path, Some(token), None).await;
+        let (status, _headers, body) = call(app, "GET", path, Some(token), Value::Null).await;
         let text = body.to_string();
         Got { status, body, text }
     }
@@ -666,7 +666,7 @@ mod r604_a_ranked_series_through_the_results_writer {
                 "turns": 4,
                 "at": 5,
             }));
-            record_result(&app, &input).await.expect("recordResult");
+            record_result(&app, input).await.expect("recordResult");
 
             let ended = json_of(&store!(app, series_get("series-1")));
             assert_eq!(ended["status"], json!("over"), "ranked: {ranked}");

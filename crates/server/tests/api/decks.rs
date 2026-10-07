@@ -199,8 +199,9 @@ fn import_body(base: usize, overrides: Value) -> Value {
 }
 
 impl Ctx {
+    /// `support::deps::call`, whose body `Value::Null` sends none.
     async fn request(&self, method: &str, path: &str, body: Option<Value>, bearer: &str) -> (u16, Value) {
-        let (status, _headers, answer) = call(&self.app, method, path, Some(bearer), body).await;
+        let (status, _headers, answer) = call(&self.app, method, path, Some(bearer), body.unwrap_or(Value::Null)).await;
         (status, answer)
     }
 
@@ -1023,13 +1024,14 @@ mod the_routes_9_4_a_pending_account_sees_no_decks {
 
     #[test]
     fn declares_every_deck_and_trio_route_active() {
-        // TS read `createDeckRoutes()`; the Rust server has one table, `app::ROUTES`, in
-        // `allRoutes()` order, and the deck routes are the ones under these two prefixes.
+        // TS read `createDeckRoutes()`; the Rust server has one table, `app::ROUTES` of
+        // `(method, path, AuthLevel, handler)` in `allRoutes()` order, and the deck routes are the
+        // ones under these two prefixes.
         let routes: Vec<_> = app::ROUTES
             .iter()
-            .filter(|route| route.path.starts_with("/api/decks") || route.path.starts_with("/api/trios"))
+            .filter(|route| route.1.starts_with("/api/decks") || route.1.starts_with("/api/trios"))
             .collect();
-        let listed: Vec<String> = routes.iter().map(|route| format!("{} {}", route.method, route.path)).collect();
+        let listed: Vec<String> = routes.iter().map(|route| format!("{} {}", route.0, route.1)).collect();
         assert_eq!(
             listed,
             vec![
@@ -1041,7 +1043,7 @@ mod the_routes_9_4_a_pending_account_sees_no_decks {
                 "DELETE /api/trios/:id",
             ]
         );
-        assert!(routes.iter().all(|route| matches!(route.auth, AuthLevel::Active)));
+        assert!(routes.iter().all(|route| matches!(route.2, AuthLevel::Active)));
     }
 
     #[tokio::test(start_paused = true)]

@@ -21,13 +21,14 @@ use std::time::Duration;
 
 use axum::body::Body;
 use axum::http::{HeaderMap, Request};
+use hmac::{Hmac, KeyInit, Mac};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
+use sha2::Sha256;
 use tower::ServiceExt;
 
-use jackioh_server::api::codes::{MintInviteCodeInput, mint_invite_code};
-use jackioh_server::api::crypto::{Hashes, create_hashes};
+use jackioh_server::api::codes::{MintDeps, MintInput, mint_invite_code};
 use jackioh_server::api::http::{create_rate_limiter, error_response, rate_limited};
 use jackioh_server::app::{self, App, now_ms};
 use jackioh_server::config::{
@@ -150,10 +151,31 @@ async fn fake(app: &App) -> tokio::sync::MutexGuard<'_, FakeData> {
     }
 }
 
-/// §9.4's hashes as the server keys them (`index.ts`: `${CODE_PEPPER}:code`, `${CODE_PEPPER}:ip`).
+/// §9.4's address hash as the server takes it (TS `createHashes(...).ip`, peppered as `index.ts`
+/// peppers it, `${CODE_PEPPER}:ip`): HMAC-SHA256 of the trimmed, lower-cased address, in hex.
+struct Hashes {
+    pepper: String,
+}
+
+impl Hashes {
+    fn ip(&self, raw: &str) -> String {
+        let mut mac =
+            <Hmac<Sha256> as KeyInit>::new_from_slice(format!("{}:ip", self.pepper).as_bytes()).expect("any key length");
+        mac.update(raw.trim().to_lowercase().as_bytes());
+        mac.finalize().into_bytes().iter().map(|byte| format!("{byte:02x}")).collect()
+    }
+}
+
 fn hashes(app: &App) -> Hashes {
-    let pepper = &app.env.code_pepper;
-    create_hashes(&format!("{pepper}:code"), &format!("{pepper}:ip"))
+    Hashes { pepper: app.env.code_pepper.clone() }
+}
+
+/// TS `mintInviteCode(deps, { maxUses, expiresAt })`: the new code's id and its formatted text.
+async fn mint(app: &App, max_uses: Option<i32>, expires_at: Option<i64>) -> (String, String) {
+    let minted = mint_invite_code(MintDeps { db: &app.db, code_pepper: &app.env.code_pepper }, MintInput { max_uses, expires_at })
+        .await
+        .expect("mintInviteCode");
+    (minted.id, minted.formatted)
 }
 
 /// TS `codeDeps()`: the test app, whose redemption limits are `config.rs`'s.
@@ -423,33 +445,23 @@ mod r192_b8_refusals_at_9_4_steps_2_and_3 {
     #[tokio::test(start_paused = true)]
     async fn r192_b8_keeps_every_code_dependent_refusal_at_r145_s_exact_bytes_with_no_retry_after() {
         let app = code_app().await;
-        let hashes = hashes(&app);
         let consumer = seed_caller(&app, "consumer").await;
-        let expired = mint_invite_code(
-            &app.db,
-            &hashes,
-            MintInviteCodeInput { expires_at: Some(now_ms() - MS_PER_SECOND), ..MintInviteCodeInput::default() },
-        )
-        .await
-        .expect("mint");
-        let exhausted =
-            mint_invite_code(&app.db, &hashes, MintInviteCodeInput { max_uses: Some(1), ..MintInviteCodeInput::default() })
-                .await
-                .expect("mint");
-        let revoked = mint_invite_code(&app.db, &hashes, MintInviteCodeInput::default()).await.expect("mint");
+        let (_, expired) = mint(&app, None, Some(now_ms() - MS_PER_SECOND)).await;
+        let (_, exhausted) = mint(&app, Some(1), None).await;
+        let (revoked_id, revoked) = mint(&app, None, None).await;
         {
             let mut data = fake(&app).await;
-            let row = data.tables.codes.iter_mut().find(|row| row.id == revoked.id).expect("the revoked code was stored");
+            let row = data.tables.codes.iter_mut().find(|row| row.id == revoked_id).expect("the revoked code was stored");
             row.revoked = true;
         }
-        assert_eq!(redeem(&app, &consumer.token, &exhausted.formatted, "198.51.100.80").await.status, 200);
+        assert_eq!(redeem(&app, &consumer.token, &exhausted, "198.51.100.80").await.status, 200);
 
         let kinds = [
             ("missing", UNMINTED_CODE.to_string()),
             ("malformed", "ABCD-EFGH-JKMN-PQR0".to_string()),
-            ("expired", expired.formatted.clone()),
-            ("exhausted", exhausted.formatted.clone()),
-            ("revoked", revoked.formatted.clone()),
+            ("expired", expired),
+            ("exhausted", exhausted),
+            ("revoked", revoked),
         ];
 
         for (index, (name, code)) in kinds.iter().enumerate() {
@@ -485,11 +497,11 @@ mod r192_b8_refusals_at_9_4_steps_2_and_3 {
         // The operator paused redemption in the database (app.settings.redemption_enabled = false).
         fake(&app).await.redemption.enabled = Arc::new(|| false);
         let caller = seed_caller(&app, "paused").await;
-        let minted = mint_invite_code(&app.db, &hashes(&app), MintInviteCodeInput::default()).await.expect("mint");
+        let (_, minted) = mint(&app, None, None).await;
 
         // Before any redemption this process cannot know about the database's switch.
         assert_eq!(code_status(&app, &caller.token).await["redemptionEnabled"], json!(true));
-        assert_eq!(redeem(&app, &caller.token, &minted.formatted, DEFAULT_IP).await.status, 503);
+        assert_eq!(redeem(&app, &caller.token, &minted, DEFAULT_IP).await.status, 503);
 
         // Now it does: the status says paused, with the breaker's cooldown as the wait…
         let paused = code_status(&app, &caller.token).await;
@@ -499,7 +511,7 @@ mod r192_b8_refusals_at_9_4_steps_2_and_3 {
         assert!(wait <= breaker_cooldown_ms());
 
         // …and a second press is refused before the store logs another attempt.
-        assert_eq!(redeem(&app, &caller.token, &minted.formatted, DEFAULT_IP).await.status, 503);
+        assert_eq!(redeem(&app, &caller.token, &minted, DEFAULT_IP).await.status, 503);
         assert_eq!(remaining(&code_status(&app, &caller.token).await), remaining(&paused));
     }
 }

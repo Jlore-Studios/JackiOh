@@ -18,15 +18,17 @@ use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{HeaderMap, Request};
+use hmac::{Hmac, KeyInit, Mac};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
+use sha2::Sha256;
 use tower::ServiceExt;
 
 use jackioh_engine::config::DECK_SIZE;
 use jackioh_server::api::collection::{LAUNCH_COPIES, LAUNCH_GRANT_REASON};
 use jackioh_server::api::cors::is_origin_allowed;
-use jackioh_server::api::crypto::{Hashes, create_hashes};
+use jackioh_server::api::crypto::normalize_code;
 use jackioh_server::api::e2e::{
     E2E_ACCOUNTS, E2E_INVITE_CODES, E2eAccount, E2eInviteCodes, E2eSeedOptions, seed_e2e_fixtures,
     seed_e2e_fixtures_with,
@@ -104,10 +106,23 @@ async fn harness() -> Arc<App> {
     Arc::new(App { db: e2e_store(), ..app })
 }
 
-/// §9.4's hashes as the server keys them (`index.ts`: `${CODE_PEPPER}:code`, `${CODE_PEPPER}:ip`).
+/// §9.4's code hash as the server takes it (TS `createHashes(...).code`, peppered as `index.ts`
+/// peppers it, `${CODE_PEPPER}:code`): HMAC-SHA256 of the normalised code (R191), in hex.
+struct Hashes {
+    pepper: String,
+}
+
+impl Hashes {
+    fn code(&self, plain: &str) -> String {
+        let mut mac =
+            <Hmac<Sha256> as KeyInit>::new_from_slice(format!("{}:code", self.pepper).as_bytes()).expect("any key length");
+        mac.update(normalize_code(plain).as_bytes());
+        mac.finalize().into_bytes().iter().map(|byte| format!("{byte:02x}")).collect()
+    }
+}
+
 fn hashes(app: &App) -> Hashes {
-    let pepper = &app.env.code_pepper;
-    create_hashes(&format!("{pepper}:code"), &format!("{pepper}:ip"))
+    Hashes { pepper: app.env.code_pepper.clone() }
 }
 
 /// One store call in a transaction of its own (TS called the store's methods bare).
@@ -175,7 +190,7 @@ async fn set_status(db: &Db, profile_id: &str, status: &str) {
 
 async fn redeem(app: &Arc<App>, code: &str) -> (u16, Value) {
     let (status, _headers, body) =
-        call(app, "POST", "/api/codes/redeem", Some(&*pending().token), Some(json!({ "code": code }))).await;
+        call(app, "POST", "/api/codes/redeem", Some(&*pending().token), json!({ "code": code })).await;
     (status, body)
 }
 
@@ -491,7 +506,8 @@ mod r144_the_reseed_at_boot {
         assert_ne!(body["error"]["message"], json!(REDEMPTION_IDENTICAL_ERROR));
 
         // ...and the freshly activated account owns exactly one copy of everything, once.
-        let (status, _headers, owned) = call(&app, "GET", "/api/collection", Some(&*pending().token), None).await;
+        let (status, _headers, owned) =
+            call(&app, "GET", "/api/collection", Some(&*pending().token), Value::Null).await;
         assert_eq!(status, 200);
         let entries = owned["entries"].as_array().expect("entries");
         assert_eq!(entries.len(), PLAYABLE.len());
@@ -562,14 +578,8 @@ mod the_fixture_auth_provider {
         // TS: `signUp` rejects with an `ApiError`. SURFACE §11.3 drops `POST /api/auth/signup` and
         // `Auth` has no sign-up at all, so the Rust answer is that no such endpoint exists.
         let app = test_app().await;
-        let (status, _headers, body) = call(
-            &app,
-            "POST",
-            "/api/auth/signup",
-            None,
-            Some(json!({ "email": "new@jackioh.test", "password": "password" })),
-        )
-        .await;
+        let body = json!({ "email": "new@jackioh.test", "password": "password" });
+        let (status, _headers, body) = call(&app, "POST", "/api/auth/signup", None, body).await;
         assert_eq!(status, 404);
         assert_eq!(body["error"]["code"], json!("not_found"));
     }
@@ -578,7 +588,7 @@ mod the_fixture_auth_provider {
     async fn carries_a_pending_account_through_api_auth_me_exactly_as_the_code_screen_reads_it() {
         let app = harness().await;
         seed_e2e_fixtures(&app).await.expect("the reseed");
-        let (status, _headers, body) = call(&app, "GET", "/api/auth/me", Some(&*pending().token), None).await;
+        let (status, _headers, body) = call(&app, "GET", "/api/auth/me", Some(&*pending().token), Value::Null).await;
         assert_eq!(status, 200);
         assert_matches(
             &body,
@@ -591,7 +601,8 @@ mod the_fixture_auth_provider {
     async fn closes_9_4_s_gate_on_the_pending_account() {
         let app = harness().await;
         seed_e2e_fixtures(&app).await.expect("the reseed");
-        let (status, _headers, body) = call(&app, "GET", "/api/collection", Some(&*pending().token), None).await;
+        let (status, _headers, body) =
+            call(&app, "GET", "/api/collection", Some(&*pending().token), Value::Null).await;
         assert_eq!(status, 403);
         assert_matches(&body, &json!({ "error": { "code": "account_pending" } }), "body");
     }
@@ -684,7 +695,7 @@ mod r143_the_optional_seed {
             body["seed"] = seed;
         }
         let (status, _headers, answer) =
-            call(&h.app, "POST", "/api/queue", Some(h.tokens[index].as_str()), Some(body)).await;
+            call(&h.app, "POST", "/api/queue", Some(h.tokens[index].as_str()), body).await;
         (status, answer)
     }
 
@@ -708,6 +719,7 @@ mod r143_the_optional_seed {
     async fn uses_a_supplied_seed_verbatim_for_the_match_the_pair_becomes_in_end_to_end_mode() {
         let h = queue_harness(true).await;
         let seed = "05-reconnect";
+        let held_before = e2e_seed_count();
 
         let (first, _) = enqueue(&h, 0, Some(json!(seed))).await;
         assert_eq!(first, 200);
@@ -718,7 +730,9 @@ mod r143_the_optional_seed {
         // same record here.
         assert_eq!(started_seeds(&h.app).await, vec![seed.to_string()]);
         // The seed is consumed with the pair, so nothing accumulates across a long-running server.
-        assert_eq!(e2e_seed_count(), 0);
+        // TS's map was per test file; the Rust one is a process static the binary's other tests
+        // share (part 19's queue.rs), so what is checked is that this test left nothing behind.
+        assert!(e2e_seed_count() <= held_before, "the pair's seed is still held");
     }
 
     #[tokio::test(start_paused = true)]
@@ -831,7 +845,7 @@ mod get_api_catalog {
         // TS served a one-card catalog of its own; the Rust server serves the compiled-in catalog
         // (SURFACE §11.3), so the record it must serve whole is that one.
         let app = test_app().await;
-        let (status, _headers, body) = call(&app, "GET", "/api/catalog", None, None).await;
+        let (status, _headers, body) = call(&app, "GET", "/api/catalog", None, Value::Null).await;
         assert_eq!(status, 200);
         let defs: Value = serde_json::from_str(jackioh_cards::catalog_json()).expect("catalog.json");
         assert_eq!(body, json!({ "version": jackioh_cards::catalog_version(), "defs": defs }));
