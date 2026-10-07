@@ -3777,15 +3777,19 @@
         {
           "at": "2026-10-07T01:59:07Z",
           "minutes": 11.8
+        },
+        {
+          "at": "2026-10-07T02:12:13Z",
+          "minutes": 6.3
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-07T06:30:00Z",
-          "utilization": 0.41
+          "utilization": 0.99
         },
-        "observed_at": "2026-10-07T01:59:07Z",
-        "status": "allowed"
+        "observed_at": "2026-10-07T02:12:13Z",
+        "status": "allowed_warning"
       }
     },
     "claude-2": {
