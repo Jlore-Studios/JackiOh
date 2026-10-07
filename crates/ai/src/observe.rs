@@ -361,9 +361,8 @@ fn scrub_owed_mulligan(resume: &mut Resume, opp: PlayerId) {
             seat.insert("keep".to_string(), keep);
         }
     }
-    if copy.get("player") == Some(&opp_value)
-        && let Some(Value::Array(returned)) = copy.get_mut("returned")
-    {
+    let opps_own = copy.get("player") == Some(&opp_value);
+    if opps_own && let Some(Value::Array(returned)) = copy.get_mut("returned") {
         for card in returned.iter_mut() {
             to_placeholder_json(card);
         }
@@ -426,7 +425,7 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     next.players[seat].library.sort_by(by_instance_id);
 
     // Step 5: queue entries of hidden cards go; events naming one lose the definition.
-    next.trigger_queue.retain(|entry| !belongs_to_hidden(Some(&entry.instance_id), Some(&entry.resume), &hidden));
+    next.trigger_queue.retain(|entry| !belongs_to_hidden(Some(entry.instance_id.as_str()), Some(&entry.resume), &hidden));
     for entry in next.trigger_queue.iter_mut() {
         scrub_resume(&mut entry.resume, &hidden);
         without_answer_key(&mut entry.resume);
@@ -449,7 +448,7 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     next.work_cursor = cursor.min(kept_work.len() as i64).max(0) as usize;
     next.work = kept_work;
 
-    next.echo_queue.retain(|entry| !belongs_to_hidden(Some(&entry.instance_id), None, &hidden));
+    next.echo_queue.retain(|entry| !belongs_to_hidden(Some(entry.instance_id.as_str()), None, &hidden));
     next.delayed.retain(|entry| !belongs_to_hidden(None, Some(&entry.resume), &hidden));
     for entry in next.delayed.iter_mut() {
         scrub_resume(&mut entry.resume, &hidden);

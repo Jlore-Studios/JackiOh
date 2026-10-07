@@ -31,7 +31,7 @@ pub const AI_BUDGET: SearchBudget = SearchBudget {
 pub const AI_GATE_BUDGET: SearchBudget = AI_BUDGET;
 
 /// `AI_SEARCH`'s shape.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AiSearch {
     /// Plays identical but for `zone` keep the leftmost and rightmost lane only.
