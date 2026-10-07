@@ -1,0 +1,16 @@
+id.instance: String (TS "c<n>")
+num.game: i32
+num.cursor: u32
+map.ordered: IndexMap
+bag.data: IndexMap<String, serde_json::Value>
+error.style: Result<_, StoreError> with TS's message (Duplicate for DuplicateResultError); anyhow::Result in the CLIs; panic only on invariants
+null.optional: Option + skip_serializing_if; x?: T | null as Option<Option<T>> via absent_or_null
+null.nullable: Option, serialised null
+case.json: camelCase via serde rename_all
+case.rust: snake_case
+state.mut: &mut GameState writes, &GameState reads, &mut EngineSink for TS sink mutators
+rng.source: Rng::new(&state.seed, state.rng_cursor) and write the cursor back
+hook.style: Arc<dyn Fn + Send + Sync> via hook(); no fn pointers, no Box
+registry.style: OnceLock set once by register_all; fused scripts built on lookup from state
+async.style: tokio in crates/server only; none in pure crates; Tx methods async, pg async, fake sync
+log.style: tracing JSON to stdout, server only
