@@ -81,7 +81,7 @@ mod tests {
     /// A unit on the board, so a test can name it in `tributes` without a non-null assertion.
     fn unit_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
         match s.unit(player, lane) {
-            Some(unit) => unit.clone(),
+            Some(unit) => unit,
             None => panic!("no unit in {player}'s lane {lane}"),
         }
     }
@@ -326,7 +326,7 @@ mod tests {
             s.play("core-055", json!({ "zone": 3, "tributes": tributes }));
 
             let golem = s.card("core-055").clone();
-            assert_eq!(s.unit(P2, 3).map(|unit| unit.id.clone()), Some(golem.id.clone()));
+            assert_eq!(s.unit(P2, 3).map(|unit| unit.id), Some(golem.id.clone()));
             assert!(s.unit(P1, 3).is_none());
             assert_eq!(golem.controller, P2);
             // Control, not ownership (§3.2): it is still p1's card, and it was p1's play.
@@ -358,7 +358,7 @@ mod tests {
             s.play("core-055", json!({ "zone": 5, "tributes": theirs }));
 
             // p2's lane 5 is taken, so the Golem takes p2's leftmost open zone, lane 1.
-            assert_eq!(s.unit(P2, 1).map(|unit| unit.def_id.clone()).as_deref(), Some("core-055"));
+            assert_eq!(s.unit(P2, 1).map(|unit| unit.def_id).as_deref(), Some("core-055"));
             assert_eq!(s.card("core-055").controller, P2);
         }
 
@@ -373,7 +373,7 @@ mod tests {
 
             s.play("core-055", json!({ "zone": 4, "tributes": mine }));
 
-            assert_eq!(s.unit(P1, 4).map(|unit| unit.def_id.clone()).as_deref(), Some("core-055"));
+            assert_eq!(s.unit(P1, 4).map(|unit| unit.def_id).as_deref(), Some("core-055"));
             assert_eq!(s.card("core-055").controller, P1);
         }
 
@@ -388,7 +388,7 @@ mod tests {
 
             s.play("core-055", json!({ "zone": 2, "tributes": theirs }));
 
-            assert_eq!(s.unit(P1, 2).map(|unit| unit.def_id.clone()).as_deref(), Some("core-055"));
+            assert_eq!(s.unit(P1, 2).map(|unit| unit.def_id).as_deref(), Some("core-055"));
             assert_eq!(s.card("core-055").controller, P1);
             assert_eq!(s.pile(P2, "graveyard").len(), 3);
         }
