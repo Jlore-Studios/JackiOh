@@ -163,7 +163,7 @@ mod b5_e22_flicker {
         let mut sink = sink_for(&state);
         sink.apply(&mut state, flicker(json_as(json!({ "target": { "of": "instance", "instanceId": unit.id } }))), PlayerId::P1);
         // Offer the flicker's events to the traps, as the resolution loop does.
-        settle(&mut sink.on(&mut state));
+        settle(&mut sink.on(&mut state), Default::default());
         assert_eq!(pluck(&events_of_type(&sink.events, GameEventType::Summoned), "instanceId"), vec![json!(unit.id)]);
         assert_eq!(pluck(&events_of_type(&sink.events, GameEventType::TrapFired), "instanceId"), vec![json!(zapper.id)]);
         assert_eq!(by_id(&state, &unit.id).damage, 4);
