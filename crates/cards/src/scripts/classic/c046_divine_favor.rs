@@ -13,9 +13,8 @@
 //! `test/preview.test.ts`): the draws it asks for now, from the two hands' public sizes, this card
 //! left out of "yours" in hand; label "Draw". `param(ctx, "multiplier")` (R386).
 
+use jackioh_engine::effects::{DrawWhileArgs, draw_while};
 use jackioh_engine::prelude::*;
-use jackioh_engine::effects::{draw_while, DrawWhileArgs};
-use std::sync::Arc;
 
 pub const ID: &str = "classic-046";
 
@@ -23,7 +22,8 @@ pub const ID: &str = "classic-046";
 const PREVIEW_LABEL: &str = "Draw";
 
 /// The cards still wanted: `multiplier ×` the opponent's hand less your own, never below 0. `leaving`
-/// counts the cards about to leave your hand before the draws begin (this card, asked in hand).
+/// counts the cards about to leave your hand before the draws begin (this card, asked in hand; TS's
+/// default is 0, which every caller here writes out).
 fn draws_wanted(state: &GameState, player: PlayerId, multiplier: i32, leaving: i32) -> i32 {
     let yours = zone_count(state, player, OffFieldZone::Hand) - leaving;
     let mark = multiplier * zone_count(state, opponent_of(player), OffFieldZone::Hand);
@@ -34,24 +34,33 @@ pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(hook(|_ctx| {
             vec![draw_while(DrawWhileArgs {
-                more: Arc::new(|now: &EffectContext| -> bool {
+                more: Arc::new(|now: &EffectContext<'_>| -> bool {
                     draws_wanted(&now.state, now.controller, param(now, "multiplier"), 0) > 0
                 }),
                 player: None,
             })]
         })),
-        preview: Some(Arc::new(|ctx: &ConditionContext| -> Vec<PreviewValue> {
-            let in_hand = if ctx.zone == ConditionZone::Hand && matches!(ctx.self_.zone, Zone::Hand { .. }) { 1 } else { 0 };
-            vec![json_as(json!({
-                "label": PREVIEW_LABEL,
-                "value": draws_wanted(&ctx.state, ctx.controller, param(ctx, "multiplier"), in_hand),
-            }))]
+        preview: Some(condition_hook(|ctx| {
+            let in_hand = if ctx.zone == ConditionZone::Hand && matches!(ctx.self_.zone, Zone::Hand { .. }) {
+                1
+            } else {
+                0
+            };
+            vec![PreviewValue {
+                label: PREVIEW_LABEL.to_string(),
+                value: draws_wanted(ctx.state, ctx.controller, param(&ctx, "multiplier"), in_hand),
+                display: None,
+                ids: None,
+            }]
         })),
         ..Script::default()
     };
 
     // The same script: the Radiant face differs only in its declared multiplier (2), read through `param`.
-    CardScripts { radiant: base.clone(), base }
+    CardScripts {
+        radiant: base.clone(),
+        base,
+    }
 }
 
 // C #46 Divine Favor — SPEC §8.6 row 46, BUILD M9 Classic row C 46: "Read as it resolves (this Spell has
@@ -64,8 +73,8 @@ pub fn script() -> CardScripts {
 // The preview's proofs are in `test/preview.test.ts` (its C #46 section), with the set of hooked cards.
 #[cfg(test)]
 mod tests {
-    use super::{script, ID};
-    use jackioh_engine::effects::{applicable_changes, TuneDirection, TuneRow};
+    use super::{ID, script};
+    use jackioh_engine::effects::{TuneDirection, TuneRow, applicable_changes};
     use jackioh_engine::testkit::*;
 
     const FAVOR: &str = "classic-046";
@@ -91,7 +100,14 @@ mod tests {
         (0..count).map(|_| def_id.to_string()).collect()
     }
 
-    mod c_46_divine_favor {
+    /// TS `stepParam(s.card(ref), key, steps)`: the step written on the card as it stands in the state.
+    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
+        let id = s.card(card).id.clone();
+        let instance = find_instance_mut(s.state_mut(), &id).expect("the card to step is in the state");
+        step_param(instance, key, steps);
+    }
+
+    mod c46_divine_favor {
         use super::*;
 
         #[test]
@@ -144,7 +160,7 @@ mod tests {
             }
 
             #[test]
-            fn c2_4_a_fatigue_hit_adds_no_card_and_ends_it_one_hit_however_far_behind() {
+            fn s2_4_a_fatigue_hit_adds_no_card_and_ends_it_one_hit_however_far_behind() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [FAVOR], "library": [MENACE] }, "p2": { "hand": many(6, STOCKPILE) } }));
                 s.play(FAVOR, json!({}));
@@ -153,7 +169,7 @@ mod tests {
             }
 
             #[test]
-            fn c2_4_a_burn_at_the_hand_cap_adds_no_card_and_ends_it() {
+            fn s2_4_a_burn_at_the_hand_cap_adds_no_card_and_ends_it() {
                 crate::register_all();
                 let mut hand = vec![json!({ "def": FAVOR, "radiant": true })];
                 hand.extend(many(9, FILLER).into_iter().map(Value::from));
@@ -186,7 +202,7 @@ mod tests {
             }
 
             #[test]
-            fn c9_3_a_cast_on_draw_ends_it_too_r682_no_prompt_the_chain_still_repeats_into_one_menace() {
+            fn s9_3_a_cast_on_draw_ends_it_too_r682_no_prompt_the_chain_still_repeats_into_one_menace() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FAVOR, FILLER], "library": [HINDER, MENACE, MENACE] },
@@ -237,7 +253,7 @@ mod tests {
                 }));
                 assert!(!applicable_changes(s.state(), s.card(FAVOR), TuneDirection::Upgrade).contains(&TuneRow::Number));
                 assert!(!applicable_changes(s.state(), s.card(FAVOR), TuneDirection::Degrade).contains(&TuneRow::Number));
-                step_param(s.card_mut(FAVOR), "multiplier", 1);
+                step(&mut s, FAVOR, "multiplier", 1);
                 s.play(FAVOR, json!({}));
                 // As many as the opponent's three, as the text says: the Filler and two draws.
                 assert_eq!(s.hand(PlayerId::P1).len(), 3);
@@ -294,13 +310,13 @@ mod tests {
                     "p2": { "hand": many(3, STOCKPILE) },
                 }));
                 assert!(applicable_changes(s.state(), s.card(FAVOR), TuneDirection::Degrade).contains(&TuneRow::Number));
-                step_param(s.card_mut(FAVOR), "multiplier", -1);
+                step(&mut s, FAVOR, "multiplier", -1);
                 s.play(FAVOR, json!({}));
                 assert_eq!(s.hand(PlayerId::P1).len(), 3);
             }
 
             #[test]
-            fn c2_4_a_fatigue_hit_ends_it_on_the_radiant_face_too() {
+            fn s2_4_a_fatigue_hit_ends_it_on_the_radiant_face_too() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": FAVOR, "radiant": true }], "library": [] },
