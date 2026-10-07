@@ -36,14 +36,17 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "classic-033";
 
 pub fn script() -> CardScripts {
+    // `ReplacementDef` holds a `when` closure, so it is built in Rust, not through `json_as`.
     let base = Script {
-        replacements: vec![json_as(json!({
-            "id": "joro",
-            "on": "targeted",
-            "where": "hand",
-            "by": "spell",
-            "instead": { "interpose": true },
-        }))],
+        replacements: vec![ReplacementDef {
+            id: "joro".into(),
+            on: ReplacementMoment::Targeted,
+            where_: Some(ReplacementWhere::Hand),
+            when: None,
+            instead: ReplacementInstead { interpose: Some(true), ..ReplacementInstead::default() },
+            then: None,
+            by: Some(ReplacementBy::Spell),
+        }],
         ..Script::default()
     };
 
@@ -126,14 +129,22 @@ mod tests {
         #[test]
         fn is_one_replacement_at_targeted_from_the_hand_answering_only_a_spell_the_same_on_both_faces_with_no_numbers() {
             crate::register_all();
-            assert!(js(&registered_catalog()[ID])["params"].is_null());
+            assert!(crate::card_def(ID).params.is_none());
             let scripts = script();
-            assert_eq!(
-                js(&scripts.base.replacements),
-                json!([{ "id": "joro", "on": "targeted", "where": "hand", "by": "spell", "instead": { "interpose": true } }]),
-            );
-            // TS `expect(radiant).toBe(base)`: the Radiant face is the same declaration.
-            assert_eq!(js(&scripts.radiant.replacements), js(&scripts.base.replacements));
+            // TS `toEqual([{ id: "joro", on: "targeted", where: "hand", by: "spell", instead: { interpose: true } }])`:
+            // `ReplacementDef` is not serialisable (its `when` is a closure), so field by field.
+            for face in [&scripts.base, &scripts.radiant] {
+                // TS `expect(radiant).toBe(base)`: the Radiant face is the same declaration.
+                assert_eq!(face.replacements.len(), 1);
+                let joro = &face.replacements[0];
+                assert_eq!(joro.id, "joro");
+                assert_eq!(joro.on, ReplacementMoment::Targeted);
+                assert_eq!(joro.where_, Some(ReplacementWhere::Hand));
+                assert_eq!(joro.by, Some(ReplacementBy::Spell));
+                assert_eq!(js(&joro.instead), json!({ "interpose": true }));
+                assert!(joro.when.is_none());
+                assert!(joro.then.is_none());
+            }
         }
 
         mod base {

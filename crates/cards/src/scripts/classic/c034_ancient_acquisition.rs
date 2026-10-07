@@ -73,6 +73,13 @@ mod tests {
         if opts[key].is_null() { fallback } else { opts[key].clone() }
     }
 
+    /// TS `stepParam(s.card(ref), key, steps)`: TS's `card()` handed back the live instance, so the
+    /// step is written on the state's own copy, found again by id.
+    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
+        let id = s.card(card).id.clone();
+        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
+    }
+
     /// `piles`: `graveyard`, `exile`, `hand`, as the TS helper's (`{}` for none).
     fn acquire(radiant_face: bool, piles: Value) -> Scenario {
         let mut hand = vec![json!({ "def": ACQUIRE, "radiant": radiant_face })];
@@ -264,7 +271,7 @@ mod tests {
             fn r386_an_upgrade_of_cards_lets_it_return_3() {
                 crate::register_all();
                 let mut s = acquire(false, json!({}));
-                step_param(s.card_mut(ACQUIRE), "cards", 1);
+                step(&mut s, ACQUIRE, "cards", 1);
                 s.play(ACQUIRE, json!({}));
                 assert!(s.state().pending.is_none());
                 assert_eq!(s.hand(PlayerId::P1).len(), 4);
@@ -275,7 +282,7 @@ mod tests {
             fn r386_a_degrade_of_cards_lets_it_return_1() {
                 crate::register_all();
                 let mut s = acquire(false, json!({}));
-                step_param(s.card_mut(ACQUIRE), "cards", -1);
+                step(&mut s, ACQUIRE, "cards", -1);
                 s.play(ACQUIRE, json!({}));
                 assert!(s.state().pending.is_none());
                 assert_eq!(s.hand(PlayerId::P1).len(), 2);
@@ -382,7 +389,7 @@ mod tests {
             fn r386_a_degrade_of_cards_lets_it_return_3() {
                 crate::register_all();
                 let mut s = acquire(true, json!({ "graveyard": [MENACE, SEVEN, FELINORS], "exile": [VANILLA, ECLIPSE] }));
-                step_param(s.card_mut(ACQUIRE), "cards", -1);
+                step(&mut s, ACQUIRE, "cards", -1);
                 s.play(ACQUIRE, json!({}));
                 assert!(s.state().pending.is_none());
                 assert_eq!(s.hand(PlayerId::P1).len(), 4);

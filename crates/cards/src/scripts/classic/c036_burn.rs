@@ -21,21 +21,21 @@
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::effects::{damage, draw};
-use std::sync::Arc;
 
 pub const ID: &str = "classic-036";
 
 /// §8 Conventions: any unit or hero, either side.
 fn targets() -> Vec<TargetDecl> {
-    vec![json_as(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }))]
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
 }
 
 /// The mana the face's condition compares, and whether it reaches the threshold. `leftNow` is the
 /// base face's "mana left": current mana as the Spell resolves, or, asked of a card in hand, what
 /// paying for it now would leave.
 ///
-/// (TS takes `EffectContext | ConditionContext` and reads `state`, `controller` and
-/// `param(ctx, "threshold")` off it; Rust takes those three readings.)
+/// TS takes `EffectContext | ConditionContext` and reads `state`, `controller` and
+/// `param(ctx, "threshold")` off it; the two are different types here, so the caller hands over
+/// those three readings (pure reads, so where they are taken changes nothing).
 fn draw_condition(state: &GameState, controller: PlayerId, threshold: i32, radiant: bool, left_now: i32) -> bool {
     let mana = if radiant { max_mana_of(state, controller) } else { left_now };
     mana >= threshold
@@ -46,26 +46,22 @@ fn burn(radiant: bool) -> Script {
         targets: targets(),
         cry: Some(hook(move |ctx| {
             let mut effects = vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": param(ctx, "damage") })))];
-            if draw_condition(
-                &ctx.state,
-                ctx.controller,
-                param(ctx, "threshold"),
-                radiant,
-                unspent_mana_of(&ctx.state, ctx.controller),
-            ) {
+            let threshold = param(ctx, "threshold");
+            let left = unspent_mana_of(&ctx.state, ctx.controller);
+            if draw_condition(&ctx.state, ctx.controller, threshold, radiant, left) {
                 effects.push(draw(json_as(json!({ "count": param(ctx, "draw") }))));
             }
             effects
         })),
         // R195: in hand, whether playing it now would draw.
-        condition_met: Some(Arc::new(move |ctx: &ConditionContext| -> bool {
-            ctx.zone == ConditionZone::Hand
+        condition_met: Some(condition_hook(move |c: ConditionContext| -> bool {
+            c.zone == ConditionZone::Hand
                 && draw_condition(
-                    &ctx.state,
-                    ctx.controller,
-                    param(ctx, "threshold"),
+                    c.state,
+                    c.controller,
+                    param(&c, "threshold"),
                     radiant,
-                    unspent_mana_of(&ctx.state, ctx.controller) - effective_cost(&ctx.state, &ctx.self_, Default::default()),
+                    unspent_mana_of(c.state, c.controller) - effective_cost(c.state, c.self_, Default::default()),
                 )
         })),
         ..Script::default()
@@ -102,6 +98,13 @@ mod tests {
     /// An engine value as the JSON the TS test reads (SURFACE §5.1: the same keys and values).
     fn js<T: serde::Serialize + ?Sized>(value: &T) -> Value {
         serde_json::to_value(value).expect("an engine value serialises")
+    }
+
+    /// TS `stepParam(s.card(ref), key, steps)`: TS's `card()` handed back the live instance, so the
+    /// step is written on the state's own copy, found again by id.
+    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
+        let id = s.card(card).id.clone();
+        step_param(find_instance_mut(s.state_mut(), &id).expect("the card is in the game"), key, steps);
     }
 
     /// TS `AT_HERO: Selection[]`.
@@ -216,7 +219,7 @@ mod tests {
             }
 
             #[test]
-            fn c2_3_temporary_mana_above_max_counts_as_mana_left() {
+            fn s2_3_temporary_mana_above_max_counts_as_mana_left() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "turn": 3,
@@ -233,17 +236,17 @@ mod tests {
             fn r386_an_upgrade_deals_3_a_degrade_of_the_threshold_to_5_stops_4_mana_drawing_an_upgrade_of_draw_draws_2() {
                 crate::register_all();
                 let mut dmg = scenario(json!({ "p1": { "hand": [BURN, ANCHOR], "library": [A, B] }, "p2": { "hand": [ANCHOR] } }));
-                step_param(dmg.card_mut(BURN), "damage", 1);
+                step(&mut dmg, BURN, "damage", 1);
                 dmg.play(BURN, json!({ "targets": at_hero() }));
                 dmg.expect_health(PlayerId::P2, 27);
 
                 let mut harder = scenario(json!({ "p1": { "hand": [BURN, ANCHOR], "library": [A, B] }, "p2": { "hand": [ANCHOR] } }));
-                step_param(harder.card_mut(BURN), "threshold", 1);
+                step(&mut harder, BURN, "threshold", 1);
                 harder.play(BURN, json!({ "targets": at_hero() }));
                 assert_eq!(hand_defs(&harder), vec![ANCHOR]);
 
                 let mut more = scenario(json!({ "p1": { "hand": [BURN, ANCHOR], "library": [A, B] }, "p2": { "hand": [ANCHOR] } }));
-                step_param(more.card_mut(BURN), "draw", 1);
+                step(&mut more, BURN, "draw", 1);
                 more.play(BURN, json!({ "targets": at_hero() }));
                 assert_eq!(hand_defs(&more), vec![ANCHOR, A, B]);
             }
@@ -267,7 +270,7 @@ mod tests {
             }
 
             #[test]
-            fn c2_3_with_max_mana_3_it_draws_nothing_however_much_mana_is_left() {
+            fn s2_3_with_max_mana_3_it_draws_nothing_however_much_mana_is_left() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "turn": 5,
@@ -289,7 +292,7 @@ mod tests {
                     "p1": { "hand": [{ "def": BURN, "radiant": true }, ANCHOR], "library": [A] },
                     "p2": { "hand": [ANCHOR] },
                 }));
-                step_param(s.card_mut(BURN), "threshold", 1);
+                step(&mut s, BURN, "threshold", 1);
 
                 s.play(BURN, json!({ "targets": at_hero() }));
 

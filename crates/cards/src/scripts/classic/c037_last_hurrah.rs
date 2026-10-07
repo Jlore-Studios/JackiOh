@@ -174,7 +174,7 @@ mod tests {
             }
 
             #[test]
-            fn c2_4_a_draw_limit_stops_the_rest_those_draws_do_not_happen_at_all() {
+            fn s2_4_a_draw_limit_stops_the_rest_those_draws_do_not_happen_at_all() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({ "backrow": [{ "def": PALANTIR, "faceUp": true }] }), false);
 
@@ -240,7 +240,7 @@ mod tests {
             }
 
             #[test]
-            fn c6_3_each_card_goes_as_a_discard_with_its_own_discarded_event() {
+            fn s6_3_each_card_goes_as_a_discard_with_its_own_discarded_event() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
                 s.play(HURRAH, json!({}));
