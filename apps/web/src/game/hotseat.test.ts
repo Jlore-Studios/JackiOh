@@ -699,7 +699,7 @@ describe("resolveDeck", () => {
     expect("error" in result).toBe(true);
     if ("error" in result) {
       expect(result.error).toMatch(/catalog is empty/);
-      expect(result.error).toMatch(/packages\/cards/);
+      expect(result.error).toMatch(/crates\/cards/);
     }
   });
 
