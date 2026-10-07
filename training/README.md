@@ -12,7 +12,7 @@ docs/v0.3.0/SURFACE.md §14.
 
 ## How a lane runs
 
-The training box (an always-on EC2 `m7i.xlarge`, set up by #306's part 39) runs two systemd services,
+The training box (an always-on EC2 `m7i-flex.large`, set up by #306's part 39) runs two systemd services,
 `jackioh-train@improve` and `jackioh-train@unban`, each as its own Linux user (`agent-train-improve`,
 `agent-train-unban`) with its own checkout, Devin login and GitHub token. Each runs
 [`loop.sh`](loop.sh) `<lane>` forever (`Restart=always`):

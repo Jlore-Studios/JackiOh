@@ -164,7 +164,7 @@ if [ -n "$training" ]; then
   # One lane, forever: training/loop.sh <lane> as the lane's user, from its checkout. A system
   # unit's %h is root's home whatever User= says, so the paths name the lane's home in full; the
   # loop sets JACKIOH_TRAINING_OUT to the same directory itself. RAYON_NUM_THREADS=2: two lanes'
-  # games share the four vCPUs. DEVIN_MODEL is the knob for Devin's model.
+  # games share the box's vCPUs. DEVIN_MODEL is the knob for Devin's model.
   cat > /etc/systemd/system/jackioh-train@.service <<'EOF'
 [Unit]
 Description=JackiOh AI training lane %i (training/README.md)
