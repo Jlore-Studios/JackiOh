@@ -1140,3 +1140,20 @@ registry.style: OnceLock set once by register_all; fused scripts built on lookup
 async.style: tokio in crates/server only; none in pure crates
 log.style: tracing JSON to stdout, server only
 ```
+
+## 17. Amendments from the reconcile (part 31, Wave 2)
+
+Holes the Wave 2 reconcilers found, each settled once and applied to the code (`.fullsend/notes/spec-gaps.md` has the reasoning and `.fullsend/notes/reconcile-decisions.md` the per-crate decisions). Where a section above says otherwise, this section wins.
+
+- **§2, `jsonwebtoken`:** the workspace entry carries `features = ["rust_crypto"]` (without a provider 11.1 panics on the first verify).
+- **§4.3, three more TS shapes:** an AI node budget or count (`SearchBudget`, `SearchStats`, `NodeCounter`, `find_lethal`'s limit, `MatchRecord.nodes`) is `usize`, the AI's config counts stay `i32`; a store's counts, caps, positions, sequence numbers and epoch ms are `i64` at the `Tx` boundary; TS's optional nullable `x?: T | null` is `Option<Option<T>>` with `#[serde(default, skip_serializing_if = "Option::is_none", with = "absent_or_null")]`.
+- **§5.1 / §10.1, the web's engine constants:** `engineConfig.ts` carries 13, `LIBRARY_CAP` included.
+- **§6.1, `view_for`'s clock:** `view_for_with_clock(state: &GameState, player: PlayerId, clock_ms: Option<i32>) -> PlayerView` sits beside `view_for` (TS's third argument, R79; the server's actor passes it).
+- **§6.5, `EngineSink`:** two more fields, `frontier: triggers::FrontierSlot<'a>` (which of an action's events are dispatched; TS used object identity) and `owed_behind: Option<IndexSet<String>>` (R117). `reborrow` shares `frontier` and copies the rest.
+- **§6.6, closures:** `TriggerWhen = Arc<dyn Fn(&mut EffectContext, &GameEvent) -> bool>` (Classic+ #74 writes while it declines, R99). In effect arguments, a field that builds a list or a query reads `&mut EffectContext` (`ForEachCardArgs.cards`, `CastEachArgs.cards`, `DrawWhileArgs.more`, `DiscoverFromCatalogArgs.query_fn`, `CastNewDef::Read`, `CastRandomQuery::Read`, `CastRandomCount::Read`); a filter reads `&EffectContext` (`ChooseTargetWhereArgs.where_`, `ChooseFromHandArgs.where_`); `forEachCard`/`castEach` answer card ids.
+- **§7.1, the prelude:** it names `catalog`'s items one by one and leaves out `register_catalog`, so a card test's two globs (`super::*`, `testkit::*`) do not collide on it.
+- **§8, the testkit:** `s.state_mut() -> &mut GameState` (TS assigned `g.state.…`) and `s.card_mut(ref) -> &mut CardInstance` (TS wrote through `s.card(…)`'s live object). Two test seams exist under `#[cfg(feature = "testkit")]` only, beside the registry override: `register_work_handler` (a test-made work hook, TS `registerWorkHandler`) and `mock_brittle_tick` / `mock_animate_at_turn_start` / `mock_return_at_cleanup` (TS `vi.mock` of the three turn stages). In the cards crate, one registering `scenario()` per test binary (`crate::scenario`, `cross::scenario`) and the JSON helpers `js`, `matches_object`, `merged`, `unit_or_blank`.
+- **§9, the AI's counter:** `NodeCounter` is a trait with `&self` methods whose tallies live in `Cell` (`clippy.toml` bans `RefCell` only); node-spending functions take `&dyn NodeCounter`.
+- **§10.1, the bindings:** each returns `Result<String, JsError>` (`ai_to_act`: `Result<bool, JsError>`), the same JS type, throwing where TS threw. `validator("checkDeckDraft", …)` takes `{ name, cards, deckable: string[], portrait?, portraitKnown?, nameMaxLength }` (its TS argument holds two predicates; the binding rebuilds them).
+- **§11.2, handlers:** `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult` (a handler that starts a match needs the `Arc` for `Registry::start`); `app::Handler`, `h!` and `api::http::dispatch` follow.
+- **§14.2, the arena's records:** `pilots` are both `"ai"` (R376's `Pilot` allows only `human`/`ai`); the two agents are named in the record's `id`, `dev:<patch>:arena:<a>-vs-<b>:<seed>`.
