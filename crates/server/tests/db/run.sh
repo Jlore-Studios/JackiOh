@@ -2,9 +2,9 @@
 # Runs the database suite — the Postgres store (`Db::Pg`, crates/server/src/db/pg.rs) against a
 # real Postgres.
 #
-#   pnpm test:db             # or: sh crates/server/tests/db/run.sh
-#   KEEP_DB=1 pnpm test:db   # leave the container up for poking at
-#   DB_PORT=55555 pnpm test:db
+#   sh crates/server/tests/db/run.sh               # as CI's db job runs it
+#   KEEP_DB=1 sh crates/server/tests/db/run.sh     # leave the container up for poking at
+#   DB_PORT=55555 sh crates/server/tests/db/run.sh
 #
 # Needs Docker and cargo, and takes a couple of seconds once the server crate is built. This is
 # NOT part of `cargo test` on its own and never will be: without DATABASE_URL, `cargo test` runs the

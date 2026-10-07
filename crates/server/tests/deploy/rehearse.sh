@@ -1,7 +1,7 @@
 #!/bin/sh
-# Rehearse a Render deploy of the server before it happens (`pnpm test:deploy`, CI's db job).
+# Rehearse a Render deploy of the server before it happens (CI's db job).
 #
-#   pnpm test:deploy        # or: sh crates/server/tests/deploy/rehearse.sh
+#   sh crates/server/tests/deploy/rehearse.sh
 #
 # Render builds the Docker image render.yaml names (`runtime: docker`, its dockerfilePath and
 # dockerContext) and runs the image's own command, `jackioh-server release`: migrate, then seed the

@@ -2,15 +2,15 @@
 # Apply every migration (0001-0026) to a throwaway Postgres and assert the
 # invariants of SPEC §9.1, §9.4 and §9.5 against a real database.
 #
-#   pnpm test:sql            # or: sh crates/server/tests/sql/run.sh
+#   sh crates/server/tests/sql/run.sh        # as CI's db job runs it
 #
-# Needs Docker only. This is NOT part of `pnpm test`, and it never will be: the
+# Needs Docker only. This is NOT part of `cargo test`, and it never will be: the
 # cargo suite under crates/server runs against an in-memory fake, and every
 # assertion in these files is a property of a real Postgres that a fake cannot
 # have — row-level security under the `authenticated` role, the append-only
 # deny_row_mutation triggers, SECURITY DEFINER boundaries, and the L4 unique
 # index on (profile_id, card_id) that BUILD M6-T3 names as a raw SQL test. Run
-# both: `cargo test` for the server logic, `pnpm test:sql` for the schema.
+# both: `cargo test` for the server logic, this script for the schema.
 #
 # Exit status is the whole point — this is a gate, not a report. It exits 0 only
 # when every migration applied without noise and every check passed. It exits 1
