@@ -17,7 +17,7 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactElement } from "
 
 import { checkImportRoom, trioConflicts, type CatalogSnapshot, type Collection } from "@jackioh/validator";
 
-import { TRIO_CODE_VERSION } from "../../../../server/src/config.ts";
+import { TRIO_CODE_VERSION } from "@jackioh/server-config";
 import { DECK_SIZE } from "./deckSize.ts";
 import { droppedLines } from "./ImportPanel.tsx";
 import type { TrioImport, TrioImportResult, WorkshopLimits } from "./sync.ts";

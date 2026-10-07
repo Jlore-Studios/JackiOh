@@ -218,10 +218,11 @@ export function activationsFor(legal: readonly ActionBody[], instanceId: string,
 
 /**
  * How an `attack` names a hero: the literal string `hero-<playerId>`, e.g. `"hero-p2"`.
- * Learned from `packages/engine/test/combat-validation.test.ts` (`attackVia(other, free.id,
- * "hero-p1").error === "no target hero-p1"`), `combat-positions.test.ts` (every face attack sends
- * `targetId: "hero-p2"`) and `packages/engine/src/damage.ts`, whose `targetId()` builds the same
- * id for the `damage` and `healed` events. There is no exported helper in `@jackioh/shared` for
+ * Learned from the engine's combat tests, `crates/engine/tests/rules/combat_validation.rs` (a
+ * refused attack on `"hero-p1"` reads `"no target hero-p1"`) and
+ * `combat_positions.rs` (every face attack sends `targetId: "hero-p2"`), and from
+ * `crates/engine/src/damage.rs`, whose `target_id()` builds the same id for the `damage` and
+ * `healed` events. There is no exported helper in `@jackioh/shared` for
  * it — reported as an M5-T2 finding — so this is the client's copy of that one string.
  */
 export function heroTargetId(player: PlayerId): string {
@@ -944,7 +945,7 @@ export function onControl(legal: readonly ActionBody[], control: BoardControl): 
 // Answering a prompt.
 // ---------------------------------------------------------------------------------------------
 
-/** The `<pick>:` prefixes the engine puts on an option key (`packages/engine/src/effects/choose.ts`). */
+/** The `<pick>:` prefixes the engine puts on an option key (`crates/engine/src/effects/choose.rs`). */
 const KEY_PREFIXES = ["instance:", "hero:", "zone:", "mode:"] as const;
 
 function withoutPickPrefix(key: string): string {
@@ -980,7 +981,7 @@ export function selectionForOption(option: PendingOption): Selection {
  * The mulligan is not an `answer`: §10.2 gives it its own `mulligan {keep[]}` action, and
  * `legalActions` enumerates it as subsets of the prompt's option keys, so the picked keys *are*
  * the kept cards. They are re-ordered into hand order so the same picks always build the same
- * action (the engine reads `keep` as a set, `packages/engine/src/setup.ts`).
+ * action (the engine reads `keep` as a set, `crates/engine/src/setup.rs`).
  */
 export function answerAction(
   pending: Extract<PendingView, { forYou: true }>,

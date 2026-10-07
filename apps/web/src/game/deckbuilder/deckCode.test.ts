@@ -16,7 +16,7 @@ import {
   DECK_CODE_MAX_INPUT_LENGTH,
   DECK_CODE_VERSION,
   DECK_NAME_MAX_LENGTH,
-} from "../../../../server/src/config.ts";
+} from "@jackioh/server-config";
 import {
   DECK_CODE_MESSAGES,
   DECK_CODE_PREFIX,

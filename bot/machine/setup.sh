@@ -1,21 +1,48 @@
 #!/bin/bash
-# Sets up the night bot's machine (README.md): Ubuntu 24.04 on x86_64, run as root. Idempotent;
-# run it again to update the CLIs or to add a subscription. Arguments: the ids of the
-# subscriptions that run there (providers.json entries whose runs_on is night-vm-<id>):
+# Sets up one of the bot's two boxes (README.md): Ubuntu 24.04 on x86_64, run as root. Idempotent;
+# run it again to update the CLIs, the Rust toolchain or to add a subscription.
+#
+# The night box: the ids of the subscriptions that run there (providers.json entries whose
+# runs_on is night-vm-<id>):
 #
 #   bash setup.sh gpt agy muse devin
 #
 # Each subscription gets a Linux user of its own, agent-<id>, with a home no other user can read,
-# where its CLI login lives and where its GitHub runner (unpacked here, registered by
-# register-runners.sh) runs its jobs. No agent user has sudo or Docker.
+# where its CLI login lives, its Rust toolchain for the light checks, and its GitHub runner
+# (unpacked here, registered by register-runners.sh) runs its jobs. No agent user has sudo or
+# Docker.
+#
+# The training box (training/README.md), with --training and nothing else:
+#
+#   bash setup.sh --training
+#
+# Two users, agent-train-improve and agent-train-unban, each with its own checkout, Rust, Devin
+# and gh, and the systemd service jackioh-train@<lane> that runs training/loop.sh <lane> forever.
+# The box is always on: no idle stop, no runner, no starter. Each user's Devin login and GitHub
+# token are a person's to put in once (README.md, The training box). TRAIN_REPO (OWNER/REPO) is the
+# repository the lanes clone, push to and open pull requests on.
 set -euo pipefail
 [ "$(id -u)" = 0 ] || { echo "run as root" >&2; exit 1; }
+training=""
+if [ "${1:-}" = --training ]; then
+  training=1
+  shift
+  [ "$#" = 0 ] || { echo "setup.sh --training takes no subscription ids" >&2; exit 2; }
+fi
 # The Claude accounts log in from secrets and run on GitHub's runners, so none has a user here.
-[ "$#" -gt 0 ] || set -- gpt agy muse devin
+[ -n "$training" ] || [ "$#" -gt 0 ] || set -- gpt agy muse devin
 export DEBIAN_FRONTEND=noninteractive HOME=/root
-date +%s > /run/night-vm-last-busy  # a long setup is not idle time
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# The version rust-toolchain.toml pins (with its components and target), installed for every user
+# that runs the repository's checks, so cargo in a checkout never downloads a toolchain mid-job.
+# Change it with rust-toolchain.toml, then run this again on both boxes.
+RUST_TOOLCHAIN=1.97.0
+TRAIN_REPO="${TRAIN_REPO:-Jlore-Studios/JackiOh}"
+TRAIN_LANES="improve unban"
+[ -n "$training" ] || date +%s > /run/night-vm-last-busy  # a long setup is not idle time
 
-# Swap: three jobs at once on 8 GB, each running the repo's checks.
+# Swap: three jobs at once on 8 GB, each running the repo's checks; on the training box, room for
+# both lanes' release builds beside their games.
 if [ ! -f /swapfile ]; then
   fallocate -l 8G /swapfile && chmod 600 /swapfile && mkswap /swapfile >/dev/null && swapon /swapfile
   echo '/swapfile none swap sw 0 0' >> /etc/fstab
@@ -39,6 +66,143 @@ printf '[Journal]\nSystemMaxUse=200M\n' > /etc/systemd/journald.conf.d/night-vm.
 systemctl restart systemd-journald
 journalctl --vacuum-size=200M >/dev/null 2>&1 || true
 
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+chmod 755 "$work"  # the agent users read the installers below from here
+
+# rustup's installer, run once per user by install_rust.
+curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs -o "$work/rustup-init.sh"
+chmod 644 "$work/rustup-init.sh"
+
+# Rust for one user, in that user's home: rustup, then RUST_TOOLCHAIN on the minimal profile with
+# rustfmt and clippy (the light checks: `cargo fmt --check` and the `cargo jackioh` checks) and the
+# wasm32 target rust-toolchain.toml lists. It runs from the user's home, which only that user (and
+# root) may enter. Run again, it changes nothing.
+install_rust() {
+  local user="$1" home="/home/$1" out
+  if ! out="$(
+      cd "$home" || exit 1
+      if [ ! -x "$home/.cargo/bin/rustup" ]; then
+        sudo -u "$user" -H sh "$work/rustup-init.sh" -y --no-modify-path --profile minimal \
+          --default-toolchain none 2>&1 || exit 1
+      fi
+      sudo -u "$user" -H "$home/.cargo/bin/rustup" toolchain install "$RUST_TOOLCHAIN" \
+        --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown 2>&1 || exit 1
+      sudo -u "$user" -H "$home/.cargo/bin/rustup" default "$RUST_TOOLCHAIN" 2>&1
+    )"; then
+    echo "$user: Rust $RUST_TOOLCHAIN did not install:" >&2
+    echo "$out" | tail -20 >&2
+    exit 1
+  fi
+}
+
+# Devin's CLI: the steps of cli.devin.ai/install.sh (its manifest, the bundle, the bundle's
+# checksum), into a shared directory instead of root's home, and without the per-user
+# `devin setup` it ends with. Each user's own login stays in that user's home.
+install_devin() {
+  local manifest version dir
+  manifest="$(curl -fsSL https://static.devin.ai/cli/current/manifest.json)"
+  version="$(jq -r .version <<<"$manifest")"
+  dir="/usr/local/lib/devin/$version"
+  if [ ! -x "$dir/bin/devin" ]; then
+    curl -fsSL -o "$work/devin.tgz" \
+      "$(jq -r '.platforms["x86_64-unknown-linux"].url' <<<"$manifest")"
+    echo "$(jq -r '.platforms["x86_64-unknown-linux"].sha256' <<<"$manifest")  $work/devin.tgz" \
+      | sha256sum -c --quiet -
+    rm -rf "$dir.tmp" && mkdir -p "$dir.tmp"
+    tar xzf "$work/devin.tgz" -C "$dir.tmp"
+    rm -rf "$dir" && mv "$dir.tmp" "$dir"
+  fi
+  echo curl-bash > "$dir/distribution"
+  ln -sfn "$version" /usr/local/lib/devin/current
+  ln -sf /usr/local/lib/devin/current/bin/devin /usr/local/bin/devin
+  chmod -R a+rX /usr/local/lib/devin
+}
+
+if [ -n "$training" ]; then
+  # GitHub's CLI from GitHub's own apt repository (cli.github.com): loop.sh lists, opens and
+  # auto-merges the lanes' pull requests with it, and git pushes through it.
+  if [ ! -f /etc/apt/sources.list.d/github-cli.list ]; then
+    install -d -m 755 /etc/apt/keyrings
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+      -o /etc/apt/keyrings/githubcli-archive-keyring.gpg
+    chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list
+    apt-get update -qq
+  fi
+  apt-get install -y -qq gh >/dev/null
+  install_devin
+
+  # The box is always on. A box set up before as a night box (or by the old `setup.sh
+  # devin-train`) has the idle stop: it goes.
+  systemctl disable --now night-vm-idle-stop.timer >/dev/null 2>&1 || true
+  rm -f /etc/systemd/system/night-vm-idle-stop.timer /etc/systemd/system/night-vm-idle-stop.service
+
+  for lane in $TRAIN_LANES; do
+    user="agent-train-$lane"
+    home="/home/$user"
+    id "$user" >/dev/null 2>&1 || useradd -m -s /bin/bash -K UMASK=077 "$user"
+    chmod 700 "$home"
+    install_rust "$user"
+    # The lane's own checkout, which loop.sh resets to main every cycle (so its target/ stays and
+    # each build after the first is incremental).
+    if [ ! -d "$home/JackiOh/.git" ]; then
+      (cd "$home" && sudo -u "$user" -H git clone --quiet "https://github.com/$TRAIN_REPO.git" JackiOh)
+    fi
+    # git pushes through gh's login (what `gh auth setup-git` writes), and commits under a name of
+    # the lane's own unless a person set one: Devin commits its promotion and loop.sh rebases it.
+    (cd "$home" && sudo -u "$user" -H git config --global --replace-all \
+      credential.https://github.com.helper '!/usr/bin/gh auth git-credential')
+    if ! (cd "$home" && sudo -u "$user" -H git config --global user.email >/dev/null); then
+      (cd "$home" && sudo -u "$user" -H git config --global user.name "JackiOh training ($lane)")
+      (cd "$home" && sudo -u "$user" -H git config --global user.email "$user@jackioh-train-box")
+    fi
+    sudo -u "$user" mkdir -p "$home/training-out/$lane" "$home/logs"
+  done
+
+  # One lane, forever: training/loop.sh <lane> as the lane's user, from its checkout. A system
+  # unit's %h is root's home whatever User= says, so the paths name the lane's home in full; the
+  # loop sets JACKIOH_TRAINING_OUT to the same directory itself. RAYON_NUM_THREADS=2: two lanes'
+  # games share the box's vCPUs. DEVIN_MODEL is the knob for Devin's model.
+  cat > /etc/systemd/system/jackioh-train@.service <<'EOF'
+[Unit]
+Description=JackiOh AI training lane %i (training/README.md)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=agent-train-%i
+WorkingDirectory=/home/agent-train-%i/JackiOh
+ExecStart=/bin/sh /home/agent-train-%i/JackiOh/training/loop.sh %i
+Restart=always
+RestartSec=60
+Environment=DEVIN_MODEL=swe-2-max
+Environment=RAYON_NUM_THREADS=2
+Environment=JACKIOH_TRAINING_OUT=/home/agent-train-%i/training-out/%i
+Environment=PATH=/home/agent-train-%i/.cargo/bin:/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  systemctl daemon-reload
+  # A lane already running keeps its Devin session; it reads a changed unit at its next restart
+  # (`systemctl restart jackioh-train@<lane>`).
+  systemctl enable --now jackioh-train@improve jackioh-train@unban
+  apt-get clean
+
+  for lane in $TRAIN_LANES; do
+    user="agent-train-$lane"
+    printf '%-20s %s; rustc %s; %s\n' "jackioh-train@$lane" \
+      "$(systemctl is-active "jackioh-train@$lane" || true)" \
+      "$(cd "/home/$user" && sudo -u "$user" -H "/home/$user/.cargo/bin/rustc" --version 2>&1 | awk '{print $2}')" \
+      "$(cd "/home/$user" && sudo -u "$user" -H gh auth status >/dev/null 2>&1 && echo "gh logged in" || echo "gh not logged in")"
+  done
+  printf '%-7s %s\n' devin "$(devin --version 2>&1 | head -1)" gh "$(gh --version 2>&1 | head -1)"
+  df -h / | awk 'NR==2 {print "disk: " $4 " free of " $2}'
+  exit 0
+fi
+
 # Codex sandboxes commands with bubblewrap, which Ubuntu's AppArmor blocks by default.
 echo 'kernel.apparmor_restrict_unprivileged_userns=0' > /etc/sysctl.d/60-codex-bwrap.conf
 sysctl -q -p /etc/sysctl.d/60-codex-bwrap.conf
@@ -51,8 +215,6 @@ fi
 corepack enable
 
 # The model CLIs, installed for every user. Each user's login stays in its own home.
-work="$(mktemp -d)"
-trap 'rm -rf "$work"' EXIT
 npm install -g --loglevel=error @anthropic-ai/claude-code@latest @openai/codex@latest >/dev/null
 curl -fsSL https://antigravity.google/cli/install.sh -o "$work/agy-install.sh"
 bash "$work/agy-install.sh" >/dev/null 2>&1
@@ -62,32 +224,13 @@ curl -fsSL https://dev.meta.ai/install.sh -o "$work/muse-install.sh"
 MUSE_INSTALL_DIR=/usr/local/lib/muse MUSE_NO_AUTO_UPDATE=1 bash "$work/muse-install.sh" >/dev/null 2>&1
 ln -sf /usr/local/lib/muse/muse /usr/local/bin/muse
 chmod -R a+rX /usr/local/lib/muse
-# Devin's CLI: the steps of cli.devin.ai/install.sh (its manifest, the bundle, the bundle's
-# checksum), into a shared directory instead of root's home, and without the per-user
-# `devin setup` it ends with. Each user's own login stays in that user's home.
-devin_manifest="$(curl -fsSL https://static.devin.ai/cli/current/manifest.json)"
-devin_version="$(jq -r .version <<<"$devin_manifest")"
-devin_dir="/usr/local/lib/devin/$devin_version"
-if [ ! -x "$devin_dir/bin/devin" ]; then
-  curl -fsSL -o "$work/devin.tgz" \
-    "$(jq -r '.platforms["x86_64-unknown-linux"].url' <<<"$devin_manifest")"
-  echo "$(jq -r '.platforms["x86_64-unknown-linux"].sha256' <<<"$devin_manifest")  $work/devin.tgz" \
-    | sha256sum -c --quiet -
-  rm -rf "$devin_dir.tmp" && mkdir -p "$devin_dir.tmp"
-  tar xzf "$work/devin.tgz" -C "$devin_dir.tmp"
-  rm -rf "$devin_dir" && mv "$devin_dir.tmp" "$devin_dir"
-fi
-echo curl-bash > "$devin_dir/distribution"
-ln -sfn "$devin_version" /usr/local/lib/devin/current
-ln -sf /usr/local/lib/devin/current/bin/devin /usr/local/bin/devin
-chmod -R a+rX /usr/local/lib/devin
+install_devin
 
 # The disk's clean-up (clean.sh, beside this script: on-machine.sh ships the folder), run as each
 # user: after every job by the runners' job-completed hook, and every ten minutes by the disk
 # timer below. The repo's packages come back from the network next time; the checkout and the
 # logins stay. The runner takes a hook only by its extension (.sh, .ps1 or .js), and fails the
 # job's last step otherwise.
-here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 install -m 755 "$here/clean.sh" /usr/local/bin/night-vm-clean.sh
 rm -f /usr/local/bin/night-vm-job-done
 cat > /usr/local/bin/night-vm-job-done.sh <<'EOF'
@@ -119,7 +262,7 @@ version="$(curl -fsSL https://api.github.com/repos/actions/runner/releases/lates
 version="${version#v}"
 curl -fsSL -o "$work/runner.tgz" \
   "https://github.com/actions/runner/releases/download/v${version}/actions-runner-linux-x64-${version}.tar.gz"
-chmod 755 "$work" && chmod 644 "$work/runner.tgz"
+chmod 644 "$work/runner.tgz"
 installed_deps=""
 
 for id in "$@"; do
@@ -133,6 +276,12 @@ export TBH_CREDENTIAL_BACKEND=file
 export MUSE_NO_AUTO_UPDATE=1
 unset META_API_KEY
 EOF
+  # Rust on the user's own shell's PATH too (the runners get it from .path, below). $HOME and
+  # $PATH are written as they are, for the user's shell to expand.
+  # shellcheck disable=SC2016
+  grep -q '.cargo/bin' "/home/$user/.profile" \
+    || echo 'export PATH="$HOME/.cargo/bin:$PATH"  # Rust, from setup.sh' >> "/home/$user/.profile"
+  install_rust "$user"
   dir="/home/$user/actions-runner"
   if [ ! -x "$dir/config.sh" ]; then
     sudo -u "$user" mkdir -p "$dir"
@@ -141,8 +290,12 @@ EOF
   if [ -z "$installed_deps" ]; then
     "$dir/bin/installdependencies.sh" >/dev/null && installed_deps=1
   fi
-  # The job environment: the same login settings as the user's shell, and the clean-up hook.
-  sudo -u "$user" tee "$dir/.env" >/dev/null <<'EOF'
+  # The job environment of every runner of this user (register-runners.sh copies the first one's
+  # for a second lane, once): the same login settings as the user's shell, the clean-up hook, and
+  # the user's Rust ahead of the system's PATH.
+  for dir in "/home/$user"/actions-runner*; do
+    [ -x "$dir/config.sh" ] || continue
+    sudo -u "$user" tee "$dir/.env" >/dev/null <<'EOF'
 LANG=C.UTF-8
 GEMINI_FORCE_FILE_STORAGE=true
 TBH_CREDENTIAL_BACKEND=file
@@ -151,16 +304,18 @@ COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 CYPRESS_INSTALL_BINARY=0
 ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/usr/local/bin/night-vm-job-done.sh
 EOF
-  echo "/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin" | sudo -u "$user" tee "$dir/.path" >/dev/null
-  # A running runner reads .env and .path only when it starts; one in the middle of a job is left
-  # alone, since restarting it would kill the job (run this again later).
-  if [ -f "$dir/.service" ]; then
-    if pgrep -u "$user" -f Runner.Worker >/dev/null; then
-      echo "$user: busy with a job; its runner picks up the new settings at its next restart"
-    else
-      (cd "$dir" && ./svc.sh stop >/dev/null && ./svc.sh start >/dev/null)
+    echo "/home/$user/.cargo/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin" \
+      | sudo -u "$user" tee "$dir/.path" >/dev/null
+    # A running runner reads .env and .path only when it starts; one in the middle of a job is
+    # left alone, since restarting it would kill the job (run this again later).
+    if [ -f "$dir/.service" ]; then
+      if pgrep -u "$user" -f Runner.Worker >/dev/null; then
+        echo "${dir##*/} of $user: busy with a job; it picks up the new settings at its next restart"
+      else
+        (cd "$dir" && ./svc.sh stop >/dev/null && ./svc.sh start >/dev/null)
+      fi
     fi
-  fi
+  done
 done
 
 # Power off when idle: no job running (Runner.Worker), no Session Manager session, and first-boot
@@ -251,5 +406,9 @@ fi
 apt-get clean
 
 for cli in claude codex agy muse devin; do printf '%-7s %s\n' "$cli" "$($cli --version 2>&1 | head -1)"; done
+for id in "$@"; do
+  printf '%-7s rustc %s\n' "$id" \
+    "$(cd "/home/agent-$id" && sudo -u "agent-$id" -H "/home/agent-$id/.cargo/bin/rustc" --version 2>&1 | awk '{print $2}')"
+done
 echo "users: $(printf 'agent-%s ' "$@")"
 df -h / | awk 'NR==2 {print "disk: " $4 " free of " $2}'

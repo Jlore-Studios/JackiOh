@@ -35,7 +35,7 @@ import { SFX_IDS } from "./sfx.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(here, "../../../..");
-const CATALOG_PATH = resolve(REPO, "packages/cards/catalog.json");
+const CATALOG_PATH = resolve(REPO, "crates/cards/catalog.json");
 const AUDIO_PATH = resolve(here, "card-audio.json5");
 
 type EntryKind = "unit" | "spell" | "trap";
@@ -188,7 +188,7 @@ describe("card-audio.json5 covers the catalog (B33)", () => {
   it("B33 holds one cards entry per catalog card, Core's 111 among them", () => {
     expect(
       CATALOG_IDS.filter((id) => id.startsWith("core-")),
-      "packages/cards/catalog.json holds the 100 Core cards and 11 tokens",
+      "crates/cards/catalog.json holds the 100 Core cards and 11 tokens",
     ).toHaveLength(111);
     expect(Object.keys(CARDS), "one cards entry per catalog id").toHaveLength(CATALOG_IDS.length);
   });
@@ -201,7 +201,7 @@ describe("card-audio.json5 covers the catalog (B33)", () => {
   it("B33 has no entry for an id the catalog does not hold", () => {
     const known = new Set(CATALOG_IDS);
     const extra = Object.keys(CARDS).filter((id) => !known.has(id));
-    expect(extra, "card-audio entries for ids outside packages/cards/catalog.json").toEqual([]);
+    expect(extra, "card-audio entries for ids outside crates/cards/catalog.json").toEqual([]);
   });
 
   it("B33 takes every entry's kind from its catalog type, which the file never states", () => {
@@ -470,7 +470,7 @@ describe("card-audio.json5's layout and effects (R655)", () => {
     const known = new Set(Object.keys(CARDS));
     expect(
       Object.keys(CARDS).filter((id) => id in CATALOG),
-      "entries in the order packages/cards/catalog.json lists their cards",
+      "entries in the order crates/cards/catalog.json lists their cards",
     ).toEqual(CATALOG_IDS.filter((id) => known.has(id)));
   });
 

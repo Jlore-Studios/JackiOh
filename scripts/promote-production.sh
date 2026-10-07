@@ -26,7 +26,7 @@
 #                            is what merges, and the cron is a second chance, not the mechanism.
 #   catalog fast path        part of every check. The commit CI just passed (workflow_run), or the
 #                            newest green one, merges at once when it changes render.yaml's
-#                            CATALOG_VERSION. Render deploys apps/server from main on every push and
+#                            CATALOG_VERSION. Render deploys crates/server from main on every push and
 #                            the bundle compiles the catalog version in, so a catalog left a day
 #                            behind would refuse every deck save and queue in production (SPEC §9.4,
 #                            R105). It ignores the hold and leaves the countdown's time alone.

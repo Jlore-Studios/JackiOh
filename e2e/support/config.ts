@@ -44,8 +44,8 @@ export const routes = {
 /**
  * A6: the `E2E=1` server the networked specs (05, 06, 07, 10) talk to.
  *
- * The socket path is not an assumption: `apps/server/src/match/wsServer.ts` exports
- * `WS_PATH = "/ws/match"` and `attachWebSocketServer` leaves a handshake off that path alone, so
+ * The socket path is not an assumption: `crates/server/src/actor/ws_server.rs` exports
+ * `WS_PATH` ("/ws/match") and leaves a handshake off that path alone, so
  * anything else is refused at the upgrade. It is spelled here rather than imported because
  * `support/` type-checks without `apps/*` being buildable (see e2e/tsconfig.json).
  */
@@ -85,7 +85,7 @@ export const TUTORIAL_PROGRESS_KEY = "jackioh.tutorial.v1";
 export const TUTORIAL_PROGRESS_VERSION = 1;
 
 /**
- * R290: the tutorial opponent's handicap, `AI_TUTORIAL` in packages/engine/src/config.ts. Spec 23
+ * R290: the tutorial opponent's handicap, `AI_TUTORIAL` in crates/engine/src/config.rs. Spec 23
  * asserts a lesson's AI seat carries exactly this and that the engine's own constant still says
  * the same (read through `cy.task("tutorialLessons")`), so a change to the ruling fails here first.
  */

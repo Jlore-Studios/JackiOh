@@ -12,7 +12,7 @@
 // because §9.4's "32-symbol alphabet without 0/O/1/I/l" is unsatisfiable as written — dropping
 // 0, 1, I, O *and* L from the 36 alphanumerics leaves 31 — so the resolution keeps 32 symbols by
 // dropping four and normalising input to upper case. Neither the length nor the alphabet is
-// spelled in this file: both are imported from `apps/server/src/config.ts`, and the spec also
+// spelled in this file: both are imported from `crates/server/src/config.rs`, and the spec also
 // checks that `support/config.ts`'s own mirror of the length has not drifted from it.
 //
 // R110: a room code is unique only among matches that are not yet `over`, so a finished match
@@ -21,7 +21,7 @@
 // consequence and BUILD's actual criterion: once the match is over, both profiles are out of a
 // match and can enter the queue again. The reuse of the code itself belongs to a server test.
 //
-// HOW SEAT 2 JOINS. Not over the socket. `apps/server/src/match/protocol.ts` accepts a `joinRoom`
+// HOW SEAT 2 JOINS. Not over the socket. `crates/server/src/actor/protocol.rs` accepts a `joinRoom`
 // frame "only so a client that speaks it gets a pointed `error` instead of 'malformed': joining a
 // room is `POST /api/rooms/:code/join`, because the atomic single-claim and the loadout re-check
 // are HTTP concerns and a socket is opened for a match that already exists." So seat 2 claims the
@@ -36,7 +36,7 @@
 //
 // Needs: M6 (server, match actor, WS protocol). See e2e/README.md.
 
-import { CODE_ALPHABET, ROOM_CODE_LENGTH } from "../../../apps/server/src/config.ts";
+import { CODE_ALPHABET, ROOM_CODE_LENGTH } from "../../../apps/web/src/wire/serverConfig.ts";
 import { accounts, constants, routes, seedFor, server, timeouts } from "../../support/config.ts";
 import {
   END_TURN,
@@ -222,7 +222,7 @@ describe("06 room code — a networked match between a browser and a Node client
 
         expect(
           constants.ROOM_CODE_LENGTH,
-          "support/config.ts's mirror still agrees with apps/server/src/config.ts (R79)",
+          "support/config.ts's mirror still agrees with crates/server/src/config.rs (R79)",
         ).to.eq(ROOM_CODE_LENGTH);
         expect(roomCode.length, `R79: a room code is ${String(ROOM_CODE_LENGTH)} characters`).to.eq(
           ROOM_CODE_LENGTH,

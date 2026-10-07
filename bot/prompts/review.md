@@ -51,12 +51,12 @@ $diff
 1. **The task.** Every requirement is met: name each one and where the diff meets it. Something
    asked for and not done is a blocking finding even when nothing in the diff is wrong.
 2. **Correctness.** Wrong logic, missed edge cases, broken invariants, state that no longer
-   survives `JSON.parse(JSON.stringify(...))`, replay or determinism broken, hidden information
-   leaking through `viewFor`, the client enforcing a rule.
-3. **SPEC and CLAUDE.md.** Rules implemented from memory instead of from SPEC; a new ruling
-   without its §11 row, its `R<n>` test and its index line; engine, cards or ai made impure; a
-   number that is not a named constant; a card without its test; the per-package contracts in
-   the READMEs broken.
+   survives a serde round trip, replay or determinism broken, hidden information leaking through
+   `view_for`, the client enforcing a rule.
+3. **The spec and CLAUDE.md.** Rules implemented from memory instead of from the spec; a new
+   ruling without its note in `spec/rulings/`, its `r<n>`/`R<n>` test and its line in
+   `spec/INDEX.md`; engine, cards or ai made impure; a number that is not a named constant; a
+   card without its tests; the per-crate contracts in the READMEs broken.
 4. **Tests.** New behaviour tested in the repository's style, and each test would fail without
    the change. Run the tests that matter and read what they assert.
 5. **Honesty.** A check weakened, skipped or silenced; a test deleted or emptied; an error
@@ -77,7 +77,7 @@ it:
 
 or
 
-    <!-- review: {"verdict": "changes", "findings": [{"severity": "blocking", "where": "packages/engine/src/combat.ts:212", "claim": "One sentence saying what is wrong.", "evidence": "What you read or ran that shows it."}]} -->
+    <!-- review: {"verdict": "changes", "findings": [{"severity": "blocking", "where": "crates/engine/src/combat.rs:212", "claim": "One sentence saying what is wrong.", "evidence": "What you read or ran that shows it."}]} -->
 
 - `verdict` is `approve` only when no finding is `blocking`.
 - `where` is a path with an optional `:line`, or `task` for a requirement not met.

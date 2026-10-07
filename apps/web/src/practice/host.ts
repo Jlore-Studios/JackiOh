@@ -6,9 +6,13 @@
 // and answers each on a macrotask so a test sees the same asynchrony a worker has.
 //
 // Only type imports reach `core.ts` from here (they are erased), so the page's bundle never holds
-// the engine, the cards or the AI: the worker's bundle does, and the in-thread host loads them with
-// a dynamic import when it is first asked.
+// the practice core: the worker's bundle does, and the in-thread host loads it with a dynamic import
+// when it is first asked. Either way the engine and the AI are the WebAssembly module
+// (docs/v0.3.0/SURFACE.md §10.3), loaded before the first request: the worker loads its own, and the
+// in-thread host awaits `loadWasm()`, which under jsdom returns at once, because `test/setup.ts` has
+// already instantiated the module from its bytes with `loadWasmSync`.
 
+import { loadWasm } from "../wasm/index.ts";
 import type { PracticeCore, PracticeCoreEnv } from "./core.ts";
 import { defaultSaveStore } from "./saveStore.ts";
 import type { PracticeRequest, PracticeRequestBody, PracticeResponse } from "./protocol.ts";
@@ -130,9 +134,10 @@ function createInThreadHost(env: Partial<PracticeCoreEnv>): PracticeHost {
       // R668: the save store is the env's (a test passes one to outlive the host, as IndexedDB
       // outlives a reload), else the scope's own.
       const saves = env.saves ?? defaultSaveStore();
-      core = Promise.all([import("./core.ts"), saves.ready]).then(([mod]) =>
+      core = Promise.all([import("./core.ts"), saves.ready, loadWasm()]).then(([mod]) =>
         mod.createPracticeCore({
-          now: () => performance.now(),
+          // `Date.now`, the clock the WebAssembly side measures the AI's deadline on (`core.ts`).
+          now: () => Date.now(),
           dev: import.meta.env.MODE !== "production",
           ...env,
           saves,

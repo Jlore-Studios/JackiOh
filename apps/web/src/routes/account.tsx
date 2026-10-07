@@ -26,7 +26,7 @@
 
 import { useEffect, useState, useSyncExternalStore, type FormEvent, type ReactElement } from "react";
 
-import { AUTH_SIGN_OUT_WAIT_SECONDS } from "../../../server/src/config.ts";
+import { AUTH_SIGN_OUT_WAIT_SECONDS } from "@jackioh/server-config";
 import { deleteAccount, getOwnRank, getProfile, type MeResponse, type OwnRankResponse, type ProfileResponse } from "../net/api.ts";
 import { revokeSignedOutSession, sessionNearExpiry } from "../net/auth.ts";
 import { badgeWords, rankWords } from "../rank/rank.ts";

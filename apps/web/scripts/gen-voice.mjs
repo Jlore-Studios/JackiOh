@@ -32,7 +32,7 @@
 //
 // `--check` runs on any OS and touches nothing. It is what CI runs (B37): one line per problem, each
 // starting with the key it concerns, and exit 1; or `gen-voice: ok, <n> files, <bytes> bytes` and exit 0.
-// `--catalog <file>` checks the lines against another catalog.json than packages/cards/catalog.json.
+// `--catalog <file>` checks the lines against another catalog.json than crates/cards/catalog.json.
 //
 // Exit codes: 0 ok, 1 a problem was found, 2 bad arguments or no synthesizer at all on this machine.
 import { spawn, spawnSync } from "node:child_process";
@@ -89,7 +89,7 @@ const USAGE =
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 /** Found from the script, not from `--root`, so a temp copy of the web dir is still checked against it. */
-const CATALOG = path.resolve(SCRIPT_DIR, "../../../packages/cards/catalog.json");
+const CATALOG = path.resolve(SCRIPT_DIR, "../../../crates/cards/catalog.json");
 const POWERSHELL_WSL = "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe";
 
 function usage(message) {

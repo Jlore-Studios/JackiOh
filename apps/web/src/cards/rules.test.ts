@@ -4,9 +4,11 @@
 // The rendered half of B10 (`RulesText` → `strong.cf-term[data-term]`) is in CardFace.test.tsx,
 // through the face that uses it.
 //
-// B11 says each keyword carries "SPEC §6.1's rule text", and the Surface says the rule is "SPEC's
-// 'Rule' column, copied verbatim". So the SPEC tables are read here at test time, rather than
-// retyped: a transcription in this file would be a second copy that could drift from both.
+// The glossary's rules are its own reviewed data, in a player's words (v0.3.0, #133), so nothing
+// here compares a sentence with the spec's. What ties the glossary to the spec is structure: the
+// first column of spec/06-keywords.md's three tables, the term names, read as ids and nothing else.
+// Every row is a glossary term or one of the rules-only rows below, and every term is a row of its
+// own section. A row added without a glossary entry fails; a reworded rule fails nothing.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -23,8 +25,7 @@ import {
   RULED_TERMS,
   SHORT_REMINDERS,
   SHORT_TERMS,
-  inPlayerWords,
-  splitPairedRule,
+  type GlossaryEntry,
   type GlossaryTermId,
   type StatusTermId,
   type TriggerTermId,
@@ -34,66 +35,80 @@ import { termsIn, tokenizeRules, type RulesToken } from "./rules.ts";
 
 /* -------------------------------------------------------------------------------------- helpers */
 
-const SPEC = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../../../SPEC.md"), "utf8");
+/**
+ * The spec's keyword note (§6) and its card-types note (§5), read for ids only (#133). Paths, not
+ * `new URL("…", import.meta.url)`, which Vite rewrites into an asset URL `readFileSync` refuses.
+ */
+const SPEC_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../../../spec");
+const KEYWORDS_NOTE = join(SPEC_DIR, "06-keywords.md");
+const CARD_TYPES_NOTE = join(SPEC_DIR, "05-card-types.md");
 
-/** The `Rule` column of one SPEC §6 table, keyed by the table's first column. */
-function ruleColumn(section: "6.1" | "6.2" | "6.3"): Map<string, string> {
-  const lines = SPEC.split("\n");
-  const start = lines.findIndex((line) => line.startsWith(`### ${section} `));
-  if (start < 0) throw new Error(`SPEC.md has no §${section} heading`);
-  const rules = new Map<string, string>();
-  for (const line of lines.slice(start + 1)) {
-    if (line.startsWith("#")) break;
-    if (!line.startsWith("|")) continue;
-    const [term, rule] = line
-      .split("|")
-      .slice(1)
-      .map((cell) => cell.trim());
-    if (term === undefined || rule === undefined) continue;
-    if (/^-+$/.test(term) || rule === "Rule") continue;
-    rules.set(term, rule);
-  }
-  return rules;
+type TableSection = "§6.1" | "§6.2" | "§6.3";
+const TABLE_SECTIONS: readonly TableSection[] = ["§6.1", "§6.2", "§6.3"];
+
+/** The `### N.M` heading ids of a spec note. */
+function headingIds(note: string): string[] {
+  return readFileSync(note, "utf8")
+    .split("\n")
+    .flatMap((line) => /^### (\d+\.\d+) /.exec(line)?.slice(1, 2) ?? []);
 }
 
-/** The Cry line the glossary printed before R500 shortened it: §6.2's ruling in full. */
-const CRY_RULING_BEFORE_R500 =
-  "When you play this card from your hand, or it is cast (Cast on draw, Echo, Call to Chaos). Not when it is summoned, copied, Recruited, Reborn or Transformed into";
+/** The first cell of every row of one §6 table: its term names. No other cell is read. */
+function rowNames(section: TableSection): string[] {
+  const lines = readFileSync(KEYWORDS_NOTE, "utf8").split("\n");
+  const start = lines.findIndex((line) => line.startsWith(`### ${section.slice(1)} `));
+  if (start < 0) throw new Error(`spec/06-keywords.md has no ${section} heading`);
+  const names: string[] = [];
+  for (const line of lines.slice(start + 1)) {
+    if (line.startsWith("#")) break;
+    if (line.startsWith("|")) names.push(line.split("|")[1]?.trim() ?? "");
+  }
+  // The first two are the header row and its separator.
+  return names.slice(2);
+}
 
-/** R500: a short reminder is one line of at most this many words. */
-const SHORT_REMINDER_MAX_WORDS = 16;
+/**
+ * The §6 rows that are rules vocabulary, not words a card prints as a term, so the glossary has no
+ * entry for them (Make Radiant's rule is Radiant's, under §5.2). A new row goes here or into the
+ * glossary, or the first B11 test fails.
+ */
+const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
+  "§6.1": ["Can't attack or be attacked", "A keyword while a condition holds"],
+  "§6.2": ["Cry and Death", "Hand and deck triggers", 'Replacement ("would … instead")', "Targets chosen randomly", "Fatigue"],
+  "§6.3": [
+    "Summon",
+    "Play",
+    "Destroy",
+    "Sacrifice",
+    "Exile",
+    "Discard",
+    "Heal X",
+    "Mana / gain mana",
+    "Refresh X",
+    "Damage",
+    "Lose health",
+    "Draw",
+    "Add to hand",
+    "Shuffle into",
+    "Make Radiant",
+    "Switch position",
+    "Forced attack",
+    "Cancel an attack",
+    "Cost",
+    "Cast",
+    "Swap",
+    "Rotate",
+    "Replace",
+  ],
+};
+
+/** The name of an entry's spec row. */
+function rowOf(entry: GlossaryEntry): string {
+  return entry.row ?? entry.id;
+}
 
 function isShort(id: GlossaryTermId): id is (typeof SHORT_TERMS)[number] {
   return (SHORT_TERMS as readonly string[]).includes(id);
-}
-
-/** Where a glossary id's SPEC row spells it differently (a trailing X, a capital). */
-const SPEC_ROW_NAME: Readonly<Partial<Record<GlossaryTermId, string>>> = {
-  Armor: "Armor X",
-  Lucky: "Lucky X",
-  Brittle: "Brittle X",
-  "Spell Damage": "Spell Damage X",
-  "Start of game": "Start of Game",
-  "Once per turn": "Once per Turn",
-  Combo: "Combo X",
-  Echo: "Echo X",
-  Tribute: "Tribute X",
-  // Patch v0.2.0 (R512): the catalog's spelling of SPEC's row, and the rows that name several forms.
-  "Can't be in Defense Position": "Cannot be in Defense Position",
-  Activate: "Activate / Activate X / Activate ♾️",
-  Degrade: "Degrade / Upgrade",
-  Upgrade: "Degrade / Upgrade",
-};
-
-/** R512: the one SPEC row the glossary splits in two, and which half of it each term takes. */
-const PAIRED_HALF: Readonly<Partial<Record<GlossaryTermId, 0 | 1>>> = { Degrade: 0, Upgrade: 1 };
-
-function specRule(section: "6.1" | "6.2" | "6.3", id: GlossaryTermId): string {
-  const name = SPEC_ROW_NAME[id] ?? id;
-  const rule = ruleColumn(section).get(name);
-  if (rule === undefined) throw new Error(`SPEC §${section} has no row "${name}"`);
-  const half = PAIRED_HALF[id];
-  return half === undefined ? rule : splitPairedRule(rule)[half];
 }
 
 const TRIGGERS: readonly TriggerTermId[] = [
@@ -354,19 +369,30 @@ describe("B10: tokenizeRules and termsIn", () => {
 /* ----------------------------------------------------------------------------------------- B11 */
 
 describe("B11: GLOSSARY and KEYWORD_MARK", () => {
-  it("B11 the SPEC tables this file reads are really there (a control for the checks below)", () => {
-    expect(ruleColumn("6.1").size).toBeGreaterThanOrEqual(KEYWORD_KINDS.length);
-    expect(ruleColumn("6.2").size).toBeGreaterThanOrEqual(TRIGGERS.length);
-    expect(ruleColumn("6.3").size).toBeGreaterThanOrEqual(VERBS_6_3.length);
+  it("B11 every row of the spec's §6.1–§6.3 tables is a glossary term of its section or a rules-only row, and nothing else is", () => {
+    const entries = Object.values(GLOSSARY);
+    for (const section of TABLE_SECTIONS) {
+      const rows = rowNames(section);
+      expect(rows.length, section).toBeGreaterThan(0);
+      expect(new Set(rows).size, `${section}: a row name is repeated`).toBe(rows.length);
+
+      const terms = entries.filter((entry) => entry.section === section).map(rowOf);
+      const rulesOnly = RULES_ONLY_ROWS[section];
+      expect(terms.filter((name) => rulesOnly.includes(name)), `${section}: a term is also rules-only`).toEqual([]);
+      expect([...terms, ...rulesOnly].sort(), section).toEqual([...rows].sort());
+    }
+    // Radiant is §5.2's, which has no table: its section is there.
+    expect(GLOSSARY.Radiant.section).toBe("§5.2");
+    expect(headingIds(CARD_TYPES_NOTE)).toContain("5.2");
   });
 
-  it("B11 R373 one entry per KEYWORD_KINDS kind, carrying SPEC §6.1's rule text verbatim, in players' words", () => {
+  it("B11 R373 one entry per KEYWORD_KINDS kind, under §6.1, each with a rule", () => {
     for (const kind of KEYWORD_KINDS) {
       const entry = GLOSSARY[kind];
       expect(entry, kind).toBeDefined();
       expect(entry.id, kind).toBe(kind);
       expect(entry.section, kind).toBe("§6.1");
-      expect(entry.rule, kind).toBe(inPlayerWords(specRule("6.1", kind)));
+      expect(entry.rule.trim(), kind).not.toBe("");
     }
   });
 
@@ -381,25 +407,18 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     expect(new Set(marks).size).toBe(marks.length);
   });
 
-  it("B11 every §6.2 term, with SPEC §6.2's rule text (or, for a ruled term, not the overridden Rule column)", () => {
+  it("B11 every §6.2 term is an entry under §6.2, a short term with its reminder", () => {
     for (const id of TRIGGERS) {
       const entry = GLOSSARY[id];
       expect(entry, id).toBeDefined();
       expect(entry.id, id).toBe(id);
       expect(entry.section, id).toBe("§6.2");
+      expect(entry.rule.trim(), id).not.toBe("");
       if (isShort(id)) expect(entry.rule, id).toBe(SHORT_REMINDERS[id]);
-      else if (RULED_TERMS.includes(id)) expect(entry.rule, id).not.toBe(inPlayerWords(specRule("6.2", id)));
-      else expect(entry.rule, id).toBe(inPlayerWords(specRule("6.2", id)));
     }
   });
 
   it("B11 R500 Cry states §6.2's ruling, short: played or cast, never onto the field another way", () => {
-    // The ruling this pins, read from SPEC so a change there fails here.
-    const row = SPEC.split("\n").find((line) => line.startsWith("| Cry |"));
-    expect(row).toBeDefined();
-    expect(row).toContain("fires only when played from hand (or by Cast on draw / Echo / Call to Chaos casting)");
-    expect(row).toContain("Copies, Recruit, Reborn, tokens and Transform results do not fire it");
-
     const rule = GLOSSARY.Cry.rule;
     expect(rule).toBe(SHORT_REMINDERS.Cry);
     expect(rule).not.toContain("enters the field");
@@ -409,15 +428,11 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     expect(RULED_TERMS).toEqual(["Cry"]);
   });
 
-  it("R500 Cry and Tribute are short reminders, each shorter than the SPEC text it replaces and a single line", () => {
+  it("R500 Cry and Tribute are short reminders, each a single line in a player's words", () => {
     expect([...SHORT_TERMS]).toEqual(["Cry", "Tribute"]);
     expect(GLOSSARY.Tribute.rule).toBe(SHORT_REMINDERS.Tribute);
     expect(GLOSSARY.Tribute.section).toBe("§6.3");
-    expect(SHORT_REMINDERS.Cry.length).toBeLessThan(CRY_RULING_BEFORE_R500.length);
-    expect(SHORT_REMINDERS.Tribute.length).toBeLessThan(inPlayerWords(specRule("6.3", "Tribute")).length);
     for (const id of SHORT_TERMS) {
-      const words = SHORT_REMINDERS[id].split(/\s+/).length;
-      expect(words, id).toBeLessThanOrEqual(SHORT_REMINDER_MAX_WORDS);
       expect(SHORT_REMINDERS[id], id).not.toMatch(/\n|\(R\d+\)|library|sacrific/i);
     }
     // Tribute's reminder is Units only (R428: Carnivorous Cube no longer eats the backrow).
@@ -425,14 +440,14 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     expect(SHORT_REMINDERS.Tribute).not.toMatch(/permanent|backrow/i);
   });
 
-  it("B11 every §6.3 term, with SPEC §6.3's rule text, and Radiant under §5.2 with a non-empty rule", () => {
+  it("B11 every §6.3 term is an entry under §6.3, and Radiant under §5.2 with a non-empty rule", () => {
     for (const id of VERBS_6_3) {
       const entry = GLOSSARY[id];
       expect(entry, id).toBeDefined();
       expect(entry.id, id).toBe(id);
       expect(entry.section, id).toBe("§6.3");
+      expect(entry.rule.trim(), id).not.toBe("");
       if (isShort(id)) expect(entry.rule, id).toBe(SHORT_REMINDERS[id]);
-      else expect(entry.rule, id).toBe(inPlayerWords(specRule("6.3", id)));
     }
     const radiant = GLOSSARY.Radiant;
     expect(radiant.id).toBe("Radiant");
@@ -441,23 +456,14 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
   });
 
   it("R373 the glossary says deck for the rules' library and tribute for sacrifice, and never the old words", () => {
-    expect(inPlayerWords("Summon from library, scanning top down")).toBe("Summon from deck, scanning top down");
-    expect(inPlayerWords("Library order; swap libraries")).toBe("Deck order; swap decks");
-    expect(inPlayerWords("can be exiled or sacrificed; Sacrifice X; it sacrifices; sacrificing")).toBe(
-      "can be exiled or tributed; Tribute X; it tributes; tributing",
-    );
-    // Whole words only: nothing inside another word moves.
-    expect(inPlayerWords("librarian, sacrificial")).toBe("librarian, sacrificial");
     expect(GLOSSARY.Recruit.rule).toBe("Summon from deck, scanning top down");
     expect(GLOSSARY.Radiant.rule).toContain("In hand or deck");
     expect(GLOSSARY.Indestructible.rule).toContain("tributed");
     // R500: Tribute's reminder is short and says Units, not the rules' "sacrifice".
     expect(GLOSSARY.Tribute.rule).toBe("Playing this also costs X of your Units, which go to the graveyard");
-    // Patch v0.2.1: backrow zone becomes backrow in players' words.
-    expect(inPlayerWords("steps from its backrow zone into a unit zone")).toBe("steps from its backrow into a unit zone");
-    // Patch v0.2.1: retired turn-trigger prose reads label-style in players' words.
-    expect(inPlayerWords("At the start of your turn, the count drops")).toBe("At the start of turn, the count drops");
-    expect(inPlayerWords("it heals at the end of your turn")).toBe("it heals at the end of turn");
+    // Patch v0.2.1: backrow zone reads backrow, and the retired turn-trigger prose reads label-style.
+    expect(GLOSSARY["Animated on your turn"].rule).toBe("A Unit on your turn; back in its backrow on your opponent's");
+    expect(GLOSSARY.Brittle.rule).toMatch(/^At the start of turn, /);
     for (const entry of Object.values(GLOSSARY)) {
       expect(entry.rule, entry.id).not.toMatch(/\blibrar(y|ies)\b|\bsacrific|\bbounce\b|\bbackrow zone\b/i);
       // Patch v0.2.1 (issue #45): no glossary rule uses any other word the vocabulary table retired.
@@ -475,37 +481,29 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     }
   });
 
-  it("R512 every §6.1 status a v0.2.0 card prints, with SPEC §6.1's rule text in players' words", () => {
+  it("R512 every §6.1 status a v0.2.0 card prints is an entry under §6.1", () => {
     for (const id of STATUSES) {
       const entry = GLOSSARY[id];
       expect(entry, id).toBeDefined();
       expect(entry.id, id).toBe(id);
       expect(entry.section, id).toBe("§6.1");
-      expect(entry.rule, id).toBe(inPlayerWords(specRule("6.1", id)));
+      expect(entry.rule.trim(), id).not.toBe("");
     }
     // The catalog writes "Can't"; aliases are empty (patch v0.2.1, issue #45).
     expect(GLOSSARY["Can't be in Defense Position"].aliases).toEqual([]);
   });
 
-  it("R512 SPEC's one row \"Degrade / Upgrade\" is two terms, each its own word with the row's shared rest", () => {
-    const row = ruleColumn("6.3").get("Degrade / Upgrade");
-    expect(row).toBeDefined();
-    expect(splitPairedRule("Weaken / strengthen a card: one change per application (R386)")).toEqual([
-      "Weaken a card: one change per application (R386)",
-      "Strengthen a card: one change per application (R386)",
-    ]);
+  it("R512 Degrade and Upgrade are two terms with a §6.3 row each, each rule its own word", () => {
+    expect(rowNames("§6.3")).toEqual(expect.arrayContaining(["Degrade", "Upgrade"]));
+    expect(rowOf(GLOSSARY.Degrade)).toBe("Degrade");
+    expect(rowOf(GLOSSARY.Upgrade)).toBe("Upgrade");
     expect(GLOSSARY.Degrade.rule).toBe("Weaken a card: one change per application");
     expect(GLOSSARY.Upgrade.rule).toBe("Strengthen a card: one change per application");
     expect(GLOSSARY.Degrade.section).toBe("§6.3");
     expect(GLOSSARY.Upgrade.section).toBe("§6.3");
-    // A rule with no pair is itself, twice.
-    expect(splitPairedRule("Take control")).toEqual(["Take control", "Take control"]);
   });
 
-  it("R512 a ruling's number is no player's word: every rule is printed without SPEC's citations", () => {
-    expect(inPlayerWords("Once per turn (R384)")).toBe("Once per turn");
-    expect(inPlayerWords("one of your other Units (R41, R428)")).toBe("one of your other Units");
-    expect(inPlayerWords("A rule (with a note) stays")).toBe("A rule (with a note) stays");
+  it("R512 a ruling's number is no player's word: no rule cites one", () => {
     for (const entry of Object.values(GLOSSARY)) expect(entry.rule, entry.id).not.toMatch(/\(R\d+/);
     expect(GLOSSARY.Activate.rule).toBe(
       'Once per turn on your turn, click the card to do an effect; "Activate X" up to X times per turn, "Activate ♾️" any number of times',

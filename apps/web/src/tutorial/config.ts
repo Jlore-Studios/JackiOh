@@ -1,5 +1,5 @@
 // Every number and key the tutorial states (CLAUDE.md rule 9). The rules numbers — the tutorial
-// opponent's handicap — are the engine's (`AI_TUTORIAL` in packages/engine/src/config.ts, R290);
+// opponent's handicap — are the engine's (`AI_TUTORIAL` in crates/engine/src/config.rs, R290);
 // these are the browser's own: the coach's patience, its mark's geometry, and where progress is kept.
 
 import { PRACTICE_SHOWCASE_HOLD_MAX_MS } from "../practice/config.ts";

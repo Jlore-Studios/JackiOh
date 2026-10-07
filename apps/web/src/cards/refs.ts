@@ -1,7 +1,7 @@
 // Where a card's text names another card (SPEC §10.10, R279).
 //
 // The catalog lists, per card, the cards and tokens its text names (`CardDef.refs`, by id), and
-// packages/cards/test/references.test.ts proves the list against the texts with one naming rule,
+// crates/cards/tests/cross/references.rs proves the list against the texts with one naming rule,
 // which this module reads the same way: a card is named by its name, or by its name before a
 // parenthesis ("Call to Chaos (Core Edition)" is named "Call to Chaos"), alone or with a plural "s",
 // standing as whole words — the characters either side are not letters, digits, an apostrophe or a

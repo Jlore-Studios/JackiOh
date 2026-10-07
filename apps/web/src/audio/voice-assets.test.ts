@@ -55,7 +55,7 @@ import { VOICE_BUDGET_BYTES, VOICE_FILE_MAX_MS } from "./constants.ts";
 const here = dirname(fileURLToPath(import.meta.url));
 const WEB = resolve(here, "../..");
 const REPO = resolve(WEB, "../..");
-const CATALOG_PATH = join(REPO, "packages/cards/catalog.json");
+const CATALOG_PATH = join(REPO, "crates/cards/catalog.json");
 const AUDIO_PATH = join(here, "card-audio.json5");
 const MANIFEST_PATH = join(here, "voice-manifest.json");
 const VOICE_DIR = join(WEB, "public/audio/voice");

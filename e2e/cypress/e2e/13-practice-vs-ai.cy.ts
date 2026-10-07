@@ -1,4 +1,5 @@
-// Spec 13 — practice against the AI (SPEC §9.9, R187; docs/polish/3-ai.md B40).
+// Spec 13 — practice against the AI (SPEC §9.9, R187; docs/polish/3-ai.md B40). With spec 01,
+// docs/v0.3.0/README.md V19: a practice game on the WASM engine and AI.
 //
 // What it proves, in a real browser against `pnpm build:e2e` + `vite preview` and NO server:
 //

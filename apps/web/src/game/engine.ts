@@ -1,4 +1,4 @@
-// The one seam between the client and `packages/engine` (CLAUDE.md rule 7, SPEC §10.8).
+// The one seam between the hotseat client and the engine (CLAUDE.md rule 7, SPEC §10.8).
 //
 // The client never holds rules. It holds an `EnginePort`: `createGame` / `beginGame` / `reduce`
 // to advance the game, `legalActions` to learn what it is allowed to offer, and `viewFor` to get
@@ -6,11 +6,16 @@
 // hands and both libraries, so a client that could read a field could leak hidden information.
 // Everything the UI needs comes back through `viewFor`.
 //
-// The real binding lives in `engine.real.ts` and is loaded lazily, so the presentation layer,
-// the action builders and the animation table all compile and test with no engine at all.
+// The real port is the Rust engine compiled to WebAssembly (`../wasm`, docs/v0.3.0/SURFACE.md
+// §10.3): `enginePort()` maps its functions onto the port, synchronously once `loadWasm()` has
+// finished, and `loadEnginePort()` is that load and that mapping. The presentation layer, the
+// action builders and the animation table compile and test with no engine at all, and tests install
+// a scripted port with `setEnginePort`.
 
 import type { Action, ActionBody, CardDefs, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import type { Handicap } from "@jackioh/engine/config";
+
+import * as wasm from "../wasm/index.ts";
 
 declare const engineStateBrand: unique symbol;
 
@@ -45,11 +50,11 @@ export type EnginePort = {
   /** The only window the client has onto the game (SPEC §10.8). */
   viewFor: (state: EngineState, player: PlayerId) => PlayerView;
   hashState: (state: EngineState) => string;
-  /** The card catalog, for the dev deck picker. Absent until `packages/cards` ships defs. */
+  /** The card catalog, for the dev deck picker. */
   catalog?: () => CardDefs;
 };
 
-/** The exports `engine.real.ts` needs from `@jackioh/engine`, for the missing-export report. */
+/** The functions `enginePort()` needs from the WebAssembly wrapper, for the missing-export report. */
 export const REQUIRED_ENGINE_EXPORTS = [
   "createGame",
   "beginGame",
@@ -65,8 +70,8 @@ export class EngineUnavailableError extends Error {
   constructor(missing: readonly string[], cause?: unknown) {
     super(
       missing.length > 0
-        ? `@jackioh/engine is missing: ${missing.join(", ")}. The client cannot run a game until the engine exports them.`
-        : `@jackioh/engine could not be loaded: ${String(cause)}`,
+        ? `the engine is missing: ${missing.join(", ")}. The client cannot run a game until the WebAssembly module exports them.`
+        : `the engine could not be loaded: ${String(cause)}`,
     );
     this.name = "EngineUnavailableError";
     this.missing = missing;
@@ -74,35 +79,59 @@ export class EngineUnavailableError extends Error {
 }
 
 let injected: EnginePort | null = null;
-let loading: Promise<EnginePort> | null = null;
 
 /** Tests and Cypress fixtures install a scripted port instead of the real engine. */
 export function setEnginePort(port: EnginePort | null): void {
   injected = port;
-  loading = null;
 }
 
 export function injectedEnginePort(): EnginePort | null {
   return injected;
 }
 
+/** The engine's own `GameState` behind the client's opaque brand, and back. The casts strip only the brand. */
+type GameState = Parameters<typeof wasm.hashState>[0];
+const raw = (state: EngineState): GameState => state as unknown as GameState;
+const opaque = (state: GameState): EngineState => state as unknown as EngineState;
+
 /**
- * The import is dynamic so Vite code-splits the engine and the 110 card scripts out of the first
- * paint — `/login`, `/invite` and `/decks` never need them. It is a plain analyzable
- * `import("./engine.real.ts")`, not the `@vite-ignore` string specifier this used to be: that
- * workaround existed only while `packages/engine/src/index.ts` re-exported modules that did not
- * exist yet, and `tsc -p packages/engine/tsconfig.json` is green now, so the module is in
- * `apps/web/tsconfig.json` and typechecked like everything else.
+ * The real port over the loaded WebAssembly module. Synchronous: call it after `loadWasm()` has
+ * resolved (`loadEnginePort` does both). Nothing here decides a rule; it renames the wrapper's
+ * functions onto the port.
+ */
+export function enginePort(): EnginePort {
+  const mod = wasm as unknown as Record<string, unknown>;
+  const missing = REQUIRED_ENGINE_EXPORTS.filter((name) => typeof mod[name] !== "function");
+  if (missing.length > 0) throw new EngineUnavailableError(missing);
+  if (!wasm.wasmLoaded()) throw new EngineUnavailableError([], "the WebAssembly module is not loaded yet");
+
+  return {
+    createGame: (args) => opaque(wasm.createGame(args)),
+    beginGame: (state) => {
+      const result = wasm.beginGame(raw(state));
+      return { ...result, state: opaque(result.state) };
+    },
+    reduce: (state, action) => {
+      const result = wasm.reduce(raw(state), action);
+      return { ...result, state: opaque(result.state) };
+    },
+    legalActions: (state, player) => wasm.legalActions(raw(state), player),
+    viewFor: (state, player) => wasm.viewFor(raw(state), player),
+    hashState: (state) => wasm.hashState(raw(state)),
+    catalog: () => wasm.registeredCatalog(),
+  };
+}
+
+/**
+ * The port: the injected one when a test installed it, else the real one once the WebAssembly
+ * module has loaded. Rejects with `EngineUnavailableError` when the module cannot be loaded.
  */
 export function loadEnginePort(): Promise<EnginePort> {
   if (injected !== null) return Promise.resolve(injected);
-  if (loading !== null) return loading;
-  loading = import("./engine.real.ts")
-    .then((mod) => mod.enginePort())
-    .catch((cause: unknown) => {
-      loading = null;
-      if (cause instanceof EngineUnavailableError) throw cause;
+  return wasm.loadWasm().then(
+    () => enginePort(),
+    (cause: unknown) => {
       throw new EngineUnavailableError([], cause);
-    });
-  return loading;
+    },
+  );
 }

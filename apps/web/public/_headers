@@ -1,7 +1,7 @@
 # Cloudflare's copy of vercel.json's `headers`, sent on every response.
 # apps/web/src/net/cloudflare-config.test.ts holds them equal to vercel.json's.
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://exmjdaswedxhnzmpzqrq.supabase.co https://jackioh-server.onrender.com wss://jackioh-server.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://exmjdaswedxhnzmpzqrq.supabase.co https://jackioh-server.onrender.com wss://jackioh-server.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin

@@ -1,0 +1,54 @@
+[package]
+name = "jackioh-server"
+description = "The JackiOh server: the HTTP API and the match actors (docs/v0.3.0/SURFACE.md §11)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+name = "jackioh_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "jackioh-server"
+path = "src/main.rs"
+
+[dependencies]
+jackioh-engine = { workspace = true }
+jackioh-cards = { workspace = true }
+jackioh-ai = { workspace = true }
+serde = { workspace = true }
+# `float_roundtrip`: JSON numbers parse to the nearest double, as `JSON.parse` does (serde_json's
+# default parser may land one ulp off: `0.22727272727272727`, 10/44, read back as
+# `0.2272727272727273`), so a body, a stored JSON column or a test's read of a response holds the
+# number that was written.
+serde_json = { workspace = true, features = ["float_roundtrip"] }
+# SURFACE §11.2's `Req` carries `indexmap::IndexMap` params and query.
+indexmap = { workspace = true }
+axum = { workspace = true }
+tokio = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+sqlx = { workspace = true }
+jsonwebtoken = { workspace = true }
+reqwest = { workspace = true }
+hmac = { workspace = true }
+sha2 = { workspace = true }
+base64 = { workspace = true }
+uuid = { workspace = true }
+time = { workspace = true }
+getrandom = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+clap = { workspace = true }
+
+[dev-dependencies]
+jackioh-engine = { workspace = true, features = ["testkit"] }
+
+# The one integration-test binary (SURFACE §1, §11.2): `mod api; mod actor; mod store; mod support;`.
+[[test]]
+name = "server"
+path = "tests/server.rs"

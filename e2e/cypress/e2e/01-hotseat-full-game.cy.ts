@@ -1,5 +1,5 @@
 // BUILD M8 `01-hotseat-full-game.cy.ts` — "Seeded game to completion via the UI with two aggro
-// decks".
+// decks". With spec 13, docs/v0.3.0/README.md V19: a hotseat game on the WASM engine.
 //
 // Key assertions (BUILD M8's table, verbatim):
 //
@@ -7,8 +7,9 @@
 //
 // The second half is the point of this spec and the reason it exists alongside the engine's own
 // replay tests: the log is recorded by the BROWSER, action by action, as a human would build it
-// out of clicks, and is then folded by `packages/engine/src/replay.ts` in Node
-// (`cy.task("replayHash")` → `e2e/support/tasks/replay-runner.ts`) and hashed. Equal hashes mean
+// out of clicks, and is then folded by the engine's replay (`crates/engine/src/replay.rs`, run as
+// the `jackioh replay` CLI) from Node (`cy.task("replayHash")` → `e2e/support/tasks/replay-runner.ts`)
+// and hashed. Equal hashes mean
 // the client sent nothing the engine did not accept, in the order it accepted it — BUILD M5-T3's
 // "the same seed and actions reproduce the same final state hash in the browser and in vitest".
 //
@@ -206,8 +207,9 @@ describe("BUILD M8 01 — a seeded hotseat game played to completion through the
     });
 
     // "final state hash equals the vitest replay of the recorded actions": `cy.replayCheck` hands
-    // (seed, decks, log, final state) to `cy.task("replayHash")`, which folds the log through
-    // `packages/engine/src/replay.ts` under the repo's tsx and compares `hashState` on both sides.
+    // (seed, decks, log, final state) to `cy.task("replayHash")`, which folds the log through the
+    // `jackioh replay` CLI (`crates/engine/src/replay.rs`, SURFACE §12) and compares `hashState` on
+    // both sides.
     // It also asserts the fold rejected none of the recorded actions.
     cy.replayCheck("01-hotseat-full-game");
   });

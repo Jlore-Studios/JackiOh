@@ -13,7 +13,7 @@
 
 import { useEffect, useState, type ReactElement } from "react";
 
-import { SERIES_POLL_SECONDS } from "../../../server/src/config.ts";
+import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
 import { getSeriesForMatch, type SeriesView } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
 import { followInApp } from "./nav.tsx";

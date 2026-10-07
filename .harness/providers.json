@@ -1,9 +1,9 @@
 {
   "max_parallel": 10,
-  "machine_parallel": 7,
+  "machine_parallel": 6,
   "plan_lanes": 4,
   "start_headroom": { "five_hour": 0.05, "seven_day": 0.05 },
-  "priority": ["claude-3", "claude-7", "claude-1", "claude-4", "claude-6", "claude-5", "muse", "agy", "gpt", "claude-2", "devin", "devin-train"],
+  "priority": ["claude-3", "claude-7", "claude-1", "claude-4", "claude-6", "claude-5", "muse", "agy", "gpt", "claude-2", "devin"],
   "tiers": {
     "weak": [
       { "model": "swe-2-max", "note": "Devin (SWE-2): easy items only, under the easy rule. Its builds check themselves before any review." }
@@ -206,23 +206,6 @@
       "schedule": { "mode": "always" },
       "limits": { "mode": "caps", "five_hour": 0.95, "seven_day": 1.0 },
       "quiet_check": false
-    },
-    "devin-train": {
-      "note": "A second Devin login on the training box, for ladder training items only (`only_labels`): long RL training runs live there, off the bot's own machine. Label a training issue `training` (and `difficulty:easy`, which Devin may build); it trains the proposal within the ladder's budget, through the self-check loop like any Devin build. Reviews float to any reviewer. Off until the training box is built (bot/machine/README.md, The training box): on 2026-10-06 there was no `jackioh-train-box` instance and no `night-vm-devin-train` runner (#318).",
-      "enabled": false,
-      "cli": "devin",
-      "family": "cognition",
-      "model": "swe-2-max",
-      "effort": "",
-      "tier": "weak",
-      "self_check": true,
-      "login": "machine",
-      "runs_on": "night-vm-devin-train",
-      "schedule": { "mode": "always" },
-      "limits": { "mode": "none" },
-      "quiet_check": false,
-      "roles": ["build", "revise"],
-      "only_labels": ["training"]
     }
   }
 }

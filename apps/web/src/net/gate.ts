@@ -60,7 +60,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   AUTH_SESSION_REFRESH_MARGIN_SECONDS,
   AUTH_SESSION_RENEWAL_FLOOR_SECONDS,
-} from "../../../server/src/config.ts";
+} from "@jackioh/server-config";
 import { sessionIdFromToken, subjectFromToken } from "../auth/redirect.ts";
 import { ApiRequestError, getMe, retryAfterMsOf, type MeResponse } from "./api.ts";
 import { AuthError, authConfig, refreshSession, revokeSession, sessionNearExpiry } from "./auth.ts";

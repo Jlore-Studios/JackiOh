@@ -1,0 +1,508 @@
+//! Combat, damage and keyword fixtures for the M2-M3 engine tests (BUILD §0): one plain CardDef per
+//! keyword or statline the tests need, so a test reads `put(state, taunter.id, ...)` rather than
+//! building a def inline. The real cards, with their own tests, arrive in M4.
+//!
+//! Each def echoes the §8 card named in its doc comment, trimmed to the one property its name
+//! promises; the stats are the ones the importing tests assert (SPEC §6.1 keywords, §4.1 to §4.5
+//! combat, §10.4 layers). A fixture named for a keyword carries that keyword on *both* faces, so
+//! `{ radiant: true }` never silently changes what the fixture means; the exceptions are the four
+//! defs that mirror a specific card's radiant text (Big D-fender, Moths, Deft Duelist, Spikey
+//! Pillow), which SPEC §8 pins.
+//!
+//! Port of `packages/engine/test/fixtures/combat.ts`. Each TS `export const x = def({ … })` is a
+//! `pub static x: LazyLock<CardDef>` under TS's name snake_cased (SURFACE §4.2), so a test reads
+//! `taunter.id` as TS does; `COMBAT_DEFS` and `COMBAT_SCRIPTS` keep their names.
+
+#![allow(non_upper_case_globals)]
+
+use std::sync::LazyLock;
+
+use jackioh_engine::testkit::*;
+
+/// TS `{ ...base, ...extra }`: every key of `extra` written over `base`.
+fn spread(mut base: Value, extra: Value) -> Value {
+    if let (Some(target), Value::Object(extra)) = (base.as_object_mut(), extra) {
+        for (key, value) in extra {
+            target.insert(key, value);
+        }
+    }
+    base
+}
+
+/// TS `def(overrides)`: a Core Common Unit at cost 1 with empty faces, `overrides` (which names the
+/// `id`, `index` and `name`) over it.
+fn def(overrides: Value) -> CardDef {
+    json_as(spread(
+        json!({
+            "set": "Core",
+            "type": "Unit",
+            "tags": [],
+            "rarity": "Common",
+            "token": false,
+            "cost": 1,
+            "base": { "keywords": [], "text": "" },
+            "radiant": { "keywords": [], "text": "" },
+        }),
+        overrides,
+    ))
+}
+
+// ---------------------------------------------------------------------------
+// Bodies with no keywords.
+// ---------------------------------------------------------------------------
+
+/// The vanilla 3/3 every test attacks with, trades and targets. No keywords at all (§6.1).
+pub static plain: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-plain",
+        "index": "910",
+        "name": "Plain Body (combat fixture)",
+        "base": { "attack": 3, "health": 3, "keywords": [], "text": "3/3, no keywords" },
+        "radiant": { "attack": 6, "health": 6, "keywords": [], "text": "6/6, no keywords" },
+    }))
+});
+
+/// A 5/10 that survives what it trades with, so a strike back can be read on its own (§4.3).
+pub static big_body: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-big-body",
+        "index": "911",
+        "name": "Big Body (combat fixture)",
+        "cost": 3,
+        "base": { "attack": 5, "health": 10, "keywords": [], "text": "5/10, no keywords" },
+        "radiant": { "attack": 10, "health": 20, "keywords": [], "text": "10/20, no keywords" },
+    }))
+});
+
+/// R7: a 0-attack body with no aura, so "0 attack cannot attack" can be tested without #1.
+pub static zero_attack: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-zero-attack",
+        "index": "912",
+        "name": "Zero Attack (combat fixture)",
+        "cost": 2,
+        "base": { "attack": 0, "health": 8, "keywords": [], "text": "0/8, no keywords" },
+        "radiant": { "attack": 0, "health": 16, "keywords": [], "text": "0/16, no keywords" },
+    }))
+});
+
+// ---------------------------------------------------------------------------
+// One keyword each (§6.1).
+// ---------------------------------------------------------------------------
+
+/// §8 #19's keyword: Taunt on a 2/5.
+pub static taunter: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-taunter",
+        "index": "913",
+        "name": "Taunt Wall (combat fixture)",
+        "cost": 2,
+        "base": { "attack": 2, "health": 5, "keywords": [{ "kind": "Taunt" }], "text": "2/5 Taunt" },
+        "radiant": { "attack": 4, "health": 10, "keywords": [{ "kind": "Taunt" }], "text": "4/10 Taunt" },
+    }))
+});
+
+/// The Rush Token's keyword (§6.1): may attack units, never the hero, on its summon turn.
+pub static rusher: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-rusher",
+        "index": "914",
+        "name": "Rusher (combat fixture)",
+        "base": { "attack": 3, "health": 3, "keywords": [{ "kind": "Rush" }], "text": "3/3 Rush" },
+        "radiant": { "attack": 6, "health": 6, "keywords": [{ "kind": "Rush" }], "text": "6/6 Rush" },
+    }))
+});
+
+/// §8 #11r's keyword: the full sickness exemption, units and the hero alike (§6.1).
+pub static charger: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-charger",
+        "index": "915",
+        "name": "Charger (combat fixture)",
+        "base": { "attack": 3, "health": 3, "keywords": [{ "kind": "Charge" }], "text": "3/3 Charge" },
+        "radiant": { "attack": 6, "health": 6, "keywords": [{ "kind": "Charge" }], "text": "6/6 Charge" },
+    }))
+});
+
+/// §8 #20's keyword on a 4/4, so First Strike's step 1 kills a 3/3 outright (§4.3).
+pub static first_striker: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-first-striker",
+        "index": "916",
+        "name": "First Striker (combat fixture)",
+        "cost": 2,
+        "base": { "attack": 4, "health": 4, "keywords": [{ "kind": "First Strike" }], "text": "4/4 First Strike" },
+        "radiant": { "attack": 8, "health": 8, "keywords": [{ "kind": "First Strike" }], "text": "8/8 First Strike" },
+    }))
+});
+
+/// §8 #3's keyword: Divine Shield on a 2/2, so a negated hit is bigger than the body (§4.4 step 1).
+pub static shielded: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-shielded",
+        "index": "917",
+        "name": "Shielded (combat fixture)",
+        "base": { "attack": 2, "health": 2, "keywords": [{ "kind": "Divine Shield" }], "text": "2/2 Divine Shield" },
+        "radiant": { "attack": 4, "health": 4, "keywords": [{ "kind": "Divine Shield" }], "text": "4/4 Divine Shield" },
+    }))
+});
+
+/// §8 #25 (the 4-mana 7/7), trimmed to its Armor: 7/7 with Armor 7 (§4.4 step 2). #25's radiant text
+/// swaps the Armor for Indestructible; the fixture keeps Armor on both faces so `armoured` always
+/// means "Armor 7" and `indestructible` is the fixture that means Indestructible.
+pub static armoured: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-armoured",
+        "index": "918",
+        "name": "Armoured (combat fixture)",
+        "cost": 4,
+        "base": { "attack": 7, "health": 7, "keywords": [{ "kind": "Armor", "n": 7 }], "text": "7/7 Armor 7" },
+        "radiant": { "attack": 7, "health": 7, "keywords": [{ "kind": "Armor", "n": 7 }], "text": "7/7 Armor 7" },
+    }))
+});
+
+/// §8 #66's keyword: Indestructible on a 4/4 (§4.4 step 4, §4.5 step 1, R46, R69).
+pub static indestructible: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-indestructible",
+        "index": "919",
+        "name": "Indestructible (combat fixture)",
+        "cost": 4,
+        "base": { "attack": 4, "health": 4, "keywords": [{ "kind": "Indestructible" }], "text": "4/4 Indestructible" },
+        "radiant": { "attack": 8, "health": 8, "keywords": [{ "kind": "Indestructible" }], "text": "8/8 Indestructible" },
+    }))
+});
+
+/// Poisonous is pool-only in §8 (R21), so this small body carries it for §4.4 step 7.
+pub static poisonous: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-poisonous",
+        "index": "920",
+        "name": "Poisonous (combat fixture)",
+        "base": { "attack": 1, "health": 1, "keywords": [{ "kind": "Poisonous" }], "text": "1/1 Poisonous" },
+        "radiant": { "attack": 2, "health": 2, "keywords": [{ "kind": "Poisonous" }], "text": "2/2 Poisonous" },
+    }))
+});
+
+/// §8 #56's Lifesteal alone, so step 8 heals without a Taunt or a shield in the way.
+pub static lifestealer: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-lifestealer",
+        "index": "921",
+        "name": "Lifestealer (combat fixture)",
+        "cost": 2,
+        "base": { "attack": 3, "health": 3, "keywords": [{ "kind": "Lifesteal" }], "text": "3/3 Lifesteal" },
+        "radiant": { "attack": 6, "health": 6, "keywords": [{ "kind": "Lifesteal" }], "text": "6/6 Lifesteal" },
+    }))
+});
+
+/// Trample is pool-only in §8 (R21): a 6/4, so 6 into a 3-health unit leaves 3 to trample (R63).
+pub static trampler: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-trampler",
+        "index": "922",
+        "name": "Trampler (combat fixture)",
+        "cost": 3,
+        "base": { "attack": 6, "health": 4, "keywords": [{ "kind": "Trample" }], "text": "6/4 Trample" },
+        "radiant": { "attack": 12, "health": 8, "keywords": [{ "kind": "Trample" }], "text": "12/8 Trample" },
+    }))
+});
+
+/// Both halves of R63's last clause: Trample and Lifesteal on one body, so the heal is one total.
+pub static trample_lifesteal: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-trample-lifesteal",
+        "index": "923",
+        "name": "Draining Trampler (combat fixture)",
+        "cost": 3,
+        "base": {
+            "attack": 6,
+            "health": 4,
+            "keywords": [{ "kind": "Trample" }, { "kind": "Lifesteal" }],
+            "text": "6/4 Trample, Lifesteal",
+        },
+        "radiant": {
+            "attack": 12,
+            "health": 8,
+            "keywords": [{ "kind": "Trample" }, { "kind": "Lifesteal" }],
+            "text": "12/8 Trample, Lifesteal",
+        },
+    }))
+});
+
+/// §8 #32r's Cleave (§4.4 step 10). Attack 3 and health 8: the three cleaved hits read as 3 each and
+/// the body outlives the 5 a Big Body strikes back with.
+pub static cleaver: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-cleaver",
+        "index": "924",
+        "name": "Cleaver (combat fixture)",
+        "cost": 2,
+        "base": { "attack": 3, "health": 8, "keywords": [{ "kind": "Cleave" }], "text": "3/8 Cleave" },
+        "radiant": { "attack": 6, "health": 16, "keywords": [{ "kind": "Cleave" }], "text": "6/16 Cleave" },
+    }))
+});
+
+/// §8 #86's keyword: Can't attack, the attack-validator flag of §6.1.
+pub static pacifist: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-pacifist",
+        "index": "925",
+        "name": "Pacifist (combat fixture)",
+        "base": { "attack": 1, "health": 1, "keywords": [{ "kind": "Can't attack" }], "text": "1/1 Can't attack" },
+        "radiant": { "attack": 2, "health": 2, "keywords": [{ "kind": "Can't attack" }], "text": "2/2 Can't attack" },
+    }))
+});
+
+/// §8 #92's Stack keyword (§3.2, R13), without Felinor Fiender's set-stat layer. `placeOnField`
+/// takes `{ stack: true }`, so the keyword is here for the view and the validator to read.
+pub static stacker: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-stacker",
+        "index": "926",
+        "name": "Stacker (combat fixture)",
+        "cost": 2,
+        "base": { "attack": 5, "health": 7, "keywords": [{ "kind": "Stack" }], "text": "5/7 Stack" },
+        "radiant": { "attack": 10, "health": 14, "keywords": [{ "kind": "Stack" }], "text": "10/14 Stack" },
+    }))
+});
+
+// ---------------------------------------------------------------------------
+// The three §8 cards whose rules text the tests exercise, scripts included.
+// ---------------------------------------------------------------------------
+
+/// §8 #9 Moths to the Flame, 1/14 (2/28 with Armor 1 radiant). The forced-attack tests call
+/// `forceAttack`/`forceAttacksOn` directly, so this is the body they aim at and it needs no script;
+/// the start-of-turn half of #9's text is the real card's job in M4 (R53).
+pub static moths: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-moths",
+        "index": "9",
+        "name": "Moths to the Flame (combat fixture)",
+        "rarity": "Rare",
+        "cost": 2,
+        "base": { "attack": 1, "health": 14, "keywords": [], "text": "1/14; start of turn every enemy unit attacks this" },
+        "radiant": { "attack": 2, "health": 28, "keywords": [{ "kind": "Armor", "n": 1 }], "text": "2/28 Armor 1; same" },
+    }))
+});
+
+/// §8 #1 Big D-fender, 0/8 → 0/16: 0 attack so it never attacks (R7), plus the §10.4 layer-5 aura
+/// that gives its controller's Defense-Position units Armor +2, or +4 radiant.
+pub static big_dfender: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-big-dfender",
+        "index": "1",
+        "name": "Big D-fender (combat fixture)",
+        "tags": ["Human"],
+        "cost": 2,
+        "base": { "attack": 0, "health": 8, "keywords": [], "text": "Aura: your units in Defense Position have +2 Armor" },
+        "radiant": { "attack": 0, "health": 16, "keywords": [], "text": "Aura: +4 Armor instead" },
+    }))
+});
+
+/// Armor +n to the controller's units that are in Defense Position on the field (§4.1, §10.4).
+fn defense_armor_aura(n: i32) -> AuraHook {
+    aura_hook(move |a| {
+        let controller = a.self_.controller;
+        vec![AuraEntry {
+            applies: Box::new(move |unit: &CardInstance| {
+                unit.controller == controller
+                    && matches!(unit.zone, Zone::Field { row: Row::Units, .. })
+                    && unit.position.unwrap_or(Position::Atk) == Position::Def
+            }),
+            mod_: StatMod {
+                keywords: Some(vec![Keyword::Armor { n }]),
+                ..StatMod::default()
+            },
+        }]
+    })
+}
+
+fn big_dfender_scripts() -> CardScripts {
+    CardScripts {
+        base: Script {
+            aura: Some(defense_armor_aura(2)),
+            ..Script::default()
+        },
+        radiant: Script {
+            aura: Some(defense_armor_aura(4)),
+            ..Script::default()
+        },
+    }
+}
+
+/// §8 #45 Deft Duelist, 4/3 → 8/6 with Charge and Deft (radiant adds Armor 1). R49: two exertions,
+/// one attack and one switch per turn, which the engine reads off the Deft keyword (BUILD M2-T1).
+pub static deft_duelist: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-deft-duelist",
+        "index": "45",
+        "name": "Deft Duelist (combat fixture)",
+        "tags": ["Human"],
+        "rarity": "Rare",
+        "cost": 2,
+        "base": {
+            "attack": 4,
+            "health": 3,
+            "keywords": [{ "kind": "Charge" }, { "kind": "Deft" }],
+            "text": "Charge, Deft",
+        },
+        "radiant": {
+            "attack": 8,
+            "health": 6,
+            "keywords": [{ "kind": "Charge" }, { "kind": "Armor", "n": 1 }, { "kind": "Deft" }],
+            "text": "Charge, Armor 1, Deft",
+        },
+    }))
+});
+
+fn deft_duelist_scripts() -> CardScripts {
+    CardScripts {
+        base: Script::default(),
+        radiant: Script::default(),
+    }
+}
+
+/// §8 token 65.1 Spikey Pillow, 0/2 → 0/4: the `neverDefense` flag of §4.1 plus the layer-5 aura
+/// that takes 2 attack off your units, floored at 0 (§10.4). The radiant aura spares other Spikey
+/// Pillows.
+pub static spikey_pillow: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-spikey-pillow",
+        "index": "65.1",
+        "name": "Spikey Pillow (combat fixture)",
+        "tags": ["Token"],
+        "rarity": "Token",
+        "token": true,
+        "base": {
+            "attack": 0,
+            "health": 2,
+            "keywords": [],
+            "text": "Cannot be in Defense Position. Aura: your units have -2 attack",
+        },
+        "radiant": {
+            "attack": 0,
+            "health": 4,
+            "keywords": [],
+            "text": "Cannot be in Defense Position. Aura: your non-Spikey-Pillow units have -2 attack",
+        },
+    }))
+});
+
+/// R636: a plain 3/3 that may attack twice each turn.
+pub static windfurier: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-windfurier",
+        "index": "913",
+        "name": "Windfurier (combat fixture)",
+        "base": { "attack": 3, "health": 10, "keywords": [{ "kind": "Windfury" }], "text": "Windfury" },
+        "radiant": { "attack": 6, "health": 20, "keywords": [{ "kind": "Windfury" }], "text": "Windfury" },
+    }))
+});
+
+/// R637: a 2/2 Unit that prints Temporary, so it is discarded from a hand at the end of its owner's turn.
+pub static temporary_body: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cb-temporary",
+        "index": "914",
+        "name": "Temporary Body (combat fixture)",
+        "base": { "attack": 2, "health": 2, "keywords": [{ "kind": "Temporary" }], "text": "Temporary" },
+        "radiant": { "attack": 4, "health": 4, "keywords": [{ "kind": "Temporary" }], "text": "Temporary" },
+    }))
+});
+
+/// −2 attack to the controller's units on the field; `spares_own_kind` is 65.1's radiant text.
+fn attack_drain_aura(spares_own_kind: bool) -> AuraHook {
+    aura_hook(move |a| {
+        let controller = a.self_.controller;
+        let own_kind = a.self_.def_id.clone();
+        vec![AuraEntry {
+            applies: Box::new(move |unit: &CardInstance| {
+                unit.controller == controller
+                    && matches!(unit.zone, Zone::Field { row: Row::Units, .. })
+                    && !(spares_own_kind && unit.def_id == own_kind)
+            }),
+            mod_: StatMod {
+                attack: Some(-2),
+                ..StatMod::default()
+            },
+        }]
+    })
+}
+
+fn spikey_pillow_scripts() -> CardScripts {
+    let never_defense = || {
+        Some(StaticFlags {
+            never_defense: Some(true),
+            ..StaticFlags::default()
+        })
+    };
+    CardScripts {
+        base: Script {
+            static_flags: never_defense(),
+            aura: Some(attack_drain_aura(false)),
+            ..Script::default()
+        },
+        radiant: Script {
+            static_flags: never_defense(),
+            aura: Some(attack_drain_aura(true)),
+            ..Script::default()
+        },
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Registration. `setupCatalog` in ./harness.ts must fold both of these in, the way it already
+// folds in ./scripts.ts's `fixtureCatalog` and `FIXTURE_SCRIPTS`.
+// ---------------------------------------------------------------------------
+
+pub static COMBAT_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
+    vec![
+        plain.clone(),
+        big_body.clone(),
+        zero_attack.clone(),
+        taunter.clone(),
+        rusher.clone(),
+        charger.clone(),
+        first_striker.clone(),
+        shielded.clone(),
+        armoured.clone(),
+        indestructible.clone(),
+        poisonous.clone(),
+        lifestealer.clone(),
+        trampler.clone(),
+        trample_lifesteal.clone(),
+        cleaver.clone(),
+        pacifist.clone(),
+        stacker.clone(),
+        moths.clone(),
+        big_dfender.clone(),
+        deft_duelist.clone(),
+        spikey_pillow.clone(),
+        windfurier.clone(),
+        temporary_body.clone(),
+    ]
+});
+
+pub static COMBAT_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
+    IndexMap::from([
+        (big_dfender.id.clone(), big_dfender_scripts()),
+        (deft_duelist.id.clone(), deft_duelist_scripts()),
+        (spikey_pillow.id.clone(), spikey_pillow_scripts()),
+    ])
+});
+
+/// Every combat fixture on top of `base`, mirroring `fixtureCatalog` in ./scripts.ts. TS
+/// `combatCatalog(base = {})`: pass `CardDefs::new()` for the default.
+pub fn combat_catalog(base: CardDefs) -> CardDefs {
+    let mut defs = base;
+    for entry in COMBAT_DEFS.iter() {
+        defs.insert(entry.id.clone(), entry.clone());
+    }
+    defs
+}
+
+/// Part 24's brief, step 2: this file's scripts (`COMBAT_SCRIPTS`).
+pub fn scripts() -> IndexMap<String, CardScripts> {
+    COMBAT_SCRIPTS.clone()
+}

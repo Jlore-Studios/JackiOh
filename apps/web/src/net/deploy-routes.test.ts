@@ -111,7 +111,9 @@ describe("vercel.json", () => {
     expect(headers.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
     expect(headers.get("permissions-policy")).toBe("camera=(), microphone=(), geolocation=()");
     const csp = headers.get("content-security-policy") ?? "";
-    expect(csp).toMatch(/script-src 'self'(;|$)/u);
+    // 'wasm-unsafe-eval' lets the page and the practice worker compile the engine's WebAssembly
+    // module (docs/v0.3.0/SURFACE.md §10.3); it allows no string eval.
+    expect(csp).toMatch(/script-src 'self' 'wasm-unsafe-eval'(;|$)/u);
     expect(csp).toMatch(/frame-ancestors 'none'/u);
     // The three origins the bundle talks to: Supabase Auth, and the API and match socket on Render.
     const connect = /connect-src ([^;]+)/u.exec(csp)?.[1] ?? "";

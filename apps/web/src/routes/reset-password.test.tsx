@@ -6,7 +6,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AUTH_PASSWORD_MAX_LENGTH, AUTH_PASSWORD_MIN_LENGTH } from "../../../server/src/config.ts";
+import { AUTH_PASSWORD_MAX_LENGTH, AUTH_PASSWORD_MIN_LENGTH } from "@jackioh/server-config";
 import { holdRecoverySession, recoverySession, releaseRecoverySession } from "../auth/redirect.ts";
 import { navTestid } from "./nav.tsx";
 import { resetTestid } from "../auth/testids.ts";

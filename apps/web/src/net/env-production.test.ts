@@ -13,7 +13,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const WEB = join(HERE, "../..");
 const ROOT = join(WEB, "../..");
 
-/** apps/server/src/env.ts PUBLIC_ENV_VARS, the variables a browser bundle may carry. */
+/** `PUBLIC_ENV_VARS` in crates/server/src/env.rs, the variables a browser bundle may carry. */
 const PUBLIC = [
   "VITE_SUPABASE_URL",
   "VITE_SUPABASE_PUBLISHABLE_KEY",
@@ -41,8 +41,8 @@ describe("apps/web/.env.production", () => {
       expect(PUBLIC, key).toContain(key);
       expect(value, key).not.toMatch(/sb_secret_|service_role|postgres(ql)?:\/\/|-----BEGIN/u);
     }
-    // The server's own list says the same four names are public.
-    const server = readFileSync(join(ROOT, "apps/server/src/env.ts"), "utf8");
+    // The server's own list (PUBLIC_ENV_VARS in the Rust env parser) says the same four names are public.
+    const server = readFileSync(join(ROOT, "crates/server/src/env.rs"), "utf8");
     for (const [key] of entries()) expect(server, key).toContain(`"${key}"`);
   });
 

@@ -3,8 +3,8 @@
 // card (B5 E39), a backrow pile's depth (E21), an Animated card's stats and its standing as a Unit
 // (R383), a face's own type (B2.7) and a card's lines of code (E36), which a match hides (R693).
 //
-// Every view here is a fixture shaped as `viewFor` builds it (src/test/fixtures.ts, the view types in
-// packages/shared/src/view.ts), rendered on the board — a hand card (the tall face), a unit (the
+// Every view here is a fixture shaped as `viewFor` builds it (src/test/fixtures.ts, the view types of
+// crates/engine/src/wire/view.rs), rendered on the board — a hand card (the tall face), a unit (the
 // minion), a face-up backrow card (the compact face), a face-down one (a back) — and in the inspect
 // overlays a hover and a long-press open. Each state is checked on each surface, and its absence
 // draws nothing.

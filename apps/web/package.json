@@ -4,22 +4,22 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "// predev": "The engine is the Rust one compiled to WebAssembly (docs/v0.3.0/SURFACE.md §10.2): each of dev, build, build:e2e and test first builds crates/wasm into src/wasm/pkg. Idempotent, and quick when nothing changed.",
+    "predev": "sh ../../scripts/build-wasm.sh",
     "dev": "vite",
+    "prebuild": "sh ../../scripts/build-wasm.sh",
     "build": "vite build",
     "preview": "vite preview",
     "// build:e2e": "A production build deletes what the suite drives. main.tsx:168 serves NotFound for /dev/hotseat, net.ts:670 and hotseat.tsx:97 return early, so `window.__jackioh` is absent: measured 0 occurrences of it in a `vite build` bundle and 7 in this one. The two bundles differ by 20 bytes and nothing else — MODE is the only thing this flag moves.",
+    "prebuild:e2e": "sh ../../scripts/build-wasm.sh",
     "build:e2e": "vite build --mode development",
     "typecheck": "tsc -p tsconfig.json",
+    "pretest": "sh ../../scripts/build-wasm.sh",
     "test": "vitest run",
     "gen:voice": "node scripts/gen-voice.mjs",
     "gen:music": "node scripts/gen-music.mjs"
   },
   "dependencies": {
-    "@jackioh/ai": "workspace:*",
-    "@jackioh/cards": "workspace:*",
-    "@jackioh/engine": "workspace:*",
-    "@jackioh/shared": "workspace:*",
-    "@jackioh/validator": "workspace:*",
     "json5": "2.2.3",
     "react": "19.3.0",
     "react-dom": "19.3.0"

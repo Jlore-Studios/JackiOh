@@ -75,7 +75,7 @@ export const CARD_EFFECT_DELAY_MS = 200;
 export const EFFECT_PITCH_JITTER = 0.03;
 /** R655: a pick-up this soon after the last one accepted plays nothing, so quick fiddling never stacks. */
 export const PICKUP_MIN_GAP_MS = 300;
-/** R97's sentinel as a redacted event carries it (packages/engine/src/viewFor.ts HIDDEN_ID). */
+/** R97's sentinel as a redacted event carries it (crates/engine/src/view_for.rs HIDDEN_ID). */
 export const HIDDEN_DEF_ID = "hidden";
 /** Rules vocabulary a line may not use (whole word, case-insensitive): lines are flavour, not text. */
 export const BANNED_RULES_WORDS: readonly string[] = [
@@ -101,7 +101,7 @@ export const HINDER_DEF_ID = "core-021";
 /** #27 Blood Ridden Glowy Jelly Bean: each card it turns Radiant is a blood drain and a gold burst. */
 export const BLOOD_BEAN_DEF_ID = "core-027";
 /**
- * The id `modifierChanged` names the next refresh's rider by (packages/engine/src/mana.ts
+ * The id `modifierChanged` names the next refresh's rider by (crates/engine/src/mana.rs
  * NEXT_REFRESH_MODIFIER_ID, R169): the web reaches no engine module for a string, as HIDDEN_DEF_ID.
  */
 export const NEXT_REFRESH_MODIFIER_ID = "nextTurnMana";

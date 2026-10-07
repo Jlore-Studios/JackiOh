@@ -5,18 +5,19 @@ the procedural art stays the fallback after that: a card the manifest does not l
 fails to load, and a Radiant face with no file of its own (which shows the base file under a gold
 tint) all fall back without a request or an error. This file is the convention an artist's
 delivery meets (R660). `convention.ts` holds its numbers, and `convention.test.ts` holds the real
-directory and `manifest.ts` to them in CI.
+directory and `manifest.ts` to them in CI's daily super run (the pull-request web tests leave the
+asset tests out).
 
 ## A delivery is a file plus a manifest line
 
 1. Put the file(s) in `apps/web/public/art/`, named for the card's catalog id
-   (`packages/cards/catalog.json`, tokens included):
+   (`crates/cards/catalog.json`, tokens included):
    - `<id>.webp` for the base face, for example `core-002.webp`;
    - `<id>-radiant.webp` for the Radiant face, for example `core-002-radiant.webp`. Optional: a
      card with only a base file shows it under a gold tint on its Radiant face.
 2. Add the card's line to `ART_MANIFEST` in `manifest.ts`, naming the faces delivered:
    `"core-002": { base: true, radiant: true },` (or `{ base: true }`).
-3. Credit the artist, if they are credited, as the card's `artist` in `packages/cards/flavour.json`
+3. Credit the artist, if they are credited, as the card's `artist` in `crates/cards/flavour.json`
    (`{ "flavour": "…", "artist": "Name" }`, at most `ARTIST_MAX_CHARS` characters). The inspect
    views and the Card Almanac show it as "Art by Name". That file is not card data, so the credit
    needs no patch fragment.

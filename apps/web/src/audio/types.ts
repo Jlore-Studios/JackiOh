@@ -150,7 +150,7 @@ export type CardAudioTable = {
   voices: Record<string, Persona>;
   /** The effects bank, by the name a hook gives. */
   effects: Record<string, CardEffect>;
-  /** Keyed by catalog id: exactly the ids of packages/cards/catalog.json, tokens included. */
+  /** Keyed by catalog id: exactly the ids of crates/cards/catalog.json, tokens included. */
   cards: Record<string, CardAudioEntry>;
   /** Keyed by portrait id (shared `PORTRAIT_IDS`): the six portraits' emote lines. */
   emotes: Record<string, EmoteLineEntry>;

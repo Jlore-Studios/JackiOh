@@ -28,14 +28,14 @@
 //
 // The catalog blocker this header used to name is CLOSED. The note is kept rather than deleted
 // because a stale "blocked" claim is worse than none — it invites a reader to write off a real
-// failure as known. `apps/web` now depends on `@jackioh/cards` and calls `registerAll()` in its
-// composition root, so `registeredCatalog()` is populated, `/dev/hotseat` resolves a fixture deck
-// and `window.__jackioh` is exposed. If this spec fails in `cy.seedGame` now, it is a finding.
+// failure as known. `apps/web` now runs the Rust engine as a WebAssembly module whose `init`
+// registers the catalog and every card script, so `registeredCatalog()` is populated, `/dev/hotseat`
+// resolves a fixture deck and `window.__jackioh` is exposed. If this spec fails in `cy.seedGame` now, it is a finding.
 //
 // The #94 blocker this header used to name is CLOSED too, and the same rule applies to it: this
-// header once said `packages/cards/src/scripts/094-genns-greed.ts` was down to its `gainMana`
-// clause because neither "draw every 2-cost card" nor "exile every odd-cost card" was in
-// `packages/engine/src/effects`. Both verbs exist now, and step 3's precondition — empty library,
+// header once said #94's script (now `crates/cards/src/scripts/core/c094_genns_greed.rs`) was down
+// to its `gainMana` clause because neither "draw every 2-cost card" nor "exile every odd-cost card"
+// was among the engine's effects (now `crates/engine/src/effects`). Both verbs exist now, and step 3's precondition — empty library,
 // a hand holding nothing but Knockoff Temu, Mr. Vanilla the only non-Radiant card on the field —
 // is met in a real run. So a failure there is a finding about #94, not a known gap.
 //

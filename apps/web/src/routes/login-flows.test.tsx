@@ -14,7 +14,7 @@ import {
   AUTH_PASSWORD_MIN_LENGTH,
   AUTH_PENDING_ADDRESS_TTL_SECONDS,
   GATE_SLOW_NOTICE_SECONDS,
-} from "../../../server/src/config.ts";
+} from "@jackioh/server-config";
 import { challengeForRequest, storedVerifiers } from "../auth/pkce.ts";
 import { clearConsumedAuthRedirect, recoverySession, releaseRecoverySession } from "../auth/redirect.ts";
 import { loginTestid } from "../auth/testids.ts";

@@ -5,7 +5,7 @@
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { SERIES_MAX_GAMES, SERIES_WINS_NEEDED } from "../../../server/src/config.ts";
+import { SERIES_MAX_GAMES, SERIES_WINS_NEEDED } from "@jackioh/server-config";
 import { getSeriesForMatch, type SeriesView } from "../net/api.ts";
 import { SeriesBanner, SeriesContinue, nextStep, seriesBannerTestid, useMatchSeries } from "./SeriesBanner.tsx";
 

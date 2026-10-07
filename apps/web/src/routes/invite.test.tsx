@@ -5,7 +5,7 @@
 // anything: §9.4's one sentence for a code failure and R145's distinct sentence for an
 // account-state failure both reach the DOM exactly as the server wrote them. A client that
 // paraphrased either would flatten the two into one, which is the oracle §9.8 is paying 80 bits to
-// avoid. Every number in the format assertions is imported from `apps/server/src/config.ts`.
+// avoid. Every number in the format assertions is imported from `crates/server/src/config.rs`.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -16,7 +16,7 @@ import {
   INVITE_CODE_LENGTH,
   INVITE_CODE_SEPARATOR,
   REDEMPTION_IDENTICAL_ERROR,
-} from "../../../server/src/config.ts";
+} from "@jackioh/server-config";
 import { codeFieldTestid, inviteTestid } from "../auth/testids.ts";
 import { ApiRequestError, getCodeStatus, getMe, redeemCode } from "../net/api.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
@@ -84,7 +84,7 @@ async function mount(): Promise<void> {
 // §9.4's format, from config
 // ---------------------------------------------------------------------------------------------
 
-describe("the code format is §9.4's, read from apps/server/src/config.ts", () => {
+describe("the code format is §9.4's, read from crates/server/src/config.rs", () => {
   it("R104 normalises to upper case, and refuses an excluded character rather than dropping it", async () => {
     // R104: "the alphabet is uppercase-only, so SPEC's exclusion of lowercase `l` is satisfied by
     // normalising any user-entered code to upper case before comparison, rather than by omitting a

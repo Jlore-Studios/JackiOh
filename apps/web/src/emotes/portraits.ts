@@ -1,9 +1,9 @@
 // R641's hero portraits on the client: which catalog card's art each portrait draws, in `CardArt`'s
 // `oval` shape (issue §1 — the card's own art, manifest image first, procedural SVG otherwise).
 //
-// The roster in `packages/shared` names each portrait by its card's NAME, not its id — the issue's
-// roster table says to look cards up by name, never by number — so this module resolves the name
-// once, against the catalog the bundle ships (`@jackioh/cards/catalog.json`, the same import
+// The roster in the wire layer (`src/wire/emotes.ts`, `@jackioh/shared`) names each portrait by
+// its card's NAME, not its id — the issue's roster table says to look cards up by name, never by
+// number — so this module resolves the name once, against the catalog the bundle ships (`@jackioh/cards/catalog.json`, the same import
 // `routes/almanac.tsx` makes), and keeps the def for `CardArt`.
 
 import catalogJson from "@jackioh/cards/catalog.json";

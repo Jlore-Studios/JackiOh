@@ -5,7 +5,9 @@
   //
   // It is also the one TypeScript project in the repo that spans both trees: a component spec
   // imports apps/web/src directly, so the client's own sources are pulled in and checked here with
-  // the same options apps/web/tsconfig.json uses (both extend tsconfig.base.json).
+  // the same options apps/web/tsconfig.json uses (both extend tsconfig.base.json), and the same
+  // `@jackioh/*` paths, which resolve to the client's wire layer (docs/v0.3.0/SURFACE.md §10.4) as
+  // the component tests' Vite server does (e2e/cypress.config.ts, apps/web/vite.config.ts).
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
@@ -14,7 +16,19 @@
     // `import.meta.env`; `cypress` brings `cy`, `describe` and chai's `expect`.
     "types": ["cypress", "node", "vite/client"],
     "allowImportingTsExtensions": true,
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "@jackioh/shared": ["../../../apps/web/src/wire/index.ts"],
+      "@jackioh/engine": ["../../../apps/web/src/wire/engine.ts"],
+      "@jackioh/engine/config": ["../../../apps/web/src/wire/engineConfig.ts"],
+      "@jackioh/validator": ["../../../apps/web/src/wire/validator.ts"],
+      "@jackioh/cards": ["../../../apps/web/src/wire/cards.ts"],
+      "@jackioh/cards/catalog.json": ["../../../crates/cards/catalog.json"],
+      "@jackioh/cards/flavour.json": ["../../../crates/cards/flavour.json"],
+      "@jackioh/ai": ["../../../apps/web/src/wire/ai.ts"],
+      "@jackioh/ai/config": ["../../../apps/web/src/wire/ai.ts"],
+      "@jackioh/server-config": ["../../../apps/web/src/wire/serverConfig.ts"]
+    }
   },
   "include": ["**/*.cy.tsx", "../../support/component.tsx"]
 }

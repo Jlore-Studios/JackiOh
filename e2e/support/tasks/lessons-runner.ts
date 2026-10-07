@@ -4,12 +4,14 @@
 //
 //   lessons     apps/web/src/tutorial/lessons.ts's TUTORIAL_LESSONS, in path order: each lesson's
 //               id, number, title, seed, seat and its two fixed decks (SPEC §9.10, R291);
-//   aiTutorial  AI_TUTORIAL from packages/engine/src/config.ts, the tutorial opponent's handicap (R290);
-//   quickdraw   the catalog ids tagged Quickdraw (packages/cards/catalog.json).
+//   aiTutorial  AI_TUTORIAL from apps/web/src/wire/engineConfig.ts, the tutorial opponent's handicap
+//               (R290), which `cargo test -p jackioh-engine --test export_config` generates from
+//               crates/engine/src/config.rs;
+//   quickdraw   the catalog ids tagged Quickdraw (crates/cards/catalog.json).
 //
 // Specs 22 and 23 compare what the page plays against these, so no card list is ever copied into a
-// spec by hand. Like replay-runner.ts, this file is excluded from e2e/tsconfig.json on purpose: it
-// is one of the two places in e2e/ that reach into apps/* and packages/*.
+// spec by hand. This file is excluded from e2e/tsconfig.json on purpose: it is the one place in e2e/
+// that imports the client's source at run time.
 
 import { readFileSync } from "node:fs";
 
@@ -29,10 +31,10 @@ async function main(): Promise<void> {
   const { TUTORIAL_LESSONS } = (await import("../../../apps/web/src/tutorial/lessons.ts")) as {
     TUTORIAL_LESSONS: readonly Lesson[];
   };
-  const { AI_TUTORIAL } = (await import("../../../packages/engine/src/config.ts")) as {
+  const { AI_TUTORIAL } = (await import("../../../apps/web/src/wire/engineConfig.ts")) as {
     AI_TUTORIAL: Record<string, number>;
   };
-  const catalog = JSON.parse(readFileSync("packages/cards/catalog.json", "utf8")) as Record<string, CatalogEntry>;
+  const catalog = JSON.parse(readFileSync("crates/cards/catalog.json", "utf8")) as Record<string, CatalogEntry>;
   const quickdraw = Object.entries(catalog)
     .filter(([, entry]) => Array.isArray(entry.tags) && entry.tags.includes("Quickdraw"))
     .map(([id]) => id);

@@ -33,8 +33,8 @@ export const BACKROW_LANES = 5;
 export const DISCOVER_OPTION_LIMIT = 5;
 
 /**
- * Lanes are 1-based, because the engine's are: `packages/engine/src/zones.ts` builds slots with
- * `lane: i + 1` and reads `side.units[ref.lane - 1]`, and `e2e/support/types.ts` declares
+ * Lanes are 1-based, because the engine's are: `crates/engine/src/zones.rs` numbers a row's slots
+ * from 1 and reads a unit pile at `lane - 1`, and `e2e/support/types.ts` declares
  * `Lane = 1 | 2 | 3 | 4 | 5`. A `ZoneChoice` inside a `play` action therefore carries 1..5, so
  * the client's zone testids must too or nothing the engine blesses would ever light up.
  */

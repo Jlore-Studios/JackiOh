@@ -1,6 +1,8 @@
 # `@jackioh/web`
 
-The JackiOh client: React 19 + Vite. It renders a `PlayerView` and nothing else.
+The JackiOh client: React 19 + Vite. It renders a `PlayerView` and nothing else. The engine, the AI
+and the deck validator it runs locally are the Rust crates compiled to WebAssembly (`crates/wasm`,
+[The engine as WebAssembly](#the-engine-as-webassembly) below).
 
 ## The one rule
 
@@ -15,7 +17,8 @@ enforces rules and never sees hidden information.** In practice:
   nothing on click.
 - `EngineState` is opaque (`game/engine.ts`). The client passes it back to the port and cannot
   read a field off it, which is how "never sees hidden information" is enforced by the compiler
-  rather than by discipline.
+  rather than by discipline. Under it is the WASM module's `GameState` JSON, which no component
+  reads.
 - Choices split two ways per SPEC §11 R81: zone, X, embiggen, Tribute and a card's declared
   targets and modes are built **inline into the `play` action**; everything decided during
   resolution is a `PendingChoice` answered with an `answer` action. `game/Prompt.tsx` renders
@@ -45,8 +48,8 @@ src/
                         a corruption aura in the mark's colours and a badge with its words, still under
                         reduced motion; the board's Card.tsx mounts it on units and face-up backrow cards
   game/
-    engine.ts           the EnginePort: the only seam onto packages/engine
-    engine.real.ts      the real binding (see "Blocked on the engine" below)
+    engine.ts           the EnginePort: hotseat's only seam onto the engine, its functions the WASM
+                        module's (../wasm/index.ts), synchronous once loadWasm() has run
     contract.ts         data-testid vocabulary, ClickTarget, Highlight, BoardProps
     catalog.ts          card names and rules text (see the §10.8 finding below), and `MatchCardsContext`: the
                         match-made definitions the view carries (`PlayerView.defs`, a Fuse's, R243) and each field
@@ -171,8 +174,17 @@ src/
                         confidence floor, card drill-down, public player aggregates, and a provisional banner
                         that names no data source and none of the gate's workings (R661); the site footer
                         links it, and the landing page's calls to action do not
+  wasm/index.ts         the only caller of the WASM module: loadWasm() (main.tsx and the practice worker
+                        await it before anything else), loadWasmSync(bytes) for jsdom, and one typed
+                        function per binding; pkg/ is scripts/build-wasm.sh's output, gitignored
+  wire/                 what the @jackioh/* imports resolve to (vite.config.ts, vitest.config.ts and
+                        tsconfig.json alias them): generated/ (the Rust wire types, ts-rs), engineConfig.ts
+                        and serverConfig.ts (the Rust constants the client reads), all three written by
+                        `cargo test` and never edited; engine.ts, ai.ts, validator.ts and cards.ts (typed
+                        functions over ../wasm and the catalog); rng.ts and the hand-kept helpers
+                        (codes.ts, emotes.ts, aim.ts, catalog.ts, stats.ts)
   test/
-    setup.ts            jsdom matchers and a matchMedia stub
+    setup.ts            jsdom matchers, a matchMedia stub, and the WASM module loaded synchronously
     fixtures.ts         fixture PlayerViews; every test renders one of these
 scripts/
   gen-voice.mjs         renders card-audio.json5's lines to public/audio/voice/<card-id>-<hook>.m4a
@@ -282,11 +294,16 @@ play is built as a hand card's.
 ## Commands
 
 ```
-pnpm --filter @jackioh/web dev          # vite dev server on :5173
-pnpm --filter @jackioh/web build        # production build
-pnpm --filter @jackioh/web typecheck    # tsc -p apps/web/tsconfig.json
-pnpm --filter @jackioh/web test         # vitest (jsdom)
+pnpm --dir apps/web dev          # vite dev server on :5173
+pnpm --dir apps/web build        # production build
+pnpm --dir apps/web build:e2e    # the build e2e drives: development mode, so window.__jackioh stays
+pnpm --dir apps/web typecheck    # tsc -p apps/web/tsconfig.json
+pnpm --dir apps/web test         # vitest (jsdom)
 ```
+
+`dev`, `build`, `build:e2e` and `test` first run `scripts/build-wasm.sh` (their `pre` scripts), which
+needs the Rust toolchain `rust-toolchain.toml` pins; `typecheck` reads the module's generated `.d.ts`,
+so run one of them (or the script) once first.
 
 The dev hotseat route is `/dev/hotseat?seed=42&a=first20&b=first20`. It runs `reduce` in the
 browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
@@ -295,8 +312,8 @@ browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 ## Decks, the lobby and the series
 
 The screens an account uses between games (SPEC §9.4, §9.5, R250–R264, R330–R341). None of them
-decides a rule: every verdict they show comes from `@jackioh/validator`, the module the server runs at
-queue, and the server's refusal, when it comes, is shown in its own words (rule 7).
+decides a rule: every verdict they show comes from `@jackioh/validator` (the Rust validator through
+WASM), the module the server runs at queue, and the server's refusal, when it comes, is shown in its own words (rule 7).
 
 ```
 routes/decks.tsx        /decks: loads GET /api/decks, the catalog and the collection, hands them to the workshop
@@ -328,7 +345,7 @@ A practice game offers the account's complete saved decks by name, read from `GE
 ## Practice
 
 `/practice` (SPEC §9.9, R187) is a game against the AI with no account and no server. The engine
-and the AI (`packages/ai`) run in a Web Worker, which stands where SPEC §9.1 puts the server, so
+and the AI (`crates/engine`, `crates/ai`, as WebAssembly) run in a Web Worker, which stands where SPEC §9.1 puts the server, so
 rule 7 holds exactly as it does online:
 
 ```
@@ -430,8 +447,10 @@ src/tutorial/
 - `?lesson=<id>` starts a lesson at once (`&pace=fast` works as for practice); `?seed=` and
   `?seat=` never override a lesson's own. `window.__jackiohTutorial` (dev builds only) exposes the
   coach's display and the action its current step asks for, which spec 22 performs through the UI.
-- `pnpm --dir apps/web exec tsx scripts/lesson-deal.ts <lessonId> [seed | --scan …]` prints a
-  lesson's deal, which is how a lesson's seed is picked.
+- `scripts/lesson-deal.ts <lessonId> [seed | --scan …]` prints a lesson's deal, which is how a
+  lesson's seed is picked: `pnpm --dir apps/web exec tsx scripts/lesson-deal.ts basics`, after
+  `sh scripts/build-wasm.sh` has written `src/wasm/pkg` (it loads the module from disk through
+  `src/wasm/`, as `src/test/setup.ts` does).
 - Progress lives on the device and, for an active account, on the account too (R320, R321). The
   device's copy is the one the page renders; `accountSync.ts` reads the account's once per visit,
   merges it in (the union of completed lessons, the newest Hide/Show choice by the time it was
@@ -494,28 +513,31 @@ flavour text: `voice-lines.test.ts` enforces the word limits and bans rules word
 missing from the manifest falls back to the browser's `speechSynthesis`, with the voice's `web`
 pitch and rate.
 
-## Blocked on the engine
+## The engine as WebAssembly
 
-`packages/engine` does not compile yet: `packages/engine/src/index.ts` re-exports `./combat`,
-`./playChoices`, `./prompts`, `./triggers`, `./traps` and `./viewFor`, and none of those files
-exist (M3 is in flight). **`viewFor` is one of them**, so the client has no way to obtain a
-`PlayerView` from a real game today.
+Since v0.3.0 the engine, the card scripts, the AI and the validator are Rust (`crates/`), and the
+client runs them as one WebAssembly module (`crates/wasm`, its README the binding list). JSON
+strings go in and out; the state is an opaque JSON object the client hands back on every call.
 
-Two deliberate consequences, both reversible in one commit:
-
-1. `src/game/engine.real.ts` is the only page-side file that imports `@jackioh/engine` (the other
-   importer, `src/practice/core.ts`, is loaded only by the practice worker; see Practice above). It is listed in
-   `tsconfig.json`'s `exclude`, and `engine.ts` reaches it through a dynamic import marked
-   `/* @vite-ignore */`. That keeps `tsc -p apps/web/tsconfig.json` and `vite build` green
-   without the client pretending to have an engine.
-2. The dev hotseat route renders an `EngineUnavailableError` panel naming the missing exports.
-   It does **not** substitute a client-side `viewFor` — computing a view in the client is
-   exactly the hidden-information leak rule 7 forbids.
-
-When `pnpm exec tsc -p packages/engine/tsconfig.json` is green: delete the `exclude` entry in
-`tsconfig.json`, change `loadEnginePort` in `engine.ts` to a static
-`import { enginePort } from "./engine.real.ts"`, and drop the `@vite-ignore`. Nothing else in
-`src/` touches the engine but the practice worker's `src/practice/core.ts`.
+- `scripts/build-wasm.sh` builds the module into `src/wasm/pkg/` (gitignored). It adds the
+  `wasm32-unknown-unknown` target and downloads the pinned `wasm-bindgen` CLI only when they are
+  missing, and cargo rebuilds only what changed. The package's `pre` scripts run it, so `dev`,
+  `build`, `build:e2e` and `test` always load a fresh module.
+- `src/wasm/index.ts` is the module's only caller. `main.tsx` awaits `loadWasm()` before the first
+  render (the deck builder calls the validator synchronously), the practice worker before its first
+  message, and `test/setup.ts` loads it synchronously for jsdom.
+- `src/wire/` keeps every import the client had when these packages were TypeScript working
+  unchanged: `@jackioh/shared` is the generated wire types plus hand-kept helpers, `@jackioh/engine`
+  and `@jackioh/ai` are typed functions over the module, `@jackioh/engine/config` and
+  `@jackioh/server-config` are the generated Rust constants, `@jackioh/validator` the validator,
+  `@jackioh/cards` the catalog and its version (read from `crates/cards/patches/patches.json`), and
+  `@jackioh/cards/catalog.json` and `flavour.json` the files in `crates/cards`.
+- The generated files (`src/wire/generated/`, `engineConfig.ts`, `serverConfig.ts`) are written by
+  `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`; CI fails when they
+  differ from what is committed, so a Rust change that moves the wire commits them in the same change.
+- Two files hold a game's state, and nothing else imports the engine's game functions: `game/engine.ts`
+  (hotseat's port) and `practice/core.ts` (the practice worker's game, and the only caller of the AI's
+  `decide`), with `tutorial/harness.ts` for tests.
 
 ## `PlayerView` gaps found while building M5 (SPEC §10.8)
 

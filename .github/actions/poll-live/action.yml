@@ -6,7 +6,7 @@
 # The catalog version alone cannot show that Render deployed a push: a push that leaves the catalog
 # as it was serves the same version before and after, and a service whose dashboard CATALOG_VERSION
 # is stale serves the old version from new code. The server therefore also reports the commit it was
-# deployed from in the `x-deployed-commit` header (apps/server/src/api/catalog.ts).
+# deployed from in the `x-deployed-commit` header (crates/server/src/api/catalog.rs).
 name: poll live catalog
 description: Poll the live server's /api/catalog until it serves the expected catalog version, on the expected commit
 inputs:

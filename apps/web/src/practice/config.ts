@@ -1,5 +1,5 @@
 // Every number the practice route states (CLAUDE.md rule 9). The rules numbers — the AI seat's
-// handicap per difficulty — are the engine's (`AI_DIFFICULTY` in `packages/engine/src/config.ts`,
+// handicap per difficulty — are the engine's (`AI_DIFFICULTY` in `crates/engine/src/config.rs`,
 // SPEC §9.9); these are the browser's own: pacing, the wall-clock cap on one AI decision, and what
 // the setup screen remembers between visits.
 

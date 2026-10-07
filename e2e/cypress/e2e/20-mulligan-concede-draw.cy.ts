@@ -47,7 +47,7 @@
 // Needs: M6 (server, match actor, WS protocol), M7-T1 (the clock), and a `build:e2e` client (the
 // dev handles). See e2e/README.md.
 
-import { MULLIGAN_CLOCK_MS } from "../../../apps/server/src/config.ts";
+import { MULLIGAN_CLOCK_MS } from "../../../apps/web/src/wire/serverConfig.ts";
 import { accounts, routes, seedFor, server, timeouts } from "../../support/config.ts";
 import {
   BOARD,
@@ -314,26 +314,29 @@ function bearer(token: string): Record<string, string> {
 function openMatch(seed: string): void {
   const seatOne = accounts.p1();
   const seatTwo = accounts.p2();
-  cy.installLoadout(seatOne, DECK_A);
-  cy.installLoadout(seatTwo, DECK_B);
-
-  // R143: an end-to-end server honours the room's `seed` (spec 06 has the whole story).
-  cy.request<{ code: string }>({
-    method: "POST",
-    url: api("/api/rooms"),
-    headers: bearer(seatOne.token),
-    body: { deckIndex: 0, seed },
-  }).then((created) => {
-    cy.request<{ matchId: string; seat: string }>({
-      method: "POST",
-      url: api(`/api/rooms/${created.body.code}/join`),
-      headers: bearer(seatTwo.token),
-      body: { deckIndex: 0 },
-    }).then((joined) => {
-      expect(joined.body.seat, "the joiner is seat 2 (§9.5)").to.eq(SEAT_TWO_ID);
-      const matchId = joined.body.matchId;
-      cy.wsPlayer({ action: "connect", name: SEAT_TWO, url: server.ws(), token: seatTwo.token, matchId });
-      cy.visitAs(seatOne, routes.match(matchId));
+  // Each seat plays the fixture `cy.installLoadout` saves first, named by id: `{ mode: "bo1",
+  // deckId }` (R257; v0.3.0 dropped the legacy `deckIndex` body, SURFACE §11.3).
+  cy.installLoadout(seatOne, DECK_A).then((one) => {
+    cy.installLoadout(seatTwo, DECK_B).then((two) => {
+      // R143: an end-to-end server honours the room's `seed` (spec 06 has the whole story).
+      cy.request<{ code: string }>({
+        method: "POST",
+        url: api("/api/rooms"),
+        headers: bearer(seatOne.token),
+        body: { mode: "bo1", deckId: one.deckIds[0], seed },
+      }).then((created) => {
+        cy.request<{ matchId: string; seat: string }>({
+          method: "POST",
+          url: api(`/api/rooms/${created.body.code}/join`),
+          headers: bearer(seatTwo.token),
+          body: { mode: "bo1", deckId: two.deckIds[0] },
+        }).then((joined) => {
+          expect(joined.body.seat, "the joiner is seat 2 (§9.5)").to.eq(SEAT_TWO_ID);
+          const matchId = joined.body.matchId;
+          cy.wsPlayer({ action: "connect", name: SEAT_TWO, url: server.ws(), token: seatTwo.token, matchId });
+          cy.visitAs(seatOne, routes.match(matchId));
+        });
+      });
     });
   });
 }

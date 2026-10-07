@@ -4,9 +4,9 @@
 // nothing else, so a `PlayerView` alone cannot render a card's name, type, tribe tags or rules
 // text — all of which BUILD M5-T1 requires on the face of a card. The catalog is public
 // information (§5.1, §9.4 checks a `catalogVersion` on both sides), so the client may hold it;
-// but it has to come from somewhere other than the view. Until `packages/cards` ships defs and
-// the server sends a catalog with the view, every component falls back to showing the `defId`,
-// which keeps the tests honest about what the view does and does not contain.
+// but it has to come from somewhere other than the view. Until `crates/cards`' definitions reach a
+// component and the server sends a catalog with the view, every component falls back to showing
+// the `defId`, which keeps the tests honest about what the view does and does not contain.
 //
 // A match makes cards no catalog holds — a Fuse's, a crafted card's (R77, R102, R179) — and the view
 // carries their definitions beside the cards it names (`PlayerView.defs`, R243). `MatchCardsContext`

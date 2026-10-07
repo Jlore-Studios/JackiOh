@@ -1,0 +1,489 @@
+[
+  {
+    "name": "canonical form",
+    "input": "ABCD-EFGH-JKMN-PQRS",
+    "canonical": "ABCDEFGHJKMNPQRS",
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": null,
+    "foundInText": true
+  },
+  {
+    "name": "lower case",
+    "input": "abcd-efgh-jkmn-pqrs",
+    "canonical": "ABCDEFGHJKMNPQRS",
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": null,
+    "foundInText": true
+  },
+  {
+    "name": "mixed case",
+    "input": "aBcD-eFgH-jKmN-pQrS",
+    "canonical": "ABCDEFGHJKMNPQRS",
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": null,
+    "foundInText": true
+  },
+  {
+    "name": "no separators",
+    "input": "ABCDEFGHJKMNPQRS",
+    "canonical": "ABCDEFGHJKMNPQRS",
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": null,
+    "foundInText": true
+  },
+  {
+    "name": "spaces as separators",
+    "input": "ABCD EFGH JKMN PQRS",
+    "canonical": "ABCDEFGHJKMNPQRS",
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": null,
+    "foundInText": true
+  },
+  {
+    "name": "leading and trailing whitespace, tabs and newlines",
+    "input": " \t\nABCD-EFGH-JKMN-PQRS\r\n\t ",
+    "canonical": "ABCDEFGHJKMNPQRS",
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": null,
+    "foundInText": true
+  },
+  {
+    "name": "en and em dashes",
+    "input": "ABCD\u2013EFGH\u2014JKMN\u2013PQRS",
+    "canonical": "ABCDEFGHJKMNPQRS",
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": null,
+    "foundInText": true
+  },
+  {
+    "name": "hyphen, non-breaking hyphen, horizontal bar and minus sign",
+    "input": "ABCD\u2010EFGH\u2011JKMN\u2015PQ\u2212RS",
+    "canonical": "ABCDEFGHJKMNPQRS",
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": null,
+    "foundInText": true
+  },
+  {
+    "name": "small and fullwidth dash forms",
+    "input": "ABCD\ufe58EFGH\ufe63JKMN\uff0dPQRS",
+    "canonical": "ABCDEFGHJKMNPQRS",
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": null,
+    "foundInText": true
+  },
+  {
+    "name": "NBSP",
+    "input": "ABCD\u00a0EFGH\u00a0JKMN\u00a0PQRS",
+    "canonical": "ABCDEFGHJKMNPQRS",
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": null,
+    "foundInText": true
+  },
+  {
+    "name": "ideographic space",
+    "input": "ABCD\u3000EFGH\u3000JKMN\u3000PQRS",
+    "canonical": "ABCDEFGHJKMNPQRS",
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": null,
+    "foundInText": true
+  },
+  {
+    "name": "a zero-width space inside a group",
+    "input": "AB\u200bCD-EFGH-JKMN-PQRS",
+    "canonical": "ABCDEFGHJKMNPQRS",
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": null,
+    "foundInText": true
+  },
+  {
+    "name": "BOM, soft hyphen, zero-width joiners and word joiner",
+    "input": "\ufeffABCD\u00adEFGH\u200cJKMN\u200dPQ\u2060RS",
+    "canonical": "ABCDEFGHJKMNPQRS",
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": null,
+    "foundInText": true
+  },
+  {
+    "name": "the fullwidth form",
+    "input": "\uff21\uff22\uff23\uff24\uff0d\uff25\uff26\uff27\uff28\uff0d\uff2a\uff2b\uff2d\uff2e\uff0d\uff30\uff31\uff32\uff33",
+    "canonical": "ABCDEFGHJKMNPQRS",
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": null,
+    "foundInText": true
+  },
+  {
+    "name": "the fullwidth form in lower case",
+    "input": "\uff41\uff42\uff43\uff44\uff0d\uff45\uff46\uff47\uff48\uff0d\uff4a\uff4b\uff4d\uff4e\uff0d\uff50\uff51\uff52\uff53",
+    "canonical": "ABCDEFGHJKMNPQRS",
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": null,
+    "foundInText": true
+  },
+  {
+    "name": "mixed ' - ' separators",
+    "input": "ABCD - EFGH - JKMN - PQRS",
+    "canonical": "ABCDEFGHJKMNPQRS",
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": null,
+    "foundInText": true
+  },
+  {
+    "name": "a padded paste longer than the old 19-character field",
+    "input": " abcd - efgh - jkmn - pqrs ",
+    "canonical": "ABCDEFGHJKMNPQRS",
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": null,
+    "foundInText": true
+  },
+  {
+    "name": "a separator between every character",
+    "input": "A-B-C-D-E-F-G-H-J-K-M-N-P-Q-R-S",
+    "canonical": "ABCDEFGHJKMNPQRS",
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": null,
+    "foundInText": true
+  },
+  {
+    "name": "a code padded to exactly the input cap",
+    "input": "ABCD-EFGH-JKMN-PQRS                                             ",
+    "canonical": "ABCDEFGHJKMNPQRS",
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": null,
+    "foundInText": true
+  },
+  {
+    "name": "a lowercase l, read as L",
+    "input": "abcd-efgh-jklm-npqr",
+    "canonical": "ABCDEFGHJKLMNPQR",
+    "formatted": "ABCD-EFGH-JKLM-NPQR",
+    "problem": null,
+    "foundInText": true
+  },
+  {
+    "name": "excluded 0",
+    "input": "ABCD-EF0H-JKMN-PQRS",
+    "canonical": null,
+    "formatted": "ABCD-EF",
+    "problem": "excluded",
+    "character": "0",
+    "foundInText": false
+  },
+  {
+    "name": "excluded 1",
+    "input": "ABCD-1FGH-JKMN-PQRS",
+    "canonical": null,
+    "formatted": "ABCD",
+    "problem": "excluded",
+    "character": "1",
+    "foundInText": false
+  },
+  {
+    "name": "excluded O",
+    "input": "ABCD-EFGH-OKMN-PQRS",
+    "canonical": null,
+    "formatted": "ABCD-EFGH",
+    "problem": "excluded",
+    "character": "O",
+    "foundInText": false
+  },
+  {
+    "name": "excluded I",
+    "input": "IBCD-EFGH-JKMN-PQRS",
+    "canonical": null,
+    "formatted": "",
+    "problem": "excluded",
+    "character": "I",
+    "foundInText": false
+  },
+  {
+    "name": "a lowercase o, excluded as O",
+    "input": "abcd-efgh-jkmn-pqro",
+    "canonical": null,
+    "formatted": "ABCD-EFGH-JKMN-PQR",
+    "problem": "excluded",
+    "character": "O",
+    "foundInText": false
+  },
+  {
+    "name": "a lowercase i, excluded as I",
+    "input": "abcd-efgh-jkmi-pqrs",
+    "canonical": null,
+    "formatted": "ABCD-EFGH-JKM",
+    "problem": "excluded",
+    "character": "I",
+    "foundInText": false
+  },
+  {
+    "name": "a fullwidth zero, excluded as 0",
+    "input": "ABCD-EFGH-JKMN-PQR\uff10",
+    "canonical": null,
+    "formatted": "ABCD-EFGH-JKMN-PQR",
+    "problem": "excluded",
+    "character": "0",
+    "foundInText": false
+  },
+  {
+    "name": "foreign #",
+    "input": "ABCD-EF#H-JKMN-PQRS",
+    "canonical": null,
+    "formatted": "ABCD-EF",
+    "problem": "foreign",
+    "character": "#",
+    "foundInText": false
+  },
+  {
+    "name": "foreign dotted capital I",
+    "input": "ABCD-EFGH-JKMN-PQR\u0130",
+    "canonical": null,
+    "formatted": "ABCD-EFGH-JKMN-PQR",
+    "problem": "foreign",
+    "character": "\u0130",
+    "foundInText": false
+  },
+  {
+    "name": "foreign Cyrillic capital A",
+    "input": "\u0410BCD-EFGH-JKMN-PQRS",
+    "canonical": null,
+    "formatted": "",
+    "problem": "foreign",
+    "character": "\u0410",
+    "foundInText": false
+  },
+  {
+    "name": "foreign underscores used as separators",
+    "input": "ABCD_EFGH_JKMN_PQRS",
+    "canonical": null,
+    "formatted": "ABCD",
+    "problem": "foreign",
+    "character": "_",
+    "foundInText": false
+  },
+  {
+    "name": "foreign full stops used as separators",
+    "input": "ABCD.EFGH.JKMN.PQRS",
+    "canonical": null,
+    "formatted": "ABCD",
+    "problem": "foreign",
+    "character": ".",
+    "foundInText": false
+  },
+  {
+    "name": "foreign sharp s, which never becomes SS",
+    "input": "ABCD-EFGH-JKMN-PQ\u00df",
+    "canonical": null,
+    "formatted": "ABCD-EFGH-JKMN-PQ",
+    "problem": "foreign",
+    "character": "\u00df",
+    "foundInText": false
+  },
+  {
+    "name": "15 characters: incomplete, with no problem",
+    "input": "ABCD-EFGH-JKMN-PQR",
+    "canonical": null,
+    "formatted": "ABCD-EFGH-JKMN-PQR",
+    "problem": null,
+    "foundInText": false
+  },
+  {
+    "name": "17 characters: tooLong",
+    "input": "ABCD-EFGH-JKMN-PQRST",
+    "canonical": null,
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": "tooLong",
+    "foundInText": false
+  },
+  {
+    "name": "the empty string",
+    "input": "",
+    "canonical": null,
+    "formatted": "",
+    "problem": null,
+    "foundInText": false
+  },
+  {
+    "name": "input longer than the input cap: tooLong, unread",
+    "input": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "canonical": null,
+    "formatted": "",
+    "problem": "tooLong",
+    "foundInText": false
+  },
+  {
+    "name": "an invite sentence",
+    "input": "Your invite: abcd-efgh-jkmn-pqrs.",
+    "canonical": null,
+    "formatted": "Y",
+    "problem": "excluded",
+    "character": "O",
+    "foundInText": true
+  },
+  {
+    "name": "a text holding two different codes",
+    "input": "(ABCD-EFGH-JKMN-PQRS) (ABCD-EFGH-JKMN-PQRT)",
+    "canonical": null,
+    "formatted": "",
+    "problem": "foreign",
+    "character": "(",
+    "foundInText": false
+  },
+  {
+    "name": "a text holding no code",
+    "input": "No code here.",
+    "canonical": null,
+    "formatted": "N",
+    "problem": "excluded",
+    "character": "O",
+    "foundInText": false
+  },
+  {
+    "name": "a sentence whose code holds an excluded character",
+    "input": "Your invite: ABCD-EFGH-JKMN-PQR0.",
+    "canonical": null,
+    "formatted": "Y",
+    "problem": "excluded",
+    "character": "O",
+    "foundInText": false
+  },
+  {
+    "name": "a code glued to another letter",
+    "input": "XABCD-EFGH-JKMN-PQRS",
+    "canonical": null,
+    "formatted": "XABC-DEFG-HJKM-NPQR",
+    "problem": "tooLong",
+    "foundInText": false
+  },
+  {
+    "name": "a leading word",
+    "input": "Here ABCD-EFGH-JKMN-PQRS",
+    "canonical": null,
+    "formatted": "HERE-ABCD-EFGH-JKMN",
+    "problem": "tooLong",
+    "foundInText": true
+  },
+  {
+    "name": "a leading word in capitals",
+    "input": "HERE ABCD-EFGH-JKMN-PQRS",
+    "canonical": null,
+    "formatted": "HERE-ABCD-EFGH-JKMN",
+    "problem": "tooLong",
+    "foundInText": true
+  },
+  {
+    "name": "a closing word on the next line",
+    "input": "Your invite code:\nABCD-EFGH-JKMN-PQRS\nHave fun!",
+    "canonical": null,
+    "formatted": "Y",
+    "problem": "excluded",
+    "character": "O",
+    "foundInText": true
+  },
+  {
+    "name": "a four-letter signature",
+    "input": "ABCD-EFGH-JKMN-PQRS\n\nBest,\nJack",
+    "canonical": null,
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": "tooLong",
+    "foundInText": true
+  },
+  {
+    "name": "a signature after a dash",
+    "input": "ABCD-EFGH-JKMN-PQRS\n\u2014 Mark",
+    "canonical": null,
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": "tooLong",
+    "foundInText": true
+  },
+  {
+    "name": "a chat message ending in a lower-case code",
+    "input": "my invite code is abcd efgh jkmn pqrs",
+    "canonical": null,
+    "formatted": "MY",
+    "problem": "excluded",
+    "character": "I",
+    "foundInText": true
+  },
+  {
+    "name": "a chat message with a greeting and a comma",
+    "input": "hey, my code is abcd efgh jkmn pqrs",
+    "canonical": null,
+    "formatted": "HEY",
+    "problem": "foreign",
+    "character": ",",
+    "foundInText": true
+  },
+  {
+    "name": "a chat message in capitals",
+    "input": "MY CODE IS ABCD EFGH JKMN PQRS",
+    "canonical": null,
+    "formatted": "MYC",
+    "problem": "excluded",
+    "character": "O",
+    "foundInText": true
+  },
+  {
+    "name": "your code is, then the code",
+    "input": "your code is abcd efgh jkmn pqrs",
+    "canonical": null,
+    "formatted": "Y",
+    "problem": "excluded",
+    "character": "O",
+    "foundInText": true
+  },
+  {
+    "name": "a lower-case code with a word after it",
+    "input": "abcd efgh jkmn pqrs thanks",
+    "canonical": null,
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": "tooLong",
+    "foundInText": true
+  },
+  {
+    "name": "a fifth group of four in lower case",
+    "input": "abcd efgh jkmn pqrs tuvw",
+    "canonical": null,
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": "tooLong",
+    "foundInText": false
+  },
+  {
+    "name": "a short word of code letters in front, spaced like the groups",
+    "input": "hey abcd efgh jkmn pqrs",
+    "canonical": null,
+    "formatted": "HEYA-BCDE-FGHJ-KMNP",
+    "problem": "tooLong",
+    "foundInText": false
+  },
+  {
+    "name": "a fifth group of one character",
+    "input": "ABCD-EFGH-JKMN-PQRS-T",
+    "canonical": null,
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": "tooLong",
+    "foundInText": false
+  },
+  {
+    "name": "a 17th character after a space, in lower case",
+    "input": "abcd efgh jkmn pqrs t",
+    "canonical": null,
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": "tooLong",
+    "foundInText": false
+  },
+  {
+    "name": "a stray character joined on in front",
+    "input": "X-ABCD-EFGH-JKMN-PQRS",
+    "canonical": null,
+    "formatted": "XABC-DEFG-HJKM-NPQR",
+    "problem": "tooLong",
+    "foundInText": false
+  },
+  {
+    "name": "an excluded 0 in a fifth group",
+    "input": "ABCD-EFGH-JKMN-PQRS-0",
+    "canonical": null,
+    "formatted": "ABCD-EFGH-JKMN-PQRS",
+    "problem": "excluded",
+    "character": "0",
+    "foundInText": false
+  }
+]

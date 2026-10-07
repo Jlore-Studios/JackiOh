@@ -49,11 +49,15 @@ const f = (k) => (flag[k] ? flag[k][0] : undefined);
 const iso = () => new Date(Number(process.env.NOW) * 1000).toISOString().replace(/\.\d+Z$/, "Z");
 const git = (cwd, ...a) =>
   cp.execFileSync("git", ["-c", "user.name=gh", "-c", "user.email=gh@example.com", "-c", "commit.gpgsign=false", ...a], { cwd, encoding: "utf8" }).trim();
+// What a call prints goes out only after its state is saved (the last line). The script reads the
+// comments through a process substitution and reacts to each one while that call is still running,
+// so a call that printed first and saved last overwrote the reaction saved in between.
+let printed = "";
 function out(data) {
-  if (f("--jq") === undefined) return void process.stdout.write(JSON.stringify(data) + "\n");
+  if (f("--jq") === undefined) return void (printed += JSON.stringify(data) + "\n");
   const r = cp.spawnSync("jq", ["-r", f("--jq")], { input: JSON.stringify(data), encoding: "utf8" });
   if (r.status !== 0) { process.stderr.write(r.stderr); process.exit(1); }
-  process.stdout.write(r.stdout);
+  printed += r.stdout;
 }
 const bot = (n, body) => st.issues.find((i) => i.number === n).comments.push({ id: st.nextComment++, login: "github-actions[bot]", type: "Bot", assoc: "NONE", at: iso(), body });
 const issue = (n) => st.issues.find((i) => i.number === Number(n));
@@ -77,7 +81,7 @@ if (a === "run" && b === "list") {
 } else if (a === "issue" && b === "create") {
   const number = st.next++;
   st.issues.push({ number, title: f("--title"), body: fs.readFileSync(f("--body-file"), "utf8"), labels: flag["--label"], assignees: (f("--assignee") || "").split(","), state: "open", reason: "", comments: [] });
-  process.stdout.write("https://github.com/acme/game/issues/" + number + "\n");
+  printed += "https://github.com/acme/game/issues/" + number + "\n";
 } else if (a === "issue" && b === "edit") {
   const i = issue(pos[2]);
   if (f("--title") !== undefined) i.title = f("--title");
@@ -94,7 +98,7 @@ if (a === "run" && b === "list") {
 } else if (a === "pr" && b === "create") {
   const number = st.next++;
   st.prs.push({ number, head: f("--head"), base: f("--base"), title: f("--title"), body: fs.readFileSync(f("--body-file"), "utf8"), labels: flag["--label"], assignees: (f("--assignee") || "").split(","), state: "open", merged: false });
-  process.stdout.write("https://github.com/acme/game/pull/" + number + "\n");
+  printed += "https://github.com/acme/game/pull/" + number + "\n";
 } else if (a === "pr" && b === "merge") {
   const p = st.prs.find((x) => x.number === Number(pos[2]));
   if (st.failMerges > 0) { st.failMerges--; fs.writeFileSync(file, JSON.stringify(st)); process.stderr.write("Pull request is not mergeable\n"); process.exit(1); }
@@ -117,6 +121,7 @@ if (a === "run" && b === "list") {
   } else { process.stderr.write("fake gh: unsupported api call " + argv.join(" ") + "\n"); process.exit(2); }
 } else { process.stderr.write("fake gh: unsupported " + argv.join(" ") + "\n"); process.exit(2); }
 fs.writeFileSync(file, JSON.stringify(st));
+process.stdout.write(printed);
 `;
 
 interface Comment { id: number; login: string; type: string; assoc: string; at: string; body: string }

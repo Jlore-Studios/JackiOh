@@ -5,7 +5,7 @@
 // v0.1.1 (R374): the hand is dealt at random on every visit, from every non-token Core card, instead
 // of the same four each time. It keeps the fixed hand's shape: four cards of four different rarities
 // in a random order, the middle one on its Radiant face. The cards come straight from
-// packages/cards/catalog.json (about 8.5 KB gzipped), so the landing always shows them as they are
+// crates/cards/catalog.json (about 8.5 KB gzipped), so the landing always shows them as they are
 // printed now; the fixed hand was four copies kept equal to it by a test.
 //
 // Randomness here is the client's own, never the game's (CLAUDE.md rule 4 binds the engine, the
@@ -31,7 +31,7 @@ export const FAN_FACES = 4;
 /** Which face-up card, from the left, shows its Radiant face: the middle of the five. */
 export const FAN_RADIANT_AT = 2;
 
-/** JSON widens the unions to strings; the catalog is proved against SPEC §8 in packages/cards. */
+/** JSON widens the unions to strings; the catalog is proved against SPEC §8 in crates/cards. */
 const CATALOG = catalogJson as unknown as CardDefs;
 
 /** Every card a deck may hold: the Core cards, tokens aside (§2.6), in catalog order. */

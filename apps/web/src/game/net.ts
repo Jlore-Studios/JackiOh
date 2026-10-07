@@ -1,4 +1,4 @@
-// The networked match client: one WebSocket, the five frames `apps/server/src/match/protocol.ts`
+// The networked match client: one WebSocket, the five frames `crates/server/src/actor/protocol.rs`
 // defines, and no rules at all.
 //
 // CLAUDE.md rule 7 / SPEC §9.1: "the client sends intent, never state". So this module does three
@@ -7,7 +7,7 @@
 // whether an action is legal, never computes a view, and never reads a field the server did not
 // send.
 //
-// WHAT IS ON THE WIRE (`apps/server/src/match/protocol.ts`, BUILD M6-T4):
+// WHAT IS ON THE WIRE (`crates/server/src/actor/protocol.rs`, BUILD M6-T4):
 //
 //   client -> server   hello {token?, matchId?, roomCode?}
 //                      action {nonce, action: ActionBody}      (`playerId` is DISCARDED server-side)
@@ -17,14 +17,14 @@
 //                      prompt {forYou, pendingFor, choiceId?, kind?, deadline}
 //                      clock {now, clocks: MatchClocks}
 //
-// THE HANDSHAKE. `apps/server/src/match/wsServer.ts` `tokenFrom` reads the bearer token from the
-// `authorization` header OR from `?token=`, and the match from `?matchId=`. A browser cannot set
-// headers on a WebSocket handshake, so both travel in the query string. The `hello` frame is sent
+// THE HANDSHAKE. `crates/server/src/actor/ws_server.rs` reads the bearer token from `?token=` and
+// the match from `?matchId=` (a browser cannot set headers on a WebSocket handshake, so both travel
+// in the query string, and the server reads no other place, SURFACE §11.3). The `hello` frame is sent
 // anyway: the actor treats it as "push me a fresh full view" (§9.5: "Reconnect gets a fresh full
 // view, never a log replay") and ignores every field on it, so it is how a reconnected socket asks
 // for the state it missed.
 //
-// NO IMPORT FROM `apps/server`. `MatchClocks` is restated structurally below, the way
+// NO IMPORT FROM `crates/server`. `MatchClocks` is restated structurally below, the way
 // `e2e/support/types.ts` restates the engine's types: the client is a separate deployable and a
 // type import across that boundary would be a build-time coupling the topology (§9.2) does not
 // have.
@@ -35,22 +35,19 @@
 // and no hand card is clickable, so a board with no array can answer prompts (`Prompt.tsx` rebuilds
 // an `answer` from `PendingView.options` when none is supplied) and do nothing else.
 //
-// The actor now sends it: `apps/server/src/match/protocol.ts` `ViewMessage` is
-// `{type:"view", view, legal}` and `actor.ts` `pushView` fills `legal` with
+// The actor sends it: `crates/server/src/actor/protocol.rs` `ViewMessage` is
+// `{type:"view", view, legal}` and `match_actor.rs` `push_view` fills `legal` with
 // `legalActions(state, player)` for the seat that socket holds — after every change, and on attach
 // and `hello` too, which is what makes a reloaded board interactive again. That file's own comment
 // says why it rides on `view` rather than in a frame of its own: BUILD §1 fixes the message names,
 // and an array that travels with its view can never describe a different one.
 //
-// This module does NOT compute legality — that is exactly what rule 7 and M5-T2 forbid. It accepts
-// the array from EITHER shape, because the second is a protocol a server could still grow and an
-// unknown frame must not take the board down:
-//
-//   1. a `legal` field riding alongside the view:  {type:"view", view, legal:[...]}   <- the actor
-//   2. a frame of its own:                         {type:"legal", legal:[...]}
-//
-// and reports in `legalSource` when neither has ever arrived — which `routes/match.tsx` renders as
-// a visible notice rather than as a silently dead board.
+// This module does NOT compute legality — that is exactly what rule 7 and M5-T2 forbid. It takes
+// the array from the `legal` field riding alongside the view, `{type:"view", view, legal:[...]}`,
+// the one shape a server sends (a standalone `legal` frame was never sent, and its handler went with
+// v0.3.0, SURFACE §11.3; an unknown frame is still ignored, never fatal), and reports in
+// `legalSource` when none has ever arrived — which `routes/match.tsx` renders as a visible notice
+// rather than as a silently dead board.
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
@@ -63,10 +60,10 @@ import { matchSocketUrl } from "../net/api.ts";
 const DEV_ONLY = import.meta.env.MODE !== "production";
 
 // ---------------------------------------------------------------------------------------------
-// The wire, restated structurally (never imported from apps/server)
+// The wire, restated structurally (never imported from crates/server)
 // ---------------------------------------------------------------------------------------------
 
-/** `apps/server/src/api/ports.ts` `MatchClocks`. One shape, stated twice, by design (see header). */
+/** The server's `MatchClocks` (`crates/server/src/db/store.rs`). One shape, stated twice, by design (see header). */
 export type MatchClocks = {
   /** Epoch ms the active player's turn clock expires, or null while it is paused. */
   turnDeadline: number | null;
@@ -144,7 +141,7 @@ function browserSocket(url: string): SocketLike {
 }
 
 /**
- * The private-use close codes `apps/server/src/match/wsServer.ts` refuses with. Restated, not
+ * The private-use close codes `crates/server/src/actor/ws_server.rs` refuses with. Restated, not
  * imported (see the header). A refusal is final: retrying it would be a reconnect loop against a
  * server that has already said no.
  */
@@ -152,7 +149,7 @@ const REFUSAL_CLOSE_CODES: readonly number[] = [4401, 4403, 4404];
 
 /**
  * R679: the close code both sockets of a match a Glitch voided carry (`MATCH_VOIDED_CLOSE_CODE` in
- * `apps/server/src/config.ts`, restated like the refusals). The match no longer exists, so there is
+ * `crates/server/src/config.rs`, restated like the refusals). The match no longer exists, so there is
  * nothing to reconnect to; the last view already shows the game over as voided.
  */
 const VOIDED_CLOSE_CODE = 4410;
@@ -219,7 +216,6 @@ function parseClocks(value: unknown): MatchClocks | null {
 /** Every server frame this client understands, after parsing. */
 export type ServerFrame =
   | { type: "view"; view: PlayerView; legal: readonly ActionBody[] | null }
-  | { type: "legal"; legal: readonly ActionBody[] }
   | { type: "ack"; nonce: string; seq: number }
   | { type: "error"; code: string; message: string; nonce?: string }
   | { type: "prompt"; prompt: PromptFrame }
@@ -253,14 +249,9 @@ export function parseServerFrame(text: string): ServerFrame | null {
       return {
         type: "view",
         view: parsed.view as unknown as PlayerView,
-        // Shape 1 (see the header): `legal` riding alongside the view, which is what the actor sends.
+        // `legal` riding alongside the view, which is what the actor sends (see the header).
         legal: parsed.legal === undefined ? null : parseLegal(parsed.legal),
       };
-    }
-    case "legal": {
-      // Shape 2 (see the header): a frame of its own. Not what the actor sends today.
-      const legal = parseLegal(parsed.legal);
-      return legal === null ? null : { type: "legal", legal };
     }
     case "ack": {
       if (!isString(parsed.nonce) || typeof parsed.seq !== "number") return null;
@@ -353,7 +344,7 @@ export type ConnectionState =
  * Where the `legalActions` array came from. `"none"` means no server has sent one at all, which
  * leaves the board read-only; `routes/match.tsx` renders that as a visible notice.
  */
-export type LegalSource = "none" | "view" | "frame";
+export type LegalSource = "none" | "view";
 
 export type MatchSnapshot = {
   connection: ConnectionState;
@@ -505,14 +496,10 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       case "view":
         patch({
           view: frame.view,
-          // A view that carries no `legal` leaves the previous array alone: a server that sends
-          // the array as a separate frame sends views without one, and dropping it here would blank
-          // a board that `legal` frame had just filled.
+          // A view that carries no `legal` leaves the previous array alone rather than blanking a
+          // board that an earlier view had filled.
           ...(frame.legal === null ? {} : { legal: frame.legal, legalSource: "view" as const }),
         });
-        return;
-      case "legal":
-        patch({ legal: frame.legal, legalSource: "frame" });
         return;
       case "ack":
         // The action landed, so whatever refusal was on screen belongs to an older one.

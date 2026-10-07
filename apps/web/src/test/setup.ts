@@ -1,8 +1,23 @@
-// Vitest setup for the web package: jsdom matchers plus a `matchMedia` stub, which jsdom lacks
-// and the animation table needs for `prefers-reduced-motion` (BUILD M5-T4).
+// Vitest setup for the web package: jsdom matchers, a `matchMedia` stub, which jsdom lacks and the
+// animation table needs for `prefers-reduced-motion` (BUILD M5-T4), and the engine.
+//
+// The engine, the AI and the validator are the Rust ones, compiled to WebAssembly
+// (docs/v0.3.0/SURFACE.md §10.3). jsdom cannot fetch the module from a file URL the way the page
+// does, so its bytes are read from disk here and instantiated before any test file is imported
+// (`scripts/build-wasm.sh`, which `pretest` runs, writes them). Every test then reaches the engine
+// synchronously, as the page does after `main.tsx` has awaited `loadWasm()`.
 
 import "@testing-library/jest-dom/vitest";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { beforeEach } from "vitest";
+
+import { loadWasmSync } from "../wasm/index.ts";
+
+// A path, not `new URL("../wasm/pkg/…", import.meta.url)`: Vite rewrites that literal pattern into an
+// asset URL against the page's origin, which `readFileSync` refuses ("The URL must be of scheme file").
+loadWasmSync(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../wasm/pkg/jackioh_wasm_bg.wasm")));
 
 let reducedMotion = false;
 

@@ -1,0 +1,2 @@
+[alias]
+jackioh = "run --release -p jackioh-tools --"

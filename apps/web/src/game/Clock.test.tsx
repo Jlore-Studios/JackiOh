@@ -7,9 +7,9 @@
 //     so the component shows a stopped clock because the server stopped it, not because it worked
 //     out that a prompt was open;
 //   * remaining time is `deadline - now` measured against a monotonic delta, as
-//     `apps/server/src/match/protocol.ts` documents, never against the browser's wall clock.
+//     `crates/server/src/actor/protocol.rs` documents, never against the browser's wall clock.
 //
-// Every duration comes from `apps/server/src/config.ts`; no test below spells a number of seconds.
+// Every duration comes from `crates/server/src/config.rs`; no test below spells a number of seconds.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -24,7 +24,7 @@ import {
   MULLIGAN_CLOCK_MS,
   PROMPT_CLOCK_MS,
   TURN_CLOCK_MS,
-} from "../../../server/src/config.ts";
+} from "@jackioh/server-config";
 import Clock, {
   formatClock,
   readClock,

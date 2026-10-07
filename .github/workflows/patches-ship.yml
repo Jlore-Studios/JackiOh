@@ -1,10 +1,11 @@
 # Promotes pending card-patch fragments (SPEC R646, issue #63): `patches ship` after every merge to
-# main that touches packages/cards/patches/pending/, opened as a pull request.
+# main that touches crates/cards/patches/pending/, opened as a pull request.
 #
 # A branch that changes card data adds one fragment under pending/ and never edits the history.
-# Once it merges, `pnpm --filter @jackioh/cards run patches ship` snapshots the catalog as each
-# fragment's first-parent commit left it, appends the patches in ship order, records shipped.json,
-# deletes the fragments and bumps CATALOG_VERSION everywhere it lives. It needs main's whole
+# Once it merges, `cargo jackioh patches ship` (crates/tools, docs/v0.3.0/SURFACE.md §12) snapshots
+# the catalog as each fragment's first-parent commit left it, appends the patches in ship order,
+# records shipped.json, deletes the fragments and bumps CATALOG_VERSION everywhere it lives
+# (render.yaml, crates/server/.env.example, apps/web/.env.production). It needs main's whole
 # history (fetch-depth: 0), and it writes nothing when a fragment's commit does not match its claims,
 # so a refusal fails this run, loudly, with main untouched.
 #
@@ -22,7 +23,7 @@ name: patches ship
 on:
   push:
     branches: [main]
-    paths: ["packages/cards/patches/pending/**"]
+    paths: ["crates/cards/patches/pending/**"]
   workflow_dispatch:
 
 concurrency:
@@ -36,7 +37,8 @@ jobs:
   ship:
     name: promote pending fragments
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # A release build of the CLI first (the cache holds its dependencies, not the crates themselves).
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,11 +46,14 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
       - uses: ./.github/actions/setup
+        with:
+          node: "false"
 
-      # `shell: bash` runs with pipefail, so a refused promotion fails the step through `tee`.
+      # `shell: bash` runs with pipefail, so a refused promotion fails the step through `tee`. Cargo's
+      # own build output goes to stderr, so the log holds only what `patches ship` printed.
       - name: ship
         shell: bash
-        run: pnpm --filter @jackioh/cards run patches ship | tee "$RUNNER_TEMP/ship.log"
+        run: cargo jackioh patches ship | tee "$RUNNER_TEMP/ship.log"
 
       - name: open the promotion pull request
         env:

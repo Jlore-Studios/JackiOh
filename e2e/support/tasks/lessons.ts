@@ -25,7 +25,7 @@ export type TutorialLessonData = {
 export type TutorialData = {
   /** In path order. */
   lessons: TutorialLessonData[];
-  /** AI_TUTORIAL (packages/engine/src/config.ts, R290). */
+  /** AI_TUTORIAL (crates/engine/src/config.rs, R290). */
   aiTutorial: Record<string, number>;
   /** Catalog ids tagged Quickdraw. */
   quickdraw: string[];

@@ -4,10 +4,10 @@
 // and from under the sign-up button.
 //
 // DRAFTED FROM THE CODE, NOT FROM A TEMPLATE. Every statement below is something this repository
-// does: what the sign-up form sends (net/auth.ts), what the server stores (apps/server/src/db/
+// does: what the sign-up form sends (net/auth.ts), what the server stores (crates/server/src/db/
 // migrations/), what this browser keeps (net/session.ts, auth/pkce.ts, settings/store.ts,
 // tutorial/progress.ts, net/return-to.ts, auth/redirect.ts), where it runs (render.yaml,
-// vercel.json), how long it is kept (the retention constants in apps/server/src/config.ts, purged
+// vercel.json), how long it is kept (the retention constants in crates/server/src/config.rs, purged
 // by migration 0013), what deleting an account removes (migration 0012) and the summary each finished
 // match leaves for the card statistics (migration 0014, SPEC §9.11). The two things the code
 // cannot say, a minimum age and a private contact address, are marked for the owner. Change the
@@ -15,7 +15,7 @@
 
 import type { ReactElement } from "react";
 
-import { CODE_ATTEMPT_RETENTION_DAYS, MATCH_ACTION_RETENTION_DAYS } from "../../../server/src/config.ts";
+import { CODE_ATTEMPT_RETENTION_DAYS, MATCH_ACTION_RETENTION_DAYS } from "@jackioh/server-config";
 
 import { CONTACT_URL } from "./SiteFooter.tsx";
 import { BackLink } from "./nav.tsx";

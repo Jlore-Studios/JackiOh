@@ -4,7 +4,7 @@
 
 Every card's Radiant face held against one standard, and the ones below it raised. SPEC §8 (and §7
 for the tokens) is where the result lives; this document is the record of the judgement, one row
-per catalog entry, which `packages/cards/test/radiant-standard.test.ts` holds to the catalog.
+per catalog entry, which `crates/cards/tests/cross/radiant_standard.rs` holds to the catalog.
 
 ## The standard (R275)
 

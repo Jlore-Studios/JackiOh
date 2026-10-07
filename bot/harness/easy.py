@@ -2,9 +2,10 @@
 (#317, "The easy rule").
 
 Devin, the weak tier, may build only easy items. On this repository it could not resolve the
-conflicts in SPEC §11 and the rulings index (every pull request appends the next R number there),
-could not hold a big change together, cannot plan, runs no tests where it works, and cannot judge
-what it cannot see. Its clean merges were all small (7–15 files, under about 500 lines).
+conflicts in SPEC §11 and the rulings index (every pull request appended the next R number there;
+since v0.3.0 a ruling is a note in `spec/rulings/`, listed in the generated `spec/INDEX.md`), could
+not hold a big change together, cannot plan, runs no tests where it works, and cannot judge what it
+cannot see. Its clean merges were all small (7–15 files, under about 500 lines).
 
 The rule is in the planner's prompt (`RULE`, `bot/prompts/plan.md`), and the harness holds the
 rating to it twice, trusting nothing the model said: deliver checks the plan's "Files to touch"
@@ -25,22 +26,22 @@ RULE = """An item is **easy** only if every line below holds. If any line fails,
 tell, it is **medium** at least.
 
 1. **Small.** At most $max_files files changed in all, the tests it adds included, and at most
-   $max_lines lines added plus removed (generated files such as
-   `packages/cards/src/scripts/_generated.ts` aside).
-2. **One place.** All of it inside one package or app, except a test of the same feature in that
-   package's `test/`.
-3. **None of the conflict hot spots:** `SPEC.md` (no new §11 row, no ruling cited or renumbered),
-   `BUILD.md`, `packages/engine/test/rulings.test.ts`.
-4. **None of the shared surfaces:** `packages/shared/src/events.ts`, `packages/engine/src/script.ts`,
-   `packages/engine/src/state.ts`, `packages/engine/src/effects/index.ts`.
-5. **No rules or data work:** nothing in `packages/engine/src/` or `packages/ai/src/`, no change to
-   `packages/cards/catalog.json`, `packages/cards/patches/` or `CATALOG_VERSION`, no card script,
-   no database migration.
-6. **No review-only or forbidden path** (every `package.json`, the lockfile, the build and test
-   configs, `scripts/`, `vercel.json`, `render.yaml`; `.github/`, `.harness/`, `bot/`), and no new
-   dependency.
-7. **Checked by a unit test** in the same package, which the plan names; no Cypress or e2e spec
-   change, and no judging by eye (animation, layout, sound or art tuning).
+   $max_lines lines added plus removed (generated files such as `apps/web/src/wire/generated/`
+   aside).
+2. **One place.** All of it inside one crate or app, except a test of the same feature in that
+   crate's `tests/`.
+3. **None of the conflict hot spots:** `SPEC.md` and the spec's notes in `spec/` (no new ruling,
+   no ruling cited or renumbered, nothing `spec/INDEX.md` lists), `BUILD.md`.
+4. **None of the shared surfaces:** `crates/engine/src/wire/events.rs`, `crates/engine/src/script.rs`,
+   `crates/engine/src/state.rs`, `crates/engine/src/effects/mod.rs`.
+5. **No rules or data work:** nothing in `crates/engine/src/` or `crates/ai/src/`, no change to
+   `crates/cards/catalog.json`, `crates/cards/patches/` or the catalog version, no card script
+   (`crates/cards/src/scripts/`), no database migration (`crates/server/migrations/`).
+6. **No review-only or forbidden path** (every `package.json` and `Cargo.toml`, the lockfiles,
+   `rust-toolchain.toml`, the build and test configs, `scripts/`, `vercel.json`, `render.yaml`;
+   `.github/`, `.harness/`, `bot/`), and no new dependency.
+7. **Checked by a unit test** in the same crate or app, which the plan names; no Cypress or e2e
+   spec change, and no judging by eye (animation, layout, sound or art tuning).
 8. **No decisions left:** the plan names each file, what changes in it, and the test that proves
    it. If the builder would choose between two designs, it is not easy.
 9. **Stands alone:** blocked by no open issue, and no open pull request touches the same files.
@@ -49,9 +50,9 @@ Never easy: a patch that changes cards or rules, anything that adds an R number,
 work, visual polish.
 
 - **medium:** anything that fails the easy rule and is not hard: a new ruling, a card or catalog
-  change, a shared surface, several packages, e2e work, visual polish.
-- **hard:** engine rules or the resolution loop (`packages/engine/src/`), the AI's search
-  (`packages/ai/src/`), design across packages, a database migration, or about 40 files or more.
+  change, a shared surface, several crates or apps, e2e work, visual polish.
+- **hard:** engine rules or the resolution loop (`crates/engine/src/`), the AI's search
+  (`crates/ai/src/`), design across crates, a database migration, or about 40 files or more.
 
 When torn between two, choose the higher."""
 

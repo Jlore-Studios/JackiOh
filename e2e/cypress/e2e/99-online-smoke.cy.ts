@@ -46,6 +46,23 @@ function tokenFor(email: string): Cypress.Chainable<string> {
 }
 
 /**
+ * The account's second saved deck, oldest first: the deck R257's legacy `{ deckIndex: 1 }` named
+ * (0-based, in `GET /api/decks` order). The server takes a Best-of-1 choice only as
+ * `{ mode: "bo1", deckId }` now (docs/v0.3.0/SURFACE.md §11.3), so the bodies below send that.
+ */
+function secondDeckId(token: string): Cypress.Chainable<string> {
+  return cy
+    .request({ url: `${SERVER}/api/decks`, headers: { Authorization: `Bearer ${token}` } })
+    .then((res) => {
+      expect(res.status, "the saved decks").to.eq(200);
+      const decks = (res.body.decks ?? []) as readonly { id?: unknown }[];
+      const id = decks[1]?.id;
+      expect(id, "a second saved deck").to.be.a("string");
+      return String(id);
+    });
+}
+
+/**
  * Clears queue AND match state, so the spec is re-runnable.
  *
  * Cancelling the queue is not enough and the second run proved it: the first run left both
@@ -130,7 +147,7 @@ function signInThroughForm(email: string): void {
           expect(res.body.entries, "cards owned").to.have.length.greaterThan(0);
         });
       // R254: migration 0007 turned the seeded loadout into three saved decks and one trio. The
-      // queue bodies below still say `deckIndex: 1`, R257's legacy form: position 1 of this list.
+      // queue bodies below send the second of them by id (`secondDeckId`).
       cy.request({ url: `${SERVER}/api/decks`, headers: { Authorization: `Bearer ${token}` } })
         .then((res) => {
           expect(res.status).to.eq(200);
@@ -144,6 +161,8 @@ function signInThroughForm(email: string): void {
     let code = "";
     let t1 = "";
     let t2 = "";
+    let d1 = "";
+    let d2 = "";
 
     resetOnlineState();
     tokenFor(P1).then((token) => {
@@ -152,6 +171,16 @@ function signInThroughForm(email: string): void {
     tokenFor(P2).then((token) => {
       t2 = token;
     });
+    cy.then(() =>
+      secondDeckId(t1).then((id) => {
+        d1 = id;
+      }),
+    );
+    cy.then(() =>
+      secondDeckId(t2).then((id) => {
+        d2 = id;
+      }),
+    );
 
     // Player 1 opens the room.
     cy.then(() =>
@@ -160,7 +189,7 @@ function signInThroughForm(email: string): void {
           method: "POST",
           url: `${SERVER}/api/rooms`,
           headers: { Authorization: `Bearer ${t1}` },
-          body: { deckIndex: 1 },
+          body: { mode: "bo1", deckId: d1 },
         })
         .then((res) => {
           expect(res.status, "room created").to.eq(200);
@@ -176,7 +205,7 @@ function signInThroughForm(email: string): void {
           method: "POST",
           url: `${SERVER}/api/rooms/${code}/join`,
           headers: { Authorization: `Bearer ${t2}` },
-          body: { deckIndex: 1 },
+          body: { mode: "bo1", deckId: d2 },
         })
         .then((res) => {
           expect(res.status, "room joined").to.eq(200);
@@ -248,12 +277,24 @@ function signInThroughForm(email: string): void {
 
     let t1 = "";
     let t2 = "";
+    let d1 = "";
+    let d2 = "";
     tokenFor(P1).then((token) => {
       t1 = token;
     });
     tokenFor(P2).then((token) => {
       t2 = token;
     });
+    cy.then(() =>
+      secondDeckId(t1).then((id) => {
+        d1 = id;
+      }),
+    );
+    cy.then(() =>
+      secondDeckId(t2).then((id) => {
+        d2 = id;
+      }),
+    );
 
     cy.then(() =>
       cy
@@ -261,7 +302,7 @@ function signInThroughForm(email: string): void {
           method: "POST",
           url: `${SERVER}/api/queue`,
           headers: { Authorization: `Bearer ${t1}` },
-          body: { deckIndex: 1 },
+          body: { mode: "bo1", deckId: d1 },
         })
         .then((res) => {
           expect(res.status, "first enqueue").to.eq(200);
@@ -276,7 +317,7 @@ function signInThroughForm(email: string): void {
           method: "POST",
           url: `${SERVER}/api/queue`,
           headers: { Authorization: `Bearer ${t2}` },
-          body: { deckIndex: 1 },
+          body: { mode: "bo1", deckId: d2 },
         })
         .then((res) => {
           // This is the assertion the bug broke: a 500 here still left a live match behind.
@@ -312,13 +353,15 @@ function signInThroughForm(email: string): void {
 
     // Player 2 joins the queue from outside the browser; player 1's tab is told nothing.
     tokenFor(P2).then((t2) => {
-      cy.request({
-        method: "POST",
-        url: `${SERVER}/api/queue`,
-        headers: { Authorization: `Bearer ${t2}` },
-        body: { deckIndex: 1 },
-      }).then((res) => {
-        expect(res.status, "player 2 enqueues").to.eq(200);
+      secondDeckId(t2).then((deckId) => {
+        cy.request({
+          method: "POST",
+          url: `${SERVER}/api/queue`,
+          headers: { Authorization: `Bearer ${t2}` },
+          body: { mode: "bo1", deckId },
+        }).then((res) => {
+          expect(res.status, "player 2 enqueues").to.eq(200);
+        });
       });
     });
 

@@ -1,7 +1,7 @@
 // Types the specs and the support commands share.
 //
-// e2e does NOT import @jackioh/shared: BUILD M8 is written while packages/* and apps/* are still
-// in flight, and `tsc -p e2e/tsconfig.json` has to pass on its own. Everything below is a
+// e2e does NOT import @jackioh/shared: BUILD M8 is written while the engine (`crates/*`) and apps/*
+// are still in flight, and `tsc -p e2e/tsconfig.json` has to pass on its own. Everything below is a
 // structural subset of the real types (SPEC §10.1, §10.2, §10.8) — narrow enough that a drift in
 // the engine types cannot silently break the specs, wide enough for the assertions M8 asks for.
 
@@ -14,12 +14,12 @@ export type Side = "you" | "opponent";
 /** SPEC §3: the two field rows. */
 export type Row = "units" | "backrow";
 
-/** SPEC §3.1: lanes are 1-indexed, 1..5, exactly as `packages/engine/src/zones.ts` numbers them. */
+/** SPEC §3.1: lanes are 1-indexed, 1..5, exactly as `crates/engine/src/zones.rs` numbers them. */
 export type Lane = 1 | 2 | 3 | 4 | 5;
 
 export type ZoneRef = { side: Side; row: Row; lane: Lane };
 
-/** SPEC §10.6 / packages/shared/src/catalog-types.ts. */
+/** SPEC §10.6 / crates/engine/src/wire/catalog_types.rs. */
 export type PromptKind =
   | "discover"
   | "target"
@@ -35,7 +35,7 @@ export type PromptKind =
 /** BUILD M5-T4: every animation sets `data-animating="<eventType>"` while it runs. */
 export type EventType = string;
 
-/** packages/shared/src/actions.ts `Selection`. */
+/** crates/engine/src/wire/actions.rs `Selection`. */
 export type Selection =
   | { pick: "instance"; instanceId: string }
   | { pick: "hero"; player: PlayerId }
@@ -43,7 +43,7 @@ export type Selection =
   | { pick: "mode"; option: string }
   | { pick: "none" };
 
-/** packages/shared/src/actions.ts `ActionBody`, client-sendable members only. */
+/** crates/engine/src/wire/actions.rs `ActionBody`, client-sendable members only. */
 export type ActionBody =
   | { type: "mulligan"; keep: string[] }
   | {
@@ -82,7 +82,7 @@ export type GameStateLike = {
   /**
    * TWO SHAPES, ONE FIELD. The hotseat handle hands over the raw `GameState`, so `pending` is the
    * engine's `PendingChoice` and the seat it belongs to is **`playerId`**
-   * (`packages/engine/src/state.ts`). A networked handle has no `GameState` at all and derives this
+   * (`crates/engine/src/state.rs`). A networked handle has no `GameState` at all and derives this
    * from the `PlayerView` instead (`apps/web/src/game/net.ts` `viewDerivedState`), which spells the
    * same seat **`player`**. Both are optional here because either may be the one present.
    *
@@ -94,7 +94,7 @@ export type GameStateLike = {
     | null;
   /**
    * §2.1 step 3, R265: both seats' opening mulligans while they are open at once — hotseat only,
-   * since it is the raw `GameState` (`packages/engine/src/state.ts` `MulliganSeat`). `pending` is
+   * since it is the raw `GameState` (`crates/engine/src/state.rs` `MulliganSeat`). `pending` is
    * null for the whole window; `keep` is a seat's sealed answer, null until it gives one. Absent
    * once the second answer has resolved both, and never on a networked handle.
    */
@@ -126,8 +126,8 @@ export type JackiOhDevHandle = {
 };
 
 /**
- * R180: one seat's handicap, as `Handicap` in packages/engine/src/config.ts spells it (a structural
- * copy: support/ does not import packages/*). Every field is a non-negative integer, `deckSize` is
+ * R180: one seat's handicap, as `Handicap` in crates/engine/src/config.rs spells it (a structural
+ * copy: support/ imports no engine types). Every field is a non-negative integer, `deckSize` is
  * 1..LIBRARY_CAP (R184), and `heroHealth` is optional (R290).
  */
 export type FixtureHandicap = {

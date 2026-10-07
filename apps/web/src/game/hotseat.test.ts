@@ -4,12 +4,12 @@
 // What this file owns is the LOOP — nonces, the log, the seat, the subscription — not the rules,
 // so the port below is a fake: a turn counter with a settable pending choice. Every assertion is
 // about what the session did with the port, which is the whole contract between the client and the
-// engine (CLAUDE.md rule 7). (`packages/engine` compiles now, so the fake is a choice rather than
-// the workaround it started as.)
+// engine (CLAUDE.md rule 7). (The real engine runs here too, as WebAssembly, so the fake is a choice
+// rather than the workaround it started as.)
 //
 // Because the port is a fake, NOTHING here can speak to the engine's determinism. The other half of
 // M5-T3's acceptance — the same seed and actions reaching the same final state hash — is folded
-// with the real engine in `packages/cards/test/hotseat-replay.test.ts`, and checked against the
+// with the real engine in `crates/engine/tests/golden.rs`, and checked against the
 // browser in `e2e/cypress/e2e/01-hotseat-full-game.cy.ts`.
 
 import { describe, expect, it } from "vitest";
@@ -19,8 +19,7 @@ import type { Action, ActionBody, CardDef, CardDefs, GameEvent, PlayerId, Player
 import { DECK_SIZE, byIndex, printedCost, resolveDeck, resolveDecks } from "./decks.ts";
 import { fold } from "@jackioh/engine";
 
-import type { CreateGameArgs, EnginePort, EngineState, ReduceResult } from "./engine.ts";
-import { enginePort } from "./engine.real.ts";
+import { enginePort, type CreateGameArgs, type EnginePort, type EngineState, type ReduceResult } from "./engine.ts";
 import { createHotseat } from "./hotseat.ts";
 import { baseView, emptySide } from "../test/fixtures.ts";
 
@@ -253,8 +252,8 @@ describe("nonces", () => {
   // "the same seed and actions reproduce the same final state hash in the browser and in vitest" is
   // proved by two things that use the real engine: `e2e/cypress/e2e/01-hotseat-full-game.cy.ts`
   // (browser hash vs a Node fold of the recorded log) and
-  // `packages/cards/test/hotseat-replay.test.ts` (that same recorded log folded in vitest with the
-  // real catalog and the 110 card scripts, against a written-down hash).
+  // `crates/engine/tests/golden.rs` (that same recorded log folded by the Rust engine with the
+  // real catalog and the card scripts, against a written-down hash).
   it("two sessions with the same seed and the same actions agree on hash() and log()", () => {
     const bodies: ActionBody[] = [
       { type: "endTurn" },
@@ -700,7 +699,7 @@ describe("resolveDeck", () => {
     expect("error" in result).toBe(true);
     if ("error" in result) {
       expect(result.error).toMatch(/catalog is empty/);
-      expect(result.error).toMatch(/packages\/cards/);
+      expect(result.error).toMatch(/crates\/cards/);
     }
   });
 

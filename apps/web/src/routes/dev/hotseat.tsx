@@ -7,9 +7,9 @@
 // It computes no view of its own. A local `viewFor` would mean the client deciding what a player
 // may see, which is exactly the hidden-information leak CLAUDE.md rule 7 and SPEC §10.8 forbid —
 // so when the engine cannot be loaded this route renders the reason and stops. That panel is the
-// honest state of the world today: `packages/engine/src/index.ts` re-exports six modules that do
-// not exist yet, `viewFor` among them, so `loadEnginePort()` rejects with `EngineUnavailableError`
-// until M3 lands. Nothing here stubs a fake engine to hide it.
+// honest state of the world: when the WebAssembly module (`crates/wasm`, behind `src/wasm/`) fails
+// to load, or lacks a function the port needs, `viewFor` among them, `loadEnginePort()` rejects with
+// `EngineUnavailableError` and the panel names why. Nothing here stubs a fake engine to hide it.
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 

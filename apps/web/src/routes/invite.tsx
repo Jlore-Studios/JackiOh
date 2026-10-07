@@ -75,7 +75,7 @@
 // partial code never costs one of §9.4's attempts. What is submitted is exactly what the box shows.
 //
 // THE FORMAT IS CONFIG, NOT A LITERAL. Every number of `XXXX-XXXX-XXXX-XXXX`, the alphabet and the
-// separator come from `apps/server/src/config.ts` through `INVITE_CODE_FORMAT` (CLAUDE.md rule 9),
+// separator come from `crates/server/src/config.rs` through `INVITE_CODE_FORMAT` (CLAUDE.md rule 9),
 // which is where R79/R104 put them and where `e2e/cypress/e2e/10-invite-gate.cy.ts` reads them.
 //
 // THE ROUTE STAYS REACHABLE FOR BOTH STATUSES. Spec 10 visits it while pending and expects to
@@ -91,7 +91,7 @@ import {
   AUTH_EMAIL_RESEND_COOLDOWN_SECONDS,
   CODE_ATTEMPT_WINDOW_SECONDS,
   CODE_STATUS_RECHECK_FLOOR_SECONDS,
-} from "../../../server/src/config.ts";
+} from "@jackioh/server-config";
 import Address from "../auth/Address.tsx";
 import CodeField from "../auth/CodeField.tsx";
 import { deadlineAfter, useAddressCooldown, useSecondsUntil } from "../auth/cooldown.ts";

@@ -3,8 +3,9 @@
 // The load-bearing assertion in this file is what a board does with `legalActions`. A view that
 // carries none renders `legal={[]}`, `end-turn` is `disabled`, and `waitForMyTurn` in specs 05 and
 // 06 waits forever — so the route says so out loud rather than looking merely idle. The two tests
-// after it show the board coming alive on either accepted shape: the `legal` field on the `view`
-// frame, which is what `apps/server/src/match/actor.ts` sends, and a `legal` frame of its own.
+// after it show the board coming alive on the `legal` field of the `view` frame, which is what
+// `crates/server/src/actor/match_actor.rs` sends (a standalone `legal` frame was never sent, and the
+// client no longer reads one, SURFACE §11.3).
 // Nothing here computes legality; that is the engine's (BUILD M5-T2, CLAUDE.md rule 7).
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,7 +13,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 
 import type { ActionBody } from "@jackioh/shared";
 
-import { MULLIGAN_CLOCK_MS, SERIES_MAX_GAMES, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "../../../server/src/config.ts";
+import { MULLIGAN_CLOCK_MS, SERIES_MAX_GAMES, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "@jackioh/server-config";
 
 import type { SocketLike } from "../game/net.ts";
 import { baseView } from "../test/fixtures.ts";
@@ -109,13 +110,15 @@ describe("the networked board", () => {
     expect(screen.getByTestId("end-turn")).toBeDisabled();
   });
 
-  it("comes alive on a `legal` frame, and the click goes out as an `action`", () => {
+  it("comes alive on a view that carries the list, and the click goes out as an `action`", () => {
     render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
     attach();
 
     const legal: ActionBody[] = [{ type: "endTurn" }];
     act(() => {
-      live().onmessage?.({ data: JSON.stringify({ type: "legal", legal }) });
+      live().onmessage?.({
+        data: JSON.stringify({ type: "view", view: baseView({ viewer: "p1", active: "p1" }), legal }),
+      });
     });
 
     expect(screen.queryByTestId("missing-legal-frame")).toBeNull();
@@ -490,7 +493,7 @@ describe("R439 the turn clock's last 30 seconds on the match bar", () => {
   });
 });
 
-/** `WS_CLOSE.forbidden` in apps/server/src/match/wsServer.ts (R148): a refusal, never retried. */
+/** `WS_CLOSE.forbidden` in crates/server/src/actor/ws_server.rs (R148): a refusal, never retried. */
 const FORBIDDEN_CLOSE = 4403;
 
 // des-4, des-10, str-1: what a player reads around the online board. The ids, the socket URL and

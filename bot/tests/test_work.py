@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Callable
 
 from harness.runner import FakeRunner, RunRequest, RunResult
-from harness.work import Worker
+from harness.work import Worker, _is_manifest
 
 from tests.fakes import git, make_origin, push_branch
 from tests.support import make_config
@@ -67,7 +67,9 @@ class MachineGateTests(unittest.TestCase):
         self.assertIn("- rules exist:", text)
         self.assertNotIn("- no broken file:", text)
         self.assertIn("leaves no broken file (`test ! -f broken.txt`) to CI", text)
-        self.assertIn("pnpm vitest run <test file>", text)
+        self.assertIn("`cargo test -p <crate> <test name>`", text)
+        self.assertIn("`pnpm --dir apps/web test <test file>`", text)
+        self.assertNotIn("pnpm lint", text)
         on_github = self.worker("ubuntu-latest")
         self.assertEqual([g.name for g in on_github.gates], ["rules exist", "no broken file"])
         self.assertNotIn("shared machine", on_github._gate_list())
@@ -75,9 +77,24 @@ class MachineGateTests(unittest.TestCase):
     def test_the_committed_checks(self):
         cfg = make_config()
         machine = {g.name: g.machine for g in cfg.gates}
-        self.assertEqual(machine, {"lint": False, "typecheck": True, "catalog": True,
-                                   "card tests exist": True, "rulings coverage": True,
-                                   "related tests": False})
+        self.assertEqual(machine, {"rustfmt": True, "catalog": True, "patches": True,
+                                   "rulings": True, "clippy": False, "cargo tests": False,
+                                   "web tests": False})
+        runs = {g.name: g.run for g in cfg.gates}
+        # The night box's checks build only the CLI their three checks share; clippy, the tests
+        # and the WASM module the web's tests load compile far more, on GitHub's runners.
+        self.assertEqual(runs["rustfmt"], "cargo fmt --check")
+        for name, command in (("catalog", "catalog check"), ("patches", "patches check"),
+                              ("rulings", "spec check")):
+            self.assertEqual(runs[name], f"cargo jackioh {command}")
+        self.assertEqual(runs["clippy"], "cargo clippy --workspace --all-targets -- -D warnings")
+        self.assertIn("cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts",
+                      runs["cargo tests"])
+        self.assertIn('git status --porcelain -- apps/web/src/wire', runs["cargo tests"])  # V20
+        self.assertTrue(runs["web tests"].startswith("sh scripts/build-wasm.sh && "))
+        self.assertEqual(cfg.install.run, "rustup toolchain install && pnpm install --frozen-lockfile")
+        for gate in cfg.gates:
+            self.assertNotRegex(gate.run, r"\b(packages/|apps/server|tsc|pnpm lint|pnpm typecheck)")
 
 
 class WorkTests(unittest.TestCase):
@@ -242,6 +259,16 @@ class WorkTests(unittest.TestCase):
         self.assertEqual(result["status"], "approved")
         self.assertNotIn("late.txt", result["changed_paths"])
         self.assertIn("late", result["dropped_after_review"])
+
+    def test_the_rust_workspace_files_are_manifests_too(self):
+        """A new crate dependency, a new lockfile or a new pinned toolchain installs again
+        (`rustup toolchain install` reads rust-toolchain.toml); a source file does not."""
+        for path in ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "crates/engine/Cargo.toml",
+                     "package.json", "apps/web/package.json", "pnpm-lock.yaml"):
+            self.assertTrue(_is_manifest(path), path)
+        for path in ("crates/engine/src/lib.rs", "crates/cards/catalog.json", "rustfmt.toml",
+                     "apps/web/src/main.tsx"):
+            self.assertFalse(_is_manifest(path), path)
 
     def test_the_install_runs_again_when_a_manifest_changes(self):
         runner = FakeRunner({"build": builder({"src/game.txt": "v2\n", "package.json": "{}\n"}),

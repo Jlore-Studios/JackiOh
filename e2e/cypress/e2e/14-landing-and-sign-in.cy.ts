@@ -30,7 +30,7 @@ import {
   INVITE_CODE_LENGTH,
   INVITE_CODE_SEPARATOR,
   REDEMPTION_IDENTICAL_ERROR,
-} from "../../../apps/server/src/config.ts";
+} from "../../../apps/web/src/wire/serverConfig.ts";
 import {
   codeFieldTestid,
   inviteTestid,

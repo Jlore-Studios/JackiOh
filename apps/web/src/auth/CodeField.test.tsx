@@ -21,11 +21,8 @@ import {
   INVITE_CODE_GROUP_SIZE,
   INVITE_CODE_LENGTH,
   INVITE_CODE_SEPARATOR,
-} from "../../../server/src/config.ts";
-import {
-  CODE_INPUT_CASES,
-  type CodeInputCase,
-} from "../../../../packages/shared/test/fixtures/code-input-cases.ts";
+} from "@jackioh/server-config";
+import codeInputCases from "../../../../crates/engine/tests/fixtures/code-input-cases.json";
 import CodeField from "./CodeField.tsx";
 import {
   INVITE_CODE_GROUPS,
@@ -38,6 +35,27 @@ import {
 import { codeFieldSegmentTestid, codeFieldTestid, inviteTestid } from "./testids.ts";
 
 afterEach(cleanup);
+
+/**
+ * One row of the shared table (`crates/engine/tests/fixtures/code-input-cases.json`), which the
+ * server's Rust reading and `wire/codes.test.ts` read too. Every column is what the shared reading
+ * gives for `INVITE_CODE_FORMAT`.
+ */
+type CodeInputCase = {
+  readonly name: string;
+  readonly input: string;
+  /** canonicalCode(input, INVITE_CODE_FORMAT). The server must redeem a code minted as this. */
+  readonly canonical: string | null;
+  /** readCodeInput(input, INVITE_CODE_FORMAT).formatted */
+  readonly formatted: string;
+  readonly problem: CodeInputProblem["kind"] | null;
+  /** The character an excluded or foreign problem names. */
+  readonly character?: string;
+  /** findCodeInText(input, INVITE_CODE_FORMAT) !== null: the paste handler fills the field. */
+  readonly foundInText: boolean;
+};
+
+const CODE_INPUT_CASES = codeInputCases as readonly CodeInputCase[];
 
 // ---------------------------------------------------------------------------------------------
 // fixtures, built from config rather than spelled

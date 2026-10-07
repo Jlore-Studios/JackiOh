@@ -1,5 +1,5 @@
-# e2e/ is deliberately its own pnpm root: the root workspace globs only `packages/*` and `apps/*`,
-# and the suite needs Cypress without adding a heavyweight dependency to every other package.
+# e2e/ is deliberately its own pnpm root as well as one of the root workspace's two projects
+# (`apps/web` and `e2e`), so the suite can install Cypress on its own.
 # `pnpm install` inside e2e/ therefore just works, and Cypress is allowed to run its postinstall,
 # which fetches the browser binary.
 packages: []

@@ -1,12 +1,24 @@
 # The night bot's machine
 
-The night bot's model sessions for the subscriptions that log in here run on this machine: one
-virtual machine on AWS, where each subscription in
+The night bot's model sessions for the subscriptions that log in here run on this machine, the
+night box: one virtual machine on AWS, where each subscription in
 [`.harness/providers.json`](../../.harness/providers.json) whose `runs_on` is `night-vm-<id>`
 (Codex, agy, Muse and Devin) has a Linux user of its own and a GitHub runner of its own per lane.
 The Claude accounts log in from secrets, so their jobs run on GitHub's own runners (free for this
 public repository, four vCPUs each), and so do `gate`, `plan` and `deliver`, the jobs that hold a
-GitHub write token.
+GitHub write token. A second box, the training box (below), runs the two AI training lanes,
+outside the harness.
+
+**After the v0.3.0 cutover (#306), run `setup.sh` on the night box again, once**, with the same
+ids as before (Building it, step 2). The repository's checks are Rust now, and that run gives every
+agent user the Rust toolchain `rust-toolchain.toml` pins and puts it on each runner's `PATH`; until
+it runs, a machine job finds no `rustup` or `cargo`, so its install and its Rust checks fail. It
+touches neither the logins nor the runners' registrations, and a runner in the middle of a job
+picks up the new `PATH` at its next restart (the script says which):
+
+```sh
+bot/machine/on-machine.sh bot/machine/setup.sh gpt agy muse devin
+```
 
 | | |
 |---|---|
@@ -15,6 +27,7 @@ GitHub write token.
 | Users | `agent-<id>` per subscription (`agent-gpt`, `agent-agy`, `agent-muse`, `agent-devin`): a home only it can read, no `sudo`, no Docker |
 | Runners | `~agent-<id>/actions-runner` (and `actions-runner-2` … for a subscription with `lanes` over 1), registered as `night-vm-<id>` (`night-vm-<id>-2` …) with the one label `night-vm-<id>`, each a systemd service under that user |
 | CLIs | `claude`, `codex`, `agy`, `muse` and `devin`, installed for every user; Node 24, pnpm (corepack) and Python 3.12 |
+| Rust | in each user's home: rustup, and the toolchain `rust-toolchain.toml` pins (1.97.0) on the minimal profile with `rustfmt`, `clippy` and the `wasm32-unknown-unknown` target; `~/.cargo/bin` is first on every runner's `PATH` |
 | Idle stop | a timer powers it off after 30 minutes with no job and no Session Manager session |
 | Starter | a Lambda run every five minutes starts it when a job waits for one of its runners |
 
@@ -24,10 +37,9 @@ A machine login (`"login": "machine"`) is a file in a home directory that its CL
 place. With one user per subscription, a session can read only its own login and leave things
 only in its own home, and its runner, labelled with its id alone, takes only its jobs. A Claude
 account's token comes from its GitHub secret, handed to that job alone, and is never written to
-the home. At most `machine_parallel` (7) jobs run across both boxes at once, each as its own user;
-Devin has `"lanes": 6` on the six runners here, and Muse
-has two (`night-vm-muse` and `night-vm-muse-2`, both under `agent-muse` and its one login).
-The seventh slot is the training box's `night-vm-devin-train`, below.
+the home. At most `machine_parallel` (6) jobs run here at once, each as its own user; Devin has
+`"lanes": 6` on the six runners here, and Muse has two (`night-vm-muse` and `night-vm-muse-2`,
+both under `agent-muse` and its one login).
 
 Every repository workflow could ask for these labels, so the repository makes outside
 contributors' pull requests wait for approval before any workflow runs (Settings → Actions →
@@ -37,7 +49,7 @@ contributors' pull requests wait for approval before any workflow runs (Settings
 
 | File | Runs | What it does |
 |---|---|---|
-| `setup.sh` | on the machine, as root | everything above except the logins and the registration; idempotent, run it again to update the CLIs or add a subscription |
+| `setup.sh` | on the machine, as root | everything above except the logins and the registration; idempotent, run it again to update the CLIs or Rust, or to add a subscription. With `--training`, the training box instead (below) |
 | `clean.sh` | on the machine, as each agent user | gives back the disk that user's jobs can do without (Disk, below); installed as `/usr/local/bin/night-vm-clean.sh` |
 | `disk-report.sh` | on the machine, as root | read-only: what fills the disk, biggest first, the runner versions kept and the disk timer's last runs |
 | `on-machine.sh` | on your computer | runs a local script on the machine through Session Manager, with the scripts beside it, starting the machine first if it is stopped |
@@ -83,50 +95,70 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 
 ## The training box
 
-Ladder training runs (RL within its 300-minute budget, the gauntlet's hundreds of games) would
-starve the 2 vCPUs above, so they run on a second, bigger box as `devin-train`
-(`providers.json`): a Devin login whose jobs GitHub Actions sends to its runner,
-`night-vm-devin-train`, the seventh machine slot. The planner sends it only items labelled
-`training` (and nothing else goes there); their reviews float to any reviewer.
+The two AI training lanes (`training/README.md`, #306 part 39) run on a second, bigger box that
+is always on: `jackioh-train@improve` and `jackioh-train@unban`, two systemd services that run
+`training/loop.sh <lane>` forever, each as its own user with its own checkout, Rust, Devin login
+and GitHub token. They run outside the harness: no runner, no GitHub Actions job, no slot of
+`machine_parallel`, no `training` label. A lane opens its own pull requests from `ai/<lane>`, and
+CI's `training gate` re-runs its promotion before anything merges.
 
 | | |
 |---|---|
-| Instance | EC2 `m7i.xlarge` (4 vCPUs, 16 GB), Ubuntu 24.04 x86_64, 100 GB gp3 encrypted for checkpoints and stores, tagged `Name=jackioh-train-box`, in the project's Region |
-| Way in | Session Manager only, like the night box: no inbound port, no key pair. The instance role has `AmazonSSMManagedInstanceCore` and nothing else. IMDSv2 required. |
-| Users | `agent-devin-train` only, from `setup.sh devin-train`: a home only it can read, no `sudo`, no Docker |
-| Runners | `~agent-devin-train/actions-runner`, registered as `night-vm-devin-train`, a systemd service under that user |
-| CLIs | the same install as the night box, plus the ladder's Python environment (`ladder/.venv`: `pyyaml`, `jsonschema`, `pytest`) |
-| Idle stop | the same 30-minute timer powers it off with no job and no Session Manager session |
+| Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus 8 GB swap), Ubuntu 24.04 x86_64, 100 GB gp3 encrypted, tagged `Name=jackioh-train-box`, in the project's Region (`us-east-2`). The plan was an `m7i.xlarge` (4 vCPUs, 16 GB); the project's Free plan refuses instance types outside the Free Tier, so the box built on 2026-10-07 (`i-017d1843ea5e68cef`, #427) is the `m7i-flex.large`; on a paid plan the bigger one halves a lane's cycle |
+| Way in | Session Manager only, like the night box: no inbound port, no key pair. It uses the night box's subnet and instance profile (`jackioh-night-vm`: `AmazonSSMManagedInstanceCore`, and `CloudWatchAgentServerPolicy`). IMDSv2 required. |
+| Users | `agent-train-improve` and `agent-train-unban`: a home only each can read, no `sudo`, no Docker |
+| In each home | `~/JackiOh`, the lane's checkout (`loop.sh` resets it to `main` every cycle; its `target/` stays, so builds after the first are incremental); Rust (rustup and the toolchain `rust-toolchain.toml` pins, with `rustfmt` and `clippy`); `~/training-out/<lane>/` (the games' records, `attempts.md`, the gate's reports); `~/logs/<lane>.log` (the loop's log) |
+| CLIs | `devin` (as on the night box), `gh` (GitHub's apt repository), `git` (pushing through `gh`'s login) |
+| Services | `jackioh-train@.service`: `User=agent-train-%i`, `training/loop.sh %i` from the lane's checkout, `Restart=always` after `RestartSec=60`, `DEVIN_MODEL=swe-2-max` (the knob for Devin's model), `RAYON_NUM_THREADS=2` (the two lanes' games share the box's vCPUs), `JACKIOH_TRAINING_OUT` the lane's `~/training-out/<lane>`; both enabled, so they start at boot |
+| Idle stop | none: the box never powers itself off, and no starter wakes it |
 
-Build it with the same scripts:
+Build it once, after the cutover has put `training/loop.sh` on `main` (a lane runs whatever `main`
+holds; before that its service restarts every minute and does nothing):
 
-1. **The instance**, as in the table above (shutdown behaviour **stop**).
-2. **Set it up**: `TAG=jackioh-train-box bot/machine/on-machine.sh bot/machine/setup.sh
-   devin-train`.
-3. **Log Devin in once**, as `agent-devin-train`:
-   `sudo -iu agent-devin-train devin auth login --force-manual-token-flow`.
-4. **Register the runner**, from the repository's root: `bot/machine/register-runners.sh
-   OWNER/REPO` (it reads every `night-vm-*` provider, training included).
-5. **Starter for the training box**, so each box wakes only for its own runners:
-
-   ```sh
-   REPO_ID=$(gh api repos/OWNER/REPO --jq .id) \
-     TAG=jackioh-train-box STARTER_NAME=jackioh-train-starter STARTER_ROLE=jackioh-train-starter \
-     RUNNER_LABELS=night-vm-devin-train bot/machine/deploy-starter.sh
-   ```
-
-   and point the night starter at its own runners only:
+1. **The instance**, as in the table above.
+2. **Set it up**: `TAG=jackioh-train-box bot/machine/on-machine.sh bot/machine/setup.sh --training`.
+   It installs the CLIs, makes both users with their checkouts and Rust, writes the service and
+   starts both lanes; they wait, retrying every minute, until the logins below are in.
+3. **Log each lane in once**, as its own user (`aws ssm start-session --target <instance>`): Devin,
+   then a fine-grained GitHub token that can write contents and pull requests on this repository
+   only, one token per lane:
 
    ```sh
-   REPO_ID=$(gh api repos/OWNER/REPO --jq .id) \
-     RUNNER_LABELS=night-vm-gpt,night-vm-agy,night-vm-muse,night-vm-devin \
-     bot/machine/deploy-starter.sh
+   sudo -iu agent-train-improve devin auth login --force-manual-token-flow   # paste the page's token
+   sudo -iu agent-train-improve gh auth login --hostname github.com --git-protocol https --with-token < improve-token.txt
+   sudo -iu agent-train-unban devin auth login --force-manual-token-flow
+   sudo -iu agent-train-unban gh auth login --hostname github.com --git-protocol https --with-token < unban-token.txt
    ```
 
-Training issues are labelled `training` (and `difficulty:easy`, which Devin may build) by the
-ladder's generation workflow (issue #55, phases 4–5); the lane takes them from the ordinary
-queue, builds on the training box through Devin's self-check loop, and shows as the seventh
-box in the status issue's mermaid.
+   `setup.sh` already made `gh` git's credential helper for each user, and gave each a commit name
+   of its own (`JackiOh training (<lane>)`); set `git config --global user.name`/`user.email` as
+   that user to commit as someone else. Delete the token files after.
+4. **Check it**: `systemctl status jackioh-train@improve jackioh-train@unban`, then `sudo reboot`
+   and the same again (both come back by themselves). A lane's first cycle builds `jackioh` from
+   `main` (minutes), starts Devin, and writes `GameRecord` lines to
+   `~agent-train-<lane>/training-out/<lane>/<date>.jsonl`:
+   `sudo tail -f ~agent-train-improve/logs/improve.log`. `devin --version` and a one-line
+   `devin -p` as each user show whether Devin answers; if it does not, leave the services as they
+   are: they retry every minute, which costs nothing, and start working once it does.
+
+Running the lanes:
+
+- **Stop a lane** (its Devin session ends with it): `sudo systemctl stop jackioh-train@improve`;
+  `sudo systemctl disable jackioh-train@improve` keeps it stopped across reboots, and `sudo
+  systemctl enable --now jackioh-train@improve` starts it again. To refuse one promotion, close its
+  pull request: the lane waits while one is open and starts again from `main` once it is closed.
+- **Change Devin's model**: edit `DEVIN_MODEL` in `setup.sh`'s unit, run `setup.sh --training`
+  again, then `sudo systemctl restart jackioh-train@improve jackioh-train@unban` (a running lane
+  reads a changed unit only when it restarts). SWE-2 is free on Devin's CLI only through
+  2026-10-16.
+- **Updating** the CLIs or Rust: run `setup.sh --training` again; it changes nothing else and never
+  restarts a lane.
+- **Disk**: each lane's `target/` (a few GB), its records and logs, and Devin's session database in
+  `~/.local/share/devin/cli/` (about 700 MB a day of sessions on the night box; the loop never
+  resumes one) grow on the 100 GB disk; the night box's clean-up does not run here. To give the
+  database back, stop the lane, delete `sessions.db*` there as that user, and start it again.
+- **Cost**: the box is always on: about $70 a month for the instance (on-demand `m7i-flex.large` in
+  `us-east-2`; an `m7i.xlarge` would be about $150) plus about $8 for its disk.
 
 ## Running it
 
@@ -173,6 +205,10 @@ box in the status issue's mermaid.
     restart.
   - `CYPRESS_INSTALL_BINARY=0` keeps `pnpm install` from fetching Cypress's 800 MB binary at all,
     since the bot's checks never run e2e.
+  - **Rust:** each agent user's toolchain (about 0.8 GB) and its crate downloads
+    (`~/.cargo/registry`, a few hundred MB) stay in its home; a job's `target/` (about 1.5 GB for
+    the release build of `jackioh` its checks run) is in its worktree under `RUNNER_TEMP`, and goes
+    with the job.
 - **How many at once:** six machine jobs (`machine_parallel`), because a job here runs only the
   light checks. The load is each job's checks, not its model: on 2026-10-02 three jobs running
   the full set had the machine at load average 14 on 2 vCPUs with 1.5 GB swapped. Measured on
@@ -180,7 +216,12 @@ box in the status issue's mermaid.
   4.5 min and 1.1 GB, the catalog and rulings checks seconds and 0.13 GB, and `pnpm test` 22.6
   min on one of GitHub's four-vCPU runners. So a job here runs install, typecheck and the light
   checks; lint and the unit tests (`"machine": false` in `.harness/config.json`) run in CI on
-  the pull request, and the agents are told to run only the tests for what they changed. The
+  the pull request, and the agents are told to run only the tests for what they changed. Since
+  v0.3.0 the checks are Rust and the split is the same: a job here runs the install, `cargo fmt
+  --check` and the three `cargo jackioh` checks (catalog, patches, spec), which share one release
+  build of the CLI (on 2026-10-07 it took 7.5 minutes on four vCPUs busy with other builds, and
+  the engine's crate held about 1.4 GB while it compiled); clippy, the cargo tests and the web's
+  unit tests (`"machine": false`) run in CI. The
   Claude accounts run on GitHub's runners, so `max_parallel` is 10: six here and up to four
   Claude jobs there. The Free plan's largest machines are the 2-vCPU `m7i-flex.large` and
   `c7i-flex.large`.

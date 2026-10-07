@@ -15,7 +15,7 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactElement } from "
 
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
-import { DECK_CODE_VERSION } from "../../../../server/src/config.ts";
+import { DECK_CODE_VERSION } from "@jackioh/server-config";
 import { DECK_CODE_PREFIX, decodeDeckCode, type DroppedCards } from "./deckCode.ts";
 import { DECK_SIZE, MAX_COPIES } from "./deckSize.ts";
 import {

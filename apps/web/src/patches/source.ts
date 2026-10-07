@@ -1,5 +1,5 @@
 // Where the patch history comes from (brief B4.2, R388): the one seam between the client and the
-// catalog workstream's `packages/cards/patches/`, which holds
+// catalog workstream's `crates/cards/patches/`, which holds
 //
 //   - `patches.json`: every patch in patch order, `{ version, date, title, source, notes, changes }`,
 //     each change `{ id, name, kind: "added" | "changed" | "removed", fields? }`;
@@ -68,7 +68,7 @@ const PATCHES_FILE = "patches";
 const INDEX_FILE = "index";
 const SHIPPED_FILE = "shipped";
 
-/** "../../../../packages/cards/patches/v0.1.1.json" -> "v0.1.1". */
+/** "../../../../crates/cards/patches/v0.1.1.json" -> "v0.1.1". */
 export function fileStem(path: string): string {
   const name = path.slice(path.lastIndexOf("/") + 1);
   return name.endsWith(".json") ? name.slice(0, -".json".length) : name;
@@ -158,7 +158,7 @@ export function sourceFromData(data: {
 export const EMPTY_PATCH_SOURCE: PatchSource = sourceFromData({ patches: [], index: {}, snapshots: {} });
 
 /** The catalog workstream's files, one lazy chunk each. */
-const PATCH_FILES = import.meta.glob<unknown>("../../../../packages/cards/patches/*.json", { import: "default" });
+const PATCH_FILES = import.meta.glob<unknown>("../../../../crates/cards/patches/*.json", { import: "default" });
 
-/** The real patch history, from `packages/cards/patches/`. */
+/** The real patch history, from `crates/cards/patches/`. */
 export const realPatchSource: PatchSource = sourceFromLoaders(loadersByStem(PATCH_FILES));

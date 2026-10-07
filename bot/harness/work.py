@@ -135,7 +135,10 @@ this change, in a fresh session, and nothing you say here approves it: an indepe
 judges it afterwards. Adversarially find every reason your own change should not ship, as that
 reviewer would, and report each as a blocking finding. Self check {n} of at most {cap}."""
 SETTINGS_FILES = (".claude/settings.json", ".claude/settings.local.json", ".mcp.json")
-MANIFESTS = ("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".npmrc")
+#: The files that say what the install installs: the web's pnpm workspace and the Rust workspace
+#: (its manifests, its lockfile and the toolchain it pins). A change to one runs the install again.
+MANIFESTS = ("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".npmrc",
+             "Cargo.toml", "Cargo.lock", "rust-toolchain.toml")
 
 #: The runs that start only `start_headroom` under each cap (`_start_check`; the router holds
 #: the same line in `plan._usable` and `plan.lane_planners`): a build, a revision, and a plan,
@@ -923,16 +926,20 @@ class Worker:
         lines = ["The harness's checks, run in this order after you stop:"]
         lines.append(f"- install: `{self.cfg.install.run}` (again whenever a manifest changed)")
         lines += [f"- {g.name}: `{g.run}`" for g in self.gates]
-        lines.append("CI on the pull request also runs the fuzz gate, coverage, the AI gates, "
-                     "the Postgres suites and the Cypress e2e specs before anything merges.")
+        lines.append("CI on the pull request also runs 200 fuzz seeds, the web's typecheck, eslint "
+                     "and unit tests, the e2e smoke specs and, when the change touches the "
+                     "database, the Postgres suites before anything merges; the AI gates, "
+                     "coverage and the full e2e suite run daily.")
         left = [f"{g.name} (`{g.run}`)" for g in self.cfg.gates if g not in self.gates]
         if left:
             lines.append(
                 "This run is on the bot's shared machine, so the harness leaves "
                 f"{', '.join(left)} to CI on the pull request, which runs before anything merges. "
-                "Don't run whole suites yourself either (`pnpm test`, `pnpm lint`, `pnpm fuzz`, "
-                "`pnpm ai:gate`, coverage, e2e): check only what you changed, such as "
-                "`pnpm vitest run <test file>` or `pnpm exec eslint <files>`.")
+                "Don't run whole suites yourself either (`cargo test --workspace`, `cargo clippy "
+                "--workspace`, `cargo jackioh fuzz`, `cargo jackioh gate`, the web's whole vitest "
+                "run, e2e): check only what you changed, such as `cargo test -p <crate> <test "
+                "name>`, `cargo clippy -p <crate>` or `pnpm --dir apps/web test <test file>` "
+                "(which builds the WASM module the web's tests load first).")
         return "\n".join(lines)
 
     def _findings_text(self, findings: list[Finding], label: str = "Blocking findings") -> str:
