@@ -81,10 +81,26 @@ class NightWorkflowTests(unittest.TestCase):
             self.assertRegex(work, rf"if: needs\.plan\.outputs\.cli == '{cli}' && "
                                    r"startsWith\(needs\.plan\.outputs\.runs_on, 'ubuntu-'\)")
         self.assertNotIn("cli == 'agy'", work)  # agy lives on the machine only
-        for action in ("pnpm/action-setup", "actions/setup-node", "actions/setup-python"):
+        for action in ("pnpm/action-setup", "actions/setup-node", "dtolnay/rust-toolchain",
+                       "actions/setup-python"):
             step = work[work.index(action):]
             self.assertTrue(step.split("\n", 2)[1].strip().startswith(
                 "if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')"), action)
+
+    def test_the_model_jobs_install_the_rust_ci_installs(self):
+        """The harness's checks run cargo, so a model job on GitHub's runners sets up the
+        toolchain rust-toolchain.toml pins, with the components and target ci.yml's setup
+        installs (.github/actions/setup); the machine's users have their own (setup.sh)."""
+        toml = (config.REPO_ROOT / "rust-toolchain.toml").read_text(encoding="utf-8")
+        channel = re.search(r'^channel = "([^"]+)"', toml, re.M).group(1)
+        ci = (config.REPO_ROOT / ".github" / "actions" / "setup" / "action.yml").read_text(
+            encoding="utf-8")
+        step = re.compile(rf"- uses: dtolnay/rust-toolchain@{re.escape(channel)}\n(?:\s+if: .*\n)?"
+                          r"\s+with:\n\s+components: rustfmt, clippy\n"
+                          r"\s+targets: wasm32-unknown-unknown\n")
+        self.assertRegex(ci, step)
+        for name in ("bot-night.yml", "squishy-run.yml"):
+            self.assertRegex(job(read(name), "work"), step, name)
 
     def test_the_model_job_runs_on_its_subscriptions_runner(self):
         self.assertIn("runs_on: ${{ steps.plan.outputs.runs_on }}", job(self.text, "plan"))
@@ -316,6 +332,9 @@ class RequiredChecksTests(unittest.TestCase):
                 continue
             for raw in re.findall(r"^    name: (.+)$", text, re.M):
                 raw = raw.strip().strip('"')
+                # A name chosen by a dispatch input (`inputs.x == 'v' && 'A' || 'B'`) is its `B` on a
+                # pull request, which has no inputs.
+                raw = re.sub(r"\$\{\{ inputs\.[\w-]+ == '[^']*' && '[^']*' \|\| '([^']*)' \}\}", r"\1", raw)
                 if "${{ matrix.browser }}" in raw:
                     names.update(raw.replace("${{ matrix.browser }}", b) for b in ("chrome", "electron"))
                 else:

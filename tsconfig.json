@@ -1,4 +1,7 @@
 {
+  // The root's own TypeScript, the vitest workspace file. The web and the e2e specs are projects of
+  // their own (apps/web/tsconfig.json, e2e/tsconfig.json, e2e/cypress/component/tsconfig.json), which
+  // the root `typecheck` runs after this one.
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "types": [
@@ -6,8 +9,6 @@
     ]
   },
   "include": [
-    "packages/*/src",
-    "packages/*/test",
-    "packages/*/scripts"
+    "vitest.config.ts"
   ]
 }

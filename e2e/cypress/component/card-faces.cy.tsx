@@ -26,11 +26,11 @@
 // the face must fill its 5:7 box, the name must have a box of its own, and the board must span
 // the viewport.
 //
-// The catalog comes from packages/cards/src/catalog-data.ts, the package's one reader of
-// catalog.json (e2e/ cannot resolve `@jackioh/cards`). Client code comes from apps/web/src, and
+// The catalog comes from `@jackioh/cards`, which the client's aliases resolve to its wire layer's
+// reader of crates/cards/catalog.json (e2e/cypress.config.ts). Client code comes from apps/web/src, and
 // from outside apps/web/src/cards only through its barrel, cards/index.ts.
 
-import { CATALOG } from "../../../packages/cards/src/catalog-data.ts";
+import { CATALOG } from "@jackioh/cards";
 import { CardFace, FACE_ASPECT, POWER_WORDS, TEXT_TIER_MAX, faceModel, type FaceModel } from "../../../apps/web/src/cards/index.ts";
 import { FIT_FLOOR_PX } from "../../../apps/web/src/cards/constants.ts";
 import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catalog.ts";

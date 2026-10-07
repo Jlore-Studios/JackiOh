@@ -1,4 +1,5 @@
-// BUILD M8 spec 05 — "Networked game, reload mid-prompt".
+// BUILD M8 spec 05 — "Networked game, reload mid-prompt". With spec 06, the browser's half of
+// docs/v0.3.0/README.md V14 (the Rust server's WebSocket, end to end).
 //
 // Key assertions (BUILD M8, quoted verbatim):
 //
@@ -65,7 +66,7 @@
 // `turnDeadline` (the clock was not restarted), a later `now`, strictly less time remaining, and
 // seat 1's grace cleared because it came back inside `DISCONNECT_GRACE_SECONDS`.
 //
-// R79's values are never spelled here: they are imported from `apps/server/src/config.ts`, which
+// R79's values are never spelled here: they are imported from `crates/server/src/config.rs`, which
 // is where BUILD §2 and R79 put them.
 //
 // Needs: M6 (server, match actor, WS protocol) and M7-T1 (the clock). See e2e/README.md.
@@ -74,7 +75,7 @@ import {
   DISCONNECT_GRACE_SECONDS,
   PROMPT_CLOCK_SECONDS,
   TURN_CLOCK_SECONDS,
-} from "../../../apps/server/src/config.ts";
+} from "../../../apps/web/src/wire/serverConfig.ts";
 import { CARD_NAMES } from "../../support/cards.ts";
 import { accounts, routes, seedFor, server, timeouts } from "../../support/config.ts";
 import {
@@ -160,7 +161,7 @@ function visitAs(token: string, path: string): void {
 
 // --- reading seat 2's socket ------------------------------------------------------------------
 
-/** `apps/server/src/api/ports.ts` `MatchClocks`, restated structurally (see support/types.ts). */
+/** `crates/server/src/db/store.rs` `MatchClocks`, restated structurally (see support/types.ts). */
 type Clocks = {
   turnDeadline: number | null;
   promptDeadline: number | null;
@@ -321,12 +322,19 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
     // --- both seats are free, and their first saved deck is this spec's fixture (§9.4) ---------
     // `cy.freeAccount`: the E2E server keeps its state for its whole life, so a match or series an
     // earlier spec left behind would answer the room calls below with 409 `already_in_match`.
-    // `cy.installLoadout` saves the fixture as the oldest of three decks (R250), which is the one
-    // the legacy `{ deckIndex: 0 }` bodies below name (R257).
+    // `cy.installLoadout` saves the fixture as the oldest of three decks (R250); the room calls
+    // below name it by id, `{ mode: "bo1", deckId }` (R257; v0.3.0 dropped the legacy `deckIndex`
+    // body, SURFACE §11.3).
     cy.freeAccount(seatOne);
     cy.freeAccount(seatTwo);
-    cy.installLoadout(seatOne, "05-reconnect-a");
-    cy.installLoadout(seatTwo, "05-reconnect-b");
+    let seatOneDeck = "";
+    let seatTwoDeck = "";
+    cy.installLoadout(seatOne, "05-reconnect-a").then((installed) => {
+      seatOneDeck = installed.deckIds[0];
+    });
+    cy.installLoadout(seatTwo, "05-reconnect-b").then((installed) => {
+      seatTwoDeck = installed.deckIds[0];
+    });
 
     // --- a live match: seat 1 opens a room, seat 2 claims it (§9.5) ---------------------------
     // `seed` is BUILD M8's "every spec sets a seed". A networked match's seed is normally minted
@@ -341,20 +349,23 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
     // proves the host's seed is used verbatim for the match the join creates. The fixture still
     // guarantees its Quickdraw card for every seed, which costs nothing and is one less thing to
     // depend on — but the match this spec drives IS seeded, and its determinism is real.
-    cy.request<{ code: string }>({
-      method: "POST",
-      url: api("/api/rooms"),
-      headers: bearer(seatOne.token),
-      body: { deckIndex: 0, seed },
-    }).then((created) => {
-      cy.request<{ matchId: string; seat: string }>({
+    // The bodies are built inside `cy.then`, once the two deck ids above are known.
+    cy.then(() => {
+      cy.request<{ code: string }>({
         method: "POST",
-        url: api(`/api/rooms/${created.body.code}/join`),
-        headers: bearer(seatTwo.token),
-        body: { deckIndex: 0 },
-      }).then((joined) => {
-        expect(joined.body.seat, "the joiner is seat 2 (§9.5)").to.eq(SEAT_TWO_ID);
-        matchId = joined.body.matchId;
+        url: api("/api/rooms"),
+        headers: bearer(seatOne.token),
+        body: { mode: "bo1", deckId: seatOneDeck, seed },
+      }).then((created) => {
+        cy.request<{ matchId: string; seat: string }>({
+          method: "POST",
+          url: api(`/api/rooms/${created.body.code}/join`),
+          headers: bearer(seatTwo.token),
+          body: { mode: "bo1", deckId: seatTwoDeck },
+        }).then((joined) => {
+          expect(joined.body.seat, "the joiner is seat 2 (§9.5)").to.eq(SEAT_TWO_ID);
+          matchId = joined.body.matchId;
+        });
       });
     });
 

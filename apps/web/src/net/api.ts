@@ -1,24 +1,25 @@
-// The client's one door onto `apps/server`'s REST surface.
+// The client's one door onto `crates/server`'s REST surface.
 //
 // CLAUDE.md rule 7: the client sends intent and renders what comes back. Nothing here decides a
-// rule — in particular no L1–L6 message is ever composed in the browser. `packages/validator` is
+// rule — in particular no L1–L6 message is ever composed in the browser. The validator
+// (`crates/engine/src/validator.rs`, the client's through WebAssembly) is
 // "one validator module shared by client and server" (SPEC §9.4) and the server passes its issues
 // through untouched, so a `LoadoutIssue.message` shown by the deckbuilder is either the validator's
 // own sentence (client-side, as UX) or the server's relay of it (at save, as law). A second copy
 // of a message would be a second source of truth.
 //
-// Every response shape below is the one `apps/server/src/api/*.ts` actually returns; every error
-// is `{ error: { code, message, details? } }` from `apps/server/src/api/http.ts`.
+// Every response shape below is the one `crates/server/src/api/*.rs` actually returns; every error
+// is `{ error: { code, message, details? } }` from `crates/server/src/api/http.rs`.
 
 import type { CardDefs, GameOverReason } from "@jackioh/shared";
 
-import { API_REQUEST_TIMEOUT_SECONDS } from "../../../server/src/config.ts";
+import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 
 const DEFAULT_HTTP_URL = "http://localhost:8787";
 
 /**
  * `VITE_SERVER_HTTP_URL` is the public half of the environment contract
- * (`apps/server/src/env.ts` `PUBLIC_ENV_VARS`). The default is the port `apps/server` listens on,
+ * (`crates/server/src/env.rs` `PUBLIC_ENV_VARS`). The default is the port `crates/server` listens on,
  * which is what `e2e/support/config.ts` points at.
  */
 export function apiBaseUrl(): string {
@@ -29,13 +30,13 @@ export function apiBaseUrl(): string {
 
 const DEFAULT_WS_URL = "ws://localhost:8787/ws/match";
 
-/** `WS_PATH` in `apps/server/src/match/wsServer.ts` is `/ws/match`; the default mirrors it. */
+/** `WS_PATH` in `crates/server/src/actor/ws_server.rs` is `/ws/match`; the default mirrors it. */
 export function matchSocketUrl(): string {
   const configured: unknown = import.meta.env.VITE_SERVER_WS_URL;
   return typeof configured === "string" && configured.length > 0 ? configured : DEFAULT_WS_URL;
 }
 
-/** `apps/server/src/api/http.ts` `ApiErrorCode`, as the client sees it: an opaque string. */
+/** `crates/server/src/api/http.rs` `ApiErrorCode`, as the client sees it: an opaque string. */
 export type ApiErrorBody = { code: string; message: string; details?: unknown };
 
 /** A refusal from the server, carrying its code and message verbatim. Never reworded here. */
@@ -167,7 +168,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 }
 
 // ---------------------------------------------------------------------------------------------
-// The endpoints, as the handlers in `apps/server/src/api/**` return them.
+// The endpoints, as the handlers in `crates/server/src/api/**` return them.
 // ---------------------------------------------------------------------------------------------
 
 /** `GET /api/auth/me` (`auth: "user"`): the code screen's own read (§9.4). */
@@ -387,7 +388,7 @@ export function deleteTrio(token: string, id: string): Promise<{ deleted: boolea
 // renders (`tutorial/progress.ts`); `tutorial/accountSync.ts` is the only caller of these two.
 // ---------------------------------------------------------------------------------------------
 
-/** `TutorialProgressView` in `apps/server/src/api/tutorial.ts`. */
+/** `TutorialProgressView` in `crates/server/src/api/tutorial.rs`. */
 export type TutorialAccountProgress = {
   /** Lesson ids, each once, in code-point order; an id this client does not know may be among them. */
   completed: string[];
@@ -429,7 +430,7 @@ export type PlayerSettingValue = boolean | number | string;
 /** One group of settings (a store of the client) and when it last changed (epoch ms, the device's clock). */
 export type PlayerSettingsGroup = { at: number; values: Record<string, PlayerSettingValue> };
 
-/** `PlayerSettingsView` in `apps/server/src/api/settings.ts`: group id to group, empty before the first write. */
+/** `PlayerSettingsView` in `crates/server/src/api/settings.rs`: group id to group, empty before the first write. */
 export type PlayerSettingsAccountCopy = { groups: Record<string, PlayerSettingsGroup> };
 
 /** `GET /api/settings` (`active`): the account's copy, empty before its first write. */
@@ -499,7 +500,7 @@ export function getPopulation(token: string): Promise<PopulationResponse> {
  * client", but the deckbuilder needs names and costs before any engine is loaded and the client
  * has no catalog of its own to ship yet, so the server serves the one it already holds. The
  * proposed §11 row is written out once, on the server half, above `createCatalogRoutes` in
- * `apps/server/src/api/catalog.ts`; this is the caller, not a second statement of the rule.
+ * `crates/server/src/api/catalog.rs`; this is the caller, not a second statement of the rule.
  */
 // It returns the whole `CardDefs` record and not a projection, because `@jackioh/validator`'s
 // `CatalogSnapshot.cards` is a `CardDefs` — the deckbuilder's client-side verdict (§9.4: "the
@@ -623,7 +624,7 @@ export function getSeriesForMatch(token: string, matchId: string): Promise<{ ser
 }
 
 // ---------------------------------------------------------------------------------------------
-// The ranked ladder (SPEC §9.12, R612). Every shape below is `apps/server/src/api/ranked.ts`'s,
+// The ranked ladder (SPEC §9.12, R612). Every shape below is `crates/server/src/api/ranked.rs`'s,
 // and none of them carries the hidden rating — the client shows the visible rank only.
 // ---------------------------------------------------------------------------------------------
 

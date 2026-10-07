@@ -2,7 +2,7 @@
 
 This is the plan and the runbook for serving `apps/web` from two hosts. It says what each host is
 for, how a commit reaches each one, what the repo enforces, what has to be set by hand outside the
-repo, and what to do when something goes wrong. Nothing here changes `apps/server` (Render) or the
+repo, and what to do when something goes wrong. Nothing here changes `crates/server` (Render) or the
 database and auth (Supabase).
 
 ## 1. Target state
@@ -23,8 +23,8 @@ merging a pull request whose head is a green commit of main, so its files always
 
 ## 2. How a commit reaches production
 
-1. A pull request merges into `main` (branch protection already requires the six CI checks).
-2. Pushes to `main` trigger three things at once: Render deploys `apps/server`; Vercel deploys
+1. A pull request merges into `main` (branch protection already requires the five CI checks).
+2. Pushes to `main` trigger three things at once: Render deploys `jackioh-server`; Vercel deploys
    staging (unless `scripts/vercel-ignore.sh` skips it); and CI runs again on main.
 3. An open issue labelled `production merge` says "Merging to production in N hours" (section 2.3).
    When its time comes, 10:00 AM Central each day unless someone held or delayed it,
@@ -43,7 +43,8 @@ merging a pull request whose head is a green commit of main, so its files always
 
 ### 2.1 The catalog fast path, and why it exists
 
-The web bundle compiles the catalog version in (`packages/cards` `CATALOG_VERSION`) and sends it
+The web bundle compiles the catalog version in (`CATALOG_VERSION`, the newest entry of
+`crates/cards/patches/patches.json`) and sends it
 with every deck save and queue request. The server refuses any request whose catalog version is not
 its own (SPEC §9.4, R105). Render deploys the server from `main` on every push, but Cloudflare now
 deploys only once a day. Without a fast path, a merge that bumps the catalog would leave production
@@ -197,7 +198,8 @@ every pull request (#207). They are switched off here.
 
 **Settings this does not need.** No build variables: the four public `VITE_` values are in
 `apps/web/.env.production` (the publishable key too, or as a repository variable
-`VITE_SUPABASE_PUBLISHABLE_KEY`), and Node, pnpm and the install come from the same setup CI uses.
+`VITE_SUPABASE_PUBLISHABLE_KEY`), and Node, pnpm, the install and the Rust toolchain the WASM module
+needs come from the same setup CI uses.
 The Worker's name is `jackioh` (`wrangler.jsonc`), and its account is `CLOUDFLARE_ACCOUNT_ID` in
 the workflow. **Never** put `SUPABASE_SECRET_KEY`, `DATABASE_URL` or `CODE_PEPPER` in the web build
 or in Cloudflare: anything the web build reads is readable by every visitor.
@@ -260,7 +262,7 @@ canonical origin, which still say `jackioh.vercel.app`:
 - `apps/web/public/robots.txt`, `public/sitemap.xml`, `public/.well-known/security.txt`
 - `apps/web/src/routes/privacy.tsx`: "Vercel hosts this website" should name Cloudflare. This is
   your privacy policy, so it has to be accurate about who hosts the site.
-- `apps/server/test/deploy/rehearse.sh` `PUBLIC_ORIGINS`
+- `crates/server/tests/deploy/rehearse.sh` `PUBLIC_ORIGINS`
 - `e2e/cypress/e2e/99-online-smoke.cy.ts`: the example `E2E_BASE_URL`
 
 In the same change, add `{ "key": "X-Robots-Tag", "value": "noindex" }` to the headers in **both

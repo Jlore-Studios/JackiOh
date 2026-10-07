@@ -46,7 +46,7 @@ import {
   DECK_CODE_MAX_INPUT_LENGTH,
   DECK_CODE_VERSION,
   DECK_NAME_MAX_LENGTH,
-} from "../../../../server/src/config.ts";
+} from "@jackioh/server-config";
 import { DECK_SIZE, MAX_COPIES } from "./deckSize.ts";
 
 /** What every code starts with, before its version digits and a ".". */

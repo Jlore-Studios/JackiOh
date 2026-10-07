@@ -7,8 +7,9 @@
 #
 # STARTER_GITHUB_TOKEN, if set, is handed to the function to raise GitHub's rate limit (a
 # fine-grained token with read access to Actions only); without it the public API is used.
-# A second box (the training box) takes TAG, NAME and ROLE for its own names, plus
-# RUNNER_LABELS, the comma-separated runner labels that box wakes for (starter.py).
+# A second box that sleeps when idle would take TAG, NAME and ROLE for its own names, plus
+# RUNNER_LABELS, the comma-separated runner labels that box wakes for (starter.py). The training
+# box is always on and has no runner, so it has no starter.
 set -euo pipefail
 REPO_ID="${REPO_ID:?the numeric id of the repository: gh api repos/OWNER/REPO --jq .id}"
 export AWS_REGION="${AWS_REGION:-us-east-2}"

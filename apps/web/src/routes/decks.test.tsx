@@ -9,7 +9,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DECK_AUTOSAVE_DEBOUNCE_MS } from "../../../server/src/config.ts";
+import { DECK_AUTOSAVE_DEBOUNCE_MS } from "@jackioh/server-config";
 import { fixtureCatalog, fixtureCollection, legalDecks } from "../game/deckbuilder/fixtures.ts";
 import { mirrorKey } from "../game/deckbuilder/sync.ts";
 import { decksResponse, savedDeck, savedTrio } from "../game/deckbuilder/testkit.ts";

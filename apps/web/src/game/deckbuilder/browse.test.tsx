@@ -19,7 +19,7 @@ import { validateDeck, type CatalogSnapshot, type Collection } from "@jackioh/va
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { DECK_AUTOSAVE_DEBOUNCE_MS } from "../../../../server/src/config.ts";
+import { DECK_AUTOSAVE_DEBOUNCE_MS } from "@jackioh/server-config";
 import {
   CARD_SETTINGS_DEFAULTS,
   INSPECT_CLOSE,

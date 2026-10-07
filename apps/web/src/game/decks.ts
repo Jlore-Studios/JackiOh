@@ -1,12 +1,12 @@
 // Dev decks for the hotseat route (BUILD M5-T3): `?a=<deckId>&b=<deckId>` → a list of card ids.
 //
-// No card id is written down here. `packages/cards` has not shipped its defs yet, and inventing
-// "core-001" would be a guess at SPEC §8 that would go stale the day the catalog lands. A
-// `DeckSource` is therefore a QUERY over whatever catalog the engine hands the client
-// (`EnginePort.catalog`), and every deck in the registry is derived: the day the catalog exists,
-// these decks exist too, with no edit here.
+// No card id is written down here. The definitions are `crates/cards`' (compiled into the
+// WebAssembly module), and spelling "core-001" here would be a guess at SPEC §8 that goes stale the
+// day the catalog changes. A `DeckSource` is therefore a QUERY over whatever catalog the engine hands
+// the client (`EnginePort.catalog`), and every deck in the registry is derived: whatever the catalog
+// holds, these decks follow it, with no edit here.
 //
-// This module decides nothing about legality. `validateDeck` in `packages/engine/src/state.ts`
+// This module decides nothing about legality. `validate_deck` in `crates/engine/src/state.rs`
 // is the authority and `createGame` throws when a deck breaks §2.6 — the checks below exist only
 // so the route can print a readable sentence instead of showing a thrown stack, which is the same
 // trade `e2e/support/commands.ts` makes in `asDeck`.
@@ -15,10 +15,11 @@ import type { CardCost, CardDef, CardDefs } from "@jackioh/shared";
 
 /**
  * SPEC §2.6 L2 / L3. Re-exported from the engine's own `config` entry point rather than restated:
- * BUILD §2 keeps every rules constant in `packages/engine/src/config.ts` and says nothing else
- * spells the numbers. These used to be literals because the engine did not compile and its barrel
- * would have dragged in modules the client excludes — both now resolved, the second by the engine's
- * `"./config"` export, which reaches the constants without loading the barrel.
+ * BUILD §2 keeps every rules constant in the engine's config (`crates/engine/src/config.rs`) and
+ * says nothing else spells the numbers. These used to be literals because the engine did not compile
+ * and its barrel would have dragged in modules the client excludes — both now resolved, the second by
+ * `@jackioh/engine/config`, the constants generated from that config (`src/wire/engineConfig.ts`),
+ * which reaches them without loading the engine.
  */
 // Imported and then re-exported, not `export … from`: this module uses both constants itself
 // (`resolveDeck`, the dev decks), and a bare re-export creates no local binding.
@@ -167,8 +168,8 @@ export function resolveDeck(
     return {
       error:
         `deck "${id}" cannot be built: the card catalog is empty. ` +
-        `packages/cards has not shipped its definitions yet (BUILD M4-T1), and the client never ` +
-        `invents card ids.`,
+        `The engine's catalog (crates/cards, in the WebAssembly module) handed the client no ` +
+        `definitions, and the client never invents card ids.`,
     };
   }
   if (pool.length < DECK_SIZE) {

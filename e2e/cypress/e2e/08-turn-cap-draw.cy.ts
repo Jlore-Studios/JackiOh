@@ -11,7 +11,7 @@
 // `HERO_HEALTH` when it appears, which is what makes it the cap's draw and not §2.5's "both heroes
 // at 0 or less in the same check".
 //
-// Why Infinite Reserves: R389's own engine test (packages/engine/test/turn-cap.test.ts) shows that
+// Why Infinite Reserves: R389's own engine test (crates/engine/tests/rules/turn_cap.rs) shows that
 // two do-nothing 20-card decks now fatigue out before the cap — the second seat's eighth fatigue
 // draw kills it at player-turn 48 — so the old do-nothing decks can no longer reach it. The
 // 08-reserves decks are 08-do-nothing-a and -b with #100 Ceaseless Void swapped for #75 Infinite

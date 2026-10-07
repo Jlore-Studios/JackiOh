@@ -1,5 +1,5 @@
 // `game/net.ts` driven entirely through a fake WebSocket: every frame
-// `apps/server/src/match/protocol.ts` defines, the handshake, the reconnect and the dev-handle shim.
+// `crates/server/src/actor/protocol.rs` defines, the handshake, the reconnect and the dev-handle shim.
 //
 // No real socket, no timer and no server. The seams (`socketFactory`, `timers`, `monotonic`) exist
 // for exactly this, so the protocol can be asserted the way `apps/server` asserts it against its own
@@ -142,8 +142,8 @@ function connected(options: { matchId?: string; token?: string } = {}): Harness 
 
 describe("the handshake", () => {
   it("carries the token and the match in the query string, because a browser cannot set headers", () => {
-    // `apps/server/src/match/wsServer.ts` `tokenFrom` reads `authorization` OR `?token=`, and the
-    // match from `?matchId=`.
+    // `crates/server/src/actor/ws_server.rs` reads the token from `?token=` and the match from
+    // `?matchId=` (SURFACE §11.3).
     const url = socketUrlFor("ws://server.test/ws/match", "tok en", "m-1");
     expect(url).toContain("token=tok+en");
     expect(url).toContain("matchId=m-1");
@@ -192,16 +192,9 @@ describe("server frames", () => {
     expect(h.client.snapshot().legalSource).toBe("view");
   });
 
-  it("accepts a separate `legal` frame", () => {
+  it("a view without a legal field does not blank a list an earlier view set", () => {
     const h = connected();
-    h.socket().deliver({ type: "legal", legal: [{ type: "offerDraw" }] });
-    expect(h.client.snapshot().legal).toEqual([{ type: "offerDraw" }]);
-    expect(h.client.snapshot().legalSource).toBe("frame");
-  });
-
-  it("a view without a legal field does not blank a list a `legal` frame just set", () => {
-    const h = connected();
-    h.socket().deliver({ type: "legal", legal: [{ type: "endTurn" }] });
+    h.socket().deliver({ type: "view", view: baseView(), legal: [{ type: "endTurn" }] });
     h.socket().deliver({ type: "view", view: baseView() });
     expect(h.client.snapshot().legal).toEqual([{ type: "endTurn" }]);
   });

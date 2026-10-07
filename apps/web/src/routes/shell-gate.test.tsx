@@ -17,7 +17,7 @@ import {
   INVITE_CODE_GROUP_SIZE,
   INVITE_CODE_LENGTH,
   INVITE_CODE_SEPARATOR,
-} from "../../../server/src/config.ts";
+} from "@jackioh/server-config";
 import { clearConsumedAuthRedirect } from "../auth/redirect.ts";
 import { inviteTestid, landingTestid, loginTestid, shellTestid } from "../auth/testids.ts";
 import { API_UNREACHABLE_MESSAGE } from "../net/api.ts";

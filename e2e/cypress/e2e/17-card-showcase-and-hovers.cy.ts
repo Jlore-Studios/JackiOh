@@ -95,7 +95,7 @@ const LIVE_DECK_A = "17-live-a";
 const LIVE_DECK_B = "08-do-nothing-b";
 
 /**
- * The catalog's Units and Spells among 01-aggro-a and 01-aggro-b (packages/cards/catalog.json).
+ * The catalog's Units and Spells among 01-aggro-a and 01-aggro-b (crates/cards/catalog.json).
  * Every card in those two decks is choice-free (spec 01), so a play is a hand click plus, for a
  * Unit, a zone click. A Spell resolves into its owner's graveyard; the Field Spells stay out.
  */

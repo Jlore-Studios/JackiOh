@@ -45,7 +45,7 @@ import {
   RATING_WINDOW_UNCAPPED_AFTER_SECONDS,
   SERIES_POLL_SECONDS,
   SERIES_WINS_NEEDED,
-} from "../../../apps/server/src/config.ts";
+} from "../../../apps/web/src/wire/serverConfig.ts";
 import { TOKEN_NAMES, tokenId } from "../../support/cards.ts";
 import { INSTALLED_TRIO_NAME, type InstalledLoadout } from "../../support/commands.ts";
 import {

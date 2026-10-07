@@ -14,7 +14,7 @@
 
 import { Suspense, lazy, useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
-import { GATE_SLOW_NOTICE_SECONDS } from "../../../server/src/config.ts";
+import { GATE_SLOW_NOTICE_SECONDS } from "@jackioh/server-config";
 
 import type { CardDef } from "@jackioh/shared";
 

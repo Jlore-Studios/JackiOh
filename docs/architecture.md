@@ -7,7 +7,7 @@ records the decision (§11 below collects all nine, R104–R112). SPEC is the co
 and SPEC disagree, SPEC wins and this document is the bug.
 
 **Audience.** A developer executing BUILD M6 and M7. Nothing here is a game rule; rules live in SPEC
-§§2–8 and are implemented once, in `packages/engine`.
+§§2–8 and are implemented once, in `crates/engine`.
 
 ---
 
@@ -19,11 +19,11 @@ flowchart TD
   CDN["Static host / CDN"]
   AUTH["Supabase Auth<br/>email + password, verification"]
   PGR["Supabase Data API (PostgREST)<br/>role: authenticated"]
-  API["apps/server HTTP routes<br/>codes, collection, decks, trios, queue, rooms, series, tutorial"]
-  ACT["apps/server match actor<br/>one per live match"]
+  API["jackioh-server HTTP routes<br/>codes, collection, decks, trios, queue, rooms, series, tutorial"]
+  ACT["jackioh-server match actor<br/>one per live match"]
   PG[("Supabase Postgres<br/>20 tables + private app schema")]
-  ENG["packages/engine<br/>reduce / viewFor / fold"]
-  CAT["packages/cards<br/>catalog.json + scripts"]
+  ENG["crates/engine<br/>reduce / view_for / fold"]
+  CAT["crates/cards<br/>catalog.json + scripts"]
 
   CDN -.serves.-> B
   B -->|HTTPS, publishable key + user JWT| AUTH
@@ -36,22 +36,23 @@ flowchart TD
   API --> ENG
   ACT --> ENG
   ENG --> CAT
+  B -.->|"WASM: hotseat, practice"| ENG
 ```
 
 This is SPEC §9.2's topology with each box named. The only departure from the diagram in SPEC is that
-the "API functions" and the "Match actor" are two responsibilities of **one Node process**
-(`apps/server`) rather than two deployment units; §5.3 below explains why, and the split is a
+the "API functions" and the "Match actor" are two responsibilities of **one process**
+(`jackioh-server`, `crates/server`) rather than two deployment units; §5.3 below explains why, and the split is a
 deployment decision that can be made later without touching the code.
 
 | Component | Where it runs | Stateful? | Owns |
 | --- | --- | --- | --- |
-| `apps/web` | Static bundle on any CDN | No | Rendering `viewFor`, composing intent, the bundled catalog |
+| `apps/web` | Static bundle on any CDN | No | Rendering `viewFor`, composing intent, the bundled catalog; hotseat and practice run the engine and the AI there as WebAssembly (`crates/wasm`), with no server |
 | Supabase Auth | Supabase | Managed | Signup, password hashing, email verification, sessions, JWTs |
 | Supabase Postgres | Supabase | Yes (durable) | The 13 tables of BUILD M6 plus `decks`, `trios` and `series` (R250–R263, R330–R341), `tutorial_progress` (R320) and `game_records` (R376), RLS, the private `app` schema |
 | Supabase Data API | Supabase | No | Read-only projections to the browser, RLS-enforced |
-| `apps/server` HTTP routes | One Node process | No | Redemption, collection reads, deck and trio saves and trio imports, enqueue in three modes, room create/join, the Conquest series and its sweeper, the tutorial's account copy (R320) |
-| `apps/server` match actor | The same Node process | **Yes (in memory)** | `GameState`, two WebSockets, the turn clock, the action log |
-| `packages/engine` + `packages/cards` | Imported by both of the above | No (pure) | Every rule, `reduce`, `viewFor`, `fold` |
+| `jackioh-server` HTTP routes | One process (a Docker image on Render) | No | Redemption, collection reads, deck and trio saves and trio imports, enqueue in three modes, room create/join, the Conquest series and its sweeper, the tutorial's account copy (R320) |
+| `jackioh-server` match actor | The same process | **Yes (in memory)** | `GameState`, two WebSockets, the turn clock, the action log |
+| `crates/engine` + `crates/cards` | Linked into both of the above | No (pure) | Every rule, `reduce`, `view_for`, `fold` |
 
 ---
 
@@ -183,9 +184,9 @@ ARCHITECTURE-CCG §2.1 offers three options and this design takes the third:
 
 | Option | Verdict here |
 | --- | --- |
-| Stateful actor per match (Durable Objects) | The reference design. Available if the deployment target becomes Cloudflare; the actor code is written against an interface that allows it (§5.2). |
+| Stateful actor per match (Durable Objects) | The reference design. Available if the deployment target becomes Cloudflare; the actor's clock, store and socket calls would be re-pointed (§5.2). |
 | Stateless functions + external state + scheduler | Rejected: two storage round trips per action, plus a separate scheduled job for every clock. |
-| **Long-running Node process hosting one actor object per live match** | **Taken.** One process, one `Map<matchId, MatchActor>`, `setTimeout` for the clocks, `ws` for the sockets. ARCHITECTURE-CCG: "Simple to reason about, but you're operating a server." |
+| **Long-running process hosting one actor object per live match** | **Taken.** One `jackioh-server` process, a registry of live actors by match id (`crates/server/src/actor/registry.rs`), `tokio::time` for the clocks, axum's WebSocket for the sockets. ARCHITECTURE-CCG: "Simple to reason about, but you're operating a server." |
 
 What "operating a server" costs us, and the mitigation each cost already has in SPEC:
 
@@ -197,8 +198,8 @@ What "operating a server" costs us, and the mitigation each cost already has in 
 
 ### 4.2 The two deployment configs
 
-`vercel.json` (client) and `render.yaml` (server) are the two halves §3's table describes. Neither
-file can hold a comment, and three things in them are not obvious:
+`vercel.json` (client) and `render.yaml` (server) are the two halves §3's table describes. `vercel.json`
+cannot hold a comment, and three things in them are not obvious:
 
 - **The client build emits to a REPO-ROOT `dist`**, not `apps/web/dist`. A build that wrote the
   latter failed with `No Output Directory named "dist" found after the Build completed` — Vercel
@@ -214,16 +215,17 @@ file can hold a comment, and three things in them are not obvious:
   settings in `vercel.json` hold it down. `git.deploymentEnabled` creates no deployment at all for
   the branches machines push to (`bot-state`, `bot/**`, `claude/**`, `copilot/**`, `dependabot/**`,
   `patch/**`, `patches/**`, `polish/**`, `production` and `promote/**`, which
-  `promote-production.yml` moves and opens pull requests from, `wt/**`); main is never listed. `ignoreCommand` runs
+  `promote-production.yml` moves and opens pull requests from, `squishy-state`, `squishy/**`, `wt/**`); main is never listed. `ignoreCommand` runs
   `scripts/vercel-ignore.sh` for everything else: a commit message containing `[vercel]` builds on
   any branch (the flag for a preview); any other branch is cancelled; and main builds unless every
   file changed since the last commit Vercel built (`VERCEL_GIT_PREVIOUS_SHA`, and only when that
-  commit is an ancestor of HEAD) is one the web bundle never reads: `bot/`, `.harness/`, `.github/`,
-  `docs/`, `reviews/`, `e2e/`, `apps/server/`, `scripts/`, `render.yaml`, the root docs, and inside
-  the client and the packages their test files (`*.test.ts(x)`, a package's `test/`,
-  `apps/web/src/test/`), each package's own `scripts/` tooling and READMEs (the bundle imports
-  `packages/*` and nothing else, and none of those; `packages/cards/src/scripts/` is the card
-  scripts and is bundled, so the list names each package's `scripts/` and never a wildcard). Diffing against the last build, not the previous
+  commit is an ancestor of HEAD) is one the web bundle never reads: `bot/`, `.harness/`, `.squishy/`, `.github/`, `docs/`, `reviews/`,
+  `e2e/`, `spec/`, `training/`, `scripts/` (but `scripts/build-wasm.sh`), `crates/server/` and `crates/tools/`
+  (but their manifests, which cargo reads), `render.yaml`, the root docs, a crate's `tests/`, and the
+  client's test files (`*.test.ts(x)`, `apps/web/src/test/`), `apps/web/scripts/` and its README. The
+  bundle is `apps/web` plus the WASM module compiled from `crates/engine`, `crates/cards`, `crates/ai`
+  and `crates/wasm`, and `crates/cards/src/scripts/` holds the card scripts, which are compiled in, so
+  the list never names a crate's `src/`. Diffing against the last build, not the previous
   commit, means a commit whose build was cancelled or failed is never skipped past. Any doubt builds:
   no previous sha, a shallow clone without it, an empty diff, a path off the list. A cancelled build
   still counts against the 100, which is why the machine branches are switched off outright rather
@@ -236,9 +238,18 @@ file can hold a comment, and three things in them are not obvious:
   CI job would take a deploy hook called from `ci.yml` and `deploymentEnabled: { "main": false }`.
   `apps/web/src/net/deploy-routes.test.ts` holds the branch list in place and `vercel-ignore.test.ts`
   the script's decisions, over diffs in a throwaway repo.
-- **`render.yaml` installs with `--prod=false`.** `tsx` is a devDependency of the workspace root
-  and `apps/server`'s start script runs through it, so a production-only install builds a service
-  that cannot boot. Both files set `CYPRESS_INSTALL_BINARY=0`, since neither deploy runs a test.
+- **`render.yaml` builds a Docker image and names no command.** `runtime: docker` builds
+  `crates/server/Dockerfile` with the repository root as its context, because the server crate builds
+  against the engine, cards and AI crates beside it: `rust:1.97-slim-bookworm` stages run `cargo
+  build --release -p jackioh-server` after cargo-chef (pinned) has compiled its dependencies from the
+  workspace's manifests alone, in a layer a change to the sources does not rebuild, and a
+  `debian:bookworm-slim` stage holds the one binary with CA certificates and `tini`. The catalog, the
+  patch history and every migration are compiled into the binary, so nothing at run time needs Node,
+  pnpm or the repository. The image's own command, `jackioh-server release`, migrates, seeds the
+  catalog and serves; `render.yaml` sets no build or start command, and
+  `crates/server/tests/deploy/rehearse.sh` fails if it ever does. On Vercel,
+  `vercel.json`'s install step installs rustup and the `wasm32-unknown-unknown` target before
+  `pnpm install`, because the web build compiles the WASM module.
 
 The SPA rewrite is not boilerplate either: `main.tsx` routes on `window.location.pathname`, so
 `/decks`, `/play` and `/match/<id>` are real URLs a player can open or reload, and without it each
@@ -249,11 +260,11 @@ served `index.html` as JavaScript.
 
 | Clock | Value | Held by | Also stored on `matches` | Why stored |
 | --- | --- | --- | --- | --- |
-| Turn clock | 75 s (`TURN_CLOCK_SECONDS`) | actor `setTimeout` | `turn_deadline_at` | so both clients render it and a rebuild restores it |
-| Prompt clock | 30 s (`PROMPT_CLOCK_SECONDS`) | actor `setTimeout` | `prompt_deadline_at` | a trap prompt held by the non-active player pauses the turn clock (R79) |
-| Mulligan clock | 45 s (`MULLIGAN_CLOCK_SECONDS`) | actor `setTimeout` | `prompt_deadline_at` (the prompt clock never runs at the same time) | both mulligans are open at once (R265), so one deadline covers both seats and both clients render it; on expiry every seat still owing is timed out (R268) |
-| Disconnect grace | 60 s (`DISCONNECT_GRACE_SECONDS`) | actor `setTimeout` | `grace_deadline_at` | SPEC §9.5: "the grace countdown is stored on the match so both clients show it" |
-| Match ceiling | 60 min (`MATCH_CEILING_MINUTES`) | actor + the DB reaper | `ceiling_at` | the reaper must be able to resolve a match whose actor died (§9.5) |
+| Turn clock | 75 s (`TURN_CLOCK_SECONDS`) | actor timer (`tokio::time`) | `turn_deadline_at` | so both clients render it and a rebuild restores it |
+| Prompt clock | 30 s (`PROMPT_CLOCK_SECONDS`) | actor timer (`tokio::time`) | `prompt_deadline_at` | a trap prompt held by the non-active player pauses the turn clock (R79) |
+| Mulligan clock | 45 s (`MULLIGAN_CLOCK_SECONDS`) | actor timer (`tokio::time`) | `prompt_deadline_at` (the prompt clock never runs at the same time) | both mulligans are open at once (R265), so one deadline covers both seats and both clients render it; on expiry every seat still owing is timed out (R268) |
+| Disconnect grace | 60 s (`DISCONNECT_GRACE_SECONDS`) | actor timer (`tokio::time`) | `grace_deadline_at` | SPEC §9.5: "the grace countdown is stored on the match so both clients show it" |
+| Match ceiling | 120 min (`MATCH_CEILING_MINUTES`) | actor + the DB reaper | `ceiling_at` | the reaper must be able to resolve a match whose actor died (§9.5) |
 
 Expiry never mutates state directly. It submits an action — `timeout`, `disconnectExpired`,
 `ceilingReached` — through the same `reduce` as a player's click (R79, BUILD M7-T2); the mulligan
@@ -265,11 +276,12 @@ knows what time it is.
 ## 5. How the actor calls the pure engine
 
 SPEC §9.3: "`reduce(state, action, rng)` is pure: no I/O, no clock reads, no framework. Timestamps
-arrive as action data." The engine's public surface is already what the actor needs:
+arrive as action data." The engine's public surface is already what the actor needs, and
+`crates/server/src/actor/engine.rs` is the one module that calls it:
 
-```ts
-import { createGame, beginGame, reduce, legalActions, viewFor, fold, hashState } from "@jackioh/engine";
-import { catalog } from "@jackioh/cards";
+```rust
+use jackioh_engine::{begin_game, create_game, fold, hash_state, legal_actions, reduce, view_for};
+jackioh_cards::register_all(); // the catalog and every card script, once per process
 ```
 
 ### 5.1 The loop
@@ -288,17 +300,17 @@ on action frame:
    5. if error -> ack { ok: false, reason: error }; log the rejection with its reason (SPEC §9.8)
    6. append the action to match_actions via app.append_match_action  (SPEC §9.3)
    7. push viewFor(state, 'p1') to p1 and viewFor(state, 'p2') to p2  (SPEC §10.8)
-   8. reset the clocks from the new state; if state.result -> deps.recordResult
-      (src/api/results.ts) and close
+   8. reset the clocks from the new state; if the game is over -> api::results::record_result
+      (crates/server/src/api/results.rs) and close
 ```
 
 Notes that matter:
 
 - **Step 3 is the whole trust model in one line.** The seat comes from the verified token. An action
   claiming `playerId: "p2"` on p1's socket is rejected before it reaches `reduce`.
-- **Step 4 does not need `rng` passed in.** Randomness is `(state.seed, state.rngCursor)`, advanced
-  inside the reducer (SPEC §10.7), so the actor never sources entropy. `Math.random` is banned by
-  lint in `packages/engine` and `packages/cards`.
+- **Step 4 does not need `rng` passed in.** Randomness is `(state.seed, state.rng_cursor)`, advanced
+  inside the reducer (SPEC §10.7), so the actor never sources entropy. The pure crates cannot reach
+  OS randomness or a clock at all (CLAUDE.md rule 4: their dependency lists and `clippy.toml`).
 - **Step 6 appends after `reduce` succeeds.** The log is a log of *resolved* actions (SPEC §9.3:
   "Append-only action log per match"), so a fold of it never has to skip rejects.
 - **Step 7 pushes two different objects.** `viewFor` is the filter; there is no "full state" frame and
@@ -319,21 +331,21 @@ Notes that matter:
 | One socket drops | start the grace timer, write `grace_deadline_at`, push the countdown to the other player; **the clock keeps running** (SPEC §9.5) |
 | Reconnect inside grace | fresh `viewFor`, never a replay (SPEC §9.5); cancel the grace timer |
 | Grace expires | submit `disconnectExpired` → a loss (R79) |
-| Terminal state | `recordResult` (`src/api/results.ts`) writes one `results` row, applies the rating move when the match is ranked (R604), clears both `profiles.current_match_id` and any queued ticket — all in one transaction — then the actor is dropped from the map |
-| Process boot | nothing: no actor is rebuilt until a socket for its match arrives, when `registry.ts` folds `(seed, decks, log)`; the rebuilt clock restarts the turn clock from full and keeps the ceiling from `started_at` |
+| Terminal state | `api::results::record_result` (`crates/server/src/api/results.rs`) writes one `results` row, applies the rating move when the match is ranked (R604), clears both `profiles.current_match_id` and any queued ticket — all in one transaction — then the actor is dropped from the map |
+| Process boot | nothing: no actor is rebuilt until a socket for its match arrives, when `actor/registry.rs` folds `(seed, decks, log)`; the rebuilt clock restarts the turn clock from full and keeps the ceiling from `started_at` |
 | First socket on an actor while the other seat has never attached to it (a restart, a no-show) | start that seat's grace at its stored `grace_deadline_at` if the restart left one (never later than a fresh window, at once if already past), else a fresh 60 s; it expires as a loss like any other. A match no socket returns to is the reaper's ceiling draw (R112, R744) |
-| Idle | The Node process has no hibernation; an actor with no sockets and an expired grace has already ended. On Durable Objects this row would read "hibernate". |
+| Idle | The process has no hibernation; an actor with no sockets and an expired grace has already ended. On Durable Objects this row would read "hibernate". |
 
-The actor is written against a small interface — `now()`, `setAlarm()`, `appendAction()`,
-`send(seat, frame)` — so the Durable Object port is a different implementation of four methods rather
-than a rewrite.
+The actor reaches the world in four places only: the clock (`tokio::time`), its timers, the store's
+`matches_append_actions`, and its two sockets. A Durable Object port would replace those four, not the
+actor's logic.
 
 ### 5.3 Why the API routes share the process
 
 They do not have to. They are stateless and could be Edge Functions. They share the process because:
 
-- They import `@jackioh/validator` and `@jackioh/engine`, which are TypeScript workspace packages;
-  one Node process resolves them the way the rest of the repo does, with no bundling step.
+- They call `jackioh_engine::validator` and the engine, crates of the same workspace that one binary
+  links, so the server and the actor always run the same rules.
 - A deck's capped upsert, the redemption transaction, the ticket claim and a series' compare-and-set
   need multi-statement transactions over `DATABASE_URL`, which is a server-only credential either way.
 - Matchmaking's opportunistic pairing on enqueue (SPEC §9.5) wants to hand the paired match straight
@@ -354,7 +366,7 @@ its own, written by compare-and-set on `version`, and each player's sealed pick 
 in it before the pick is acknowledged (R331). Each of its games is an ordinary match with its own
 `(seed, log)`, started only once both decks are picked (R338); the series records which match each
 game was and which decks have won, and a game's result and the series' record of it commit in one
-transaction (`src/api/results.ts`). A sweeper runs the pick clock and starts a game whose picks are
+transaction (`crates/server/src/api/results.rs`). A sweeper runs the pick clock and starts a game whose picks are
 in but whose match a restart left unstarted. Conquest reads which decks have won off the games the
 row already recorded, so it needed no migration (R330, R337).
 
@@ -364,13 +376,13 @@ What this buys, in the order it will be needed:
    its log back and re-arms its clocks, starting the grace of a seat that has not come back (R744).
    No snapshots to keep consistent, no half-written state. BUILD M6-T4's acceptance is exactly this:
    "killing the actor mid-game and reconnecting yields the same `viewFor` for both players."
-2. **Determinism as a test oracle.** `hashState(fold(seed, decks, log))` computed twice must match.
-   BUILD's e2e `01` compares the final hash from a browser game against a vitest replay of the
-   recorded actions; the fuzz gate folds 1,000 seeded games twice and compares.
+2. **Determinism as a test oracle.** `hash_state(fold(seed, decks, log))` computed twice must match.
+   BUILD's e2e `01` compares the final hash from a browser game against `jackioh replay`'s fold of the
+   recorded actions; the fuzz gate folds every seeded game back and compares.
 3. **Dispute resolution and balance telemetry.** ARCHITECTURE-CCG §2.2. A finished match's log is
    purged after `MATCH_ACTION_RETENTION_DAYS` (migration 0013), so card win rates are not derived
    from it later: once a match's result is in, the server folds the log one more time through the
-   engine's `summarizeGame` and keeps what the card statistics need as a `game_records` row
+   engine's `summarize_game` and keeps what the card statistics need as a `game_records` row
    (SPEC §9.11, R376). The fold is the instrumentation; nothing is added to the state or the log.
 4. **Replays later for free.** Out of scope (SPEC §9.6) but already paid for.
 
@@ -405,11 +417,11 @@ at save and queue."
 
 | Copy | Lives in | Used for |
 | --- | --- | --- |
-| `packages/cards/catalog.json` | the repo, bundled into `apps/web` | every card name, cost, stat and rules text the client renders |
-| `packages/cards/src/scripts/*` | imported by the engine, server-side only | what cards actually do |
+| `crates/cards/catalog.json` | the repo, bundled into `apps/web` and compiled into the server and the WASM module | every card name, cost, stat and rules text the client renders |
+| `crates/cards/src/scripts/*` | compiled into the engine wherever it runs: the server, and the browser's WASM module for hotseat and practice | what cards actually do |
 | `public.cards` | Postgres | referential integrity for `collection`, and the server-side L6 check ("exists in the current catalog version and is not banned") |
 
-`public.cards` is a projection, loaded by `pnpm --filter @jackioh/server db:seed-catalog`, which stamps
+`public.cards` is a projection, loaded by `jackioh-server seed-catalog`, which stamps
 `catalog_version` on every row and writes the same value to `app.settings`. It is not a source of
 truth for rules: the deck builder is fast because a collection read is a short list of
 `(card_id, quantity)` and the card data is already in the bundle.
@@ -432,10 +444,12 @@ public by construction; anything without that prefix must never appear in a clie
 | --- | --- | --- |
 | `VITE_SUPABASE_URL` | `https://<ref>.supabase.co` | Dashboard → Project Settings → Data API → Project URL |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_…` | Dashboard → Project Settings → API Keys → Publishable key |
-| `VITE_SERVER_HTTP_URL` | `https://api.example.com` | wherever `apps/server` is deployed |
+| `VITE_SERVER_HTTP_URL` | `https://api.example.com` | wherever `jackioh-server` is deployed |
 | `VITE_SERVER_WS_URL` | `wss://api.example.com/ws` | same host, WebSocket path |
-| `VITE_CATALOG_VERSION` | e.g. `core-1` | must equal the server's `CATALOG_VERSION` |
 | `VITE_AUTH_OAUTH_PROVIDERS` | optional, e.g. `google,github` | R666: the OAuth providers the sign-in screen offers, by Supabase's names (apple, azure, discord, facebook, github, gitlab, google, twitch). Names only; unset offers none. Set it only once each named provider is enabled in the dashboard (§10, step 2) |
+
+The client's catalog version is not a variable: the bundle reads it from
+`crates/cards/patches/patches.json` when it is built, as the server compiles it in.
 
 A publishable key is safe in a browser **because RLS is the access control**, not because the key is
 secret. It maps to the `anon` role before login and `authenticated` after, and §3.2's matrix is the
@@ -454,21 +468,25 @@ whole of what it can reach. Legacy `anon` JWT keys still work and are compatibil
 | `PORT` | no (8787) | listen port | — |
 | `PUBLIC_ORIGINS` | yes | comma-separated allowed origins for CORS and the WebSocket `Origin` check | your web host |
 | `NODE_ENV` | no (`development`) | `development \| test \| production` | — |
-| `CATALOG_VERSION` | yes | the catalog version this server accepts (§9.4) | must match what `db:seed-catalog` stamped. On Render the start command sets it at every boot from the newest entry of `packages/cards/patches/patches.json` (`scripts/catalog-version.mjs`), so a value in the dashboard is overwritten and a patch needs no dashboard edit; set it yourself only for a local server |
+| `CATALOG_VERSION` | yes | the catalog version this server accepts (§9.4) | must equal the version compiled into the binary, the newest entry of `crates/cards/patches/patches.json` (`cargo jackioh catalog-version` prints it), or the server refuses to boot; `release` stamps the same version on `public.cards`. `render.yaml` carries it and `patches ship` bumps it there, so a stale dashboard value stops a deploy instead of being served |
 | `E2E` | no (`0`) | BUILD M8's test-server mode; refused when `NODE_ENV=production` | — |
 | `TRUSTED_PROXY_HOPS` | no (`0`) | R190: how many `X-Forwarded-For` entries, counted from the right, this deployment's own proxies write. The per-IP limits (§9.4 step 3, R157) key on that entry and ignore everything the caller wrote to its left; `CF-Connecting-IP` and `X-Real-IP` are never read. `0` to `5`; `0` (the default) ignores the header and keys on the socket's peer address, which is right with no proxy in front | `render.yaml` starts it at `1`, which can only over-group; set it to the count your own request shows in the `api.forwarded_for` log (§10, step 8); leave unset for a local server |
 | `RENDER_GIT_COMMIT` | no | the git commit this deploy was built from; Render sets it on every deploy and it is unset anywhere else. `GET /api/catalog` reports it in the `x-deployed-commit` response header (the body is untouched, R163), and `deploy-watch.yml` compares it with each push to `main`, so a Render that stopped receiving pushes is seen even when the catalog version did not change. Only a hex SHA is kept | set by Render; leave unset for a local server |
 
-`apps/server/src/env.ts` loads these, reports **every** missing or malformed variable in one error
-naming where to get each, and never logs a secret value — not even truncated. It exports
-`PUBLIC_ENV_VARS` and `SERVER_ONLY_ENV_VARS` so a test can assert the halves never cross. Template:
-`apps/server/.env.example`.
+`crates/server/src/env.rs` loads these from the process environment (the binary reads no `.env`
+file), reports **every** missing or malformed variable in one error naming where to get each, and
+never logs a secret value — not even truncated. It exports `PUBLIC_ENV_VARS` and
+`SERVER_ONLY_ENV_VARS` so a test can assert the halves never cross. Template:
+`crates/server/.env.example`. Under `E2E=1` the Supabase, database, pepper, origin and catalog
+variables fall back to fixture placeholders, so `E2E=1 jackioh-server` boots with nothing else set.
+Nothing in the image needs Node: `NODE_ENV` keeps its name only because the server still reads it,
+to refuse `E2E` in production.
 
 Two things that are **not** env vars, deliberately:
 
 - **R79's lifecycle values and §9.12's ranked numbers** — turn clock, prompt clock, grace,
   ceiling, room-code length, the Glicko-2 start and the ladder's tier and season constants
-  (R603–R609). They are gameplay, so they are named exports in `apps/server/src/config.ts` and
+  (R603–R609). They are gameplay, so they are named constants in `crates/server/src/config.rs` and
   change only with a code change and a review. BUILD §2 requires exactly that.
 - **The code pepper in Postgres.** Hashing happens in the server, so the pepper never reaches the
   database and `invite_codes` only ever holds `code_hash`. A database dump therefore does not yield a
@@ -488,8 +506,8 @@ The same four SQL files, the same server, two connection strings.
 | Studio | `http://127.0.0.1:54323` | the dashboard |
 | Outgoing email | captured locally at `http://127.0.0.1:54324`, nothing is actually sent | your SMTP provider; configure it before inviting anyone, because §9.4 requires a verified email before redemption |
 | Keys | printed by `supabase start` | Project Settings → API Keys |
-| `apps/server` | `pnpm --filter @jackioh/server dev` | the same process, behind TLS |
-| `apps/web` | `pnpm --filter @jackioh/web dev` (Vite, :5173) | static bundle on a CDN |
+| `jackioh-server` | `cargo run --release -p jackioh-server`, with the environment exported | the Docker image on Render, behind TLS |
+| `apps/web` | `pnpm --dir apps/web dev` (Vite, :5173) | static bundle on a CDN |
 
 Notes:
 
@@ -498,32 +516,32 @@ Notes:
   out. Locally, click the link in the captured mail UI. `[auth.email] enable_confirmations` in
   `supabase/config.toml` controls it; leave it **on**, because turning it off locally makes the gate's
   step 1 untestable.
-- **Connection modes.** `db:migrate` takes its advisory lock with `pg_advisory_xact_lock` inside
+- **Connection modes.** `migrate` takes its advisory lock with `pg_advisory_xact_lock` inside
   each migration's transaction, never as a session lock, so it runs over either a **session-mode**
   connection (the direct `:5432` URI, or Supavisor's session port) or a transaction-mode pooler.
-  That matters because Render's start command runs `release` (`db:migrate`, then `db:seed-catalog`)
-  before every boot over the server's own `DATABASE_URL` (`render.yaml`), and a session lock taken
+  That matters because the image's `release` (migrate, then seed the catalog) runs before every
+  boot on Render over the server's own `DATABASE_URL`, and a session lock taken
   through a transaction-mode pooler stays held on a pooled backend, where the next deploy's runner
   could wait on it forever. The runtime server is fine on either; transaction-mode pooling is the
   cheaper default for it.
 - **Migrations run as a role that is not a superuser.** On Supabase the role `DATABASE_URL`
   names is not a superuser, so a migration must not need one: no `set` clause on a function for a
   custom parameter (Postgres 15+ refuses it; set it with `set_config()` in the body, as 0013 does),
-  no `alter system`, no extension only a superuser may create. `pnpm test:deploy` applies every
-  migration as such a role; `test:sql` and `test:db` migrate as a superuser and cannot tell.
+  no `alter system`, no extension only a superuser may create. `crates/server/tests/deploy/rehearse.sh`
+  applies every migration as such a role; the sql and db suites migrate as a superuser and cannot tell.
 - **Deploys bring the database along.** Steps 4 and 6 of the checklist below run on every Render
   boot, so a deploy that ships new migrations or a new card patch applies them and reseeds at its
   `CATALOG_VERSION` before the server listens. Both are idempotent, and a failure keeps the new
   instance from passing its health check, so the previous deploy keeps serving. A deploy that bumps
   the game's **minor** version also opens a new ranked season (R609): the first boot opens it and
   runs the soft reset itself, so the operator's part is only the rehearsal —
-  `db:season-start -- --dry-run` against a copy of the live data beforehand, which prints the
-  report and rolls back (apps/server's README has the command).
+  `jackioh-server season-start --dry-run` against a copy of the live data beforehand, which prints
+  the report and rolls back (`crates/server/README.md`).
 - **Exposed schemas.** Confirm `app` is not in the Data API's exposed schema list — `[api] schemas`
   in `supabase/config.toml` locally, Project Settings → Data API in the dashboard. The default
   (`public`, `graphql_public`) is correct. If `app` is ever exposed, every `SECURITY DEFINER` function
   in it becomes an HTTP endpoint.
-- **Supabase CLI users.** The canonical SQL is at `apps/server/src/db/migrations/` per BUILD §1. The
+- **Supabase CLI users.** The canonical SQL is at `crates/server/migrations/` per BUILD §1. The
   CLI only reads `supabase/migrations/<timestamp>_<name>.sql`, so if you want `supabase db push` and
   `supabase db reset`, add `supabase/migrations/` entries that are symlinks or `\i` includes pointing
   at the canonical files, and keep the ordering identical. The bring-up checklist below uses the
@@ -580,13 +598,13 @@ step that is not yet implemented says which BUILD task delivers it.
      same address, then try the password. If the password still signs in, Supabase kept an
      unconfirmed account's password through linking (a pre-account takeover); do not enable
      providers until that is resolved.
-3. **Fill the server environment.** `cp apps/server/.env.example apps/server/.env` and set
+3. **Fill the server environment.** `cp crates/server/.env.example crates/server/.env` and set
    `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `DATABASE_URL`, `CODE_PEPPER` (`openssl rand -base64 48`),
-   `PUBLIC_ORIGINS` and `CATALOG_VERSION`. Then `pnpm install`. Every `@jackioh/server` script runs
-   under `--env-file-if-exists=.env`, so this file is read without a dotenv dependency; a variable
-   set in the shell still overrides it, and a missing file is a warning rather than an error.
-4. **Apply the migrations.** `pnpm --filter @jackioh/server db:migrate`, which applies every file in
-   `apps/server/src/db/migrations/` in order — `0001_profiles_and_invites.sql` → `0002_collection.sql`
+   `PUBLIC_ORIGINS` and `CATALOG_VERSION` (`cargo jackioh catalog-version`). The binary reads only its
+   environment, so export the file into the shell that runs it: `set -a; . crates/server/.env; set +a`.
+   Then `cargo build --release -p jackioh-server`; the steps below run `target/release/jackioh-server`.
+4. **Apply the migrations.** `target/release/jackioh-server migrate`, which applies every file in
+   `crates/server/migrations/` (compiled into the binary) in order — `0001_profiles_and_invites.sql` → `0002_collection.sql`
    → `0003_loadouts.sql` → `0004_matches.sql` → `0005` → `0006` → `0007_decks_and_trios.sql` →
    `0008_queue_modes.sql` → `0009_series.sql` → `0010_jlockeed_tag.sql` →
    `0011_tutorial_progress.sql` → `0012_account_deletion.sql` → `0013_retention_purge.sql` →
@@ -598,13 +616,13 @@ step that is not yet implemented says which BUILD task delivers it.
    result: 25 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
-   loadout tables where they are. 0010 only widens the `cards` tag check, so `db:seed-catalog` can
+   loadout tables where they are. 0010 only widens the `cards` tag check, so `seed-catalog` can
    write #13 and #14's Jlockeed tag (R278). 0011 adds `tutorial_progress` and its one write path,
    `app.merge_tutorial_progress` (R320); it needs nothing else from the bring-up. 0014 adds
-   the server-only `game_records` (R376); `stats:cards` reads it and
-   `stats:import` loads an AI development run into it (R377, R378). Patch v0.2.0 adds three: 0015
+   the server-only `game_records` (R376); `stats-cards` reads it and
+   `stats-import` loads an AI development run into it (R377, R378). Patch v0.2.0 adds three: 0015
    widens the `cards` tag check with Book, Pancake and AI (B2.4); 0016 grants every active account
-   the cards a new catalog version adds when `db:seed-catalog` stamps it (R481); and 0017 adds the
+   the cards a new catalog version adds when `seed-catalog` stamps it (R481); and 0017 adds the
    server-only `last_boards` and each match's starting boards for C+ #29 Portal to the Past (R417,
    R565). 0018 adds `player_settings` and its one write path, `app.merge_player_settings` (R633,
    R634), which keeps a player's game settings on the account; like 0011 it needs nothing else from
@@ -618,7 +636,7 @@ step that is not yet implemented says which BUILD task delivers it.
    every row a database filed under the card patches' old names to their new ones (R743); on a new
    project it changes nothing. 0026 only widens the `cards` tag check again, with patch v0.2.Y's
    Catalyst, Prime and Acclaimed, as 0020 did with Plague.
-5. **Verify the invariants before trusting anything.** `sh apps/server/test/sql/run.sh` runs all of
+5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL
    editor:
@@ -626,22 +644,21 @@ step that is not yet implemented says which BUILD task delivers it.
    - `select count(*) from public.decks;` → three per loadout that existed before 0007 (R254).
    - `insert into public.collection …` as an `authenticated` user → must be refused. There is no
      policy, so there is no path (§9.4).
-6. **Seed the catalog.** `pnpm --filter @jackioh/server db:seed-catalog`. Requires
-   `packages/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 318
+6. **Seed the catalog.** `target/release/jackioh-server seed-catalog`. It writes the catalog compiled
+   into the binary, `crates/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 318
    (268 cards + 50 tokens over Core, Classic and Classic+, patch v0.2.0 and Glitch, issue #170) and
    `select app.catalog_version();` → your `CATALOG_VERSION`, the latest card patch's version (R388).
-7. **Mint an invite code.** `pnpm --filter @jackioh/server codes:mint`. It generates 16 characters
+7. **Mint an invite code.** `target/release/jackioh-server mint-code`. It generates 16 characters
    from `CODE_ALPHABET`, formats them `XXXX-XXXX-XXXX-XXXX`, HMACs with `CODE_PEPPER` and inserts
    only the hash (§9.4). The plaintext goes to stdout **once** — the database cannot give it back —
-   and the metadata to stderr, so `codes:mint > code.txt` captures the code alone. `--max-uses=N`
+   and the metadata to stderr, so `jackioh-server mint-code > code.txt` captures the code alone. `--max-uses=N`
    (default 1, R161) and `--expires-in-days=N` (default never) are the options; for two accounts on
    one code, `--max-uses=2`. Check `select count(*) from public.invite_codes;` → 1.
-   `src/db/mint-code.ts` validates the whole environment through `loadEnv()` rather than the two
-   variables it reads, because a `CODE_PEPPER` that differs from the server's mints a well-formed
+   `mint-code` (`crates/server/src/cli/mint_code.rs`) validates the whole environment through
+   `load_env` rather than the two variables it reads, because a `CODE_PEPPER` that differs from the server's mints a well-formed
    code that nobody can ever redeem.
-8. **Start the server and the client.** `pnpm --filter @jackioh/server dev` and
-   `pnpm --filter @jackioh/web dev`. The server must print its resolved config and refuse to start
-   with a missing env var.
+8. **Start the server and the client.** `target/release/jackioh-server` and
+   `pnpm --dir apps/web dev`. The server must refuse to start with a missing env var, naming it.
    Behind a proxy (Render), calibrate `TRUSTED_PROXY_HOPS` (R190) from the `api.forwarded_for` log
    lines. The server logs one each time a request carries fewer `X-Forwarded-For` entries than any
    before it (`fewestEntries`, next to the configured `trustedProxyHops`, and never an address). A
@@ -666,7 +683,7 @@ step that is not yet implemented says which BUILD task delivers it.
     three failure kinds — missing, expired, exhausted — return the identical message.
 11. **Build a deck on each** in `/decks` (R250). It saves as you go, whether or not it is finished;
     `/play` shows whether it can be queued and, if not, the validator's reason, naming the deck and
-    the card. `db:seed-accounts` gives its accounts three starter decks and a trio instead.
+    the card. `jackioh-server seed-accounts` gives its accounts three starter decks and a trio instead.
 12. **Create a room** (BUILD M6-T4). `POST /api/rooms { mode: "bo1", deckId }` → a 6-character code
     from `CODE_ALPHABET` (R79). A `matches` row appears at `status = 'open'` with p1's frozen deck.
 13. **Join it from the second browser.** `POST /api/rooms/:code/join { mode: "bo1", deckId }` claims
@@ -687,7 +704,7 @@ step that is not yet implemented says which BUILD task delivers it.
 ## 11. Decisions this document made that SPEC §9 does not state
 
 All nine are now rulings in SPEC §11, **R104 to R112**. Each is cited by number at the point in the
-source that implements it (`SPEC §11 Rnnn` in the SQL and in `config.ts`), so the comment is the
+source that implements it (`SPEC §11 Rnnn` in the SQL and in `config.rs`), so the comment is the
 cross-reference between the code and the table. A choice that is local robustness rather than a rule —
 an input-shape check, a `max_uses >= 1` constraint, a nullable `display_name` — is marked "no R-row"
 instead, so an unnumbered marker never reads as an unrecorded gap.
@@ -702,14 +719,14 @@ instead, so an unnumbered marker never reads as an unrecorded gap.
 | R109 | Rate limits for action flooding | Per-match actions per second and per-account API requests per minute. SPEC §9.8 requires both limits and names no numbers. |
 | R110 | Room-code reuse | A room code is unique among matches that are not `over`, so codes are reusable once a match ends. SPEC says codes are 6 characters and nothing about their lifetime. |
 | R111 | Launch grant quantity | One copy of every non-token card, which with `MAX_COPIES = 1` and 3 decks of 20 is exactly enough for a legal loadout, and keeps the ledger shape scarcity will need later. Granted by a trigger on the `pending → active` transition, idempotent by skipping cards that already carry a `launch` grant. |
-| R112 | A match the reaper resolves, not the actor | `reapStuckMatches` (`src/api/results.ts`) finishes a stuck match itself rather than flagging it for a server that may be the crashed component. The consequence: a ceiling draw resolved by the reaper records `turns = 0` (the turn counter lives only in the actor's in-memory `GameState`) and leaves both ratings unchanged, where a draw resolved by a live actor applies the real rating update. SPEC §9.5 requires the reaper and says nothing about either value. |
+| R112 | A match the reaper resolves, not the actor | `reap_stuck_matches` (`crates/server/src/api/results.rs`) finishes a stuck match itself rather than flagging it for a server that may be the crashed component. The consequence: a ceiling draw resolved by the reaper records `turns = 0` (the turn counter lives only in the actor's in-memory `GameState`) and leaves both ratings unchanged, where a draw resolved by a live actor applies the real rating update. SPEC §9.5 requires the reaper and says nothing about either value. |
 
 ---
 
 ## 12. Verifying the schema
 
-The migrations are not taken on faith. `sh apps/server/test/sql/run.sh` needs nothing but Docker:
-it starts a throwaway Postgres, applies `apps/server/test/sql/00_supabase_stub.sql` (stand-ins for the
+The migrations are not taken on faith. `sh crates/server/tests/sql/run.sh` needs nothing but Docker:
+it starts a throwaway Postgres, applies `crates/server/tests/sql/00_supabase_stub.sql` (stand-ins for the
 Supabase-managed pieces the migrations reference — the `anon`, `authenticated` and `service_role`
 roles, `auth.users` and `auth.uid()`; a real project supplies all of it), applies 0001–0006, saves a
 loadout the old way (`03b_legacy_loadout_seed.sql`), applies 0007–0018 over it, and then asserts:
@@ -726,7 +743,7 @@ loadout the old way (`03b_legacy_loadout_seed.sql`), applies 0007–0018 over it
 | `10_last_boards.sql` | `last_boards` holds one board per profile and kind, replaced by the server and gone with its profile, refusing an unknown kind or a malformed entry; a match keeps the boards it started with whatever the profiles' rows do later; and no client role may read or write a last board (R417, R565). |
 
 Each SPEC §11 row this schema implements is proved under a `### Rnnn: … ###` heading, which is how
-REVIEW's B4 check and the §11 index find a row's evidence. **That heading form is the signal; a bare
+`cargo jackioh spec check` credits an SQL file a ruling note lists in its `proven_in` (REVIEW B4). **That heading form is the signal; a bare
 mention in prose is not.** The database-provable rows:
 
 | Row | Heading | What it asserts |
@@ -743,11 +760,11 @@ mention in prose is not.** The database-provable rows:
 | R257 | `04` | A ticket carries its mode, and exactly a Best-of-3 ticket carries a trio. |
 | R263 | `04` | A series is a server-only row, written by compare-and-set, found by its next match and by any game. |
 | R264 | `04` | A room keeps its mode, and exactly a Best-of-3 room keeps a trio. |
-| R278 | `01` CHECK 18 | `cards_tags_check` admits every catalog tag, Jlockeed included, and refuses an unknown one, so `db:seed-catalog` can write #13 and #14. |
+| R278 | `01` CHECK 18 | `cards_tags_check` admits every catalog tag, Jlockeed included, and refuses an unknown one, so `seed-catalog` can write #13 and #14. |
 | R320 | `02`, `05` | A client reads only its own `tutorial_progress` row and writes none of it; `app.merge_tutorial_progress` only grows a row: the union of the lessons, the strictly newer choice, and the cap. |
 | R376 | `08` | One record per game, its filter columns always equal to the record's own. |
 
-**R107**, **R108** and **R109** are `config.ts` values with no database behaviour to assert, so they
+**R107**, **R108** and **R109** are `config.rs` values with no database behaviour to assert, so they
 get no heading; they are proved at the server level by BUILD M6-T1 (the 5 ms timing test), M7-T1 and
 M7-T3. Those three ids appear in `03`'s header comment as explicit exclusions, so an id search that
 keys on any occurrence rather than on the heading form would misread them as proved.
@@ -765,48 +782,61 @@ not expose `app`, and `02_rls_as_client.sql` asserts that the privileged functio
 
 ## 13. File map
 
-Files this milestone owns. "M6-T*/M7-T*" marks what is designed here and delivered by that task.
+Files this milestone owns, as the Rust server lays them out since v0.3.0. "M6-T*/M7-T*" marks what is
+designed here and delivered by that task; `crates/server/README.md` has the module contract.
 
 ```
-apps/server/
-  package.json                     deps and scripts
-  tsconfig.json                    types: ["node"] — the server is the impure half
-  vitest.config.ts                 the "server" vitest project
+crates/server/
+  Cargo.toml                       the server's dependencies (axum, tokio, sqlx, …) and the engine crates
+  Dockerfile                       the image render.yaml builds: the one binary, CA certificates, tini
   .env.example                     the server-only half of §8
+  migrations/
+    0001_profiles_and_invites.sql   app schema, profiles, invite_codes, code_attempts,
+                                    app.redeem_invite_code (the six steps of §9.4)
+    0002_collection.sql             cards, collection, collection_grants, app.grant_cards,
+                                    the launch grant on activation
+    0003_loadouts.sql               loadouts, loadout_decks, loadout_deck_cards,
+                                    loadout_card_unique (L4), app.save_loadout
+    0004_matches.sql                tickets, matches, match_actions, results,
+                                    app.join_room, app.claim_ticket_pair, app.end_match
+    0005_service_role_reads_auth_users.sql, 0006_redeem_ip_lock.sql
+    0007_decks_and_trios.sql        decks, trios, app.upsert_deck, app.upsert_trio, and every
+                                    loadout turned into three decks and a trio (R250–R254)
+    0008_queue_modes.sql            tickets.mode and frozen_trio, matches.room_mode and room_trio (R257, R264)
+    0009_series.sql                 series: the Best-of-3 row, server-only (R259–R263)
+    0010_jlockeed_tag.sql           cards_tags_check re-added with the Jlockeed tag (R278)
+    0011_tutorial_progress.sql      tutorial_progress, app.merge_tutorial_progress (R320)
+    0014_game_records.sql           game_records: the card statistics (R376)
+    0015_classic_sets_tags.sql      cards_tags_check re-added with Book, Pancake and AI (patch v0.2.0)
+    0016_catalog_growth_grants.sql  a new catalog version grants its new cards (R481)
+    0017_last_boards.sql            last_boards, matches.p1_last_board / p2_last_board (R417, R565)
+    0018_player_settings.sql        player_settings, app.merge_player_settings (R633, R634)
+    …                               through 0026, each listed in §10 step 4
   src/
-    config.ts                      R79's values and the code alphabet, as named exports (BUILD §2)
-    env.ts                         typed loader, fails fast naming every missing variable
+    main.rs                        the binary: serve (default), release, migrate, seed-catalog, mint-code,
+                                   seed-accounts, season-start, stats-cards, stats-import
+    app.rs                         the route table, boot, the background loops
+    config.rs                      R79's values and the code alphabet, as named constants (BUILD §2)
+    env.rs                         the environment, refusing to boot naming every missing variable
+    auth.rs                        JWKS verification (Supabase) and E2E mode's fixture auth   M6-T1
+    api/                           codes, collection, decks, game_records, queue, results, series,
+                                   series_rules, settings, tutorial, …: one handler per route
+    actor/                         match_actor.rs, protocol.rs, clock.rs, registry.rs, rooms.rs,
+                                   ws_server.rs, engine.rs (the one path to the engine)   M6-T4, M7-T1
     db/
-      migrate.ts                   applies migrations/*.sql in order, ledger in app.migrations
-      seed-catalog.ts              packages/cards/catalog.json -> public.cards
-      mint-code.ts                 `codes:mint`: one invite code, plaintext to stdout once
-      card-stats.ts                `stats:cards`: card win rates off game_records (R377, R378)
-      import-dev-records.ts        `stats:import`: an AI development run's records -> game_records (R378)
-      migrations/
-        0001_profiles_and_invites.sql   app schema, profiles, invite_codes, code_attempts,
-                                        app.redeem_invite_code (the six steps of §9.4)
-        0002_collection.sql             cards, collection, collection_grants, app.grant_cards,
-                                        the launch grant on activation
-        0003_loadouts.sql               loadouts, loadout_decks, loadout_deck_cards,
-                                        loadout_card_unique (L4), app.save_loadout
-        0004_matches.sql                tickets, matches, match_actions, results,
-                                        app.join_room, app.claim_ticket_pair, app.end_match
-        0005_service_role_reads_auth_users.sql, 0006_redeem_ip_lock.sql
-        0007_decks_and_trios.sql        decks, trios, app.upsert_deck, app.upsert_trio, and every
-                                        loadout turned into three decks and a trio (R250–R254)
-        0008_queue_modes.sql            tickets.mode and frozen_trio, matches.room_mode and room_trio (R257, R264)
-        0009_series.sql                 series: the Best-of-3 row, server-only (R259–R263)
-        0010_jlockeed_tag.sql           cards_tags_check re-added with the Jlockeed tag (R278)
-        0011_tutorial_progress.sql      tutorial_progress, app.merge_tutorial_progress (R320)
-        0014_game_records.sql           game_records: the card statistics (R376)
-        0015_classic_sets_tags.sql      cards_tags_check re-added with Book, Pancake and AI (patch v0.2.0)
-        0016_catalog_growth_grants.sql  a new catalog version grants its new cards (R481)
-        0017_last_boards.sql            last_boards, matches.p1_last_board / p2_last_board (R417, R565)
-        0018_player_settings.sql        player_settings, app.merge_player_settings (R633, R634)
-    api/       codes.ts collection.ts decks.ts game-records.ts queue.ts results.ts series.ts series-rules.ts settings.ts tutorial.ts
-    match/     actor.ts protocol.ts                                        M6-T4, M7-T1
-    auth/      jwt.ts (JWKS verification, seat resolution)                 M6-T1
-  test/
+      store.rs                     the Db and Tx enums: one method per store operation
+      pg.rs                        those methods over Postgres (sqlx)
+      fake.rs                      the same over an in-memory store, for cargo test and E2E mode
+      migrate.rs                   applies migrations/*.sql in order, ledger in app.migrations
+    cli/
+      seed_catalog.rs              the compiled-in catalog -> public.cards
+      mint_code.rs                 `mint-code`: one invite code, plaintext to stdout once
+      card_stats.rs                `stats-cards`: card win rates off game_records (R377, R378)
+      import_dev_records.rs        `stats-import`: an AI development run's records -> game_records (R378)
+      seed_accounts.rs, season_start.rs
+    ranked/                        Glicko-2, the ladder, seasons (R603–R612)
+  tests/
+    server.rs                      the cargo suite: api/, actor/, store/ on the fake store
     sql/run.sh                     Docker-only schema validation (§12)
     sql/00_supabase_stub.sql       stand-in for auth.users, auth.uid(), the three roles
     sql/01_schema_invariants.sql   RLS everywhere, the L4 index, the redemption steps
@@ -815,6 +845,8 @@ apps/server/
     sql/04_decks_and_series.sql    decks, trios, queue modes and the series, as the server drives them
     sql/05_tutorial_progress.sql   the tutorial's grow-only merge (R320)
     sql/08_game_records.sql        the game records' checks (R376)
+    db/run.sh                      the store contract against a throwaway Postgres
+    deploy/rehearse.sh             Render's deploy rehearsed: the image, a non-superuser migration, a production boot
 docs/
   architecture.md                  this file
 ```

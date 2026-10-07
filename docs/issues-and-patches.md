@@ -40,11 +40,11 @@ labels left say who does it and what it is, not how it was handed on.
 
 **How hard it is.** A person may set a `difficulty:*` label, and the bot never changes it.
 Otherwise the night bot's planner rates the issue when it plans it, and it counts as medium until
-then: **easy** only when it is small (at most 10 files and 400 lines), in one package, touches
-none of `SPEC.md`, `BUILD.md`, `packages/engine/test/rulings.test.ts` or the shared surfaces,
-does no engine, AI, catalog, card or migration work, is checked by a unit test, leaves the builder
-no decision, and is blocked by nothing (`bot/harness/easy.py`); **hard** for engine rules, the AI,
-design across packages, a migration, or about 40 files or more; **medium** for the rest. Triage
+then: **easy** only when it is small (at most 10 files and 400 lines), in one crate or app,
+touches none of `SPEC.md`, the notes in `spec/`, `BUILD.md` or the shared surfaces, does no engine,
+AI, catalog, card or migration work, is checked by a unit test, leaves the builder no decision, and
+is blocked by nothing (`bot/harness/easy.py`); **hard** for engine rules, the AI, design across
+crates, a migration, or about 40 files or more; **medium** for the rest. Triage
 gives no difficulty. Three failures of an issue's own raise it a step (`bot/README.md`, Rating,
 strikes and the step up).
 
@@ -81,7 +81,7 @@ suggestions (`bot:suggestion`) arrive with plain titles, so retitle one when you
 ## Version numbers
 
 - **Numbers run in order (R743).** A card patch takes the next number after the newest card patch on
-  `main`, shipped (`packages/cards/patches/patches.json`) or still pending (`pending/`): after v0.2.9
+  `main`, shipped (`crates/cards/patches/patches.json`) or still pending (`pending/`): after v0.2.9
   with nothing pending, a normal patch (`Patch v0.2.X: …`) is v0.2.10, and a micro patch
   (`Patch v0.2.Y: …`) becomes v0.2.9b when it ships (below). Name the pending fragment that number
   when the branch makes it. Two normal patches in flight at once cannot both take it: the one that
@@ -103,7 +103,7 @@ suggestions (`bot:suggestion`) arrive with plain titles, so retitle one when you
 - **A micro patch is named when it ships (R650).** `Y` becomes the newest version in `patches.json`
   plus the next letter: a micro patch that ships after v0.2.5 is v0.2.5b, and one after v0.2.7c is
   v0.2.7d. Going live through a pending fragment it keeps its `Y` (`pending/v0.2.Y.json`) until
-  `patches ship` promotes it, which names it (`packages/cards/scripts/versions.ts`). It refuses a
+  `patches ship` promotes it, which names it (`crates/tools/src/patches.rs`'s `versions`). It refuses a
   `v0.2.Y` when the newest version is not a v0.2 one. A micro patch with no card data change bumps
   nothing and keeps its `Y` title.
 
@@ -125,10 +125,10 @@ suggestions (`bot:suggestion`) arrive with plain titles, so retitle one when you
 - **Pull requests.** A part's PR says `Closes #<part>` and `Part of #<tracker>`, never
   `Closes #<tracker>`. Close the tracker by hand once its last sub-issue is closed.
 - **Going live.** A change to card data goes live through a pending fragment:
-  `pnpm --filter @jackioh/cards run patches <version> <date> "<title>"` writes
-  `packages/cards/patches/pending/<version>.json` claiming the cards the branch changed, and after
+  `cargo jackioh patches <version> <date> "<title>"` writes
+  `crates/cards/patches/pending/<version>.json` claiming the cards the branch changed, and after
   the branch merges `patches ship` promotes it — appending the version to `patches.json` and
-  bumping `CATALOG_VERSION` everywhere it lives (`packages/cards/README.md` §8) — and the next
+  bumping the catalog version everywhere it lives (`crates/cards/README.md` §6) — and the next
   deploy reseeds the database. The PR that adds the fragment is the last part, and the patch is
   live when the promotion PR merges. A patch with no card data change is live when its last part
   merges.

@@ -4,9 +4,9 @@
 // text, progress and rewards and each aura the line holds in the inspect notes, a log line per report
 // — and the reward prompt it opens takes the reward the engine offers.
 //
-// The fixtures are shaped as `viewFor` builds the view (`packages/shared/src/view.ts` `QuestView`);
-// the last block plays the real engine (registerAll, through `game/engine.real.ts`), so a renamed
-// field or a reworded event breaks it.
+// The fixtures are shaped as `viewFor` builds the view (`crates/engine/src/wire/view.rs` `QuestView`);
+// the last block plays the real engine (the WebAssembly module, through `audio/test/realGame.ts`),
+// so a renamed field or a reworded event breaks it.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

@@ -44,7 +44,7 @@ const AUDIO_SETTINGS_KEY = "jackioh.audio.v1";
 const CORE_004_PLAY_URL = "/audio/voice/core-004-play.m4a";
 
 /**
- * The catalog's `type: "Unit"` cards among 01-aggro-a and 01-aggro-b (packages/cards/catalog.json).
+ * The catalog's `type: "Unit"` cards among 01-aggro-a and 01-aggro-b (crates/cards/catalog.json).
  * The rest of those two decks are Spells and Field Spells, which speak a cast line, not a play line.
  */
 const UNIT_DEF_IDS: ReadonlySet<string> = new Set([

@@ -301,19 +301,31 @@ def _run_created(cfg: Config) -> Any:
         return None
 
 
-def _current(cfg: Config, since: Any) -> Config:
+def _current(cfg: Config, since: Any) -> Config | None:
     """The loop's config as it stands now. The `bot-status` job reads `.harness/` once, when it
     starts, and runs for five and a half hours, and GitHub fixes its secrets when its run is
     created, hours before that for a run queued behind the last loop; so a subscription added or
     changed since would show as it was. Each tick reads the subscriptions again from the default
     branch, and takes which secrets are set from the newest plan job's record when that is newer
-    than this run (`providers.newer_secrets`). What cannot be read stays as it was."""
+    than this run (`providers.newer_secrets`). What cannot be read stays as it was.
+
+    None when this checkout's code refuses the default branch's subscriptions: it read its own
+    file when it started, so the branch's has changed since in a way only newer code reads (a
+    subscription with a secret this checkout does not know, as claude-7's was), and the loop ends
+    so that the next one starts on the default branch's code."""
     pool, secrets = cfg.pool, cfg.secrets
     try:
         ctx = _ctx(cfg)
         text, _ = ctx.gh.get_file(providers_mod.PROVIDERS_PATH.as_posix(), cfg.default_branch)
         if text:
-            pool = providers_mod.parse(json.loads(text))
+            raw = json.loads(text)
+            try:
+                pool = providers_mod.parse(raw)
+            except ConfigError as exc:
+                print(redact(f"::notice::this checkout cannot read the subscriptions on "
+                             f"{cfg.default_branch} ({exc}): the next loop starts on its code"),
+                      flush=True)
+                return None
         secrets = providers_mod.newer_secrets(cfg.secrets, ctx.store.load(), since)
     except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
         print(redact(f"::warning::kept the subscriptions and secrets as they were: {exc}"),
@@ -373,8 +385,9 @@ def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
     `bot-status` loop). With `--sweep` each tick sweeps first, so the bot does not wait hours
     for GitHub's late schedules to start its next run when its chain of runs breaks. Each tick
     reads the subscriptions and the secrets afresh (`_current`), so one added or changed while
-    the loop runs shows within a tick, and settles the issue about the machine's disk
-    (`disk.alert`). A failure is only a warning: it never fails the sweep or the loop.
+    the loop runs shows within a tick (or, when this checkout's code is too old to read it, the
+    loop ends and the next one shows it on newer code), and settles the issue about the
+    machine's disk (`disk.alert`). A failure is only a warning: it never fails the sweep or the loop.
 
     With `--companions`, each other bot (Squishy, #60) is swept (with `--sweep`) and drawn by a
     process of its own (`_companions`), and its section goes into the issue apart from the night
@@ -386,7 +399,10 @@ def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
     deadline = time.monotonic() + max(0, int(getattr(args, "for_seconds", 0) or 0))
     since = _run_created(cfg)
     while True:
-        cfg = _current(cfg, since)
+        fresh = _current(cfg, since)
+        if fresh is None:
+            return 0  # bot-status starts the next loop, on the default branch's code
+        cfg = fresh
         if getattr(args, "sweep", False):
             try:
                 for line in sweep_mod.sweep(_ctx(cfg)) or ["nothing was left unanswered"]:

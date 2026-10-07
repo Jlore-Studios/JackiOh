@@ -1,45 +1,69 @@
-# One shard of one browser's e2e run (.github/workflows/ci.yml, #73): a built client and a fresh E2E
-# server, then the specs `e2e/scripts/shard-specs.mjs` gives this shard.
+# One shard of the e2e specs on Chrome (ci.yml's `e2e smoke`, super.yml's full run): this run's
+# built client and a fresh release jackioh-server in E2E mode, then the specs
+# `e2e/scripts/shard-specs.mjs` gives this shard. Electron is not run (docs/v0.3.0/README.md §7).
+#
+# Nothing is compiled here. The calling workflow builds once per run, in the order the client
+# needs: `scripts/build-wasm.sh` before `pnpm build:e2e` in its `wasm` job (artifact `web-build`:
+# apps/web/dist and the WASM module), and `cargo build --release -p jackioh-server -p jackioh-tools`
+# in its `rust-build` job (artifact `rust-release`: target/release/jackioh-server, and
+# target/release/jackioh, whose `replay` spec 01's and 13's hash checks run). The caller checks out
+# the repository and runs ./.github/actions/setup (Node is enough) first.
 #
 # Fresh is the point. SPEC §11 R144 makes the server reseed its fixture accounts and invite codes at
 # boot, so a suite that activates the pending account or spends an invite code (spec 10) is
 # repeatable only against a fresh server. Each shard boots its own, which is also why `retries` is
 # left at the Cypress config's value: a retried spec-10 test cannot pass either.
 name: e2e shard
-description: Build the E2E client, start it and the E2E server, and run one shard of the e2e specs
+description: Start this run's e2e client and release jackioh-server, and run one shard of the e2e specs on Chrome
 inputs:
-  browser:
-    description: chrome or electron
+  specs:
+    description: "all: every spec in e2e/cypress/e2e; smoke: the per-pull-request list (shard-specs.mjs SMOKE)"
     required: true
   shard:
     description: this shard, 1-based
     required: true
   shards:
-    description: how many shards the browser's run is split into
+    description: how many shards the run is split into
     required: true
 runs:
   using: composite
   steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: web-build
+        path: ${{ runner.temp }}
+    - uses: actions/download-artifact@v4
+      with:
+        name: rust-release
+        path: ${{ runner.temp }}
+    # Tarballs, so the binaries keep their executable bits and every file lands where it was built.
+    - name: unpack the client and the binaries
+      shell: bash
+      run: |
+        tar -xzf "$RUNNER_TEMP/web-build.tgz"
+        tar -xzf "$RUNNER_TEMP/rust-release.tgz"
+
     # A built client rather than `vite dev`: HMR reloads the page mid-run when anything under
     # apps/web/src changes, which remounts the route and restarts the game at turn 0. `build:e2e`,
     # not `build`: BUILD M5-T3 publishes `window.__jackioh` only outside production mode, and every
     # spec reaches it through cy.jackioh(), so under a plain `vite build` every spec fails on its
     # first command.
-    - name: build the client
-      shell: bash
-      run: pnpm build:e2e
-
-    # Backgrounded with stdout redirected to a file: without the redirect the step inherits the
-    # runner's output pipe and can wait on a child that never closes it, and the logs become
-    # uploadable evidence when a spec fails.
+    #
+    # The server refuses to boot on a CATALOG_VERSION other than the one compiled into it, so it gets
+    # exactly that one, from the CLI built beside it. Backgrounded with stdout redirected to a file:
+    # without the redirect the step inherits the runner's output pipe and can wait on a child that
+    # never closes it, and the logs become uploadable evidence when a spec fails.
     - name: start the client and the server
       shell: bash
       env:
         E2E: "1"
       run: |
+        CATALOG_VERSION=$(target/release/jackioh catalog-version)
+        export CATALOG_VERSION
+        echo "catalog $CATALOG_VERSION"
         nohup pnpm --dir apps/web exec vite preview --port 5173 --strictPort \
           > "$RUNNER_TEMP/client.log" 2>&1 &
-        nohup pnpm --dir apps/server start > "$RUNNER_TEMP/server.log" 2>&1 &
+        nohup target/release/jackioh-server > "$RUNNER_TEMP/server.log" 2>&1 &
 
     # /api/catalog is the one route R163 makes unauthenticated, so a 200 means the catalog really
     # registered. `localhost`, not `127.0.0.1`: `vite preview` may bind the IPv6 loopback only, and
@@ -65,10 +89,18 @@ runs:
       shell: bash
       env:
         E2E: "1"
+        SPECS: ${{ inputs.specs }}
+        SHARD: ${{ inputs.shard }}
+        SHARDS: ${{ inputs.shards }}
       run: |
-        specs=$(cd e2e && node scripts/shard-specs.mjs "${{ inputs.shard }}" "${{ inputs.shards }}")
-        echo "shard ${{ inputs.shard }}/${{ inputs.shards }}: ${specs//,/ }"
-        pnpm --dir e2e exec cypress run --browser "${{ inputs.browser }}" --spec "$specs"
+        case "$SPECS" in
+          all) list=() ;;
+          smoke) list=(--smoke) ;;
+          *) echo "::error::specs must be all or smoke, not $SPECS"; exit 2 ;;
+        esac
+        specs=$(cd e2e && node scripts/shard-specs.mjs "${list[@]}" "$SHARD" "$SHARDS")
+        echo "$SPECS shard $SHARD/$SHARDS: ${specs//,/ }"
+        pnpm --dir e2e exec cypress run --browser chrome --spec "$specs"
 
     # e2e/artifacts/*: e2e/cypress.config.ts puts screenshots under `artifacts/screenshots`. `warn`
     # rather than `ignore`, because a red run with no screenshot is itself a finding
@@ -77,7 +109,7 @@ runs:
       if: failure()
       uses: actions/upload-artifact@v4
       with:
-        name: cypress-${{ inputs.browser }}-${{ inputs.shard }}-of-${{ inputs.shards }}
+        name: cypress-${{ inputs.specs }}-${{ inputs.shard }}-of-${{ inputs.shards }}
         path: |
           e2e/artifacts/screenshots
           ${{ runner.temp }}/client.log

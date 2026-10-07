@@ -22,7 +22,7 @@ import { HOVER_DELAY_MS } from "../cards/inspect/constants.ts";
 import { FX_LETHAL_LEAD_MAX_MS, FX_RESULT_MS } from "../fx/constants.ts";
 import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 
-import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "../../../server/src/config.ts";
+import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import type { DecksResponse, TutorialAccountProgress } from "../net/api.ts";
 import type { Account } from "../net/gate.ts";
 import {

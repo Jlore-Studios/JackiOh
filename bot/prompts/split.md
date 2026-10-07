@@ -14,15 +14,16 @@ $children
 
 ## How to split it
 
-- **Read first.** The issue, `CLAUDE.md`, the `SPEC.md` sections it touches, the code it touches,
+- **Read first.** The issue, `CLAUDE.md`, the spec sections it touches (`spec/`), the code it touches,
   and `docs/issues-and-patches.md`, which sets how issues are titled and labelled.
 - **One run each.** A sub-issue is one change with its tests: say what to do, where (the files
   and functions), and how to check it (the tests that prove it, the commands to run). It stands on
   its own: whoever builds it reads only it and the code, not this issue.
 - **In order.** When one needs another merged first, list that one in its `blocked_by`. Keep the
   chains short: the sub-issues that do not depend on each other can be built side by side.
-- **Shared surfaces** (`SPEC.md` §11 numbering, `packages/shared/src/events.ts`, `state.ts`,
-  `script.ts`, the effects barrel) belong to one sub-issue at a time: make the others wait for it.
+- **Shared surfaces** (the ruling numbers in `spec/rulings/` and `spec/INDEX.md`,
+  `crates/engine/src/wire/events.rs`, `state.rs`, `script.rs`, `effects/mod.rs`) belong to one
+  sub-issue at a time: make the others wait for it.
 - **A plan each.** Under `plan`, the steps the builder should take, in order, with the files, so it
   builds without planning again. This becomes the **Plan** section of its description.
 - **How hard.** Rate each `easy`, `medium` or `hard` by the rule below. The rating decides which

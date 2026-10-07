@@ -15,7 +15,7 @@ import { DECK_SIZE } from "@jackioh/engine/config";
 import type { CardDef, CardDefs } from "@jackioh/shared";
 import { validateDeck, validateTrio, type LoadoutResult } from "@jackioh/validator";
 
-import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "../../../server/src/config.ts";
+import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import {
   ApiRequestError,
   createRoom,

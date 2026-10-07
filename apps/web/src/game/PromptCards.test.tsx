@@ -187,8 +187,9 @@ describe("card options are card faces", () => {
 
 describe("R247: #82 KY's Trial's Discover offers numbers", () => {
   /**
-   * The chooser's view exactly as `viewFor` builds it for #82 (packages/cards/test/082-kys-trial.test.ts
-   * "R247 …"): each option is the number, keyed `mode:<n>` and labelled `<n>`, with no definition.
+   * The chooser's view exactly as `viewFor` builds it for #82 (the "R247 …" test beside its script,
+   * crates/cards/src/scripts/core/c082_kys_trial.rs): each option is the number, keyed `mode:<n>`
+   * and labelled `<n>`, with no definition.
    */
   const NUMBERS = ["17", "42", "88"] as const;
 

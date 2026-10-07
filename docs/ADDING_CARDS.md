@@ -3,51 +3,43 @@
 Read this before any card work. It is the procedure for a **standard** card: one whose text is made of
 verbs, keywords and filters the engine already has. Anything else is [§6](#6-a-card-the-engine-cannot-express-yet).
 
-It was written by reading C+ #5 Guy Att, #6 Wrong-House Attacker, #77 Anti-Softlock and the Rush Token, grepping every file that names
-a card of each kind, and then adding a dummy Classic+ unit (a vanilla (1) 1/1 Human) to a scratch worktree and running every gate. The
-files below are what that run named. It could not reach a fully green run, for the reason in [§7](#7-what-cannot-be-done-on-linux).
+It was first written by reading C+ #5 Guy Att, #6 Wrong-House Attacker, #77 Anti-Softlock and the Rush Token, grepping every file that
+names a card of each kind, and adding a dummy Classic+ unit (a vanilla (1) 1/1 Human) to a scratch worktree and running every gate;
+since v0.3.0 the cards are Rust, and the files and gates below are the Rust ones. The contract a card file is held to is
+[`crates/cards/README.md`](../crates/cards/README.md). One step cannot be done on Linux: [§7](#7-what-cannot-be-done-on-linux).
 
 ## 1. The files, in the order to touch them
 
-A Classic+ card is shown. Core cards live at the top of `src/scripts/` and `test/`, Classic in `classic/`.
-`NNN-slug` is the card's SPEC index in three digits plus a slug ([cards README §1](../packages/cards/README.md)).
+A Classic+ card is shown. Core cards live in `src/scripts/core/`, Classic in `src/scripts/classic/`. `cNNN_slug` is the card's spec
+index in three digits after a `c`, then its slug with every `-` and `.` an `_` ([cards README §1](../crates/cards/README.md#1-the-card-file)).
 
 | # | File | What changes | A gate fails without it |
 |---|---|---|---|
-| 1 | `SPEC.md` §8.7 (§8.1 Core, §8.6 Classic, §7 tokens) | the card's row: the only source of card text (CLAUDE.md) | none |
-| 2 | `packages/cards/catalog.json` | the entry, after the set's highest card index and before its shared tokens (`T-AI-…`); a token follows its card | `validate:catalog`, `catalog.test.ts` |
-| 3 | `packages/cards/src/scripts/classic-plus/NNN-slug.ts` | the script ([§2](#2-templates)) | `registry.test.ts`, `missing-tests` |
-| 4 | `packages/cards/test/classic-plus/NNN-slug.test.ts` | the test ([§2](#2-templates), [cards README §5](../packages/cards/README.md)) | `missing-tests` |
-| 5 | `packages/cards/src/scripts/_generated.ts` | **generated**: run `pnpm typecheck`, commit its diff, never edit it | typecheck |
-| 6 | `packages/cards/test/catalog.test.ts` | the card's fixture row in `CLASSIC_PLUS`; `RARITY_COUNTS` and `SET_SIZES` (the totals and row counts are their sums) | itself |
-| 7 | `packages/cards/scripts/validate-catalog.ts` | the set's `cards` and `rarities`, and `EXPECTED_TAG_COUNTS` for each tag the card has | `validate:catalog` |
-| 8 | `docs/radiant-audit.md` | one row `\| <index> \| <name> \| …`; the Radiant face must meet R275 (about twice the base face; doubling stats alone is not enough for a unit with text) | `radiant-standard.test.ts` |
-| 9 | `BUILD.md` | the card's must-pass row in the M9 (or M4-T4) table | none |
-| 10 | `apps/web/src/audio/card-audio.json5` | the card's entry in catalog order, its name in a comment beside its id: a Unit's play and death lines, anything else's cast line, and any effects or attack hook (R655; the file's header says how) | `voice-lines.test.ts`, `voiceData.test.ts` |
-| 11 | `packages/cards/flavour.json` | the card's flavour line, `"<id>": { "flavour": "…" }`: one short line in the source notes' voice, no rules words, at most 120 characters (R660); it is not card data, so no fragment claims it | `flavour.test.ts` (both of them) |
-| 12 | the count assertions below | the totals change by one | the tests named |
-| 13 | `packages/cards/patches/pending/<version>.json` | the fragment, `run patches …` ([§3](#3-the-patch-and-its-order)); the shipped history and the four version sites move at promotion, not here | `patches check`, `patches.test.ts`, `loc.test.ts` |
+| 1 | `spec/08-catalog.md` §8.7 (§8.1 Core, §8.6 Classic; `spec/07-tokens.md` for a token) | the card's row: the only source of card text (CLAUDE.md) | none |
+| 2 | `crates/cards/catalog.json` | the entry, after the set's highest card index and before its shared tokens (`T-AI-…`); a token follows its card | `catalog check`, `tests/cross/catalog.rs` |
+| 3 | `crates/cards/src/scripts/classic_plus/cNNN_slug.rs` | the script and its tests in one file ([§2](#2-templates)) | the build: `build.rs` refuses a catalog id with no file |
+| 4 | `crates/cards/tests/cross/catalog.rs` | the card's fixture row in `CLASSIC_PLUS`; `RARITY_COUNTS` and `SET_SIZES` (the totals and row counts are their sums) | itself |
+| 5 | `crates/tools/src/catalog.rs` | the set's `cards` and `rarities` in `sets()`, `expected_tag_count` for each tag the card has, and the totals `the_shipped_catalog_passes_every_check` pins | `catalog check`, `cargo test -p jackioh-tools` |
+| 6 | `docs/radiant-audit.md` | one row `\| <index> \| <name> \| …`; the Radiant face must meet R275 (about twice the base face; doubling stats alone is not enough for a unit with text) | `tests/cross/radiant_standard.rs` |
+| 7 | `BUILD.md` | the card's must-pass row in the M9 (or M4-T4) table | none |
+| 8 | `apps/web/src/audio/card-audio.json5` | the card's entry in catalog order, its name in a comment beside its id: a Unit's play and death lines, anything else's cast line, and any effects or attack hook (R655; the file's header says how) | `voice-lines.test.ts`, `voiceData.test.ts` |
+| 9 | `crates/cards/flavour.json` | the card's flavour line, `"<id>": { "flavour": "…" }`: one short line in the source notes' voice, no rules words, at most 120 characters (R660); it is not card data, so no fragment claims it | `tests/cross/flavour.rs`, `apps/web/src/cards/flavour.test.tsx` |
+| 10 | a pinned pool, when the card joins one | `tests/cross/query.rs` names the pools the spec pins down card by card (the KY pool, the (1) Cost Traps, R35's Legendaries, …) | `tests/cross/query.rs` |
+| 11 | `crates/cards/patches/pending/<version>.json` | the fragment, `cargo jackioh patches …` ([§3](#3-the-patch-and-its-order)); the shipped history and the version sites move at promotion, not here | `patches check` |
 
-**Count assertions** (`grep -rn "\b317\b\|\b268\b" --include=*.ts --include=*.tsx` finds most): `test/query.test.ts` (the
-non-token total, the set sizes, `317 - 1`), `test/registry.test.ts` (`CATALOG_SIZE`),
-`test/059-unbiased-immigration.test.ts` (the pool without #59), `apps/server/test/api/catalog.test.ts`,
-`apps/server/test/db/seed-catalog.test.ts` and `.spec.ts`, `apps/web/src/game/deckbuilder/filters.test.ts` (the pool and a set's
-size), and `e2e/cypress/component/deckbuilder-layout.cy.tsx` (`DECKABLE_COUNT`). Since #108 the catalog and pool counts
-and the web's patch tests (`patches/source.test.ts`, `routes/patch-notes.test.tsx`, `patches/PatchNotes.test.tsx`) count
-`catalog.json` and `patches.json` themselves and need no edit for a new card. The patch-list tests
-(`patches.test.ts`, `PatchNotes.test.tsx`, `source.test.ts`, `patch-notes.test.tsx`) pin only the history shipped before
-yours — a pending-claimed card needs no edits there (R646). What stays hand-kept is the proof:
-`catalog.test.ts`'s `RARITY_COUNTS` and `SET_SIZES` (its totals and row counts are the sums) and
-`validate-catalog.ts`'s `SETS` and `EXPECTED_TAG_COUNTS` (`patches.test.ts`'s `VERSIONS` is derived from
-`patches.json`, with the shipped prefix pinned).
+The catalog and pool counts elsewhere (the web's deck builder, Almanac and patch tests, the e2e component specs) count
+`catalog.json` and `patches.json` themselves and need no edit for a new card. The patch-list tests pin only the history shipped
+before yours, so a pending-claimed card needs no edit there (R646). What stays hand-kept is the proof: `catalog.rs`'s rows,
+`RARITY_COUNTS` and `SET_SIZES`, and the tools' `sets()` and tag counts.
 
-Also grep the Markdown for the stated totals (`268 cards`, `317`) and update them: `README`s, `BUILD.md`, `REVIEW.md`,
-`CLAUDE.md`, `SPEC.md`, `docs/architecture.md`.
+Also grep the Markdown for the stated totals (`268 cards`, `318`) and update them: the READMEs, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`,
+`spec/`, `docs/architecture.md`.
 
 ## 2. Templates
 
-**Catalog entry** (C+ #6). `loc` is rewritten by `gen-loc` ([§3](#3-the-patch-and-its-order)); text is the printed text, with
-`{key}` where a number is declared in `params`. A token has `"token": true`, `"rarity": "Token"` and the `Token` tag.
+**Catalog entry** (C+ #6). `loc` is the script's lines of code, from `cargo jackioh catalog loc <script path>` once the script is written
+([§3](#3-the-patch-and-its-order)); text is the printed text, with `{key}` where a number is declared in `params`. A token has
+`"token": true`, `"rarity": "Token"` and the `Token` tag.
 
 ```json
 "classicplus-006": {
@@ -60,50 +52,76 @@ Also grep the Markdown for the stated totals (`268 cards`, `317`) and update the
 }
 ```
 
-**Script, keywords only** (`src/scripts/classic-plus/006-wrong-house-attacker.ts`, comments left out). Keywords are catalog data, so there is nothing to run:
+**Script, keywords only** (`src/scripts/classic_plus/c006_wrong_house_attacker.rs`, its header comment left out). Keywords are catalog
+data, so there is nothing to run:
 
-```ts
-import type { Script } from "@jackioh/engine";
-import { cardDef } from "../../catalog-data";
+```rust
+use jackioh_engine::prelude::*;
 
-export const def = cardDef("classicplus-006");
-export const base: Script = {};
-export const radiant: Script = base;
+pub const ID: &str = "classicplus-006";
+
+pub fn script() -> CardScripts {
+    let base = Script::default();
+    // The Radiant face adds Reborn and doubles the stats: catalog data only.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 ```
 
-**Script with an effect** (`005-guy-att.ts`). Hooks return `Effect[]` from `@jackioh/engine/effects` and never touch state:
+**Script with an effect** (`c005_guy_att.rs`). Hooks return `Vec<Effect>` from the engine's effects and never touch state:
 
-```ts
-import type { Script } from "@jackioh/engine";
-import { destroyAll } from "@jackioh/engine/effects";
-import { cardDef } from "../../catalog-data";
+```rust
+use jackioh_engine::prelude::*;
 
-export const def = cardDef("classicplus-005");
-export const base: Script = { cry: () => [destroyAll({ side: "self", rows: ["backrow"] })] };
-export const radiant: Script = { cry: () => [destroyAll({ side: "any", rows: ["backrow"] })] };
+pub const ID: &str = "classicplus-005";
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            cry: Some(hook(|_ctx| vec![destroy_all(json_as(json!({ "side": "self", "rows": ["backrow"] })))])),
+            ..Script::default()
+        },
+        radiant: Script {
+            cry: Some(hook(|_ctx| vec![destroy_all(json_as(json!({ "side": "any", "rows": ["backrow"] })))])),
+            ..Script::default()
+        },
+    }
+}
 ```
 
 Read a declared number with `param(ctx, "draw")`, never a literal. Declared targets and modes go in `targets` and `modes`
-([cards README §1](../packages/cards/README.md)). A card with no script of its own for one face reuses `base`.
+([cards README §1](../crates/cards/README.md#1-the-card-file)). A card with no script of its own for one face reuses `base`.
 
-**Test** (`test/classic-plus/006-wrong-house-attacker.test.ts`, first case only). Build every game with `scenario()` from `../_harness`, and name a
-test after the ruling it pins (`it("R64 …")`):
+**Tests**, at the bottom of the same file (two cases in the shape of C+ #6's). Build every game with the testkit's `scenario()`
+after `crate::register_all()`, and name a test after the ruling it pins (`fn r64_the_copy_lands_in_the_leftmost_free_zone`):
 
-```ts
-import { describe, expect, it } from "vitest";
-import { scenario } from "../_harness";
-import { base, def, radiant } from "../../src/scripts/classic-plus/006-wrong-house-attacker";
+```rust
+#[cfg(test)]
+mod tests {
+    use super::ID;
+    use jackioh_engine::testkit::*;
 
-describe("C+ #6 Wrong-House Attacker", () => {
-  it("is a (1) 1/1 Human Unit with Rush, Lifesteal, Poisonous (Radiant 2/2 plus Reborn); no script on either face", () => {
-    expect([def.cost, def.base.attack, def.base.health, def.radiant.attack, def.radiant.health]).toEqual([1, 1, 1, 2, 2]);
-    expect(def.base.keywords.map((k) => k.kind)).toEqual(["Rush", "Lifesteal", "Poisonous"]);
-    expect(def.radiant.keywords.map((k) => k.kind)).toEqual(["Rush", "Lifesteal", "Poisonous", "Reborn"]);
-    expect(base).toEqual({});
-    expect(radiant).toBe(base);
-  });
-  // …one case per behaviour in the SPEC row, for base and radiant separately.
-});
+    #[test]
+    fn is_a_1_1_1_human_unit_radiant_2_2() {
+        crate::register_all();
+        let def = crate::card_def(ID);
+        assert_eq!(def.cost, CardCost::Fixed(1));
+        assert_eq!(
+            [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
+            [Some(1), Some(1), Some(2), Some(2)]
+        );
+    }
+
+    #[test]
+    fn radiant_enters_the_field_when_played() {
+        crate::register_all();
+        let mut s = scenario(json!({ "p1": { "hand": [{ "def": ID, "radiant": true }] } }));
+        s.play(ID, json!({}));
+        s.expect_in_zone(ID, "field");
+    }
+
+    // …one case per behaviour in the spec row, base and radiant separately.
+}
 ```
 
 ## 3. The patch, and its order
@@ -113,55 +131,74 @@ after the newest card patch on `main`, shipped or pending (R743); a micro patch 
 keeps its `Y` until promotion names it with the next letter (R650); never reopen a shipped one. A branch claims its card changes with a pending fragment:
 
 ```
-pnpm --filter @jackioh/cards run patches <version> <date> "<title>" --source "<issue or PR>" --notes "<what changed>"
+cargo jackioh patches <version> <date> "<title>" --source "<issue or PR>" --notes "<what changed>"
 ```
 
-It writes or updates `packages/cards/patches/pending/<version>.json`, containing the version, title,
+It writes or updates `crates/cards/patches/pending/<version>.json`, containing the version, title,
 sources, notes and every catalog id the patch changes. It never changes the shipped history, its
-snapshots or `CATALOG_VERSION`. `pnpm --filter @jackioh/cards run patches check` must pass before the
-branch merges. The post-merge promotion runs `patches ship`: it snapshots the catalog at the
-fragment's first-parent commit, appends the shipped patch and bumps `CATALOG_VERSION` everywhere.
+snapshots or the catalog version. `cargo jackioh patches check` must pass before the branch merges.
+The post-merge promotion (`patches-ship.yml`) runs `cargo jackioh patches ship`: it snapshots the
+catalog at the fragment's first-parent commit, appends the shipped patch and bumps the catalog version
+wherever it is written; the binaries compile it in from `patches.json`.
 
-`typecheck` runs `gen`, whose `gen-loc` may update the card's `loc` in `catalog.json`; include that
-card in the fragment before merging. It never amends a shipped snapshot. In a patch split over
-several PRs, only the part that changes card data adds the fragment
-([issues-and-patches.md](issues-and-patches.md)).
+`loc` is frozen data since v0.3.0: nothing recomputes it, and a refactor of an existing script leaves it as it is. A new card's comes
+from `cargo jackioh catalog loc crates/cards/src/scripts/<set>/<file>.rs` (its non-blank, non-comment, non-`use` lines above
+`#[cfg(test)]`), written into its entry by hand. In a patch split over several PRs, only the part that changes card data adds the
+fragment ([issues-and-patches.md](issues-and-patches.md)).
 
 ## 4. Gates, and what a new card breaks that is not your card's fault
 
-Run, from the repo root: `pnpm typecheck` (generates, then compiles), `pnpm lint`, `pnpm validate:catalog`,
-`pnpm --filter @jackioh/cards missing-tests`, `pnpm rulings:coverage`, then `pnpm test` (or one project:
-`pnpm vitest run --project cards`; the cards project takes about ten minutes, almost all of it the two 1000-game fuzz suites).
-Replay one fuzz seed with `JACKIOH_FUZZ_FROM=<seed> JACKIOH_FUZZ_SEEDS=1 pnpm fuzz`.
+Run, from the repo root:
+
+```
+cargo fmt --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo jackioh catalog check
+cargo jackioh patches check
+cargo jackioh spec check
+cargo test -p jackioh-cards c006_wrong_house_attacker    # your card's own tests first
+cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts
+cargo jackioh fuzz --seeds 200                            # CI's wave; plain `cargo jackioh fuzz` plays 1,000
+pnpm --dir apps/web test                                  # the voice lines and the flavour line
+```
+
+Replay one fuzz seed with `cargo jackioh fuzz --from <seed> --seeds 1`.
 
 One more card shifts every random draw from the pool (R380), so tests and games that were lucky stop being so:
 
-- **Seed-pinned tests** ("the first Discover offers Bigot, the second Twisted Sorcerer"): `play-choices`, `resolving-face`, `fused-hooks`,
-  `tributes`, `pools-and-randomness`, `098-heroic-power` (Stitching), and `ai/test/shadowBan.test.ts`. Re-pin by looping seeds in a
-  throwaway test (`for n … scenario({ seed: \`craft-${n}\`, … })`, `g.play(…)`, `g.answer(…)` in a `try`) until the offers match, and
-  update the comment beside the seed.
-- **The fuzz gates** play 1000 seeded games each and may now draw a game nobody has played. Four latent bugs came out this way, all fixed: a fused
+- **Seed-pinned tests** ("the first Discover offers Bigot, the second Twisted Sorcerer"): `crates/cards/tests/cross/`'s
+  `play_choices.rs`, `resolving_face.rs`, `fused_hooks.rs`, `tributes.rs` and `pools_and_randomness.rs`, #98 Heroic Power's own
+  tests (`src/scripts/core/c098_heroic_power.rs`, Stitching), and `crates/ai/tests/ai/shadow_ban.rs`. Re-pin by looping seeds in a throwaway test
+  (`for n in 0.. { let mut s = scenario(json!({ "seed": format!("craft-{n}"), … })); … }`) until the offers match, and update the
+  comment beside the seed.
+- **The golden traces** (`crates/engine/tests/golden/games.jsonl`, replayed by `cargo test` and `cargo jackioh golden check`) are games
+  recorded from the TypeScript engine. A recorded game that draws from a pool the new card joins can diverge; the failure names the seed,
+  the step and the hash. If the divergence is the new card's pool and nothing else, re-record with `cargo jackioh golden bless` and say so
+  in the PR: the file is then the Rust engine's own record.
+- **The fuzz waves** play seeded games and may now draw a game nobody has played. Four latent bugs came out this way, all fixed: a fused
   card of two ingredients that define `targetChecks` threw from `legalActions` (#104), a client table made the animation runner replay a
   whole event window (#106), `determinize` put a Siphon Squad in a hidden slot the seat's own view rules out (#107), and a deeply nested
-  fusion resumed Final Gambit's step against the wrong ingredient (#105). If a gate fails at a seed that has nothing to do with
-  your card, print the failing game's state, find which card the throw or the diff names, and file it rather than editing the test.
+  fusion resumed Final Gambit's step against the wrong ingredient (#105). If a wave fails at a seed that has nothing to do with
+  your card, print the failing game's state, find which card the panic or the diff names, and file it rather than editing the test.
 - **A renamed card** (a patch that changes a `name`) fails `voice-lines.test.ts` until its comment in `card-audio.json5`, the name on the
   line of its id, says the new name (R655).
 
 ## 5. Do not read
 
-These look relevant and do not change for a standard card: `packages/cards/src/index.ts` (a contract shared by every card, README §2),
-`_generated.ts` (generated; commit it), `catalog-data.ts` (only the post-merge promotion edits the version), the snapshots in `packages/cards/patches/`,
-`packages/engine/**` (unless the text needs a new verb, [§6](#6-a-card-the-engine-cannot-express-yet)), `apps/web/src/cards/**` (faces
-and art are drawn from the catalog; procedural art needs nothing), `apps/server/src/**` and `packages/ai/src/**` (they read the catalog),
-`e2e/fixtures/decks/*.json`, `reviews/`, `docs/polish/`, and the designer's source notes (`JackiOh_*.md`).
+These look relevant and do not change for a standard card: `crates/cards/src/lib.rs` and `build.rs` (the registry is generated: there is
+nothing to wire), the snapshots in `crates/cards/patches/`, `crates/engine/**` (unless the text needs a new verb,
+[§6](#6-a-card-the-engine-cannot-express-yet)), `apps/web/src/cards/**` (faces and art are drawn from the catalog; procedural art needs
+nothing), `crates/server/src/**` and `crates/ai/src/**` (they read the catalog), `e2e/fixtures/decks/*.json`, `reviews/`, `docs/polish/`,
+`docs/v0.3.0/`, and the designer's source notes (`JackiOh_*.md`).
 
 ## 6. A card the engine cannot express yet
 
 When the text needs a verb, keyword, filter or board fact that no card uses: find where the most similar existing mechanic lives, add the new
-one beside it in that pattern, and test it there. A verb is an effect in `packages/engine/src/effects/` (re-exported by its barrel), a new
-board fact goes in `packages/engine/src/query.ts`, a new keyword also needs its row in SPEC §6.1 (the web glossary reads that table). Keep the card's script a list of those effects
-(CLAUDE.md rules 4 and 5). A rule the SPEC does not decide is a new R-row in SPEC §11 with a proving test (CLAUDE.md rule 3). No escalation step.
+one beside it in that pattern, and test it there. A verb is an effect in `crates/engine/src/effects/` (re-exported by `effects/mod.rs` and the
+prelude), a new board fact goes in `crates/engine/src/query.rs`, a new keyword also needs its row in spec §6.1 (the web glossary reads that
+table). Engine tests that need the card's behaviour use a fixture script in `crates/engine/tests/rules/fixtures/`. Keep the card's script a
+list of those effects (CLAUDE.md rules 4 and 5). A rule the spec does not decide is a new ruling note with a proving test (CLAUDE.md rule 3).
+No escalation step.
 
 ## 7. What cannot be done on Linux
 
@@ -169,4 +206,5 @@ Every card needs its voice lines **rendered**: `apps/web/src/audio/voice-assets.
 `apps/web/public/audio/voice/` and a manifest entry. `pnpm --filter @jackioh/web gen:voice` renders them with macOS `say` and `afconvert` or
 Windows SAPI and ffmpeg, and has no Linux backend, so a card added from Linux or CI fails about twenty tests there until a person renders them.
 `node apps/web/scripts/gen-voice.mjs --check` lists what is missing. Write the `card-audio.json5` entry (the text needs no tool) and say in the
-PR that the audio is owed. A hook that is only an effect renders nothing, so it is never owed.
+PR that the audio is owed. A hook that is only an effect renders nothing, so it is never owed. The asset tests run in the daily super run, not
+on a pull request.

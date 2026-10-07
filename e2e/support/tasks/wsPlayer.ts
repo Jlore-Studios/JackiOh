@@ -3,7 +3,7 @@
 // BUILD M6 gate and spec 06 require it ("the second player driven by a Node WebSocket client via
 // cy.task"). One socket per named player, held across tasks for the length of the spec file.
 //
-// PROTOCOL. BUILD M6-T4 fixes the message names and `apps/server/src/match/protocol.ts` now fixes
+// PROTOCOL. BUILD M6-T4 fixes the message names and `crates/server/src/actor/protocol.rs` now fixes
 // every shape, so this is read off that file rather than assumed (e2e/README.md A8):
 //
 //   -> { type: "hello", token?, matchId?, roomCode? }   (the actor ignores every field: it means
@@ -17,7 +17,7 @@
 //
 // TWO THINGS THIS CLIENT DELIBERATELY DOES NOT DO.
 //
-//  - It never sends `joinRoom`. `protocol.ts` accepts that frame only so a client which speaks it
+//  - It never sends `joinRoom`. `protocol.rs` accepts that frame only so a client which speaks it
 //    gets `error { code: "unsupported" }` instead of "malformed": joining is
 //    `POST /api/rooms/:code/join`, because the atomic single-claim and the loadout re-check are
 //    HTTP concerns and a socket is only ever opened onto a match that already exists. Specs 05 and
@@ -27,7 +27,7 @@
 //    used to fill the field the frozen specs put on the wire, and to label the result.
 //
 // The socket's query string carries `token` and `matchId` only — the two things
-// `apps/server/src/match/wsServer.ts` reads at the upgrade.
+// `crates/server/src/actor/ws_server.rs` reads at the upgrade.
 //
 // If the server team lands other shapes, only this file changes.
 
@@ -147,7 +147,7 @@ async function connect(command: Extract<WsPlayerCommand, { action: "connect" }>)
   const existing = clients.get(command.name);
   if (existing !== undefined) existing.socket.close();
 
-  // `WS_PATH` in apps/server/src/match/wsServer.ts. A handshake off this path is left alone by
+  // `WS_PATH` in crates/server/src/actor/ws_server.rs. A handshake off this path is left alone by
   // `attachWebSocketServer`, so a wrong path never reaches the upgrade at all.
   const base = command.url ?? "ws://localhost:8787/ws/match";
   const url = new URL(base);
@@ -288,7 +288,7 @@ async function awaitView(command: Extract<WsPlayerCommand, { action: "awaitView"
  *
  * A profile with `inMatchId` set is refused by `POST /api/rooms`, `POST /api/rooms/:code/join` and
  * `POST /api/queue` alike — all three answer `409 already_in_match`
- * (`apps/server/src/match/rooms.ts`, `apps/server/src/api/queue.ts`). Spec 05 ends with its match
+ * (`crates/server/src/actor/rooms.rs`, `crates/server/src/api/queue.rs`). Spec 05 ends with its match
  * still running, on purpose: the point of that spec is that the prompt rebuilt after the reload is
  * live state, so it answers the prompt and stops. Spec 06 is next in the alphabetical order Cypress
  * runs, and its first server call is `POST /api/rooms` as the same account — so without this the
@@ -320,7 +320,7 @@ async function concedeIfLive(record: Client): Promise<void> {
  *
  * This is how a spec (or `cy.freeAccount`) takes a seat out of a match that seat's own BROWSER is
  * also attached to. The actor keeps one socket per seat and closes the older one when a second
- * attaches (`attach` in apps/server/src/match/actor.ts), and the browser reconnects after
+ * attaches (`attach` in crates/server/src/actor/match_actor.rs), and the browser reconnects after
  * `RECONNECT_DELAYS_MS[0]` (apps/web/src/game/net.ts), which would take the seat straight back.
  * Doing connect and concede as two Cypress commands leaves a Cypress round trip inside that window;
  * doing both here leaves only the socket's own. The ack of a concede is sent after the actor has

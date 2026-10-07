@@ -6,10 +6,10 @@
 // deliberately loose: an address needs an `@` and a dot after it, and a new password only has to
 // fit the provider's length window. Anything subtler is the provider's call.
 //
-// The length window is two named constants in `apps/server/src/config.ts` (CLAUDE.md rule 9),
+// The length window is two named constants in `crates/server/src/config.rs` (CLAUDE.md rule 9),
 // imported by relative path the way `invite.tsx` imports the code alphabet. Both are public.
 
-import { AUTH_PASSWORD_MAX_LENGTH, AUTH_PASSWORD_MIN_LENGTH } from "../../../server/src/config.ts";
+import { AUTH_PASSWORD_MAX_LENGTH, AUTH_PASSWORD_MIN_LENGTH } from "@jackioh/server-config";
 
 /** Loose on purpose: something, an `@`, something, a dot, something, and no whitespace. */
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;

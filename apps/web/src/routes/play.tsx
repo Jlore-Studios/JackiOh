@@ -37,7 +37,7 @@ import {
   type LoadoutResult,
 } from "@jackioh/validator";
 
-import { MATCH_FOUND_NAV_DELAY_MS, SERIES_POLL_SECONDS } from "../../../server/src/config.ts";
+import { MATCH_FOUND_NAV_DELAY_MS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
 import {
   ApiRequestError,
   createRoom,
@@ -133,7 +133,7 @@ export const MODE_LABEL: Readonly<Record<QueueMode, string>> = {
 /** Where the lobby remembers the last mode, deck and trio (a convenience; see `readStoredChoice`). */
 export const PLAY_CHOICE_KEY = "jackioh.play.choice";
 
-/** `apps/server/src/api/http.ts`'s code for a choice the validator refused (R253). */
+/** `crates/server/src/api/http.rs`'s code for a choice the validator refused (R253). */
 const LOADOUT_INVALID = "loadout_invalid";
 
 // ---------------------------------------------------------------------------------------------

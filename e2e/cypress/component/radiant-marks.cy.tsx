@@ -7,7 +7,7 @@
 // holding the named card's face, inside the viewport; and a computed value sits inside the rules
 // box without pushing it out.
 
-import { CATALOG } from "../../../packages/cards/src/catalog-data.ts";
+import { CATALOG } from "@jackioh/cards";
 import { CardDefsProvider, CardDetail, CardFace, faceModel } from "../../../apps/web/src/cards/index.ts";
 
 type CardDef = (typeof CATALOG)[string];

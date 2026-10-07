@@ -1,7 +1,7 @@
 // The browser's own arrow to the auth provider. SPEC §9.2 draws two separate arrows out of the
 // browser -- `B -->|HTTPS| A[Auth provider]` and `B -->|HTTPS| F[API functions]` -- and this
 // module is the first of them. The server never brokers a password: it verifies the token that
-// comes back (`apps/server/src/api/auth.ts`, JWKS + `jose`), which is why its own
+// comes back (`crates/server/src/api/auth.rs`, JWKS + `jose`), which is why its own
 // `/api/auth/signin` answers 503 with "sign up and sign in against Supabase Auth from the client".
 //
 // NOT IN BUILD. No BUILD task names a client sign-in: M6-T1's files are all server-side, and the
@@ -53,7 +53,7 @@ import {
   AUTH_EMAIL_RESEND_COOLDOWN_SECONDS,
   AUTH_PROVIDER_TIMEOUT_SECONDS,
   AUTH_SESSION_REFRESH_MARGIN_SECONDS,
-} from "../../../server/src/config.ts";
+} from "@jackioh/server-config";
 import { challengeForRequest, forgetVerifier, storedVerifiers, type PkceChallenge, type PkceFlow } from "../auth/pkce.ts";
 import { paths } from "./navigate.ts";
 import {
@@ -120,7 +120,7 @@ export type AuthFailure =
  *
  * So wrong password, unknown address and unconfirmed address are all `credentials`, and every
  * sign-up refusal that could hinge on an existing account is `signUpRefused`. The strings match
- * `SIGN_IN_FAILED_MESSAGE` and `SIGN_UP_FAILED_MESSAGE` in `apps/server/src/api/auth.ts`, so the
+ * `SIGN_IN_FAILED_MESSAGE` and `SIGN_UP_FAILED_MESSAGE` in `crates/server/src/api/auth.rs`, so the
  * disabled server path and this one refuse in the same words.
  */
 export const SIGN_IN_FAILED_MESSAGE = "That email and password do not match an account.";
@@ -476,8 +476,8 @@ export type AuthConfig = { url: string; publishableKey: string };
  * `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (`apps/web/.env.example`). Both are
  * PUBLIC by construction -- Vite compiles a `VITE_`-prefixed value into the browser bundle -- and
  * the publishable key is the one that is safe there. `SUPABASE_SECRET_KEY` bypasses every RLS
- * policy and lives only in `apps/server/.env`; `SERVER_ONLY_ENV_VARS` and `PUBLIC_ENV_VARS` in
- * `apps/server/src/env.ts` are the two disjoint lists.
+ * policy and lives only in `crates/server/.env`; `SERVER_ONLY_ENV_VARS` and `PUBLIC_ENV_VARS` in
+ * `crates/server/src/env.rs` are the two disjoint lists.
  *
  * Returns null rather than throwing, so a deployment that has not configured auth renders a
  * sentence saying so instead of a blank screen.

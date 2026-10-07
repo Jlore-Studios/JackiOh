@@ -66,12 +66,14 @@ class TimedOutCheckTests(unittest.TestCase):
         self.assertIsNone(worker._base_wt)  # no copy of main was installed or run
 
     def test_the_committed_test_gate_runs_only_related_tests_in_minutes(self):
-        gate = next(g for g in make_config().gates if g.name == "related tests")
+        gate = next(g for g in make_config().gates if g.name == "web tests")
         self.assertIsInstance(gate, Gate)
-        self.assertIn("--changed origin/main", gate.run)
-        self.assertIn("gate-*.test.ts", gate.run)  # the AI gates and fuzz run in CI's own jobs
-        self.assertIn("fuzz*.test.ts", gate.run)
-        self.assertLessEqual(gate.timeout_minutes, 15)
+        self.assertIn("vitest run --project web --changed origin/main", gate.run)
+        # As CI's web unit tests: the audio, fx and asset tests run in the daily super run.
+        for skipped in ("'**/src/audio/**'", "'**/src/fx/**'",
+                        "'**/src/cards/art/convention.test.ts'"):
+            self.assertIn(f"--exclude {skipped}", gate.run)
+        self.assertLessEqual(gate.timeout_minutes, 20)
 
 
 class PlanCutTests(unittest.TestCase):

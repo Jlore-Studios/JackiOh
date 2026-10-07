@@ -1,5 +1,5 @@
 // Test helper for the audio suite: real engine games, reached the way the client reaches them
-// (`game/engine.real.ts`'s `enginePort()`), so a test can feed the director the very views
+// (`game/engine.ts`'s `enginePort()`, over the WebAssembly engine), so a test can feed the director the very views
 // `viewFor` redacts for each seat (R97, R154). It is not a test file.
 //
 // The driver is deterministic: a seed, two decks and a caller's policy. Nothing here decides a
@@ -10,8 +10,7 @@ import type { Action, ActionBody, CardDefs, GameEvent, PlayerId, PlayerView } fr
 
 import { castOnDrawAt } from "../../fx/castOnDraw.ts";
 import { resolveDeck } from "../../game/decks.ts";
-import type { EnginePort, EngineState } from "../../game/engine.ts";
-import { enginePort } from "../../game/engine.real.ts";
+import { enginePort, type EnginePort, type EngineState } from "../../game/engine.ts";
 
 export type RealGame = {
   port: EnginePort;

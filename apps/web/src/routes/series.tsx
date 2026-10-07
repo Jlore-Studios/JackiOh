@@ -19,7 +19,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 
-import { SERIES_POLL_SECONDS } from "../../../server/src/config.ts";
+import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
 import { useSecondsUntil } from "../auth/cooldown.ts";
 import { ApiRequestError, forfeitSeries, getSeries, pickSeriesDeck, type SeriesView } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";

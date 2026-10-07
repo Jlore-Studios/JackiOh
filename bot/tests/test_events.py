@@ -400,8 +400,8 @@ class StatusTests(unittest.TestCase):
         text = status.report(ctx)
         runs = "https://github.com/jgoetzmann/JackiOh/actions/runs"
         self.assertIn("\n".join([
-            "- **Running now** (3 of 10 lanes, 7 free; 2 of 7 on the machine, the rest on "
-            "GitHub's runners):",
+            "- **Running now** (3 of 10 lanes, 7 free; 2 of "
+            f"{ctx.cfg.pool.machine_parallel} on the night box, the rest on GitHub's runners):",
             f"  - `claude-1` (claude, `opus`): building #37, for 47m, [run]({runs}/101).",
             f"  - `muse` (muse, `muse-spark-1.3-contributor`): revising #49, for 2h 03m, "
             f"[run]({runs}/102).",

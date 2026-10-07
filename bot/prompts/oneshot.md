@@ -31,7 +31,7 @@ changes for this harness:
 2. **Where.** This worktree is already on the issue's branch: do not make the skill's
    `fullsend/<feature>` branch. `.fullsend/` is ignored by git here and never ships; keep the
    skill's scratch there (`.fullsend/SPEC.md`, `.fullsend/notes/`, `.fullsend/damage/`).
-3. **Phase 0.** Write `.fullsend/SPEC.md` from the issue, `SPEC.md` and `CLAUDE.md`. Nobody will
+3. **Phase 0.** Write `.fullsend/SPEC.md` from the issue, the spec (`spec/`) and `CLAUDE.md`. Nobody will
    answer a question before morning: decide, and list each guess under **Decisions** in your report.
 4. **Commits.** At each phase boundary commit this worktree: `git add -A && git commit -m
    "fullsend: phase N for #$number"`. That overrides the system prompt's "do not commit" for this
@@ -45,13 +45,15 @@ changes for this harness:
    and tell it to work only inside its worktree's directory and to commit there when it stops.
    Spec-testers write their tests where this repository keeps tests for the code they test.
 6. **Phase 3.** Merge every slice branch into this worktree's branch (`git merge --no-ff
-   <branch>`), then run the first build (`pnpm typecheck`) and write the damage report.
+   <branch>`), then run the first build (`cargo build --workspace --all-targets`, and `pnpm --dir
+   apps/web typecheck` when the web changed) and write the damage report.
 7. **Phases 4 to 6** run in this worktree, each reconciler, fixer and the culler owning files no
    other agent in its wave holds.
-8. **Green means this repository's checks**, not only a build: `pnpm lint`, `pnpm typecheck`, the
-   vitest projects or files you touched, `pnpm rulings:coverage` when SPEC §11 changed, and
-   `pnpm validate:catalog` when a card did. A failing spec-test means the code is wrong, unless a
-   line of the spec says otherwise.
+8. **Green means this repository's checks**, not only a build: `cargo fmt --check`, `cargo clippy
+   --workspace --all-targets -- -D warnings`, the tests of the crates you touched (`cargo test -p
+   <crate>`), the web's test files you touched, `cargo jackioh spec check` when a ruling changed,
+   and `cargo jackioh catalog check` and `cargo jackioh patches check` when a card did. A failing
+   spec-test means the code is wrong, unless a line of the spec says otherwise.
 9. **Abort.** When a row of the skill's failure table fires twice, or `.fullsend/SPEC.md` cannot
    settle a semantic conflict, roll back to the last phase commit that built (`git reset --hard
    <commit>`) and finish the issue the ordinary way. Say so in your report.

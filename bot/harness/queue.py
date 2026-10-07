@@ -422,8 +422,6 @@ class Candidate:
     #: For a revision: it resolves a conflict with `main` on a change the review rule cleared
     #: (`cleared`), so the run's own reviewer can carry that clearance (`deliver._carry`).
     carries: bool = False
-    #: Its labels: subscriptions with `only_labels` take only items carrying them.
-    labels: tuple[str, ...] = ()
     #: Someone has rated how hard it is (`rated`); an unrated build is rated when it is planned.
     rated: bool = True
     #: A revision queued because `main` left the pull request with conflicts: only a builder
@@ -615,7 +613,7 @@ def candidates(ctx: Context, state: dict[str, Any],
                     votes, ctx.cfg.pool.family_tier)),
                 bot_pr=LABEL_PR in names,
                 carries=kind == "revise" and LABEL_PR in names and carries(record),
-                labels=tuple(sorted(names)), rated=kind != "build" or rated(names, record),
+                rated=kind != "build" or rated(names, record),
                 conflict=kind == "revise" and record.get("source") == "conflict",
                 review_floor=str(record.get("review_floor") or "") if kind == "review" else "",
                 mode=mode)

@@ -9,7 +9,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AUTH_SESSION_REFRESH_MARGIN_SECONDS } from "../../../server/src/config.ts";
+import { AUTH_SESSION_REFRESH_MARGIN_SECONDS } from "@jackioh/server-config";
 import { inviteTestid, shellTestid } from "../auth/testids.ts";
 import { signOut } from "../routes/account.tsx";
 import InviteRoute from "../routes/invite.tsx";

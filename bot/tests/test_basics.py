@@ -36,7 +36,7 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(dict(first_caps.limits.stops), {"five_hour": 0.98})  # no weekly cap
         self.assertEqual(cfg.max_self_check_rounds, 3)
         self.assertIn("plan", cfg.max_turns)
-        self.assertEqual((cfg.pool.max_parallel, cfg.pool.machine_parallel), (10, 7))
+        self.assertEqual((cfg.pool.max_parallel, cfg.pool.machine_parallel), (10, 6))
         self.assertIn(".github/", cfg.forbidden_paths)
         self.assertIn("bot/", cfg.forbidden_paths)
         self.assertIn(".harness/", cfg.forbidden_paths)
@@ -382,12 +382,15 @@ class PathTests(unittest.TestCase):
                      ".harness/trust.txt", ".claude/settings.json", ".mcp.json", ".vscode/tasks.json",
                      ".github"):
             self.assertTrue(matches(path, forbidden), path)
-        for path in ("package.json", "packages/cards/package.json", "pnpm-lock.yaml",
-                     "vitest.config.ts", "tsconfig.base.json", "packages/engine/tsconfig.json",
-                     "eslint.config.js", "scripts/worktree.sh", "render.yaml",
-                     "apps/server/src/db/migrations/0005_x.sql", "e2e/cypress.config.ts"):
+        for path in ("package.json", "apps/web/package.json", "pnpm-lock.yaml",
+                     "Cargo.toml", "crates/engine/Cargo.toml", "Cargo.lock", "rust-toolchain.toml",
+                     "rustfmt.toml", "crates/engine/clippy.toml", "crates/cards/build.rs",
+                     ".cargo/config.toml", "vitest.config.ts", "apps/web/tsconfig.json",
+                     "eslint.config.js", "scripts/build-wasm.sh", "render.yaml",
+                     "crates/server/Dockerfile", "crates/server/migrations/0005_x.sql",
+                     "e2e/cypress.config.ts"):
             self.assertTrue(matches(path, review), path)
-        for path in ("apps/web/src/game/Game.tsx", "packages/cards/src/scripts/002-bigot.ts",
-                     "SPEC.md", "bots/x", "docs/scripts.md", "packages/engine/test/scripts/x.ts"):
+        for path in ("apps/web/src/game/Game.tsx", "crates/cards/src/scripts/core/c002_bigot.rs",
+                     "SPEC.md", "bots/x", "docs/scripts.md", "crates/engine/tests/rules/combat.rs"):
             self.assertFalse(matches(path, forbidden), path)
             self.assertFalse(matches(path, review), path)

@@ -10,7 +10,7 @@
 // a file in the directory that no line here lists (R660). To add art: drop the file(s) in
 // `apps/web/public/art/`, then add a line here, for example
 //   "core-002": { base: true, radiant: true },
-// and, if the artist is credited, their name as the card's `artist` in packages/cards/flavour.json.
+// and, if the artist is credited, their name as the card's `artist` in crates/cards/flavour.json.
 // A radiant face whose own file is missing shows the base file under a gold tint.
 
 export type ArtManifest = Readonly<Record<string, { readonly base?: true; readonly radiant?: true }>>;

@@ -1,6 +1,6 @@
 // A catalog and a collection for the deckbuilder's tests.
 //
-// Deliberately NOT `packages/cards/catalog.json`: the real catalog belongs to M4 and is still
+// Deliberately NOT `crates/cards/catalog.json`: the real catalog belongs to M4 and is still
 // moving, and a test that breaks when a designer renames a card tells you nothing about the
 // builder. The shape is the real one (`CardDef` from `@jackioh/shared`) and the sizes are the real
 // ones (`DECK_SIZE` and `LOADOUT_DECKS` are imported, never spelled), so a loadout built from this

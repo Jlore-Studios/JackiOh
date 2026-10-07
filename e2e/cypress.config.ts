@@ -3,6 +3,7 @@
 
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "cypress";
+import { jackiohAliases } from "../apps/web/vite.config.ts";
 import { registerTasks } from "./support/tasks/index.ts";
 
 export default defineConfig({
@@ -35,7 +36,7 @@ export default defineConfig({
     testIsolation: true,
     // Cypress 16: spec-visible variables live in `expose` and are read with Cypress.expose(key)
     // (support/config.ts wraps them). Override on the CLI with `--expose wsUrl=…`.
-    // `WS_PATH` is `/ws/match` (apps/server/src/match/wsServer.ts); a handshake off that path is
+    // `WS_PATH` is `/ws/match` (crates/server/src/actor/ws_server.rs); a handshake off that path is
     // never upgraded. support/config.ts carries the same default for the browser side.
     expose: {
       apiUrl: process.env.E2E_API_URL ?? "http://localhost:8787",
@@ -104,7 +105,10 @@ export default defineConfig({
         // the same version are still two dispatchers, and the first `useState` in `Game.tsx`
         // rendered by the other copy's root throws "Invalid hook call". `dedupe` makes Vite
         // resolve these two ids from the dev-server root (this directory) whatever imports them.
-        resolve: { dedupe: ["react", "react-dom"] },
+        //
+        // And the client's own `@jackioh/*` specifiers, resolved to its wire layer exactly as its
+        // build resolves them (docs/v0.3.0/SURFACE.md §10.4): the packages they named are Rust now.
+        resolve: { dedupe: ["react", "react-dom"], alias: jackiohAliases },
         server: {
           // The specs import apps/web/src/**, which is outside this Vite root. Vite's default
           // allow-list is the workspace root it detects, and e2e/ is deliberately its own pnpm

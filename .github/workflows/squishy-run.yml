@@ -226,6 +226,13 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
+      # The Rust toolchain rust-toolchain.toml pins, with its components and target, as ci.yml's
+      # setup installs it (.github/actions/setup); the harness's checks run cargo.
+      - uses: dtolnay/rust-toolchain@1.97.0
+        with:
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"

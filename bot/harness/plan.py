@@ -396,11 +396,6 @@ def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lan
             return None
         return Assignment(seat.provider, "review", candidate.difficulty, review=seat)
     builders = free(ROLE_OF[candidate.kind])
-    # Reserved work goes to the subscriptions that claim it, and nowhere else: a `training`
-    # item trains on devin-train's box, while anything else never lands there.
-    reserved = providers_mod.reserved_labels(pool.providers)
-    builders = [p for p in builders
-                if providers_mod.takes_item(p, set(candidate.labels), reserved)]
     floor = plan_floor(candidate)
     if candidate.kind == "build" and not plan_meets(candidate):
         # It has no plan its difficulty may build from (#317 part 6): the planning lane writes one
@@ -478,32 +473,14 @@ def survey_provider(ctx: Context, state: dict[str, Any], lanes: Lanes, *, force:
     return None
 
 
-def training_ids(pool: providers_mod.Pool) -> set[str]:
-    """The machine subscriptions with work of their own (`only_labels`, devin-train): they
-    run on the training box, whose slots the night box's subscriptions cannot take."""
-    return {p.id for p in pool.providers.values()
-            if p.enabled and p.only_labels and pool.on_machine(p.id)}
-
-
-def machine_cap(pool: providers_mod.Pool, provider: Provider) -> int:
-    """How many machine runs may go ahead of `provider`: all of `machine_parallel` for the
-    training box's own, one slot each reserved from it for everyone else, so at most six
-    (devin, muse, gpt, agy) run on the night box with one left to train on."""
-    reserved = sum(pool.get(pid).lanes for pid in training_ids(pool))
-    if provider.id in training_ids(pool):
-        return pool.machine_parallel
-    return pool.machine_parallel - reserved
-
-
 def machine_full(pool: providers_mod.Pool, provider: Provider, lanes: Lanes) -> bool:
-    """`provider` runs on the bot's machine, and its share of it is full. GitHub's runners
-    have no such limit beyond `max_parallel`."""
+    """`provider` runs on the bot's machine (the night box), and its `machine_parallel` slots are
+    all held. GitHub's runners have no such limit beyond `max_parallel`. (The AI's training lanes
+    run on a box of their own, outside the harness, so no slot is kept for them.)"""
     if not pool.on_machine(provider.id):
         return False
-    held = [held_id for held_id in lanes.held.values() if pool.on_machine(held_id)]
-    if provider.id in training_ids(pool):
-        return len(held) >= pool.machine_parallel
-    return sum(1 for held_id in held if held_id not in training_ids(pool)) >= machine_cap(pool, provider)
+    held = sum(1 for held_id in lanes.held.values() if pool.on_machine(held_id))
+    return held >= pool.machine_parallel
 
 
 def why_none(ctx: Context, state: dict[str, Any], lanes: Lanes) -> str:
@@ -516,8 +493,7 @@ def why_none(ctx: Context, state: dict[str, Any], lanes: Lanes) -> str:
             continue
         reason = providers_mod.availability(provider, state, ctx.now(), cfg.timezone, cfg.secrets)
         if reason is None and machine_full(cfg.pool, provider, lanes):
-            reason = (f"waits for room on the machine "
-                      f"({machine_cap(cfg.pool, provider)} at once)")
+            reason = f"waits for room on the machine ({cfg.pool.machine_parallel} at once)"
         if reason is None and provider.quiet_check and cfg.quiet.enabled:
             reason = "waits for its owner to be quiet"
         parts.append(f"`{provider.id}` {reason or 'is free'}")

@@ -15,7 +15,7 @@ import {
   AUTH_PASSWORD_MIN_LENGTH,
   AUTH_PROVIDER_TIMEOUT_SECONDS,
   AUTH_SIGN_OUT_WAIT_SECONDS,
-} from "../../../server/src/config.ts";
+} from "@jackioh/server-config";
 import { signOut } from "../routes/account.tsx";
 import {
   AUTH_MESSAGES,

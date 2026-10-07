@@ -39,12 +39,12 @@ class ParseTests(unittest.TestCase):
         # The usage order: claude-3, claude-7 (the same rules: no caps) and claude-1 first,
         # then claude-4, claude-6 and claude-5 last of the Claude accounts (each under its
         # caps), then the medium models, Muse first (#317 part 9), then claude-2, kept for
-        # planning and review, Devin, and devin-train, which takes only `training` items on the
-        # training box, last.
+        # planning and review, and Devin last. (The AI's training lanes run outside the
+        # harness: no subscription of theirs.)
         self.assertEqual(pool.priority, ("claude-3", "claude-7", "claude-1", "claude-4",
                                          "claude-6", "claude-5", "muse", "agy", "gpt",
-                                         "claude-2", "devin", "devin-train"))
-        self.assertEqual((pool.max_parallel, pool.machine_parallel), (10, 7))
+                                         "claude-2", "devin"))
+        self.assertEqual((pool.max_parallel, pool.machine_parallel), (10, 6))
         self.assertEqual({p.cli for p in pool.ordered()}, set(providers.CLIS))
         self.assertEqual(len([p for p in pool.ordered() if p.cli == "claude"]), 7)
         first = pool.get("claude-1")
@@ -65,7 +65,6 @@ class ParseTests(unittest.TestCase):
             "gpt": [("gpt-5.6-terra", "medium", False)],
             "claude-2": [("opus", "strong", False), ("sonnet", "medium", False)],
             "devin": [("swe-2-max", "weak", True)],
-            "devin-train": [("swe-2-max", "weak", True)],
         })
         self.assertEqual([e.model for e in pool.tiers["weak"]], ["swe-2-max"])
         self.assertEqual([e.model for e in pool.tiers["medium"]],
@@ -95,8 +94,7 @@ class ParseTests(unittest.TestCase):
         broken(lambda r: r["providers"]["gpt"].update(secret="CLAUDE_CODE_OAUTH_TOKEN"))
         broken(lambda r: r["providers"]["gpt"].update(limits={"mode": "caps", "five_hour": 98}))
         broken(lambda r: r["providers"]["gpt"].update(limits={"mode": "caps"}))
-        broken(lambda r: r["providers"]["gpt"].update(only_labels="training"))
-        broken(lambda r: r["providers"]["gpt"].update(only_labels=[""]))
+        broken(lambda r: r["providers"]["gpt"].update(only_labels=["training"]))  # retired
         broken(lambda r: r["providers"]["gpt"].update(schedule={"mode": "window", "start": "9"}))
         broken(lambda r: r["providers"]["gpt"].update(roles=["build", "dance"]))
         broken(lambda r: r.update(priority=["claude-1"]))
@@ -270,12 +268,7 @@ class MatchingTests(unittest.TestCase):
                          ("devin", "cognition", "machine", "night-vm-devin"))
         self.assertEqual((devin.schedule.mode, devin.limits.mode), ("always", "none"))
         self.assertEqual((devin.tier, devin.self_check, devin.easy_first), ("weak", True, True))
-        self.assertEqual(pool.priority[-2:], ("devin", "devin-train"))
-        train = pool.get("devin-train")
-        self.assertEqual((train.cli, train.family, train.login, train.runs_on, train.roles,
-                          train.only_labels),
-                         ("devin", "cognition", "machine", "night-vm-devin-train",
-                          ("build", "revise"), ("training",)))
+        self.assertEqual(pool.priority[-1], "devin")
         # Unplanned, Devin cannot take it: it builds only from a plan. By day no strong model is
         # free (the Claude accounts keep to the night here), so Muse plans it in its own run and
         # builds it.
@@ -647,8 +640,8 @@ class MatchingTests(unittest.TestCase):
 
     def test_devin_can_fill_the_machine(self):
         """`lanes: 6`: Devin takes more items while it holds some (six runners carry its
-        label); a seventh waits on its lanes. The machine's limit of seven
-        counts every subscription's runs, so with another one there Devin gets fewer."""
+        label); a seventh waits on its lanes. The night box's limit of six counts every
+        subscription's runs, so with another one there Devin gets fewer."""
         gh = FakeGitHub()
         items = (3, 4, 5, 6, 7, 8, 9)
         for n in items:
@@ -656,7 +649,7 @@ class MatchingTests(unittest.TestCase):
         ctx = ctx_for(gh, at=DAY, env=secrets(), machine=("devin",))
         ctx.store.update(lambda s: [state_item(s, n).update(planned_at=clock.iso(DAY))
                                     for n in items])
-        self.assertEqual((ctx.cfg.pool.get("devin").lanes, ctx.cfg.pool.machine_parallel), (6, 7))
+        self.assertEqual((ctx.cfg.pool.get("devin").lanes, ctx.cfg.pool.machine_parallel), (6, 6))
         taken = []
         for _ in range(7):
             planned = plan_mod.make(ctx)
@@ -670,8 +663,7 @@ class MatchingTests(unittest.TestCase):
         self.assertIn("`devin` is busy", planned["reason"])
         lanes = plan_mod.read_lanes(ctx, ctx.store.load())
         self.assertEqual((lanes.count("devin"), lanes.on_machine(ctx.cfg.pool)), (6, 6))
-        # With GPT holding a machine run, Devin still takes six: seven slots leave room.
-        # Its seventh waits on its own lanes instead.
+        # With GPT holding a machine run, Devin takes five and waits for room on the box.
         gh = FakeGitHub()
         for n in items:
             gh.add_issue(n, labels=(LABEL_BUILD, "difficulty:easy"))
@@ -690,66 +682,8 @@ class MatchingTests(unittest.TestCase):
             ctx.store.update(lambda s, n=planned["number"]: state_item(s, n).update(
                 run_id=str(n)))
             devins += planned["provider"] == "devin"
-        self.assertEqual(devins, 6)
-        self.assertIn("`devin` is busy", planned["reason"])
-
-    def test_the_machine_keeps_a_slot_for_training(self):
-        """At most six (devin, muse, gpt, agy) run on the night box: with gpt holding one,
-        Devin takes five and waits for room; the seventh slot stays free, and a `training`
-        item still trains on devin-train while the night box is full."""
-        gh = FakeGitHub()
-        items = (3, 4, 5, 6, 7, 8)
-        for n in items:
-            gh.add_issue(n, labels=(LABEL_BUILD, "difficulty:easy"))
-        gh.add_issue(9, labels=(LABEL_BUILD, "difficulty:easy", "training"))
-        ctx = ctx_for(gh, at=DAY, env=secrets(), machine=("devin", "gpt", "devin-train"))
-        ctx.store.update(lambda s: [state_item(s, n).update(planned_at=clock.iso(DAY))
-                                    for n in items + (9,)])
-        gh.add_issue(40, labels=(LABEL_WORKING,))
-        gh.runs["40"] = {"status": "in_progress"}
-        ctx.store.update(lambda s: state_item(s, 40).update(run_id="40", provider="gpt"))
-        taken = []
-        for _ in range(7):
-            planned = plan_mod.make(ctx)
-            if planned["action"] == "none":
-                break
-            gh.runs[str(planned["number"])] = {"status": "in_progress"}
-            ctx.store.update(lambda s, n=planned["number"]: state_item(s, n).update(
-                run_id=str(n)))
-            taken.append((planned["number"], planned["provider"]))
-        self.assertEqual(taken, [(n, "devin") for n in items[:5]] + [(9, "devin-train")])
-        self.assertIn("waits for room on the machine (6 at once)", planned["reason"])
-
-    def test_training_items_go_only_to_devin_train(self):
-        """`only_labels`: a `training` item builds on devin-train's box, and nothing else
-        takes it; an ordinary item never lands on devin-train. Like Devin, it builds from
-        a strong model's plan, and its reviews float to any reviewer."""
-        pool = providers.load(ROOT)
-        self.assertEqual(providers.reserved_labels(pool.providers), {"training"})
-        devin_train = pool.get("devin-train")
-        self.assertEqual(devin_train.only_labels, ("training",))
-        for provider in pool.ordered():
-            if provider.id == "devin-train":
-                self.assertTrue(providers.takes_item(provider, {"training"}, {"training"}))
-                self.assertFalse(providers.takes_item(provider, {"bot:build"}, {"training"}))
-            else:
-                self.assertFalse(providers.takes_item(provider, {"training"}, {"training"}))
-                self.assertTrue(providers.takes_item(provider, {"bot:build"}, {"training"}))
-        gh = FakeGitHub()
-        gh.add_issue(3, labels=(LABEL_BUILD, "difficulty:easy", "training"))
-        gh.add_issue(4, labels=(LABEL_BUILD, "difficulty:easy"))
-        ctx = ctx_for(gh, machine=ALL_MACHINE)
-        ctx.store.update(lambda s: [state_item(s, n).update(planned_at=clock.iso(NIGHT),
-                                                            planned_tier="strong")
-                                    for n in (3, 4)])
-        planned = plan_mod.make(ctx)
-        self.assertEqual((planned["number"], planned["provider"]), (3, "devin-train"))
-        self.assertEqual(planned["runs_on"], "night-vm-devin-train")
-        gh.runs["1"] = {"status": "in_progress"}
-        ctx.store.update(lambda s: state_item(s, 3).update(run_id="1"))
-        planned = plan_mod.make(ctx)
-        # The ordinary easy item goes to Devin first, never to the training box.
-        self.assertEqual((planned["number"], planned["provider"]), (4, "devin"))
+        self.assertEqual(devins, 5)
+        self.assertIn("`devin` waits for room on the machine (6 at once)", planned["reason"])
 
     def test_a_second_review_goes_to_another_model_family(self):
         gh = FakeGitHub()
@@ -807,7 +741,6 @@ class WhenTests(unittest.TestCase):
         text = providers.when_free(test_pool(), {}, DAY, "America/Chicago", only_claude)
         self.assertIn("when `claude-1` opens (21:00–07:00", text)
         text = providers.when_free(providers.load(ROOT), {}, DAY, "America/Chicago", only_claude)
-        # devin-train is off in the committed file until the training box is built (#318).
         self.assertIn("`muse`, `agy`, `gpt`, `devin` can take it now", text)
 
 

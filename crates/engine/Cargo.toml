@@ -1,0 +1,39 @@
+[package]
+name = "jackioh-engine"
+description = "The JackiOh rules engine, its wire types and the deck validator (SPEC.md; docs/v0.3.0/SURFACE.md §6)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+default = []
+# `jackioh_engine::testkit`: scenario() and the invariant monitor (SURFACE §8). Every test crate
+# enables it as a dev-dependency feature.
+testkit = []
+# The client's generated TypeScript types (SURFACE §5.1):
+# `cargo test -p jackioh-engine --features ts export_bindings`.
+ts = ["dep:ts-rs"]
+
+[dependencies]
+# Pure (SURFACE §3): serde, serde_json, indexmap and, behind `ts`, ts-rs. Nothing else.
+serde = { workspace = true }
+serde_json = { workspace = true }
+indexmap = { workspace = true }
+ts-rs = { workspace = true, optional = true }
+
+[dev-dependencies]
+# Golden traces and the hotseat fixture run the real cards (SURFACE §2, §13).
+jackioh-cards = { workspace = true }
+
+# The one integration-test binary for the ported engine tests (SURFACE §1). It reaches the engine
+# through `jackioh_engine::testkit`, so it builds only with that feature:
+# `cargo test -p jackioh-engine --features testkit`.
+[[test]]
+name = "rules"
+path = "tests/rules.rs"
+required-features = ["testkit"]
+
+[[test]]
+name = "golden"
+path = "tests/golden.rs"

@@ -12,7 +12,7 @@ import { checkImportRoom, validateDeck, validateTrio, type Collection } from "@j
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { DECK_AUTOSAVE_DEBOUNCE_MS, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "../../../../server/src/config.ts";
+import { DECK_AUTOSAVE_DEBOUNCE_MS, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import { ApiRequestError, type SavedDeck, type SavedTrio } from "../../net/api.ts";
 import { DECK_COMPLETE_SAVED } from "./DeckEditor.tsx";
 import { decodeDeckCode, encodeDeckCode } from "./deckCode.ts";

@@ -8,7 +8,7 @@
 import { trioConflicts, validateDeck, validateTrio } from "@jackioh/validator";
 import { describe, expect, it } from "vitest";
 
-import { DECK_NAME_MAX_LENGTH } from "../../../../server/src/config.ts";
+import { DECK_NAME_MAX_LENGTH } from "@jackioh/server-config";
 import { DECK_SIZE } from "./deckSize.ts";
 import { fixtureCardId, fixtureCatalog, fixtureCollection, legalDecks } from "./fixtures.ts";
 import type { DeckItem, TrioItem } from "./sync.ts";

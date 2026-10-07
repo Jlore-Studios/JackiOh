@@ -12,7 +12,7 @@ import {
   DECK_NAME_MAX_LENGTH,
   MAX_SAVED_DECKS,
   MAX_SAVED_TRIOS,
-} from "../../../../server/src/config.ts";
+} from "@jackioh/server-config";
 import {
   ApiRequestError,
   ApiUnreachableError,
@@ -123,7 +123,7 @@ type Call = {
   body?: DeckInput | TrioInput | TrioImportInput;
 };
 
-/** An in-memory server with the refusals `apps/server/src/api/decks.ts` makes that matter here. */
+/** An in-memory server with the refusals `crates/server/src/api/decks.rs` makes that matter here. */
 function fakeServer() {
   const decks = new Map<string, DeckInput>();
   const trios = new Map<string, TrioInput>();
