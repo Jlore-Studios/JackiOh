@@ -18,7 +18,7 @@ use crate::prelude::json_as;
 use crate::script::Effect;
 use crate::state::{CardInstance, GameState, find_instance};
 use crate::subsystems::scorer::{Scored, ScorerOptions, dry_run_base, score_def};
-use crate::wire::{CardDef, PlayerId};
+use crate::wire::PlayerId;
 
 /// `rankPerfectHand`'s options (TS `{ radiant?: boolean; selfDefId?: string }`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]

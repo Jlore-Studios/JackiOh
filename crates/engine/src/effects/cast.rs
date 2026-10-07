@@ -64,7 +64,7 @@ fn options_of(how: &CastHow) -> CastOptions {
     CastOptions {
         random: if how.random == Some(true) { Some(true) } else { None },
         target_enemies: if how.target_enemies == Some(true) { Some(true) } else { None },
-        afterward: how.afterward.clone(),
+        afterward: how.afterward,
         ..CastOptions::default()
     }
 }
@@ -153,8 +153,11 @@ pub enum CastNewDef {
     Id(String),
     Def(CastDef),
     #[serde(skip)]
-    Read(Arc<dyn Fn(&mut EffectContext<'_>) -> Option<CastDef> + Send + Sync>),
+    Read(CastDefReader),
 }
+
+/// `CastNewDef::Read`'s function: the definition to cast, read when the effect resolves.
+pub type CastDefReader = Arc<dyn Fn(&mut EffectContext<'_>) -> Option<CastDef> + Send + Sync>;
 
 impl From<&str> for CastNewDef {
     fn from(def_id: &str) -> CastNewDef {
@@ -331,7 +334,7 @@ pub fn cast_random(args: CastRandomArgs) -> Effect {
         let how = CastHow {
             random: None,
             target_enemies: args.target_enemies,
-            afterward: args.afterward.clone(),
+            afterward: args.afterward,
         };
         let radiant = args.radiant == Some(true);
         EffectPart {

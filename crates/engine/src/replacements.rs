@@ -46,17 +46,17 @@
 
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::Value;
 
 use crate::config::{DAMAGE_REDIRECT_CAP, LIBRARY_CAP};
 use crate::damage::{DamageArgs, DamageTarget};
 use crate::script::{
-    EffectContext, EngineSink, InsteadLasting, InsteadTo, Script, empty_script,
+    EffectContext, EngineSink, InsteadLasting, InsteadTo,
 };
 use crate::state::{
     CardInstance, GameState, ModifierExpiry, ModifierKind, Resume, find_instance, find_instance_mut,
 };
-use crate::wire::{CardType, GameEvent, PlayerId, RedirectWhat, Row, Zone, ZoneName, ZoneRef, opponent_of};
+use crate::wire::{CardType, GameEvent, PlayerId, RedirectWhat, Row, Zone, ZoneName, opponent_of};
 use crate::zones::GraveyardRedirect;
 
 // ---------------------------------------------------------------------------
@@ -103,9 +103,7 @@ pub fn replacement_of(ctx: &EffectContext<'_>) -> Option<ReplacementRecord> {
     if !raw.is_object() {
         return None;
     }
-    if raw.get("event").is_none() {
-        return None;
-    }
+    raw.get("event")?;
     serde_json::from_value::<ReplacementRecord>(raw.clone()).ok()
 }
 
@@ -170,11 +168,11 @@ fn candidates(state: &GameState, about: Option<&CardInstance>) -> Vec<Candidate>
     let mut seen: IndexSet<String> = IndexSet::new();
     for player in sides_of(state) {
         for card in crate::zones::active_units_of(state, player) {
-            add_candidate(&mut out, &mut seen, &card, player, CandidateZone::Field);
+            add_candidate(&mut out, &mut seen, card, player, CandidateZone::Field);
         }
         for slot in crate::zones::slots_of(player, Row::Backrow) {
-            if let Some(card) = crate::zones::card_at(state, &slot) {
-                add_candidate(&mut out, &mut seen, &card, player, CandidateZone::Backrow);
+            if let Some(card) = crate::zones::card_at(state, slot) {
+                add_candidate(&mut out, &mut seen, card, player, CandidateZone::Backrow);
             }
         }
         for card in &state.players[player].hand {

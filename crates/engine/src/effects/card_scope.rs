@@ -150,7 +150,7 @@ fn field_cards(state: &GameState, player: PlayerId, rows: &[Row]) -> Vec<CardIns
         .flat_map(|row| {
             slots_of(player, *row)
                 .into_iter()
-                .filter_map(|slot| card_at(state, &slot).cloned())
+                .filter_map(|slot| card_at(state, slot).cloned())
                 .collect::<Vec<CardInstance>>()
         })
         .collect()

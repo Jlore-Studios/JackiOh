@@ -34,7 +34,7 @@ use serde_json::Value;
 
 use crate::damage::DamageTarget;
 use crate::layers::unit_has;
-use crate::script::{EffectContext, FlagOrCount, Script, StaticFlags, empty_script};
+use crate::script::{EffectContext, FlagOrCount};
 use crate::state::{CardInstance, FaceUpRecord, GameState, ModifierKind, PlayRecord, find_instance};
 use crate::wire::{CardType, GameEvent, KeywordKind, PlayerId, Row, Tag, Zone, opponent_of};
 use crate::zones::{OffFieldZone, active_units_of, card_at, slot_of, slots_of};
@@ -233,7 +233,7 @@ pub fn killer_of<'a>(state: &'a GameState, card: Option<&CardInstance>) -> Optio
         return None;
     }
     let at = slot_of(state, killer)?;
-    if card_at(state, &at).map(|top| top.id.clone()) != Some(killer.id.clone()) {
+    if card_at(state, at).map(|top| top.id.clone()) != Some(killer.id.clone()) {
         return None;
     }
     Some(killer)
@@ -318,7 +318,7 @@ fn permanents_held_by(state: &GameState, player: PlayerId) -> Vec<CardInstance> 
     [Row::Units, Row::Backrow]
         .into_iter()
         .flat_map(|row| slots_of(player, row))
-        .filter_map(|slot| card_at(state, &slot).map(|held| held.clone()))
+        .filter_map(|slot| card_at(state, slot).cloned())
         .collect()
 }
 
@@ -370,9 +370,7 @@ pub fn gifted_would_make_radiant(state: &GameState, player: PlayerId, card: &Car
 pub fn lethal_attackers_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let target = DamageTarget::Hero { player };
     active_units_of(state, opponent_of(player))
-        .into_iter()
-        .map(|unit| unit.clone())
-        .filter(|unit| crate::subsystems::lethal::is_lethal(state, unit, &target))
+        .into_iter().filter(|&unit| crate::subsystems::lethal::is_lethal(state, unit, &target)).cloned()
         .collect()
 }
 

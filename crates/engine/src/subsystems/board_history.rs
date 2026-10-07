@@ -303,7 +303,7 @@ pub fn restore_board(sink: &mut EngineSink<'_>, by: PlayerId, turns_ago: i32, on
                 if !place_on_field(
                     sink.state,
                     &mut card,
-                    &slot,
+                    slot,
                     PlaceOnFieldOptions { stack: Some(at > 0) },
                 ) {
                     bounce_card(sink, &card);

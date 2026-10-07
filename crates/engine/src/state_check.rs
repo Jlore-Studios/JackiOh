@@ -40,11 +40,10 @@ use serde_json::Value;
 use crate::config::{BACKROW_ZONES, STATE_CHECK_PASS_CAP, UNIT_ZONES};
 use crate::prompts::{ListStatus, ResumePlan, SELF_KEY, run_resumable_list};
 use crate::resolve::{HookOptions, make_context};
-use crate::script::{EngineSink, HookArgs, Script};
+use crate::script::{EngineSink, HookArgs};
 use crate::state::{CardInstance, GameState, Resume, WorkItem, find_instance, find_instance_mut};
 use crate::wire::{
-    AttackHealth, GameEvent, GameOverReason, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Position, Row, Winner,
-    Zone, ZoneName, ZoneRef, has_keyword,
+    AttackHealth, GameEvent, GameOverReason, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Position, Row, Winner, ZoneName, ZoneRef, has_keyword,
 };
 use crate::work::{PAUSE_KEY, PausedStep, WorkPlan, paused_of};
 use crate::zones::{MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot};
@@ -218,14 +217,14 @@ const PASS_KEY: &str = "pass";
 /// as plain JSON:
 ///
 ///  - `owed`   — step 3's Death hooks still to fire, in R68's order, each as the snapshot of the card
-///               taken just before it left the field. R78 has already reset the instance on the
-///               board, so the snapshot is the only place the hook's `ctx.self` can come from (R89),
-///               and a continuation cannot re-derive it — hence it travels here (R127).
+///    taken just before it left the field. R78 has already reset the instance on the
+///    board, so the snapshot is the only place the hook's `ctx.self` can come from (R89),
+///    and a continuation cannot re-derive it — hence it travels here (R127).
 ///  - `reborn` — step 4's returns: which collected unit had Reborn and which zone it reserved (R64).
-///               The instance is found again by id when the step runs, so a Death hook that removed
-///               it in between cannot be resurrected by a stale reference.
+///    The instance is found again by id when the step runs, so a Death hook that removed
+///    it in between cannot be resurrected by a stale reference.
 ///  - `collected` — step 5's report: `enteredGraveyard` for everything that is still in a graveyard
-///               once Reborn has taken its own back out (R47).
+///    once Reborn has taken its own back out (R47).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct DeathPass {
@@ -415,10 +414,10 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
     let mut back: Vec<(String, ZoneRef)> = Vec::new();
     for entry in &pass.reborn {
         // R563: a C+ #35 Rollback that let the zone go has given it to the snapshot's card; no return.
-        if !crate::zones::is_reserved(sink.state, &entry.at) {
+        if !crate::zones::is_reserved(sink.state, entry.at) {
             continue;
         }
-        crate::zones::release_zone(sink.state, &entry.at);
+        crate::zones::release_zone(sink.state, entry.at);
         // R127's shape at the level of a unit: the pass names it by id, so a Death hook that exiled or
         // unmade it in between leaves nothing to bring back rather than a stale object to resurrect.
         // A unit token is the exception R175 makes: it ceased to exist as it left (R11), so no pile
@@ -454,7 +453,7 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
             row: entry.at.row,
             lane: entry.at.lane,
         };
-        if !crate::zones::place_on_field(sink.state, &mut copy, &slot, PlaceOnFieldOptions { stack: Some(true) }) {
+        if !crate::zones::place_on_field(sink.state, &mut copy, slot, PlaceOnFieldOptions { stack: Some(true) }) {
             continue;
         }
         let owner = copy.owner;
@@ -721,7 +720,7 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
         if card.reborn
             && let Some(at) = card.at
         {
-            crate::zones::reserve_zone(sink.state, &at);
+            crate::zones::reserve_zone(sink.state, at);
             // R175: a unit token ceases to exist below and no pile will hold it, so its return is
             // carried by the pass itself, with the X/X it was summoned as.
             // Read off the snapshot: the move above has already reset the instance (R78).

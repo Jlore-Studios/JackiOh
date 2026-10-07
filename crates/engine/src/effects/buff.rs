@@ -153,8 +153,7 @@ pub fn buff_all_units(args: BuffAllUnitsArgs) -> Effect {
         let amount = amount_of(args.attack, args.health);
         for player in players {
             let units: Vec<CardInstance> = active_units_of(ctx.sink.state, player)
-                .into_iter()
-                .map(|unit| unit.clone())
+                .into_iter().cloned()
                 .collect();
             for unit in &units {
                 apply_buff(ctx, unit, &amount, true);

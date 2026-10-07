@@ -68,7 +68,7 @@ use crate::prompts::{
 };
 use crate::random_cast::{count_chain_cast, prefer_enemies, prefer_friends, random_cast_of, random_picks, with_cast_mode};
 use crate::resolve::{CastOptions, HookName, MANA_BEFORE_PLAY_KEY, flag_return_to_hand_at_end_of_turn};
-use crate::script::{EngineSink, FlagOrCount, Script, StaticFlags, empty_script};
+use crate::script::{EngineSink, FlagOrCount};
 use crate::state::{
     AnnounceRecord, CardInstance, CastMode, EngineError, GameState, ModifierExpiry, ModifierKind, PlayRecord,
     PromptOption, QueuedTrigger, Resume, WorkItem, find_instance, find_instance_mut, new_instance,
@@ -782,7 +782,7 @@ fn handed_over_zone(state: &GameState, run: &PlayRun, card: &CardInstance) -> Op
         row: Row::Units,
         lane: zone.lane,
     };
-    if is_open(state, &same_lane) {
+    if is_open(state, same_lane) {
         Some(same_lane)
     } else {
         first_free_zone(state, opponent, Row::Units)
@@ -861,7 +861,7 @@ fn pay_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
     if let Some(zone) = run.zone
         && !run.tributes.is_empty()
     {
-        reserve_zone(sink.state, &zone);
+        reserve_zone(sink.state, zone);
     }
     if tributes_an_enemy(sink.state, run) {
         run.enemy_tributed = Some(true);
@@ -1405,7 +1405,7 @@ fn arrived_during(state: &GameState, run: &PlayRun) -> Vec<String> {
 fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     // R210: step 2 held the named zone for this play; it is released here, whatever happens next.
     if let Some(zone) = run.zone {
-        release_zone(sink.state, &zone);
+        release_zone(sink.state, zone);
     }
     let Some(mut card) = snapshot(sink.state, &run.instance_id) else {
         return false;
@@ -1467,7 +1467,7 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     let placed = match run.zone {
         Some(zone) => {
             let stack = plays_on_stack(sink.state, &card);
-            place_on_field(sink.state, &mut card, &zone, PlaceOnFieldOptions { stack: Some(stack) })
+            place_on_field(sink.state, &mut card, zone, PlaceOnFieldOptions { stack: Some(stack) })
         }
         None => false,
     };
@@ -1656,13 +1656,13 @@ fn quickstriker_grants(state: &GameState, run: &PlayRun, played: &CardInstance) 
     let mut multiples: Vec<i32> = Vec::new();
     for row in [Row::Units, Row::Backrow] {
         for slot in slots_of(run.player, row) {
-            let Some(held) = card_at(state, &slot) else {
+            let Some(held) = card_at(state, slot) else {
                 continue;
             };
             if held.id == played.id || arrived.contains(&held.id) {
                 continue;
             }
-            let grants = match crate::scripts::flags_of(state, &held).quickstriker {
+            let grants = match crate::scripts::flags_of(state, held).quickstriker {
                 Some(FlagOrCount::Flag(true)) => 1,
                 Some(FlagOrCount::Count(count)) => count.max(0),
                 _ => 0,
@@ -1793,13 +1793,13 @@ fn resolve_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
     if run.fizzled == Some(true) {
         return;
     }
-    for at in run.resolve_at..RESOLVE_PARTS.len() {
+    for (at, part) in RESOLVE_PARTS.iter().enumerate().skip(run.resolve_at) {
         run.resolve_at = at + 1;
         let Some(card) = still_resolving(sink.state, run) else {
             return;
         };
 
-        match RESOLVE_PARTS[at] {
+        match part {
             ResolvePart::Quickstriker => quickstriker_combo(sink, run, &card),
             ResolvePart::ComboDraw => combo_draw_step(sink, run),
             ResolvePart::Script => {
@@ -2034,11 +2034,10 @@ fn ask_repeat_targets(sink: &mut EngineSink<'_>, run: &mut PlayRun, card: &CardI
         .unwrap_or_default();
     let targets = active_target_decls(&declared_targets(sink.state, card), &chosen_modes);
     let start = run.repeat.as_ref().map_or(0, |repeat| repeat.decl_at);
-    for at in start..targets.len() {
+    for (at, decl) in targets.iter().enumerate().skip(start) {
         if let Some(repeat) = run.repeat.as_mut() {
             repeat.decl_at = at + 1;
         }
-        let decl = &targets[at];
         let options = cast_target_options(sink.state, run, card, decl);
         if options.is_empty() {
             continue;
@@ -2091,11 +2090,10 @@ fn ask_repeat_modes(sink: &mut EngineSink<'_>, run: &mut PlayRun, card: &CardIns
     let name = def_of(Some(&*sink.state), &card.def_id).name.clone();
     let modes = declared_modes(sink.state, card);
     let start = run.repeat.as_ref().map_or(0, |repeat| repeat.mode_at);
-    for at in start..modes.len() {
+    for (at, decl) in modes.iter().enumerate().skip(start) {
         if let Some(repeat) = run.repeat.as_mut() {
             repeat.mode_at = at + 1;
         }
-        let decl = &modes[at];
         if decl.options.is_empty() {
             continue;
         }
@@ -2230,14 +2228,14 @@ fn resolve_repeat(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
         repeat.exits_from = Some(exit_mark(sink.state));
     }
     let start = repeat.part_at.unwrap_or(0);
-    for at in start..RESOLVE_PARTS.len() {
+    for (at, part) in RESOLVE_PARTS.iter().enumerate().skip(start) {
         if let Some(repeat) = run.repeat.as_mut() {
             repeat.part_at = Some(at + 1);
         }
         let Some(card) = still_resolving(sink.state, run) else {
             break;
         };
-        match RESOLVE_PARTS[at] {
+        match part {
             ResolvePart::Quickstriker => quickstriker_combo(sink, run, &card),
             ResolvePart::ComboDraw => combo_draw_step(sink, run),
             ResolvePart::Script => {
@@ -2459,8 +2457,7 @@ fn cast_mode_of(run: &PlayRun) -> Option<CastMode> {
 
 /// `drive`'s loop over the steps from `run.at`; true when the pipeline is finished with.
 fn drive_steps(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
-    for at in run.at..STEP_TABLE.len() {
-        let step = &STEP_TABLE[at];
+    for (at, step) in STEP_TABLE.iter().enumerate().skip(run.at) {
 
         // Where a pause would pick up. A `repeats` step is re-entered at itself, because it holds its
         // own place inside the record — and the record is read when the pause is parked, after the step

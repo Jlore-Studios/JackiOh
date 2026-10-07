@@ -11,7 +11,6 @@
 //! function and wrote through it; here a card travels as an owned copy while it is off the board,
 //! and once it is placed every write goes to the card in the state, found by its id.
 
-use std::borrow::Borrow;
 
 use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
@@ -31,7 +30,7 @@ use crate::script::{Effect, EffectContext, EffectPart};
 use crate::state::{CardInstance, find_instance, find_instance_mut, new_instance};
 use crate::stays::exit_mark;
 use crate::wire::{
-    AttackHealth, CardType, CostRange, Enchantment, GameEvent, OneOrMany, PlayerId, Row, Tag, Zone, ZoneName,
+    AttackHealth, CardType, CostRange, GameEvent, OneOrMany, PlayerId, Row, Tag, Zone, ZoneName,
 };
 use crate::zones::{
     PlaceOnFieldOptions, ZoneSlot, fill_board_zones, first_entry_zone, fresh_face_down_id, is_empty, is_reserved,

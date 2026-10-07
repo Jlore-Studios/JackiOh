@@ -11,9 +11,9 @@ use serde::{Deserialize, Serialize};
 use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated, query};
 use crate::draw::shuffle_into_library;
 use crate::effects::targets::{PlayerSpec, player_of};
-use crate::script::{Effect, EffectContext};
-use crate::state::{CardInstance, new_instance};
-use crate::wire::{Enchantment, PlayerId, Zone};
+use crate::script::Effect;
+use crate::state::new_instance;
+use crate::wire::{Enchantment, Zone};
 
 /// `shuffleRandomFromCatalog`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

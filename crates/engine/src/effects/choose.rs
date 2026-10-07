@@ -98,7 +98,7 @@ pub fn targets_in_scope(ctx: &EffectContext<'_>, scope: Option<&TargetScope>) ->
         }
         if kinds.contains(&FilterOf::Backrow) {
             for slot in slots_of(player, Row::Backrow) {
-                let Some(card) = card_at(ctx.state, &slot) else {
+                let Some(card) = card_at(ctx.state, slot) else {
                     continue;
                 };
                 if excludes_self && Some(card.id.as_str()) == self_id {
@@ -426,7 +426,7 @@ pub fn choose_cost_in_hand(args: ChooseCostInHandArgs) -> Effect {
             groups
                 .entry(cost)
                 .or_default()
-                .push(def_of(Some(&*state), &card.def_id).name.clone());
+                .push(def_of(Some(state), &card.def_id).name.clone());
         }
         let mut costs: Vec<i32> = groups.keys().copied().collect();
         costs.sort();
@@ -815,7 +815,7 @@ fn pile_cards(state: &GameState, player: PlayerId, zone: PileZone) -> Vec<&CardI
         PileZone::Field => {
             let mut out: Vec<&CardInstance> = active_units_of(state, player);
             for slot in slots_of(player, Row::Backrow) {
-                if let Some(card) = card_at(state, &slot) {
+                if let Some(card) = card_at(state, slot) {
                     out.push(card);
                 }
             }
@@ -852,7 +852,7 @@ fn pickable(state: &GameState, card: &CardInstance, filter: &PickFilter) -> bool
         return false;
     }
     if let Some(tags) = &filter.tags {
-        let printed = &def_of(Some(&*state), &card.def_id).tags;
+        let printed = &def_of(Some(state), &card.def_id).tags;
         if !tags.iter().all(|tag| printed.contains(tag)) {
             return false;
         }
@@ -920,7 +920,7 @@ pub fn choose_pick(args: ChoosePickArgs) -> Effect {
                 seen.insert(card.id.clone());
                 options.push(PromptOption {
                     key: format!("instance:{}", card.id),
-                    label: def_of(Some(&*state), &card.def_id).name.clone(),
+                    label: def_of(Some(state), &card.def_id).name.clone(),
                     selection: Selection::Instance {
                         instance_id: card.id.clone(),
                     },

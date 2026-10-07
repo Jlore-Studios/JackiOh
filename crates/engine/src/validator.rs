@@ -134,7 +134,7 @@ pub struct LoadoutError {
 pub struct LoadoutResult {
     pub ok: bool,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    #[cfg_attr(feature = "ts", ts(optional))]
+    #[cfg_attr(feature = "ts", ts(as = "Option<Vec<LoadoutError>>", optional))]
     pub errors: Vec<LoadoutError>,
 }
 

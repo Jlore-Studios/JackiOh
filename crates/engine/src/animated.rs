@@ -112,7 +112,7 @@ fn unit_zone_for(state: &GameState, player: PlayerId, lane: i32) -> Option<ZoneS
         row: Row::Units,
         lane,
     };
-    if is_open(state, &same) {
+    if is_open(state, same) {
         Some(same)
     } else {
         first_entry_zone(state, player, Row::Units)
@@ -142,7 +142,7 @@ pub fn animate_card(sink: &mut FieldSink<'_>, card: &CardInstance, options: Anim
     let Some(to) = unit_zone_for(sink.state, from.player, from.lane) else {
         return false;
     };
-    if !step_into_unit_zone(sink.state, &card, &to) {
+    if !step_into_unit_zone(sink.state, &card, to) {
         return false;
     }
 
@@ -160,7 +160,7 @@ pub fn animate_card(sink: &mut FieldSink<'_>, card: &CardInstance, options: Anim
     animated.face_up = Some(true);
     let animated = animated.clone();
     if animated_kind_of(sink.state, &animated) == Some(AnimatedKind::AnimatedOnYourTurn) {
-        reserve_home(sink.state, &from, &animated.id);
+        reserve_home(sink.state, from, &animated.id);
     }
     sink.events.push(GameEvent::Animated {
         player: from.player,
@@ -188,7 +188,7 @@ pub fn return_home(sink: &mut FieldSink<'_>, card: &CardInstance) -> bool {
         return false;
     }
 
-    let home = home_of(sink.state, &card.id).map(|home| home.clone());
+    let home = home_of(sink.state, &card.id).cloned();
     let at_home = home.as_ref().is_some_and(|home| home.zone.player == from.player);
     let to: ZoneSlot = match &home {
         Some(home) if at_home => ZoneSlot {
@@ -211,7 +211,7 @@ pub fn return_home(sink: &mut FieldSink<'_>, card: &CardInstance) -> bool {
     // Its own home is held for it alone; a card dormant there since it left (the pile it animated off,
     // B5 E21) is the one thing the zone can hold, and it goes back on top of that pile.
     release_home(sink.state, &card.id);
-    if !step_into_backrow(sink.state, &card, &to, at_home) {
+    if !step_into_backrow(sink.state, &card, to, at_home) {
         if let Some(home) = &home
             && at_home
         {
@@ -220,7 +220,7 @@ pub fn return_home(sink: &mut FieldSink<'_>, card: &CardInstance) -> bool {
                 row: home.zone.row,
                 lane: home.zone.lane,
             };
-            reserve_home(sink.state, &zone, &card.id);
+            reserve_home(sink.state, zone, &card.id);
         }
         return false;
     }
@@ -269,7 +269,7 @@ pub fn animate_on_entry(sink: &mut FieldSink<'_>, card: &CardInstance) -> bool {
 /// E21), and a face-down card stays hidden (rule 8).
 pub fn animate_at_turn_start(sink: &mut FieldSink<'_>, player: PlayerId) {
     for slot in slots_of(player, Row::Backrow) {
-        let Some(card) = card_at(sink.state, &slot).map(|card| card.clone()) else {
+        let Some(card) = card_at(sink.state, slot).cloned() else {
             continue;
         };
         if is_face_down(sink.state, &card) {
@@ -287,7 +287,7 @@ pub fn animate_at_turn_start(sink: &mut FieldSink<'_>, player: PlayerId) {
 /// that has lost the keyword since (a Vanilla) stays a Unit for good, and the zone it held is let go.
 pub fn return_at_cleanup(sink: &mut FieldSink<'_>, player: PlayerId) {
     for slot in slots_of(player, Row::Units) {
-        let Some(card) = card_at(sink.state, &slot).map(|card| card.clone()) else {
+        let Some(card) = card_at(sink.state, slot).cloned() else {
             continue;
         };
         if !is_animated(sink.state, &card) {

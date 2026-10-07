@@ -2,7 +2,6 @@
 //!
 //! Port of `packages/engine/src/effects/split.ts`.
 
-use std::borrow::Borrow;
 
 use serde::{Deserialize, Serialize};
 use serde_json::json;

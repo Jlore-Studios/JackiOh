@@ -16,10 +16,10 @@
 //!      that player's units redirects the first. A declared pick moves only when the interceptor is
 //!      itself a legal pick of that declaration (Hearthstone's Spellbender); a cost already paid for
 //!      the first pick stays paid.
-//! "Targeting" is choosing: declared `target` picks of a play, a cast and an activation, and every
-//! answer to a `target` prompt. Random picks, "all" effects, Tributes, hand picks and zone picks target
-//! nothing (R450). The attack half (§4.2 step 2, `combat.rs`) calls `intercept_targeting` with
-//! `what: "attack"`.
+//!      "Targeting" is choosing: declared `target` picks of a play, a cast and an activation, and every
+//!      answer to a `target` prompt. Random picks, "all" effects, Tributes, hand picks and zone picks target
+//!      nothing (R450). The attack half (§4.2 step 2, `combat.rs`) calls `intercept_targeting` with
+//!      `what: "attack"`.
 //!
 //! A prompt answer reaches this through `prompts.rs`'s calls into this module (TS
 //! `prompts.registerTargetingHooks`, which goes, SURFACE §6.6: `prompts.rs` calls
@@ -41,6 +41,9 @@ use crate::wire::{CardType, GameEvent, PlayerId, PromptKind, RedirectWhat, Selec
 /// move, so it is that type.
 pub type RedirectKind = RedirectWhat;
 
+/// `InterceptArgs.accepts`: whether this card may stand as pick `index`, read on the state as it stands.
+pub type InterceptorFilter<'a> = dyn Fn(&GameState, &CardInstance, usize) -> bool + 'a;
+
 /// TS `InterceptArgs`. The two predicates borrow what their caller closes over; `accepts` is also
 /// handed the state as it stands, because the caller's state is the sink this call writes to.
 pub struct InterceptArgs<'a> {
@@ -51,7 +54,7 @@ pub struct InterceptArgs<'a> {
     /// Which picks are targetings (a declared `target` pick); every pick when absent.
     pub targeting: Option<&'a dyn Fn(usize) -> bool>,
     /// Whether the interceptor may stand as pick `index` (a declaration's filter); always when absent.
-    pub accepts: Option<&'a dyn Fn(&GameState, &CardInstance, usize) -> bool>,
+    pub accepts: Option<&'a InterceptorFilter<'a>>,
     pub what: Option<RedirectKind>,
     /// The targeting card's type; an attack carries none, so a `by: "spell"` card never answers it (R651).
     pub source: Option<CardType>,

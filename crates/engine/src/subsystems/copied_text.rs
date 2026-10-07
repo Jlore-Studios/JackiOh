@@ -30,8 +30,8 @@
 //!   * Cast on draw (R547): a copier drawn while the last Spell casts on draw is cast (`draw.castsOnDraw`).
 //!   * `preview` (R280) and `conditionMet` (R195) of the copied face answer for the copier in hand.
 //!   * The view (R243, R399): the owner's hand view of a copier carries the copied face as `copies`.
-//! Text that answers from a pile the card has landed in — §5.1's end-of-turn return (#23, #24, #31) —
-//! is not had (R547): step 7 writes that flag off the card's own face, and the copy ends as it lands.
+//!     Text that answers from a pile the card has landed in — §5.1's end-of-turn return (#23, #24, #31) —
+//!     is not had (R547): step 7 writes that flag off the card's own face, and the copy ends as it lands.
 //!
 //! Everything else about the card is its own: its name, (1) Cost, type and tags (a copied Book does
 //! not make it a Book), its own Echo 1 on the Radiant face, and "this" in the copied text, which is the

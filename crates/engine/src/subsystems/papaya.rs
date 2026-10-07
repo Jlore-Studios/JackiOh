@@ -78,7 +78,7 @@ static GRID_ROWS: [GridRow; 4] = [
 
 fn is_cell(point: &PapayaPoint) -> bool {
     let PapayaPoint { x, y } = *point;
-    x >= 0 && x < PAPAYA_LANES && y >= 0 && y < PAPAYA_ROWS
+    (0..PAPAYA_LANES).contains(&x) && (0..PAPAYA_ROWS).contains(&y)
 }
 
 /// The grid row a `y` names, or `None` off the grid (TS `GRID_ROWS[y]`).
@@ -192,7 +192,7 @@ pub fn cards_on_curve(
             if enemy_only && !grid_row(cell.y).is_some_and(|grid| grid.enemy) {
                 return None;
             }
-            zone_contents(state, &zone_of_point(controller, cell))
+            zone_contents(state, zone_of_point(controller, cell))
                 .first()
                 .map(|top| top.id.clone())
         })

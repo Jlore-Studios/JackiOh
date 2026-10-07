@@ -22,7 +22,7 @@ use indexmap::{IndexMap, IndexSet};
 use crate::catalog::{def_of, fused_id_parts};
 use crate::config::LAST_FACE_UP_SKIPPED_TAGS;
 use crate::faces::card_type_of;
-use crate::script::{HookArgs, Script, empty_script};
+use crate::script::HookArgs;
 use crate::state::{CardInstance, FaceUpRecord, GameLog, GameState, PlayRecord};
 use crate::wire::{CardType, PlayerId, Tag};
 

@@ -25,7 +25,7 @@ use crate::config::TUNE_MIN_AMOUNT;
 use crate::faces::card_type_of;
 use crate::mana::modifier_is_live;
 use crate::modifiers::{install_lasting_modifiers, remove_modifier};
-use crate::script::{EngineSink, Script, StaticFlags, empty_script};
+use crate::script::EngineSink;
 use crate::state::{CardInstance, EchoItem, GameState, ModifierKind, PlayerModifier, find_instance, find_instance_mut};
 use crate::stays::{exit_mark, left_field_after};
 use crate::subsystems::copied_text::copied_echo;

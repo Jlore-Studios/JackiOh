@@ -53,7 +53,7 @@ use serde_json::{Value, json};
 use crate::config::{CRAFTED_CARD_COST, FUSE_COST_CAP, FUSE_MIN_INGREDIENTS, FUSED_ID_CAP};
 use crate::script::{
     ActivationDecl, AuraEntry, AuraHook, CardScripts, ConditionContext, ConditionHook, Effect, EffectApply,
-    EffectContext, EffectPart, EngineSink, FlagOrCount, Hook, HookArgs, Memo, PlagueMultiplierHook, QuestBook,
+    EffectContext, EffectPart, EngineSink, FlagOrCount, Hook, HookArgs, PlagueMultiplierHook, QuestBook,
     Script, SetStat, SetStatHook, StatMod, StaticFlags, TargetCheck, TriggerDef, TriggerRun, TributeWhenHook,
     WouldCounterHook, aura_hook, condition_hook, hook, read_hook, target_check, would_counter_hook,
 };
@@ -1491,7 +1491,7 @@ pub fn compose_fused_scripts(state: &GameState, def: &CardDef) -> CardScripts {
 /// target on the field (R77's shared type). `None` for an id that cannot be rebuilt: a digest
 /// (R468), a bare `t-<n>`, an ingredient the catalog lacks. C+ #29 brings fused cards back this way.
 pub fn rebuild_fused_def(state: &mut GameState, def_id: &str, owner: PlayerId) -> Option<CardDef> {
-    if let Some(known) = crate::catalog::find_def(Some(&*state), def_id).map(|def| def.clone()) {
+    if let Some(known) = crate::catalog::find_def(Some(&*state), def_id).cloned() {
         return Some(known);
     }
     let specs = if crate::catalog::is_digest_id(def_id) {
@@ -1774,7 +1774,8 @@ pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
         let controller = result.controller;
         let _ = crate::prompts::run_start_of_game(sink, &result, controller);
         find_instance(sink.state, &result.id).cloned().unwrap_or(result)
-    } else if let Some(player) = to_hand {
+    } else {
+        let player = to_hand?;
         craft_in_hand(
             sink,
             &def,
@@ -1786,8 +1787,6 @@ pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
                 radiant: args.radiant == Some(true) || forced.iter().all(|is_radiant| *is_radiant),
             },
         )
-    } else {
-        return None;
     };
 
     sink.events.push(GameEvent::Fused {

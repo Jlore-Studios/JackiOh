@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use crate::effects::targets::{PlayerSpec, player_of};
 use crate::script::{Effect, EffectContext};
 use crate::state::CardInstance;
-use crate::wire::{GameEvent, PlayerId};
+use crate::wire::GameEvent;
 use crate::zones::{MoveResult, OffFieldZone, move_to_zone};
 
 /// One card to the exile pile, exactly as `move_.rs`'s `exile` does it: the game exile counter counts

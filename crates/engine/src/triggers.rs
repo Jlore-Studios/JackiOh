@@ -58,7 +58,7 @@ use serde_json::{Value, json};
 
 use crate::config::{BACKROW_ZONES, CAST_ON_DRAW_CHAIN_CAP, LIBRARY_CAP, UNIT_ZONES};
 use crate::resolve::HookName;
-use crate::script::{EngineSink, Script, TriggerDef, empty_script};
+use crate::script::{EngineSink, Script, TriggerDef};
 use crate::state::{CardInstance, DispatchItem, GameState, QueuedTrigger, Resume, find_instance};
 use crate::stays::LaterMoves;
 use crate::traps::{
@@ -259,11 +259,11 @@ pub fn trigger_holders_of(state: &GameState, player: PlayerId) -> Vec<TriggerHol
     let side = &state.players[player];
     let mut out: Vec<TriggerHolder> = Vec::new();
     for card in crate::zones::active_units_of(state, player) {
-        out.push(holder_of(state, &card, TriggerZone::Field, player));
+        out.push(holder_of(state, card, TriggerZone::Field, player));
     }
     for slot in crate::zones::slots_of(player, Row::Backrow) {
-        if let Some(card) = crate::zones::card_at(state, &slot) {
-            out.push(holder_of(state, &card, TriggerZone::Backrow, player));
+        if let Some(card) = crate::zones::card_at(state, slot) {
+            out.push(holder_of(state, card, TriggerZone::Backrow, player));
         }
     }
     for card in &side.hand {
@@ -307,7 +307,7 @@ pub fn trigger_holder_for(state: &GameState, card: &CardInstance) -> Option<Trig
                     Some(holder_of(state, card, TriggerZone::Backrow, player))
                 };
             }
-            let on_top = crate::zones::card_at(state, &ZoneRef { player, row, lane })
+            let on_top = crate::zones::card_at(state, ZoneRef { player, row, lane })
                 .is_some_and(|top| top.id == card.id);
             if !on_top {
                 return None;
@@ -941,14 +941,14 @@ impl FrontierSlot<'_> {
     pub fn get(&self) -> &Frontier {
         match self {
             FrontierSlot::Own(frontier) => frontier,
-            FrontierSlot::Shared(frontier) => &**frontier,
+            FrontierSlot::Shared(frontier) => frontier,
         }
     }
 
     pub fn get_mut(&mut self) -> &mut Frontier {
         match self {
             FrontierSlot::Own(frontier) => frontier,
-            FrontierSlot::Shared(frontier) => &mut **frontier,
+            FrontierSlot::Shared(frontier) => frontier,
         }
     }
 }

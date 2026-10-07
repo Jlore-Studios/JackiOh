@@ -89,15 +89,15 @@ pub fn last_board_for(state: &GameState, seat: PlayerId) -> Vec<LastBoardEntry> 
     let mut board: Vec<LastBoardEntry> = Vec::new();
     for player in PLAYER_IDS {
         for slot in slots_of(player, Row::Units) {
-            if let Some(top) = card_at(state, &slot) {
+            if let Some(top) = card_at(state, slot) {
                 board.push(entry_of(top));
             }
         }
         for slot in slots_of(player, Row::Backrow) {
-            if let Some(carried) = carried_at(state, &slot) {
+            if let Some(carried) = carried_at(state, slot) {
                 board.push(entry_of(carried));
             }
-            if let Some(card) = card_at(state, &slot)
+            if let Some(card) = card_at(state, slot)
                 && !(is_face_down(state, card) && card.controller != seat)
             {
                 board.push(entry_of(card));

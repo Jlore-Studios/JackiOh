@@ -86,7 +86,7 @@ fn replace_on_field(
     }
 
     let turn = ctx.state.turn;
-    let mut replacement = new_instance(&mut *ctx.state, &def.id, old.owner, zone_of(&at));
+    let mut replacement = new_instance(&mut *ctx.state, &def.id, old.owner, zone_of(at));
     replacement.radiant = radiant;
     if old.position.is_some() {
         replacement.position = old.position;
@@ -420,7 +420,7 @@ pub fn transform_beneath(args: TransformBeneathArgs) -> Effect {
         if at.row != Row::Units {
             return;
         }
-        let Some(pile) = pile_at(ctx.state, &at).cloned() else {
+        let Some(pile) = pile_at(ctx.state, at).cloned() else {
             return;
         };
         if pile.first().map(|card| card.id.as_str()) != Some(top.id.as_str()) {

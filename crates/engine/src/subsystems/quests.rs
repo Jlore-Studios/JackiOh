@@ -22,9 +22,9 @@
 //!     finds the card on the field with no quest memory, and it is counting at once. R212 keeps an
 //!     event from before the card's arrival away from it: a card that has moved since an event (its
 //!     `cardPlayed`, its `summoned` comes after the event) does not answer it.
-//! The side a card stood on when an event happened is read as R212 reads it, off what happened since
-//! (`side_when`): `destroyed` names the controller a card died under (`destroyed.controller`), a
-//! draw that took the last card of the drawer's deck says so (`drawn.emptied`).
+//!     The side a card stood on when an event happened is read as R212 reads it, off what happened since
+//!     (`side_when`): `destroyed` names the controller a card died under (`destroyed.controller`), a
+//!     draw that took the last card of the drawer's deck says so (`drawn.emptied`).
 //!
 //! COMPLETION is noticed at the state check (`notice_quests`, called once at the end of
 //! `state_check::state_check`, when the board has settled): a counted quest whose count reached its goal,
@@ -50,14 +50,14 @@ use serde_json::Value;
 use crate::catalog::def_of;
 use crate::faces::card_type_of;
 use crate::layers::unit_view;
-use crate::script::{Effect, EffectContext, EngineSink, Script, empty_script};
+use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut};
 use crate::stays::moves_in;
 use crate::wire::{
     CardType, GameEvent, GameEventType, PLAYER_IDS, PlayerId, QuestItemView, QuestOpenView, QuestView, Row,
     ZoneName, opponent_of,
 };
-use crate::zones::{active_units_of, card_at, is_buried, slots_of};
+use crate::zones::{active_units_of, card_at, slots_of};
 
 // ---------------------------------------------------------------------------
 // The tree, as a card declares it
@@ -402,8 +402,7 @@ fn quest_cards_in_order(state: &GameState) -> Vec<CardInstance> {
     let mut out: Vec<CardInstance> = Vec::new();
     for player in sides {
         let units: Vec<CardInstance> = active_units_of(state, player)
-            .iter()
-            .map(|card| CardInstance::clone(card))
+            .into_iter().cloned()
             .collect();
         let backrow: Vec<CardInstance> = backrow_cards_of(state, player).into_iter().cloned().collect();
         for card in units.into_iter().chain(backrow) {

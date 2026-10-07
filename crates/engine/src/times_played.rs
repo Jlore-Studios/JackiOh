@@ -10,7 +10,6 @@
 //!
 //! Port of `packages/engine/src/timesPlayed.ts`.
 
-use crate::script::{Script, empty_script};
 use crate::state::{CardInstance, GameState, find_instance_mut};
 
 /// R429: the plays this card has had so far, the one under way included once step 4 has run.

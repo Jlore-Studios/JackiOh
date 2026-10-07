@@ -595,7 +595,7 @@ pub fn in_offered_order(pending: &PendingChoice, selection: &[Selection]) -> Vec
         }
         placed.push((at.unwrap_or(usize::MAX), pick.clone()));
     }
-    placed.sort_by(|a, b| a.0.cmp(&b.0));
+    placed.sort_by_key(|a| a.0);
     placed.into_iter().map(|(_, pick)| pick).collect()
 }
 

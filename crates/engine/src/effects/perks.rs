@@ -10,9 +10,8 @@ use crate::effects::cost::set_cost_mod;
 use crate::effects::targets::{PlayerSpec, player_of};
 use crate::mana::{effective_cost, is_x_cost};
 use crate::prelude::json_as;
-use crate::script::{Effect, EffectContext};
+use crate::script::Effect;
 use crate::state::CardInstance;
-use crate::wire::PlayerId;
 
 /// `gainHeroArmor`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

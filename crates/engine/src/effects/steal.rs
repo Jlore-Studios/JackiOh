@@ -8,7 +8,6 @@
 //!
 //! Port of `packages/engine/src/effects/steal.ts`.
 
-use std::borrow::Borrow;
 
 use serde::{Deserialize, Serialize};
 
@@ -54,7 +53,7 @@ fn destination_for(ctx: &EffectContext<'_>, thief: PlayerId, from: &ZoneSlot) ->
         row: from.row,
         lane: from.lane,
     };
-    if is_open(ctx.state, &same_lane) {
+    if is_open(ctx.state, same_lane) {
         return Some(same_lane);
     }
     first_entry_zone(ctx.state, thief, from.row)
@@ -83,10 +82,10 @@ fn take_control(ctx: &mut EffectContext<'_>, card: &CardInstance) -> bool {
 
     let mut moving = card.clone();
     remove_from_field(ctx.state, &moving, Default::default());
-    if !place_on_field(ctx.state, &mut moving, &to, Default::default()) {
+    if !place_on_field(ctx.state, &mut moving, to, Default::default()) {
         // `to` was open a line ago and the card came off the other side of the field, so this cannot
         // happen; putting the card back keeps the board legal rather than losing it to a refusal.
-        place_on_field(ctx.state, &mut moving, &from, PlaceOnFieldOptions { stack: Some(true) });
+        place_on_field(ctx.state, &mut moving, from, PlaceOnFieldOptions { stack: Some(true) });
         return false;
     }
 
@@ -133,7 +132,7 @@ pub fn steal_all(args: StealAllArgs) -> Effect {
     Effect::new("stealAll", move |ctx| {
         let row = args.row.unwrap_or(Row::Units);
         for slot in slots_of(opponent_of(ctx.controller), row) {
-            let Some(card) = card_at(ctx.state, &slot).cloned() else {
+            let Some(card) = card_at(ctx.state, slot).cloned() else {
                 continue;
             };
             take_control(ctx, &card);

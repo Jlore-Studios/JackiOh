@@ -313,7 +313,7 @@ fn slots_in_scope(ctx: &EffectContext<'_>, scope: &BoardScope) -> Vec<ZoneSlot> 
 pub fn cards_in_scope(ctx: &EffectContext<'_>, scope: &BoardScope) -> Vec<CardInstance> {
     let mut out: Vec<CardInstance> = Vec::new();
     for slot in slots_in_scope(ctx, scope) {
-        if let Some(card) = card_at(ctx.state, &slot)
+        if let Some(card) = card_at(ctx.state, slot)
             && matches_scope(ctx, card, scope)
         {
             out.push(card.clone());
@@ -346,8 +346,8 @@ pub fn adjacent_to(ctx: &EffectContext<'_>, spec: &TargetSpec, scope: &BoardScop
     };
 
     let mut out: Vec<CardInstance> = Vec::new();
-    for neighbour in adjacent(&slot) {
-        let Some(found) = card_at(ctx.state, &neighbour) else {
+    for neighbour in adjacent(slot) {
+        let Some(found) = card_at(ctx.state, neighbour) else {
             continue;
         };
         if found.id == card.id {

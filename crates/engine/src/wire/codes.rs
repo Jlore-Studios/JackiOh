@@ -422,7 +422,7 @@ fn could_belong_to_code(word: &Word, format: &CodeFormat) -> bool {
         }
     }
     let size = format.group_size.max(1);
-    length <= size || length % size == 0
+    length <= size || length.is_multiple_of(size)
 }
 
 /// The codes one chain holds. A chain that reads as exactly one code as a whole is that code,
@@ -455,7 +455,7 @@ fn codes_in_chain(chain: &Chain, format: &CodeFormat) -> Vec<String> {
         for end in start..count {
             if end > start {
                 // One way of joining groups, and only ever between whole groups.
-                if chain.joins.get(end - 1) != internal || utf16_len(&characters) % size != 0 {
+                if chain.joins.get(end - 1) != internal || !utf16_len(&characters).is_multiple_of(size) {
                     break;
                 }
             }
@@ -616,7 +616,7 @@ mod nfkc {
             return Some(S_BASE + ((first - L_BASE) * V_COUNT + (second - V_BASE)) * T_COUNT);
         }
         if (S_BASE..S_BASE + S_COUNT).contains(&first)
-            && (first - S_BASE) % T_COUNT == 0
+            && (first - S_BASE).is_multiple_of(T_COUNT)
             && (T_BASE + 1..T_BASE + T_COUNT).contains(&second)
         {
             return Some(first + (second - T_BASE));

@@ -13,7 +13,6 @@
 //! returned the entry's builder; here each entry's builder is a named function (`build_fruits`, …), so
 //! the table is a constant like Core's.
 
-use std::borrow::Borrow;
 use std::sync::Arc;
 
 use serde_json::{Value, json};
@@ -23,7 +22,7 @@ use crate::config::{
     CHAOS_PLUS_UPGRADES,
 };
 use crate::prelude::json_as;
-use crate::script::{Effect, EffectContext, EffectPart, Memo};
+use crate::script::{Effect, EffectContext, EffectPart};
 use crate::state::CardInstance;
 use crate::subsystems::call_to_chaos::{CHAOS_TAG, ChaosEffectDef, cast_random_call_to_chaos};
 use crate::wire::{CardDef, SetName};
@@ -31,11 +30,6 @@ use crate::wire::{CardDef, SetName};
 /// §7: the Classic Golem (C+ #73.1), by its index in its set (B2.2).
 const GOLEM_SET: SetName = SetName::ClassicPlus;
 const GOLEM_INDEX: &str = "73.1";
-
-/// The definitions a catalog read hands back, as owned copies.
-fn owned_defs<R: Borrow<CardDef>>(defs: impl IntoIterator<Item = R>) -> Vec<CardDef> {
-    defs.into_iter().map(|def| def.borrow().clone()).collect()
-}
 
 /// `callToChaosPlus:<name>`, the kind of an entry's part (an effect's kind is a static name).
 fn entry_kind(name: &str) -> &'static str {
@@ -130,7 +124,7 @@ fn build_books() -> Effect {
 }
 
 /// 3. Every enemy permanent on the field — the top of each pile, face-down cards included — is marked
-/// together (R59); Indestructible ones stay (R46).
+///    together (R59); Indestructible ones stay (R46).
 fn build_destroy() -> Effect {
     entry("destroy", |_ctx| {
         vec![crate::effects::destroy::destroy_all(json_as(
@@ -145,7 +139,7 @@ fn build_classic() -> Effect {
 }
 
 /// 5. Two separate Upgrades of each card in your hand and your deck (R386), the deck's unseen by its
-/// owner until the card leaves it (R311).
+///    owner until the card leaves it (R311).
 fn build_upgrade() -> Effect {
     entry("upgrade", |_ctx| {
         vec![crate::effects::tune::upgrade(json_as(json!({
@@ -156,7 +150,7 @@ fn build_upgrade() -> Effect {
 }
 
 /// 6. E23: a random non-token card of every set but this one (R387) fused into each deck card, which
-/// is the kept instance, keeps its type and keeps its cost (R470); Immutable ones are skipped (R23).
+///    is the kept instance, keeps its type and keeps its cost (R470); Immutable ones are skipped (R23).
 fn build_fuse() -> Effect {
     entry("fuse", |_ctx| {
         vec![crate::effects::fuse::fuse_random_into(json_as(
@@ -166,7 +160,7 @@ fn build_fuse() -> Effect {
 }
 
 /// 7. Three separate Degrades of each card on the opponent's field and in their hand, hidden in
-/// their hand (R177, R242).
+///    their hand (R177, R242).
 fn build_degrade() -> Effect {
     entry("degrade", |_ctx| {
         vec![crate::effects::tune::degrade(json_as(json!({

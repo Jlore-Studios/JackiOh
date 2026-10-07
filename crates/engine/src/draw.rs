@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::config::{CAST_ON_DRAW_CHAIN_CAP, FATIGUE_DAMAGE, HAND_CAP, LIBRARY_CAP, SETUP_TURN};
-use crate::script::{DrawLimit, DrawLimitPlayer, EngineSink, HookArgs, Script};
+use crate::script::{DrawLimit, DrawLimitPlayer, EngineSink, HookArgs};
 use crate::state::{CardInstance, DrawCount, GameState, Resume, WorkItem, find_instance_mut, new_instance};
 use crate::wire::{
     CardType, Enchantment, GameEvent, LibraryOverflowOutcome, PLAYER_IDS, PlayerId, Row, SetName, Zone,
@@ -56,7 +56,7 @@ fn run_arrival_hooks(sink: &mut EngineSink, instance: &CardInstance) {
 /// #75: a backrow card that turns an empty-library draw into a Rush Token card.
 fn infinite_reserves_source(sink: &EngineSink, player: PlayerId) -> Option<CardInstance> {
     for slot in crate::zones::slots_of(player, Row::Backrow) {
-        if let Some(card) = crate::zones::card_at(sink.state, &slot)
+        if let Some(card) = crate::zones::card_at(sink.state, slot)
             && crate::scripts::script_of(sink.state, card).flags().infinite_reserves == Some(true)
         {
             return Some(card.clone());
@@ -256,7 +256,7 @@ fn text_on_field(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
         out.push(unit);
     }
     for slot in crate::zones::slots_of(player, Row::Backrow) {
-        if let Some(card) = crate::zones::card_at(state, &slot) {
+        if let Some(card) = crate::zones::card_at(state, slot) {
             out.push(card);
         }
     }
@@ -641,7 +641,7 @@ pub fn complete_draw(
         );
         crate::resolve::cast_card(
             sink,
-            &mut card,
+            &card,
             crate::resolve::CastOptions {
                 data: Some(data),
                 ..Default::default()
@@ -699,7 +699,7 @@ pub fn cast_dealt_card(sink: &mut EngineSink, card: &CardInstance) -> bool {
     );
     crate::resolve::cast_card(
         sink,
-        &mut taken,
+        &taken,
         crate::resolve::CastOptions {
             data: Some(data),
             ..Default::default()

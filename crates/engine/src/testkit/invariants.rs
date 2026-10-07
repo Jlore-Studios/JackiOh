@@ -833,7 +833,7 @@ impl InvariantMonitor {
             return found;
         }
         for unit in crate::zones::active_units_of(state, player) {
-            let unit: &CardInstance = &unit;
+            let unit: &CardInstance = unit;
             if self.entered.get(&unit.id) != Some(&state.turn) || self.is_readied(unit) {
                 continue;
             }

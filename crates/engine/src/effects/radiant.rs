@@ -5,7 +5,6 @@
 //!
 //! Port of `packages/engine/src/effects/radiant.ts`.
 
-use std::borrow::Borrow;
 
 use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
@@ -124,7 +123,7 @@ fn field_cards_of(ctx: &EffectContext<'_>, player: PlayerId) -> Vec<CardInstance
     let mut out = Vec::new();
     for row in [Row::Units, Row::Backrow] {
         for slot in slots_of(player, row) {
-            if let Some(card) = card_at(ctx.state, &slot) {
+            if let Some(card) = card_at(ctx.state, slot) {
                 out.push(card.clone());
             }
         }

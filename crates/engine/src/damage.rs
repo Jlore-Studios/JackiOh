@@ -22,13 +22,16 @@
 //! hook's source is the snapshot of the card as it died, R89).
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 use crate::config::{ANTI_ONESHOT_CAP, DAMAGE_REDIRECT_CAP, HERO_ARMOR};
-use crate::script::{EngineSink, HeroGuard, HookArgs, Script, StaticFlags, empty_script};
+use crate::script::{EngineSink, HeroGuard, HookArgs};
 use crate::state::{CardInstance, GameState, ModifierKind, find_instance, find_instance_mut};
 use crate::wire::{CardType, GameEvent, Keyword, KeywordKind, PlayerId, Row, ZoneName, armor_of, has_keyword, opponent_of};
 
+/// TS `{ kind: "unit"; instance } | { kind: "hero"; player }`. The unit is carried by value, as TS's
+/// object was: a target is built once per hit and matched at every card and test that aims one, and a
+/// `Box` there would buy nothing but noise at those sites.
+#[allow(clippy::large_enum_variant)]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum DamageTarget {
@@ -99,13 +102,13 @@ fn controller_of(target: &DamageTarget) -> PlayerId {
 pub fn hero_armor_of(state: &GameState, player: PlayerId) -> i32 {
     let mut sum = state.players[player].hero.armor + modifier_armor_of(state, player);
     for slot in crate::zones::slots_of(player, Row::Backrow) {
-        let Some(card) = crate::zones::card_at(state, &slot) else {
+        let Some(card) = crate::zones::card_at(state, slot) else {
             continue;
         };
         let side = HERO_ARMOR.on(card.radiant);
         // R124, R102: every Going Long text a card carries grants its own Armor, at the price that
         // text's card was played for — a Going Long fused onto a Going Long is Armor 4 as two apart are.
-        for text in crate::scripts::texts_of(state, &card) {
+        for text in crate::scripts::texts_of(state, card) {
             let grants = text.flags.hero_armor.map_or(0, |grant| grant.count());
             sum += grants.max(0) * side.on(text.embiggened);
         }
@@ -130,10 +133,10 @@ fn acting_texts_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
         .cloned()
         .collect();
     for slot in crate::zones::slots_of(player, Row::Backrow) {
-        let Some(card) = crate::zones::card_at(state, &slot) else {
+        let Some(card) = crate::zones::card_at(state, slot) else {
             continue;
         };
-        let card_type = crate::faces::card_type_of(state, &card);
+        let card_type = crate::faces::card_type_of(state, card);
         let face_down =
             (card_type == CardType::Trap || card_type == CardType::FieldTrap) && card.face_up != Some(true);
         if !face_down {
@@ -214,7 +217,7 @@ pub fn hero_hit_amount(state: &GameState, player: PlayerId, amount: i32, pierce:
 pub fn spell_damage_of(state: &GameState, player: PlayerId) -> i32 {
     let mut total = 0;
     for card in crate::zones::active_units_of(state, player) {
-        for keyword in crate::layers::unit_view(state, &card).keywords {
+        for keyword in crate::layers::unit_view(state, card).keywords {
             if let Keyword::SpellDamage { n } = keyword {
                 total += n;
             }

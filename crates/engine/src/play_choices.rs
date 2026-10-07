@@ -40,7 +40,7 @@ use serde_json::Value;
 
 use crate::config::{MAX_CHOICE_COMBINATIONS, MIN_CHOSEN_X};
 use crate::graveyard_play::PlayPayment;
-use crate::script::{Script, TargetCheckArgs};
+use crate::script::TargetCheckArgs;
 use crate::state::{CardInstance, EngineError, GameState};
 use crate::wire::{
     ActionBody, CardCost, CardType, FilterOf, FilterSide, KeywordKind, ModeDecl, PlagueSpend, PlayerId,
@@ -211,7 +211,7 @@ fn permanents_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     let mut out: Vec<&CardInstance> = Vec::new();
     for row in ROWS {
         for slot in crate::zones::slots_of(player, row) {
-            if let Some(held) = crate::zones::card_at(state, &slot) {
+            if let Some(held) = crate::zones::card_at(state, slot) {
                 out.push(held);
             }
         }
@@ -881,7 +881,7 @@ pub fn legal_selections_for(
                 }
                 FilterOf::Backrow => {
                     for slot in crate::zones::slots_of(side, Row::Backrow) {
-                        let Some(held) = crate::zones::card_at(state, &slot) else {
+                        let Some(held) = crate::zones::card_at(state, slot) else {
                             continue;
                         };
                         if on_field(held) {
@@ -924,7 +924,7 @@ pub fn legal_selections_for(
                 FilterOf::Zone => {
                     for row in ROWS {
                         for slot in crate::zones::slots_of(side, row) {
-                            if !crate::zones::is_open(state, &slot) {
+                            if !crate::zones::is_open(state, slot) {
                                 continue;
                             }
                             let selection = Selection::Zone {
@@ -1697,7 +1697,7 @@ fn refuse_zone(
             row: zone.row,
             lane: zone.lane,
         };
-        crate::zones::why_cannot_carry(state, &slot)?;
+        crate::zones::why_cannot_carry(state, slot)?;
         if immutable_fuser(state, &slot) {
             return refuse("an Immutable card takes no Unit in".to_string());
         }
@@ -1722,7 +1722,7 @@ fn refuse_zone(
     let takes_it = if plays_on_stack(state, card) {
         accepts_stack(state, &slot)
     } else {
-        crate::zones::is_open(state, &slot) || freed_by_tribute(state, &slot, tributes)
+        crate::zones::is_open(state, slot) || freed_by_tribute(state, &slot, tributes)
     };
     if !takes_it {
         return refuse(format!("that {row} zone is not open"));

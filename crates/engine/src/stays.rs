@@ -130,11 +130,10 @@ pub fn left_field_since(events: &[GameEvent], from: usize, instance_id: &str) ->
                 instance_id: id,
                 new_instance_id,
                 ..
-            } => {
-                if id == instance_id && new_instance_id != instance_id {
+            }
+                if id == instance_id && new_instance_id != instance_id => {
                     return true;
                 }
-            }
             _ => {}
         }
     }

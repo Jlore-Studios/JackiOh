@@ -133,8 +133,8 @@ fn on_instance(effect: Effect, instance_id: String) -> Effect {
 // ---------------------------------------------------------------------------
 
 /// 1. "Summon 3 random 3-cost Units": three independent picks (R60), placed per R64. Each pick is its
-/// own `summonRandom`, which draws only when its unit has a zone to go to (R129), so a full row takes
-/// no draw for a summon that cannot land.
+///    own `summonRandom`, which draws only when its unit has a zone to go to (R129), so a full row takes
+///    no draw for a summon that cannot land.
 pub fn summon_random_three_cost_units() -> Effect {
     chaos_effect(ChaosEffectName::Units, |_ctx| {
         (0..CHAOS_UNIT_COUNT)
@@ -158,8 +158,8 @@ pub fn heal_hero_thirty() -> Effect {
 }
 
 /// 3. "Draw your whole library and gain 4 mana": R58 fixes the count at the library size when the
-/// effect starts, so a cast-on-draw card drawn along the way cannot lengthen the draw, and an empty
-/// library draws nothing at all rather than taking a fatigue hit (§2.4, R3).
+///    effect starts, so a cast-on-draw card drawn along the way cannot lengthen the draw, and an empty
+///    library draws nothing at all rather than taking a fatigue hit (§2.4, R3).
 pub fn draw_library_and_gain_mana() -> Effect {
     chaos_effect(ChaosEffectName::Draw, |ctx| {
         let count = ctx.sink.state.players[ctx.controller].library.len();
@@ -171,10 +171,10 @@ pub fn draw_library_and_gain_mana() -> Effect {
 }
 
 /// 4. "Add 3 random cards to hand costing 0": three independent picks (R60) from the whole catalog,
-/// which §5.1 keeps free of tokens and of the generating card — "never include the generating card's
-/// own definition, unless the card names the pool itself", and only the recursion names its pool —
-/// so no Call to Chaos is added. The 0 is a `costOverride` the card takes on reaching the hand (R65);
-/// a full hand burns what it cannot take (§2.4, R4), without the price.
+///    which §5.1 keeps free of tokens and of the generating card — "never include the generating card's
+///    own definition, unless the card names the pool itself", and only the recursion names its pool —
+///    so no Call to Chaos is added. The 0 is a `costOverride` the card takes on reaching the hand (R65);
+///    a full hand burns what it cannot take (§2.4, R4), without the price.
 pub fn add_random_zero_cost_cards() -> Effect {
     chaos_effect(ChaosEffectName::Add, |_ctx| {
         vec![crate::effects::add_random_from_catalog(json_as(json!({
@@ -185,7 +185,7 @@ pub fn add_random_zero_cost_cards() -> Effect {
 }
 
 /// 5. "Your hand becomes Radiant": every card in hand right now (§5.2). A card that is already
-/// Radiant is untouched, since the flag is never unset (§6.3 Make Radiant).
+///    Radiant is untouched, since the flag is never unset (§6.3 Make Radiant).
 pub fn make_hand_radiant() -> Effect {
     chaos_effect(ChaosEffectName::Radiant, |ctx| {
         ctx.sink.state.players[ctx.controller]
@@ -197,7 +197,7 @@ pub fn make_hand_radiant() -> Effect {
 }
 
 /// 6. "Summon five Radiant Rush Tokens": the §7 Rush Token's own Radiant face (6/6), five separate
-/// summons, so a board with fewer free zones simply takes fewer (R64) instead of failing as a whole.
+///    summons, so a board with fewer free zones simply takes fewer (R64) instead of failing as a whole.
 pub fn summon_rush_tokens() -> Effect {
     chaos_effect(ChaosEffectName::Tokens, |_ctx| {
         let Some(def_id) = token_def_id(RUSH_TOKEN_INDEX) else {
@@ -210,8 +210,8 @@ pub fn summon_rush_tokens() -> Effect {
 }
 
 /// 7. "Every card in your hand and library costs 2 less": the cards that are there when the effect
-/// resolves, each getting a permanent `costMod` that travels with it between zones (R78). It changes
-/// those cards, not the player, so a card drawn afterwards still pays full price.
+///    resolves, each getting a permanent `costMod` that travels with it between zones (R78). It changes
+///    those cards, not the player, so a card drawn afterwards still pays full price.
 pub fn discount_hand_and_library() -> Effect {
     chaos_effect(ChaosEffectName::Discount, |ctx| {
         let side = &ctx.sink.state.players[ctx.controller];
@@ -236,9 +236,9 @@ pub fn summon_chaos_golem() -> Effect {
 }
 
 /// 9. "Summon 5 random Field Spells or Traps (Field Traps included, traps face-down) into your
-/// backrow": five independent picks (R60). `summonRandom` sends every one of those types to the
-/// backrow, leaves a Trap or Field Trap face-down while a Field Spell is public (§3.2, R33), and draws
-/// only for a summon that has a zone to go to (R129).
+///    backrow": five independent picks (R60). `summonRandom` sends every one of those types to the
+///    backrow, leaves a Trap or Field Trap face-down while a Field Spell is public (§3.2, R33), and draws
+///    only for a summon that has a zone to go to (R129).
 pub fn summon_random_backrow() -> Effect {
     chaos_effect(ChaosEffectName::Backrow, |_ctx| {
         (0..CHAOS_BACKROW_CARDS)
@@ -248,9 +248,9 @@ pub fn summon_random_backrow() -> Effect {
 }
 
 /// 10. "Cast a random Call to Chaos": a Cast per R70 — free, counted as a play, running the card's
-/// own script. The pool is every card tagged Call to Chaos in every set (R380: a pool that names no set
-/// reaches every set), so it holds both editions, and the card cast is the *base* form even when a
-/// Radiant Call cast it (R28); the new card is Radiant only if something later makes it so.
+///     own script. The pool is every card tagged Call to Chaos in every set (R380: a pool that names no set
+///     reaches every set), so it holds both editions, and the card cast is the *base* form even when a
+///     Radiant Call cast it (R28); the new card is Radiant only if something later makes it so.
 ///
 /// R28 caps the chain at CALL_TO_CHAOS_CHAIN_CAP casts of either edition. The cap is a hard stop: at
 /// the cap this effect resolves into nothing, and no re-roll replaces it (R87, R423).

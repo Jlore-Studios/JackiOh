@@ -84,13 +84,11 @@ fn can_accept(state: &GameState, slot: &ZoneSlot) -> bool {
 /// Put a zone's cards down in their new zone. A pile is rebuilt from the bottom up so the card that
 /// was on top is on top again, which keeps the same card acting for the zone (§3.2).
 fn place_contents(state: &mut GameState, cards: &[CardInstance], to: &ZoneSlot) {
-    let mut placed = 0;
-    for card in cards.iter().rev() {
+    for (placed, card) in cards.iter().rev().enumerate() {
         // Every ring zone was emptied before anything was placed and the destination accepts cards,
         // so a refusal here is a broken invariant, not a game rule; `zones.rs` says so the same way.
         let options = crate::zones::PlaceOnFieldOptions {
             stack: Some(placed > 0),
-            ..Default::default()
         };
         if !crate::zones::place_on_field(state, &mut card.clone(), to, options) {
             panic!(
@@ -98,7 +96,6 @@ fn place_contents(state: &mut GameState, cards: &[CardInstance], to: &ZoneSlot) 
                 card.id, to.player, to.row, to.lane
             );
         }
-        placed += 1;
     }
 }
 
@@ -151,7 +148,7 @@ pub fn rotate_rings(sink: &mut EngineSink<'_>, args: &RotationArgs) -> RotationR
                 crate::zones::ring_order(*row, args.perspective)
                     .into_iter()
                     .map(|from| RingEntry {
-                        to: crate::zones::ring_neighbor(&from, args.direction, args.perspective),
+                        to: crate::zones::ring_neighbor(from, args.direction, args.perspective),
                         cards: contents_of(state, &from),
                         from,
                     })
@@ -170,7 +167,6 @@ pub fn rotate_rings(sink: &mut EngineSink<'_>, args: &RotationArgs) -> RotationR
         for card in &entry.cards {
             let options = crate::zones::RemoveFromFieldOptions {
                 with_pile: Some(true),
-                ..Default::default()
             };
             crate::zones::remove_from_field(sink.state, card, options);
         }

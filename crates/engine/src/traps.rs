@@ -8,13 +8,13 @@
 //! This module owns four things and nothing else:
 //!   1. matching  — which backrow traps watch a given event (`traps_watching`), in R68 order;
 //!   2. firing    — emit `trapFired`, run the trigger to completion, run the state check
-//!                  (`fire_traps_for`, `run_trap_window`);
+//!      (`fire_traps_for`, `run_trap_window`);
 //!   3. consuming — a Trap goes to its owner's graveyard, a Field Trap stays and is face-up (R33)
-//!                  (`consume_trap`);
+//!      (`consume_trap`);
 //!   4. owing     — a window a prompt interrupted parks the traps that have not seen the event yet
-//!                  on `state.work`, so the answer finishes the window (`TRAP_WINDOW_WORK`, R113),
-//!                  and a trap whose own list asks parks the rest of its firing — its other
-//!                  triggers, its consumption and its check — behind that list (`TRAP_FIRING_WORK`).
+//!      on `state.work`, so the answer finishes the window (`TRAP_WINDOW_WORK`, R113),
+//!      and a trap whose own list asks parks the rest of its firing — its other
+//!      triggers, its consumption and its check — behind that list (`TRAP_FIRING_WORK`).
 //!
 //! The *when* is the caller's: `triggers.rs` offers every freshly emitted event to `fire_traps_for`
 //! before it queues any ordinary trigger, and `turn.rs` calls `run_trap_window` at R62's scheduled
@@ -45,10 +45,10 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::script::{EngineSink, Script, TriggerDef, empty_script};
+use crate::script::{EngineSink, TriggerDef};
 use crate::state::{CardInstance, GameState, Resume, WorkItem, find_instance, find_instance_mut};
 use crate::stays::LaterMoves;
-use crate::wire::{GameEvent, GameEventType, PlayerId, Row, Zone, ZoneName, ZoneRef};
+use crate::wire::{GameEvent, GameEventType, PlayerId, Row, ZoneName};
 
 /// A trap trigger, and the two rows that settle what firing means.
 ///
@@ -180,16 +180,16 @@ pub fn traps_in_order(state: &GameState) -> Vec<CardInstance> {
     let mut out: Vec<CardInstance> = Vec::new();
     for player in sides {
         for slot in crate::zones::slots_of(player, Row::Units) {
-            if let Some(card) = crate::zones::card_at(state, &slot)
-                && crate::animated::is_animated(state, &card)
-                && is_trap_type(state, &card)
+            if let Some(card) = crate::zones::card_at(state, slot)
+                && crate::animated::is_animated(state, card)
+                && is_trap_type(state, card)
             {
                 out.push(card.clone());
             }
         }
         for slot in crate::zones::slots_of(player, Row::Backrow) {
-            if let Some(card) = crate::zones::card_at(state, &slot)
-                && is_trap_type(state, &card)
+            if let Some(card) = crate::zones::card_at(state, slot)
+                && is_trap_type(state, card)
             {
                 out.push(card.clone());
             }

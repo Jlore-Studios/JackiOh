@@ -30,7 +30,7 @@
 use indexmap::IndexSet;
 
 use crate::config::GLITCH_DEF_ID;
-use crate::script::{CostAura, CostAuraWhose, HookArgs, Script};
+use crate::script::{CostAura, CostAuraWhose, HookArgs};
 use crate::state::{CardInstance, CostRule, GameState, ModifierExpiry, ModifierKind, PlayerModifier};
 use crate::wire::{CardType, Enchantment, PLAYER_IDS, PlayerId, Row, opponent_of};
 
@@ -110,7 +110,7 @@ fn acting_permanents(state: &GameState) -> Vec<&CardInstance> {
     for player in order {
         for row in [Row::Units, Row::Backrow] {
             for slot in crate::zones::slots_of(player, row) {
-                if let Some(card) = crate::zones::card_at(state, &slot) {
+                if let Some(card) = crate::zones::card_at(state, slot) {
                     out.push(card);
                 }
             }

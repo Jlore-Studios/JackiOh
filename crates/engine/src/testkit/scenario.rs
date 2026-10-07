@@ -74,15 +74,15 @@
 //!   2. a catalog id (`"core-043"`);
 //!   3. a SPEC §5 index (`"43"`, `"51.1"`, `"T-rush"`);
 //!   4. a card name, exact (`"Big Felinor"`), then case-insensitive.
-//! Steps 2-4 give a defId, and the instance is then the first one found scanning
-//!   the ACTIVE player first, then the opponent, and within a side:
-//!   hand → unit zones (lane 1..5, top of a Stack pile before the cards dormant under it) →
-//!   backrow (lane 1..5, then the cards dormant under its tops) → graveyard → exile → library →
-//!   resolving.
-//! A method that needs the card somewhere particular narrows the search to that place first:
-//! `play` looks in hands only, `attack`/`switch_position` on the field only. Nothing matching panics
-//! naming the string and listing what was there instead. Holding several copies of one def?
-//! Use the `CardInstance` the setup or `s.card(...)` handed back; the string form is first-match.
+//!      Steps 2-4 give a defId, and the instance is then the first one found scanning
+//!      the ACTIVE player first, then the opponent, and within a side:
+//!      hand → unit zones (lane 1..5, top of a Stack pile before the cards dormant under it) →
+//!      backrow (lane 1..5, then the cards dormant under its tops) → graveyard → exile → library →
+//!      resolving.
+//!      A method that needs the card somewhere particular narrows the search to that place first:
+//!      `play` looks in hands only, `attack`/`switch_position` on the field only. Nothing matching panics
+//!      naming the string and listing what was there instead. Holding several copies of one def?
+//!      Use the `CardInstance` the setup or `s.card(...)` handed back; the string form is first-match.
 //!
 //! ---------------------------------------------------------------------------------------------
 //! INSTANCES ARE SNAPSHOTS
@@ -142,7 +142,7 @@ use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
-use crate::config::{BACKROW_ZONES, DECK_SIZE, GLITCH_DEF_ID, UNIT_ZONES};
+use crate::config::{BACKROW_ZONES, DECK_SIZE, UNIT_ZONES};
 use crate::layers::{UnitView, unit_view};
 use crate::own_library::show_to_owner;
 use crate::rng::Rng;
@@ -153,7 +153,7 @@ use crate::state::{
 };
 use crate::wire::{
     Action, ActionBody, AttackHealth, CardDef, CardDefs, CardType, Counters, GameEvent, PLAYER_IDS, Phase,
-    PlayerId, PlayerView, Position, Row, SHIPPED_SETS, Selection, SetName, Tag, Zone, ZoneChoice, opponent_of,
+    PlayerId, PlayerView, Position, Row, Selection, Zone, ZoneChoice, opponent_of,
 };
 use crate::zones::{LibraryPosition, MoveToZoneOptions, MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot};
 
@@ -832,7 +832,7 @@ fn place_one(sink: &mut EngineSink<'_>, player: PlayerId, entry: &Placement) -> 
     let options = PlaceOnFieldOptions {
         stack: if entry.entry.stack == Some(true) { Some(true) } else { None },
     };
-    if !crate::zones::place_on_field(&mut *sink.state, &mut card, &slot, options) {
+    if !crate::zones::place_on_field(&mut *sink.state, &mut card, slot, options) {
         return Err(format!(
             "{}: {} {} lane {lane} would not take \"{}\"",
             entry.label,

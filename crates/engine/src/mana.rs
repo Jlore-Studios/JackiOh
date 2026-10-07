@@ -7,7 +7,7 @@ use crate::config::GLITCH_DEF_ID;
 use crate::cost_rules::{climb_price_rules, cost_floor_of, price_rules_for};
 use crate::faces::card_type_of;
 use crate::graveyard_play::playable_from_graveyard;
-use crate::script::{CostArgs, Script, empty_script};
+use crate::script::CostArgs;
 use crate::state::{
     CardInstance, GameState, ModifierExpiry, ModifierKind, PlayerModifier, PlayerState, handicap_of,
 };
@@ -259,8 +259,8 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
         off
     };
     let live = |modifier: &PlayerModifier| modifier_is_live(state, modifier);
-    let rules = price_rules_for(state, instance.controller, instance, &live);
-    let climbed = climb_price_rules(cost, &rules, &curvature);
+    let rules = price_rules_for(state, instance.controller, instance, live);
+    let climbed = climb_price_rules(cost, &rules, curvature);
 
     Price {
         cost: 0.max(climbed.price).max(floor),

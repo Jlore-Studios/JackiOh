@@ -206,11 +206,10 @@ pub struct EmoteGate {
 /// can keep one rolling array per player.
 pub fn emote_gate(sent_at: &[i64], now: i64) -> EmoteGate {
     let kept: Vec<i64> = sent_at.iter().copied().filter(|at| now - at < EMOTE_WINDOW_MS).collect();
-    if let Some(&last) = kept.last() {
-        if now - last < EMOTE_COOLDOWN_MS {
+    if let Some(&last) = kept.last()
+        && now - last < EMOTE_COOLDOWN_MS {
             return EmoteGate { ok: false, retry_after_ms: Some(EMOTE_COOLDOWN_MS - (now - last)), sent_at: kept };
         }
-    }
     if kept.len() >= EMOTE_WINDOW_MAX {
         let oldest = kept.first().copied().unwrap_or(now);
         return EmoteGate { ok: false, retry_after_ms: Some(EMOTE_WINDOW_MS - (now - oldest)), sent_at: kept };

@@ -61,8 +61,7 @@ pub fn trigger_order(sink: &EngineSink, hook: HookName, only: Option<PlayerId>) 
         .into_iter()
         .flat_map(|player| {
             let mut cards: Vec<CardInstance> = crate::zones::active_units_of(state, player)
-                .into_iter()
-                .map(|card| CardInstance::clone(&card))
+                .into_iter().cloned()
                 .collect();
             // `slotsOf(player, "backrow")` read through `cardAt`: the backrow's cards by lane.
             cards.extend(state.players[player].backrow.iter().flatten().cloned());
@@ -159,7 +158,7 @@ struct DueEntry {
 }
 
 enum Due {
-    Delayed(DelayedEffect),
+    Delayed(Box<DelayedEffect>),
     /// The `startOfTurnEffect` modifier's id, found again on the player as it runs.
     Recurring { id: String },
 }
@@ -176,13 +175,13 @@ fn due_entries(state: &GameState, phase: Phase, player: PlayerId, due_before: u3
                 && effect.not_before.is_none_or(|not_before| state.turn >= not_before)
         })
         .collect();
-    delayed.sort_by(|a, b| a.seq.cmp(&b.seq));
+    delayed.sort_by_key(|a| a.seq);
     let mut entries: Vec<DueEntry> = delayed
         .into_iter()
         .filter(|due| due.seq < due_before)
         .map(|due| DueEntry {
             seq: due.seq,
-            what: Due::Delayed(due.clone()),
+            what: Due::Delayed(Box::new(due.clone())),
         })
         .collect();
     if phase == Phase::Start {
@@ -198,7 +197,7 @@ fn due_entries(state: &GameState, phase: Phase, player: PlayerId, due_before: u3
                 _ => None,
             })
             .collect();
-        recurring.sort_by(|a, b| a.0.cmp(&b.0));
+        recurring.sort_by_key(|a| a.0);
         entries.extend(
             recurring
                 .into_iter()
@@ -210,7 +209,7 @@ fn due_entries(state: &GameState, phase: Phase, player: PlayerId, due_before: u3
         );
     }
     // A stable sort, as `Array.prototype.sort` (SURFACE §4.4.1).
-    entries.sort_by(|a, b| a.seq.cmp(&b.seq));
+    entries.sort_by_key(|a| a.seq);
     entries
 }
 

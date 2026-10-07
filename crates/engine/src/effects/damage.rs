@@ -108,7 +108,7 @@ pub fn damage_all(args: DamageAllArgs) -> Effect {
                     source,
                     target: DamageTarget::Unit { instance },
                     amount: args.amount,
-                    flags: Some(flags.clone()),
+                    flags: Some(flags),
                 },
             );
         }
@@ -124,7 +124,7 @@ pub fn damage_all(args: DamageAllArgs) -> Effect {
                     source,
                     target: DamageTarget::Hero { player },
                     amount: args.amount,
-                    flags: Some(flags.clone()),
+                    flags: Some(flags),
                 },
             );
         }

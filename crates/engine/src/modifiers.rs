@@ -6,10 +6,10 @@
 //! that is what `add_modifier` takes. The readers that TS answered with the live record
 //! (`dueDelayed`, `dueStartOfTurnEffects`) answer copies, which a caller writes back by id.
 
-use crate::config::{BACKROW_ZONES, SETUP_TURN, UNIT_ZONES};
-use crate::script::{EngineSink, Script, StaticFlags};
+use crate::config::SETUP_TURN;
+use crate::script::EngineSink;
 use crate::state::{
-    CardInstance, DelayedAt, DelayedEffect, GameState, ModifierExpiry, ModifierKind, Phase, PlayerModifier,
+    DelayedAt, DelayedEffect, GameState, ModifierExpiry, ModifierKind, Phase, PlayerModifier,
     Resume, find_instance,
 };
 use crate::wire::{GameEvent, PLAYER_IDS, PlayerId, Row, ZoneName};
@@ -236,7 +236,7 @@ pub fn due_delayed(state: &GameState, phase: Phase, player: PlayerId) -> Vec<Del
         })
         .cloned()
         .collect();
-    due.sort_by(|a, b| a.seq.cmp(&b.seq));
+    due.sort_by_key(|a| a.seq);
     due
 }
 
@@ -353,6 +353,6 @@ pub fn due_start_of_turn_effects(state: &GameState, player: PlayerId) -> Vec<Sta
             _ => None,
         })
         .collect();
-    due.sort_by(|a, b| a.0.cmp(&b.0));
+    due.sort_by_key(|a| a.0);
     due.into_iter().map(|(_, modifier)| modifier).collect()
 }

@@ -543,7 +543,7 @@ fn carried_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> Option
         slots_of(player, Row::Backrow)
             .into_iter()
             .map(|zone_ref| {
-                let unit: Option<CardInstance> = carried_at(state, zone_ref).map(|unit| unit.clone());
+                let unit: Option<CardInstance> = carried_at(state, zone_ref).cloned();
                 unit.and_then(|unit| unit_view_of(state, &[unit], viewer))
             })
             .collect(),
@@ -572,7 +572,7 @@ fn hero_powers_of(state: &GameState, player: PlayerId) -> Vec<HeroPowerView> {
                 instance_id: card.id.clone(),
                 def_id: card.def_id.clone(),
                 name: power.name.to_string(),
-                title: power_title_of(&power, card.radiant).to_string(),
+                title: power_title_of(power, card.radiant).to_string(),
                 x: power.x,
                 used_this_turn: used_this_turn(state, card),
             });
@@ -907,7 +907,7 @@ fn prompt_view(state: &GameState, viewer: PlayerId, pending: &PendingChoice) -> 
 /// other seat held — never what that seat is choosing from or has chosen.
 fn mulligan_pending_view(state: &GameState, viewer: PlayerId) -> Option<PendingView> {
     if let Some(own) = mulligan_prompt_for(state, viewer) {
-        return Some(prompt_view(state, viewer, &own));
+        return Some(prompt_view(state, viewer, own));
     }
     let other = opponent_of(viewer);
     if mulligan_prompt_for(state, other).is_none() {

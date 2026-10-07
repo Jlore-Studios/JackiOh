@@ -14,5 +14,5 @@ pub fn is_cast_on_draw(state: &GameState, card: &CardInstance) -> bool {
     state
         .held_draws
         .as_ref()
-        .is_some_and(|held| held.iter().any(|id| *id == card.id))
+        .is_some_and(|held| held.contains(&card.id))
 }

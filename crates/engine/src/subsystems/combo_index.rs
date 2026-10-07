@@ -73,7 +73,7 @@ pub const GRADES: &[Grade] = &[Grade::E, Grade::D, Grade::C, Grade::B, Grade::A,
 pub const LAST_GRADE: i32 = GRADES.len() as i32;
 
 fn clamp_grade(grade: i32) -> i32 {
-    grade.max(FIRST_GRADE).min(LAST_GRADE)
+    grade.clamp(FIRST_GRADE, LAST_GRADE)
 }
 
 /// The letter a grade number shows, for the card file and for `view_for` (§10.8).

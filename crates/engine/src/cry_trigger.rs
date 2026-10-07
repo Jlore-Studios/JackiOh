@@ -41,7 +41,7 @@ use crate::prompts::{
     hero_option_label, in_offered_order, open_prompt, resume_at, run_hook_resumable, run_resume,
     why_answer_refused,
 };
-use crate::script::{EngineSink, Script};
+use crate::script::EngineSink;
 use crate::state::{CardInstance, EngineError, GameState, PromptOption, Resume, find_instance};
 use crate::stays::{exit_mark, left_field_after};
 use crate::wire::{CardType, PlayerId, PromptKind, Row, Selection, Zone};
@@ -101,9 +101,7 @@ pub fn cry_place_of(state: &GameState, card: &CardInstance) -> Option<CryPlace> 
     if crate::faces::card_type_of(state, card) != CardType::Unit {
         return None;
     }
-    if crate::scripts::script_of(state, card).cry.is_none() {
-        return None;
-    }
+    crate::scripts::script_of(state, card).cry.as_ref()?;
     match card.zone {
         Zone::Graveyard { .. } => Some(CryPlace::Graveyard),
         Zone::Field { row: Row::Units, .. } if !crate::zones::is_buried(state, card) => Some(CryPlace::Field),
@@ -187,9 +185,8 @@ fn key_of(selection: &Selection) -> String {
 fn ask_modes(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> bool {
     let modes = declared_modes(sink.state, card);
     let name = name_of(sink.state, &card.def_id);
-    for at in run.mode_at..modes.len() {
+    for (at, decl) in modes.iter().enumerate().skip(run.mode_at) {
         run.mode_at = at + 1;
-        let decl = &modes[at];
         if decl.options.is_empty() {
             continue;
         }
@@ -234,9 +231,8 @@ fn ask_modes(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> bo
 fn ask_targets(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> bool {
     let decls = active_target_decls(&declared_targets(sink.state, card), &run.modes);
     let name = name_of(sink.state, &card.def_id);
-    for at in run.decl_at..decls.len() {
+    for (at, decl) in decls.iter().enumerate().skip(run.decl_at) {
         run.decl_at = at + 1;
-        let decl = &decls[at];
         let options = legal_selections_for(sink.state, run.controller, card, decl);
         if decl.kind == PromptKind::Tribute {
             // A Tribute is a play's price, and nothing was played: its slots stay, empty (R90, R123).
@@ -283,16 +279,21 @@ fn ask_targets(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> 
     true
 }
 
+/// `ask_modes` or `ask_targets`: one kind of declaration still to ask; false while one is waiting.
+type Asker = fn(&mut EngineSink, &mut CryRun, &CardInstance) -> bool;
+
 /// Ask what is still to ask, then run the Cry; stops at a prompt, whose answer comes back here.
 fn continue_run(sink: &mut EngineSink, mut run: CryRun) {
     let Some(card) = standing(sink.state, &run) else {
         return;
     };
-    let asked = if targets_follow_modes(&declared_targets(sink.state, &card)) {
-        ask_modes(sink, &mut run, &card) && ask_targets(sink, &mut run, &card)
+    // The order is the point: the second asks only once the first has nothing left to ask.
+    let (first, second): (Asker, Asker) = if targets_follow_modes(&declared_targets(sink.state, &card)) {
+        (ask_modes, ask_targets)
     } else {
-        ask_targets(sink, &mut run, &card) && ask_modes(sink, &mut run, &card)
+        (ask_targets, ask_modes)
     };
+    let asked = first(sink, &mut run, &card) && second(sink, &mut run, &card);
     if !asked {
         return;
     }

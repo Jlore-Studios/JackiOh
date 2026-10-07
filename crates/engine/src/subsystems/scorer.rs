@@ -42,7 +42,7 @@ use crate::rng::Rng;
 use crate::script::EngineSink;
 use crate::state::{CardInstance, GameState};
 use crate::wire::{
-    ActionBody, CardCost, CardDef, CardFace, CardType, KeywordKind, Phase, PlayerId, Rarity, Row, Selection, SetName,
+    CardCost, CardDef, CardFace, CardType, KeywordKind, Phase, PlayerId, Rarity, Row, Selection, SetName,
     Winner, Zone, ZoneChoice, has_keyword, opponent_of,
 };
 

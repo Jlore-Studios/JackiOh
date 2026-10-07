@@ -28,7 +28,7 @@ use serde_json::{Value, json};
 
 use crate::config::{LANE_RESTRICTED_ATTACKS, WINDFURY_ATTACKS};
 use crate::damage::{DamageArgs, DamageFlags, DamageTarget, deal_damage};
-use crate::script::{EngineSink, Script, StaticFlags, TargetedWhat, empty_script};
+use crate::script::{EngineSink, TargetedWhat};
 use crate::state::{
     CardInstance, DeclaredAttack, EngineError, Exertion, GameState, Position, Resume, WorkItem, find_instance,
     find_instance_mut,
@@ -468,8 +468,8 @@ fn cleave(sink: &mut EngineSink<'_>, attacker: &CardInstance, target: &AttackTar
     let Some(at) = crate::zones::slot_of(sink.state, &defender) else {
         return;
     };
-    for slot in crate::zones::adjacent(&at) {
-        let Some(neighbour) = crate::zones::card_at(sink.state, &slot).cloned() else {
+    for slot in crate::zones::adjacent(at) {
+        let Some(neighbour) = crate::zones::card_at(sink.state, slot).cloned() else {
             continue;
         };
         deal_damage(

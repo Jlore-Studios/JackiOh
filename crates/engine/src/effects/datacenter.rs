@@ -155,13 +155,13 @@ pub fn field_spells_doomed(reader: SweepReader<'_>, side: FieldSpellSide) -> Vec
     let mut out: Vec<CardInstance> = Vec::new();
     for player in sides {
         for slot in slots_of(player, Row::Backrow) {
-            let Some(card) = card_at(reader.state, &slot) else {
+            let Some(card) = card_at(reader.state, slot) else {
                 continue;
             };
-            if card_type_of(reader.state, &card) != CardType::FieldSpell {
+            if card_type_of(reader.state, card) != CardType::FieldSpell {
                 continue;
             }
-            if unit_has(reader.state, &card, KeywordKind::Indestructible) || reader_unaffected_by(&reader, &card) {
+            if unit_has(reader.state, card, KeywordKind::Indestructible) || reader_unaffected_by(&reader, card) {
                 continue;
             }
             out.push(card.clone());

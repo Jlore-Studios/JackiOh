@@ -37,7 +37,7 @@ use crate::layers::unit_view;
 use crate::prelude::json_as;
 use crate::rng::Rng;
 use crate::script::{
-    ActivationCost, ActivationDecl, ActivationUses, Effect, EffectContext, EffectPart, EngineSink, hook, read_hook,
+    ActivationCost, ActivationDecl, ActivationUses, Effect, EffectContext, EngineSink, hook, read_hook,
 };
 use crate::state::{CardInstance, GameState};
 use crate::subsystems::activate::{ACTIVATIONS_MEMORY_KEY, abilities_of, uses_allowed, uses_this_turn};

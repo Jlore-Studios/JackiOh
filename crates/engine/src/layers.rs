@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::brittle_count::active_brittle_count;
 use crate::catalog::def_of;
 use crate::config::{ANIMATED_FALLBACK_ATTACK, ANIMATED_FALLBACK_HEALTH, BACKROW_ZONES, RADIANT_FALLBACK_FACTOR, UNIT_ZONES};
-use crate::script::{HookArgs, Script, StatMod, empty_script};
+use crate::script::{HookArgs, StatMod};
 use crate::state::{CardInstance, GameState, Position};
 use crate::tuning::{tuned_keywords, x_of};
 use crate::wire::{AttackHealth, CardDef, CardFace, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Row, Zone, armor_of, has_keyword};

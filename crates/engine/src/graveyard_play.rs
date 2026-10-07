@@ -21,7 +21,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::config::{MIN_PLAGUE_PAYMENT, PLAGUE_TOKEN_MANA};
-use crate::script::{GraveyardPlayPermission, HookArgs, Script};
+use crate::script::{GraveyardPlayPermission, HookArgs};
 use crate::script::EngineSink;
 use crate::state::{CardInstance, EngineError, GameState};
 use crate::wire::{CardType, CounterKind, GameEvent, PlayerId, Row, Zone};
@@ -53,7 +53,7 @@ pub fn graveyard_grants_of(state: &GameState, player: PlayerId) -> Vec<Graveyard
     let mut out: Vec<GraveyardGrant> = Vec::new();
     for row in [Row::Units, Row::Backrow] {
         for slot in crate::zones::slots_of(player, row) {
-            let Some(source) = crate::zones::card_at(state, &slot) else {
+            let Some(source) = crate::zones::card_at(state, slot) else {
                 continue;
             };
             if source.controller != player {

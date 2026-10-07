@@ -19,7 +19,7 @@
 //!   - `set`: a number KY's Constant set outright; the steps after it count from it (`tuned_count`).
 //!     A declared number's key is a catalog `params` key (camelCase), a keyword's its kind (capitalised),
 //!     so the two never share a key.
-//! The cost change is the card's `costMod` (R65), never a field here.
+//!     The cost change is the card's `costMod` (R65), never a field here.
 //!
 //! Port of `packages/engine/src/tuning.ts`. TS's `Pick<CardInstance, "tuning">` arguments take the
 //! instance; TS's `delete record[key]` is `IndexMap::shift_remove`, which keeps the other keys in

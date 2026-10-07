@@ -141,8 +141,7 @@ fn attacker_of(state: &GameState, player: PlayerId, instance_id: &str) -> Option
     }
     carried_units_of(state, player)
         .into_iter()
-        .find(|card| card.id == instance_id)
-        .map(|card| card.clone())
+        .find(|card| card.id == instance_id).cloned()
 }
 
 /// The target an `attack` action names, looked up among the enemy's active units and the enemy hero
@@ -154,8 +153,7 @@ fn attack_target_of(state: &GameState, player: PlayerId, target_id: &str) -> Opt
     }
     let unit = active_units_of(state, enemy)
         .into_iter()
-        .find(|card| card.id == target_id)
-        .map(|card| card.clone())?;
+        .find(|card| card.id == target_id).cloned()?;
     Some(AttackTarget::Unit { instance: unit })
 }
 
@@ -693,7 +691,7 @@ fn each_legal_action(
             return visit(ActionBody::Concede);
         }
         for answer in prompt_answers(pending) {
-            visit(ActionBody::from(answer))?;
+            visit(answer)?;
         }
         return visit(ActionBody::Concede);
     }
@@ -736,13 +734,13 @@ fn each_legal_action(
     }
 
     for unit in active_units_of(state, player) {
-        for target in attack_targets(state, &unit) {
+        for target in attack_targets(state, unit) {
             visit(ActionBody::Attack {
                 attacker_id: unit.id.clone(),
                 target_id: attack_target_id(&target),
             })?;
         }
-        if can_switch(state, &unit) {
+        if can_switch(state, unit) {
             visit(ActionBody::SwitchPosition {
                 instance_id: unit.id.clone(),
             })?;
@@ -754,7 +752,7 @@ fn each_legal_action(
     for row in [Row::Units, Row::Backrow] {
         for zone_ref in slots_of(player, row) {
             if let Some(card) = card_at(state, zone_ref) {
-                for activation in activation_actions(state, player, &card) {
+                for activation in activation_actions(state, player, card) {
                     visit(activation)?;
                 }
             }

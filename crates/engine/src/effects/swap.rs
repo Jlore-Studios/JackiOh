@@ -86,8 +86,7 @@ fn can_accept(state: &GameState, slot: &ZoneSlot) -> bool {
 /// Put a zone's cards down in their new zone. A pile is rebuilt from the bottom up so the card that
 /// was on top is on top again, which keeps the same card acting for the zone (§3.2).
 fn place_contents(state: &mut GameState, cards: &[CardInstance], to: &ZoneSlot) {
-    let mut placed = 0;
-    for card in cards.iter().rev() {
+    for (placed, card) in cards.iter().rev().enumerate() {
         // Every swapped zone was emptied before anything was placed and the destination accepts cards,
         // so a refusal here is a broken invariant, not a game rule; `rotation.rs` says so the same way.
         if !place_on_field(
@@ -100,7 +99,6 @@ fn place_contents(state: &mut GameState, cards: &[CardInstance], to: &ZoneSlot) 
         ) {
             panic!("swap could not place {} in {} {} {}", card.id, to.player, to.row, to.lane);
         }
-        placed += 1;
     }
 }
 
@@ -265,15 +263,15 @@ pub fn swap(args: SwapArgs) -> Effect {
 
 /// R73: the two heroes' health values change places; armor stays with its hero.
 pub fn swap_health() -> Effect {
-    Effect::new("swapHealth", move |ctx| swap_health_now(ctx))
+    Effect::new("swapHealth", swap_health_now)
 }
 
 /// R73: zone contents change sides lane by lane in both rows; locks stay, control moves, owners don't.
 pub fn swap_board() -> Effect {
-    Effect::new("swapBoard", move |ctx| swap_board_now(ctx))
+    Effect::new("swapBoard", swap_board_now)
 }
 
 /// R73: the libraries change places whole, and each swapped card's owner changes with it (R12).
 pub fn swap_library() -> Effect {
-    Effect::new("swapLibrary", move |ctx| swap_library_now(ctx))
+    Effect::new("swapLibrary", swap_library_now)
 }

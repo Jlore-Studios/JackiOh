@@ -10,7 +10,6 @@
 //!
 //! Port of `packages/engine/src/effects/reveal.ts`.
 
-use std::borrow::Borrow;
 
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -19,7 +18,7 @@ use crate::brittle_count::start_brittle_on_field;
 use crate::effects::targets::{TargetSpec, instance_of};
 use crate::prelude::json_as;
 use crate::script::Effect;
-use crate::state::{CardInstance, find_instance, find_instance_mut};
+use crate::state::{find_instance, find_instance_mut};
 use crate::wire::{Row, Zone};
 
 /// `{ of: "self" }`, built from its JSON so this file names no variant of `TargetSpec`'s own.

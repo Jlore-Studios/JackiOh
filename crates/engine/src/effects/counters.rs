@@ -126,10 +126,10 @@ pub fn lock(args: LockArgs) -> Effect {
         let Some(slot) = zone_for(ctx, &args.zone) else {
             return;
         };
-        if is_locked(ctx.state, &slot) {
+        if is_locked(ctx.state, slot) {
             return;
         }
-        lock_zone(&mut *ctx.state, &slot);
+        lock_zone(&mut *ctx.state, slot);
         ctx.events.push(GameEvent::Locked {
             player: slot.player,
             row: slot.row,
@@ -153,10 +153,10 @@ pub fn unlock(args: UnlockArgs) -> Effect {
         let Some(slot) = zone_for(ctx, &args.zone) else {
             return;
         };
-        if !is_locked(ctx.state, &slot) {
+        if !is_locked(ctx.state, slot) {
             return;
         }
-        unlock_zone(&mut *ctx.state, &slot);
+        unlock_zone(&mut *ctx.state, slot);
         ctx.events.push(GameEvent::Unlocked {
             player: slot.player,
             row: slot.row,

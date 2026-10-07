@@ -26,7 +26,7 @@
 use crate::catalog::def_of;
 use crate::damage::DamageTarget;
 use crate::layers::unit_has;
-use crate::script::{EffectContext, Script, StaticFlags, empty_script};
+use crate::script::EffectContext;
 use crate::state::{CardInstance, EngineError, GameState};
 use crate::wire::{CardType, KeywordKind, Row, Zone};
 use crate::zones::{card_at, slot_of};
@@ -151,7 +151,7 @@ pub fn can_go_berserk(state: &GameState, card: &CardInstance) -> bool {
 /// The card that acts in its zone: on the field and the top of its pile (§3.2, R13).
 fn active_on_field(state: &GameState, card: &CardInstance) -> bool {
     match slot_of(state, card) {
-        Some(at) => card_at(state, &at).is_some_and(|held| held.id == card.id),
+        Some(at) => card_at(state, at).is_some_and(|held| held.id == card.id),
         None => false,
     }
 }

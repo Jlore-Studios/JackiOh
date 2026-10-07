@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::effects::targets::{PlayerSpec, player_of};
 use crate::mana::{NEXT_REFRESH_MODIFIER_ID, mana_event, refresh_some_mana};
-use crate::script::{Effect, EffectContext};
-use crate::wire::{GameEvent, PlayerId};
+use crate::script::Effect;
+use crate::wire::GameEvent;
 
 /// `gainMana`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

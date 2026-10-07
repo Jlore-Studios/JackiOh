@@ -225,8 +225,7 @@ fn drawable_count(state: &GameState, player: PlayerId) -> i32 {
 /// rest of it is dealt from them, uncast (`deal_suspended`), and they are cast at the start of the game;
 /// the draw is `min` of the hand and what may be drawn, so setup still never deals a fatigue draw.
 fn deal_from(sink: &mut EngineSink, seat: usize) {
-    for at in seat..PLAYER_IDS.len() {
-        let player = PLAYER_IDS[at];
+    for (at, &player) in PLAYER_IDS.iter().enumerate().skip(seat) {
         let size = opening_hand_size(sink.state, player);
         let shuffled = sink.rng.shuffle(&sink.state.players[player].library);
         let (quickdraw, set_aside, drawable) = {

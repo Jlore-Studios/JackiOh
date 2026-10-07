@@ -15,8 +15,7 @@
 use serde_json::Value;
 
 use crate::animated::FieldSink;
-use crate::script::{Script, empty_script};
-use crate::state::{CardInstance, GameState, find_instance_mut};
+use crate::state::find_instance_mut;
 use crate::wire::{GameEvent, PLAYER_IDS, Row};
 use crate::zones::{ZoneSlot, first_entry_zone, is_open, slots_of, step_into_unit_zone};
 
@@ -37,10 +36,10 @@ pub fn settle_carried(sink: &mut FieldSink<'_>) {
             continue;
         }
         for slot in slots_of(player, Row::Backrow) {
-            let Some(unit) = crate::zones::carried_at(sink.state, &slot).cloned() else {
+            let Some(unit) = crate::zones::carried_at(sink.state, slot).cloned() else {
                 continue;
             };
-            if let Some(top) = crate::zones::card_at(sink.state, &slot).cloned()
+            if let Some(top) = crate::zones::card_at(sink.state, slot).cloned()
                 && crate::zones::is_carrier(sink.state, &top)
             {
                 continue;
@@ -50,7 +49,7 @@ pub fn settle_carried(sink: &mut FieldSink<'_>) {
                 row: Row::Units,
                 lane: slot.lane,
             };
-            let to = if is_open(sink.state, &same) {
+            let to = if is_open(sink.state, same) {
                 Some(same)
             } else {
                 first_entry_zone(sink.state, player, Row::Units)
@@ -67,7 +66,7 @@ pub fn settle_carried(sink: &mut FieldSink<'_>) {
                 }
                 continue;
             };
-            if !step_into_unit_zone(sink.state, &unit, &to) {
+            if !step_into_unit_zone(sink.state, &unit, to) {
                 continue;
             }
             if let Some(moved) = find_instance_mut(sink.state, &unit.id) {

@@ -358,7 +358,7 @@ pub fn fused_id_specs(state: Option<&GameState>, def_id: &str) -> Option<Vec<Fus
     let mut specs: Vec<FusedIngredient> = Vec::new();
     let mut depth: i32 = 0;
     let mut start = head;
-    for at in start..=bytes.len() {
+    for at in head..=bytes.len() {
         let ch = bytes.get(at).copied();
         if ch == Some(b'(') {
             depth += 1;

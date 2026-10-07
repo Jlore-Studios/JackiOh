@@ -26,7 +26,6 @@
 //!
 //! Port of `packages/engine/src/effects/plague.ts`.
 
-use std::borrow::Borrow;
 
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
@@ -199,7 +198,7 @@ fn placement_data(data: &IndexMap<String, Value>) -> Option<PlacementData> {
 
 /// The label a placement option shows its chooser; `view_for` hides a card the chooser may not read (R177).
 fn label_of(state: &GameState, card: &CardInstance) -> String {
-    def_of(Some(&*state), &card.def_id).name.clone()
+    def_of(Some(state), &card.def_id).name.clone()
 }
 
 /// Open the one placement prompt for `resume`'s placer over every permanent on the field (R68's

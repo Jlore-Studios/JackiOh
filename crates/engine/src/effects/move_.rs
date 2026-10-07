@@ -8,7 +8,6 @@
 //!
 //! Port of `packages/engine/src/effects/move.ts` (`move` is a Rust keyword, hence `move_`).
 
-use std::borrow::Borrow;
 
 use serde::{Deserialize, Serialize};
 
@@ -22,7 +21,7 @@ use crate::ownership::take_into_hand;
 use crate::query::zone_cards;
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, find_instance, find_instance_mut};
-use crate::wire::{CounteredTo, GameEvent, PlayerId, Zone, ZoneName};
+use crate::wire::{CounteredTo, GameEvent, Zone, ZoneName};
 use crate::zones::{MoveResult, OffFieldZone, is_unit_token, move_to_zone, report_graveyard_landing};
 
 /// One card to the exile pile: the whole of §6.3 Exile for a single card, so `exile`, `exile_all`,
@@ -501,7 +500,7 @@ pub fn counter_play(args: CounterPlayArgs) -> Effect {
         let mut card = card;
         match to {
             CounterDestination::Thief => {
-                take_into_hand(ctx, &mut card, thief);
+                take_into_hand(ctx, &card, thief);
             }
             CounterDestination::Exile => exile_card(ctx, &card),
             CounterDestination::Graveyard => {

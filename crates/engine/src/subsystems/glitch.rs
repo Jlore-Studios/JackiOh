@@ -5,21 +5,20 @@
 //!     generated into a hand or a deck after that is Glitch with odds n/10000.
 //!   - `glitch` (R676): Glitch's own text. One draw of the match rng picks one of `GLITCH_OUTCOMES`,
 //!     and a public `glitched` event names it:
-//!       reset  — the match starts again from `create_game`'s decks, shuffled and dealt by the match
-//!                rng, mulligans and all (`reset_match`, run by `reduce` once the action has settled,
-//!                so nothing of the old game is still resolving when it goes);
-//!       swap   — each account now plays the other seat (R677). The engine's game is unchanged; the
-//!                hosts read `state.seat_swaps` (`seats_swapped`), and the server credits results by it;
-//!       boards — both fields become the boards of two other players' games, a frozen setup input
-//!                like C+ #29's last boards (`state.glitch_boards`, R678); hands, decks and life stay;
-//!       void   — the game ends with no winner and reason `voided`, and the server keeps no trace of
-//!                it but a log line (R679).
+//!     reset  — the match starts again from `create_game`'s decks, shuffled and dealt by the match
+//!     rng, mulligans and all (`reset_match`, run by `reduce` once the action has settled,
+//!     so nothing of the old game is still resolving when it goes);
+//!     swap   — each account now plays the other seat (R677). The engine's game is unchanged; the
+//!     hosts read `state.seat_swaps` (`seats_swapped`), and the server credits results by it;
+//!     boards — both fields become the boards of two other players' games, a frozen setup input
+//!     like C+ #29's last boards (`state.glitch_boards`, R678); hands, decks and life stay;
+//!     void   — the game ends with no winner and reason `voided`, and the server keeps no trace of
+//!     it but a log line (R679).
 //!
 //! All of it is plain data on the state, so `(seed, decks, …, log)` folds to the same game (§9.3).
 //!
 //! Port of `packages/engine/src/subsystems/glitch.ts`.
 
-use std::borrow::Borrow;
 
 use crate::config::{GLITCH_OUTCOMES, SETUP_TURN, SYSTEM_CARD_DEF_IDS};
 use crate::script::{EngineSink, Effect};
@@ -90,10 +89,10 @@ fn place_glitch_boards(state: &mut GameState) {
     for player in PLAYER_IDS {
         for row in [Row::Units, Row::Backrow] {
             for slot in crate::zones::slots_of(player, row) {
-                for mut card in crate::zones::zone_contents(state, &slot) {
+                for mut card in crate::zones::zone_contents(state, slot) {
                     crate::zones::cease_to_exist(state, &mut card);
                 }
-                crate::zones::unlock_zone(state, &slot);
+                crate::zones::unlock_zone(state, slot);
             }
         }
     }
@@ -119,7 +118,7 @@ fn place_glitch_boards(state: &mut GameState) {
             let Some(slot) = crate::zones::first_free_zone(state, player, row) else {
                 continue;
             };
-            if !crate::zones::place_on_field(state, &mut card, &slot, Default::default()) {
+            if !crate::zones::place_on_field(state, &mut card, slot, Default::default()) {
                 continue;
             }
             let turn = state.turn;

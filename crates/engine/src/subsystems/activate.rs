@@ -56,8 +56,7 @@ use crate::preview::is_face_down;
 use crate::prompts::{HookInstance, HookResumableOptions, run_hook_resumable};
 use crate::resolve::{HookOptions, make_context};
 use crate::script::{
-    ActivationDecl, ActivationUses, ConditionContext, ConditionZone, EffectContext, EngineSink, HookArgs,
-    Script, activation_decls, activation_hook, empty_script,
+    ActivationDecl, ActivationUses, ConditionContext, ConditionZone, EffectContext, EngineSink, HookArgs, activation_decls, activation_hook,
 };
 use crate::state::{CardInstance, EngineError, GameState, Resume, WorkItem, find_instance, find_instance_mut};
 use crate::state_check::{sacrifice_together, state_check};
@@ -279,8 +278,7 @@ fn mark_use(state: &mut GameState, card_id: &str) {
 /// B3.2 rule 4: the units a Tribute cost may take — the controller's acting units, the card too.
 fn tribute_units_for(state: &GameState, player: PlayerId, card: &CardInstance, decl: &ActivationDecl) -> Vec<CardInstance> {
     let units: Vec<CardInstance> = active_units_of(state, player)
-        .iter()
-        .map(|unit| CardInstance::clone(unit))
+        .into_iter().cloned()
         .collect();
     // "Tribute this" pays with the card itself, so it is not also one of the units a Tribute counts.
     // R683: a cost that excludes itself (Classic #21) never lists the card either.

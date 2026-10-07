@@ -13,9 +13,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::brittle_count::active_brittle_count;
-use crate::config::TUNE_MIN_AMOUNT;
 use crate::layers::{card_keywords, printed_keywords_of, stats_with_buffs, unit_view};
-use crate::script::{ActivationUses, Script, empty_script};
+use crate::script::{ActivationUses, Script};
 use crate::state::{CardInstance, GameState};
 use crate::wire::{AttackHealth, CardType, Keyword, KeywordKind, ParamBetter, ParamTunedOn, Row, Zone, has_keyword};
 

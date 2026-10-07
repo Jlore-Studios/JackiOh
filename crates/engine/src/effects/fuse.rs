@@ -482,8 +482,8 @@ fn fuse_candidates(
     if piles.contains(&FuseOntoPile::Field) {
         for row in [Row::Units, Row::Backrow] {
             for slot in slots_of(player, row) {
-                if let Some(card) = card_at(state, &slot) {
-                    let card: &CardInstance = &card;
+                if let Some(card) = card_at(state, slot) {
+                    let card: &CardInstance = card;
                     if fits(card) {
                         out.push(card.clone());
                     }
