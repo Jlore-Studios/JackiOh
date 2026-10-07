@@ -221,7 +221,7 @@ describe("10 invite gate — a pending account", () => {
       { method: "PUT", path: `/api/decks/${someId}`, body: { name: "Gate", cards: [], catalogVersion: "whatever" } },
       { method: "DELETE", path: `/api/decks/${someId}` },
       { method: "PUT", path: `/api/trios/${someId}`, body: { name: "Gate", deckIds: [null, null, null] } },
-      { method: "POST", path: "/api/queue", body: { deckIndex: 0 } },
+      { method: "POST", path: "/api/queue", body: { mode: "bo1", deckId: someId } },
       { method: "POST", path: "/api/queue", body: { mode: "random" } },
     ];
     for (const door of gated) {
