@@ -247,7 +247,7 @@ class FlowTests(unittest.TestCase):
         self.assertNotIn(pull["node_id"], h.gh.auto_merge)
         self.assertIn("is not protected", h.gh.bot_comments(12)[-1])
         h2 = Harness(self)
-        h2.gh.branch_checks = {"lint, typecheck, unit, fuzz, coverage"}
+        h2.gh.branch_checks = {"rust"}
         h2.gh.add_issue(12, labels=(LABEL_BUILD,))
         h2.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}), "review": reviewer(APPROVE)}))
         self.assertEqual(h2.gh.auto_merge, {})

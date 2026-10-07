@@ -48,12 +48,10 @@
   "merge_method": "squash",
   "ci_workflow": "CI",
   "required_checks": [
-    "lint, typecheck, unit, fuzz, coverage",
-    "ai quality gates (full)",
-    "sql invariants (real Postgres)",
-    "store contract (real Postgres)",
-    "e2e (chrome)",
-    "e2e (electron)",
+    "rust",
+    "web",
+    "e2e smoke",
+    "db",
     "bot selftest"
   ],
   "ci_reruns": 1,
