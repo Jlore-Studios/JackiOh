@@ -64,7 +64,7 @@ const PLAY_PICK_BUDGET = 10;
 // the handles (routes/practice.tsx and tutorial/devHandle.ts, dev builds only)
 // ---------------------------------------------------------------------------------------------
 
-/** Structural subsets of the `@jackioh/shared` view types (packages/shared/src/view.ts). */
+/** Structural subsets of the `@jackioh/shared` view types (crates/engine/src/wire/view.rs). */
 export type CardLike = { instanceId: string; defId: string };
 export type PendingOptionLike = {
   key: string;

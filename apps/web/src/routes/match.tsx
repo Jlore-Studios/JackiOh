@@ -8,10 +8,10 @@
 // WHERE LEGALITY COMES FROM. `game/actions.ts` derives every clickable element by filtering the
 // `legalActions` array (BUILD M5-T2: "The client never computes legality itself; it asks
 // `legalActions` and greys out the rest"). The actor sends it on the `view` frame —
-// `apps/server/src/match/protocol.ts` `ViewMessage` is `{type:"view", view, legal}` and `pushView`
-// fills it with `legalActions(state, player)` for that socket's own seat — so this route hands
-// `match.legal` to the same `Game.tsx` the hotseat route hands `engine.legalActions(state, seat)`.
-// `net.ts` also accepts a `legal` frame of its own and reports when NEITHER has ever arrived; this
+// `crates/server/src/actor/protocol.rs` `ViewMessage` is `{type:"view", view, legal}` and
+// `match_actor.rs` `push_view` fills it with `legalActions(state, player)` for that socket's own
+// seat — so this route hands `match.legal` to the same `Game.tsx` the hotseat route hands
+// `engine.legalActions(state, seat)`. `net.ts` reports when it has never arrived; this
 // file renders that state as a loud notice instead of a silently dead board, because the failure
 // is invisible otherwise: prompts would still work (`Prompt.tsx` rebuilds an `answer` from
 // `PendingView.options` when it is given no array) and nothing else would. Nothing here papers

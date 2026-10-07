@@ -6,7 +6,7 @@
 //      card a compared deck holds is refused; a legal deck and trio queue"
 //
 // THE MESSAGES ARE THE ACCEPTANCE CRITERION, so they are asserted as text: every sentence below is
-// rebuilt from `packages/validator/src/index.ts`, which SPEC §9.4 makes the single implementation
+// rebuilt from `crates/engine/src/validator.rs`, which SPEC §9.4 makes the single implementation
 // ("one validator module shared by client and server"), with every number from `support/config.ts`
 // and every card name from `support/cards.ts`. If a sentence here and the validator disagree, one
 // of them is wrong — that is the point of asserting the string and not only the rule code.
@@ -62,7 +62,7 @@ import {
 import type { FixtureDeck } from "../../support/types.ts";
 
 // ---------------------------------------------------------------------------------------------
-// the validator's sentences (packages/validator/src/index.ts), rebuilt
+// the validator's sentences (crates/engine/src/validator.rs), rebuilt
 // ---------------------------------------------------------------------------------------------
 
 const DECK_SIZE = constants.DECK_SIZE;
@@ -314,7 +314,7 @@ describe("09 deck workshop — L1 to L6 in the builder and at the queue, a compa
             { rule: "L3", message: sentence.L3copies("Twice", twice, 2) },
             { rule: "L5", message: sentence.L5deck("Twice", twice, 2, OWNED) },
           ],
-          // D4, the save's own sentence (packages/validator `checkDeckDraft`).
+          // D4, the save's own sentence (the validator's `check_deck_draft`, crates/engine/src/validator.rs).
           save: `A deck may hold at most ${String(MAX_COPIES)} ${copyWord(MAX_COPIES)} of "${twice}"; this one has 2.`,
         },
         {

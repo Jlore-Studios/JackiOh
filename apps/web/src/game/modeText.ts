@@ -1,6 +1,6 @@
 // What a "Choose one" option says to the player (presentation only, CLAUDE.md rule 7).
 //
-// A card script's mode options are its public interface (`packages/cards` owns them, e2e answers
+// A card script's mode options are its public interface (`crates/cards` owns them, e2e answers
 // with them): short machine words such as Pocket Chaos's "health", "board" and "library". The
 // picker used to print those words bare under "Choose one", with nothing saying which card asked or
 // what each option does. This map gives each one a label and a line of detail, written from the

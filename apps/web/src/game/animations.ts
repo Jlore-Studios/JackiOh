@@ -90,7 +90,7 @@ export type AnimationRow<K extends GameEventType = GameEventType> = AnimationSpe
  * Payload → testid helpers
  * ------------------------------------------------------------------------------------------- */
 
-/** The engine writes a hero damage/heal target as `hero-<playerId>` (`packages/engine/damage.ts`). */
+/** The engine writes a hero damage/heal target as `hero-<playerId>` (`crates/engine/src/damage.rs`). */
 const HERO_TARGET_ID = /^hero-(p1|p2)$/;
 
 function heroSide(view: PlayerView, targetId: string): Side | null {
@@ -1227,7 +1227,7 @@ export function sameOccurrence(a: unknown, b: unknown): boolean {
  * The events in `next` that the runner has not been given yet.
  *
  * SPEC §10.8 gives a view "the last N events" (`VIEW_EVENT_LIMIT`, 32, in
- * `packages/engine/src/viewFor.ts`) — a sliding WINDOW over the whole match, not the delta one
+ * `crates/engine/src/view_for.rs`) — a sliding WINDOW over the whole match, not the delta one
  * action produced. Handing the whole window to the runner on every view would re-animate
  * everything it has already played: thirty-odd entries per click, a queue that never drains, and a
  * board that never catches up to the newest view. The window only ever moves forward by whole
@@ -1447,7 +1447,7 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
  *    to `trapFired`, or give the face-down `BackrowView` variant an opaque per-zone slot key.
  *
  * 2. `damage`/`healed` carry `targetId: string` with no discriminator; a hero is encoded as the
- *    string `hero-<playerId>` by `packages/engine/src/damage.ts` and nothing in §10.3 says so.
+ *    string `hero-<playerId>` by `crates/engine/src/damage.rs` and nothing in §10.3 says so.
  *    This table parses that prefix. A typed target (`{ kind: "unit" | "hero" }`, as `Selection`
  *    already does for actions) would remove the string convention from the client.
  *

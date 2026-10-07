@@ -45,7 +45,7 @@ export const almanacTestid = {
  */
 export const ALMANAC_CATALOG: CatalogSnapshot = {
   version: "bundled",
-  // JSON widens the unions to strings; the catalog is proved against SPEC §8 in packages/cards.
+  // JSON widens the unions to strings; the catalog is proved against SPEC §8 in crates/cards.
   cards: catalogJson as unknown as CardDefs,
 };
 

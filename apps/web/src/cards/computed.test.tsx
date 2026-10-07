@@ -1,8 +1,8 @@
 // R280: in play, a card whose view carries `preview` prints what its formula comes to now, in
 // braces after the formula — in hand, on the field, and in the overlays that show those faces. The
 // collection prints no value. Every view is a fixture shaped as `viewFor` builds it; the engine's
-// side (which cards carry it, and for whom) is packages/engine/test/preview.test.ts's and
-// packages/cards/test/preview.test.ts's.
+// side (which cards carry it, and for whom) is crates/engine/tests/rules/preview.rs's and
+// crates/cards/tests/cross/preview.rs's.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";

@@ -33,7 +33,7 @@ const LOGIN_LINK_ERROR = loginTestid.linkError;
 import type { TutorialData } from "../../support/tasks/lessons.ts";
 import { PRACTICE_PATH, TUTORIAL_BOOT_TIMEOUT, storedProgress, visitTutorial } from "../../support/tutorial.ts";
 
-/** `TutorialProgressView` in apps/server/src/api/tutorial.ts. */
+/** `TutorialProgressView` in crates/server/src/api/tutorial.rs. */
 type AccountProgress = { completed: string[]; hiddenChoice: { hidden: boolean; at: number } | null };
 
 /** How long the page may take to read or write the account after it boots. */

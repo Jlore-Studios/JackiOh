@@ -1,5 +1,5 @@
 // Test support only (nothing outside a test imports it): a small patch history in the real files'
-// shape (packages/cards/patches/), fed through `PatchSourceProvider`.
+// shape (crates/cards/patches/), fed through `PatchSourceProvider`.
 //
 // Three patches whose version strings sort the wrong way on purpose ("v9-first" < "v1-second" is
 // false), so a screen that ordered patches by comparing versions instead of reading patches.json's

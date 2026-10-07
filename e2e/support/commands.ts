@@ -132,7 +132,7 @@ export type AttackTarget = { card: string } | { hero: Side };
  * Mirrors `WsPlayerCommand` in support/tasks/wsPlayer.ts, which is the file that actually speaks
  * the protocol. Anything the task accepts must be declarable here or a spec cannot ask for it.
  *
- * There is no `joinRoom`: `apps/server/src/match/protocol.ts` accepts that frame only to answer it
+ * There is no `joinRoom`: `crates/server/src/actor/protocol.rs` accepts that frame only to answer it
  * with `error { code: "unsupported" }`. Joining a room is `POST /api/rooms/:code/join` — the
  * atomic single-claim and the loadout re-check are HTTP concerns, and a socket is only ever opened
  * onto a match that already exists.

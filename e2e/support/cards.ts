@@ -1,6 +1,6 @@
 // Catalog ids, one place. SPEC §8 numbers every card; the id of card #N is `core-` plus N
-// zero-padded to three digits, as `packages/cards/catalog.json` spells it ("core-001", "core-043")
-// and `packages/shared/src/catalog-types.ts` documents it. No spec spells an id itself: if the
+// zero-padded to three digits, as `crates/cards/catalog.json` spells it ("core-001", "core-043")
+// and `crates/engine/src/wire/catalog_types.rs` documents it. No spec spells an id itself: if the
 // format ever moves, `cardId` below and the fixture decks are the only places to fix.
 
 /** SPEC §8: index -> name, all 100 Core cards. Tokens are excluded: L3 bans them from decks. */
@@ -107,7 +107,7 @@ export const CARD_NAMES: Record<number, string> = {
   100: "Ceaseless Void",
 };
 
-/** How many deckable cards SPEC §8 numbers. `packages/cards/catalog.json` holds exactly 100. */
+/** How many deckable cards SPEC §8 numbers. `crates/cards/catalog.json` holds exactly 100. */
 export const CORE_CARD_COUNT = Object.keys(CARD_NAMES).length;
 
 /** The catalog id of SPEC §8 card #index. */
@@ -133,7 +133,7 @@ export function idOf(name: string): string {
 // ---------------------------------------------------------------------------------------------
 
 /**
- * The 11 Token cards, read off `packages/cards/catalog.json` (`"token": true`), keyed by the
+ * The 11 Token cards, read off `crates/cards/catalog.json` (`"token": true`), keyed by the
  * catalog's own `index` string. They are deliberately NOT in `CARD_NAMES`: L3 bans Tokens from
  * decks, and `asDeck` in support/commands.ts checks a fixture against `CARD_NAMES` being exactly
  * the deckable set, so a Token added there would let an illegal fixture through.
