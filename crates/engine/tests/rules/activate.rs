@@ -13,8 +13,8 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use jackioh_engine::effects::DELAYED_DESTROY_HOOK;
 use jackioh_engine::subsystems::activate::{
-    ACTIVATION_WORK, abilities_of, activate_ability, activate_actions_for, is_acting_on_field, uses_allowed,
-    why_cannot_activate_ability,
+    ACTIVATION_WORK, ActivateAction, abilities_of, activate_ability, activate_actions_for, is_acting_on_field,
+    uses_allowed, why_cannot_activate_ability,
 };
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::subsystems::hero_power::POWER_KEY;
@@ -183,7 +183,7 @@ fn ability_ids(state: &GameState, instance: &str) -> Vec<String> {
 }
 
 /// TS `body.targets?.[0]`, as JSON (null when there is none).
-fn first_target(body: &ActionBody) -> Value {
+fn first_target<T: serde::Serialize>(body: &T) -> Value {
     json_of(body)["targets"][0].clone()
 }
 
@@ -199,12 +199,13 @@ fn ids_of(cards: &[CardInstance]) -> Vec<String> {
 fn fuse_onto(state: &mut GameState, ingredients: Vec<CardInstance>, target: &CardInstance) -> Option<CardInstance> {
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
+    let target = Some(card(state, &target.id).clone());
     let mut sink = EngineSink::new(state, &mut events, &mut rng);
     fuse(
         &mut sink,
         FuseArgs {
             ingredients,
-            target: Some(card(sink.state, &target.id).clone()),
+            target,
             ..FuseArgs::default()
         },
     )
@@ -345,7 +346,7 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
     fn r384_activate_unlimited_is_any_number_of_uses_bounded_by_activate_unlimited_cap() {
         let mut state = playing("unlimited");
         let card = put(&mut state, &endless.id, slot(P1, Row::Backrow, 1), json!({}));
-        let action = || ActionBody::Activate {
+        let action = || ActivateAction {
             instance_id: card.id.clone(),
             ability: None,
             targets: None,
@@ -405,18 +406,18 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
         let mut state = playing("bounced");
         let card = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
         state = act(&state, activate(P1, &card.id, hero_target())).0;
-        let used = state.players.p1.backrow[0].clone().expect("on the field");
+        let mut used = state.players.p1.backrow[0].clone().expect("on the field");
         assert_eq!(
             why_not(&state, P1, &used.id, None).as_deref(),
             Some("that ability has already been used this turn")
         );
 
-        move_to_zone(&mut state, &used.id, OffFieldZone::Hand, MoveToZoneOptions::default());
+        move_to_zone(&mut state, &mut used, OffFieldZone::Hand, MoveToZoneOptions::default());
         assert_eq!(super::card(&state, &used.id).memory.get("activations"), None);
-        let held = take_from_hand(&mut state, P1, &used.id);
+        let mut held = take_from_hand(&mut state, P1, &used.id);
         assert!(place_on_field(
             &mut state,
-            held,
+            &mut held,
             slot(P1, Row::Backrow, 1),
             PlaceOnFieldOptions::default()
         ));
@@ -506,10 +507,10 @@ mod r384_b3_2_rule_2_who_and_when {
 
         let under = put(&mut state, &sentry.id, slot(P1, Row::Units, 2), json!({}));
         assert!(is_acting_on_field(&state, card(&state, &under.id)));
-        let top = new_instance(&mut state, &sentry.id, P1, Zone::Hand { player: P1 });
+        let mut top = new_instance(&mut state, &sentry.id, P1, Zone::Hand { player: P1 });
         assert!(place_on_field(
             &mut state,
-            top.clone(),
+            &mut top,
             slot(P1, Row::Units, 2),
             PlaceOnFieldOptions { stack: Some(true) }
         ));
@@ -770,7 +771,13 @@ mod r384_r81_r90_b3_2_rules_5_8_choices_and_the_list {
         // Three ways to pay (itself or either ally) times six targets (four units, two heroes). The two
         // sentries' "Activate 2" abilities are listed too, but not under the eater's id.
         assert_eq!(listed.len(), 3 * 6);
-        assert_eq!(listed, activate_actions_for(&state, P1, card(&state, &eater.id)));
+        assert_eq!(
+            listed,
+            activate_actions_for(&state, P1, card(&state, &eater.id))
+                .into_iter()
+                .map(ActionBody::from)
+                .collect::<Vec<ActionBody>>()
+        );
         assert_eq!(
             json_of(&listed[0]),
             json!({
@@ -818,7 +825,7 @@ mod r384_r81_r90_b3_2_rules_5_8_choices_and_the_list {
         let spare_ids: Vec<Value> = spares.iter().map(|spare| json!(spare.id)).collect();
         let at_ghost = json!({ "pick": "instance", "instanceId": costly.id });
 
-        let listed: Vec<ActionBody> = activate_actions_for(&state, P1, super::card(&state, &card.id))
+        let listed: Vec<ActivateAction> = activate_actions_for(&state, P1, super::card(&state, &card.id))
             .into_iter()
             .filter(|body| first_target(body) == at_ghost)
             .collect();
@@ -1204,8 +1211,8 @@ mod r384_r97_b3_2_and_s10_8_what_each_player_sees {
             &json!({ "instanceId": card.id, "defId": pinger.id })
         ));
         let mut moved = round_trip(&after);
-        let on_field = moved.players.p1.backrow[0].clone().expect("on the field");
-        move_to_zone(&mut moved, &on_field.id, OffFieldZone::Hand, MoveToZoneOptions::default());
+        let mut on_field = moved.players.p1.backrow[0].clone().expect("on the field");
+        move_to_zone(&mut moved, &mut on_field, OffFieldZone::Hand, MoveToZoneOptions::default());
         assert!(matches_object(
             &seen(P2, &moved),
             &json!({ "instanceId": HIDDEN_ID, "defId": HIDDEN_ID, "ability": "ping" })
