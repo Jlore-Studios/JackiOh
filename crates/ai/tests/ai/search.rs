@@ -260,7 +260,7 @@ mod candidate_actions_b14 {
             "p1": { "hand": ["core-008"] },
             "p2": { "hand": ["core-011"] },
         }));
-        let offered = act(s.state(), PlayerId::P2, &ActionBody::OfferDraw, None);
+        let offered = act(s.state(), PlayerId::P2, &ActionBody::OfferDraw);
         assert!(legal_actions(&offered, AI).iter().any(|action| matches!(action, ActionBody::AnswerDraw { .. })));
         assert_eq!(candidate_actions(&offered, AI), Vec::<ActionBody>::new());
     }
@@ -453,14 +453,14 @@ mod decides_determinism_and_budget_b15 {
     /// B15: the node counter grants exactly its limit, then reports the budget
     #[test]
     fn b15_the_node_counter_grants_exactly_its_limit_then_reports_the_budget() {
-        let mut counter = create_node_counter(3, None);
+        let counter = create_node_counter(3, None);
         assert_eq!([counter.take(), counter.take(), counter.take()], [true, true, true]);
         assert!(!counter.take());
         assert_eq!(counter.used(), 3);
         assert_eq!(counter.limit(), 3);
         assert_eq!(js(counter.stopped_by()), json!("budget"));
 
-        let mut none = create_node_counter(0, None);
+        let none = create_node_counter(0, None);
         assert!(!none.take());
         assert_eq!(none.used(), 0);
     }
@@ -473,7 +473,7 @@ mod decides_determinism_and_budget_b15 {
             polls.set(polls.get() + 1);
             polls.get() > 2
         };
-        let mut counter = create_node_counter(10, Some(&stop));
+        let counter = create_node_counter(10, Some(&stop));
         assert!(counter.take());
         assert!(counter.take());
         assert!(!counter.take());

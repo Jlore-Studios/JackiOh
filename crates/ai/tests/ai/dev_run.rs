@@ -30,15 +30,6 @@ const QUICK: SearchBudget = SearchBudget {
     finalists: 1,
 };
 
-/// TS's `Pick<DevRunOptions, "series" | "budget">`: a run's options with no patch named.
-fn series_only(series: &str) -> DevRunOptions {
-    DevRunOptions {
-        series: series.to_string(),
-        patch: String::new(),
-        budget: None,
-    }
-}
-
 /// TS `expect(record).toMatchObject(fields)`: every field named holds its value, read as the wire writes it.
 fn assert_matches_object(record: &GameRecord, fields: serde_json::Value) {
     let written = serde_json::to_value(record).expect("a record serialises");
@@ -53,7 +44,7 @@ mod the_ais_development_run_9_11 {
     #[test]
     fn r378_deals_game_n_as_all_random_deals_it_to_two_ai_seats_on_this_specs_resources() {
         register_cards();
-        let config = dev_game_config(7, &series_only(AI_DEV_RUN.series));
+        let config = dev_game_config(7, AI_DEV_RUN.series, None);
         assert_eq!(config.seed, format!("{}:7", AI_DEV_RUN.series));
         // R258: the server's deal, `${seed}:p1-deck` and `${seed}:p2-deck`, nothing banned.
         let unbanned: AiDeckOptions = json_as(json!({ "banned": [] }));
@@ -76,7 +67,7 @@ mod the_ais_development_run_9_11 {
                 },
             )
         );
-        assert_ne!(dev_game_config(7, &series_only("other")).decks, config.decks);
+        assert_ne!(dev_game_config(7, "other", None).decks, config.decks);
     }
 
     #[test]
@@ -94,7 +85,7 @@ mod the_ais_development_run_9_11 {
             let record = record
                 .as_ref()
                 .unwrap_or_else(|| panic!("dev-test:{n} did not finish"));
-            let config = dev_game_config(n, &options);
+            let config = dev_game_config(n, &options.series, options.budget);
             assert_matches_object(
                 record,
                 json!({

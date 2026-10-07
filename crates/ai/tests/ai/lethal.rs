@@ -61,7 +61,7 @@ fn worlds(state: &GameState, seed: &str, count: usize) -> Vec<GameState> {
     let mut rng = create_rng(seed, 0);
     let public = redact(state, AI);
     (0..count)
-        .map(|_| determinize(&public, AI, &mut rng, &DeterminizeOptions::default()))
+        .map(|_| determinize(&public, AI, &mut rng, DeterminizeOptions::default()))
         .collect()
 }
 

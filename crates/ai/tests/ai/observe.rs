@@ -198,9 +198,9 @@ fn real_states() -> &'static [GameState] {
     static REAL_STATES: OnceLock<Vec<GameState>> = OnceLock::new();
     REAL_STATES.get_or_init(|| {
         jackioh_cards::register_all();
-        let mut states = random_policy_states("observe-real-1", 7, Some(600));
-        states.extend(random_policy_states("observe-real-2", 9, Some(600)));
-        states.extend(random_policy_states("observe-real-3", 5, Some(400)));
+        let mut states = random_policy_states("observe-real-1", 7, 600);
+        states.extend(random_policy_states("observe-real-2", 9, 600));
+        states.extend(random_policy_states("observe-real-3", 5, 400));
         states
     })
 }
@@ -210,7 +210,7 @@ fn real_game(seed: &str) -> GameState {
     jackioh_cards::register_all();
     let created = create_game(&CreateGameArgs {
         seed: seed.to_string(),
-        decks: random_decks(seed, None),
+        decks: random_decks(seed),
         ..Default::default()
     });
     begin_game(&created).state
@@ -380,8 +380,8 @@ mod redact_b9 {
     fn r266_b9_while_both_mulligans_are_open_the_opponents_sealed_answer_and_its_options_reach_the_seat_as_nothing() {
         let dealt = dealt_game("observe-their-mulligan");
         let everything: Vec<String> = dealt.players[PlayerId::P2].hand.iter().map(|card| card.id.clone()).collect();
-        let kept_all = act(&dealt, PlayerId::P2, &ActionBody::Mulligan { keep: everything }, None);
-        let kept_none = act(&dealt, PlayerId::P2, &ActionBody::Mulligan { keep: Vec::new() }, None);
+        let kept_all = act(&dealt, PlayerId::P2, &ActionBody::Mulligan { keep: everything });
+        let kept_none = act(&dealt, PlayerId::P2, &ActionBody::Mulligan { keep: Vec::new() });
 
         // Whatever p2 kept, the seat's state is the same: only that p2 has answered (R265, R266).
         assert_eq!(hash_state(&redact(&kept_none, AI)), hash_state(&redact(&kept_all, AI)));
@@ -446,10 +446,10 @@ mod redact_b9 {
             } else {
                 Vec::new()
             };
-            let sealed = act(&dealt, PlayerId::P2, &ActionBody::Mulligan { keep }, None);
+            let sealed = act(&dealt, PlayerId::P2, &ActionBody::Mulligan { keep });
             let keep_p1: Vec<String> =
                 sealed.players[PlayerId::P1].hand.iter().skip(1).map(|card| card.id.clone()).collect();
-            act(&sealed, PlayerId::P1, &ActionBody::Mulligan { keep: keep_p1 }, None)
+            act(&sealed, PlayerId::P1, &ActionBody::Mulligan { keep: keep_p1 })
         };
         let kept_all = paused(true);
         let kept_none = paused(false);

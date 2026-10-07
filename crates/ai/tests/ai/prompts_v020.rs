@@ -13,7 +13,7 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, act, clone, in_graveyard, is_legal};
+use super::support::{AI, HUMAN, act_with_nonce, clone, in_graveyard, is_legal};
 
 /// Spell (1): the opponent chooses, three times (E18's mode held by the other player).
 const PICKLE: &str = "classic-008";
@@ -337,7 +337,7 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
                     .into_iter()
                     .find(|action| matches!(action, ActionBody::Answer { .. }))
                     .unwrap_or_else(|| panic!("the human's prompt has no answer"));
-                state = act(&state, HUMAN, &answer, Some(&format!("pickle-human-{step}")));
+                state = act_with_nonce(&state, HUMAN, &answer, &format!("pickle-human-{step}"));
                 human_answers += 1;
                 step += 1;
                 continue;

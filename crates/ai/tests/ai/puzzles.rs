@@ -34,7 +34,7 @@ fn ai_options(seed: &str) -> AiOptions<'static> {
 /// `runPuzzle(name, setup)` at its default budget (AI_BUDGET).
 fn puzzle(name: &str, setup: Value) -> PuzzleRun {
     jackioh_cards::register_all();
-    run_puzzle(name, setup, None)
+    run_puzzle(name, setup)
 }
 
 fn expect_enemy_dead(run: &PuzzleRun) {
@@ -289,7 +289,7 @@ mod prompts_through_the_search_b19 {
         assert_eq!(decision.as_ref().map(|decision| decision.reason), Some(DecisionReason::Prompt));
         assert_eq!(decision.as_ref().map(|decision| decision.action.action_type()), Some(ActionType::Answer));
 
-        let after = act(&state, AI, &decision.expect("a decision").action, None);
+        let after = act(&state, AI, &decision.expect("a decision").action);
         assert!(after.result.is_none());
         assert_eq!(after.players[AI].hero.health, 3);
         assert!(!on_field(&after, AI, "core-065-1"));

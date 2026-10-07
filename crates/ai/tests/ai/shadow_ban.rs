@@ -263,7 +263,7 @@ mod sweep_flags_b25 {
     #[test]
     fn b25_sweep_card_on_tempo_timmy_over_2_seeds_plays_2_games_and_flags_no_error() {
         jackioh_cards::register_all();
-        let result = js(sweep_card("core-011", SweepOptions { seeds: Some(2), now: None, tier: None }));
+        let result = js(sweep_card("core-011", &SweepOptions { seeds: Some(2), now: None, tier: None }));
         assert_eq!(result["defId"], json!("core-011"));
         assert_eq!(result["games"], json!(2));
         assert!(!result["flags"].as_array().is_some_and(|f| f.contains(&json!("error"))));
@@ -397,7 +397,7 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
     #[test]
     fn r186_giga_glowy_jelly_bean_6_mana_is_unswept_at_easys_four_crystals() {
         jackioh_cards::register_all();
-        let easy = js(sweep_card("core-029", SweepOptions { seeds: Some(1), now: None, tier: Some(Difficulty::Easy) }));
+        let easy = js(sweep_card("core-029", &SweepOptions { seeds: Some(1), now: None, tier: Some(Difficulty::Easy) }));
         assert_eq!(easy["tier"], json!("easy"));
         assert_eq!(easy["affordableTurns"], json!(0));
         assert_eq!(easy["unswept"], json!(true));
@@ -408,7 +408,7 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
     #[test]
     fn r186_giga_glowy_jelly_bean_6_mana_is_judged_at_hards_seven_crystals() {
         jackioh_cards::register_all();
-        let hard = js(sweep_card("core-029", SweepOptions { seeds: Some(2), now: None, tier: Some(Difficulty::Hard) }));
+        let hard = js(sweep_card("core-029", &SweepOptions { seeds: Some(2), now: None, tier: Some(Difficulty::Hard) }));
         assert_eq!(hard["tier"], json!("hard"));
         assert_eq!(hard["errors"], json!(0));
         assert!(hard["affordableTurns"].as_i64().unwrap_or(0) > 0);
@@ -714,7 +714,7 @@ mod the_two_pass_sweep_r390 {
             "core-011",
             &at_risk,
             &keep_out,
-            SweepOptions { seeds: Some(1), now: Some(&now), tier: Some(Difficulty::Easy) },
+            &SweepOptions { seeds: Some(1), now: Some(&now), tier: Some(Difficulty::Easy) },
         ));
         assert_eq!(timed["forced"], json!("core-011"));
         assert_eq!(timed["games"], json!(1));
@@ -748,7 +748,7 @@ mod the_two_pass_sweep_r390 {
 
         // The same game without a clock: the clock only measures, so the deal and the play are the same.
         let plain =
-            js(sweep_at_risk("core-011", &at_risk, &keep_out, SweepOptions { seeds: Some(1), now: None, tier: Some(Difficulty::Easy) }));
+            js(sweep_at_risk("core-011", &at_risk, &keep_out, &SweepOptions { seeds: Some(1), now: None, tier: Some(Difficulty::Easy) }));
         assert_eq!(plain["suspects"], json!([]));
         let untimed = |cards: &Value| -> Vec<Value> {
             cards.as_array().cloned().unwrap_or_default().into_iter().map(|card| spread(card, Some(&json!({ "timeouts": 0 })))).collect()

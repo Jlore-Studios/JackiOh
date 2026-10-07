@@ -88,7 +88,7 @@ mod determinize_at_the_shown_cost_r762 {
                 &redact(&state, AI),
                 AI,
                 &mut create_rng(&format!("shown-cost-lanes:{k}"), 0),
-                &DeterminizeOptions::default(),
+                DeterminizeOptions::default(),
             );
             for (at, lane) in lanes.iter().enumerate() {
                 let def_id = card_by_id(&world, &lane.id).map(|card| card.def_id.clone()).unwrap_or_default();
@@ -116,7 +116,7 @@ mod determinize_at_the_shown_cost_r762 {
                 &seen,
                 AI,
                 &mut create_rng(&format!("shown-cost-greedy:{k}"), 0),
-                &DeterminizeOptions {
+                DeterminizeOptions {
                     match_shown_cost: Some(false),
                 },
             );

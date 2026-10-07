@@ -39,7 +39,7 @@ fn handed_over(setup: Value) -> GameState {
     options["p1"] = spread(json!({ "library": LIBRARY }), setup.get("p1"));
     options["p2"] = spread(json!({ "library": LIBRARY }), setup.get("p2"));
     let s = scenario(options);
-    let ended = act(s.state(), AI, &ActionBody::EndTurn, None);
+    let ended = act(s.state(), AI, &ActionBody::EndTurn);
     assert_eq!(ended.active, HUMAN);
     assert_eq!(ended.turn, TURN + 1);
     ended
@@ -52,8 +52,8 @@ mod simulate_reply {
     #[test]
     fn b41_swings_an_unblocked_unit_at_the_open_face_ends_the_turn_and_stops_at_the_seats_next_main_phase() {
         let state = handed_over(json!({ "p2": { "field": ["core-008"] } }));
-        let mut counter = create_node_counter(20, None);
-        let after = simulate_reply(&state, AI, &mut counter, &hidden_card_ids(&state, AI));
+        let counter = create_node_counter(20, None);
+        let after = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI));
         assert!(after.is_some());
         let reply = after.expect("a reply");
         assert!(reply.result.is_none());
@@ -70,7 +70,7 @@ mod simulate_reply {
     #[test]
     fn b41_takes_lethal_when_the_face_is_in_reach() {
         let state = handed_over(json!({ "p1": { "health": 4 }, "p2": { "field": ["core-008"] } }));
-        let reply = simulate_reply(&state, AI, &mut create_node_counter(20, None), &hidden_card_ids(&state, AI)).expect("a reply");
+        let reply = simulate_reply(&state, AI, &create_node_counter(20, None), &hidden_card_ids(&state, AI)).expect("a reply");
         assert_eq!(reply.result.map(|result| result.winner), Some(Winner::from(HUMAN)));
     }
 
@@ -82,8 +82,8 @@ mod simulate_reply {
             "p1": { "field": [{ "def": "core-025", "position": "DEF" }] },
             "p2": { "field": ["core-008"] },
         }));
-        let mut counter = create_node_counter(20, None);
-        let reply = simulate_reply(&state, AI, &mut counter, &hidden_card_ids(&state, AI)).expect("a reply");
+        let counter = create_node_counter(20, None);
+        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI)).expect("a reply");
         assert!(on_field(&reply, HUMAN, "core-008"));
         assert_eq!(reply.players[AI].hero.health, 30);
         assert_eq!(reply.active, AI);
@@ -96,7 +96,7 @@ mod simulate_reply {
         // Midrange Menace survives Pointmaster's First Strike 7 and kills it: an 11-point unit for free
         // beats 9 to the face.
         let state = handed_over(json!({ "p1": { "field": ["core-020"] }, "p2": { "field": ["core-019"] } }));
-        let reply = simulate_reply(&state, AI, &mut create_node_counter(20, None), &hidden_card_ids(&state, AI)).expect("a reply");
+        let reply = simulate_reply(&state, AI, &create_node_counter(20, None), &hidden_card_ids(&state, AI)).expect("a reply");
         assert!(in_graveyard(&reply, AI, "core-020"));
         assert_eq!(reply.players[AI].hero.health, 30);
     }
@@ -106,7 +106,7 @@ mod simulate_reply {
     fn stops_at_the_seats_own_start_of_turn_prompt_which_is_where_its_next_decision_begins() {
         // Masochism Mask asks p1 at the start of each of its turns.
         let state = handed_over(json!({ "p1": { "backrow": ["core-065"] } }));
-        let reply = simulate_reply(&state, AI, &mut create_node_counter(20, None), &hidden_card_ids(&state, AI)).expect("a reply");
+        let reply = simulate_reply(&state, AI, &create_node_counter(20, None), &hidden_card_ids(&state, AI)).expect("a reply");
         assert_eq!(reply.active, AI);
         assert_eq!(reply.turn, TURN + 2);
         assert_eq!(reply.pending.as_ref().map(|pending| pending.player_id), Some(AI));
@@ -132,18 +132,18 @@ mod simulate_reply {
         // Flood bounces Midrange Menace. p1 has nothing left to do, so R82 ends its turn on the spot and
         // p2 is into its turn 10, having drawn.
         let flood = s.hand(AI).first().map(|card| card.id.clone()).unwrap_or_default();
-        let ended = act(s.state(), AI, &body(json!({ "type": "play", "instanceId": flood })), None);
+        let ended = act(s.state(), AI, &body(json!({ "type": "play", "instanceId": flood })));
         assert_eq!(ended.active, HUMAN);
         assert_eq!(ended.turn, TURN + 1);
         assert!(ended.players[HUMAN].hand.iter().any(|card| card.id == menace));
 
-        let reply = simulate_reply(&ended, AI, &mut create_node_counter(40, None), &hidden).expect("a reply");
+        let reply = simulate_reply(&ended, AI, &create_node_counter(40, None), &hidden).expect("a reply");
         // Midrange Menace came back; the Mr. Vanilla p2 held from the start stayed in its hand.
         assert!(on_field(&reply, HUMAN, "core-019"));
         assert!(!on_field(&reply, HUMAN, "core-008"));
 
         // Without that history every card in p2's hand is unseen, and the reply plays none of them.
-        let blind = simulate_reply(&ended, AI, &mut create_node_counter(40, None), &hidden_card_ids(&ended, AI)).expect("a reply");
+        let blind = simulate_reply(&ended, AI, &create_node_counter(40, None), &hidden_card_ids(&ended, AI)).expect("a reply");
         assert!(!on_field(&blind, HUMAN, "core-019"));
         assert!(!on_field(&blind, HUMAN, "core-008"));
     }
@@ -152,7 +152,7 @@ mod simulate_reply {
     #[test]
     fn returns_null_without_a_node_to_spend() {
         let state = handed_over(json!({ "p2": { "field": ["core-008"] } }));
-        assert!(simulate_reply(&state, AI, &mut create_node_counter(0, None), &hidden_card_ids(&state, AI)).is_none());
+        assert!(simulate_reply(&state, AI, &create_node_counter(0, None), &hidden_card_ids(&state, AI)).is_none());
     }
 }
 
@@ -170,13 +170,13 @@ mod reply_score {
             "p1": { "mana": 2, "library": LIBRARY },
             "p2": { "field": ["core-008"], "library": LIBRARY },
         }));
-        let ended = act(s.state(), AI, &ActionBody::EndTurn, None);
+        let ended = act(s.state(), AI, &ActionBody::EndTurn);
         assert_eq!(line_status(&ended, AI, TURN), LineStatus::Passed);
         assert_eq!(ended.players[AI].turn_log.unspent_at_end, Some(2));
 
-        let after = simulate_reply(&ended, AI, &mut create_node_counter(20, None), &hidden_card_ids(&ended, AI)).expect("a reply");
-        let mut counter = create_node_counter(20, None);
-        let score = reply_score(&ended, AI, TURN, &mut counter, &hidden_card_ids(&ended, AI));
+        let after = simulate_reply(&ended, AI, &create_node_counter(20, None), &hidden_card_ids(&ended, AI)).expect("a reply");
+        let counter = create_node_counter(20, None);
+        let score = reply_score(&ended, AI, TURN, &counter, &hidden_card_ids(&ended, AI));
         assert_eq!(score, Some(evaluate(&after, AI, NextSwing::Seat, &AI_EVAL) - AI_EVAL.unspent_mana * 2.0));
         assert_eq!(counter.used(), 2);
         // The state it was scored at carries the reply's 4 damage.
@@ -199,11 +199,10 @@ mod reply_score {
             s.state(),
             AI,
             &ActionBody::Attack { attacker_id: attacker, target_id: format!("hero-{HUMAN}") },
-            None,
         );
         assert_eq!(won.result.as_ref().map(|result| result.winner), Some(Winner::from(AI)));
-        let mut counter = create_node_counter(20, None);
-        assert_eq!(reply_score(&won, AI, TURN, &mut counter, &hidden_card_ids(&won, AI)), Some(static_score(&won, AI, TURN)));
+        let counter = create_node_counter(20, None);
+        assert_eq!(reply_score(&won, AI, TURN, &counter, &hidden_card_ids(&won, AI)), Some(static_score(&won, AI, TURN)));
         assert_eq!(counter.used(), 0);
     }
 
@@ -211,6 +210,6 @@ mod reply_score {
     #[test]
     fn is_null_when_the_counter_runs_out_during_the_reply() {
         let state = handed_over(json!({ "p2": { "field": ["core-008"] } }));
-        assert!(reply_score(&state, AI, TURN, &mut create_node_counter(1, None), &hidden_card_ids(&state, AI)).is_none());
+        assert!(reply_score(&state, AI, TURN, &create_node_counter(1, None), &hidden_card_ids(&state, AI)).is_none());
     }
 }
