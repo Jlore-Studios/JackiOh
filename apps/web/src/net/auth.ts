@@ -476,7 +476,7 @@ export type AuthConfig = { url: string; publishableKey: string };
  * `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (`apps/web/.env.example`). Both are
  * PUBLIC by construction -- Vite compiles a `VITE_`-prefixed value into the browser bundle -- and
  * the publishable key is the one that is safe there. `SUPABASE_SECRET_KEY` bypasses every RLS
- * policy and lives only in `apps/server/.env`; `SERVER_ONLY_ENV_VARS` and `PUBLIC_ENV_VARS` in
+ * policy and lives only in `crates/server/.env`; `SERVER_ONLY_ENV_VARS` and `PUBLIC_ENV_VARS` in
  * `crates/server/src/env.rs` are the two disjoint lists.
  *
  * Returns null rather than throwing, so a deployment that has not configured auth renders a

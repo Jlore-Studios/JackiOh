@@ -6,7 +6,9 @@
 //!    crate's `clippy.toml` holds the rest of the rule);
 //!  - V23: no code under `apps/`, `crates/` or `e2e/` reads a Markdown file's prose, part 28's grep
 //!    (`readFileSync(…md`, `include_str!(…md`, `read_to_string(…md`) as a test. The two structural
-//!    readers it allows are named below.
+//!    readers it allows are named below;
+//!  - V28: the TypeScript the Rust replaced is gone: no source file under `packages/`,
+//!    `apps/server/` or `ladder/` (part 37; a checkout's leftover `node_modules` does not count).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -186,4 +188,17 @@ fn v23_the_scan_finds_each_reader() {
     let text = "a\nreadFileSync(join(HERE, \"SPEC.md\"), \"utf8\")\nconst X: &str = include_str!(\"../x.md\");\nfs::read_to_string(\"notes.json\")\n";
     assert_eq!(markdown_reads(text).len(), 2);
     assert!(markdown_reads(&text.replace(".md", ".json")).is_empty());
+}
+
+#[test]
+fn v28_no_typescript_is_left_where_the_rust_replaced_it() {
+    let root = repo();
+    let mut left = Vec::new();
+    for dir in ["packages", "apps/server", "ladder"] {
+        sources(&root.join(dir), &mut left);
+    }
+    assert!(
+        left.is_empty(),
+        "TypeScript the Rust replaced is still here (V28): {left:?}"
+    );
 }

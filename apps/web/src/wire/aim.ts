@@ -7,7 +7,7 @@
 // Cosmetic, like an emote (R643): an aim is never an `ActionBody`, never reaches `reduce`, the
 // action log, the replay hash or a game record, is never part of `PlayerView`, and no rule is ever
 // decided from it (CLAUDE.md rule 7). This module holds only the shape both ends of the wire agree
-// on, and its shape check, because `apps/web` and `apps/server` may not import each other.
+// on, and its shape check, because `apps/web` and `crates/server` may not import each other.
 //
 // Every end is a public handle, so nothing hidden can ride on it (R97, R177):
 //  - a hero, by its seat;

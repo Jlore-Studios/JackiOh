@@ -1,4 +1,4 @@
-// The client's one door onto `apps/server`'s REST surface.
+// The client's one door onto `crates/server`'s REST surface.
 //
 // CLAUDE.md rule 7: the client sends intent and renders what comes back. Nothing here decides a
 // rule — in particular no L1–L6 message is ever composed in the browser. The validator
@@ -19,7 +19,7 @@ const DEFAULT_HTTP_URL = "http://localhost:8787";
 
 /**
  * `VITE_SERVER_HTTP_URL` is the public half of the environment contract
- * (`crates/server/src/env.rs` `PUBLIC_ENV_VARS`). The default is the port `apps/server` listens on,
+ * (`crates/server/src/env.rs` `PUBLIC_ENV_VARS`). The default is the port `crates/server` listens on,
  * which is what `e2e/support/config.ts` points at.
  */
 export function apiBaseUrl(): string {

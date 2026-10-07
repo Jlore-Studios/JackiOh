@@ -24,7 +24,7 @@
 // view, never a log replay") and ignores every field on it, so it is how a reconnected socket asks
 // for the state it missed.
 //
-// NO IMPORT FROM `apps/server`. `MatchClocks` is restated structurally below, the way
+// NO IMPORT FROM `crates/server`. `MatchClocks` is restated structurally below, the way
 // `e2e/support/types.ts` restates the engine's types: the client is a separate deployable and a
 // type import across that boundary would be a build-time coupling the topology (§9.2) does not
 // have.
@@ -60,7 +60,7 @@ import { matchSocketUrl } from "../net/api.ts";
 const DEV_ONLY = import.meta.env.MODE !== "production";
 
 // ---------------------------------------------------------------------------------------------
-// The wire, restated structurally (never imported from apps/server)
+// The wire, restated structurally (never imported from crates/server)
 // ---------------------------------------------------------------------------------------------
 
 /** The server's `MatchClocks` (`crates/server/src/db/store.rs`). One shape, stated twice, by design (see header). */

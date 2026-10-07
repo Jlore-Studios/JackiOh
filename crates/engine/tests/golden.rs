@@ -15,7 +15,8 @@
 //! On a game's first mismatch the test names the seed, the step, which hash and the action, writes
 //! the Rust side's canonical text to `target/golden-diff/<seed>-<step>-<which>.json`, and prints the
 //! command that writes TS's side next to it (`pnpm exec tsx scripts/golden/record.ts --seed <k>
-//! --dump-step <n>`, `.ts.json`): diff the two. Every game is replayed, so the report lists every
+//! --dump-step <n>`, `.ts.json`, run in a checkout of 05f5cfd, the last commit that has the
+//! TypeScript): diff the two. Every game is replayed, so the report lists every
 //! game that diverges with its first divergent step; fix the earliest seed and step first, since one
 //! root cause often explains dozens. The games are split over GOLDEN_SHARDS tests so that the test
 //! harness replays them on as many threads (the engine's `clippy.toml` bans spawning one here).
@@ -93,7 +94,9 @@ impl Mismatch {
             };
             if step != "end" {
                 text.push_str(&format!(
-                    "\n    TS side:   pnpm exec tsx scripts/golden/record.ts --seed {k} --dump-step {step}"
+                    "\n    TS side:   in a checkout of 05f5cfd, the last commit with the TypeScript \
+                     (git worktree add ../jackioh-ts 05f5cfd, then pnpm install there):\
+                     \n               pnpm exec tsx scripts/golden/record.ts --seed {k} --dump-step {step}"
                 ));
             }
         }

@@ -186,8 +186,8 @@ jobs:
         run: tar -xzf "$RUNNER_TEMP/rust-release.tgz"
       - name: every recorded trace replays with the same hashes
         run: target/release/jackioh golden check
-      # The Rust side of the first mismatch (SURFACE §13.3); scripts/golden/record.ts --dump-step
-      # writes the TypeScript side beside it.
+      # The Rust side of the first mismatch (SURFACE §13.3); scripts/golden/record.ts --dump-step,
+      # in a checkout of 05f5cfd (the last commit that has the TypeScript), writes its side beside it.
       - name: keep the diff when it fails
         if: failure()
         uses: actions/upload-artifact@v4

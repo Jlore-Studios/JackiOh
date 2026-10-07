@@ -21,9 +21,9 @@
 #                      /resume on an overdue merge goes out at once.
 #   workflow_run (CI)  right after a green CI run on main: the same check, and the one that does the
 #                      work in practice. It also merges a commit that changes render.yaml's
-#                      CATALOG_VERSION at once, hold or no hold. Render deploys apps/server from main
+#                      CATALOG_VERSION at once, hold or no hold. Render deploys crates/server from main
 #                      on every push, and the bundle compiles the catalog version in
-#                      (packages/cards), so a catalog bump left a day behind would refuse every deck
+#                      (crates/cards), so a catalog bump left a day behind would refuse every deck
 #                      save and queue in production (SPEC §9.4, R105).
 #   workflow_dispatch  by hand (Actions -> promote production -> Run workflow): the newest green
 #                      commit, or the `sha` given, which must also be green and on main. A hold does

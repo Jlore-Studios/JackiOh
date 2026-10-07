@@ -1,6 +1,6 @@
 # Watches Render's deploy of each push to main and reports a deploy that never arrives.
 #
-# Render deploys apps/server from main on every push and, when a deploy fails, keeps the previous
+# Render deploys crates/server from main on every push and, when a deploy fails, keeps the previous
 # one serving, so a failure is silent from GitHub's side. The 0013 outage was exactly that: main
 # moved to catalog v0.2.0 while the live server, unable to migrate, stayed on core-1. This polls
 # the live server's one unauthenticated route, GET /api/catalog (R163), until it serves the catalog
@@ -246,7 +246,7 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           if [ -n "$SERVED_COMMIT" ] && [ "$SERVED_COMMIT" = "$SHA" ]; then
-            diagnosis="Render deployed this commit but serves another catalog version than render.yaml names. The start command takes the version from the newest entry of packages/cards/patches/patches.json (scripts/catalog-version.mjs), so either render.yaml's \`CATALOG_VERSION\` and that list disagree (the patch command writes both, and R388's test holds them equal), or the service is not running render.yaml's start command: open jackioh-server, Settings, Build & Deploy, and Blueprints."
+            diagnosis="Render deployed this commit but serves another catalog version than render.yaml names. The server compiles its catalog version in from the newest entry of crates/cards/patches/patches.json and refuses to boot when its \`CATALOG_VERSION\` differs, so it is running with a \`CATALOG_VERSION\` other than render.yaml's that matches what it compiled: either render.yaml's line and that list disagree (the patch command writes both, and R388's test holds them equal), or the service does not take its environment from render.yaml: open jackioh-server, Settings, Environment, and Blueprints."
           elif [ -n "$SERVED_COMMIT" ]; then
             diagnosis="Render is still running \`${SERVED_COMMIT:0:7}\`, not this push. If the \`RENDER_DEPLOY_HOOK_URL\` secret is not set, set it (jackioh-server, Settings, Deploy Hook): the watch then asks Render to deploy every push itself. Open jackioh-server, Events: no \"Deploy started\" for \`${SHA:0:7}\` means Render is not receiving pushes (the repository was moved or renamed, the GitHub app lost access to it, or Auto-Deploy is off: Settings, Build & Deploy; a Blueprint's own repository is under Blueprints). A deploy marked failed names its step in its log: the build, the \`release\` step's migrations or reseed, or the boot."
           else

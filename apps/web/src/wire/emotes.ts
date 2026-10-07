@@ -7,7 +7,7 @@
 // action log, the replay hash or a game record, and a portrait is never part of `PlayerView`
 // (R643). This module holds only what BOTH sides of the wire must agree on — the id lists, the
 // portrait roster the deck save checks (D5, R641) and the rate limit the client and the server
-// enforce identically (R643) — because `apps/web` and `apps/server` may not import each other
+// enforce identically (R643) — because `apps/web` and `crates/server` may not import each other
 // (§9.2: a client and a server are separate deployables). Constants therefore live here and not
 // in the server's config (`crates/server/src/config.rs`, CLAUDE.md rule 9): the rule books numbers to one named place,
 // and this module is the one place both ends read.

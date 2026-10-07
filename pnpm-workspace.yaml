@@ -1,6 +1,5 @@
 packages:
-  - packages/*
-  - apps/*
+  - apps/web
   - e2e
 allowBuilds:
   cypress: true

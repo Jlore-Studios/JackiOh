@@ -18,7 +18,7 @@ import process from "node:process";
 
 const here = path.dirname(new URL(import.meta.url).pathname);
 const decksDir = path.join(here, "..", "fixtures", "decks");
-const catalogPath = path.join(here, "..", "..", "packages", "cards", "catalog.json");
+const catalogPath = path.join(here, "..", "..", "crates", "cards", "catalog.json");
 
 const DECK_SIZE = 20;
 /** R80: a library holds at most this many cards, so no handicap deck is larger (R184). */
@@ -58,7 +58,7 @@ let catalog = null;
 if (existsSync(catalogPath)) {
   catalog = JSON.parse(readFileSync(catalogPath, "utf8"));
 } else {
-  console.warn("packages/cards/catalog.json is missing (M4 not landed): skipping the id checks.");
+  console.warn("crates/cards/catalog.json is missing: skipping the id checks.");
 }
 
 const problems = [];

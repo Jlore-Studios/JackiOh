@@ -8,7 +8,8 @@
 //! `e` (the step's events); last, the ending and the length must be the line's `end`. A game's first
 //! mismatch names the seed, the step, which hash and the action, writes the Rust side's canonical
 //! text to `target/golden-diff/<seed>-<step>-<which>.json`, and prints the `record.ts --dump-step`
-//! command that writes TS's side next to it. The hotseat fixture must fold to "a798906b". Games run in
+//! command that writes TS's side next to it, run in a checkout of 05f5cfd (the last commit that has
+//! the TypeScript). The hotseat fixture must fold to "a798906b". Games run in
 //! parallel (rayon); the report lists every divergent game, earliest seed first. Exit 1 on any
 //! divergence.
 //!
@@ -199,7 +200,9 @@ impl Mismatch {
             };
             if step != "end" {
                 text.push_str(&format!(
-                    "\n    TS side:   pnpm exec tsx scripts/golden/record.ts --seed {k} --dump-step {step}"
+                    "\n    TS side:   in a checkout of 05f5cfd, the last commit with the TypeScript \
+                     (git worktree add ../jackioh-ts 05f5cfd, then pnpm install there):\
+                     \n               pnpm exec tsx scripts/golden/record.ts --seed {k} --dump-step {step}"
                 ));
             }
         }
