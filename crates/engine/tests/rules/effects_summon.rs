@@ -8,7 +8,7 @@ use jackioh_engine::effects::{damage, fill_board, recruit, summon};
 use jackioh_engine::testkit::*;
 use serde::Serialize;
 
-use super::fixtures::harness::{PutOptions, events_of_type, new_game, put, set_library, slot};
+use super::fixtures::harness::{events_of_type, new_game, put, set_library, slot};
 
 // ---------------------------------------------------------------------------
 // Fixture cards.
@@ -180,6 +180,11 @@ fn in_graveyard(state: &mut GameState, def_id: &str, player: PlayerId) -> CardIn
     card
 }
 
+/// TS `string[]` for the harness's `setLibrary`, from the ids as written.
+fn owned(ids: &[&str]) -> Vec<String> {
+    ids.iter().map(|id| id.to_string()).collect()
+}
+
 /// TS held the live instance and read it after an effect; Rust reads the card again by id.
 fn live(state: &GameState, id: &str) -> CardInstance {
     find_instance(state, id).cloned().unwrap_or_else(|| panic!("no card {id} in the state"))
@@ -237,8 +242,8 @@ mod summon_s6_3_m3_t1 {
     #[test]
     fn r64_takes_the_leftmost_empty_unlocked_zone_of_its_row_with_no_zone_named() {
         let mut state = game();
-        put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), PutOptions::default());
-        put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 3), PutOptions::default());
+        put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1));
+        put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 3));
 
         run(&mut state, summon(json_as(json!({ "defId": "fx-5" }))), RunOptions::default());
 
@@ -260,7 +265,7 @@ mod summon_s6_3_m3_t1 {
     fn s3_2_a_summon_into_a_full_row_fails_silently_and_creates_nothing() {
         let mut state = game();
         for lane in [1, 2, 3, 4, 5] {
-            put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, lane), PutOptions::default());
+            put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, lane));
         }
         let ids = state.next_id;
 
@@ -274,7 +279,7 @@ mod summon_s6_3_m3_t1 {
     #[test]
     fn r47_a_lane_named_summon_fizzles_on_an_occupied_zone() {
         let mut state = game();
-        put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 2), PutOptions::default());
+        put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 2));
 
         let on_occupied = run(&mut state, summon(json_as(json!({ "defId": "fx-5", "lane": 2 }))), RunOptions::default());
         assert!(events_of_type(&on_occupied, GameEventType::Summoned).is_empty());
@@ -378,7 +383,7 @@ mod summon_s6_3_m3_t1 {
     #[test]
     fn s3_2_a_stack_summon_enters_an_occupied_unit_zone_and_becomes_the_piles_top_card() {
         let mut state = game();
-        let under = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), PutOptions::default());
+        let under = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1));
         find_instance_mut(&mut state, &under.id).expect("placed").damage = 2;
 
         let events = run(
@@ -469,7 +474,7 @@ mod recruit_s6_3_m3_t1 {
     fn s6_3_takes_the_first_permanent_from_the_top_and_leaves_the_rest_of_the_library_in_order() {
         let mut state = game();
         // setLibrary hands back the library array itself, so the ids are snapshotted before the move.
-        let ids = ids_of(&set_library(&mut state, PlayerId::P1, &["fx-1", "fx-2", "fx-3"]));
+        let ids = ids_of(&set_library(&mut state, PlayerId::P1, &owned(&["fx-1", "fx-2", "fx-3"])));
 
         let events = run(&mut state, recruit(json_as(json!({}))), RunOptions::default());
 
@@ -486,7 +491,7 @@ mod recruit_s6_3_m3_t1 {
         let mut state = game();
         let spell_id = spell().id;
         let felinor_id = felinor().id;
-        let ids = ids_of(&set_library(&mut state, PlayerId::P1, &[spell_id.as_str(), "fx-1", felinor_id.as_str(), "fx-2"]));
+        let ids = ids_of(&set_library(&mut state, PlayerId::P1, &owned(&[spell_id.as_str(), "fx-1", felinor_id.as_str(), "fx-2"])));
 
         run(&mut state, recruit(json_as(json!({ "filter": { "tags": ["Felinor"] } }))), RunOptions::default());
 
@@ -504,7 +509,7 @@ mod recruit_s6_3_m3_t1 {
     fn r65_filters_on_the_printed_cost_and_stops_at_the_first_match() {
         let mut state = game();
         let pricey_id = pricey().id;
-        set_library(&mut state, PlayerId::P1, &["fx-1", pricey_id.as_str(), "fx-2"]);
+        set_library(&mut state, PlayerId::P1, &owned(&["fx-1", pricey_id.as_str(), "fx-2"]));
 
         run(&mut state, recruit(json_as(json!({ "filter": { "cost": 4 } }))), RunOptions::default());
 
@@ -522,7 +527,7 @@ mod recruit_s6_3_m3_t1 {
     fn s6_3_a_recruited_trap_enters_the_backrow_face_down() {
         let mut state = game();
         let trap_id = trap().id;
-        set_library(&mut state, PlayerId::P1, &["fx-1", trap_id.as_str()]);
+        set_library(&mut state, PlayerId::P1, &owned(&["fx-1", trap_id.as_str()]));
 
         run(&mut state, recruit(json_as(json!({ "filter": { "type": "Trap" } }))), RunOptions::default());
 
@@ -538,7 +543,7 @@ mod recruit_s6_3_m3_t1 {
     fn r227_a_recruited_trap_takes_a_fresh_id_as_it_goes_face_down_and_its_summoned_event_names_the_old_one() {
         let mut state = game();
         let trap_id = trap().id;
-        let held = ids_of(&set_library(&mut state, PlayerId::P1, &["fx-1", trap_id.as_str()]))[1].clone();
+        let held = ids_of(&set_library(&mut state, PlayerId::P1, &owned(&["fx-1", trap_id.as_str()])))[1].clone();
         let next = format!("c{}", state.next_id);
 
         let events = run(&mut state, recruit(json_as(json!({ "filter": { "type": "Trap" } }))), RunOptions::default());
@@ -567,7 +572,7 @@ mod recruit_s6_3_m3_t1 {
     fn r227_a_recruited_unit_or_field_spell_keeps_its_id_only_a_card_going_face_down_takes_a_fresh_one() {
         let mut state = game();
         let field_id = field_spell().id;
-        let ids = ids_of(&set_library(&mut state, PlayerId::P1, &["fx-1", field_id.as_str()]));
+        let ids = ids_of(&set_library(&mut state, PlayerId::P1, &owned(&["fx-1", field_id.as_str()])));
         let (unit_id, field_card_id) = (ids[0].clone(), ids[1].clone());
 
         let mut events = run(&mut state, recruit(json_as(json!({}))), RunOptions::default());
@@ -596,7 +601,7 @@ mod recruit_s6_3_m3_t1 {
     fn s3_2_summons_nothing_when_no_permanent_matches_and_nothing_leaves_the_library() {
         let mut state = game();
         let spell_id = spell().id;
-        set_library(&mut state, PlayerId::P1, &[spell_id.as_str(), spell_id.as_str()]);
+        set_library(&mut state, PlayerId::P1, &owned(&[spell_id.as_str(), spell_id.as_str()]));
 
         let events = run(&mut state, recruit(json_as(json!({}))), RunOptions::default());
 
@@ -608,9 +613,9 @@ mod recruit_s6_3_m3_t1 {
     fn s3_2_a_recruit_into_a_full_row_fizzles_and_the_card_stays_in_the_library() {
         let mut state = game();
         for lane in [1, 2, 3, 4, 5] {
-            put(&mut state, "fx-20", slot(PlayerId::P1, Row::Units, lane), PutOptions::default());
+            put(&mut state, "fx-20", slot(PlayerId::P1, Row::Units, lane));
         }
-        set_library(&mut state, PlayerId::P1, &["fx-1"]);
+        set_library(&mut state, PlayerId::P1, &owned(&["fx-1"]));
 
         let events = run(&mut state, recruit(json_as(json!({}))), RunOptions::default());
 
@@ -629,7 +634,7 @@ mod fill_your_board_r64_s7_m3_t1 {
     #[test]
     fn r64_summons_a_token_into_every_empty_unlocked_unit_zone_left_to_right() {
         let mut state = game();
-        put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 2), PutOptions::default());
+        put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 2));
         lock_zone(&mut state, slot(PlayerId::P1, Row::Units, 4));
 
         let events = run(&mut state, fill_board(json_as(json!({ "defId": RUSH_TOKEN }))), RunOptions::default());
@@ -667,7 +672,7 @@ mod fill_your_board_r64_s7_m3_t1 {
     fn r64_fills_nothing_when_the_unit_row_is_full() {
         let mut state = game();
         for lane in [1, 2, 3, 4, 5] {
-            put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, lane), PutOptions::default());
+            put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, lane));
         }
         let ids = state.next_id;
 

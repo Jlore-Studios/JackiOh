@@ -11,7 +11,7 @@ use serde::Serialize;
 
 use super::fixtures::catalog as catalog_fx;
 use super::fixtures::combat as combat_fx;
-use super::fixtures::harness::{PutOptions, events_of_type, new_game, put, set_library, slot};
+use super::fixtures::harness::{events_of_type, new_game, put, set_library, slot};
 
 /// A face-down Trap for R33; #87's board swap moves the backrow too.
 fn trap() -> CardDef {
@@ -74,6 +74,11 @@ fn where_is(state: &GameState, card: &CardInstance) -> String {
         Some(Zone::Field { player, row, lane }) => format!("{} {} {}", player.as_str(), row.as_str(), lane),
         Some(zone) => zone.z().as_str().to_string(),
     }
+}
+
+/// TS `string[]` for the harness's `setLibrary`, from the ids as written.
+fn owned(ids: &[&str]) -> Vec<String> {
+    ids.iter().map(|id| id.to_string()).collect()
 }
 
 /// TS held the live instance and read it after an effect; Rust reads the card again by id.
@@ -154,7 +159,7 @@ mod swap_s6_3_r73_m3_t1 {
     fn r73_swaps_board_contents_lane_by_lane_in_both_rows_with_control_moving_and_nothing_left_behind() {
         let mut state = game();
         let turn = state.turn;
-        let mine = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 2), PutOptions::default());
+        let mine = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 2));
         {
             let card = live_mut(&mut state, &mine.id);
             card.damage = 1;
@@ -171,9 +176,9 @@ mod swap_s6_3_r73_m3_t1 {
                 attacks: None,
             };
         }
-        let my_back = put(&mut state, &trap().id, slot(PlayerId::P1, Row::Backrow, 4), PutOptions::default());
-        let theirs = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P2, Row::Units, 5), PutOptions::default());
-        let their_back = put(&mut state, &trap().id, slot(PlayerId::P2, Row::Backrow, 1), PutOptions::default());
+        let my_back = put(&mut state, &trap().id, slot(PlayerId::P1, Row::Backrow, 4));
+        let theirs = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P2, Row::Units, 5));
+        let their_back = put(&mut state, &trap().id, slot(PlayerId::P2, Row::Backrow, 1));
 
         let events = run(&mut state, swap_board(), HookOptions::default());
 
@@ -243,7 +248,7 @@ mod swap_s6_3_r73_m3_t1 {
     #[test]
     fn r12_a_swapped_card_changes_controller_but_never_owner_so_it_still_leaves_to_its_owners_zones() {
         let mut state = game();
-        let card = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 1), PutOptions::default());
+        let card = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 1));
 
         run(&mut state, swap_board(), HookOptions::default());
         let mut now = live(&state, &card.id);
@@ -263,10 +268,10 @@ mod swap_s6_3_r73_m3_t1 {
         let units: Vec<CardInstance> = [1, 3, 4]
             .iter()
             .map(|lane| {
-                put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, *lane), PutOptions::default())
+                put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, *lane))
             })
             .collect();
-        let back = put(&mut state, &trap().id, slot(PlayerId::P1, Row::Backrow, 5), PutOptions::default());
+        let back = put(&mut state, &trap().id, slot(PlayerId::P1, Row::Backrow, 5));
 
         let events = run(&mut state, swap_board(), HookOptions::default());
 
@@ -287,7 +292,7 @@ mod swap_s6_3_r73_m3_t1 {
     #[test]
     fn r73_leaves_locks_with_their_zones_so_a_lock_never_travels_with_the_card_that_sat_under_it() {
         let mut state = game();
-        let card = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 1), PutOptions::default());
+        let card = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 1));
         // §3.2: the current occupant is unaffected by the lock and the lock persists after it leaves.
         lock_zone(&mut state, slot(PlayerId::P1, Row::Units, 1));
 
@@ -306,13 +311,13 @@ mod swap_s6_3_r73_m3_t1 {
         // zone; §3.2's "accepts no summons" plus R14's answer for the other whole-board move is the
         // reading implemented here.
         let mut state = game();
-        let blocked = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 3), PutOptions::default());
+        let blocked = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 3));
         {
             let card = live_mut(&mut state, &blocked.id);
             card.damage = 2;
             card.buffs = AttackHealth { attack: 1, health: 1 };
         }
-        let other = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 2), PutOptions::default());
+        let other = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 2));
         lock_zone(&mut state, slot(PlayerId::P2, Row::Units, 3));
 
         let events = run(&mut state, swap_board(), HookOptions::default());
@@ -337,7 +342,7 @@ mod swap_s6_3_r73_m3_t1 {
     #[test]
     fn r33_a_swapped_face_down_trap_stays_face_down_and_is_readable_by_its_new_controller_only() {
         let mut state = game();
-        let hidden = put(&mut state, &trap().id, slot(PlayerId::P1, Row::Backrow, 2), PutOptions::default());
+        let hidden = put(&mut state, &trap().id, slot(PlayerId::P1, Row::Backrow, 2));
         assert_eq!(live(&state, &hidden.id).face_up, None);
         // Before the swap only p1 may read it: p2 sees a face-down marker (§3, R33).
         assert!(matches_object(
@@ -381,7 +386,7 @@ mod swap_s6_3_r73_m3_t1 {
     #[test]
     fn s3_2_a_stack_pile_swaps_whole_and_keeps_the_same_card_on_top() {
         let mut state = game();
-        let under = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 5), PutOptions::default());
+        let under = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 5));
         live_mut(&mut state, &under.id).damage = 1;
         let top = stack_onto(&mut state, &combat_fx::stacker().id, PlayerId::P1, 5);
 
@@ -415,7 +420,7 @@ mod swap_s6_3_r73_m3_t1 {
     #[test]
     fn r11_a_unit_token_that_cannot_land_ceases_to_exist_instead_of_reaching_a_hand() {
         let mut state = game();
-        let token = put(&mut state, TOKEN_ID, slot(PlayerId::P1, Row::Units, 4), PutOptions::default());
+        let token = put(&mut state, TOKEN_ID, slot(PlayerId::P1, Row::Units, 4));
         lock_zone(&mut state, slot(PlayerId::P2, Row::Units, 4));
 
         let events = run(&mut state, swap_board(), HookOptions::default());
@@ -428,13 +433,13 @@ mod swap_s6_3_r73_m3_t1 {
     }
 
     #[test]
-    fn r73_swaps_libraries_whole_and_r12s_exception_gives_each_swapped_card_its_new_holder_as_owner() {
+    fn r73_swaps_libraries_whole_and_r12_exception_gives_each_swapped_card_its_new_holder_as_owner() {
         let mut state = game();
         let plain_id = combat_fx::plain().id;
         let stacker_id = combat_fx::stacker().id;
         let trap_id = trap().id;
-        let mine = set_library(&mut state, PlayerId::P1, &[plain_id.as_str(), stacker_id.as_str(), plain_id.as_str()]);
-        let theirs = set_library(&mut state, PlayerId::P2, &[trap_id.as_str(), TOKEN_ID]);
+        let mine = set_library(&mut state, PlayerId::P1, &owned(&[plain_id.as_str(), stacker_id.as_str(), plain_id.as_str()]));
+        let theirs = set_library(&mut state, PlayerId::P2, &owned(&[trap_id.as_str(), TOKEN_ID]));
         state.players.p1.fatigue_count = 2;
         state.players.p2.fatigue_count = 0;
 

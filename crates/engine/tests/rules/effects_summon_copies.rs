@@ -12,7 +12,7 @@ use jackioh_engine::effects::{damage, summon, summon_copy, summon_random};
 use jackioh_engine::testkit::*;
 use serde::Serialize;
 
-use super::fixtures::harness::{PutOptions, events_of_type, new_game, put, slot};
+use super::fixtures::harness::{events_of_type, new_game, put, slot};
 
 // ---------------------------------------------------------------------------
 // Fixture cards.
@@ -158,6 +158,22 @@ fn run(state: &mut GameState, effect: Effect, options: RunOptions) -> Vec<GameEv
     run_all(state, &[effect], options)
 }
 
+/// TS `put(state, defId, slot, { radiant: true })`, the harness's `put` with its option: the card is
+/// made in its owner's hand, flagged Radiant, then placed (TS's order), and a copy of it as placed comes
+/// back. Written here from part 1's `new_instance` and `zones::place_on_field`, since the harness's
+/// `put` is called with three arguments in every other file of this part.
+fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
+    let mut card = new_instance(state, def_id, at.player, Zone::Hand { player: at.player });
+    card.radiant = true;
+    assert!(
+        place_on_field(state, &mut card, at, PlaceOnFieldOptions::default()),
+        "could not place {def_id} in {} {}",
+        at.row.as_str(),
+        at.lane
+    );
+    live(state, &card.id)
+}
+
 /// TS `unitAt(state, lane, player = "p1")`.
 fn unit_at(state: &GameState, lane: i32, player: PlayerId) -> Option<CardInstance> {
     card_at(state, slot(player, Row::Units, lane)).cloned()
@@ -271,7 +287,7 @@ mod summon_with_random_keywords_r21_s7_80 {
     fn r21_grants_nothing_when_the_summon_fizzled_and_takes_no_draw_for_it() {
         let mut state = game("kw-fizzle");
         for lane in [1, 2, 3, 4, 5] {
-            put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, lane), PutOptions::default());
+            put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, lane));
         }
         let cursor_before = state.rng_cursor;
 
@@ -297,12 +313,7 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
     #[test]
     fn r57_keeps_the_radiant_flag_the_buffs_the_granted_keywords_vanilla_and_stats_override() {
         let mut state = game("copy-keeps");
-        let source = put(
-            &mut state,
-            &body().id,
-            slot(PlayerId::P1, Row::Units, 2),
-            PutOptions { radiant: Some(true) },
-        );
+        let source = put_radiant(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 2));
         {
             let card = live_mut(&mut state, &source.id);
             card.buffs = AttackHealth { attack: 2, health: 3 };
@@ -355,7 +366,7 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
     #[test]
     fn r57_resets_damage_exertion_counters_and_summoned_turn_on_the_copy() {
         let mut state = game("copy-resets");
-        let source = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 2), PutOptions::default());
+        let source = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 2));
         {
             let card = live_mut(&mut state, &source.id);
             card.damage = 4;
@@ -409,12 +420,7 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
     #[test]
     fn s8_3_61_vanilla_true_and_granted_keywords_false_keep_the_buffs_and_the_radiant_flag() {
         let mut state = game("copy-postdoc");
-        let source = put(
-            &mut state,
-            &body().id,
-            slot(PlayerId::P1, Row::Units, 2),
-            PutOptions { radiant: Some(true) },
-        );
+        let source = put_radiant(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 2));
         {
             let card = live_mut(&mut state, &source.id);
             card.buffs = AttackHealth { attack: 1, health: 1 };
@@ -448,7 +454,7 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
     #[test]
     fn s6_2_the_copy_fires_no_cry_where_the_sources_own_cry_is_observable() {
         let mut state = game("copy-no-cry");
-        let source = put(&mut state, &crier().id, slot(PlayerId::P1, Row::Units, 1), PutOptions::default());
+        let source = put(&mut state, &crier().id, slot(PlayerId::P1, Row::Units, 1));
         let before = state.players.p2.hero.health;
 
         let events = run(
@@ -487,9 +493,9 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
     #[test]
     fn r64_fizzles_silently_with_a_full_row_creating_nothing() {
         let mut state = game("copy-full");
-        let source = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1), PutOptions::default());
+        let source = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1));
         for lane in [2, 3, 4, 5] {
-            put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, lane), PutOptions::default());
+            put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, lane));
         }
         let ids_before = state.next_id;
 
@@ -569,7 +575,7 @@ mod summon_random_s5_1_s10_7_r60_67 {
     fn s5_1_never_summons_the_requesting_cards_own_definition() {
         for seed in 0..12 {
             let mut state = game(&format!("random-exclude-{seed}"));
-            let self_ = put(&mut state, &pool_a().id, slot(PlayerId::P1, Row::Units, 5), PutOptions::default());
+            let self_ = put(&mut state, &pool_a().id, slot(PlayerId::P1, Row::Units, 5));
 
             run(
                 &mut state,
@@ -603,7 +609,7 @@ mod summon_random_s5_1_s10_7_r60_67 {
     #[test]
     fn r47_fizzles_on_an_occupied_backrow_lane_but_a_locked_one_takes_the_summon_r688() {
         let mut occupied = game("random-occupied");
-        put(&mut occupied, &pool_trap().id, slot(PlayerId::P1, Row::Backrow, 2), PutOptions::default());
+        put(&mut occupied, &pool_trap().id, slot(PlayerId::P1, Row::Backrow, 2));
         let before = occupied.next_id;
         assert!(
             run(

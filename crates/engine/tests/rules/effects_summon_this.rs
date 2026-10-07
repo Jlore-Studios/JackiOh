@@ -12,7 +12,7 @@ use jackioh_engine::testkit::*;
 use serde::Serialize;
 
 use super::fixtures::combat as combat_fx;
-use super::fixtures::harness::{PutOptions, events_of_type, in_hand, put, slot};
+use super::fixtures::harness::{events_of_type, in_hand, put, slot};
 use super::fixtures::prompt_harness::{
     act, answer_keys, board, expect_replays, hand_card, open_as, replayable, round_trip,
 };
@@ -105,7 +105,7 @@ fn played_ids(events: &[GameEvent]) -> Vec<String> {
         .collect()
 }
 
-mod e26_deck_and_graveyard_triggers_in_r68s_order_r464 {
+mod e26_deck_and_graveyard_triggers_in_r68_order_r464 {
     use super::*;
 
     #[test]
@@ -194,7 +194,7 @@ mod e26_summon_this_from_your_hand_or_deck {
     #[test]
     fn e26_a_deck_trigger_summons_its_card_no_cry_summoning_sick_the_leftmost_open_zone() {
         let mut state = board("deck-summon");
-        put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 1), PutOptions::default());
+        put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 1));
         let drum = new_instance(&mut state, &prompts_fx::wardrum().id, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
         let first = new_instance(&mut state, &combat_fx::plain().id, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
         state.players.p1.library = vec![first, drum.clone()];
@@ -245,7 +245,7 @@ mod e26_summon_this_from_your_hand_or_deck {
     fn e26_with_no_open_zone_the_card_stays_where_it_is() {
         let mut state = board("deck-full");
         for lane in 1..=5 {
-            put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, lane), PutOptions::default());
+            put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, lane));
         }
         let drum = new_instance(&mut state, &prompts_fx::wardrum().id, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
         state.players.p1.library = vec![drum.clone()];
@@ -281,7 +281,7 @@ mod e26_summon_this_from_your_hand_or_deck {
     fn e26_a_wardrum_game_replays_from_its_log() {
         let zap = prompts_fx::quickdraw_of(&prompts_fx::spark()).id;
         let wardrum_id = prompts_fx::wardrum().id;
-        let replay = replayable("wardrum-replay", &[zap.as_str(), wardrum_id.as_str()], &[]);
+        let replay = replayable("wardrum-replay", &[zap.clone(), wardrum_id.clone()], &[]);
         let (dealt, mut log, decks) = (replay.state, replay.log, replay.decks);
         let mut state = dealt;
         let drum = state
@@ -310,7 +310,7 @@ mod e26_graveyard_triggers_classic_47 {
         let mut card = grave_card(&mut state, PlayerId::P1, &prompts_fx::recurring().id);
         card.radiant = radiant;
         find_instance_mut(&mut state, &card.id).expect("in the graveyard").radiant = radiant;
-        put(&mut state, &prompts_fx::snare().id, slot(PlayerId::P1, Row::Backrow, 1), PutOptions::default());
+        put(&mut state, &prompts_fx::snare().id, slot(PlayerId::P1, Row::Backrow, 1));
         state.active = PlayerId::P2;
         let zap = in_hand(&mut state, &prompts_fx::spark().id, PlayerId::P2, 1).remove(0);
         let state = act(&state, json_as(play_body(PlayerId::P2, &zap.id)), None);
@@ -339,7 +339,7 @@ mod e26_graveyard_triggers_classic_47 {
     fn e26_the_other_players_trap_does_not_return_it_and_a_card_elsewhere_has_no_graveyard_trigger() {
         let mut state = board("recur-theirs");
         let card = grave_card(&mut state, PlayerId::P1, &prompts_fx::recurring().id);
-        put(&mut state, &prompts_fx::snare().id, slot(PlayerId::P2, Row::Backrow, 1), PutOptions::default());
+        put(&mut state, &prompts_fx::snare().id, slot(PlayerId::P2, Row::Backrow, 1));
         let zap = in_hand(&mut state, &prompts_fx::spark().id, PlayerId::P1, 1).remove(0);
         state = act(&state, json_as(play_body(PlayerId::P1, &zap.id)), None);
         assert_eq!(events_of_type(&last_applied_events(&state), GameEventType::TrapFired).len(), 1);

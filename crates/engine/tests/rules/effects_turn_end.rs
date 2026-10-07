@@ -19,7 +19,7 @@ use jackioh_engine::testkit::*;
 use serde::Serialize;
 
 use super::fixtures::catalog as catalog_fx;
-use super::fixtures::harness::{PutOptions, events_of_type, in_hand, new_game, put, set_library, setup_catalog, slot};
+use super::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, setup_catalog, slot};
 use super::fixtures::turn as turn_fx;
 
 fn register() {
@@ -85,7 +85,6 @@ fn playing(seed: &str) -> GameState {
         &mut state,
         &turn_fx::log_card().id,
         slot(PlayerId::P2, Row::Backrow, turn_fx::LOG_LANE),
-        PutOptions::default(),
     );
     // R345: nothing but the rule under test ends a turn behind the test's back (R82).
     state.players.p1.auto_end_turn = Some(false);
@@ -175,6 +174,11 @@ fn with_ctx<R>(
         },
     );
     f(&mut ctx)
+}
+
+/// TS `string[]` for the harness's `setLibrary`, from the ids as written.
+fn owned(ids: &[&str]) -> Vec<String> {
+    ids.iter().map(|id| id.to_string()).collect()
 }
 
 /// TS held the live instance; Rust reads the card again by id.
@@ -350,7 +354,7 @@ mod b5_e10_end_your_turn_r456 {
     fn r456_cast_on_draw_end_your_turn_drawn_at_the_start_of_that_turn_ends_it_before_its_main_phase() {
         let mut state = playing("tempo");
         let tempo_id = turn_fx::tempo().id;
-        set_library(&mut state, PlayerId::P2, &[tempo_id.as_str(), "fx-30"]);
+        set_library(&mut state, PlayerId::P2, &owned(&[tempo_id.as_str(), "fx-30"]));
         let drawn = state.players.p2.library.first().cloned();
         let Acted { state: after, events } = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
 
@@ -389,7 +393,7 @@ mod b5_e10_one_more_action_then_your_turn_ends_r456 {
     fn r456_radiant_drawn_at_the_start_of_the_turn_the_player_takes_one_action_and_the_turn_ends_once_it_resolves() {
         let mut state = playing("one-more-drawn");
         let tempo_id = turn_fx::tempo().id;
-        set_library(&mut state, PlayerId::P2, &[tempo_id.as_str(), "fx-30"]);
+        set_library(&mut state, PlayerId::P2, &owned(&[tempo_id.as_str(), "fx-30"]));
         let radiant_tempo_id = state.players.p2.library[0].id.clone();
         state.players.p2.library[0].radiant = true;
 
@@ -425,7 +429,7 @@ mod b5_e10_one_more_action_then_your_turn_ends_r456 {
     #[test]
     fn r456_the_action_that_sets_the_rider_is_not_counted_a_draw_offer_is_not_an_action_and_a_position_switch_is() {
         let mut state = playing("count");
-        let unit = put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 1), PutOptions::default());
+        let unit = put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 1));
         let turn = state.turn;
         live_mut(&mut state, &unit.id).summoned_turn = Some(turn);
         let set = play(&mut state, PlayerId::P1, &turn_fx::one_more().id).state;
@@ -479,8 +483,8 @@ mod b5_e10_one_more_action_then_your_turn_ends_r456 {
     #[test]
     fn r456_with_two_riders_on_one_turn_the_sooner_end_holds_and_names_the_card_that_set_it() {
         let mut state = playing("two-riders");
-        let first = put(&mut state, "fx-3", slot(PlayerId::P1, Row::Units, 1), PutOptions::default());
-        let second = put(&mut state, "fx-4", slot(PlayerId::P1, Row::Units, 2), PutOptions::default());
+        let first = put(&mut state, "fx-3", slot(PlayerId::P1, Row::Units, 1));
+        let second = put(&mut state, "fx-4", slot(PlayerId::P1, Row::Units, 2));
         let (first, second) = (live(&state, &first.id), live(&state, &second.id));
         // One sink for all three contexts, as TS's `const sink = sinkFor(state)`.
         let mut events = Vec::new();
@@ -517,7 +521,7 @@ mod b5_e10_the_opponents_trap_ends_the_turn_r456_the_ai_card_rate_limit {
     #[test]
     fn r456_the_play_that_set_it_off_resolves_first_then_the_active_players_turn_ends_named_by_the_trap() {
         let mut state = playing("rate-limit");
-        let trap = put(&mut state, &turn_fx::rate_limit().id, slot(PlayerId::P2, Row::Backrow, 1), PutOptions::default());
+        let trap = put(&mut state, &turn_fx::rate_limit().id, slot(PlayerId::P2, Row::Backrow, 1));
         let Played { state: after, events, .. } = play(&mut state, PlayerId::P1, &turn_fx::marker().id);
 
         assert_eq!(turn_fx::notes(&after), vec!["marker:p1"]);
