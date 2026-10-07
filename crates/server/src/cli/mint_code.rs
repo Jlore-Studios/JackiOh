@@ -1,0 +1,204 @@
+//! Admin script: mints one invite code and prints the plaintext exactly once (SPEC §9.4).
+//! `jackioh-server mint-code` (TS `codes:mint`), the port of `apps/server/src/db/mint-code.ts`.
+//!
+//! Step 7 of docs/architecture.md's bring-up checklist, which BUILD M6-T1 owes as "an admin
+//! script". Every account starts `pending` and a pending account can do nothing but look at the
+//! code screen, so until a code exists there is no way into the game.
+//!
+//! Why this reads the whole environment through `load_env()` when it only needs two variables:
+//! the hash stored here has to be byte-identical to the one the running server computes when it
+//! redeems, and `load_env` plus the `{CODE_PEPPER}:code` derivation below is the single contract
+//! that guarantees it. `migrate` and `seed-catalog` read `DATABASE_URL` directly because a
+//! connection string that is wrong fails loudly on the first query; a pepper that is merely
+//! *different* mints a well-formed code that nobody can ever redeem, and nothing reports it.
+
+use anyhow::{Result, anyhow};
+use indexmap::IndexMap;
+use serde::{Deserialize, Serialize};
+use sqlx::postgres::PgPoolOptions;
+
+use crate::api::codes::{MintDeps, MintInput, mint_invite_code};
+use crate::api::crypto::{Peppers, create_hashes};
+use crate::db::store::Db;
+use crate::env::{Env, load_env};
+
+const MS_PER_DAY: i64 = 24 * 60 * 60 * 1000;
+
+const USAGE: &str = "Usage: jackioh-server mint-code [options]
+       (from a checkout: cargo run --release -p jackioh-server -- mint-code [options])
+
+  --max-uses=N          How many accounts this code activates. Default 1 (R161).
+  --expires-in-days=N   Expire the code N days from now. Default: never expires.
+
+Prints the plaintext code once. Only its keyed hash is stored, so a lost code
+cannot be recovered — mint another.";
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct MintOptions {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_uses: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expires_in_days: Option<i64>,
+}
+
+/// Parses `--flag=value` arguments, rejecting anything it does not recognise.
+pub fn parse_mint_args(argv: &[String]) -> Result<MintOptions> {
+    let mut options = MintOptions::default();
+
+    for arg in argv {
+        let Some((name, raw)) = flag_of(arg) else {
+            return Err(anyhow!("Unrecognised argument {}.\n\n{USAGE}", json_text(arg)));
+        };
+
+        // The name is checked before the value, so `--label=bring-up` is reported as the unknown
+        // option it is rather than as a malformed number.
+        if name != "max-uses" && name != "expires-in-days" {
+            return Err(anyhow!("Unrecognised option --{name}.\n\n{USAGE}"));
+        }
+
+        let value = js_number(raw);
+        if !is_integer(value) || value < 1.0 {
+            return Err(anyhow!(
+                "--{name} must be a positive integer (got {}).\n\n{USAGE}",
+                json_text(raw)
+            ));
+        }
+
+        if name == "max-uses" {
+            options.max_uses = Some(value as i64);
+        } else {
+            options.expires_in_days = Some(value as i64);
+        }
+    }
+
+    Ok(options)
+}
+
+/// TS `main()`: parse, read the environment, mint over one connection, print, close.
+pub async fn run(args: Vec<String>) -> Result<()> {
+    let options = parse_mint_args(&args)?;
+    let source: IndexMap<String, String> = std::env::vars().collect();
+    let env = load_env(&source).map_err(|error| anyhow!("{error}"))?;
+
+    // One connection: this process runs a single insert and exits.
+    let pool = PgPoolOptions::new().max_connections(1).connect(&env.database_url).await?;
+    let db = Db::Pg(pool.clone());
+    let minted = mint(&db, &env, &options).await;
+    pool.close().await;
+    minted
+}
+
+async fn mint(db: &Db, env: &Env, options: &MintOptions) -> Result<()> {
+    let expires_at = match options.expires_in_days {
+        None => None,
+        Some(days) => Some(
+            days.checked_mul(MS_PER_DAY)
+                .and_then(|span| span.checked_add(now_ms()))
+                .ok_or_else(|| anyhow!("--expires-in-days={days} is further away than a timestamp can hold"))?,
+        ),
+    };
+
+    let minted = mint_invite_code(
+        &MintDeps {
+            db,
+            // §9.4, §9.8: one pepper in the environment, two domains — the same derivation
+            // `src/app.rs` uses, so this code hashes to what redemption will look up.
+            hashes: &create_hashes(Peppers {
+                code: format!("{}:code", env.code_pepper),
+                ip: format!("{}:ip", env.code_pepper),
+            }),
+        },
+        MintInput { max_uses: options.max_uses, expires_at },
+    )
+    .await
+    .map_err(|error| anyhow!("{error}"))?;
+
+    // The plaintext goes to stdout and the metadata to stderr, so `mint-code > code.txt`
+    // captures the code alone.
+    let expiry = match expires_at {
+        None => "never expires".to_string(),
+        Some(at) => format!("expires {}", iso_string(at)?),
+    };
+    eprintln!(
+        "codes:mint: id {}, max uses {}, {expiry}\n\
+         codes:mint: this is the only time the code is shown; the database holds only its hash.",
+        minted.id,
+        options.max_uses.unwrap_or(1),
+    );
+    println!("{}", minted.formatted);
+    Ok(())
+}
+
+/// TS's `/^--(?<name>[a-z-]+)=(?<value>.*)$/u`: `--`, a name of lower-case letters and hyphens up
+/// to the first `=`, then a value with no line terminator (`.` does not match one).
+fn flag_of(arg: &str) -> Option<(&str, &str)> {
+    let rest = arg.strip_prefix("--")?;
+    let eq = rest.find('=')?;
+    let (name, value) = (&rest[..eq], &rest[eq + 1..]);
+    if name.is_empty() || !name.chars().all(|c| c.is_ascii_lowercase() || c == '-') {
+        return None;
+    }
+    if value.chars().any(|c| matches!(c, '\n' | '\r' | '\u{2028}' | '\u{2029}')) {
+        return None;
+    }
+    Some((name, value))
+}
+
+/// `JSON.stringify` of a string, for the refusals that quote what they were given.
+fn json_text(text: &str) -> String {
+    serde_json::to_string(text).unwrap_or_else(|_| format!("\"{text}\""))
+}
+
+/// JS `Number(raw)` on a command-line string: surrounding whitespace ignored, empty is 0,
+/// `Infinity`, `0x`/`0o`/`0b` integers and decimal literals (`5`, `1.5`, `1e3`, `.5`), anything
+/// else NaN.
+fn js_number(raw: &str) -> f64 {
+    let text = raw.trim_matches(|c: char| c.is_whitespace() || c == '\u{feff}');
+    if text.is_empty() {
+        return 0.0;
+    }
+    match text {
+        "Infinity" | "+Infinity" => return f64::INFINITY,
+        "-Infinity" => return f64::NEG_INFINITY,
+        _ => {}
+    }
+    for (prefix, radix) in [("0x", 16), ("0X", 16), ("0o", 8), ("0O", 8), ("0b", 2), ("0B", 2)] {
+        if let Some(digits) = text.strip_prefix(prefix) {
+            if digits.is_empty() {
+                return f64::NAN;
+            }
+            let mut value = 0.0;
+            for c in digits.chars() {
+                match c.to_digit(radix) {
+                    Some(digit) => value = value * f64::from(radix) + f64::from(digit),
+                    None => return f64::NAN,
+                }
+            }
+            return value;
+        }
+    }
+    if !text.chars().all(|c| c.is_ascii_digit() || matches!(c, '+' | '-' | '.' | 'e' | 'E')) {
+        return f64::NAN;
+    }
+    text.parse::<f64>().unwrap_or(f64::NAN)
+}
+
+/// JS `Number.isInteger`.
+fn is_integer(value: f64) -> bool {
+    value.is_finite() && value.fract() == 0.0
+}
+
+/// `Date.now()`: the wall clock in epoch milliseconds (TS `systemTimers.now`).
+fn now_ms() -> i64 {
+    (time::OffsetDateTime::now_utc().unix_timestamp_nanos() / 1_000_000) as i64
+}
+
+/// `new Date(ms).toISOString()`: `2026-10-07T12:34:56.789Z`.
+fn iso_string(ms: i64) -> Result<String> {
+    let at = time::OffsetDateTime::from_unix_timestamp_nanos(i128::from(ms) * 1_000_000)?;
+    let format = time::format_description::parse(
+        "[year]-[month]-[day]T[hour]:[minute]:[second].[subsecond digits:3]Z",
+    )?;
+    Ok(at.format(&format)?)
+}
