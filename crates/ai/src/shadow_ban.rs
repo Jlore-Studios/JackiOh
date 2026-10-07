@@ -28,14 +28,15 @@
 //! `error` or `selfHarm`.
 //!
 //! Sweep of record for the Rust AI (generation 0, #306 part 40): 2026-10-07 (UTC), `cargo jackioh
-//! sweep`, pass 1 over 268 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2
-//! over 91 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget
-//! AI_GATE_BUDGET as above, in four parallel slices per pass. It filled `SHADOW_WATCH` below (41
-//! cards). `SHADOW_BAN` above stays generation 0's, TypeScript's eleven (#306): that sweep would ban
-//! 64 cards, four of the eleven among them and 59 of the 64 for `timeout` alone, and clear the other
-//! seven.
-//! training/history/sweep-2026-10-07.md lists them, with what the timeouts measured, as the unban
-//! lane's starting notes.
+//! sweep` on `7e91089`, pass 1 over 268 card(s) at easy and hard, 8 seeds each
+//! (`sweep:<tier>:<id>:<n>`), pass 2 over 91 at-risk card(s), 24 seeds each
+//! (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET as above, in four parallel
+//! slices per pass. It filled `SHADOW_WATCH` below (67 cards). `SHADOW_BAN` above stays generation 0's,
+//! TypeScript's eleven (#306): that sweep would ban 25 cards, three of the eleven among them and 22 of
+//! the 25 for `timeout` (decisions that resolve R29's dry-run scorers, and one turn that never ends),
+//! and clear the other eight. It replaces a first run of the same day (`fa03797`), whose 63 timeouts
+//! were fused scripts composed on every lookup. training/history/sweep-2026-10-07.md lists them, with
+//! what the timeouts measured, as the unban lane's starting notes.
 //!
 //! Port of `packages/ai/src/shadowBan.ts` (SURFACE §9): TS's `Record<string, string>` is a slice of
 //! `(defId, reason)` pairs sorted by id, the order `Object.keys` gave it.
@@ -105,20 +106,20 @@ pub const SHADOW_BAN_IDS: &[&str] = &{
 /// card on track to be banned stays watched from one sweep to the next. It changes no deck.
 pub const SHADOW_WATCH: &[(&str, &str)] = &[
     (
-        "classic-014",
-        "at risk: hard: pass 1 affordable on 8 turns over 8 games, played 1 time(s), mean evaluate change 1.5",
+        "classic-006",
+        "at risk: hard: pass 1 affordable on 7 turns over 8 games, never played",
     ),
     (
         "classic-015",
         "at risk: easy: pass 1 affordable on 6 turns over 8 games, played 1 time(s), mean evaluate change 4.8",
     ),
     (
-        "classic-026",
-        "at risk: hard: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change -0.4",
+        "classic-018",
+        "at risk: hard: pass 1 affordable on 10 turns over 8 games, played 1 time(s), mean evaluate change 11.0",
     ),
     (
-        "classic-030",
-        "at risk: hard: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 0.0",
+        "classic-026",
+        "at risk: hard: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change -0.4",
     ),
     (
         "classic-037",
@@ -129,16 +130,24 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
         "at risk: hard: pass 1 affordable on 5 turns over 8 games, played 1 time(s), mean evaluate change 3.5",
     ),
     (
+        "classic-042",
+        "at risk: hard: pass 1 affordable on 8 turns over 8 games, played 1 time(s), mean evaluate change 1.5",
+    ),
+    (
+        "classic-043",
+        "at risk: easy: pass 1 affordable on 12 turns over 8 games, never played; hard: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change -3.1",
+    ),
+    (
         "classic-044",
         "at risk: easy: pass 1 affordable on 13 turns over 8 games, played 1 time(s), mean evaluate change -2.2; hard: pass 1 affordable on 10 turns over 8 games, played 1 time(s), mean evaluate change -2.2",
     ),
     (
-        "classic-055",
-        "at risk: hard: pass 1 affordable on 3 turns over 8 games, played 1 time(s), mean evaluate change 4.9",
+        "classic-050",
+        "at risk: hard: pass 1 affordable on 11 turns over 8 games, played 1 time(s), mean evaluate change 10.1",
     ),
     (
-        "classic-056",
-        "at risk: hard: pass 1 affordable on 6 turns over 8 games, played 1 time(s), mean evaluate change 21.3",
+        "classic-055",
+        "at risk: hard: pass 1 affordable on 3 turns over 8 games, played 1 time(s), mean evaluate change 4.9",
     ),
     (
         "classic-062",
@@ -149,56 +158,80 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
         "at risk: hard: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 1.5",
     ),
     (
+        "classic-066",
+        "at risk: hard: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 10.9",
+    ),
+    (
         "classic-070",
         "at risk: hard: pass 1 affordable on 4 turns over 8 games, played 1 time(s), mean evaluate change -1.3",
+    ),
+    (
+        "classic-074",
+        "at risk: hard: pass 1 affordable on 5 turns over 8 games, played 1 time(s), mean evaluate change 1.5",
     ),
     (
         "classic-078",
         "at risk: hard: pass 1 affordable on 4 turns over 8 games, played 1 time(s), mean evaluate change 1.0",
     ),
     (
-        "classic-085",
-        "at risk: easy: pass 1 affordable on 11 turns over 8 games, played 1 time(s), mean evaluate change 0.4; hard: pass 1 affordable on 6 turns over 8 games, played 1 time(s), mean evaluate change 33.2",
+        "classic-080",
+        "at risk: hard: pass 1 affordable on 8 turns over 8 games, played 1 time(s), mean evaluate change 1.5",
     ),
     (
-        "classicplus-002",
-        "at risk: hard: pass 1 affordable on 13 turns over 8 games, played 1 time(s), mean evaluate change 2.0",
+        "classic-089",
+        "at risk: easy: pass 1 affordable on 4 turns over 8 games, played 1 time(s), mean evaluate change 14.9",
     ),
     (
         "classicplus-003",
         "at risk: hard: pass 1 affordable on 17 turns over 8 games, played 1 time(s), mean evaluate change 5.6",
     ),
     (
-        "classicplus-011",
-        "at risk: hard: pass 1 affordable on 11 turns over 8 games, played 1 time(s), mean evaluate change 9.2",
+        "classicplus-009",
+        "at risk: hard: pass 1 affordable on 11 turns over 8 games, played 1 time(s), mean evaluate change -1.0",
+    ),
+    (
+        "classicplus-014",
+        "at risk: easy: pass 1 affordable on 9 turns over 8 games, never played; hard: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change -1.3",
     ),
     (
         "classicplus-017",
         "at risk: hard: pass 1 affordable on 6 turns over 8 games, never played",
     ),
     (
+        "classicplus-022",
+        "at risk: hard: pass 1 affordable on 4 turns over 8 games, played 1 time(s), mean evaluate change 1.0",
+    ),
+    (
+        "classicplus-029",
+        "at risk: hard: pass 1 affordable on 20 turns over 8 games, never played",
+    ),
+    (
+        "classicplus-030",
+        "at risk: easy: pass 1 affordable on 11 turns over 8 games, never played",
+    ),
+    (
         "classicplus-031",
         "at risk: hard: pass 1 affordable on 4 turns over 8 games, played 1 time(s), mean evaluate change 1.5",
+    ),
+    (
+        "classicplus-033",
+        "at risk: hard: pass 1 affordable on 4 turns over 8 games, played 1 time(s), mean evaluate change 14.0",
     ),
     (
         "classicplus-034",
         "at risk: hard: pass 1 affordable on 12 turns over 8 games, never played",
     ),
     (
-        "classicplus-035",
-        "at risk: easy: pass 1 affordable on 16 turns over 8 games, played 2 time(s), mean evaluate change -499990.1",
-    ),
-    (
         "classicplus-036",
         "at risk: hard: pass 1 affordable on 24 turns over 8 games, played 1 time(s), mean evaluate change -1.6",
     ),
     (
-        "classicplus-037",
-        "at risk: easy: pass 1 affordable on 4 turns over 8 games, played 1 time(s), mean evaluate change 11.0",
-    ),
-    (
         "classicplus-041",
         "at risk: hard: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change -0.8",
+    ),
+    (
+        "classicplus-042",
+        "at risk: hard: pass 1 affordable on 5 turns over 8 games, never played",
     ),
     (
         "classicplus-043",
@@ -209,12 +242,12 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
         "at risk: hard: pass 1 affordable on 22 turns over 8 games, never played",
     ),
     (
-        "classicplus-048",
-        "at risk: hard: pass 1 affordable on 14 turns over 8 games, played 1 time(s), mean evaluate change 0.1",
+        "classicplus-045",
+        "at risk: easy: pass 1 affordable on 23 turns over 8 games, never played; hard: pass 1 affordable on 15 turns over 8 games, never played",
     ),
     (
-        "classicplus-062",
-        "at risk: easy: pass 1 affordable on 17 turns over 8 games, played 1 time(s), mean evaluate change -1.3; hard: pass 1 affordable on 16 turns over 8 games, played 1 time(s), mean evaluate change -1.3",
+        "classicplus-048",
+        "at risk: hard: pass 1 affordable on 14 turns over 8 games, played 1 time(s), mean evaluate change 0.1",
     ),
     (
         "classicplus-065",
@@ -225,12 +258,48 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
         "at risk: hard: pass 1 affordable on 9 turns over 8 games, never played",
     ),
     (
+        "classicplus-073",
+        "at risk: hard: pass 1 affordable on 15 turns over 8 games, played 1 time(s), mean evaluate change -2.2",
+    ),
+    (
         "classicplus-078",
         "at risk: hard: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change 1.5",
     ),
     (
+        "core-001",
+        "at risk: easy: pass 1 affordable on 23 turns over 8 games, never played",
+    ),
+    (
+        "core-005",
+        "at risk: hard: pass 1 affordable on 11 turns over 8 games, played 1 time(s), mean evaluate change 2.0",
+    ),
+    (
+        "core-006",
+        "at risk: easy: pass 1 affordable on 17 turns over 8 games, never played",
+    ),
+    (
         "core-007",
         "at risk: hard: pass 1 affordable on 9 turns over 8 games, never played",
+    ),
+    (
+        "core-016",
+        "at risk: easy: pass 1 affordable on 4 turns over 8 games, played 1 time(s), mean evaluate change 999883.7",
+    ),
+    (
+        "core-017",
+        "at risk: hard: pass 1 affordable on 16 turns over 8 games, played 1 time(s), mean evaluate change 34.1",
+    ),
+    (
+        "core-022",
+        "at risk: hard: pass 1 affordable on 17 turns over 8 games, played 1 time(s), mean evaluate change 2.0",
+    ),
+    (
+        "core-026",
+        "at risk: hard: pass 1 affordable on 16 turns over 8 games, never played",
+    ),
+    (
+        "core-034",
+        "at risk: hard: pass 1 affordable on 5 turns over 8 games, played 1 time(s), mean evaluate change 19.3",
     ),
     (
         "core-040",
@@ -241,19 +310,43 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
         "at risk: hard: pass 1 affordable on 14 turns over 8 games, never played",
     ),
     (
-        "core-055",
-        "at risk: easy: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change 9.7; hard: pass 1 affordable on 11 turns over 8 games, played 1 time(s), mean evaluate change 28.5",
+        "core-048",
+        "at risk: hard: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 4.4",
     ),
     (
         "core-057",
         "at risk: hard: pass 1 affordable on 5 turns over 8 games, never played",
     ),
     (
+        "core-058",
+        "at risk: hard: pass 1 affordable on 8 turns over 8 games, played 1 time(s), mean evaluate change 1.5",
+    ),
+    (
+        "core-059",
+        "at risk: hard: pass 1 affordable on 16 turns over 8 games, played 1 time(s), mean evaluate change 1.4",
+    ),
+    (
         "core-065",
         "at risk: hard: pass 1 affordable on 45 turns over 8 games, played 1 time(s), mean evaluate change 1.0",
     ),
     (
+        "core-069",
+        "at risk: hard: pass 1 affordable on 7 turns over 8 games, never played",
+    ),
+    (
+        "core-072",
+        "at risk: hard: pass 1 affordable on 12 turns over 8 games, played 1 time(s), mean evaluate change -1.3",
+    ),
+    (
         "core-079",
+        "at risk: hard: pass 1 affordable on 8 turns over 8 games, never played",
+    ),
+    (
+        "core-083",
+        "at risk: hard: pass 1 affordable on 21 turns over 8 games, never played",
+    ),
+    (
+        "core-086",
         "at risk: hard: pass 1 affordable on 8 turns over 8 games, never played",
     ),
     (
@@ -261,8 +354,20 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
         "at risk: hard: pass 1 affordable on 16 turns over 8 games, never played",
     ),
     (
+        "core-090",
+        "at risk: hard: pass 1 affordable on 12 turns over 8 games, played 1 time(s), mean evaluate change -1.6",
+    ),
+    (
+        "core-092",
+        "at risk: hard: pass 1 affordable on 3 turns over 8 games, played 1 time(s), mean evaluate change 13.9",
+    ),
+    (
         "core-093",
         "at risk: hard: pass 1 affordable on 21 turns over 8 games, played 1 time(s), mean evaluate change 1.5",
+    ),
+    (
+        "core-094",
+        "at risk: easy: pass 1 affordable on 21 turns over 8 games, played 1 time(s), mean evaluate change 0.4; hard: pass 1 affordable on 10 turns over 8 games, never played",
     ),
     (
         "core-099",
