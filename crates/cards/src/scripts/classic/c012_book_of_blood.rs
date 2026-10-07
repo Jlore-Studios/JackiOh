@@ -18,7 +18,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-012";
 
-/// "a Unit": units only, either side.
+/// "a Unit": units only, either side. (TS `const targets: TargetDecl[]`.)
 fn targets() -> Vec<TargetDecl> {
     vec![json_as(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"] } }))]
 }
@@ -27,10 +27,15 @@ pub fn script() -> CardScripts {
     let base = Script {
         targets: targets(),
         cry: Some(hook(|ctx| {
-            vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": param(ctx, "damage"), "lifesteal": true })))]
+            vec![damage(json_as(json!({
+                "to": { "of": "chosen" },
+                "amount": param(&*ctx, "damage"),
+                "lifesteal": true,
+            })))]
         })),
         ..Script::default()
     };
+
     // The same script: the Radiant face's 10 is its declared `damage`, which `param` reads off the running face.
     let radiant = base.clone();
     CardScripts { base, radiant }
@@ -44,14 +49,15 @@ pub fn script() -> CardScripts {
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use serde_json::{json, Value};
-    use std::sync::Arc;
 
     /// Card tests run on the real catalog and scripts (TS: the vitest globalSetup's `registerAll`).
     fn scenario(setup: Value) -> Scenario {
         crate::register_all();
         jackioh_engine::testkit::scenario(setup)
     }
+
+    const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
 
     const BOOK: &str = "classic-012";
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt; Radiant 18/18.
@@ -60,49 +66,52 @@ mod tests {
     const ROCK: &str = "core-066"; // The Rock 10/10 Indestructible.
     const FILLER: &str = "core-005";
 
-    fn pid(p: PlayerId) -> &'static str {
-        match p {
-            PlayerId::P1 => "p1",
-            PlayerId::P2 => "p2",
-        }
-    }
-
-    fn at(s: &Scenario, player: PlayerId, lane: usize) -> Value {
+    fn at(s: &Scenario, player: PlayerId, lane: i32) -> Value {
         let Some(unit) = s.unit(player, lane) else {
-            panic!("no unit in {} lane {lane}", pid(player));
+            panic!("no unit in {player:?} lane {lane}");
         };
         json!([{ "pick": "instance", "instanceId": unit.id }])
     }
 
-    fn events_json(s: &Scenario) -> Vec<Value> {
-        s.events().iter().map(|event| serde_json::to_value(event).unwrap()).collect()
-    }
-
-    fn hits(s: &Scenario) -> Vec<i64> {
-        events_json(s)
+    fn hits(s: &Scenario) -> Vec<i32> {
+        s.events()
             .iter()
-            .filter(|event| event["type"] == "damage")
-            .map(|event| event["amount"].as_i64().unwrap())
+            .filter_map(|event| match event {
+                GameEvent::Damage { amount, .. } => Some(*amount),
+                _ => None,
+            })
             .collect()
     }
 
-    fn hero_heals(s: &Scenario, player: PlayerId) -> Vec<i64> {
-        let hero = format!("hero-{}", pid(player));
-        events_json(s)
+    fn hero_heals(s: &Scenario, player: PlayerId) -> Vec<i32> {
+        let hero = format!("hero-{}", player.as_str());
+        s.events()
             .iter()
-            .filter(|event| event["type"] == "healed" && event["targetId"] == hero.as_str())
-            .map(|event| event["amount"].as_i64().unwrap())
+            .filter_map(|event| match event {
+                GameEvent::Healed { target_id, amount } if *target_id == hero => Some(*amount),
+                _ => None,
+            })
             .collect()
+    }
+
+    /// TS `stepParam(s.card(ref), key, steps)` on the live card.
+    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
+        let id = s.card(card).id.clone();
+        match find_instance_mut(s.state_mut(), &id) {
+            Some(live) => step_param(live, key, steps),
+            None => panic!("no card {card} to tune"),
+        }
     }
 
     #[test]
     fn declares_one_unit_target_on_either_side_and_runs_one_script_on_both_faces() {
-        assert_eq!(ID, BOOK);
+        assert_eq!(crate::card_def(ID).id, BOOK);
         let CardScripts { base, radiant } = script();
         assert_eq!(
-            base.targets,
-            vec![json_as::<TargetDecl>(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"] } }))]
+            serde_json::to_value(&base.targets).unwrap(),
+            json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"] } }])
         );
+        // TS `expect(radiant).toBe(base)`: one script, so one hook.
         assert!(Arc::ptr_eq(base.cry.as_ref().unwrap(), radiant.cry.as_ref().unwrap()));
         assert_eq!(radiant.targets, base.targets);
     }
@@ -114,33 +123,31 @@ mod tests {
         fn deals_5_to_an_enemy_unit_in_one_hit_and_r85_its_lifesteal_heals_your_hero_5() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 20 }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
 
-            let targets = at(&s, PlayerId::P2, 1);
+            let targets = at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
             s.expect_stats(MENACE, json!({ "health": 4 }));
             assert_eq!(hits(&s), vec![5]);
-            s.expect_health(PlayerId::P1, 25);
-            assert_eq!(hero_heals(&s, PlayerId::P1), vec![5]);
+            s.expect_health(P1, 25);
+            assert_eq!(hero_heals(&s, P1), vec![5]);
         }
 
         #[test]
         fn targets_your_own_unit_too_and_still_heals_you() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "field": [MENACE], "health": 20 }, "p2": { "hand": [FILLER] } }));
 
-            let targets = at(&s, PlayerId::P1, 1);
+            let targets = at(&s, P1, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
             s.expect_stats(MENACE, json!({ "health": 4 }));
-            s.expect_health(PlayerId::P1, 25);
+            s.expect_health(P1, 25);
         }
 
         #[test]
         fn offers_no_hero_a_hero_pick_is_refused() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER] }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
 
-            s.expect_refused(|s| {
-                s.play(BOOK, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
-            });
+            s.expect_refused(|s| s.play(BOOK, json!({ "targets": [{ "pick": "hero", "player": "p2" }] })));
             s.expect_in_zone(BOOK, "hand");
         }
 
@@ -150,9 +157,8 @@ mod tests {
 
             s.play(BOOK, json!({}));
 
-            assert_eq!(hits(&s), Vec::<i64>::new());
-            s.expect_health(PlayerId::P1, 20);
-            s.expect_in_zone(BOOK, "graveyard");
+            assert!(hits(&s).is_empty());
+            s.expect_health(P1, 20).expect_in_zone(BOOK, "graveyard");
         }
 
         #[test]
@@ -162,68 +168,64 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "position": "DEF" }] },
             }));
 
-            let targets = at(&s, PlayerId::P2, 1);
+            let targets = at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
             s.expect_stats(MENACE, json!({ "health": 5 }));
-            s.expect_health(PlayerId::P1, 24);
+            s.expect_health(P1, 24);
         }
 
         #[test]
         fn r63_a_divine_shield_takes_the_hit_whole_and_the_heal_is_0() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 20 }, "p2": { "hand": [FILLER], "field": [SHIELDED] } }));
 
-            let targets = at(&s, PlayerId::P2, 1);
+            let targets = at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
-            s.expect_in_zone(SHIELDED, "field");
-            s.expect_events(json!(["divineShieldLost"]));
-            s.expect_health(PlayerId::P1, 20);
-            assert_eq!(hero_heals(&s, PlayerId::P1), Vec::<i64>::new());
+            s.expect_in_zone(SHIELDED, "field").expect_events(json!("divineShieldLost"));
+            s.expect_health(P1, 20);
+            assert!(hero_heals(&s, P1).is_empty());
         }
 
         #[test]
         fn sec4_4_step_5_r85_the_heal_is_the_amount_dealt_which_is_not_capped_at_the_unit_s_health_5_on_a_7_1_heals_5() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 20 }, "p2": { "hand": [FILLER], "field": [POINTMASTER] } }));
 
-            let targets = at(&s, PlayerId::P2, 1);
+            let targets = at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
             s.expect_in_zone(POINTMASTER, "graveyard");
             assert_eq!(hits(&s), vec![5]);
-            assert_eq!(hero_heals(&s, PlayerId::P1), vec![5]);
-            s.expect_health(PlayerId::P1, 25);
+            assert_eq!(hero_heals(&s, P1), vec![5]);
+            s.expect_health(P1, 25);
         }
 
         #[test]
         fn sec4_4_step_4_r85_an_indestructible_unit_takes_no_damage_so_the_heal_is_0() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 20 }, "p2": { "hand": [FILLER], "field": [ROCK] } }));
 
-            let targets = at(&s, PlayerId::P2, 1);
+            let targets = at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
-            s.expect_stats(ROCK, json!({ "health": 10 }));
-            s.expect_in_zone(ROCK, "field");
-            assert_eq!(hits(&s), Vec::<i64>::new());
-            assert_eq!(hero_heals(&s, PlayerId::P1), Vec::<i64>::new());
-            s.expect_health(PlayerId::P1, 20);
+            s.expect_stats(ROCK, json!({ "health": 10 })).expect_in_zone(ROCK, "field");
+            assert!(hits(&s).is_empty());
+            assert!(hero_heals(&s, P1).is_empty());
+            s.expect_health(P1, 20);
         }
 
         #[test]
         fn r386_an_upgrade_makes_it_deal_and_heal_6_a_degrade_4() {
             let mut up = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 20 }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
-            step_param(up.card_mut(BOOK), "damage", 1);
-            let targets = at(&up, PlayerId::P2, 1);
+            step(&mut up, BOOK, "damage", 1);
+            let targets = at(&up, P2, 1);
             up.play(BOOK, json!({ "targets": targets }));
-            up.expect_stats(MENACE, json!({ "health": 3 }));
-            up.expect_health(PlayerId::P1, 26);
+            up.expect_stats(MENACE, json!({ "health": 3 })).expect_health(P1, 26);
 
             let mut down = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 20 }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
-            step_param(down.card_mut(BOOK), "damage", -1);
-            let targets = at(&down, PlayerId::P2, 1);
+            step(&mut down, BOOK, "damage", -1);
+            let targets = at(&down, P2, 1);
             down.play(BOOK, json!({ "targets": targets }));
-            down.expect_stats(MENACE, json!({ "health": 5 }));
-            down.expect_health(PlayerId::P1, 24);
+            down.expect_stats(MENACE, json!({ "health": 5 })).expect_health(P1, 24);
         }
     }
 
@@ -237,22 +239,25 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "radiant": true }] },
             }));
 
-            let targets = at(&s, PlayerId::P2, 1);
+            let targets = at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
             s.expect_stats(MENACE, json!({ "health": 8, "maxHealth": 18 }));
             assert_eq!(hits(&s), vec![10]);
-            s.expect_health(PlayerId::P1, 30);
+            s.expect_health(P1, 30);
         }
 
         #[test]
         fn r63_a_divine_shield_still_leaves_the_radiant_heal_at_0() {
-            let mut s = scenario(json!({ "p1": { "hand": [{ "def": BOOK, "radiant": true }, FILLER], "health": 20 }, "p2": { "hand": [FILLER], "field": [SHIELDED] } }));
+            let mut s = scenario(json!({
+                "p1": { "hand": [{ "def": BOOK, "radiant": true }, FILLER], "health": 20 },
+                "p2": { "hand": [FILLER], "field": [SHIELDED] },
+            }));
 
-            let targets = at(&s, PlayerId::P2, 1);
+            let targets = at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
-            s.expect_health(PlayerId::P1, 20);
+            s.expect_health(P1, 20);
         }
 
         #[test]
@@ -261,13 +266,12 @@ mod tests {
                 "p1": { "hand": [{ "def": BOOK, "radiant": true }, FILLER], "health": 10 },
                 "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "radiant": true }] },
             }));
-            step_param(s.card_mut(BOOK), "damage", 1);
+            step(&mut s, BOOK, "damage", 1);
 
-            let targets = at(&s, PlayerId::P2, 1);
+            let targets = at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
-            s.expect_stats(MENACE, json!({ "health": 7 }));
-            s.expect_health(PlayerId::P1, 21);
+            s.expect_stats(MENACE, json!({ "health": 7 })).expect_health(P1, 21);
         }
     }
 }

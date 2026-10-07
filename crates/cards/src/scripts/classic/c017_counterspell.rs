@@ -20,7 +20,6 @@
 //! (R317), and in your hand the opponent's view names it no more (R97).
 
 use jackioh_engine::prelude::*;
-use std::sync::Arc;
 
 pub const ID: &str = "classic-017";
 
@@ -31,8 +30,8 @@ struct Announced {
 }
 
 /// "When your opponent plays a Spell": the announce of an opponent's Spell-type play or cast.
-fn opponents_spell(ctx: &EffectContext) -> Option<Announced> {
-    let Some(GameEvent::CardAnnounced { player, instance_id, def_id, card_type, .. }) = ctx.event.as_ref() else {
+fn opponents_spell(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<Announced> {
+    let GameEvent::CardAnnounced { player, instance_id, def_id, card_type, .. } = event else {
         return None;
     };
     if *player == ctx.controller {
@@ -45,8 +44,10 @@ fn opponents_spell(ctx: &EffectContext) -> Option<Announced> {
     }
 }
 
-fn counter_it(ctx: &EffectContext, announced: &Announced, copy: bool) -> Vec<Effect> {
-    let countered = counter_play(json_as(json!({ "target": { "of": "instance", "instanceId": announced.instance_id } })));
+fn counter_it(ctx: &EffectContext<'_>, announced: &Announced, copy: bool) -> Vec<Effect> {
+    let countered = counter_play(json_as(json!({
+        "target": { "of": "instance", "instanceId": announced.instance_id },
+    })));
     if !copy {
         return vec![countered];
     }
@@ -54,20 +55,22 @@ fn counter_it(ctx: &EffectContext, announced: &Announced, copy: bool) -> Vec<Eff
     let radiant = find_instance(&ctx.state, &announced.instance_id).is_some_and(|card| card.radiant);
     vec![
         countered,
-        add_to_hand(json_as(json!({ "defId": announced.def_id, "radiant": radiant, "costOverride": param(ctx, "setCost") }))),
+        add_to_hand(json_as(json!({
+            "defId": announced.def_id,
+            "radiant": radiant,
+            "costOverride": param(ctx, "setCost"),
+        }))),
     ]
 }
 
 fn counterspell(copy: bool) -> TriggerDef {
-    TriggerDef {
-        id: "counterspell".into(),
-        on: vec![GameEventType::CardAnnounced],
-        when: Some(Arc::new(|ctx: &EffectContext| opponents_spell(ctx).is_some())),
-        run: hook(move |ctx| match opponents_spell(ctx) {
+    TriggerDef::new("counterspell", &[GameEventType::CardAnnounced], move |ctx, event| {
+        match opponents_spell(ctx, event) {
             None => vec![],
             Some(announced) => counter_it(ctx, &announced, copy),
-        }),
-    }
+        }
+    })
+    .with_when(|ctx, event| opponents_spell(ctx, event).is_some())
 }
 
 pub fn script() -> CardScripts {
@@ -95,13 +98,15 @@ pub fn script() -> CardScripts {
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use serde_json::{json, Value};
 
     /// Card tests run on the real catalog and scripts (TS: the vitest globalSetup's `registerAll`).
     fn scenario(setup: Value) -> Scenario {
         crate::register_all();
         jackioh_engine::testkit::scenario(setup)
     }
+
+    const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
 
     const COUNTER: &str = "classic-017";
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
@@ -112,6 +117,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const MENACE: &str = "core-019";
 
+    /// TS `armed(radiantFace = false, lane = 2)`.
     fn armed(radiant_face: bool, lane: i32) -> Value {
         json!({ "def": COUNTER, "radiant": radiant_face, "faceUp": false, "lane": lane })
     }
@@ -119,14 +125,15 @@ mod tests {
     /// TS `{ ...base, ...extra }` on a setup object: `extra`'s keys replace `base`'s.
     fn merged(base: Value, extra: Value) -> Value {
         let mut out = base;
-        if let (Some(out), Value::Object(extra)) = (out.as_object_mut(), extra) {
+        if let (Some(map), Value::Object(extra)) = (out.as_object_mut(), extra) {
             for (key, value) in extra {
-                out.insert(key, value);
+                map.insert(key, value);
             }
         }
         out
     }
 
+    /// TS `setup(p1 = {}, p2 = {}, radiantFace = false)`.
     fn setup(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
         scenario(json!({
             "active": "p2",
@@ -135,8 +142,8 @@ mod tests {
         }))
     }
 
-    fn count(events: &[GameEvent], kind: &str) -> usize {
-        events.iter().filter(|event| serde_json::to_value(event).unwrap()["type"] == kind).count()
+    fn count(events: &[GameEvent], kind: GameEventType) -> usize {
+        events.iter().filter(|event| event.event_type() == kind).count()
     }
 
     /// TS `toMatchObject`: every key of `expected` is equal in `actual`, objects compared key by key.
@@ -144,7 +151,9 @@ mod tests {
         match (actual, expected) {
             (Value::Object(actual_map), Value::Object(expected_map)) => {
                 for (key, want) in expected_map {
-                    let got = actual_map.get(key).unwrap_or_else(|| panic!("{actual} has no key {key}"));
+                    let Some(got) = actual_map.get(key) else {
+                        panic!("{actual} has no key {key}");
+                    };
                     assert_subset(got, want);
                 }
             }
@@ -152,10 +161,22 @@ mod tests {
         }
     }
 
+    /// TS `stepParam(s.card(ref), key, steps)` on the live card.
+    fn step(s: &mut Scenario, card: &str, key: &str, steps: i32) {
+        let id = s.card(card).id.clone();
+        match find_instance_mut(s.state_mut(), &id) {
+            Some(live) => step_param(live, key, steps),
+            None => panic!("no card {card} to tune"),
+        }
+    }
+
+    fn copy_in_hand(s: &Scenario, player: PlayerId) -> Option<CardInstance> {
+        s.hand(player).into_iter().find(|card| card.def_id == STOCKPILE)
+    }
+
     #[test]
     fn is_a_trap_whose_condition_lives_in_when_r99() {
-        crate::register_all();
-        assert_eq!(registered_catalog()[ID].type_, CardType::Trap);
+        assert_eq!(crate::card_def(COUNTER).type_, CardType::Trap);
         let CardScripts { base, radiant } = script();
         assert!(base.triggers.first().is_some_and(|trigger| trigger.when.is_some()));
         assert!(radiant.triggers.first().is_some_and(|trigger| trigger.when.is_some()));
@@ -169,26 +190,26 @@ mod tests {
             let s = setup(json!({}), json!({}), false);
             let trap = s.card(COUNTER).clone();
             assert_eq!(trap.face_up, Some(false));
-            assert!(!serde_json::to_string(&s.view(PlayerId::P2)).unwrap().contains(COUNTER));
+            assert!(!serde_json::to_string(&s.view(P2)).unwrap().contains(COUNTER));
         }
 
         #[test]
         fn r448_counters_the_opponent_s_spell_before_it_moves_it_never_resolves_and_goes_to_its_owner_s_graveyard() {
             let mut s = setup(json!({}), json!({}), false);
             let spell = s.card(STOCKPILE).clone();
-            let hand_before = s.hand(PlayerId::P2).len();
+            let hand_before = s.hand(P2).len();
 
             s.play(&spell, json!({}));
 
             s.expect_in_zone(&spell, "graveyard");
-            assert!(s.pile(PlayerId::P2, "graveyard").iter().any(|card| card.id == spell.id));
+            assert!(s.pile(P2, "graveyard").iter().any(|card| card.id == spell.id));
             // Stockpile's script never ran: no draws, no heal.
-            assert_eq!(s.hand(PlayerId::P2).len(), hand_before - 1);
-            s.expect_health(PlayerId::P2, 20);
+            assert_eq!(s.hand(P2).len(), hand_before - 1);
+            s.expect_health(P2, 20);
             s.expect_events(json!(["cardAnnounced", "trapFired", "countered"]));
-            assert_eq!(count(s.last_events(), "cardPlayed"), 0);
-            assert_eq!(count(s.last_events(), "cardResolved"), 0);
-            assert_eq!(count(s.last_events(), "drawn"), 0);
+            assert_eq!(count(s.last_events(), GameEventType::CardPlayed), 0);
+            assert_eq!(count(s.last_events(), GameEventType::CardResolved), 0);
+            assert_eq!(count(s.last_events(), GameEventType::Drawn), 0);
         }
 
         #[test]
@@ -199,7 +220,7 @@ mod tests {
             s.play(STOCKPILE, json!({}));
 
             s.expect_in_zone(&trap, "graveyard");
-            assert!(s.backrow(PlayerId::P1, 2).is_none());
+            assert!(s.backrow(P1, 2).is_none());
         }
 
         #[test]
@@ -212,7 +233,7 @@ mod tests {
 
             assert_eq!(s.state().players.p2.turn_log.cards_played, played);
             assert_eq!(s.state().counters.played, game);
-            s.expect_mana(PlayerId::P2, 3);
+            s.expect_mana(P2, 3);
         }
 
         #[test]
@@ -225,7 +246,7 @@ mod tests {
 
             // Rapid Replenish's Combo 3 needs three earlier plays; the Vanilla alone was played.
             assert_eq!(s.state().players.p2.turn_log.cards_played, 2);
-            assert_eq!(count(s.last_events(), "drawn"), 0);
+            assert_eq!(count(s.last_events(), GameEventType::Drawn), 0);
         }
 
         #[test]
@@ -234,9 +255,9 @@ mod tests {
 
             s.play(STOCKPILE, json!({}));
 
-            assert_eq!(count(s.last_events(), "drawn"), 0);
-            assert_eq!(count(s.last_events(), "cardResolved"), 0);
-            s.expect_health(PlayerId::P2, 20);
+            assert_eq!(count(s.last_events(), GameEventType::Drawn), 0);
+            assert_eq!(count(s.last_events(), GameEventType::CardResolved), 0);
+            s.expect_health(P2, 20);
         }
 
         #[test]
@@ -251,10 +272,10 @@ mod tests {
 
             s.end_turn();
 
-            assert_eq!(s.state().active, PlayerId::P2);
+            assert_eq!(s.state().active, P2);
             s.expect_in_zone(&hinder, "graveyard");
-            assert_eq!(count(s.events(), "countered"), 1);
-            assert_eq!(count(s.events(), "cardResolved"), 0);
+            assert_eq!(count(s.events(), GameEventType::Countered), 1);
+            assert_eq!(count(s.events(), GameEventType::CardResolved), 0);
             // Hinder never resolved, so p1's next refresh is not lowered.
             assert_eq!(s.state().players.p1.mana.next_turn_mod, 0);
         }
@@ -266,8 +287,8 @@ mod tests {
             s.play(BEAR, json!({ "zone": 3 }));
             s.play(VANILLA, json!({ "zone": 1 }));
 
-            assert_eq!(count(s.events(), "countered"), 0);
-            assert_eq!(s.backrow(PlayerId::P1, 2).and_then(|card| card.face_up), Some(false));
+            assert_eq!(count(s.events(), GameEventType::Countered), 0);
+            assert_eq!(s.backrow(P1, 2).and_then(|card| card.face_up), Some(false));
             s.expect_in_zone(TWINSPELL, "field");
             s.expect_in_zone(VANILLA, "field");
         }
@@ -281,9 +302,9 @@ mod tests {
 
             s.play(STOCKPILE, json!({}));
 
-            assert_eq!(count(s.events(), "countered"), 0);
-            assert_eq!(s.backrow(PlayerId::P1, 2).and_then(|card| card.face_up), Some(false));
-            assert_eq!(count(s.events(), "drawn"), 2);
+            assert_eq!(count(s.events(), GameEventType::Countered), 0);
+            assert_eq!(s.backrow(P1, 2).and_then(|card| card.face_up), Some(false));
+            assert_eq!(count(s.events(), GameEventType::Drawn), 2);
         }
 
         #[test]
@@ -292,15 +313,11 @@ mod tests {
 
             s.play(STOCKPILE, json!({}));
 
-            assert_eq!(count(s.events(), "countered"), 1);
-            assert_eq!(count(s.events(), "trapFired"), 1);
-            let left: Vec<CardInstance> = [s.backrow(PlayerId::P1, 1), s.backrow(PlayerId::P1, 2)]
-                .into_iter()
-                .flatten()
-                .cloned()
-                .collect();
+            assert_eq!(count(s.events(), GameEventType::Countered), 1);
+            assert_eq!(count(s.events(), GameEventType::TrapFired), 1);
+            let left: Vec<CardInstance> = [s.backrow(P1, 1), s.backrow(P1, 2)].into_iter().flatten().collect();
             assert_eq!(left.len(), 1);
-            assert_eq!(left[0].face_up, Some(false));
+            assert_eq!(left.first().and_then(|card| card.face_up), Some(false));
         }
 
         #[test]
@@ -310,10 +327,14 @@ mod tests {
 
             s.play(&spell, json!({}));
 
-            let view = serde_json::to_value(s.view(PlayerId::P1)).unwrap();
+            let view = serde_json::to_value(s.view(P1)).unwrap();
             let seen = view["events"].as_array().cloned().unwrap_or_default();
-            let announced = seen.iter().find(|event| event["type"] == "cardAnnounced").expect("no cardAnnounced");
-            let countered = seen.iter().find(|event| event["type"] == "countered").expect("no countered");
+            let Some(announced) = seen.iter().find(|event| event["type"] == "cardAnnounced") else {
+                panic!("no cardAnnounced");
+            };
+            let Some(countered) = seen.iter().find(|event| event["type"] == "countered") else {
+                panic!("no countered");
+            };
             assert_subset(announced, &json!({ "instanceId": spell.id, "defId": STOCKPILE, "cardType": "Spell" }));
             assert_subset(countered, &json!({ "instanceId": spell.id, "defId": STOCKPILE, "to": "graveyard" }));
         }
@@ -321,11 +342,11 @@ mod tests {
         #[test]
         fn the_base_face_adds_no_copy_to_your_hand() {
             let mut s = setup(json!({}), json!({}), false);
-            let before = s.hand(PlayerId::P1).len();
+            let before = s.hand(P1).len();
 
             s.play(STOCKPILE, json!({}));
 
-            assert_eq!(s.hand(PlayerId::P1).len(), before);
+            assert_eq!(s.hand(P1).len(), before);
         }
     }
 
@@ -340,13 +361,15 @@ mod tests {
             s.play(&spell, json!({}));
 
             s.expect_in_zone(&spell, "graveyard");
-            let copy = s.hand(PlayerId::P1).iter().find(|card| card.def_id == STOCKPILE).cloned();
+            let copy = copy_in_hand(&s, P1);
             assert!(copy.is_some());
-            let copy = copy.unwrap();
+            let Some(copy) = copy else {
+                panic!("no copy");
+            };
             assert_ne!(copy.id, spell.id);
-            assert_eq!(copy.owner, PlayerId::P1);
+            assert_eq!(copy.owner, P1);
             assert_eq!(copy.cost_override, Some(0));
-            s.expect_health(PlayerId::P2, 20);
+            s.expect_health(P2, 20);
         }
 
         #[test]
@@ -355,20 +378,19 @@ mod tests {
 
             s.play(STOCKPILE, json!({}));
 
-            let copy = s.hand(PlayerId::P1).iter().find(|card| card.def_id == STOCKPILE).cloned();
-            assert_eq!(copy.map(|card| card.radiant), Some(true));
+            assert_eq!(copy_in_hand(&s, P1).map(|card| card.radiant), Some(true));
         }
 
         #[test]
         fn r317_a_full_hand_burns_the_copy_into_your_graveyard() {
-            let ten: Vec<&str> = (0..10).map(|_| VANILLA).collect();
+            let ten = vec![VANILLA; 10];
             let mut s = setup(json!({ "hand": ten }), json!({}), true);
 
             s.play(STOCKPILE, json!({}));
 
-            assert_eq!(s.hand(PlayerId::P1).len(), 10);
-            assert!(s.pile(PlayerId::P1, "graveyard").iter().any(|card| card.def_id == STOCKPILE));
-            assert_eq!(count(s.events(), "burned"), 1);
+            assert_eq!(s.hand(P1).len(), 10);
+            assert!(s.pile(P1, "graveyard").iter().any(|card| card.def_id == STOCKPILE));
+            assert_eq!(count(s.events(), GameEventType::Burned), 1);
         }
 
         #[test]
@@ -377,25 +399,24 @@ mod tests {
 
             s.play(STOCKPILE, json!({}));
 
-            let Some(copy) = s.hand(PlayerId::P1).iter().find(|card| card.def_id == STOCKPILE).cloned() else {
+            let Some(copy) = copy_in_hand(&s, P1) else {
                 panic!("no copy");
             };
             let quoted = format!("\"{}\"", copy.id);
             // The event that put it in p1's hand named it; p2's whole view (its events included) does not.
             assert!(s.events().iter().any(|event| serde_json::to_string(event).unwrap().contains(&quoted)));
-            assert!(!serde_json::to_string(&s.view(PlayerId::P2)).unwrap().contains(&quoted));
-            assert!(serde_json::to_string(&s.view(PlayerId::P1).you.hand).unwrap().contains(&quoted));
+            assert!(!serde_json::to_string(&s.view(P2)).unwrap().contains(&quoted));
+            assert!(serde_json::to_string(&s.view(P1).you.hand).unwrap().contains(&quoted));
         }
 
         #[test]
         fn r386_a_degrade_of_its_set_cost_makes_the_copy_cost_1() {
             let mut s = setup(json!({}), json!({}), true);
-            step_param(s.card_mut(COUNTER), "setCost", 1);
+            step(&mut s, COUNTER, "setCost", 1);
 
             s.play(STOCKPILE, json!({}));
 
-            let copy = s.hand(PlayerId::P1).iter().find(|card| card.def_id == STOCKPILE).cloned();
-            assert_eq!(copy.and_then(|card| card.cost_override), Some(1));
+            assert_eq!(copy_in_hand(&s, P1).and_then(|card| card.cost_override), Some(1));
         }
 
         #[test]
@@ -404,8 +425,8 @@ mod tests {
 
             s.play(VANILLA, json!({ "zone": 1 }));
 
-            assert_eq!(count(s.events(), "countered"), 0);
-            assert_eq!(s.backrow(PlayerId::P1, 2).and_then(|card| card.face_up), Some(false));
+            assert_eq!(count(s.events(), GameEventType::Countered), 0);
+            assert_eq!(s.backrow(P1, 2).and_then(|card| card.face_up), Some(false));
         }
     }
 }
