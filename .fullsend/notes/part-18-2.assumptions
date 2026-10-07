@@ -1,0 +1,19 @@
+id.instance: String (TS "c<n>") (not used in this chunk)
+num.game: i32
+num.cursor: u32 (not used in this chunk)
+map.ordered: IndexMap
+bag.data: IndexMap<String, serde_json::Value>
+error.style: Result<_, ApiError> in handlers (TS's code, message and details); Result<_, StoreError> in open_season_in_tx, the ranked plan and the purge; ApiError::internal for a TS throw
+null.optional: Option + skip_serializing_if
+null.nullable: Option, serialised null
+case.json: camelCase via serde rename_all
+case.rust: snake_case
+state.mut: &mut GameState writes, &GameState reads, &mut EngineSink for TS sink mutators (not used in this chunk)
+rng.source: Rng::new(&state.seed, state.rng_cursor) and write the cursor back (not used in this chunk)
+hook.style: Arc<dyn Fn + Send + Sync> via hook(); no fn pointers, no Box (not used in this chunk; handlers are app.rs's fn-pointer table)
+registry.style: OnceLock set once by register_all; fused scripts built on lookup from state (not used in this chunk)
+async.style: tokio in crates/server only; none in pure crates
+log.style: tracing JSON to stdout, server only (event = TS name, data = TS's object)
+clock.style: app::now_ms (re-exported as api::http::now_ms), tokio sleeps
+store.ints: i64 into every Tx method (caps, positions, epoch ms), i32 for ladder quantities
+router.style: TS's matcher over app::ROUTES tuples; 404 for a wrong method
