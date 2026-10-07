@@ -73,7 +73,7 @@ fn ids_of<C: std::borrow::Borrow<CardInstance>>(cards: &[C]) -> Vec<String> {
     cards.iter().map(|card| card.borrow().id.clone()).collect()
 }
 
-fn instance_ids(events: &[&GameEvent]) -> Vec<Value> {
+fn instance_ids<E: serde::Serialize>(events: &[E]) -> Vec<Value> {
     events.iter().map(|event| json_of(event)["instanceId"].clone()).collect()
 }
 
