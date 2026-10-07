@@ -514,6 +514,40 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
             && !hidden.contains(&card.id)
         {
             referenced.insert(card.def_id.clone());
+            // R399, R546: a copier the seat can see has its copy's text, fixed on it once it is played.
+            if let Some(copy) = subsystems::copied_text_of(&next, card) {
+                referenced.insert(copy.def_id);
+            }
+        }
+    }
+    // R451, R185: the play records are public history, and the engine reads a definition by the id
+    // they keep: a copier's text is the last Spell's (R399), wherever the card that was played went
+    // since, and T-AI-5 adds a copy of a player's last face-up card. A fused card that went back into a
+    // hidden library or hand is still named by them, so its definition stays.
+    if let Some(last) = &next.last_spell {
+        referenced.insert(last.def_id.clone());
+    }
+    for player in PLAYER_IDS {
+        if let Some(record) = next.players[player]
+            .game_log
+            .as_ref()
+            .and_then(|log| log.last_face_up_play.as_ref())
+        {
+            referenced.insert(record.def_id.clone());
+        }
+    }
+    // A kept continuation runs by the definition it names (`Resume.defId`), which outlives its card: a
+    // fused unit token's Death, its card gone (R11). One of a hidden card's own is not the seat's to read.
+    let resumes = next
+        .trigger_queue
+        .iter()
+        .map(|entry| &entry.resume)
+        .chain(next.work.iter().map(|item| &item.resume))
+        .chain(next.delayed.iter().map(|entry| &entry.resume))
+        .chain(next.pending.iter().map(|pending| &pending.resume));
+    for resume in resumes {
+        if !belongs_to_hidden(None, Some(resume), &hidden) {
+            referenced.insert(resume.def_id.clone());
         }
     }
     // A kept fusion of a fusion names its older ingredient in its id (R179), so that ingredient's

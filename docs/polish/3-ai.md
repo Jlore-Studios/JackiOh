@@ -401,7 +401,12 @@ export function aiToAct(state: GameState, seat: PlayerId): boolean;
    `instanceId` in H becomes `HIDDEN_DEF_ID`.
 6. Each `transientDefs` entry that no instance outside H references is dropped, except an entry a
    kept entry's id names as an ingredient (a fusion of a fusion, R179), which the engine needs to
-   rebuild the kept card's scripts.
+   rebuild the kept card's scripts, and an entry the kept state names by id: a public play record
+   (R451: `lastSpell` and each player's `gameLog.lastFaceUpPlay`), the copy fixed on a copier outside
+   H (R546), and the `resume.defId` of a kept continuation whose instance is not in H. The engine
+   reads those definitions by id (a copier's text, R399; T-AI-5's copy; a continuation's script), and
+   a fused card that went back into a hidden library, or a fused token that ceased to exist, is
+   still named by them.
 7. If `pending` belongs to `opp`, its `options := []`.
 
 Everything else is kept on purpose, because it is public history the seat watched happen: board
