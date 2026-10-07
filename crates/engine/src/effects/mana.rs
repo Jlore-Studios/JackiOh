@@ -11,14 +11,6 @@ use crate::mana::{NEXT_REFRESH_MODIFIER_ID, mana_event, refresh_some_mana};
 use crate::script::{Effect, EffectContext};
 use crate::wire::{GameEvent, PlayerId};
 
-/// `playerOf(ctx, spec ?? "self")`: an absent spec is the running card's controller.
-fn player_or_self(ctx: &EffectContext<'_>, spec: Option<PlayerSpec>) -> PlayerId {
-    match spec {
-        Some(spec) => player_of(ctx, spec),
-        None => ctx.controller,
-    }
-}
-
 /// `gainMana`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -31,7 +23,7 @@ pub struct GainManaArgs {
 /// Temporary mana, which may take current above max (§2.3).
 pub fn gain_mana(args: GainManaArgs) -> Effect {
     Effect::new("gainMana", move |ctx| {
-        let player = player_or_self(ctx, args.player);
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let side = &mut ctx.sink.state.players[player];
         crate::mana::gain_mana(side, args.amount);
         let event = mana_event(player, side);
@@ -52,7 +44,7 @@ pub struct RefreshManaArgs {
 /// mana"). A refresh that gives nothing — current already at or above max — announces nothing.
 pub fn refresh_mana(args: RefreshManaArgs) -> Effect {
     Effect::new("refreshMana", move |ctx| {
-        let player = player_or_self(ctx, args.player);
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let side = &mut ctx.sink.state.players[player];
         let before = side.mana.current;
         refresh_some_mana(side, args.amount);
@@ -81,7 +73,7 @@ pub struct NextTurnManaArgs {
 /// with X of 1 or less) changes nothing, and announces nothing.
 pub fn next_turn_mana(args: NextTurnManaArgs) -> Effect {
     Effect::new("nextTurnMana", move |ctx| {
-        let player = player_or_self(ctx, args.player);
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let side = &mut ctx.sink.state.players[player];
         let before = side.mana.next_turn_mod;
         side.mana.next_turn_mod += args.amount;

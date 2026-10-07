@@ -325,17 +325,6 @@ fn standing_of(
     None
 }
 
-/// R265: this seat's own mulligan prompt while it is open and the seat has not answered it
-/// (`setup.mulliganPromptFor`; a private copy, fullsend builder rule 5).
-fn mulligan_prompt_for(state: &GameState, player: PlayerId) -> Option<&PendingChoice> {
-    let seat = &state.mulligan.as_ref()?[player];
-    if seat.keep.is_some() {
-        None
-    } else {
-        Some(&seat.prompt)
-    }
-}
-
 /// The hidden set, worked out from the state's zones on their own terms and never from `view_for`'s
 /// rules (the oracle must not be the fix restated): the other seat's hand while the game is live
 /// (R434), both libraries (§9.1), the other seat's face-down traps (dormant ones under a backrow top
@@ -414,7 +403,7 @@ fn hidden_from(state: &GameState, viewer: PlayerId) -> HiddenSet {
     let mut offered_bare: IndexSet<String> = IndexSet::new();
     let prompt: Option<&PendingChoice> = match &state.pending {
         Some(pending) if pending.player_id == viewer => Some(pending),
-        _ => mulligan_prompt_for(state, viewer),
+        _ => crate::setup::mulligan_prompt_for(state, viewer),
     };
     for option in prompt.map(|prompt| prompt.options.as_slice()).unwrap_or(&[]) {
         match &option.selection {

@@ -31,11 +31,6 @@ use crate::wire::{
     Zone,
 };
 
-/// The cards a zone read hands back, as owned copies.
-fn owned<R: Borrow<CardInstance>>(cards: impl IntoIterator<Item = R>) -> Vec<CardInstance> {
-    cards.into_iter().map(|card| card.borrow().clone()).collect()
-}
-
 /// R673: count one play of `card` if it is a "… in the System" card (a fused one counts once).
 pub fn count_system_play(state: &mut GameState, card: &CardInstance) {
     if !crate::catalog::self_def_ids(Some(state), &card.def_id)
@@ -95,7 +90,7 @@ fn place_glitch_boards(state: &mut GameState) {
     for player in PLAYER_IDS {
         for row in [Row::Units, Row::Backrow] {
             for slot in crate::zones::slots_of(player, row) {
-                for card in owned(crate::zones::zone_contents(state, &slot)) {
+                for card in crate::zones::zone_contents(state, &slot) {
                     crate::zones::cease_to_exist(state, &card);
                 }
                 crate::zones::unlock_zone(state, &slot);

@@ -15,27 +15,6 @@ use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, new_instance};
 use crate::wire::{Enchantment, PlayerId, Zone};
 
-/// `playerOf(ctx, spec ?? "self")`: an absent spec is the running card's controller.
-fn player_or_self(ctx: &EffectContext<'_>, spec: Option<PlayerSpec>) -> PlayerId {
-    match spec {
-        Some(spec) => player_of(ctx, spec),
-        None => ctx.controller,
-    }
-}
-
-/// A private copy of `enchantments::add_enchantment`: put an enchantment on a card unless it already
-/// carries one equal to it in every field (B5 E39; TS compared their JSON, SURFACE §4.4.3).
-fn add_enchantment(instance: &mut CardInstance, enchantment: &Enchantment) -> bool {
-    let held = instance.enchantments.clone().unwrap_or_default();
-    if held.iter().any(|entry| entry == enchantment) {
-        return false;
-    }
-    let mut next = held;
-    next.push(enchantment.clone());
-    instance.enchantments = Some(next);
-    true
-}
-
 /// `shuffleRandomFromCatalog`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -58,7 +37,7 @@ pub fn shuffle_random_from_catalog(args: ShuffleRandomFromCatalogArgs) -> Effect
             .map(|me| me.def_id.clone())
             .or_else(|| ctx.def_id.clone());
         let pool = query(&excluding_def_id(Some(&*ctx.state), &args.query, own.as_deref()));
-        let player = player_or_self(ctx, args.player);
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let mut at = 0;
         while at < args.count && !pool.is_empty() {
             // R673: a card generated into a deck may be Glitch (`catalog::GlitchOdds` is the state).
@@ -70,7 +49,7 @@ pub fn shuffle_random_from_catalog(args: ShuffleRandomFromCatalogArgs) -> Effect
                 card.radiant = true;
             }
             for enchantment in args.enchantments.iter().flatten() {
-                add_enchantment(&mut card, enchantment);
+                crate::enchantments::add_enchantment(&mut card, enchantment);
             }
             shuffle_into_library(ctx, &mut card, false, None);
             at += 1;

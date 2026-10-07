@@ -20,19 +20,6 @@ use crate::state::{CardInstance, find_instance, find_instance_mut};
 use crate::wire::{CardType, GameEvent, Keyword, OneOrMany, PlayerId, Row, Zone, ZoneName};
 use crate::zones::{card_at, slots_of};
 
-/// An owned copy of a lookup's answer, whether the lookup lent the card or handed over a copy.
-fn owned<C: Borrow<CardInstance>>(card: C) -> CardInstance {
-    card.borrow().clone()
-}
-
-/// `playerOf(ctx, spec ?? "self")`: an absent spec is the running card's controller.
-fn player_or_self(ctx: &EffectContext<'_>, spec: Option<PlayerSpec>) -> PlayerId {
-    match spec {
-        Some(spec) => player_of(ctx, spec),
-        None => ctx.controller,
-    }
-}
-
 /// Which card becomes Radiant: the pick the play or a prompt carried (#26 Glowy Jelly Bean's hand
 /// pick, R81), `{ of: "self" }` for Radiant Saintess including itself (R22), or an instance id a
 /// script captured earlier. All plain data, so a card file stays pure (CLAUDE.md rule 5).
@@ -57,11 +44,11 @@ pub enum RadiantZone {
 fn instance_of(ctx: &EffectContext<'_>, args: &RadiantTarget) -> Option<CardInstance> {
     // R174: a card named by id is aimed at the stay it had when the run began (`instance_on_its_stay`).
     if let Some(instance_id) = &args.instance_id {
-        return instance_on_its_stay(ctx, instance_id).map(owned);
+        return instance_on_its_stay(ctx, instance_id);
     }
     let spec = args.target.clone().unwrap_or(TargetSpec::Chosen { index: None });
     match resolve_target(ctx, &spec) {
-        Some(DamageTarget::Unit { instance }) => Some(owned(instance)),
+        Some(DamageTarget::Unit { instance }) => Some(instance),
         _ => None,
     }
 }
@@ -138,7 +125,7 @@ fn field_cards_of(ctx: &EffectContext<'_>, player: PlayerId) -> Vec<CardInstance
     for row in [Row::Units, Row::Backrow] {
         for slot in slots_of(player, row) {
             if let Some(card) = card_at(ctx.state, &slot) {
-                out.push(owned(card));
+                out.push(card.clone());
             }
         }
     }
@@ -199,7 +186,7 @@ pub struct SetRadiantRandomArgs {
 /// when none are left (R60) — split by who may read each card when the zones mix them (R242).
 pub fn set_radiant_random(args: SetRadiantRandomArgs) -> Effect {
     Effect::new("setRadiantRandom", move |ctx| {
-        let player = player_or_self(ctx, args.player);
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let zones: Vec<RadiantZone> = args.zones.as_slice().to_vec();
         let count = args.count.unwrap_or(1).max(0) as usize;
         // The zones' cards in their own order, read before anything changes, split by who reads them.
@@ -355,7 +342,7 @@ pub struct RadiantChanceArgs {
 /// check after the whole list, never between two of its effects.
 pub fn radiant_chance(args: RadiantChanceArgs) -> Effect {
     Effect::new("radiantChance", move |ctx| {
-        let player = player_or_self(ctx, args.player);
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let zones: Vec<RadiantZone> = args.zone.as_slice().to_vec();
         let lucky = args.lucky.unwrap_or(0).max(0);
         let chance = args.chance;

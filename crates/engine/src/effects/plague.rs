@@ -47,11 +47,6 @@ use crate::wire::{PlayerId, PromptKind, Selection, ZoneName};
 use crate::work::{begin_work_cascade, drain_work};
 use crate::zones::is_buried;
 
-/// An owned copy of a lookup's answer, whether the lookup lent the card or handed over a copy.
-fn owned<C: Borrow<CardInstance>>(card: C) -> CardInstance {
-    card.borrow().clone()
-}
-
 /// `{ of: "self" }`, built from its JSON so this file names no variant of `TargetSpec`'s own.
 fn self_spec() -> TargetSpec {
     json_as(json!({ "of": "self" }))
@@ -80,7 +75,7 @@ pub struct PlacePlagueArgs {
 pub fn place_plague(args: PlacePlagueArgs) -> Effect {
     Effect::new("placePlague", move |ctx| {
         let spec = args.target.clone().unwrap_or_else(self_spec);
-        let card = instance_of(ctx, &spec).map(owned);
+        let card = instance_of(ctx, &spec);
         if !on_field(ctx.state, card.as_ref()) {
             return;
         }
@@ -103,7 +98,7 @@ pub struct PlacePlagueEachArgs {
 /// face-down cards, as every backrow card is in a scope's backrow row.
 pub fn place_plague_each(args: PlacePlagueEachArgs) -> Effect {
     Effect::new("placePlagueEach", move |ctx| {
-        let cards: Vec<CardInstance> = cards_in_scope(ctx, &args.scope).into_iter().map(owned).collect();
+        let cards: Vec<CardInstance> = cards_in_scope(ctx, &args.scope).into_iter().collect();
         for card in &cards {
             place_plague_on(ctx, card, args.amount);
         }
@@ -130,7 +125,7 @@ pub fn place_plague_random(args: PlacePlagueRandomArgs) -> Effect {
             Some(scope) => scope.clone(),
             None => json_as(json!({ "side": "any", "rows": ["units"] })),
         };
-        let pool: Vec<CardInstance> = cards_in_scope(ctx, &scope).into_iter().map(owned).collect();
+        let pool: Vec<CardInstance> = cards_in_scope(ctx, &scope).into_iter().collect();
         let count = args.count;
         if pool.is_empty() || count <= 0 {
             return;
@@ -166,7 +161,7 @@ pub struct ConsumePlagueArgs {
 pub fn consume_plague(args: ConsumePlagueArgs) -> Effect {
     Effect::new("consumePlague", move |ctx| {
         let spec = args.target.clone().unwrap_or_else(self_spec);
-        let Some(card) = instance_of(ctx, &spec).map(owned) else {
+        let Some(card) = instance_of(ctx, &spec) else {
             return;
         };
         remove_plague(ctx, &card, args.amount.unwrap_or(1));
@@ -211,7 +206,7 @@ fn label_of(state: &GameState, card: &CardInstance) -> String {
 /// order, the placer's side first), or return false when there is none — the placements fizzle
 /// then, and draw nothing (R129).
 fn ask_placement(sink: &mut EngineSink<'_>, player: PlayerId, resume: Resume) -> bool {
-    let cards: Vec<CardInstance> = permanents_on_field(sink.state, player).into_iter().map(owned).collect();
+    let cards: Vec<CardInstance> = permanents_on_field(sink.state, player).into_iter().cloned().collect();
     if cards.is_empty() {
         return false;
     }
@@ -227,7 +222,7 @@ fn ask_placement(sink: &mut EngineSink<'_>, player: PlayerId, resume: Resume) ->
     if let Some(mode) = mode
         && mode.random
     {
-        let now: Vec<CardInstance> = permanents_on_field(sink.state, player).into_iter().map(owned).collect();
+        let now: Vec<CardInstance> = permanents_on_field(sink.state, player).into_iter().cloned().collect();
         let pool: Vec<CardInstance> = if mode.target_enemies {
             prefer_enemies(
                 sink.state,

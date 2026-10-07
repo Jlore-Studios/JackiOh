@@ -38,19 +38,6 @@ use crate::zones::{
     is_unit_token, lands_face_down, place_on_field, remove_from_any_zone, row_size,
 };
 
-/// An owned copy of a lookup's answer, whether the lookup lent the card or handed over a copy.
-fn owned<C: Borrow<CardInstance>>(card: C) -> CardInstance {
-    card.borrow().clone()
-}
-
-/// `playerOf(ctx, spec ?? "self")`: an absent spec is the running card's controller.
-fn player_or_self(ctx: &EffectContext<'_>, spec: Option<PlayerSpec>) -> PlayerId {
-    match spec {
-        Some(spec) => player_of(ctx, spec),
-        None => ctx.controller,
-    }
-}
-
 /// TS `{ defId, radiant }`, the partial instance `faces.cardTypeOf` reads a definition's running face
 /// from before any card exists: a scratch instance numbered from a counter of its own, so the
 /// state's ids are untouched, with no zone on the field.
@@ -330,14 +317,14 @@ fn roll_random_keywords(ctx: &mut EffectContext<'_>, card: &CardInstance, count:
 /// has none; a named lane fails the same way when it is occupied or Locked (R47).
 pub fn summon(args: SummonArgs) -> Effect {
     Effect::new("summon", move |ctx| {
-        let player = player_or_self(ctx, args.player);
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let at = args.placement();
 
         if let Some(spec) = &args.instance {
             let Some(DamageTarget::Unit { instance }) = resolve_target(ctx, spec) else {
                 return;
             };
-            let instance = owned(instance);
+            
             if let Some(moved) = summon_existing(ctx, &instance, player, &at) {
                 roll_random_keywords(ctx, &moved, args.random_keywords);
             }
@@ -384,21 +371,6 @@ impl SummonCopyArgs {
     }
 }
 
-/// R443: what a copy carries — every enchantment of the cards it is made from, once each, in their
-/// order; `None` when none carries any, so the card stores nothing. A private copy of
-/// `enchantments::united_enchantments` (TS compared their JSON, SURFACE §4.4.3).
-fn united_enchantments(instances: &[&CardInstance]) -> Option<Vec<Enchantment>> {
-    let mut out: Vec<Enchantment> = Vec::new();
-    for instance in instances {
-        for entry in instance.enchantments.iter().flatten() {
-            if !out.iter().any(|held| held == entry) {
-                out.push(entry.clone());
-            }
-        }
-    }
-    if out.is_empty() { None } else { Some(out) }
-}
-
 /// §10.7's `cloneInstance(inst)` and R57: the copy keeps the radiant flag, the buffs, the granted
 /// keywords, the Vanilla state and `statsOverride`, and resets damage, exertion, counters and
 /// `summonedTurn` — the last of which `summon_onto` sets to the current turn, so the copy is
@@ -443,7 +415,7 @@ pub fn clone_of(
     if let Some(tuning) = source.tuning.clone() {
         copy.tuning = Some(tuning);
     }
-    if let Some(enchantments) = united_enchantments(&[source]) {
+    if let Some(enchantments) = crate::enchantments::united_enchantments([source]) {
         copy.enchantments = Some(enchantments);
     }
     copy
@@ -458,13 +430,13 @@ pub fn summon_copy(args: SummonCopyArgs) -> Effect {
         // R57 copies "a unit on the field" (#12 itself, #61's chosen Human). One that has left it —
         // sacrificed by a fused card's other half (#22) earlier in the same list — is gone for this
         // effect (R174), and a copy is never made of a card in a graveyard.
-        let Some(source) = instance_of(ctx, &args.of).map(owned) else {
+        let Some(source) = instance_of(ctx, &args.of) else {
             return;
         };
         if source.zone.z() != ZoneName::Field {
             return;
         }
-        let player = player_or_self(ctx, args.player);
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let Some(row) = row_of(card_type_of(ctx.state, &source)) else {
             return;
         };
@@ -534,7 +506,7 @@ pub fn summon_random(args: SummonRandomArgs) -> Effect {
             .or_else(|| ctx.def_id.clone());
         let asked: CatalogQueryArgs = args.query.clone().unwrap_or_default();
         let pool = query(&excluding_def_id(Some(&*ctx.state), &asked, own.as_deref()));
-        let player = player_or_self(ctx, args.player);
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let at = args.placement();
         let rows: IndexSet<Row> = pool.iter().filter_map(|def| row_of(def.type_)).collect();
         if !rows.iter().any(|row| zone_for(ctx, player, *row, &at).is_some()) {
@@ -724,7 +696,7 @@ pub struct RecruitArgs {
 /// are the only valid targets (R690).
 pub fn recruit(args: RecruitArgs) -> Effect {
     Effect::new("recruit", move |ctx| {
-        let player = player_or_self(ctx, args.player);
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let whose = match args.whose {
             None => player,
             Some(spec) => player_of(ctx, spec),
@@ -773,7 +745,7 @@ pub struct RecruitAllArgs {
 /// rest, which resumes over the same cards in the same order (R113).
 pub fn recruit_all(args: RecruitAllArgs) -> Effect {
     lazy_part("recruitAll", move |ctx, memo| {
-        let player = player_or_self(ctx, args.player);
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let whose = match args.whose {
             None => player,
             Some(spec) => player_of(ctx, spec),
@@ -832,7 +804,7 @@ pub struct FillBoardArgs {
 /// left to right.
 pub fn fill_board(args: FillBoardArgs) -> Effect {
     Effect::new("fillBoard", move |ctx| {
-        let player = player_or_self(ctx, args.player);
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let probe = face_probe(&args.def_id, player, args.radiant == Some(true));
         if row_of(card_type_of(ctx.state, &probe)) != Some(Row::Units) {
             return;

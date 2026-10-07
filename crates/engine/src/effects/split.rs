@@ -15,11 +15,6 @@ use crate::script::Effect;
 use crate::state::{CardInstance, GameState};
 use crate::wire::opponent_of;
 
-/// An owned copy of a lookup's answer, whether the lookup lent the card or handed over a copy.
-fn owned<C: Borrow<CardInstance>>(card: C) -> CardInstance {
-    card.borrow().clone()
-}
-
 /// "Still standing": above 0 health and not marked destroyed, so the check will not collect it (§4.5).
 fn standing(state: &GameState, unit: &CardInstance) -> bool {
     unit_view(state, unit).health > 0 && unit.marked_destroyed != Some(true)
@@ -62,7 +57,7 @@ pub fn damage_split(args: DamageSplitArgs) -> Effect {
             if ctx.state.result.is_some() {
                 return;
             }
-            let units: Vec<CardInstance> = cards_in_scope(ctx, &scope).into_iter().map(owned).collect();
+            let units: Vec<CardInstance> = cards_in_scope(ctx, &scope).into_iter().collect();
             let mut pool: Vec<DamageTarget> = Vec::new();
             for instance in units {
                 if standing(ctx.state, &instance) {

@@ -22,14 +22,6 @@ use crate::state::CardInstance;
 use crate::wire::{GameEvent, PlayerId};
 use crate::zones::{MoveResult, OffFieldZone, move_to_zone};
 
-/// `playerOf(ctx, spec ?? "self")`: an absent spec is the running card's controller.
-fn player_or_self(ctx: &EffectContext<'_>, spec: Option<PlayerSpec>) -> PlayerId {
-    match spec {
-        Some(spec) => player_of(ctx, spec),
-        None => ctx.controller,
-    }
-}
-
 /// One card to the exile pile, exactly as `move_.rs`'s `exile` does it: the game exile counter counts
 /// only the cards that actually get there, a unit-token library card ceases to exist instead and is
 /// not counted (R11 — §3.2 names Infinite Reserves and the Unstable Clone Machine / Recycling
@@ -73,7 +65,7 @@ pub struct ExileRandomFromLibraryArgs {
 /// An empty library fizzles and the card still resolves (§6.3). No draw happens, so no fatigue.
 pub fn exile_random_from_library(args: ExileRandomFromLibraryArgs) -> Effect {
     Effect::new("exileRandomFromLibrary", move |ctx| {
-        let player = player_or_self(ctx, args.player);
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let count = args.count.unwrap_or(1).max(0);
         if count == 0 || ctx.state.players[player].library.is_empty() {
             return;
@@ -108,7 +100,7 @@ pub struct ExileBottomOfLibraryArgs {
 /// the bottom twice takes the bottom two cards bottom-upward and stops early on an empty library.
 pub fn exile_bottom_of_library(args: ExileBottomOfLibraryArgs) -> Effect {
     Effect::new("exileBottomOfLibrary", move |ctx| {
-        let player = player_or_self(ctx, args.player);
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let count = args.count.unwrap_or(1).max(0);
 
         for _ in 0..count {

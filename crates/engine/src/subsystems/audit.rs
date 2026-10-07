@@ -31,11 +31,6 @@ pub struct AuditArgs {
     pub enemy_only: bool,
 }
 
-/// The cards a zone read hands back, as owned copies (whether the reader lends them or hands copies).
-fn owned<R: Borrow<CardInstance>>(cards: impl IntoIterator<Item = R>) -> Vec<CardInstance> {
-    cards.into_iter().map(|card| card.borrow().clone()).collect()
-}
-
 /// The permanents an Audit run by `controller` exiles now: the cards acting on the field — tops of
 /// piles (a Unit a carrier holds too) and backrow cards, face-down ones included, never a card dormant
 /// under a Stack (§3.2) — on both sides, `active`'s first (R68; the caller says who is active, since a
@@ -51,9 +46,9 @@ pub fn audit_targets(state: &GameState, args: AuditArgs) -> Vec<CardInstance> {
     sides
         .into_iter()
         .flat_map(|player| {
-            let mut cards = owned(crate::zones::active_units_of(state, player));
+            let mut cards = crate::zones::active_units_of(state, player).into_iter().cloned().collect::<Vec<_>>();
             for slot in crate::zones::slots_of(player, Row::Backrow) {
-                cards.extend(owned(crate::zones::card_at(state, &slot)));
+                cards.extend(crate::zones::card_at(state, &slot).cloned());
             }
             cards
         })

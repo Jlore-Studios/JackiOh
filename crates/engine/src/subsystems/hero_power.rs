@@ -473,26 +473,6 @@ fn spells_in_hand(ctx: &EffectContext<'_>) -> Vec<String> {
         .collect()
 }
 
-/// TS `effects.forEachCard({ cards, each })` (`effects/each.ts`), a private copy: `each(id)` for every
-/// card `cards` names, read once as the list reaches the clause (a part of the list, `resolve.lazyPart`)
-/// and kept as the part's memo, so a prompt inside one of them resumes over the same set in the same
-/// order (R113).
-fn for_each_card(
-    cards: impl Fn(&EffectContext<'_>) -> Vec<String> + Send + Sync + 'static,
-    each: impl Fn(&str) -> Effect + Send + Sync + 'static,
-) -> Effect {
-    crate::resolve::lazy_part("forEachCard", move |ctx, memo| {
-        let ids: Vec<String> = match memo.as_ref().and_then(Value::as_array) {
-            Some(kept) => kept.iter().filter_map(|id| id.as_str().map(str::to_string)).collect(),
-            None => cards(&*ctx),
-        };
-        EffectPart {
-            effects: ids.iter().map(|id| each(id.as_str())).collect(),
-            memo: Some(json!(ids)),
-        }
-    })
-}
-
 /// KY Brainstorm (R759): a random KY card of every set (R380) to your hand — Radiant on the Radiant
 /// face — then every Spell in your hand, that card included, costs (1) less there.
 fn ky_brainstorm(_ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
@@ -503,12 +483,15 @@ fn ky_brainstorm(_ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     };
     vec![
         crate::effects::add_random_from_catalog(json_as(add)),
-        for_each_card(spells_in_hand, |instance_id| {
+        crate::effects::each::for_each_card(crate::effects::each::ForEachCardArgs {
+            cards: std::sync::Arc::new(|ctx: &mut EffectContext<'_>| spells_in_hand(ctx)),
+            each: std::sync::Arc::new(|instance_id: &str| {
             crate::effects::set_cost_mod(json_as(json!({
                 "target": { "of": "instance", "instanceId": instance_id },
                 "amount": -BRAINSTORM_DISCOUNT,
                 "inHandOnly": true
             })))
+            }),
         }),
     ]
 }

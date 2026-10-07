@@ -22,11 +22,6 @@ use crate::script::Effect;
 use crate::state::{CardInstance, find_instance, find_instance_mut};
 use crate::wire::{Row, Zone};
 
-/// An owned copy of a lookup's answer, whether the lookup lent the card or handed over a copy.
-fn owned<C: Borrow<CardInstance>>(card: C) -> CardInstance {
-    card.borrow().clone()
-}
-
 /// `{ of: "self" }`, built from its JSON so this file names no variant of `TargetSpec`'s own.
 fn self_spec() -> TargetSpec {
     json_as(json!({ "of": "self" }))
@@ -44,7 +39,7 @@ pub struct RevealArgs {
 pub fn reveal(args: RevealArgs) -> Effect {
     Effect::new("reveal", move |ctx| {
         let spec = args.target.clone().unwrap_or_else(self_spec);
-        let Some(card) = instance_of(ctx, &spec).map(owned) else {
+        let Some(card) = instance_of(ctx, &spec) else {
             return;
         };
         if !matches!(card.zone, Zone::Field { row: Row::Backrow, .. }) {

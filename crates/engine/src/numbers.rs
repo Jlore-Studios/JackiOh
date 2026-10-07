@@ -90,44 +90,6 @@ const PRINTED_NUMBERED: &[(NumberedKey, KeywordKind)] = &[
     (NumberedKey::SpellDamage, KeywordKind::SpellDamage),
 ];
 
-/// `tuning::tuned_count(instance, key, printed)` with its default floor (`TUNED_FLOOR`, which is
-/// `TUNE_MIN_AMOUNT`): the printed value moved by the card's tuning steps for `key`, or set outright by
-/// KY's Constant. A private copy: a number the card does not print (0) is never tuned into existence.
-fn tuned_count(instance: &CardInstance, key: &str, printed: i32) -> i32 {
-    if printed <= 0 {
-        return printed;
-    }
-    let tuning = instance.tuning.as_ref();
-    let set = tuning.and_then(|tuning| tuning.set.as_ref()).and_then(|set| set.get(key)).copied();
-    let step = tuning
-        .and_then(|tuning| tuning.x.as_ref())
-        .and_then(|x| x.get(key))
-        .copied()
-        .unwrap_or(0);
-    if set.is_none() && step == 0 {
-        return printed;
-    }
-    TUNE_MIN_AMOUNT.max(set.unwrap_or(printed) + step)
-}
-
-/// `tuning::numbered_sum`: the sum of a numbered keyword's entries in a list, or `None` when the list
-/// has none of that kind. A private copy.
-fn numbered_sum(keywords: &[Keyword], kind: KeywordKind) -> Option<i32> {
-    let mut found = false;
-    let mut sum = 0;
-    for keyword in keywords {
-        if keyword.kind() != kind {
-            continue;
-        }
-        let Some(n) = keyword.n() else {
-            continue;
-        };
-        found = true;
-        sum += n;
-    }
-    if found { Some(sum) } else { None }
-}
-
 /// The field's unit row: where a card's stats are read through all five layers (§10.4).
 fn in_unit_row(card: &CardInstance) -> bool {
     matches!(card.zone, Zone::Field { row: Row::Units, .. })
@@ -190,7 +152,7 @@ pub fn numbered_keywords_on(state: &GameState, card: &CardInstance) -> Vec<Numbe
         if printed > 0 {
             out.push(NumberedKeyword {
                 key,
-                value: tuned_count(card, key.as_str(), printed),
+                value: crate::tuning::tuned_count(card, key.as_str(), printed),
                 better,
                 printed: Some(printed),
             });
@@ -208,7 +170,7 @@ pub fn numbered_keywords_on(state: &GameState, card: &CardInstance) -> Vec<Numbe
     };
     for &(key, kind) in PRINTED_NUMBERED {
         if !removed.contains(&kind) {
-            add(&mut out, key, numbered_sum(&keywords, kind).unwrap_or(0), ParamBetter::Up);
+            add(&mut out, key, crate::tuning::numbered_sum(&keywords, kind).unwrap_or(0), ParamBetter::Up);
         }
     }
     match active_brittle_count(card) {
@@ -225,7 +187,7 @@ pub fn numbered_keywords_on(state: &GameState, card: &CardInstance) -> Vec<Numbe
         None => add(
             &mut out,
             NumberedKey::Brittle,
-            numbered_sum(&keywords, KeywordKind::Brittle).unwrap_or(0),
+            crate::tuning::numbered_sum(&keywords, KeywordKind::Brittle).unwrap_or(0),
             ParamBetter::Up,
         ),
     }

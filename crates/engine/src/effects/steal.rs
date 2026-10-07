@@ -23,11 +23,6 @@ use crate::zones::{
     slots_of,
 };
 
-/// An owned copy of a lookup's answer, whether the lookup lent the card or handed over a copy.
-fn owned<C: Borrow<CardInstance>>(card: C) -> CardInstance {
-    card.borrow().clone()
-}
-
 /// Which card to steal: the pick the play or a prompt carried (R81), or an instance id a script
 /// captured earlier — K-Pop Fanatic's delayed steal names its target that way (R76). Both are plain
 /// data, so a card file never holds a closure over state (CLAUDE.md rule 5).
@@ -43,11 +38,11 @@ pub struct StealTarget {
 fn instance_of(ctx: &EffectContext<'_>, args: &StealTarget) -> Option<CardInstance> {
     // R174: a card named by id is aimed at the stay it had when the run began (`instance_on_its_stay`).
     if let Some(instance_id) = &args.instance_id {
-        return instance_on_its_stay(ctx, instance_id).map(owned);
+        return instance_on_its_stay(ctx, instance_id);
     }
     let spec = args.target.clone().unwrap_or(TargetSpec::Chosen { index: None });
     match resolve_target(ctx, &spec) {
-        Some(DamageTarget::Unit { instance }) => Some(owned(instance)),
+        Some(DamageTarget::Unit { instance }) => Some(instance),
         _ => None,
     }
 }
@@ -138,7 +133,7 @@ pub fn steal_all(args: StealAllArgs) -> Effect {
     Effect::new("stealAll", move |ctx| {
         let row = args.row.unwrap_or(Row::Units);
         for slot in slots_of(opponent_of(ctx.controller), row) {
-            let Some(card) = card_at(ctx.state, &slot).map(owned) else {
+            let Some(card) = card_at(ctx.state, &slot).cloned() else {
                 continue;
             };
             take_control(ctx, &card);

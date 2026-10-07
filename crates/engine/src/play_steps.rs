@@ -119,21 +119,6 @@ fn has_target_enemies(card: &CardInstance) -> bool {
         .any(|entry| matches!(entry, Enchantment::TargetEnemies))
 }
 
-/// TS `timesPlayed.countPlay(card)`. R429, §10.5 step 4: one more play of this card, when its script
-/// counts them (`timesPlayed.timesPlayedOf`: the plays so far, 0 when absent or not positive).
-fn count_play(state: &mut GameState, instance_id: &str) {
-    let Some(card) = find_instance(state, instance_id) else {
-        return;
-    };
-    if crate::scripts::flags_of(state, card).counts_plays != Some(true) {
-        return;
-    }
-    let so_far = card.times_played.filter(|count| *count > 0).unwrap_or(0);
-    if let Some(live) = find_instance_mut(state, instance_id) {
-        live.times_played = Some(so_far + 1);
-    }
-}
-
 /// The card as it stands now, by id. TS handed the live object around; Rust reads it again at each
 /// point TS read the object, and hands a copy to calls that take the card beside a `&mut` state.
 fn snapshot(state: &GameState, instance_id: &str) -> Option<CardInstance> {
@@ -1521,7 +1506,7 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     }
     sink.state.counters.played += 1;
     // R429: a card that counts its own plays counts this one here, with every other count of it.
-    count_play(sink.state, &card.id);
+    crate::times_played::count_play(sink.state, &card);
     let card = live(sink.state, &card);
     // R673: a play of a "… in the System" card, by either player, raises the match's Glitch odds.
     if run.cast != Some(true) {

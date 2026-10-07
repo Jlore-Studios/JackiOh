@@ -25,19 +25,6 @@ use crate::state::{CardInstance, find_instance, find_instance_mut};
 use crate::wire::{CounteredTo, GameEvent, PlayerId, Zone, ZoneName};
 use crate::zones::{MoveResult, OffFieldZone, is_unit_token, move_to_zone, report_graveyard_landing};
 
-/// An owned copy of a lookup's answer, whether the lookup lent the card or handed over a copy.
-fn owned<C: Borrow<CardInstance>>(card: C) -> CardInstance {
-    card.borrow().clone()
-}
-
-/// `playerOf(ctx, spec ?? "self")`: an absent spec is the running card's controller.
-fn player_or_self(ctx: &EffectContext<'_>, spec: Option<PlayerSpec>) -> PlayerId {
-    match spec {
-        Some(spec) => player_of(ctx, spec),
-        None => ctx.controller,
-    }
-}
-
 /// One card to the exile pile: the whole of §6.3 Exile for a single card, so `exile`, `exile_all`,
 /// `exile_adjacent_to` and `exile_hand` are four ways of naming cards over ONE implementation. A card
 /// that reaches the pile feeds the game exile counter (R55); a unit token ceases to exist instead
@@ -117,7 +104,7 @@ pub struct ExileArgs {
 /// §6.3 Exile: to the exile pile from anywhere, with no Death trigger.
 pub fn exile(args: ExileArgs) -> Effect {
     Effect::new("exile", move |ctx| {
-        let Some(card) = instance_of(ctx, &args.target).map(owned) else {
+        let Some(card) = instance_of(ctx, &args.target) else {
             return;
         };
         exile_card(ctx, &card);
@@ -130,7 +117,7 @@ pub fn exile(args: ExileArgs) -> Effect {
 /// the running card standing; without it the Void would exile itself mid-Cry.
 pub fn exile_all(args: BoardScope) -> Effect {
     Effect::new("exileAll", move |ctx| {
-        let cards: Vec<CardInstance> = cards_in_scope(ctx, &args).into_iter().map(owned).collect();
+        let cards: Vec<CardInstance> = cards_in_scope(ctx, &args).into_iter().collect();
         for card in &cards {
             exile_card(ctx, card);
         }
@@ -153,7 +140,7 @@ pub struct ExileAdjacentToArgs {
 /// unit has units. The card pairs this with a plain `exile` on the target itself.
 pub fn exile_adjacent_to(args: ExileAdjacentToArgs) -> Effect {
     Effect::new("exileAdjacentTo", move |ctx| {
-        let cards: Vec<CardInstance> = adjacent_to(ctx, &args.target, &args.scope).into_iter().map(owned).collect();
+        let cards: Vec<CardInstance> = adjacent_to(ctx, &args.target, &args.scope).into_iter().collect();
         for card in &cards {
             exile_card(ctx, card);
         }
@@ -257,14 +244,14 @@ pub struct ExileMatchingArgs {
 /// The scope is one player's zones, never both: §8 #94 says "YOUR library, hand and GY".
 pub fn exile_matching(args: ExileMatchingArgs) -> Effect {
     Effect::new("exileMatching", move |ctx| {
-        let owner = player_or_self(ctx, args.player);
+        let owner = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let zones: Vec<ExileZone> = args.zones.clone().unwrap_or_else(|| EXILE_ZONE_ORDER.to_vec());
         // R66: "every odd-cost card" is one set, read as the clause resolves — each card's cost per
         // R65 at that moment — and then exiled a card at a time (R135). Read again after each exile, a
         // cost that counts the exiles (#100 Ceaseless Void, R55) flipped its parity halfway through.
         let mut matching: Vec<CardInstance> = Vec::new();
         for zone in zones {
-            let pile: Vec<CardInstance> = zone_cards(ctx.state, owner, zone.pile()).into_iter().map(owned).collect();
+            let pile: Vec<CardInstance> = zone_cards(ctx.state, owner, zone.pile()).into_iter().collect();
             for card in pile {
                 if matches_cost(ctx, &card, &args.filter) {
                     matching.push(card);
@@ -287,7 +274,7 @@ pub struct BounceArgs {
 /// §6.3 Bounce: return the card to its controller's hand (R747).
 pub fn bounce(args: BounceArgs) -> Effect {
     Effect::new("bounce", move |ctx| {
-        let Some(card) = instance_of(ctx, &args.target).map(owned) else {
+        let Some(card) = instance_of(ctx, &args.target) else {
             return;
         };
         bounce_card(ctx, &card);
@@ -300,7 +287,7 @@ pub fn bounce(args: BounceArgs) -> Effect {
 /// unit tokens because they cease to exist rather than reaching a hand (R11).
 pub fn bounce_all(args: BoardScope) -> Effect {
     Effect::new("bounceAll", move |ctx| {
-        let cards: Vec<CardInstance> = cards_in_scope(ctx, &args).into_iter().map(owned).collect();
+        let cards: Vec<CardInstance> = cards_in_scope(ctx, &args).into_iter().collect();
         for card in &cards {
             bounce_card(ctx, card);
         }
@@ -343,7 +330,7 @@ pub struct DiscardArgs {
 pub fn discard(args: DiscardArgs) -> Effect {
     Effect::new("discard", move |ctx| {
         let spec = args.target.clone().unwrap_or(TargetSpec::Chosen { index: None });
-        let Some(card) = instance_of(ctx, &spec).map(owned) else {
+        let Some(card) = instance_of(ctx, &spec) else {
             return;
         };
         discard_card(ctx, &card);
@@ -363,7 +350,7 @@ pub struct DiscardRandomArgs {
 /// §6.3 Discard at random (R16: only when the card says "random"), drawn from the match rng.
 pub fn discard_random(args: DiscardRandomArgs) -> Effect {
     Effect::new("discardRandom", move |ctx| {
-        let player = player_or_self(ctx, args.player);
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let count = args.count.unwrap_or(1).max(0);
         for _ in 0..count {
             if ctx.state.players[player].hand.is_empty() {
@@ -398,7 +385,7 @@ pub struct DiscardHandArgs {
 ///     different fuzz game — for no reason a rule asks for.
 pub fn discard_hand(args: DiscardHandArgs) -> Effect {
     Effect::new("discardHand", move |ctx| {
-        let player = player_or_self(ctx, args.player);
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         // A snapshot: `discard_card` splices the hand, so iterating it live would skip cards.
         let hand = ctx.state.players[player].hand.clone();
         for card in &hand {
@@ -416,7 +403,7 @@ pub type ExileHandArgs = DiscardHandArgs;
 /// counted (R11, §3.2). No choice and no rng draw, for the reasons on `discard_hand`.
 pub fn exile_hand(args: ExileHandArgs) -> Effect {
     Effect::new("exileHand", move |ctx| {
-        let player = player_or_self(ctx, args.player);
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let hand = ctx.state.players[player].hand.clone();
         for card in &hand {
             exile_card(ctx, card);
@@ -466,7 +453,7 @@ pub fn counter_play(args: CounterPlayArgs) -> Effect {
     Effect::new("counterPlay", move |ctx| {
         let record: Option<String> = match &args.target {
             None => innermost_live_announce(ctx.state).map(|record| record.instance_id.clone()),
-            Some(target) => match instance_of(ctx, target).map(owned) {
+            Some(target) => match instance_of(ctx, target) {
                 Some(named) if is_announce_live(ctx.state, &named.id) => Some(named.id),
                 _ => None,
             },

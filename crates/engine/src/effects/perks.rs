@@ -14,14 +14,6 @@ use crate::script::{Effect, EffectContext};
 use crate::state::CardInstance;
 use crate::wire::PlayerId;
 
-/// `playerOf(ctx, spec ?? "self")`: an absent spec is the running card's controller.
-fn player_or_self(ctx: &EffectContext<'_>, spec: Option<PlayerSpec>) -> PlayerId {
-    match spec {
-        Some(spec) => player_of(ctx, spec),
-        None => ctx.controller,
-    }
-}
-
 /// `gainHeroArmor`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -40,7 +32,7 @@ pub fn gain_hero_armor(args: GainHeroArmorArgs) -> Effect {
         if amount == 0 {
             return;
         }
-        let player = player_or_self(ctx, args.player);
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         ctx.state.players[player].hero.armor += amount;
     })
 }
@@ -60,7 +52,7 @@ pub struct DiscountRandomInHandArgs {
 /// floors at 0 when read (§2.3); `set_cost_mod` reports it under R177's sentinel to the other seat.
 pub fn discount_random_in_hand(args: DiscountRandomInHandArgs) -> Effect {
     Effect::new("discountRandomInHand", move |ctx| {
-        let player = player_or_self(ctx, args.player);
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let hand = ctx.state.players[player].hand.clone();
         let mut cheaper: Vec<CardInstance> = Vec::new();
         for card in hand {
