@@ -311,8 +311,8 @@ mod r214_step_3_applies_the_face_step_1_checked_whatever_step_2_put_on_the_board
         }));
         // A Unit that carries Gifted Program's text: the Gifted Program fused onto p1's Mr. Vanilla, which
         // keeps its instance and its type (R77). #22 eats Units only (R428), and this one is a Unit.
-        let vanilla = must(s.unit(PlayerId::P1, 3).map(|card| card.clone()), "p1's Mr. Vanilla");
-        let gifted = must(s.backrow(PlayerId::P1, 1).map(|card| card.clone()), "p1's Gifted Program");
+        let vanilla = must(s.unit(PlayerId::P1, 3), "p1's Mr. Vanilla");
+        let gifted = must(s.backrow(PlayerId::P1, 1), "p1's Gifted Program");
         // #99's result, built the way `099-craft-a-card.test.ts` builds one: Lava Golem + Bigot, a
         // Unit with Tribute 3 costing 0, whose base face names an enemy non-Human unit to destroy and
         // whose radiant face destroys every enemy non-Human unit and names nothing (R102, R214).

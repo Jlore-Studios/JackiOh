@@ -110,10 +110,10 @@ mod tests {
 
     fn mid(s: &Scenario) -> CardInstance {
         for lane in 1..=5 {
-            if let Some(unit) = s.unit(P1, lane) {
-                if unit.def_id == MID {
-                    return unit;
-                }
+            if let Some(unit) = s.unit(P1, lane)
+                && unit.def_id == MID
+            {
+                return unit;
             }
         }
         panic!("no Mid Loser on the field");

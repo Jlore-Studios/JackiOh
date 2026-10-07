@@ -22,7 +22,7 @@ const MID_LOSER: &str = "classicplus-019-3";
 fn mid_loser_cry(lane: i32) -> Effect {
     for_each_card(ForEachCardArgs {
         cards: Arc::new(move |ctx: &mut EffectContext<'_>| {
-            let unit = card_at(&*ctx.state, &ZoneRef { player: ctx.controller, row: Row::Units, lane }).cloned();
+            let unit = card_at(&*ctx.state, ZoneRef { player: ctx.controller, row: Row::Units, lane }).cloned();
             match unit {
                 Some(unit) if unit.def_id == MID_LOSER && summoned_so_far(ctx).contains(&unit.id) => vec![unit.id],
                 _ => Vec::new(),
@@ -40,7 +40,7 @@ fn league(radiant: bool) -> Script {
                 .zip(1..)
                 .flat_map(|(&def_id, lane): (&&str, i32)| {
                     // R688's card-specific override: a Locked lane is skipped (§8.7 row 19).
-                    if is_locked(&*ctx.state, &ZoneRef { player: ctx.controller, row: Row::Units, lane }) {
+                    if is_locked(&*ctx.state, ZoneRef { player: ctx.controller, row: Row::Units, lane }) {
                         return Vec::new();
                     }
                     let summoned = summon(json_as(json!({ "defId": def_id, "lane": lane, "radiant": radiant })));
@@ -239,7 +239,7 @@ mod tests {
             #[test]
             fn r688_a_locked_zone_is_skipped_the_card_s_own_override_of_the_locked_takes_summons_rule() {
                 let mut s = league(json!({}), false, None);
-                lock_zone(s.state_mut(), &ZoneRef { player: P1, row: Row::Units, lane: 4 });
+                lock_zone(s.state_mut(), ZoneRef { player: P1, row: Row::Units, lane: 4 });
                 s.play(LEAGUE, json!({}));
                 assert_eq!(row(&s), ids(&[Some(FIVE[0]), Some(FIVE[1]), Some(FIVE[2]), None, Some(FIVE[4])]));
             }
@@ -247,7 +247,7 @@ mod tests {
             #[test]
             fn r64_a_reserved_zone_is_skipped() {
                 let mut s = league(json!({}), false, None);
-                reserve_zone(s.state_mut(), &ZoneRef { player: P1, row: Row::Units, lane: 5 });
+                reserve_zone(s.state_mut(), ZoneRef { player: P1, row: Row::Units, lane: 5 });
                 s.play(LEAGUE, json!({}));
                 assert_eq!(row(&s), ids(&[Some(FIVE[0]), Some(FIVE[1]), Some(FIVE[2]), Some(FIVE[3]), None]));
             }

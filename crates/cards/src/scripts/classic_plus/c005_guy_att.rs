@@ -159,7 +159,7 @@ mod tests {
             s.play(&rider, json!({ "zone": 2, "row": "backrow" }));
             // R653: once its play resolved, the Vanilla was fused into the Tower.
             s.expect_in_zone(&rider, "gone");
-            assert!(carried_at(s.state(), &ZoneSlot { player: P1, row: Row::Backrow, lane: 2 }).is_none());
+            assert!(carried_at(s.state(), ZoneSlot { player: P1, row: Row::Backrow, lane: 2 }).is_none());
 
             s.play(GUY, json!({ "zone": 1 }));
 

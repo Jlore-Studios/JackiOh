@@ -229,7 +229,7 @@ mod tests {
             // A Lock on its reserved backrow zone, as Lock effects leave one (§3.2).
             lock_zone(
                 s.state_mut(),
-                &ZoneSlot {
+                ZoneSlot {
                     player: P1,
                     row: Row::Backrow,
                     lane: 2,

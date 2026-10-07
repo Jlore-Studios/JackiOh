@@ -864,7 +864,7 @@ fn fuse_on(s: &mut Scenario, args: FuseArgs) -> Option<CardInstance> {
 
 /// TS `const hand = s.hand("p1")`: a copy of the hand as it stands.
 fn hand_of(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
-    s.hand(player).iter().cloned().collect()
+    s.hand(player)
 }
 
 mod r174_r41_a_cubes_meal_is_read_on_the_stay_the_play_chose {
@@ -1012,7 +1012,7 @@ mod c3_2_r13_r174_a_card_the_plays_own_stack_buried_is_not_on_the_field_for_its_
             ),
             "the crafted card",
         );
-        let vanilla = must(s.unit(PlayerId::P1, 1).map(|card| card.clone()), "Mr. Vanilla");
+        let vanilla = must(s.unit(PlayerId::P1, 1), "Mr. Vanilla");
         s.play(crafted.id.as_str(), json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }));
         (s, crafted, vanilla)
     }
