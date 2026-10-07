@@ -55,7 +55,7 @@ fn both(script: Script) -> CardScripts {
     CardScripts { base: script.clone(), radiant: script }
 }
 
-fn opponents_draw(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
+fn opponents_draw(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     matches!(event, GameEvent::Drawn { player, .. } if *player != ctx.controller)
 }
 

@@ -68,7 +68,7 @@ fn panic_text(run: impl FnOnce() -> i32) -> String {
 }
 
 /// TS `{ state, self: null, radiant, defId? }`: a context with no card of its own.
-fn bare_context(state: &mut GameState, radiant: bool, def_id: Option<&str>) -> EffectContext<'_> {
+fn bare_context<'a>(state: &'a mut GameState, radiant: bool, def_id: Option<&str>) -> EffectContext<'a> {
     let mut ctx = EffectContext::new(sink_for(state), P1);
     ctx.self_ = None;
     ctx.radiant = radiant;
@@ -157,7 +157,7 @@ mod r386_b3_4_rule_5_declared_numbers {
 
     #[test]
     fn r386_the_default_step_is_1_up_to_5_2_from_6_to_12_and_a_quarter_rounded_above_a_declared_step_wins() {
-        let def = def_of(&game(), &numbered.id).clone();
+        let def = def_of(Some(&game()), &numbered.id).clone();
         let by_key = |key: &str| -> Param {
             def.params
                 .as_ref()
@@ -217,7 +217,8 @@ mod r386_b3_4_rule_5_declared_numbers {
         step_param(live_mut(&mut state, &card), "damage", 2);
         let now = live(&state, &card);
         {
-            let mut ctx = make_context(sink_for(&mut state), Some(now.clone()), HookOptions::default());
+            let mut sink = sink_for(&mut state);
+            let mut ctx = make_context(&mut sink, Some(&now), HookOptions::default());
             assert_eq!(param(&ctx, "damage"), 4);
             // TS `{ ...ctx, radiant: true }`.
             ctx.radiant = true;
@@ -264,7 +265,8 @@ mod r386_b3_4_rule_5_declared_numbers {
         );
         let view = params_view(&state, &live(&state, &fused));
         {
-            let mut ctx = make_context(sink_for(&mut state), Some(fused.clone()), HookOptions::default());
+            let mut sink = sink_for(&mut state);
+            let mut ctx = make_context(&mut sink, Some(&fused), HookOptions::default());
             // Ingredient 0 is the numbered spell, 1 Book of Nerf's shape, and the kept body comes last (R77).
             ctx.data = part(&[0]);
             assert_eq!(param(&ctx, "damage"), 2);
@@ -298,7 +300,8 @@ mod r386_b3_4_rule_5_declared_numbers {
             )
         }
         .expect("expected a fusion");
-        let mut ctx = make_context(sink_for(&mut state), Some(fused), HookOptions::default());
+        let mut sink = sink_for(&mut state);
+        let mut ctx = make_context(&mut sink, Some(&fused), HookOptions::default());
         // Three ingredients: index 3 is past them, and ingredient 0 is a catalog card with no ingredients of its own.
         ctx.data = part(&[3]);
         let past = panic_text(|| param(&ctx, "damage"));

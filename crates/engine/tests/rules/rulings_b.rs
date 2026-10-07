@@ -2126,7 +2126,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         );
 
         // The engine carries the clock the server runs, and none of R79's numbers.
-        assert_eq!(view_for_with_clock(&clean, P1, 75_000).clock_ms, Some(75_000));
+        assert_eq!(view_for_with_clock(&clean, P1, Some(75_000)).clock_ms, Some(75_000));
         assert_eq!(view_for(&clean, P1).clock_ms, None);
         // TS also asserted that `config.ts` exports none of the server's constant names (its
         // `Object.keys(engineConfig)` over SERVER_CONSTANTS); Rust has no run-time list of a module's

@@ -193,7 +193,7 @@ mod r371_the_controllers_view_marks_a_face_down_trap_as_unrevealed {
             let mut sink = sink_for(&mut state);
             {
                 let mut ctx = make_context(
-                    sink.reborrow(),
+                    &mut sink,
                     None,
                     HookOptions {
                         controller: Some(PlayerId::P1),

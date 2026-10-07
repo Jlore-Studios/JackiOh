@@ -133,12 +133,14 @@ mod turn_loop_and_mana_m1_t6 {
             add_modifier(
                 &mut sink,
                 PlayerId::P1,
-                json_as(json!({ "kind": "costDiscount", "amount": 1, "expiry": { "until": "thisTurn", "turn": turn } })),
+                json_as(json!({ "until": "thisTurn", "turn": turn })),
+                json_as(json!({ "kind": "costDiscount", "amount": 1 })),
             );
             add_modifier(
                 &mut sink,
                 PlayerId::P1,
-                json_as(json!({ "kind": "echoNextSpell", "amount": 1, "expiry": { "until": "used" } })),
+                json_as(json!({ "until": "used" })),
+                json_as(json!({ "kind": "echoNextSpell", "amount": 1 })),
             );
         }
         assert_eq!(state.players.p1.mods.len(), 2);
@@ -251,11 +253,11 @@ mod turn_loop_and_mana_m1_t6 {
             add_modifier(
                 &mut sink,
                 PlayerId::P1,
+                json_as(json!({ "until": "nextTurnOf", "player": "p1", "fromTurn": turn })),
                 json_as(json!({
                     "kind": "costDiscount",
                     "amount": 1,
                     "minCurrentCost": 4,
-                    "expiry": { "until": "nextTurnOf", "player": "p1", "fromTurn": turn },
                 })),
             );
         }
@@ -549,6 +551,8 @@ fn delay_at_end_of_p1(state: &mut GameState, resume: Resume) -> String {
             player: PlayerId::P1,
         },
         resume,
+        None,
+        None,
     )
     .id
 }
@@ -653,7 +657,7 @@ mod r62_r113_r117_r126_r127_delayed_continuations_and_the_end_of_turn_2_2_10_6 {
         // the handler is registered at module scope by `turn.ts`, not by this test.
         let parked = only(&owed_work(&paused, Some(END_OF_TURN_WORK)));
         assert_eq!(round_trip(&parked), parked);
-        assert!(can_resume(&parked.resume));
+        assert!(can_resume(&paused, &parked.resume));
 
         // §10.1: the paused game survives a round trip and resumes from the round-tripped copy.
         let round = round_trip(&paused);
