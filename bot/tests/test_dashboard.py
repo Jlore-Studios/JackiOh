@@ -107,17 +107,20 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("    tickInterval 30minute\n    todayMarker off", body)
         self.assertIn("    section GitHub's runners\n    claude-1 · building 37 · 47m :active, "
                       "2026-09-29 21:13, 2026-09-29 22:00", body)
-        self.assertIn("    section The machine\n    muse · revising 49 · 2h 03m :active, ", body)
+        self.assertIn("    section The night box\n    muse · revising 49 · 2h 03m :active, ", body)
         gantt = body.split("```mermaid\ngantt")[1].split("```")[0]
         self.assertNotIn("#", gantt)  # a gantt chart reads `#` as a comment
         # The lanes as boxes: each Claude account, then each slot on the machine.
         self.assertIn('subgraph hosted["Claude accounts, on GitHub\'s runners: 1 of 7 working"]',
                       body)
         self.assertIn('h0["<b>claude-1</b><br/>🟢 building #37<br/>since 21:13"]:::busy', body)
-        self.assertIn('subgraph machine["The machine: 1 of 7 slots in use"]', body)
+        slots = self.ctx.cfg.pool.machine_parallel
+        self.assertIn(f'subgraph machine["The night box: 1 of {slots} slots in use"]', body)
         self.assertIn('m0["<b>muse</b><br/>revising #49<br/>since 19:57"]:::busy', body)
         self.assertIn('m5["free"]:::free', body)
-        self.assertIn("m0 ~~~ m1 ~~~ m2 ~~~ m3 ~~~ m4 ~~~ m5 ~~~ m6", body)
+        self.assertIn(" ~~~ ".join(f"m{i}" for i in range(slots)), body)
+        # The AI's training lanes run outside the harness: no box of theirs here.
+        self.assertNotIn("training", body)
         self.assertIn("Lanes: 2 of 10 in use", body)
         self.assertNotIn("pie", body)
         # Each subscription, with its usage as a bar.
@@ -132,35 +135,11 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("<details><summary>The full status</summary>", body)
         self.assertIn("**Night bot status**", body)
 
-    def test_the_training_box_is_drawn_on_its_own(self):
-        """devin-train's slot is on the training box, which the night box's subscriptions cannot
-        take (#317 part 11): two boxes, six slots and one."""
-        ctx = make_ctx(self.gh, at=NIGHT, cfg=make_config(machine=("devin", "devin-train", "muse")))
-        for number in (37, 49):
-            self.gh.add_issue(number, labels=(LABEL_WORKING,))
-        self.gh.runs.update({"101": {"status": "in_progress"}, "102": {"status": "in_progress"}})
-        ago = lambda minutes: iso(NIGHT - timedelta(minutes=minutes))
-        def seed(state):
-            state_item(state, 37).update(provider="devin-train", kind="build", run_id="101",
-                                         started_at=ago(20))
-            state_item(state, 49).update(provider="muse", kind="revise", run_id="102",
-                                         started_at=ago(40))
-        ctx.store.update(seed, "seed")
-        body = dashboard.render(ctx)
-        self.assertIn('subgraph machine["The night box: 1 of 6 slots in use"]', body)
-        self.assertIn('subgraph training["The training box: ladder training items only"]', body)
-        self.assertIn('t0["<b>devin-train</b><br/>building #37<br/>since 21:40"]:::busy', body)
-        self.assertNotIn("devin-train</b>", body.split('subgraph training')[0].split(
-            'subgraph machine')[1])
-        self.assertIn("    section The night box\n    muse", body)
-        self.assertIn("    section The training box\n    devin-train", body)
-        self.assertIn("1 of 6 on the night box, 1 of 1 on the training box", body)
-        self.assertIn("The training box runs only items labelled `training`", body)
-
     def test_nothing_running(self):
         body = dashboard.render(self.ctx)
         self.assertIn("Nothing is running right now.", body)
-        self.assertIn("The machine: 0 of 7 slots in use", body)
+        slots = self.ctx.cfg.pool.machine_parallel
+        self.assertIn(f"The night box: 0 of {slots} slots in use", body)
         self.assertIn("Lanes: 0 of 10 in use", body)
         self.assertIn("Nothing is queued.", body)
 

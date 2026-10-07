@@ -11,7 +11,7 @@ from harness.clock import human_delta, parse_iso
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_NEEDS_PLAN,
                             LABEL_PR, LABEL_REVISE, LABEL_SUGGESTION, LABEL_WORKING, SLASH, TITLE)
 from harness.context import Context
-from harness.plan import run_status, training_ids, working_threads
+from harness.plan import run_status, working_threads
 from harness.providers import Provider
 
 #: What a run is doing to an item, by the item's kind (`queue.KIND_ORDER`).
@@ -19,22 +19,11 @@ DOING = {"plan": "planning", "build": "building", "revise": "revising",
          "review": "reviewing"}
 
 
-
-def night_slots(pool: Any) -> int:
-    """The night box's slots: the machine's (`machine_parallel`), less the training box's."""
-    return pool.machine_parallel - sum(pool.get(p).lanes for p in training_ids(pool))
-
-
 def machine_text(pool: Any, live: dict[int, str]) -> str:
-    """How many runs are on each of the bot's boxes (#317 part 11): "2 of 6 on the night box,
-    0 of 1 on the training box", or "n of N on the machine" with no training box."""
-    training = training_ids(pool)
-    night = sum(1 for p in live.values() if pool.on_machine(p) and p not in training)
-    if not training:
-        return f"{night} of {pool.machine_parallel} on the machine"
-    trained = sum(1 for p in live.values() if p in training)
-    return (f"{night} of {night_slots(pool)} on the night box, {trained} of "
-            f"{pool.machine_parallel - night_slots(pool)} on the training box")
+    """How many runs are on the bot's machine: "2 of 6 on the night box"."""
+    night = sum(1 for p in live.values() if pool.on_machine(p))
+    return f"{night} of {pool.machine_parallel} on the night box"
+
 
 def _numbers(items: list[dict[str, Any]]) -> str:
     if not items:

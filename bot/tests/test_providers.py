@@ -693,33 +693,6 @@ class MatchingTests(unittest.TestCase):
         self.assertEqual(devins, 6)
         self.assertIn("`devin` is busy", planned["reason"])
 
-    def test_the_machine_keeps_a_slot_for_training(self):
-        """At most six (devin, muse, gpt, agy) run on the night box: with gpt holding one,
-        Devin takes five and waits for room; the seventh slot stays free, and a `training`
-        item still trains on devin-train while the night box is full."""
-        gh = FakeGitHub()
-        items = (3, 4, 5, 6, 7, 8)
-        for n in items:
-            gh.add_issue(n, labels=(LABEL_BUILD, "difficulty:easy"))
-        gh.add_issue(9, labels=(LABEL_BUILD, "difficulty:easy", "training"))
-        ctx = ctx_for(gh, at=DAY, env=secrets(), machine=("devin", "gpt", "devin-train"))
-        ctx.store.update(lambda s: [state_item(s, n).update(planned_at=clock.iso(DAY))
-                                    for n in items + (9,)])
-        gh.add_issue(40, labels=(LABEL_WORKING,))
-        gh.runs["40"] = {"status": "in_progress"}
-        ctx.store.update(lambda s: state_item(s, 40).update(run_id="40", provider="gpt"))
-        taken = []
-        for _ in range(7):
-            planned = plan_mod.make(ctx)
-            if planned["action"] == "none":
-                break
-            gh.runs[str(planned["number"])] = {"status": "in_progress"}
-            ctx.store.update(lambda s, n=planned["number"]: state_item(s, n).update(
-                run_id=str(n)))
-            taken.append((planned["number"], planned["provider"]))
-        self.assertEqual(taken, [(n, "devin") for n in items[:5]] + [(9, "devin-train")])
-        self.assertIn("waits for room on the machine (6 at once)", planned["reason"])
-
     def test_training_items_go_only_to_devin_train(self):
         """`only_labels`: a `training` item builds on devin-train's box, and nothing else
         takes it; an ordinary item never lands on devin-train. Like Devin, it builds from
