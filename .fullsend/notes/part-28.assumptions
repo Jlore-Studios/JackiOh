@@ -1,0 +1,27 @@
+id.instance: String (TS "c<n>")
+num.game: i32
+num.cursor: u32
+map.ordered: IndexMap
+bag.data: IndexMap<String, serde_json::Value>
+error.style: Result<_, EngineError> with TS's message; panic only on invariants
+null.optional: Option + skip_serializing_if
+null.nullable: Option, serialised null
+case.json: camelCase via serde rename_all
+case.rust: snake_case
+state.mut: &mut GameState writes, &GameState reads, &mut EngineSink for TS sink mutators
+rng.source: Rng::new(&state.seed, state.rng_cursor) and write the cursor back
+hook.style: Arc<dyn Fn + Send + Sync> via hook(); no fn pointers, no Box
+registry.style: OnceLock set once by register_all; fused scripts built on lookup from state
+async.style: tokio in crates/server only; none in pure crates
+log.style: tracing JSON to stdout, server only
+spec.ruling_file: spec/rulings/R{n:04}.md
+spec.section_notes: 01-overview 02-core-systems 03-zones 04-combat 05-card-types 06-keywords 07-tokens 08-catalog 09-architecture 10-engine-guide 11-rulings
+spec.front_matter: id, title, cards, proven_in; no aliases
+spec.links: [[R<n>]] and [[§N.M]] only where they resolve; never inside code
+spec.proof.sql: \echo '### R<n>: ###' heading counts
+spec.proof.required: at least one proven_in per note
+spec.scan.extensions: rs sql toml ts tsx mts cts js jsx mjs cjs css html
+spec.index.row: | id | title | [stem](rulings/stem.md) | `path`, `path` |
+spec.root: nearest ancestor with spec/ and Cargo.toml, else CARGO_MANIFEST_DIR/../..
+config.compare: serde_json::to_value for structs, enums and string switches
+glossary.link: section + optional row name
