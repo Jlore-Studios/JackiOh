@@ -188,7 +188,7 @@ fn run(sink: &mut EngineSink<'_>, effect: Effect, self_: Option<&CardInstance>, 
         controller: Some(controller),
         ..HookOptions::default()
     };
-    let mut ctx = make_context(sink.reborrow(), self_.cloned(), options);
+    let mut ctx = make_context(sink, self_, options);
     apply_effects(&[effect], &mut ctx);
 }
 
@@ -197,7 +197,7 @@ fn summoned_defs(state: &GameState, events: &[GameEvent]) -> Vec<CardDef> {
         .iter()
         .map(|event| {
             let def_id = json_of(event)["defId"].as_str().unwrap_or_default().to_string();
-            def_of(state, &def_id).clone()
+            def_of(Some(state), &def_id).clone()
         })
         .collect()
 }
@@ -316,9 +316,9 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         assert_eq!(hand.len(), 3);
         for card in hand {
             // §5.1: `query` keeps tokens out of a pool that does not ask for them.
-            assert!(!def_of(&state, &card.def_id).token);
+            assert!(!def_of(Some(&state), &card.def_id).token);
             assert_eq!(card.cost_override, Some(0));
-            assert_eq!(effective_cost(&state, card), 0);
+            assert_eq!(effective_cost(&state, card, CostOptions::default()), 0);
         }
     }
 
@@ -364,7 +364,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
             let token = pile.as_ref().and_then(|pile| pile.first());
             assert!(token.is_some());
             let Some(token) = token else { continue };
-            assert_eq!(def_of(&state, &token.def_id).index, "T-rush");
+            assert_eq!(def_of(Some(&state), &token.def_id).index, "T-rush");
             // No `statsOverride`: #95 was the only card that invented a Rush Token size, and it now
             // summons the token's own Radiant face instead, so the 6/6 is the catalog's.
             assert!(token.radiant);
@@ -392,9 +392,9 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         assert_eq!(now(&in_library.id).cost_mod, -2);
         assert_eq!(now(&enemy.id).cost_mod, 0); // "your" hand and library only
         // R65 floors the result at 0, and the discount travels with the card between zones (R78).
-        assert_eq!(effective_cost(&state, &now(&cheap.id)), 0);
-        assert_eq!(effective_cost(&state, &now(&pricey.id)), 2);
-        assert_eq!(effective_cost(&state, &now(&in_library.id)), 2);
+        assert_eq!(effective_cost(&state, &now(&cheap.id), CostOptions::default()), 0);
+        assert_eq!(effective_cost(&state, &now(&pricey.id), CostOptions::default()), 2);
+        assert_eq!(effective_cost(&state, &now(&in_library.id), CostOptions::default()), 2);
     }
 
     #[test]
@@ -409,7 +409,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         let card = state.players.p1.units[0].as_ref().and_then(|pile| pile.first());
         assert!(card.is_some());
         let Some(card) = card else { return };
-        assert_eq!(def_of(&state, &card.def_id).index, "95.1");
+        assert_eq!(def_of(Some(&state), &card.def_id).index, "95.1");
         let view = unit_view(&state, card);
         assert_eq!((view.attack, view.max_health), (10, 10));
     }
@@ -435,7 +435,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
             for card in &state.players.p1.backrow {
                 assert!(card.is_some());
                 let Some(card) = card else { continue };
-                let card_def = def_of(&state, &card.def_id);
+                let card_def = def_of(Some(&state), &card.def_id);
                 seen.insert(card_def.type_);
                 assert!([CardType::FieldSpell, CardType::Trap, CardType::FieldTrap].contains(&card_def.type_));
                 // §3.2 and R33: a Field Spell is public, a Trap or Field Trap stays face-down.
@@ -490,7 +490,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
     fn r28_the_base_form_rolls_exactly_one_of_the_ten_effects_and_all_ten_are_reachable() {
         let mut rolled: IndexSet<String> = IndexSet::new();
         for seed in 0..200 {
-            let effects = roll_chaos_effects(&mut Rng::new(&format!("base-{seed}"), 0), false, CHAOS_EFFECTS);
+            let effects = roll_chaos_effects(&mut Rng::new(&format!("base-{seed}"), 0), false, Some(CHAOS_EFFECTS));
             assert_eq!(effects.len(), 1);
             let name = names_of(&effects).first().cloned();
             assert!(CHAOS_EFFECTS.iter().any(|effect| Some(effect.name.to_string()) == name));
@@ -507,7 +507,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         let mut reached: IndexSet<String> = IndexSet::new();
         let mut with_recursion = 0;
         for seed in 0..300 {
-            let effects = roll_chaos_effects(&mut Rng::new(&format!("radiant-{seed}"), 0), true, CHAOS_EFFECTS);
+            let effects = roll_chaos_effects(&mut Rng::new(&format!("radiant-{seed}"), 0), true, Some(CHAOS_EFFECTS));
             assert_eq!(effects.len() as i32, CALL_TO_CHAOS_RADIANT_EFFECTS);
             let names = names_of(&effects);
             // Three different entries: none comes up twice.
@@ -529,7 +529,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
             for name in &names {
                 reached.insert(name.clone());
             }
-            if names.iter().any(|name| name == CHAOS_RECURSION) {
+            if names.iter().any(|name| name == CHAOS_RECURSION.as_str()) {
                 with_recursion += 1;
             }
         }
@@ -543,7 +543,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
     #[test]
     fn r423_a_list_shorter_than_three_rolls_all_of_it_once_each() {
         let short = &CHAOS_EFFECTS[..2];
-        let rolled = roll_chaos_effects(&mut Rng::new("short-list", 0), true, short);
+        let rolled = roll_chaos_effects(&mut Rng::new("short-list", 0), true, Some(short));
         assert_eq!(names_of(&rolled), names_of(short));
     }
 
@@ -551,8 +551,8 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
     fn r423_a_radiant_call_to_chaos_runs_all_three_rolled_effects_the_recursion_only_when_rolled() {
         // A seed whose three are the hero heal, the Chaos Golem and the recursion: all three visible at once.
         let seed = (0..3000).map(|i| format!("chaos-radiant-run-{i}")).find(|candidate| {
-            let names = names_of(&roll_chaos_effects(&mut Rng::new(candidate, 0), true, CHAOS_EFFECTS));
-            names.join(",") == ["heal", "golem", CHAOS_RECURSION].join(",")
+            let names = names_of(&roll_chaos_effects(&mut Rng::new(candidate, 0), true, Some(CHAOS_EFFECTS)));
+            names.join(",") == ["heal", "golem", CHAOS_RECURSION.as_str()].join(",")
         });
         assert!(seed.is_some());
         let Some(seed) = seed else { return };
@@ -580,9 +580,9 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
 
         // A seed whose three leave the recursion out casts nothing at all.
         let no_recursion = (0..400).map(|i| format!("chaos-radiant-none-{i}")).find(|candidate| {
-            !names_of(&roll_chaos_effects(&mut Rng::new(candidate, 0), true, CHAOS_EFFECTS))
+            !names_of(&roll_chaos_effects(&mut Rng::new(candidate, 0), true, Some(CHAOS_EFFECTS)))
                 .iter()
-                .any(|name| name == CHAOS_RECURSION)
+                .any(|name| name == CHAOS_RECURSION.as_str())
         });
         assert!(no_recursion.is_some());
         let Some(no_recursion) = no_recursion else { return };
@@ -598,15 +598,15 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
     #[test]
     fn r436_names_what_it_rolled_to_both_players_by_the_printed_clauses_before_any_of_it_resolves() {
         let seed = (0..400).map(|i| format!("chaos-announce-{i}")).find(|candidate| {
-            let names = names_of(&roll_chaos_effects(&mut Rng::new(candidate, 0), true, CHAOS_EFFECTS));
-            names.iter().any(|name| name == "heal") && !names.iter().any(|name| name == CHAOS_RECURSION)
+            let names = names_of(&roll_chaos_effects(&mut Rng::new(candidate, 0), true, Some(CHAOS_EFFECTS)));
+            names.iter().any(|name| name == "heal") && !names.iter().any(|name| name == CHAOS_RECURSION.as_str())
         });
         assert!(seed.is_some());
         let Some(seed) = seed else { return };
         let mut state = game(&seed, None);
         let mut events: Vec<GameEvent> = Vec::new();
         let me = chaos_card(&mut state, true, None);
-        let expected = labels_of(&roll_chaos_effects(&mut Rng::new(&seed, 0), true, CHAOS_EFFECTS));
+        let expected = labels_of(&roll_chaos_effects(&mut Rng::new(&seed, 0), true, Some(CHAOS_EFFECTS)));
 
         sink_events(&mut state, &mut events, |sink| {
             run(sink, call_to_chaos(CallToChaosArgs::default()), Some(&me), P1);
@@ -631,7 +631,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         });
         let one = events_of_type(&base_events, GameEventType::ChaosRolled);
         assert_eq!(one.len(), 1);
-        let base_label = labels_of(&roll_chaos_effects(&mut Rng::new("chaos-announce-base", 0), false, CHAOS_EFFECTS))
+        let base_label = labels_of(&roll_chaos_effects(&mut Rng::new("chaos-announce-base", 0), false, Some(CHAOS_EFFECTS)))
             .first()
             .cloned();
         assert_eq!(json_of(&one[0])["effects"], json!([base_label]));
@@ -724,15 +724,15 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
 
         let names: IndexSet<Option<String>> = (0..20)
             .map(|i| {
-                names_of(&roll_chaos_effects(&mut Rng::new(&format!("spread-{i}"), 0), false, CHAOS_EFFECTS))
+                names_of(&roll_chaos_effects(&mut Rng::new(&format!("spread-{i}"), 0), false, Some(CHAOS_EFFECTS)))
                     .first()
                     .cloned()
             })
             .collect();
         assert!(names.len() > 1);
         assert_eq!(
-            names_of(&roll_chaos_effects(&mut Rng::new("one", 0), false, CHAOS_EFFECTS)).first(),
-            names_of(&roll_chaos_effects(&mut Rng::new("one", 0), false, CHAOS_EFFECTS)).first()
+            names_of(&roll_chaos_effects(&mut Rng::new("one", 0), false, Some(CHAOS_EFFECTS))).first(),
+            names_of(&roll_chaos_effects(&mut Rng::new("one", 0), false, Some(CHAOS_EFFECTS))).first()
         );
     }
 
@@ -764,7 +764,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
 
         sink_events(&mut state, &mut Vec::new(), |sink| {
             for entry in CHAOS_EFFECTS {
-                if entry.name == CHAOS_RECURSION {
+                if entry.name == CHAOS_RECURSION.as_str() {
                     continue; // its own test; nothing here reaches a library
                 }
                 run(sink, (entry.build)(), None, P1);
@@ -846,9 +846,9 @@ mod r28_r87_r423_what_r28_leaves_open_m3_t7 {
      {
         // 1. Written order: the recursion is the list's last entry, so when it is rolled it resolves last.
         for seed in 0..50 {
-            let names = names_of(&roll_chaos_effects(&mut Rng::new(&format!("r87-{seed}"), 0), true, CHAOS_EFFECTS));
-            if names.iter().any(|name| name == CHAOS_RECURSION) {
-                assert_eq!(names.last().map(String::as_str), Some(CHAOS_RECURSION));
+            let names = names_of(&roll_chaos_effects(&mut Rng::new(&format!("r87-{seed}"), 0), true, Some(CHAOS_EFFECTS)));
+            if names.iter().any(|name| name == CHAOS_RECURSION.as_str()) {
+                assert_eq!(names.last().map(String::as_str), Some(CHAOS_RECURSION.as_str()));
             }
         }
 
@@ -867,9 +867,9 @@ mod r28_r87_r423_what_r28_leaves_open_m3_t7 {
         // 3. At the cap the recursion does nothing and nothing is rolled in its place: a radiant Call
         // at the cap runs only its other two effects.
         let seed = (0..400).map(|i| format!("r87-cap-{i}")).find(|candidate| {
-            names_of(&roll_chaos_effects(&mut Rng::new(candidate, 0), true, CHAOS_EFFECTS))
+            names_of(&roll_chaos_effects(&mut Rng::new(candidate, 0), true, Some(CHAOS_EFFECTS)))
                 .iter()
-                .any(|name| name == CHAOS_RECURSION)
+                .any(|name| name == CHAOS_RECURSION.as_str())
         });
         assert!(seed.is_some());
         let Some(seed) = seed else { return };
@@ -885,10 +885,10 @@ mod r28_r87_r423_what_r28_leaves_open_m3_t7 {
         let me = chaos_card(&mut capped, true, Some(CALL_TO_CHAOS_CHAIN_CAP));
         assert!(chaos_chain_cap_reached(chaos_chain_of(Some(&me))));
 
-        let rolled = roll_chaos_effects(&mut Rng::new(&capped.seed, 0), true, CHAOS_EFFECTS);
+        let rolled = roll_chaos_effects(&mut Rng::new(&capped.seed, 0), true, Some(CHAOS_EFFECTS));
         let others: Vec<&ChaosEffectDef> = CHAOS_EFFECTS
             .iter()
-            .filter(|effect| names_of(&rolled).contains(&effect.name.to_string()) && effect.name != CHAOS_RECURSION)
+            .filter(|effect| names_of(&rolled).contains(&effect.name.to_string()) && effect.name != CHAOS_RECURSION.as_str())
             .collect();
         assert_eq!(others.len() as i32, CALL_TO_CHAOS_RADIANT_EFFECTS - 1);
 
@@ -920,7 +920,7 @@ mod r28_r87_r423_what_r28_leaves_open_m3_t7 {
         let mut alone_events: Vec<GameEvent> = Vec::new();
         sink_events(&mut alone, &mut alone_events, |sink| {
             // The twin takes the roll's draws first, so the two effects meet the rng exactly where they did.
-            roll_chaos_effects(sink.rng, true, CHAOS_EFFECTS);
+            roll_chaos_effects(sink.rng, true, Some(CHAOS_EFFECTS));
             let twin = chaos_card(sink.state, true, Some(CALL_TO_CHAOS_CHAIN_CAP));
             for effect in &others {
                 run(sink, (effect.build)(), Some(&twin), P1);
