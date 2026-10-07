@@ -82,16 +82,7 @@ mod tests {
             .collect()
     }
 
-    /// TS `{ ...base, ...extra }` on two object literals (a shallow merge; `extra`'s keys win).
-    fn merged(base: Value, extra: Value) -> Value {
-        let mut out = base;
-        if let (Some(into), Value::Object(from)) = (out.as_object_mut(), extra) {
-            for (key, value) in from {
-                into.insert(key, value);
-            }
-        }
-        out
-    }
+    use crate::merged;
 
     /// TS `extra: { radiant?; p1?; seed? }`.
     #[derive(Default)]

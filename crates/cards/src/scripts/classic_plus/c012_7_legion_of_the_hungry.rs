@@ -82,16 +82,7 @@ mod tests {
     const LUNAR: &str = "core-035"; // a Spell
     const STOCKPILE: &str = "core-005"; // a Spell
 
-    /// TS `{ ...base, ...extra }` on two object literals (a shallow merge; `extra`'s keys win).
-    fn merged(base: Value, extra: Value) -> Value {
-        let mut out = base;
-        if let (Some(into), Value::Object(from)) = (out.as_object_mut(), extra) {
-            for (key, value) in from {
-                into.insert(key, value);
-            }
-        }
-        out
-    }
+    use crate::merged;
 
     fn legion(radiant: bool, library: Value, p1: Value, seed: Option<&str>) -> Scenario {
         crate::register_all();

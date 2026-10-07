@@ -67,16 +67,7 @@ mod tests {
     const FILLER: &str = "core-010";
     const STOCKPILE: &str = "core-005";
 
-    /// TS `{ ...base, ...extra }` on two object literals (a shallow merge; `extra`'s keys win).
-    fn merged(base: Value, extra: Value) -> Value {
-        let mut out = base;
-        if let (Some(into), Value::Object(from)) = (out.as_object_mut(), extra) {
-            for (key, value) in from {
-                into.insert(key, value);
-            }
-        }
-        out
-    }
+    use crate::merged;
 
     fn setup(p1: Value, radiant_face: bool, seed: Option<&str>) -> Scenario {
         crate::register_all();

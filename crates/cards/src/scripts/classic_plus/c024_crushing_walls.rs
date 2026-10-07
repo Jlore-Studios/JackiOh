@@ -105,10 +105,7 @@ mod tests {
         }
     }
 
-    /// TS `s.unit(p, lane) ?? ""`: the unit's id, or a reference that names nothing.
-    fn unit_or_blank(s: &Scenario, player: PlayerId, lane: i32) -> String {
-        s.unit(player, lane).map(|unit| unit.id).unwrap_or_default()
-    }
+    use crate::unit_or_blank;
 
     mod c_n24_crushing_walls {
         use super::*;

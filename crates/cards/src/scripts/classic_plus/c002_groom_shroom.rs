@@ -105,16 +105,7 @@ mod tests {
     const FELINOR_UNITS: &[&str] =
         &["core-012", "core-043", "core-086", "classic-047", "classicplus-030", "classicplus-046"];
 
-    /// TS `{ ...base, ...extra }` on two object literals (a shallow merge; `extra`'s keys win).
-    fn merged(base: Value, extra: Value) -> Value {
-        let mut out = base;
-        if let (Some(into), Value::Object(from)) = (out.as_object_mut(), extra) {
-            for (key, value) in from {
-                into.insert(key, value);
-            }
-        }
-        out
-    }
+    use crate::merged;
 
     fn setup(p1: Value, radiant_face: bool, seed: Option<&str>) -> Scenario {
         crate::register_all();

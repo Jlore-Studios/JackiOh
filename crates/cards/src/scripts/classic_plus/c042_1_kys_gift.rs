@@ -59,15 +59,7 @@ mod tests {
 
     use crate::scenario;
 
-    /// TS `{ ...side, ...over }`: the override's keys replace the side's.
-    fn merged(mut side: Value, over: Value) -> Value {
-        if let (Some(into), Value::Object(keys)) = (side.as_object_mut(), over) {
-            for (key, value) in keys {
-                into.insert(key, value);
-            }
-        }
-        side
-    }
+    use crate::merged;
 
     /// p1's Gift in the backrow, p2 to move; `end_turn()` hands p1 its turn.
     fn gift(radiant: bool, p1: Value, p2: Value) -> Scenario {

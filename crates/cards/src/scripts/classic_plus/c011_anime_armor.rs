@@ -66,16 +66,7 @@ mod tests {
         json!([{ "pick": "hero", "player": "p1" }])
     }
 
-    /// TS `{ ...base, ...extra }` on two object literals (a shallow merge; `extra`'s keys win).
-    fn merged(base: Value, extra: Value) -> Value {
-        let mut out = base;
-        if let (Some(into), Value::Object(from)) = (out.as_object_mut(), extra) {
-            for (key, value) in from {
-                into.insert(key, value);
-            }
-        }
-        out
-    }
+    use crate::merged;
 
     /// p2 active, attacking or casting into p1, who holds Anime Armor.
     fn under_fire(p1: Value, p2: Value, radiant_face: bool) -> Scenario {

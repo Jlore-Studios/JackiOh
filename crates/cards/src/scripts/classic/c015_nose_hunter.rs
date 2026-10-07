@@ -84,16 +84,7 @@ mod tests {
     /// p2's deck, top first: the bottom card is Pointmaster, so "the bottom card" is visible by def.
     const DECK: [&str; 3] = [VANILLA, TIMMY, POINTMASTER];
 
-    /// TS `{ ...base, ...extra }` on a setup object: `extra`'s keys replace `base`'s.
-    fn merged(base: Value, extra: Value) -> Value {
-        let mut out = base;
-        if let (Some(map), Value::Object(extra)) = (out.as_object_mut(), extra) {
-            for (key, value) in extra {
-                map.insert(key, value);
-            }
-        }
-        out
-    }
+    use crate::merged;
 
     /// TS `setup(p1, p2 = {})`.
     fn setup(p1: Value, p2: Value) -> Scenario {

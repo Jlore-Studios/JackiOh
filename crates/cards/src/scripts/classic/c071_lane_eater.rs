@@ -104,15 +104,7 @@ mod tests {
 
     use crate::scenario;
 
-    /// TS `{ ...base, ...over }` on two object literals.
-    fn merged(mut base: Value, over: Value) -> Value {
-        if let (Some(into), Some(from)) = (base.as_object_mut(), over.as_object()) {
-            for (key, value) in from {
-                into.insert(key.clone(), value.clone());
-            }
-        }
-        base
-    }
+    use crate::merged;
 
     /// TS `SPARE: SideSetup`.
     fn spare() -> Value {

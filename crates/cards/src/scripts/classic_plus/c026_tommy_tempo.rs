@@ -97,10 +97,7 @@ mod tests {
         (1..=5).find_map(|lane| s.unit(P1, lane).filter(|unit| unit.def_id == TOMMY))
     }
 
-    /// TS `s.unit(p, lane) ?? ""`: the unit's id, or a reference that names nothing.
-    fn unit_or_blank(s: &Scenario, player: PlayerId, lane: i32) -> String {
-        s.unit(player, lane).map(|unit| unit.id).unwrap_or_default()
-    }
+    use crate::unit_or_blank;
 
     /// TS `s.hand(p)[0] ?? FILLER`.
     fn first_in_hand(s: &Scenario, player: PlayerId) -> String {

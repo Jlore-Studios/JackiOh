@@ -57,16 +57,7 @@ mod tests {
     const SOLARIUS: &str = "classicplus-038"; // Spell Damage +2
     const FILLER: &str = "core-005";
 
-    /// TS `{ ...base, ...extra }` on two object literals (a shallow merge; `extra`'s keys win).
-    fn merged(base: Value, extra: Value) -> Value {
-        let mut out = base;
-        if let (Some(into), Value::Object(from)) = (out.as_object_mut(), extra) {
-            for (key, value) in from {
-                into.insert(key, value);
-            }
-        }
-        out
-    }
+    use crate::merged;
 
     fn boil(radiant: bool, p1: Value, p2: Value) -> Scenario {
         crate::register_all();

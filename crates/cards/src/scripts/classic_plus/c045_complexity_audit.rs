@@ -154,15 +154,7 @@ mod tests {
         panic!("no two Units sum to {target} lines");
     }
 
-    /// TS `{ ...base, ...extra }` on two object literals.
-    fn merged(mut base: Value, extra: Value) -> Value {
-        if let (Some(into), Value::Object(from)) = (base.as_object_mut(), extra) {
-            for (key, value) in from {
-                into.insert(key, value);
-            }
-        }
-        base
-    }
+    use crate::merged;
 
     /// TS `audit({ radiant?, p1?, p2? })`: the Audit and a filler in p1's hand, a filler in p2's, and
     /// each side's extra setup spread over that.

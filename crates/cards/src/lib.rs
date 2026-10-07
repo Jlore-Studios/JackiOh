@@ -116,6 +116,27 @@ pub(crate) fn js<T: serde::Serialize + ?Sized>(value: &T) -> serde_json::Value {
     serde_json::to_value(value).expect("an engine value serialises")
 }
 
+/// TS `{ ...base, ...over }` on two object literals (a test's side setup over its defaults).
+#[cfg(test)]
+pub(crate) fn merged(mut base: serde_json::Value, over: serde_json::Value) -> serde_json::Value {
+    if let (Some(into), serde_json::Value::Object(from)) = (base.as_object_mut(), over) {
+        for (key, value) in from {
+            into.insert(key, value);
+        }
+    }
+    base
+}
+
+/// TS `s.unit(p, lane)?.id ?? ""`: the unit's instance id, or blank for an empty lane.
+#[cfg(test)]
+pub(crate) fn unit_or_blank(
+    s: &jackioh_engine::testkit::Scenario,
+    player: jackioh_engine::PlayerId,
+    lane: i32,
+) -> String {
+    s.unit(player, lane).map(|unit| unit.id).unwrap_or_default()
+}
+
 /// TS `toMatchObject`: every key the pattern names holds a matching value; arrays match item by item.
 #[cfg(test)]
 pub(crate) fn matches_object(actual: &serde_json::Value, pattern: &serde_json::Value) -> bool {

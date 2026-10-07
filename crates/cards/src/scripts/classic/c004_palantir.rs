@@ -157,15 +157,7 @@ mod tests {
 
     use crate::matches_object;
 
-    /// TS `{ ...defaults, ...over }` on a side's setup.
-    fn merged(mut defaults: Value, over: Value) -> Value {
-        if let (Some(into), Value::Object(over)) = (defaults.as_object_mut(), over) {
-            for (key, value) in over {
-                into.insert(key, value);
-            }
-        }
-        defaults
-    }
+    use crate::merged;
 
     fn setup(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
         scenario(json!({

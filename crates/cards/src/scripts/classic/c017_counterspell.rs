@@ -118,16 +118,7 @@ mod tests {
         json!({ "def": COUNTER, "radiant": radiant_face, "faceUp": false, "lane": lane })
     }
 
-    /// TS `{ ...base, ...extra }` on a setup object: `extra`'s keys replace `base`'s.
-    fn merged(base: Value, extra: Value) -> Value {
-        let mut out = base;
-        if let (Some(map), Value::Object(extra)) = (out.as_object_mut(), extra) {
-            for (key, value) in extra {
-                map.insert(key, value);
-            }
-        }
-        out
-    }
+    use crate::merged;
 
     /// TS `setup(p1 = {}, p2 = {}, radiantFace = false)`.
     fn setup(p1: Value, p2: Value, radiant_face: bool) -> Scenario {

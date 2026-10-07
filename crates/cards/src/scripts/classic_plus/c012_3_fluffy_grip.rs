@@ -54,16 +54,7 @@ mod tests {
     const FILLER: &str = "core-005"; // a Spell
     const RUSH_TOKEN: &str = "core-t-rush"; // a unit-token card (R11)
 
-    /// TS `{ ...base, ...extra }` on two object literals (a shallow merge; `extra`'s keys win).
-    fn merged(base: Value, extra: Value) -> Value {
-        let mut out = base;
-        if let (Some(into), Value::Object(from)) = (out.as_object_mut(), extra) {
-            for (key, value) in from {
-                into.insert(key, value);
-            }
-        }
-        out
-    }
+    use crate::merged;
 
     use crate::matches_object;
 
