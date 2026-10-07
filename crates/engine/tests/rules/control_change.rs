@@ -42,7 +42,7 @@ fn trap() -> CardDef {
 
 /// The shared fixture unit token, which the Reborn fixture's Death summons for "you".
 fn token_id() -> String {
-    token_def("rush").id
+    token_def("rush", [Tag::Token]).id
 }
 
 /// R172: Reborn, and a Death that summons for its controller, so "you" is observable.
@@ -253,9 +253,9 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
     fn r171_a_stolen_unit_with_neither_rush_nor_charge_is_summoning_sick_for_the_rest_of_the_turn() {
         let mut state = playing("cc-steal-sick");
         let turn = state.turn;
-        let victim = put(&mut state, &plain().id, slot(P2, Row::Units, 3));
+        let victim = put(&mut state, &plain.id, slot(P2, Row::Units, 3), json!({}));
         let victim = ready(&mut state, victim, turn - 1);
-        let bystander = put(&mut state, &plain().id, slot(P2, Row::Units, 5));
+        let bystander = put(&mut state, &plain.id, slot(P2, Row::Units, 5), json!({}));
         let bystander = ready(&mut state, bystander, turn - 1);
 
         let events = run(&mut state, steal(json_as(json!({ "instanceId": victim.id }))), P1);
@@ -283,11 +283,11 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
     fn r171_a_stolen_rush_unit_may_attack_units_but_not_the_hero_a_stolen_charge_unit_may_attack_both() {
         let mut state = playing("cc-steal-keywords");
         let turn = state.turn;
-        let rush = put(&mut state, &rusher().id, slot(P2, Row::Units, 1));
+        let rush = put(&mut state, &rusher.id, slot(P2, Row::Units, 1), json!({}));
         let rush = ready(&mut state, rush, turn - 1);
-        let charge = put(&mut state, &charger().id, slot(P2, Row::Units, 2));
+        let charge = put(&mut state, &charger.id, slot(P2, Row::Units, 2), json!({}));
         let charge = ready(&mut state, charge, turn - 1);
-        let bystander = put(&mut state, &plain().id, slot(P2, Row::Units, 5));
+        let bystander = put(&mut state, &plain.id, slot(P2, Row::Units, 5), json!({}));
         let bystander = ready(&mut state, bystander, turn - 1);
 
         run(&mut state, steal(json_as(json!({ "instanceId": rush.id }))), P1);
@@ -311,9 +311,9 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
     fn r171_the_exertion_is_fresh_a_unit_that_attacked_or_switched_for_the_player_it_left_may_act_again() {
         let mut state = playing("cc-steal-exertion");
         let turn = state.turn;
-        let charge = put(&mut state, &charger().id, slot(P2, Row::Units, 1));
+        let charge = put(&mut state, &charger.id, slot(P2, Row::Units, 1), json!({}));
         let charge = exhausted(&mut state, charge, turn - 1);
-        let switcher = put(&mut state, &plain().id, slot(P2, Row::Units, 2));
+        let switcher = put(&mut state, &plain.id, slot(P2, Row::Units, 2), json!({}));
         let switcher = exhausted(&mut state, switcher, turn - 1);
 
         run(&mut state, steal(json_as(json!({ "instanceId": charge.id }))), P1);
@@ -332,17 +332,17 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         let mut state = playing("cc-steal-all");
         let turn = state.turn;
         for lane in 1..=3 {
-            let mine = put(&mut state, &plain().id, slot(P1, Row::Units, lane));
+            let mine = put(&mut state, &plain.id, slot(P1, Row::Units, lane), json!({}));
             ready(&mut state, mine, turn - 1);
         }
         let mut taken: Vec<CardInstance> = Vec::new();
         for lane in [1, 2] {
-            let card = put(&mut state, &plain().id, slot(P2, Row::Units, lane));
+            let card = put(&mut state, &plain.id, slot(P2, Row::Units, lane), json!({}));
             taken.push(exhausted(&mut state, card, turn - 1));
         }
         let mut left_behind: Vec<CardInstance> = Vec::new();
         for lane in [3, 4, 5] {
-            let card = put(&mut state, &plain().id, slot(P2, Row::Units, lane));
+            let card = put(&mut state, &plain.id, slot(P2, Row::Units, lane), json!({}));
             left_behind.push(exhausted(&mut state, card, turn - 1));
         }
 
@@ -371,11 +371,11 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
     fn r171_the_board_swap_c87_marks_every_card_that_changes_sides_dormant_stack_cards_and_backrow_cards_included() {
         let mut state = playing("cc-swap-marks");
         let turn = state.turn;
-        let mine = put(&mut state, &plain().id, slot(P1, Row::Units, 1));
+        let mine = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
         let mine = exhausted(&mut state, mine, turn - 1);
-        let beneath = put(&mut state, &plain().id, slot(P1, Row::Units, 2));
+        let beneath = put(&mut state, &plain.id, slot(P1, Row::Units, 2), json!({}));
         let beneath = exhausted(&mut state, beneath, turn - 2);
-        let top = new_instance(&mut state, &stacker().id, P1, Zone::Hand { player: P1 });
+        let top = new_instance(&mut state, &stacker.id, P1, Zone::Hand { player: P1 });
         let top_id = top.id.clone();
         assert!(place_on_field(
             &mut state,
@@ -385,11 +385,11 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         ));
         let top = live_by_id(&state, &top_id);
         let top = exhausted(&mut state, top, turn - 1);
-        let my_trap = put(&mut state, &trap().id, slot(P1, Row::Backrow, 3));
+        let my_trap = put(&mut state, &trap().id, slot(P1, Row::Backrow, 3), json!({}));
         find_instance_mut(&mut state, &my_trap.id).expect("in the backrow").summoned_turn = Some(turn - 1);
-        let theirs = put(&mut state, &plain().id, slot(P2, Row::Units, 4));
+        let theirs = put(&mut state, &plain.id, slot(P2, Row::Units, 4), json!({}));
         let theirs = exhausted(&mut state, theirs, turn - 1);
-        let their_trap = put(&mut state, &trap().id, slot(P2, Row::Backrow, 5));
+        let their_trap = put(&mut state, &trap().id, slot(P2, Row::Backrow, 5), json!({}));
         find_instance_mut(&mut state, &their_trap.id).expect("in the backrow").summoned_turn = Some(turn - 1);
 
         let events = run(&mut state, swap_board(), P1);
@@ -413,13 +413,13 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
     fn r171_the_board_swap_units_the_caster_receives_are_sick_units_the_opponent_receives_attack_on_its_next_turn() {
         let mut state = playing("cc-swap-turns");
         let turn = state.turn;
-        let own = put(&mut state, &plain().id, slot(P1, Row::Units, 1));
+        let own = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
         ready(&mut state, own, turn - 1);
-        let their_plain = put(&mut state, &plain().id, slot(P2, Row::Units, 3));
+        let their_plain = put(&mut state, &plain.id, slot(P2, Row::Units, 3), json!({}));
         let their_plain = ready(&mut state, their_plain, turn - 1);
-        let their_charge = put(&mut state, &charger().id, slot(P2, Row::Units, 4));
+        let their_charge = put(&mut state, &charger.id, slot(P2, Row::Units, 4), json!({}));
         let their_charge = ready(&mut state, their_charge, turn - 1);
-        let their_rush = put(&mut state, &rusher().id, slot(P2, Row::Units, 5));
+        let their_rush = put(&mut state, &rusher.id, slot(P2, Row::Units, 5), json!({}));
         let their_rush = ready(&mut state, their_rush, turn - 1);
 
         run(&mut state, swap_board(), P1);
@@ -445,9 +445,9 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         let mut state = playing("cc-rotate");
         let turn = state.turn;
         // Rotating right from p1's seat: p1 lane n → n+1, p1 lane 5 → p2 lane 5, p2 lane 1 → p1 lane 1.
-        let along_ready = put(&mut state, &plain().id, slot(P1, Row::Units, 2));
+        let along_ready = put(&mut state, &plain.id, slot(P1, Row::Units, 2), json!({}));
         let along_ready = ready(&mut state, along_ready, turn - 1);
-        let along_spent = put(&mut state, &plain().id, slot(P1, Row::Units, 3));
+        let along_spent = put(&mut state, &plain.id, slot(P1, Row::Units, 3), json!({}));
         {
             let held = find_instance_mut(&mut state, &along_spent.id).expect("on the field");
             held.summoned_turn = Some(turn - 1);
@@ -457,9 +457,9 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
                 attacks: None,
             };
         }
-        let outbound = put(&mut state, &plain().id, slot(P1, Row::Units, 5));
+        let outbound = put(&mut state, &plain.id, slot(P1, Row::Units, 5), json!({}));
         let outbound = exhausted(&mut state, outbound, turn - 1);
-        let inbound = put(&mut state, &plain().id, slot(P2, Row::Units, 1));
+        let inbound = put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({}));
         let inbound = exhausted(&mut state, inbound, turn - 1);
 
         let events = rotate(&mut state, RotationDirection::Right, false);
@@ -506,12 +506,12 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         let turn = state.turn;
         // Rotating right from p1's seat: p1 lane 5 would cross to p2 and is bounced instead (R14);
         // p2 lane 1 crosses onto p1's side as it would on the base face.
-        let along = put(&mut state, &plain().id, slot(P1, Row::Units, 2));
+        let along = put(&mut state, &plain.id, slot(P1, Row::Units, 2), json!({}));
         let along = exhausted(&mut state, along, turn - 1);
-        let their_along = put(&mut state, &plain().id, slot(P2, Row::Units, 3));
+        let their_along = put(&mut state, &plain.id, slot(P2, Row::Units, 3), json!({}));
         let their_along = ready(&mut state, their_along, turn - 1);
-        let outbound = put(&mut state, &plain().id, slot(P1, Row::Units, 5));
-        let inbound = put(&mut state, &plain().id, slot(P2, Row::Units, 1));
+        let outbound = put(&mut state, &plain.id, slot(P1, Row::Units, 5), json!({}));
+        let inbound = put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({}));
         let inbound = exhausted(&mut state, inbound, turn - 1);
 
         let events = rotate(&mut state, RotationDirection::Right, true);
@@ -538,7 +538,7 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         let mut state = playing("cc-round-trip");
         let turn = state.turn;
         // Right then left from p1's seat: p1 lane 5 → p2 lane 5 → p1 lane 5.
-        let traveller = put(&mut state, &plain().id, slot(P1, Row::Units, 5));
+        let traveller = put(&mut state, &plain.id, slot(P1, Row::Units, 5), json!({}));
         let traveller = ready(&mut state, traveller, turn - 1);
         assert!(offered_attacks(&state, &traveller).contains(&"hero-p2".to_string()));
 
@@ -558,7 +558,7 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         let mut state = playing("cc-round-trip-charge");
         let turn = state.turn;
         // Left then right from p1's seat: p1 lane 1 → p2 lane 1 → p1 lane 1.
-        let charge = put(&mut state, &charger().id, slot(P1, Row::Units, 1));
+        let charge = put(&mut state, &charger.id, slot(P1, Row::Units, 1), json!({}));
         {
             let held = find_instance_mut(&mut state, &charge.id).expect("on the field");
             held.summoned_turn = Some(turn - 1);
@@ -585,12 +585,12 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
     fn r171_r76_r15_a_steal_that_does_nothing_touches_neither_summonedturn_nor_exertion() {
         let mut state = playing("cc-noop");
         let turn = state.turn;
-        let mine = put(&mut state, &plain().id, slot(P1, Row::Units, 1));
+        let mine = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
         let mine = exhausted(&mut state, mine, turn - 1);
         for lane in 2..=5 {
-            put(&mut state, &plain().id, slot(P1, Row::Units, lane));
+            put(&mut state, &plain.id, slot(P1, Row::Units, lane), json!({}));
         }
-        let theirs = put(&mut state, &plain().id, slot(P2, Row::Units, 3));
+        let theirs = put(&mut state, &plain.id, slot(P2, Row::Units, 3), json!({}));
         let theirs = exhausted(&mut state, theirs, turn - 1);
 
         // R76: already yours. R15: no free zone on the thief's side.
@@ -609,11 +609,11 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
     fn r171_a_change_of_control_on_the_opponent_s_turn_leaves_the_unit_ready_on_its_new_controller_s_next_turn() {
         let mut state = playing("cc-opponents-turn");
         let turn = state.turn;
-        let first = put(&mut state, &plain().id, slot(P1, Row::Units, 1));
+        let first = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
         ready(&mut state, first, turn - 1);
-        let victim = put(&mut state, &plain().id, slot(P1, Row::Units, 2));
+        let victim = put(&mut state, &plain.id, slot(P1, Row::Units, 2), json!({}));
         let victim = exhausted(&mut state, victim, turn - 1);
-        let other = put(&mut state, &plain().id, slot(P2, Row::Units, 5));
+        let other = put(&mut state, &plain.id, slot(P2, Row::Units, 5), json!({}));
         ready(&mut state, other, turn - 1);
 
         // p1 is active, so this is the inactive player stealing: the unit enters p2's side on turn T.
@@ -635,10 +635,10 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
     fn r171_r53_forced_attacks_still_ignore_sickness_and_spend_nothing() {
         let mut state = playing("cc-forced");
         let turn = state.turn;
-        let victim = put(&mut state, &plain().id, slot(P2, Row::Units, 2));
+        let victim = put(&mut state, &plain.id, slot(P2, Row::Units, 2), json!({}));
         let victim = ready(&mut state, victim, turn - 1);
         find_instance_mut(&mut state, &victim.id).expect("on the field").buffs = AttackHealth { attack: 0, health: 10 };
-        let target = put(&mut state, &plain().id, slot(P2, Row::Units, 4));
+        let target = put(&mut state, &plain.id, slot(P2, Row::Units, 4), json!({}));
         let target = ready(&mut state, target, turn - 1);
         find_instance_mut(&mut state, &target.id).expect("on the field").buffs = AttackHealth { attack: 0, health: 10 };
         run(&mut state, steal(json_as(json!({ "instanceId": victim.id }))), P1);
@@ -679,11 +679,11 @@ mod r172_a_stolen_unit_dies_as_its_controller_s {
     fn r172_a_stolen_reborn_unit_returns_to_the_zone_it_reserved_on_the_thief_s_side_owned_by_its_owner_and_sick() {
         let mut state = playing("cc-reborn");
         let turn = state.turn;
-        let first = put(&mut state, &plain().id, slot(P1, Row::Units, 1));
+        let first = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
         ready(&mut state, first, turn - 1);
-        let body = put(&mut state, &reborner().id, slot(P2, Row::Units, 3));
+        let body = put(&mut state, &reborner().id, slot(P2, Row::Units, 3), json!({}));
         let body = ready(&mut state, body, turn - 1);
-        let other = put(&mut state, &plain().id, slot(P2, Row::Units, 5));
+        let other = put(&mut state, &plain.id, slot(P2, Row::Units, 5), json!({}));
         ready(&mut state, other, turn - 1);
         run(&mut state, steal(json_as(json!({ "instanceId": body.id }))), P1);
         assert_eq!(card_id_at(&state, slot(P1, Row::Units, 3)), Some(body.id.clone()));
@@ -718,9 +718,9 @@ mod r172_a_stolen_unit_dies_as_its_controller_s {
     fn r172_a_stolen_unit_s_death_runs_for_the_player_who_controlled_it_when_it_died() {
         let mut state = playing("cc-death");
         let turn = state.turn;
-        let body = put(&mut state, &reborner().id, slot(P2, Row::Units, 2));
+        let body = put(&mut state, &reborner().id, slot(P2, Row::Units, 2), json!({}));
         let body = ready(&mut state, body, turn - 1);
-        let other = put(&mut state, &plain().id, slot(P2, Row::Units, 5));
+        let other = put(&mut state, &plain.id, slot(P2, Row::Units, 5), json!({}));
         ready(&mut state, other, turn - 1);
         run(&mut state, steal(json_as(json!({ "instanceId": body.id }))), P1);
 

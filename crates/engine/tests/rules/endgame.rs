@@ -143,8 +143,8 @@ mod ending_the_game_m1_t8 {
         let mut state = playing("cap", None);
         // R389: do-nothing decks fatigue out at player-turn 48 (§2.4, R3); #75 Infinite Reserves on both
         // sides turns every empty-library draw into a card, so nothing but the cap ends this game.
-        put(&mut state, &infinite_reserves().id, slot(P1, Row::Backrow, 1));
-        put(&mut state, &infinite_reserves().id, slot(P2, Row::Backrow, 1));
+        put(&mut state, &infinite_reserves().id, slot(P1, Row::Backrow, 1), json!({}));
+        put(&mut state, &infinite_reserves().id, slot(P2, Row::Backrow, 1), json!({}));
         for _ in 0..TURN_CAP_PLAYER_TURNS - 1 {
             let active = state.active;
             state = act(&state, json!({ "type": "endTurn", "playerId": active }));

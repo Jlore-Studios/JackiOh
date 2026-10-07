@@ -9,26 +9,11 @@ use jackioh_engine::wire::PlayerId::P2;
 
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::field::playing;
-use crate::rules::fixtures::harness::slot;
-
-/// `put(state, defId, ref, { radiant })` (fixtures/harness.ts), face and all: a hand instance made
-/// Radiant before it is placed, as the TS helper does.
-fn put_face(state: &mut GameState, def_id: &str, at: ZoneSlot, radiant: bool) -> CardInstance {
-    let (player, row, lane) = (at.player, at.row, at.lane);
-    let mut card = new_instance(state, def_id, player, Zone::Hand { player });
-    if radiant {
-        card.radiant = true;
-    }
-    let id = card.id.clone();
-    if !place_on_field(state, card, at, Default::default()) {
-        panic!("could not place {def_id} in {row} {lane}");
-    }
-    find_instance(state, &id).cloned().expect("placed card")
-}
+use crate::rules::fixtures::harness::{put, slot};
 
 fn killed(radiant: bool) -> Option<GameEvent> {
     let mut state = playing(&format!("destroyed-face-{radiant}"));
-    let unit = put_face(&mut state, &plain().id, slot(P2, Row::Units, 1), radiant);
+    let unit = put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({ "radiant": radiant }));
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut sink = EngineSink::new(&mut state, &mut events, &mut rng);

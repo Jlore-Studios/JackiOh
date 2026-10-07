@@ -44,27 +44,27 @@ const COMBATS: i32 = 1000;
 /// Every keyword fixture of §6.1, as the bodies a random combat is fought between.
 fn bodies() -> Vec<CardDef> {
     vec![
-        plain(),
-        big_body(),
-        zero_attack(),
-        taunter(),
-        rusher(),
-        charger(),
-        first_striker(),
-        shielded(),
-        armoured(),
-        indestructible(),
-        poisonous(),
-        lifestealer(),
-        trampler(),
-        trample_lifesteal(),
-        cleaver(),
-        pacifist(),
-        stacker(),
-        moths(),
-        big_dfender(),
-        deft_duelist(),
-        spikey_pillow(),
+        plain.clone(),
+        big_body.clone(),
+        zero_attack.clone(),
+        taunter.clone(),
+        rusher.clone(),
+        charger.clone(),
+        first_striker.clone(),
+        shielded.clone(),
+        armoured.clone(),
+        indestructible.clone(),
+        poisonous.clone(),
+        lifestealer.clone(),
+        trampler.clone(),
+        trample_lifesteal.clone(),
+        cleaver.clone(),
+        pacifist.clone(),
+        stacker.clone(),
+        moths.clone(),
+        big_dfender.clone(),
+        deft_duelist.clone(),
+        spikey_pillow.clone(),
     ]
 }
 
@@ -126,21 +126,6 @@ fn grants_for(rng: &mut Rng) -> Vec<Keyword> {
         }
     }
     picked
-}
-
-/// `put(state, defId, ref, { radiant })` (fixtures/harness.ts), face and all: a hand instance made
-/// Radiant before it is placed, as the TS helper does.
-fn put_face(state: &mut GameState, def_id: &str, at: ZoneSlot, radiant: bool) -> CardInstance {
-    let (player, row, lane) = (at.player, at.row, at.lane);
-    let mut card = new_instance(state, def_id, player, Zone::Hand { player });
-    if radiant {
-        card.radiant = true;
-    }
-    let id = card.id.clone();
-    if !place_on_field(state, card, at, Default::default()) {
-        panic!("could not place {def_id} in {row} {lane}");
-    }
-    find_instance(state, &id).cloned().expect("placed card")
 }
 
 /// The instance as the state holds it now (TS reads its live object).
@@ -217,8 +202,8 @@ fn run_one_combat(index: i32, tally: &mut Tally) -> Vec<Violation> {
     state.phase = Phase::Main;
 
     let bodies = bodies();
-    let attacker_def = rng.pick(&bodies).cloned().unwrap_or_else(plain);
-    let defender_def = rng.pick(&bodies).cloned().unwrap_or_else(plain);
+    let attacker_def = rng.pick(&bodies).cloned().unwrap_or_else(|| plain.clone());
+    let defender_def = rng.pick(&bodies).cloned().unwrap_or_else(|| plain.clone());
     let attacker_radiant = rng.chance(0.4);
     let defender_radiant = rng.chance(0.4);
     if attacker_radiant {
@@ -229,8 +214,8 @@ fn run_one_combat(index: i32, tally: &mut Tally) -> Vec<Violation> {
     }
 
     // Lane 3 on each side, so a Cleave has a neighbour on either hand (§4.4 step 10, §3.1).
-    let attacker = put_face(&mut state, &attacker_def.id, slot(P1, Row::Units, 3), attacker_radiant);
-    let defender = put_face(&mut state, &defender_def.id, slot(P2, Row::Units, 3), defender_radiant);
+    let attacker = put(&mut state, &attacker_def.id, slot(P1, Row::Units, 3), json!({ "radiant": attacker_radiant }));
+    let defender = put(&mut state, &defender_def.id, slot(P2, Row::Units, 3), json!({ "radiant": defender_radiant }));
     dress(&mut state, &attacker.id, &mut rng);
     dress(&mut state, &defender.id, &mut rng);
 
@@ -238,15 +223,15 @@ fn run_one_combat(index: i32, tally: &mut Tally) -> Vec<Violation> {
         if !rng.chance(0.5) {
             continue;
         }
-        let neighbour_def = rng.pick(&bodies).cloned().unwrap_or_else(plain);
+        let neighbour_def = rng.pick(&bodies).cloned().unwrap_or_else(|| plain.clone());
         let radiant = rng.chance(0.3);
-        let neighbour = put_face(&mut state, &neighbour_def.id, slot(P2, Row::Units, lane), radiant);
+        let neighbour = put(&mut state, &neighbour_def.id, slot(P2, Row::Units, lane), json!({ "radiant": radiant }));
         dress(&mut state, &neighbour.id, &mut rng);
     }
     if rng.chance(0.3) {
-        let ally_def = rng.pick(&bodies).cloned().unwrap_or_else(plain);
+        let ally_def = rng.pick(&bodies).cloned().unwrap_or_else(|| plain.clone());
         let radiant = rng.chance(0.3);
-        let ally = put_face(&mut state, &ally_def.id, slot(P1, Row::Units, 2), radiant);
+        let ally = put(&mut state, &ally_def.id, slot(P1, Row::Units, 2), json!({ "radiant": radiant }));
         dress(&mut state, &ally.id, &mut rng);
     }
 
@@ -357,8 +342,8 @@ fn run_one_combat(index: i32, tally: &mut Tally) -> Vec<Violation> {
             if view.health > 0 {
                 continue;
             }
-            let indestructible = has_keyword(&view.keywords, KeywordKind::Indestructible);
-            if indestructible && view.max_health > 0 {
+            let is_indestructible_now = has_keyword(&view.keywords, KeywordKind::Indestructible);
+            if is_indestructible_now && view.max_health > 0 {
                 tally.r69_survivors += 1;
                 continue;
             }
@@ -495,7 +480,7 @@ mod r69_and_r46_the_exception_invariant_2_carves_out {
     fn r69_leaves_an_indestructible_unit_at_0_or_less_health_on_the_field_while_its_max_health_is_above_0() {
         let mut state = new_game("r69-stays", None);
         state.turn = 4;
-        let unit = put(&mut state, &indestructible().id, slot(P1, Row::Units, 1)); // 4/4 Indestructible
+        let unit = put(&mut state, &indestructible.id, slot(P1, Row::Units, 1), json!({})); // 4/4 Indestructible
         // "Damage taken before it became Indestructible": 6 on a 4-health body.
         find_instance_mut(&mut state, &unit.id).expect("on the field").damage = 6;
 
@@ -516,7 +501,7 @@ mod r69_and_r46_the_exception_invariant_2_carves_out {
     fn r69_collects_an_indestructible_unit_whose_max_health_falls_to_0_or_less_like_any_other_unit() {
         let mut state = new_game("r69-collected", None);
         state.turn = 4;
-        let unit = put(&mut state, &indestructible().id, slot(P1, Row::Units, 1)); // 4/4 Indestructible
+        let unit = put(&mut state, &indestructible.id, slot(P1, Row::Units, 1), json!({})); // 4/4 Indestructible
         // Suppressive Aura's effect, as a layer-4 buff: max health to 0, with no destroy involved.
         find_instance_mut(&mut state, &unit.id).expect("on the field").buffs.health = -4;
         assert_eq!(unit_view(&state, &live(&state, &unit.id)).max_health, 0);
@@ -543,7 +528,7 @@ mod r69_and_r46_the_exception_invariant_2_carves_out {
     fn r46_a_would_destroy_on_an_indestructible_unit_switches_it_to_attack_position_and_takes_its_taunt_for_the_turn() {
         let mut state = new_game("r46", None);
         state.turn = 4;
-        let unit = put(&mut state, &indestructible().id, slot(P1, Row::Units, 1));
+        let unit = put(&mut state, &indestructible.id, slot(P1, Row::Units, 1), json!({}));
         {
             let held = find_instance_mut(&mut state, &unit.id).expect("on the field");
             held.granted_keywords.push(Keyword::Taunt);
@@ -591,8 +576,8 @@ mod r69_and_r46_the_exception_invariant_2_carves_out {
         state.turn = 4;
         state.active = P1;
         state.phase = Phase::Main;
-        let attacker = put(&mut state, &big_body().id, slot(P1, Row::Units, 1)); // 5/10
-        let defender = put(&mut state, &indestructible().id, slot(P2, Row::Units, 1)); // 4/4 Indestructible
+        let attacker = put(&mut state, &big_body.id, slot(P1, Row::Units, 1), json!({})); // 5/10
+        let defender = put(&mut state, &indestructible.id, slot(P2, Row::Units, 1), json!({})); // 4/4 Indestructible
 
         let mut events: Vec<GameEvent> = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);

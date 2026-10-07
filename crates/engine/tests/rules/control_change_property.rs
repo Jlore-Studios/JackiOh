@@ -45,7 +45,7 @@ const AGREEMENT_RUNS: u32 = 60;
 
 /// The keyword bodies of `fixtures/combat` a unit zone is filled from.
 fn bodies() -> Vec<CardDef> {
-    vec![plain(), rusher(), charger(), deft_duelist(), taunter(), pacifist(), zero_attack()]
+    vec![plain.clone(), rusher.clone(), charger.clone(), deft_duelist.clone(), taunter.clone(), pacifist.clone(), zero_attack.clone()]
 }
 
 const FRESH: Exertion = Exertion {
@@ -263,8 +263,8 @@ fn build(base: &GameState, board: &Board) -> (GameState, IndexMap<String, Snapsh
                 continue;
             };
             let lane = index as i32 + 1;
-            let def = bodies.get(spec.body).cloned().unwrap_or_else(plain);
-            let body = put(&mut state, &def.id, slot(player, Row::Units, lane));
+            let def = bodies.get(spec.body).cloned().unwrap_or_else(|| plain.clone());
+            let body = put(&mut state, &def.id, slot(player, Row::Units, lane), json!({}));
             {
                 let held = find_instance_mut(&mut state, &body.id).expect("on the field");
                 held.position = Some(spec.position);
@@ -273,7 +273,7 @@ fn build(base: &GameState, board: &Board) -> (GameState, IndexMap<String, Snapsh
             let Some(top_marks) = spec.top else {
                 continue;
             };
-            let top = new_instance(&mut state, &stacker().id, player, Zone::Hand { player });
+            let top = new_instance(&mut state, &stacker.id, player, Zone::Hand { player });
             let top_id = top.id.clone();
             if !place_on_field(&mut state, top, slot(player, Row::Units, lane), json_as(json!({ "stack": true }))) {
                 panic!("could not stack");

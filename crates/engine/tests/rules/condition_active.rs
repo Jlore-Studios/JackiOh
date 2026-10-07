@@ -602,8 +602,8 @@ mod r195_condition_active_stays_off_a_hand_card_outside_its_playable_window_b2 {
     fn r195_b2_after_the_game_has_ended_nothing_carries_the_flag_hand_or_field() {
         let (mut state, hooks) = game("r195-b2-over");
         let spell = one(in_hand(&mut state, &glow_spell().id, P1, 1));
-        put(&mut state, &glow_unit().id, slot(P1, Row::Units, 1));
-        put(&mut state, &glow_trap().id, slot(P1, Row::Backrow, 1));
+        put(&mut state, &glow_unit().id, slot(P1, Row::Units, 1), json!({}));
+        put(&mut state, &glow_trap().id, slot(P1, Row::Backrow, 1), json!({}));
         state.result = Some(GameResult {
             winner: Winner::P2,
             reason: GameOverReason::HeroDeath,
@@ -647,7 +647,7 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
     #[test]
     fn r195_b3_a_unit_the_viewer_controls_carries_the_flag_on_the_viewer_s_turn_asked_as_field_with_yourturn_true() {
         let (mut state, hooks) = game("r195-b3-unit-own-turn");
-        let unit = put(&mut state, &glow_unit().id, slot(P1, Row::Units, 2));
+        let unit = put(&mut state, &glow_unit().id, slot(P1, Row::Units, 2), json!({}));
 
         let view = view_for(&state, P1);
 
@@ -665,7 +665,7 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
     fn r195_b3_the_same_unit_still_carries_it_on_the_opponent_s_turn_asked_with_yourturn_false() {
         let (mut state, hooks) = game("r195-b3-unit-their-turn");
         state.active = P2;
-        let unit = put(&mut state, &glow_unit().id, slot(P1, Row::Units, 1));
+        let unit = put(&mut state, &glow_unit().id, slot(P1, Row::Units, 1), json!({}));
 
         let view = view_for(&state, P1);
 
@@ -684,9 +684,9 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
             let (mut state, hooks) = game(&format!("r195-b3-backrow-{active}"));
             hooks.clear(Which::Base);
             state.active = active;
-            let trap = put(&mut state, &glow_trap().id, slot(P1, Row::Backrow, 1));
-            let field_trap = put(&mut state, &glow_field_trap().id, slot(P1, Row::Backrow, 2));
-            let field_spell = put(&mut state, &glow_field_spell().id, slot(P1, Row::Backrow, 3));
+            let trap = put(&mut state, &glow_trap().id, slot(P1, Row::Backrow, 1), json!({}));
+            let field_trap = put(&mut state, &glow_field_trap().id, slot(P1, Row::Backrow, 2), json!({}));
+            let field_spell = put(&mut state, &glow_field_spell().id, slot(P1, Row::Backrow, 3), json!({}));
 
             let view = view_for(&state, P1);
 
@@ -709,8 +709,8 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
     #[test]
     fn r195_b3_a_field_card_is_asked_outside_the_main_phase_and_with_a_prompt_open_and_still_carries_the_flag() {
         let (mut state, _hooks) = game("r195-b3-field-prompt");
-        put(&mut state, &glow_unit().id, slot(P1, Row::Units, 1));
-        put(&mut state, &glow_trap().id, slot(P1, Row::Backrow, 1));
+        put(&mut state, &glow_unit().id, slot(P1, Row::Units, 1), json!({}));
+        put(&mut state, &glow_trap().id, slot(P1, Row::Backrow, 1), json!({}));
         open_mode_prompt(&mut state, P2);
 
         let with_prompt = view_for(&state, P1);
@@ -728,8 +728,8 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
     fn r195_b3_a_field_card_whose_hook_returns_false_carries_no_key() {
         let (mut state, hooks) = game("r195-b3-field-false");
         hooks.answer(Which::Base, false);
-        put(&mut state, &glow_unit().id, slot(P1, Row::Units, 1));
-        put(&mut state, &glow_trap().id, slot(P1, Row::Backrow, 1));
+        put(&mut state, &glow_unit().id, slot(P1, Row::Units, 1), json!({}));
+        put(&mut state, &glow_trap().id, slot(P1, Row::Backrow, 1), json!({}));
 
         let view = view_for(&state, P1);
 
@@ -741,7 +741,7 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
     #[test]
     fn r195_b3_a_unit_the_viewer_controls_but_does_not_own_carries_it_its_owner_s_view_does_not() {
         let (mut state, hooks) = game("r195-b3-stolen");
-        let stolen = put(&mut state, &glow_unit().id, slot(P1, Row::Units, 3));
+        let stolen = put(&mut state, &glow_unit().id, slot(P1, Row::Units, 3), json!({}));
         find_instance_mut(&mut state, &stolen.id).expect("on the field").owner = P2;
 
         assert!(glows(view_for(&state, P1).you.units[2].as_ref()));
@@ -778,7 +778,7 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
     #[test]
     fn r195_b3_a_buried_card_is_never_asked_only_the_top_of_its_pile_is() {
         let (mut state, hooks) = game("r195-b3-buried");
-        let buried = put(&mut state, &glow_unit().id, slot(P1, Row::Units, 3));
+        let buried = put(&mut state, &glow_unit().id, slot(P1, Row::Units, 3), json!({}));
         let top = new_instance(&mut state, &plain_stack().id, P1, Zone::Hand { player: P1 });
         let top_id = top.id.clone();
         assert!(place_on_field(
@@ -802,7 +802,7 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
     #[test]
     fn r195_b3_a_hooked_top_of_a_stack_pile_carries_the_flag_while_the_hooked_card_under_it_is_not_asked() {
         let (mut state, hooks) = game("r195-b3-hooked-top");
-        let buried = put(&mut state, &glow_unit().id, slot(P1, Row::Units, 4));
+        let buried = put(&mut state, &glow_unit().id, slot(P1, Row::Units, 4), json!({}));
         let top = new_instance(&mut state, &glow_stack().id, P1, Zone::Hand { player: P1 });
         let top_id = top.id.clone();
         assert!(place_on_field(
@@ -827,7 +827,7 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
     fn r195_b3_condition_active_asks_a_field_card_on_the_opponent_s_turn_with_yourturn_false() {
         let (mut state, hooks) = game("r195-b3-direct");
         state.active = P2;
-        let unit = put(&mut state, &glow_unit().id, slot(P1, Row::Units, 1));
+        let unit = put(&mut state, &glow_unit().id, slot(P1, Row::Units, 1), json!({}));
 
         assert!(condition_active(&state, live(&state, &unit.id), P1, ConditionZone::Field));
         let calls = hooks.calls(Which::Base);
@@ -852,13 +852,13 @@ mod r195_condition_active_is_the_viewer_s_alone_b4 {
     fn r195_b4_the_opponent_s_view_of_p1_s_glowing_cards_carries_no_key_anywhere_and_p1_s_cards_are_not_asked() {
         let (mut state, hooks) = game("r195-b4-opponent-view");
         let hand = one(in_hand(&mut state, &glow_spell().id, P1, 1));
-        let unit = put(&mut state, &glow_unit().id, slot(P1, Row::Units, 1));
-        let trap = put(&mut state, &glow_trap().id, slot(P1, Row::Backrow, 1));
-        let field_spell = put(&mut state, &glow_field_spell().id, slot(P1, Row::Backrow, 2));
-        let fired_field_trap = put(&mut state, &glow_field_trap().id, slot(P1, Row::Backrow, 3));
+        let unit = put(&mut state, &glow_unit().id, slot(P1, Row::Units, 1), json!({}));
+        let trap = put(&mut state, &glow_trap().id, slot(P1, Row::Backrow, 1), json!({}));
+        let field_spell = put(&mut state, &glow_field_spell().id, slot(P1, Row::Backrow, 2), json!({}));
+        let fired_field_trap = put(&mut state, &glow_field_trap().id, slot(P1, Row::Backrow, 3), json!({}));
         find_instance_mut(&mut state, &fired_field_trap.id).expect("in the backrow").face_up = Some(true);
         // p2's own hooked unit, so p2's view is not simply a view with nothing to ask about.
-        let their_unit = put(&mut state, &glow_unit().id, slot(P2, Row::Units, 2));
+        let their_unit = put(&mut state, &glow_unit().id, slot(P2, Row::Units, 2), json!({}));
 
         // p1 sees all five of its own cards glowing.
         let mine = view_for(&state, P1);
@@ -905,7 +905,7 @@ mod r195_condition_active_is_the_viewer_s_alone_b4 {
     #[test]
     fn r195_b4_condition_active_refuses_a_field_card_the_viewer_does_not_control_without_asking_the_hook() {
         let (mut state, hooks) = game("r195-b4-direct");
-        let theirs = put(&mut state, &glow_unit().id, slot(P2, Row::Units, 1));
+        let theirs = put(&mut state, &glow_unit().id, slot(P2, Row::Units, 1), json!({}));
 
         assert!(!condition_active(&state, live(&state, &theirs.id), P1, ConditionZone::Field));
         assert!(hooks.calls(Which::Base).is_empty());
@@ -922,11 +922,11 @@ mod r195_condition_active_is_the_viewer_s_alone_b4 {
             in_hand(&mut state, &unscripted_unit().id, player, 1);
             in_hand(&mut state, &transient_unit().id, player, 1);
         }
-        put(&mut state, &quiet_unit().id, slot(P1, Row::Units, 1));
-        put(&mut state, &unscripted_unit().id, slot(P1, Row::Units, 2));
-        let transient = put(&mut state, &transient_unit().id, slot(P1, Row::Units, 3));
-        put(&mut state, &transient_unit().id, slot(P2, Row::Units, 1));
-        put(&mut state, &quiet_unit().id, slot(P2, Row::Units, 2));
+        put(&mut state, &quiet_unit().id, slot(P1, Row::Units, 1), json!({}));
+        put(&mut state, &unscripted_unit().id, slot(P1, Row::Units, 2), json!({}));
+        let transient = put(&mut state, &transient_unit().id, slot(P1, Row::Units, 3), json!({}));
+        put(&mut state, &transient_unit().id, slot(P2, Row::Units, 1), json!({}));
+        put(&mut state, &quiet_unit().id, slot(P2, Row::Units, 2), json!({}));
 
         for active in [P1, P2] {
             state.active = active;
@@ -1032,7 +1032,7 @@ mod r196_a_fusion_s_condition_met_is_its_ingredients_hooks_or_ed {
     #[test]
     fn r196_r77_a_fusion_kept_on_the_field_glows_for_its_controller_when_either_hook_holds() {
         let (mut state, hooks) = game("r196-field");
-        let target = put(&mut state, &glow_a().id, slot(P1, Row::Units, 2));
+        let target = put(&mut state, &glow_a().id, slot(P1, Row::Units, 2), json!({}));
         let ingredient = one(in_hand(&mut state, &glow_b().id, P1, 1));
         let fused = with_sink(&mut state, |sink| {
             let target = find_instance(sink.state, &target.id).cloned();

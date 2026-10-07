@@ -32,28 +32,13 @@ fn to_json<T: serde::Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("serialises")
 }
 
-/// `put(state, defId, ref, { radiant })` (fixtures/harness.ts), face and all: a hand instance made
-/// Radiant before it is placed, as the TS helper does.
-fn put_face(state: &mut GameState, def_id: &str, at: ZoneSlot, radiant: bool) -> CardInstance {
-    let (player, row, lane) = (at.player, at.row, at.lane);
-    let mut card = new_instance(state, def_id, player, Zone::Hand { player });
-    if radiant {
-        card.radiant = true;
-    }
-    let id = card.id.clone();
-    if !place_on_field(state, card, at, Default::default()) {
-        panic!("could not place {def_id} in {row} {lane}");
-    }
-    find_instance(state, &id).cloned().expect("placed card")
-}
-
 /// The instance as the state holds it now (TS reads its live object).
 fn live(state: &GameState, id: &str) -> CardInstance {
     find_instance(state, id).cloned().unwrap_or_else(|| panic!("{id} is in no zone"))
 }
 
 fn game() -> GameState {
-    let mut state = instance_game("faces");
+    let mut state = instance_game("faces", None);
     state.turn = 3;
     state.active = P1;
     state.phase = Phase::Main;
@@ -67,7 +52,7 @@ mod b2_7_a_face_with_its_own_type {
     #[test]
     fn b2_7_the_card_s_type_is_its_running_face_s_a_radiant_blood_moon_is_a_field_trap_the_base_one_a_trap() {
         let mut state = game();
-        let cards = in_hand(&mut state, &blood_moon().id, P1, 2);
+        let cards = in_hand(&mut state, &blood_moon.id, P1, 2);
         let (Some(base), Some(radiant)) = (cards.first().cloned(), cards.get(1).cloned()) else {
             panic!("no card");
         };
@@ -91,8 +76,8 @@ mod b2_7_a_face_with_its_own_type {
     #[test]
     fn b2_7_a_radiant_blood_moon_stays_on_the_field_after_it_fires_as_a_field_trap_does_the_base_one_goes() {
         let mut state = game();
-        let base = put(&mut state, &blood_moon().id, slot(P1, Row::Backrow, 1));
-        let radiant = put_face(&mut state, &blood_moon().id, slot(P1, Row::Backrow, 2), true);
+        let base = put(&mut state, &blood_moon.id, slot(P1, Row::Backrow, 1), json!({}));
+        let radiant = put(&mut state, &blood_moon.id, slot(P1, Row::Backrow, 2), json!({ "radiant": true }));
         let mut events: Vec<GameEvent> = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         {
@@ -118,7 +103,7 @@ mod b2_7_a_face_with_its_own_type {
     #[test]
     fn b2_7_filters_read_the_card_s_type_now_a_pool_of_definitions_reads_the_definition_s() {
         let mut state = game();
-        let cards = in_hand(&mut state, &blood_moon().id, P1, 1);
+        let cards = in_hand(&mut state, &blood_moon.id, P1, 1);
         let Some(radiant) = cards.first().cloned() else {
             panic!("no card");
         };
@@ -148,14 +133,14 @@ mod b2_7_a_face_with_its_own_type {
                 .is_empty()
         );
         let trap_ids: Vec<String> = query(json_as(json!({ "type": "Trap" }))).iter().map(|def| def.id.clone()).collect();
-        assert!(trap_ids.contains(&blood_moon().id));
+        assert!(trap_ids.contains(&blood_moon.id));
     }
 
     #[test]
     fn b2_7_the_view_names_the_type_only_where_it_differs_from_the_definition_s() {
         let mut state = game();
-        put(&mut state, &blood_moon().id, slot(P1, Row::Backrow, 1));
-        put_face(&mut state, &blood_moon().id, slot(P1, Row::Backrow, 2), true);
+        put(&mut state, &blood_moon.id, slot(P1, Row::Backrow, 1), json!({}));
+        put(&mut state, &blood_moon.id, slot(P1, Row::Backrow, 2), json!({ "radiant": true }));
         let own = view_for(&state, P1).you.backrow;
         assert!(matches_object(&to_json(&own[0]), &json!({ "faceDown": false, "type": "Trap" })));
         assert!(matches_object(&to_json(&own[1]), &json!({ "faceDown": false, "type": "Field Trap" })));
@@ -165,7 +150,7 @@ mod b2_7_a_face_with_its_own_type {
         for card in &hand {
             assert_eq!(card.type_, None);
         }
-        let held = in_hand(&mut state, &blood_moon().id, P1, 1);
+        let held = in_hand(&mut state, &blood_moon.id, P1, 1);
         let Some(held) = held.first().cloned() else {
             panic!("no card");
         };
@@ -204,7 +189,7 @@ mod b2_7_x_in_the_stats_buff_billy {
 
     #[test]
     fn b2_7_an_x_stat_unit_played_for_x_is_xstats_x_and_its_cry_s_upgrades_land_on_that_body() {
-        let mut state = begin_game(&instance_game("billy")).state;
+        let mut state = begin_game(&instance_game("billy", None)).state;
         let keep: Vec<String> = state.players[P1].hand.iter().map(|c| c.id.clone()).collect();
         state = act(
             &state,
@@ -221,7 +206,7 @@ mod b2_7_x_in_the_stats_buff_billy {
                 player_id: P2,
             },
         );
-        let cards = in_hand(&mut state, &billy().id, P1, 1);
+        let cards = in_hand(&mut state, &billy.id, P1, 1);
         let Some(card) = cards.first().cloned() else {
             panic!("no card");
         };
@@ -263,8 +248,8 @@ mod b2_7_x_in_the_stats_buff_billy {
 
     #[test]
     fn b2_7_the_radiant_face_multiplies_the_same_x_by_its_own_numbers_7x_7x() {
-        let mut state = instance_game("billy-radiant");
-        let cards = in_hand(&mut state, &billy().id, P1, 1);
+        let mut state = instance_game("billy-radiant", None);
+        let cards = in_hand(&mut state, &billy.id, P1, 1);
         let Some(card) = cards.first().cloned() else {
             panic!("no card");
         };
@@ -279,7 +264,7 @@ mod b2_7_x_in_the_stats_buff_billy {
 
     #[test]
     fn b2_7_with_no_x_a_summon_outside_a_play_it_arrives_0_0_and_the_state_check_collects_it() {
-        let mut state = instance_game("billy-summon");
+        let mut state = instance_game("billy-summon", None);
         state.turn = 3;
         state.active = P1;
         let mut events: Vec<GameEvent> = Vec::new();
@@ -287,7 +272,7 @@ mod b2_7_x_in_the_stats_buff_billy {
         let unit_id;
         {
             let mut sink = EngineSink::new(&mut state, &mut events, &mut rng);
-            let effect = summon(json_as(json!({ "defId": billy().id })));
+            let effect = summon(json_as(json!({ "defId": billy.id })));
             {
                 let mut ctx = make_context(
                     sink.reborrow(),
