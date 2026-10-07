@@ -218,14 +218,14 @@ pub fn granted_echo(sink: &mut EngineSink<'_>, player: PlayerId, card: &CardInst
         spent.insert(source_id.clone());
         granted += amount;
 
-        let Some(source) = snapshot(sink.state, source_id) else {
+        let Some(mut source) = snapshot(sink.state, source_id) else {
             continue;
         };
         if !matches!(source.zone, Zone::Field { .. }) {
             continue;
         }
         // B5 E5: to its graveyard, or wherever a replacement sends it.
-        let moved = move_to_zone(sink.state, &source, OffFieldZone::Graveyard, MoveOptions::default());
+        let moved = move_to_zone(sink.state, &mut source, OffFieldZone::Graveyard, MoveOptions::default());
         let landed = snapshot(sink.state, &source.id).unwrap_or(source);
         report_graveyard_landing(sink, &landed, moved);
     }
@@ -331,7 +331,7 @@ pub fn land_after_resolution(sink: &mut EngineSink<'_>, resolved: &ResolvedCard)
         .as_ref()
         .is_some_and(|card| card.memory.get(EXILE_ON_LANDING) == Some(&Value::Bool(true)));
 
-    if let Some(card) = card
+    if let Some(mut card) = card
         && resolving
     {
         if exiles {
@@ -339,8 +339,8 @@ pub fn land_after_resolution(sink: &mut EngineSink<'_>, resolved: &ResolvedCard)
             if let Some(live) = find_instance_mut(sink.state, &card.id) {
                 live.memory.shift_remove(EXILE_ON_LANDING);
             }
-            let card = snapshot(sink.state, &card.id).unwrap_or(card);
-            if move_to_zone(sink.state, &card, OffFieldZone::Exile, MoveOptions::default()) == MoveResult::Moved {
+            let mut card = snapshot(sink.state, &card.id).unwrap_or(card);
+            if move_to_zone(sink.state, &mut card, OffFieldZone::Exile, MoveOptions::default()) == MoveResult::Moved {
                 sink.state.counters.exiled += 1;
             }
             sink.events.push(GameEvent::Exiled {
@@ -350,7 +350,7 @@ pub fn land_after_resolution(sink: &mut EngineSink<'_>, resolved: &ResolvedCard)
             });
         } else {
             // B5 E5: its graveyard, or wherever a replacement sends it (Classic #50's exile, #60's library).
-            let moved = move_to_zone(sink.state, &card, OffFieldZone::Graveyard, MoveOptions::default());
+            let moved = move_to_zone(sink.state, &mut card, OffFieldZone::Graveyard, MoveOptions::default());
             let landed = snapshot(sink.state, &card.id).unwrap_or(card);
             report_graveyard_landing(sink, &landed, moved);
         }

@@ -46,7 +46,7 @@ pub fn play_record_of(state: &GameState, card: &CardInstance) -> Option<PlayReco
         def_id: card.def_id.clone(),
         radiant: card.radiant,
     };
-    if fused_id_parts(&card.def_id).is_some() {
+    if fused_id_parts(Some(state), &card.def_id).is_some() {
         return Some(own);
     }
     let script = running_script(state, card);

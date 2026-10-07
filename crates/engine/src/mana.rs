@@ -147,9 +147,8 @@ struct Price {
 /// its `costOverride` or printed cost with its `costMod`: #30 Archivist's "highest" (R24), #94's
 /// 2-cost draw and odd-cost exile (R66), a Recruit's filter — as Hearthstone's hand discounts never
 /// reach the deck or the graveyard (R65) — except a graveyard a permission lets its player play from
-/// (E11, R454), where a play takes the card from. `options.asPlay` prices any card as a play of it now
-/// (`effective_cost_with`; every caller in TS but `play_cost` passed no options, so this two-argument
-/// form is the one they call).
+/// (E11, R454), where a play takes the card from. `options.asPlay` prices any card as a play of it now.
+/// (TS's `options` defaulted to `{}`; a caller with none passes `CostOptions::default()`.)
 ///
 /// R455 (E15) adds its rungs through `cost_rules.rs`: after R65's discounts, the flat price rules (the
 /// `costRule` modifiers and the field's cost auras), then the threshold rules, which read the one
@@ -157,18 +156,13 @@ struct Price {
 /// card carries (Forever&'s "can't cost less than (N)"), which holds in every zone, as the card's own
 /// `costOverride` does; then 0. An X-cost card still ignores every modifier (R65), and only its floor
 /// reaches it.
-pub fn effective_cost(state: &GameState, instance: &CardInstance) -> i32 {
-    effective_cost_with(state, instance, CostOptions::default())
-}
-
-/// `effective_cost` with TS's `options` argument (`effectiveCost(state, instance, options)`).
-pub fn effective_cost_with(state: &GameState, instance: &CardInstance, options: CostOptions) -> i32 {
+pub fn effective_cost(state: &GameState, instance: &CardInstance, options: CostOptions) -> i32 {
     price_of(state, instance, options).cost
 }
 
 /// R454, R455: what a play of this card now costs, wherever the play takes it from.
 pub fn play_cost(state: &GameState, instance: &CardInstance) -> i32 {
-    effective_cost_with(state, instance, CostOptions { as_play: Some(true) })
+    effective_cost(state, instance, CostOptions { as_play: Some(true) })
 }
 
 /// R455: the `costRule` modifiers a play of this card at this price spends — the ones "until used" that
@@ -286,7 +280,7 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
 }
 
 pub fn can_afford(state: &GameState, instance: &CardInstance) -> bool {
-    effective_cost(state, instance) <= state.players[instance.controller].mana.current
+    effective_cost(state, instance, CostOptions::default()) <= state.players[instance.controller].mana.current
 }
 
 /// R396 (Classic #10, #18, #25, #32, #39): what a card costs wherever a rule compares or counts costs —
@@ -310,7 +304,7 @@ pub fn cost_now(state: &GameState, card: &CardInstance) -> i32 {
             embiggened: Some(false),
             ..card.clone()
         };
-        return effective_cost(state, &unembiggened);
+        return effective_cost(state, &unembiggened, CostOptions::default());
     }
-    effective_cost(state, card)
+    effective_cost(state, card, CostOptions::default())
 }

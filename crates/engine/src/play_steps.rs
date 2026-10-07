@@ -63,7 +63,7 @@ use crate::play_choices::{
 };
 use crate::play_counts::record_play;
 use crate::prompts::{
-    AnswerInput, OpenPromptArgs, RunHookOptions, cell_option_label, close_prompt, hero_option_label,
+    AnswerInput, OpenPromptArgs, HookResumableOptions, cell_option_label, close_prompt, hero_option_label,
     in_offered_order, open_prompt, run_hook_resumable, why_answer_refused,
 };
 use crate::random_cast::{count_chain_cast, prefer_enemies, prefer_friends, random_cast_of, random_picks, with_cast_mode};
@@ -91,7 +91,7 @@ use crate::wire::{
 };
 use crate::work::{begin_work_cascade, drain_work, drop_work, paused, paused_of, push_work};
 use crate::zones::{
-    PlaceOptions, ZoneSlot, card_at, cease_to_exist, first_free_zone, fresh_face_down_id, is_open,
+    PlaceOnFieldOptions, ZoneSlot, card_at, cease_to_exist, first_free_zone, fresh_face_down_id, is_open,
     lands_face_down, place_on_field, release_zone, remove_from_any_zone, reserve_zone, slots_of,
 };
 
@@ -708,7 +708,7 @@ pub fn validate_play(sink: &mut EngineSink<'_>, player: PlayerId, action: &PlayA
     run.mods_before = Some(begins.mods_before);
     run.mana_before = Some(state.players[player].mana.current);
     // B5 E14, R546: a copier's copy is fixed as its play is checked, the choices with it.
-    if copies_text(state, &card) {
+    if copies_text(&card) {
         run.copied = Some(copied_text_of(state, &card));
     }
     if from == PlayFrom::Graveyard {
@@ -949,7 +949,7 @@ fn gifted_hook_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
             sink,
             &holder_card,
             "onPlayHook",
-            RunHookOptions {
+            HookResumableOptions {
                 controller: Some(holder_controller),
                 targets: Some(vec![Selection::Instance {
                     instance_id: run.instance_id.clone(),
@@ -1144,7 +1144,7 @@ fn announced_zone(state: &GameState, run: &PlayRun, card: &CardInstance) -> Opti
 /// waits there already), its announce opens, and `cardAnnounced` goes out — what `cardPlayed` would
 /// show: a card to be set face-down shows the other player only its zone (`view_for`). False when the
 /// card is no longer where the play takes it from (R226): the play is lost.
-fn announce_play(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
+fn announce_play(sink: &mut EngineSink<'_>, run: &PlayRun) -> bool {
     let Some(mut card) = snapshot(sink.state, &run.instance_id) else {
         return false;
     };
@@ -1158,13 +1158,12 @@ fn announce_play(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
             return false;
         }
         card.zone = Zone::Resolving { player: run.player };
-        // B5 E14, R546: the copy step 1 checked the choices against is the one the card resolves.
-        // (Written on the card before it joins the resolving zone; the copy reads only the card and
-        // `state.lastSpell`, so the order TS used, push then fix, changes nothing.)
-        if let Some(copied) = &run.copied {
-            fix_copied_text(sink.state, &mut card, Some(copied.clone()));
-        }
         sink.state.players[run.player].resolving.push(card.clone());
+        // B5 E14, R546: the copy step 1 checked the choices against is the one the card resolves.
+        if let Some(copied) = &run.copied {
+            fix_copied_text(sink.state, &card.id, Some(copied.clone()));
+            card = live(sink.state, &card);
+        }
     }
 
     let type_ = card_type_of(sink.state, &card);
@@ -1495,7 +1494,7 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     let placed = match run.zone {
         Some(zone) => {
             let stack = plays_on_stack(sink.state, &card);
-            place_on_field(sink.state, &card, &zone, PlaceOptions { stack: Some(stack) })
+            place_on_field(sink.state, &mut card, &zone, PlaceOnFieldOptions { stack: Some(stack) })
         }
         None => false,
     };
@@ -1837,7 +1836,7 @@ fn resolve_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
                     sink,
                     &face,
                     "cry",
-                    RunHookOptions {
+                    HookResumableOptions {
                         controller: Some(run.player),
                         targets: Some(standing_targets(run)),
                         modes: Some(run.modes.clone()),
@@ -2281,7 +2280,7 @@ fn resolve_repeat(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
                     sink,
                     &face,
                     "cry",
-                    RunHookOptions {
+                    HookResumableOptions {
                         controller: Some(run.player),
                         targets: Some(repeat.targets),
                         modes: Some(repeat.modes),
@@ -2350,7 +2349,7 @@ fn return_after_resolving(sink: &mut EngineSink<'_>, run: &PlayRun) {
     if run.fizzled == Some(true) {
         return;
     }
-    let Some(card) = snapshot(sink.state, &run.instance_id) else {
+    let Some(mut card) = snapshot(sink.state, &run.instance_id) else {
         return;
     };
     if !matches!(card.zone, Zone::Graveyard { .. } | Zone::Exile { .. }) {
@@ -2359,7 +2358,7 @@ fn return_after_resolving(sink: &mut EngineSink<'_>, run: &PlayRun) {
     if card_type_of(sink.state, &card) != CardType::Spell || !has_return_after_resolve(&card) {
         return;
     }
-    add_to_hand(sink, &card);
+    add_to_hand(sink, &mut card);
 }
 
 // ---------------------------------------------------------------------------
@@ -2598,7 +2597,7 @@ pub fn run_owed_play(sink: &mut EngineSink<'_>, item: &WorkItem) {
 ///
 /// `resolve::cast_card` is the entry point; TS reached this through a driver it registered, because
 /// `resolve.ts` sat under `prompts.ts` and could not import the pipeline itself. Rust calls it directly.
-pub fn cast_through_pipeline(sink: &mut EngineSink<'_>, instance: &CardInstance, options: &CastOptions) {
+pub fn cast_through_pipeline(sink: &mut EngineSink<'_>, instance: &CardInstance, options: CastOptions) {
     // The card an effect casts may be in no pile yet — drawn off the library (§2.4) or made from the
     // catalog (#95) — and the pipeline finds its card by id, so it waits in the resolving zone from
     // the start, as a card being played does (§10.5 step 4, R98).
@@ -2613,10 +2612,10 @@ pub fn cast_through_pipeline(sink: &mut EngineSink<'_>, instance: &CardInstance,
         card.return_to_hand_at_end_of_turn = None;
     }
     card.zone = Zone::Resolving { player };
-    // B5 E14, R546: a copier cast resolves the Spell that is last as the cast begins. (Written before the
-    // card joins the resolving zone, which the copy does not read.)
-    fix_copied_text(sink.state, &mut card, None);
     sink.state.players[player].resolving.push(card.clone());
+    // B5 E14, R546: a copier cast resolves the Spell that is last as the cast begins.
+    fix_copied_text(sink.state, &card.id, None);
+    let mut card = live(sink.state, &card);
 
     // R452: a cast made while a random cast of its caster's resolves is random too, and counts in that
     // cast's chain; a card that targets enemies (E39's enchantment) is cast so, whoever casts it.
@@ -2640,8 +2639,8 @@ pub fn cast_through_pipeline(sink: &mut EngineSink<'_>, instance: &CardInstance,
         exile_on_landing(resolving);
     }
 
-    let targets: Vec<Selection> = options.targets.clone().unwrap_or_default();
-    let modes: Vec<String> = options.modes.clone().unwrap_or_default();
+    let targets: Vec<Selection> = options.targets.unwrap_or_default();
+    let modes: Vec<String> = options.modes.unwrap_or_default();
     let drawn_as: Option<String> = options
         .data
         .as_ref()
@@ -2709,22 +2708,16 @@ fn intercept_declared_targets(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
     };
     // R214: the face whose declarations the picks answer.
     let face = resolving_face(sink.state, run.player, &card, run.cost_paid);
-    let decls: Vec<Option<TargetDecl>> = targeting_decls_of(sink.state, run.player, &face, &run.targets, &run.modes, None);
-    // With no pick a targeting one, the interception leaves every pick as it is (TS's call returned
-    // the picks unchanged), so it is not asked.
-    if !decls.iter().any(Option::is_some) {
-        return;
-    }
+    let decls: Vec<Option<TargetDecl>> =
+        targeting_decls_of(sink.state, run.player, &face, &run.targets, &run.modes, None);
     // R651: a `by: "spell"` interceptor (Classic #33 Joro) answers only a Spell's declared target.
     let source = card_type_of(sink.state, &card);
     let player = run.player;
-    // `accepts` reads the board: nothing moves before the first pick it accepts (the interception
-    // stops there), so a copy of the board as it stands now reads as TS's live state did, and leaves
-    // the sink free for the interception's own writes.
-    let board: GameState = sink.state.clone();
+    // `accepts` is handed the state the interception reads (TS's filter closed over it; here the sink
+    // holds its borrow).
     let targeting = |index: usize| decls.get(index).is_some_and(Option::is_some);
-    let accepts = |interceptor: &CardInstance, index: usize| match decls.get(index) {
-        Some(Some(decl)) => interceptor_fits_decl(&board, player, &face, decl, interceptor),
+    let accepts = |state: &GameState, interceptor: &CardInstance, index: usize| match decls.get(index) {
+        Some(Some(decl)) => interceptor_fits_decl(state, player, &face, decl, interceptor),
         _ => false,
     };
     run.targets = intercept_targeting(
