@@ -47,8 +47,7 @@ mod config_constants_build_s2 {
     }
 
     #[test]
-    fn r21_random_keyword_pool_has_the_fourteen_listed_keywords_r346_s_pierce_r636_s_windfury_and_r49_s_deft_last()
-    {
+    fn r21_r346_r636_r49_random_keyword_pool_has_the_fourteen_listed_keywords_pierce_windfury_and_deft_last() {
         assert_eq!(
             RANDOM_KEYWORD_POOL.to_vec(),
             vec![

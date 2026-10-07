@@ -283,7 +283,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
     }
 
     #[test]
-    fn step_6_an_instance_armor_reduces_to_0_emits_no_damage_event_and_a_0_hit_is_no_instance_at_all_r63() {
+    fn r63_step_6_an_instance_armor_reduces_to_0_emits_no_damage_event_and_a_0_hit_is_no_instance_at_all() {
         // M1 has no trigger dispatch, so what step 6 makes observable is the `damage` event an
         // on-damage trigger such as Fed Fauci's Plague Counter would fire from: one per instance dealt,
         // none at all for an instance stopped before step 5.
@@ -343,7 +343,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
     }
 
     #[test]
-    fn step_7_poisonous_destroys_on_1_dealt_not_on_0_and_never_affects_a_hero_r63() {
+    fn r63_step_7_poisonous_destroys_on_1_dealt_not_on_0_and_never_affects_a_hero() {
         let mut state = game();
         let source = put(&mut state, &poisonous().id, slot(P1, Row::Units, 1));
         let victim = put(&mut state, &big_body().id, slot(P2, Row::Units, 1));
@@ -389,7 +389,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
     }
 
     #[test]
-    fn step_9_trample_sends_only_the_excess_to_the_target_s_hero_from_non_combat_damage_too_r63() {
+    fn r63_step_9_trample_sends_only_the_excess_to_the_target_s_hero_from_non_combat_damage_too() {
         let mut state = game();
         let source = put(&mut state, &trampler().id, slot(P1, Row::Units, 1));
         let target = put(&mut state, &plain().id, slot(P2, Row::Units, 1));
@@ -435,8 +435,8 @@ mod the_damage_pipeline_s4_4_m2_t3 {
     }
 
     #[test]
-    fn step_10_cleave_hits_both_neighbours_for_the_attacker_s_attack_never_across_sides_and_through_a_divine_shield_r63()
-    {
+    fn r63_step_10_cleave_hits_both_neighbours_for_the_attacker_s_attack_never_across_sides_and_through_a_divine_shield(
+    ) {
         let mut state = game();
         let attacker = put(&mut state, &cleaver().id, slot(P1, Row::Units, 3));
         let own_left = put(&mut state, &big_body().id, slot(P1, Row::Units, 2));
@@ -483,7 +483,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
 }
 
 /// `describe("heal and lose health (§6.3, R18, R19, M2-T3)")`.
-mod heal_and_lose_health_s6_3_r18_r19_m2_t3 {
+mod r18_r19_heal_and_lose_health_s6_3_m2_t3 {
     use super::*;
 
     #[test]
@@ -516,7 +516,7 @@ mod heal_and_lose_health_s6_3_r18_r19_m2_t3 {
     }
 
     #[test]
-    fn heals_a_hero_with_no_cap_and_heal_up_to_n_raises_only_a_hero_below_n_r19() {
+    fn r19_heals_a_hero_with_no_cap_and_heal_up_to_n_raises_only_a_hero_below_n() {
         let mut state = game();
         with_sink(&mut state, |sink| {
             assert_eq!(heal_hero(sink, P1, 5), 5);

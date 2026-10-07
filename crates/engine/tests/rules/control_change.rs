@@ -500,8 +500,8 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
     }
 
     #[test]
-    fn r171_a_radiant_rotation_bounces_what_it_would_lose_marks_what_crosses_onto_its_side_and_nothing_that_moves_along_a_side()
-    {
+    fn r171_a_radiant_rotation_bounces_what_it_would_lose_marks_what_crosses_onto_its_side_and_nothing_that_moves_along_a_side(
+    ) {
         let mut state = playing("cc-rotate-radiant");
         let turn = state.turn;
         // Rotating right from p1's seat: p1 lane 5 would cross to p2 and is bounced instead (R14);
@@ -582,7 +582,7 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
     }
 
     #[test]
-    fn r171_a_steal_that_does_nothing_touches_neither_summonedturn_nor_exertion_r76_r15() {
+    fn r171_r76_r15_a_steal_that_does_nothing_touches_neither_summonedturn_nor_exertion() {
         let mut state = playing("cc-noop");
         let turn = state.turn;
         let mine = put(&mut state, &plain().id, slot(P1, Row::Units, 1));
@@ -632,7 +632,7 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
     }
 
     #[test]
-    fn r171_forced_attacks_still_ignore_sickness_and_spend_nothing_r53() {
+    fn r171_r53_forced_attacks_still_ignore_sickness_and_spend_nothing() {
         let mut state = playing("cc-forced");
         let turn = state.turn;
         let victim = put(&mut state, &plain().id, slot(P2, Row::Units, 2));

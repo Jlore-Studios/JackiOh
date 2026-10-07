@@ -439,7 +439,8 @@ mod m2_gate_1_000_random_combats_build_m2_s4_3_s4_4_s4_5 {
     use super::*;
 
     #[test]
-    fn m2_gate_1_000_random_combats_never_leave_negative_health_never_leave_a_dead_unit_on_the_field_r69_and_never_damage_an_indestructible_target() {
+    fn r69_m2_gate_1_000_random_combats_never_leave_negative_health_never_leave_a_dead_unit_on_the_field_and_never_damage_an_indestructible_target(
+    ) {
         let mut tally = Tally::default();
 
         let mut violations: Vec<Violation> = Vec::new();

@@ -139,7 +139,7 @@ mod ending_the_game_m1_t8 {
     }
 
     #[test]
-    fn ends_in_a_draw_after_the_60th_player_turn_not_the_59th_r2_r389() {
+    fn r2_r389_ends_in_a_draw_after_the_60th_player_turn_not_the_59th() {
         let mut state = playing("cap", None);
         // R389: do-nothing decks fatigue out at player-turn 48 (§2.4, R3); #75 Infinite Reserves on both
         // sides turns every empty-library draw into a card, so nothing but the cap ends this game.
@@ -178,7 +178,7 @@ mod ending_the_game_m1_t8 {
     }
 
     #[test]
-    fn a_declined_offer_blocks_the_offering_player_for_three_of_their_turns_not_the_opponent_r36() {
+    fn r36_a_declined_offer_blocks_the_offering_player_for_three_of_their_turns_not_the_opponent() {
         let mut state = playing("offer-decline", None);
         state = act(&state, json!({ "type": "offerDraw", "playerId": "p1" }));
         state = act(&state, json!({ "type": "answerDraw", "accept": false, "playerId": "p2" }));
@@ -228,7 +228,7 @@ mod ending_the_game_m1_t8 {
     }
 
     #[test]
-    fn the_match_ceiling_ends_the_game_in_a_draw_r79() {
+    fn r79_the_match_ceiling_ends_the_game_in_a_draw() {
         let result = reduce(
             &playing("ceiling", None),
             &action(json!({ "type": "ceilingReached", "playerId": "p1", "nonce": "ceil" })),
@@ -243,7 +243,7 @@ mod ending_the_game_m1_t8 {
     }
 
     #[test]
-    fn a_timeout_answers_the_open_prompt_and_only_ends_the_turn_of_the_player_who_ran_out_r79() {
+    fn r79_a_timeout_answers_the_open_prompt_and_only_ends_the_turn_of_the_player_who_ran_out() {
         let with_prompt = begin_game(&new_game("timeout", None)).state;
         assert_eq!(mulligan_owed(&with_prompt), vec![P1, P2]);
 
@@ -282,7 +282,7 @@ mod ending_the_game_m1_t8 {
     }
 
     #[test]
-    fn disconnect_expiry_is_a_loss_r79() {
+    fn r79_disconnect_expiry_is_a_loss() {
         let result = reduce(
             &playing("disconnect", None),
             &action(json!({ "type": "disconnectExpired", "player": "p2", "playerId": "p2", "nonce": "dc" })),
