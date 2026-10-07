@@ -430,7 +430,7 @@ mod r59_damage_rounds_until_death_each_round_checks_state_and_the_storm_stops_af
     }
 
     #[test]
-    fn sec4_4_spell_damage_raises_every_rounds_hit() {
+    fn s4_4_spell_damage_raises_every_rounds_hit() {
         let (target, played) = stormed(
             "pcv-spell-damage",
             |s| {
@@ -495,7 +495,7 @@ mod r59_damage_rounds_until_death_each_round_checks_state_and_the_storm_stops_af
     }
 
     #[test]
-    fn sec9_3_a_storm_replays_to_the_same_hash_from_a_json_copy() {
+    fn s9_3_a_storm_replays_to_the_same_hash_from_a_json_copy() {
         let mut state = playing("pcv-replay");
         put(&mut state, &body3().id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         put(&mut state, &armored().id, slot(PlayerId::P1, Row::Units, 1), json!({}));

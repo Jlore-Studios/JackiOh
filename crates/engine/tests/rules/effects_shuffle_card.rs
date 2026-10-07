@@ -58,7 +58,7 @@ fn full_library() -> Vec<&'static str> {
     vec!["fx-1"; LIBRARY_CAP as usize]
 }
 
-mod sec6_3_shuffle_card_into_c_30_recycle {
+mod s6_3_shuffle_card_into_c_c30_recycle {
     use super::*;
 
     #[test]

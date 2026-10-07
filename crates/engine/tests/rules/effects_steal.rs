@@ -79,7 +79,7 @@ fn id_at(state: &GameState, player: PlayerId, row: Row, lane: i32) -> Option<Str
     card_at(state, &slot(player, row, lane)).map(|card| card.id.clone())
 }
 
-mod r15_steal_sec6_3_m3_t1 {
+mod r15_steal_s6_3_m3_t1 {
     use super::*;
 
     #[test]
@@ -251,7 +251,7 @@ mod r15_steal_sec6_3_m3_t1 {
     }
 
     #[test]
-    fn r15_86_steals_every_enemy_unit_in_lane_order_and_leaves_the_excess_with_its_owner() {
+    fn r15_c86_steals_every_enemy_unit_in_lane_order_and_leaves_the_excess_with_its_owner() {
         let mut state = game();
         put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 2), json!({}));

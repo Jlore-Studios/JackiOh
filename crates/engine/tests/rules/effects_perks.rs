@@ -79,11 +79,11 @@ fn first(cards: Vec<CardInstance>) -> CardInstance {
     cards.into_iter().next().expect("a card was put in hand")
 }
 
-mod gain_hero_armor_c_plus_46 {
+mod gain_hero_armor_c_plus_c46 {
     use super::*;
 
     #[test]
-    fn r124_adds_to_the_heros_own_armor_stacks_and_sec4_4_step_2_takes_it_off_each_hit_but_a_pierce_one() {
+    fn r124_adds_to_the_heros_own_armor_stacks_and_s4_4_step_2_takes_it_off_each_hit_but_a_pierce_one() {
         let mut state = game("perks-armor");
         run(&mut state, gain_hero_armor(json_as(json!({ "amount": 1 }))));
         run(&mut state, gain_hero_armor(json_as(json!({ "amount": 2 }))));
@@ -104,7 +104,7 @@ mod gain_hero_armor_c_plus_46 {
     }
 }
 
-mod discount_random_in_hand_c_plus_49 {
+mod discount_random_in_hand_c_plus_c49 {
     use super::*;
 
     #[test]
@@ -124,7 +124,7 @@ mod discount_random_in_hand_c_plus_49 {
     }
 
     #[test]
-    fn sec2_3_a_discount_past_the_price_floors_the_cost_at_0() {
+    fn s2_3_a_discount_past_the_price_floors_the_cost_at_0() {
         let mut state = game("perks-floor");
         let three = first(in_hand(&mut state, &pricey().id, PlayerId::P1, 1));
         run(&mut state, discount_random_in_hand(json_as(json!({ "amount": 20 }))));

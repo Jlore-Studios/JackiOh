@@ -125,7 +125,7 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
 
-mod r22_r74_make_radiant_on_a_named_card_sec6_3_sec5_2_m3_t1 {
+mod r22_r74_make_radiant_on_a_named_card_s6_3_s5_2_m3_t1 {
     use super::*;
 
     #[test]
@@ -183,7 +183,7 @@ mod r22_r74_make_radiant_on_a_named_card_sec6_3_sec5_2_m3_t1 {
     }
 
     #[test]
-    fn r22_81_targets_the_card_whose_script_is_running_so_radiant_saintess_includes_itself() {
+    fn r22_c81_targets_the_card_whose_script_is_running_so_radiant_saintess_includes_itself() {
         let mut state = game("radiant-test");
         let saintess = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 4), json!({}));
 
@@ -200,7 +200,7 @@ mod r22_r74_make_radiant_on_a_named_card_sec6_3_sec5_2_m3_t1 {
     }
 
     #[test]
-    fn sec6_3_does_nothing_to_a_card_that_is_already_radiant() {
+    fn s6_3_does_nothing_to_a_card_that_is_already_radiant() {
         let mut state = game("radiant-test");
         let unit = put(
             &mut state,
@@ -228,7 +228,7 @@ mod r22_r74_make_radiant_on_a_named_card_sec6_3_sec5_2_m3_t1 {
     }
 
     #[test]
-    fn sec5_2_swaps_a_hand_cards_stats_and_text_where_it_sits() {
+    fn s5_2_swaps_a_hand_cards_stats_and_text_where_it_sits() {
         let mut state = game("radiant-test");
         let held = in_hand(&mut state, &plain().id, PlayerId::P1, 1)
             .into_iter()
@@ -299,7 +299,7 @@ mod r60_make_radiant_at_random_m3_t1 {
     }
 
     #[test]
-    fn r60_28_picks_n_different_cards_from_the_union_of_hand_library_and_field() {
+    fn r60_c28_picks_n_different_cards_from_the_union_of_hand_library_and_field() {
         let mut state = game("radiant-test");
         let hand = in_hand(&mut state, &plain().id, PlayerId::P1, 2);
         let library = set_library(&mut state, PlayerId::P1, &[plain().id.as_str(), crier().id.as_str()]);

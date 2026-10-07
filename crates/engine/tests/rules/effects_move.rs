@@ -221,11 +221,11 @@ fn placed_from_hand_of(state: &mut GameState, def_id: &str, player: PlayerId) ->
 // exile
 // ---------------------------------------------------------------------------
 
-mod exile_sec6_3_m3_t1 {
+mod exile_s6_3_m3_t1 {
     use super::*;
 
     #[test]
-    fn r55_sec6_3_moves_a_unit_from_the_field_to_its_owners_exile_pile_and_counts_it() {
+    fn r55_s6_3_moves_a_unit_from_the_field_to_its_owners_exile_pile_and_counts_it() {
         let mut state = game("effects-move");
         let victim = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 2), json!({}));
 
@@ -242,7 +242,7 @@ mod exile_sec6_3_m3_t1 {
     }
 
     #[test]
-    fn sec6_3_exiles_from_anywhere_a_hand_card_and_a_graveyard_card_both_reach_the_pile() {
+    fn s6_3_exiles_from_anywhere_a_hand_card_and_a_graveyard_card_both_reach_the_pile() {
         let mut state = game("effects-move");
         let from_hand = first(in_hand(&mut state, "fx-1", PlayerId::P1, 1));
         let from_graveyard = new_instance(&mut state, "fx-2", PlayerId::P1, Zone::Graveyard { player: PlayerId::P1 });
@@ -261,7 +261,7 @@ mod exile_sec6_3_m3_t1 {
     }
 
     #[test]
-    fn sec6_3_fires_no_death_trigger() {
+    fn s6_3_fires_no_death_trigger() {
         let mut state = game("effects-move");
         let victim = put(&mut state, &noisy().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
 
@@ -323,7 +323,7 @@ mod exile_sec6_3_m3_t1 {
 // bounce
 // ---------------------------------------------------------------------------
 
-mod bounce_sec6_3_m3_t1 {
+mod bounce_s6_3_m3_t1 {
     use super::*;
 
     #[test]
@@ -376,7 +376,7 @@ mod bounce_sec6_3_m3_t1 {
     }
 
     #[test]
-    fn sec2_4_a_bounce_into_a_full_hand_burns_the_card_to_the_graveyard() {
+    fn s2_4_a_bounce_into_a_full_hand_burns_the_card_to_the_graveyard() {
         let mut state = game("effects-move");
         in_hand(&mut state, "fx-2", PlayerId::P1, HAND_CAP);
         let victim = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({}));
@@ -429,7 +429,7 @@ mod bounce_sec6_3_m3_t1 {
     }
 
     #[test]
-    fn sec6_3_fires_no_death_trigger() {
+    fn s6_3_fires_no_death_trigger() {
         let mut state = game("effects-move");
         let victim = put(&mut state, &noisy().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
 
@@ -440,7 +440,7 @@ mod bounce_sec6_3_m3_t1 {
     }
 
     #[test]
-    fn sec6_3_leaves_a_card_that_is_already_in_its_owners_hand_alone() {
+    fn s6_3_leaves_a_card_that_is_already_in_its_owners_hand_alone() {
         let mut state = game("effects-move");
         let card = first(in_hand(&mut state, "fx-1", PlayerId::P1, 1));
 
@@ -455,7 +455,7 @@ mod bounce_sec6_3_m3_t1 {
 // discard
 // ---------------------------------------------------------------------------
 
-mod r16_discard_sec6_3_m3_t1 {
+mod r16_discard_s6_3_m3_t1 {
     use super::*;
 
     #[test]
@@ -523,7 +523,7 @@ mod r16_discard_sec6_3_m3_t1 {
     }
 
     #[test]
-    fn sec6_3_discards_the_enemys_hand_when_the_effect_says_so() {
+    fn s6_3_discards_the_enemys_hand_when_the_effect_says_so() {
         let mut state = game("effects-move");
         in_hand(&mut state, "fx-1", PlayerId::P2, 3);
 
@@ -540,7 +540,7 @@ mod r16_discard_sec6_3_m3_t1 {
     }
 
     #[test]
-    fn sec6_3_ignores_a_card_that_is_not_in_a_hand() {
+    fn s6_3_ignores_a_card_that_is_not_in_a_hand() {
         let mut state = game("effects-move");
         let unit = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({}));
 
@@ -584,11 +584,11 @@ fn first_in_hand(state: &mut GameState, def_id: &str, player: PlayerId) -> Optio
     in_hand(state, def_id, player, 1).into_iter().next()
 }
 
-mod r448_counter_sec6_3_m3_t1_b5_e1 {
+mod r448_counter_s6_3_m3_t1_b5_e1 {
     use super::*;
 
     #[test]
-    fn sec6_3_sends_the_announced_card_to_the_graveyard_with_no_cry_and_no_death() {
+    fn s6_3_sends_the_announced_card_to_the_graveyard_with_no_cry_and_no_death() {
         let mut state = game("effects-move");
         let held = first_in_hand(&mut state, &noisy().id, PlayerId::P1);
         let card = announced(&mut state, held);
