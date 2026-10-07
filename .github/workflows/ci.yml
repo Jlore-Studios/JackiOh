@@ -37,7 +37,11 @@
 # "skipped" only on `full == 'false'`. A push to main, a dispatch, and any doubt run everything.
 #
 # `workflow_dispatch` lets a person run all of it on any branch (`gh workflow run ci.yml --ref
-# staging`); the v0.3.0 rewrite's first full run is its cutover pull request (part 38).
+# staging`); the v0.3.0 rewrite's first full run is its cutover pull request (part 38). Its `e2e`
+# input set to `all` runs every e2e spec in super.yml's eight shards and the component specs in place
+# of the smoke list, as super.yml does, for a branch that wants that proof before super.yml can be
+# dispatched there (GitHub dispatches only a workflow the default branch has). Pushes and pull
+# requests always run the smoke list.
 name: CI
 
 on:
@@ -45,6 +49,12 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      e2e:
+        description: "smoke: the per-pull-request specs; all: every spec and the component specs, as the daily super run"
+        type: choice
+        options: [smoke, all]
+        default: smoke
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -193,21 +203,11 @@ jobs:
           DOC: ${{ matrix.doc }}
         run: |
           # shellcheck disable=SC2086 # TEST is several arguments on purpose.
-          cargo test --timings $TEST
+          cargo test $TEST
           if [ -n "$DOC" ]; then
             # shellcheck disable=SC2086 # and so is DOC.
             cargo test --doc $DOC
           fi
-      - name: the slowest units to compile
-        if: ${{ !cancelled() }}
-        continue-on-error: true
-        shell: python3 {0}
-        run: |
-          import json, re
-          html = open("target/cargo-timings/cargo-timing.html", encoding="utf-8").read()
-          units = json.loads(re.search(r"const UNIT_DATA = (\[.*?\]);", html, re.S).group(1))
-          for u in sorted(units, key=lambda u: -u["duration"])[:20]:
-              print(f'{u["duration"]:7.1f}s from {u["start"]:6.1f}s  {u["name"]} {u.get("target", "")} {u.get("mode", "")}')
       - name: the web's generated types and constants are what the Rust exports (V20)
         run: |
           changed=$(git status --porcelain -- apps/web/src/wire)
@@ -489,17 +489,18 @@ jobs:
   # ------------------------------------------------------------------------------------------------
 
   # One smoke per user-facing flow, on Chrome, against this run's release jackioh-server and client
-  # (.github/actions/e2e-shard says why each shard boots its own server).
+  # (.github/actions/e2e-shard says why each shard boots its own server). A dispatch with `e2e: all`
+  # runs every spec instead, in super.yml's eight shards (`e2e all (k/8)`).
   e2e-smoke-shard:
-    name: e2e smoke (${{ matrix.shard }}/${{ strategy.job-total }})
+    name: e2e ${{ inputs.e2e == 'all' && 'all' || 'smoke' }} (${{ matrix.shard }}/${{ strategy.job-total }})
     needs: [changes, wasm, rust-build]
     if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: ${{ inputs.e2e == 'all' && 20 || 10 }}
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: ${{ fromJSON(inputs.e2e == 'all' && '[1, 2, 3, 4, 5, 6, 7, 8]' || '[1, 2]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -507,13 +508,44 @@ jobs:
           rust: "false"
       - uses: ./.github/actions/e2e-shard
         with:
-          specs: smoke
+          specs: ${{ inputs.e2e == 'all' && 'all' || 'smoke' }}
           shard: ${{ matrix.shard }}
           shards: ${{ strategy.job-total }}
 
+  # Only on a dispatch with `e2e: all`, as super.yml's `component` job runs it: the 10-unit/10-backrow
+  # fixture board mounted in a real browser (BUILD M5-T1's layout at 1280x720 and 390x844). No client
+  # build and no server: the component dev server compiles apps/web/src itself and only needs the
+  # WASM module.
+  e2e-component:
+    name: e2e component (chrome)
+    needs: [changes, wasm]
+    if: ${{ needs.changes.outputs.full == 'true' && inputs.e2e == 'all' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          rust: "false"
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: ${{ runner.temp }}
+      - name: unpack the WASM module
+        run: tar -xzf "$RUNNER_TEMP/web-build.tgz"
+      - name: the fixture board's layout, measured in a browser
+        run: pnpm --dir e2e exec cypress run --component --browser chrome
+      - name: keep the evidence when it fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-component
+          path: e2e/artifacts/component/screenshots
+          if-no-files-found: warn
+
   e2e-smoke:
     name: e2e smoke
-    needs: [changes, e2e-smoke-shard]
+    needs: [changes, e2e-smoke-shard, e2e-component]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -522,13 +554,18 @@ jobs:
         env:
           FULL: ${{ needs.changes.outputs.full }}
           SHARDS: ${{ needs.e2e-smoke-shard.result }}
+          COMPONENT: ${{ needs.e2e-component.result }}
+          ALL: ${{ inputs.e2e == 'all' }}
         run: |
-          echo "full=$FULL shards=$SHARDS"
+          echo "full=$FULL shards=$SHARDS component=$COMPONENT (every spec: $ALL)"
           if [ "$FULL" = false ]; then
             echo "only files no job reads changed (scripts/ci-scope.sh)"
             exit 0
           fi
           test "$SHARDS" = success
+          if [ "$ALL" = true ]; then
+            test "$COMPONENT" = success
+          fi
 
   # ------------------------------------------------------------------------------------------------
   # db

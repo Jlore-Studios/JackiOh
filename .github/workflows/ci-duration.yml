@@ -9,7 +9,8 @@
 # purpose (10,000 fuzz seeds, the full AI gates, coverage, every e2e spec) and waits on nobody. It is
 # left off the list below by design; do not add it. Inside CI, `rust (training gate)`
 # is exempt too: it replays a training lane's 200 promotion games, runs only on an ai/* branch's
-# pull request, and is one command that no matrix can split.
+# pull request, and is one command that no matrix can split. So are `e2e all (k/8)` and `e2e component
+# (chrome)`: super.yml's e2e jobs, which CI runs only when a person dispatches it with `e2e: all`.
 #
 # The report is handed to the night bot (.harness/config.json's bot_login): a new issue is assigned
 # to it and queued with bot:build, and an open one nobody is assigned to is handed over the same
@@ -72,7 +73,8 @@ jobs:
           slow=$(gh api --paginate "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" --jq '
             .jobs[]
             | select(.started_at != null and .completed_at != null)
-            | select(.name != "rust (training gate)")
+            | select(.name != "rust (training gate)" and .name != "e2e component (chrome)")
+            | select(.name | startswith("e2e all (") | not)
             | select(.conclusion == "success" or .conclusion == "failure" or .conclusion == "timed_out")
             | ((.completed_at | fromdateiso8601) - (.started_at | fromdateiso8601)) as $s
             | select($s > (env.LIMIT_SECONDS | tonumber))
