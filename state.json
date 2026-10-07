@@ -2762,6 +2762,7 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-10-07T00:08:57Z",
