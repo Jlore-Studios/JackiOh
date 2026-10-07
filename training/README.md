@@ -2,7 +2,7 @@
 
 Two lanes that keep improving JackiOh's AI (`crates/ai/`, SPEC §9.9), each a Devin session after
 another on the training box, each gated by a fixed number of games against the AI on `main`. They
-succeed #55's ladder (`ladder/`). The design is docs/v0.3.0/README.md §8; the interfaces are
+succeed #55's ladder (the Python `ladder/` that v0.3.0 replaced and deleted). The design is docs/v0.3.0/README.md §8; the interfaces are
 docs/v0.3.0/SURFACE.md §14.
 
 | Lane | Goal | Standing prompt |
@@ -139,6 +139,6 @@ jq -r '[.generation, .date, .vsRandom, .vsParent, .shadowBan] | @tsv' training/h
 git log --oneline -- crates/ai/generation.json   # every generation's pull request
 ```
 
-Generation 0 is the port of the last TypeScript AI (`packages/ai` at `91cc43c`, which won 94 of 100
+Generation 0 is the port of the last TypeScript AI (before v0.3.0, `packages/ai` at `91cc43c`, which won 94 of 100
 against random, 35 of 50 against greedy and 47 of 50 as Hard against Easy). Its record says
 `"lane": "port"` until part 40 measures it in Rust; the histories start empty.
