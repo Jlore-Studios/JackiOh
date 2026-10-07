@@ -18,3 +18,15 @@ Measured 2026-10-07 by part 34 (second half) on the Wave 3 cloud machine: 4 core
 Both engines report the same plain wave to the line: hero-death 997, both-heroes-dead 3, 96 actions a game on average, 280 at most, the longest game ending on turn 53 of 60, 268 deck-legal cards, I6 every 5 states.
 
 Per core, Rust's plain wave spends 0.34 s of CPU a seed against TS's 0.56 s (TS's worker is single-threaded, so its wall time is its CPU time); rayon spreads Rust's over the cores, so its wall time is about 4.8× shorter on this machine at low load. The handicapped wave's wall time is held up by the machine's load (117 s of CPU in 84 s of wall: about 1.4 of 4 cores were free), not by the wave.
+
+## gate and promote (part 34)
+
+Same machine, release build, load average 9–23 throughout (other sessions' builds), so the wall times are upper bounds.
+
+| Run | Wall | Counts |
+|---|---|---|
+| `gate` (smoke, 20 games each) | 365 s | ai-vs-random 20/20 (17 needed), ai-vs-greedy 17/20 (10), hard-vs-easy 20/20 (16); perf: slowest 137 ms (scaled) of 1,500 |
+| `gate --full` | 1,601 s (random 508 s, greedy 305 s, hard-vs-easy 695 s, perf 93 s) | ai-vs-random 94/100 (91 needed), ai-vs-greedy 35/50 (28), hard-vs-easy 47/50 (40), no turn-cap draws; perf: 155 decisions, slowest 478 ms scaled (1,138 ms raw), wide boards 612 / 364 ms scaled |
+| `promote --lane improve --parent-bin target/release/jackioh --dry-run` | 2,166 s | vs random 97/100, vs parent (itself, gen 0) 53/100 with 1 draw and no game without a result |
+
+The full gate's counts are generation 0's TS counts to the game (`crates/ai/generation.json`: `packages/ai` at 91cc43c, 94/100, 35/50, 47/50).
