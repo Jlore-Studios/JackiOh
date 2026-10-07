@@ -19,6 +19,7 @@
 //!   (SURFACE §6.6: the registration hooks go).
 //! - TS's optional `options` objects are `<Function>Options` structs deriving `Default`.
 
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::brittle_count::{drop_spent_brittle, start_brittle_on_field};
@@ -35,7 +36,7 @@ use crate::state::{
 use crate::stays::{note_field_exit, note_moved, note_uncovered};
 use crate::wire::{
     AttackHealth, CardType, Counters, GameEvent, PLAYER_IDS, PlayerId, Position, RotationDirection, Row, Zone,
-    ZoneName, ZoneRef, opponent_of, string_union,
+    ZoneName, ZoneRef, opponent_of,
 };
 
 /// `{ player, row, lane }`: a field zone (TS `ZoneSlot`), the same shape as the wire's `ZoneRef`.
@@ -915,17 +916,37 @@ pub fn remove_from_field(state: &mut GameState, instance: &CardInstance, options
     false
 }
 
-string_union! {
-    /// The off-field zones a card can be moved to (TS `OffFieldZone`).
-    pub enum OffFieldZone {
-        Hand = "hand",
-        Library = "library",
-        Graveyard = "graveyard",
-        Exile = "exile",
-    }
+/// The off-field zones a card can be moved to (TS `OffFieldZone`: "hand" | "library" | "graveyard" |
+/// "exile"). Written by hand rather than with `wire::string_union!`: it is no wire type, and the macro
+/// would export it to the web's generated types (SURFACE §5.1).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[serde(rename_all = "camelCase")]
+pub enum OffFieldZone {
+    Hand,
+    Library,
+    Graveyard,
+    Exile,
 }
 
 impl OffFieldZone {
+    /// Every off-field zone, in TS's order (`removeFromAnyZone` searches them so).
+    pub const ALL: &'static [OffFieldZone] = &[
+        OffFieldZone::Hand,
+        OffFieldZone::Library,
+        OffFieldZone::Graveyard,
+        OffFieldZone::Exile,
+    ];
+
+    /// The literal, as TS writes it.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            OffFieldZone::Hand => "hand",
+            OffFieldZone::Library => "library",
+            OffFieldZone::Graveyard => "graveyard",
+            OffFieldZone::Exile => "exile",
+        }
+    }
+
     /// The zone's name, as `Zone::z` reads it.
     pub fn zone_name(self) -> ZoneName {
         match self {
@@ -1112,14 +1133,26 @@ fn end_play_choices(instance: &mut CardInstance) {
     instance.embiggened = None;
 }
 
-string_union! {
-    /// `replaced` (B5 E5, R460): the card was on its way to a graveyard and a replacement sent it
-    /// elsewhere — its exile pile, or the bottom of its library — so it is not in the graveyard, and
-    /// `report_graveyard_landing` names where it went.
-    pub enum MoveResult {
-        Moved = "moved",
-        Vanished = "vanished",
-        Replaced = "replaced",
+/// What `move_to_zone` did (TS `MoveResult`: "moved" | "vanished" | "replaced"; by hand, as
+/// `OffFieldZone` is). `Replaced` (B5 E5, R460): the card was on its way to a graveyard and a
+/// replacement sent it elsewhere — its exile pile, or the bottom of its library — so it is not in the
+/// graveyard, and `report_graveyard_landing` names where it went.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[serde(rename_all = "camelCase")]
+pub enum MoveResult {
+    Moved,
+    Vanished,
+    Replaced,
+}
+
+impl MoveResult {
+    /// The literal, as TS writes it.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            MoveResult::Moved => "moved",
+            MoveResult::Vanished => "vanished",
+            MoveResult::Replaced => "replaced",
+        }
     }
 }
 

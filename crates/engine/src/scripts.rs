@@ -16,7 +16,7 @@
 //!   definition id gives the card's two scripts (TS `scriptsFor`), an instance its running face's
 //!   script with the Vanilla guard below (TS `scriptOf`).
 
-use std::sync::{Arc, OnceLock};
+use std::sync::OnceLock;
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -29,14 +29,15 @@ use crate::state::{CardInstance, GameState};
 /// The production registry (SURFACE §3: one of the two statics, set once).
 static REGISTERED: OnceLock<IndexMap<String, CardScripts>> = OnceLock::new();
 
-/// The testkit's thread-local registry, when a test has set one (SURFACE §8).
+/// The testkit's thread-local registry, when a test has set one (SURFACE §8; `'static` as the catalog's
+/// override is, e.g. a leaked box per registration).
 #[cfg(feature = "testkit")]
-fn override_map() -> Option<Arc<IndexMap<String, CardScripts>>> {
+fn override_map() -> Option<&'static IndexMap<String, CardScripts>> {
     crate::testkit::scenario::scripts_override()
 }
 
 #[cfg(not(feature = "testkit"))]
-fn override_map() -> Option<Arc<IndexMap<String, CardScripts>>> {
+fn override_map() -> Option<&'static IndexMap<String, CardScripts>> {
     None
 }
 
@@ -52,7 +53,7 @@ pub fn register_scripts(scripts: IndexMap<String, CardScripts>) {
 /// register the result (TS `registerScripts({ ...registeredScripts(), … })`).
 pub fn registered_scripts() -> IndexMap<String, CardScripts> {
     match override_map() {
-        Some(over) => (*over).clone(),
+        Some(over) => over.clone(),
         None => REGISTERED.get().cloned().unwrap_or_default(),
     }
 }
