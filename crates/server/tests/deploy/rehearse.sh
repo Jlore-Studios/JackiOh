@@ -91,7 +91,10 @@ echo "catalog version: $CATALOG_VERSION"
 echo "--- the image, built as Render builds it ---"
 # REHEARSAL_CACHE_FROM (and REHEARSAL_CACHE_TO) give buildx a layer cache to read (and write), in its
 # `--cache-from`/`--cache-to` syntax: CI's GitHub Actions cache, so an unchanged image is not compiled
-# again on every run. Same Dockerfile, same context, same image either way.
+# again on every run. Same Dockerfile, same context, same image either way. Only a cache written
+# with `mode=max` keeps the build stages' layers, the Dockerfile's dependency layer (`cargo chef
+# cook`) among them, which a change to the sources alone reuses; `mode=min` keeps only the image's
+# own layers, so any change under crates/ compiles every dependency again.
 if [ -n "${REHEARSAL_CACHE_FROM:-}" ]; then
   set -- --cache-from "$REHEARSAL_CACHE_FROM"
   if [ -n "${REHEARSAL_CACHE_TO:-}" ]; then set -- "$@" --cache-to "$REHEARSAL_CACHE_TO"; fi

@@ -240,12 +240,14 @@ cannot hold a comment, and three things in them are not obvious:
   the script's decisions, over diffs in a throwaway repo.
 - **`render.yaml` builds a Docker image and names no command.** `runtime: docker` builds
   `crates/server/Dockerfile` with the repository root as its context, because the server crate builds
-  against the engine, cards and AI crates beside it: a `rust:1.97-slim-bookworm` stage runs `cargo
-  build --release -p jackioh-server`, and a `debian:bookworm-slim` stage holds the one binary with CA
-  certificates and `tini`. The catalog, the patch history and every migration are compiled into the
-  binary, so nothing at run time needs Node, pnpm or the repository. The image's own command,
-  `jackioh-server release`, migrates, seeds the catalog and serves; `render.yaml` sets no build or
-  start command, and `crates/server/tests/deploy/rehearse.sh` fails if it ever does. On Vercel,
+  against the engine, cards and AI crates beside it: `rust:1.97-slim-bookworm` stages run `cargo
+  build --release -p jackioh-server` after cargo-chef (pinned) has compiled its dependencies from the
+  workspace's manifests alone, in a layer a change to the sources does not rebuild, and a
+  `debian:bookworm-slim` stage holds the one binary with CA certificates and `tini`. The catalog, the
+  patch history and every migration are compiled into the binary, so nothing at run time needs Node,
+  pnpm or the repository. The image's own command, `jackioh-server release`, migrates, seeds the
+  catalog and serves; `render.yaml` sets no build or start command, and
+  `crates/server/tests/deploy/rehearse.sh` fails if it ever does. On Vercel,
   `vercel.json`'s install step installs rustup and the `wasm32-unknown-unknown` target before
   `pnpm install`, because the web build compiles the WASM module.
 
