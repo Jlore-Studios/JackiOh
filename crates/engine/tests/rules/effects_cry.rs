@@ -242,8 +242,8 @@ mod e13_trigger_a_cry {
         let unit = put(&mut state, &aimer().id, slot(P1, Units, 1), json!({}));
         rewind_on(&mut state, &unit, P1, false);
         open_as(&state, PromptKind::Target, P1);
-        let moving = live(&state, &unit).clone();
-        move_to_zone(&mut state, &moving, ZoneName::Graveyard, Default::default());
+        let mut moving = live(&state, &unit).clone();
+        move_to_zone(&mut state, &mut moving, OffFieldZone::Graveyard, Default::default());
         answer_keys(&mut state, &["hero:p2"]);
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
         // The triggering list goes on.
@@ -254,8 +254,8 @@ mod e13_trigger_a_cry {
     fn r467_no_cry_is_triggered_for_a_dormant_card_a_card_with_no_cry_or_a_card_that_is_not_a_unit() {
         let mut state = board("cry-none");
         let buried = put(&mut state, &crier().id, slot(P1, Units, 1), json!({}));
-        let top = new_instance(&mut state, &plain.id, P1, Zone::Hand { player: P1 });
-        assert!(place_on_field(&mut state, top.clone(), slot(P1, Units, 1), json_as(json!({ "stack": true }))));
+        let mut top = new_instance(&mut state, &plain.id, P1, Zone::Hand { player: P1 });
+        assert!(place_on_field(&mut state, &mut top, slot(P1, Units, 1), json_as(json!({ "stack": true }))));
         let plain_unit = put(&mut state, &plain.id, slot(P1, Units, 2), json!({}));
         let spell = grave_unit(&mut state, P1, &spark().id);
         let dead = grave_unit(&mut state, P1, &crier().id);
@@ -266,8 +266,9 @@ mod e13_trigger_a_cry {
         for card in [&buried, &plain_unit, &spell] {
             let mut sink = sink_for(&mut state);
             {
+                let mut inner = sink.sink();
                 let mut ctx = make_context(
-                    sink.sink(),
+                    &mut inner,
                     None,
                     HookOptions { controller: Some(P1), ..Default::default() },
                 );

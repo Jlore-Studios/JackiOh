@@ -25,7 +25,7 @@ fn hand_defs(state: &GameState, player: PlayerId) -> Vec<String> {
 fn is_hero_power(power: Option<&Value>) -> bool {
     power
         .and_then(Value::as_str)
-        .is_some_and(|name| HERO_POWERS.iter().any(|known| *known == name))
+        .is_some_and(|name| HERO_POWERS.iter().any(|known| known.as_str() == name))
 }
 
 mod setup_m1_t5 {

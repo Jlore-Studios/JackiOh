@@ -57,21 +57,24 @@ fn is_portrait() -> Arc<dyn Fn(&str) -> bool + Send + Sync> {
     Arc::new(|portrait: &str| is_portrait_id(&json!(portrait)))
 }
 
-/// A deck draft as `checkDeckDraft` takes it, with the test's `isDeckable` and `NAME_MAX`.
-fn draft_input(
+/// `checkDeckDraft`'s issues for a deck draft with the test's `isDeckable` and `NAME_MAX`. The
+/// input borrows its predicates (`DeckDraftInput<'a>`), so it is built and checked here, where they live.
+fn draft_issues(
     name: &str,
     cards: &[String],
     portrait: Option<&str>,
     is_portrait: Option<Arc<dyn Fn(&str) -> bool + Send + Sync>>,
-) -> DeckDraftInput {
-    DeckDraftInput {
+) -> Value {
+    let is_deckable = is_deckable();
+    let input = DeckDraftInput {
         name: name.to_string(),
         cards: cards.to_vec(),
-        is_deckable: is_deckable(),
+        is_deckable: &*is_deckable,
         name_max_length: NAME_MAX,
         portrait: portrait.map(str::to_string),
-        is_portrait,
-    }
+        is_portrait: is_portrait.as_deref().map(|known| -> &dyn Fn(&str) -> bool { known }),
+    };
+    issues_of(&input)
 }
 
 /// `checkDeckDraft`'s issues, as the JSON TS returned.
@@ -80,7 +83,7 @@ fn issues_of(input: &DeckDraftInput) -> Value {
 }
 
 fn draft(cards: &[String], name: &str) -> Value {
-    issues_of(&draft_input(name, cards, None, None))
+    draft_issues(name, cards, None, None)
 }
 
 /// `issues.map((issue) => issue.rule)`.
@@ -247,7 +250,7 @@ mod r641_d5_a_saved_decks_portrait_is_null_or_a_known_portrait_id {
         portrait: Option<&str>,
         is_portrait: Option<Arc<dyn Fn(&str) -> bool + Send + Sync>>,
     ) -> Value {
-        issues_of(&draft_input("Aggro", &[], portrait, is_portrait))
+        draft_issues("Aggro", &[], portrait, is_portrait)
     }
 
     #[test]
@@ -267,7 +270,7 @@ mod r641_d5_a_saved_decks_portrait_is_null_or_a_known_portrait_id {
         );
         // D5 is collected with the other rules' failures, not instead of them.
         assert_eq!(
-            rule_list(&issues_of(&draft_input("", &[], Some("not-a-portrait"), Some(is_portrait())))),
+            rule_list(&draft_issues("", &[], Some("not-a-portrait"), Some(is_portrait()))),
             vec!["D1", "D5"]
         );
     }

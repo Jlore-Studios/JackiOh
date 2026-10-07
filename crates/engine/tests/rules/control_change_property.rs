@@ -273,9 +273,9 @@ fn build(base: &GameState, board: &Board) -> (GameState, IndexMap<String, Snapsh
             let Some(top_marks) = spec.top else {
                 continue;
             };
-            let top = new_instance(&mut state, &stacker.id, player, Zone::Hand { player });
+            let mut top = new_instance(&mut state, &stacker.id, player, Zone::Hand { player });
             let top_id = top.id.clone();
-            if !place_on_field(&mut state, top, slot(player, Row::Units, lane), json_as(json!({ "stack": true }))) {
+            if !place_on_field(&mut state, &mut top, slot(player, Row::Units, lane), json_as(json!({ "stack": true }))) {
                 panic!("could not stack");
             }
             mark(find_instance_mut(&mut state, &top_id).expect("stacked"), top_marks, turn);
@@ -325,9 +325,9 @@ fn apply(state: &mut GameState, verbs: &[Verb]) -> (Vec<GameEvent>, IndexSet<Str
         };
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         {
-            let sink = EngineSink::new(state, &mut events, &mut rng);
+            let mut sink = EngineSink::new(state, &mut events, &mut rng);
             let mut ctx = make_context(
-                sink,
+                &mut sink,
                 None,
                 HookOptions {
                     controller: Some(verb.actor()),

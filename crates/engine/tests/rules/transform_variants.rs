@@ -15,7 +15,7 @@ use crate::rules::fixtures::harness::{events_of_type, put, sink_for, slot};
 
 fn run(sink: &mut EngineSink<'_>, effect: Effect, self_: Option<&CardInstance>) {
     let mut ctx = make_context(
-        sink.reborrow(),
+        sink,
         self_,
         HookOptions {
             controller: Some(PlayerId::P1),
@@ -285,7 +285,7 @@ mod e24_a_card_becomes_a_random_card_of_a_pool_classic_plus_73_1 {
         let state = &mut start.state;
         let replaced = must(state.players.p1.hand.last().cloned(), "the new hand card");
         assert_eq!(replaced.def_id, classic_unit.id);
-        assert_eq!(def_of(state, &replaced.def_id).set, SetName::Classic);
+        assert_eq!(def_of(Some(&*state), &replaced.def_id).set, SetName::Classic);
         state.applied.push(AppliedAction {
             nonce: "transform-view".to_string(),
             events,

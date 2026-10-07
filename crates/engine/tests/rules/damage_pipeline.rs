@@ -81,11 +81,11 @@ mod e6_spell_damage_s4_4_step_0 {
         let mut sink = EngineSink::new(&mut state, &mut events, &mut rng);
         apply_effects(
             &[damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 2 })))],
-            &mut make_context(sink.reborrow(), Some(mage.clone()), HookOptions::default()),
+            &mut make_context(&mut sink, Some(&mage), HookOptions::default()),
         );
         apply_effects(
             &[damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 2 })))],
-            &mut make_context(sink.reborrow(), Some(field.clone()), HookOptions::default()),
+            &mut make_context(&mut sink, Some(&field), HookOptions::default()),
         );
         assert_eq!(sink.state.players[P2].hero.health, 26);
         let spell = spell_in(sink.state, &bolt.id);
@@ -280,12 +280,12 @@ mod e6_hero_divisors_and_caps_s4_4_steps_2_and_3 {
         put(&mut state, &anime_armor.id, slot(P2, Row::Units, 1), json!({}));
         for amount in [1, 2, 5, 9] {
             assert_eq!(
-                projected_hero_damage(&state, P2, amount),
+                projected_hero_damage(&state, P2, amount, false),
                 hero_hit_amount(&state, P2, amount, false)
             );
         }
         let mut unguarded = playing("dc-projection-plain");
         put(&mut unguarded, &argus.id, slot(P2, Row::Backrow, 1), json!({}));
-        assert_eq!(projected_hero_damage(&unguarded, P2, 9), 5);
+        assert_eq!(projected_hero_damage(&unguarded, P2, 9, false), 5);
     }
 }

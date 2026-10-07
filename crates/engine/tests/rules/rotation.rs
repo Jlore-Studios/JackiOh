@@ -61,10 +61,10 @@ const TOKEN_ID: &str = "fx-token-rush";
 
 /// A Stack card pushed onto an occupied unit zone (§3.2); the harness's `put` fills empty zones.
 fn stack_onto(state: &mut GameState, def_id: &str, player: PlayerId, lane: i32) -> CardInstance {
-    let card = new_instance(state, def_id, player, Zone::Hand { player });
+    let mut card = new_instance(state, def_id, player, Zone::Hand { player });
     let ok = place_on_field(
         state,
-        card.clone(),
+        &mut card,
         slot(player, Row::Units, lane),
         json_as(json!({ "stack": true })),
     );
@@ -95,7 +95,7 @@ fn rotate(state: &mut GameState, direction: &str, options: Value) -> (Vec<GameEv
     if let Some(radiant) = options.get("radiant") {
         args["radiant"] = radiant.clone();
     }
-    let result = rotate_rings(&mut EngineSink::new(state, &mut events, &mut rng), json_as(args));
+    let result = rotate_rings(&mut EngineSink::new(state, &mut events, &mut rng), &json_as(args));
     (events, result)
 }
 
@@ -224,8 +224,8 @@ mod r14_rotation_m3_t7 {
         assert_eq!(live(&state, &card).owner, PlayerId::P1);
 
         // Off the field a card always belongs to its owner (R12, §3.2).
-        let moving = live(&state, &card).clone();
-        move_to_zone(&mut state, &moving, OffFieldZone::Graveyard, Default::default());
+        let mut moving = live(&state, &card).clone();
+        move_to_zone(&mut state, &mut moving, OffFieldZone::Graveyard, Default::default());
         let graveyard: Vec<String> = state.players.p1.graveyard.iter().map(|c| c.id.clone()).collect();
         assert_eq!(graveyard, vec![card.id.clone()]);
         assert_eq!(state.players.p2.graveyard.len(), 0);

@@ -121,7 +121,7 @@ fn both(script: Script) -> CardScripts {
 
 /// The ids of `player`'s graveyard cards that are this file's Units.
 fn unit_cards_in(ctx: &EffectContext, player: PlayerId) -> Vec<String> {
-    zone_cards(ctx.state, player, ZoneName::Graveyard)
+    zone_cards(ctx.state, player, OffFieldZone::Graveyard)
         .into_iter()
         .filter(|card| card.def_id == ASKER || card.def_id == QUIET)
         .map(|card| card.id.clone())

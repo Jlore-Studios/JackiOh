@@ -49,8 +49,8 @@ fn script(asks_after: AsksAfter) -> Script {
         cry: Some(hook(move |_ctx| {
             let asks_after = asks_after.clone();
             vec![for_each_card(ForEachCardArgs {
-                cards: Arc::new(|ctx: &EffectContext<'_>| {
-                    zone_cards(ctx.state, ctx.controller, ZoneName::Library).into_iter().map(|card| card.id.clone()).collect()
+                cards: Arc::new(|ctx: &mut EffectContext<'_>| {
+                    zone_cards(ctx.state, ctx.controller, OffFieldZone::Library).into_iter().map(|card| card.id.clone()).collect()
                 }),
                 each: Arc::new(move |instance_id: &str| {
                     let asks_after = asks_after.clone();
