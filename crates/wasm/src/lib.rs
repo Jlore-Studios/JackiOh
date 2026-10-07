@@ -365,6 +365,38 @@ fn check_deck_draft(input_json: &str) -> Result<String, JsError> {
     to_json(&validator::check_deck_draft(&input))
 }
 
+/// A loadout input (`DeckInput`, `LoadoutInput`) whose `catalog.cards` may hold partial definitions.
+///
+/// The rules read three fields of a card's definition: `name` (its label in a message), `token` and
+/// `tags` (L3, `validator.rs`); L6 asks only whether the id has one. TypeScript's validator took any
+/// object with those, and the web's tests hand it `{ id, name, token, tags }` (`routes/play.test.tsx`),
+/// while Rust's `CardDef` requires every field. So each definition that crosses is laid over a complete
+/// one first: its own fields win, and the ones it lacks come from a registered definition with
+/// `token: false` and no tags, which no rule reads. A full definition crosses unchanged.
+fn parse_loadout_input<T: DeserializeOwned>(call: &str, input_json: &str) -> Result<T, JsError> {
+    let mut input: Value = parse(call, input_json)?;
+    if let Some(cards) = input.pointer_mut("/catalog/cards").and_then(Value::as_object_mut) {
+        let mut template = engine::registered_catalog()
+            .values()
+            .next()
+            .map(|def| serde_json::to_value(def).unwrap_or(Value::Null))
+            .and_then(|value| value.as_object().cloned())
+            .unwrap_or_default();
+        template.insert("token".to_owned(), Value::Bool(false));
+        template.insert("tags".to_owned(), json!([]));
+        for (card_id, def) in cards.iter_mut() {
+            let Some(given) = def.as_object() else { continue };
+            let mut complete = template.clone();
+            complete.insert("id".to_owned(), Value::String(card_id.clone()));
+            for (key, value) in given {
+                complete.insert(key.clone(), value.clone());
+            }
+            *def = Value::Object(complete);
+        }
+    }
+    serde_json::from_value(input).map_err(|error| JsError::new(&format!("{call}: {error}")))
+}
+
 /// One validator call by its TypeScript name; the input and the output are that function's
 /// argument and result, as JSON (SURFACE §10.1). `checkDeckDraft` takes `DeckDraftRequest` above.
 #[wasm_bindgen]
@@ -373,15 +405,15 @@ pub fn validator(call: &str, input_json: &str) -> Result<String, JsError> {
 
     match call {
         "validateDeck" => {
-            let input: validator::DeckInput = parse(call, input_json)?;
+            let input: validator::DeckInput = parse_loadout_input(call, input_json)?;
             to_json(&validator::validate_deck(&input))
         }
         "validateLoadout" => {
-            let input: validator::LoadoutInput = parse(call, input_json)?;
+            let input: validator::LoadoutInput = parse_loadout_input(call, input_json)?;
             to_json(&validator::validate_loadout(&input))
         }
         "validateTrio" => {
-            let input: validator::LoadoutInput = parse(call, input_json)?;
+            let input: validator::LoadoutInput = parse_loadout_input(call, input_json)?;
             to_json(&validator::validate_trio(&input))
         }
         "checkDeckDraft" => check_deck_draft(input_json),
