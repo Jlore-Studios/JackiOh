@@ -124,7 +124,7 @@ mod tests {
         jackioh_engine::testkit::scenario(opts)
     }
 
-    fn def() -> &'static CardDef {
+    fn def() -> CardDef {
         crate::register_all();
         crate::card_def(ID)
     }
