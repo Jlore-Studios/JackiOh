@@ -56,17 +56,17 @@ mod tests {
     const FRIEND: &str = "core-062"; // Spell, 1
     const FELINOR: &str = "core-t-felinor"; // §7's shared Felinor Token, 1/1
     const TIMMY: &str = "core-011"; // Unit, 3/3 — the unit already on the board
-    const LANES: [usize; 5] = [1, 2, 3, 4, 5];
+    const LANES: [i32; 5] = [1, 2, 3, 4, 5];
 
-    fn unit_at(s: &Scenario, player: PlayerId, lane: usize) -> CardInstance {
+    fn unit_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
         match s.unit(player, lane) {
-            Some(found) => found.clone(),
+            Some(found) => found,
             None => panic!("expected a unit in {player} lane {lane}, found none"),
         }
     }
 
     fn defs_of(s: &Scenario, player: PlayerId) -> Vec<Option<String>> {
-        LANES.iter().map(|&lane| s.unit(player, lane).map(|u| u.def_id.clone())).collect()
+        LANES.iter().map(|&lane| s.unit(player, lane).map(|u| u.def_id)).collect()
     }
 
     /// A row of def ids (or empty zones) as `defs_of` reads one.
@@ -74,90 +74,100 @@ mod tests {
         ids.iter().map(|id| id.map(str::to_string)).collect()
     }
 
-    #[test]
-    fn r64_fills_every_empty_unit_zone_left_to_right_and_leaves_the_occupied_one_alone() {
-        let mut s = scenario(json!({ "p1": { "hand": [FRIEND], "field": [TIMMY], "mana": 4 } }));
+    mod friend_of_felinors {
+        use super::*;
 
-        s.play(FRIEND, json!({}));
+        #[test]
+        fn r64_fills_every_empty_unit_zone_left_to_right_and_leaves_the_occupied_one_alone() {
+            crate::register_all();
+            let mut s = scenario(json!({ "p1": { "hand": [FRIEND], "field": [TIMMY], "mana": 4 } }));
 
-        assert_eq!(
-            defs_of(&s, PlayerId::P1),
-            row(&[Some(TIMMY), Some(FELINOR), Some(FELINOR), Some(FELINOR), Some(FELINOR)])
-        );
-        let token = unit_at(&s, PlayerId::P1, 2);
-        s.expect_stats(&token, json!({ "attack": 1, "maxHealth": 1 }));
-        // The pre-existing unit is untouched by the base face.
-        let timmy = unit_at(&s, PlayerId::P1, 1);
-        s.expect_stats(&timmy, json!({ "attack": 3, "maxHealth": 3 }));
-    }
+            s.play(FRIEND, json!({}));
 
-    #[test]
-    fn fills_only_your_own_board() {
-        let mut s = scenario(json!({ "p1": { "hand": [FRIEND], "mana": 4 }, "p2": { "field": [TIMMY] } }));
-
-        s.play(FRIEND, json!({}));
-
-        assert_eq!(
-            defs_of(&s, PlayerId::P1),
-            row(&[Some(FELINOR), Some(FELINOR), Some(FELINOR), Some(FELINOR), Some(FELINOR)])
-        );
-        assert_eq!(defs_of(&s, PlayerId::P2), row(&[Some(TIMMY), None, None, None, None]));
-    }
-
-    #[test]
-    fn r64_a_full_board_takes_no_tokens_and_the_spell_still_resolves() {
-        let full = [TIMMY, "core-t-rush", "core-t-sheep", "core-019", "core-020"];
-        let mut s = scenario(json!({ "p1": { "hand": [FRIEND], "field": full, "mana": 4 } }));
-
-        s.play(FRIEND, json!({}));
-
-        assert_eq!(defs_of(&s, PlayerId::P1), row(&full.map(Some)));
-        s.expect_in_zone(FRIEND, "graveyard");
-    }
-
-    #[test]
-    fn radiant_gives_plus_2_plus_2_to_every_unit_you_control_the_new_tokens_included() {
-        let mut s = scenario(json!({ "p1": { "hand": [{ "def": FRIEND, "radiant": true }], "field": [TIMMY], "mana": 4 } }));
-
-        s.play(FRIEND, json!({}));
-
-        // "Then": the buff lands after the fill, so the Felinors it just made are units you control.
-        let timmy = unit_at(&s, PlayerId::P1, 1);
-        s.expect_stats(&timmy, json!({ "attack": 5, "maxHealth": 5 }));
-        for lane in [2, 3, 4, 5] {
-            let token = unit_at(&s, PlayerId::P1, lane);
-            assert_eq!(token.def_id, FELINOR);
-            s.expect_stats(&token, json!({ "attack": 3, "maxHealth": 3 }));
+            assert_eq!(
+                defs_of(&s, PlayerId::P1),
+                row(&[Some(TIMMY), Some(FELINOR), Some(FELINOR), Some(FELINOR), Some(FELINOR)])
+            );
+            let token = unit_at(&s, PlayerId::P1, 2);
+            s.expect_stats(&token, json!({ "attack": 1, "maxHealth": 1 }));
+            // The pre-existing unit is untouched by the base face.
+            let timmy = unit_at(&s, PlayerId::P1, 1);
+            s.expect_stats(&timmy, json!({ "attack": 3, "maxHealth": 3 }));
         }
-        s.expect_events(json!(["cardPlayed", "summoned", "buffed"]));
-    }
 
-    #[test]
-    fn radiant_buffs_your_units_only() {
-        let mut s = scenario(json!({
-            "p1": { "hand": [{ "def": FRIEND, "radiant": true }], "mana": 4 },
-            "p2": { "field": [TIMMY] },
-        }));
+        #[test]
+        fn fills_only_your_own_board() {
+            crate::register_all();
+            let mut s = scenario(json!({ "p1": { "hand": [FRIEND], "mana": 4 }, "p2": { "field": [TIMMY] } }));
 
-        s.play(FRIEND, json!({}));
+            s.play(FRIEND, json!({}));
 
-        let token = unit_at(&s, PlayerId::P1, 1);
-        s.expect_stats(&token, json!({ "attack": 3, "maxHealth": 3 }));
-        let timmy = unit_at(&s, PlayerId::P2, 1);
-        s.expect_stats(&timmy, json!({ "attack": 3, "maxHealth": 3 }));
-    }
+            assert_eq!(
+                defs_of(&s, PlayerId::P1),
+                row(&[Some(FELINOR), Some(FELINOR), Some(FELINOR), Some(FELINOR), Some(FELINOR)])
+            );
+            assert_eq!(defs_of(&s, PlayerId::P2), row(&[Some(TIMMY), None, None, None, None]));
+        }
 
-    #[test]
-    fn radiant_still_buffs_your_board_when_it_is_full_and_no_token_can_enter() {
-        let mut s = scenario(json!({
-            "p1": { "hand": [{ "def": FRIEND, "radiant": true }], "field": [TIMMY, TIMMY, TIMMY, TIMMY, TIMMY], "mana": 4 },
-        }));
+        #[test]
+        fn r64_a_full_board_takes_no_tokens_and_the_spell_still_resolves() {
+            crate::register_all();
+            let full = [TIMMY, "core-t-rush", "core-t-sheep", "core-019", "core-020"];
+            let mut s = scenario(json!({ "p1": { "hand": [FRIEND], "field": full, "mana": 4 } }));
 
-        s.play(FRIEND, json!({}));
+            s.play(FRIEND, json!({}));
 
-        for lane in LANES {
-            let unit = unit_at(&s, PlayerId::P1, lane);
-            s.expect_stats(&unit, json!({ "attack": 5, "maxHealth": 5 }));
+            assert_eq!(defs_of(&s, PlayerId::P1), row(&full.map(Some)));
+            s.expect_in_zone(FRIEND, "graveyard");
+        }
+
+        #[test]
+        fn radiant_gives_plus_2_plus_2_to_every_unit_you_control_the_new_tokens_included() {
+            crate::register_all();
+            let mut s = scenario(json!({ "p1": { "hand": [{ "def": FRIEND, "radiant": true }], "field": [TIMMY], "mana": 4 } }));
+
+            s.play(FRIEND, json!({}));
+
+            // "Then": the buff lands after the fill, so the Felinors it just made are units you control.
+            let timmy = unit_at(&s, PlayerId::P1, 1);
+            s.expect_stats(&timmy, json!({ "attack": 5, "maxHealth": 5 }));
+            for lane in [2, 3, 4, 5] {
+                let token = unit_at(&s, PlayerId::P1, lane);
+                assert_eq!(token.def_id, FELINOR);
+                s.expect_stats(&token, json!({ "attack": 3, "maxHealth": 3 }));
+            }
+            s.expect_events(json!(["cardPlayed", "summoned", "buffed"]));
+        }
+
+        #[test]
+        fn radiant_buffs_your_units_only() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [{ "def": FRIEND, "radiant": true }], "mana": 4 },
+                "p2": { "field": [TIMMY] },
+            }));
+
+            s.play(FRIEND, json!({}));
+
+            let token = unit_at(&s, PlayerId::P1, 1);
+            s.expect_stats(&token, json!({ "attack": 3, "maxHealth": 3 }));
+            let timmy = unit_at(&s, PlayerId::P2, 1);
+            s.expect_stats(&timmy, json!({ "attack": 3, "maxHealth": 3 }));
+        }
+
+        #[test]
+        fn radiant_still_buffs_your_board_when_it_is_full_and_no_token_can_enter() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [{ "def": FRIEND, "radiant": true }], "field": [TIMMY, TIMMY, TIMMY, TIMMY, TIMMY], "mana": 4 },
+            }));
+
+            s.play(FRIEND, json!({}));
+
+            for lane in LANES {
+                let unit = unit_at(&s, PlayerId::P1, lane);
+                s.expect_stats(&unit, json!({ "attack": 5, "maxHealth": 5 }));
+            }
         }
     }
 }
