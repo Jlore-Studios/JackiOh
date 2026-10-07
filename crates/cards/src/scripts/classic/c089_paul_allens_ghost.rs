@@ -146,7 +146,7 @@ mod tests {
     /// TS `stepParam(s.card(card), key, steps)`, on the card as it stands in the state.
     fn step_param_on(s: &mut Scenario, card: &str, key: &str, steps: i32) {
         let id = s.card(card).id.clone();
-        step_param(
+        jackioh_engine::params::step_param(
             find_instance_mut(s.state_mut(), &id).expect("the card in the state"),
             key,
             steps,
