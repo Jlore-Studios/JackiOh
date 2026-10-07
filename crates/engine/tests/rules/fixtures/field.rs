@@ -266,7 +266,7 @@ pub fn notes_of<'a>(card: impl Into<Option<&'a CardInstance>>) -> Vec<String> {
     }
 }
 
-fn enemy_play(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
+fn enemy_play(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     matches!(event, GameEvent::CardPlayed { player, .. } if *player != ctx.controller)
 }
 

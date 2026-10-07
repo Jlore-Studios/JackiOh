@@ -376,16 +376,18 @@ fn cast_new_of(def_id: String) -> Effect {
 
 /// `castRandom({ query: { defId: pool }, count, ...how })`.
 fn cast_random_of(pool: Vec<String>, count: i32, radiant: Option<bool>, how: Value) -> Effect {
+    let how: effects::CastHow = json_as(how);
     effects::cast_random(effects::CastRandomArgs {
         query: effects::CastRandomQuery::Fixed(json_as(json!({ "defId": pool }))),
         count: Some(effects::CastRandomCount::Fixed(count)),
         radiant,
-        how: json_as(how),
+        target_enemies: how.target_enemies,
+        afterward: how.afterward,
     })
 }
 
 /// The Spells in the running card's controller's graveyard, by id (`castEach`'s `cards`).
-fn graveyard_spells(ctx: &EffectContext<'_>) -> Vec<String> {
+fn graveyard_spells(ctx: &mut EffectContext<'_>) -> Vec<String> {
     ctx.state.players[ctx.controller]
         .graveyard
         .iter()

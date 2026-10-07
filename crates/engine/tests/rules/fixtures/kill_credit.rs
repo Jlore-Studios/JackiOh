@@ -70,7 +70,7 @@ fn jungle_face(transfer: bool) -> Script {
         end_of_turn: Some(hook(move |_ctx| {
             vec![with_kill_credit(WithKillCreditArgs {
                 killer: json_as(json!({ "of": "self" })),
-                pairs: Arc::new(|ctx: &EffectContext<'_>, _killer: &CardInstance| {
+                pairs: Arc::new(|ctx: &mut EffectContext<'_>, _killer: &CardInstance| {
                     across_from_bots(ctx.state, ctx.controller)
                 }),
                 transfer,
