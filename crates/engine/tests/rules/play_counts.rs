@@ -128,7 +128,7 @@ mod r451_plays_by_type_this_turn_classic_plus_c37 {
     #[test]
     fn r451_r448_a_countered_play_counts_nowhere() {
         let mut state = game("r451-countered");
-        put(&mut state, &PA.counter_trap.id, slot(PlayerId::P2, Row::Backrow, 1));
+        put(&mut state, &PA.counter_trap.id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
         let after = play(&state, PlayerId::P1, &PA.apple.id, false);
         assert_eq!(of_type(&after, PlayerId::P1, &[CardType::Spell]), 0);
         assert_eq!(query::played_this_game_with_tag(&after, PlayerId::P1, Tag::Fruit), 0);

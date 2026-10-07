@@ -321,8 +321,8 @@ mod r678_other_games_boards {
     fn r678_replaces_both_fields_with_the_frozen_boards_units_to_the_unit_zones_and_the_rest_to_the_backrow() {
         let seed = seed_for(GlitchOutcome::Boards);
         let mut state = game(&seed);
-        put(&mut state, "fx-1", slot(P1, Row::Units, 1));
-        put(&mut state, "fx-2", slot(P2, Row::Units, 3));
+        put(&mut state, "fx-1", slot(P1, Row::Units, 1), json!({}));
+        put(&mut state, "fx-2", slot(P2, Row::Units, 3), json!({}));
         let decks = state
             .opening
             .as_ref()
@@ -432,7 +432,7 @@ mod r764_a_glitchs_reset_or_boards_leaves_no_public_trace_of_the_cards_it_took_u
         let mut catalog = registered_catalog().clone();
         catalog.insert(trap_def().id, trap_def());
         register_catalog(catalog);
-        let trap = put(&mut state, &trap_def().id, slot(P2, Row::Backrow, 1));
+        let trap = put(&mut state, &trap_def().id, slot(P2, Row::Backrow, 1), json!({}));
         state.applied = vec![json_as(json!({
             "nonce": "before",
             "events": [{ "type": "cardPlayed", "player": "p2", "instanceId": trap.id, "defId": trap.def_id, "costPaid": 1 }],

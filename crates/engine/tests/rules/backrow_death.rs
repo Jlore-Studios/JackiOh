@@ -51,10 +51,10 @@ mod section_4_5_step_3_death_for_a_collected_backrow_card {
     #[test]
     fn a_destroyed_field_spell_fires_its_death_in_r68s_order_the_active_sides_units_its_backrow_then_the_other_side() {
         let mut state = playing("dc-backrow-death");
-        let foe_back = put(&mut state, &bauble().id, slot(P2, Row::Backrow, 1), Default::default());
-        let foe = put(&mut state, &rattle().id, slot(P2, Row::Units, 3), Default::default());
-        let pop = put(&mut state, &bauble().id, slot(P1, Row::Backrow, 2), Default::default());
-        let own = put(&mut state, &rattle().id, slot(P1, Row::Units, 4), Default::default());
+        let foe_back = put(&mut state, &bauble.id, slot(P2, Row::Backrow, 1), Default::default());
+        let foe = put(&mut state, &rattle.id, slot(P2, Row::Units, 3), Default::default());
+        let pop = put(&mut state, &bauble.id, slot(P1, Row::Backrow, 2), Default::default());
+        let own = put(&mut state, &rattle.id, slot(P1, Row::Units, 4), Default::default());
         for card in [&foe_back, &foe, &pop, &own] {
             by_id_mut(&mut state, &card.id).marked_destroyed = Some(true);
         }
@@ -73,12 +73,12 @@ mod section_4_5_step_3_death_for_a_collected_backrow_card {
     #[test]
     fn the_death_hooks_run_in_that_order_and_a_bounce_or_an_exile_is_no_death() {
         let mut state = playing("dc-backrow-order");
-        let own = put(&mut state, &rattle().id, slot(P1, Row::Units, 1), Default::default());
-        let pop = put(&mut state, &bauble().id, slot(P1, Row::Backrow, 1), Default::default());
-        let foe = put(&mut state, &rattle().id, slot(P2, Row::Units, 1), Default::default());
-        let spell = in_hand(&mut state, &storm().id, P1, None).remove(0);
+        let own = put(&mut state, &rattle.id, slot(P1, Row::Units, 1), Default::default());
+        let pop = put(&mut state, &bauble.id, slot(P1, Row::Backrow, 1), Default::default());
+        let foe = put(&mut state, &rattle.id, slot(P2, Row::Units, 1), Default::default());
+        let spell = in_hand(&mut state, &storm.id, P1, 1).remove(0);
         by_id_mut(&mut state, &pop.id).marked_destroyed = Some(true);
-        let mut game = recorder(state);
+        let mut game = recorder(&state);
         game.play(input(json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" })));
         assert_eq!(
             notes(game.state()),
@@ -97,8 +97,8 @@ mod section_4_5_step_3_death_for_a_collected_backrow_card {
         assert!(replays_to(&game.start, &game.log, game.state()));
 
         let mut quiet = playing("dc-backrow-no-death");
-        let one = put(&mut quiet, &bauble().id, slot(P1, Row::Backrow, 1), Default::default());
-        let two = put(&mut quiet, &bauble().id, slot(P1, Row::Backrow, 2), Default::default());
+        let one = put(&mut quiet, &bauble.id, slot(P1, Row::Backrow, 1), Default::default());
+        let two = put(&mut quiet, &bauble.id, slot(P1, Row::Backrow, 2), Default::default());
         let mut sink = sink_for(&mut quiet);
         let mut ctx = make_context(sink.reborrow(), None, by(P1));
         apply_effects(
@@ -116,15 +116,15 @@ mod section_4_5_step_3_death_for_a_collected_backrow_card {
     #[test]
     fn r461_a_sacrificed_backrow_card_fires_its_death_one_exiled_instead_of_reaching_its_graveyard_does_not() {
         let mut state = playing("dc-backrow-sacrifice");
-        let pop = put(&mut state, &bauble().id, slot(P1, Row::Backrow, 1), Default::default());
+        let pop = put(&mut state, &bauble.id, slot(P1, Row::Backrow, 1), Default::default());
         let mut sink = sink_for(&mut state);
         sacrifice_now(&mut sink, &pop);
         assert_eq!(notes(sink.state), vec!["bauble:death"]);
 
         let mut walled = playing("dc-backrow-void");
-        put(&mut walled, &voidwalker().id, slot(P2, Row::Units, 1), Default::default());
-        let gone = put(&mut walled, &bauble().id, slot(P1, Row::Backrow, 1), Default::default());
-        put(&mut walled, &grunt().id, slot(P1, Row::Units, 1), Default::default());
+        put(&mut walled, &voidwalker.id, slot(P2, Row::Units, 1), Default::default());
+        let gone = put(&mut walled, &bauble.id, slot(P1, Row::Backrow, 1), Default::default());
+        put(&mut walled, &grunt.id, slot(P1, Row::Units, 1), Default::default());
         by_id_mut(&mut walled, &gone.id).marked_destroyed = Some(true);
         let mut void_sink = sink_for(&mut walled);
         state_check(&mut void_sink);

@@ -12,6 +12,8 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use jackioh_engine::effects::{ForEachCardArgs, after_state_check, destroy_all, for_each_card, gain_mana, summon};
+use std::sync::Arc;
+
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
@@ -237,7 +239,7 @@ fn playing(seed: &str) -> GameState {
         }
         state = result.state;
     }
-    put(&mut state, LOG_CARD, slot(PlayerId::P1, Row::Backrow, NOTE_LANE as i32));
+    put(&mut state, LOG_CARD, slot(PlayerId::P1, Row::Backrow, NOTE_LANE as i32), json!({}));
     state
 }
 
@@ -269,8 +271,8 @@ mod after_state_check_c_43_plague_nuke {
     fn r59_runs_the_check_at_its_point_of_the_list_the_rest_finds_the_destroyed_units_in_their_graveyard_after_their_deaths(
     ) {
         let mut state = playing("after-check-order");
-        put(&mut state, QUIET, slot(PlayerId::P2, Row::Units, 1));
-        put(&mut state, QUIET, slot(PlayerId::P2, Row::Units, 2));
+        put(&mut state, QUIET, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        put(&mut state, QUIET, slot(PlayerId::P2, Row::Units, 2), json!({}));
 
         let ReduceResult { state: after, events, .. } = play_spell(&mut state, SWEEP);
 
@@ -285,8 +287,8 @@ mod after_state_check_c_43_plague_nuke {
     #[test]
     fn r174_the_rest_is_a_new_stay_a_unit_the_check_sent_to_its_graveyard_is_nameable_there_by_id() {
         let mut state = playing("after-check-stay");
-        let a = put(&mut state, QUIET, slot(PlayerId::P2, Row::Units, 1));
-        let b = put(&mut state, QUIET, slot(PlayerId::P2, Row::Units, 3));
+        let a = put(&mut state, QUIET, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let b = put(&mut state, QUIET, slot(PlayerId::P2, Row::Units, 3), json!({}));
 
         let after = play_spell(&mut state, SWEEP_AND_TAKE).state;
 
@@ -300,7 +302,7 @@ mod after_state_check_c_43_plague_nuke {
     #[test]
     fn the_control_without_the_check_in_between_the_same_summon_finds_the_units_still_on_the_field_and_takes_nothing() {
         let mut state = playing("after-check-control");
-        put(&mut state, QUIET, slot(PlayerId::P2, Row::Units, 1));
+        put(&mut state, QUIET, slot(PlayerId::P2, Row::Units, 1), json!({}));
 
         let after = play_spell(&mut state, SWEEP_NO_CHECK).state;
 
@@ -312,8 +314,8 @@ mod after_state_check_c_43_plague_nuke {
     fn r113_a_death_hook_asking_inside_the_check_parks_the_rest_behind_the_pass_after_the_answer_the_rest_runs_once_and_the_pause_survives_json(
     ) {
         let mut state = playing("after-check-pause");
-        put(&mut state, ASKER, slot(PlayerId::P2, Row::Units, 1));
-        put(&mut state, QUIET, slot(PlayerId::P2, Row::Units, 2));
+        put(&mut state, ASKER, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        put(&mut state, QUIET, slot(PlayerId::P2, Row::Units, 2), json!({}));
 
         let paused = play_spell(&mut state, SWEEP).state;
 

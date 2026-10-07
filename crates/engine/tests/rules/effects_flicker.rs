@@ -102,7 +102,7 @@ mod b5_e22_flicker {
     #[test]
     fn leaves_and_re_enters_the_same_zone_at_once_reset_summoning_sick_in_attack_position_no_cry_no_death() {
         let mut state = playing("flicker-basic");
-        let unit = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 3));
+        let unit = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
         {
             let card = live_mut(&mut state, &unit.id);
             card.damage = 2;
@@ -133,7 +133,7 @@ mod b5_e22_flicker {
         assert_eq!(event_types(&sink.events), vec![GameEventType::Flickered, GameEventType::Summoned]);
         assert_eq!(
             as_json(&events_of_type(&sink.events, GameEventType::Flickered)),
-            json!([{ "type": "flickered", "player": "p1", "instanceId": unit.id, "defId": plain().id, "row": "units", "lane": 3 }])
+            json!([{ "type": "flickered", "player": "p1", "instanceId": unit.id, "defId": plain.id, "row": "units", "lane": 3 }])
         );
         assert!(!sink.events.iter().any(|event| matches!(
             event.event_type(),
@@ -158,8 +158,8 @@ mod b5_e22_flicker {
     #[test]
     fn counts_as_summoned_an_enemy_tesla_answers_the_flicker_of_a_unit_on_the_other_side() {
         let mut state = playing("flicker-summoned");
-        let zapper = put(&mut state, &tesla().id, slot(PlayerId::P2, Row::Backrow, 1));
-        let unit = put(&mut state, &stacker().id, slot(PlayerId::P1, Row::Units, 1));
+        let zapper = put(&mut state, &tesla.id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        let unit = put(&mut state, &stacker.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let mut sink = sink_for(&state);
         sink.apply(&mut state, flicker(json_as(json!({ "target": { "of": "instance", "instanceId": unit.id } }))), PlayerId::P1);
         // Offer the flicker's events to the traps, as the resolution loop does.
@@ -172,14 +172,14 @@ mod b5_e22_flicker {
     #[test]
     fn r174_ends_every_delayed_effect_aimed_at_the_card_what_returns_is_a_new_arrival() {
         let mut state = playing("flicker-watchers");
-        let unit = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1));
+        let unit = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let mut sink = sink_for(&state);
         schedule_delayed(
             &mut sink.on(&mut state),
             PlayerId::P1,
             DelayedAt { phase: Phase::Start, player: PlayerId::P1 },
             Resume {
-                def_id: plain().id,
+                def_id: plain.id.clone(),
                 hook: "delayed".to_string(),
                 step: String::new(),
                 radiant: false,
@@ -197,7 +197,7 @@ mod b5_e22_flicker {
     #[test]
     fn a_stolen_unit_re_enters_the_same_zone_on_its_thief_s_side() {
         let mut state = playing("flicker-stolen");
-        let unit = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1));
+        let unit = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let mut sink = sink_for(&state);
         sink.apply(&mut state, steal(json_as(json!({ "target": { "of": "instance", "instanceId": unit.id } }))), PlayerId::P1);
         let at = by_id(&state, &unit.id).zone.clone();
@@ -210,11 +210,11 @@ mod b5_e22_flicker {
     #[test]
     fn flickers_every_card_a_scope_names_and_never_a_card_dormant_under_a_stack() {
         let mut state = playing("flicker-scope");
-        let low = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1));
-        let top = put(&mut state, &stacker().id, slot(PlayerId::P2, Row::Units, 2));
+        let low = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let top = put(&mut state, &stacker.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
         state.players[PlayerId::P2].units[1] = None;
         place_on_field(&mut state, &top, &slot(PlayerId::P2, Row::Units, 1), json_as(json!({ "stack": true })));
-        let other = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 3));
+        let other = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 3), json!({}));
         let mut sink = sink_for(&state);
         sink.apply(&mut state, flicker(json_as(json!({ "scope": { "side": "enemy" } }))), PlayerId::P1);
         assert_eq!(
@@ -231,21 +231,21 @@ mod b5_e22_flicker {
     #[test]
     fn r227_r97_a_face_down_trap_re_enters_face_down_under_a_fresh_id_and_the_other_seat_cannot_link_the_two() {
         let mut state = playing("flicker-trap");
-        let trap = put(&mut state, &watcher().id, slot(PlayerId::P2, Row::Backrow, 2));
+        let trap = put(&mut state, &watcher.id, slot(PlayerId::P2, Row::Backrow, 2), json!({}));
         let old_id = trap.id.clone();
         let mut sink = sink_for(&state);
         sink.flicker_card(&mut state, &trap.id);
         // TS's live object took the fresh id; here the card is the one now in its zone.
         let trap = card_at(&state, &slot(PlayerId::P2, Row::Backrow, 2)).cloned().expect("the trap is back in its zone");
         assert_ne!(trap.id, old_id);
-        assert_eq!(trap.def_id, watcher().id);
+        assert_eq!(trap.def_id, watcher.id.clone());
         assert!(find_instance(&state, &old_id).is_none());
         assert_eq!(trap.face_up, None);
         let summoned = events_of_type(&sink.events, GameEventType::Summoned);
         assert_eq!(
             as_json(&summoned),
             json!([{
-                "type": "summoned", "player": "p2", "instanceId": trap.id, "defId": watcher().id,
+                "type": "summoned", "player": "p2", "instanceId": trap.id, "defId": watcher.id,
                 "row": "backrow", "lane": 2, "formerId": old_id,
             }])
         );
@@ -270,7 +270,7 @@ mod b5_e22_flicker {
     #[test]
     fn an_animated_card_stays_a_unit_in_its_unit_zone_face_up_and_its_home_is_let_go() {
         let mut state = playing("flicker-animated");
-        let card = put(&mut state, &spatula().id, slot(PlayerId::P1, Row::Backrow, 1));
+        let card = put(&mut state, &spatula.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
         let mut sink = sink_for(&state);
         animate_card(&mut sink.on(&mut state), &card, Default::default());
         assert!(home_of(&state, &card.id).is_some());
@@ -286,20 +286,20 @@ mod b5_e22_flicker_inside_a_play_that_pauses_r113 {
 
     fn cast(seed: &str) -> (GameState, String) {
         let mut state = playing(seed);
-        let unit = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 2));
+        let unit = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
         live_mut(&mut state, &unit.id).damage = 2;
-        let Some(spell) = in_hand(&mut state, &blink().id, PlayerId::P1, 1).into_iter().next() else {
+        let Some(spell) = in_hand(&mut state, &blink.id, PlayerId::P1, 1).into_iter().next() else {
             panic!("no card");
         };
         flush(&mut state, PlayerId::P1, 10);
         let result = act_result(
             &state,
-            json_as(json!({
+            json!({
                 "type": "play",
                 "instanceId": spell.id,
                 "targets": [{ "pick": "instance", "instanceId": unit.id }],
                 "playerId": "p1",
-            })),
+            }),
         );
         if let Some(error) = result.error {
             panic!("{error}");
@@ -311,12 +311,12 @@ mod b5_e22_flicker_inside_a_play_that_pauses_r113 {
         let choice_id = state.pending.as_ref().map(|pending| pending.id.clone()).unwrap_or_default();
         act(
             state,
-            json_as(json!({
+            json!({
                 "type": "answer",
                 "choiceId": choice_id,
                 "selection": [{ "pick": "hero", "player": "p2" }],
                 "playerId": "p1",
-            })),
+            }),
         )
     }
 
@@ -355,7 +355,7 @@ mod b5_e22_flicker_inside_a_play_that_pauses_r113 {
             let events = view_for(&state, viewer).events;
             expect_match_object(
                 &events_of_type(&events, GameEventType::Flickered),
-                json!([{ "instanceId": unit, "defId": plain().id, "row": "units", "lane": 2 }]),
+                json!([{ "instanceId": unit, "defId": plain.id, "row": "units", "lane": 2 }]),
             );
         }
     }

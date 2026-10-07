@@ -400,7 +400,7 @@ mod e12_casts_from_anywhere_r70_r453 {
         // Fill the backrow: the next cast Field Spell finds no zone and fizzles.
         let mut full = playing("r453-fizzle");
         for lane in [1, 2, 3, 4, 5] {
-            put(&mut full, &cast_trap().id, slot(PlayerId::P1, Row::Backrow, lane));
+            put(&mut full, &cast_trap().id, slot(PlayerId::P1, Row::Backrow, lane), json!({}));
         }
         let health = full.players[PlayerId::P2].hero.health;
         let played = full.counters.played;
@@ -420,7 +420,7 @@ mod e12_casts_from_anywhere_r70_r453 {
     fn r453_a_card_on_the_field_is_never_cast_a_graveyard_card_cast_without_a_rider_resolves_and_lands_in_the_graveyard_again(
     ) {
         let mut state = playing("r453-where");
-        let on_field = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1));
+        let on_field = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({}));
         let played = state.counters.played;
         run(
             &mut state,
@@ -491,8 +491,8 @@ mod e12_random_casts_r452 {
     fn r452_a_random_cast_that_targets_enemies_picks_an_enemy_whenever_one_is_legal() {
         for seed in ["r452-enemy-1", "r452-enemy-2", "r452-enemy-3", "r452-enemy-4", "r452-enemy-5"] {
             let mut state = playing(seed);
-            let mine = put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 2));
-            put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 3));
+            let mine = put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 2), json!({}));
+            put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 3), json!({}));
             let card = only(in_hand(&mut state, &solarius().id, PlayerId::P1, 1));
             let result = pb_reduce(
                 &state,
@@ -597,8 +597,8 @@ mod e39_target_enemies_on_a_cast_its_caster_makes_r452 {
     #[test]
     fn r452_a_card_carrying_the_target_enemies_enchantment_cast_offers_its_caster_only_enemies_when_there_is_one() {
         let mut state = playing("r452-enchanted");
-        put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 1));
-        let enemy = put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 1));
+        put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let enemy = put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 1), json!({}));
         let mut card = new_instance(&mut state, &target_spell().id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
         card.enchantments = Some(vec![json_as(json!({ "kind": "targetEnemies" }))]);
         state.players[PlayerId::P1].hand.push(card.clone());
@@ -629,7 +629,7 @@ mod e39_target_enemies_on_a_cast_its_caster_makes_r452 {
     #[test]
     fn r452_with_no_enemy_to_pick_or_too_few_every_option_stays() {
         let mut state = playing("r452-no-enemy");
-        let own = put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 1));
+        let own = put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 1), json!({}));
         let options = vec![Selection::Instance { instance_id: own.id.clone() }, Selection::Hero { player: PlayerId::P1 }];
         assert_eq!(prefer_enemies(&state, PlayerId::P1, &options, |selection: &Selection| selection.clone(), 1), options);
         let mut mixed = options.clone();
@@ -648,8 +648,8 @@ mod r656_aimed_random_targets {
     #[test]
     fn r656_a_helpful_pick_under_target_enemies_narrows_to_friends_when_one_is_legal() {
         let mut state = playing("r651-enchanted");
-        let own = put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 1));
-        put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 1));
+        let own = put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 1), json!({}));
+        put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 1), json!({}));
         let mut card = new_instance(&mut state, HEAL_FRIEND, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
         card.enchantments = Some(vec![json_as(json!({ "kind": "targetEnemies" }))]);
         state.players[PlayerId::P1].hand.push(card.clone());
@@ -666,10 +666,10 @@ mod r656_aimed_random_targets {
     #[test]
     fn r656_with_no_friend_to_pick_or_too_few_every_option_stays_and_a_mode_pick_is_kept_either_way() {
         let mut state = playing("r651-no-friend");
-        let foe = put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 1));
+        let foe = put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 1), json!({}));
         let options = vec![Selection::Instance { instance_id: foe.id.clone() }, Selection::Hero { player: PlayerId::P2 }];
         assert_eq!(prefer_friends(&state, PlayerId::P1, &options, |selection: &Selection| selection.clone(), 1), options);
-        let own = put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 1));
+        let own = put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 1), json!({}));
         let mode = Selection::Mode { option: "a".to_string() };
         let mut mixed = options.clone();
         mixed.push(mode.clone());
@@ -688,8 +688,8 @@ mod r656_aimed_random_targets {
         let mut saw_heal = false;
         for seed in ["r651-aim-1", "r651-aim-2", "r651-aim-3", "r651-aim-4", "r651-aim-5"] {
             let mut state = playing(seed);
-            let mine = put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 1));
-            let foe = put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 1));
+            let mine = put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 1), json!({}));
+            let foe = put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 1), json!({}));
             set_damage(&mut state, &mine.id, 1);
             set_damage(&mut state, &foe.id, 1);
             let events = run(
@@ -720,8 +720,8 @@ mod r656_aimed_random_targets {
         let mut seen: BTreeSet<&str> = BTreeSet::new();
         for seed in ["r651-box-1", "r651-box-2", "r651-box-3", "r651-box-4", "r651-box-5", "r651-box-6"] {
             let mut state = playing(seed);
-            let mine = put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 1));
-            let foe = put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 1));
+            let mine = put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 1), json!({}));
+            let foe = put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 1), json!({}));
             set_damage(&mut state, &mine.id, 1);
             set_damage(&mut state, &foe.id, 1);
             let events = run(

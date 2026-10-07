@@ -14,7 +14,7 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
 use crate::rules::fixtures::twice_forward::{
     CRIER_DAMAGE, TURNER_DAMAGE, caster, crier, forward, self_exiler, spell, trap, turner, twice_forward_catalog,
-    twice_forward_scripts,
+    TWICE_FORWARD_SCRIPTS,
 };
 
 /// TS's module-level `let nonce`.
@@ -56,7 +56,7 @@ fn opponents_turn(seed: &str, radiant: bool) -> OpponentsTurn {
     let mut state = begin_game(&new_game(&format!("twice-forward-{seed}"), None)).state;
     register_catalog(twice_forward_catalog(registered_catalog().clone()));
     let mut registry = registered_scripts().clone();
-    for (id, script) in twice_forward_scripts() {
+    for (id, script) in TWICE_FORWARD_SCRIPTS.clone() {
         registry.insert(id, script);
     }
     register_scripts(registry);
@@ -475,7 +475,7 @@ mod c_plus_c74s_field_trap_r425 {
     #[test]
     fn put_places_it_face_down_too_a_set_trap_counts_from_when_it_arrived() {
         let OpponentsTurn { mut state, .. } = opponents_turn("placed", false);
-        let placed = put(&mut state, &forward().id, slot(PlayerId::P1, Row::Backrow, 4));
+        let placed = put(&mut state, &forward().id, slot(PlayerId::P1, Row::Backrow, 4), json!({}));
         trap_of_mut(&mut state, &placed.id).face_up = Some(false);
         let next = play(state, PlayerId::P2, &spell().id, None).state;
         assert_eq!(twice_forward_plays(trap_of(&next, &placed.id)), 1);

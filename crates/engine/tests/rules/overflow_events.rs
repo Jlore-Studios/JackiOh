@@ -153,7 +153,7 @@ mod r315_fatigue {
     #[test]
     fn r315_counts_each_fatigue_draw_of_a_draw_n_on_1_2_3() {
         let mut state = new_game("r315-count", None);
-        set_library(&mut state, PlayerId::P1, &[]);
+        set_library(&mut state, PlayerId::P1, &[] as &[&str]);
         let mut sink = Sink::for_state(&state);
         let _ = sink.with(&mut state, |s| draw::draw(s, PlayerId::P1, 3));
         let events = values(&sink.events);
@@ -181,7 +181,7 @@ mod r315_fatigue {
     #[test]
     fn r315_r240_still_reports_a_fatigue_draw_whose_whole_hit_armor_absorbs_ahead_of_the_zero() {
         let mut state = new_game("r315-armor", None);
-        set_library(&mut state, PlayerId::P1, &[]);
+        set_library(&mut state, PlayerId::P1, &[] as &[&str]);
         state.players.p1.hero.armor = 3;
         let mut sink = Sink::for_state(&state);
         let outcome = sink.with(&mut state, |s| draw::draw_one(s, PlayerId::P1, None));
@@ -199,8 +199,8 @@ mod r315_fatigue {
     #[test]
     fn r315_reports_no_fatigue_for_a_draw_c75_infinite_reserves_replaces_with_a_rush_token_card() {
         let mut state = new_game("r315-reserves", None);
-        set_library(&mut state, PlayerId::P1, &[]);
-        put(&mut state, &infinite_reserves().id, slot(PlayerId::P1, Row::Backrow, 1));
+        set_library(&mut state, PlayerId::P1, &[] as &[&str]);
+        put(&mut state, &infinite_reserves().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
         let mut sink = Sink::for_state(&state);
         let outcome = sink.with(&mut state, |s| draw::draw_one(s, PlayerId::P1, None));
         assert!(matches!(outcome, DrawOutcome::Token));
@@ -273,7 +273,7 @@ mod r316_library_overflow {
     #[test]
     fn r316_reports_an_existing_unit_token_card_a_full_library_turns_away_as_ceased_with_no_graveyard() {
         let mut state = full_library("r316-token");
-        let mut token = put(&mut state, TOKEN, slot(PlayerId::P1, Row::Units, 1));
+        let mut token = put(&mut state, TOKEN, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let mut sink = Sink::for_state(&state);
         let outcome = sink.with(&mut state, |s| draw::shuffle_into_library(s, &mut token, true, None));
         assert!(matches!(outcome, ShuffleInOutcome::Dropped));
@@ -311,7 +311,7 @@ mod r316_library_overflow {
         let mut catalog = registered_catalog().clone();
         catalog.insert(trap.id.clone(), trap.clone());
         register_catalog(catalog);
-        let mut set = put(&mut state, &trap.id, slot(PlayerId::P1, Row::Backrow, 2));
+        let mut set = put(&mut state, &trap.id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
         let mut sink = Sink::for_state(&state);
         let effect = effects::shuffle_into(json_as(json!({ "defId": trap.id, "count": 1, "copyOf": set.id })));
         sink.with(&mut state, |s| {
@@ -365,7 +365,7 @@ mod r316_library_overflow {
 
         // Copying a face-down trap: the other seat reads neither the card nor its face.
         let mut hidden = full_library("r316-radiant-hidden");
-        let mut trap = put(&mut hidden, "fx-2", slot(PlayerId::P1, Row::Units, 1));
+        let mut trap = put(&mut hidden, "fx-2", slot(PlayerId::P1, Row::Units, 1), json!({}));
         let mut hidden_sink = Sink::for_state(&hidden);
         let mut copy = new_instance(&mut hidden, "fx-2", PlayerId::P1, Zone::Library { player: PlayerId::P1 });
         copy.radiant = true;
@@ -480,8 +480,8 @@ mod r317_a_full_hand_burns {
     #[test]
     fn r317_burns_a_unit_token_card_out_of_existence_public_and_no_graveyard() {
         let mut state = new_game("r317-token", None);
-        set_library(&mut state, PlayerId::P1, &[]);
-        put(&mut state, &infinite_reserves().id, slot(PlayerId::P1, Row::Backrow, 1));
+        set_library(&mut state, PlayerId::P1, &[] as &[&str]);
+        put(&mut state, &infinite_reserves().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
         in_hand(&mut state, "fx-30", PlayerId::P1, HAND_CAP);
         let mut sink = Sink::for_state(&state);
         let outcome = sink.with(&mut state, |s| draw::draw_one(s, PlayerId::P1, None));

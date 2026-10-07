@@ -100,10 +100,10 @@ mod e16_e2_a_card_out_of_the_other_player_s_deck_classic_plus_12_3 {
     ) {
         let mut state = board("fluffy");
         // A copy: the harness hands back the library array itself, which the steal splices.
-        let library = set_library(&mut state, PlayerId::P2, &[glitch().id, plain().id, glitch().id]);
-        set_library(&mut state, PlayerId::P1, &[plain().id]);
+        let library = set_library(&mut state, PlayerId::P2, &[glitch().id, plain.id.clone(), glitch().id]);
+        set_library(&mut state, PlayerId::P1, &[plain.id.clone()]);
         assert_eq!(unknown_in_own_library(&state, PlayerId::P2), Some(0));
-        let events = cast_now(&mut state, &fluffy_grip().id, PlayerId::P1, false);
+        let events = cast_now(&mut state, &fluffy_grip().id, PlayerId::P1, false).events;
         state.applied.push(AppliedAction { nonce: "fluffy".to_string(), events });
 
         // The one Unit of their deck, now p1's in every sense, costing (0) in p1's hand.
@@ -118,7 +118,7 @@ mod e16_e2_a_card_out_of_the_other_player_s_deck_classic_plus_12_3 {
         // `stolen`: the taker reads it; its old owner, who never saw their deck, reads only that a card left.
         assert_eq!(
             stolen_seen_by(&state, PlayerId::P1),
-            vec![json!({ "type": "stolen", "instanceId": taken.id, "defId": plain().id, "from": "p2", "to": "p1", "zone": "library" })]
+            vec![json!({ "type": "stolen", "instanceId": taken.id, "defId": plain.id, "from": "p2", "to": "p1", "zone": "library" })]
         );
         assert_eq!(
             stolen_seen_by(&state, PlayerId::P2),
@@ -143,7 +143,7 @@ mod e16_e2_a_card_out_of_the_other_player_s_deck_classic_plus_12_3 {
     #[test]
     fn e16_radiant_makes_the_taken_card_radiant_with_no_unit_in_the_deck_nothing_is_taken() {
         let mut state = board("fluffy-radiant");
-        set_library(&mut state, PlayerId::P2, &[plain().id]);
+        set_library(&mut state, PlayerId::P2, &[plain.id.clone()]);
         cast_now(&mut state, &fluffy_grip().id, PlayerId::P1, true);
         assert_eq!(state.players[PlayerId::P1].hand.first().map(|card| card.radiant), Some(true));
         assert_eq!(state.players[PlayerId::P1].hand.first().and_then(|card| card.cost_override), Some(0));
@@ -168,8 +168,8 @@ mod e16_e2_a_card_out_of_the_other_player_s_deck_classic_plus_12_3 {
     #[test]
     fn e2_the_taker_s_hand_cap_burns_a_taken_card_into_the_taker_s_graveyard_and_no_price_rides_it_there() {
         let mut state = board("fluffy-burn");
-        in_hand(&mut state, &plain().id, PlayerId::P1, HAND_CAP);
-        let card = set_library(&mut state, PlayerId::P2, &[plain().id]).into_iter().next().expect("the card");
+        in_hand(&mut state, &plain.id, PlayerId::P1, HAND_CAP);
+        let card = set_library(&mut state, PlayerId::P2, &[plain.id.clone()]).into_iter().next().expect("the card");
         let events = cast_now(&mut state, &fluffy_grip().id, PlayerId::P1, false);
         assert_eq!(ids(&state.players[PlayerId::P1].graveyard), vec![card.id.clone()]);
         assert_eq!(live(&state, &card.id).owner, PlayerId::P1);
@@ -185,7 +185,7 @@ mod e16_e2_a_card_out_of_the_other_player_s_deck_classic_plus_12_3 {
         let decks = dealt.decks;
         let mut state = dealt.state;
         let played = hand_card(&state, PlayerId::P1, &qd).id.clone();
-        state = act(&state, json_as(json!({ "type": "play", "playerId": "p1", "instanceId": played })), Some(&mut log));
+        state = act(&state, json!({ "type": "play", "playerId": "p1", "instanceId": played }), Some(&mut log));
         assert!(state.players[PlayerId::P1]
             .hand
             .iter()
@@ -199,11 +199,11 @@ mod e16_cards_handed_from_one_hand_to_the_other_classic_9 {
 
     fn taxed(seed: &str, radiant: bool) -> GameState {
         let mut state = board(seed);
-        let trap = put(&mut state, &income_tax().id, slot(PlayerId::P1, Row::Backrow, 2));
+        let trap = put(&mut state, &income_tax().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
         live_mut(&mut state, &trap.id).radiant = radiant;
-        in_hand(&mut state, &plain().id, PlayerId::P2, 2);
+        in_hand(&mut state, &plain.id, PlayerId::P2, 2);
         in_hand(&mut state, &grunt().id, PlayerId::P2, 1);
-        set_library(&mut state, PlayerId::P2, &[glitch().id, plain().id]);
+        set_library(&mut state, PlayerId::P2, &[glitch().id, plain.id.clone()]);
         state.active = PlayerId::P2;
         let mut sink = sink_for(&state);
         {
@@ -278,7 +278,7 @@ mod e16_cards_handed_from_one_hand_to_the_other_classic_9 {
     #[test]
     fn e16_cards_may_be_given_the_other_way_and_at_random() {
         let mut state = board("give-away");
-        let mine = in_hand(&mut state, &plain().id, PlayerId::P1, 3);
+        let mine = in_hand(&mut state, &plain.id, PlayerId::P1, 3);
         run(
             &mut state,
             give_from_hand(json_as(json!({ "from": "self", "cards": "random", "count": 2 }))),
@@ -301,7 +301,7 @@ mod e16_a_draw_from_the_other_player_s_deck_classic_58 {
     #[test]
     fn e16_it_is_a_draw_of_the_drawer_s_own_from_the_bottom_of_their_deck() {
         let mut state = board("resources");
-        let library = set_library(&mut state, PlayerId::P2, &[glitch().id, grunt().id, plain().id]);
+        let library = set_library(&mut state, PlayerId::P2, &[glitch().id, grunt().id, plain.id.clone()]);
         let drawn_before = state.counters.drawn;
         let events = run(&mut state, draw_from_opponent(Default::default()), PlayerId::P1);
         let bottom = library[2].clone();
@@ -311,7 +311,7 @@ mod e16_a_draw_from_the_other_player_s_deck_classic_58 {
         assert_eq!(state.counters.drawn, drawn_before + 1);
         assert_eq!(
             serde_json::to_value(events_of_type(&events, GameEventType::Drawn)).expect("events serialise"),
-            json!([{ "type": "drawn", "player": "p1", "instanceId": bottom.id, "defId": plain().id, "turnDraw": 1 }])
+            json!([{ "type": "drawn", "player": "p1", "instanceId": bottom.id, "defId": plain.id, "turnDraw": 1 }])
         );
         // The drawer reads it; the deck's owner reads that p1 drew, never what (R466).
         let theirs = view_for(&state, PlayerId::P2).events;
@@ -336,7 +336,7 @@ mod e16_a_draw_from_the_other_player_s_deck_classic_58 {
     #[test]
     fn r58_e16_a_cast_on_draw_card_drawn_from_their_deck_is_cast_for_the_drawer() {
         let mut state = board("resources-cast");
-        set_library(&mut state, PlayerId::P2, &[plain().id, cast_on_draw_marker().id]);
+        set_library(&mut state, PlayerId::P2, &[plain.id.clone(), cast_on_draw_marker().id]);
         run(&mut state, draw_from_opponent(Default::default()), PlayerId::P1);
         // The marker's Cry hits its caster's enemy: p2, whose deck it came from.
         assert_eq!(state.players[PlayerId::P2].hero.health, HERO_HEALTH - 2);
@@ -350,7 +350,7 @@ mod e16_a_draw_from_the_other_player_s_deck_classic_58 {
     #[test]
     fn r4_e16_the_drawer_s_hand_cap_burns_a_card_drawn_from_their_deck_into_the_drawer_s_graveyard() {
         let mut state = board("resources-burn");
-        in_hand(&mut state, &plain().id, PlayerId::P1, HAND_CAP);
+        in_hand(&mut state, &plain.id, PlayerId::P1, HAND_CAP);
         let card = set_library(&mut state, PlayerId::P2, &[grunt().id]).into_iter().next().expect("the card");
         run(&mut state, draw_from_opponent(json_as(json!({ "end": "top" }))), PlayerId::P1);
         assert_eq!(ids(&state.players[PlayerId::P1].graveyard), vec![card.id.clone()]);
@@ -360,11 +360,11 @@ mod e16_a_draw_from_the_other_player_s_deck_classic_58 {
     #[test]
     fn e16_common_resources_draws_at_its_controller_s_start_of_turn() {
         let mut state = board("resources-turn");
-        put(&mut state, &common_resources().id, slot(PlayerId::P1, Row::Backrow, 1));
-        set_library(&mut state, PlayerId::P1, &[plain().id, plain().id]);
-        let theirs = set_library(&mut state, PlayerId::P2, &[plain().id, grunt().id, glitch().id]);
+        put(&mut state, &common_resources().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        set_library(&mut state, PlayerId::P1, &[plain.id.clone(), plain.id.clone()]);
+        let theirs = set_library(&mut state, PlayerId::P2, &[plain.id.clone(), grunt().id, glitch().id]);
         state.active = PlayerId::P2;
-        state = act(&state, json_as(json!({ "type": "endTurn", "playerId": "p2" })), None);
+        state = act(&state, json!({ "type": "endTurn", "playerId": "p2" }), None);
         assert_eq!(state.active, PlayerId::P1);
         // Their bottom card, and p1's own draw of the turn.
         assert!(ids(&state.players[PlayerId::P1].hand).contains(&theirs[2].id));
@@ -379,10 +379,10 @@ mod r466_a_card_taken_off_the_field {
     #[test]
     fn r466_a_face_up_card_reads_to_both_a_face_down_one_to_whoever_controlled_it_neither_once_hidden_from_them_now() {
         let mut state = board("field-steal");
-        let face_up = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1));
-        let own_trap = put(&mut state, &income_tax().id, slot(PlayerId::P2, Row::Backrow, 1));
+        let face_up = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let own_trap = put(&mut state, &income_tax().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
         // p2's trap, taken over by p1 earlier (R33: the controller reads a face-down trap, not its owner).
-        let taken_trap = put(&mut state, &income_tax().id, slot(PlayerId::P1, Row::Backrow, 2));
+        let taken_trap = put(&mut state, &income_tax().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
         live_mut(&mut state, &taken_trap.id).owner = PlayerId::P2;
         let mut sink = sink_for(&state);
         for id in [&face_up.id, &own_trap.id, &taken_trap.id] {
@@ -414,7 +414,7 @@ mod e2_e16_the_change_of_owner_itself {
     #[test]
     fn e2_a_card_that_has_ceased_to_exist_is_not_taken() {
         let mut state = board("gone");
-        let card = new_instance(&mut state, &plain().id, PlayerId::P2, Zone::Gone { player: PlayerId::P2 });
+        let card = new_instance(&mut state, &plain.id, PlayerId::P2, Zone::Gone { player: PlayerId::P2 });
         let mut sink = sink_for(&state);
         assert!(take_into_hand(&mut sink.on(&mut state), &card, PlayerId::P1).is_none());
         assert!(!change_owner(&mut sink.on(&mut state), &card, PlayerId::P1));
@@ -430,7 +430,7 @@ mod e2_e16_the_change_of_owner_itself {
         let mut state = board("public");
         let resolving = new_instance(&mut state, &glitch().id, PlayerId::P2, Zone::Resolving { player: PlayerId::P2 });
         state.players[PlayerId::P2].resolving.push(resolving.clone());
-        let dead = new_instance(&mut state, &plain().id, PlayerId::P2, Zone::Graveyard { player: PlayerId::P2 });
+        let dead = new_instance(&mut state, &plain.id, PlayerId::P2, Zone::Graveyard { player: PlayerId::P2 });
         state.players[PlayerId::P2].graveyard.push(dead.clone());
         let mut sink = sink_for(&state);
         take_into_hand(&mut sink.on(&mut state), &resolving, PlayerId::P1);
@@ -446,7 +446,7 @@ mod e2_e16_the_change_of_owner_itself {
             assert!(!events.contains("readableFrom"));
         }
         // And the other way round: p2 takes the top of p1's deck, and the rest of it turns unknown to p1.
-        set_library(&mut state, PlayerId::P1, &[plain().id, grunt().id]);
+        set_library(&mut state, PlayerId::P1, &[plain.id.clone(), grunt().id]);
         let own = state.players[PlayerId::P1].library[0].clone();
         run(&mut state, take_from_library(json_as(json!({ "from": "enemy", "pick": "top" }))), PlayerId::P2);
         assert_eq!(live(&state, &own.id).owner, PlayerId::P2);
@@ -460,13 +460,13 @@ mod e16_and_e3_a_draw_from_the_other_player_s_deck_is_the_drawer_s_draw_for_thei
     #[test]
     fn e3_a_draw_past_the_drawer_s_limit_takes_no_card_from_the_other_deck_draw_limited_and_nothing_moves() {
         let mut state = board("resources-limited");
-        let library = set_library(&mut state, PlayerId::P2, &[grunt().id, plain().id]);
+        let library = set_library(&mut state, PlayerId::P2, &[grunt().id, plain.id.clone()]);
         // A permanent of p2's that lets p1 draw 1 card each turn (B5 E3), and p1 has drawn once this turn.
         let limiter_id = "give-limiter";
         let mut catalog = registered_catalog().clone();
         catalog.insert(
             limiter_id.to_string(),
-            CardDef { id: limiter_id.to_string(), index: limiter_id.to_string(), ..plain() },
+            CardDef { id: limiter_id.to_string(), index: limiter_id.to_string(), ..plain.clone() },
         );
         register_catalog(catalog);
         let limit = Script {
@@ -476,7 +476,7 @@ mod e16_and_e3_a_draw_from_the_other_player_s_deck_is_the_drawer_s_draw_for_thei
         let mut registry = registered_scripts().clone();
         registry.insert(limiter_id.to_string(), CardScripts { base: limit.clone(), radiant: limit });
         register_scripts(registry);
-        put(&mut state, limiter_id, slot(PlayerId::P2, Row::Units, 1));
+        put(&mut state, limiter_id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         state.players[PlayerId::P1].draws = Some(DrawCount { turn: state.turn, count: 1 });
 
         let events = run(&mut state, draw_from_opponent(Default::default()), PlayerId::P1);

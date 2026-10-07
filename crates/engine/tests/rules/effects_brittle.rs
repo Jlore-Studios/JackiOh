@@ -12,7 +12,7 @@ use crate::rules::fixtures::harness::{in_hand, put, set_library, slot};
 use crate::rules::fixtures::instance_data::{brittle_trap, brittle_unit, instance_game};
 
 fn game() -> GameState {
-    let mut state = instance_game("brittle-verbs");
+    let mut state = instance_game("brittle-verbs", None);
     state.turn = 5;
     state.active = PlayerId::P1;
     state.phase = Phase::Main;
@@ -52,7 +52,7 @@ mod b3_3_rule_4_give_and_gain_r385 {
     #[test]
     fn r385_give_brittle_n_sets_the_count_to_n_from_now_whatever_the_card_had() {
         let mut state = game();
-        let unit = put(&mut state, &brittle_unit().id, slot(PlayerId::P1, Row::Units, 1));
+        let unit = put(&mut state, &brittle_unit.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         assert_eq!(brittle_of(&state, &unit.id), Some(BrittleCounter { count: 2, since: 5, printed: Some(true) }));
         state.turn = 7;
         let events = run(
@@ -71,7 +71,7 @@ mod b3_3_rule_4_give_and_gain_r385 {
     #[test]
     fn r385_gain_n_adds_to_the_count_in_force_and_keeps_when_it_started() {
         let mut state = game();
-        let unit = put(&mut state, &brittle_unit().id, slot(PlayerId::P1, Row::Units, 1));
+        let unit = put(&mut state, &brittle_unit.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         state.turn = 8;
         let self_ = find_instance(&state, &unit.id).cloned();
         run(
@@ -86,10 +86,10 @@ mod b3_3_rule_4_give_and_gain_r385 {
     #[test]
     fn r385_a_named_card_in_a_hand_or_a_deck_takes_a_count_too_reported_to_whoever_may_read_it_r97() {
         let mut state = game();
-        let Some(held) = in_hand(&mut state, &plain().id, PlayerId::P1, 1).into_iter().next() else {
+        let Some(held) = in_hand(&mut state, &plain.id, PlayerId::P1, 1).into_iter().next() else {
             panic!("no card");
         };
-        let Some(deck) = set_library(&mut state, PlayerId::P1, &[plain().id]).into_iter().next() else {
+        let Some(deck) = set_library(&mut state, PlayerId::P1, &[plain.id.clone()]).into_iter().next() else {
             panic!("no card");
         };
         let events = run(
@@ -121,9 +121,9 @@ mod b3_3_rule_4_give_and_gain_r385 {
     #[test]
     fn r440_over_a_scope_a_card_of_a_hidden_pile_takes_its_count_silently_a_public_one_is_reported() {
         let mut state = game();
-        let unit = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1));
-        let trap = put(&mut state, &brittle_trap().id, slot(PlayerId::P1, Row::Backrow, 1));
-        let hand = in_hand(&mut state, &plain().id, PlayerId::P1, 3);
+        let unit = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let trap = put(&mut state, &brittle_trap.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let hand = in_hand(&mut state, &plain.id, PlayerId::P1, 3);
         let events = run(
             &mut state,
             give_brittle(json_as(json!({ "scope": { "zones": ["field", "hand"] }, "n": 2 }))),
@@ -144,7 +144,7 @@ mod b3_3_rule_4_give_and_gain_r385 {
     #[test]
     fn r385_a_card_that_has_ceased_to_exist_takes_nothing() {
         let mut state = game();
-        let Some(mut held) = in_hand(&mut state, &plain().id, PlayerId::P1, 1).into_iter().next() else {
+        let Some(mut held) = in_hand(&mut state, &plain.id, PlayerId::P1, 1).into_iter().next() else {
             panic!("no card");
         };
         state.players[PlayerId::P1].hand = vec![];

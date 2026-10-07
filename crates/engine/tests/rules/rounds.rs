@@ -161,11 +161,11 @@ fn casted(seed: &str, setup: impl FnOnce(&mut GameState), def_id: Option<&str>) 
     let mut state = playing(seed);
     setup(&mut state);
     let storm = def_id.map(str::to_string).unwrap_or_else(|| cast_storm().id);
-    let card = in_hand(&mut state, &storm, PlayerId::P1, None)
+    let card = in_hand(&mut state, &storm, PlayerId::P1, 1)
         .into_iter()
         .next()
         .expect("the storm");
-    in_hand(&mut state, &plain().id, PlayerId::P1, None);
+    in_hand(&mut state, &plain().id, PlayerId::P1, 1);
     let result = act(
         &state,
         json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),

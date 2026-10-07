@@ -23,7 +23,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::activate::{
     HIGH_TELL, KEEPER_KEY, LOG_LANE, LOW_TELL, MERCHANT_PRICE, PICK_KEY, SCEPTER_KEY, ZAPPER_DAMAGE,
-    activate_catalog, activate_scripts, asker, chooser, endless, ghost, heroic, high_teller, keeper, lockdown,
+    activate_catalog, ACTIVATE_SCRIPTS, asker, chooser, endless, ghost, heroic, high_teller, keeper, lockdown,
     log_card, low_teller, merchant, mourner, nose, notes, pinger, punisher, scepter, sentry, spark, trapper,
     turtle, zapper,
 };
@@ -37,14 +37,14 @@ use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, se
 fn register() {
     register_catalog(activate_catalog(registered_catalog().clone()));
     let mut scripts = registered_scripts().clone();
-    for (id, script) in activate_scripts() {
+    for (id, script) in ACTIVATE_SCRIPTS.clone() {
         scripts.insert(id, script);
     }
     register_scripts(scripts);
 }
 
 fn game(seed: &str) -> GameState {
-    let state = new_game(&format!("activate-{seed}"));
+    let state = new_game(&format!("activate-{seed}"), None);
     register();
     state
 }
@@ -76,7 +76,7 @@ fn playing(seed: &str) -> GameState {
         let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();
         state = act(&state, input(json!({ "type": "mulligan", "keep": keep, "playerId": player }))).0;
     }
-    put(&mut state, &log_card().id, slot(P2, Row::Backrow, LOG_LANE));
+    put(&mut state, &log_card.id, slot(P2, Row::Backrow, LOG_LANE), json!({}));
     // R345: the tests end turns themselves, so nothing ends one behind their back (R82).
     state.players.p1.auto_end_turn = Some(false);
     state.players.p2.auto_end_turn = Some(false);
@@ -226,7 +226,7 @@ mod r384_b3_2_activate_using_an_ability {
     #[test]
     fn r384_the_activate_action_runs_the_ability_with_its_declared_target_announces_it_and_is_not_a_play() {
         let mut state = playing("ping");
-        let card = put(&mut state, &pinger().id, slot(P1, Row::Backrow, 1));
+        let card = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
 
         let (after, events) = act(
             &state,
@@ -236,7 +236,7 @@ mod r384_b3_2_activate_using_an_ability {
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH - 1);
         assert_eq!(
             json_of(events_of_type(&events, GameEventType::Activated)),
-            json!([{ "type": "activated", "player": "p1", "instanceId": card.id, "defId": pinger().id, "ability": "ping" }])
+            json!([{ "type": "activated", "player": "p1", "instanceId": card.id, "defId": pinger.id, "ability": "ping" }])
         );
         // B3.2 rule 6: nothing that counts plays sees it.
         assert!(events_of_type(&events, GameEventType::CardPlayed).is_empty());
@@ -252,11 +252,11 @@ mod r384_b3_2_activate_using_an_ability {
     #[test]
     fn r384_an_ability_named_by_nothing_is_the_cards_only_one_a_card_with_several_needs_it_named() {
         let mut state = playing("naming");
-        let card = put(&mut state, &pinger().id, slot(P1, Row::Backrow, 1));
+        let card = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
         let (mut after, _) = act(&state, activate(P1, &card.id, hero_target()));
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH - 1);
 
-        let many = put(&mut after, &chooser().id, slot(P1, Row::Backrow, 2));
+        let many = put(&mut after, &chooser.id, slot(P1, Row::Backrow, 2), json!({}));
         card_mut(&mut after, &many.id).memory.insert(PICK_KEY.to_string(), json!("alpha"));
         assert_eq!(
             why_not(&after, P1, &many.id, None).as_deref(),
@@ -272,8 +272,8 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
     #[test]
     fn r384_activate_is_once_per_turn_and_activate_n_is_n_times_each_counted_per_card_per_turn() {
         let mut state = playing("uses");
-        let once = put(&mut state, &pinger().id, slot(P1, Row::Backrow, 1));
-        let twice = put(&mut state, &sentry().id, slot(P1, Row::Units, 1));
+        let once = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
+        let twice = put(&mut state, &sentry.id, slot(P1, Row::Units, 1), json!({}));
 
         state = act(&state, activate(P1, &once.id, hero_target())).0;
         assert_eq!(
@@ -292,10 +292,10 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
 
         // The Radiant face's "Activate 2" is the face's own count. (TS `put(…, { radiant: true })` set
         // the flag before placing; these fixtures place the same either way.)
-        let radiant = put(&mut state, &pinger().id, slot(P1, Row::Backrow, 2));
+        let radiant = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 2), json!({}));
         card_mut(&mut state, &radiant.id).radiant = true;
-        let face = activate_scripts()
-            .get(&pinger().id)
+        let face = ACTIVATE_SCRIPTS.clone()
+            .get(&pinger.id)
             .map(|scripts| scripts.radiant.clone())
             .unwrap_or_default();
         let decls = activation_decls(&face);
@@ -305,7 +305,7 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
     #[test]
     fn r384_uses_are_counted_per_card_a_card_with_several_abilities_counts_every_use_of_any_of_them() {
         let mut state = playing("per-card");
-        let card = put(&mut state, &chooser().id, slot(P1, Row::Backrow, 1));
+        let card = put(&mut state, &chooser.id, slot(P1, Row::Backrow, 1), json!({}));
         card_mut(&mut state, &card.id).memory.insert(PICK_KEY.to_string(), json!("alpha"));
         let after = act(&state, activate(P1, &card.id, json!({ "ability": "gamma" }))).0;
         assert_eq!(
@@ -321,7 +321,7 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
     #[test]
     fn r384_uses_reset_on_the_controllers_next_turn_and_on_the_opponents_turn_nothing_can_be_activated() {
         let mut state = playing("reset");
-        let card = put(&mut state, &pinger().id, slot(P1, Row::Backrow, 1));
+        let card = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
         state = act(&state, activate(P1, &card.id, hero_target())).0;
 
         state = act(&state, input(json!({ "type": "endTurn", "playerId": "p1" }))).0;
@@ -344,7 +344,7 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
     #[test]
     fn r384_activate_unlimited_is_any_number_of_uses_bounded_by_activate_unlimited_cap() {
         let mut state = playing("unlimited");
-        let card = put(&mut state, &endless().id, slot(P1, Row::Backrow, 1));
+        let card = put(&mut state, &endless.id, slot(P1, Row::Backrow, 1), json!({}));
         let action = || ActionBody::Activate {
             instance_id: card.id.clone(),
             ability: None,
@@ -368,9 +368,9 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
     #[test]
     fn r384_degrade_and_upgrade_move_activate_n_by_the_tuning_key_activate_never_below_1_and_never_unlimited() {
         let mut state = playing("tuned");
-        let once = put(&mut state, &pinger().id, slot(P1, Row::Backrow, 1));
-        let twice = put(&mut state, &sentry().id, slot(P1, Row::Units, 1));
-        let always = put(&mut state, &endless().id, slot(P1, Row::Backrow, 2));
+        let once = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
+        let twice = put(&mut state, &sentry.id, slot(P1, Row::Units, 1), json!({}));
+        let always = put(&mut state, &endless.id, slot(P1, Row::Backrow, 2), json!({}));
         let ping_decl = abilities_of(&state, &once).into_iter().next().expect("no ability");
         let surge_decl = abilities_of(&state, &twice).into_iter().next().expect("no ability");
         let again_decl = abilities_of(&state, &always).into_iter().next().expect("no ability");
@@ -403,7 +403,7 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
     #[test]
     fn r384_r78_leaving_the_field_resets_the_uses_so_a_card_bounced_and_played_again_starts_fresh() {
         let mut state = playing("bounced");
-        let card = put(&mut state, &pinger().id, slot(P1, Row::Backrow, 1));
+        let card = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
         state = act(&state, activate(P1, &card.id, hero_target())).0;
         let used = state.players.p1.backrow[0].clone().expect("on the field");
         assert_eq!(
@@ -430,7 +430,7 @@ mod r384_b3_2_rule_2_who_and_when {
     #[test]
     fn r384_only_the_controller_in_their_main_phase_with_no_prompt_open_and_the_game_not_over() {
         let mut state = playing("when");
-        let card = put(&mut state, &pinger().id, slot(P1, Row::Backrow, 1));
+        let card = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
 
         assert_eq!(why_not(&state, P2, &card.id, None).as_deref(), Some("that card is not yours"));
         assert_eq!(why_not(&state, P1, "c99999", None).as_deref(), Some("no card c99999"));
@@ -480,7 +480,7 @@ mod r384_b3_2_rule_2_who_and_when {
     #[test]
     fn r384_summoning_sickness_and_exertion_do_not_stop_an_activation_activating_is_not_attacking() {
         let mut state = playing("sick");
-        let unit = put(&mut state, &sentry().id, slot(P1, Row::Units, 1));
+        let unit = put(&mut state, &sentry.id, slot(P1, Row::Units, 1), json!({}));
         let turn = state.turn;
         {
             let live = card_mut(&mut state, &unit.id);
@@ -501,12 +501,12 @@ mod r384_b3_2_rule_2_who_and_when {
     #[test]
     fn r384_r13_a_card_acts_only_on_the_field_not_in_a_hand_not_dormant_under_a_pile_not_face_down() {
         let mut state = playing("acting");
-        let held = in_hand(&mut state, &pinger().id, P1, 1).remove(0);
+        let held = in_hand(&mut state, &pinger.id, P1, 1).remove(0);
         assert_eq!(why_not(&state, P1, &held.id, None).as_deref(), Some("that card is not on the field"));
 
-        let under = put(&mut state, &sentry().id, slot(P1, Row::Units, 2));
+        let under = put(&mut state, &sentry.id, slot(P1, Row::Units, 2), json!({}));
         assert!(is_acting_on_field(&state, card(&state, &under.id)));
-        let top = new_instance(&mut state, &sentry().id, P1, Zone::Hand { player: P1 });
+        let top = new_instance(&mut state, &sentry.id, P1, Zone::Hand { player: P1 });
         assert!(place_on_field(
             &mut state,
             top.clone(),
@@ -520,7 +520,7 @@ mod r384_b3_2_rule_2_who_and_when {
         );
         assert_eq!(why_not(&state, P1, &top.id, None), None);
 
-        let trap = put(&mut state, &trapper().id, slot(P1, Row::Backrow, 3));
+        let trap = put(&mut state, &trapper.id, slot(P1, Row::Backrow, 3), json!({}));
         assert_eq!(
             why_not(&state, P1, &trap.id, None).as_deref(),
             Some("a face-down card has no ability to use")
@@ -529,7 +529,7 @@ mod r384_b3_2_rule_2_who_and_when {
         assert_eq!(why_not(&state, P1, &trap.id, None), None);
 
         // §6.3 Vanilla: a card with no text has no ability.
-        let blank = put(&mut state, &pinger().id, slot(P1, Row::Backrow, 4));
+        let blank = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 4), json!({}));
         card_mut(&mut state, &blank.id).vanilla = true;
         assert_eq!(why_not(&state, P1, &blank.id, None).as_deref(), Some("that card has no Activate ability"));
     }
@@ -537,7 +537,7 @@ mod r384_b3_2_rule_2_who_and_when {
     #[test]
     fn r384_a_condition_the_text_sets_is_part_of_the_refusal_classic_7_nothing_remembered_no_activation() {
         let mut state = playing("condition");
-        let card = put(&mut state, &scepter().id, slot(P1, Row::Backrow, 1));
+        let card = put(&mut state, &scepter.id, slot(P1, Row::Backrow, 1), json!({}));
         assert_eq!(
             why_not(&state, P1, &card.id, None).as_deref(),
             Some("that ability can't be activated now")
@@ -557,7 +557,7 @@ mod r384_b3_2_rule_4_costs {
     #[test]
     fn r384_a_mana_price_is_paid_as_it_is_activated_and_an_ability_the_player_cannot_pay_for_is_refused() {
         let mut state = playing("mana");
-        let card = put(&mut state, &merchant().id, slot(P1, Row::Backrow, 1));
+        let card = put(&mut state, &merchant.id, slot(P1, Row::Backrow, 1), json!({}));
         set_library(&mut state, P1, &["fx-5", "fx-6"]);
         state.players.p1.mana.current = MERCHANT_PRICE - 1;
         assert_eq!(
@@ -579,7 +579,7 @@ mod r384_b3_2_rule_4_costs {
     #[test]
     fn r384_a_random_discard_is_paid_from_the_hand_and_an_empty_hand_cannot_pay_it() {
         let mut state = playing("discard");
-        let card = put(&mut state, &nose().id, slot(P1, Row::Units, 1));
+        let card = put(&mut state, &nose.id, slot(P1, Row::Units, 1), json!({}));
         state.players.p1.hand = Vec::new();
         assert_eq!(
             why_not(&state, P1, &card.id, None).as_deref(),
@@ -598,7 +598,7 @@ mod r384_b3_2_rule_4_costs {
     #[test]
     fn r384_tribute_this_bypasses_indestructible_and_the_abilitys_effect_runs_after_it_with_the_card_in_its_graveyard() {
         let mut state = playing("tribute-self");
-        let card = put(&mut state, &lockdown().id, slot(P1, Row::Backrow, 1));
+        let card = put(&mut state, &lockdown.id, slot(P1, Row::Backrow, 1), json!({}));
         let (after, events) = act(&state, activate(P1, &card.id, json!({})));
         assert!(after.players.p1.backrow[0].is_none());
         assert!(ids_of(&after.players.p1.graveyard).contains(&card.id));
@@ -612,8 +612,8 @@ mod r384_b3_2_rule_4_costs {
     #[test]
     fn r384_a_tribute_cost_takes_the_controllers_units_the_card_itself_allowed_and_one_unit_is_one_tribute() {
         let mut state = playing("tribute");
-        let eater = put(&mut state, &turtle().id, slot(P1, Row::Units, 1));
-        let enemy = put(&mut state, &sentry().id, slot(P2, Row::Units, 1));
+        let eater = put(&mut state, &turtle.id, slot(P1, Row::Units, 1), json!({}));
+        let enemy = put(&mut state, &sentry.id, slot(P2, Row::Units, 1), json!({}));
         let to_p2 = |tributes: Value| {
             json!({ "targets": [{ "pick": "hero", "player": "p2" }], "tributes": tributes })
         };
@@ -624,7 +624,7 @@ mod r384_b3_2_rule_4_costs {
         assert!(alone.players.p1.units[0].is_none());
 
         // The refusals: none, two, an enemy unit, the same unit twice.
-        let ally = put(&mut state, &sentry().id, slot(P1, Row::Units, 2));
+        let ally = put(&mut state, &sentry.id, slot(P1, Row::Units, 2), json!({}));
         assert_eq!(
             act_result(&state, activate(P1, &eater.id, hero_target())).error.as_deref(),
             Some("that ability tributes a Unit")
@@ -646,8 +646,8 @@ mod r384_b3_2_rule_4_costs {
     #[test]
     fn r384_r78_r89_the_tributed_units_attack_is_read_as_it_stood_before_it_died() {
         let mut state = playing("last-known");
-        let eater = put(&mut state, &turtle().id, slot(P1, Row::Units, 1));
-        let fed = put(&mut state, &sentry().id, slot(P1, Row::Units, 2));
+        let eater = put(&mut state, &turtle.id, slot(P1, Row::Units, 1), json!({}));
+        let fed = put(&mut state, &sentry.id, slot(P1, Row::Units, 2), json!({}));
         card_mut(&mut state, &fed.id).buffs = AttackHealth { attack: 3, health: 0 };
         let (after, _) = act(
             &state,
@@ -668,8 +668,8 @@ mod r384_b3_2_rule_4_costs {
     #[test]
     fn r384_r174_a_target_the_tribute_took_off_the_field_is_gone_for_the_effect_and_nothing_else_is_hit() {
         let mut state = playing("target-tributed");
-        let eater = put(&mut state, &turtle().id, slot(P1, Row::Units, 1));
-        let fed = put(&mut state, &sentry().id, slot(P1, Row::Units, 2));
+        let eater = put(&mut state, &turtle.id, slot(P1, Row::Units, 1), json!({}));
+        let fed = put(&mut state, &sentry.id, slot(P1, Row::Units, 2), json!({}));
         let (after, events) = act(
             &state,
             activate(
@@ -690,8 +690,8 @@ mod r384_r81_r90_b3_2_rules_5_8_choices_and_the_list {
     #[test]
     fn r384_modes_and_the_targets_they_bind_travel_in_the_action_and_are_checked_like_a_plays() {
         let mut state = playing("modes");
-        let card = put(&mut state, &punisher().id, slot(P1, Row::Backrow, 1));
-        let enemy = put(&mut state, &sentry().id, slot(P2, Row::Units, 1));
+        let card = put(&mut state, &punisher.id, slot(P1, Row::Backrow, 1), json!({}));
+        let enemy = put(&mut state, &sentry.id, slot(P2, Row::Units, 1), json!({}));
         let name = "punisher (activate)";
 
         assert_eq!(
@@ -758,10 +758,10 @@ mod r384_r81_r90_b3_2_rules_5_8_choices_and_the_list {
     #[test]
     fn r384_legal_actions_lists_activate_for_exactly_the_usable_abilities_each_tribute_set_crossed_with_each_choice() {
         let mut state = playing("listing");
-        let eater = put(&mut state, &turtle().id, slot(P1, Row::Units, 1));
-        let ally_a = put(&mut state, &sentry().id, slot(P1, Row::Units, 2));
-        put(&mut state, &sentry().id, slot(P1, Row::Units, 3));
-        put(&mut state, &sentry().id, slot(P2, Row::Units, 1));
+        let eater = put(&mut state, &turtle.id, slot(P1, Row::Units, 1), json!({}));
+        let ally_a = put(&mut state, &sentry.id, slot(P1, Row::Units, 2), json!({}));
+        put(&mut state, &sentry.id, slot(P1, Row::Units, 3), json!({}));
+        put(&mut state, &sentry.id, slot(P2, Row::Units, 1), json!({}));
 
         let listed: Vec<ActionBody> = legal_actions(&state, P1)
             .into_iter()
@@ -803,7 +803,7 @@ mod r384_r81_r90_b3_2_rules_5_8_choices_and_the_list {
         );
 
         // Used up, it is listed no more; and on the opponent's turn not at all.
-        let merchant_card = put(&mut state, &merchant().id, slot(P1, Row::Backrow, 1));
+        let merchant_card = put(&mut state, &merchant.id, slot(P1, Row::Backrow, 1), json!({}));
         state.players.p1.mana.current = 0;
         assert!(!lists_activate_of(&state, &merchant_card.id));
     }
@@ -811,10 +811,10 @@ mod r384_r81_r90_b3_2_rules_5_8_choices_and_the_list {
     #[test]
     fn r450_r682_a_declared_target_that_costs_discards_lists_one_action_carrying_none_paid_random_with_the_costs() {
         let mut state = playing("ghost");
-        let card = put(&mut state, &pinger().id, slot(P1, Row::Backrow, 1));
-        let costly = put(&mut state, &ghost().id, slot(P2, Row::Units, 1));
+        let card = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
+        let costly = put(&mut state, &ghost.id, slot(P2, Row::Units, 1), json!({}));
         state.players.p1.hand = Vec::new();
-        let spares = in_hand(&mut state, &sentry().id, P1, 3);
+        let spares = in_hand(&mut state, &sentry.id, P1, 3);
         let spare_ids: Vec<Value> = spares.iter().map(|spare| json!(spare.id)).collect();
         let at_ghost = json!({ "pick": "instance", "instanceId": costly.id });
 
@@ -833,10 +833,10 @@ mod r384_r81_r90_b3_2_rules_5_8_choices_and_the_list {
         );
         // Refused when too few other cards are held; a hero target asks nothing and succeeds.
         let mut poor = playing("ghost-poor");
-        let poor_card = put(&mut poor, &pinger().id, slot(P1, Row::Backrow, 1));
-        let poor_costly = put(&mut poor, &ghost().id, slot(P2, Row::Units, 1));
+        let poor_card = put(&mut poor, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
+        let poor_costly = put(&mut poor, &ghost.id, slot(P2, Row::Units, 1), json!({}));
         poor.players.p1.hand = Vec::new();
-        in_hand(&mut poor, &sentry().id, P1, 1);
+        in_hand(&mut poor, &sentry.id, P1, 1);
         let poor_ghost = json!({ "pick": "instance", "instanceId": poor_costly.id });
         assert!(
             act_result(&poor, activate(P1, &poor_card.id, json!({ "ability": "ping", "targets": [poor_ghost] })))
@@ -871,7 +871,7 @@ mod r384_r81_r90_b3_2_rules_5_8_choices_and_the_list {
 
         // With fewer than two cards in hand it is no legal target of the ability.
         state.players.p1.hand = Vec::new();
-        in_hand(&mut state, &sentry().id, P1, 1);
+        in_hand(&mut state, &sentry.id, P1, 1);
         assert!(
             !activate_actions_for(&state, P1, super::card(&state, &card.id))
                 .iter()
@@ -882,7 +882,7 @@ mod r384_r81_r90_b3_2_rules_5_8_choices_and_the_list {
     #[test]
     fn r384_an_ability_a_card_does_not_have_now_is_neither_listed_nor_accepted_the_heroic_power_patchs_rolled_power() {
         let mut state = playing("has");
-        let card = put(&mut state, &chooser().id, slot(P1, Row::Backrow, 1));
+        let card = put(&mut state, &chooser.id, slot(P1, Row::Backrow, 1), json!({}));
         card_mut(&mut state, &card.id).memory.insert(PICK_KEY.to_string(), json!("beta"));
         assert_eq!(ability_ids(&state, &card.id), vec!["beta", "gamma"]);
         assert_eq!(
@@ -944,7 +944,7 @@ mod r384_r113_r117_b3_2_and_s9_3_an_activation_across_a_prompt {
     fn r384_a_prompt_inside_the_ability_parks_the_rest_of_its_list_under_the_abilitys_own_hook_and_the_answer_finishes_it()
      {
         let mut state = playing("asker");
-        let card = put(&mut state, &asker().id, slot(P1, Row::Backrow, 1));
+        let card = put(&mut state, &asker.id, slot(P1, Row::Backrow, 1), json!({}));
         let paused = act(&state, activate(P1, &card.id, json!({}))).0;
 
         assert_eq!(notes(&paused), vec!["ask"]);
@@ -971,8 +971,8 @@ mod r384_r113_r117_b3_2_and_s9_3_an_activation_across_a_prompt {
     #[test]
     fn r384_a_tribute_whose_death_asks_owes_the_abilitys_effect_on_state_work_behind_the_death_passs_own_remainder() {
         let mut state = playing("tribute-pause");
-        let eater = put(&mut state, &turtle().id, slot(P1, Row::Units, 1));
-        let fed = put(&mut state, &mourner().id, slot(P1, Row::Units, 2));
+        let eater = put(&mut state, &turtle.id, slot(P1, Row::Units, 1), json!({}));
+        let fed = put(&mut state, &mourner.id, slot(P1, Row::Units, 2), json!({}));
         let paused = act(
             &state,
             activate(
@@ -1002,7 +1002,7 @@ mod r384_r113_r117_b3_2_and_s9_3_an_activation_across_a_prompt {
 
     #[test]
     fn r384_a_game_with_activations_replays_from_its_log_to_the_same_state_s9_3() {
-        let mut deck = vec![asker().id];
+        let mut deck = vec![asker.id.clone()];
         deck.extend(vanilla_deck(DECK_SIZE - 1, 1));
         let decks = (deck, vanilla_deck(DECK_SIZE, 21));
         let seed = "activate-replay";
@@ -1037,7 +1037,7 @@ mod r384_r113_r117_b3_2_and_s9_3_an_activation_across_a_prompt {
             .p1
             .hand
             .iter()
-            .find(|card| card.def_id == asker().id)
+            .find(|card| card.def_id == asker.id)
             .cloned()
             .unwrap_or_else(|| panic!("Quickdraw put the asker in the opening hand"));
         step(
@@ -1074,7 +1074,7 @@ mod r384_r752_b3_2_rule_10_activate_power_is_an_alias_of_activate {
     use super::*;
 
     fn with_power(state: &mut GameState, lane: i32) -> CardInstance {
-        let card = put(state, &heroic().id, slot(P1, Row::Backrow, lane));
+        let card = put(state, &heroic.id, slot(P1, Row::Backrow, lane), json!({}));
         // R754: "burn" is Steady Shot, "Deal {shot} damage to the enemy hero" for (1).
         card_mut(state, &card.id).memory.insert(POWER_KEY.to_string(), json!("burn"));
         super::card(state, &card.id).clone()
@@ -1131,7 +1131,7 @@ mod r384_r752_b3_2_rule_10_activate_power_is_an_alias_of_activate {
     #[test]
     fn r384_activate_power_on_a_card_with_an_activate_ability_uses_that_ability() {
         let mut state = playing("alias-ability");
-        let card = put(&mut state, &pinger().id, slot(P1, Row::Backrow, 1));
+        let card = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
         let (after, events) = act(
             &state,
             input(json!({
@@ -1152,9 +1152,9 @@ mod r384_r97_b3_2_and_s10_8_what_each_player_sees {
     #[test]
     fn r384_the_controllers_own_view_of_a_card_on_the_field_carries_its_abilities_and_the_other_players_never_does() {
         let mut state = playing("view");
-        let once = put(&mut state, &pinger().id, slot(P1, Row::Backrow, 1));
-        put(&mut state, &endless().id, slot(P1, Row::Backrow, 2));
-        put(&mut state, &sentry().id, slot(P1, Row::Units, 1));
+        let once = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
+        put(&mut state, &endless.id, slot(P1, Row::Backrow, 2), json!({}));
+        put(&mut state, &sentry.id, slot(P1, Row::Units, 1), json!({}));
 
         let mine = json_of(view_for(&state, P1));
         assert!(matches_object(
@@ -1188,7 +1188,7 @@ mod r384_r97_b3_2_and_s10_8_what_each_player_sees {
     #[test]
     fn r384_r97_the_activated_event_is_public_while_its_card_is_readable_and_the_sentinel_once_it_is_in_a_hand() {
         let mut state = playing("event");
-        let card = put(&mut state, &pinger().id, slot(P1, Row::Backrow, 1));
+        let card = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
         let after = act(&state, activate(P1, &card.id, hero_target())).0;
         let seen = |viewer: PlayerId, at: &GameState| -> Value {
             view_for(at, viewer)
@@ -1201,7 +1201,7 @@ mod r384_r97_b3_2_and_s10_8_what_each_player_sees {
 
         assert!(matches_object(
             &seen(P2, &after),
-            &json!({ "instanceId": card.id, "defId": pinger().id })
+            &json!({ "instanceId": card.id, "defId": pinger.id })
         ));
         let mut moved = round_trip(&after);
         let on_field = moved.players.p1.backrow[0].clone().expect("on the field");
@@ -1220,14 +1220,14 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
     #[test]
     fn r102_a_card_a_fuse_kept_still_activates_on_what_its_own_text_remembered_and_reads_it_back() {
         let mut state = playing("fused-keeper");
-        let card = put(&mut state, &keeper().id, slot(P1, Row::Backrow, 1));
+        let card = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
         remember_on(
             &mut card_mut(&mut state, &card.id).memory,
             &IndexMap::new(),
             KEEPER_KEY,
             json!("spell"),
         );
-        let other = in_hand(&mut state, &endless().id, P1, 1).remove(0);
+        let other = in_hand(&mut state, &endless.id, P1, 1).remove(0);
         assert_eq!(
             fuse_onto(&mut state, vec![other], &card).map(|fused| fused.id),
             Some(card.id.clone())
@@ -1247,14 +1247,14 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
     #[test]
     fn r102_two_fused_copies_read_their_own_memories_the_one_that_remembered_nothing_cant_be_activated() {
         let mut state = playing("fused-keepers");
-        let card = put(&mut state, &keeper().id, slot(P1, Row::Backrow, 1));
+        let card = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
         remember_on(
             &mut card_mut(&mut state, &card.id).memory,
             &IndexMap::new(),
             KEEPER_KEY,
             json!("mine"),
         );
-        let copy = in_hand(&mut state, &keeper().id, P1, 1).remove(0);
+        let copy = in_hand(&mut state, &keeper.id, P1, 1).remove(0);
         fuse_onto(&mut state, vec![copy], &card);
         assert_eq!(ability_ids(&state, &card.id), vec!["recall", "recall#2"]);
         assert_eq!(
@@ -1272,8 +1272,8 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
     #[test]
     fn r102_a_fused_ability_reads_its_own_declared_number_not_one_an_ingredient_ahead_of_it_declares_under_the_same_key() {
         let mut state = playing("fused-zapper");
-        let card = put(&mut state, &zapper().id, slot(P1, Row::Backrow, 1));
-        let first = in_hand(&mut state, &spark().id, P1, 1).remove(0);
+        let card = put(&mut state, &zapper.id, slot(P1, Row::Backrow, 1), json!({}));
+        let first = in_hand(&mut state, &spark.id, P1, 1).remove(0);
         fuse_onto(&mut state, vec![first], &card);
         let after = act(
             &state,
@@ -1290,9 +1290,9 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
     #[test]
     fn r102_an_abilitys_has_on_a_fused_card_still_reads_the_engines_own_entry_which_no_fuse_moves() {
         let mut state = playing("fused-chooser");
-        let card = put(&mut state, &chooser().id, slot(P1, Row::Backrow, 1));
+        let card = put(&mut state, &chooser.id, slot(P1, Row::Backrow, 1), json!({}));
         card_mut(&mut state, &card.id).memory.insert(PICK_KEY.to_string(), json!("beta"));
-        let other = in_hand(&mut state, &endless().id, P1, 1).remove(0);
+        let other = in_hand(&mut state, &endless.id, P1, 1).remove(0);
         fuse_onto(&mut state, vec![other], &card);
         assert_eq!(ability_ids(&state, &card.id), vec!["again", "beta", "gamma"]);
         assert_eq!(
@@ -1304,14 +1304,14 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
     #[test]
     fn r102_r113_a_fused_cards_activation_survives_json_and_replays_to_the_same_hash() {
         let mut state = playing("fused-roundtrip");
-        let card = put(&mut state, &keeper().id, slot(P1, Row::Backrow, 1));
+        let card = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
         remember_on(
             &mut card_mut(&mut state, &card.id).memory,
             &IndexMap::new(),
             KEEPER_KEY,
             json!("spell"),
         );
-        let other = in_hand(&mut state, &endless().id, P1, 1).remove(0);
+        let other = in_hand(&mut state, &endless.id, P1, 1).remove(0);
         fuse_onto(&mut state, vec![other], &card);
         let copy = round_trip(&state);
         let live = act(&state, activate(P1, &card.id, json!({ "ability": "recall" }))).0;
@@ -1324,8 +1324,8 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
     fn r102_r113_a_fused_ability_that_asks_mid_list_parks_its_tail_under_its_own_hook_and_the_answer_finishes_it_in_its_place()
      {
         let mut state = playing("fused-asker");
-        let card = put(&mut state, &asker().id, slot(P1, Row::Backrow, 1));
-        let other = in_hand(&mut state, &endless().id, P1, 1).remove(0);
+        let card = put(&mut state, &asker.id, slot(P1, Row::Backrow, 1), json!({}));
+        let other = in_hand(&mut state, &endless.id, P1, 1).remove(0);
         fuse_onto(&mut state, vec![other], &card);
         let paused = act(&state, activate(P1, &card.id, json!({ "ability": "ask" }))).0;
 
@@ -1347,9 +1347,9 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
     fn r102_r113_a_question_an_ability_asks_two_fusions_down_comes_back_to_its_own_ingredient_not_the_first_that_names_its_step()
      {
         let mut state = playing("fused-tellers");
-        let card = put(&mut state, &high_teller().id, slot(P1, Row::Backrow, 1));
-        let low = in_hand(&mut state, &low_teller().id, P1, 1).remove(0);
-        let outer = in_hand(&mut state, &spark().id, P1, 1).remove(0);
+        let card = put(&mut state, &high_teller.id, slot(P1, Row::Backrow, 1), json!({}));
+        let low = in_hand(&mut state, &low_teller.id, P1, 1).remove(0);
+        let outer = in_hand(&mut state, &spark.id, P1, 1).remove(0);
         // Low Teller + High Teller, then a Spark fused onto that: High Teller's text runs at place 1.1.
         fuse_onto(&mut state, vec![low], &card);
         fuse_onto(&mut state, vec![outer], &card);

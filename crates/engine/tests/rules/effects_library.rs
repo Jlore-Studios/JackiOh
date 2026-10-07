@@ -603,7 +603,7 @@ mod exile_bottom_of_library_40_65 {
     #[test]
     fn an_empty_library_exiles_nothing_and_causes_no_fatigue_40() {
         let mut state = game("exile-bottom-empty");
-        set_library(&mut state, PlayerId::P1, &[]);
+        set_library(&mut state, PlayerId::P1, &[] as &[&str]);
         let before = state.players[PlayerId::P1].fatigue_count;
         let health = state.players[PlayerId::P1].hero.health;
 
@@ -821,7 +821,7 @@ mod discover_from_library_51_ky_s_private_tutor {
         assert_eq!(events, Vec::<GameEvent>::new());
 
         // An empty library is the same fizzle, which is the branch #51 answers with its Notebook.
-        set_library(&mut state, PlayerId::P1, &[]);
+        set_library(&mut state, PlayerId::P1, &[] as &[&str]);
         assert_eq!(
             run(&mut state, vec![discover_from_library(json_as(json!({ "step": "take" })))], Some(PlayerId::P1), None),
             Vec::<GameEvent>::new()

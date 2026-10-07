@@ -273,7 +273,7 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
     #[test]
     fn r449_r64_a_replacement_that_is_a_permanent_takes_the_leftmost_open_zone_at_step_4() {
         let mut state = game("r449-permanent");
-        put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1));
+        put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({}));
         let turn = state.turn;
         state.players.p1.mods.push(PlayerModifier {
             id: "m-test".to_string(),
@@ -345,8 +345,8 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
     #[test]
     fn r449_a_counter_reads_the_replacements_announce_and_cancels_it() {
         let mut state = pacted("r449-counter", false);
-        put(&mut state, &PA.refusal.id, slot(PlayerId::P2, Row::Backrow, 1));
-        let mine = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 1));
+        put(&mut state, &PA.refusal.id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        let mine = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 1), json!({}));
         let ping = one(&mut state, PlayerId::P1, &PA.ping.id, false);
         let asked = must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": ping.id })).state;
         let answered = must(
@@ -373,7 +373,7 @@ mod r449_r213_by_tag_plays_made_radiant_at_step_3_classic_plus_c68_organic_produ
     #[test]
     fn r449_every_fruit_its_controller_plays_becomes_radiant_as_it_is_played_and_nothing_else_does() {
         let mut state = game("r213-produce");
-        put(&mut state, &PA.produce.id, slot(PlayerId::P1, Row::Backrow, 1));
+        put(&mut state, &PA.produce.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
         let pear = one(&mut state, PlayerId::P1, &PA.pear.id, false);
         let ping = one(&mut state, PlayerId::P1, &PA.ping.id, false);
 
@@ -391,7 +391,7 @@ mod r449_r213_by_tag_plays_made_radiant_at_step_3_classic_plus_c68_organic_produ
     #[test]
     fn r449_r214_step_1_reads_the_radiant_face_so_the_play_carries_that_faces_choices() {
         let mut state = game("r214-produce");
-        put(&mut state, &PA.produce.id, slot(PlayerId::P1, Row::Backrow, 1));
+        put(&mut state, &PA.produce.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
         let apple = one(&mut state, PlayerId::P1, &PA.apple.id, false);
         assert!(play_choices::resolving_face(&state, PlayerId::P1, &apple, 1).radiant);
         let plays = play_choices::play_actions_for(&state, PlayerId::P1, &apple);
@@ -414,7 +414,7 @@ mod r449_r213_by_tag_plays_made_radiant_at_step_3_classic_plus_c68_organic_produ
     #[test]
     fn r449_r70_the_opponents_organic_produce_does_nothing_for_this_player_and_a_cast_fruit_is_radiant_too() {
         let mut state = game("r213-produce-theirs");
-        put(&mut state, &PA.produce.id, slot(PlayerId::P2, Row::Backrow, 1));
+        put(&mut state, &PA.produce.id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
         let pear = one(&mut state, PlayerId::P1, &PA.pear.id, false);
         let mut after = must(&state, PlayerId::P1, json!({ "type": "play", "instanceId": pear.id })).state;
         assert_eq!(
@@ -422,7 +422,7 @@ mod r449_r213_by_tag_plays_made_radiant_at_step_3_classic_plus_c68_organic_produ
             Some(false)
         );
 
-        put(&mut after, &PA.produce.id, slot(PlayerId::P1, Row::Backrow, 2));
+        put(&mut after, &PA.produce.id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
         let cast = new_instance(&mut after, &PA.pear.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
         let events = cast_and_settle(&mut after, &cast);
         assert_eq!(pluck(&of_type(&events, "radiantSet"), "instanceId"), vec![json!(cast.id)]);

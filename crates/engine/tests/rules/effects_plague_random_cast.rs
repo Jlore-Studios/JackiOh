@@ -66,7 +66,7 @@ fn game(seed: &str) -> GameState {
     state.turn = 4;
     state.active = PlayerId::P1;
     state.phase = Phase::Main;
-    set_library(&mut state, PlayerId::P1, &[]);
+    set_library(&mut state, PlayerId::P1, &[] as &[&str]);
     state
 }
 

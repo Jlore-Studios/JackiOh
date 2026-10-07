@@ -237,7 +237,7 @@ mod delay_scheduling_s10_1_s10_6_r62_r68 {
     #[test]
     fn r62_stores_one_entry_at_the_named_phase_and_player_owned_by_the_controller_carrying_the_captured_data() {
         let mut state = playing("delay-schedule");
-        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1));
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), json!({}));
 
         run(
             &mut state,
@@ -270,7 +270,7 @@ mod delay_scheduling_s10_1_s10_6_r62_r68 {
     #[test]
     fn s10_6_reads_at_player_as_a_player_spec_so_enemy_waits_for_the_opponents_boundary() {
         let mut state = playing("delay-enemy");
-        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1));
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), json!({}));
 
         run(
             &mut state,
@@ -287,7 +287,7 @@ mod delay_scheduling_s10_1_s10_6_r62_r68 {
     #[test]
     fn r350_this_turn_waits_for_the_end_of_the_turn_that_is_running_whoever_s_it_is_and_r241_does_not_drop_it() {
         let mut state = playing("delay-this-turn");
-        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1));
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), json!({}));
         assert_eq!(state.active, P1);
 
         // Made by p1 on p2's turn: an end-of-turn clause of p1's own would be dropped (R241), but "the
@@ -333,7 +333,7 @@ mod delay_scheduling_s10_1_s10_6_r62_r68 {
     #[test]
     fn r68_keeps_two_delays_scheduled_in_one_effect_list_in_creation_order_by_seq() {
         let mut state = playing("delay-order");
-        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1));
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), json!({}));
 
         run(
             &mut state,
@@ -365,7 +365,7 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
     #[test]
     fn r62_the_hook_delayed_form_round_trips_a_real_end_of_turn_boundary_with_its_captured_data() {
         let mut state = playing("delay-round-trip");
-        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1));
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), json!({}));
         run(
             &mut state,
             vec![delay(json_as(json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 3 } })))],
@@ -394,7 +394,7 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
     #[test]
     fn r126_the_step_table_form_re_enters_too_one_reader_resolves_a_hook_or_a_resume_step() {
         let mut state = playing("delay-step-table");
-        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1));
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), json!({}));
         run(
             &mut state,
             vec![delay(json_as(json!({
@@ -416,7 +416,7 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
     #[test]
     fn r62_a_start_of_turn_delay_fires_at_its_own_controllers_next_start_not_the_opponents() {
         let mut state = playing("delay-start");
-        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1));
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), json!({}));
         run(
             &mut state,
             vec![delay(json_as(json!({ "at": { "phase": "start", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 2 } })))],
@@ -438,7 +438,7 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
     #[test]
     fn r76_c50_still_fires_after_its_scheduler_has_died_the_continuation_is_found_in_the_graveyard() {
         let mut state = playing("delay-graveyard");
-        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1));
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 1), json!({}));
         run(
             &mut state,
             vec![delay(json_as(json!({ "at": { "phase": "start", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 5 } })))],
@@ -458,7 +458,7 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
     #[test]
     fn r86_c39_still_fires_after_its_scheduler_has_exiled_itself_in_the_same_effect_list() {
         let mut state = playing("delay-exile");
-        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 3));
+        let scribe = put(&mut state, &bolt().id, slot(P1, Units, 3), json!({}));
         run(
             &mut state,
             vec![delay(json_as(json!({ "at": { "phase": "end", "player": "self" }, "step": BOLT_STEP, "data": { "amount": 6 } })))],
@@ -622,8 +622,8 @@ mod add_player_modifier_s2_2_s2_3_s6_3_cost_r30_r48_r65 {
     #[test]
     fn s6_3_cost_the_discount_it_installs_really_discounts_and_enemy_installs_it_on_the_opponent() {
         let mut state = playing("player-mods-cost");
-        let mine = one(in_hand(&mut state, &indestructible().id, P1, 1));
-        let theirs = one(in_hand(&mut state, &indestructible().id, P2, 1));
+        let mine = one(in_hand(&mut state, &indestructible.id, P1, 1));
+        let theirs = one(in_hand(&mut state, &indestructible.id, P2, 1));
         let cost = |state: &GameState, card: &CardInstance| {
             effective_cost(state, find_instance(state, &card.id).expect("a hand card"))
         };

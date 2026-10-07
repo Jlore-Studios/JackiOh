@@ -1128,16 +1128,6 @@ pub fn scripts() -> IndexMap<String, CardScripts> {
     PROMPT_SCRIPTS.clone()
 }
 
-/// `PROMPT_SCRIPTS` as a call, for a caller that names the TS constant as a function.
-pub fn prompt_scripts() -> IndexMap<String, CardScripts> {
-    PROMPT_SCRIPTS.clone()
-}
-
-/// `PROMPT_DEFS` as a call.
-pub fn prompt_defs() -> Vec<CardDef> {
-    PROMPT_DEFS.clone()
-}
-
 /// Add these fixtures to whatever the harness registered (`newGame` registers its own first).
 pub fn register_prompt_fixtures() {
     let mut all_defs = registered_catalog().clone();

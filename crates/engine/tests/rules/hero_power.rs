@@ -29,7 +29,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::harness::{
-    PutOptions, events_of_type, in_hand, new_game, put, set_library, sink_for, slot,
+    events_of_type, in_hand, new_game, put, set_library, sink_for, slot,
 };
 use crate::rules::fixtures::scripts::{HERO_POWERS as FIXTURE_POWER_NAMES, heroic_power};
 
@@ -196,9 +196,7 @@ fn powered(state: &mut GameState, name: &str, radiant: bool, lane: i32) -> CardI
         state,
         &heroic().id,
         slot(P1, Row::Backrow, lane),
-        PutOptions {
-            radiant: Some(radiant),
-        },
+        json!({ "radiant": radiant }),
     );
     set_memory(state, &card.id, POWER_KEY, json!(name))
 }
@@ -223,7 +221,7 @@ fn use_power(state: &GameState, card: &CardInstance, targets: Option<Value>) -> 
 
 /// Keep the turn from auto-ending (§2.5) under the assertions: a second card p1 could still play.
 fn keep_turn(state: &mut GameState) {
-    in_hand(state, &plain().id, P1, 1);
+    in_hand(state, &plain.id, P1, 1);
 }
 
 fn on_field_now(state: &GameState, id: &str) -> CardInstance {
@@ -398,7 +396,7 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
     fn r752_a_use_pays_x_once_per_turn_is_refused_unaffordable_and_the_next_turn_is_a_new_use() {
         let mut state = game("r752-once");
         let card = powered(&mut state, "recruit", false, 1); // X 3
-        set_library(&mut state, P1, &[plain().id]);
+        set_library(&mut state, P1, &[plain.id.clone()]);
         keep_turn(&mut state);
         state.players.p1.mana.current = 2;
         assert_eq!(
@@ -421,7 +419,7 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
         );
         assert_eq!(used.error, None);
         assert_eq!(used.state.players.p1.mana.current, 1);
-        assert_eq!(def_ids(&active_units_of(&used.state, P1)), vec![plain().id]);
+        assert_eq!(def_ids(&active_units_of(&used.state, P1)), vec![plain.id.clone()]);
         assert!(used_this_turn(&used.state, &on_field_now(&used.state, &card.id)));
         assert_eq!(
             use_power(&used.state, &card, None).error.as_deref(),
@@ -488,8 +486,8 @@ mod heroic_power_the_powers_r753_r758 {
     fn r753_life_tap_draws_1_and_deals_2_to_your_own_hero_radiant_draws_the_top_card_of_each_deck() {
         let mut state = game("r753-life-tap");
         let card = powered(&mut state, "draw", false, 1);
-        set_library(&mut state, P1, &[plain().id, plain().id]);
-        set_library(&mut state, P2, &[plain().id, plain().id]);
+        set_library(&mut state, P1, &[plain.id.clone(), plain.id.clone()]);
+        set_library(&mut state, P2, &[plain.id.clone(), plain.id.clone()]);
         keep_turn(&mut state);
         let hand = state.players.p1.hand.len();
         let after = use_power(&state, &card, None).state;
@@ -502,8 +500,8 @@ mod heroic_power_the_powers_r753_r758 {
 
         let mut shining = game("r753-life-tap-radiant");
         let radiant = powered(&mut shining, "draw", true, 1);
-        set_library(&mut shining, P1, &[plain().id, plain().id]);
-        let theirs = set_library(&mut shining, P2, &[plain().id, plain().id]);
+        set_library(&mut shining, P1, &[plain.id.clone(), plain.id.clone()]);
+        let theirs = set_library(&mut shining, P2, &[plain.id.clone(), plain.id.clone()]);
         keep_turn(&mut shining);
         let before = shining.players.p1.hand.len();
         let drawn = use_power(&shining, &radiant, None).state;
@@ -601,7 +599,7 @@ mod heroic_power_the_powers_r753_r758 {
         // A hero hit, or a Unit the hit leaves standing, summons nothing.
         let face = use_power(&shining, &radiant, Some(json!([{ "pick": "hero", "player": "p2" }])));
         assert!(active_units_of(&face.state, P1).is_empty());
-        let sturdy = put(&mut shining, &plain().id, slot(P2, Row::Units, 2), Default::default());
+        let sturdy = put(&mut shining, &plain.id, slot(P2, Row::Units, 2), Default::default());
         let survived = use_power(
             &shining,
             &radiant,
@@ -656,7 +654,7 @@ mod heroic_power_the_powers_r753_r758 {
             for n in 0..40 {
                 let mut state = game(&format!("r758-insect-{}-{n}", if radiant { "r" } else { "b" }));
                 let card = powered(&mut state, "insect", radiant, 1);
-                put(&mut state, &plain().id, slot(P2, Row::Units, 1), Default::default());
+                put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
                 keep_turn(&mut state);
                 let result = use_power(&state, &card, None);
                 assert_eq!(result.error, None);
@@ -691,8 +689,8 @@ mod heroic_power_rolling_the_power_r43_r78 {
         let mut state = game("r43-roll-setup");
         let p1_hand = in_hand(&mut state, &heroic().id, P1, 1).remove(0);
         let p2_hand = in_hand(&mut state, &heroic().id, P2, 1).remove(0);
-        set_library(&mut state, P1, &[heroic().id, plain().id]);
-        set_library(&mut state, P2, &[plain().id, heroic().id]);
+        set_library(&mut state, P1, &[heroic().id, plain.id.clone()]);
+        set_library(&mut state, P2, &[plain.id.clone(), heroic().id]);
         let p1_library = state
             .players
             .p1

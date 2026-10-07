@@ -455,8 +455,8 @@ mod r81_r90_play_choice_declarations_and_filters {
     #[test]
     fn r90_reads_two_declarations_off_the_flat_targets_list_in_order_and_refuses_the_swapped_order() {
         let mut state = playing("two-declarations");
-        let theirs = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1));
-        let mine = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1));
+        let theirs = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let mine = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let card = first(in_hand(&mut state, &two_step().id, PlayerId::P1, 1));
 
         // Declaration 1 takes the first selection (an enemy unit), declaration 2 the second (an ally).
@@ -479,10 +479,10 @@ mod r81_r90_play_choice_declarations_and_filters {
     #[test]
     fn r90_enumerates_a_declaration_pair_as_a_cross_product_and_both_may_name_the_same_card() {
         let mut state = playing("declaration-pairs");
-        let enemy_a = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1));
-        let enemy_b = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 2));
-        let ally_a = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1));
-        let ally_b = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 2));
+        let enemy_a = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let enemy_b = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
+        let ally_a = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let ally_b = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
         let card = first(in_hand(&mut state, &two_step().id, PlayerId::P1, 1));
 
         let combos = play_choices::play_choice_combinations(&state, PlayerId::P1, &card, None);
@@ -538,11 +538,11 @@ mod r81_r90_play_choice_declarations_and_filters {
     #[test]
     fn r90_gives_the_last_declaration_the_remainder_and_refuses_more_than_its_own_max() {
         let mut state = playing("remainder-split");
-        let enemy_a = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1));
-        let enemy_b = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 2));
-        let ally_a = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1));
-        let ally_b = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 2));
-        let ally_c = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 3));
+        let enemy_a = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let enemy_b = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
+        let ally_a = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let ally_b = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let ally_c = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
         let card = first(in_hand(&mut state, &remainder().id, PlayerId::P1, 1));
 
         // 1 for the fixed declaration, then 3 for the "up to 3": four selections in one flat list.
@@ -613,9 +613,9 @@ mod r81_r90_play_choice_declarations_and_filters {
     #[test]
     fn r81_offers_a_backrow_declaration_both_backrows_filtered_by_the_list_of_types_it_names() {
         let mut state = playing("backrow-type-filter");
-        let their_trap = put(&mut state, &trap_card().id, slot(PlayerId::P2, Row::Backrow, 1));
-        let my_trap = put(&mut state, &trap_card().id, slot(PlayerId::P1, Row::Backrow, 2));
-        let not_a_trap = put(&mut state, &field_spell_card().id, slot(PlayerId::P1, Row::Backrow, 1));
+        let their_trap = put(&mut state, &trap_card().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        let my_trap = put(&mut state, &trap_card().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
+        let not_a_trap = put(&mut state, &field_spell_card().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
         let card = first(in_hand(&mut state, &backrow_traps().id, PlayerId::P1, 1));
 
         let decl = first_decl(&state, &card);
@@ -656,7 +656,7 @@ mod r81_r90_play_choice_declarations_and_filters {
     #[test]
     fn r81_offers_a_hero_declaration_only_on_the_side_its_filter_names() {
         let mut state = playing("hero-kind");
-        let theirs = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1));
+        let theirs = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let card = first(in_hand(&mut state, &hero_hitter().id, PlayerId::P1, 1));
 
         let decl = first_decl(&state, &card);
@@ -678,9 +678,9 @@ mod r81_r90_play_choice_declarations_and_filters {
     #[test]
     fn r81_offers_a_zone_declaration_only_your_own_open_zones_never_a_locked_one() {
         let mut state = playing("zone-kind");
-        put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1)); // occupied: not open
+        put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({})); // occupied: not open
         zones::lock_zone(&mut state, slot(PlayerId::P1, Row::Units, 2)); // Locked: never offered
-        put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1)); // the enemy side is not offered at all
+        put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({})); // the enemy side is not offered at all
         let card = first(in_hand(&mut state, &zone_namer().id, PlayerId::P1, 1));
 
         let decl = first_decl(&state, &card);
@@ -712,8 +712,8 @@ mod r81_r90_play_choice_declarations_and_filters {
     #[test]
     fn r81_exclude_self_drops_the_declaring_card_from_its_own_unit_and_backrow_picks() {
         let mut state = playing("exclude-self");
-        let self_card = put(&mut state, &selfless().id, slot(PlayerId::P1, Row::Units, 1));
-        let other = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 2));
+        let self_card = put(&mut state, &selfless().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let other = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
 
         let decl = first_decl(&state, &self_card);
         assert_eq!(legal(&state, &self_card, &decl), vec![on_instance(&other.id)]);
@@ -729,8 +729,8 @@ mod r81_r90_play_choice_declarations_and_filters {
             vec![self_card.id.clone(), other.id.clone()]
         );
 
-        let back = put(&mut state, &backrow_selfless().id, slot(PlayerId::P1, Row::Backrow, 1));
-        let other_back = put(&mut state, &field_spell_card().id, slot(PlayerId::P1, Row::Backrow, 2));
+        let back = put(&mut state, &backrow_selfless().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let other_back = put(&mut state, &field_spell_card().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
         let back_decl = first_decl(&state, &back);
         assert_eq!(legal(&state, &back, &back_decl), vec![on_instance(&other_back.id)]);
     }
@@ -809,7 +809,7 @@ mod r81_r90_play_choice_declarations_and_filters {
     #[test]
     fn r90_refuses_a_mode_pick_or_an_empty_pick_where_a_card_or_a_zone_is_declared() {
         let mut state = playing("pick-kinds");
-        put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1));
+        put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let hitter = first(in_hand(&mut state, &hero_hitter().id, PlayerId::P1, 1));
         let zoner = first(in_hand(&mut state, &zone_namer().id, PlayerId::P1, 1));
 
@@ -838,9 +838,9 @@ mod r81_r90_play_choice_declarations_and_filters {
     #[test]
     fn r81_reads_a_bare_target_declaration_as_a_unit_on_either_side_and_filters_units_by_tag() {
         let mut state = playing("bare-and-tribal");
-        let mine = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1));
-        let felinor = put(&mut state, &felinor_ky().id, slot(PlayerId::P1, Row::Units, 2));
-        let theirs = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1));
+        let mine = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let felinor = put(&mut state, &felinor_ky().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let theirs = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let bare = first(in_hand(&mut state, &bare_target().id, PlayerId::P1, 1));
         let tribal = first(in_hand(&mut state, &tribal_hitter().id, PlayerId::P1, 1));
 
@@ -870,10 +870,10 @@ mod r81_r90_play_choice_declarations_and_filters {
     fn r90_bounds_a_choose_2_or_3_enumeration_at_max_choice_combinations_on_a_wide_board() {
         let mut state = playing("wide-board");
         for lane in [1, 2, 3, 4, 5] {
-            put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, lane));
+            put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, lane), json!({}));
         }
         for lane in [1, 2, 3, 4, 5] {
-            put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, lane));
+            put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, lane), json!({}));
         }
         let card = first(in_hand(&mut state, &up_to_three().id, PlayerId::P1, 1));
 

@@ -64,8 +64,8 @@ mod setup_m1_t5 {
     fn puts_every_quickdraw_card_in_the_opening_hand_and_draws_that_many_fewer_6_2() {
         // §6.2
         let mut deck = vec![going_long().id, heroic_power().id];
-        deck.extend(vanilla_deck(Some(DECK_SIZE - 2), Some(1)));
-        let state = started("quickdraw", Some((deck, vanilla_deck(Some(DECK_SIZE), Some(21)))));
+        deck.extend(vanilla_deck(DECK_SIZE - 2, 1));
+        let state = started("quickdraw", Some((deck, vanilla_deck(DECK_SIZE, 21))));
         let hand = hand_defs(&state, PlayerId::P1);
 
         assert!(hand.contains(&going_long().id));
@@ -83,10 +83,10 @@ mod setup_m1_t5 {
     #[test]
     fn draws_no_random_cards_when_quickdraw_already_fills_the_opening_hand() {
         let mut quickdraw_deck = vec![going_long().id, heroic_power().id];
-        quickdraw_deck.extend(vanilla_deck(Some(DECK_SIZE - 2), Some(1)));
+        quickdraw_deck.extend(vanilla_deck(DECK_SIZE - 2, 1));
         let state = started(
             "qd-full",
-            Some((vanilla_deck(Some(DECK_SIZE), Some(21)), quickdraw_deck)),
+            Some((vanilla_deck(DECK_SIZE, 21), quickdraw_deck)),
         );
         assert_eq!(state.players.p2.hand.len() as i32, OPENING_DRAW[1]);
     }
@@ -94,9 +94,9 @@ mod setup_m1_t5 {
     #[test]
     fn r635_a_cast_on_draw_card_sits_out_the_opening_deal_while_other_cards_remain() {
         let mut deck = vec![hinder().id];
-        deck.extend(vanilla_deck(Some(DECK_SIZE - 1), Some(1)));
+        deck.extend(vanilla_deck(DECK_SIZE - 1, 1));
         for seed in ["r635-a", "r635-b", "r635-c"] {
-            let state = started(seed, Some((deck.clone(), vanilla_deck(Some(DECK_SIZE), Some(21)))));
+            let state = started(seed, Some((deck.clone(), vanilla_deck(DECK_SIZE, 21))));
             // No cast asks during the deal: both mulligans open at once, on every seed.
             assert!(state.pending.is_none(), "{seed}");
             assert_eq!(mulligan_owed(&state), vec![PlayerId::P1, PlayerId::P2], "{seed}");
@@ -181,8 +181,8 @@ mod setup_m1_t5 {
     #[test]
     fn r43_heroic_power_rolls_its_power_during_setup_deterministically_from_the_seed() {
         let mut deck = vec![heroic_power().id];
-        deck.extend(vanilla_deck(Some(DECK_SIZE - 1), Some(1)));
-        let decks = (deck, vanilla_deck(Some(DECK_SIZE), Some(21)));
+        deck.extend(vanilla_deck(DECK_SIZE - 1, 1));
+        let decks = (deck, vanilla_deck(DECK_SIZE, 21));
 
         let power = |seed: &str| -> Option<Value> {
             let mut state = started(seed, Some(decks.clone()));
@@ -200,10 +200,10 @@ mod setup_m1_t5 {
     #[test]
     fn r43_rolls_a_power_for_a_heroic_power_the_mulligan_returned_to_the_library() {
         let mut deck = vec![heroic_power().id];
-        deck.extend(vanilla_deck(Some(DECK_SIZE - 1), Some(1)));
+        deck.extend(vanilla_deck(DECK_SIZE - 1, 1));
         let mut state = started(
             "mulliganed-power",
-            Some((deck, vanilla_deck(Some(DECK_SIZE), Some(21)))),
+            Some((deck, vanilla_deck(DECK_SIZE, 21))),
         );
 
         // Quickdraw put it in the opening hand; return it, so it is in the library at start of game.
@@ -268,8 +268,8 @@ mod the_coin_r244 {
         let created = create_game(&CreateGameOptions {
             seed: "coin".into(),
             decks: (
-                vanilla_deck(Some(DECK_SIZE), Some(1)),
-                vanilla_deck(Some(DECK_SIZE), Some(21)),
+                vanilla_deck(DECK_SIZE, 1),
+                vanilla_deck(DECK_SIZE, 21),
             ),
             ..Default::default()
         });

@@ -6,7 +6,7 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::catalog::{spell_def, token_def, unit_def, vanilla_catalog, vanilla_deck};
 
 fn rush_token() -> CardDef {
-    token_def("rush", None)
+    token_def("rush", [Tag::Token])
 }
 
 /// `{ ...spellDef(900), id: "fx-token-spell", index: "T-spell", token: true, tags: ["Token"] }`.
@@ -24,7 +24,7 @@ fn stack_unit() -> CardDef {
 }
 
 fn catalog() -> CardDefs {
-    let mut catalog = vanilla_catalog(None, None);
+    let mut catalog = vanilla_catalog(40, 1);
     for def in [rush_token(), spell_token(), stack_unit()] {
         catalog.insert(def.id.clone(), def);
     }
@@ -37,7 +37,7 @@ fn game() -> GameState {
     register_catalog(catalog());
     create_game(&CreateGameOptions {
         seed: "zones".to_string(),
-        decks: (vanilla_deck(Some(DECK_SIZE), Some(1)), vanilla_deck(Some(DECK_SIZE), Some(21))),
+        decks: (vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 21)),
         catalog: Some(catalog()),
         ..Default::default()
     })

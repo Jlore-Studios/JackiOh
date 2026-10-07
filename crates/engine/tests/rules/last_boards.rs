@@ -14,7 +14,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{PutOptions, put, slot};
+use crate::rules::fixtures::harness::{put, slot};
 use crate::rules::fixtures::last_boards::{
     FIELD_TRAP, LB_DECKS, PORTAL, PORTAL_RADIANT_CARDS, TRAP, act, portal_game, register_last_boards,
 };
@@ -188,7 +188,7 @@ mod b5_e30_the_reader_the_server_calls_as_a_game_ends_r417 {
             &mut state,
             "fx-1",
             slot(P1, Row::Units, 1),
-            PutOptions { radiant: Some(true) },
+            json!({ "radiant": true }),
         );
         put(&mut state, "fx-2", slot(P1, Row::Units, 2), Default::default());
         // A Stack pile: the dormant card beneath is not on the field (R13).
@@ -219,7 +219,7 @@ mod b5_e30_the_reader_the_server_calls_as_a_game_ends_r417 {
             &mut state,
             TRAP,
             slot(P2, Row::Backrow, 2),
-            PutOptions { radiant: Some(true) },
+            json!({ "radiant": true }),
         );
         let fired = put(&mut state, FIELD_TRAP, slot(P2, Row::Backrow, 3), Default::default());
         find_instance_mut(&mut state, &fired.id)

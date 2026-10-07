@@ -242,8 +242,8 @@ mod summon_s6_3_m3_t1 {
     #[test]
     fn r64_takes_the_leftmost_empty_unlocked_zone_of_its_row_with_no_zone_named() {
         let mut state = game();
-        put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1));
-        put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 3));
+        put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({}));
+        put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 3), json!({}));
 
         run(&mut state, summon(json_as(json!({ "defId": "fx-5" }))), RunOptions::default());
 
@@ -265,7 +265,7 @@ mod summon_s6_3_m3_t1 {
     fn s3_2_a_summon_into_a_full_row_fails_silently_and_creates_nothing() {
         let mut state = game();
         for lane in [1, 2, 3, 4, 5] {
-            put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, lane));
+            put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, lane), json!({}));
         }
         let ids = state.next_id;
 
@@ -279,7 +279,7 @@ mod summon_s6_3_m3_t1 {
     #[test]
     fn r47_a_lane_named_summon_fizzles_on_an_occupied_zone() {
         let mut state = game();
-        put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 2));
+        put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 2), json!({}));
 
         let on_occupied = run(&mut state, summon(json_as(json!({ "defId": "fx-5", "lane": 2 }))), RunOptions::default());
         assert!(events_of_type(&on_occupied, GameEventType::Summoned).is_empty());
@@ -383,7 +383,7 @@ mod summon_s6_3_m3_t1 {
     #[test]
     fn s3_2_a_stack_summon_enters_an_occupied_unit_zone_and_becomes_the_piles_top_card() {
         let mut state = game();
-        let under = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1));
+        let under = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({}));
         find_instance_mut(&mut state, &under.id).expect("placed").damage = 2;
 
         let events = run(
@@ -613,7 +613,7 @@ mod recruit_s6_3_m3_t1 {
     fn s3_2_a_recruit_into_a_full_row_fizzles_and_the_card_stays_in_the_library() {
         let mut state = game();
         for lane in [1, 2, 3, 4, 5] {
-            put(&mut state, "fx-20", slot(PlayerId::P1, Row::Units, lane));
+            put(&mut state, "fx-20", slot(PlayerId::P1, Row::Units, lane), json!({}));
         }
         set_library(&mut state, PlayerId::P1, &owned(&["fx-1"]));
 
@@ -634,7 +634,7 @@ mod fill_your_board_r64_s7_m3_t1 {
     #[test]
     fn r64_summons_a_token_into_every_empty_unlocked_unit_zone_left_to_right() {
         let mut state = game();
-        put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 2));
+        put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 2), json!({}));
         lock_zone(&mut state, slot(PlayerId::P1, Row::Units, 4));
 
         let events = run(&mut state, fill_board(json_as(json!({ "defId": RUSH_TOKEN }))), RunOptions::default());
@@ -672,7 +672,7 @@ mod fill_your_board_r64_s7_m3_t1 {
     fn r64_fills_nothing_when_the_unit_row_is_full() {
         let mut state = game();
         for lane in [1, 2, 3, 4, 5] {
-            put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, lane));
+            put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, lane), json!({}));
         }
         let ids = state.next_id;
 

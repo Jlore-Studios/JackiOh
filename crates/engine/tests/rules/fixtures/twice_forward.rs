@@ -151,8 +151,3 @@ pub fn catalog() -> CardDefs {
 pub fn scripts() -> IndexMap<String, CardScripts> {
     TWICE_FORWARD_SCRIPTS.clone()
 }
-
-/// `TWICE_FORWARD_SCRIPTS` as a call, for a caller that names the TS constant as a function.
-pub fn twice_forward_scripts() -> IndexMap<String, CardScripts> {
-    TWICE_FORWARD_SCRIPTS.clone()
-}

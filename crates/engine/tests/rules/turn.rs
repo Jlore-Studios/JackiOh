@@ -168,8 +168,8 @@ mod turn_loop_and_mana_m1_t6 {
     #[test]
     fn r348_refuses_an_x_above_current_mana_and_an_x_of_0() {
         let deck: Vec<String> =
-            std::iter::once(x_bolt().id).chain(vanilla_deck(Some(DECK_SIZE - 1), Some(1))).collect();
-        let mut state = playing("x-cost", Some((deck.clone(), vanilla_deck(Some(DECK_SIZE), Some(21)))));
+            std::iter::once(x_bolt().id).chain(vanilla_deck(DECK_SIZE - 1, 1)).collect();
+        let mut state = playing("x-cost", Some((deck.clone(), vanilla_deck(DECK_SIZE, 21))));
         let bolt = new_instance(&mut state, &x_bolt().id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
         state.players.p1.hand.push(bolt.clone());
 
@@ -203,7 +203,7 @@ mod turn_loop_and_mana_m1_t6 {
             vec![Some(1)]
         );
 
-        state = playing("x-cost-2", Some((deck, vanilla_deck(Some(DECK_SIZE), Some(21)))));
+        state = playing("x-cost-2", Some((deck, vanilla_deck(DECK_SIZE, 21))));
         let bolt2 = new_instance(&mut state, &x_bolt().id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
         state.players.p1.hand.push(bolt2.clone());
         let one = reduce(

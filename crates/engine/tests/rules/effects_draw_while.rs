@@ -6,6 +6,8 @@
 //! Port of `packages/engine/test/effects-drawWhile.test.ts`.
 
 use jackioh_engine::effects::{DrawWhileArgs, damage, draw_while};
+use std::sync::Arc;
+
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
@@ -145,7 +147,7 @@ mod draw_while_classic_46_divine_favor_s_draw_until {
     #[test]
     fn b5_e3_a_draw_a_draw_limit_stops_adds_no_card_and_ends_it() {
         let mut state = setup("dw-limit");
-        put(&mut state, &limiter().id, slot(PlayerId::P2, Row::Backrow, 1));
+        put(&mut state, &limiter().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
         set_library(&mut state, PlayerId::P1, &plains(3));
         let events = draw_to(&mut state, below(3));
         assert_eq!(events_of_type(&events, GameEventType::Drawn).len(), 1);

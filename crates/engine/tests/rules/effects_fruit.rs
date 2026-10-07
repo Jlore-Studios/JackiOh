@@ -11,10 +11,10 @@ use jackioh_engine::effects::fruit::{
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_catalog;
-use crate::rules::fixtures::combat::{combat_catalog, combat_scripts};
-use crate::rules::fixtures::fruit::{cast_on_draw, fruit_catalog, fruit_scripts, grape_roller, mythic, priced_draw, replacer};
+use crate::rules::fixtures::combat::{combat_catalog, COMBAT_SCRIPTS};
+use crate::rules::fixtures::fruit::{cast_on_draw, fruit_catalog, FRUIT_SCRIPTS, grape_roller, mythic, priced_draw, replacer};
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
-use crate::rules::fixtures::scripts::{fixture_catalog, fixture_scripts};
+use crate::rules::fixtures::scripts::{fixture_catalog, FIXTURE_SCRIPTS};
 
 fn grape_ids() -> Vec<&'static str> {
     GRAPE_ODDS.iter().map(|grape| grape.def_id).collect()
@@ -32,9 +32,9 @@ fn is_grape(id: &str) -> bool {
 fn game(seed: &str) -> GameState {
     let mut state = new_game(seed, None);
     register_catalog(fruit_catalog(combat_catalog(fixture_catalog(vanilla_catalog(40, 1)))));
-    let mut scripts = fixture_scripts();
-    scripts.extend(combat_scripts());
-    scripts.extend(fruit_scripts());
+    let mut scripts = FIXTURE_SCRIPTS.clone();
+    scripts.extend(COMBAT_SCRIPTS.clone());
+    scripts.extend(FRUIT_SCRIPTS.clone());
     register_scripts(scripts);
     state.players[PlayerId::P1].hand = vec![];
     state.players[PlayerId::P2].hand = vec![];
@@ -170,7 +170,7 @@ mod add_rolled_grapes_c_65_66 {
     #[test]
     fn r60_adds_n_grapes_each_its_own_roll_to_the_controller_s_hand() {
         let mut state = game("grapes-three");
-        let self_ = resolving_p1(&mut state, &grape_roller().id);
+        let self_ = resolving_p1(&mut state, &grape_roller.id);
         let events = run_as(&mut state, add_rolled_grapes(json_as(json!({ "count": 3 }))), &self_);
 
         assert_eq!(state.players[PlayerId::P1].hand.len(), 3);
@@ -183,7 +183,7 @@ mod add_rolled_grapes_c_65_66 {
     #[test]
     fn r74_radiant_every_grape_is_made_radiant() {
         let mut state = game("grapes-radiant");
-        let self_ = resolving_p1(&mut state, &grape_roller().id);
+        let self_ = resolving_p1(&mut state, &grape_roller.id);
         run_as(&mut state, add_rolled_grapes(json_as(json!({ "count": 3, "radiant": true, "lucky": 0 }))), &self_);
         assert!(state.players[PlayerId::P1].hand.iter().all(|card| card.radiant));
     }
@@ -192,12 +192,12 @@ mod add_rolled_grapes_c_65_66 {
     #[test]
     fn the_lucky_is_the_running_card_s_own_the_radiant_face_s_printed_lucky_1_is_two_draws_a_grape() {
         let mut state = game("grapes-lucky");
-        let self_ = resolving(&mut state, &grape_roller().id, true, PlayerId::P1);
+        let self_ = resolving(&mut state, &grape_roller.id, true, PlayerId::P1);
         run_as(&mut state, add_rolled_grapes(json_as(json!({ "count": 3, "radiant": true }))), &self_);
         assert_eq!(state.rng_cursor, 6);
 
         let mut plain = game("grapes-lucky");
-        let self_ = resolving(&mut plain, &grape_roller().id, false, PlayerId::P1);
+        let self_ = resolving(&mut plain, &grape_roller.id, false, PlayerId::P1);
         run_as(&mut plain, add_rolled_grapes(json_as(json!({ "count": 3 }))), &self_);
         assert_eq!(plain.rng_cursor, 3);
     }
@@ -207,7 +207,7 @@ mod add_rolled_grapes_c_65_66 {
     fn r4_a_full_hand_burns_each_grape_that_doesn_t_fit() {
         let mut state = game("grapes-burn");
         in_hand(&mut state, "fx-1", PlayerId::P1, HAND_CAP - 1);
-        let self_ = resolving_p1(&mut state, &grape_roller().id);
+        let self_ = resolving_p1(&mut state, &grape_roller.id);
         let events = run_as(&mut state, add_rolled_grapes(json_as(json!({ "count": 3 }))), &self_);
         assert_eq!(state.players[PlayerId::P1].hand.len(), HAND_CAP as usize);
         assert_eq!(events_of_type(&events, GameEventType::Burned).len(), 2);
@@ -219,7 +219,7 @@ mod add_rolled_grapes_c_65_66 {
     fn a_fixed_seed_and_cursor_give_fixed_grapes_in_a_fixed_order() {
         let roll = || -> Vec<String> {
             let mut state = game("grapes-fixed");
-            let self_ = resolving_p1(&mut state, &grape_roller().id);
+            let self_ = resolving_p1(&mut state, &grape_roller.id);
             run_as(&mut state, add_rolled_grapes(json_as(json!({ "count": 5 }))), &self_);
             state.players[PlayerId::P1].hand.iter().map(|card| card.def_id.clone()).collect()
         };
@@ -229,7 +229,7 @@ mod add_rolled_grapes_c_65_66 {
     #[test]
     fn a_count_of_0_adds_nothing_and_draws_nothing() {
         let mut state = game("grapes-none");
-        let self_ = resolving_p1(&mut state, &grape_roller().id);
+        let self_ = resolving_p1(&mut state, &grape_roller.id);
         run_as(&mut state, add_rolled_grapes(json_as(json!({ "count": 0 }))), &self_);
         assert_eq!(state.players[PlayerId::P1].hand, Vec::<CardInstance>::new());
         assert_eq!(state.rng_cursor, 0);
@@ -242,8 +242,8 @@ mod damage_enemy_or_heal_friend_c_65_2_65_3 {
     #[test]
     fn an_enemy_unit_takes_the_hit_from_the_card_running_the_script() {
         let mut state = game("hit-enemy");
-        let enemy = put(&mut state, "fx-5", slot(PlayerId::P2, Row::Units, 1));
-        let self_ = resolving_p1(&mut state, &priced_draw().id);
+        let enemy = put(&mut state, "fx-5", slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let self_ = resolving_p1(&mut state, &priced_draw.id);
         let events = run(
             &mut state,
             damage_enemy_or_heal_friend(json_as(json!({ "amount": 2 }))),
@@ -258,7 +258,7 @@ mod damage_enemy_or_heal_friend_c_65_2_65_3 {
     #[test]
     fn the_enemy_hero_takes_the_hit() {
         let mut state = game("hit-hero");
-        let self_ = resolving_p1(&mut state, &priced_draw().id);
+        let self_ = resolving_p1(&mut state, &priced_draw.id);
         run(
             &mut state,
             damage_enemy_or_heal_friend(json_as(json!({ "amount": 2 }))),
@@ -272,9 +272,9 @@ mod damage_enemy_or_heal_friend_c_65_2_65_3 {
     #[test]
     fn r19_a_friendly_unit_is_healed_never_hit() {
         let mut state = game("heal-friend");
-        let friend = put(&mut state, "fx-5", slot(PlayerId::P1, Row::Units, 1));
+        let friend = put(&mut state, "fx-5", slot(PlayerId::P1, Row::Units, 1), json!({}));
         live_mut(&mut state, &friend.id).damage = 1;
-        let self_ = resolving_p1(&mut state, &priced_draw().id);
+        let self_ = resolving_p1(&mut state, &priced_draw.id);
         let events = run(
             &mut state,
             damage_enemy_or_heal_friend(json_as(json!({ "amount": 2 }))),
@@ -289,7 +289,7 @@ mod damage_enemy_or_heal_friend_c_65_2_65_3 {
     #[test]
     fn r19_your_own_hero_is_healed_past_30_a_hero_has_no_maximum() {
         let mut state = game("heal-hero");
-        let self_ = resolving_p1(&mut state, &priced_draw().id);
+        let self_ = resolving_p1(&mut state, &priced_draw.id);
         run(
             &mut state,
             damage_enemy_or_heal_friend(json_as(json!({ "amount": 4 }))),
@@ -303,7 +303,7 @@ mod damage_enemy_or_heal_friend_c_65_2_65_3 {
     #[test]
     fn a_target_gone_by_resolution_is_nothing() {
         let mut state = game("hit-gone");
-        let self_ = resolving_p1(&mut state, &priced_draw().id);
+        let self_ = resolving_p1(&mut state, &priced_draw.id);
         let events = run(
             &mut state,
             damage_enemy_or_heal_friend(json_as(json!({ "amount": 2 }))),
@@ -326,7 +326,7 @@ mod draw_priced_c_65_2_65_3 {
             panic!("library");
         };
         live_mut(&mut state, &top.id).cost_mod = 1;
-        let self_ = resolving_p1(&mut state, &priced_draw().id);
+        let self_ = resolving_p1(&mut state, &priced_draw.id);
         let events = run_as(&mut state, draw_priced(json_as(json!({ "costMod": -1 }))), &self_);
         assert_eq!(zone_of(&state, &top.id), Some(ZoneName::Hand));
         assert_eq!(live(&state, &top.id).cost_mod, 0);
@@ -337,7 +337,7 @@ mod draw_priced_c_65_2_65_3 {
     fn r65_a_set_price_is_a_cost_override() {
         let mut state = game("priced-override");
         let top = set_library(&mut state, PlayerId::P1, &["fx-3".to_string()]).into_iter().next();
-        let self_ = resolving_p1(&mut state, &priced_draw().id);
+        let self_ = resolving_p1(&mut state, &priced_draw.id);
         run_as(&mut state, draw_priced(json_as(json!({ "costOverride": 0 }))), &self_);
         assert_eq!(top.and_then(|top| live(&state, &top.id).cost_override), Some(0));
     }
@@ -348,7 +348,7 @@ mod draw_priced_c_65_2_65_3 {
         let mut state = game("priced-burn");
         in_hand(&mut state, "fx-1", PlayerId::P1, HAND_CAP);
         let top = set_library(&mut state, PlayerId::P1, &["fx-3".to_string()]).into_iter().next().expect("library");
-        let self_ = resolving_p1(&mut state, &priced_draw().id);
+        let self_ = resolving_p1(&mut state, &priced_draw.id);
         run_as(&mut state, draw_priced(json_as(json!({ "costMod": -1 }))), &self_);
         assert_eq!(zone_of(&state, &top.id), Some(ZoneName::Graveyard));
         assert_eq!(live(&state, &top.id).cost_mod, 0);
@@ -359,7 +359,7 @@ mod draw_priced_c_65_2_65_3 {
     fn a_fatigue_draw_brings_no_card_and_prices_nothing() {
         let mut state = game("priced-fatigue");
         state.players[PlayerId::P1].library = vec![];
-        let self_ = resolving_p1(&mut state, &priced_draw().id);
+        let self_ = resolving_p1(&mut state, &priced_draw.id);
         let events = run_as(&mut state, draw_priced(json_as(json!({ "costMod": -1 }))), &self_);
         assert_eq!(events_of_type(&events, GameEventType::Fatigue).len(), 1);
         assert!(events_of_type(&events, GameEventType::CostChanged).is_empty());
@@ -368,9 +368,9 @@ mod draw_priced_c_65_2_65_3 {
     #[test]
     fn r596_a_card_cast_on_draw_never_reaches_the_hand_so_neither_it_nor_the_card_the_draw_then_brings_is_priced() {
         let mut state = game("priced-cod");
-        let library = set_library(&mut state, PlayerId::P1, &[cast_on_draw().id, "fx-3".to_string()]);
+        let library = set_library(&mut state, PlayerId::P1, &[cast_on_draw.id.clone(), "fx-3".to_string()]);
         let (cast, next) = (library[0].clone(), library[1].clone());
-        let self_ = resolving_p1(&mut state, &priced_draw().id);
+        let self_ = resolving_p1(&mut state, &priced_draw.id);
         run_as(&mut state, draw_priced(json_as(json!({ "costMod": -1 }))), &self_);
         assert_eq!(zone_of(&state, &cast.id), Some(ZoneName::Graveyard));
         assert_eq!(zone_of(&state, &next.id), Some(ZoneName::Hand));
@@ -454,7 +454,7 @@ mod replace_hand_with_random_c_65_5 {
     fn moves_every_hand_card_to_the_graveyard_not_a_discard_and_adds_as_many_cards_of_the_pool() {
         let mut state = game("replace-hand");
         let old = in_hand(&mut state, "fx-1", PlayerId::P1, 3);
-        let self_ = resolving_p1(&mut state, &replacer().id);
+        let self_ = resolving_p1(&mut state, &replacer.id);
         let events = run_as(
             &mut state,
             replace_hand_with_random(json_as(json!({ "query": { "rarity": "Mythic" }, "costOverride": 0 }))),
@@ -471,23 +471,23 @@ mod replace_hand_with_random_c_65_5 {
         assert!(state.players[PlayerId::P1]
             .hand
             .iter()
-            .all(|card| card.def_id == mythic().id && card.cost_override == Some(0)));
+            .all(|card| card.def_id == mythic.id && card.cost_override == Some(0)));
     }
 
     #[test]
     fn r387_the_card_running_it_is_never_in_its_own_pool() {
         let mut state = game("replace-self");
         in_hand(&mut state, "fx-1", PlayerId::P1, 4);
-        let self_ = resolving_p1(&mut state, &replacer().id);
+        let self_ = resolving_p1(&mut state, &replacer.id);
         run_as(&mut state, replace_hand_with_random(json_as(json!({ "query": { "rarity": "Mythic" } }))), &self_);
-        assert!(!state.players[PlayerId::P1].hand.iter().any(|card| card.def_id == replacer().id));
+        assert!(!state.players[PlayerId::P1].hand.iter().any(|card| card.def_id == replacer.id));
     }
 
     #[test]
     fn r74_radiant_the_new_cards_are_radiant() {
         let mut state = game("replace-radiant");
         in_hand(&mut state, "fx-1", PlayerId::P1, 2);
-        let self_ = resolving_p1(&mut state, &replacer().id);
+        let self_ = resolving_p1(&mut state, &replacer.id);
         run_as(
             &mut state,
             replace_hand_with_random(json_as(json!({ "query": { "rarity": "Mythic" }, "radiant": true }))),
@@ -501,7 +501,7 @@ mod replace_hand_with_random_c_65_5 {
         let mut state = game("replace-token");
         let token = in_hand(&mut state, "fx-token-rush", PlayerId::P1, 1).into_iter().next().expect("the token");
         in_hand(&mut state, "fx-1", PlayerId::P1, 1);
-        let self_ = resolving_p1(&mut state, &replacer().id);
+        let self_ = resolving_p1(&mut state, &replacer.id);
         run_as(&mut state, replace_hand_with_random(json_as(json!({ "query": { "rarity": "Mythic" } }))), &self_);
         assert_ne!(zone_of(&state, &token.id), Some(ZoneName::Graveyard));
         assert!(!state.players[PlayerId::P1].graveyard.iter().any(|card| card.id == token.id));
@@ -511,7 +511,7 @@ mod replace_hand_with_random_c_65_5 {
     #[test]
     fn r129_an_empty_hand_moves_nothing_adds_nothing_and_draws_nothing_from_the_rng() {
         let mut state = game("replace-empty");
-        let self_ = resolving_p1(&mut state, &replacer().id);
+        let self_ = resolving_p1(&mut state, &replacer.id);
         let events =
             run_as(&mut state, replace_hand_with_random(json_as(json!({ "query": { "rarity": "Mythic" } }))), &self_);
         assert_eq!(events, Vec::<GameEvent>::new());

@@ -34,21 +34,21 @@ fn scripts(cry: Hook) -> CardScripts {
 
 /// TS `game(seed, { plus?, core? })`: the cries of the two editions' cast copies.
 fn game(seed: &str, plus_cry: Option<Hook>, core_cry: Option<Hook>) -> GameState {
-    let mut state = new_game(seed);
+    let mut state = new_game(seed, None);
     register_catalog(chaos_plus_catalog(registered_catalog().clone()));
     let mut registered = registered_scripts().clone();
     registered.insert(
-        plus().id,
+        plus.id.clone(),
         scripts(plus_cry.unwrap_or_else(|| hook(|_ctx| vec![call_to_chaos(plus_table())]))),
     );
-    registered.insert(core95().id, scripts(core_cry.unwrap_or_else(|| hook(|_ctx| vec![]))));
+    registered.insert(core95.id.clone(), scripts(core_cry.unwrap_or_else(|| hook(|_ctx| vec![]))));
     register_scripts(registered);
     state.turn = 4;
     state.active = P1;
     state.phase = Phase::Main;
     state.players.p1.hand = Vec::new();
     state.players.p2.hand = Vec::new();
-    set_library(&mut state, P1, &[]);
+    set_library(&mut state, P1, &[] as &[&str]);
     state
 }
 
@@ -62,7 +62,7 @@ fn plus_table() -> CallToChaosArgs {
 
 /// A C+ #73 mid-resolution, as `self` is while its Spell script runs (§10.5).
 fn plus_card(state: &mut GameState, radiant: bool, chain: Option<i32>) -> CardInstance {
-    let mut card = new_instance(&mut *state, &plus().id, P1, Zone::Resolving { player: P1 });
+    let mut card = new_instance(&mut *state, &plus.id, P1, Zone::Resolving { player: P1 });
     if radiant {
         card.radiant = true;
     }
@@ -202,12 +202,12 @@ mod r423_c_plus_73s_table {
             let hand = &state.players.p1.hand;
             assert_eq!(hand.len() as i32, CHAOS_PLUS_FRUITS);
             for card in hand {
-                assert!([fruit().id, grape().id].contains(&card.def_id));
+                assert!([fruit.id.clone(), grape.id.clone()].contains(&card.def_id));
                 assert_eq!(card.cost_override, Some(0));
                 seen.push(card.def_id.clone());
             }
         }
-        assert_eq!(sorted(seen), sorted(vec![fruit().id, grape().id]));
+        assert_eq!(sorted(seen), sorted(vec![fruit.id.clone(), grape.id.clone()]));
     }
 
     #[test]
@@ -228,9 +228,9 @@ mod r423_c_plus_73s_table {
         run(&mut state, entry("books"), None);
         assert_eq!(
             state.players.p1.hand.iter().map(|card| card.def_id.clone()).collect::<Vec<String>>(),
-            (0..CHAOS_PLUS_BOOKS).map(|_| book().id).collect::<Vec<String>>()
+            (0..CHAOS_PLUS_BOOKS).map(|_| book.id.clone()).collect::<Vec<String>>()
         );
-        assert!(!state.players.p1.hand.iter().any(|card| card.def_id == book_token().id));
+        assert!(!state.players.p1.hand.iter().any(|card| card.def_id == book_token.id));
         assert!(state.players.p1.hand.iter().all(|card| effective_cost(&state, card) == 0));
     }
 
@@ -238,10 +238,10 @@ mod r423_c_plus_73s_table {
     fn r46_r59_entry_3_every_enemy_permanent_is_destroyed_the_top_of_each_pile_face_down_cards_too_indestructible_ones_staying()
      {
         let mut state = game("destroy", None, None);
-        let unit = put(&mut state, "fx-2", slot(P2, Row::Units, 1));
-        let face_down = put(&mut state, &trap().id, slot(P2, Row::Backrow, 1));
-        let hard = put(&mut state, &hard_field().id, slot(P2, Row::Backrow, 2));
-        let mine = put(&mut state, "fx-3", slot(P1, Row::Units, 1));
+        let unit = put(&mut state, "fx-2", slot(P2, Row::Units, 1), json!({}));
+        let face_down = put(&mut state, &trap.id, slot(P2, Row::Backrow, 1), json!({}));
+        let hard = put(&mut state, &hard_field.id, slot(P2, Row::Backrow, 2), json!({}));
+        let mine = put(&mut state, "fx-3", slot(P1, Row::Units, 1), json!({}));
         run(&mut state, entry("destroy"), None);
         assert!(card(&state, &face_down.id).face_up != Some(true));
         assert_eq!(
@@ -266,9 +266,9 @@ mod r423_c_plus_73s_table {
     #[test]
     fn r386_entry_5_two_separate_upgrades_of_each_card_in_your_hand_and_your_deck_none_of_the_opponents() {
         let mut state = game("upgrade", None, None);
-        let hand = in_hand(&mut state, &classic().id, P1, 2);
-        let deck = set_library(&mut state, P1, &[classic().id.as_str(), classic().id.as_str()]);
-        let theirs = in_hand(&mut state, &classic().id, P2, 1);
+        let hand = in_hand(&mut state, &classic.id, P1, 2);
+        let deck = set_library(&mut state, P1, &[classic.id.as_str(), classic.id.as_str()]);
+        let theirs = in_hand(&mut state, &classic.id, P2, 1);
         let events = run(&mut state, entry("upgrade"), None);
         assert_eq!(
             events_of_type(&events, GameEventType::Upgraded).len() as i32,
@@ -284,7 +284,7 @@ mod r423_c_plus_73s_table {
     #[test]
     fn r311_r177_entry_5s_deck_upgrades_stay_unread_by_the_decks_owner_too() {
         let mut state = game("upgrade-hidden", None, None);
-        set_library(&mut state, P1, &[classic().id.as_str()]);
+        set_library(&mut state, P1, &[classic.id.as_str()]);
         let events = run(&mut state, entry("upgrade"), None);
         state.applied = vec![AppliedAction {
             nonce: "upgrade-hidden".into(),
@@ -306,7 +306,7 @@ mod r423_c_plus_73s_table {
     fn r77_r470_r387_r23_entry_6_a_random_card_fused_into_each_deck_card_which_keeps_its_cost_never_this_card_immutable_skipped()
      {
         let mut state = game("fuse", None, None);
-        let deck = set_library(&mut state, P1, &[classic().id.as_str(), "fx-1", immutable().id.as_str()]);
+        let deck = set_library(&mut state, P1, &[classic.id.as_str(), "fx-1", immutable.id.as_str()]);
         let events = run(&mut state, entry("fuse"), None);
         assert_eq!(events_of_type(&events, GameEventType::Fused).len(), 2);
         let library = state.players.p1.library.clone();
@@ -315,7 +315,7 @@ mod r423_c_plus_73s_table {
         assert_eq!(def_of(&state, &first.def_id).type_, CardType::Unit);
         assert_eq!(effective_cost(&state, first), 3);
         assert_eq!(effective_cost(&state, second), 1);
-        assert_eq!(third.def_id, immutable().id);
+        assert_eq!(third.def_id, immutable.id.clone());
         for each in [first, second] {
             assert!(state.transient_defs.contains_key(&each.def_id));
             assert!(
@@ -323,7 +323,7 @@ mod r423_c_plus_73s_table {
                     .ingredients
                     .iter()
                     .flatten()
-                    .any(|part| part.def_id == plus().id)
+                    .any(|part| part.def_id == plus.id)
             );
         }
     }
@@ -331,7 +331,7 @@ mod r423_c_plus_73s_table {
     #[test]
     fn r179_r468_entry_6s_fused_deck_cards_survive_json() {
         let mut state = game("fuse-json", None, None);
-        set_library(&mut state, P1, &[classic().id.as_str(), "fx-1", "fx-2"]);
+        set_library(&mut state, P1, &[classic.id.as_str(), "fx-1", "fx-2"]);
         run(&mut state, entry("fuse"), None);
         let round: GameState = serde_json::from_value(json_of(&state)).unwrap();
         assert_eq!(round, state);
@@ -347,10 +347,10 @@ mod r423_c_plus_73s_table {
     #[test]
     fn r386_entry_7_three_separate_degrades_of_each_card_on_the_opponents_field_and_in_their_hand_none_of_yours() {
         let mut state = game("degrade", None, None);
-        let field = put(&mut state, &classic().id, slot(P2, Row::Units, 1));
-        let hand = in_hand(&mut state, &classic().id, P2, 1);
-        let mine = put(&mut state, &classic().id, slot(P1, Row::Units, 1));
-        let deck = set_library(&mut state, P2, &[classic().id.as_str()]);
+        let field = put(&mut state, &classic.id, slot(P2, Row::Units, 1), json!({}));
+        let hand = in_hand(&mut state, &classic.id, P2, 1);
+        let mine = put(&mut state, &classic.id, slot(P1, Row::Units, 1), json!({}));
+        let deck = set_library(&mut state, P2, &[classic.id.as_str()]);
         let events = run(&mut state, entry("degrade"), None);
         // Up to three each: a Degrade with nothing left it can change is no Degrade (B3.4 rule 1).
         let degraded: Vec<String> = field_of(&events, GameEventType::Degraded, "instanceId")
@@ -374,11 +374,11 @@ mod r423_c_plus_73s_table {
     #[test]
     fn r64_entry_8_a_classic_golem_summoned_into_the_leftmost_free_zone() {
         let mut state = game("golem", None, None);
-        put(&mut state, "fx-1", slot(P1, Row::Units, 1));
+        put(&mut state, "fx-1", slot(P1, Row::Units, 1), json!({}));
         let events = run(&mut state, entry("golem"), None);
         assert!(matches_object(
             &json_of(events_of_type(&events, GameEventType::Summoned)),
-            &json!([{ "defId": golem().id, "lane": 2 }])
+            &json!([{ "defId": golem.id, "lane": 2 }])
         ));
     }
 
@@ -395,7 +395,7 @@ mod r423_c_plus_73s_table {
             let deck = &state.players.p1.library;
             assert_eq!(deck.len(), old.len());
             for card in deck {
-                assert!([plus().id, core95().id].contains(&card.def_id));
+                assert!([plus.id.clone(), core95.id.clone()].contains(&card.def_id));
                 assert_eq!(card.cost_override, Some(0));
                 assert_eq!(card.known_as, None);
                 seen.push(card.def_id.clone());
@@ -404,7 +404,7 @@ mod r423_c_plus_73s_table {
             // live handle on a card that has ceased to exist, so what it can read is that none is found.
             assert!(old.iter().all(|card| find_instance(&state, &card.id).is_none()));
         }
-        assert_eq!(sorted(seen), sorted(vec![plus().id, core95().id]));
+        assert_eq!(sorted(seen), sorted(vec![plus.id.clone(), core95.id.clone()]));
     }
 
     #[test]
@@ -429,7 +429,7 @@ mod r423_c_plus_73s_table {
             .map(|id| id.as_str().unwrap_or_default().to_string())
             .collect();
         assert_eq!(played.len() as i32, CALL_TO_CHAOS_CHAIN_CAP);
-        assert_eq!(sorted(played), sorted(vec![plus().id, core95().id]));
+        assert_eq!(sorted(played), sorted(vec![plus.id.clone(), core95.id.clone()]));
     }
 
     #[test]
@@ -443,7 +443,7 @@ mod r423_c_plus_73s_table {
         let me = plus_card(&mut state, true, Some(CALL_TO_CHAOS_CHAIN_CAP));
         let events = run(&mut state, call_to_chaos(plus_table()), Some(me.clone()));
         assert!(events_of_type(&events, GameEventType::CardPlayed).is_empty());
-        assert_eq!(field_of(&events, GameEventType::Summoned, "defId"), vec![json!(golem().id)]);
+        assert_eq!(field_of(&events, GameEventType::Summoned, "defId"), vec![json!(golem.id.clone())]);
         assert_eq!(chaos_chain_of(Some(&me)), CALL_TO_CHAOS_CHAIN_CAP);
     }
 
@@ -499,7 +499,7 @@ mod r423_c_plus_73s_table {
         let expected = labels_of(&roll_chaos_effects(&mut Rng::new(&seed, 0), true, CHAOS_PLUS_EFFECTS));
         assert_eq!(
             events.first().map(json_of),
-            Some(json!({ "type": "chaosRolled", "player": "p1", "instanceId": me.id, "defId": plus().id, "effects": expected }))
+            Some(json!({ "type": "chaosRolled", "player": "p1", "instanceId": me.id, "defId": plus.id, "effects": expected }))
         );
     }
 }

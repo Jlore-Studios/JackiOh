@@ -57,7 +57,7 @@ fn endless_scripts() -> CardScripts {
 
 /// p1's main phase on turn 4, so nothing placed with `put` is summoning sick (§4.1).
 fn board(seed: &str) -> GameState {
-    let mut state = new_game(seed);
+    let mut state = new_game(seed, None);
     let mut catalog = registered_catalog().clone();
     catalog.insert(endless_question().id, endless_question());
     register_catalog(catalog);
@@ -77,8 +77,8 @@ fn busy_board(seed: &str) -> GameState {
     let mut state = board(seed);
     in_hand(&mut state, "fx-1", P1, 2);
     in_hand(&mut state, "fx-2", P1, 2);
-    put(&mut state, &big_body().id, slot(P1, Row::Units, 1));
-    put(&mut state, &plain().id, slot(P2, Row::Units, 1));
+    put(&mut state, &big_body.id, slot(P1, Row::Units, 1), json!({}));
+    put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({}));
     state
 }
 

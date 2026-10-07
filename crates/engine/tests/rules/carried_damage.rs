@@ -34,12 +34,12 @@ fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
 /// p1 plays a plain body on top of a Tower in backrow lane 2; the state after, and the carried Unit.
 fn carried(seed: &str) -> (GameState, CardInstance) {
     let mut state = playing(seed);
-    put(&mut state, &tower().id, slot(P1, Row::Backrow, 2), Default::default());
-    let card = in_hand(&mut state, &plain().id, P1, None)
+    put(&mut state, &tower.id, slot(P1, Row::Backrow, 2), Default::default());
+    let card = in_hand(&mut state, &plain.id, P1, 1)
         .into_iter()
         .next()
         .expect("no plain body in hand");
-    flush(&mut state, P1, None);
+    flush(&mut state, P1, 10);
     let result = act_result(
         &state,
         input(json!({
@@ -97,7 +97,7 @@ mod r53_r446_a_carried_unit_is_out_of_a_random_forced_attack {
     #[test]
     fn it_is_never_drawn_as_the_target_and_with_nothing_else_to_attack_no_roll_is_spent() {
         let (mut state, rider) = carried("carried-random-target");
-        let striker = put(&mut state, &plain().id, slot(P2, Row::Units, 3), Default::default());
+        let striker = put(&mut state, &plain.id, slot(P2, Row::Units, 3), Default::default());
         assert!(random_attack_targets(&state, &striker, json_as(json!("enemyUnits"))).is_empty());
         assert_eq!(
             random_attack_targets(&state, &striker, json_as(json!("enemies"))),
@@ -116,7 +116,7 @@ mod r53_r446_a_carried_unit_is_out_of_a_random_forced_attack {
     #[test]
     fn carried_it_draws_no_target_of_its_own() {
         let (mut state, rider) = carried("carried-random-attacker");
-        put(&mut state, &plain().id, slot(P2, Row::Units, 3), Default::default());
+        put(&mut state, &plain.id, slot(P2, Row::Units, 3), Default::default());
         assert!(random_attack_targets(&state, by_id(&state, &rider.id), json_as(json!("enemies"))).is_empty());
     }
 }

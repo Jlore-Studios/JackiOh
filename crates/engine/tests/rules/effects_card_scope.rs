@@ -13,7 +13,7 @@ use crate::rules::fixtures::harness::{in_hand, put, set_library, slot};
 use crate::rules::fixtures::instance_data::{blood_moon, echo_bolt, instance_game, tesla};
 
 fn game(active: PlayerId) -> GameState {
-    let mut state = instance_game("card-scope");
+    let mut state = instance_game("card-scope", None);
     state.turn = 3;
     state.active = active;
     state
@@ -51,13 +51,13 @@ mod card_scopes_r242_r440 {
     #[test]
     fn r242_walks_public_cards_first_then_hands_and_face_down_traps_then_decks_the_active_side_first_in_each_group() {
         let mut state = game(PlayerId::P2);
-        let deck1 = first_id(set_library(&mut state, PlayerId::P1, &[plain().id]));
-        let deck2 = first_id(set_library(&mut state, PlayerId::P2, &[plain().id]));
-        let hand1 = first_id(in_hand(&mut state, &plain().id, PlayerId::P1, 1));
-        let hand2 = first_id(in_hand(&mut state, &plain().id, PlayerId::P2, 1));
-        let unit1 = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 3));
-        let trap1 = put(&mut state, &blood_moon().id, slot(PlayerId::P1, Row::Backrow, 1));
-        let field2 = put(&mut state, &tesla().id, slot(PlayerId::P2, Row::Backrow, 2));
+        let deck1 = first_id(set_library(&mut state, PlayerId::P1, &[plain.id.clone()]));
+        let deck2 = first_id(set_library(&mut state, PlayerId::P2, &[plain.id.clone()]));
+        let hand1 = first_id(in_hand(&mut state, &plain.id, PlayerId::P1, 1));
+        let hand2 = first_id(in_hand(&mut state, &plain.id, PlayerId::P2, 1));
+        let unit1 = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
+        let trap1 = put(&mut state, &blood_moon.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let field2 = put(&mut state, &tesla.id, slot(PlayerId::P2, Row::Backrow, 2), json!({}));
         find_instance_mut(&mut state, &field2.id).expect("the field trap").face_up = Some(true);
         let (ids, readers) = with_ctx(&mut state, None, as_player(PlayerId::P1), |ctx| {
             let walk = cards_in_card_scope(
@@ -79,10 +79,10 @@ mod card_scopes_r242_r440 {
     #[test]
     fn r440_filters_keep_the_matching_cards_whole_hidden_piles_keeps_every_hidden_card_the_rest_marked() {
         let mut state = game(PlayerId::P1);
-        let unit = first_id(in_hand(&mut state, &plain().id, PlayerId::P1, 1));
-        let spell = first_id(in_hand(&mut state, &echo_bolt().id, PlayerId::P1, 1));
-        let field_spell = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1));
-        let trap = put(&mut state, &blood_moon().id, slot(PlayerId::P1, Row::Backrow, 1));
+        let unit = first_id(in_hand(&mut state, &plain.id, PlayerId::P1, 1));
+        let spell = first_id(in_hand(&mut state, &echo_bolt.id, PlayerId::P1, 1));
+        let field_spell = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let trap = put(&mut state, &blood_moon.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
         let the_scope = scope(json!({ "zones": ["field", "hand"], "types": ["Spell"] }));
         let (matching, whole) = with_ctx(&mut state, None, as_player(PlayerId::P1), |ctx| {
             let matching: Vec<String> = cards_in_card_scope(ctx, &the_scope, Default::default())
@@ -106,11 +106,11 @@ mod card_scopes_r242_r440 {
     fn a_card_dormant_under_a_stack_is_not_on_the_field_for_a_scope_the_side_and_rows_narrow_it() {
         // §3.2.
         let mut state = game(PlayerId::P1);
-        let under = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1));
-        let top = new_instance(&mut state, &stacker().id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let under = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let top = new_instance(&mut state, &stacker.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
         place_on_field(&mut state, top.clone(), slot(PlayerId::P1, Row::Units, 1), json_as(json!({ "stack": true })));
-        let back = put(&mut state, &tesla().id, slot(PlayerId::P1, Row::Backrow, 2));
-        let theirs = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1));
+        let back = put(&mut state, &tesla.id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
+        let theirs = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let me = find_instance(&state, &top.id).cloned();
         with_ctx(&mut state, me, as_player(PlayerId::P1), |ctx| {
             let ids = |side: &str, rows: Option<Vec<&str>>, exclude_self: bool| -> Vec<String> {
@@ -138,10 +138,10 @@ mod card_scopes_r242_r440 {
     fn r177_who_may_not_read_a_card_where_it_sits_both_for_a_deck_card_the_other_player_for_a_hand_card_or_a_face_down_trap(
     ) {
         let mut state = game(PlayerId::P1);
-        let deck = set_library(&mut state, PlayerId::P1, &[plain().id]).into_iter().next();
-        let held = in_hand(&mut state, &plain().id, PlayerId::P2, 1).into_iter().next();
-        let trap = put(&mut state, &blood_moon().id, slot(PlayerId::P1, Row::Backrow, 1));
-        let unit = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1));
+        let deck = set_library(&mut state, PlayerId::P1, &[plain.id.clone()]).into_iter().next();
+        let held = in_hand(&mut state, &plain.id, PlayerId::P2, 1).into_iter().next();
+        let trap = put(&mut state, &blood_moon.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let unit = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let (Some(deck), Some(held)) = (deck, held) else {
             panic!("no card");
         };

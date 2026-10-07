@@ -37,7 +37,7 @@ fn play(state: &mut GameState, def_id: &str, zone: Option<(Row, i32)>, radiant: 
     if let Some((row, lane)) = zone {
         body["zone"] = json!({ "row": row, "lane": lane });
     }
-    let result = act_result(state, json_as(body));
+    let result = act_result(state, body);
     if let Some(error) = result.error {
         panic!("{error}");
     }
@@ -104,7 +104,7 @@ mod b5_e20_lock_a_lane {
     #[test]
     fn lane_eater_s_cry_locks_the_four_zones_of_its_lane_itself_staying_in_its_locked_zone() {
         let mut state = playing("lock-lane");
-        let out = play(&mut state, &eater().id, Some((Row::Units, 3)), false);
+        let out = play(&mut state, &eater.id, Some((Row::Units, 3)), false);
         assert_eq!(locked_zones(&out.state), vec!["p1:units:3", "p1:backrow:3", "p2:units:3", "p2:backrow:3"]);
         assert_eq!(id_at(&out.state, slot(PlayerId::P1, Row::Units, 3)), Some(out.id.clone()));
         assert_eq!(events_of_type(&out.events, GameEventType::Locked).len(), 4);
@@ -120,7 +120,7 @@ mod b5_e20_lock_a_lane {
     fn the_radiant_face_locks_only_the_enemy_side_of_the_lane_a_zone_locked_already_emits_nothing_more() {
         let mut state = playing("lock-lane-radiant");
         state.players[PlayerId::P2].locks.backrow[1] = true;
-        let out = play(&mut state, &eater().id, Some((Row::Units, 2)), true);
+        let out = play(&mut state, &eater.id, Some((Row::Units, 2)), true);
         assert_eq!(locked_zones(&out.state), vec!["p2:units:2", "p2:backrow:2"]);
         assert_eq!(
             serde_json::to_value(events_of_type(&out.events, GameEventType::Locked)).expect("events serialise"),
@@ -147,17 +147,17 @@ mod b5_e20_lock_the_zone_a_permanent_was_just_played_into {
     #[test]
     fn lockdown_locks_the_zone_of_each_permanent_played_either_player_s_and_never_a_spell_s() {
         let mut state = playing("lock-played");
-        put(&mut state, &lockdown().id, slot(PlayerId::P2, Row::Backrow, 1));
-        let unit = play(&mut state, &plain().id, Some((Row::Units, 4)), false);
+        put(&mut state, &lockdown.id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        let unit = play(&mut state, &plain.id, Some((Row::Units, 4)), false);
         let mut state = unit.state;
         assert_eq!(locked_zones(&state), vec!["p1:units:4"]);
         assert_eq!(id_at(&state, slot(PlayerId::P1, Row::Units, 4)), Some(unit.id.clone()));
         // A Locked zone takes no further play.
-        let Some(next) = in_hand(&mut state, &plain().id, PlayerId::P1, 1).into_iter().next() else {
+        let Some(next) = in_hand(&mut state, &plain.id, PlayerId::P1, 1).into_iter().next() else {
             return;
         };
         assert!(!legal_zones_for(&state, PlayerId::P1, &next, &[]).contains(&ZoneChoice { row: Row::Units, lane: 4 }));
-        let spell = play(&mut state, &leak().id, None, false);
+        let spell = play(&mut state, &leak.id, None, false);
         let ours: Vec<String> = locked_zones(&spell.state).into_iter().filter(|zone| zone.starts_with("p1")).collect();
         assert_eq!(ours, vec!["p1:units:4"]);
     }
@@ -167,12 +167,12 @@ mod b5_e20_lock_the_zone_a_permanent_was_just_played_into {
         let mut state = playing("lock-played-events");
         let mut sink = sink_for(&state);
         let summoned: GameEvent = json_as(json!({
-            "type": "summoned", "player": "p2", "instanceId": "c999", "defId": plain().id, "row": "backrow", "lane": 2,
+            "type": "summoned", "player": "p2", "instanceId": "c999", "defId": plain.id, "row": "backrow", "lane": 2,
         }));
         sink.apply_as_p1(&mut state, lock_played_zone(json_as(json!({ "event": summoned }))), None);
         assert_eq!(locked_zones(&state), vec!["p2:backrow:2"]);
         let gone: GameEvent = json_as(json!({
-            "type": "cardPlayed", "player": "p1", "instanceId": "c998", "defId": plain().id, "costPaid": 1,
+            "type": "cardPlayed", "player": "p1", "instanceId": "c998", "defId": plain.id, "costPaid": 1,
         }));
         sink.apply_as_p1(&mut state, lock_played_zone(json_as(json!({ "event": gone }))), None);
         assert_eq!(locked_zones(&state), vec!["p2:backrow:2"]);
@@ -190,7 +190,7 @@ mod b5_e20_lock_a_random_zone {
                 state.players[PlayerId::P2].locks.units[lane - 1] = true;
             }
             state.players[PlayerId::P2].locks.backrow[0] = true;
-            let out = play(&mut state, &leak().id, None, false);
+            let out = play(&mut state, &leak.id, None, false);
             (locked_zones(&out.state), hash_state(&out.state))
         };
         let live = run("lock-random");
@@ -224,7 +224,7 @@ mod b5_e20_lock_a_random_zone {
         for lane in 2..=5 {
             state.players[PlayerId::P2].locks.units[lane - 1] = true;
         }
-        let unit = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1));
+        let unit = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let mut sink = sink_for(&state);
         sink.apply_as_p1(&mut state, lock_random_zone(json_as(json!({ "side": "enemy" }))), None);
         assert!(is_locked(&state, &slot(PlayerId::P2, Row::Units, 1)));
@@ -238,8 +238,8 @@ mod b5_e20_lock_the_firing_trap_s_own_zone {
     #[test]
     fn doom_shroom_fires_locks_its_own_zone_and_is_consumed_the_zone_staying_locked_behind_it() {
         let mut state = playing("lock-own");
-        let trap = put(&mut state, &doom().id, slot(PlayerId::P2, Row::Backrow, 4));
-        let out = play(&mut state, &plain().id, Some((Row::Units, 1)), false);
+        let trap = put(&mut state, &doom.id, slot(PlayerId::P2, Row::Backrow, 4), json!({}));
+        let out = play(&mut state, &plain.id, Some((Row::Units, 1)), false);
         assert!(is_locked(&out.state, &slot(PlayerId::P2, Row::Backrow, 4)));
         assert_eq!(id_at(&out.state, slot(PlayerId::P2, Row::Backrow, 4)), None);
         let consumed = find_instance(&out.state, &trap.id);
@@ -251,7 +251,7 @@ mod b5_e20_lock_the_firing_trap_s_own_zone {
     #[test]
     fn a_card_off_the_field_locks_nothing() {
         let mut state = playing("lock-own-gone");
-        let mut card = put(&mut state, &banner().id, slot(PlayerId::P1, Row::Backrow, 1));
+        let mut card = put(&mut state, &banner.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
         state.players[PlayerId::P1].backrow[0] = None;
         card.zone = Zone::Graveyard { player: PlayerId::P1 };
         let mut sink = sink_for(&state);
@@ -268,7 +268,7 @@ mod b5_e20_unlock {
         let mut state = playing("unlock-all");
         state.players[PlayerId::P1].locks.units[1] = true;
         state.players[PlayerId::P2].locks.backrow[4] = true;
-        let mut out = play(&mut state, &unlocker().id, None, false);
+        let mut out = play(&mut state, &unlocker.id, None, false);
         assert_eq!(locked_zones(&out.state), Vec::<String>::new());
         assert_eq!(
             serde_json::to_value(events_of_type(&out.events, GameEventType::Unlocked)).expect("events serialise"),
@@ -280,7 +280,7 @@ mod b5_e20_unlock {
         for viewer in [PlayerId::P1, PlayerId::P2] {
             assert_eq!(events_of_type(&view_for(&out.state, viewer).events, GameEventType::Unlocked).len(), 2);
         }
-        let Some(next) = in_hand(&mut out.state, &plain().id, PlayerId::P1, 1).into_iter().next() else {
+        let Some(next) = in_hand(&mut out.state, &plain.id, PlayerId::P1, 1).into_iter().next() else {
             return;
         };
         assert!(legal_zones_for(&out.state, PlayerId::P1, &next, &[]).contains(&ZoneChoice { row: Row::Units, lane: 2 }));

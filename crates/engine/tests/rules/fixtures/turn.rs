@@ -65,14 +65,14 @@ pub fn log_card() -> CardDef {
     def(4301, "log", "Field Spell", json!({}))
 }
 
-pub const LOG_LANE: usize = 5;
+pub const LOG_LANE: i32 = 5;
 
 fn log_of(state: &GameState) -> Option<&CardInstance> {
-    state.players.p2.backrow.get(LOG_LANE - 1).and_then(|slot| slot.as_ref())
+    state.players.p2.backrow.get((LOG_LANE - 1) as usize).and_then(|slot| slot.as_ref())
 }
 
 fn log_of_mut(state: &mut GameState) -> Option<&mut CardInstance> {
-    state.players.p2.backrow.get_mut(LOG_LANE - 1).and_then(|slot| slot.as_mut())
+    state.players.p2.backrow.get_mut((LOG_LANE - 1) as usize).and_then(|slot| slot.as_mut())
 }
 
 /// The steps the log card's memory holds, in order (empty without a log card).
@@ -623,14 +623,4 @@ pub fn catalog() -> CardDefs {
 /// This file's scripts, by id (the brief's `scripts()`): `TURN_SCRIPTS`.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     TURN_SCRIPTS.clone()
-}
-
-/// `TURN_SCRIPTS` as a call, for a caller that names the TS constant as a function.
-pub fn turn_scripts() -> IndexMap<String, CardScripts> {
-    TURN_SCRIPTS.clone()
-}
-
-/// `TURN_DEFS` as a call.
-pub fn turn_defs() -> Vec<CardDef> {
-    TURN_DEFS.clone()
 }

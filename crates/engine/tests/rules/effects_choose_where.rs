@@ -6,6 +6,8 @@
 //! Port of `packages/engine/test/effects-choose-where.test.ts`.
 
 use jackioh_engine::effects::{ChooseTargetWhereArgs, choose_target_where};
+use std::sync::Arc;
+
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{new_game, put, slot};
@@ -45,9 +47,9 @@ mod s10_6_choose_target_where_c_32_felinor_feelings {
     #[test]
     fn offers_the_scope_s_cards_that_the_condition_admits_in_the_scope_s_order_to_the_controller() {
         let mut state = new_game("choose-where", None);
-        let a = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 1));
-        put(&mut state, "fx-2", slot(PlayerId::P2, Row::Units, 2));
-        let c = put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 3));
+        let a = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 1), json!({}));
+        put(&mut state, "fx-2", slot(PlayerId::P2, Row::Units, 2), json!({}));
+        let c = put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 3), json!({}));
 
         let events = run(
             &mut state,
@@ -88,7 +90,7 @@ mod s10_6_choose_target_where_c_32_felinor_feelings {
     #[test]
     fn asks_nothing_when_the_condition_admits_no_card_the_effect_fizzles() {
         let mut state = new_game("choose-where-none", None);
-        put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 1));
+        put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 1), json!({}));
 
         let events = run(&mut state, choose_where(json!({ "side": "enemy" }), |_ctx, _card| false));
 
@@ -100,7 +102,7 @@ mod s10_6_choose_target_where_c_32_felinor_feelings {
     fn the_open_prompt_is_plain_data_it_survives_a_json_round_trip() {
         // §9.3.
         let mut state = new_game("choose-where-json", None);
-        put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 1));
+        put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 1), json!({}));
 
         run(&mut state, choose_where(json!({ "side": "enemy" }), |_ctx, _card| true));
 

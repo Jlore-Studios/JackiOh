@@ -169,7 +169,7 @@ mod transform_s6_3_r23_r35_m3_t1 {
     #[test]
     fn replaces_a_card_in_place_with_a_new_instance_of_the_new_definition_and_fires_no_cry_r1() {
         let mut state = game();
-        let old = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 3));
+        let old = put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
         {
             let card = live_mut(&mut state, &old.id);
             card.position = Some(Position::Def);
@@ -207,7 +207,7 @@ mod transform_s6_3_r23_r35_m3_t1 {
     #[test]
     fn r691_a_transformed_unit_keeps_its_battle_position_def_stays_def() {
         let mut state = game();
-        let old = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 3));
+        let old = put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
         live_mut(&mut state, &old.id).position = Some(Position::Def);
 
         run(&mut state, transform_into(&old.id, &crier().id), by(PlayerId::P1));
@@ -220,7 +220,7 @@ mod transform_s6_3_r23_r35_m3_t1 {
     #[test]
     fn reports_the_transform_with_a_transformed_event() {
         let mut state = game();
-        let old = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 3));
+        let old = put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
         {
             let card = live_mut(&mut state, &old.id);
             card.position = Some(Position::Def);
@@ -236,7 +236,7 @@ mod transform_s6_3_r23_r35_m3_t1 {
                 {
                     "type": "transformed",
                     "instanceId": old.id,
-                    "fromDefId": combat_fx::plain().id,
+                    "fromDefId": combat_fx::plain.id,
                     "toDefId": crier().id,
                     "newInstanceId": now.map(|card| card.id),
                 },
@@ -250,7 +250,7 @@ mod transform_s6_3_r23_r35_m3_t1 {
         state.active = PlayerId::P1;
         let turn = state.turn;
         // A unit that has been on the field since an earlier turn, with its exertions unspent: ready.
-        let old = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 2));
+        let old = put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
         live_mut(&mut state, &old.id).summoned_turn = Some(turn - 2);
         assert!(!is_sick(&state, &live(&state, &old.id)));
 
@@ -262,7 +262,7 @@ mod transform_s6_3_r23_r35_m3_t1 {
 
         // The opponent's own unit, transformed on the opponent's turn, is sick for that turn too.
         state.active = PlayerId::P2;
-        let theirs = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P2, Row::Units, 1));
+        let theirs = put(&mut state, &combat_fx::plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         live_mut(&mut state, &theirs.id).summoned_turn = Some(turn - 2);
         run(&mut state, transform_into(&theirs.id, &sheep().id), by(PlayerId::P2));
         assert!(is_sick(&state, &at(&state, PlayerId::P2, Row::Units, 1).expect("the sheep")));
@@ -271,7 +271,7 @@ mod transform_s6_3_r23_r35_m3_t1 {
     #[test]
     fn r35_the_replaced_card_ceases_to_exist_no_graveyard_no_exile_and_no_death() {
         let mut state = game();
-        let old = put(&mut state, &mourner().id, slot(PlayerId::P1, Row::Units, 1));
+        let old = put(&mut state, &mourner().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
 
         let events = run(&mut state, transform_into(&old.id, &sheep().id), by(PlayerId::P1));
 
@@ -289,8 +289,8 @@ mod transform_s6_3_r23_r35_m3_t1 {
     #[test]
     fn r23_refuses_a_transform_on_an_immutable_card_printed_or_granted() {
         let mut state = game();
-        let printed = put(&mut state, &immutable().id, slot(PlayerId::P1, Row::Units, 1));
-        let granted = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 2));
+        let printed = put(&mut state, &immutable().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let granted = put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
         live_mut(&mut state, &granted.id).granted_keywords.push(Keyword::Immutable);
 
         assert!(run(&mut state, transform_into(&printed.id, &sheep().id), by(PlayerId::P1)).is_empty());
@@ -299,10 +299,10 @@ mod transform_s6_3_r23_r35_m3_t1 {
         assert_eq!(at(&state, PlayerId::P1, Row::Units, 1).map(|card| card.id), Some(printed.id.clone()));
         assert_eq!(at(&state, PlayerId::P1, Row::Units, 2).map(|card| card.id), Some(granted.id.clone()));
         assert_eq!(live(&state, &printed.id).def_id, immutable().id);
-        assert_eq!(live(&state, &granted.id).def_id, combat_fx::plain().id);
+        assert_eq!(live(&state, &granted.id).def_id, combat_fx::plain.id.clone());
 
         // A unit with no Immutable in the same spot is replaced, so the refusal is the keyword's work.
-        let open = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 3));
+        let open = put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
         assert_eq!(run(&mut state, transform_into(&open.id, &sheep().id), by(PlayerId::P1)).len(), 1);
         assert_eq!(at(&state, PlayerId::P1, Row::Units, 3).map(|card| card.def_id), Some(sheep().id));
     }
@@ -310,7 +310,7 @@ mod transform_s6_3_r23_r35_m3_t1 {
     #[test]
     fn s3_2_replaces_a_backrow_card_in_its_lane_a_field_spell_face_up_and_a_trap_face_down_r33() {
         let mut state = game();
-        let hidden = put(&mut state, &trap_card().id, slot(PlayerId::P2, Row::Backrow, 2));
+        let hidden = put(&mut state, &trap_card().id, slot(PlayerId::P2, Row::Backrow, 2), json!({}));
 
         run(&mut state, transform_into(&hidden.id, &field_spell().id), by(PlayerId::P2));
 
@@ -319,7 +319,7 @@ mod transform_s6_3_r23_r35_m3_t1 {
         assert_eq!(public.as_ref().and_then(|card| card.face_up), Some(true));
 
         // The other way round: a Trap replacement is hidden again until it fires.
-        let spell = put(&mut state, &field_spell().id, slot(PlayerId::P1, Row::Backrow, 5));
+        let spell = put(&mut state, &field_spell().id, slot(PlayerId::P1, Row::Backrow, 5), json!({}));
         live_mut(&mut state, &spell.id).face_up = Some(true);
         run(&mut state, transform_into(&spell.id, &trap_card().id), by(PlayerId::P1));
 
@@ -331,8 +331,8 @@ mod transform_s6_3_r23_r35_m3_t1 {
     #[test]
     fn r13_keeps_a_stack_pile_the_replacement_is_the_top_and_the_dormant_card_stays_beneath() {
         let mut state = game();
-        let beneath = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 2));
-        let mut top = new_instance(&mut state, &combat_fx::stacker().id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let beneath = put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let mut top = new_instance(&mut state, &combat_fx::stacker.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
         assert!(place_on_field(
             &mut state,
             &mut top,
@@ -343,7 +343,7 @@ mod transform_s6_3_r23_r35_m3_t1 {
         run(&mut state, transform_into(&top.id, &sheep().id), by(PlayerId::P1));
 
         let pile = state.players.p1.units[1].as_ref().map(|pile| def_ids_of(pile));
-        assert_eq!(pile, Some(vec![sheep().id, combat_fx::plain().id]));
+        assert_eq!(pile, Some(vec![sheep().id, combat_fx::plain.id.clone()]));
         assert_eq!(
             active_units_of(&state, PlayerId::P1).iter().map(|card| card.def_id.clone()).collect::<Vec<_>>(),
             vec![sheep().id]
@@ -355,7 +355,7 @@ mod transform_s6_3_r23_r35_m3_t1 {
     #[test]
     fn r35_replaces_a_hand_card_and_keeps_a_library_card_at_its_index() {
         let mut state = game();
-        let hand = in_hand(&mut state, &combat_fx::plain().id, PlayerId::P1, 3);
+        let hand = in_hand(&mut state, &combat_fx::plain.id, PlayerId::P1, 3);
 
         run(&mut state, transform_into(&hand[1].id, &sheep().id), by(PlayerId::P1));
 
@@ -364,11 +364,11 @@ mod transform_s6_3_r23_r35_m3_t1 {
         assert!(find_instance(&state, &hand[1].id).is_none());
         assert_eq!(state.players.p1.hand.iter().filter(|card| card.def_id == sheep().id).count(), 1);
         assert_eq!(
-            state.players.p1.hand.iter().filter(|card| card.def_id == combat_fx::plain().id).count(),
+            state.players.p1.hand.iter().filter(|card| card.def_id == combat_fx::plain.id).count(),
             2
         );
 
-        let plain_id = combat_fx::plain().id;
+        let plain_id = combat_fx::plain.id.clone();
         let mourner_id = mourner().id;
         let crier_id = crier().id;
         let library = set_library(&mut state, PlayerId::P2, &owned(&[plain_id.as_str(), mourner_id.as_str(), crier_id.as_str()]));
@@ -385,19 +385,19 @@ mod transform_s6_3_r23_r35_m3_t1 {
     #[test]
     fn s5_1_refuses_a_definition_that_cannot_live_in_the_zone_the_old_card_occupies() {
         let mut state = game();
-        let unit = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 1));
+        let unit = put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
 
         // A Spell is never a permanent, and a Trap belongs to the backrow, not a unit zone.
         assert!(run(&mut state, transform_into(&unit.id, &one_shot().id), by(PlayerId::P1)).is_empty());
         assert!(run(&mut state, transform_into(&unit.id, &trap_card().id), by(PlayerId::P1)).is_empty());
         assert_eq!(at(&state, PlayerId::P1, Row::Units, 1).map(|card| card.id), Some(unit.id.clone()));
-        assert_eq!(live(&state, &unit.id).def_id, combat_fx::plain().id);
+        assert_eq!(live(&state, &unit.id).def_id, combat_fx::plain.id.clone());
     }
 
     #[test]
     fn transforms_nothing_when_no_target_was_picked() {
         let mut state = game();
-        let unit = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 1));
+        let unit = put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
 
         assert!(run(&mut state, transform(json_as(json!({ "defId": sheep().id }))), by(PlayerId::P1)).is_empty());
         assert_eq!(at(&state, PlayerId::P1, Row::Units, 1).map(|card| card.id), Some(unit.id.clone()));
@@ -406,7 +406,7 @@ mod transform_s6_3_r23_r35_m3_t1 {
     #[test]
     fn makes_a_radiant_replacement_when_the_effect_asks_for_one_s5_2() {
         let mut state = game();
-        let old = put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 1));
+        let old = put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
 
         run(
             &mut state,
@@ -429,7 +429,7 @@ mod vanilla_s6_3_r23_m3_t1 {
     fn clears_printed_keywords_while_stats_buffs_damage_and_granted_keywords_stay() {
         let mut state = game();
         // The fixture Taunt unit is a 2/5 with Taunt.
-        let unit = put(&mut state, &combat_fx::taunter().id, slot(PlayerId::P1, Row::Units, 1));
+        let unit = put(&mut state, &combat_fx::taunter.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         {
             let card = live_mut(&mut state, &unit.id);
             card.buffs = AttackHealth { attack: 1, health: 1 };
@@ -449,7 +449,7 @@ mod vanilla_s6_3_r23_m3_t1 {
         assert_eq!(view.attack, 3);
         assert_eq!(view.max_health, 6);
         assert_eq!(view.health, 4);
-        assert_eq!(now.def_id, combat_fx::taunter().id);
+        assert_eq!(now.def_id, combat_fx::taunter.id.clone());
 
         // No instance is created and no definition changes, so both sides name the same card.
         assert_eq!(
@@ -458,8 +458,8 @@ mod vanilla_s6_3_r23_m3_t1 {
                 {
                     "type": "transformed",
                     "instanceId": unit.id,
-                    "fromDefId": combat_fx::taunter().id,
-                    "toDefId": combat_fx::taunter().id,
+                    "fromDefId": combat_fx::taunter.id,
+                    "toDefId": combat_fx::taunter.id,
                     "newInstanceId": unit.id,
                 },
             ])
@@ -469,8 +469,8 @@ mod vanilla_s6_3_r23_m3_t1 {
     #[test]
     fn r23_refuses_a_vanilla_on_an_immutable_card_printed_or_granted() {
         let mut state = game();
-        let printed = put(&mut state, &immutable().id, slot(PlayerId::P1, Row::Units, 1));
-        let granted = put(&mut state, &combat_fx::taunter().id, slot(PlayerId::P1, Row::Units, 2));
+        let printed = put(&mut state, &immutable().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let granted = put(&mut state, &combat_fx::taunter.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
         live_mut(&mut state, &granted.id).granted_keywords.push(Keyword::Immutable);
 
         assert!(run(&mut state, vanilla(json_as(json!({ "instanceId": printed.id }))), by(PlayerId::P1)).is_empty());
@@ -487,7 +487,7 @@ mod vanilla_s6_3_r23_m3_t1 {
     #[test]
     fn does_nothing_to_a_card_that_is_already_vanilla_and_nothing_with_no_target_picked() {
         let mut state = game();
-        let unit = put(&mut state, &combat_fx::taunter().id, slot(PlayerId::P1, Row::Units, 1));
+        let unit = put(&mut state, &combat_fx::taunter.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
 
         assert_eq!(run(&mut state, vanilla(json_as(json!({ "instanceId": unit.id }))), by(PlayerId::P1)).len(), 1);
         assert!(run(&mut state, vanilla(json_as(json!({ "instanceId": unit.id }))), by(PlayerId::P1)).is_empty());
@@ -499,7 +499,7 @@ mod vanilla_s6_3_r23_m3_t1 {
     #[test]
     fn clears_the_text_of_a_card_in_hand_too_so_it_is_not_a_field_only_flag_s6_3() {
         let mut state = game();
-        let held = in_hand(&mut state, &combat_fx::taunter().id, PlayerId::P1, 1).remove(0);
+        let held = in_hand(&mut state, &combat_fx::taunter.id, PlayerId::P1, 1).remove(0);
 
         assert_eq!(run(&mut state, vanilla(json_as(json!({ "instanceId": held.id }))), by(PlayerId::P1)).len(), 1);
         let held = live(&state, &held.id);

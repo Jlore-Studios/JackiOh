@@ -30,7 +30,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::generation::{
     Run, act, ai_spell, ai_unit, answer, big_unit, body, deck_fusion, felinor_a, felinor_b, felinor_c, field_trap,
-    frozen, fuse_a, fuse_b, fuser, gen_scripts, hand_card, immutable, lab, lab_pool, mutate, pick, plain_trap,
+    frozen, fuse_a, fuse_b, fuser, GEN_SCRIPTS, hand_card, immutable, lab, LAB_POOL, mutate, pick, plain_trap,
     playing, replayed, slime, slop, x_unit,
 };
 use crate::rules::fixtures::harness::{put, set_library, slot};
@@ -117,8 +117,8 @@ fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
 
-fn input(body: Value) -> ActionInput {
-    json_as(body)
+fn input(literal: Value) -> ActionInput {
+    json_as(literal)
 }
 
 /// The `fused` events of a view's event list (`eventsOfType(view.events, "fused")`).
@@ -185,20 +185,20 @@ mod r468_a_fused_id_is_bounded_past_fused_id_cap_it_is_a_digest_of_the_ingredien
     fn r468_a_short_list_is_spelled_out_r179_a_card_fused_onto_again_and_again_switches_to_a_digest_once_the_list_outgrows_the_cap()
      {
         let mut state = playing("fuse-digest").state;
-        let kept = put(&mut state, &slime().id, slot(P1, Row::Units, 1));
+        let kept = put(&mut state, &slime.id, slot(P1, Row::Units, 1), json!({}));
         let mut sink = Sink::for_state(&state);
 
-        let ingredient = phantom(&mut state, &slime().id);
+        let ingredient = phantom(&mut state, &slime.id);
         let target = live(&state, &kept.id);
         let first = must(
             fuse_in(&mut state, &mut sink, json!({ "ingredients": [ingredient], "target": target })),
             "a fusion",
         );
-        assert_eq!(first.def_id, format!("t-1:{}+{}", slime().id, slime().id));
+        assert_eq!(first.def_id, format!("t-1:{}+{}", slime.id.clone(), slime.id.clone()));
 
         let mut fusions: u32 = 1;
         while !is_digest_id(&live(&state, &kept.id).def_id) {
-            let ingredient = phantom(&mut state, &slime().id);
+            let ingredient = phantom(&mut state, &slime.id);
             let target = live(&state, &kept.id);
             fuse_in(&mut state, &mut sink, json!({ "ingredients": [ingredient], "target": target }));
             fusions += 1;
@@ -227,12 +227,12 @@ mod r468_a_fused_id_is_bounded_past_fused_id_cap_it_is_a_digest_of_the_ingredien
         assert_eq!(plague_multiplier_of(&state, &live(&state, &kept.id)), 2_i32.pow(fusions + 1));
         // One more fusion onto it names the digest in parentheses, which stays short. The kept card is the
         // last ingredient, as R77's target always is (#85's played card fused onto its target).
-        let ingredient = phantom(&mut state, &slime().id);
+        let ingredient = phantom(&mut state, &slime.id);
         let target = live(&state, &kept.id);
         fuse_in(&mut state, &mut sink, json!({ "ingredients": [ingredient], "target": target }));
         let now = live(&state, &kept.id);
-        assert_eq!(now.def_id, format!("t-{}:{}+({id})", fusions + 1, slime().id));
-        assert_eq!(fused_id_parts(Some(&state), &now.def_id), Some(vec![slime().id, id.clone()]));
+        assert_eq!(now.def_id, format!("t-{}:{}+({id})", fusions + 1, slime.id.clone()));
+        assert_eq!(fused_id_parts(Some(&state), &now.def_id), Some(vec![slime.id.clone(), id.clone()]));
         assert_eq!(plague_multiplier_of(&state, &now), 2_i32.pow(fusions + 2));
     }
 
@@ -249,13 +249,13 @@ mod r468_a_fused_id_is_bounded_past_fused_id_cap_it_is_a_digest_of_the_ingredien
     fn r468_a_state_holding_a_digest_id_this_process_never_minted_rebuilds_its_scripts_from_the_definition() {
         let mut state = playing("fuse-digest-json").state;
         let id = format!("t-1:#{}", fused_digest("never-minted-here"));
-        let mut fused = def_of(Some(&state), &slime().id).clone();
+        let mut fused = def_of(Some(&state), &slime.id).clone();
         fused.id = id.clone();
         fused.index = id.clone();
         fused.name = "Gen slime + Gen slime".to_string();
-        fused.ingredients = Some(json_as(json!([{ "defId": slime().id }, { "defId": slime().id }])));
+        fused.ingredients = Some(json_as(json!([{ "defId": slime.id }, { "defId": slime.id }])));
         state.transient_defs.insert(id.clone(), fused);
-        let card = put(&mut state, &id, slot(P1, Row::Units, 1));
+        let card = put(&mut state, &id, slot(P1, Row::Units, 1), json!({}));
         // Read without the state, a digest is no fused id: nothing in this process has seen its list.
         assert!(fused_id_specs(None, &id).is_none());
         assert!(registered_scripts().get(id.as_str()).is_none());
@@ -264,24 +264,24 @@ mod r468_a_fused_id_is_bounded_past_fused_id_cap_it_is_a_digest_of_the_ingredien
         let _ = legal_actions(&round, P1);
         assert_eq!(
             json_of(fused_id_specs(Some(&round), &id)),
-            json!([{ "defId": slime().id }, { "defId": slime().id }])
+            json!([{ "defId": slime.id }, { "defId": slime.id }])
         );
-        assert_eq!(fused_ingredients(&round, &id), Some(vec![slime().id, slime().id]));
+        assert_eq!(fused_ingredients(&round, &id), Some(vec![slime.id.clone(), slime.id.clone()]));
         assert!(script_of(&round, id.as_str()).base.plague_multiplier.is_some());
         let again = must(find_instance(&round, &card.id).cloned(), "the card after JSON");
         assert_eq!(plague_multiplier_of(&round, &again), 4);
 
         // B4.1: a digest-named fused card never generates any of its ingredients either.
-        assert_eq!(json_of(self_def_ids(Some(&round), &id)), json!([slime().id, slime().id]));
+        assert_eq!(json_of(self_def_ids(Some(&round), &id)), json!([slime.id.clone(), slime.id.clone()]));
         let excluded: IndexSet<String> =
             json_of(excluding_def_id(Some(&round), &CatalogQueryArgs::default(), Some(id.as_str())))["excludeDefId"]
                 .as_array()
                 .map(|ids| ids.iter().filter_map(|id| id.as_str().map(str::to_string)).collect())
                 .unwrap_or_default();
-        assert_eq!(excluded, IndexSet::from([slime().id]));
+        assert_eq!(excluded, IndexSet::from([slime.id.clone()]));
 
         // A registry replaced wholesale is repaired on the next entry, digest ids included.
-        register_scripts(gen_scripts());
+        register_scripts(GEN_SCRIPTS.clone());
         assert!(registered_scripts().get(id.as_str()).is_none());
         let _ = view_for(&round, P1);
         assert!(script_of(&round, id.as_str()).base.plague_multiplier.is_some());
@@ -290,26 +290,26 @@ mod r468_a_fused_id_is_bounded_past_fused_id_cap_it_is_a_digest_of_the_ingredien
     #[test]
     fn r468_every_fused_definition_keeps_its_ingredient_list_and_sums_its_ingredients_lines_of_code_e36() {
         let mut state = playing("fuse-loc").state;
-        let kept = put(&mut state, &fuse_a().id, slot(P1, Row::Units, 1));
+        let kept = put(&mut state, &fuse_a.id, slot(P1, Row::Units, 1), json!({}));
         let mut sink = Sink::for_state(&state);
-        let ingredient = phantom(&mut state, &fuse_b().id);
+        let ingredient = phantom(&mut state, &fuse_b.id);
         let result = must(
             fuse_in(&mut state, &mut sink, json!({ "ingredients": [ingredient], "target": kept })),
             "a fusion",
         );
         let def = def_of(Some(&state), &result.def_id).clone();
-        assert_eq!(json_of(&def.ingredients), json!([{ "defId": fuse_b().id }, { "defId": fuse_a().id }]));
+        assert_eq!(json_of(&def.ingredients), json!([{ "defId": fuse_b.id }, { "defId": fuse_a.id }]));
         assert_eq!(def.loc, Some(17));
 
-        let other = put(&mut state, &body().id, slot(P1, Row::Units, 2));
-        let ingredient = phantom(&mut state, &fuse_b().id);
+        let other = put(&mut state, &body.id, slot(P1, Row::Units, 2), json!({}));
+        let ingredient = phantom(&mut state, &fuse_b.id);
         let plain = must(
             fuse_in(&mut state, &mut sink, json!({ "ingredients": [ingredient], "target": other })),
             "a fusion",
         );
         assert_eq!(def_of(Some(&state), &plain.def_id).loc, Some(7));
-        let none = put(&mut state, &body().id, slot(P1, Row::Units, 3));
-        let ingredient = phantom(&mut state, &body().id);
+        let none = put(&mut state, &body.id, slot(P1, Row::Units, 3), json!({}));
+        let ingredient = phantom(&mut state, &body.id);
         let bare = must(
             fuse_in(&mut state, &mut sink, json!({ "ingredients": [ingredient], "target": none })),
             "a fusion",
@@ -328,8 +328,8 @@ mod r469_an_ingredient_fused_on_its_radiant_face_goes_into_both_fused_forms {
     #[test]
     fn r469_the_id_marks_it_with_a_star_and_the_base_form_carries_its_radiant_face_and_text() {
         let mut state = playing("fuse-radiant-ingredient").state;
-        let kept = put(&mut state, &body().id, slot(P1, Row::Units, 1));
-        let ingredient = phantom(&mut state, &fuse_a().id);
+        let kept = put(&mut state, &body.id, slot(P1, Row::Units, 1), json!({}));
+        let ingredient = phantom(&mut state, &fuse_a.id);
         let result = must(
             fuse_fresh(
                 &mut state,
@@ -337,12 +337,12 @@ mod r469_an_ingredient_fused_on_its_radiant_face_goes_into_both_fused_forms {
             ),
             "a fusion",
         );
-        assert_eq!(result.def_id, format!("t-1:{}*+{}", fuse_a().id, body().id));
+        assert_eq!(result.def_id, format!("t-1:{}*+{}", fuse_a.id.clone(), body.id.clone()));
         assert_eq!(
             json_of(fused_id_specs(Some(&state), &result.def_id)),
-            json!([{ "defId": fuse_a().id, "radiant": true }, { "defId": body().id }])
+            json!([{ "defId": fuse_a.id, "radiant": true }, { "defId": body.id }])
         );
-        assert_eq!(fused_id_parts(Some(&state), &result.def_id), Some(vec![fuse_a().id, body().id]));
+        assert_eq!(fused_id_parts(Some(&state), &result.def_id), Some(vec![fuse_a.id.clone(), body.id.clone()]));
         let def = def_of(Some(&state), &result.def_id).clone();
         // body 1/1 on the base form, fuseA's Radiant 7/1 Taunt on both.
         assert!(matches_object(&json_of(&def.base), &json!({ "attack": 8, "health": 2 })));
@@ -355,8 +355,8 @@ mod r469_an_ingredient_fused_on_its_radiant_face_goes_into_both_fused_forms {
     #[test]
     fn r469_its_radiant_script_runs_on_the_base_form_a_radiant_slime_triples_on_a_base_card() {
         let mut state = playing("fuse-radiant-script").state;
-        let kept = put(&mut state, &body().id, slot(P1, Row::Units, 1));
-        let ingredient = phantom(&mut state, &slime().id);
+        let kept = put(&mut state, &body.id, slot(P1, Row::Units, 1), json!({}));
+        let ingredient = phantom(&mut state, &slime.id);
         fuse_fresh(
             &mut state,
             json!({ "ingredients": [ingredient], "target": kept, "radiantIngredients": [ingredient.id] }),
@@ -370,8 +370,8 @@ mod r469_an_ingredient_fused_on_its_radiant_face_goes_into_both_fused_forms {
     fn r469_fuse_cards_radiant_ingredients_the_opponents_played_card_fused_into_your_permanent_as_a_radiant_copy_classic_plus_74()
      {
         let mut state = playing("fuse-twice-forward").state;
-        let trap = put(&mut state, &field_trap().id, slot(P1, Row::Backrow, 1));
-        let played = put(&mut state, &fuse_a().id, slot(P2, Row::Units, 1));
+        let trap = put(&mut state, &field_trap.id, slot(P1, Row::Backrow, 1), json!({}));
+        let played = put(&mut state, &fuse_a.id, slot(P2, Row::Units, 1), json!({}));
         let mut sink = Sink::for_state(&state);
         run(
             &mut state,
@@ -398,7 +398,7 @@ mod r469_an_ingredient_fused_on_its_radiant_face_goes_into_both_fused_forms {
         assert!(find_instance(&state, &played.id).is_none());
         assert!(state.players.p2.units[0].is_none());
         assert!(def.base.text.contains("fuse-a radiant"));
-        assert_eq!(trap_now.def_id, format!("t-1:{}*+{}", fuse_a().id, field_trap().id));
+        assert_eq!(trap_now.def_id, format!("t-1:{}*+{}", fuse_a.id.clone(), field_trap.id.clone()));
     }
 }
 
@@ -412,9 +412,9 @@ mod r470_a_fusion_keeps_a_hand_or_deck_card_where_it_is_and_its_cost_doesnt_chan
     #[test]
     fn r470_fusion_lab_a_random_card_of_the_pool_never_the_lab_b4_1_into_the_declared_hand_card_which_keeps_its_cost() {
         let mut start = playing("fuse-lab");
-        let card = hand_card(&mut start.state, &fuse_b().id, P1);
+        let card = hand_card(&mut start.state, &fuse_b.id, P1);
         live_mut(&mut start.state, &card.id).cost_mod = 1;
-        let lab_card = hand_card(&mut start.state, &lab().id, P1);
+        let lab_card = hand_card(&mut start.state, &lab.id, P1);
         let cost_before = effective_cost(&start.state, &live(&start.state, &card.id), Default::default());
         let mut run1 = frozen(&start);
         run1 = act(
@@ -427,8 +427,8 @@ mod r470_a_fusion_keeps_a_hand_or_deck_card_where_it_is_and_its_cost_doesnt_chan
         let def = def_of(Some(&run1.state), &kept.def_id).clone();
         let parts = must(fused_id_parts(Some(&run1.state), &kept.def_id), "a fused id");
         assert_eq!(parts.len(), 2);
-        assert_eq!(parts[1], fuse_b().id);
-        assert!(lab_pool().into_iter().filter(|id| *id != lab().id).any(|id| id == parts[0]));
+        assert_eq!(parts[1], fuse_b.id.clone());
+        assert!(LAB_POOL.clone().into_iter().filter(|id| *id != lab.id).any(|id| id == parts[0]));
         assert_eq!(json_of(&def.type_), json!("Unit"));
         // Its own cost as it stood, printed 1, now its costOverride; its costMod is its own and stays.
         assert_eq!(kept.cost_override, Some(1));
@@ -455,8 +455,8 @@ mod r470_a_fusion_keeps_a_hand_or_deck_card_where_it_is_and_its_cost_doesnt_chan
     #[test]
     fn r470_fusion_labs_radiant_face_fuses_a_radiant_card_r469() {
         let mut start = playing("fuse-lab-radiant");
-        let card = hand_card(&mut start.state, &body().id, P1);
-        let lab_card = hand_card(&mut start.state, &lab().id, P1);
+        let card = hand_card(&mut start.state, &body.id, P1);
+        let lab_card = hand_card(&mut start.state, &lab.id, P1);
         live_mut(&mut start.state, &lab_card.id).radiant = true;
         let mut run1 = frozen(&start);
         run1 = act(
@@ -466,25 +466,25 @@ mod r470_a_fusion_keeps_a_hand_or_deck_card_where_it_is_and_its_cost_doesnt_chan
         let kept = must(find_instance(&run1.state, &card.id).cloned(), "the hand card");
         let specs = json_of(fused_id_specs(Some(&run1.state), &kept.def_id));
         assert_eq!(specs[0]["radiant"], json!(true));
-        assert_eq!(specs[1], json!({ "defId": body().id }));
+        assert_eq!(specs[1], json!({ "defId": body.id }));
     }
 
     #[test]
     fn r470_an_x_cost_or_embiggen_hand_card_keeps_its_printed_form_a_card_with_an_override_keeps_the_override() {
         let mut state = playing("fuse-keep-forms").state;
         let mut sink = Sink::for_state(&state);
-        let x = hand_card(&mut state, &x_unit().id, P1);
-        let big = hand_card(&mut state, &big_unit().id, P1);
-        let crafted = hand_card(&mut state, &fuse_a().id, P1);
+        let x = hand_card(&mut state, &x_unit.id, P1);
+        let big = hand_card(&mut state, &big_unit.id, P1);
+        let crafted = hand_card(&mut state, &fuse_a.id, P1);
         live_mut(&mut state, &crafted.id).cost_override = Some(0);
 
-        let ingredient = phantom(&mut state, &fuse_a().id);
+        let ingredient = phantom(&mut state, &fuse_a.id);
         let into = live(&state, &x.id);
         fuse_in(&mut state, &mut sink, json!({ "ingredients": [ingredient], "into": into, "keepCost": true }));
-        let ingredient = phantom(&mut state, &fuse_a().id);
+        let ingredient = phantom(&mut state, &fuse_a.id);
         let into = live(&state, &big.id);
         fuse_in(&mut state, &mut sink, json!({ "ingredients": [ingredient], "into": into, "keepCost": true }));
-        let ingredient = phantom(&mut state, &fuse_b().id);
+        let ingredient = phantom(&mut state, &fuse_b.id);
         let into = live(&state, &crafted.id);
         fuse_in(&mut state, &mut sink, json!({ "ingredients": [ingredient], "into": into, "keepCost": true }));
 
@@ -499,8 +499,8 @@ mod r470_a_fusion_keeps_a_hand_or_deck_card_where_it_is_and_its_cost_doesnt_chan
         assert_eq!(effective_cost(&state, &crafted, Default::default()), 0);
 
         // Without keepCost the kept card takes R77's fused cost.
-        let plain = hand_card(&mut state, &fuse_a().id, P1);
-        let ingredient = phantom(&mut state, &fuse_b().id);
+        let plain = hand_card(&mut state, &fuse_a.id, P1);
+        let ingredient = phantom(&mut state, &fuse_b.id);
         fuse_in(&mut state, &mut sink, json!({ "ingredients": [ingredient], "into": plain }));
         let plain = live(&state, &plain.id);
         assert!(plain.cost_override.is_none());
@@ -511,19 +511,19 @@ mod r470_a_fusion_keeps_a_hand_or_deck_card_where_it_is_and_its_cost_doesnt_chan
     fn r470_into_takes_only_a_hand_or_library_card_target_only_a_field_card_and_an_immutable_card_refuses_either() {
         let mut state = playing("fuse-into-refusals").state;
         let mut sink = Sink::for_state(&state);
-        let on_field = put(&mut state, &body().id, slot(P1, Row::Units, 1));
-        let held = hand_card(&mut state, &body().id, P1);
-        let locked = hand_card(&mut state, &immutable().id, P1);
-        let gy = new_instance(&mut state, &body().id, P1, Zone::Graveyard { player: P1 });
+        let on_field = put(&mut state, &body.id, slot(P1, Row::Units, 1), json!({}));
+        let held = hand_card(&mut state, &body.id, P1);
+        let locked = hand_card(&mut state, &immutable.id, P1);
+        let gy = new_instance(&mut state, &body.id, P1, Zone::Graveyard { player: P1 });
         state.players.p1.graveyard.push(gy.clone());
 
-        let ingredient = phantom(&mut state, &fuse_b().id);
+        let ingredient = phantom(&mut state, &fuse_b.id);
         assert!(fuse_in(&mut state, &mut sink, json!({ "ingredients": [ingredient], "into": on_field })).is_none());
-        let ingredient = phantom(&mut state, &fuse_b().id);
+        let ingredient = phantom(&mut state, &fuse_b.id);
         assert!(fuse_in(&mut state, &mut sink, json!({ "ingredients": [ingredient], "target": held })).is_none());
-        let ingredient = phantom(&mut state, &fuse_b().id);
+        let ingredient = phantom(&mut state, &fuse_b.id);
         assert!(fuse_in(&mut state, &mut sink, json!({ "ingredients": [ingredient], "into": gy })).is_none());
-        let ingredient = phantom(&mut state, &fuse_b().id);
+        let ingredient = phantom(&mut state, &fuse_b.id);
         assert!(fuse_in(&mut state, &mut sink, json!({ "ingredients": [ingredient], "into": locked })).is_none());
         assert!(sink.events.is_empty());
         assert!(state.transient_defs.is_empty());
@@ -533,7 +533,7 @@ mod r470_a_fusion_keeps_a_hand_or_deck_card_where_it_is_and_its_cost_doesnt_chan
         let targeted = |card: &CardInstance| -> Effect {
             fuse_random_into(json_as(json!({
                 "into": { "target": { "of": "instance", "instanceId": card.id } },
-                "query": { "defId": lab_pool() },
+                "query": { "defId": LAB_POOL.clone() },
             })))
         };
         run(&mut state, &mut sink, targeted(&locked), None);
@@ -546,13 +546,13 @@ mod r470_a_fusion_keeps_a_hand_or_deck_card_where_it_is_and_its_cost_doesnt_chan
     fn r470_the_deck_fusion_a_random_card_into_every_deck_card_each_keeping_its_cost_hidden_from_both_players_classic_plus_73()
      {
         let mut start = playing("fuse-deck");
-        let library = set_library(&mut start.state, P1, &[fuse_a().id, x_unit().id, body().id]);
+        let library = set_library(&mut start.state, P1, &[fuse_a.id.clone(), x_unit.id.clone(), body.id.clone()]);
         let costs: Vec<i32> = library
             .iter()
             .map(|card| effective_cost(&start.state, card, Default::default()))
             .collect();
         let list_before = json_of(view_for(&start.state, P1))["you"]["ownLibrary"].clone();
-        let spell = hand_card(&mut start.state, &deck_fusion().id, P1);
+        let spell = hand_card(&mut start.state, &deck_fusion.id, P1);
         let mut run1 = frozen(&start);
         run1 = act(&run1, input(json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" })));
 
@@ -599,7 +599,7 @@ mod r470_a_fusion_keeps_a_hand_or_deck_card_where_it_is_and_its_cost_doesnt_chan
         run(
             &mut empty,
             &mut sink,
-            fuse_random_into(json_as(json!({ "into": { "pile": "library" }, "query": { "defId": lab_pool() } }))),
+            fuse_random_into(json_as(json!({ "into": { "pile": "library" }, "query": { "defId": LAB_POOL.clone() } }))),
             None,
         );
         assert_eq!(sink.rng.cursor(), cursor);
@@ -617,7 +617,7 @@ mod e23_fuse_three_generated_cards_into_the_hand_classic_plus_43 {
     #[test]
     fn r77_three_random_picks_of_the_pool_repeats_allowed_fused_with_no_target_a_token_at_0_in_the_hand() {
         let mut start = playing("fuse-slop");
-        let spell = hand_card(&mut start.state, &slop().id, P1);
+        let spell = hand_card(&mut start.state, &slop.id, P1);
         let hand_before = start.state.players.p1.hand.len();
         let mut run1 = frozen(&start);
         run1 = act(&run1, input(json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" })));
@@ -627,7 +627,7 @@ mod e23_fuse_three_generated_cards_into_the_hand_classic_plus_43 {
         let made = must(hand.last().cloned(), "the fused card");
         let def = def_of(Some(&run1.state), &made.def_id).clone();
         assert_eq!(def.ingredients.as_ref().map(Vec::len), Some(3));
-        let generated = [ai_unit().id, ai_spell().id];
+        let generated = [ai_unit.id.clone(), ai_spell.id.clone()];
         assert!(
             def.ingredients
                 .as_ref()
@@ -651,7 +651,7 @@ mod e23_fuse_three_generated_cards_into_the_hand_classic_plus_43 {
     #[test]
     fn r469_the_radiant_face_fuses_radiant_ai_cards_fewer_than_two_picks_or_an_empty_pool_fuses_and_draws_nothing() {
         let mut start = playing("fuse-slop-radiant");
-        let spell = hand_card(&mut start.state, &slop().id, P1);
+        let spell = hand_card(&mut start.state, &slop.id, P1);
         live_mut(&mut start.state, &spell.id).radiant = true;
         let mut run1 = frozen(&start);
         run1 = act(&run1, input(json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" })));
@@ -670,7 +670,7 @@ mod e23_fuse_three_generated_cards_into_the_hand_classic_plus_43 {
         run(
             &mut start.state,
             &mut sink,
-            fuse_generated(json_as(json!({ "count": 1, "query": { "defId": [ai_unit().id] } }))),
+            fuse_generated(json_as(json!({ "count": 1, "query": { "defId": [ai_unit.id.clone()] } }))),
             None,
         );
         run(
@@ -698,13 +698,13 @@ struct MutateBoard {
 
 fn mutate_board(seed: &str) -> MutateBoard {
     let mut start = playing(seed);
-    let enemy = put(&mut start.state, &fuse_a().id, slot(P2, Row::Units, 1));
-    let field = put(&mut start.state, &body().id, slot(P1, Row::Units, 1));
-    put(&mut start.state, &immutable().id, slot(P1, Row::Units, 2));
+    let enemy = put(&mut start.state, &fuse_a.id, slot(P2, Row::Units, 1), json!({}));
+    let field = put(&mut start.state, &body.id, slot(P1, Row::Units, 1), json!({}));
+    put(&mut start.state, &immutable.id, slot(P1, Row::Units, 2), json!({}));
     start.state.players.p1.hand = vec![];
-    let in_hand = hand_card(&mut start.state, &fuse_b().id, P1);
-    hand_card(&mut start.state, &slop().id, P1); // a Spell, not of the enemy card's type
-    let deck = set_library(&mut start.state, P1, &[felinor_c().id, lab().id, felinor_a().id]);
+    let in_hand = hand_card(&mut start.state, &fuse_b.id, P1);
+    hand_card(&mut start.state, &slop.id, P1); // a Spell, not of the enemy card's type
+    let deck = set_library(&mut start.state, P1, &[felinor_c.id.clone(), lab.id.clone(), felinor_a.id.clone()]);
     MutateBoard {
         run: start,
         enemy,
@@ -727,7 +727,7 @@ mod e23_fuse_an_enemy_card_onto_one_of_yours_of_its_type_classic_78_radiant {
             in_hand,
             deck,
         } = mutate_board("fuse-mutate");
-        let spell = hand_card(&mut start.state, &mutate().id, P1);
+        let spell = hand_card(&mut start.state, &mutate.id, P1);
         let mut run1 = frozen(&start);
         let enemy_hero = run1.state.players.p2.hero.health;
         run1 = act(
@@ -768,7 +768,7 @@ mod e23_fuse_an_enemy_card_onto_one_of_yours_of_its_type_classic_78_radiant {
             .as_array()
             .and_then(|options| options.iter().find(|option| option["instanceId"] == json!(felinor_a_in_deck.id)))
             .map(|option| option["defId"].clone());
-        assert_eq!(offered, Some(json!(felinor_a().id)));
+        assert_eq!(offered, Some(json!(felinor_a.id.clone())));
 
         // JSON mid-prompt, and the answer: onto the deck card, which stays in the deck.
         let round = round_trip(&run1.state);
@@ -782,7 +782,7 @@ mod e23_fuse_an_enemy_card_onto_one_of_yours_of_its_type_classic_78_radiant {
         assert_eq!(kept.zone, Zone::Library { player: P1 });
         assert_eq!(
             fused_id_parts(Some(&live_run.state), &kept.def_id),
-            Some(vec![fuse_a().id, felinor_a().id])
+            Some(vec![fuse_a.id.clone(), felinor_a.id.clone()])
         );
         assert!(find_instance(&live_run.state, &enemy.id).is_none());
         assert!(live_run.state.players.p2.units[0].is_none());
@@ -793,9 +793,9 @@ mod e23_fuse_an_enemy_card_onto_one_of_yours_of_its_type_classic_78_radiant {
     fn r470_onto_a_field_card_it_is_r77s_target_a_trap_counts_as_a_field_trap_with_none_of_its_type_the_card_is_exiled()
      {
         let mut start = playing("fuse-mutate-trap");
-        let enemy_trap = put(&mut start.state, &plain_trap().id, slot(P2, Row::Backrow, 2));
-        let mine_trap = put(&mut start.state, &field_trap().id, slot(P1, Row::Backrow, 4));
-        let spell = hand_card(&mut start.state, &mutate().id, P1);
+        let enemy_trap = put(&mut start.state, &plain_trap.id, slot(P2, Row::Backrow, 2), json!({}));
+        let mine_trap = put(&mut start.state, &field_trap.id, slot(P1, Row::Backrow, 4), json!({}));
+        let spell = hand_card(&mut start.state, &mutate.id, P1);
         let mut run1 = frozen(&start);
         run1 = act(
             &run1,
@@ -821,10 +821,10 @@ mod e23_fuse_an_enemy_card_onto_one_of_yours_of_its_type_classic_78_radiant {
         );
 
         let mut lonely = playing("fuse-mutate-none");
-        let target = put(&mut lonely.state, &fuse_a().id, slot(P2, Row::Units, 3));
+        let target = put(&mut lonely.state, &fuse_a.id, slot(P2, Row::Units, 3), json!({}));
         lonely.state.players.p1.library = vec![];
         lonely.state.players.p1.hand = vec![];
-        let again = hand_card(&mut lonely.state, &mutate().id, P1);
+        let again = hand_card(&mut lonely.state, &mutate.id, P1);
         let mut run2 = frozen(&lonely);
         run2 = act(
             &run2,
@@ -845,7 +845,7 @@ mod e23_discover_twice_and_fuse_both_onto_this_classic_plus_30 {
     #[test]
     fn r77_two_chained_discovers_of_felinor_units_never_the_fuser_itself_b4_1_fused_onto_the_fuser_on_the_field() {
         let mut start = playing("fuse-felinor");
-        let card = hand_card(&mut start.state, &fuser().id, P1);
+        let card = hand_card(&mut start.state, &fuser.id, P1);
         let mut run1 = frozen(&start);
         run1 = act(&run1, input(json!({ "type": "play", "instanceId": card.id, "playerId": "p1" })));
 
@@ -858,8 +858,8 @@ mod e23_discover_twice_and_fuse_both_onto_this_classic_plus_30 {
                 _ => String::new(),
             })
             .collect();
-        assert!(!offered.contains(&fuser().id));
-        let felinors = [felinor_a().id, felinor_b().id, felinor_c().id];
+        assert!(!offered.contains(&fuser.id));
+        let felinors = [felinor_a.id.clone(), felinor_b.id.clone(), felinor_c.id.clone()];
         assert!(offered.iter().all(|id| felinors.contains(id)));
         assert_eq!(
             json_of(view_for(&run1.state, P2))["pending"],
@@ -876,7 +876,7 @@ mod e23_discover_twice_and_fuse_both_onto_this_classic_plus_30 {
         assert!(matches!(kept.zone, Zone::Field { .. }));
         let parts = must(fused_id_parts(Some(&run1.state), &kept.def_id), "a fused id");
         assert_eq!(parts.len(), 3);
-        assert_eq!(parts[2], fuser().id);
+        assert_eq!(parts[2], fuser.id.clone());
         let summed: i32 = parts
             .iter()
             .map(|id| def_of(Some(&run1.state), id).base.attack.unwrap_or(0))

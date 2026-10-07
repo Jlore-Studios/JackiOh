@@ -1193,7 +1193,7 @@ mod r184_deck_size_for_a_handicapped_seat {
     fn r184_b2_a_token_card_in_the_hard_deck_is_refused_naming_the_seat() {
         register_all();
         let mut with_token = vanilla_deck(29, 1);
-        with_token.push(token_def("rush").id);
+        with_token.push(token_def("rush", [Tag::Token]).id);
         let message =
             create_refusal(options("r184-token", (vanilla_deck(DECK_SIZE, 1), with_token), on_p2(AI_DIFFICULTY.hard)));
         assert!(message.is_some_and(|m| in_order(&m, &["p2", "is a Token card", "§2.6 L3"])));

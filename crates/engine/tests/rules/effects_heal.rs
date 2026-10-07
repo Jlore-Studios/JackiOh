@@ -90,7 +90,7 @@ mod heal_x_r19_m3_t1 {
     #[test]
     fn r19_heal_x_takes_damage_off_a_unit_and_never_past_its_max_health() {
         let mut state = new_game("heal-unit", None);
-        let unit = put(&mut state, &big_body().id, slot(PlayerId::P2, Row::Units, 1)); // 5/10
+        let unit = put(&mut state, &big_body.id, slot(PlayerId::P2, Row::Units, 1), json!({})); // 5/10
         live_mut(&mut state, &unit.id).damage = 6;
         let mut sink = sink_for(&state);
 
@@ -119,7 +119,7 @@ mod heal_x_r19_m3_t1 {
     #[test]
     fn the_cap_a_unit_heals_to_is_its_buffed_max_health_read_through_the_layers() {
         let mut state = new_game("heal-buffed", None);
-        let unit = put(&mut state, &big_body().id, slot(PlayerId::P1, Row::Units, 1)); // 5/10
+        let unit = put(&mut state, &big_body.id, slot(PlayerId::P1, Row::Units, 1), json!({})); // 5/10
         live_mut(&mut state, &unit.id).buffs = AttackHealth { attack: 0, health: 5 }; // layer 4: max health 15
         live_mut(&mut state, &unit.id).damage = 12;
         let mut sink = sink_for(&state);
@@ -166,7 +166,7 @@ mod heal_x_r19_m3_t1 {
     #[test]
     fn heals_nothing_when_there_is_no_target_and_a_non_positive_amount_does_nothing() {
         let mut state = new_game("heal-fizzle", None);
-        let unit = put(&mut state, &big_body().id, slot(PlayerId::P1, Row::Units, 1));
+        let unit = put(&mut state, &big_body.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         live_mut(&mut state, &unit.id).damage = 3;
         let mut sink = sink_for(&state);
 
@@ -188,7 +188,7 @@ mod heal_to_full_and_heal_up_to_n_m3_t1 {
     #[test]
     fn heal_to_full_removes_all_of_a_unit_s_damage_19() {
         let mut state = new_game("heal-full", None);
-        let unit = put(&mut state, &big_body().id, slot(PlayerId::P1, Row::Units, 1)); // 5/10
+        let unit = put(&mut state, &big_body.id, slot(PlayerId::P1, Row::Units, 1), json!({})); // 5/10
         live_mut(&mut state, &unit.id).damage = 9;
         let mut sink = sink_for(&state);
 
@@ -240,9 +240,9 @@ mod heal_to_full_and_heal_up_to_n_m3_t1 {
     #[test]
     fn heal_up_to_n_on_a_unit_stops_at_n_and_at_the_unit_s_max_health() {
         let mut state = new_game("heal-upto-unit", None);
-        let unit = put(&mut state, &big_body().id, slot(PlayerId::P1, Row::Units, 1)); // 5/10
+        let unit = put(&mut state, &big_body.id, slot(PlayerId::P1, Row::Units, 1), json!({})); // 5/10
         live_mut(&mut state, &unit.id).damage = 8; // health 2
-        let other = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 2)); // 3/3
+        let other = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 2), json!({})); // 3/3
         live_mut(&mut state, &other.id).damage = 2;
         let mut sink = sink_for(&state);
 

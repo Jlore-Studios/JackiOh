@@ -46,8 +46,8 @@ mod e7_set_health {
     #[test]
     fn sets_either_hero_s_health_up_or_down_with_no_pipeline_no_damage_no_heal_no_replacement() {
         let mut state = playing("dc-set-health");
-        let self_ = put(&mut state, &grunt().id, slot(PlayerId::P1, Row::Units, 1));
-        put(&mut state, &gambit().id, slot(PlayerId::P1, Row::Backrow, 1));
+        let self_ = put(&mut state, &grunt.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        put(&mut state, &gambit.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
         state.players[PlayerId::P1].hero.armor = 5;
         state.players[PlayerId::P2].hero.health = 40;
         let mut sink = sink_for(&state);
@@ -83,7 +83,7 @@ mod e7_set_health {
     #[test]
     fn a_target_that_is_not_a_hero_fizzles() {
         let mut state = playing("dc-set-health-unit");
-        let self_ = put(&mut state, &grunt().id, slot(PlayerId::P1, Row::Units, 1));
+        let self_ = put(&mut state, &grunt.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let mut sink = sink_for(&state);
         sink.apply(
             &mut state,
@@ -96,16 +96,16 @@ mod e7_set_health {
     #[test]
     fn r97_the_event_is_public_to_both_seats_and_the_game_replays() {
         let mut state = playing("dc-set-health-view");
-        let Some(spell) = in_hand(&mut state, &vital_kill().id, PlayerId::P1, 1).into_iter().next() else {
+        let Some(spell) = in_hand(&mut state, &vital_kill.id, PlayerId::P1, 1).into_iter().next() else {
             panic!("no spell");
         };
         let mut game = recorder(&state);
-        game.play(json_as(json!({
+        game.play(json!({
             "type": "play",
             "instanceId": spell.id,
             "targets": [{ "pick": "hero", "player": "p2" }],
             "playerId": "p1",
-        })));
+        }));
         for viewer in [PlayerId::P1, PlayerId::P2] {
             let seen: Vec<Value> = view_for(&game.state(), viewer)
                 .events
@@ -125,7 +125,7 @@ mod e8_convert_healing {
     #[test]
     fn installs_a_this_turn_modifier_heals_on_its_controller_s_enemies_become_pierce_damage_from_the_card() {
         let mut state = playing("dc-convert");
-        let moon = put(&mut state, &blood_moon().id, slot(PlayerId::P2, Row::Backrow, 2));
+        let moon = put(&mut state, &blood_moon.id, slot(PlayerId::P2, Row::Backrow, 2), json!({}));
         find_instance_mut(&mut state, &moon.id).expect("the card is in the state").face_up = Some(true);
         let mut sink = sink_for(&state);
         sink.apply(&mut state, &[convert_healing(Default::default())], Some(moon.id.as_str()));
@@ -148,7 +148,7 @@ mod e8_convert_healing {
         heal_hero(&mut sink.on(&mut state), PlayerId::P1, 7);
         assert_eq!(state.players[PlayerId::P1].hero.health, 23);
         // A unit of the enemy's: a heal of 3 on it deals 3.
-        let body = put(&mut state, &grunt().id, slot(PlayerId::P1, Row::Units, 1));
+        let body = put(&mut state, &grunt.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         sink.apply(
             &mut state,
             &[heal(json_as(json!({ "target": { "of": "instance", "instanceId": body.id }, "amount": 3 })))],
@@ -170,10 +170,10 @@ mod e8_convert_healing {
     #[test]
     fn a_converted_heal_is_a_new_damage_instance_divine_shield_and_the_lethal_window_meet_it() {
         let mut state = playing("dc-convert-lethal");
-        let moon = put(&mut state, &blood_moon().id, slot(PlayerId::P2, Row::Backrow, 2));
+        let moon = put(&mut state, &blood_moon.id, slot(PlayerId::P2, Row::Backrow, 2), json!({}));
         let mut sink = sink_for(&state);
         sink.apply(&mut state, &[convert_healing(Default::default())], Some(moon.id.as_str()));
-        put(&mut state, &gambit().id, slot(PlayerId::P1, Row::Backrow, 1));
+        put(&mut state, &gambit.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
         state.players[PlayerId::P1].hero.health = 3;
         heal_hero(&mut sink.on(&mut state), PlayerId::P1, 5);
         // p1's Final Gambit sent the 5 to p2's hero.

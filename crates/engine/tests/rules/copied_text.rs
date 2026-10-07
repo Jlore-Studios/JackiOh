@@ -18,7 +18,7 @@ use jackioh_engine::triggers::{SettleOptions, settle};
 use jackioh_engine::view_for::view_for;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
-use crate::rules::fixtures::copied_text::{ct, with_copied_text};
+use crate::rules::fixtures::copied_text::{CT, with_copied_text};
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
 
 /// TS's module-level `let nonce = 0`: every action this file sends gets a fresh nonce.
@@ -118,7 +118,7 @@ fn at_p2() -> Value {
 fn play_spell(mut state: GameState, def_id: &str, radiant: bool, player: PlayerId) -> GameState {
     let card = hand(&mut state, player, def_id, radiant);
     let mut body = json!({ "type": "play", "instanceId": card.id });
-    if def_id == ct().bolt.id {
+    if def_id == CT.bolt.id {
         let other = if player == P1 { P2 } else { P1 };
         body["targets"] = json!([{ "pick": "hero", "player": other }]);
     }
@@ -181,7 +181,7 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
     #[test]
     fn r399_with_no_spell_played_yet_it_has_no_text_its_play_declares_nothing_resolves_nothing_records_nothing() {
         let mut state = game("ct-empty", 9);
-        let echo = hand(&mut state, P1, &ct().echo.id, false);
+        let echo = hand(&mut state, P1, &CT.echo.id, false);
         assert_eq!(json_of(copied_text_of(&state, &echo)), Value::Null);
         assert_eq!(
             json_of(plays_of(&state, P1, &echo.id)),
@@ -199,10 +199,10 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
 
     #[test]
     fn r399_it_declares_the_copied_spells_targets_and_legal_actions_offers_exactly_the_copied_spells() {
-        let mut state = play_spell(game("ct-declare", 9), &ct().bolt.id, false, P1);
-        put(&mut state, &ct().dummy.id, slot(P2, Row::Units, 1));
-        let echo = hand(&mut state, P1, &ct().echo.id, false);
-        let bolt = hand(&mut state, P1, &ct().bolt.id, false);
+        let mut state = play_spell(game("ct-declare", 9), &CT.bolt.id, false, P1);
+        put(&mut state, &CT.dummy.id, slot(P2, Row::Units, 1), json!({}));
+        let echo = hand(&mut state, P1, &CT.echo.id, false);
+        let bolt = hand(&mut state, P1, &CT.bolt.id, false);
         assert_eq!(
             field_of_plays(&plays_of(&state, P1, &echo.id), "targets"),
             field_of_plays(&plays_of(&state, P1, &bolt.id), "targets")
@@ -218,15 +218,15 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
 
     #[test]
     fn r399_it_resolves_the_copied_face_a_radiant_bolts_number_through_the_copied_definitions_declared_value_r386() {
-        let mut radiant = play_spell(game("ct-face-r", 9), &ct().bolt.id, true, P1);
-        let echo = hand(&mut radiant, P1, &ct().echo.id, false);
+        let mut radiant = play_spell(game("ct-face-r", 9), &CT.bolt.id, true, P1);
+        let echo = hand(&mut radiant, P1, &CT.echo.id, false);
         let before = radiant.players.p2.hero.health;
         let events = act(&radiant, P1, json!({ "type": "play", "instanceId": echo.id, "targets": at_p2() })).events;
         assert_eq!(hero_hits(&events, P2), vec![4]);
         assert_eq!(radiant.players.p2.hero.health, before);
 
-        let mut base = play_spell(game("ct-face-b", 9), &ct().bolt.id, false, P1);
-        let echo2 = hand(&mut base, P1, &ct().echo.id, false);
+        let mut base = play_spell(game("ct-face-b", 9), &CT.bolt.id, false, P1);
+        let echo2 = hand(&mut base, P1, &CT.echo.id, false);
         let base_events =
             act(&base, P1, json!({ "type": "play", "instanceId": echo2.id, "targets": at_p2() })).events;
         assert_eq!(hero_hits(&base_events, P2), vec![2]);
@@ -235,26 +235,26 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
     #[test]
     fn r399_b5_e4_a_played_copier_records_the_spell_it_copied_on_its_face_never_itself_so_a_second_one_copies_the_same_spell()
      {
-        let mut state = play_spell(game("ct-record", 9), &ct().ping.id, true, P1);
-        state = play_spell(state, &ct().echo.id, false, P1);
-        assert_eq!(json_of(last_spell_played(&state)), json!({ "defId": ct().ping.id, "radiant": true }));
-        let second = hand(&mut state, P1, &ct().echo.id, false);
+        let mut state = play_spell(game("ct-record", 9), &CT.ping.id, true, P1);
+        state = play_spell(state, &CT.echo.id, false, P1);
+        assert_eq!(json_of(last_spell_played(&state)), json!({ "defId": CT.ping.id, "radiant": true }));
+        let second = hand(&mut state, P1, &CT.echo.id, false);
         assert_eq!(
             json_of(copied_text_of(&state, &second)),
-            json!({ "defId": ct().ping.id, "radiant": true })
+            json!({ "defId": CT.ping.id, "radiant": true })
         );
         let ReduceResult { state: after, events, .. } =
             act(&state, P1, json!({ "type": "play", "instanceId": second.id }));
         assert_eq!(hero_hits(&events, P2), vec![3]);
-        assert_eq!(json_of(last_spell_played(&after)), json!({ "defId": ct().ping.id, "radiant": true }));
+        assert_eq!(json_of(last_spell_played(&after)), json!({ "defId": CT.ping.id, "radiant": true }));
     }
 
     #[test]
     fn r399_the_copied_modes_are_declared_with_the_play_and_resolved() {
         let mut state = game("ct-modes", 9);
-        let modal = hand(&mut state, P1, &ct().modal.id, false);
+        let modal = hand(&mut state, P1, &CT.modal.id, false);
         let mut after = act(&state, P1, json!({ "type": "play", "instanceId": modal.id, "modes": ["hit"] })).state;
-        let echo = hand(&mut after, P1, &ct().echo.id, false);
+        let echo = hand(&mut after, P1, &CT.echo.id, false);
         assert_eq!(
             field_of_plays(&plays_of(&after, P1, &echo.id), "modes"),
             vec![json!(["hit"]), json!(["heal"])]
@@ -267,10 +267,10 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
     #[test]
     fn r545_an_x_cost_text_x_is_chosen_with_the_play_from_1_up_to_the_mana_left_once_the_copiers_own_price_is_paid() {
         let mut state = game("ct-x", 4);
-        let x_bolt = hand(&mut state, P1, &ct().x_bolt.id, false);
+        let x_bolt = hand(&mut state, P1, &CT.x_bolt.id, false);
         state = act(&state, P1, json!({ "type": "play", "instanceId": x_bolt.id, "x": 1 })).state;
         assert_eq!(state.players.p1.mana.current, 3);
-        let echo = hand(&mut state, P1, &ct().echo.id, false);
+        let echo = hand(&mut state, P1, &CT.echo.id, false);
         // 3 mana: the copier costs 1, so X is 1 or 2.
         assert_eq!(field_of_plays(&plays_of(&state, P1, &echo.id), "x"), vec![json!(1), json!(2)]);
         assert!(
@@ -294,10 +294,10 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
     #[test]
     fn r545_with_no_mana_left_after_the_copiers_price_an_x_cost_text_cannot_be_played_at_all() {
         let mut state = game("ct-x-none", 2);
-        let x_bolt = hand(&mut state, P1, &ct().x_bolt.id, false);
+        let x_bolt = hand(&mut state, P1, &CT.x_bolt.id, false);
         state = act(&state, P1, json!({ "type": "play", "instanceId": x_bolt.id, "x": 1 })).state;
         assert_eq!(state.players.p1.mana.current, 1);
-        let echo = hand(&mut state, P1, &ct().echo.id, false);
+        let echo = hand(&mut state, P1, &CT.echo.id, false);
         assert_eq!(json_of(plays_of(&state, P1, &echo.id)), json!([]));
         assert!(
             error_of(&attempt(&state, P1, json!({ "type": "play", "instanceId": echo.id, "x": 1 })))
@@ -308,9 +308,9 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
     #[test]
     fn r545_b5_e12_a_cast_copier_with_an_x_cost_text_asks_its_caster_for_x_as_any_cast_x_card() {
         let mut state = game("ct-x-cast", 3);
-        let x_bolt = hand(&mut state, P1, &ct().x_bolt.id, false);
+        let x_bolt = hand(&mut state, P1, &CT.x_bolt.id, false);
         state = act(&state, P1, json!({ "type": "play", "instanceId": x_bolt.id, "x": 1 })).state;
-        let echo = new_instance(&mut state, &ct().echo.id, P1, Zone::Hand { player: P1 });
+        let echo = new_instance(&mut state, &CT.echo.id, P1, Zone::Hand { player: P1 });
         let mut sink = Sink::for_state(&state);
         cast_card(&mut sink.on(&mut state), &echo, CastOptions::default());
         settle(&mut sink.on(&mut state), SettleOptions::default());
@@ -333,9 +333,9 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
     #[test]
     fn r545_an_embiggen_text_resolves_at_its_base_price_the_copier_pays_its_own_and_offers_no_embiggen_choice() {
         let mut state = game("ct-embiggen", 9);
-        let bigger = hand(&mut state, P1, &ct().bigger.id, false);
+        let bigger = hand(&mut state, P1, &CT.bigger.id, false);
         state = act(&state, P1, json!({ "type": "play", "instanceId": bigger.id, "embiggen": true })).state;
-        let echo = hand(&mut state, P1, &ct().echo.id, false);
+        let echo = hand(&mut state, P1, &CT.echo.id, false);
         assert_eq!(
             json_of(plays_of(&state, P1, &echo.id)),
             json!([{ "type": "play", "instanceId": echo.id }])
@@ -356,12 +356,12 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
     fn r546_a_prompt_in_the_copied_text_resumes_into_the_copied_definition_after_a_json_round_trip_with_its_declared_number()
      {
         let mut state = game("ct-prompt", 9);
-        let dummy = put(&mut state, &ct().dummy.id, slot(P2, Row::Units, 1));
-        let asker = hand(&mut state, P1, &ct().asker.id, true);
+        let dummy = put(&mut state, &CT.dummy.id, slot(P2, Row::Units, 1), json!({}));
+        let asker = hand(&mut state, P1, &CT.asker.id, true);
         state = act(&state, P1, json!({ "type": "play", "instanceId": asker.id })).state;
         assert_eq!(
             state.pending.as_ref().map(|pending| pending.resume.def_id.clone()),
-            Some(ct().asker.id)
+            Some(CT.asker.id.clone())
         );
         let choice = pending_id(&state);
         state = act(
@@ -372,12 +372,12 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
         .state;
         assert_eq!(top_unit(&state, P2, 1).map(|card| card.damage), Some(6));
 
-        let echo = hand(&mut state, P1, &ct().echo.id, false);
+        let echo = hand(&mut state, P1, &CT.echo.id, false);
         state = act(&state, P1, json!({ "type": "play", "instanceId": echo.id })).state;
         let pending = state.pending.clone().expect("a prompt");
         assert_eq!(pending.player_id, P1);
         // The continuation names the copied Spell's definition and face, with the copier as its card.
-        assert_eq!(pending.resume.def_id, ct().asker.id);
+        assert_eq!(pending.resume.def_id, CT.asker.id);
         assert!(pending.resume.radiant);
         assert_eq!(pending.resume.instance_id.as_deref(), Some(echo.id.as_str()));
         let round = round_trip(&state);
@@ -399,20 +399,20 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
     #[test]
     fn r546_the_copy_is_fixed_as_the_play_begins_a_spell_its_own_resolution_casts_changes_neither_it_nor_its_echo_repeat()
      {
-        let mut state = play_spell(game("ct-fixed", 9), &ct().caster.id, false, P1);
-        assert_eq!(json_of(last_spell_played(&state)), json!({ "defId": ct().ping.id, "radiant": false }));
+        let mut state = play_spell(game("ct-fixed", 9), &CT.caster.id, false, P1);
+        assert_eq!(json_of(last_spell_played(&state)), json!({ "defId": CT.ping.id, "radiant": false }));
         // Every caster play leaves the ping it cast as the last Spell, so the record is set to the one a
         // caster that had cast nothing would leave; then a Radiant copier copies it.
         state.last_spell = Some(PlayRecord {
-            def_id: ct().caster.id,
+            def_id: CT.caster.id.clone(),
             radiant: false,
         });
-        let echo = hand(&mut state, P1, &ct().echo.id, true);
+        let echo = hand(&mut state, P1, &CT.echo.id, true);
         let ReduceResult { state: after, events, .. } =
             act(&state, P1, json!({ "type": "play", "instanceId": echo.id }));
         // Each resolution casts a ping (1) and then deals 5: twice, though the ping is last after the first.
         assert_eq!(hero_hits(&events, P2), vec![1, 5, 1, 5]);
-        assert_eq!(json_of(last_spell_played(&after)), json!({ "defId": ct().ping.id, "radiant": false }));
+        assert_eq!(json_of(last_spell_played(&after)), json!({ "defId": CT.ping.id, "radiant": false }));
         assert!(
             after
                 .players
@@ -427,9 +427,9 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
 
     #[test]
     fn r546_radiant_echo_1_repeats_the_copied_text_asking_a_fresh_pick_for_the_repeat() {
-        let mut state = play_spell(game("ct-repeat", 9), &ct().bolt.id, false, P1);
-        let dummy = put(&mut state, &ct().dummy.id, slot(P2, Row::Units, 1));
-        let echo = hand(&mut state, P1, &ct().echo.id, true);
+        let mut state = play_spell(game("ct-repeat", 9), &CT.bolt.id, false, P1);
+        let dummy = put(&mut state, &CT.dummy.id, slot(P2, Row::Units, 1), json!({}));
+        let echo = hand(&mut state, P1, &CT.echo.id, true);
         state = act(&state, P1, json!({ "type": "play", "instanceId": echo.id, "targets": at_p2() })).state;
         let pending = state.pending.clone().expect("a prompt");
         assert!(pending.prompt.contains("Echo"));
@@ -445,14 +445,14 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
 
     #[test]
     fn r546_a_copied_faces_own_echo_x_adds_to_the_copiers_own() {
-        let mut base = play_spell(game("ct-echo-sum-b", 9), &ct().echo_spell.id, false, P1);
-        let echo = hand(&mut base, P1, &ct().echo.id, false);
+        let mut base = play_spell(game("ct-echo-sum-b", 9), &CT.echo_spell.id, false, P1);
+        let echo = hand(&mut base, P1, &CT.echo.id, false);
         assert_eq!(
             hero_hits(&act(&base, P1, json!({ "type": "play", "instanceId": echo.id })).events, P2),
             vec![1, 1]
         );
-        let mut radiant = play_spell(game("ct-echo-sum-r", 9), &ct().echo_spell.id, false, P1);
-        let echo_r = hand(&mut radiant, P1, &ct().echo.id, true);
+        let mut radiant = play_spell(game("ct-echo-sum-r", 9), &CT.echo_spell.id, false, P1);
+        let echo_r = hand(&mut radiant, P1, &CT.echo.id, true);
         assert_eq!(
             hero_hits(&act(&radiant, P1, json!({ "type": "play", "instanceId": echo_r.id })).events, P2),
             vec![1, 1, 1]
@@ -461,24 +461,24 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
 
     #[test]
     fn r399_b5_e1_a_countered_spell_is_never_recorded_so_it_is_not_copied_nor_is_a_countered_copier() {
-        let mut state = play_spell(game("ct-countered", 9), &ct().ping.id, false, P1);
-        put(&mut state, &ct().counter.id, slot(P1, Row::Backrow, 1));
+        let mut state = play_spell(game("ct-countered", 9), &CT.ping.id, false, P1);
+        put(&mut state, &CT.counter.id, slot(P1, Row::Backrow, 1), json!({}));
         state = act(&state, P1, json!({ "type": "endTurn" })).state;
         state.players.p2.mana.current = 9;
-        let bolt = hand(&mut state, P2, &ct().bolt.id, false);
+        let bolt = hand(&mut state, P2, &CT.bolt.id, false);
         state = act(
             &state,
             P2,
             json!({ "type": "play", "instanceId": bolt.id, "targets": [{ "pick": "hero", "player": "p1" }] }),
         )
         .state;
-        assert_eq!(json_of(last_spell_played(&state)), json!({ "defId": ct().ping.id, "radiant": false }));
+        assert_eq!(json_of(last_spell_played(&state)), json!({ "defId": CT.ping.id, "radiant": false }));
         // The trap is spent; a second trap counters p2's copier, which records nothing either.
-        put(&mut state, &ct().counter.id, slot(P1, Row::Backrow, 2));
-        let echo = hand(&mut state, P2, &ct().echo.id, false);
+        put(&mut state, &CT.counter.id, slot(P1, Row::Backrow, 2), json!({}));
+        let echo = hand(&mut state, P2, &CT.echo.id, false);
         assert_eq!(
             json_of(copied_text_of(&state, &echo)),
-            json!({ "defId": ct().ping.id, "radiant": false })
+            json!({ "defId": CT.ping.id, "radiant": false })
         );
         let events = act(&state, P2, json!({ "type": "play", "instanceId": echo.id })).events;
         assert_eq!(events_of_type(&events, GameEventType::Countered).len(), 1);
@@ -487,35 +487,35 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
 
     #[test]
     fn r399_a_field_spell_is_never_the_last_spell() {
-        let mut state = play_spell(game("ct-field", 9), &ct().ping.id, false, P1);
-        let field = hand(&mut state, P1, &ct().field.id, false);
+        let mut state = play_spell(game("ct-field", 9), &CT.ping.id, false, P1);
+        let field = hand(&mut state, P1, &CT.field.id, false);
         state = act(&state, P1, json!({ "type": "play", "instanceId": field.id })).state;
-        assert_eq!(json_of(last_spell_played(&state)), json!({ "defId": ct().ping.id, "radiant": false }));
+        assert_eq!(json_of(last_spell_played(&state)), json!({ "defId": CT.ping.id, "radiant": false }));
     }
 
     #[test]
     fn r399_a_cast_copier_copies_the_spell_that_is_last_as_the_cast_begins_r70() {
-        let mut state = play_spell(game("ct-cast", 9), &ct().ping.id, true, P1);
-        let echo = new_instance(&mut state, &ct().echo.id, P1, Zone::Hand { player: P1 });
+        let mut state = play_spell(game("ct-cast", 9), &CT.ping.id, true, P1);
+        let echo = new_instance(&mut state, &CT.echo.id, P1, Zone::Hand { player: P1 });
         let mut sink = Sink::for_state(&state);
         cast_card(&mut sink.on(&mut state), &echo, CastOptions::default());
         settle(&mut sink.on(&mut state), SettleOptions::default());
         assert_eq!(hero_hits(&sink.events, P2), vec![3]);
-        assert_eq!(json_of(last_spell_played(&state)), json!({ "defId": ct().ping.id, "radiant": true }));
+        assert_eq!(json_of(last_spell_played(&state)), json!({ "defId": CT.ping.id, "radiant": true }));
     }
 
     #[test]
     fn r547_a_copier_drawn_while_the_last_spell_casts_on_draw_is_cast_and_the_draw_repeats() {
         let mut state = game("ct-draw-cast", 9);
-        let first = new_instance(&mut state, &ct().draw_cast.id, P1, Zone::Hand { player: P1 });
+        let first = new_instance(&mut state, &CT.draw_cast.id, P1, Zone::Hand { player: P1 });
         let mut sink = Sink::for_state(&state);
         cast_card(&mut sink.on(&mut state), &first, CastOptions::default());
         settle(&mut sink.on(&mut state), SettleOptions::default());
         assert_eq!(
             json_of(last_spell_played(&state)),
-            json!({ "defId": ct().draw_cast.id, "radiant": false })
+            json!({ "defId": CT.draw_cast.id, "radiant": false })
         );
-        let library = set_library(&mut state, P1, &[ct().echo.id, ct().ping.id]);
+        let library = set_library(&mut state, P1, &[CT.echo.id.clone(), CT.ping.id.clone()]);
         let echo = library.first().cloned().expect("the copier on top");
         let next = library.get(1).cloned().expect("the ping beneath");
         let mut drawing = Sink::for_state(&state);
@@ -528,8 +528,8 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
 
     #[test]
     fn r547_a_copier_drawn_while_the_last_spell_does_not_cast_on_draw_goes_to_the_hand() {
-        let mut state = play_spell(game("ct-draw-plain", 9), &ct().ping.id, false, P1);
-        let library = set_library(&mut state, P1, &[ct().echo.id, ct().ping.id]);
+        let mut state = play_spell(game("ct-draw-plain", 9), &CT.ping.id, false, P1);
+        let library = set_library(&mut state, P1, &[CT.echo.id.clone(), CT.ping.id.clone()]);
         let echo = library.first().cloned().expect("the copier on top");
         let mut drawing = Sink::for_state(&state);
         draw(&mut drawing.on(&mut state), P1, 1);
@@ -541,13 +541,13 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
     #[test]
     fn r547_the_copied_faces_preview_and_yellow_glow_answer_for_the_copier_in_hand_on_that_faces_numbers() {
         let mut state = game("ct-glow", 9);
-        let glow = hand(&mut state, P1, &ct().glow.id, true);
+        let glow = hand(&mut state, P1, &CT.glow.id, true);
         state = act(&state, P1, json!({ "type": "play", "instanceId": glow.id, "targets": at_p2() })).state;
-        let echo = hand(&mut state, P1, &ct().echo.id, false);
+        let echo = hand(&mut state, P1, &CT.echo.id, false);
         assert!(running_script_of(&state, &echo).preview.is_some());
         assert!(matches_object(
             &json_of(text_face_of(&state, &echo)),
-            &json!({ "id": echo.id, "defId": ct().glow.id, "radiant": true })
+            &json!({ "id": echo.id, "defId": CT.glow.id, "radiant": true })
         ));
         let view = json_of(view_for(&state, P1));
         let card = held_in(&view["you"]["hand"], &echo.id);
@@ -558,21 +558,21 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
     #[test]
     fn r399_r243_the_owners_hand_view_carries_the_copied_face_and_its_numbers_the_opponents_never_names_the_card() {
         let mut empty = game("ct-view-empty", 9);
-        let blank = hand(&mut empty, P1, &ct().echo.id, false);
+        let blank = hand(&mut empty, P1, &CT.echo.id, false);
         let blank_view = json_of(view_for(&empty, P1));
         let blank_card = held_in(&blank_view["you"]["hand"], &blank.id);
         assert!(!blank_card.is_null());
         assert!(blank_card.get("copies").is_none());
 
-        let mut state = play_spell(game("ct-view", 9), &ct().bolt.id, true, P1);
-        let echo = hand(&mut state, P1, &ct().echo.id, false);
+        let mut state = play_spell(game("ct-view", 9), &CT.bolt.id, true, P1);
+        let echo = hand(&mut state, P1, &CT.echo.id, false);
         let own = json_of(view_for(&state, P1));
         let card = held_in(&own["you"]["hand"], &echo.id);
-        assert_eq!(card["defId"], json!(ct().echo.id));
+        assert_eq!(card["defId"], json!(CT.echo.id));
         assert_eq!(card["cost"], json!(1));
         assert_eq!(
             card["copies"],
-            json!({ "defId": ct().bolt.id, "radiant": true, "params": { "damage": 4 } })
+            json!({ "defId": CT.bolt.id, "radiant": true, "params": { "damage": 4 } })
         );
         let theirs = json_of(view_for(&state, P2));
         assert_eq!(theirs["opponent"]["hand"], json!({ "count": state.players.p1.hand.len() }));

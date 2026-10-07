@@ -123,12 +123,12 @@ fn deck_of(quick: i32, cast: i32, size: Option<i32>) -> Vec<String> {
     let rest = size.unwrap_or(DECK_SIZE) - quick - cast;
     let mut deck: Vec<String> = (0..quick).map(|at| qd(at + 1)).collect();
     deck.extend((0..cast).map(|at| cod(at + 1)));
-    deck.extend(vanilla_deck(Some(rest), Some(1)));
+    deck.extend(vanilla_deck(rest, 1));
     deck
 }
 
 fn other() -> Vec<String> {
-    vanilla_deck(Some(DECK_SIZE), Some(21))
+    vanilla_deck(DECK_SIZE, 21)
 }
 
 /// TS `start(...)` returned `{ game, begun }`; every test reads `begun` only, so this returns it.
@@ -383,7 +383,7 @@ mod r635_cast_on_draw_cards_sit_out_the_deal_and_are_shuffled_in_after_the_mulli
     fn r635_a_card_that_is_both_quickdraw_and_cast_on_draw_is_dealt_as_a_quickdraw_card_never_cast() {
         for n in 0..20 {
             let mut deck = vec![DUAL.to_string()];
-            deck.extend(vanilla_deck(Some(DECK_SIZE - 1), Some(1)));
+            deck.extend(vanilla_deck(DECK_SIZE - 1, 1));
             let begun = start(&format!("r635-dual-{n}"), (other(), deck), None);
             let hand = &begun.state.players.p2.hand;
             assert!(defs_of(hand).contains(&DUAL.to_string()));

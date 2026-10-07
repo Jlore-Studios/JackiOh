@@ -185,7 +185,7 @@ mod r22_r74_make_radiant_on_a_named_card_s6_3_s5_2_m3_t1 {
     #[test]
     fn r22_c81_targets_the_card_whose_script_is_running_so_radiant_saintess_includes_itself() {
         let mut state = game("radiant-test");
-        let saintess = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 4), json!({}));
+        let saintess = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 4), json!({}));
 
         let events = run(
             &mut state,
@@ -204,7 +204,7 @@ mod r22_r74_make_radiant_on_a_named_card_s6_3_s5_2_m3_t1 {
         let mut state = game("radiant-test");
         let unit = put(
             &mut state,
-            &plain().id,
+            &plain.id,
             slot(PlayerId::P1, Row::Units, 1),
             json!({ "radiant": true }),
         );
@@ -230,7 +230,7 @@ mod r22_r74_make_radiant_on_a_named_card_s6_3_s5_2_m3_t1 {
     #[test]
     fn s5_2_swaps_a_hand_cards_stats_and_text_where_it_sits() {
         let mut state = game("radiant-test");
-        let held = in_hand(&mut state, &plain().id, PlayerId::P1, 1)
+        let held = in_hand(&mut state, &plain.id, PlayerId::P1, 1)
             .into_iter()
             .next()
             .expect("a hand card");
@@ -264,7 +264,7 @@ mod r60_make_radiant_at_random_m3_t1 {
     #[test]
     fn r60_chooses_only_among_non_radiant_cards() {
         let mut state = game("radiant-test");
-        let hand = in_hand(&mut state, &plain().id, PlayerId::P1, 3);
+        let hand = in_hand(&mut state, &plain.id, PlayerId::P1, 3);
         find_instance_mut(&mut state, &hand[0].id).expect("hand card").radiant = true;
         find_instance_mut(&mut state, &hand[2].id).expect("hand card").radiant = true;
 
@@ -284,7 +284,7 @@ mod r60_make_radiant_at_random_m3_t1 {
     #[test]
     fn r60_r177_r129_changes_no_card_and_draws_nothing_when_no_non_radiant_card_is_left_though_the_hidden_hand_is_cued() {
         let mut state = game("radiant-test");
-        let hand = in_hand(&mut state, &plain().id, PlayerId::P1, 2);
+        let hand = in_hand(&mut state, &plain.id, PlayerId::P1, 2);
         for card in &hand {
             find_instance_mut(&mut state, &card.id).expect("hand card").radiant = true;
         }
@@ -301,9 +301,9 @@ mod r60_make_radiant_at_random_m3_t1 {
     #[test]
     fn r60_c28_picks_n_different_cards_from_the_union_of_hand_library_and_field() {
         let mut state = game("radiant-test");
-        let hand = in_hand(&mut state, &plain().id, PlayerId::P1, 2);
-        let library = set_library(&mut state, PlayerId::P1, &[plain().id.as_str(), crier().id.as_str()]);
-        let on_field = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let hand = in_hand(&mut state, &plain.id, PlayerId::P1, 2);
+        let library = set_library(&mut state, PlayerId::P1, &[plain.id.as_str(), crier().id.as_str()]);
+        let on_field = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let pool: Vec<CardInstance> = hand.iter().chain(library.iter()).cloned().chain([on_field]).collect();
 
         let events = run(
@@ -321,8 +321,8 @@ mod r60_make_radiant_at_random_m3_t1 {
 
         // More than the pool holds takes all of it (R60).
         let mut all = game("radiant-test");
-        let all_hand = in_hand(&mut all, &plain().id, PlayerId::P1, 2);
-        let all_field = put(&mut all, &plain().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let all_hand = in_hand(&mut all, &plain.id, PlayerId::P1, 2);
+        let all_field = put(&mut all, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let everything = run(
             &mut all,
             at_random(json!({ "zones": ["hand", "field"], "count": 9 })),
@@ -336,8 +336,8 @@ mod r60_make_radiant_at_random_m3_t1 {
     #[test]
     fn r13_offers_only_the_top_of_a_stack_pile_never_the_dormant_card_beneath() {
         let mut state = game("radiant-test");
-        let beneath = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 3), json!({}));
-        let mut top = new_instance(&mut state, &stacker().id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let beneath = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
+        let mut top = new_instance(&mut state, &stacker.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
         assert!(place_on_field(
             &mut state,
             &mut top,
@@ -354,11 +354,11 @@ mod r60_make_radiant_at_random_m3_t1 {
     #[test]
     fn reads_the_enemys_zone_when_the_effect_names_it() {
         let mut state = game("radiant-test");
-        let mine = in_hand(&mut state, &plain().id, PlayerId::P1, 1)
+        let mine = in_hand(&mut state, &plain.id, PlayerId::P1, 1)
             .into_iter()
             .next()
             .expect("p1's card");
-        let theirs = in_hand(&mut state, &plain().id, PlayerId::P2, 1)
+        let theirs = in_hand(&mut state, &plain.id, PlayerId::P2, 1)
             .into_iter()
             .next()
             .expect("p2's card");
@@ -378,7 +378,7 @@ mod r60_make_radiant_at_random_m3_t1 {
     fn draws_from_the_match_rng_so_the_same_seed_picks_the_same_cards_and_another_seed_does_not() {
         let picks = |seed: &str| -> Vec<String> {
             let mut state = game(seed);
-            in_hand(&mut state, &plain().id, PlayerId::P1, 6);
+            in_hand(&mut state, &plain.id, PlayerId::P1, 6);
             radiant_ids(&run(&mut state, at_random(json!({ "zones": "hand", "count": 2 })), None, as_p1()))
         };
 
@@ -386,7 +386,7 @@ mod r60_make_radiant_at_random_m3_t1 {
         assert_ne!(picks("radiant-seed-a"), picks("radiant-seed-b"));
         // The pick also moves the cursor on, so nothing draws the same numbers twice.
         let mut state = game("radiant-test");
-        in_hand(&mut state, &plain().id, PlayerId::P1, 6);
+        in_hand(&mut state, &plain.id, PlayerId::P1, 6);
         assert_eq!(state.rng_cursor, 0);
         run(&mut state, at_random(json!({ "zones": "hand", "count": 2 })), None, as_p1());
         assert!(state.rng_cursor > 0);

@@ -307,7 +307,7 @@ fn playing(seed: &str) -> GameState {
     state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }));
     let keep = ids(&state.players.p2.hand);
     state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }));
-    put(&mut state, &log_card().id, slot(P1, Row::Backrow, NOTE_LANE as i32));
+    put(&mut state, &log_card().id, slot(P1, Row::Backrow, NOTE_LANE as i32), json!({}));
     state
 }
 
@@ -352,7 +352,7 @@ fn survives_json<T: serde::Serialize + serde::de::DeserializeOwned + PartialEq +
 /// Put a unit on the board with the buff R78 will strip as it leaves, and mark it for the check.
 /// A destroy mark is §4.5 step 1's other way in, so the fixture needs no damage arithmetic (§6.3).
 fn doomed(state: &mut GameState, def_id: &str, player: PlayerId, lane: i32) -> CardInstance {
-    let card = put(state, def_id, slot(player, Row::Units, lane));
+    let card = put(state, def_id, slot(player, Row::Units, lane), json!({}));
     let live = find_instance_mut(state, &card.id).expect("the doomed card on the field");
     live.buffs = AttackHealth { attack: 3, health: 0 };
     live.marked_destroyed = Some(true);

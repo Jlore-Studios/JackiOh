@@ -426,13 +426,3 @@ pub fn catalog() -> CardDefs {
 pub fn scripts() -> IndexMap<String, CardScripts> {
     FIXTURE_SCRIPTS.clone()
 }
-
-/// `FIXTURE_SCRIPTS` as a call, for a caller that names the TS constant as a function.
-pub fn fixture_scripts() -> IndexMap<String, CardScripts> {
-    FIXTURE_SCRIPTS.clone()
-}
-
-/// `FIXTURE_DEFS` as a call.
-pub fn fixture_defs() -> Vec<CardDef> {
-    FIXTURE_DEFS.clone()
-}

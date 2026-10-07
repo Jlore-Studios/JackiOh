@@ -114,7 +114,7 @@ fn unit_at(state: &GameState, player: PlayerId, lane: i32) -> CardInstance {
 }
 
 fn hand_card(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
-    in_hand(state, def_id, player, None)
+    in_hand(state, def_id, player, 1)
         .into_iter()
         .next()
         .unwrap_or_else(|| panic!("could not add {def_id} to {player}'s hand"))
@@ -149,7 +149,7 @@ mod positions_and_exertion_m2_t1 {
     #[test]
     fn units_enter_the_field_in_attack_position_4_1() {
         let mut state = playing("enter-atk");
-        let card = hand_card(&mut state, &plain().id, P1);
+        let card = hand_card(&mut state, &plain.id, P1);
         let mut played = act(
             &state,
             input(json!({
@@ -163,14 +163,14 @@ mod positions_and_exertion_m2_t1 {
         assert_eq!(view.armor, 0);
 
         // A unit put on the field by anything else enters the same way.
-        let summoned = put(&mut played, &plain().id, slot(P1, Row::Units, 4), Default::default());
+        let summoned = put(&mut played, &plain.id, slot(P1, Row::Units, 4), Default::default());
         assert_eq!(view_of(&played, &summoned.id).position, Position::Atk);
     }
 
     #[test]
     fn r6_a_unit_that_switched_position_cannot_attack_that_turn() {
         let mut state = playing("switch-then-attack");
-        put(&mut state, &plain().id, slot(P1, Row::Units, 1), Default::default());
+        put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
 
         let first = unit_at(&state, P1, 1).id;
         state = act(&state, input(json!({ "type": "switchPosition", "instanceId": first, "playerId": "p1" })));
@@ -213,7 +213,7 @@ mod positions_and_exertion_m2_t1 {
     #[test]
     fn a_unit_that_attacked_cannot_switch_position_that_turn_4_1() {
         let mut state = playing("attack-then-switch");
-        put(&mut state, &plain().id, slot(P1, Row::Units, 1), Default::default());
+        put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
 
         let attacker = unit_at(&state, P1, 1).id;
         state = act(
@@ -238,8 +238,8 @@ mod positions_and_exertion_m2_t1 {
     #[test]
     fn resets_both_exertions_at_the_controllers_next_turn_not_the_opponents_4_1() {
         let mut state = playing("exertion-reset");
-        put(&mut state, &plain().id, slot(P1, Row::Units, 1), Default::default());
-        put(&mut state, &plain().id, slot(P1, Row::Units, 2), Default::default());
+        put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
+        put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default());
 
         let first = unit_at(&state, P1, 1).id;
         state = act(
@@ -281,8 +281,8 @@ mod positions_and_exertion_m2_t1 {
     #[test]
     fn r49_deft_duelist_attacks_and_switches_in_one_turn() {
         let mut state = playing("deft-duelist");
-        put(&mut state, &deft_duelist().id, slot(P1, Row::Units, 1), Default::default());
-        put(&mut state, &plain().id, slot(P1, Row::Units, 2), Default::default());
+        put(&mut state, &deft_duelist.id, slot(P1, Row::Units, 1), Default::default());
+        put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default());
 
         // The plain unit gets one exertion only; the Duelist gets both.
         let first = unit_at(&state, P1, 1).id;
@@ -337,7 +337,7 @@ mod positions_and_exertion_m2_t1 {
     #[test]
     fn r20_a_unit_switched_by_a_spell_keeps_its_exertion() {
         let mut state = playing("r20");
-        let unit = put(&mut state, &plain().id, slot(P1, Row::Units, 1), Default::default());
+        let unit = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
 
         let (to_defense_events, to_defense_error) = switch_by_effect(&mut state, &unit, None);
         assert_eq!(to_defense_error, None);
@@ -374,9 +374,9 @@ mod positions_and_exertion_m2_t1 {
     #[test]
     fn defense_position_grants_taunt_4_1() {
         let mut state = playing("defense-taunt");
-        let attacker = put(&mut state, &plain().id, slot(P1, Row::Units, 1), Default::default());
-        let open = put(&mut state, &plain().id, slot(P2, Row::Units, 1), Default::default());
-        let defender = put(&mut state, &plain().id, slot(P2, Row::Units, 2), Default::default());
+        let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
+        let open = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
+        let defender = put(&mut state, &plain.id, slot(P2, Row::Units, 2), Default::default());
 
         assert_eq!(attack_targets(&state, by_id(&state, &attacker.id)).len(), 3); // both units and the hero
 
@@ -405,9 +405,9 @@ mod positions_and_exertion_m2_t1 {
     #[test]
     fn defense_armor_1_stacks_with_printed_armor_and_big_d_fenders_aura_4_1() {
         let mut state = playing("defense-armor");
-        let armour = put(&mut state, &armoured().id, slot(P1, Row::Units, 1), Default::default());
-        let dfender = put(&mut state, &big_dfender().id, slot(P1, Row::Units, 2), Default::default());
-        let enemy = put(&mut state, &armoured().id, slot(P2, Row::Units, 1), Default::default());
+        let armour = put(&mut state, &armoured.id, slot(P1, Row::Units, 1), Default::default());
+        let dfender = put(&mut state, &big_dfender.id, slot(P1, Row::Units, 2), Default::default());
+        let enemy = put(&mut state, &armoured.id, slot(P2, Row::Units, 1), Default::default());
 
         // In Attack Position neither the position bonus nor the aura applies.
         assert_eq!(view_of(&state, &armour.id).armor, 7);
@@ -434,10 +434,10 @@ mod positions_and_exertion_m2_t1 {
 
         // Radiant Big D-fender gives +4 instead.
         let mut radiant_state = playing("defense-armor-radiant");
-        let radiant_armour = put(&mut radiant_state, &armoured().id, slot(P1, Row::Units, 1), Default::default());
+        let radiant_armour = put(&mut radiant_state, &armoured.id, slot(P1, Row::Units, 1), Default::default());
         put(
             &mut radiant_state,
-            &big_dfender().id,
+            &big_dfender.id,
             slot(P1, Row::Units, 2),
             json_as(json!({ "radiant": true })),
         );
@@ -448,8 +448,8 @@ mod positions_and_exertion_m2_t1 {
     #[test]
     fn spikey_pillow_cannot_be_switched_to_defense_position_4_1() {
         let mut state = playing("spikey-pillow");
-        put(&mut state, &spikey_pillow().id, slot(P1, Row::Units, 1), Default::default());
-        put(&mut state, &taunter().id, slot(P1, Row::Units, 2), Default::default());
+        put(&mut state, &spikey_pillow.id, slot(P1, Row::Units, 1), Default::default());
+        put(&mut state, &taunter.id, slot(P1, Row::Units, 2), Default::default());
 
         let pillow = unit_at(&state, P1, 1);
         assert_eq!(unit_view(&state, &pillow).position, Position::Atk);
@@ -479,7 +479,7 @@ mod positions_and_exertion_m2_t1 {
     #[test]
     fn a_summoning_sick_unit_may_still_switch_to_defense_4_1() {
         let mut state = playing("sick-switch");
-        let card = hand_card(&mut state, &plain().id, P1);
+        let card = hand_card(&mut state, &plain.id, P1);
         state = act(
             &state,
             input(json!({

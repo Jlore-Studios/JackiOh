@@ -113,7 +113,7 @@ mod the_players_mana_as_the_play_began_classic_22 {
         let card = only(&in_hand(&mut rich, &runner().id, PlayerId::P1, 1));
         let after = pb_act(
             &rich,
-            json_as(json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" })),
+            json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
         );
         assert_eq!(after.players.p1.mana.current, 2);
         assert_eq!(after.players.p2.hero.health, rich.players.p2.hero.health - 4);
@@ -133,7 +133,7 @@ mod the_players_mana_as_the_play_began_classic_22 {
         let card = only(&in_hand(&mut state, &asking_runner().id, PlayerId::P1, 1));
         let paused = pb_act(
             &state,
-            json_as(json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" })),
+            json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
         );
         assert_eq!(paused.pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Mode));
         let round = round_trip(&paused);

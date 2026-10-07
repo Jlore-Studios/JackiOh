@@ -330,7 +330,7 @@ fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
 
 /// TS `put(state, defId, ref, { radiant: true })`: the card placed, then made Radiant.
 fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
-    let card = put(state, def_id, at);
+    let card = put(state, def_id, at, json!({}));
     live_mut(state, &card.id).radiant = true;
     live(state, &card.id)
 }
@@ -379,8 +379,8 @@ mod fuse_the_transient_definition_r77_m3_t7 {
     #[test]
     fn r77_fuse_creates_a_transient_definition_and_registers_its_new_def_id_in_state_transient_defs() {
         let mut state = game("fuse-transient");
-        let target = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1));
-        let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2));
+        let target = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1), json!({}));
+        let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2), json!({}));
 
         assert!(state.transient_defs.is_empty());
         let result = must(
@@ -401,8 +401,8 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         );
 
         // A second fusion is its own definition, so the first one is never edited (§10.1).
-        let other = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 3));
-        let other_food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 4));
+        let other = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 3), json!({}));
+        let other_food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 4), json!({}));
         let second = must(
             fuse_fresh(&mut state, json!({ "ingredients": [other, other_food], "target": other })),
             "a second fusion",
@@ -417,8 +417,8 @@ mod fuse_the_transient_definition_r77_m3_t7 {
     #[test]
     fn r77_sums_the_ingredients_base_attack_and_health_and_does_the_same_with_the_radiant_forms() {
         let mut state = game("fuse-both-faces");
-        let target = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1)); // base 2/3, radiant 3/9
-        let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2)); // base 1/1, radiant 5/2
+        let target = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1), json!({})); // base 2/3, radiant 3/9
+        let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2), json!({})); // base 1/1, radiant 5/2
 
         let result = must(
             fuse_fresh(&mut state, json!({ "ingredients": [target, food], "target": target })),
@@ -440,8 +440,8 @@ mod fuse_the_transient_definition_r77_m3_t7 {
     #[test]
     fn r77_unions_the_base_keywords_and_the_tags_and_takes_the_radiant_keywords_from_the_radiant_forms() {
         let mut state = game("fuse-keywords");
-        let target = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1)); // Taunt / Taunt + Divine Shield
-        let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2)); // Rush / Rush + Cleave
+        let target = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1), json!({})); // Taunt / Taunt + Divine Shield
+        let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2), json!({})); // Rush / Rush + Cleave
 
         let result = must(
             fuse_fresh(&mut state, json!({ "ingredients": [target, food], "target": target })),
@@ -468,8 +468,8 @@ mod fuse_the_transient_definition_r77_m3_t7 {
     fn r77_concatenates_the_base_scripts_so_both_ingredients_cry_and_death_lists_run() {
         let mut state = game("fuse-scripts");
         let mut sink = Sink::for_state(&state);
-        let target = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1)); // Cry 1, Death 3
-        let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2)); // Cry 2, Death 4
+        let target = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1), json!({})); // Cry 1, Death 3
+        let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2), json!({})); // Cry 2, Death 4
 
         let result = must(
             fuse_in(&mut state, &mut sink, json!({ "ingredients": [target, food], "target": target })),
@@ -493,7 +493,7 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         let mut state = game("fuse-radiant-scripts");
         let mut sink = Sink::for_state(&state);
         let target = put_radiant(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1)); // radiant Cry 10
-        let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2)); // radiant Cry 20
+        let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2), json!({})); // radiant Cry 20
 
         let result = must(
             fuse_in(&mut state, &mut sink, json!({ "ingredients": [target, food], "target": target })),
@@ -516,8 +516,8 @@ mod fuse_the_transient_definition_r77_m3_t7 {
     #[test]
     fn r77_costs_min_sum_of_the_printed_costs_fuse_cost_cap() {
         let mut under = game("fuse-cost-under");
-        let target_a = put(&mut under, &ingredient_a().id, slot(P1, Row::Units, 1)); // cost 2
-        let food_a = put(&mut under, &ingredient_b().id, slot(P1, Row::Units, 2)); // cost 1
+        let target_a = put(&mut under, &ingredient_a().id, slot(P1, Row::Units, 1), json!({})); // cost 2
+        let food_a = put(&mut under, &ingredient_b().id, slot(P1, Row::Units, 2), json!({})); // cost 1
         let cheap = must(
             fuse_fresh(&mut under, json!({ "ingredients": [target_a, food_a], "target": target_a })),
             "a fusion",
@@ -526,8 +526,8 @@ mod fuse_the_transient_definition_r77_m3_t7 {
         assert!(3 < FUSE_COST_CAP);
 
         let mut over = game("fuse-cost-capped");
-        let target_b = put(&mut over, &ingredient_a().id, slot(P1, Row::Units, 1)); // cost 2
-        let food_b = put(&mut over, &pricey().id, slot(P1, Row::Units, 2)); // cost 4
+        let target_b = put(&mut over, &ingredient_a().id, slot(P1, Row::Units, 1), json!({})); // cost 2
+        let food_b = put(&mut over, &pricey().id, slot(P1, Row::Units, 2), json!({})); // cost 4
         let capped = must(
             fuse_fresh(&mut over, json!({ "ingredients": [target_b, food_b], "target": target_b })),
             "a fusion",
@@ -539,7 +539,7 @@ mod fuse_the_transient_definition_r77_m3_t7 {
     #[test]
     fn r77_sums_the_printed_costs_per_r65_an_x_card_counts_its_x_and_an_embiggen_card_its_price() {
         let mut state = game("fuse-cost-r65");
-        let target = put(&mut state, &x_unit().id, slot(P1, Row::Units, 1));
+        let target = put(&mut state, &x_unit().id, slot(P1, Row::Units, 1), json!({}));
         live_mut(&mut state, &target.id).x = Some(1);
         let target = live(&state, &target.id);
         let embiggen = first_in_hand(&mut state, &embiggen_unit().id, "an embiggen ingredient");
@@ -554,7 +554,7 @@ mod fuse_the_transient_definition_r77_m3_t7 {
 
         // The chosen embiggen price is the printed cost of the card that was played for it (R65).
         let mut other = game("fuse-cost-r65-embiggened");
-        let target2 = put(&mut other, &x_unit().id, slot(P1, Row::Units, 1));
+        let target2 = put(&mut other, &x_unit().id, slot(P1, Row::Units, 1), json!({}));
         live_mut(&mut other, &target2.id).x = Some(1);
         let target2 = live(&other, &target2.id);
         let bigger = first_in_hand(&mut other, &embiggen_unit().id, "an embiggen ingredient");
@@ -571,7 +571,7 @@ mod fuse_the_transient_definition_r77_m3_t7 {
     #[test]
     fn r77_takes_the_targets_type_when_an_ingredient_is_a_target_on_the_field() {
         let mut state = game("fuse-type-target");
-        let target = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1)); // Unit
+        let target = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1), json!({})); // Unit
         let food = first_in_hand(&mut state, &fieldy().id, "a Field Spell ingredient"); // Field Spell
 
         let result = must(
@@ -627,7 +627,7 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
      {
         let mut state = game("fuse-keeps-instance");
         let target = put_radiant(&mut state, &ingredient_a().id, slot(P1, Row::Units, 3));
-        let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 1));
+        let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 1), json!({}));
 
         {
             let card = live_mut(&mut state, &target.id);
@@ -682,8 +682,8 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
     #[test]
     fn r77_sums_every_ingredients_buffs_and_unions_their_granted_keywords() {
         let mut state = game("fuse-buffs");
-        let target = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1));
-        let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2));
+        let target = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1), json!({}));
+        let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2), json!({}));
 
         {
             let card = live_mut(&mut state, &target.id);
@@ -713,8 +713,8 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
     fn r77_leaves_every_other_field_of_the_kept_instance_unchanged_the_vanilla_flag_included_and_sums_its_stats_override_into_the_fused_face()
      {
         let mut state = game("fuse-other-fields");
-        let target = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1));
-        let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2));
+        let target = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1), json!({}));
+        let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2), json!({}));
 
         let turn = state.turn;
         {
@@ -767,8 +767,8 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
     #[test]
     fn r77_the_other_ingredients_cease_to_exist_without_a_death_trigger_and_without_counting_as_destroyed() {
         let mut state = game("fuse-ingredients-gone");
-        let target = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1));
-        let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2)); // Death: 4 to the enemy hero
+        let target = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1), json!({}));
+        let food = put(&mut state, &ingredient_b().id, slot(P1, Row::Units, 2), json!({})); // Death: 4 to the enemy hero
 
         let before = state.counters.destroyed;
         let mut sink = Sink::for_state(&state);
@@ -810,9 +810,9 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
         // everything at once.
         let mut state = game("fuse-one-at-a-time");
         let mut sink = Sink::for_state(&state);
-        let first = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1));
-        let second = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 2));
-        let played = put(&mut state, &ingredient_b().id, slot(P2, Row::Units, 1));
+        let first = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1), json!({}));
+        let second = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 2), json!({}));
+        let played = put(&mut state, &ingredient_b().id, slot(P2, Row::Units, 1), json!({}));
 
         let one = must(
             fuse_in(&mut state, &mut sink, json!({ "ingredients": [played], "target": first })),
@@ -823,7 +823,7 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
 
         // The second fusion is a separate call with a separate copy of the played permanent, and it
         // leaves the first fusion's card and definition alone.
-        let again = put(&mut state, &ingredient_b().id, slot(P2, Row::Units, 2));
+        let again = put(&mut state, &ingredient_b().id, slot(P2, Row::Units, 2), json!({}));
         let two = must(
             fuse_in(&mut state, &mut sink, json!({ "ingredients": [again], "target": second })),
             "the second fusion",
@@ -850,7 +850,7 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
     fn r77_a_fused_trap_has_every_ingredients_trigger_condition_and_runs_only_the_script_whose_condition_was_met() {
         let mut state = game("fuse-trap-conditions");
         let mut sink = Sink::for_state(&state);
-        let target = put(&mut state, &trap_played().id, slot(P1, Row::Backrow, 1)); // fires on cardPlayed, for 1
+        let target = put(&mut state, &trap_played().id, slot(P1, Row::Backrow, 1), json!({})); // fires on cardPlayed, for 1
         let food = first_in_hand(&mut state, &trap_attack().id, "a second trap"); // fires on attackDeclared, for 2
 
         let result = must(
@@ -877,7 +877,7 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
     fn r77_a_fused_trap_is_consumed_unless_it_is_a_field_trap() {
         let mut consumed = game("fuse-trap-consumed");
         let mut consumed_sink = Sink::for_state(&consumed);
-        let plain_target = put(&mut consumed, &trap_played().id, slot(P1, Row::Backrow, 1));
+        let plain_target = put(&mut consumed, &trap_played().id, slot(P1, Row::Backrow, 1), json!({}));
         let extra = first_in_hand(&mut consumed, &trap_attack().id, "a second trap");
         let plain_result = must(
             fuse_in(
@@ -899,7 +899,7 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
         // A Field Trap target keeps the type, so the fused trap stays and can fire again (§5.1).
         let mut stays = game("fuse-field-trap-stays");
         let mut stays_sink = Sink::for_state(&stays);
-        let field_target = put(&mut stays, &field_trap_played().id, slot(P1, Row::Backrow, 1));
+        let field_target = put(&mut stays, &field_trap_played().id, slot(P1, Row::Backrow, 1), json!({}));
         let other = first_in_hand(&mut stays, &trap_attack().id, "a second trap");
         let field_result = must(
             fuse_in(

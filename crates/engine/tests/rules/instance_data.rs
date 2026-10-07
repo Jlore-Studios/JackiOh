@@ -20,18 +20,18 @@ use crate::rules::fixtures::instance_data::{
 /// TS's module-level `let nonce`; an atomic so that tests running side by side never share a nonce.
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
-fn act(state: &GameState, body: ActionInput, fixed: Option<&str>) -> GameState {
+fn act(state: &GameState, action: ActionInput, fixed: Option<&str>) -> GameState {
     let n = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
     let nonce = fixed.map_or_else(|| format!("id{n}"), str::to_string);
-    let result = reduce(state, &body.with_nonce(nonce));
+    let result = reduce(state, &action.with_nonce(nonce));
     if let Some(error) = result.error {
         panic!("{error}");
     }
     result.state
 }
 
-fn input(player: PlayerId, body: ActionBody) -> ActionInput {
-    ActionInput { body, player_id: player }
+fn input(player: PlayerId, action: ActionBody) -> ActionInput {
+    ActionInput { body: action, player_id: player }
 }
 
 fn ids(cards: &[CardInstance]) -> Vec<String> {
@@ -40,7 +40,7 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
 
 /// p1's main phase on turn 1, past the mulligans, with mana to spend.
 fn playing(seed: &str) -> GameState {
-    let mut state = begin_game(&instance_game(seed)).state;
+    let mut state = begin_game(&instance_game(seed, None)).state;
     let keep = ids(&state.players.p1.hand);
     state = act(&state, input(PlayerId::P1, ActionBody::Mulligan { keep }), None);
     let keep = ids(&state.players.p2.hand);
@@ -125,7 +125,7 @@ mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
     #[test]
     fn e38_a_buff_and_a_keyword_given_to_a_hand_card_are_on_it_when_it_is_played() {
         let mut state = playing("e38-hand");
-        let card = first(in_hand(&mut state, &plain().id, PlayerId::P1, 1));
+        let card = first(in_hand(&mut state, &plain.id, PlayerId::P1, 1));
         run(
             &mut state,
             &effects::buff(json_as(json!({ "target": { "of": "instance", "instanceId": card.id }, "attack": 2, "health": 1 }))),
@@ -153,7 +153,7 @@ mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
     #[test]
     fn e38_given_in_a_deck_they_ride_the_draw_into_the_hand_and_a_recruit_onto_the_field() {
         let mut state = playing("e38-deck");
-        let library = set_library(&mut state, PlayerId::P1, &[plain().id, body().id]);
+        let library = set_library(&mut state, PlayerId::P1, &[plain.id.clone(), body.id.clone()]);
         let (Some(first), Some(second)) = (library.first().cloned(), library.get(1).cloned()) else {
             panic!("no card")
         };
@@ -184,8 +184,8 @@ mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
     #[test]
     fn e38_they_go_when_the_card_leaves_the_field_r78_and_when_a_hand_card_reaches_a_graveyard_r215() {
         let mut state = playing("e38-reset");
-        let unit = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1));
-        let held = first(in_hand(&mut state, &plain().id, PlayerId::P1, 1));
+        let unit = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let held = first(in_hand(&mut state, &plain.id, PlayerId::P1, 1));
         for card in [&unit, &held] {
             run(&mut state, &effects::buff(json_as(json!({ "target": { "of": "instance", "instanceId": card.id }, "attack": 2 }))));
             run(
@@ -209,9 +209,9 @@ mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
     #[test]
     fn r440_a_scope_over_the_field_a_hand_and_a_deck_reports_its_public_cards_only() {
         let mut state = playing("e38-military");
-        let unit = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1));
-        let hand_units = in_hand(&mut state, &body().id, PlayerId::P1, 2);
-        let spell = first(in_hand(&mut state, &military().id, PlayerId::P1, 1));
+        let unit = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let hand_units = in_hand(&mut state, &body.id, PlayerId::P1, 2);
+        let spell = first(in_hand(&mut state, &military.id, PlayerId::P1, 1));
         let before = state.applied.len();
         let play = play_of(&state, &spell, None);
         state = act(&state, play, None);
@@ -250,8 +250,8 @@ mod classic_plus_41_and_a_degrade_after_a_prompt_pauses_and_replays_r113_s9_3_r3
     #[test]
     fn r386_kys_constants_base_face_sets_a_random_number_on_the_chosen_hand_card_to_3() {
         let mut state = playing("constant-base");
-        let spell = first(in_hand(&mut state, &constant().id, PlayerId::P1, 1));
-        let target = first(in_hand(&mut state, &numbered().id, PlayerId::P1, 1));
+        let spell = first(in_hand(&mut state, &constant.id, PlayerId::P1, 1));
+        let target = first(in_hand(&mut state, &numbered.id, PlayerId::P1, 1));
         let before = state.applied.len();
         let names_target = |action: &ActionBody| targets_name(action, &target.id);
         let play = play_of(&state, &spell, Some(&names_target));
@@ -272,8 +272,8 @@ mod classic_plus_41_and_a_degrade_after_a_prompt_pauses_and_replays_r113_s9_3_r3
     #[test]
     fn r386_the_radiant_faces_discover_pauses_survives_json_and_resumes_to_the_same_state_in_the_live_game_and_a_copy() {
         let mut state = playing("constant-radiant");
-        let spell = first(in_hand(&mut state, &constant().id, PlayerId::P1, 1));
-        let target = first(in_hand(&mut state, &numbered().id, PlayerId::P1, 1));
+        let spell = first(in_hand(&mut state, &constant.id, PlayerId::P1, 1));
+        let target = first(in_hand(&mut state, &numbered.id, PlayerId::P1, 1));
         find_instance_mut(&mut state, &spell.id).expect("in hand").radiant = true;
         let names_target = |action: &ActionBody| targets_name(action, &target.id);
         let play = play_of(&state, &live(&state, &spell.id), Some(&names_target));
@@ -318,8 +318,8 @@ mod classic_plus_41_and_a_degrade_after_a_prompt_pauses_and_replays_r113_s9_3_r3
     #[test]
     fn r386_a_degrade_after_a_target_prompt_resumes_the_same_from_a_json_copy() {
         let mut state = playing("nerf-pause");
-        let victim = put(&mut state, &body().id, slot(PlayerId::P2, Row::Units, 2));
-        let spell = first(in_hand(&mut state, &nerfer().id, PlayerId::P1, 1));
+        let victim = put(&mut state, &body.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
+        let spell = first(in_hand(&mut state, &nerfer.id, PlayerId::P1, 1));
         let play = play_of(&state, &spell, None);
         state = act(&state, play, None);
         let pending = state.pending.clone().expect("expected the target prompt");

@@ -20,13 +20,13 @@ use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, setup_catalog, slot};
 use crate::rules::fixtures::turn::{
     anti_greed, cast_spell, cast_unit, draw_two, log_card, notes, palantir, plain, taxman, turn_catalog,
-    turn_scripts, LOG_LANE,
+    TURN_SCRIPTS, LOG_LANE,
 };
 
 fn register() {
     register_catalog(turn_catalog(registered_catalog().clone()));
     let mut all = registered_scripts().clone();
-    all.extend(turn_scripts());
+    all.extend(TURN_SCRIPTS.clone());
     register_scripts(all);
 }
 

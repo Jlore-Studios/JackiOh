@@ -56,7 +56,7 @@ mod e35_go_berserk {
     #[test]
     fn sets_the_status_marks_it_in_both_views_and_a_berserk_bot_loser_attacks_its_own_hero_at_its_start_of_turn() {
         let mut state = playing("dc-berserk");
-        let bot = put(&mut state, &bot_loser().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let bot = put(&mut state, &bot_loser.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         let mut events = Vec::new();
         {
@@ -85,7 +85,7 @@ mod e35_go_berserk {
 
         // Its card's own text makes the attacks: at p1's next start of turn, 5 to p1's own hero.
         let mut game = recorder(&state);
-        game.play(json_as(json!({ "type": "endTurn", "playerId": "p1" })));
+        game.play(json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(game.state().players.p1.hero.health, 30);
         let back = game.play(json_as(json!({ "type": "endTurn", "playerId": "p2" })));
         let after = game.state().clone();
@@ -102,11 +102,11 @@ mod e35_go_berserk {
         let mut state = playing("dc-berserk-never");
         let calm = put(
             &mut state,
-            &bot_loser().id,
+            &bot_loser.id,
             slot(PlayerId::P1, Row::Units, 1),
             json!({ "radiant": true }),
         );
-        let wild = put(&mut state, &grunt().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let wild = put(&mut state, &grunt.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         let mut events = Vec::new();
         {
@@ -138,12 +138,12 @@ mod e35_may_attack_again {
     #[test]
     fn a_unit_that_has_attacked_gets_a_fresh_exertion_one_that_entered_this_turn_is_no_longer_sick() {
         let mut state = playing("dc-again");
-        let striker = put(&mut state, &grunt().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let fresh = put(&mut state, &grunt().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let striker = put(&mut state, &grunt.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let fresh = put(&mut state, &grunt.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
         let turn = state.turn;
         find_instance_mut(&mut state, &fresh.id).expect("the fresh unit").summoned_turn = Some(turn);
         let mut game = recorder(&state);
-        game.play(json_as(json!({ "type": "attack", "attackerId": striker.id, "targetId": "hero-p2", "playerId": "p1" })));
+        game.play(json!({ "type": "attack", "attackerId": striker.id, "targetId": "hero-p2", "playerId": "p1" }));
         let mut now = game.state().clone();
         assert!(!has_attack(&now, &striker.id));
         assert!(!has_attack(&now, &fresh.id));
@@ -174,7 +174,7 @@ mod e35_may_attack_again {
     #[test]
     fn it_lends_no_attack_a_unit_could_not_otherwise_make() {
         let mut state = playing("dc-again-def");
-        let guard = put(&mut state, &grunt().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let guard = put(&mut state, &grunt.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         find_instance_mut(&mut state, &guard.id).expect("the guard").position = Some(Position::Def);
         let guard_now = live(&state, &guard.id).clone();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);

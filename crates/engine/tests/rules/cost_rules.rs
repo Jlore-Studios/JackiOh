@@ -17,7 +17,7 @@ use crate::rules::fixtures::play_pipeline_b::{
 
 /// R345: no automatic turn ends, so a test walks the turns it names.
 fn manual_turns(state: &GameState) -> GameState {
-    let one = pb_act(state, json_as(json!({ "type": "setAutoEndTurn", "enabled": false, "playerId": "p1" })));
+    let one = pb_act(state, json!({ "type": "setAutoEndTurn", "enabled": false, "playerId": "p1" }));
     pb_act(&one, json_as(json!({ "type": "setAutoEndTurn", "enabled": false, "playerId": "p2" })))
 }
 
@@ -129,7 +129,7 @@ mod r455_e15_price_rules_from_auras {
         let mana = state.players.p1.mana.current;
         let after = pb_act(
             &state,
-            json_as(json!({ "type": "play", "instanceId": trap.id, "zone": { "row": "backrow", "lane": 2 }, "playerId": "p1" })),
+            json!({ "type": "play", "instanceId": trap.id, "zone": { "row": "backrow", "lane": 2 }, "playerId": "p1" }),
         );
         assert_eq!(after.players.p1.mana.current, mana);
     }
@@ -195,7 +195,7 @@ mod r455_e15_price_rules_from_auras {
         let one = hand_card(&mut state, &grave_spell().id, PlayerId::P1);
         assert_eq!(plays_json(&state, &three.id), Vec::<Value>::new());
         assert_eq!(plays_json(&state, &one.id).len(), 1);
-        assert!(refusal(&pb_reduce(&state, json_as(json!({ "type": "play", "instanceId": three.id, "playerId": "p1" }))))
+        assert!(refusal(&pb_reduce(&state, json!({ "type": "play", "instanceId": three.id, "playerId": "p1" })))
             .contains("can't play (3)+ Cost cards"));
         // An X card: X below 3 only.
         let x = hand_card(&mut state, &x_spell().id, PlayerId::P1);
@@ -223,7 +223,7 @@ mod r455_e15_price_rules_on_a_player {
         let card = hand_card(&mut state, &trickster().id, PlayerId::P1);
         let mut after = pb_act(
             &state,
-            json_as(json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" })),
+            json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
         );
         let rules: Vec<PlayerModifier> = after.players.p1.mods.iter().filter(|m| is_cost_rule(m)).cloned().collect();
         let rule = only(&rules);
@@ -268,7 +268,7 @@ mod r455_e15_price_rules_on_a_player {
         find_instance_mut(&mut state, &card.id).expect("the hand card").radiant = true;
         let mut after = pb_act(
             &state,
-            json_as(json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" })),
+            json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
         );
         let mut big = new_instance(&mut after, &two_field().id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
         big.cost_mod = 3; // (5), and (3)+ would add 1
@@ -288,7 +288,7 @@ mod r455_e15_price_rules_on_a_player {
         let mut state = manual_turns(&pb_playing("r455-tax"));
         let card = hand_card(&mut state, &tax().id, PlayerId::P1);
         let theirs = hand_card(&mut state, &grave_spell().id, PlayerId::P2);
-        let mut after = pb_act(&state, json_as(json!({ "type": "play", "instanceId": card.id, "playerId": "p1" })));
+        let mut after = pb_act(&state, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }));
         // Not on the turn it was cast.
         assert_eq!(cost(&after, &only(&held(&after.players.p2.hand, &theirs.id))), 1);
         assert_eq!(only(&view_for(&after, PlayerId::P1).opponent.modifiers).label, "Your cards cost (1) more (next turn)");
@@ -314,7 +314,7 @@ mod r455_e15_price_rules_on_a_player {
         );
         let spell = hand_card(&mut state, &grave_spell().id, PlayerId::P1);
         assert_eq!(cost(&state, &spell), 2);
-        let after = pb_act(&state, json_as(json!({ "type": "endTurn", "playerId": "p1" })));
+        let after = pb_act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(after.players.p1.mods.iter().filter(|m| is_cost_rule(m)).count(), 1);
         assert_eq!(cost(&after, &only(&held(&after.players.p1.hand, &spell.id))), 0);
     }
@@ -327,7 +327,7 @@ mod r455_e39_return_after_resolving_and_its_floor {
     fn r455_classic_plus_14_the_next_spell_played_gains_the_return_it_comes_back_after_it_resolves_every_time_and_cant_cost_less_than_2() {
         let mut state = pb_playing("r455-forever");
         let card = hand_card(&mut state, &forever().id, PlayerId::P1);
-        let mut after = pb_act(&state, json_as(json!({ "type": "play", "instanceId": card.id, "playerId": "p1" })));
+        let mut after = pb_act(&state, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }));
         assert_eq!(
             only(&view_for(&after, PlayerId::P1).you.modifiers).label,
             "Your next Spell returns to your hand after it resolves (it can't cost less than (2))"
@@ -392,7 +392,7 @@ mod r455_e39_return_after_resolving_and_its_floor {
             Some(vec![Enchantment::ReturnAfterResolve { floor: 1 }]);
         let filler = HAND_CAP - full.players.p1.hand.len() as i32 + 1;
         in_hand(&mut full, &zero_spell().id, PlayerId::P1, filler.max(0));
-        let played = pb_reduce(&full, json_as(json!({ "type": "play", "instanceId": burnt.id, "playerId": "p1" })));
+        let played = pb_reduce(&full, json!({ "type": "play", "instanceId": burnt.id, "playerId": "p1" }));
         assert_eq!(played.error, None);
         assert!(instance_ids(&played.events, GameEventType::Burned).contains(&burnt.id));
     }
@@ -402,7 +402,7 @@ mod r455_e39_return_after_resolving_and_its_floor {
         let mut state = pb_playing("r455-forever-radiant");
         let card = hand_card(&mut state, &forever().id, PlayerId::P1);
         find_instance_mut(&mut state, &card.id).expect("the hand card").radiant = true;
-        let mut after = pb_act(&state, json_as(json!({ "type": "play", "instanceId": card.id, "playerId": "p1" })));
+        let mut after = pb_act(&state, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }));
         run(&mut after, vec![cast_new_of(zero_spell().id)], PlayerId::P1);
         let returned: Vec<CardInstance> = after
             .players
@@ -429,7 +429,7 @@ mod r396_an_x_card_on_the_field_costs_its_x {
         state.players.p1.mana.current = 3;
         let mut after = pb_act(
             &state,
-            json_as(json!({ "type": "play", "instanceId": in_hand_x.id, "x": 3, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" })),
+            json!({ "type": "play", "instanceId": in_hand_x.id, "x": 3, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
         );
         let on_field = only(after.players.p1.units[0].as_deref().unwrap_or(&[]));
         assert_eq!(on_field.x, Some(3));

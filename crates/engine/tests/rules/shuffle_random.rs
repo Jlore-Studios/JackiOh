@@ -86,7 +86,7 @@ fn board(seed: &str) -> GameState {
     register_scripts(registry);
     state.active = PlayerId::P1;
     state.phase = Phase::Main;
-    set_library(&mut state, PlayerId::P1, &[]);
+    set_library(&mut state, PlayerId::P1, &[] as &[&str]);
     state
 }
 
@@ -101,7 +101,7 @@ mod shuffle_random_from_catalog_e39 {
     fn r60_r387_shuffles_that_many_random_pool_cards_in_never_the_running_cards_own_nor_a_token_each_radiant_and_enchanted()
      {
         let mut state = board("sr-basic");
-        cast_now(&mut state, &shuffler().id, None, None);
+        cast_now(&mut state, &shuffler().id, PlayerId::P1, false);
         let library = &state.players.p1.library;
         let defs: Vec<String> = library.iter().map(|card| card.def_id.clone()).collect();
         assert_eq!(defs, vec![pages().id, pages().id, pages().id]);
@@ -116,7 +116,7 @@ mod shuffle_random_from_catalog_e39 {
     #[test]
     fn e39_a_card_it_made_is_cast_as_it_is_drawn() {
         let mut state = board("sr-draw");
-        cast_now(&mut state, &shuffler().id, None, None);
+        cast_now(&mut state, &shuffler().id, PlayerId::P1, false);
         let mut events = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         let mut sink = EngineSink::new(&mut state, &mut events, &mut rng);
@@ -139,7 +139,7 @@ mod shuffle_random_from_catalog_e39 {
             ));
         }
         state.players.p1.library = library;
-        let events = cast_now(&mut state, &shuffler().id, None, None);
+        let events = cast_now(&mut state, &shuffler().id, PlayerId::P1, false);
         assert_eq!(state.players.p1.library.len() as i32, LIBRARY_CAP);
         assert_eq!(count_of(&events, GameEventType::LibraryOverflow), 2);
     }

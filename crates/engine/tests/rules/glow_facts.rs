@@ -52,7 +52,7 @@ fn both(script: Script) -> CardScripts {
 }
 
 fn defs() -> Vec<CardDef> {
-    vec![striker(), gifted(), two_cost(), immutable()]
+    vec![striker(), gifted(), two_cost(), immutable.clone()]
 }
 
 fn local_scripts() -> IndexMap<String, CardScripts> {
@@ -123,7 +123,7 @@ mod r662_granted_combo_live_a_granted_combo_answers_the_next_play {
     #[test]
     fn r662_a_quickstrikers_flag_on_the_field_is_live_once_a_card_has_been_played_this_turn() {
         let mut state = board("gf-striker");
-        put(&mut state, &striker().id, slot(PlayerId::P1, Row::Backrow, 1));
+        put(&mut state, &striker().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
         assert!(!query::granted_combo_live(&state, PlayerId::P1));
         played_one(&mut state, 3);
         assert!(query::granted_combo_live(&state, PlayerId::P1));
@@ -158,8 +158,8 @@ mod r662_gifted_would_make_radiant_step_3s_question_asked_of_a_hand_card_now {
     #[test]
     fn r662_the_first_card_costing_the_threshold_or_less_this_turn_and_not_one_already_radiant() {
         let mut state = board("gf-gifted");
-        put(&mut state, &gifted().id, slot(PlayerId::P1, Row::Backrow, 1));
-        let cheap = first_in_hand(&mut state, &plain().id);
+        put(&mut state, &gifted().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let cheap = first_in_hand(&mut state, &plain.id);
         let dear = first_in_hand(&mut state, &two_cost().id);
         assert!(query::gifted_would_make_radiant(&state, PlayerId::P1, &live(&state, &cheap.id)));
         assert!(!query::gifted_would_make_radiant(&state, PlayerId::P1, &live(&state, &dear.id)));
@@ -176,8 +176,8 @@ mod r662_gifted_would_make_radiant_step_3s_question_asked_of_a_hand_card_now {
     #[test]
     fn r662_without_a_gifted_program_on_the_players_side_nothing_qualifies() {
         let mut state = board("gf-gifted-none");
-        put(&mut state, &gifted().id, slot(PlayerId::P2, Row::Backrow, 1));
-        let cheap = first_in_hand(&mut state, &plain().id);
+        put(&mut state, &gifted().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        let cheap = first_in_hand(&mut state, &plain.id);
         assert!(!query::gifted_would_make_radiant(&state, PlayerId::P1, &live(&state, &cheap.id)));
     }
 }
@@ -192,9 +192,9 @@ mod r662_lethal_attackers_of_r44s_projection_over_the_enemy_units_acting_now {
     #[test]
     fn r662_names_the_enemy_units_whose_attack_on_the_hero_would_be_lethal_and_only_those() {
         let mut state = board("gf-lethal");
-        let big = put(&mut state, &trampler().id, slot(PlayerId::P2, Row::Units, 1)); // 6/4
-        let small = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 2)); // 3/3
-        let mine = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1));
+        let big = put(&mut state, &trampler.id, slot(PlayerId::P2, Row::Units, 1), json!({})); // 6/4
+        let small = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 2), json!({})); // 3/3
+        let mine = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         assert_eq!(lethal_ids(&state, PlayerId::P1), Vec::<String>::new());
 
         state.players.p1.hero.health = 6;
@@ -220,11 +220,11 @@ mod r662_fusable_permanents_of_where_85s_fuse_could_land {
     #[test]
     fn r662_every_permanent_of_the_players_but_the_one_excepted_and_never_an_immutable_one() {
         let mut state = board("gf-fusable");
-        let trap = put(&mut state, &striker().id, slot(PlayerId::P1, Row::Backrow, 1));
+        let trap = put(&mut state, &striker().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
         assert_eq!(fusable_ids(&state, PlayerId::P1, Some(trap.id.as_str())), Vec::<String>::new());
-        put(&mut state, &immutable().id, slot(PlayerId::P1, Row::Units, 1));
+        put(&mut state, &immutable.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         assert_eq!(fusable_ids(&state, PlayerId::P1, Some(trap.id.as_str())), Vec::<String>::new());
-        let body = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 2));
+        let body = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
         assert_eq!(fusable_ids(&state, PlayerId::P1, Some(trap.id.as_str())), vec![body.id.clone()]);
         let mut all = fusable_ids(&state, PlayerId::P1, None);
         all.sort();
@@ -240,8 +240,8 @@ mod r662_condition_active_rule_5_a_hand_card_glows_for_a_condition_another_card_
     #[test]
     fn r662_a_quickstriker_on_the_field_and_a_card_played_every_hand_card_glows_in_the_owners_view_only() {
         let mut state = board("gf-glow-striker");
-        put(&mut state, &striker().id, slot(PlayerId::P1, Row::Backrow, 1));
-        let card = first_in_hand(&mut state, &plain().id);
+        put(&mut state, &striker().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let card = first_in_hand(&mut state, &plain.id);
         assert!(!condition::condition_active(&state, &live(&state, &card.id), PlayerId::P1, ConditionZone::Hand));
         played_one(&mut state, 3);
         assert!(condition::condition_active(&state, &live(&state, &card.id), PlayerId::P1, ConditionZone::Hand));
@@ -255,8 +255,8 @@ mod r662_condition_active_rule_5_a_hand_card_glows_for_a_condition_another_card_
     #[test]
     fn r662_a_gifted_program_lights_the_hand_cards_it_would_make_radiant_and_not_the_rest() {
         let mut state = board("gf-glow-gifted");
-        put(&mut state, &gifted().id, slot(PlayerId::P1, Row::Backrow, 1));
-        let cheap = first_in_hand(&mut state, &plain().id);
+        put(&mut state, &gifted().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let cheap = first_in_hand(&mut state, &plain.id);
         let dear = first_in_hand(&mut state, &two_cost().id);
         assert!(condition::condition_active(&state, &live(&state, &cheap.id), PlayerId::P1, ConditionZone::Hand));
         assert!(!condition::condition_active(&state, &live(&state, &dear.id), PlayerId::P1, ConditionZone::Hand));
@@ -265,8 +265,8 @@ mod r662_condition_active_rule_5_a_hand_card_glows_for_a_condition_another_card_
     #[test]
     fn r662_a_granted_condition_never_lights_a_card_on_the_field() {
         let mut state = board("gf-glow-field");
-        put(&mut state, &striker().id, slot(PlayerId::P1, Row::Backrow, 1));
-        let unit = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1));
+        put(&mut state, &striker().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let unit = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         played_one(&mut state, 3);
         assert!(!condition::condition_active(&state, &live(&state, &unit.id), PlayerId::P1, ConditionZone::Field));
     }

@@ -287,7 +287,7 @@ mod summon_with_random_keywords_r21_s7_80 {
     fn r21_grants_nothing_when_the_summon_fizzled_and_takes_no_draw_for_it() {
         let mut state = game("kw-fizzle");
         for lane in [1, 2, 3, 4, 5] {
-            put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, lane));
+            put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, lane), json!({}));
         }
         let cursor_before = state.rng_cursor;
 
@@ -366,7 +366,7 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
     #[test]
     fn r57_resets_damage_exertion_counters_and_summoned_turn_on_the_copy() {
         let mut state = game("copy-resets");
-        let source = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 2));
+        let source = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
         {
             let card = live_mut(&mut state, &source.id);
             card.damage = 4;
@@ -454,7 +454,7 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
     #[test]
     fn s6_2_the_copy_fires_no_cry_where_the_sources_own_cry_is_observable() {
         let mut state = game("copy-no-cry");
-        let source = put(&mut state, &crier().id, slot(PlayerId::P1, Row::Units, 1));
+        let source = put(&mut state, &crier().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let before = state.players.p2.hero.health;
 
         let events = run(
@@ -493,9 +493,9 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
     #[test]
     fn r64_fizzles_silently_with_a_full_row_creating_nothing() {
         let mut state = game("copy-full");
-        let source = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1));
+        let source = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         for lane in [2, 3, 4, 5] {
-            put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, lane));
+            put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, lane), json!({}));
         }
         let ids_before = state.next_id;
 
@@ -575,7 +575,7 @@ mod summon_random_s5_1_s10_7_r60_67 {
     fn s5_1_never_summons_the_requesting_cards_own_definition() {
         for seed in 0..12 {
             let mut state = game(&format!("random-exclude-{seed}"));
-            let self_ = put(&mut state, &pool_a().id, slot(PlayerId::P1, Row::Units, 5));
+            let self_ = put(&mut state, &pool_a().id, slot(PlayerId::P1, Row::Units, 5), json!({}));
 
             run(
                 &mut state,
@@ -609,7 +609,7 @@ mod summon_random_s5_1_s10_7_r60_67 {
     #[test]
     fn r47_fizzles_on_an_occupied_backrow_lane_but_a_locked_one_takes_the_summon_r688() {
         let mut occupied = game("random-occupied");
-        put(&mut occupied, &pool_trap().id, slot(PlayerId::P1, Row::Backrow, 2));
+        put(&mut occupied, &pool_trap().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
         let before = occupied.next_id;
         assert!(
             run(

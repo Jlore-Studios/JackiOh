@@ -33,7 +33,7 @@ use jackioh_engine::zones::{MoveToZoneOptions, OffFieldZone, move_to_zone};
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::combat::{big_body, plain};
 use crate::rules::fixtures::core_patches::{
-    core_patch_catalog, core_patch_scripts, counted, marker, quiet_trap, test_mark, uncounted,
+    core_patch_catalog, CORE_PATCH_SCRIPTS, counted, marker, quiet_trap, TEST_MARK, uncounted,
 };
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
 
@@ -92,7 +92,7 @@ fn register() {
     catalog.extend(core_patch_catalog());
     register_catalog(catalog);
     let mut scripts = registered_scripts().clone();
-    scripts.extend(core_patch_scripts());
+    scripts.extend(CORE_PATCH_SCRIPTS.clone());
     register_scripts(scripts);
 }
 
@@ -160,8 +160,8 @@ mod r429_10_5_step_4_counts_the_plays_of_a_card_that_asks {
     fn r429_a_card_that_counts_its_plays_has_one_after_its_first_the_play_under_way_included_and_keeps_it_in_every_zone()
      {
         let mut state = board("r429-count");
-        put(&mut state, &plain().id, slot(P1, Row::Units, 1));
-        let card = first_in_hand(&mut state, &counted().id, P1, "the counted Spell");
+        put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
+        let card = first_in_hand(&mut state, &counted.id, P1, "the counted Spell");
         state.players.p1.mana.current = 4;
 
         let played = act(&state, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" })).state;
@@ -197,8 +197,8 @@ mod r429_10_5_step_4_counts_the_plays_of_a_card_that_asks {
     #[test]
     fn r429_a_card_that_does_not_ask_carries_no_count_at_all_so_a_game_without_one_hashes_as_before() {
         let mut state = board("r429-none");
-        put(&mut state, &plain().id, slot(P1, Row::Units, 1));
-        let card = first_in_hand(&mut state, &uncounted().id, P1, "the plain Spell");
+        put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
+        let card = first_in_hand(&mut state, &uncounted.id, P1, "the plain Spell");
         state.players.p1.mana.current = 4;
 
         let played = act(&state, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" })).state;
@@ -215,7 +215,7 @@ mod r429_10_5_step_4_counts_the_plays_of_a_card_that_asks {
     #[test]
     fn r429_r70_a_cast_is_a_play_casting_the_card_counts_it() {
         let mut state = board("r429-cast");
-        let card = new_instance(&mut state, &counted().id, P1, Zone::Resolving { player: P1 });
+        let card = new_instance(&mut state, &counted.id, P1, Zone::Resolving { player: P1 });
         state.players.p1.resolving.push(card.clone());
         let mut sink = Sink::for_state(&state);
 
@@ -229,9 +229,9 @@ mod r429_10_5_step_4_counts_the_plays_of_a_card_that_asks {
     #[test]
     fn r429_r57_a_new_instance_of_the_same_card_starts_its_own_count() {
         let mut state = board("r429-copy");
-        let mut card = new_instance(&mut state, &counted().id, P1, Zone::Hand { player: P1 });
+        let mut card = new_instance(&mut state, &counted.id, P1, Zone::Hand { player: P1 });
         card.times_played = Some(3);
-        let copy = new_instance(&mut state, &counted().id, P1, Zone::Hand { player: P1 });
+        let copy = new_instance(&mut state, &counted.id, P1, Zone::Hand { player: P1 });
         assert_eq!(times_played_of(&card), 3);
         assert_eq!(times_played_of(&copy), 0);
     }
@@ -244,13 +244,13 @@ mod r427_r174_a_resolved_plays_card_that_something_answering_the_play_has_since_
     fn r427_left_field_since_resolved_is_false_while_the_card_stands_and_for_one_that_left_before_the_play_resolved_true_once_it_leaves_after()
      {
         let mut state = board("r427-left");
-        let unit = put(&mut state, &plain().id, slot(P1, Row::Units, 1));
+        let unit = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
         let resolved_now = |state: &GameState| -> GameEvent {
             json_as(json!({
                 "type": "cardResolved",
                 "player": "p1",
                 "instanceId": unit.id,
-                "defId": plain().id,
+                "defId": plain.id,
                 "permanent": true,
                 "costPaid": 1,
                 "exitsFrom": exit_mark(state),
@@ -392,10 +392,10 @@ mod r434_once_the_game_is_over_each_view_carries_the_other_players_hand {
     fn r434_before_the_end_the_opponents_hand_is_a_count_after_it_the_cards_as_they_stand_and_nothing_else_is_revealed()
      {
         let mut state = board("r434");
-        let theirs = in_hand(&mut state, &plain().id, P2, 2);
-        in_hand(&mut state, &uncounted().id, P1, 1);
-        put(&mut state, &big_body().id, slot(P1, Row::Units, 1));
-        put(&mut state, &plain().id, slot(P2, Row::Units, 1));
+        let theirs = in_hand(&mut state, &plain.id, P2, 2);
+        in_hand(&mut state, &uncounted.id, P1, 1);
+        put(&mut state, &big_body.id, slot(P1, Row::Units, 1), json!({}));
+        put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({}));
 
         assert_eq!(json_of(view_for(&state, P1))["opponent"]["hand"], json!({ "count": 2 }));
 
@@ -412,13 +412,13 @@ mod r434_once_the_game_is_over_each_view_carries_the_other_players_hand {
             .unwrap_or_default();
         assert_eq!(hand_ids, theirs.iter().map(|card| json!(card.id)).collect::<Vec<_>>());
         // As the owner sees them: a Unit's stats ride with it (R243).
-        assert!(matches_object(&hand[0], &json!({ "defId": plain().id, "attack": 3, "health": 3 })));
+        assert!(matches_object(&hand[0], &json!({ "defId": plain.id, "attack": 3, "health": 3 })));
         // And for the other seat, symmetrically.
         let other: Vec<Value> = json_of(view_for(&over, P2))["opponent"]["hand"]
             .as_array()
             .map(|cards| cards.iter().map(|card| card["defId"].clone()).collect())
             .unwrap_or_default();
-        assert_eq!(other, vec![json!(uncounted().id)]);
+        assert_eq!(other, vec![json!(uncounted.id.clone())]);
         // The libraries stay a count, and the opponent's list is never sent (§9.1).
         assert_eq!(p1_view["opponent"]["libraryCount"], json!(over.players.p2.library.len()));
         assert!(p1_view["opponent"].get("ownLibrary").is_none());
@@ -427,9 +427,9 @@ mod r434_once_the_game_is_over_each_view_carries_the_other_players_hand {
     #[test]
     fn r434_r97_an_event_that_named_a_hand_card_while_it_was_hidden_stays_redacted_after_the_end() {
         let mut state = board("r434-events");
-        put(&mut state, &big_body().id, slot(P1, Row::Units, 1));
-        put(&mut state, &plain().id, slot(P2, Row::Units, 1));
-        in_hand(&mut state, &uncounted().id, P1, 1);
+        put(&mut state, &big_body.id, slot(P1, Row::Units, 1), json!({}));
+        put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({}));
+        in_hand(&mut state, &uncounted.id, P1, 1);
         // p1 ends the turn; p2's draw names a card p1 may not read.
         let turned = act(&state, json!({ "type": "endTurn", "playerId": "p1" })).state;
         let draw_event = view_events_of(&json_of(view_for(&turned, P1)), "drawn")
@@ -473,12 +473,12 @@ mod r437_a_delayed_effect_aimed_at_a_card_marks_it_in_both_views_while_it_waits 
 
     fn marked(seed: &str) -> Marked {
         let mut state = board(seed);
-        put(&mut state, &big_body().id, slot(P1, Row::Units, 5));
-        let target = put(&mut state, &big_body().id, slot(P2, Row::Units, 1));
-        put(&mut state, &plain().id, slot(P2, Row::Units, 2));
-        in_hand(&mut state, &plain().id, P2, 1);
-        let card = first_in_hand(&mut state, &marker().id, P1, "the marker");
-        in_hand(&mut state, &uncounted().id, P1, 1);
+        put(&mut state, &big_body.id, slot(P1, Row::Units, 5), json!({}));
+        let target = put(&mut state, &big_body.id, slot(P2, Row::Units, 1), json!({}));
+        put(&mut state, &plain.id, slot(P2, Row::Units, 2), json!({}));
+        in_hand(&mut state, &plain.id, P2, 1);
+        let card = first_in_hand(&mut state, &marker.id, P1, "the marker");
+        in_hand(&mut state, &uncounted.id, P1, 1);
         state.players.p1.mana.current = 4;
         let played = act(
             &state,
@@ -498,7 +498,7 @@ mod r437_a_delayed_effect_aimed_at_a_card_marks_it_in_both_views_while_it_waits 
 
     /// `TEST_MARK` as the views and events carry it.
     fn mark() -> Value {
-        json_of(test_mark())
+        json_of(TEST_MARK)
     }
 
     fn marked_event(instance_id: &str, added: bool) -> Value {
@@ -593,12 +593,12 @@ mod r437_a_delayed_effect_aimed_at_a_card_marks_it_in_both_views_while_it_waits 
     fn r437_r33_a_face_down_target_its_controller_reads_the_mark_on_the_card_the_other_player_on_its_back_and_the_event_names_the_sentinel()
      {
         let mut state = board("r437-face-down");
-        put(&mut state, &big_body().id, slot(P1, Row::Units, 5));
-        put(&mut state, &plain().id, slot(P2, Row::Units, 1));
-        in_hand(&mut state, &plain().id, P2, 1);
-        let trap = put(&mut state, &quiet_trap().id, slot(P2, Row::Backrow, 1));
-        let card = first_in_hand(&mut state, &marker().id, P1, "the marker");
-        in_hand(&mut state, &uncounted().id, P1, 1);
+        put(&mut state, &big_body.id, slot(P1, Row::Units, 5), json!({}));
+        put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({}));
+        in_hand(&mut state, &plain.id, P2, 1);
+        let trap = put(&mut state, &quiet_trap.id, slot(P2, Row::Backrow, 1), json!({}));
+        let card = first_in_hand(&mut state, &marker.id, P1, "the marker");
+        in_hand(&mut state, &uncounted.id, P1, 1);
         state.players.p1.mana.current = 4;
 
         let played = act(

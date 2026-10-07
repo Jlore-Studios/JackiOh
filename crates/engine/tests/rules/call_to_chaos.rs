@@ -141,7 +141,7 @@ fn defs() -> Vec<CardDef> {
 
 /// `chaos_cry`: what the cast copy of #95 does when it resolves; the default is the real card (§8).
 fn game(seed: &str, chaos_cry: Option<Hook>) -> GameState {
-    let mut state = new_game(seed);
+    let mut state = new_game(seed, None);
     let mut catalog = registered_catalog().clone();
     for def in defs() {
         catalog.insert(def.id.clone(), def);
@@ -167,7 +167,7 @@ fn game(seed: &str, chaos_cry: Option<Hook>) -> GameState {
     state.active = P1;
     state.phase = Phase::Main;
     // Every test sets the library it needs; the dealt deck would only add noise to the draw effects.
-    set_library(&mut state, P1, &[]);
+    set_library(&mut state, P1, &[] as &[&str]);
     state
 }
 
@@ -796,8 +796,8 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         let mut state = game("chaos-full-board", None);
         let mut events: Vec<GameEvent> = Vec::new();
         for lane in 1..=5 {
-            put(&mut state, "fx-1", slot(P1, Row::Units, lane));
-            put(&mut state, &trap().id, slot(P1, Row::Backrow, lane));
+            put(&mut state, "fx-1", slot(P1, Row::Units, lane), json!({}));
+            put(&mut state, &trap().id, slot(P1, Row::Backrow, lane), json!({}));
         }
 
         sink_events(&mut state, &mut events, |sink| {

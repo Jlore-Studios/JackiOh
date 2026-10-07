@@ -15,7 +15,7 @@ use crate::rules::fixtures::harness::{events_of_type, new_game};
 const SEED: &str = "r345";
 
 fn decks() -> (Vec<String>, Vec<String>) {
-    (vanilla_deck(Some(DECK_SIZE), Some(1)), vanilla_deck(Some(DECK_SIZE), Some(21)))
+    (vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 21))
 }
 
 /// TS's module `let counter`: every action this file builds takes the next nonce.

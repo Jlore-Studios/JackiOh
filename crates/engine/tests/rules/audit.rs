@@ -73,7 +73,7 @@ fn trap() -> CardDef {
 }
 
 fn board() -> GameState {
-    let mut state = new_game("audit");
+    let mut state = new_game("audit", None);
     let mut catalog = registered_catalog().clone();
     for def in [small(), even(), big(), none(), stacker(), trap()] {
         catalog.insert(def.id.clone(), def);
@@ -107,10 +107,10 @@ mod the_audits_sweep_e36 {
     #[test]
     fn e36_fewer_every_permanent_below_the_audits_loc_on_both_sides_the_active_side_first_an_equal_one_stays() {
         let mut state = board();
-        put(&mut state, &small().id, slot(P2, Row::Units, 1));
-        put(&mut state, &even().id, slot(P1, Row::Units, 1));
-        put(&mut state, &small().id, slot(P1, Row::Units, 2));
-        put(&mut state, &big().id, slot(P2, Row::Units, 2));
+        put(&mut state, &small().id, slot(P2, Row::Units, 1), json!({}));
+        put(&mut state, &even().id, slot(P1, Row::Units, 1), json!({}));
+        put(&mut state, &small().id, slot(P1, Row::Units, 2), json!({}));
+        put(&mut state, &big().id, slot(P2, Row::Units, 2), json!({}));
         assert_eq!(
             ids(&audit_targets(&state, args(P2, P1, 10, false, false))),
             vec![small().id, small().id]
@@ -122,17 +122,17 @@ mod the_audits_sweep_e36 {
     #[test]
     fn e36_more_every_permanent_above_it_an_equal_one_stays() {
         let mut state = board();
-        put(&mut state, &small().id, slot(P1, Row::Units, 1));
-        put(&mut state, &even().id, slot(P2, Row::Units, 1));
-        put(&mut state, &big().id, slot(P2, Row::Units, 2));
+        put(&mut state, &small().id, slot(P1, Row::Units, 1), json!({}));
+        put(&mut state, &even().id, slot(P2, Row::Units, 1), json!({}));
+        put(&mut state, &big().id, slot(P2, Row::Units, 2), json!({}));
         assert_eq!(ids(&audit_targets(&state, args(P1, P1, 10, true, false))), vec![big().id]);
     }
 
     #[test]
     fn e36_only_the_opponents_the_controllers_own_permanents_are_left_out() {
         let mut state = board();
-        put(&mut state, &small().id, slot(P1, Row::Units, 1));
-        put(&mut state, &small().id, slot(P2, Row::Units, 1));
+        put(&mut state, &small().id, slot(P1, Row::Units, 1), json!({}));
+        put(&mut state, &small().id, slot(P2, Row::Units, 1), json!({}));
         let targets = audit_targets(&state, args(P1, P1, 10, false, true));
         assert_eq!(controllers(&targets), vec![P2]);
     }
@@ -140,8 +140,8 @@ mod the_audits_sweep_e36 {
     #[test]
     fn s3_2_face_down_backrow_cards_count_a_card_dormant_under_a_stack_is_not_on_the_field() {
         let mut state = board();
-        put(&mut state, &trap().id, slot(P2, Row::Backrow, 1));
-        put(&mut state, &small().id, slot(P2, Row::Units, 1));
+        put(&mut state, &trap().id, slot(P2, Row::Backrow, 1), json!({}));
+        put(&mut state, &small().id, slot(P2, Row::Units, 1), json!({}));
         let top = new_instance(&mut state, &stacker().id, P2, Zone::Hand { player: P2 });
         assert!(place_on_field(
             &mut state,
@@ -157,7 +157,7 @@ mod the_audits_sweep_e36 {
     fn r77_e36_a_card_with_no_loc_reads_0_a_fused_cards_loc_is_its_ingredients_sum() {
         let mut state = board();
         assert_eq!(lines_of_code(&state, &none().id), 0);
-        let kept = put(&mut state, &small().id, slot(P1, Row::Units, 1));
+        let kept = put(&mut state, &small().id, slot(P1, Row::Units, 1), json!({}));
         let other = new_instance(&mut state, &big().id, P1, Zone::Gone { player: P1 });
         let fused = {
             let mut events = Vec::new();

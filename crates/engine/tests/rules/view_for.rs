@@ -295,7 +295,7 @@ mod view_for_10_8_m3_t6 {
         let their_hand: Vec<CardInstance> = d
             .secret_hand
             .iter()
-            .map(|def| in_hand(&mut state, &def.id, PlayerId::P2, None).remove(0))
+            .map(|def| in_hand(&mut state, &def.id, PlayerId::P2, 1).remove(0))
             .collect();
         let library_ids: Vec<String> = d.secret_library.iter().map(|def| def.id.clone()).collect();
         let their_library = set_library(&mut state, PlayerId::P2, &library_ids);
@@ -306,8 +306,8 @@ mod view_for_10_8_m3_t6 {
         assert_eq!(their_hand.len(), HAND_CAP as usize);
 
         // Public things on the same board, so the proof is not vacuous: an empty view hides everything.
-        let my_hand = in_hand(&mut state, &plain().id, PlayerId::P1, Some(3));
-        let their_unit = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1), Default::default());
+        let my_hand = in_hand(&mut state, &plain.id, PlayerId::P1, 3);
+        let their_unit = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), Default::default());
         let their_field = put(&mut state, &d.public_field.id, slot(PlayerId::P2, Row::Backrow, 3), Default::default());
 
         // §10.3's event stream is filtered like the zones it reports on: a `drawn` naming a card that is
@@ -389,16 +389,16 @@ mod view_for_10_8_m3_t6 {
     fn section_10_8_the_viewers_own_hand_travels_in_full_and_in_order_and_the_opponents_as_a_count() {
         let d = defs();
         let mut state = game("hands");
-        let mine = in_hand(&mut state, &plain().id, PlayerId::P1, Some(2));
+        let mine = in_hand(&mut state, &plain.id, PlayerId::P1, 2);
         live_mut(&mut state, &mine[1].id).radiant = true;
-        let theirs = in_hand(&mut state, &d.secret_trap.id, PlayerId::P2, Some(4));
+        let theirs = in_hand(&mut state, &d.secret_trap.id, PlayerId::P2, 4);
 
         let view = view_for(&state, PlayerId::P1);
         expect_match(
             &to_json(own_hand(&view)),
             json!([
-                { "instanceId": mine[0].id, "defId": plain().id, "radiant": false, "cost": 1 },
-                { "instanceId": mine[1].id, "defId": plain().id, "radiant": true, "cost": 1 },
+                { "instanceId": mine[0].id, "defId": plain.id, "radiant": false, "cost": 1 },
+                { "instanceId": mine[1].id, "defId": plain.id, "radiant": true, "cost": 1 },
             ]),
         );
         assert_eq!(own_hand(&view).len(), mine.len());
@@ -859,8 +859,8 @@ mod view_for_10_8_m3_t6 {
         // §11 names the sentinel, so the string itself is part of the ruling.
         assert_eq!(HIDDEN_ID, "hidden");
 
-        let theirs = in_hand(&mut state, &plain().id, PlayerId::P2, None).remove(0);
-        let mine = in_hand(&mut state, &plain().id, PlayerId::P1, None).remove(0);
+        let theirs = in_hand(&mut state, &plain.id, PlayerId::P2, 1).remove(0);
+        let mine = in_hand(&mut state, &plain.id, PlayerId::P1, 1).remove(0);
         state.applied = vec![AppliedAction {
             nonce: "r97".to_string(),
             events: vec![

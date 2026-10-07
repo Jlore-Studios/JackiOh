@@ -59,9 +59,9 @@ mod r42_r412_with_kill_credit {
     #[test]
     fn with_a_transfer_the_paired_unit_is_the_killer_the_destroyed_event_names_it_and_its_kill_trigger_fires() {
         let mut state = game("kc-transfer");
-        let striker = put_radiant(&mut state, &jungle().id, slot(PlayerId::P1, Row::Units, 2));
-        let credited = put(&mut state, &bot().id, slot(PlayerId::P1, Row::Units, 4));
-        let victim = put(&mut state, &grunt().id, slot(PlayerId::P2, Row::Units, 4));
+        let striker = put_radiant(&mut state, &jungle.id, slot(PlayerId::P1, Row::Units, 2));
+        let credited = put(&mut state, &bot.id, slot(PlayerId::P1, Row::Units, 4), json!({}));
+        let victim = put(&mut state, &grunt.id, slot(PlayerId::P2, Row::Units, 4), json!({}));
         let mut play = recorder(&state);
         let ended = play.play(input(PlayerId::P1, ActionBody::EndTurn));
         assert_eq!(destroyed(&ended.events), vec![(victim.id.clone(), Some(credited.id.clone()))]);
@@ -83,9 +83,9 @@ mod r42_r412_with_kill_credit {
     #[test]
     fn a_kill_of_a_victim_with_no_pair_stays_the_strikers() {
         let mut state = game("kc-unpaired");
-        let striker = put_radiant(&mut state, &jungle().id, slot(PlayerId::P1, Row::Units, 2));
-        let credited = put(&mut state, &bot().id, slot(PlayerId::P1, Row::Units, 4));
-        let victim = put(&mut state, &grunt().id, slot(PlayerId::P2, Row::Units, 1));
+        let striker = put_radiant(&mut state, &jungle.id, slot(PlayerId::P1, Row::Units, 2));
+        let credited = put(&mut state, &bot.id, slot(PlayerId::P1, Row::Units, 4), json!({}));
+        let victim = put(&mut state, &grunt.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let result = recorder(&state).play(input(PlayerId::P1, ActionBody::EndTurn));
         assert_eq!(destroyed(&result.events), vec![(victim.id.clone(), Some(striker.id.clone()))]);
         assert_eq!(attack_of(&result.state, &credited.id), Some(0));
@@ -94,9 +94,9 @@ mod r42_r412_with_kill_credit {
     #[test]
     fn without_a_transfer_the_striker_keeps_the_kill_and_the_follow_up_runs_for_the_pair_whose_victim_died() {
         let mut state = game("kc-follow");
-        let striker = put(&mut state, &jungle().id, slot(PlayerId::P1, Row::Units, 2));
-        let credited = put(&mut state, &bot().id, slot(PlayerId::P1, Row::Units, 4));
-        let victim = put(&mut state, &grunt().id, slot(PlayerId::P2, Row::Units, 4));
+        let striker = put(&mut state, &jungle.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let credited = put(&mut state, &bot.id, slot(PlayerId::P1, Row::Units, 4), json!({}));
+        let victim = put(&mut state, &grunt.id, slot(PlayerId::P2, Row::Units, 4), json!({}));
         let result = recorder(&state).play(input(PlayerId::P1, ActionBody::EndTurn));
         assert_eq!(destroyed(&result.events), vec![(victim.id.clone(), Some(striker.id.clone()))]);
         let live = find_instance(&result.state, &credited.id);
@@ -107,9 +107,9 @@ mod r42_r412_with_kill_credit {
     #[test]
     fn r113_a_death_that_asks_during_the_watched_attack_the_credit_already_landed_and_the_pause_survives_json() {
         let mut state = game("kc-pause");
-        put_radiant(&mut state, &jungle().id, slot(PlayerId::P1, Row::Units, 2));
-        let credited = put(&mut state, &bot().id, slot(PlayerId::P1, Row::Units, 4));
-        let victim = put(&mut state, &death_asker().id, slot(PlayerId::P2, Row::Units, 4));
+        put_radiant(&mut state, &jungle.id, slot(PlayerId::P1, Row::Units, 2));
+        let credited = put(&mut state, &bot.id, slot(PlayerId::P1, Row::Units, 4), json!({}));
+        let victim = put(&mut state, &death_asker.id, slot(PlayerId::P2, Row::Units, 4), json!({}));
         let mut play = recorder(&state);
         let ended = play.play(input(PlayerId::P1, ActionBody::EndTurn));
         assert_eq!(destroyed(&ended.events), vec![(victim.id.clone(), Some(credited.id.clone()))]);
@@ -124,8 +124,8 @@ mod r42_r412_with_kill_credit {
     #[test]
     fn credited_killer_id_reads_the_record_and_falls_back_to_the_striker() {
         let mut state = game("kc-read");
-        let striker = put(&mut state, &jungle().id, slot(PlayerId::P1, Row::Units, 2));
-        let victim = put(&mut state, &grunt().id, slot(PlayerId::P2, Row::Units, 1));
+        let striker = put(&mut state, &jungle.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let victim = put(&mut state, &grunt.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         assert_eq!(kill_credit::credited_killer_id(&striker, &victim.id), striker.id);
         find_instance_mut(&mut state, &striker.id)
             .expect("the striker is on the field")
@@ -143,7 +143,7 @@ mod r58_is_cast_on_draw {
     #[test]
     fn a_cast_on_draw_cards_cry_reads_true_and_the_draw_is_complete_once_the_cast_resolved() {
         let mut state = game("kc-cast");
-        let library = set_library(&mut state, PlayerId::P1, &[tempo().id, grunt().id]);
+        let library = set_library(&mut state, PlayerId::P1, &[tempo.id.clone(), grunt.id.clone()]);
         let drawn = library.first().expect("no card").clone();
         // `sinkFor(state)`: an rng at the state's cursor; TS did not write it back.
         let mut events = Vec::new();
@@ -163,7 +163,7 @@ mod r58_is_cast_on_draw {
     #[test]
     fn the_same_card_played_from_hand_reads_false() {
         let mut state = game("kc-hand");
-        let hand = in_hand(&mut state, &tempo().id, PlayerId::P1, 1);
+        let hand = in_hand(&mut state, &tempo.id, PlayerId::P1, 1);
         let card = hand.first().expect("no card").clone();
         let body: ActionInput = json_as(json!({
             "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1"

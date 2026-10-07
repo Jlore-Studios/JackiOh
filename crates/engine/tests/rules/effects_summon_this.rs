@@ -120,7 +120,7 @@ mod e26_deck_and_graveyard_triggers_in_r68_order_r464 {
             Zone::Library { player: PlayerId::P1 },
         );
         let newer = new_instance(&mut state, &prompts_fx::wardrum().id, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
-        let filler = new_instance(&mut state, &combat_fx::plain().id, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
+        let filler = new_instance(&mut state, &combat_fx::plain.id, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
         state.players.p1.library = vec![newer.clone(), filler.clone(), older.clone()];
         let grave = grave_card(&mut state, PlayerId::P1, &prompts_fx::grave_watcher().id);
         let enemy_deck = new_instance(
@@ -194,12 +194,12 @@ mod e26_summon_this_from_your_hand_or_deck {
     #[test]
     fn e26_a_deck_trigger_summons_its_card_no_cry_summoning_sick_the_leftmost_open_zone() {
         let mut state = board("deck-summon");
-        put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, 1));
+        put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let drum = new_instance(&mut state, &prompts_fx::wardrum().id, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
-        let first = new_instance(&mut state, &combat_fx::plain().id, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
+        let first = new_instance(&mut state, &combat_fx::plain.id, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
         state.players.p1.library = vec![first, drum.clone()];
         let card = in_hand(&mut state, &prompts_fx::spark().id, PlayerId::P1, 1).remove(0);
-        state = act(&state, json_as(play_body(PlayerId::P1, &card.id)), None);
+        state = act(&state, play_body(PlayerId::P1, &card.id), None);
         let found = unit_top(&state, PlayerId::P1, 1);
         assert_eq!(found.as_ref().map(|unit| unit.id.clone()), Some(drum.id.clone()));
         assert_eq!(found.as_ref().and_then(|unit| unit.summoned_turn), Some(state.turn));
@@ -224,7 +224,7 @@ mod e26_summon_this_from_your_hand_or_deck {
         let body = in_hand(&mut state, &prompts_fx::grunt().id, PlayerId::P1, 1).remove(0);
         let zap = in_hand(&mut state, &prompts_fx::spark().id, PlayerId::P1, 1).remove(0);
         // A Spell sets nothing off.
-        state = act(&state, json_as(play_body(PlayerId::P1, &zap.id)), None);
+        state = act(&state, play_body(PlayerId::P1, &zap.id), None);
         assert!(ids_of(&state.players.p1.hand).contains(&eu.id));
         state = act(
             &state,
@@ -245,12 +245,12 @@ mod e26_summon_this_from_your_hand_or_deck {
     fn e26_with_no_open_zone_the_card_stays_where_it_is() {
         let mut state = board("deck-full");
         for lane in 1..=5 {
-            put(&mut state, &combat_fx::plain().id, slot(PlayerId::P1, Row::Units, lane));
+            put(&mut state, &combat_fx::plain.id, slot(PlayerId::P1, Row::Units, lane), json!({}));
         }
         let drum = new_instance(&mut state, &prompts_fx::wardrum().id, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
         state.players.p1.library = vec![drum.clone()];
         let card = in_hand(&mut state, &prompts_fx::spark().id, PlayerId::P1, 1).remove(0);
-        state = act(&state, json_as(play_body(PlayerId::P1, &card.id)), None);
+        state = act(&state, play_body(PlayerId::P1, &card.id), None);
         assert_eq!(ids_of(&state.players.p1.library), vec![drum.id.clone()]);
         assert!(events_of_type(&last_applied_events(&state), GameEventType::Summoned).is_empty());
     }
@@ -261,7 +261,7 @@ mod e26_summon_this_from_your_hand_or_deck {
         let asker = new_instance(&mut state, &prompts_fx::deck_asker().id, PlayerId::P1, Zone::Library { player: PlayerId::P1 });
         state.players.p1.library = vec![asker.clone()];
         let card = in_hand(&mut state, &prompts_fx::spark().id, PlayerId::P1, 1).remove(0);
-        state = act(&state, json_as(play_body(PlayerId::P1, &card.id)), None);
+        state = act(&state, play_body(PlayerId::P1, &card.id), None);
         open_as(&state, PromptKind::Mode, PlayerId::P1);
         assert_eq!(
             to_json(view_for(&state, PlayerId::P2))["pending"],
@@ -293,7 +293,7 @@ mod e26_summon_this_from_your_hand_or_deck {
             .find(|card| card.def_id == wardrum_id)
             .cloned();
         let zap_id = hand_card(&state, PlayerId::P1, &zap).id.clone();
-        state = act(&state, json_as(play_body(PlayerId::P1, &zap_id)), Some(&mut log));
+        state = act(&state, play_body(PlayerId::P1, &zap_id), Some(&mut log));
         // From the hand or the deck, wherever the deal left it, it answered the Spell.
         assert_eq!(unit_top(&state, PlayerId::P1, 0).map(|unit| unit.id), drum.map(|card| card.id));
         expect_replays("wardrum-replay", &decks, &log, &state);
@@ -310,10 +310,10 @@ mod e26_graveyard_triggers_classic_47 {
         let mut card = grave_card(&mut state, PlayerId::P1, &prompts_fx::recurring().id);
         card.radiant = radiant;
         find_instance_mut(&mut state, &card.id).expect("in the graveyard").radiant = radiant;
-        put(&mut state, &prompts_fx::snare().id, slot(PlayerId::P1, Row::Backrow, 1));
+        put(&mut state, &prompts_fx::snare().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
         state.active = PlayerId::P2;
         let zap = in_hand(&mut state, &prompts_fx::spark().id, PlayerId::P2, 1).remove(0);
-        let state = act(&state, json_as(play_body(PlayerId::P2, &zap.id)), None);
+        let state = act(&state, play_body(PlayerId::P2, &zap.id), None);
         let moved = state.players.p1.hand.iter().find(|held| held.id == card.id).cloned().unwrap_or(card);
         (state, moved)
     }
@@ -339,9 +339,9 @@ mod e26_graveyard_triggers_classic_47 {
     fn e26_the_other_players_trap_does_not_return_it_and_a_card_elsewhere_has_no_graveyard_trigger() {
         let mut state = board("recur-theirs");
         let card = grave_card(&mut state, PlayerId::P1, &prompts_fx::recurring().id);
-        put(&mut state, &prompts_fx::snare().id, slot(PlayerId::P2, Row::Backrow, 1));
+        put(&mut state, &prompts_fx::snare().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
         let zap = in_hand(&mut state, &prompts_fx::spark().id, PlayerId::P1, 1).remove(0);
-        state = act(&state, json_as(play_body(PlayerId::P1, &zap.id)), None);
+        state = act(&state, play_body(PlayerId::P1, &zap.id), None);
         assert_eq!(events_of_type(&last_applied_events(&state), GameEventType::TrapFired).len(), 1);
         assert!(ids_of(&state.players.p1.graveyard).contains(&card.id));
 

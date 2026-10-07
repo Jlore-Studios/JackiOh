@@ -85,7 +85,7 @@ mod r15_steal_s6_3_m3_t1 {
     #[test]
     fn r15_takes_the_same_lane_when_it_is_free_and_moves_control_only() {
         let mut state = game();
-        let victim = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 3), json!({}));
+        let victim = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 3), json!({}));
         {
             let card = find_instance_mut(&mut state, &victim.id).expect("the victim");
             card.damage = 1;
@@ -152,9 +152,9 @@ mod r15_steal_s6_3_m3_t1 {
     #[test]
     fn r15_falls_back_to_the_first_free_zone_when_the_same_lane_is_taken_or_locked() {
         let mut state = game();
-        put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 3), json!({}));
-        let victim = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 3), json!({}));
+        put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
+        let victim = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 3), json!({}));
 
         let events = controls(&mut state, &victim);
 
@@ -163,7 +163,7 @@ mod r15_steal_s6_3_m3_t1 {
 
         // An empty but Locked same lane is not free either, so the fallback applies again (§3.2).
         let mut locked = game();
-        let other = put(&mut locked, &plain().id, slot(PlayerId::P2, Row::Units, 4), json!({}));
+        let other = put(&mut locked, &plain.id, slot(PlayerId::P2, Row::Units, 4), json!({}));
         lock_zone(&mut locked, &slot(PlayerId::P1, Row::Units, 4));
 
         assert_eq!(of_type(&controls(&mut locked, &other), "controlChanged")[0]["lane"], json!(1));
@@ -174,9 +174,9 @@ mod r15_steal_s6_3_m3_t1 {
     fn r15_leaves_a_card_with_nowhere_to_go_with_its_owner() {
         let mut state = game();
         for lane in 1..=5 {
-            put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, lane), json!({}));
+            put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, lane), json!({}));
         }
-        let victim = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 2), json!({}));
+        let victim = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
 
         let events = controls(&mut state, &victim);
 
@@ -188,7 +188,7 @@ mod r15_steal_s6_3_m3_t1 {
     #[test]
     fn r12_keeps_the_owner_so_a_stolen_unit_that_dies_goes_to_its_owners_graveyard() {
         let mut state = game();
-        let victim = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let victim = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         controls(&mut state, &victim);
         assert_eq!(live(&state, &victim.id).controller, PlayerId::P1);
 
@@ -227,8 +227,8 @@ mod r15_steal_s6_3_m3_t1 {
     #[test]
     fn r13_steals_the_top_of_a_stack_pile_and_leaves_the_card_beneath_to_resume() {
         let mut state = game();
-        let beneath = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 2), json!({}));
-        let mut top = new_instance(&mut state, &stacker().id, PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
+        let beneath = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
+        let mut top = new_instance(&mut state, &stacker.id, PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
         assert!(place_on_field(
             &mut state,
             &mut top,
@@ -253,10 +253,10 @@ mod r15_steal_s6_3_m3_t1 {
     #[test]
     fn r15_c86_steals_every_enemy_unit_in_lane_order_and_leaves_the_excess_with_its_owner() {
         let mut state = game();
-        put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
         let enemies: Vec<CardInstance> = (1..=5)
-            .map(|lane| put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, lane), json!({})))
+            .map(|lane| put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, lane), json!({})))
             .collect();
 
         let events = run(&mut state, steal_all(Default::default()), as_p1());
@@ -291,12 +291,12 @@ mod r15_steal_s6_3_m3_t1 {
     #[test]
     fn steals_nothing_off_the_field_nothing_already_yours_and_nothing_when_no_target_was_picked() {
         let mut state = game();
-        let in_your_hand = in_hand(&mut state, &plain().id, PlayerId::P2, 1)
+        let in_your_hand = in_hand(&mut state, &plain.id, PlayerId::P2, 1)
             .into_iter()
             .next()
             .expect("a hand card");
-        let mine = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        let theirs = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 2), json!({}));
+        let mine = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let theirs = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
 
         // Off the field control means nothing, so a hand card is untouched (R12).
         assert_eq!(controls(&mut state, &in_your_hand).len(), 0);

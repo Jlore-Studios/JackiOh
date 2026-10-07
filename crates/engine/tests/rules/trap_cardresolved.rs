@@ -244,8 +244,8 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
     #[test]
     fn r17_offers_a_trap_the_card_resolved_moment_and_resolves_it_there_on_the_immediate_path() {
         let mut state = game("r17-card-resolved");
-        let trap = put(&mut state, &after_trap().id, slot(PlayerId::P2, Row::Backrow, 1));
-        let played = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1));
+        let trap = put(&mut state, &after_trap().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        let played = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
 
         // The event type is declared, so nothing here is reaching ahead of the engine (§10.3's list).
         assert!(GAME_EVENT_TYPES.contains(&GameEventType::CardResolved));
@@ -271,8 +271,8 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
     #[test]
     fn r61_reads_the_events_permanent_flag_so_a_resolved_spell_does_not_count_as_a_played_permanent() {
         let mut state = game("r61-permanent-flag");
-        let trap = put(&mut state, &permanent_trap().id, slot(PlayerId::P2, Row::Backrow, 1));
-        let played = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1));
+        let trap = put(&mut state, &permanent_trap().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        let played = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let before = enemy_health(&state);
 
         // A card that has left play by now reports `permanent: false`: the trap declines and stays
@@ -304,8 +304,8 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
     #[test]
     fn r100_keeps_card_resolved_on_the_immediate_path_the_end_of_turn_window_never_delivers_it() {
         let mut state = game("r100-card-resolved-immediate");
-        put(&mut state, &after_trap().id, slot(PlayerId::P2, Row::Backrow, 1));
-        let played = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1));
+        put(&mut state, &after_trap().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        let played = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let event = resolved(&played, true);
 
         // The two paths are disjoint, and only the window's events are withheld from the immediate one.
@@ -333,8 +333,8 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
     #[test]
     fn r119_does_not_offer_a_trap_the_arrival_of_the_play_that_put_it_there_at_step_4_or_step_7() {
         let mut state = game("r119-own-arrival");
-        let after = put(&mut state, &after_trap().id, slot(PlayerId::P2, Row::Backrow, 1));
-        let arrival = put(&mut state, &arrival_trap().id, slot(PlayerId::P2, Row::Backrow, 2));
+        let after = put(&mut state, &after_trap().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
+        let arrival = put(&mut state, &arrival_trap().id, slot(PlayerId::P2, Row::Backrow, 2), json!({}));
         let before = enemy_health(&state);
 
         // Step 7, the subtle case: a trap played this turn is on the field when its own `cardResolved`
@@ -382,7 +382,7 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
         );
 
         // The very next play is answered: R119 excludes this play, not the trap (§8 #33's wording).
-        let played = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1));
+        let played = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let mut next = sink_for(&state);
         assert_eq!(
             fire_traps_for(&mut next.on(&mut state), &resolved(&played, true)).fired,

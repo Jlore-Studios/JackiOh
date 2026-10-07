@@ -94,8 +94,8 @@ struct Played {
 
 /// p1 plays a fresh plain 3/3 from hand into the unit zone of `lane`.
 fn play_plain(state: &mut GameState, lane: i32) -> Played {
-    let card = in_hand(state, &plain().id, P1, None).into_iter().next().expect("no card");
-    flush(state, P1, None);
+    let card = in_hand(state, &plain.id, P1, 1).into_iter().next().expect("no card");
+    flush(state, P1, 10);
     let result = act_result(
         state,
         input(json!({
@@ -127,7 +127,7 @@ fn live(state: &GameState, id: &str) -> CardInstance {
 
 fn fill_units(state: &mut GameState, player: PlayerId) {
     for lane in 1..=5 {
-        put(state, &plain().id, slot(player, Row::Units, lane), Default::default());
+        put(state, &plain.id, slot(player, Row::Units, lane), Default::default());
     }
 }
 
@@ -142,7 +142,7 @@ mod r383_b3_1_animated_traps {
     #[test]
     fn r383_an_animated_field_trap_fires_then_animates_into_its_lanes_unit_zone_in_the_position_its_text_names() {
         let mut start = playing("animated-tesla");
-        let zapper = put(&mut start, &tesla().id, slot(P2, Row::Backrow, 2), Default::default());
+        let zapper = put(&mut start, &tesla.id, slot(P2, Row::Backrow, 2), Default::default());
         let played = play_plain(&mut start, 1);
         let state = &played.state;
         let tesla2 = by_id(state, &zapper.id);
@@ -157,7 +157,7 @@ mod r383_b3_1_animated_traps {
         assert_eq!(
             json_of(events_of_type(&played.events, GameEventType::Animated)),
             json!([{
-                "type": "animated", "player": "p2", "instanceId": zapper.id, "defId": tesla().id,
+                "type": "animated", "player": "p2", "instanceId": zapper.id, "defId": tesla.id,
                 "backrowLane": 2, "unitLane": 2
             }])
         );
@@ -168,7 +168,7 @@ mod r383_b3_1_animated_traps {
     #[test]
     fn r383_an_animated_field_trap_keeps_firing_from_its_unit_zone_and_a_unit_already_does_not_move_or_change_position() {
         let mut state = playing("animated-tesla-turret");
-        let zapper = put(&mut state, &tesla().id, slot(P2, Row::Backrow, 2), Default::default());
+        let zapper = put(&mut state, &tesla.id, slot(P2, Row::Backrow, 2), Default::default());
         state = play_plain(&mut state, 1).state;
         by_id_mut(&mut state, &zapper.id).position = Some(Position::Atk);
         let second = play_plain(&mut state, 3);
@@ -188,8 +188,8 @@ mod r383_b3_1_animated_traps {
     #[test]
     fn r383_an_animated_field_trap_fires_in_r68s_order_among_the_unit_lanes_before_the_backrows_traps() {
         let mut state = playing("animated-order");
-        let turret = put(&mut state, &ears().id, slot(P2, Row::Backrow, 4), Default::default());
-        let ear = put(&mut state, &listener().id, slot(P2, Row::Backrow, 1), Default::default());
+        let turret = put(&mut state, &ears.id, slot(P2, Row::Backrow, 4), Default::default());
+        let ear = put(&mut state, &listener.id, slot(P2, Row::Backrow, 1), Default::default());
         let first = play_plain(&mut state, 1);
         let mut state = first.state;
         // Both in the backrow at first: lane 1, then lane 4.
@@ -211,7 +211,7 @@ mod r383_b3_1_animated_traps {
     #[test]
     fn r383_a_plain_animated_trap_animates_on_firing_is_spent_and_never_reaches_the_graveyard() {
         let mut state = playing("animated-springer");
-        let trap = put(&mut state, &springer().id, slot(P2, Row::Backrow, 5), Default::default());
+        let trap = put(&mut state, &springer.id, slot(P2, Row::Backrow, 5), Default::default());
         state = play_plain(&mut state, 1).state;
         let card = by_id(&state, &trap.id);
         assert!(is_animated(&state, card));
@@ -227,7 +227,7 @@ mod r383_b3_1_animated_traps {
     fn r383_with_no_open_unit_zone_an_animated_trap_stays_where_it_is_face_up_spent_out_of_the_graveyard() {
         let mut state = playing("animated-no-room");
         fill_units(&mut state, P2);
-        let trap = put(&mut state, &springer().id, slot(P2, Row::Backrow, 3), Default::default());
+        let trap = put(&mut state, &springer.id, slot(P2, Row::Backrow, 3), Default::default());
         let played = play_plain(&mut state, 1);
         let state = played.state;
         let card = by_id(&state, &trap.id);
@@ -239,15 +239,15 @@ mod r383_b3_1_animated_traps {
         // Both players read it now, as a fired Field Trap is read (R33).
         expect_match(
             &view_for(&state, P1).opponent.backrow[2],
-            json!({ "faceDown": false, "defId": springer().id }),
+            json!({ "faceDown": false, "defId": springer.id }),
         );
     }
 
     #[test]
     fn r445_animating_is_not_a_summon_it_emits_animated_never_summoned_and_a_tesla_does_not_answer_it() {
         let mut state = playing("animated-not-summon");
-        let zapper = put(&mut state, &tesla().id, slot(P1, Row::Backrow, 1), Default::default());
-        let trap = put(&mut state, &springer().id, slot(P2, Row::Backrow, 2), Default::default());
+        let zapper = put(&mut state, &tesla.id, slot(P1, Row::Backrow, 1), Default::default());
+        let trap = put(&mut state, &springer.id, slot(P2, Row::Backrow, 2), Default::default());
         let played = play_plain(&mut state, 3);
         let state = played.state;
         assert!(is_animated(&state, by_id(&state, &trap.id)));
@@ -270,7 +270,7 @@ mod r383_b3_1_an_animated_card_is_a_unit_for_every_rule {
     #[test]
     fn r383_answers_unit_for_its_type_where_it_stands_joins_the_unit_walks_fights_and_dies_like_a_unit() {
         let mut state = playing("animated-unit-rules");
-        let trap = put(&mut state, &springer().id, slot(P2, Row::Backrow, 4), Default::default());
+        let trap = put(&mut state, &springer.id, slot(P2, Row::Backrow, 4), Default::default());
         state = play_plain(&mut state, 1).state;
         let card = live(&state, &trap.id);
 
@@ -310,7 +310,7 @@ mod r383_b3_1_an_animated_card_is_a_unit_for_every_rule {
     #[test]
     fn r383_entering_the_unit_zone_is_entering_it_on_that_turn_summoning_sick_a_fresh_exertion_and_it_cannot_attack_yet() {
         let mut state = playing("animated-sick");
-        let card = put(&mut state, &springer().id, slot(P1, Row::Backrow, 2), Default::default());
+        let card = put(&mut state, &springer.id, slot(P1, Row::Backrow, 2), Default::default());
         {
             let spent = by_id_mut(&mut state, &card.id);
             spent.face_up = Some(true);
@@ -343,8 +343,8 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
     #[test]
     fn r383_an_animated_field_spell_animates_as_it_enters_the_field_and_holds_no_home() {
         let mut state = playing("animated-golem");
-        let Some(card) = in_hand(&mut state, &golem().id, P1, None).into_iter().next() else { return };
-        flush(&mut state, P1, None);
+        let Some(card) = in_hand(&mut state, &golem.id, P1, 1).into_iter().next() else { return };
+        flush(&mut state, P1, 10);
         let result = act_result(
             &state,
             input(json!({
@@ -365,15 +365,15 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         assert_eq!(order, vec![GameEventType::Summoned, GameEventType::Animated]);
         expect_match(
             &view_for(next, P2).opponent.units[2],
-            json!({ "defId": golem().id, "animated": {} }),
+            json!({ "defId": golem.id, "animated": {} }),
         );
     }
 
     #[test]
     fn r383_an_on_your_turn_card_played_on_its_controllers_turn_animates_at_once_and_holds_its_backrow_zone_for_its_return() {
         let mut state = playing("animated-spatula-play");
-        let Some(card) = in_hand(&mut state, &spatula().id, P1, None).into_iter().next() else { return };
-        flush(&mut state, P1, None);
+        let Some(card) = in_hand(&mut state, &spatula.id, P1, 1).into_iter().next() else { return };
+        flush(&mut state, P1, 10);
         let mut next = act(
             &state,
             input(json!({
@@ -391,11 +391,11 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
             let view = view_for(&next, viewer);
             let side = if viewer == P1 { &view.you } else { &view.opponent };
             assert_eq!(side.reserved.backrow, vec![false, true, false, false, false]);
-            expect_match(&side.units[1], json!({ "defId": spatula().id, "animated": { "home": 2 } }));
+            expect_match(&side.units[1], json!({ "defId": spatula.id, "animated": { "home": 2 } }));
         }
         // Nothing else may enter the held zone.
-        let Some(other) = in_hand(&mut next, &golem().id, P1, None).into_iter().next() else { return };
-        flush(&mut next, P1, None);
+        let Some(other) = in_hand(&mut next, &golem.id, P1, 1).into_iter().next() else { return };
+        flush(&mut next, P1, 10);
         let refused = act_result(
             &next,
             input(json!({
@@ -408,7 +408,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
     #[test]
     fn r383_its_end_of_turn_text_runs_while_it_is_a_unit_and_cleanup_sends_it_home_its_next_start_of_turn_animates_it_again() {
         let mut state = playing("animated-spatula-cycle");
-        let card = put(&mut state, &spatula().id, slot(P1, Row::Backrow, 4), Default::default());
+        let card = put(&mut state, &spatula.id, slot(P1, Row::Backrow, 4), Default::default());
         let mut sink = sink_for(&mut state);
         animate_at_turn_start(&mut sink, P1);
         assert_eq!(id_at(sink.state, slot(P1, Row::Units, 4)), Some(card.id.clone()));
@@ -423,7 +423,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         assert_eq!(
             json_of(events_of_type(sink.events, GameEventType::Deanimated)),
             json!([{
-                "type": "deanimated", "player": "p1", "instanceId": card.id, "defId": spatula().id,
+                "type": "deanimated", "player": "p1", "instanceId": card.id, "defId": spatula.id,
                 "unitLane": 4, "backrowLane": 4
             }])
         );
@@ -449,7 +449,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
     #[test]
     fn r383_moving_is_not_leaving_the_field_damage_buffs_counters_and_memory_stay_and_no_departure_is_counted() {
         let mut state = playing("animated-keeps");
-        let card = put(&mut state, &spatula().id, slot(P1, Row::Backrow, 1), Default::default());
+        let card = put(&mut state, &spatula.id, slot(P1, Row::Backrow, 1), Default::default());
         {
             let kept = by_id_mut(&mut state, &card.id);
             kept.damage = 1;
@@ -474,7 +474,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
     fn r383_with_no_open_unit_zone_an_on_your_turn_card_stays_in_the_backrow_and_a_face_down_one_never_animates_at_turn_start() {
         let mut state = playing("animated-turn-start-limits");
         fill_units(&mut state, P1);
-        let card = put(&mut state, &spatula().id, slot(P1, Row::Backrow, 1), Default::default());
+        let card = put(&mut state, &spatula.id, slot(P1, Row::Backrow, 1), Default::default());
         let mut sink = sink_for(&mut state);
         animate_at_turn_start(&mut sink, P1);
         assert_eq!(id_at(sink.state, slot(P1, Row::Backrow, 1)), Some(card.id.clone()));
@@ -485,7 +485,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
     #[test]
     fn r688_rule_6_a_lock_on_its_home_since_no_longer_stops_the_return_the_return_is_a_move_not_a_play() {
         let mut state = playing("animated-home-locked");
-        let card = put(&mut state, &spatula().id, slot(P1, Row::Backrow, 3), Default::default());
+        let card = put(&mut state, &spatula.id, slot(P1, Row::Backrow, 3), Default::default());
         let mut sink = sink_for(&mut state);
         animate_at_turn_start(&mut sink, P1);
         lock_zone(sink.state, slot(P1, Row::Backrow, 3));
@@ -497,10 +497,10 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
     #[test]
     fn r383_rule_6_a_card_that_changed_sides_has_no_home_on_the_new_side_going_to_its_controllers_leftmost_open_backrow_zone() {
         let mut state = playing("animated-stolen");
-        let card = put(&mut state, &spatula().id, slot(P1, Row::Backrow, 2), Default::default());
+        let card = put(&mut state, &spatula.id, slot(P1, Row::Backrow, 2), Default::default());
         let mut sink = sink_for(&mut state);
         animate_at_turn_start(&mut sink, P1);
-        put(sink.state, &banner().id, slot(P2, Row::Backrow, 1), Default::default());
+        put(sink.state, &banner.id, slot(P2, Row::Backrow, 1), Default::default());
         (steal(json_as(json!({ "target": { "of": "instance", "instanceId": card.id } }))).apply)(&mut make_context(
             sink.reborrow(),
             None,
@@ -517,10 +517,10 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
     #[test]
     fn r383_rule_6_a_card_dormant_under_a_stack_does_not_return_and_its_home_stays_held() {
         let mut state = playing("animated-buried");
-        let card = put(&mut state, &spatula().id, slot(P1, Row::Backrow, 5), Default::default());
+        let card = put(&mut state, &spatula.id, slot(P1, Row::Backrow, 5), Default::default());
         let mut sink = sink_for(&mut state);
         animate_at_turn_start(&mut sink, P1);
-        let top = put(sink.state, &stacker().id, slot(P1, Row::Units, 1), Default::default());
+        let top = put(sink.state, &stacker.id, slot(P1, Row::Units, 1), Default::default());
         let mut stacked = top.clone();
         place_on_field(sink.state, &mut stacked, slot(P1, Row::Units, 5), json_as(json!({ "stack": true })));
         return_at_cleanup(&mut sink, P1);
@@ -536,7 +536,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
     #[test]
     fn r383_a_vanilla_card_has_lost_animated_where_it_stands_it_stays_a_unit_and_its_home_is_let_go() {
         let mut state = playing("animated-vanilla");
-        let card = put(&mut state, &spatula().id, slot(P1, Row::Backrow, 1), Default::default());
+        let card = put(&mut state, &spatula.id, slot(P1, Row::Backrow, 1), Default::default());
         let mut sink = sink_for(&mut state);
         animate_at_turn_start(&mut sink, P1);
         by_id_mut(sink.state, &card.id).vanilla = true;
@@ -550,7 +550,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
     #[test]
     fn r383_a_card_leaving_the_field_from_its_unit_zone_lets_its_home_go() {
         let mut state = playing("animated-dies");
-        let card = put(&mut state, &spatula().id, slot(P2, Row::Backrow, 1), Default::default());
+        let card = put(&mut state, &spatula.id, slot(P2, Row::Backrow, 1), Default::default());
         state.turn += 1;
         state.active = P2;
         let mut sink = sink_for(&mut state);
@@ -567,14 +567,14 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         let mut state = playing("animated-wisp");
         let mut sink = sink_for(&mut state);
         // Printed Animated, no stats on either face: a 0/1, not a 0/0 dead at the state check.
-        let base = put(sink.state, &wisp().id, slot(P1, Row::Backrow, 2), Default::default());
+        let base = put(sink.state, &wisp.id, slot(P1, Row::Backrow, 2), Default::default());
         let now = live(sink.state, &base.id);
         assert!(animate_card(&mut sink, &now, Default::default()));
         assert_eq!(unit_view(sink.state, by_id(sink.state, &base.id)).attack, 0);
         assert_eq!(unit_view(sink.state, by_id(sink.state, &base.id)).max_health, 1);
         let radiant = put(
             sink.state,
-            &wisp().id,
+            &wisp.id,
             slot(P1, Row::Backrow, 3),
             json_as(json!({ "radiant": true })),
         );
@@ -583,7 +583,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         assert_eq!(unit_view(sink.state, by_id(sink.state, &radiant.id)).attack, 0);
         assert_eq!(unit_view(sink.state, by_id(sink.state, &radiant.id)).max_health, 1);
         // Granted Animated on a stat-less card reads the same fallback.
-        let granted = put(sink.state, &tower().id, slot(P1, Row::Backrow, 4), Default::default());
+        let granted = put(sink.state, &tower.id, slot(P1, Row::Backrow, 4), Default::default());
         by_id_mut(sink.state, &granted.id).granted_keywords.push(Keyword::Animated);
         let now = live(sink.state, &granted.id);
         assert!(animate_card(&mut sink, &now, Default::default()));
@@ -604,7 +604,7 @@ mod r113_r383_b3_1_a_pause_inside_an_animated_traps_firing {
     /// state, and the trap's id.
     fn paused(seed: &str) -> (GameState, String) {
         let mut start = playing(seed);
-        let trap = put(&mut start, &asker().id, slot(P2, Row::Backrow, 1), Default::default());
+        let trap = put(&mut start, &asker.id, slot(P2, Row::Backrow, 1), Default::default());
         let played = play_plain(&mut start, 2);
         (played.state, trap.id)
     }
@@ -668,12 +668,12 @@ mod r113_r383_b3_1_a_pause_inside_an_animated_traps_firing {
             assert_eq!(
                 json_of(events_of_type(&view.events, GameEventType::Animated)),
                 json!([{
-                    "type": "animated", "player": "p2", "instanceId": trap, "defId": asker().id,
+                    "type": "animated", "player": "p2", "instanceId": trap, "defId": asker.id,
                     "backrowLane": 1, "unitLane": 1
                 }])
             );
             let side = if viewer == P2 { &view.you } else { &view.opponent };
-            expect_match(&side.units[0], json!({ "instanceId": trap, "defId": asker().id, "animated": {} }));
+            expect_match(&side.units[0], json!({ "instanceId": trap, "defId": asker.id, "animated": {} }));
         }
     }
 }

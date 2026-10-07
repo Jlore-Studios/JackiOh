@@ -299,7 +299,7 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
     #[test]
     fn r78_cost_mod_and_cost_override_persist_when_the_card_leaves_the_field_while_buffs_reset() {
         let mut state = new_game("cost-persists", None);
-        let unit = put(&mut state, &plain().id, slot(P1, Units, 1));
+        let unit = put(&mut state, &plain.id, slot(P1, Units, 1), json!({}));
         let mut sink = sink_for(&mut state);
 
         run(

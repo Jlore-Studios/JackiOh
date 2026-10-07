@@ -148,7 +148,7 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
     fn r391_with_a_full_row_each_zone_is_offered_with_the_paying_sets_that_empty_it_and_the_play_lands_there() {
         let mut state = playing("r391-full");
         let row = fill_row(&mut state, &[]);
-        let card = only(&in_hand(&mut state, &titan.id, PlayerId::P1, 1));
+        let card = only(&in_hand(&mut state, &titan().id, PlayerId::P1, 1));
 
         let offered = plays(&state, &card);
         // Tribute 1 on a full row: one play per lane, paying with that lane's unit.
@@ -180,7 +180,7 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
     fn r391_a_play_that_names_no_zone_takes_the_leftmost_open_one_or_on_a_full_row_the_leftmost_its_tribute_empties() {
         let mut state = playing("r391-default");
         let row = fill_row(&mut state, &[]);
-        let card = only(&in_hand(&mut state, &titan.id, PlayerId::P1, 1));
+        let card = only(&in_hand(&mut state, &titan().id, PlayerId::P1, 1));
         let after = pb_act(
             &state,
             json!({ "type": "play", "instanceId": card.id, "tributes": [row[3].id], "playerId": "p1" }),
@@ -191,9 +191,9 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
     #[test]
     fn r391_r13_r64_a_pile_of_two_frees_nothing_a_unit_with_reborn_frees_nothing_and_a_locked_zone_stays_shut() {
         let mut state = playing("r391-not-freed");
-        let row = fill_row(&mut state, &[(2, reborn_body.id.clone())]);
+        let row = fill_row(&mut state, &[(2, reborn_body().id.clone())]);
         // Lane 1: a Stack pile of two.
-        let mut top = new_instance(&mut state, &stack_body.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let mut top = new_instance(&mut state, &stack_body().id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
         assert!(place_on_field(
             &mut state,
             &mut top,
@@ -212,7 +212,7 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
         assert!(!freed_by_tribute(&state, &slot(PlayerId::P1, Row::Units, 3), &[row[2].id.clone()]));
         assert!(freed_by_tribute(&state, &slot(PlayerId::P1, Row::Units, 4), &[row[3].id.clone()]));
 
-        let card = only(&in_hand(&mut state, &titan.id, PlayerId::P1, 1));
+        let card = only(&in_hand(&mut state, &titan().id, PlayerId::P1, 1));
         assert_eq!(lanes(&plays(&state, &card)), vec![json!(4), json!(5)]);
         for (lane, unit) in [(1, &top), (2, &row[1]), (3, &row[2])] {
             assert!(says(&refused_at(&state, &card, lane, &[&unit.id]), "not open"));
@@ -225,7 +225,7 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
         let row: Vec<CardInstance> = (1..=4)
             .map(|lane| put(&mut state, &format!("fx-{lane}"), slot(PlayerId::P1, Row::Units, lane), json!({})))
             .collect();
-        let card = only(&in_hand(&mut state, &titan_two.id, PlayerId::P1, 1));
+        let card = only(&in_hand(&mut state, &titan_two().id, PlayerId::P1, 1));
         let offered = plays(&state, &card);
         // Six sets of two out of four; lane 5 is open for all six, and each full lane for the three
         // sets that hold its unit.
@@ -251,7 +251,7 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
     fn r391_r210_the_emptied_zone_is_held_for_the_play_a_tributed_units_death_summons_elsewhere_or_nowhere() {
         let mut state = playing("r391-held");
         let row = fill_row(&mut state, &[(3, summoner().id)]);
-        let card = only(&in_hand(&mut state, &titan.id, PlayerId::P1, 1));
+        let card = only(&in_hand(&mut state, &titan().id, PlayerId::P1, 1));
         let result = pb_reduce(
             &state,
             json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 3 }, "tributes": [row[2].id], "playerId": "p1" }),
@@ -270,7 +270,7 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
     fn r391_a_death_that_asks_at_step_2_pauses_the_play_with_its_emptied_zone_still_held_across_json_and_the_play_lands_there() {
         let mut state = playing("r391-pause");
         let row = fill_row(&mut state, &[(5, asker().id)]);
-        let card = only(&in_hand(&mut state, &titan.id, PlayerId::P1, 1));
+        let card = only(&in_hand(&mut state, &titan().id, PlayerId::P1, 1));
         let paused = pb_act(
             &state,
             json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 5 }, "tributes": [row[4].id], "playerId": "p1" }),
@@ -309,9 +309,9 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
         let mut state = playing("r391-backrow");
         put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({}));
         for lane in [1, 2, 3, 4, 5] {
-            put(&mut state, &grave_trap.id, slot(PlayerId::P1, Row::Backrow, lane), json!({}));
+            put(&mut state, &grave_trap().id, slot(PlayerId::P1, Row::Backrow, lane), json!({}));
         }
-        let card = only(&in_hand(&mut state, &tribute_field.id, PlayerId::P1, 1));
+        let card = only(&in_hand(&mut state, &tribute_field().id, PlayerId::P1, 1));
         assert!(plays(&state, &card).is_empty());
         let first_unit = top_id(&state, 0).expect("a unit");
         assert!(says(

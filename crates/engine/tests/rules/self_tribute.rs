@@ -208,7 +208,7 @@ mod r77_r102_r403_a_fusion_keeps_both_additions_of_its_ingredients {
         let target = put(&mut state, &zeroer().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
         let enemy = put(&mut state, &body().id, slot(PlayerId::P2, Row::Units, 1), Default::default());
         let mut b = Bench::sink_for(state);
-        let ingredient = in_hand(&mut b.state, &blank().id, PlayerId::P1, None)
+        let ingredient = in_hand(&mut b.state, &blank().id, PlayerId::P1, 1)
             .into_iter()
             .next()
             .expect("no ingredient");

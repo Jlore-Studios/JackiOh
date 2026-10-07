@@ -397,7 +397,7 @@ mod player_modifiers_and_their_three_expiries_2_2_10_1 {
     #[test]
     fn s2_2_a_this_turn_modifier_is_live_through_its_own_turn_and_gone_at_that_turns_cleanup() {
         let mut state = playing("this-turn");
-        let four = one(in_hand(&mut state, &indestructible().id, P1, 1));
+        let four = one(in_hand(&mut state, &indestructible.id, P1, 1));
         let turn = state.turn;
         let mut sink = sink_for(&mut state);
 
@@ -431,7 +431,7 @@ mod player_modifiers_and_their_three_expiries_2_2_10_1 {
     #[test]
     fn r48_a_next_turn_of_modifier_does_nothing_on_the_turn_it_was_made_and_applies_on_that_players_next_turn() {
         let mut state = playing("curvature-timing");
-        let four = one(in_hand(&mut state, &indestructible().id, P1, 1));
+        let four = one(in_hand(&mut state, &indestructible.id, P1, 1));
 
         // #77 Professor Curvature's Cry: "during your next turn, cards whose cost is 4 cost 1 less".
         let from_turn = state.turn;
@@ -458,7 +458,7 @@ mod player_modifiers_and_their_three_expiries_2_2_10_1 {
     #[test]
     fn r48_a_next_turn_of_modifier_is_not_live_during_the_opponents_turn_in_between() {
         let mut state = playing("curvature-between");
-        let four = one(in_hand(&mut state, &indestructible().id, P1, 1));
+        let four = one(in_hand(&mut state, &indestructible.id, P1, 1));
         let from_turn = state.turn;
         let modifier = add_modifier(
             &mut sink_for(&mut state),
@@ -499,10 +499,10 @@ mod player_modifiers_and_their_three_expiries_2_2_10_1 {
         );
 
         // A printed 4 is discounted, and so is a printed 5 that a costMod has brought down to 4.
-        let four = one(in_hand(&mut state, &indestructible().id, P1, 1));
+        let four = one(in_hand(&mut state, &indestructible.id, P1, 1));
         let five_modded = one(in_hand(&mut state, &cost_five().id, P1, 1));
         let five_plain = one(in_hand(&mut state, &cost_five().id, P1, 1));
-        let three = one(in_hand(&mut state, &trampler().id, P1, 1));
+        let three = one(in_hand(&mut state, &trampler.id, P1, 1));
         let five_modded = {
             let live = find_instance_mut(&mut state, &five_modded.id).expect("the modded five");
             live.cost_mod = -1;
@@ -602,7 +602,7 @@ mod player_modifiers_and_their_three_expiries_2_2_10_1 {
         let spells = in_hand(&mut state, &cheap_spell().id, P1, 2);
         let first = one(spells.clone());
         let second = spells.get(1).cloned().expect("a second Spell");
-        let unit = one(in_hand(&mut state, &trampler().id, P1, 1));
+        let unit = one(in_hand(&mut state, &trampler.id, P1, 1));
         let turn = state.turn;
         let mut sink = sink_for(&mut state);
 
@@ -787,7 +787,7 @@ mod delayed_effects_10_1_r62_r68 {
     fn s8_50_k_pop_fanatics_steal_fires_at_the_next_start_of_turn_after_the_unit_has_died_r76() {
         let mut state = playing("kpop-fanatic");
         let kpop = put(&mut state, &kpop_fanatic().id, slot(P1, Row::Units, 1), Default::default());
-        let prize = put(&mut state, &plain().id, slot(P2, Row::Units, 1), Default::default());
+        let prize = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
 
         {
             // The Cry's half: a delayed effect keyed to the chosen instance, due at p1's next turn start.

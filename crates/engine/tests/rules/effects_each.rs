@@ -12,6 +12,8 @@
 use std::sync::OnceLock;
 
 use jackioh_engine::effects::{ForEachCardArgs, choose_mode, draw_from_library, for_each_card};
+use std::sync::Arc;
+
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
@@ -84,7 +86,7 @@ fn board(seed: &str, asks_after: AsksAfter) -> (GameState, Vec<CardInstance>) {
     state.active = PlayerId::P1;
     state.phase = Phase::Main;
     // A copy: the library array itself empties as the cards are drawn.
-    let library = set_library(&mut state, PlayerId::P1, &[plain().id, plain().id, plain().id]);
+    let library = set_library(&mut state, PlayerId::P1, &[plain.id.clone(), plain.id.clone(), plain.id.clone()]);
     state.players[PlayerId::P1].hand = vec![];
     (state, library)
 }

@@ -7,15 +7,15 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::catalog::{token_def, vanilla_catalog, vanilla_deck};
 
 fn catalog() -> CardDefs {
-    vanilla_catalog(None, None)
+    vanilla_catalog(40, 1)
 }
 
 fn deck_a() -> Vec<String> {
-    vanilla_deck(Some(DECK_SIZE), Some(1))
+    vanilla_deck(DECK_SIZE, 1)
 }
 
 fn deck_b() -> Vec<String> {
-    vanilla_deck(Some(DECK_SIZE), Some(21))
+    vanilla_deck(DECK_SIZE, 21)
 }
 
 fn game() -> GameState {
@@ -122,15 +122,15 @@ mod create_game_m1_t1 {
 
     #[test]
     fn rejects_a_deck_that_is_not_exactly_20_cards_naming_the_rule() {
-        let short = refusal((vanilla_deck(Some(19), Some(1)), deck_b()));
+        let short = refusal((vanilla_deck(19, 1), deck_b()));
         assert!(short.contains("exactly 20 cards (§2.6 L2)"), "{short}");
-        let long = refusal((deck_a(), vanilla_deck(Some(21), Some(21))));
+        let long = refusal((deck_a(), vanilla_deck(21, 21)));
         assert!(long.contains("p2: deck must hold exactly 20"), "{long}");
     }
 
     #[test]
     fn rejects_duplicate_card_ids_naming_the_rule() {
-        let mut with_duplicate = vanilla_deck(Some(19), Some(1));
+        let mut with_duplicate = vanilla_deck(19, 1);
         with_duplicate.push("fx-1".into());
         let message = refusal((with_duplicate, deck_b()));
         assert!(matches_in_order(&message, "appears twice", "§2.6 L3"), "{message}");
@@ -138,8 +138,8 @@ mod create_game_m1_t1 {
 
     #[test]
     fn rejects_a_token_tagged_card_naming_the_rule() {
-        let token = token_def("rush", None);
-        let mut with_token = vanilla_deck(Some(19), Some(1));
+        let token = token_def("rush", [Tag::Token]);
+        let mut with_token = vanilla_deck(19, 1);
         with_token.push(token.id);
         let message = refusal((with_token, deck_b()));
         assert!(matches_in_order(&message, "is a Token card", "§2.6 L3"), "{message}");
@@ -147,7 +147,7 @@ mod create_game_m1_t1 {
 
     #[test]
     fn rejects_a_card_that_is_not_in_the_catalog_naming_the_rule() {
-        let mut with_ghost = vanilla_deck(Some(19), Some(1));
+        let mut with_ghost = vanilla_deck(19, 1);
         with_ghost.push("fx-does-not-exist".into());
         let message = refusal((with_ghost, deck_b()));
         assert!(message.contains("not in the catalog (§9.4 L6)"), "{message}");

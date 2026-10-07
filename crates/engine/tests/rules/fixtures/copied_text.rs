@@ -250,7 +250,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
             CT.caster.id.clone(),
             both(Script {
                 cry: Some(hook(|_ctx| {
-                    vec![cast_new(json_as(json!({ "def": CT.ping.id })), to_enemy_hero(5)]
+                    vec![cast_new(json_as(json!({ "def": CT.ping.id }))), to_enemy_hero(5)]
                 })),
                 ..Script::default()
             }),

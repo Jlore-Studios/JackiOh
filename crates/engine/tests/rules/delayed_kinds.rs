@@ -23,13 +23,13 @@ use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, setup_catalog, slot};
 use crate::rules::fixtures::turn::{
     LOG_LANE, contract, contract_ask, doom, doom_all, hurrah, later, log_card, notes, reminder, turn_catalog,
-    turn_scripts,
+    TURN_SCRIPTS,
 };
 
 fn register() {
     register_catalog(turn_catalog(registered_catalog().clone()));
     let mut scripts = registered_scripts().clone();
-    scripts.extend(turn_scripts());
+    scripts.extend(TURN_SCRIPTS.clone());
     register_scripts(scripts);
 }
 
@@ -77,7 +77,7 @@ fn playing(seed: &str) -> GameState {
         let keep = ids(&state.players[player].hand);
         state = act(&state, json!({ "type": "mulligan", "keep": keep, "playerId": player })).state;
     }
-    put(&mut state, &log_card().id, slot(P2, Row::Backrow, LOG_LANE));
+    put(&mut state, &log_card().id, slot(P2, Row::Backrow, LOG_LANE), json!({}));
     state.players.p1.auto_end_turn = Some(false);
     state.players.p2.auto_end_turn = Some(false);
     state
@@ -132,7 +132,7 @@ mod b5_e27_a_destroy_at_the_start_of_your_next_turn_r458 {
     #[test]
     fn r458_the_chosen_unit_is_destroyed_at_the_start_of_its_makers_next_turn_not_the_opponents() {
         let mut state = playing("doom");
-        let victim = put(&mut state, "fx-25", slot(P2, Row::Units, 1));
+        let victim = put(&mut state, "fx-25", slot(P2, Row::Units, 1), json!({}));
         let cast = play(
             &mut state,
             P1,
@@ -162,7 +162,7 @@ mod b5_e27_a_destroy_at_the_start_of_your_next_turn_r458 {
     #[test]
     fn r458_it_is_a_destroy_indestructible_ignores_it_r46() {
         let mut state = playing("doom-indestructible");
-        let victim = put(&mut state, "fx-25", slot(P2, Row::Units, 1));
+        let victim = put(&mut state, "fx-25", slot(P2, Row::Units, 1), json!({}));
         find_instance_mut(&mut state, &victim.id).expect("the victim").granted_keywords =
             vec![json_as(json!({ "kind": "Indestructible" }))];
         let cast = play(
@@ -179,7 +179,7 @@ mod b5_e27_a_destroy_at_the_start_of_your_next_turn_r458 {
     #[test]
     fn r458_r174_it_fizzles_once_the_unit_leaves_the_field_even_when_the_unit_comes_back() {
         let mut state = playing("doom-fizzle");
-        let victim = put(&mut state, "fx-25", slot(P2, Row::Units, 1));
+        let victim = put(&mut state, "fx-25", slot(P2, Row::Units, 1), json!({}));
         let mut cast = play(
             &mut state,
             P1,
@@ -202,14 +202,14 @@ mod b5_e27_a_destroy_at_the_start_of_your_next_turn_r458 {
     #[test]
     fn r458_all_enemy_units_then_the_ones_standing_as_it_resolves_not_a_list_fixed_when_it_was_made() {
         let mut state = playing("doom-all");
-        let early = put(&mut state, "fx-25", slot(P2, Row::Units, 1));
-        let mine = put(&mut state, "fx-5", slot(P1, Row::Units, 1));
+        let early = put(&mut state, "fx-25", slot(P2, Row::Units, 1), json!({}));
+        let mine = put(&mut state, "fx-5", slot(P1, Row::Units, 1), json!({}));
         let cast = play(&mut state, P1, &doom_all().id, json!({})).state;
         let entries: Vec<Value> = cast.delayed.iter().map(|entry| json!([entry.resume.hook, entry.watch])).collect();
         assert_eq!(entries, vec![json!([DELAYED_DESTROY_HOOK, null])]);
 
         let mut theirs = pass(&cast).state;
-        let late = put(&mut theirs, "fx-26", slot(P2, Row::Units, 2));
+        let late = put(&mut theirs, "fx-26", slot(P2, Row::Units, 2), json!({}));
         let back = pass(&theirs).state;
         assert!(!on_field(&back, &early.id));
         assert!(!on_field(&back, &late.id));

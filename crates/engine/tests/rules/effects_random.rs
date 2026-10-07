@@ -586,7 +586,7 @@ mod r32_r60_radiant_chance_s8_2_c42_s6_1_lucky_x_s10_7 {
     #[test]
     fn s8_2_nothing_is_rolled_and_no_draw_is_taken_when_the_zone_holds_no_non_radiant_card() {
         let mut state = game("eug-d");
-        set_library(&mut state, PlayerId::P1, &[]);
+        set_library(&mut state, PlayerId::P1, &[] as &[&str]);
 
         let ran = run(
             &mut state,

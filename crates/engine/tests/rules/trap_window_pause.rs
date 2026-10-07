@@ -283,7 +283,7 @@ fn playing(seed: &str) -> GameState {
         &state,
         json!({ "type": "mulligan", "keep": hand_ids(&state, PlayerId::P2), "playerId": "p2" }),
     );
-    put(&mut state, &log_card().id, slot(PlayerId::P1, Row::Backrow, NOTE_LANE as i32));
+    put(&mut state, &log_card().id, slot(PlayerId::P1, Row::Backrow, NOTE_LANE as i32), json!({}));
     state
 }
 
@@ -335,9 +335,9 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
     #[test]
     fn r113_owes_the_rest_of_the_window_when_a_trap_prompts_and_the_answer_fires_the_traps_it_had_not_reached() {
         let mut state = playing("window-owes-remainder");
-        let asking = put(&mut state, &ask_trap().id, slot(PlayerId::P1, Row::Backrow, 1));
-        let second = put(&mut state, &second_trap().id, slot(PlayerId::P1, Row::Backrow, 2));
-        let third = put(&mut state, &third_trap().id, slot(PlayerId::P2, Row::Backrow, 1));
+        let asking = put(&mut state, &ask_trap().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let second = put(&mut state, &second_trap().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
+        let third = put(&mut state, &third_trap().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
 
         let ended = act_result(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(ended.error, None);
@@ -402,8 +402,8 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
     #[test]
     fn r100_re_offers_the_event_to_nobody_who_has_already_seen_it_so_one_turn_end_is_one_firing() {
         let mut state = playing("window-no-refire");
-        let asking = put(&mut state, &ask_trap().id, slot(PlayerId::P1, Row::Backrow, 1));
-        let second = put(&mut state, &second_trap().id, slot(PlayerId::P1, Row::Backrow, 2));
+        let asking = put(&mut state, &ask_trap().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let second = put(&mut state, &second_trap().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
 
         let paused = act_result(&state, json!({ "type": "endTurn", "playerId": "p1" })).state;
         assert!(paused.pending.is_some());
@@ -429,8 +429,8 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
     #[test]
     fn r113_owes_the_whole_window_when_a_prompt_is_already_open_at_its_scheduled_point() {
         let mut state = playing("window-already-paused");
-        let first = put(&mut state, &second_trap().id, slot(PlayerId::P1, Row::Backrow, 1));
-        let second = put(&mut state, &third_trap().id, slot(PlayerId::P2, Row::Backrow, 1));
+        let first = put(&mut state, &second_trap().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let second = put(&mut state, &third_trap().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
 
         // A prompt an end-of-turn trigger left open: the window has delivered its event to nobody.
         let mut sink = sink_for(&state);
@@ -484,9 +484,9 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
     #[test]
     fn r62_finishes_the_window_before_the_end_of_turn_delayed_effects_and_before_cleanup() {
         let mut state = playing("window-before-delayed");
-        put(&mut state, &ask_trap().id, slot(PlayerId::P1, Row::Backrow, 1));
-        put(&mut state, &second_trap().id, slot(PlayerId::P1, Row::Backrow, 2));
-        let scheduler = put(&mut state, &delayed_card().id, slot(PlayerId::P1, Row::Backrow, 3));
+        put(&mut state, &ask_trap().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        put(&mut state, &second_trap().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
+        let scheduler = put(&mut state, &delayed_card().id, slot(PlayerId::P1, Row::Backrow, 3), json!({}));
 
         // §2.2's order for the end of a turn: triggers, window, delayed effects, cleanup (R62).
         let mut sink = sink_for(&state);

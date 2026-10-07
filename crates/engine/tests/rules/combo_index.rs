@@ -84,7 +84,7 @@ fn scripts() -> Vec<(String, CardScripts)> {
 }
 
 fn game(seed: &str) -> GameState {
-    let mut state = new_game(seed);
+    let mut state = new_game(seed, None);
     let mut catalog = registered_catalog().clone();
     for def in [combo_index(), trick(), other_trick(), body()] {
         catalog.insert(def.id.clone(), def);
@@ -103,7 +103,7 @@ fn game(seed: &str) -> GameState {
 
 /// The card on the field, at the grade the scenario needs.
 fn on_field(state: &mut GameState, grade: Option<i32>) -> CardInstance {
-    let card = put(state, &combo_index().id, slot(P1, Row::Backrow, 1));
+    let card = put(state, &combo_index().id, slot(P1, Row::Backrow, 1), json!({}));
     if let Some(grade) = grade {
         find_instance_mut(state, &card.id).expect("on the field").counters.grade = Some(grade);
     }
@@ -556,7 +556,7 @@ mod r27_combo_index_s8_93_m3_t7 {
         let mut unit_id = String::new();
         sink_events(&mut field, &mut Vec::new(), |sink| {
             let field_card = on_field(sink.state, None);
-            unit_id = put(sink.state, &body().id, slot(P1, Row::Units, 1)).id;
+            unit_id = put(sink.state, &body().id, slot(P1, Row::Units, 1), json!({})).id;
             run(sink, &field_card, vec![step_b()]);
         });
         assert!(!card(&field, &unit_id).radiant);

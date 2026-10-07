@@ -104,7 +104,7 @@ mod r636_windfury {
     fn r636_a_unit_with_windfury_attacks_twice_in_a_turn_each_a_full_attack_and_not_a_third_time() {
         assert_eq!(WINDFURY_ATTACKS, 2);
         let mut state = playing("windfury-twice");
-        put(&mut state, &windfurier().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+        put(&mut state, &windfurier.id, slot(PlayerId::P1, Row::Units, 1), Default::default());
         assert_eq!(attacks_per_turn(&state, unit_at(&state, PlayerId::P1, 1)), 2);
 
         state = attack_hero(&state, 1);
@@ -128,8 +128,8 @@ mod r636_windfury {
     #[test]
     fn r636_r6_a_unit_without_windfury_still_attacks_once_and_the_first_windfury_attack_spends_the_switch() {
         let mut state = playing("windfury-switch");
-        put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
-        put(&mut state, &windfurier().id, slot(PlayerId::P1, Row::Units, 2), Default::default());
+        put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+        put(&mut state, &windfurier.id, slot(PlayerId::P1, Row::Units, 2), Default::default());
 
         state = attack_hero(&state, 1);
         assert!(!offers_attack(&state, unit_at(&state, PlayerId::P1, 1)));
@@ -153,7 +153,7 @@ mod r636_windfury {
     #[test]
     fn r636_r6_a_unit_that_switched_cannot_attack_windfury_or_not() {
         let mut state = playing("windfury-switched");
-        put(&mut state, &windfurier().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+        put(&mut state, &windfurier.id, slot(PlayerId::P1, Row::Units, 1), Default::default());
         let instance_id = unit_at(&state, PlayerId::P1, 1).id.clone();
         state = act(&state, input(ActionBody::SwitchPosition { instance_id }, PlayerId::P1));
         // An effect flips it back to Attack Position (R20, no exertion): the switch it made already spent the turn's.
@@ -185,7 +185,7 @@ mod r636_windfury {
     #[test]
     fn r636_the_second_attack_comes_back_next_turn_both_attacks_are_available_again_at_its_controllers_start() {
         let mut state = playing("windfury-reset");
-        put(&mut state, &windfurier().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+        put(&mut state, &windfurier.id, slot(PlayerId::P1, Row::Units, 1), Default::default());
         state = attack_hero(&state, 1);
         state = attack_hero(&state, 1);
         state = act(&state, input(ActionBody::EndTurn, PlayerId::P1));
@@ -203,8 +203,8 @@ mod r636_windfury {
     #[test]
     fn r636_the_count_is_read_when_the_second_attack_is_declared_windfury_gained_after_one_attack_gives_another_lost_it_takes_it() {
         let mut state = playing("windfury-gain-lose");
-        put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
-        put(&mut state, &windfurier().id, slot(PlayerId::P1, Row::Units, 2), Default::default());
+        put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+        put(&mut state, &windfurier.id, slot(PlayerId::P1, Row::Units, 2), Default::default());
 
         state = attack_hero(&state, 1);
         state = attack_hero(&state, 2);
@@ -225,7 +225,7 @@ mod r636_windfury {
     #[test]
     fn r636_deft_duelist_keeps_its_independent_switch_beside_windfury() {
         let mut state = playing("windfury-duelist");
-        let duelist = put(&mut state, &deft_duelist().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+        let duelist = put(&mut state, &deft_duelist.id, slot(PlayerId::P1, Row::Units, 1), Default::default());
         find_instance_mut(&mut state, &duelist.id)
             .expect("the duelist on the field")
             .granted_keywords

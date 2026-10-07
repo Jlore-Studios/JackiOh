@@ -210,13 +210,13 @@ mod target_scopes_s10_6_r13 {
     fn offers_every_active_unit_by_default_the_chooser_s_side_first_in_lane_order() {
         // §10.6.
         let mut state = game("scope-default");
-        let mine_a = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1));
-        let mine_b = put(&mut state, &taunter().id, slot(PlayerId::P1, Row::Units, 3));
-        let theirs = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 2));
+        let mine_a = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let mine_b = put(&mut state, &taunter.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
+        let theirs = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
 
         // §3.2 and R13: a card dormant under a Stack is not on the field, so it is never offered.
-        let buried = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1));
-        let top = new_instance(&mut state, &stacker().id, PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
+        let buried = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let top = new_instance(&mut state, &stacker.id, PlayerId::P2, Zone::Hand { player: PlayerId::P2 });
         assert!(place_on_field(&mut state, top.clone(), slot(PlayerId::P2, Row::Units, 1), json_as(json!({ "stack": true }))));
 
         let self_ = Some(&mine_a);
@@ -229,10 +229,10 @@ mod target_scopes_s10_6_r13 {
     fn narrows_a_scope_by_side_and_offers_heroes_and_backrow_cards_when_it_names_them() {
         // §10.6.
         let mut state = game("scope-sides");
-        let mine = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1));
-        let theirs = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1));
-        let my_backrow = put(&mut state, &field_card().id, slot(PlayerId::P1, Row::Backrow, 2));
-        let their_backrow = put(&mut state, &field_card().id, slot(PlayerId::P2, Row::Backrow, 5));
+        let mine = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let theirs = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let my_backrow = put(&mut state, &field_card().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
+        let their_backrow = put(&mut state, &field_card().id, slot(PlayerId::P2, Row::Backrow, 5), json!({}));
         let self_ = Some(&mine);
         with_ctx(&mut state, self_, |_ctx| {}, |ctx| {
             assert_eq!(ids(&targets_in_scope(ctx, &scope(json!({ "side": "ally" })))), vec![mine.id.clone()]);
@@ -262,10 +262,10 @@ mod target_scopes_s10_6_r13 {
     fn exclude_self_drops_the_card_running_the_script_from_a_unit_and_from_a_backrow_scope() {
         // §10.6.
         let mut state = game("scope-exclude-self");
-        let self_card = put(&mut state, &caller().id, slot(PlayerId::P1, Row::Units, 1));
-        let other = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 2));
-        let self_backrow = put(&mut state, &field_card().id, slot(PlayerId::P1, Row::Backrow, 1));
-        let other_backrow = put(&mut state, &field_card().id, slot(PlayerId::P1, Row::Backrow, 2));
+        let self_card = put(&mut state, &caller().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let other = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let self_backrow = put(&mut state, &field_card().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let other_backrow = put(&mut state, &field_card().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
 
         let unit_self = Some(&self_card);
         with_ctx(&mut state, unit_self, |_ctx| {}, |ctx| {
@@ -298,7 +298,7 @@ mod target_scopes_s10_6_r13 {
     #[test]
     fn r81_reads_a_prompt_s_mode_pick_out_of_ctx_targets_and_a_play_s_modes_out_of_ctx_modes() {
         let mut state = game("chosen-options");
-        let self_card = put(&mut state, &caller().id, slot(PlayerId::P1, Row::Units, 1));
+        let self_card = put(&mut state, &caller().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
 
         // A Discover's answer arrives as a `mode` selection carrying a def id (§10.6).
         let answered = with_ctx(
@@ -336,7 +336,7 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
     fn choose_one_opens_a_mode_prompt_that_resumes_the_step_it_names() {
         // §6.3.
         let mut state = game("choose-mode");
-        let self_card = put(&mut state, &caller().id, slot(PlayerId::P1, Row::Units, 1));
+        let self_card = put(&mut state, &caller().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let effect = choose_mode(json_as(json!({ "options": ["burn", "heal"], "step": "picked" })));
         assert_eq!(effect.kind, "chooseMode");
 
@@ -394,9 +394,9 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
     fn choose_target_offers_the_scope_it_names_labelled_and_fizzles_on_an_empty_scope_s6_3() {
         // §10.6.
         let mut state = game("choose-target");
-        let self_card = put(&mut state, &caller().id, slot(PlayerId::P1, Row::Units, 1));
-        let enemy = put(&mut state, &taunter().id, slot(PlayerId::P2, Row::Units, 1));
-        let enemy_backrow = put(&mut state, &field_card().id, slot(PlayerId::P2, Row::Backrow, 3));
+        let self_card = put(&mut state, &caller().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let enemy = put(&mut state, &taunter.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let enemy_backrow = put(&mut state, &field_card().id, slot(PlayerId::P2, Row::Backrow, 3), json!({}));
         let effect =
             choose_target(json_as(json!({ "step": "zap", "scope": { "side": "enemy", "of": ["unit", "backrow", "hero"] } })));
         assert_eq!(effect.kind, "chooseTarget");
@@ -410,7 +410,7 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
             json!([
                 {
                     "key": format!("instance:{}", enemy.id),
-                    "label": taunter().name,
+                    "label": taunter.name,
                     "selection": { "pick": "instance", "instanceId": enemy.id },
                 },
                 {
@@ -425,7 +425,7 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
         // An empty scope opens no prompt and emits nothing: the effect fizzles and the card resolves.
         clear_prompt(&mut state);
         let mut empty_board = game("choose-target-empty");
-        let lonely = put(&mut empty_board, &caller().id, slot(PlayerId::P1, Row::Units, 1));
+        let lonely = put(&mut empty_board, &caller().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let quiet = run(
             &mut empty_board,
             Some(&lonely),
@@ -441,8 +441,8 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
     fn a_target_or_cell_prompt_names_heroes_and_cells_to_its_chooser_your_or_enemy_never_by_seat() {
         // §10.6.
         let mut state = game("choose-relative");
-        let mine = put(&mut state, &caller().id, slot(PlayerId::P1, Row::Units, 1));
-        let theirs = put(&mut state, &caller().id, slot(PlayerId::P2, Row::Units, 1));
+        let mine = put(&mut state, &caller().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let theirs = put(&mut state, &caller().id, slot(PlayerId::P2, Row::Units, 1), json!({}));
 
         run(
             &mut state,
@@ -491,15 +491,15 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
     fn c26_choose_from_hand_offers_your_own_hand_only_and_asks_for_what_the_hand_can_give() {
         // #26.
         let mut state = game("choose-hand");
-        let self_card = put(&mut state, &caller().id, slot(PlayerId::P1, Row::Units, 1));
+        let self_card = put(&mut state, &caller().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
 
         // An empty hand opens nothing at all.
         let empty = run(&mut state, Some(&self_card), vec![choose_from_hand(json_as(json!({ "step": "picked" })))]);
         assert!(state.pending.is_none());
         assert_eq!(empty, Vec::<GameEvent>::new());
 
-        let mine = in_hand(&mut state, &plain().id, PlayerId::P1, 3);
-        in_hand(&mut state, &taunter().id, PlayerId::P2, 2);
+        let mine = in_hand(&mut state, &plain.id, PlayerId::P1, 3);
+        in_hand(&mut state, &taunter.id, PlayerId::P2, 2);
         run(
             &mut state,
             Some(&self_card),
@@ -536,7 +536,7 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
     fn discover_offers_three_from_the_pool_it_names_never_the_card_that_generated_it_s5_1() {
         // §6.3.
         let mut state = game("discover-catalog");
-        let self_card = put(&mut state, &fruit_generator().id, slot(PlayerId::P1, Row::Units, 1));
+        let self_card = put(&mut state, &fruit_generator().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let effect = discover_from_catalog(json_as(json!({ "step": "chosen", "query": { "tags": ["Fruit"] } })));
         assert_eq!(effect.kind, "discoverFromCatalog");
 
@@ -560,7 +560,7 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
 
         // The same seed and the same pool offer them in the same order (§10.7).
         let mut twin = game("discover-catalog");
-        let twin_self = put(&mut twin, &fruit_generator().id, slot(PlayerId::P1, Row::Units, 1));
+        let twin_self = put(&mut twin, &fruit_generator().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         run(
             &mut twin,
             Some(&twin_self),
@@ -607,7 +607,7 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
     #[test]
     fn r247_a_discover_of_numbers_offers_the_same_three_cards_by_their_indices_and_the_view_names_none_of_them() {
         let mut by_card = game("discover-numbers");
-        let self_card = put(&mut by_card, &fruit_generator().id, slot(PlayerId::P1, Row::Units, 1));
+        let self_card = put(&mut by_card, &fruit_generator().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         run(
             &mut by_card,
             Some(&self_card),
@@ -617,7 +617,7 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
 
         // The same seed and pool, offered as numbers: the draw is untouched, only what each option is.
         let mut by_number = game("discover-numbers");
-        let number_self = put(&mut by_number, &fruit_generator().id, slot(PlayerId::P1, Row::Units, 1));
+        let number_self = put(&mut by_number, &fruit_generator().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         run(
             &mut by_number,
             Some(&number_self),
@@ -649,7 +649,7 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
     #[test]
     fn r50_discover_from_the_graveyard_offers_the_cards_actually_in_your_own_graveyard() {
         let mut state = game("discover-graveyard");
-        let self_card = put(&mut state, &caller().id, slot(PlayerId::P1, Row::Units, 1));
+        let self_card = put(&mut state, &caller().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let effect = discover_from_graveyard(json_as(json!({ "step": "chosen" })));
         assert_eq!(effect.kind, "discoverFromGraveyard");
 
@@ -658,7 +658,7 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
         assert!(state.pending.is_none());
         assert_eq!(empty, Vec::<GameEvent>::new());
 
-        let mine: Vec<CardInstance> = [plain().id, taunter().id, field_card().id]
+        let mine: Vec<CardInstance> = [plain.id.clone(), taunter.id.clone(), field_card().id]
             .iter()
             .map(|def_id| {
                 let card = new_instance(&mut state, def_id, PlayerId::P1, Zone::Graveyard { player: PlayerId::P1 });
@@ -666,7 +666,7 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
                 card
             })
             .collect();
-        let theirs = new_instance(&mut state, &plain().id, PlayerId::P2, Zone::Graveyard { player: PlayerId::P2 });
+        let theirs = new_instance(&mut state, &plain.id, PlayerId::P2, Zone::Graveyard { player: PlayerId::P2 });
         state.players[PlayerId::P2].graveyard.push(theirs.clone());
 
         run(&mut state, Some(&self_card), vec![effect]);

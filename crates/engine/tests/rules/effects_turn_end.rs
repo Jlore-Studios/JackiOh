@@ -85,6 +85,7 @@ fn playing(seed: &str) -> GameState {
         &mut state,
         &turn_fx::log_card().id,
         slot(PlayerId::P2, Row::Backrow, turn_fx::LOG_LANE),
+        json!({}),
     );
     // R345: nothing but the rule under test ends a turn behind the test's back (R82).
     state.players.p1.auto_end_turn = Some(false);
@@ -429,7 +430,7 @@ mod b5_e10_one_more_action_then_your_turn_ends_r456 {
     #[test]
     fn r456_the_action_that_sets_the_rider_is_not_counted_a_draw_offer_is_not_an_action_and_a_position_switch_is() {
         let mut state = playing("count");
-        let unit = put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 1));
+        let unit = put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 1), json!({}));
         let turn = state.turn;
         live_mut(&mut state, &unit.id).summoned_turn = Some(turn);
         let set = play(&mut state, PlayerId::P1, &turn_fx::one_more().id).state;
@@ -483,8 +484,8 @@ mod b5_e10_one_more_action_then_your_turn_ends_r456 {
     #[test]
     fn r456_with_two_riders_on_one_turn_the_sooner_end_holds_and_names_the_card_that_set_it() {
         let mut state = playing("two-riders");
-        let first = put(&mut state, "fx-3", slot(PlayerId::P1, Row::Units, 1));
-        let second = put(&mut state, "fx-4", slot(PlayerId::P1, Row::Units, 2));
+        let first = put(&mut state, "fx-3", slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let second = put(&mut state, "fx-4", slot(PlayerId::P1, Row::Units, 2), json!({}));
         let (first, second) = (live(&state, &first.id), live(&state, &second.id));
         // One sink for all three contexts, as TS's `const sink = sinkFor(state)`.
         let mut events = Vec::new();
@@ -521,7 +522,7 @@ mod b5_e10_the_opponents_trap_ends_the_turn_r456_the_ai_card_rate_limit {
     #[test]
     fn r456_the_play_that_set_it_off_resolves_first_then_the_active_players_turn_ends_named_by_the_trap() {
         let mut state = playing("rate-limit");
-        let trap = put(&mut state, &turn_fx::rate_limit().id, slot(PlayerId::P2, Row::Backrow, 1));
+        let trap = put(&mut state, &turn_fx::rate_limit().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
         let Played { state: after, events, .. } = play(&mut state, PlayerId::P1, &turn_fx::marker().id);
 
         assert_eq!(turn_fx::notes(&after), vec!["marker:p1"]);

@@ -27,7 +27,7 @@ fn act(state: &GameState, body: Value) -> GameState {
 
 /// Past both mulligans, in p1's main phase on turn 1, with nothing ending a turn but End turn.
 fn playing(seed: &str) -> GameState {
-    let decks = (vanilla_deck(Some(DECK_SIZE), Some(1)), vanilla_deck(Some(DECK_SIZE), Some(21)));
+    let decks = (vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 21));
     let mut state = begin_game(&new_game(&format!("turn-cap-{seed}"), Some(decks))).state;
     for player in [PlayerId::P1, PlayerId::P2] {
         let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();

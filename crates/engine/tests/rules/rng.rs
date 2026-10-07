@@ -11,7 +11,7 @@ use crate::rules::fixtures::rng_child;
 
 /// TS `childDraws`: what the child prints for `(seed, cursor, count)`, parsed.
 fn child_draws(seed: &str, cursor: u32, count: u32) -> (Vec<f64>, u32) {
-    let out = rng_child::run(&[seed, &cursor.to_string(), &count.to_string()]);
+    let out = rng_child::rng_child(&[seed, &cursor.to_string(), &count.to_string()]);
     let parsed: Value = serde_json::from_str(&out).expect("the child prints JSON");
     let draws = parsed["draws"]
         .as_array()

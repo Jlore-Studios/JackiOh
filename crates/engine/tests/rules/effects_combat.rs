@@ -292,16 +292,16 @@ mod forced_attacks_on_s6_3_forced_attack_s4_2_r53_c9 {
     fn r53_every_enemy_unit_attacks_the_target_in_lane_order_ignoring_position_sickness_and_taunt() {
         let mut state = game("moths");
         state.active = P2;
-        let target = put(&mut state, MOTHS, slot(P1, Units, 1));
+        let target = put(&mut state, MOTHS, slot(P1, Units, 1), json!({}));
         // §4.2 step 3 would force the attacks onto this unit; a forced attack skips the step entirely.
-        let wall = put(&mut state, &taunter().id, slot(P1, Units, 2));
+        let wall = put(&mut state, &taunter.id, slot(P1, Units, 2), json!({}));
 
-        let defending = put(&mut state, &plain().id, slot(P2, Units, 1));
+        let defending = put(&mut state, &plain.id, slot(P2, Units, 1), json!({}));
         live_mut(&mut state, &defending).position = Some(Position::Def);
-        let sick = put(&mut state, &plain().id, slot(P2, Units, 2));
+        let sick = put(&mut state, &plain.id, slot(P2, Units, 2), json!({}));
         let turn = state.turn;
         live_mut(&mut state, &sick).summoned_turn = Some(turn);
-        let ready = put(&mut state, &plain().id, slot(P2, Units, 3));
+        let ready = put(&mut state, &plain.id, slot(P2, Units, 3), json!({}));
 
         let events = run(
             &mut state,
@@ -338,10 +338,10 @@ mod forced_attacks_on_s6_3_forced_attack_s4_2_r53_c9 {
     fn r53_stops_once_the_target_has_left_the_field_so_the_later_attackers_never_attack() {
         let mut state = game("moths-dies");
         state.active = P2;
-        let target = put(&mut state, &frail().id, slot(P1, Units, 1));
-        let first = put(&mut state, &plain().id, slot(P2, Units, 1));
-        let second = put(&mut state, &plain().id, slot(P2, Units, 2));
-        let third = put(&mut state, &plain().id, slot(P2, Units, 3));
+        let target = put(&mut state, &frail().id, slot(P1, Units, 1), json!({}));
+        let first = put(&mut state, &plain.id, slot(P2, Units, 1), json!({}));
+        let second = put(&mut state, &plain.id, slot(P2, Units, 2), json!({}));
+        let third = put(&mut state, &plain.id, slot(P2, Units, 3), json!({}));
 
         let events = run(
             &mut state,
@@ -366,7 +366,7 @@ mod forced_attacks_on_s6_3_forced_attack_s4_2_r53_c9 {
     #[test]
     fn s6_3_fizzles_silently_when_the_target_resolves_to_nothing() {
         let mut state = game("moths-no-target");
-        put(&mut state, &plain().id, slot(P2, Units, 1));
+        put(&mut state, &plain.id, slot(P2, Units, 1), json!({}));
 
         // No `self`, so `{ of: "self" }` names nothing and no attack is declared.
         assert_eq!(
@@ -390,9 +390,9 @@ mod forced_attacks_s6_3_forced_attack_r53_c60 {
     #[test]
     fn r53_compels_only_the_attackers_the_def_id_names() {
         let mut state = game("honeypot-defid");
-        let victim = put(&mut state, &big_body().id, slot(P2, Units, 1));
-        let token = put(&mut state, RUSH_TOKEN, slot(P1, Units, 1));
-        let bystander = put(&mut state, &plain().id, slot(P1, Units, 2));
+        let victim = put(&mut state, &big_body.id, slot(P2, Units, 1), json!({}));
+        let token = put(&mut state, RUSH_TOKEN, slot(P1, Units, 1), json!({}));
+        let bystander = put(&mut state, &plain.id, slot(P1, Units, 2), json!({}));
 
         let events = run(
             &mut state,
@@ -412,9 +412,9 @@ mod forced_attacks_s6_3_forced_attack_r53_c60 {
     #[test]
     fn c60_summoned_this_script_compels_only_the_tokens_this_effect_list_just_summoned() {
         let mut state = game("honeypot-fresh");
-        let victim = put(&mut state, &big_body().id, slot(P2, Units, 1));
+        let victim = put(&mut state, &big_body.id, slot(P2, Units, 1), json!({}));
         // An unrelated Rush Token the controller already had: same defId, not summoned by this list.
-        let older = put(&mut state, RUSH_TOKEN, slot(P1, Units, 1));
+        let older = put(&mut state, RUSH_TOKEN, slot(P1, Units, 1), json!({}));
 
         let events = run_all(
             &mut state,
@@ -445,7 +445,7 @@ mod forced_attacks_s6_3_forced_attack_r53_c60 {
     #[test]
     fn s6_3_fizzles_silently_when_the_named_target_is_already_gone() {
         let mut state = game("honeypot-gone");
-        put(&mut state, RUSH_TOKEN, slot(P1, Units, 1));
+        put(&mut state, RUSH_TOKEN, slot(P1, Units, 1), json!({}));
 
         let events = run(
             &mut state,
@@ -471,8 +471,8 @@ fn busy_board(seed: &str) -> GameState {
     state.players.p1.mana.max = 4;
     in_hand(&mut state, "fx-1", P1, 2);
     in_hand(&mut state, "fx-2", P1, 2);
-    put(&mut state, &big_body().id, slot(P1, Units, 1));
-    put(&mut state, &plain().id, slot(P2, Units, 1));
+    put(&mut state, &big_body.id, slot(P1, Units, 1), json!({}));
+    put(&mut state, &plain.id, slot(P2, Units, 1), json!({}));
     state
 }
 
@@ -674,14 +674,14 @@ mod ai_plays_out_turn_s10_7_r44_r84_c96 {
 fn swing(seed: &str, traps: &[String]) -> (GameState, CardInstance, CardInstance, Vec<CardInstance>) {
     let mut state = game(seed);
     state.active = P2;
-    let attacker = put(&mut state, &plain().id, slot(P2, Units, 1));
+    let attacker = put(&mut state, &plain.id, slot(P2, Units, 1), json!({}));
     // A second body, so `reduce`'s §2.5 auto-end does not close the turn under the assertions.
-    put(&mut state, &plain().id, slot(P2, Units, 2));
-    let defender = put(&mut state, &big_body().id, slot(P1, Units, 1));
+    put(&mut state, &plain.id, slot(P2, Units, 2), json!({}));
+    let defender = put(&mut state, &big_body.id, slot(P1, Units, 1), json!({}));
     let backrow = traps
         .iter()
         .enumerate()
-        .map(|(index, def_id)| put(&mut state, def_id, slot(P1, Backrow, index as i32 + 1)))
+        .map(|(index, def_id)| put(&mut state, def_id, slot(P1, Backrow, index as i32 + 1), json!({})))
         .collect();
     (state, attacker, defender, backrow)
 }
@@ -845,7 +845,7 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
     #[test]
     fn s6_3_fizzles_silently_with_no_open_declaration_so_the_card_still_resolves() {
         let mut state = game("cancel-nothing");
-        let trap = put(&mut state, &ambush().id, slot(P1, Backrow, 1));
+        let trap = put(&mut state, &ambush().id, slot(P1, Backrow, 1), json!({}));
 
         assert_eq!(
             run(

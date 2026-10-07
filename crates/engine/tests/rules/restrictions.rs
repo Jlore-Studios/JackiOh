@@ -152,8 +152,8 @@ mod e35_attack_restrictions_section_4_2_step_2 {
     #[test]
     fn cant_be_attacked_never_a_target_of_a_declared_or_a_forced_attack_still_one_of_effects() {
         let mut state = playing("dc-cant-be-attacked");
-        let attacker = put(&mut state, &grunt().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
-        let jet = put(&mut state, &fighter().id, slot(PlayerId::P2, Row::Units, 1), Default::default());
+        let attacker = put(&mut state, &grunt.id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+        let jet = put(&mut state, &fighter.id, slot(PlayerId::P2, Row::Units, 1), Default::default());
         assert_eq!(target_ids(&attack_targets(&state, &attacker)), vec!["p2".to_string()]);
         assert_eq!(
             refusal(why_cannot_attack(&state, &attacker, &unit_of(&jet))),
@@ -189,9 +189,9 @@ mod e35_attack_restrictions_section_4_2_step_2 {
     #[test]
     fn attacked_only_from_its_lane_its_taunt_binds_only_the_attackers_that_may_reach_it() {
         let mut state = playing("dc-lane-only");
-        let far = put(&mut state, &grunt().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
-        let near = put(&mut state, &grunt().id, slot(PlayerId::P1, Row::Units, 3), Default::default());
-        let top = put(&mut state, &top_loser().id, slot(PlayerId::P2, Row::Units, 3), Default::default());
+        let far = put(&mut state, &grunt.id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+        let near = put(&mut state, &grunt.id, slot(PlayerId::P1, Row::Units, 3), Default::default());
+        let top = put(&mut state, &top_loser.id, slot(PlayerId::P2, Row::Units, 3), Default::default());
         assert_eq!(
             refusal(why_cannot_attack(&state, &far, &unit_of(&top))),
             Some("only a unit in its lane may attack that unit".to_string())
@@ -200,7 +200,7 @@ mod e35_attack_restrictions_section_4_2_step_2 {
         assert!(can_attack(&state, &far, &hero_of(PlayerId::P2)));
         assert!(!can_attack(&state, &near, &hero_of(PlayerId::P2)));
         assert!(can_attack(&state, &near, &unit_of(&top)));
-        let mut game = recorder(state);
+        let mut game = recorder(&state);
         game.play(input(json!({ "type": "attack", "attackerId": near.id, "targetId": top.id, "playerId": "p1" })));
         game.play(input(json!({ "type": "attack", "attackerId": far.id, "targetId": "hero-p2", "playerId": "p1" })));
         assert_eq!(game.state().players.p2.hero.health, 28);
@@ -210,9 +210,9 @@ mod e35_attack_restrictions_section_4_2_step_2 {
     #[test]
     fn cant_attack_or_be_attacked_a_restriction_from_where_a_card_stands_is_registered_by_the_module_that_knows_it() {
         let mut state = playing("dc-statue");
-        let stone = put(&mut state, &statue().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
-        let attacker = put(&mut state, &grunt().id, slot(PlayerId::P2, Row::Units, 2), Default::default());
-        let other = put(&mut state, &grunt().id, slot(PlayerId::P1, Row::Units, 2), Default::default());
+        let stone = put(&mut state, &statue.id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+        let attacker = put(&mut state, &grunt.id, slot(PlayerId::P2, Row::Units, 2), Default::default());
+        let other = put(&mut state, &grunt.id, slot(PlayerId::P1, Row::Units, 2), Default::default());
         state.active = PlayerId::P2;
         assert_eq!(
             refusal(why_cannot_attack(&state, &stone, &hero_of(PlayerId::P2))),
@@ -235,18 +235,18 @@ mod e35_immune_to_spells_a_spells_effects_pass_it_by {
     #[test]
     fn a_spells_single_target_and_its_sweep_skip_it_a_units_reaches_it() {
         let mut state = playing("dc-immune");
-        let shielded = put(&mut state, &warded().id, slot(PlayerId::P2, Row::Units, 1), Default::default());
-        let open = put(&mut state, &wall().id, slot(PlayerId::P2, Row::Units, 2), Default::default());
-        let sweep = in_hand(&mut state, &storm().id, PlayerId::P1, None).remove(0);
+        let shielded = put(&mut state, &warded.id, slot(PlayerId::P2, Row::Units, 1), Default::default());
+        let open = put(&mut state, &wall.id, slot(PlayerId::P2, Row::Units, 2), Default::default());
+        let sweep = in_hand(&mut state, &storm.id, PlayerId::P1, 1).remove(0);
         // The recorder plays on from this state; TS's `state` stayed the state before the play.
-        let mut game = recorder(state.clone());
+        let mut game = recorder(&state.clone());
         game.play(input(json!({ "type": "play", "instanceId": sweep.id, "playerId": "p1" })));
         assert_eq!(find_instance(game.state(), &shielded.id).map(|c| c.damage), Some(0));
         assert_eq!(find_instance(game.state(), &open.id).map(|c| c.damage), Some(2));
         assert!(replays_to(&game.start, &game.log, game.state()));
 
         let mut b = Bench::sink_for(state);
-        let spell = in_hand(&mut b.state, &bolt().id, PlayerId::P1, None).remove(0);
+        let spell = in_hand(&mut b.state, &bolt.id, PlayerId::P1, 1).remove(0);
         b.apply(
             Some(&spell),
             HookOptions {
@@ -263,7 +263,7 @@ mod e35_immune_to_spells_a_spells_effects_pass_it_by {
         );
         assert_eq!(live(&b.state, &shielded).damage, 0);
         assert!(live(&b.state, &shielded).marked_destroyed.is_none());
-        let body = put(&mut b.state, &grunt().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+        let body = put(&mut b.state, &grunt.id, slot(PlayerId::P1, Row::Units, 1), Default::default());
         b.apply(
             Some(&body),
             HookOptions::default(),
@@ -277,7 +277,7 @@ mod e35_immune_to_spells_a_spells_effects_pass_it_by {
         let mut state = playing("dc-immune-ctx");
         let radiant_top = put(
             &mut state,
-            &top_loser().id,
+            &top_loser.id,
             slot(PlayerId::P2, Row::Units, 1),
             json_as(json!({ "radiant": true })),
         );
@@ -292,17 +292,17 @@ mod e35_immune_to_spells_a_spells_effects_pass_it_by {
                 ..Default::default()
             },
         );
-        gone.def_id = Some(bolt().id);
+        gone.def_id = Some(bolt.id.clone());
         gone.radiant = false;
         assert!(effect_is_from_spell(&gone));
         assert!(unaffected_by(&gone, &top));
         // `{ ...gone, defId: grunt.id }`.
-        gone.def_id = Some(grunt().id);
+        gone.def_id = Some(grunt.id.clone());
         assert!(!unaffected_by(&gone, &top));
-        gone.def_id = Some(bolt().id);
+        gone.def_id = Some(bolt.id.clone());
         let plain_top = put(
             gone.state,
-            &top_loser().id,
+            &top_loser.id,
             slot(PlayerId::P2, Row::Units, 2),
             Default::default(),
         );
@@ -324,7 +324,7 @@ mod e35_a_keyword_that_holds_only_while_a_condition_does {
     #[test]
     fn first_strike_while_it_has_a_plague_counter_gone_when_the_token_is_and_with_the_text_under_a_vanilla() {
         let mut state = playing("dc-conditional");
-        let bull = put(&mut state, &charger().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+        let bull = put(&mut state, &charger.id, slot(PlayerId::P1, Row::Units, 1), Default::default());
         assert!(!keywords(&state, &bull).contains(&KeywordKind::FirstStrike));
         let mut b = Bench::sink_for(state);
         b.apply(
@@ -334,9 +334,9 @@ mod e35_a_keyword_that_holds_only_while_a_condition_does {
         );
         assert!(keywords(&b.state, &bull).contains(&KeywordKind::FirstStrike));
         // It strikes first: the 2/2 it attacks dies before hitting back.
-        let victim = put(&mut b.state, &grunt().id, slot(PlayerId::P2, Row::Units, 1), Default::default());
+        let victim = put(&mut b.state, &grunt.id, slot(PlayerId::P2, Row::Units, 1), Default::default());
         // The recorder plays on from this state; TS's `state` stayed the state before the attack.
-        let mut game = recorder(b.state.clone());
+        let mut game = recorder(&b.state.clone());
         game.play(input(json!({ "type": "attack", "attackerId": bull.id, "targetId": victim.id, "playerId": "p1" })));
         assert_eq!(find_instance(game.state(), &bull.id).map(|c| c.damage), Some(0));
         assert!(replays_to(&game.start, &game.log, game.state()));
@@ -355,10 +355,10 @@ mod e35_forced_attacks_on_a_random_enemy_and_on_the_units_own_hero {
     #[test]
     fn a_random_enemy_is_drawn_from_the_targets_the_attacker_may_attack_an_enemy_unit_leaves_the_hero_out() {
         let mut state = playing("dc-random");
-        let attacker = put(&mut state, &grunt().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
-        put(&mut state, &fighter().id, slot(PlayerId::P2, Row::Units, 1), Default::default());
-        let top = put(&mut state, &top_loser().id, slot(PlayerId::P2, Row::Units, 3), Default::default());
-        let open = put(&mut state, &wall().id, slot(PlayerId::P2, Row::Units, 2), Default::default());
+        let attacker = put(&mut state, &grunt.id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+        put(&mut state, &fighter.id, slot(PlayerId::P2, Row::Units, 1), Default::default());
+        let top = put(&mut state, &top_loser.id, slot(PlayerId::P2, Row::Units, 3), Default::default());
+        let open = put(&mut state, &wall.id, slot(PlayerId::P2, Row::Units, 2), Default::default());
         let ids = |state: &GameState, among: &str| -> Vec<String> {
             target_ids(&random_attack_targets(state, live(state, &attacker), json_as(json!(among))))
         };
@@ -384,8 +384,8 @@ mod e35_forced_attacks_on_a_random_enemy_and_on_the_units_own_hero {
         assert_eq!(live(&b.state, &top).damage, 0);
         // With nothing it may attack, nothing happens.
         let mut lonely = playing("dc-random-none");
-        let striker = put(&mut lonely, &grunt().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
-        put(&mut lonely, &fighter().id, slot(PlayerId::P2, Row::Units, 1), Default::default());
+        let striker = put(&mut lonely, &grunt.id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+        put(&mut lonely, &fighter.id, slot(PlayerId::P2, Row::Units, 1), Default::default());
         let mut quiet = Bench::sink_for(lonely);
         quiet.apply(
             Some(&striker),
@@ -412,7 +412,7 @@ mod e35_forced_attacks_on_a_random_enemy_and_on_the_units_own_hero {
         );
         let plain = put(
             &mut state,
-            &wall().id,
+            &wall.id,
             slot(PlayerId::P2, Row::Units, if first_pick == 0 { 2 } else { 1 }),
             Default::default(),
         );
@@ -447,8 +447,8 @@ mod e35_forced_attacks_on_a_random_enemy_and_on_the_units_own_hero {
     #[test]
     fn r96_the_radiants_second_attack_happens_only_while_the_unit_is_still_on_the_field() {
         let mut state = playing("dc-random-gone");
-        let attacker = put(&mut state, &grunt().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
-        let spiky = put(&mut state, &grunt().id, slot(PlayerId::P2, Row::Units, 2), Default::default());
+        let attacker = put(&mut state, &grunt.id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+        let spiky = put(&mut state, &grunt.id, slot(PlayerId::P2, Row::Units, 2), Default::default());
         live_mut(&mut state, &spiky).buffs = AttackHealth { attack: 5, health: 20 };
         let mut b = Bench::sink_for(state);
         let striker = live(&b.state, &attacker).clone();
@@ -468,7 +468,7 @@ mod e35_forced_attacks_on_a_random_enemy_and_on_the_units_own_hero {
     #[test]
     fn a_forced_attack_on_its_own_hero_the_hero_takes_its_attack_and_strikes_nothing_back() {
         let mut state = playing("dc-own-hero");
-        let attacker = put(&mut state, &grunt().id, slot(PlayerId::P1, Row::Units, 1), Default::default());
+        let attacker = put(&mut state, &grunt.id, slot(PlayerId::P1, Row::Units, 1), Default::default());
         live_mut(&mut state, &attacker).buffs = AttackHealth { attack: 3, health: 0 };
         let mut b = Bench::sink_for(state);
         b.apply(
@@ -483,7 +483,7 @@ mod e35_forced_attacks_on_a_random_enemy_and_on_the_units_own_hero {
             vec![json!({ "type": "attackDeclared", "attackerId": attacker.id, "targetId": "hero-p1", "forced": true })]
         );
         // A unit that cannot attack does not.
-        let stone = put(&mut b.state, &statue().id, slot(PlayerId::P1, Row::Units, 2), Default::default());
+        let stone = put(&mut b.state, &statue.id, slot(PlayerId::P1, Row::Units, 2), Default::default());
         b.apply(
             Some(&stone),
             HookOptions::default(),

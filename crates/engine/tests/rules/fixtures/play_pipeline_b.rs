@@ -781,16 +781,6 @@ pub fn scripts() -> IndexMap<String, CardScripts> {
     PB_SCRIPTS.clone()
 }
 
-/// `PB_SCRIPTS` as a call, for a caller that names the TS constant as a function.
-pub fn pb_scripts() -> IndexMap<String, CardScripts> {
-    PB_SCRIPTS.clone()
-}
-
-/// `PB_DEFS` as a call.
-pub fn pb_defs() -> Vec<CardDef> {
-    PB_DEFS.clone()
-}
-
 /// Merge this file's cards into whatever catalog and scripts the test registered first.
 pub fn register_pipeline_b() {
     let mut defs = registered_catalog().clone();

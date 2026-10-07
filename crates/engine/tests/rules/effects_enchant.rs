@@ -17,7 +17,7 @@ const CAST: Enchantment = Enchantment::CastOnDraw;
 const ENEMIES: Enchantment = Enchantment::TargetEnemies;
 
 fn game() -> GameState {
-    let mut state = instance_game("enchant");
+    let mut state = instance_game("enchant", None);
     state.turn = 3;
     state.active = PlayerId::P1;
     state.phase = Phase::Main;
@@ -63,7 +63,7 @@ mod b5_e39_enchant_r443 {
     #[test]
     fn r443_enchant_puts_an_enchantment_on_a_named_card_anywhere_never_twice_the_same_one_and_reports_nothing() {
         let mut state = game();
-        let Some(deck_card) = set_library(&mut state, PlayerId::P1, &[echo_bolt().id]).into_iter().next() else {
+        let Some(deck_card) = set_library(&mut state, PlayerId::P1, &[echo_bolt.id.clone()]).into_iter().next() else {
             panic!("no card");
         };
         assert_eq!(run(&mut state, enchant_one(&deck_card.id, CAST), None, HookOptions::default()), vec![]);
@@ -85,8 +85,8 @@ mod b5_e39_enchant_r443 {
     #[test]
     fn r443_enchant_over_a_scope_reaches_every_card_of_it_hand_and_deck_included() {
         let mut state = game();
-        let hand = in_hand(&mut state, &echo_bolt().id, PlayerId::P1, 2);
-        let deck = set_library(&mut state, PlayerId::P1, &[echo_bolt().id, plain().id]);
+        let hand = in_hand(&mut state, &echo_bolt.id, PlayerId::P1, 2);
+        let deck = set_library(&mut state, PlayerId::P1, &[echo_bolt.id.clone(), plain.id.clone()]);
         run(
             &mut state,
             enchant(json_as(json!({
@@ -103,7 +103,7 @@ mod b5_e39_enchant_r443 {
     #[test]
     fn r443_r78_r215_an_enchantment_rides_the_card_through_every_zone_and_through_leaving_the_field() {
         let mut state = game();
-        let unit = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1));
+        let unit = put(&mut state, &body.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         run(&mut state, enchant_one(&unit.id, RETURN), None, HookOptions::default());
         let now = live(&state, &unit.id).clone();
         move_to_zone(&mut state, &now, OffFieldZone::Hand, Default::default());
@@ -124,7 +124,7 @@ mod b5_e39_enchant_r443 {
     fn r443_a_copy_carries_its_source_s_enchantments_a_fuse_unites_its_ingredients_a_transform_makes_a_card_without_them(
     ) {
         let mut state = game();
-        let unit = put(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 1));
+        let unit = put(&mut state, &body.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         run(&mut state, enchant_one(&unit.id, ENEMIES), None, HookOptions::default());
         run(
             &mut state,
@@ -135,7 +135,7 @@ mod b5_e39_enchant_r443 {
         let copy = top_unit(&state, 2).unwrap_or_else(|| live(&state, &unit.id));
         assert_eq!(enchantments_of(copy).to_vec(), vec![ENEMIES]);
 
-        let spell = new_instance(&mut state, &echo_bolt().id, PlayerId::P1, Zone::Resolving { player: PlayerId::P1 });
+        let spell = new_instance(&mut state, &echo_bolt.id, PlayerId::P1, Zone::Resolving { player: PlayerId::P1 });
         state.players[PlayerId::P1].resolving.push(spell.clone());
         run(&mut state, enchant_one(&spell.id, CAST), None, HookOptions::default());
         let spell_now = live(&state, &spell.id).clone();
@@ -143,12 +143,12 @@ mod b5_e39_enchant_r443 {
         let copies: Vec<Vec<Enchantment>> = state.players[PlayerId::P1]
             .library
             .iter()
-            .filter(|card| card.def_id == echo_bolt().id)
+            .filter(|card| card.def_id == echo_bolt.id)
             .map(|card| enchantments_of(card).to_vec())
             .collect();
         assert_eq!(copies, vec![vec![CAST]]);
 
-        let other = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 3));
+        let other = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
         run(&mut state, enchant_one(&other.id, CAST), None, HookOptions::default());
         run(&mut state, enchant_one(&other.id, ENEMIES), None, HookOptions::default());
         {
@@ -163,15 +163,15 @@ mod b5_e39_enchant_r443 {
         assert_eq!(on(&state, &unit.id), vec![CAST, ENEMIES]);
         // TS's `{ enchantments: [CAST] }` and `{}`: two instances numbered apart from the game's own ids.
         let mut numbering: u32 = 1;
-        let mut enchanted = new_instance(&mut numbering, &plain().id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let mut enchanted = new_instance(&mut numbering, &plain.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
         enchanted.enchantments = Some(vec![CAST]);
-        let bare = new_instance(&mut numbering, &plain().id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let bare = new_instance(&mut numbering, &plain.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
         assert_eq!(united_enchantments(&[enchanted, bare.clone()]), Some(vec![CAST]));
         assert_eq!(united_enchantments(&[bare.clone(), bare]), None);
 
         run(
             &mut state,
-            transform(json_as(json!({ "instanceId": unit.id, "defId": plain().id }))),
+            transform(json_as(json!({ "instanceId": unit.id, "defId": plain.id }))),
             None,
             HookOptions::default(),
         );
@@ -182,7 +182,7 @@ mod b5_e39_enchant_r443 {
     #[test]
     fn r443_the_view_shows_the_enchantments_where_the_card_is_read_and_the_other_player_never_reads_a_hand_card_s() {
         let mut state = game();
-        let Some(held) = in_hand(&mut state, &echo_bolt().id, PlayerId::P1, 1).into_iter().next() else {
+        let Some(held) = in_hand(&mut state, &echo_bolt.id, PlayerId::P1, 1).into_iter().next() else {
             panic!("no card");
         };
         run(&mut state, enchant_one(&held.id, RETURN), None, HookOptions::default());

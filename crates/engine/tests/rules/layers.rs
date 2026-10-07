@@ -408,9 +408,9 @@ mod s10_4_stat_layers {
     #[test]
     fn s10_4_layer_1_is_the_printed_face_of_the_running_form_with_stats_override_ahead_of_both() {
         let mut state = board("layer-1");
-        let base = put(&mut state, &plain().id, p1(Row::Units, 1));
-        let radiant = put_radiant(&mut state, &plain().id, p1(Row::Units, 2));
-        let token = put(&mut state, &plain().id, p1(Row::Units, 3));
+        let base = put(&mut state, &plain.id, p1(Row::Units, 1), json!({}));
+        let radiant = put_radiant(&mut state, &plain.id, p1(Row::Units, 2));
+        let token = put(&mut state, &plain.id, p1(Row::Units, 3), json!({}));
         // §10.4: "or `statsOverride` for tokens summoned with X/X" (Adaptive UI's Rush Token).
         edit(&mut state, &token.id, |c| c.stats_override = Some(AttackHealth { attack: 7, health: 5 }));
 
@@ -425,26 +425,26 @@ mod s10_4_stat_layers {
     #[test]
     fn r39_layer_2_adds_the_sum_of_your_felinors_layer_4_stats_and_r13_counts_the_ones_under_a_stack() {
         let mut state = board("layer-2");
-        let fiender = put(&mut state, &felinor_fiender().id, p1(Row::Units, 1));
+        let fiender = put(&mut state, &felinor_fiender().id, p1(Row::Units, 1), json!({}));
         let v = view(&state, &fiender.id);
         assert_eq!((v.attack, v.max_health), (5, 7));
 
         // One Felinor on the board: its layer-4 stats are its printed 2/3 plus its own +1/+1 buff.
-        let ally = put(&mut state, &felinor().id, p1(Row::Units, 2));
+        let ally = put(&mut state, &felinor().id, p1(Row::Units, 2), json!({}));
         edit(&mut state, &ally.id, |c| c.buffs = AttackHealth { attack: 1, health: 1 });
         let v = view(&state, &fiender.id);
         assert_eq!((v.attack, v.max_health), (8, 11));
 
         // R13: a card under a Stack is not on the field for anything else, and still counts here.
-        let dormant_one = put(&mut state, &felinor().id, p1(Row::Units, 3));
-        stack_on(&mut state, &stacker().id, p1(Row::Units, 3));
+        let dormant_one = put(&mut state, &felinor().id, p1(Row::Units, 3), json!({}));
+        stack_on(&mut state, &stacker.id, p1(Row::Units, 3));
         assert!(!units(&state, PlayerId::P1).contains(&dormant_one.id));
         assert!(dormant(&state, PlayerId::P1).contains(&dormant_one.id));
         let v = view(&state, &fiender.id);
         assert_eq!((v.attack, v.max_health), (10, 14));
 
         // "All *your* Felinors": the opponent's are not yours (§8 #92).
-        put(&mut state, &felinor().id, slot(PlayerId::P2, Row::Units, 1));
+        put(&mut state, &felinor().id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let v = view(&state, &fiender.id);
         assert_eq!((v.attack, v.max_health), (10, 14));
     }
@@ -455,19 +455,19 @@ mod s10_4_stat_layers {
 
         // A Felinor Fiender that IS tagged Felinor: alone on the board it is its printed 5/7, so the
         // sum excluded it by instance. A tag filter on its own would have doubled it to 10/14.
-        let fused = put(&mut state, &fused_fiender().id, p1(Row::Units, 1));
+        let fused = put(&mut state, &fused_fiender().id, p1(Row::Units, 1), json!({}));
         let v = view(&state, &fused.id);
         assert_eq!((v.attack, v.max_health), (5, 7));
 
         // It still counts every OTHER Felinor, the tag it now carries changing nothing about that.
-        let ally = put(&mut state, &felinor().id, p1(Row::Units, 2));
+        let ally = put(&mut state, &felinor().id, p1(Row::Units, 2), json!({}));
         edit(&mut state, &ally.id, |c| c.buffs = AttackHealth { attack: 1, health: 1 });
         let v = view(&state, &fused.id);
         assert_eq!((v.attack, v.max_health), (8, 11));
 
         // Two of them: each adds the other's printed-and-buffed stats and never its own layer-2 total,
         // so the layer does not recurse (R131's second half, R116).
-        let second = put(&mut state, &fused_fiender().id, p1(Row::Units, 3));
+        let second = put(&mut state, &fused_fiender().id, p1(Row::Units, 3), json!({}));
         let v = view(&state, &fused.id);
         assert_eq!((v.attack, v.max_health), (13, 18));
         let v = view(&state, &second.id);
@@ -477,7 +477,7 @@ mod s10_4_stat_layers {
     #[test]
     fn s10_4_layer_4_adds_the_instances_permanent_buffs_to_both_stats() {
         let mut state = board("layer-4");
-        let unit = put(&mut state, &plain().id, p1(Row::Units, 1));
+        let unit = put(&mut state, &plain.id, p1(Row::Units, 1), json!({}));
         let v = view(&state, &unit.id);
         assert_eq!((v.attack, v.max_health), (3, 3));
 
@@ -489,8 +489,8 @@ mod s10_4_stat_layers {
     #[test]
     fn s10_4_layer_5_auras_apply_while_their_source_is_in_play_and_stop_the_moment_it_leaves_14() {
         let mut state = board("layer-5");
-        let unit = put(&mut state, &plain().id, p1(Row::Units, 1));
-        let weapons = put(&mut state, &jlockeeds_weapons().id, p1(Row::Backrow, 1));
+        let unit = put(&mut state, &plain.id, p1(Row::Units, 1), json!({}));
+        let weapons = put(&mut state, &jlockeeds_weapons().id, p1(Row::Backrow, 1), json!({}));
         assert_eq!(view(&state, &unit.id).attack, 7);
 
         // §8 #14: "removed when it leaves". Nothing was stored on the unit, so nothing has to be undone.
@@ -503,23 +503,23 @@ mod s10_4_stat_layers {
     #[test]
     fn r13_a_dormant_stack_card_projects_no_aura() {
         let mut state = board("dormant-aura");
-        let ally = put(&mut state, &plain().id, p1(Row::Units, 2));
+        let ally = put(&mut state, &plain.id, p1(Row::Units, 2), json!({}));
         edit(&mut state, &ally.id, |c| c.position = Some(Position::Def));
-        put(&mut state, &big_dfender().id, p1(Row::Units, 1));
+        put(&mut state, &big_dfender.id, p1(Row::Units, 1), json!({}));
         // Defense Position's own Armor +1 plus Big D-fender's +2 (§4.1, §8 #1).
         assert_eq!(view(&state, &ally.id).armor, 3);
 
         // §3.2: only the top of a pile is on the field, so only it projects its aura.
-        stack_on(&mut state, &stacker().id, p1(Row::Units, 1));
+        stack_on(&mut state, &stacker.id, p1(Row::Units, 1));
         assert_eq!(view(&state, &ally.id).armor, 1);
     }
 
     #[test]
     fn s10_4_layer_5_floors_attack_at_0_and_floors_max_health_at_nothing_spikey_pillow() {
         let mut state = board("attack-floor");
-        let pillow = put(&mut state, &spikey_pillow().id, p1(Row::Units, 1));
-        let small = put(&mut state, &poisonous().id, p1(Row::Units, 2));
-        let big = put(&mut state, &plain().id, p1(Row::Units, 3));
+        let pillow = put(&mut state, &spikey_pillow.id, p1(Row::Units, 1), json!({}));
+        let small = put(&mut state, &poisonous.id, p1(Row::Units, 2), json!({}));
+        let big = put(&mut state, &plain.id, p1(Row::Units, 3), json!({}));
 
         // 1 − 2 and 0 − 2 both floor at 0; 3 − 2 does not.
         assert_eq!(view(&state, &small.id).attack, 0);
@@ -532,7 +532,7 @@ mod s10_4_stat_layers {
     #[test]
     fn s10_4_layer_6_reads_current_health_as_max_health_minus_damage() {
         let mut state = board("layer-6");
-        let unit = put(&mut state, &plain().id, p1(Row::Units, 1));
+        let unit = put(&mut state, &plain.id, p1(Row::Units, 1), json!({}));
         edit(&mut state, &unit.id, |c| c.damage = 2);
         let v = view(&state, &unit.id);
         assert_eq!((v.max_health, v.health), (3, 1));
@@ -546,13 +546,13 @@ mod s10_4_stat_layers {
     #[test]
     fn s10_4_composes_layers_1_2_4_5_and_6_in_that_order() {
         let mut state = board("layer-order");
-        let fiender = put(&mut state, &felinor_fiender().id, p1(Row::Units, 2));
+        let fiender = put(&mut state, &felinor_fiender().id, p1(Row::Units, 2), json!({}));
         // 1: the printed face.
         let v = view(&state, &fiender.id);
         assert_eq!((v.attack, v.max_health, v.health), (5, 7, 7));
 
         // 2: the set-stat, reading the Felinor's layer-4 stats (printed 2/3 plus its +1/+1).
-        let ally = put(&mut state, &felinor().id, p1(Row::Units, 3));
+        let ally = put(&mut state, &felinor().id, p1(Row::Units, 3), json!({}));
         edit(&mut state, &ally.id, |c| c.buffs = AttackHealth { attack: 1, health: 1 });
         let v = view(&state, &fiender.id);
         assert_eq!((v.attack, v.max_health), (8, 11));
@@ -563,7 +563,7 @@ mod s10_4_stat_layers {
         assert_eq!((v.attack, v.max_health), (9, 13));
 
         // 5: auras come last, and an aura never changes the layer-4 stats layer 2 summed.
-        put(&mut state, &spikey_pillow().id, p1(Row::Units, 1));
+        put(&mut state, &spikey_pillow.id, p1(Row::Units, 1), json!({}));
         let v = view(&state, &ally.id);
         assert_eq!((v.attack, v.max_health), (1, 4));
         let v = view(&state, &fiender.id);
@@ -578,9 +578,9 @@ mod s10_4_stat_layers {
     #[test]
     fn s10_4_applies_layer_4s_buffs_before_layer_5s_auras_and_floors_attack_once_at_the_end() {
         let mut state = board("floor-once");
-        let unit = put(&mut state, &zero_attack().id, p1(Row::Units, 2));
+        let unit = put(&mut state, &zero_attack.id, p1(Row::Units, 2), json!({}));
         edit(&mut state, &unit.id, |c| c.buffs = AttackHealth { attack: 3, health: 0 });
-        put(&mut state, &spikey_pillow().id, p1(Row::Units, 1));
+        put(&mut state, &spikey_pillow.id, p1(Row::Units, 1), json!({}));
 
         // 0 + 3 − 2 = 1. A floor taken before the buff — max(0, 0 − 2) = 0, then +3 — would read 3,
         // so the order of layers 4 and 5 against the single final floor is observable here.
@@ -590,8 +590,8 @@ mod s10_4_stat_layers {
     #[test]
     fn c46_suppressive_aura_takes_a_2_health_units_max_health_to_0_and_the_next_state_check_kills_it() {
         let mut state = board("suppressive-kill");
-        let small = put(&mut state, &small_body().id, p1(Row::Units, 1));
-        put(&mut state, &suppressive_aura().id, p1(Row::Backrow, 1));
+        let small = put(&mut state, &small_body().id, p1(Row::Units, 1), json!({}));
+        put(&mut state, &suppressive_aura().id, p1(Row::Backrow, 1), json!({}));
         let v = view(&state, &small.id);
         assert_eq!((v.attack, v.max_health, v.health), (0, 0, 0));
 
@@ -611,8 +611,8 @@ mod s10_4_stat_layers {
     #[test]
     fn c46_removing_suppressive_aura_restores_a_surviving_units_max_health() {
         let mut state = board("suppressive-restore");
-        let unit = put(&mut state, &plain().id, p1(Row::Units, 1));
-        let aura = put(&mut state, &suppressive_aura().id, p1(Row::Backrow, 1));
+        let unit = put(&mut state, &plain.id, p1(Row::Units, 1), json!({}));
+        let aura = put(&mut state, &suppressive_aura().id, p1(Row::Backrow, 1), json!({}));
         let v = view(&state, &unit.id);
         assert_eq!((v.attack, v.max_health, v.health), (1, 1, 1));
 
@@ -632,8 +632,8 @@ mod s10_4_stat_layers {
     #[test]
     fn s10_4_layer_5_an_aura_picks_its_own_side_radiant_suppressive_aura_touches_enemy_units_only() {
         let mut state = board("suppressive-radiant");
-        let mine = put(&mut state, &big_body().id, p1(Row::Units, 1));
-        let theirs = put(&mut state, &big_body().id, slot(PlayerId::P2, Row::Units, 1));
+        let mine = put(&mut state, &big_body.id, p1(Row::Units, 1), json!({}));
+        let theirs = put(&mut state, &big_body.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         put_radiant(&mut state, &suppressive_aura().id, p1(Row::Backrow, 1));
 
         let v = view(&state, &mine.id);
@@ -649,12 +649,12 @@ mod s10_4_keyword_set {
     #[test]
     fn s10_4_the_keyword_set_is_the_union_of_printed_granted_aura_and_position_sources() {
         let mut state = board("keyword-union");
-        let unit = put(&mut state, &taunter().id, p1(Row::Units, 1));
+        let unit = put(&mut state, &taunter.id, p1(Row::Units, 1), json!({}));
         edit(&mut state, &unit.id, |c| {
             c.granted_keywords = vec![Keyword::Lifesteal];
             c.position = Some(Position::Def);
         });
-        put(&mut state, &jlockeeds_weapons().id, p1(Row::Backrow, 1));
+        put(&mut state, &jlockeeds_weapons().id, p1(Row::Backrow, 1), json!({}));
 
         // Printed Taunt, granted Lifesteal, the aura's Rush and First Strike, Defense Position's Armor.
         assert_eq!(kinds_of(&unit.id, &state), ["Armor", "First Strike", "Lifesteal", "Rush", "Taunt"]);
@@ -664,7 +664,7 @@ mod s10_4_keyword_set {
     #[test]
     fn s6_3_vanilla_strips_printed_keywords_but_not_granted_keywords_and_keeps_stats_buffs_and_damage() {
         let mut state = board("vanilla");
-        let unit = put(&mut state, &taunter().id, p1(Row::Units, 1));
+        let unit = put(&mut state, &taunter.id, p1(Row::Units, 1), json!({}));
         edit(&mut state, &unit.id, |c| {
             c.buffs = AttackHealth { attack: 1, health: 1 };
             c.damage = 2;
@@ -679,7 +679,7 @@ mod s10_4_keyword_set {
         assert_eq!((v.attack, v.max_health, v.health), (3, 6, 4));
 
         // An aura is the board's text, not the unit's, so a Vanilla unit still takes aura grants.
-        put(&mut state, &jlockeeds_weapons().id, p1(Row::Backrow, 1));
+        put(&mut state, &jlockeeds_weapons().id, p1(Row::Backrow, 1), json!({}));
         assert_eq!(kinds_of(&unit.id, &state), ["First Strike", "Rush"]);
         assert_eq!(view(&state, &unit.id).attack, 7);
     }
@@ -687,8 +687,8 @@ mod s10_4_keyword_set {
     #[test]
     fn s6_3_a_vanilla_units_own_aura_stops_applying_because_vanilla_clears_its_scripts() {
         let mut state = board("vanilla-aura");
-        let dfender = put(&mut state, &big_dfender().id, p1(Row::Units, 1));
-        let ally = put(&mut state, &plain().id, p1(Row::Units, 2));
+        let dfender = put(&mut state, &big_dfender.id, p1(Row::Units, 1), json!({}));
+        let ally = put(&mut state, &plain.id, p1(Row::Units, 2), json!({}));
         edit(&mut state, &ally.id, |c| c.position = Some(Position::Def));
         assert_eq!(view(&state, &ally.id).armor, 3);
 
@@ -706,7 +706,7 @@ mod s10_4_keyword_set {
     #[test]
     fn s4_1_a_unit_in_defense_position_gains_taunt_and_armor_1() {
         let mut state = board("defense-position");
-        let unit = put(&mut state, &plain().id, p1(Row::Units, 1));
+        let unit = put(&mut state, &plain.id, p1(Row::Units, 1), json!({}));
         let v = view(&state, &unit.id);
         assert_eq!((v.position, v.armor), (Position::Atk, 0));
         assert!(!has(&state, &unit.id, KeywordKind::Taunt));
@@ -723,7 +723,7 @@ mod s10_4_keyword_set {
     #[test]
     fn s10_4_armor_is_summed_across_every_source_printed_granted_defense_position_and_auras() {
         let mut state = board("armor-sum");
-        let unit = put(&mut state, &armoured().id, p1(Row::Units, 2));
+        let unit = put(&mut state, &armoured.id, p1(Row::Units, 2), json!({}));
         assert_eq!(view(&state, &unit.id).armor, 7);
 
         edit(&mut state, &unit.id, |c| c.granted_keywords = vec![Keyword::Armor { n: 2 }]);
@@ -733,7 +733,7 @@ mod s10_4_keyword_set {
         assert_eq!(view(&state, &unit.id).armor, 10);
 
         // §4.1: Big D-fender's aura stacks with printed Armor and with Defense Position's own +1.
-        put(&mut state, &big_dfender().id, p1(Row::Units, 1));
+        put(&mut state, &big_dfender.id, p1(Row::Units, 1), json!({}));
         let v = view(&state, &unit.id);
         assert_eq!(v.armor, 12);
         assert_eq!(armor_of(&v.keywords), 12);
@@ -742,7 +742,7 @@ mod s10_4_keyword_set {
     #[test]
     fn r347_an_indestructible_unit_never_has_taunt_printed_granted_or_from_defense_position() {
         let mut state = board("indestructible-no-taunt");
-        let unit = put(&mut state, &indestructible().id, p1(Row::Units, 1));
+        let unit = put(&mut state, &indestructible.id, p1(Row::Units, 1), json!({}));
         edit(&mut state, &unit.id, |c| {
             c.granted_keywords = vec![Keyword::Taunt];
             c.position = Some(Position::Def);
@@ -763,7 +763,7 @@ mod s10_4_keyword_set {
     #[test]
     fn r349_a_unit_with_no_radiant_form_of_its_own_doubles_its_base_stat_layer_when_radiant_a_summons_x_x_included() {
         let mut state = board("radiant-fallback");
-        let ghoul = put(&mut state, &fallback_token().id, p1(Row::Units, 1));
+        let ghoul = put(&mut state, &fallback_token().id, p1(Row::Units, 1), json!({}));
         edit(&mut state, &ghoul.id, |c| {
             c.stats_override = Some(AttackHealth { attack: 3, health: 3 });
             c.buffs = AttackHealth { attack: 1, health: 1 };
@@ -784,7 +784,7 @@ mod s10_4_keyword_set {
         assert_eq!(live(&state, &ghoul.id).stats_override, Some(AttackHealth { attack: 3, health: 3 }));
 
         // A token that prints a Radiant form keeps its X on both faces, as §7's Bread Token does.
-        let bread = put(&mut state, &printed_radiant_token().id, p1(Row::Units, 2));
+        let bread = put(&mut state, &printed_radiant_token().id, p1(Row::Units, 2), json!({}));
         edit(&mut state, &bread.id, |c| {
             c.stats_override = Some(AttackHealth { attack: 3, health: 3 });
             c.radiant = true;
@@ -799,7 +799,7 @@ mod s10_4_keyword_set {
     fn r46_r347_a_marked_indestructible_unit_stamps_the_turn_which_holds_its_taunt_off_that_turn_only_once_it_is_no_longer_indestructible() {
         let mut state = board("taunt-suppression");
         state.turn = 4;
-        let unit = put(&mut state, &indestructible().id, p1(Row::Units, 1));
+        let unit = put(&mut state, &indestructible.id, p1(Row::Units, 1), json!({}));
         edit(&mut state, &unit.id, |c| {
             c.granted_keywords = vec![Keyword::Taunt];
             c.position = Some(Position::Def);
@@ -835,7 +835,7 @@ mod s10_4_keyword_set {
     #[test]
     fn s6_1_a_spent_divine_shield_and_a_used_reborn_are_gone_until_they_are_granted_again() {
         let mut state = board("spent-keywords");
-        let shield = put(&mut state, &shielded().id, p1(Row::Units, 1));
+        let shield = put(&mut state, &shielded.id, p1(Row::Units, 1), json!({}));
         assert!(has(&state, &shield.id, KeywordKind::DivineShield));
 
         // §6.1: "Negate the first damage instance, then lose it" (§10.1's `divineShieldSpent`).
@@ -850,7 +850,7 @@ mod s10_4_keyword_set {
         });
         assert!(has(&state, &shield.id, KeywordKind::DivineShield));
 
-        let reborn = put(&mut state, &plain().id, p1(Row::Units, 2));
+        let reborn = put(&mut state, &plain.id, p1(Row::Units, 2), json!({}));
         edit(&mut state, &reborn.id, |c| c.granted_keywords = vec![Keyword::Reborn]);
         assert!(has(&state, &reborn.id, KeywordKind::Reborn));
         // §4.5 step 4: a Reborn body comes back without Reborn.
@@ -865,7 +865,7 @@ mod s10_4_recomputation {
     #[test]
     fn s10_4_recomputes_the_view_on_every_read_and_stores_no_total_in_the_state() {
         let mut state = board("no-cache");
-        let unit = put(&mut state, &plain().id, p1(Row::Units, 2));
+        let unit = put(&mut state, &plain.id, p1(Row::Units, 2), json!({}));
         let first = view(&state, &unit.id);
         assert_eq!((first.attack, first.max_health, first.health), (3, 3, 3));
 
@@ -885,7 +885,7 @@ mod s10_4_recomputation {
         assert!(!fields.contains_key("armor"));
 
         // A second read around a mutation sees the new board, and the first view is untouched by it.
-        put(&mut state, &spikey_pillow().id, p1(Row::Units, 1));
+        put(&mut state, &spikey_pillow.id, p1(Row::Units, 1), json!({}));
         edit(&mut state, &unit.id, |c| {
             c.buffs = AttackHealth { attack: 1, health: 1 };
             c.damage = 1;

@@ -28,7 +28,7 @@ use jackioh_engine::testkit::{mock_animate_at_turn_start, mock_brittle_tick, moc
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{in_hand, new_game, put, set_library, setup_catalog, slot};
 use crate::rules::fixtures::turn::{
-    LOG_LANE, cast_spell, clock, crumble_watcher, log_card, note, notes, reminder, turn_catalog, turn_scripts,
+    LOG_LANE, cast_spell, clock, crumble_watcher, log_card, note, notes, reminder, turn_catalog, TURN_SCRIPTS,
     write,
 };
 
@@ -51,7 +51,7 @@ fn log_scripts() -> CardScripts {
 fn register() {
     register_catalog(turn_catalog(registered_catalog().clone()));
     let mut scripts = registered_scripts().clone();
-    scripts.extend(turn_scripts());
+    scripts.extend(TURN_SCRIPTS.clone());
     scripts.insert(log_card().id, log_scripts());
     register_scripts(scripts);
 }
@@ -133,7 +133,7 @@ fn playing(seed: &str) -> GameState {
 fn staged(seed: &str) -> GameState {
     let mut state = playing(seed);
     put(&mut state, &clock().id, slot(PlayerId::P1, Row::Backrow, 1), Default::default());
-    let card = in_hand(&mut state, &reminder().id, PlayerId::P1, None)[0].clone();
+    let card = in_hand(&mut state, &reminder().id, PlayerId::P1, 1)[0].clone();
     state = act(&state, json!({ "type": "play", "instanceId": card.id, "playerId": "p1" })).0;
     set_library(&mut state, PlayerId::P1, &[cast_spell().id, "fx-9".to_string()]);
     state
@@ -467,7 +467,7 @@ mod r62_s_cleanup_with_the_animated_return_as_its_last_step_b3_1 {
             }
         });
         let seed = "turn-wiring-replay";
-        let decks = (vanilla_deck(Some(DECK_SIZE), Some(1)), vanilla_deck(Some(DECK_SIZE), Some(21)));
+        let decks = (vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 21));
         setup_catalog();
         register();
         let mut game = Played {

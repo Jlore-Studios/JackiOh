@@ -88,9 +88,9 @@ struct Board {
 
 fn board(seed: &str) -> Board {
     let mut started = playing(seed);
-    let mine = put(&mut started.state, &body().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-    let theirs = put(&mut started.state, &big_body().id, slot(PlayerId::P2, Row::Units, 2), json!({}));
-    let trap = put(&mut started.state, &quiet_trap().id, slot(PlayerId::P2, Row::Backrow, 3), json!({}));
+    let mine = put(&mut started.state, &body.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+    let theirs = put(&mut started.state, &big_body.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
+    let trap = put(&mut started.state, &quiet_trap.id, slot(PlayerId::P2, Row::Backrow, 3), json!({}));
     Board {
         run: started,
         mine,
@@ -179,11 +179,11 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
             theirs,
             trap,
         } = board("plague-prompts");
-        let book = hand_card(&mut start.state, &plague_book().id, PlayerId::P1);
+        let book = hand_card(&mut start.state, &plague_book.id, PlayerId::P1);
         let mut run = frozen(&start);
         let enemy_before = hero_health(&run.state, PlayerId::P2);
 
-        run = act(&run, json_as(play(&book)));
+        run = act(&run, play(&book));
         let first = run.state.pending.clone();
         assert_eq!(first.as_ref().map(|p| p.player_id), Some(PlayerId::P1));
         assert_eq!(first.as_ref().map(|p| p.kind), Some(PromptKind::Target));
@@ -215,10 +215,10 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
         let Board {
             run: mut start, theirs, ..
         } = board("plague-json");
-        let book = hand_card(&mut start.state, &plague_book().id, PlayerId::P1);
+        let book = hand_card(&mut start.state, &plague_book.id, PlayerId::P1);
         find_instance_mut(&mut start.state, &book.id).expect("the book").radiant = true;
         let mut run = frozen(&start);
-        run = act(&run, json_as(play(&book)));
+        run = act(&run, play(&book));
 
         // Paused on the one prompt, the Spell's damage parked behind it (R113).
         let paused = run.state.clone();
@@ -246,11 +246,11 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
     #[test]
     fn r471_with_no_permanent_on_the_field_nothing_is_asked_and_the_rest_of_the_list_resolves_at_once() {
         let mut start = playing("plague-empty");
-        let book = hand_card(&mut start.state, &plague_book().id, PlayerId::P1);
+        let book = hand_card(&mut start.state, &plague_book.id, PlayerId::P1);
         let mut run = frozen(&start);
         let before = hero_health(&run.state, PlayerId::P2);
         let cursor = run.state.rng_cursor;
-        run = act(&run, json_as(play(&book)));
+        run = act(&run, play(&book));
         assert!(run.state.pending.is_none());
         assert_eq!(hero_health(&run.state, PlayerId::P2), before - 1);
         // R129: a placement with nowhere to go draws nothing.
@@ -262,10 +262,10 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
         let Board {
             run: mut start, mine, ..
         } = board("plague-refused");
-        let book = hand_card(&mut start.state, &plague_book().id, PlayerId::P1);
-        let in_hand = hand_card(&mut start.state, &body().id, PlayerId::P1);
+        let book = hand_card(&mut start.state, &plague_book.id, PlayerId::P1);
+        let in_hand = hand_card(&mut start.state, &body.id, PlayerId::P1);
         let mut run = frozen(&start);
-        run = act(&run, json_as(play(&book)));
+        run = act(&run, play(&book));
         let pending = run.state.pending.clone().expect("expected a prompt");
         let refused = run.state.clone();
         // TS: `act` throws `${type} refused: ${error}`; `refusal` is the same reduce's error.
@@ -287,9 +287,9 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
         let Board {
             run: mut start, trap, ..
         } = board("plague-view");
-        let book = hand_card(&mut start.state, &plague_book().id, PlayerId::P1);
+        let book = hand_card(&mut start.state, &plague_book.id, PlayerId::P1);
         let mut run = frozen(&start);
-        run = act(&run, json_as(play(&book)));
+        run = act(&run, play(&book));
 
         assert_eq!(
             view_json(&run.state, PlayerId::P2)["pending"],
@@ -305,7 +305,7 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
             trap_option,
             Some(json!({ "key": format!("instance:{}", trap.id), "label": HIDDEN_OPTION_LABEL, "instanceId": trap.id }))
         );
-        assert!(!mine.to_string().contains(&quiet_trap().id));
+        assert!(!mine.to_string().contains(&quiet_trap.id));
 
         // The one answer lands both placements on the trap (R689).
         run = answer(&run, pick(&trap), None);
@@ -367,7 +367,7 @@ mod e19_a_placement_prompt_held_by_the_player_who_is_not_taking_the_turn {
         // TS: `answer(run1, pick(theirs), "p1")` throws the refusal; `refusal` is that reduce's error.
         let refused = refusal(
             &run1,
-            json_as(json!({ "type": "answer", "choiceId": pending.id, "selection": [pick(&theirs)], "playerId": "p1" })),
+            json!({ "type": "answer", "choiceId": pending.id, "selection": [pick(&theirs)], "playerId": "p1" }),
         );
         assert!(refused.is_some_and(|error| error.contains("other player")));
         run1 = answer(&run1, pick(&theirs), Some(PlayerId::P2));
@@ -385,11 +385,11 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
         let Board {
             run: mut start, theirs, ..
         } = board("plague-outbreak");
-        let spell = hand_card(&mut start.state, &outbreak().id, PlayerId::P1);
-        let radiant = hand_card(&mut start.state, &outbreak().id, PlayerId::P1);
+        let spell = hand_card(&mut start.state, &outbreak.id, PlayerId::P1);
+        let radiant = hand_card(&mut start.state, &outbreak.id, PlayerId::P1);
         find_instance_mut(&mut start.state, &radiant.id).expect("the radiant spell").radiant = true;
         let mut run = frozen(&start);
-        run = act(&run, json_as(play_on(&spell, &theirs)));
+        run = act(&run, play_on(&spell, &theirs));
         run = act(&run, json_as(play_on(&radiant, &theirs)));
         assert!(run.state.pending.is_none());
         let events = last_events(&run.state, 2);
@@ -403,8 +403,8 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
     fn r471_a_placement_multiplier_on_the_card_receiving_it_doubled_tripled_on_its_radiant_face() {
         let Board { run: mut start, .. } = board("plague-slime");
         let state = &mut start.state;
-        let base = put(state, &slime().id, slot(PlayerId::P1, Row::Units, 3), json!({}));
-        let radiant = put(state, &slime().id, slot(PlayerId::P1, Row::Units, 4), json!({ "radiant": true }));
+        let base = put(state, &slime.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
+        let radiant = put(state, &slime.id, slot(PlayerId::P1, Row::Units, 4), json!({ "radiant": true }));
         sink_for!(sink, *state);
         assert_eq!(plague_multiplier_of(&*sink.state, live(&*sink.state, &base.id)), 2);
         assert_eq!(plague_multiplier_of(&*sink.state, live(&*sink.state, &radiant.id)), 3);
@@ -432,8 +432,8 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
     fn r471_a_fused_cards_multipliers_multiply_a_slime_fused_onto_a_slime_quadruples() {
         let Board { run: mut start, .. } = board("plague-fused-slime");
         let state = &mut start.state;
-        let kept = put(state, &slime().id, slot(PlayerId::P1, Row::Units, 3), json!({}));
-        let other = put(state, &slime().id, slot(PlayerId::P1, Row::Units, 4), json!({}));
+        let kept = put(state, &slime.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
+        let other = put(state, &slime.id, slot(PlayerId::P1, Row::Units, 4), json!({}));
         sink_for!(sink, *state);
         let fused = fuse(
             &mut sink,
@@ -452,15 +452,15 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
     #[test]
     fn r471_whenever_plague_counters_are_placed_on_this_answers_once_per_placement_never_a_removal() {
         let Board { run: mut start, .. } = board("plague-crawler");
-        let worm = put(&mut start.state, &crawler().id, slot(PlayerId::P1, Row::Units, 3), json!({}));
-        let book = hand_card(&mut start.state, &plague_book().id, PlayerId::P1);
-        let spell = hand_card(&mut start.state, &outbreak().id, PlayerId::P1);
+        let worm = put(&mut start.state, &crawler.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
+        let book = hand_card(&mut start.state, &plague_book.id, PlayerId::P1);
+        let spell = hand_card(&mut start.state, &outbreak.id, PlayerId::P1);
         find_instance_mut(&mut start.state, &spell.id).expect("the spell").radiant = true;
         let mut run = frozen(&start);
         let before = hero_health(&run.state, PlayerId::P2);
 
         // One placement of 2: one answer.
-        run = act(&run, json_as(play_on(&spell, &worm)));
+        run = act(&run, play_on(&spell, &worm));
         assert_eq!(hero_health(&run.state, PlayerId::P2), before - 1);
 
         // Two placements on it: one answer (R689); all three triggers still wait for the whole effect and
@@ -480,7 +480,7 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
     #[test]
     fn r471_every_gain_is_a_placement_core_91s_plus_1_plague_counter_plague_reports_placed_and_is_multiplied() {
         let Board { run: mut start, .. } = board("plague-gain");
-        let on_slime = put(&mut start.state, &slime().id, slot(PlayerId::P1, Row::Units, 3), json!({}));
+        let on_slime = put(&mut start.state, &slime.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
         sink_for!(sink, start.state);
         run(&mut sink, counters::plague(json_as(json!({ "amount": 1 }))), Some(&on_slime), &[]);
         run(&mut sink, counters::plague(json_as(json!({ "amount": -1 }))), Some(&on_slime), &[]);
@@ -496,9 +496,9 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
             run: mut start, mine, ..
         } = board("plague-off-field");
         let state = &mut start.state;
-        let in_hand = hand_card(state, &body().id, PlayerId::P1);
+        let in_hand = hand_card(state, &body.id, PlayerId::P1);
         // A Stack card played on p1's lane 1, so `mine` lies dormant under it.
-        let mut top = new_instance(state, &big_body().id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
+        let mut top = new_instance(state, &big_body.id, PlayerId::P1, Zone::Hand { player: PlayerId::P1 });
         assert!(
             place_on_field(state, &mut top, &slot(PlayerId::P1, Row::Units, 1), PlaceOnFieldOptions { stack: Some(true) }),
             "expected a pile"
@@ -524,9 +524,9 @@ mod e19_placements_over_a_scope_at_random_and_removals {
             theirs,
             trap,
         } = board("plague-each");
-        let spell = hand_card(&mut start.state, &dusting().id, PlayerId::P1);
+        let spell = hand_card(&mut start.state, &dusting.id, PlayerId::P1);
         let mut run = frozen(&start);
-        run = act(&run, json_as(play(&spell)));
+        run = act(&run, play(&spell));
         let events = last_events(&run.state, 1);
         assert_eq!(
             placements(&events),
@@ -548,7 +548,7 @@ mod e19_placements_over_a_scope_at_random_and_removals {
             theirs,
             ..
         } = board("plague-random");
-        let third = put(&mut start.state, &body().id, slot(PlayerId::P2, Row::Units, 4), json!({}));
+        let third = put(&mut start.state, &body.id, slot(PlayerId::P2, Row::Units, 4), json!({}));
         {
             sink_for!(sink, start.state);
             run(&mut sink, place_plague_random(json_as(json!({ "count": 2, "amount": 1 }))), None, &[]);
@@ -562,7 +562,7 @@ mod e19_placements_over_a_scope_at_random_and_removals {
         }
 
         let mut lone = playing("plague-random-lone");
-        let only = put(&mut lone.state, &body().id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let only = put(&mut lone.state, &body.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         {
             sink_for!(lone_sink, lone.state);
             run(&mut lone_sink, place_plague_random(json_as(json!({ "count": 2, "amount": 1 }))), None, &[]);
@@ -580,10 +580,10 @@ mod e19_placements_over_a_scope_at_random_and_removals {
     #[test]
     fn r471_a_random_placement_played_as_a_spell_replays_the_same_picks() {
         let Board { run: mut start, .. } = board("plague-random-replay");
-        put(&mut start.state, &body().id, slot(PlayerId::P2, Row::Units, 4), json!({}));
-        let spell = hand_card(&mut start.state, &scatter().id, PlayerId::P1);
+        put(&mut start.state, &body.id, slot(PlayerId::P2, Row::Units, 4), json!({}));
+        let spell = hand_card(&mut start.state, &scatter.id, PlayerId::P1);
         let mut run = frozen(&start);
-        run = act(&run, json_as(play(&spell)));
+        run = act(&run, play(&spell));
         assert_eq!(hash_state(&replayed(&run)), hash_state(&run.state));
     }
 
@@ -628,12 +628,12 @@ mod e19_stats_per_token_auras_and_self_layers {
             theirs,
             ..
         } = board("plague-aura");
-        put(&mut start.state, &toxins().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
-        put(&mut start.state, &body().id, slot(PlayerId::P2, Row::Units, 4), json!({})); // 1/1
-        let book = hand_card(&mut start.state, &plague_book().id, PlayerId::P1);
+        put(&mut start.state, &toxins.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        put(&mut start.state, &body.id, slot(PlayerId::P2, Row::Units, 4), json!({})); // 1/1
+        let book = hand_card(&mut start.state, &plague_book.id, PlayerId::P1);
         let mut run = frozen(&start);
 
-        run = act(&run, json_as(play(&book)));
+        run = act(&run, play(&book));
         run = answer(&run, pick(&mine), None);
         assert!(run.state.pending.is_none());
         let ally = top_of(&run.state, PlayerId::P1, 1).expect("the ally");
@@ -648,12 +648,12 @@ mod e19_stats_per_token_auras_and_self_layers {
     #[test]
     fn r689_a_minus_x_minus_x_from_the_placements_kills_at_the_state_check_after_the_whole_effect() {
         let Board { run: mut start, .. } = board("plague-aura-death");
-        put(&mut start.state, &toxins().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
-        let frail = put(&mut start.state, &body().id, slot(PlayerId::P2, Row::Units, 4), json!({})); // 1/1
-        let book = hand_card(&mut start.state, &plague_book().id, PlayerId::P1);
+        put(&mut start.state, &toxins.id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        let frail = put(&mut start.state, &body.id, slot(PlayerId::P2, Row::Units, 4), json!({})); // 1/1
+        let book = hand_card(&mut start.state, &plague_book.id, PlayerId::P1);
         let mut run = frozen(&start);
 
-        run = act(&run, json_as(play(&book)));
+        run = act(&run, play(&book));
         run = answer(&run, pick(&frail), None);
         // Both placements landed before any state check, so the 1/1 is gone only now that the effect ended.
         assert!(run.state.pending.is_none());
@@ -670,7 +670,7 @@ mod e19_stats_per_token_auras_and_self_layers {
     #[test]
     fn r471_a_self_layer_reads_the_cards_own_tokens_classic_69_plus_2_attack_per_token() {
         let Board { run: mut start, .. } = board("plague-self-layer");
-        let unit = put(&mut start.state, &charger().id, slot(PlayerId::P1, Row::Units, 3), json!({}));
+        let unit = put(&mut start.state, &charger.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
         assert_eq!(unit_view(&start.state, live(&start.state, &unit.id)).attack, 4);
         {
             sink_for!(sink, start.state);
@@ -686,7 +686,7 @@ mod e19_tokens_spent_as_mana_the_removal_the_play_pipeline_pays_with {
     #[test]
     fn r471_remove_plague_is_the_one_way_tokens_come_off_a_card_and_place_plague_on_the_one_way_they_go_on() {
         let Board { run: mut start, .. } = board("plague-payment");
-        let field = put(&mut start.state, &toxins().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
+        let field = put(&mut start.state, &toxins.id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
         sink_for!(sink, start.state);
         run(
             &mut sink,
@@ -720,7 +720,7 @@ mod r452_e19_placements_under_a_random_cast_b5_e12 {
             json!({ "random": true })
         };
         cast_new(CastNewArgs {
-            def: CastNewDef::from(plague_book().id),
+            def: CastNewDef::from(plague_book.id.clone()),
             radiant: None,
             how: json_as(how),
         })

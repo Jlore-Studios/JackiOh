@@ -119,8 +119,8 @@ mod combat_resolution_m2_t4 {
     #[test]
     fn a_first_strike_attacker_survives_a_defender_it_kills_4_3() {
         let mut state = board("first-strike-kill");
-        let attacker = put(&mut state, &first_striker().id, slot(P1, Row::Units, 1), Default::default()); // 4/4 First Strike
-        let defender = put(&mut state, &plain().id, slot(P2, Row::Units, 1), Default::default()); // 3/3
+        let attacker = put(&mut state, &first_striker.id, slot(P1, Row::Units, 1), Default::default()); // 4/4 First Strike
+        let defender = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default()); // 3/3
 
         let (refused, events) = run(&mut state, |sink| declare(sink, &attacker.id, Some(&defender.id)));
         assert_eq!(refused, None);
@@ -139,8 +139,8 @@ mod combat_resolution_m2_t4 {
     #[test]
     fn two_first_strikers_strike_simultaneously_in_step_1_and_both_die_4_3() {
         let mut state = board("first-strike-trade");
-        let attacker = put(&mut state, &first_striker().id, slot(P1, Row::Units, 1), Default::default());
-        let defender = put(&mut state, &first_striker().id, slot(P2, Row::Units, 1), Default::default());
+        let attacker = put(&mut state, &first_striker.id, slot(P1, Row::Units, 1), Default::default());
+        let defender = put(&mut state, &first_striker.id, slot(P2, Row::Units, 1), Default::default());
 
         let (refused, events) = run(&mut state, |sink| declare(sink, &attacker.id, Some(&defender.id)));
         assert_eq!(refused, None);
@@ -162,8 +162,8 @@ mod combat_resolution_m2_t4 {
     #[test]
     fn a_defender_in_defense_position_strikes_back_at_full_attack_4_3() {
         let mut state = board("defense-strikes-back");
-        let attacker = put(&mut state, &plain().id, slot(P1, Row::Units, 1), Default::default()); // 3/3
-        let defender = put(&mut state, &big_body().id, slot(P2, Row::Units, 1), Default::default()); // 5/10
+        let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default()); // 3/3
+        let defender = put(&mut state, &big_body.id, slot(P2, Row::Units, 1), Default::default()); // 5/10
         let (switched, _) = run(&mut state, |sink| {
             let now = live(sink.state, &defender.id);
             refusal(switch_position(
@@ -200,7 +200,7 @@ mod combat_resolution_m2_t4 {
     #[test]
     fn a_hero_never_strikes_back_4_3() {
         let mut state = board("hero-target");
-        let attacker = put(&mut state, &big_body().id, slot(P1, Row::Units, 1), Default::default()); // 5/10
+        let attacker = put(&mut state, &big_body.id, slot(P1, Row::Units, 1), Default::default()); // 5/10
         let enemy_hero = state.players.p2.hero.health;
         let own_hero = state.players.p1.hero.health;
 
@@ -220,8 +220,8 @@ mod combat_resolution_m2_t4 {
     #[test]
     fn r59_both_units_of_one_combat_die_together_the_first_death_does_not_cancel_the_exchange() {
         let mut state = board("r59-mutual-kill");
-        let attacker = put(&mut state, &plain().id, slot(P1, Row::Units, 1), Default::default()); // 3/3
-        let defender = put(&mut state, &plain().id, slot(P2, Row::Units, 1), Default::default()); // 3/3
+        let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default()); // 3/3
+        let defender = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default()); // 3/3
 
         let (refused, events) = run(&mut state, |sink| declare(sink, &attacker.id, Some(&defender.id)));
         assert_eq!(refused, None);
@@ -253,8 +253,8 @@ mod combat_resolution_m2_t4 {
 #[test]
 fn a_defender_with_first_strike_hits_first_and_a_surviving_attacker_strikes_back_4_3() {
     let mut state = board("defender-first-strike");
-    let attacker = put(&mut state, &big_body().id, slot(P1, Row::Units, 1), Default::default()); // 5/10, no First Strike
-    let defender = put(&mut state, &first_striker().id, slot(P2, Row::Units, 1), Default::default()); // 4/4 First Strike
+    let attacker = put(&mut state, &big_body.id, slot(P1, Row::Units, 1), Default::default()); // 5/10, no First Strike
+    let defender = put(&mut state, &first_striker.id, slot(P2, Row::Units, 1), Default::default()); // 4/4 First Strike
 
     let (_, events) = run(&mut state, |sink| declare(sink, &attacker.id, Some(&defender.id)));
 
@@ -271,8 +271,8 @@ fn a_defender_with_first_strike_hits_first_and_a_surviving_attacker_strikes_back
 #[test]
 fn a_defender_with_first_strike_that_kills_the_attacker_takes_nothing_back_4_3() {
     let mut state = board("defender-first-strike-kill");
-    let attacker = put(&mut state, &plain().id, slot(P1, Row::Units, 1), Default::default()); // 3/3
-    let defender = put(&mut state, &first_striker().id, slot(P2, Row::Units, 1), Default::default()); // 4/4 First Strike
+    let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default()); // 3/3
+    let defender = put(&mut state, &first_striker.id, slot(P2, Row::Units, 1), Default::default()); // 4/4 First Strike
 
     let (_, events) = run(&mut state, |sink| declare(sink, &attacker.id, Some(&defender.id)));
 
@@ -288,8 +288,8 @@ mod r53_forced_attacks_m2_t4 {
     #[test]
     fn r53_moths_pulls_a_summoning_sick_enemy_into_an_attack_without_spending_its_exertion() {
         let mut state = board("moths-sick");
-        let flame = put(&mut state, &moths().id, slot(P1, Row::Units, 1), Default::default()); // 1/14
-        let sick = put(&mut state, &plain().id, slot(P2, Row::Units, 1), Default::default()); // 3/3
+        let flame = put(&mut state, &moths.id, slot(P1, Row::Units, 1), Default::default()); // 1/14
+        let sick = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default()); // 3/3
         let turn = state.turn;
         by_id_mut(&mut state, &sick.id).summoned_turn = Some(turn);
 
@@ -316,11 +316,11 @@ mod r53_forced_attacks_m2_t4 {
     #[test]
     fn r53_a_forced_attack_ignores_position_sickness_and_the_taunt_rule() {
         let mut state = board("forced-ignores-rules");
-        let guard = put(&mut state, &taunter().id, slot(P1, Row::Units, 1), Default::default()); // 2/5 Taunt
-        let flame = put(&mut state, &moths().id, slot(P1, Row::Units, 2), Default::default()); // 1/14
-        let defending = put(&mut state, &plain().id, slot(P2, Row::Units, 1), Default::default());
-        let sick = put(&mut state, &plain().id, slot(P2, Row::Units, 2), Default::default());
-        let blocked = put(&mut state, &plain().id, slot(P2, Row::Units, 3), Default::default());
+        let guard = put(&mut state, &taunter.id, slot(P1, Row::Units, 1), Default::default()); // 2/5 Taunt
+        let flame = put(&mut state, &moths.id, slot(P1, Row::Units, 2), Default::default()); // 1/14
+        let defending = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
+        let sick = put(&mut state, &plain.id, slot(P2, Row::Units, 2), Default::default());
+        let blocked = put(&mut state, &plain.id, slot(P2, Row::Units, 3), Default::default());
         let (switched, _) = run(&mut state, |sink| {
             let now = live(sink.state, &defending.id);
             refusal(switch_position(
@@ -378,11 +378,11 @@ mod r53_forced_attacks_m2_t4 {
     #[test]
     fn r53_an_ordinary_attack_spends_the_attackers_exertion_and_a_forced_one_does_not() {
         let mut state = board("forced-exertion");
-        let ordinary = put(&mut state, &big_body().id, slot(P1, Row::Units, 1), Default::default()); // 5/10
-        let forced = put(&mut state, &big_body().id, slot(P1, Row::Units, 2), Default::default()); // 5/10
-        let first = put(&mut state, &plain().id, slot(P2, Row::Units, 1), Default::default());
-        let second = put(&mut state, &plain().id, slot(P2, Row::Units, 2), Default::default());
-        let third = put(&mut state, &plain().id, slot(P2, Row::Units, 3), Default::default());
+        let ordinary = put(&mut state, &big_body.id, slot(P1, Row::Units, 1), Default::default()); // 5/10
+        let forced = put(&mut state, &big_body.id, slot(P1, Row::Units, 2), Default::default()); // 5/10
+        let first = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
+        let second = put(&mut state, &plain.id, slot(P2, Row::Units, 2), Default::default());
+        let third = put(&mut state, &plain.id, slot(P2, Row::Units, 3), Default::default());
 
         let mut sink = sink_for(&mut state);
         assert_eq!(declare(&mut sink, &ordinary.id, Some(&first.id)), None);
@@ -409,9 +409,9 @@ mod r53_forced_attacks_m2_t4 {
     #[test]
     fn r53_each_forced_attack_is_its_own_combat_followed_by_its_own_state_check() {
         let mut state = board("forced-own-combat");
-        let target = put(&mut state, &big_body().id, slot(P1, Row::Units, 1), Default::default()); // 5/10
-        let first = put(&mut state, &plain().id, slot(P2, Row::Units, 1), Default::default()); // 3/3
-        let second = put(&mut state, &plain().id, slot(P2, Row::Units, 2), Default::default()); // 3/3
+        let target = put(&mut state, &big_body.id, slot(P1, Row::Units, 1), Default::default()); // 5/10
+        let first = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default()); // 3/3
+        let second = put(&mut state, &plain.id, slot(P2, Row::Units, 2), Default::default()); // 3/3
 
         let attackers = vec![live(&state, &first.id), live(&state, &second.id)];
         let on_target = on_unit(by_id(&state, &target.id));
@@ -442,10 +442,10 @@ mod r53_forced_attacks_m2_t4 {
     #[test]
     fn r53_a_sequence_of_forced_attackers_stops_once_the_target_is_gone() {
         let mut state = board("forced-stops-when-gone");
-        let target = put(&mut state, &taunter().id, slot(P1, Row::Units, 1), Default::default()); // 2/5
-        let first = put(&mut state, &plain().id, slot(P2, Row::Units, 1), Default::default());
-        let second = put(&mut state, &plain().id, slot(P2, Row::Units, 2), Default::default());
-        let third = put(&mut state, &plain().id, slot(P2, Row::Units, 3), Default::default());
+        let target = put(&mut state, &taunter.id, slot(P1, Row::Units, 1), Default::default()); // 2/5
+        let first = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
+        let second = put(&mut state, &plain.id, slot(P2, Row::Units, 2), Default::default());
+        let third = put(&mut state, &plain.id, slot(P2, Row::Units, 3), Default::default());
 
         let attackers: Vec<CardInstance> = active_units_of(&state, P2).iter().map(|unit| (*unit).clone()).collect();
         let on_target = on_unit(by_id(&state, &target.id));

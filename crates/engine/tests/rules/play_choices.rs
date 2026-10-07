@@ -370,8 +370,8 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
     #[test]
     fn r90_r13_offers_only_the_top_of_a_stack_pile_and_refuses_a_card_dormant_under_it() {
         let mut state = playing("stack-dormant");
-        let buried = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1));
-        let mut top = put(&mut state, &stacker().id, slot(PlayerId::P1, Row::Units, 2));
+        let buried = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let mut top = put(&mut state, &stacker.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
         // Move the Stack card onto the occupied lane, which turns it into a pile (§3.2).
         assert!(zones::place_on_field(
             &mut state,
@@ -466,9 +466,9 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
     #[test]
     fn r90_refuses_fewer_picks_than_a_declarations_minimum_and_more_than_its_maximum() {
         let mut state = playing("counts");
-        let a = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 1));
-        let b = put(&mut state, &plain().id, slot(PlayerId::P1, Row::Units, 2));
-        let c = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1));
+        let a = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let b = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let c = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let card = hand_card(&mut state, &one_to_two().id, PlayerId::P1);
         let decl = first_decl(&state, &card);
         assert_eq!(decl.min, 1);
@@ -530,7 +530,7 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
     #[test]
     fn r90_gives_a_card_that_declared_nothing_nothing_a_target_or_a_mode_it_never_asked_for_is_refused() {
         let mut state = playing("declared-nothing");
-        let victim = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1));
+        let victim = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let card = hand_card(&mut state, &declares_nothing().id, PlayerId::P1);
 
         assert_eq!(play_choices::declared_targets(&state, &card), Vec::<TargetDecl>::new());
@@ -715,7 +715,7 @@ mod r703_a_pick_the_play_needs {
         assert_eq!(refused.state, state);
 
         // A unit on either side satisfies it: offered once per unit, and the play goes through.
-        let foe = put(&mut state, &plain().id, slot(PlayerId::P2, Row::Units, 1));
+        let foe = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let combos: Vec<Vec<String>> = play_choices::play_choice_combinations(&state, PlayerId::P1, &needed, None)
             .iter()
             .map(|combo| ids(combo.targets.as_deref().unwrap_or(&[])))

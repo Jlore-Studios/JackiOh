@@ -266,7 +266,7 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
     #[test]
     fn r78_leaving_the_field_resets_the_instance_while_cost_mod_cost_override_and_radiant_persist() {
         let mut state = game("r78-reset");
-        let unit = put_radiant(&mut state, &plain().id, slot(P1, Units, 1));
+        let unit = put_radiant(&mut state, &plain.id, slot(P1, Units, 1));
 
         let turn = state.turn;
         {
@@ -325,7 +325,7 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
     #[test]
     fn r78_a_card_that_never_was_on_the_field_keeps_what_it_carries() {
         let mut state = game("r78-off-field");
-        let card = must(in_hand(&mut state, &plain().id, P1, 1).into_iter().next(), "a hand card");
+        let card = must(in_hand(&mut state, &plain.id, P1, 1).into_iter().next(), "a hand card");
         {
             let held = live_mut(&mut state, &card);
             held.memory = [("note".to_string(), json!("kept"))].into_iter().collect();
@@ -365,9 +365,9 @@ mod s6_3_target_and_player_specs_targets_ts_m3_t1 {
     #[test]
     fn s6_3_resolve_target_reads_self_both_heroes_and_the_chosen_selections_in_order_r81() {
         let mut state = game("targets-resolve");
-        let self_card = put(&mut state, &plain().id, slot(P1, Units, 1));
-        let first = put(&mut state, &plain().id, slot(P2, Units, 1));
-        let second = put(&mut state, &taunter().id, slot(P2, Units, 2));
+        let self_card = put(&mut state, &plain.id, slot(P1, Units, 1), json!({}));
+        let first = put(&mut state, &plain.id, slot(P2, Units, 1), json!({}));
+        let second = put(&mut state, &taunter.id, slot(P2, Units, 2), json!({}));
 
         let options = RunOptions {
             controller: Some(P1),
@@ -449,11 +449,11 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
     #[test]
     fn s6_3_draw_takes_the_top_cards_for_the_player_the_effect_names() {
         let mut state = game("draw-effect");
-        set_library(&mut state, P1, &[plain().id, taunter().id, plain().id]);
-        set_library(&mut state, P2, &[taunter().id, plain().id]);
+        set_library(&mut state, P1, &[plain.id.clone(), taunter.id.clone(), plain.id.clone()]);
+        set_library(&mut state, P2, &[taunter.id.clone(), plain.id.clone()]);
 
         let mine = run(&mut state, vec![draw(json_as(json!({ "count": 2 })))], RunOptions::as_p(P1));
-        assert_eq!(def_ids(&state.players.p1.hand), vec![plain().id, taunter().id]);
+        assert_eq!(def_ids(&state.players.p1.hand), vec![plain.id.clone(), taunter.id.clone()]);
         assert_eq!(state.players.p1.library.len(), 1);
         assert_eq!(field_of(&mine, GameEventType::Drawn, "player"), vec![json!("p1"), json!("p1")]);
 
@@ -462,7 +462,7 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
             vec![draw(json_as(json!({ "count": 1, "player": "enemy" })))],
             RunOptions::as_p(P1),
         );
-        assert_eq!(def_ids(&state.players.p2.hand), vec![taunter().id]);
+        assert_eq!(def_ids(&state.players.p2.hand), vec![taunter.id.clone()]);
         assert_eq!(field_of(&theirs, GameEventType::Drawn, "player"), vec![json!("p2")]);
 
         // A count of 0 draws nothing.
@@ -478,15 +478,15 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
         let events = run(
             &mut state,
             vec![
-                add_to_hand(json_as(json!({ "defId": plain().id }))),
-                add_to_hand(json_as(json!({ "defId": taunter().id, "player": "enemy" }))),
-                add_to_hand(json_as(json!({ "defId": plain().id, "radiant": true, "costOverride": 0 }))),
+                add_to_hand(json_as(json!({ "defId": plain.id }))),
+                add_to_hand(json_as(json!({ "defId": taunter.id, "player": "enemy" }))),
+                add_to_hand(json_as(json!({ "defId": plain.id, "radiant": true, "costOverride": 0 }))),
             ],
             RunOptions::as_p(P1),
         );
 
-        assert_eq!(def_ids(&state.players.p1.hand), vec![plain().id, plain().id]);
-        assert_eq!(def_ids(&state.players.p2.hand), vec![taunter().id]);
+        assert_eq!(def_ids(&state.players.p1.hand), vec![plain.id.clone(), plain.id.clone()]);
+        assert_eq!(def_ids(&state.players.p2.hand), vec![taunter.id.clone()]);
         let created = must(state.players.p1.hand.get(1), "the third card");
         assert!(created.radiant);
         assert_eq!(created.cost_override, Some(0));
@@ -501,17 +501,17 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
     #[test]
     fn s2_4_a_card_added_to_a_full_hand_is_burned_instead_r4() {
         let mut state = game("add-to-hand-full");
-        in_hand(&mut state, &plain().id, P1, HAND_CAP);
+        in_hand(&mut state, &plain.id, P1, HAND_CAP);
 
-        let events = run(&mut state, vec![add_to_hand(json_as(json!({ "defId": taunter().id })))], RunOptions::as_p(P1));
+        let events = run(&mut state, vec![add_to_hand(json_as(json!({ "defId": taunter.id })))], RunOptions::as_p(P1));
         assert_eq!(state.players.p1.hand.len(), HAND_CAP as usize);
         assert_eq!(events_of_type(&events, GameEventType::Burned).len(), 1);
-        assert_eq!(def_ids(&state.players.p1.graveyard), vec![taunter().id]);
+        assert_eq!(def_ids(&state.players.p1.graveyard), vec![taunter.id.clone()]);
     }
 
     /// `[plain, taunter, stockpile]`, each put in p1's hand and moved to the graveyard.
     fn bury(state: &mut GameState) -> Vec<CardInstance> {
-        [plain().id, taunter().id, stockpile().id]
+        [plain.id.clone(), taunter.id.clone(), stockpile().id]
             .iter()
             .map(|def_id| {
                 let card = must(in_hand(state, def_id, P1, 1).into_iter().next(), def_id);
@@ -555,15 +555,15 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
     #[test]
     fn s6_3_shuffle_into_puts_fresh_copies_in_the_library_at_rng_positions() {
         let mut state = game("shuffle-into");
-        set_library(&mut state, P1, &[plain().id, plain().id]);
+        set_library(&mut state, P1, &[plain.id.clone(), plain.id.clone()]);
 
         let events = run(
             &mut state,
-            vec![shuffle_into(json_as(json!({ "defId": taunter().id, "count": 2 })))],
+            vec![shuffle_into(json_as(json!({ "defId": taunter.id, "count": 2 })))],
             RunOptions::as_p(P1),
         );
         assert_eq!(state.players.p1.library.len(), 4);
-        assert_eq!(state.players.p1.library.iter().filter(|card| card.def_id == taunter().id).count(), 2);
+        assert_eq!(state.players.p1.library.iter().filter(|card| card.def_id == taunter.id).count(), 2);
         let shuffled = events_of_type(&events, GameEventType::ShuffledIn);
         assert_eq!(shuffled.len(), 2);
         for event in &shuffled {
@@ -579,11 +579,11 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
         // The enemy's library when the effect says so, and a Radiant copy when it asks for one (R57).
         run(
             &mut state,
-            vec![shuffle_into(json_as(json!({ "defId": taunter().id, "count": 1, "player": "enemy", "radiant": true })))],
+            vec![shuffle_into(json_as(json!({ "defId": taunter.id, "count": 1, "player": "enemy", "radiant": true })))],
             RunOptions::as_p(P1),
         );
         let theirs = must(
-            state.players.p2.library.iter().find(|card| card.def_id == taunter().id),
+            state.players.p2.library.iter().find(|card| card.def_id == taunter.id),
             "the shuffled copy",
         );
         assert!(theirs.radiant);
@@ -593,7 +593,7 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
     #[test]
     fn c90_1_shuffle_copies_of_self_copies_the_running_cards_definition_and_its_radiant_flag() {
         let mut state = game("shuffle-copies");
-        let self_card = must(in_hand(&mut state, &taunter().id, P1, 1).into_iter().next(), "the running card");
+        let self_card = must(in_hand(&mut state, &taunter.id, P1, 1).into_iter().next(), "the running card");
         live_mut(&mut state, &self_card).radiant = true;
 
         run(
@@ -602,14 +602,14 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
             RunOptions { controller: Some(P1), self_: Some(self_card.clone()), ..Default::default() },
         );
         let copies: Vec<&CardInstance> =
-            state.players.p1.library.iter().filter(|card| card.def_id == taunter().id).collect();
+            state.players.p1.library.iter().filter(|card| card.def_id == taunter.id).collect();
         assert_eq!(copies.len(), 3);
         assert!(copies.iter().all(|card| card.radiant));
         assert!(copies.iter().all(|card| card.id != self_card.id));
 
         // With no card running there is nothing to copy.
         let mut bare = game("shuffle-copies-bare");
-        set_library(&mut bare, P1, &[]);
+        set_library(&mut bare, P1, &[] as &[&str]);
         assert_eq!(
             run(&mut bare, vec![shuffle_copies_of_self(json_as(json!({ "count": 2 })))], RunOptions::as_p(P1)),
             Vec::<GameEvent>::new()
@@ -629,7 +629,7 @@ mod s6_3_lose_health_r18_m3_t1 {
     fn r18_lose_health_lowers_the_hero_directly_no_armor_no_hero_cap_no_damage_event() {
         let mut state = game("lose-health");
         state.players.p2.hero.armor = 5;
-        put(&mut state, &anti_oneshot().id, slot(P2, Backrow, 1)); // caps each damage instance at 5
+        put(&mut state, &anti_oneshot().id, slot(P2, Backrow, 1), json!({})); // caps each damage instance at 5
 
         let events = run(
             &mut state,
@@ -750,7 +750,7 @@ mod s10_1_memory_what_a_card_remembers_r43_m3_t1 {
     #[test]
     fn s10_1_remember_stores_a_value_on_the_card_that_is_running_under_the_key_it_names() {
         let mut state = game("remember");
-        let self_card = put(&mut state, &plain().id, slot(P1, Units, 1));
+        let self_card = put(&mut state, &plain.id, slot(P1, Units, 1), json!({}));
         let as_self = || RunOptions { controller: Some(P1), self_: Some(self_card.clone()), ..Default::default() };
 
         run(
@@ -789,7 +789,7 @@ mod s10_1_memory_what_a_card_remembers_r43_m3_t1 {
 
         let pick = |seed: &str| -> Option<Value> {
             let mut state = game(seed);
-            let self_card = put(&mut state, &plain().id, slot(P1, Units, 1));
+            let self_card = put(&mut state, &plain.id, slot(P1, Units, 1), json!({}));
             run(
                 &mut state,
                 vec![remember_random(json_as(json!({ "key": "power", "options": options })))],
@@ -804,7 +804,7 @@ mod s10_1_memory_what_a_card_remembers_r43_m3_t1 {
 
         // An empty option list remembers nothing, and so does a call with no card running.
         let mut state = game("remember-random-empty");
-        let self_card = put(&mut state, &plain().id, slot(P1, Units, 1));
+        let self_card = put(&mut state, &plain.id, slot(P1, Units, 1), json!({}));
         run(
             &mut state,
             vec![remember_random(json_as(json!({ "key": "power", "options": [] })))],
@@ -828,7 +828,7 @@ mod s6_3_switch_position_as_an_effect_r20_m3_t1 {
     #[test]
     fn r20_switching_a_named_unit_spends_no_exertion_and_flips_or_sets_the_position() {
         let mut state = game("switch-position");
-        let unit = put(&mut state, &plain().id, slot(P2, Units, 1));
+        let unit = put(&mut state, &plain.id, slot(P2, Units, 1), json!({}));
         let at_unit = || RunOptions { controller: Some(P1), targets: on_instance(&unit), ..Default::default() };
 
         let events = run(
@@ -861,7 +861,7 @@ mod s6_3_switch_position_as_an_effect_r20_m3_t1 {
         );
 
         // The card running the effect may switch itself (§6.3), and a hero pick does nothing.
-        let self_card = put(&mut state, &plain().id, slot(P1, Units, 1));
+        let self_card = put(&mut state, &plain.id, slot(P1, Units, 1), json!({}));
         run(
             &mut state,
             vec![switch_position_of(json_as(json!({ "target": { "of": "self" } })))],
@@ -885,10 +885,10 @@ mod s6_3_switch_position_as_an_effect_r20_m3_t1 {
     #[test]
     fn c48_switch_all_positions_flips_every_unit_or_one_sides_and_never_puts_spikey_pillow_in_defense() {
         let mut state = game("switch-all");
-        let mine = put(&mut state, &plain().id, slot(P1, Units, 1));
-        let also_mine = put(&mut state, &taunter().id, slot(P1, Units, 2));
-        let pillow = put(&mut state, &spikey_pillow().id, slot(P1, Units, 3)); // neverDefense (§4.1)
-        let theirs = put(&mut state, &plain().id, slot(P2, Units, 1));
+        let mine = put(&mut state, &plain.id, slot(P1, Units, 1), json!({}));
+        let also_mine = put(&mut state, &taunter.id, slot(P1, Units, 2), json!({}));
+        let pillow = put(&mut state, &spikey_pillow.id, slot(P1, Units, 3), json!({})); // neverDefense (§4.1)
+        let theirs = put(&mut state, &plain.id, slot(P2, Units, 1), json!({}));
         live_mut(&mut state, &also_mine).position = Some(Position::Def);
 
         run(&mut state, vec![switch_all_positions(json_as(json!({ "side": "both" })))], RunOptions::as_p(P1));
@@ -924,8 +924,8 @@ mod s6_3_the_effects_barrel_m3_t1 {
         let built: Vec<Effect> = vec![
             damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 }))),
             draw(json_as(json!({ "count": 1 }))),
-            add_to_hand(json_as(json!({ "defId": plain().id }))),
-            shuffle_into(json_as(json!({ "defId": plain().id, "count": 1 }))),
+            add_to_hand(json_as(json!({ "defId": plain.id }))),
+            shuffle_into(json_as(json!({ "defId": plain.id, "count": 1 }))),
             lose_health(json_as(json!({ "player": "self", "amount": 1 }))),
             gain_mana(json_as(json!({ "amount": 1 }))),
             next_turn_mana(json_as(json!({ "amount": 1 }))),

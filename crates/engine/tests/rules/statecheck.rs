@@ -256,7 +256,7 @@ fn endless() -> CardDef {
 }
 
 fn rush_token() -> CardDef {
-    token_def("rush")
+    token_def("rush", [Tag::Token])
 }
 
 fn defs() -> Vec<CardDef> {
@@ -422,7 +422,7 @@ mod the_state_check_m2_t5 {
 
             let mut placed: Vec<(PlayerId, i32, String)> = Vec::new();
             for (player, lane) in placements {
-                let id = put(&mut state, &pinger().id, slot(player, Row::Units, lane)).id;
+                let id = put(&mut state, &pinger().id, slot(player, Row::Units, lane), json!({})).id;
                 placed.push((player, lane, id));
             }
             let sides = if active == PlayerId::P1 {
@@ -468,7 +468,7 @@ mod the_state_check_m2_t5 {
         let mut state = game("reborn-reserved");
         state.turn = 2;
         state.active = PlayerId::P1;
-        let reborner = put(&mut state, &reborn_summoner().id, slot(PlayerId::P1, Row::Units, 1));
+        let reborner = put(&mut state, &reborn_summoner().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         lethal_damage(&mut state, &reborner.id);
 
         let mut sink = sink_for(&state);
@@ -527,8 +527,8 @@ mod the_state_check_m2_t5 {
         let mut state = game("reborn-locked");
         state.turn = 2;
         state.active = PlayerId::P1;
-        let reborner = put(&mut state, &reborn_plain().id, slot(PlayerId::P1, Row::Units, 1));
-        let lane2 = put(&mut state, &locker().id, slot(PlayerId::P1, Row::Units, 2));
+        let reborner = put(&mut state, &reborn_plain().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let lane2 = put(&mut state, &locker().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
         lethal_damage(&mut state, &reborner.id);
         lethal_damage(&mut state, &lane2.id);
 
@@ -554,7 +554,7 @@ mod the_state_check_m2_t5 {
         let mut state = game("indestructible-mark");
         state.turn = 3;
         state.active = PlayerId::P1;
-        let warded = put(&mut state, &warded_taunter().id, slot(PlayerId::P1, Row::Units, 1));
+        let warded = put(&mut state, &warded_taunter().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         card_mut(&mut state, &warded.id).position = Some(Position::Def);
         // R347: its printed Taunt, and Defense Position's, give way to its Indestructible.
         assert!(!unit_has(&state, card(&state, &warded.id), KeywordKind::Taunt));
@@ -594,9 +594,9 @@ mod the_state_check_m2_t5 {
         state.turn = 2;
         state.active = PlayerId::P1;
         // Suppressive Aura on p2's side: p1's units get -4 max health.
-        put(&mut state, &suppressor().id, slot(PlayerId::P2, Row::Units, 5));
-        let dying = put(&mut state, &warded_pinger().id, slot(PlayerId::P1, Row::Units, 1));
-        let survivor = put(&mut state, &warded_pinger().id, slot(PlayerId::P2, Row::Units, 1));
+        put(&mut state, &suppressor().id, slot(PlayerId::P2, Row::Units, 5), json!({}));
+        let dying = put(&mut state, &warded_pinger().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let survivor = put(&mut state, &warded_pinger().id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         // Damage taken before it became Indestructible: health is negative, max health is not.
         card_mut(&mut state, &survivor.id).damage = 10;
 
@@ -650,8 +650,8 @@ mod the_state_check_m2_t5 {
             state = answered.state;
         }
 
-        let first = put(&mut state, &pinger().id, slot(PlayerId::P2, Row::Units, 1));
-        let second = put(&mut state, &pinger().id, slot(PlayerId::P2, Row::Units, 2));
+        let first = put(&mut state, &pinger().id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let second = put(&mut state, &pinger().id, slot(PlayerId::P2, Row::Units, 2), json!({}));
         let spell = new_instance(
             &mut state,
             &mass_smite().id,
@@ -718,7 +718,7 @@ mod the_state_check_m2_t5 {
         let mut state = game("reborn-cry");
         state.turn = 2;
         state.active = PlayerId::P1;
-        let crier = put(&mut state, &reborn_crier().id, slot(PlayerId::P1, Row::Units, 1));
+        let crier = put(&mut state, &reborn_crier().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         {
             let live = card_mut(&mut state, &crier.id);
             live.buffs = AttackHealth { attack: 3, health: 3 };
@@ -755,7 +755,7 @@ mod the_state_check_m2_t5 {
         let mut state = game("token-vanishes");
         state.turn = 2;
         state.active = PlayerId::P1;
-        let token = put(&mut state, &rush_token().id, slot(PlayerId::P1, Row::Units, 1));
+        let token = put(&mut state, &rush_token().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         lethal_damage(&mut state, &token.id);
 
         let mut sink = sink_for(&state);
@@ -818,7 +818,7 @@ mod the_state_check_m2_t5 {
     #[test]
     fn s4_5_step_1_collects_a_backrow_card_an_effect_marked_destroyed() {
         let mut state = game("backrow-destroy");
-        let placed = put(&mut state, &field_spell().id, slot(PlayerId::P1, Row::Backrow, 2));
+        let placed = put(&mut state, &field_spell().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
         card_mut(&mut state, &placed.id).marked_destroyed = Some(true);
 
         let mut sink = sink_for(&state);
@@ -838,7 +838,7 @@ mod the_state_check_m2_t5 {
     #[test]
     fn r46_leaves_an_indestructible_field_spell_where_it_is_and_drops_the_mark() {
         let mut state = game("backrow-indestructible");
-        let placed = put(&mut state, &warded_field_spell().id, slot(PlayerId::P1, Row::Backrow, 1));
+        let placed = put(&mut state, &warded_field_spell().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
         card_mut(&mut state, &placed.id).marked_destroyed = Some(true);
 
         let mut sink = sink_for(&state);
@@ -859,7 +859,7 @@ mod the_state_check_m2_t5 {
     #[test]
     fn r78_a_death_trigger_reads_what_the_unit_remembered_before_it_left_the_field() {
         let mut state = game("death-last-known");
-        let eater = put(&mut state, &rememberer().id, slot(PlayerId::P1, Row::Units, 2));
+        let eater = put(&mut state, &rememberer().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
         {
             let live = card_mut(&mut state, &eater.id);
             live.memory.insert("eaten".into(), json!(spawn().id));
@@ -891,8 +891,8 @@ mod the_state_check_m2_t5 {
     #[test]
     fn r688_the_event_stream_shows_the_reborn_return_into_a_locked_zone_as_a_summon_not_a_graveyard_stay() {
         let mut state = game("reborn-fizzle-event");
-        let unit = put(&mut state, &reborn_plain().id, slot(PlayerId::P1, Row::Units, 1));
-        let locker_unit = put(&mut state, &locker().id, slot(PlayerId::P1, Row::Units, 3));
+        let unit = put(&mut state, &reborn_plain().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let locker_unit = put(&mut state, &locker().id, slot(PlayerId::P1, Row::Units, 3), json!({}));
         card_mut(&mut state, &unit.id).marked_destroyed = Some(true);
         card_mut(&mut state, &locker_unit.id).marked_destroyed = Some(true);
 
@@ -918,9 +918,9 @@ mod what_a_death_reports_r89_m3 {
     fn r89_reports_the_dying_cards_owner_its_last_stats_and_the_unit_that_killed_it() {
         let mut state = game("death-report");
         state.active = PlayerId::P1;
-        let killer = put(&mut state, &pinger().id, slot(PlayerId::P1, Row::Units, 1));
+        let killer = put(&mut state, &pinger().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         // printed 1/1
-        let victim = put(&mut state, &spawn().id, slot(PlayerId::P2, Row::Units, 1));
+        let victim = put(&mut state, &spawn().id, slot(PlayerId::P2, Row::Units, 1), json!({}));
         {
             let live = card_mut(&mut state, &victim.id);
             // a 4/5 body when it dies
@@ -973,7 +973,7 @@ mod what_a_death_reports_r89_m3 {
     fn r89_reports_no_killer_when_nothing_dealt_the_lethal_damage() {
         let mut state = game("death-report-no-killer");
         state.active = PlayerId::P1;
-        let victim = put(&mut state, &spawn().id, slot(PlayerId::P1, Row::Units, 1));
+        let victim = put(&mut state, &spawn().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         // destroyed by an effect, not by a unit's damage
         card_mut(&mut state, &victim.id).marked_destroyed = Some(true);
 
@@ -1031,7 +1031,7 @@ mod the_pass_cap_s4_5_step_5 {
         );
         register_scripts(registry);
 
-        let doomed = put(&mut state, &endless().id, slot(PlayerId::P1, Row::Units, 1));
+        let doomed = put(&mut state, &endless().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         card_mut(&mut state, &doomed.id).stats_override = Some(AttackHealth { attack: 0, health: 0 });
 
         let mut sink = sink_for(&state);

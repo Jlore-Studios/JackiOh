@@ -374,7 +374,7 @@ fn playing(seed: &str) -> GameState {
         &state,
         json!({ "type": "mulligan", "keep": hand_ids(&state, PlayerId::P2), "playerId": "p2" }),
     );
-    put(&mut state, &log_card().id, slot(PlayerId::P1, Row::Backrow, NOTE_LANE as i32));
+    put(&mut state, &log_card().id, slot(PlayerId::P1, Row::Backrow, NOTE_LANE as i32), json!({}));
     state
 }
 
@@ -419,8 +419,8 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
     fn r68_two_end_of_turn_triggers_on_one_side_resolve_in_lane_order_not_in_creation_order() {
         let mut state = playing("r68-lane-order");
         // Created lane 3 first, so the instance order and the lane order disagree.
-        let later = put(&mut state, &closer().id, slot(PlayerId::P1, Row::Units, 3));
-        let earlier = put(&mut state, &closer().id, slot(PlayerId::P1, Row::Units, 1));
+        let later = put(&mut state, &closer().id, slot(PlayerId::P1, Row::Units, 3), json!({}));
+        let earlier = put(&mut state, &closer().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         assert!(id_number(&later.id) < id_number(&earlier.id));
 
         // The registry itself reads lane 1 before lane 3 (R68's within-a-side order).
@@ -439,8 +439,8 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
     fn s10_3_fires_a_trap_before_a_queued_trigger_because_a_trap_is_a_response() {
         let mut state = playing("trap-before-trigger");
         // Lane order alone would run the Field Spell first: it is the trap's response status that wins.
-        put(&mut state, &watcher().id, slot(PlayerId::P1, Row::Backrow, 1));
-        put(&mut state, &snap_trap().id, slot(PlayerId::P1, Row::Backrow, 2));
+        put(&mut state, &watcher().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        put(&mut state, &snap_trap().id, slot(PlayerId::P1, Row::Backrow, 2), json!({}));
         let watched: Vec<String> = cards_in_trigger_order(&state)
             .iter()
             .map(|holder| holder.card.def_id.clone())
@@ -476,9 +476,9 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
     #[test]
     fn r62_holds_the_end_of_turn_trap_window_back_to_its_scheduled_point_after_the_end_of_turn_triggers() {
         let mut state = playing("r62-window");
-        put(&mut state, &closer().id, slot(PlayerId::P1, Row::Units, 1));
-        put(&mut state, &window_trap().id, slot(PlayerId::P1, Row::Backrow, 1));
-        put(&mut state, &window_trap().id, slot(PlayerId::P2, Row::Backrow, 1));
+        put(&mut state, &closer().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        put(&mut state, &window_trap().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        put(&mut state, &window_trap().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
 
         // `turnEnded` is the one event the immediate dispatch withholds: the window owns it (R62).
         let turn_ended = GameEvent::TurnEnded {
@@ -504,9 +504,9 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
 
         // And in the turn loop the window comes after the end-of-turn triggers, never before them.
         let mut live = playing("r62-window-live");
-        put(&mut live, &closer().id, slot(PlayerId::P1, Row::Units, 1));
-        put(&mut live, &window_trap().id, slot(PlayerId::P1, Row::Backrow, 1));
-        put(&mut live, &window_trap().id, slot(PlayerId::P2, Row::Backrow, 1));
+        put(&mut live, &closer().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        put(&mut live, &window_trap().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        put(&mut live, &window_trap().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
         let ended = act(&live, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(notes(&ended), strings(&["end:lane1", "window:p1", "window:p2"]));
     }
@@ -566,8 +566,8 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
     fn s10_3_pauses_the_loop_where_it_stands_when_a_trap_prompts_its_owner_keeping_the_queue_behind_it() {
         let mut state = playing("trap-prompt-pause");
         assert_eq!(state.active, PlayerId::P1);
-        let waiting = put(&mut state, &watcher().id, slot(PlayerId::P1, Row::Backrow, 1));
-        put(&mut state, &ask_trap().id, slot(PlayerId::P2, Row::Backrow, 1));
+        let waiting = put(&mut state, &watcher().id, slot(PlayerId::P1, Row::Backrow, 1), json!({}));
+        put(&mut state, &ask_trap().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
 
         let mut sink = sink_for(&state);
         {
@@ -601,7 +601,7 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
     #[test]
     fn r118_pauses_the_opponents_action_until_the_traps_prompt_is_answered_without_eating_the_cry_s10_3() {
         let mut state = playing("trap-prompt-blocks-action");
-        put(&mut state, &ask_trap().id, slot(PlayerId::P2, Row::Backrow, 1));
+        put(&mut state, &ask_trap().id, slot(PlayerId::P2, Row::Backrow, 1), json!({}));
         let crier_id = hand_card(&mut state, &crier().id, PlayerId::P1).id;
         let played = act_result(
             &state,

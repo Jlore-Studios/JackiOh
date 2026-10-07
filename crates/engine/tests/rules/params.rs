@@ -334,9 +334,9 @@ mod r386_b3_4_rule_5_declared_numbers {
 /// TS's module `let nonce`.
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
-fn act(state: &GameState, body: ActionInput) -> GameState {
+fn act(state: &GameState, action: ActionInput) -> GameState {
     let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    let result = reduce(state, &body.with_nonce(format!("pm{nonce}")));
+    let result = reduce(state, &action.with_nonce(format!("pm{nonce}")));
     if let Some(error) = &result.error {
         panic!("{error}");
     }

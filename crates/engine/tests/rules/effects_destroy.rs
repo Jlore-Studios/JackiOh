@@ -224,7 +224,7 @@ mod destroy_m3_t1 {
     #[test]
     fn marks_the_card_and_leaves_it_on_the_field_until_the_state_check_moves_it() {
         let mut state = default_game();
-        let victim = put(&mut state, &dier().id, slot(PlayerId::P1, Row::Units, 2));
+        let victim = put(&mut state, &dier().id, slot(PlayerId::P1, Row::Units, 2), json!({}));
         let mut run = runner(&state);
 
         run.apply(&mut state, destroy(json_as(json!({ "target": chosen() }))), Some(&victim), RunOptions::default());
@@ -248,8 +248,8 @@ mod destroy_m3_t1 {
     #[test]
     fn r59_two_cards_marked_by_one_effect_die_in_the_same_state_check() {
         let mut state = default_game();
-        let first = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1));
-        let second = put(&mut state, "fx-2", slot(PlayerId::P2, Row::Units, 1));
+        let first = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let second = put(&mut state, "fx-2", slot(PlayerId::P2, Row::Units, 1), json!({}));
         let mut run = runner(&state);
 
         run.apply(&mut state, destroy(json_as(json!({ "target": chosen() }))), Some(&first), RunOptions::default());
@@ -267,7 +267,7 @@ mod destroy_m3_t1 {
     #[test]
     fn r46_an_indestructible_unit_ignores_a_destroy_mark_and_stays_on_the_field() {
         let mut state = default_game();
-        let warded = put(&mut state, &indestructible().id, slot(PlayerId::P1, Row::Units, 1));
+        let warded = put(&mut state, &indestructible.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         live_mut(&mut state, &warded.id).position = Some(Position::Def);
         let mut run = runner(&state);
 
@@ -284,7 +284,7 @@ mod destroy_m3_t1 {
     #[test]
     fn marks_a_backrow_card_which_the_state_check_collects_too() {
         let mut state = default_game();
-        let card = put(&mut state, &field_spell().id, slot(PlayerId::P1, Row::Backrow, 3));
+        let card = put(&mut state, &field_spell().id, slot(PlayerId::P1, Row::Backrow, 3), json!({}));
         let mut run = runner(&state);
 
         run.apply(&mut state, destroy(json_as(json!({ "target": chosen() }))), Some(&card), RunOptions::default());
@@ -312,7 +312,7 @@ mod destroy_m3_t1 {
     #[test]
     fn r11_a_destroyed_unit_token_vanishes_and_reaches_no_graveyard() {
         let mut state = default_game();
-        let token = put(&mut state, &rush_token().id, slot(PlayerId::P1, Row::Units, 1));
+        let token = put(&mut state, &rush_token().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let mut run = runner(&state);
 
         run.apply(&mut state, destroy(json_as(json!({ "target": chosen() }))), Some(&token), RunOptions::default());
@@ -350,7 +350,7 @@ mod sacrifice_m3_t1 {
     #[test]
     fn moves_your_own_unit_from_the_field_to_the_graveyard_at_once_with_no_state_check() {
         let mut state = default_game();
-        let victim = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 2));
+        let victim = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 2), json!({}));
         let mut run = runner(&state);
 
         run.apply(&mut state, sacrifice(json_as(json!({ "target": chosen() }))), Some(&victim), RunOptions::default());
@@ -368,7 +368,7 @@ mod sacrifice_m3_t1 {
     #[test]
     fn counts_as_a_death_the_destroyed_counter_rises_and_the_death_trigger_fires() {
         let mut state = default_game();
-        let victim = put(&mut state, &dier().id, slot(PlayerId::P1, Row::Units, 1));
+        let victim = put(&mut state, &dier().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let mut run = runner(&state);
 
         run.apply(&mut state, sacrifice(json_as(json!({ "target": chosen() }))), Some(&victim), RunOptions::default());
@@ -382,7 +382,7 @@ mod sacrifice_m3_t1 {
     #[test]
     fn bypasses_indestructible_which_a_destroy_mark_cannot() {
         let mut state = default_game();
-        let warded = put(&mut state, &warded_dier().id, slot(PlayerId::P1, Row::Units, 1));
+        let warded = put(&mut state, &warded_dier().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let mut run = runner(&state);
 
         run.apply(&mut state, sacrifice(json_as(json!({ "target": chosen() }))), Some(&warded), RunOptions::default());
@@ -395,7 +395,7 @@ mod sacrifice_m3_t1 {
     #[test]
     fn r78_the_death_hook_reads_the_card_as_it_was_just_before_it_left_the_field() {
         let mut state = default_game();
-        let victim = put(&mut state, &rememberer().id, slot(PlayerId::P1, Row::Units, 1));
+        let victim = put(&mut state, &rememberer().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         live_mut(&mut state, &victim.id).memory.insert("meal".to_string(), json!(7));
         let victim = live(&state, &victim.id).clone();
         let mut run = runner(&state);
@@ -410,7 +410,7 @@ mod sacrifice_m3_t1 {
     #[test]
     fn r11_a_sacrificed_unit_token_vanishes_and_enters_no_graveyard() {
         let mut state = default_game();
-        let token = put(&mut state, &rush_token().id, slot(PlayerId::P1, Row::Units, 1));
+        let token = put(&mut state, &rush_token().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         let mut run = runner(&state);
 
         run.apply(&mut state, sacrifice(json_as(json!({ "target": chosen() }))), Some(&token), RunOptions::default());
@@ -426,7 +426,7 @@ mod sacrifice_m3_t1 {
     #[test]
     fn refuses_an_enemy_unit_unless_a_tribute_allows_it_55() {
         let mut state = default_game();
-        let theirs = put(&mut state, "fx-4", slot(PlayerId::P2, Row::Units, 1));
+        let theirs = put(&mut state, "fx-4", slot(PlayerId::P2, Row::Units, 1), json!({}));
         let mut run = runner(&state);
 
         run.apply(
