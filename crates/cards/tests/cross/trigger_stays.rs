@@ -54,11 +54,7 @@ const BREAD_TOKEN: &str = "core-t-bread";
 const RUSH_TOKEN: &str = "core-t-rush";
 const LIBRARY: [&str; 8] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 
-/// `scenario(...)` over the real cards: the registry the TS harness imported.
-fn game(setup: Value) -> Scenario {
-    jackioh_cards::register_all();
-    scenario(setup)
-}
+use super::scenario;
 
 /// `[{ pick: "instance", instanceId: card.id }]`.
 fn at(card: &CardInstance) -> Value {
@@ -109,7 +105,7 @@ mod r212_a_reborn_body_does_not_answer_for_the_stay_that_died {
     #[test]
     fn r212_r174_fed_fauci_that_dies_attacking_and_comes_back_through_reborn_gets_no_plague_counter_for_the_hit_that_killed_it()
      {
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "p1": { "hand": [STOCKPILE], "field": [{ "def": FAUCI, "lane": 1, "damage": 5 }], "library": LIBRARY },
             "p2": { "hand": [STOCKPILE], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },
         }));
@@ -130,7 +126,7 @@ mod r212_a_reborn_body_does_not_answer_for_the_stay_that_died {
     #[test]
     fn r212_r53_r174_fed_fauci_forced_into_moths_to_the_flame_killed_by_the_strike_back_and_reborn_gets_no_plague_counter()
      {
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "p1": { "hand": [STOCKPILE], "field": [{ "def": MOTHS, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [STOCKPILE], "field": [{ "def": FAUCI, "lane": 1, "damage": 5 }], "library": LIBRARY },
         }));
@@ -148,7 +144,7 @@ mod r212_a_reborn_body_does_not_answer_for_the_stay_that_died {
     #[test]
     fn r212_fed_fauci_killed_by_the_first_resolution_of_an_echoed_true_strike_gets_no_plague_counter_on_its_reborn_body_10_5_step_6()
      {
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "p1": {
                 "hand": [TWINSPELL, TRUE_STRIKE, VANILLA],
                 "field": [{ "def": FAUCI, "lane": 1, "damage": 5 }],
@@ -172,7 +168,7 @@ mod r212_a_reborn_body_does_not_answer_for_the_stay_that_died {
 
     /// TS `trade(reborn)`: p1's Prem Panther trades with p2's Twisted Sorcerer, with or without Reborn.
     fn trade(reborn: bool) -> Scenario {
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "p1": { "hand": [VANILLA], "field": [{ "def": PANTHER, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [VANILLA], "field": [{ "def": SORCERER, "lane": 1 }], "library": LIBRARY },
         }));
@@ -213,7 +209,7 @@ mod r212_a_card_that_arrived_after_a_death_does_not_answer_it {
     fn r212_r89_a_corpse_eater_drawn_by_an_echo_repeat_does_not_feed_on_a_unit_that_died_before_it_reached_the_hand_8_89()
      {
         let library = [&[VANILLA, CORPSE_EATER][..], &LIBRARY[..]].concat();
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "p1": { "hand": [TWINSPELL, ADAPTIVE_UI], "library": library },
             "p2": { "hand": [VANILLA], "field": [{ "def": GARY, "lane": 1 }], "library": LIBRARY },
         }));
@@ -243,7 +239,7 @@ mod r212_a_card_answers_for_the_player_who_controlled_it_when_the_event_happened
         // The Panther destroyed a unit while it was p1's; Mrow's Death then steals every p1 unit, the
         // Panther included, before the `destroyed` event is dispatched. Hearthstone resolves a minion's
         // kill trigger for its controller before a Deathrattle takes it.
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "p1": { "hand": [RENO], "field": [{ "def": PANTHER, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [RENO], "field": [{ "def": MROW, "lane": 1 }], "library": LIBRARY },
         }));
@@ -366,7 +362,7 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
     #[test]
     fn r212_a_bear_honeypot_its_opponent_s_spell_stole_after_a_cast_in_the_same_list_answers_that_cast_for_the_player_who_held_it_then()
      {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "seed": "edge-r8-honeypot-lifted",
             "p1": {
                 "hand": [VANILLA],
@@ -436,7 +432,7 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
     #[test]
     fn r212_a_bread_and_butter_an_earlier_trap_of_the_end_of_turn_window_stole_answers_that_turn_end_for_the_player_who_held_it_when_it_ended()
      {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "seed": "edge-r8-window-lift",
             "p1": { "hand": [VANILLA], "field": [{ "def": VANILLA, "lane": 5 }], "library": LIBRARY },
             "p2": {
@@ -480,7 +476,7 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
 
     #[test]
     fn r212_r174_a_bear_honeypot_that_arrived_after_a_cast_in_the_same_list_does_not_answer_that_cast() {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "seed": "edge-r8-honeypot-late",
             "p1": {
                 "hand": [VANILLA],
@@ -595,7 +591,7 @@ mod r174_r212_a_late_dispatched_card_resolved_meets_the_played_card_s_stay {
     #[test]
     fn r174_r61_r70_r83_bear_honeypot_s_tokens_do_not_attack_the_reborn_body_of_a_cast_unit_that_died_before_its_card_resolved_was_dispatched()
      {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": { "hand": [RENO], "library": [RENO, RENO, RENO] },
             "p2": { "backrow": [{ "def": HONEYPOT, "lane": 1 }], "hand": [RENO], "library": [RENO, RENO] },
         }));
@@ -683,7 +679,7 @@ mod r174_a_queued_trigger_aimed_at_the_card_its_event_names_meets_that_card_s_st
     #[test]
     fn r174_r83_r59_a_trigger_naming_the_played_unit_by_its_event_s_id_does_not_buff_its_reborn_body_after_an_earlier_trigger_on_the_same_play_killed_it()
      {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": { "hand": [RIGHT_HOUSE, RENO], "library": [RENO, RENO] },
             "p2": { "hand": [RENO], "library": [RENO] },
         }));
@@ -865,7 +861,7 @@ mod r174_only_the_card_a_queued_trigger_s_event_names_is_judged_from_when_the_ev
 
     /// TS's `for (const perUnit of ["overTheBoard", "byId"])` body.
     fn reaches_the_reborn_body(per_unit: PerUnit) {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": { "hand": [HIT_JOB], "mana": 4, "library": LIBRARY },
             "p2": { "field": [VANILLA], "library": LIBRARY },
         }));

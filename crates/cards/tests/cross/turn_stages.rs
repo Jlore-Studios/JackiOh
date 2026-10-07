@@ -54,11 +54,7 @@ const TURN_ACTIONS: [ActionType; 6] = [
     ActionType::EndTurn,
 ];
 
-/// `scenario(...)` over the real cards: the registry the TS harness imported.
-fn game(setup: Value) -> Scenario {
-    jackioh_cards::register_all();
-    scenario(setup)
-}
+use super::scenario;
 
 fn must<T>(value: Option<T>, what: &str) -> T {
     match value {
@@ -140,7 +136,7 @@ mod r62_10_3_a_stage_of_the_turn_loop_settles_its_events_before_the_next_stage {
         // p1 ends the turn with 1 mana unspent: p1's Bread and Butter summons a Bread Token for p1 in
         // the window, and p1's fixture unit answers that summon with 1 damage to p2's hero, which is at
         // 1. p2's Echoes of the Forgotten would deal p1 (at 2) 3 at the start of p2's turn.
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": {
                 "hand": [RENO],
                 "backrow": [{ "def": BREAD_AND_BUTTER, "faceUp": false }],
@@ -187,7 +183,7 @@ mod r62_10_3_a_stage_of_the_turn_loop_settles_its_events_before_the_next_stage {
         // p1's K-Pop Fanatic steals p2's Tempo Timmy at the start of p1's next turn. p1's fixture unit
         // answers the change of control with 1 damage to p2's hero, which is at 1. p1's Masochism Mask
         // (backrow) asks p1 something at the start of the turn.
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": { "hand": [KPOP_FANATIC, RENO], "backrow": [MASOCHISM_MASK], "library": [RENO, RENO] },
             "p2": { "field": [TEMPO_TIMMY], "hand": [RENO], "health": 1, "library": [RENO, RENO] },
         }));
@@ -239,7 +235,7 @@ mod r44_r152_my_pawn_s_ai_plays_the_rest_of_the_turn {
     fn r44_r152_the_ai_turn_goes_on_after_the_other_player_answers_a_prompt_one_of_its_actions_opened_10_3_8_96() {
         // p1's 3/3 Timmy swings at p2's hero at 3: lethal, so p2's My Pawn cancels it and hands the
         // rest of p1's turn to the AI (R44). p2's fixture trap asks p2 something when p1 plays a card.
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": { "field": [TEMPO_TIMMY], "hand": [VANILLA, VANILLA, VANILLA], "mana": 4 },
             "p2": { "health": 3, "backrow": [{ "def": MY_PAWN, "faceUp": false }], "hand": [RENO], "library": [RENO, RENO] },
         }));
@@ -300,7 +296,7 @@ mod r44_r152_a_locked_out_player_is_never_handed_back_the_turn_my_pawn_gave_the_
      {
         // The seed only fixes which of p1's actions the AI draws: here it attacks the fixture unit with
         // one of its 1/1s early in the playout, with plays and switches still left to take.
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "seed": "edge-r6-pawn-1",
             "p1": {
                 "field": [SEVEN_SEVEN, KPOP_FANATIC, GARY],
@@ -370,7 +366,7 @@ mod r68_10_3_a_trap_answers_a_delayed_effect_before_the_next_delayed_effect_runs
         // p1 plays two K-Pop Fanatics: one on p2's Mr. Vanilla, one on p2's Tempo Timmy. Both steals are
         // due at the start of p1's next turn, in that order (R68). p2's fixture trap answers the
         // opponent taking one of p2's permanents by returning all of p2's units to p2's hand.
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": { "hand": [KPOP_FANATIC, KPOP_FANATIC, RENO], "library": [RENO, RENO, RENO] },
             "p2": { "field": [VANILLA, TEMPO_TIMMY], "hand": [RENO], "library": [RENO, RENO, RENO] },
         }));
@@ -435,7 +431,7 @@ mod r62_10_3_cleanup_s_events_are_answered_before_the_turn_cap_check_and_the_nex
         // plays the rest of p1's turn (R44). p1 has nothing left to do, so the AI ends the turn, and
         // R152 sends My Pawn to p2's graveyard at that turn's cleanup. p2's fixture unit answers a card
         // entering p2's graveyard with 1 damage to the enemy hero, and p1 is at 1.
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": { "field": [TEMPO_TIMMY], "health": 1, "library": [RENO, RENO] },
             "p2": { "health": 3, "backrow": [{ "def": MY_PAWN, "faceUp": false }], "hand": [RENO], "library": [RENO, RENO] },
         }));
@@ -492,7 +488,7 @@ mod r68_4_5_a_delayed_effect_s_check_is_answered_before_the_next_delayed_effect 
         // Tempo Timmy and then p2's Mr. Vanilla at the start of p1's next turn, in that order (R68).
         // Timmy (3/3 with 1 damage) stolen onto p1's side is at 0 health there and dies in the check
         // after the first steal. p2's fixture trap answers one of p2's own units dying by returning p2's units to hand.
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": { "hand": [KPOP_FANATIC, KPOP_FANATIC, RENO], "mana": 5, "library": [RENO, RENO, RENO] },
             "p2": {
                 "field": [{ "def": TEMPO_TIMMY, "damage": 1 }, VANILLA],
@@ -566,7 +562,7 @@ mod r62_2_2_a_this_turn_effect_made_after_cleanup_ends_with_that_turn {
         // (§2.2) and reports the removal. p1's fixture unit answers one of p1's modifiers ending, on turn
         // N only, with "this turn your cards cost 1 less" (/fullsend's rider) for the turn that is ending.
         // Round 7 made cleanup's events answered at the end of turn N (R62), which is where it lands.
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": { "hand": [LUNAR_ECLIPSE, RENO, RENO], "library": [RENO, RENO, RENO] },
             "p2": { "hand": [RENO], "library": [RENO, RENO, RENO] },
         }));
@@ -665,7 +661,7 @@ mod r155_a_return_spell_cast_after_cleanup_does_not_come_back_on_a_later_turn {
         // so the Spell is played on turn N, after that turn's end-of-turn triggers have run: it does not
         // come back at the end of turn N, and R155 says it "stays in the graveyard rather than coming
         // back at the end of a later turn it was not played on".
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": { "hand": [LUNAR_ECLIPSE, RENO, RENO], "library": [RENO, RENO, RENO] },
             "p2": { "hand": [RENO], "library": [RENO, RENO, RENO] },
         }));
@@ -758,7 +754,7 @@ mod r241_r155_r71_a_spell_s_end_of_turn_clause_belongs_to_the_turn_it_was_played
         // top card is a cast-on-draw Spell carrying /fullsend's clause verbatim in shape — `delay({ at: {
         // phase: "end", player: "self" } })` re-entering an `exileHand` step — so p1 casts it on p2's turn
         // (§2.4, R70).
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": { "field": [PREM_PANTHER], "hand": [RENO], "library": [RENO, RENO, RENO, RENO] },
             "p2": { "field": [{ "def": MOTHS, "damage": 10 }], "hand": [RENO], "library": [RENO, RENO, RENO, RENO] },
         }));
@@ -858,7 +854,7 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
     #[test]
     fn r169_every_modifier_a_modifier_changed_event_announces_is_on_the_view_s_badge_list_and_is_reported_gone_when_hinder_s_refresh_spends_it_10_3_6_3_mana()
      {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "seed": "r9-inv-hinder",
             "p1": { "hand": [HIT_JOB], "field": [TEMPO_TIMMY], "library": [HINDER, TEMPO_TIMMY, TEMPO_TIMMY, TEMPO_TIMMY] },
             "p2": { "hand": [STOCKPILE], "field": [TEMPO_TIMMY], "library": [STOCKPILE, STOCKPILE, STOCKPILE] },
@@ -913,7 +909,7 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
     #[test]
     fn r240_r3_a_fatigue_draw_that_going_long_s_armor_absorbs_still_reports_itself_since_the_public_fatigue_count_moved_10_3()
      {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "seed": "r9-inv-fatigue",
             "p1": { "hand": [HIT_JOB], "field": [TEMPO_TIMMY], "library": [TEMPO_TIMMY, TEMPO_TIMMY] },
             "p2": { "hand": [STOCKPILE], "field": [TEMPO_TIMMY], "backrow": [GOING_LONG], "library": [] },
@@ -947,7 +943,7 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
 
     #[test]
     fn r240_r63_the_report_of_an_absorbed_fatigue_draw_is_answered_by_no_trigger_and_no_trap() {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "seed": "r11-fatigue-report",
             "p1": { "hand": [HIT_JOB], "field": [TEMPO_TIMMY], "library": [TEMPO_TIMMY, TEMPO_TIMMY] },
             "p2": { "hand": [STOCKPILE], "field": [TEMPO_TIMMY], "backrow": [GOING_LONG], "library": [] },

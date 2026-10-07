@@ -32,11 +32,7 @@ const ROCK: &str = "core-066";
 const FAUCI: &str = "core-091";
 const LIBRARY: [&str; 4] = [VANILLA, VANILLA, VANILLA, VANILLA];
 
-/// The real cards, registered once per process (the TS harness's import-time `registerAll()`).
-fn game(setup: Value) -> Scenario {
-    jackioh_cards::register_all();
-    scenario(setup)
-}
+use super::scenario;
 
 fn at(card: &CardInstance) -> Value {
     json!([{ "pick": "instance", "instanceId": card.id }])
@@ -70,7 +66,7 @@ mod r115_a_vanilla_copy_keeps_none_of_the_cards_text {
 
     #[test]
     fn r115_r49_a_vanilla_copy_of_deft_duelist_has_one_exertion_not_two_s6_3_vanilla() {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": { "hand": [POSTDOC, HINDER], "field": [{ "def": DUELIST, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [HINDER], "field": [{ "def": POINTMASTER, "lane": 5 }], "library": LIBRARY },
         }));
@@ -94,7 +90,7 @@ mod r115_a_vanilla_copy_keeps_none_of_the_cards_text {
 
     #[test]
     fn r115_a_vanilla_copy_of_spikey_pillow_may_enter_defense_position_s6_3_vanilla_s7_s4_1() {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": {
                 "hand": [{ "def": POSTDOC, "radiant": true }, HINDER],
                 "field": [{ "def": PILLOW, "lane": 1 }],
@@ -117,7 +113,7 @@ mod r115_a_vanilla_copy_keeps_none_of_the_cards_text {
 
     #[test]
     fn r115_a_vanilla_copy_of_fed_fauci_gains_no_plague_counter_when_damaged_s6_3_vanilla_s8_c91() {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": {
                 "hand": [POSTDOC, TRUE_STRIKE, HINDER],
                 "field": [{ "def": FAUCI, "lane": 1 }],
@@ -139,7 +135,7 @@ mod r115_a_vanilla_copy_keeps_none_of_the_cards_text {
 
     #[test]
     fn r115_r57_a_vanilla_copy_of_radiant_right_house_defender_fires_no_death_s6_3_vanilla_s6_2() {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": {
                 "hand": [POSTDOC, TRUE_STRIKE, HINDER],
                 "field": [{ "def": RIGHT_HOUSE, "radiant": true, "lane": 1 }],
@@ -178,7 +174,7 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
 
     #[test]
     fn r91_r46_on_an_indestructible_unit_already_in_attack_position_emits_no_position_switched() {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": { "hand": [HIT_JOB, HINDER], "library": LIBRARY },
             "p2": { "field": [{ "def": ROCK, "lane": 1, "position": "ATK" }], "library": LIBRARY },
         }));
@@ -200,7 +196,7 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
 
     #[test]
     fn r46_on_an_indestructible_unit_in_defense_position_still_switches_it_and_says_so() {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": { "hand": [HIT_JOB, HINDER], "library": LIBRARY },
             "p2": { "field": [{ "def": ROCK, "lane": 1, "position": "DEF" }], "library": LIBRARY },
         }));
@@ -221,7 +217,7 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
     // for a knock-down to take: it shows none before the destroy and none after, and so reports none.
     #[test]
     fn r46_r347_r91_an_indestructible_unit_given_taunt_shows_none_so_shrugging_off_a_destroy_changes_nothing_a_view_shows_s10_3() {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": { "hand": [HIT_JOB, HINDER], "library": LIBRARY },
             "p2": { "field": [{ "def": ROCK, "lane": 1, "position": "ATK" }], "library": LIBRARY },
         }));
@@ -244,7 +240,7 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
 
     #[test]
     fn r46_r91_a_unit_with_no_taunt_to_lose_reports_none_the_rock_in_attack_position_is_knocked_down_in_silence() {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": { "hand": [HIT_JOB, HINDER], "library": LIBRARY },
             "p2": { "field": [{ "def": ROCK, "lane": 1, "position": "ATK" }], "library": LIBRARY },
         }));
@@ -267,7 +263,7 @@ mod a_units_keywords_are_a_set_s6_1_s10_4_s10_8 {
 
     #[test]
     fn s6_1_the_view_lists_each_keyword_a_unit_has_once_however_many_sources_give_it_tempo_timmy_under_jlockeeds_weapons_a_taunt_unit_in_defense_position_s10_4_s10_8() {
-        let s = game(json!({
+        let s = scenario(json!({
             "p1": {
                 "hand": [HINDER],
                 "field": [
@@ -309,7 +305,7 @@ mod r243_r115_a_vanilla_units_view_says_its_text_is_gone_s6_3_vanilla_s10_8 {
 
     #[test]
     fn r243_a_vanilla_copy_of_fed_fauci_is_marked_vanilla_in_both_seats_views_and_the_original_is_not() {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": { "hand": [POSTDOC, HINDER], "field": [{ "def": FAUCI, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [HINDER], "library": LIBRARY },
         }));

@@ -30,11 +30,7 @@ const RUSH_TOKEN: &str = "core-t-rush";
 const BREAD: &str = "core-t-bread";
 const LIBRARY: [&str; 6] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 
-/// `scenario(...)` over the real cards: the registry the TS harness imported.
-fn game(setup: Value) -> Scenario {
-    jackioh_cards::register_all();
-    scenario(setup)
-}
+use super::scenario;
 
 /// `[{ pick: "instance", instanceId: card.id }]`.
 fn at(card: &CardInstance) -> Value {
@@ -133,7 +129,7 @@ mod r13_the_state_check_never_reaches_under_a_stack_pile {
     #[test]
     fn r13_a_damaged_rush_token_that_radiant_rush_token_farm_keeps_alive_survives_being_buried_under_a_stack_and_resumes_when_the_top_leaves_3_2()
      {
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "p1": {
                 "hand": [FIENDER, HIT_JOB],
                 "mana": MANA_FOR_FIENDER_AND_HIT_JOB,
@@ -164,7 +160,7 @@ mod r13_the_state_check_never_reaches_under_a_stack_pile {
     #[test]
     fn r13_a_felinor_fiender_buried_under_a_second_fiender_is_not_killed_under_the_pile_when_the_felinor_feeding_it_dies_10_4_layer_2()
      {
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "p1": {
                 "hand": [FIENDER, HIT_JOB],
                 "mana": MANA_FOR_FIENDER_AND_HIT_JOB,
@@ -192,7 +188,7 @@ mod r13_the_state_check_never_reaches_under_a_stack_pile {
      {
         // Lane 1 is a pile: Fiender A on top of Fiender B. B took 10 damage while Big Felinor fed its
         // stats (8/17), and has Reborn. Hit Job on Big Felinor drops B to 5/7 under 10 damage.
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "p1": {
                 "hand": [HIT_JOB, VANILLA],
                 "field": [
@@ -230,7 +226,7 @@ mod r175_a_token_summoned_x_x_comes_back_through_reborn_as_that_x_x {
     #[test]
     fn r175_a_bread_token_given_reborn_comes_back_at_1_health_with_its_x_x_rather_than_as_a_0_0_that_dies_again_4_5_step_4_7()
      {
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "p1": {
                 "hand": [HIT_JOB, VANILLA],
                 "field": [{ "def": BREAD, "lane": 1, "statsOverride": { "attack": 3, "health": 3 } }],
@@ -295,7 +291,7 @@ mod r212_r119_a_card_that_resumes_on_top_of_its_pile_did_not_see_what_uncovered_
     // recorded, and a resume records none (`stays.noteUncovered` keeps it now).
     #[test]
     fn r212_r153_a_card_dormant_under_a_stack_does_not_answer_the_death_that_uncovers_it_3_2() {
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "p1": { "hand": [FIENDER, HIT_JOB], "mana": MANA_FOR_FIENDER_AND_HIT_JOB },
             "p2": { "field": ["core-011"], "health": 20 },
         }));
@@ -327,7 +323,7 @@ mod r212_r119_a_card_that_resumes_on_top_of_its_pile_did_not_see_what_uncovered_
 
     #[test]
     fn r119_r153_a_card_a_play_uncovers_in_its_stack_pile_does_not_answer_that_play_s_card_resolved_3_2() {
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "p1": { "hand": [FIENDER, HIT_JOB], "mana": MANA_FOR_FIENDER_AND_HIT_JOB },
             "p2": { "field": ["core-011"], "health": 20 },
         }));
@@ -415,7 +411,7 @@ mod r212_a_resume_is_kept_against_the_removal_that_caused_it_and_no_later_move_3
     #[test]
     fn r212_a_card_that_resumed_under_a_stack_answers_a_later_hit_even_when_the_same_list_then_exiles_the_card_that_uncovered_it_from_the_graveyard()
      {
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "p1": { "hand": [FIENDER, HIT_JOB], "mana": MANA_FOR_FIENDER_AND_HIT_JOB },
             "p2": { "field": ["core-011"], "health": 20 },
         }));
@@ -454,7 +450,7 @@ mod r212_a_resume_is_kept_against_the_removal_that_caused_it_and_no_later_move_3
     #[test]
     fn r212_a_card_still_dormant_when_a_hit_landed_does_not_answer_it_though_the_same_list_then_kills_the_card_above_it_and_exiles_that_card_from_the_graveyard()
      {
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "p1": { "hand": [FIENDER], "mana": 4 },
             "p2": { "field": ["core-011"], "health": 20 },
         }));

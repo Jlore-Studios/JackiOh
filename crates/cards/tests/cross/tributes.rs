@@ -29,11 +29,7 @@ const CRAFT_A_CARD: &str = "core-099";
 const POSTDOC: &str = "core-061"; // radiant: "choose any unit on the field; summon a Vanilla copy"
 const SHEEP: &str = "core-t-sheep"; // "Worth 2 Tributes while on the field."
 
-/// `scenario(...)` over the real cards: the registry the TS harness imported.
-fn game(setup: Value) -> Scenario {
-    jackioh_cards::register_all();
-    scenario(setup)
-}
+use super::scenario;
 
 fn must<T>(value: Option<T>, what: &str) -> T {
     match value {
@@ -76,7 +72,7 @@ mod r68_a_tribute_s_deaths_resolve_in_lane_order_whatever_order_the_play_lists_t
     /// her controller's other Units Radiant — so whether that summoned defender is Radiant says which
     /// Death ran first.
     fn tribute_game(order: impl Fn(&TributeIds) -> Vec<String>) -> Scenario {
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "p1": {
                 "hand": [LAVA_GOLEM, STOCKPILE],
                 "field": [
@@ -122,7 +118,7 @@ mod r174_a_target_the_play_s_own_tribute_sacrificed_is_no_longer_a_target {
     #[test]
     fn r174_r78_a_crafted_lava_golem_twisted_sorcerer_that_tributes_its_own_target_leaves_that_card_in_the_graveyard_undamaged_8_conventions()
      {
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "seed": "r3craft-1990", // the first Discover offers Lava Golem, the second Twisted Sorcerer (every set's Units, R380)
             "p1": {
                 "hand": [CRAFT_A_CARD, RENO],
@@ -169,7 +165,7 @@ mod s6_3_vanilla_a_vanilla_sheep_token_has_no_text_so_it_is_worth_1_tribute {
 
     #[test]
     fn r101_s6_3_a_vanilla_copy_of_a_sheep_token_and_one_other_unit_do_not_pay_lava_golem_s_tribute_3_7() {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": {
                 "hand": [{ "def": POSTDOC, "radiant": true }, LAVA_GOLEM, STOCKPILE],
                 "mana": 9,
@@ -238,7 +234,7 @@ mod r102_3_2_a_sheep_s_worth_is_its_text_and_a_fuse_keeps_it {
 
     #[test]
     fn r102_r77_a_sheep_token_fused_by_unlicensed_experimentation_is_still_worth_2_tributes_3_2_7() {
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "active": "p2",
             "turn": 10,
             "p1": {
@@ -364,7 +360,7 @@ mod r119_r210_what_a_tribute_s_death_puts_on_the_field_does_not_answer_the_play_
      {
         // p2's Cube eats p2's own Midrange Menace carrying Sheepish's text (R428: a Unit), so its Death
         // summons two copies of it into p2's unit row, each answering an opponent's resolved Unit play.
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "active": "p2",
             "p1": {
                 // Radiant, so the Golem stays on p1's side though its Tribute takes p2's Cube (R360).
@@ -418,7 +414,7 @@ mod r119_r210_what_a_tribute_s_death_puts_on_the_field_does_not_answer_the_play_
     #[test]
     fn r119_r210_an_unstable_clone_machine_text_a_tributed_cube_s_death_copies_at_step_2_does_not_shuffle_copies_of_the_card_that_paid_the_tribute()
      {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": {
                 "hand": [CARNIVOROUS_CUBE, THE_ROCK],
                 "field": [{ "def": MR_VANILLA, "lane": 3 }],
@@ -454,7 +450,7 @@ mod r119_r210_what_a_tribute_s_death_puts_on_the_field_does_not_answer_the_play_
     #[test]
     fn r119_r210_a_quickstriker_text_a_tributed_cube_s_death_copies_at_step_2_grants_the_card_that_paid_the_tribute_no_combo_damage()
      {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": {
                 "hand": [CARNIVOROUS_CUBE, TEMPO_TIMMY, THE_ROCK],
                 "field": [{ "def": MR_VANILLA, "lane": 3 }],

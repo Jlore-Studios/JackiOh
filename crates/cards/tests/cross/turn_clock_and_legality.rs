@@ -41,11 +41,7 @@ const MC_TECH: &str = "classic-040"; // Radiant: "Cry: … steal one of your cho
 const CHAOS_GOLEM: &str = "core-095-1"; // a Token: no random pool or Discover may ever offer it (§5.1)
 const LIBRARY: [&str; 5] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 
-/// `scenario(...)` over the real cards: the registry the TS harness imported.
-fn game(setup: Value) -> Scenario {
-    jackioh_cards::register_all();
-    scenario(setup)
-}
+use super::scenario;
 
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
@@ -82,7 +78,7 @@ mod r79_a_timeout_acts_only_for_the_player_whose_clock_ran_out {
 
     #[test]
     fn r79_the_non_active_player_s_timeout_with_nothing_of_theirs_open_does_not_end_the_active_player_s_turn() {
-        let g = game(json!({
+        let g = scenario(json!({
             "p1": { "hand": [VANILLA], "field": [VANILLA], "library": LIBRARY },
             "p2": { "hand": [VANILLA], "field": [VANILLA], "library": LIBRARY },
         }));
@@ -98,7 +94,7 @@ mod r79_a_timeout_acts_only_for_the_player_whose_clock_ran_out {
 
     #[test]
     fn r79_the_non_active_player_s_timeout_does_not_answer_the_active_player_s_prompt_or_end_their_turn() {
-        let mut g = game(json!({ "p1": { "hand": [SCARAB, RENO], "mana": 4 }, "p2": { "hand": [RENO] } }));
+        let mut g = scenario(json!({ "p1": { "hand": [SCARAB, RENO], "mana": 4 }, "p2": { "hand": [RENO] } }));
         g.play(SCARAB, json!({}));
         let pending = must(g.state().pending.clone(), "the Scarab's Discover");
         assert_eq!(pending.player_id, PlayerId::P1);
@@ -123,7 +119,7 @@ mod r79_a_timeout_acts_only_for_the_player_whose_clock_ran_out {
             (CRAFT, LIBRARY.to_vec()),
         ];
         for (card, library) in cases {
-            let mut g = game(json!({ "p1": { "hand": [card, RENO], "mana": 4, "library": library }, "p2": { "hand": [RENO] } }));
+            let mut g = scenario(json!({ "p1": { "hand": [card, RENO], "mana": 4, "library": library }, "p2": { "hand": [RENO] } }));
             g.play(card, json!({}));
             assert_eq!(must(g.state().pending.clone(), "the first prompt").player_id, PlayerId::P1);
             let turn = g.state().turn;
@@ -154,7 +150,7 @@ mod r36_a_draw_offer_is_answered_once {
 
     #[test]
     fn r36_a_declined_draw_offer_is_closed_it_is_no_longer_offered_and_cannot_then_be_accepted() {
-        let g = game(json!({ "p1": { "hand": [RENO] }, "p2": { "hand": [RENO] } }));
+        let g = scenario(json!({ "p1": { "hand": [RENO] }, "p2": { "hand": [RENO] } }));
         let offered = act(g.state(), json!({ "type": "offerDraw", "playerId": "p1" }));
         assert_eq!(offered.error, None);
         assert_eq!(answer_draws(&offered.state, PlayerId::P2).len(), 2);
@@ -180,7 +176,7 @@ mod r43_r103_what_an_activate_power_or_a_heroic_power_play_may_carry {
 
     #[test]
     fn r103_r13_activate_power_refuses_a_ping_target_the_power_cannot_reach_a_dormant_card_a_hand_card_a_backrow_card() {
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "p1": { "hand": [RENO], "mana": 8, "backrow": [HEROIC] },
             "p2": {
                 "hand": [MENACE],
@@ -233,7 +229,7 @@ mod r43_r103_what_an_activate_power_or_a_heroic_power_play_may_carry {
 
     #[test]
     fn r103_activate_power_cannot_carry_the_discover_s_answer_so_no_card_of_the_client_s_naming_reaches_the_hand_6_3_5_1() {
-        let mut g = game(json!({ "p1": { "hand": [RENO], "mana": 8, "backrow": [HEROIC] } }));
+        let mut g = scenario(json!({ "p1": { "hand": [RENO], "mana": 8, "backrow": [HEROIC] } }));
         let heroic = must(g.backrow(PlayerId::P1, 1), "the Heroic Power");
         let power = with_power(&mut g, &heroic, "discover");
         let hand_before: Vec<String> = g.state().players.p1.hand.iter().map(|card| card.def_id.clone()).collect();
@@ -258,7 +254,7 @@ mod r43_r103_what_an_activate_power_or_a_heroic_power_play_may_carry {
     #[test]
     fn r752_r65_heroic_power_costs_0_legal_actions_offers_no_x_choice_a_play_naming_one_is_refused_and_a_play_pays_0_2_3()
      {
-        let mut g = game(json!({ "p1": { "hand": [HEROIC, RENO], "mana": 4 } }));
+        let mut g = scenario(json!({ "p1": { "hand": [HEROIC, RENO], "mana": 4 } }));
         let first = must(g.state().players.p1.hand.first().cloned(), "the Heroic Power in hand");
         let card = with_power(&mut g, &first, "ping");
 
@@ -307,7 +303,7 @@ mod s6_2_this_turn_on_the_opponent_s_turn {
 
     #[test]
     fn r40_r70_s6_2_a_card_cast_on_the_opponent_s_turn_counts_only_the_plays_of_that_turn_so_quickstriker_s_x_is_0() {
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "seed": "hunt-l8-stale-log",
             "p1": {
                 "hand": [QUICKSTRIKER, VANILLA],
@@ -344,7 +340,7 @@ mod s10_6_a_prompt_s_options_can_each_be_picked_through_the_view {
     fn r81_s10_6_a_target_prompt_s_options_have_distinct_keys_so_each_of_two_same_named_units_can_be_picked_10_8() {
         // Two Duplicating Felinors — #12's own copy makes this an ordinary board — among the four
         // permanents Classic #40 MC Tech's Radiant face picks from in a prompt its Cry opens (§10.6).
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "seed": "inv-r4-prompt-keys",
             "p1": { "hand": [{ "def": MC_TECH, "radiant": true }, RENO], "mana": 8 },
             "p2": { "field": [FELINORS, FELINORS, MENACE], "backrow": [{ "def": SHEEPISH, "faceUp": false }] },
@@ -382,7 +378,7 @@ mod s9_1_legal_actions_and_a_face_down_trap_s_instance_id {
     // once the card is set again: not in the actions, not in the view, not in the events.
     #[test]
     fn r227_r177_legal_actions_never_names_a_face_down_trap_by_an_id_its_viewer_saw_while_the_card_was_public() {
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "active": "p2",
             "p1": { "hand": [MAGIC_JAMMED, RENO], "mana": 4 },
             "p2": { "hand": [REMINISCE, RENO], "graveyard": [SHEEPISH], "mana": 4 },
@@ -428,7 +424,7 @@ mod s3_2_9_3_a_play_s_zone_is_one_of_the_row_s_lanes {
 
     #[test]
     fn s9_3_a_play_naming_a_zone_between_two_lanes_is_refused_not_accepted_with_the_card_lost_and_its_mana_spent() {
-        let s = game(json!({ "p1": { "hand": [GARY, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
+        let s = scenario(json!({ "p1": { "hand": [GARY, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
         let gary = must(s.hand(PlayerId::P1).iter().find(|card| card.def_id == GARY).cloned(), "Gary in hand");
         let mana = s.state().players.p1.mana.current;
 
@@ -470,7 +466,7 @@ mod r221_10_2_10_6_every_answer_reduce_accepts_is_one_legal_actions_offers {
         // #80 Zao Gao's chosen discard was this test's two-pick prompt until patch v0.1.1 made that
         // discard random (R354). A radiant Glowy Jelly Bean under #79 Twinspell asks the same shape:
         // its Echo repeat reopens its hand pick as a prompt for two cards (§10.6).
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": {
                 "hand": [TWINSPELL, { "def": JELLY_BEAN, "radiant": true }, RENO, VANILLA, BIG_FELINOR, GARY],
                 "library": [RENO, RENO],
@@ -614,7 +610,7 @@ mod r123_a_declared_tribute_names_the_same_units_in_targets_and_tributes {
     #[test]
     fn r123_legal_actions_offers_and_reduce_accepts_no_play_whose_declared_tribute_pick_is_a_unit_the_play_does_not_tribute()
      {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": { "field": [EDGE_VANILLA, EDGE_VANILLA], "hand": [EDGE_VANILLA] },
             "p2": { "hand": [EDGE_VANILLA] },
         }));
@@ -700,7 +696,7 @@ mod r221_r90_10_2_a_play_s_picks_for_one_declaration_are_a_set {
     #[test]
     fn r221_r90_a_play_listing_one_declaration_s_two_picks_the_other_way_round_means_the_same_as_the_play_legal_actions_offers_3()
      {
-        let mut s = game(json!({
+        let mut s = scenario(json!({
             "p1": { "hand": [EDGE_VANILLA] },
             "p2": { "field": [EDGE_VANILLA, EDGE_VANILLA], "hand": [EDGE_VANILLA] },
         }));

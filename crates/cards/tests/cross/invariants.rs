@@ -21,11 +21,7 @@ const MY_PAWN: &str = "core-096";
 const SHEEPISH: &str = "core-041";
 const RUSH_TOKEN: &str = "core-t-rush";
 
-/// `scenario(...)` over the real cards: the registry the TS harness imported.
-fn game(setup: Value) -> Scenario {
-    jackioh_cards::register_all();
-    scenario(setup)
-}
+use super::scenario;
 
 /// An event from TS's object literal.
 fn event(literal: Value) -> GameEvent {
@@ -57,7 +53,7 @@ mod i2_a_windfury_granted_inside_one_action_s_events {
 
     #[test]
     fn r636_r44_two_declarations_after_a_mid_action_windfury_grant_are_one_legal_windfury_turn() {
-        let mut g = game(json!({
+        let mut g = scenario(json!({
             "p1": { "field": [{ "def": VANILLA, "lane": 1 }] },
             "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
         }));
@@ -78,7 +74,7 @@ mod i2_a_windfury_granted_inside_one_action_s_events {
 
     #[test]
     fn r636_two_declarations_with_no_windfury_anywhere_are_still_an_extra_attack() {
-        let g = game(json!({
+        let g = scenario(json!({
             "p1": { "field": [{ "def": VANILLA, "lane": 1 }] },
             "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
         }));
@@ -108,7 +104,7 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
     }
 
     fn board() -> Board {
-        let g = game(json!({
+        let g = scenario(json!({
             "p1": { "field": [{ "def": VANILLA, "lane": 1 }] },
             "p2": { "hand": [BIGOT], "library": [HIT_JOB], "backrow": [{ "def": MY_PAWN, "lane": 1 }] },
         }));
@@ -212,7 +208,7 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
 
     #[test]
     fn r311_r312_i6_reads_the_seat_s_own_library_only_as_it_was_shown_going_in() {
-        let mut g = game(json!({ "p1": { "library": [SHEEPISH] } }));
+        let mut g = scenario(json!({ "p1": { "library": [SHEEPISH] } }));
         assert!(!g.state().players.p1.library.is_empty(), "setup: p1 should hold a library card");
         let shown = drawn("p1", HIDDEN_ID, SHEEPISH);
         assert_eq!(violations(&g, PlayerId::P1, std::slice::from_ref(&shown)), no_violations());
@@ -295,7 +291,7 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
     #[test]
     fn r97_i6_fires_on_an_event_naming_a_face_down_trap_dormant_under_a_backrow_top() {
         // B5 E21
-        let g = game(json!({
+        let g = scenario(json!({
             "p2": {
                 "backrow": [
                     { "def": SHEEPISH, "lane": 1 },
@@ -332,7 +328,7 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
     /// it draws `outcome` (R676): the cards it takes off the board or out of the match go unseen.
     fn glitched(outcome: GlitchOutcome) -> Scenario {
         for n in 0..300 {
-            let mut g = game(json!({
+            let mut g = scenario(json!({
                 "seed": format!("i6-glitch-{outcome}-{n}"),
                 "active": "p2",
                 "turn": 8,
@@ -412,7 +408,7 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
 
     #[test]
     fn r11_i6_lets_a_token_that_ceased_to_exist_be_named_openly_as_it_was_public_when_it_went() {
-        let mut g = game(json!({ "p2": { "hand": [RUSH_TOKEN, RUSH_TOKEN] } }));
+        let mut g = scenario(json!({ "p2": { "hand": [RUSH_TOKEN, RUSH_TOKEN] } }));
         let gone = match g.state().players.p2.hand.first() {
             Some(card) => card.clone(),
             None => panic!("setup: p2 should hold the tokens"),
