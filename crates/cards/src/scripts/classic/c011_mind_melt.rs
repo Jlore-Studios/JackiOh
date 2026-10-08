@@ -145,7 +145,7 @@ mod tests {
     fn declares_its_one_number_cards_exiled_r386() {
         assert_eq!(
             js(&crate::card_def(MELT).params),
-            json!([{ "key": "cards", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1 }])
+            json!([{ "key": "cards", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1, "tunedOn": "base" }])
         );
         let CardScripts { base, radiant } = script();
         assert!(base.targets.is_empty());
