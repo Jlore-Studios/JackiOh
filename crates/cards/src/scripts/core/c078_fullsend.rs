@@ -47,12 +47,10 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-078";
 
-/// §6.3 Refresh (R364): spent mana given back, never past max.
-const MANA_REFRESH: i32 = 3;
-/// "Your cards cost (1) less this turn", on both faces.
-const DISCOUNT: i32 = 1;
-/// The Radiant face's "gain 'Combo: Draw 1'" — one card per play.
-const COMBO_DRAW: i32 = 1;
+// The numbers are declared (R386): `refresh`, §6.3 Refresh's 3 (R364: spent mana given back, never
+// past max); `discount`, "Your cards cost (1) less this turn" on both faces; and `comboDraw`, the
+// Radiant face's "gain 'Combo: Draw 1'" — one card per play.
+
 /// The step name the delayed effect carries; `turn.ts` labels the pause with it.
 const EXILE_STEP: &str = "exileHand";
 
@@ -68,7 +66,7 @@ fn combo_draw(ctx: &EffectContext<'_>) -> Effect {
         "player": "self",
         "mod": {
             "kind": "comboDraw",
-            "amount": COMBO_DRAW,
+            "amount": param(ctx, "comboDraw"),
             "expiry": { "until": "thisTurn", "turn": ctx.state.turn }
         }
     })))
@@ -79,13 +77,13 @@ fn fullsend(with_combo_draw: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let mut effects = vec![
-                refresh_mana(json_as(json!({ "amount": MANA_REFRESH }))),
+                refresh_mana(json_as(json!({ "amount": param(&*ctx, "refresh") }))),
                 add_player_modifier(json_as(json!({
                     "player": "self",
                     // "your cards", so no `onlyType`; R65 applies it as a flat discount before Curvature.
                     "mod": {
                         "kind": "costDiscount",
-                        "amount": DISCOUNT,
+                        "amount": param(&*ctx, "discount"),
                         "expiry": { "until": "thisTurn", "turn": ctx.state.turn }
                     }
                 }))),
@@ -191,6 +189,36 @@ mod tests {
             // R82: the opponent keeps something to do, so `endTurn()` does not cascade.
             "p2": { "hand": ["core-005"], "field": ["core-019"], "library": LIBRARY }
         }))
+    }
+
+    #[test]
+    fn r386_an_upgrade_refreshes_4_and_a_degrade_2() {
+        for (upgrade, refresh) in [(true, 4), (false, 2)] {
+            crate::register_all();
+            let mut s = board(false);
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, FULLSEND, "refresh")
+            } else {
+                crate::degrade_number(&mut s, FULLSEND, "refresh")
+            };
+            assert_eq!(moved, refresh);
+            s.play(FULLSEND, json!({}));
+            // 4 paid of 4, then the refresh, never past max (R364).
+            s.expect_mana(P1, refresh);
+        }
+    }
+
+    #[test]
+    fn r386_an_upgrade_makes_the_discount_2_and_the_radiant_combo_draw_2_and_a_degrade_finds_both_at_1() {
+        crate::register_all();
+        let mut s = board(true);
+        assert!(!crate::can_degrade_number(&s, FULLSEND, "discount"));
+        assert!(!crate::can_degrade_number(&s, FULLSEND, "comboDraw"));
+        assert_eq!(crate::upgrade_number(&mut s, FULLSEND, "discount"), 2);
+        assert_eq!(crate::upgrade_number(&mut s, FULLSEND, "comboDraw"), 2);
+        s.play(FULLSEND, json!({}));
+        assert_eq!(hand_cost(&s, COST_4), 2);
+        assert_eq!(mods_of(&s, "comboDraw")[0]["amount"], json!(2));
     }
 
     mod n78_fullsend_base {

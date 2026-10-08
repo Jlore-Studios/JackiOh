@@ -37,12 +37,13 @@ fn units_costing(max: i32) -> RecruitFilter {
     json_as(json!({ "type": "Unit", "costRange": { "max": max } }))
 }
 
-/// `max_cost` is the whole of the radiant text: "2 or less" in place of "1 or less".
-fn call_to_arms(max_cost: i32) -> Script {
-    let filter = units_costing(max_cost);
+/// The cost limit is the whole of the radiant text: "2 or less" in place of "1 or less" — the
+/// declared number `costLimit` (R386), read off the face that is running.
+fn call_to_arms() -> Script {
     Script {
         // Three independent top-down scans, applied in order by `apply_effects`.
-        cry: Some(hook(move |_ctx| {
+        cry: Some(hook(|ctx| {
+            let filter = units_costing(param(&*ctx, "costLimit"));
             (0..RECRUITS)
                 .map(|_| recruit(json_as(json!({ "filter": filter, "player": "self" }))))
                 .collect()
@@ -52,10 +53,9 @@ fn call_to_arms(max_cost: i32) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    CardScripts {
-        base: call_to_arms(1),
-        radiant: call_to_arms(2),
-    }
+    let base = call_to_arms();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
 }
 
 // #69 Call to Arms — SPEC §8.3, BUILD M4-T4: "Three top-down recruits of cost ≤1, library order
@@ -119,6 +119,21 @@ mod tests {
     /// `unitIds`' expected row, written with TS's `null`s.
     fn row(ids: [Option<&str>; 5]) -> Vec<Option<String>> {
         ids.iter().map(|id| id.map(str::to_string)).collect()
+    }
+
+    #[test]
+    fn r386_an_upgrade_recruits_a_2_cost_unit_and_a_radiant_degrade_stops_at_1() {
+        for (radiant, upgrade, recruited) in [(false, true, POINTMASTER), (true, false, TIMMY)] {
+            let mut s = board(json!({ "p1": { "hand": [{ "def": CALL, "radiant": radiant }], "library": [POINTMASTER, TIMMY] } }));
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, CALL, "costLimit")
+            } else {
+                crate::degrade_number(&mut s, CALL, "costLimit")
+            };
+            assert_eq!(moved, if upgrade { 2 } else { 1 });
+            s.play(CALL, json!({}));
+            assert_eq!(unit_ids(&s)[0].as_deref(), Some(recruited));
+        }
     }
 
     mod call_to_arms {

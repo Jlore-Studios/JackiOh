@@ -93,7 +93,7 @@ fn match_(ctx: &EffectContext, event: &GameEvent, any_cost: bool) -> Option<Reso
         return None;
     }
     // R56 and R70: the cost actually paid, so a cast (0) is always "1 or less".
-    if !any_cost && *cost_paid > 1 {
+    if !any_cost && *cost_paid > param(ctx, "costLimit") {
         return None;
     }
     // R430: "if you have an empty unit zone" — an empty, unlocked, unreserved one (R64).
@@ -241,6 +241,23 @@ mod tests {
 
     fn def_at(g: &Scenario, player: PlayerId, lane: i32) -> Option<String> {
         g.unit(player, lane).map(|unit| unit.def_id)
+    }
+
+    #[test]
+    fn r386_an_upgrade_answers_a_2_cost_play_and_a_degrade_finds_the_limit_at_its_floor_of_1() {
+        crate::register_all();
+        let mut g = scenario(json!({
+            "active": "p2",
+            "p1": { "backrow": [armed(false)] },
+            "p2": spread(spare(), json!({ "hand": ["core-020", "core-005"] })),
+        }));
+        assert!(!crate::can_degrade_number(&g, "core-060", "costLimit"));
+        assert_eq!(crate::upgrade_number(&mut g, "core-060", "costLimit"), 2);
+
+        g.play("core-020", json!({ "zone": 1 }));
+
+        // The (2) Cost Pointmaster set it off.
+        assert_eq!(count_of(&g, "trapFired"), 1);
     }
 
     mod base_when_it_fires {

@@ -131,4 +131,8 @@ after [[R703]]. It edits [[§10.10]], [[R374]] and [[R639]].
 
 **[[R765]] is the menus' way back into a game (issues #475, #476 and #478, 2026-10-08)**: a practice game's Save and leave and Leave without saving, the practice menu's banner that resumes a saved game, a queue pairing that takes the player to the game from anywhere in the client, and the banner on the main and practice menus while their online game is live. It takes [[R765]], the number assigned to it while several branches were in flight. It edits [[§9.5]], [[§9.9]] and [[R668]].
 
+**[[R766]] is a card reaching a graveyard or exile as its printed card, its price included (issue #473, 2026-10-08)**: the owner's decision after part 40's sweep of record found C+ #54 Book of Books' (0) following a Book of Stats into the graveyard, where C #90 In Too Deep's reward L replayed it for free until the action cap. It takes [[R766]], the number assigned to it while several branches were in flight. It edits [[§3]], [[§6.1]], [[§8.2]] (#31), [[§10.1]], [[R78]], [[R215]], [[R385]], [[R386]], [[R429]] and [[R742]].
+
+**[[R767]] is a room shared as a link (issue #432, 2026-10-08)**: the room ticket's Copy invite link, and the lobby that opens on one with its join form filled in. It takes the next number after [[R766]]. It edits [[§9.5]].
+
 The table's rows are the ruling notes in `rulings/`, one per row (`rulings/R0195.md` is [[R195]]), each with its ruling, the cards and sections it affects, and the tests that prove it. [INDEX.md](INDEX.md) lists them all, one line each.

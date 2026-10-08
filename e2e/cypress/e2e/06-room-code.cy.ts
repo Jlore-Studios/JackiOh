@@ -34,6 +34,11 @@
 // bare count (§10.8), and the browser must render exactly as many hand cards as that count says
 // seat 1 holds — no more.
 //
+// A ROOM SHARED AS A LINK (R767). The second `it` hands the room over the way the room ticket's
+// "Copy invite link" does: the guest opens `/play?room=CODE&mode=bo1` in the browser, finds the code
+// filled in and the deck choice focused, picks a deck, presses Join and both players reach the
+// match. The host stays a Node client; the browser is the guest, who is the one the link is for.
+//
 // Needs: M6 (server, match actor, WS protocol). See e2e/README.md.
 
 import { CODE_ALPHABET, ROOM_CODE_LENGTH } from "../../../apps/web/src/wire/serverConfig.ts";
@@ -41,10 +46,15 @@ import { accounts, constants, routes, seedFor, server, timeouts } from "../../su
 import {
   END_TURN,
   MANA_CRYSTAL,
+  PLAY_DECK_SELECT,
+  PLAY_JOIN_INPUT,
+  PLAY_JOIN_SUBMIT,
+  PLAY_STATUS,
   handCardId,
   handCountId,
   heroId,
   manaId,
+  playModeId,
   ts,
   zoneId,
 } from "../../support/testids.ts";
@@ -60,6 +70,7 @@ import type { ActionInput, Lane, PlayerId, Row, Side } from "../../support/types
 const SESSION_STORAGE_KEY = "jackioh.e2e.session";
 
 const SEAT_TWO = "seat-two";
+const HOST = "host";
 const SEAT_ONE_ID: PlayerId = "p1";
 const SEAT_TWO_ID: PlayerId = "p2";
 
@@ -82,6 +93,11 @@ function bearer(token: string): Record<string, string> {
 function deckOf(installed: InstalledLoadout | null): string {
   expect(installed, "cy.installLoadout has answered").to.not.eq(null);
   return installed?.deckIds[0] ?? "";
+}
+
+/** The link the room ticket shares: it mirrors `roomLinkPath` in `apps/web/src/net/roomLink.ts`. */
+function inviteLink(code: string, mode: string): string {
+  return `${routes.play()}?${new URLSearchParams({ room: code, mode }).toString()}`;
 }
 
 function visitAs(token: string, path: string): void {
@@ -437,5 +453,81 @@ describe("06 room code — a networked match between a browser and a Node client
           .should("eq", 200);
       });
     }
+  });
+
+  it("R767 the guest opens the host's invite link, picks a deck, presses Join, and both reach the match", () => {
+    const seatOne = accounts.p1();
+    const seatTwo = accounts.p2();
+    let roomCode = "";
+    let matchId = "";
+    let seatOneDecks: InstalledLoadout | null = null;
+    let seatTwoDecks: InstalledLoadout | null = null;
+
+    cy.freeAccount(seatOne);
+    cy.freeAccount(seatTwo);
+    cy.installLoadout(seatOne, "06-room-a").then((installed) => {
+      seatOneDecks = installed;
+    });
+    cy.installLoadout(seatTwo, "06-room-b").then((installed) => {
+      seatTwoDecks = installed;
+    });
+
+    // The host makes a Best-of-1 room over HTTP, as the first test does, and hands over its link.
+    cy.then(() => {
+      cy.request<{ code: string; mode: string }>({
+        method: "POST",
+        url: api("/api/rooms"),
+        headers: bearer(seatOne.token),
+        body: { mode: "bo1", deckId: deckOf(seatOneDecks), seed: seedFor("06-room-link") },
+      }).then((created) => {
+        roomCode = created.body.code;
+        expect(created.body.mode, "R264: the room plays the mode it was made with").to.eq("bo1");
+      });
+    });
+
+    // The guest follows the link. It fills in the join form and leaves the address bar clean, says
+    // what to pick and focuses it, and joins nothing by itself.
+    cy.then(() => {
+      visitAs(seatTwo.token, inviteLink(roomCode, "bo1"));
+      cy.location("pathname", { timeout: timeouts.view }).should("eq", routes.play());
+      cy.location("search").should("eq", "");
+      cy.get(ts(PLAY_JOIN_INPUT), { timeout: timeouts.view }).should("have.value", roomCode);
+      cy.get(ts(playModeId("bo1"))).should("be.checked");
+      cy.get(ts(PLAY_STATUS)).should("contain.text", "Pick a deck for Best of 1, then press Join.");
+      cy.focused({ timeout: timeouts.view }).should("have.attr", "data-testid", PLAY_DECK_SELECT);
+    });
+
+    // R264: the guest still picks a deck and presses Join.
+    cy.then(() => {
+      cy.get(ts(PLAY_DECK_SELECT)).select(deckOf(seatTwoDecks));
+    });
+    cy.get(ts(PLAY_JOIN_SUBMIT)).should("not.be.disabled").click();
+
+    cy.location("pathname", { timeout: timeouts.view })
+      .should("match", /^\/match\/([^/]+)$/)
+      .then((pathname) => {
+        matchId = /^\/match\/([^/]+)$/.exec(pathname)?.[1] ?? "";
+        expect(matchId, "the match the join made").to.not.eq("");
+      });
+    cy.get(ts(heroId("you")), { timeout: timeouts.view }).should("be.visible");
+
+    // The host reaches the same match.
+    cy.then(() => {
+      cy.wsPlayer({
+        action: "connect",
+        name: HOST,
+        url: server.ws(),
+        token: seatOne.token,
+        matchId,
+        seat: SEAT_ONE_ID,
+      }).should((result) => {
+        expect(asView(result.view).viewer, "the host's view is the host's").to.eq(SEAT_ONE_ID);
+      });
+    });
+
+    // Leave both accounts free for the next spec.
+    cy.then(() => {
+      cy.concedeAs(seatOne, matchId).its("ok").should("eq", true);
+    });
   });
 });

@@ -45,9 +45,10 @@ fn add_random_card(ctx: &EffectContext, as_radiant: bool) -> Effect {
     if as_radiant {
         args["radiant"] = json!(true);
     }
-    // "(paid 4: it costs 0)" — the embiggen price, not the mana actually spent after discounts.
+    // "(paid 4: it costs 0)" — the embiggen price, not the mana actually spent after discounts. The
+    // (0) is the declared number `setCost` (R386).
     if ctx.embiggened {
-        args["costOverride"] = json!(0);
+        args["costOverride"] = json!(param(ctx, "setCost"));
     }
     add_random_from_catalog(json_as(args))
 }
@@ -230,6 +231,22 @@ mod tests {
 
             let added = only_added(&g);
             assert_eq!(added.cost_override, Some(0));
+        }
+
+        #[test]
+        fn r386_a_degrade_makes_the_paid_card_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
+            crate::register_all();
+            let mut g = scenario(json!({
+                "p1": spread(busy(), json!({ "hand": ["core-059", "core-005"] })),
+                "p2": busy(),
+            }));
+            assert!(!crate::can_upgrade_number(&g, "core-059", "setCost"));
+            assert_eq!(crate::degrade_number(&mut g, "core-059", "setCost"), 1);
+
+            g.play("core-059", json!({ "zone": 1, "embiggen": true }));
+            g.start_turn();
+
+            assert_eq!(only_added(&g).cost_override, Some(1));
         }
 
         #[test]

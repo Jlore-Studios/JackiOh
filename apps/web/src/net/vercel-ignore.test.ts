@@ -123,7 +123,7 @@ describe("scripts/vercel-ignore.sh", () => {
       ["bot/harness/state.py", ".harness/config.json"],
       [".squishy/config.json", ".github/workflows/squishy-run.yml"],
       [".github/workflows/ci.yml", ".github/actions/setup/action.yml"],
-      ["docs/architecture.md", "SPEC.md", "BUILD.md", "CLAUDE.md", "REVIEW.md", "README.md"],
+      ["docs/architecture.md", "SPEC.md", "BUILD.md", "CLAUDE.md", "REVIEW.md", "README.md", "CONTRIBUTING.md"],
       // The server and the CLI are never compiled into the WASM module; only their manifests are read.
       ["crates/server/src/main.rs", "crates/server/migrations/0001_init.sql", "crates/server/Dockerfile", "render.yaml"],
       ["crates/server/tests/server.rs", "crates/server/.env.example", "crates/tools/src/fuzz.rs"],

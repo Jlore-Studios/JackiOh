@@ -37,12 +37,14 @@ fn start_of_turn() -> Hook {
 /// `ctx.self_.controller` rather than the owner: control is what "your" means on the field (R12).
 fn rush_token_aura() -> AuraHook {
     aura_hook(|ctx| {
+        // "+3/+3": the declared number `buff` (R386).
+        let buff = param(&ctx, "buff");
         let controller = ctx.self_.controller;
         vec![AuraEntry {
             applies: Box::new(move |unit: &CardInstance| unit.controller == controller && unit.def_id == RUSH_TOKEN),
             mod_: StatMod {
-                attack: Some(3),
-                max_health: Some(3),
+                attack: Some(buff),
+                max_health: Some(buff),
                 ..StatMod::default()
             },
         }]
@@ -290,6 +292,26 @@ mod tests {
 
             g.expect_stats("core-019", json!({ "health": 3, "maxHealth": 9 }))
                 .expect_in_zone(&token, "gone");
+        }
+
+        #[test]
+        fn r386_an_upgrade_makes_the_aura_4_4_and_a_degrade_2_2() {
+            for (upgrade, buff) in [(true, 4), (false, 2)] {
+                crate::register_all();
+                let mut g = scenario(json!({
+                    "p1": {
+                        "backrow": [{ "def": "core-058", "radiant": true, "lane": 1 }],
+                        "field": [{ "def": "core-t-rush", "lane": 1 }],
+                    },
+                }));
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut g, "core-058", "buff")
+                } else {
+                    crate::degrade_number(&mut g, "core-058", "buff")
+                };
+                assert_eq!(moved, buff);
+                g.expect_stats("core-t-rush", json!({ "attack": 3 + buff, "maxHealth": 3 + buff }));
+            }
         }
     }
 }

@@ -31,15 +31,13 @@ fn shred(amount: i32) -> Effect {
     damage_all(json_as(json!({ "side": "enemy", "amount": amount, "heroes": true })))
 }
 
+/// The amount is the declared number `damage` (R386): 2, 5 on the Radiant face.
 pub fn script() -> CardScripts {
     let base = Script {
-        end_of_turn: Some(hook(|_ctx| vec![shred(2)])),
+        end_of_turn: Some(hook(|ctx| vec![shred(param(&*ctx, "damage"))])),
         ..Script::default()
     };
-    let radiant = Script {
-        end_of_turn: Some(hook(|_ctx| vec![shred(5)])),
-        ..Script::default()
-    };
+    let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
@@ -179,6 +177,22 @@ mod tests {
                 s.expect_in_zone(&vanilla, "graveyard"); // 4/4, which 2 would have survived
                 s.expect_health(PlayerId::P2, 25);
                 assert_eq!(hits(&s).iter().map(|hit| hit.1).collect::<Vec<_>>(), vec![5, 5, 5]);
+            }
+        }
+
+        #[test]
+        fn r386_an_upgrade_deals_3_and_a_degrade_1() {
+            for (upgrade, amount) in [(true, 3), (false, 1)] {
+                crate::register_all();
+                let mut s = shredder_board(false);
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, "core-013", "damage")
+                } else {
+                    crate::degrade_number(&mut s, "core-013", "damage")
+                };
+                assert_eq!(moved, amount);
+                s.end_turn();
+                s.expect_health(PlayerId::P2, 30 - amount);
             }
         }
     }

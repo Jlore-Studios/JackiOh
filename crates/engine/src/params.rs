@@ -167,6 +167,21 @@ pub fn param_value(
     )
 }
 
+/// R386: a number a card's static flag stands for (#73 Anti-oneshot Armor's `cap`, #64 Gifted
+/// Program's `giftLimit`, #79 Twinspell's `echoGain`, #84 Going Long's `armor` and `paidArmor`),
+/// which the engine reads rather than a script: `flag`, the flag's own value, moved by as much as
+/// Degrade, Upgrade and KY's Constant have moved the card's declared number `key` off its printed
+/// value. On a card of its own the flag is that printed value, so this is the number as the card
+/// stands; on a fused card (R102), whose flag may be its ingredients' sum, the one tuning record moves
+/// it as it moves every ingredient's number. A card that declares no `key` reads `flag` as it is.
+pub fn declared_or(state: &GameState, card: &CardInstance, key: &str, flag: i32) -> i32 {
+    let Some(param) = param_decl_of(state, &card.def_id, key) else {
+        return flag;
+    };
+    let printed = value_with(&param, card.radiant, None, None);
+    flag + param_value(state, Some(card), key, ParamValueOptions::default()) - printed
+}
+
 /// What `param` reads off its context (TS's structural `{ state, self, radiant, data?, defId? }`):
 /// implemented for a script's `EffectContext` and for every read-only hook argument that carries a
 /// state, a card and a face.

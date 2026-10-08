@@ -43,6 +43,8 @@ enum Command {
     StatsCards(Rest),
     /// Load an `ai:stats` development run's game records (TS `stats:import`).
     StatsImport(Rest),
+    /// Write the game records `stats-cards` reads to a JSONL file.
+    StatsExport(Rest),
 }
 
 /// The arguments after the subcommand, passed through untouched to the tool's own parser.
@@ -65,6 +67,7 @@ async fn main() -> ExitCode {
         Command::SeasonStart(rest) => cli::season_start::run(rest.args).await,
         Command::StatsCards(rest) => cli::card_stats::run(rest.args).await,
         Command::StatsImport(rest) => cli::import_dev_records::run(rest.args).await,
+        Command::StatsExport(rest) => cli::export_records::run(rest.args).await,
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,

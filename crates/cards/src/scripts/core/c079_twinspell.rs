@@ -24,7 +24,9 @@ pub const ID: &str = "core-079";
 
 /// The two faces differ only in how many extra resolutions the next spell gets. The engine reads the
 /// amount off the face the card wears when a Spell takes it, so a Twinspell made Radiant on the field
-/// (#49 radiant) grants "Echo +2" from then on (§5.2, R209).
+/// (#49 radiant) grants "Echo +2" from then on (§5.2, R209). The card declares the grant as `echoGain`
+/// (R386), and the engine reads the flag through `params::declared_or`, so a Degrade or an Upgrade
+/// moves it.
 fn twinspell(amount: i32) -> Script {
     Script {
         static_flags: Some(StaticFlags {
@@ -122,6 +124,24 @@ mod tests {
     /// `s.state.pending?.kind`.
     fn pending_kind(s: &Scenario) -> Option<PromptKind> {
         s.state().pending.as_ref().map(|pending| pending.kind)
+    }
+
+    #[test]
+    fn r386_an_upgrade_grants_echo_2_and_a_radiant_degrade_echo_1() {
+        // The Coin's "gain 1 mana" once per resolution: 2 left after the Twinspell, plus 1 + the echoes.
+        for (radiant, upgrade, echo) in [(false, true, 2), (true, false, 1)] {
+            crate::register_all();
+            let mut s = with_coin(radiant);
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, TWINSPELL, "echoGain")
+            } else {
+                crate::degrade_number(&mut s, TWINSPELL, "echoGain")
+            };
+            assert_eq!(moved, echo);
+            s.play(TWINSPELL, json!({}));
+            s.play(COIN, json!({}));
+            s.expect_mana(P1, 2 + 1 + echo);
+        }
     }
 
     mod n79_twinspell_base {

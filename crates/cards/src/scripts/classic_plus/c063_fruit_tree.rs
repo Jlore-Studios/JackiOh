@@ -22,8 +22,10 @@ const FRUITS: i32 = 1;
 /// The two faces differ only in whether the Fruit is Radiant (R276: the Radiant face's proposal).
 fn fruit_tree(radiant: bool) -> Script {
     Script {
-        start_of_turn: Some(hook(move |_ctx| {
-            let mut args = json!({ "query": { "tags": ["Fruit"] }, "count": FRUITS, "costOverride": 0 });
+        start_of_turn: Some(hook(move |ctx| {
+            // "It costs (0)": the declared number `setCost` (R386).
+            let cost = param(&*ctx, "setCost");
+            let mut args = json!({ "query": { "tags": ["Fruit"] }, "count": FRUITS, "costOverride": cost });
             if radiant {
                 args["radiant"] = json!(true);
             }
@@ -296,6 +298,17 @@ mod tests {
             assert_eq!(defs(&a), defs(&b));
             let revived: GameState = serde_json::from_value(serde_json::to_value(a.state()).unwrap()).unwrap();
             assert_eq!(&revived, a.state());
+        }
+
+        #[test]
+        fn r386_a_degrade_makes_the_fruit_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
+            let mut s = grown(false, None, None);
+            assert!(!crate::can_upgrade_number(&s, TREE, "setCost"));
+            assert_eq!(crate::degrade_number(&mut s, TREE, "setCost"), 1);
+            s.end_turn();
+            let added = fruits_added(&s, PlayerId::P1);
+            assert_eq!(added.len(), 1);
+            assert_eq!(s.card(added[0].0.as_str()).cost_override, Some(1));
         }
     }
 }

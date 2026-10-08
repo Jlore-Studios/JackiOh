@@ -15,7 +15,8 @@ import type { Tuning } from "./Tuning";
 
 /**
  * `CardView & { … }`: a unit on the field. Every `CardView` field is repeated here, since the unit
- * makes `attack`, `health` and `keywords` required where the card view has them optional.
+ * makes `attack`, `health` and `keywords` required where the card view has them optional — all but
+ * `embiggenCost`, which only a card in its owner's hand carries (#492).
  */
 export type UnitView = { instanceId: string, defId: string, radiant: boolean, cost: number, power?: string, conditionActive?: true, counteredOnPlay?: true, preview?: Array<PreviewValue>, type?: CardType, brittle?: number, params?: { [key in string]: number }, tuning?: Tuning, enchantments?: Array<Enchantment>, marks?: Array<CardMark>, activations?: Array<ActivationView>, quest?: QuestView, copies?: CopiedTextView, owner: PlayerId, controller: PlayerId, attack: number, maxHealth: number, health: number, keywords: Array<Keyword>, armor: number, position: Position, counters: Counters, 
 /**

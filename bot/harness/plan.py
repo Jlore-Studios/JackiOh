@@ -1,8 +1,9 @@
 """The first job of a night run: decide what this run does and which subscription does it.
 
 It spends nothing. In order: the two kill switches, housekeeping (items a dead run left
-`bot:working`, bot PRs that conflict with `main`), the lanes (at most `max_parallel` runs hold an
-item at once, and a subscription holds one at a time), then one item and the subscription that
+`bot:working`, bot PRs that conflict with `main`), the lanes (at most `max_parallel` runs on
+GitHub's runners and, apart from those, `machine_parallel` on the machine hold an item at once,
+and a subscription holds as many as its `lanes`), then one item and the subscription that
 takes it (`pairs`), or a suggestion survey when nothing is queued and one is due. Having claimed
 an item, it starts another run when a lane and more work are still free, so the lanes fill up.
 
@@ -138,12 +139,17 @@ def stops(ctx: Context, state: dict[str, Any], force: bool) -> str | None:
 class Lanes:
     """The runs that hold work now: item number (0 for a suggestion survey) -> provider id.
     `planning` are the items whose run is a planning run: those hold the planning lane
-    (`Pool.plan_lanes`), not a build lane, nor a lane of their provider's."""
+    (`Pool.plan_lanes`), not a build lane, nor a lane of their provider's. GitHub's runners and
+    the bot's machine have lanes of their own, so neither waits on the other: `limit` is
+    GitHub's (`Pool.max_parallel`), `machine_limit` the machine's (`Pool.machine_parallel`), and
+    `machine` names the subscriptions that run on the machine."""
 
     limit: int
     held: dict[int, str] = field(default_factory=dict)
     planning: set[int] = field(default_factory=set)
     plan_limit: int = 0
+    machine_limit: int = 0
+    machine: frozenset[str] = frozenset()
 
     @property
     def busy(self) -> set[str]:
@@ -174,7 +180,24 @@ class Lanes:
 
     @property
     def free(self) -> int:
-        return max(0, self.limit - (len(self.held) - len(self.planning)))
+        """Build lanes free on GitHub's runners."""
+        return max(0, self.limit - sum(1 for number, provider_id in self.held.items()
+                                       if number not in self.planning
+                                       and provider_id not in self.machine))
+
+    @property
+    def machine_free(self) -> int:
+        """Slots free on the machine; a planning run there takes one too (`machine_full`)."""
+        return max(0, self.machine_limit - sum(1 for provider_id in self.held.values()
+                                               if provider_id in self.machine))
+
+    def room_for(self, provider_id: str) -> bool:
+        """A lane is free where `provider_id` runs: the machine, or GitHub's runners."""
+        return self.machine_free > 0 if provider_id in self.machine else self.free > 0
+
+    @property
+    def any_room(self) -> bool:
+        return self.free > 0 or self.machine_free > 0 or self.plan_free > 0
 
     @property
     def plan_free(self) -> int:
@@ -183,7 +206,8 @@ class Lanes:
     def with_run(self, number: int, provider_id: str, action: str) -> "Lanes":
         """These lanes with one more run held."""
         planning = self.planning | ({number} if action == "plan" else set())
-        return Lanes(self.limit, {**self.held, number: provider_id}, planning, self.plan_limit)
+        return Lanes(self.limit, {**self.held, number: provider_id}, planning, self.plan_limit,
+                     self.machine_limit, self.machine)
 
     def describe(self) -> str:
         return ", ".join((f"#{n} with `{p}`" + (" (planning)" if n in self.planning else ""))
@@ -200,7 +224,10 @@ def working_threads(ctx: Context) -> list[dict[str, Any]]:
 def read_lanes(ctx: Context, state: dict[str, Any]) -> Lanes:
     """The lanes held by runs that are still going. A run that ended without delivering holds
     nothing: housekeeping requeues its item."""
-    lanes = Lanes(ctx.cfg.pool.max_parallel, plan_limit=ctx.cfg.pool.plan_lanes)
+    pool = ctx.cfg.pool
+    lanes = Lanes(pool.max_parallel, plan_limit=pool.plan_lanes,
+                  machine_limit=pool.machine_parallel,
+                  machine=frozenset(p.id for p in pool.ordered() if pool.on_machine(p.id)))
     for thread in working_threads(ctx):
         number = int(thread["number"])
         record = state["items"].get(str(number), {})
@@ -217,7 +244,7 @@ def read_lanes(ctx: Context, state: dict[str, Any]) -> Lanes:
 def _usable(ctx: Context, state: dict[str, Any], provider: Provider, lanes: Lanes, role: str,
             *, forced: bool, quiet_ok: str) -> bool:
     cfg = ctx.cfg
-    if lanes.full(provider) or role not in provider.roles:
+    if lanes.full(provider) or role not in provider.roles or not lanes.room_for(provider.id):
         return False
     if machine_full(cfg.pool, provider, lanes):
         return False
@@ -456,7 +483,7 @@ def pairs(ctx: Context, state: dict[str, Any], queue: list[Candidate], lanes: La
                 notes=[f"#{candidate.number}: needs a plan; {seat.describe()} {what} on the "
                        "planning lane"])))
     found: list[tuple[Candidate, Assignment]] = []
-    if lanes.free > 0:
+    if lanes.free > 0 or lanes.machine_free > 0:
         found = [(candidate, assignment) for candidate in order
                  if (assignment := assign(ctx, state, candidate, lanes, force=force,
                                           quiet_ok=quiet_ok)) is not None]
@@ -475,7 +502,7 @@ def survey_provider(ctx: Context, state: dict[str, Any], lanes: Lanes, *, force:
 
 def machine_full(pool: providers_mod.Pool, provider: Provider, lanes: Lanes) -> bool:
     """`provider` runs on the bot's machine (the night box), and its `machine_parallel` slots are
-    all held. GitHub's runners have no such limit beyond `max_parallel`. (The AI's training lanes
+    all held. GitHub's runners have `max_parallel` of their own. (The AI's training lanes
     run on a box of their own, outside the harness, so no slot is kept for them.)"""
     if not pool.on_machine(provider.id):
         return False
@@ -568,7 +595,7 @@ def _peek(ctx: Context, force: bool, item: int | None, mode: str, skipped: list[
         return Peek(False, stop)
     tidy = housekeeping_due(ctx, state)
     lanes = read_lanes(ctx, state)
-    if lanes.free <= 0 and lanes.plan_free <= 0:
+    if not lanes.any_room:
         if tidy:
             return Peek(True, tidy, force, held=len(lanes.held))
         return Peek(False, f"every lane is busy ({lanes.describe()})", held=len(lanes.held))
@@ -713,7 +740,7 @@ def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: st
     state = ctx.store.load()
     notes += sync_needs_plan(ctx, state)
     lanes = read_lanes(ctx, state)
-    if lanes.free <= 0 and lanes.plan_free <= 0:
+    if not lanes.any_room:
         return {**nothing(f"every lane is busy ({lanes.describe()})"), "housekeeping": notes}
     skipped: list[str] = []
     queue = _queue(ctx, state, item, mode, skipped)
@@ -747,7 +774,7 @@ def fill_lanes(ctx: Context, lanes: Lanes, taken: Candidate, assignment: Assignm
     """Start one more run when, with this item claimed, a lane (or the planning lane) and more
     work are still free. That run does the same, so the lanes fill one run at a time."""
     after = lanes.with_run(taken.number, assignment.provider.id, assignment.action)
-    if after.free <= 0 and after.plan_free <= 0:
+    if not after.any_room:
         return
     state = ctx.store.load()
     rest = [c for c in candidates(ctx, state) if c.number != taken.number]

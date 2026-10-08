@@ -11,7 +11,7 @@ use serde_json::json;
 /// A complete, valid environment for the server (apps/server/README.md's table).
 ///
 /// `CATALOG_VERSION` is the compiled-in catalog's version, where TS wrote `"core-1"`: the Rust
-/// server refuses to boot on any other (SURFACE §11.3).
+/// server serves that one whatever the variable says (SURFACE §11.3).
 fn valid_env() -> IndexMap<String, String> {
     [
         ("SUPABASE_URL", "https://project.supabase.test"),

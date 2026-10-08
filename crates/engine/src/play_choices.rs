@@ -239,9 +239,11 @@ pub fn gifted_makes_radiant(state: &GameState, player: PlayerId, cost_paid: i32)
         .as_deref()
         .unwrap_or(&[]);
     permanents_of(state, player).into_iter().any(|held| {
-        let Some(threshold) = crate::scripts::script_of(state, held).flags().gifted_program else {
+        let Some(printed) = crate::scripts::script_of(state, held).flags().gifted_program else {
             return false;
         };
+        // R386: the threshold is the card's declared number `giftLimit` where it declares one.
+        let threshold = crate::params::declared_or(state, held, "giftLimit", printed);
         if cost_paid > threshold {
             return false;
         }
@@ -319,6 +321,14 @@ fn cost_with(state: &GameState, card: &CardInstance, x: Option<i32>, embiggen: O
         ..card.clone()
     };
     crate::mana::play_cost(state, &probe)
+}
+
+/// #492, R81: what a play of this card at its embiggen price costs now, or None for a card with no
+/// embiggen price. It is `cost_with`, the price §10.5 step 1 reads for a play with `embiggen: true`,
+/// and so `mana::play_cost` on the card stamped embiggened, as the pay step charges it: the view's
+/// `embiggenCost` (§10.8) is this number, so the client never prices a play itself (CLAUDE.md rule 7).
+pub fn embiggen_play_cost(state: &GameState, card: &CardInstance) -> Option<i32> {
+    has_embiggen_price(state, card).then(|| cost_with(state, card, None, Some(true)))
 }
 
 // ---------------------------------------------------------------------------

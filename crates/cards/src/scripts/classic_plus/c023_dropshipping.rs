@@ -5,8 +5,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-023";
 
-/// "Each costs (1)" on the Radiant face.
-const RADIANT_COST: i32 = 1;
+// "Each costs (1)" on the Radiant face: the declared number `setCost` (R386), less being better.
 
 /// The cards this list put in its controller's hand (R136: its own events, from `eventsFrom`).
 fn added_by_this_list(ctx: &mut EffectContext<'_>) -> Vec<String> {
@@ -31,7 +30,7 @@ fn dropship(radiant: bool) -> Script {
                 "count": param(&*ctx, "cards"),
             });
             if radiant {
-                add["costOverride"] = json!(RADIANT_COST);
+                add["costOverride"] = json!(param(&*ctx, "setCost"));
             }
             vec![
                 add_random_from_catalog(json_as(add)),
@@ -401,6 +400,24 @@ mod tests {
                     assert_eq!(s.card(id).cost_override, Some(1));
                 }
                 assert_eq!(brittles_of(&s, &ids), vec![Some(2), Some(2), Some(2)]);
+            }
+        }
+
+        /// R386 the Radiant face's (1) is declared: an Upgrade makes the three cost (0) and a Degrade (2)
+        #[test]
+        fn r386_an_upgrade_makes_the_three_cost_0_and_a_degrade_2() {
+            for (upgrade, cost) in [(true, 0), (false, 2)] {
+                let mut s = shop("drop-radiant", true, &[FILLER]);
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, DROP, "setCost")
+                } else {
+                    crate::degrade_number(&mut s, DROP, "setCost")
+                };
+                assert_eq!(moved, cost);
+                s.play(DROP, json!({}));
+                for id in &added(&s) {
+                    assert_eq!(s.card(id).cost_override, Some(cost));
+                }
             }
         }
     }

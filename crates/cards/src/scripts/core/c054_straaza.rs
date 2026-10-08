@@ -51,20 +51,15 @@ fn unit_pool() -> Value {
     })
 }
 
-/// Base: "they cost 1".
-const BASE_COST: i32 = 1;
-
-/// Radiant: "they cost 0".
-const RADIANT_COST: i32 = 0;
-
-/// The two faces differ in what the generated cards cost and whether they are Radiant.
-fn straaza(cost_override: i32, radiant: bool) -> Script {
+/// The two faces differ in what the generated cards cost — "they cost 1", "they cost 0": the declared
+/// number `setCost` (R386), less being better — and whether they are Radiant.
+fn straaza(radiant: bool) -> Script {
     Script {
-        cry: Some(hook(move |_ctx| {
+        cry: Some(hook(move |ctx| {
             vec![add_random_from_catalog(json_as(json!({
                 "query": unit_pool(),
                 "count": COUNT,
-                "costOverride": cost_override,
+                "costOverride": param(&*ctx, "setCost"),
                 "radiant": radiant,
             })))]
         })),
@@ -74,8 +69,8 @@ fn straaza(cost_override: i32, radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: straaza(BASE_COST, false),
-        radiant: straaza(RADIANT_COST, true),
+        base: straaza(false),
+        radiant: straaza(true),
     }
 }
 
@@ -144,6 +139,27 @@ mod tests {
         let mut cards = vec![json!({ "def": "core-054", "radiant": true })];
         cards.extend(hand.iter().map(|id| json!(id)));
         scenario(json!({ "seed": seed, "p1": { "hand": cards } }))
+    }
+
+    #[test]
+    fn r386_an_upgrade_makes_the_cards_cost_0_and_a_degrade_2_and_a_radiant_upgrade_finds_0_its_floor() {
+        for (upgrade, cost) in [(true, 0), (false, 2)] {
+            crate::register_all();
+            let mut s = scenario(json!({ "seed": "straaza-tuned", "p1": { "hand": ["core-054"] } }));
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, "core-054", "setCost")
+            } else {
+                crate::degrade_number(&mut s, "core-054", "setCost")
+            };
+            assert_eq!(moved, cost);
+            s.play("core-054", json!({}));
+            let made = added(s.hand(P1));
+            assert_eq!(made.len(), 2);
+            assert!(made.iter().all(|card| card.cost_override == Some(cost)));
+        }
+        crate::register_all();
+        let s = radiant_straaza("straaza-tuned", &[]);
+        assert!(!crate::can_upgrade_number(&s, "core-054", "setCost"));
     }
 
     mod n54_straaza_the_pool_itself_s5_1 {

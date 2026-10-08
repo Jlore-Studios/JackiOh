@@ -28,28 +28,24 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-073";
 
-/// "Cry: draw 1", radiant "Cry: draw 2".
-const BASE_DRAW: i32 = 1;
-const RADIANT_DRAW: i32 = 2;
-
-/// The cap's VALUE is read off the instance's radiant flag by the pipeline from `ANTI_ONESHOT_CAP`
-/// (engine/src/config.rs), so the only thing the two faces parameterise here is the Cry's draw.
-fn anti_oneshot_armor(draws: i32) -> Script {
+/// The cap is read by the pipeline (`damage::hero_damage_cap`) as the card's declared number `cap`
+/// (R386), 5 and 3 on the Radiant face, and the Cry's "draw 1" (radiant "draw 2") is the declared
+/// number `draw`: both faces run this one script.
+fn anti_oneshot_armor() -> Script {
     Script {
         static_flags: Some(StaticFlags {
             anti_oneshot: Some(true),
             ..StaticFlags::default()
         }),
-        cry: Some(hook(move |_ctx| vec![draw(json_as(json!({ "count": draws })))])),
+        cry: Some(hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])),
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
-    CardScripts {
-        base: anti_oneshot_armor(BASE_DRAW),
-        radiant: anti_oneshot_armor(RADIANT_DRAW),
-    }
+    let base = anti_oneshot_armor();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
 }
 
 // #73 Anti-oneshot Armor — SPEC §8.3, BUILD M4-T4: "A 12 hit becomes 5 (radiant 3), per instance,
@@ -289,6 +285,46 @@ mod tests {
 
             assert_eq!(drawn_count(&s), 1);
             assert_eq!(s.pile(P1, "library").len(), 2);
+        }
+
+        #[test]
+        fn r386_an_upgrade_draws_2_and_a_radiant_degrade_1() {
+            for (radiant, upgrade, draws) in [(false, true, 2), (true, false, 1)] {
+                let mut s = setup(json!({
+                    "seed": "core-073-tuned-draw",
+                    "p1": { "hand": [{ "def": "core-073", "radiant": radiant }, "core-005"], "library": ["core-035", "core-036", "core-037"] },
+                    "p2": { "hand": ["core-005"] },
+                }));
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, "core-073", "draw")
+                } else {
+                    crate::degrade_number(&mut s, "core-073", "draw")
+                };
+                assert_eq!(moved, draws);
+                s.play("core-073", json!({}));
+                assert_eq!(drawn_count(&s), draws as usize);
+            }
+        }
+
+        #[test]
+        fn r386_an_upgrade_lowers_the_cap_to_4_and_a_degrade_raises_it_to_6() {
+            for (upgrade, cap) in [(true, 4), (false, 6)] {
+                let mut s = setup(json!({
+                    "seed": "core-073-tuned-cap",
+                    "active": "p2",
+                    "p1": { "backrow": ["core-073"], "hand": ["core-005"], "library": ["core-035"] },
+                    "p2": { "hand": ["core-016", "core-005"], "field": ["core-019"] },
+                }));
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, "core-073", "cap")
+                } else {
+                    crate::degrade_number(&mut s, "core-073", "cap")
+                };
+                assert_eq!(moved, cap);
+                // Midrange Menace's 9 into p1's hero, held to the cap.
+                s.attack("core-019", "hero");
+                s.expect_health(P1, 30 - cap);
+            }
         }
 
         #[test]

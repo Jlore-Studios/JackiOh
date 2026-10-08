@@ -8,7 +8,7 @@
 // The modes: the lobby sends intent (`ModeChoice`) and relays what the server said. Its verdict is
 // the shared validator's, as UX; a refusal is shown in the server's words.
 
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DECK_SIZE } from "@jackioh/engine/config";
@@ -37,7 +37,17 @@ import {
   type SavedTrio,
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
-import PlayRoute, { MATCH_FOUND_STATUS, MODE_LABEL, PLAY_CHOICE_KEY, pairTargetOf, playModeTestid, playTestid } from "./play.tsx";
+import { ROOM_LINK_SHARE_TITLE, ROOM_LINK_STORAGE_KEY } from "../net/roomLink.ts";
+import PlayRoute, {
+  MATCH_FOUND_STATUS,
+  MODE_LABEL,
+  PLAY_CHOICE_KEY,
+  pairTargetOf,
+  playModeTestid,
+  playTestid,
+  queuedStatus,
+  roomLinkStatus,
+} from "./play.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -726,5 +736,226 @@ describe("the lobby's queue state", () => {
       },
       { timeout: 5000 },
     );
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R767: a room shared as a link
+// ---------------------------------------------------------------------------------------------
+
+describe("R767 a room shared as a link", () => {
+  afterEach(() => {
+    window.history.replaceState(null, "", "/");
+    window.sessionStorage.clear();
+    Reflect.deleteProperty(navigator, "clipboard");
+    Reflect.deleteProperty(navigator, "share");
+  });
+
+  /** Opens `/play` on `search`, as a visitor who followed the link does, and renders the lobby. */
+  function openLink(search: string): void {
+    window.history.replaceState(null, "", `${paths.play}${search}`);
+    render(<PlayRoute token={TOKEN} />);
+  }
+
+  function stubClipboard(writeText: () => Promise<void>): ReturnType<typeof vi.fn> {
+    const spy = vi.fn(writeText);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: spy } });
+    return spy;
+  }
+
+  async function createRandomRoom(): Promise<void> {
+    vi.mocked(createRoom).mockResolvedValue({ code: "QRSTUV", expiresAt: 0, mode: "random" });
+    await renderLobby();
+    pickMode("random");
+    fireEvent.click(screen.getByTestId(playTestid.createRoom));
+    await screen.findByTestId(playTestid.roomCode);
+  }
+
+  /** Lets a settled clipboard or share promise reach its handler. */
+  async function settle(): Promise<void> {
+    await act(async () => {
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    });
+  }
+
+  it("R767 /play?room=abc234&mode=bo1 fills in ABC234, chooses Best of 1, says what to pick, focuses the deck and sends no join", async () => {
+    // The last choice was Conquest, so the switch to Best of 1 is the link's doing.
+    window.localStorage.setItem(PLAY_CHOICE_KEY, JSON.stringify({ mode: "bo3" }));
+    openLink("?room=abc234&mode=bo1");
+
+    const select = await screen.findByTestId(playTestid.deckSelect);
+    expect(screen.getByTestId(playTestid.joinInput)).toHaveValue("ABC234");
+    expect(screen.getByTestId(playModeTestid("bo1"))).toBeChecked();
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent(roomLinkStatus("bo1"));
+    expect(roomLinkStatus("bo1")).toBe("Pick a deck for Best of 1, then press Join.");
+    await waitFor(() => {
+      expect(select).toHaveFocus();
+    });
+    expect(vi.mocked(joinRoom)).not.toHaveBeenCalled();
+    expect(screen.queryByTestId(playTestid.error)).toBeNull();
+    // The link is gone from the address bar and from this tab, so a reload or Back refills nothing.
+    expect(window.location.pathname).toBe(paths.play);
+    expect(window.location.search).toBe("");
+    expect(window.sessionStorage.getItem(ROOM_LINK_STORAGE_KEY)).toBeNull();
+  });
+
+  it("R767 a Conquest link focuses the trio and an All Random one focuses Join", async () => {
+    openLink("?room=abc234&mode=bo3");
+    const trioSelect = await screen.findByTestId(playTestid.trioSelect);
+    expect(screen.getByTestId(playModeTestid("bo3"))).toBeChecked();
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent("Pick a trio for Conquest, then press Join.");
+    await waitFor(() => {
+      expect(trioSelect).toHaveFocus();
+    });
+    cleanup();
+    window.sessionStorage.clear();
+
+    openLink("?room=wxyz23&mode=random");
+    expect(screen.getByTestId(playTestid.joinInput)).toHaveValue("WXYZ23");
+    expect(screen.getByTestId(playModeTestid("random"))).toBeChecked();
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent("No deck needed for All Random: press Join.");
+    await waitFor(() => {
+      expect(screen.getByTestId(playTestid.joinSubmit)).toHaveFocus();
+    });
+    expect(vi.mocked(joinRoom)).not.toHaveBeenCalled();
+  });
+
+  it("R767 a link with no usable mode fills in the code and leaves the last choice", async () => {
+    window.localStorage.setItem(PLAY_CHOICE_KEY, JSON.stringify({ mode: "bo3" }));
+    openLink("?room=abc234&mode=bo5");
+    await screen.findByTestId(playTestid.trioSelect);
+    expect(screen.getByTestId(playTestid.joinInput)).toHaveValue("ABC234");
+    expect(screen.getByTestId(playModeTestid("bo3"))).toBeChecked();
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent(roomLinkStatus("bo3"));
+  });
+
+  it("R767 a code that is no room code is ignored without a word", async () => {
+    // abc123 has a 1 (R104's alphabet has none), abc23 is short and abc2345 is long.
+    for (const code of ["abc123", "abc23", "abc2345"]) {
+      openLink(`?room=${code}&mode=bo3`);
+      await screen.findByTestId(playTestid.deckSelect);
+      expect(screen.getByTestId(playTestid.joinInput)).toHaveValue("");
+      expect(screen.getByTestId(playModeTestid("bo1"))).toBeChecked();
+      expect(screen.queryByTestId(playTestid.status)).toBeNull();
+      expect(screen.queryByTestId(playTestid.error)).toBeNull();
+      expect(window.location.search).toBe("");
+      expect(window.sessionStorage.getItem(ROOM_LINK_STORAGE_KEY)).toBeNull();
+      cleanup();
+    }
+    expect(vi.mocked(joinRoom)).not.toHaveBeenCalled();
+  });
+
+  it("R767 the link's mode is a hint: R264's refusal still switches to the room's", async () => {
+    vi.mocked(joinRoom).mockRejectedValue(
+      new ApiRequestError(409, {
+        code: "conflict",
+        message: "This room plays Conquest: pick one of your trios.",
+        details: { mode: "bo3" },
+      }),
+    );
+    openLink("?room=abc234&mode=bo1");
+    await screen.findByTestId(playTestid.deckSelect);
+    fireEvent.submit(screen.getByTestId(playTestid.joinForm));
+
+    const error = await screen.findByTestId(playTestid.error);
+    expect(vi.mocked(joinRoom)).toHaveBeenCalledWith(TOKEN, "ABC234", { mode: "bo1", deckId: AGGRO.id });
+    expect(error).toHaveTextContent(`This room plays ${MODE_LABEL.bo3}: pick a trio and join again.`);
+    expect(screen.getByTestId(playModeTestid("bo3"))).toBeChecked();
+    // The notice named the link's mode; it must not sit beside an error that says the opposite.
+    expect(screen.queryByTestId(playTestid.status)).toBeNull();
+    // The code stays, so joining again is one press.
+    expect(screen.getByTestId(playTestid.joinInput)).toHaveValue("ABC234");
+  });
+
+  it("R767 the link's notice goes when the player picks another mode", async () => {
+    openLink("?room=abc234&mode=bo1");
+    await screen.findByTestId(playTestid.deckSelect);
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent(roomLinkStatus("bo1"));
+    fireEvent.click(screen.getByTestId(playModeTestid("bo3")));
+    expect(screen.queryByTestId(playTestid.status)).toBeNull();
+  });
+
+  it("R767 a lobby still queued keeps its queue's mode and notice; the link fills in only the code", async () => {
+    rememberQueued("bo3");
+    openLink("?room=abc234&mode=bo1");
+    await screen.findByTestId(playTestid.trioSelect);
+    expect(screen.getByTestId(playModeTestid("bo3"))).toBeChecked();
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent(queuedStatus("bo3"));
+    expect(screen.getByTestId(playTestid.joinInput)).toHaveValue("ABC234");
+    expect(screen.getByTestId(playTestid.trioSelect)).not.toHaveFocus();
+    expect(window.location.search).toBe("");
+  });
+
+  it("R767 Copy invite link puts the full link on the clipboard where there is no share sheet", async () => {
+    const writeText = stubClipboard(() => Promise.resolve());
+    await createRandomRoom();
+    const button = screen.getByTestId(playTestid.copyRoomLink);
+    expect(button).toHaveTextContent("Copy invite link");
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(button).toHaveTextContent("Link copied");
+    });
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/play?room=QRSTUV&mode=random`);
+    // The code's own button is a separate one and is untouched.
+    expect(screen.getByTestId(playTestid.copyRoomCode)).toHaveTextContent("Copy");
+  });
+
+  it("R767 a refused clipboard leaves both copy buttons as they were", async () => {
+    const writeText = stubClipboard(() => Promise.reject(new Error("denied")));
+    await createRandomRoom();
+    fireEvent.click(screen.getByTestId(playTestid.copyRoomLink));
+    fireEvent.click(screen.getByTestId(playTestid.copyRoomCode));
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledTimes(2);
+    });
+    await settle();
+
+    expect(screen.getByTestId(playTestid.copyRoomLink)).toHaveTextContent("Copy invite link");
+    expect(screen.getByTestId(playTestid.copyRoomCode)).toHaveTextContent("Copy");
+    expect(screen.getByTestId(playTestid.copyRoomCode)).not.toHaveTextContent("Copied");
+    expect(screen.queryByTestId(playTestid.error)).toBeNull();
+  });
+
+  it("R767 no clipboard at all (an insecure origin) leaves the buttons as they were", async () => {
+    await createRandomRoom();
+    fireEvent.click(screen.getByTestId(playTestid.copyRoomLink));
+    await settle();
+    expect(screen.getByTestId(playTestid.copyRoomLink)).toHaveTextContent("Copy invite link");
+    expect(screen.queryByTestId(playTestid.error)).toBeNull();
+  });
+
+  it("R767 Copy invite link opens the share sheet where there is one", async () => {
+    const writeText = stubClipboard(() => Promise.resolve());
+    const share = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "share", { configurable: true, value: share });
+    await createRandomRoom();
+    fireEvent.click(screen.getByTestId(playTestid.copyRoomLink));
+
+    await waitFor(() => {
+      expect(screen.getByTestId(playTestid.copyRoomLink)).toHaveTextContent("Link shared");
+    });
+    expect(share).toHaveBeenCalledWith({
+      title: ROOM_LINK_SHARE_TITLE,
+      url: `${window.location.origin}/play?room=QRSTUV&mode=random`,
+    });
+    expect(writeText).not.toHaveBeenCalled();
+  });
+
+  it("R767 a share sheet closed without sharing changes nothing", async () => {
+    const writeText = stubClipboard(() => Promise.resolve());
+    const share = vi.fn(() => Promise.reject(new DOMException("", "AbortError")));
+    Object.defineProperty(navigator, "share", { configurable: true, value: share });
+    await createRandomRoom();
+    fireEvent.click(screen.getByTestId(playTestid.copyRoomLink));
+    await waitFor(() => {
+      expect(share).toHaveBeenCalledTimes(1);
+    });
+    await settle();
+
+    expect(screen.getByTestId(playTestid.copyRoomLink)).toHaveTextContent("Copy invite link");
+    expect(writeText).not.toHaveBeenCalled();
+    expect(screen.queryByTestId(playTestid.error)).toBeNull();
   });
 });

@@ -65,9 +65,9 @@ pub struct Env {
     pub node_env: NodeEnv,
     /// BUILD M8's E2E=1 test-server mode (fixture accounts, seeded games). Must be false in prod.
     pub e2e: bool,
-    /// Catalog version this server accepts; must match `cards.catalog_version`, the client's (§9.4)
-    /// and, since v0.3.0, the version compiled into this binary (`jackioh_cards::catalog_version()`,
-    /// SURFACE §11.3).
+    /// Catalog version this server accepts: always the version compiled into this binary
+    /// (`jackioh_cards::catalog_version()`, SURFACE §11.3), which `release` stamps on `public.cards`
+    /// and the client must send (§9.4). `CATALOG_VERSION` in the environment cannot change it.
     pub catalog_version: String,
     /// SPEC §11 R190: how many `X-Forwarded-For` entries, counted from the right, this deployment's
     /// own proxies wrote. 0 to `MAX_TRUSTED_PROXY_HOPS`; defaults to `DEFAULT_TRUSTED_PROXY_HOPS`; 0
@@ -434,28 +434,15 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
         );
     }
 
-    let catalog_version_raw = read("CATALOG_VERSION");
-    let mut catalog_version = String::new();
-    match catalog_version_raw {
-        Some(raw) if is_non_empty(Some(raw)) => {
-            // SURFACE §11.3: the catalog is compiled in, so the environment's version must name it.
-            // One honest check instead of render.yaml's start-command derivation: a stale dashboard
-            // value refuses to boot rather than being served.
-            let compiled = jackioh_cards::catalog_version();
-            if raw != compiled {
-                problems.push(format!(
-                    "CATALOG_VERSION: must equal the catalog version this build was compiled with ({}, the newest patch in crates/cards/patches/patches.json) (got {}). A server cannot accept saves and queues for a catalog it does not carry.",
-                    quoted(compiled),
-                    quoted(raw)
-                ));
-            } else {
-                catalog_version = raw.to_string();
-            }
-        }
-        _ => problems.push(
-            "CATALOG_VERSION: the catalog version this server accepts (§9.4: a stale catalog version is rejected at save and queue). Must match the catalog_version the seed loader stamps on public.cards and the version the client sends. Not a Supabase dashboard value — set it to the version of crates/cards/catalog.json this deploy ships."
-                .to_string(),
-        ),
+    // SURFACE §11.3: the catalog is compiled in, so this build serves its own version whatever the
+    // environment says. A `CATALOG_VERSION` that names another one is a value a host kept from an
+    // older deploy (Render's dashboard when its Blueprint did not sync a patch's bump): it is
+    // reported and ignored, so a card patch always ships without a hand edit anywhere (#488).
+    let catalog_version = jackioh_cards::catalog_version().to_string();
+    if let Some(raw) = read("CATALOG_VERSION").filter(|raw| is_non_empty(Some(raw)))
+        && raw != catalog_version
+    {
+        eprintln!("{}", stale_catalog_version_warning(raw));
     }
 
     if !problems.is_empty() {
@@ -477,4 +464,15 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
         trusted_proxy_hops,
         deployed_commit: parse_deployed_commit(read("RENDER_GIT_COMMIT")),
     })
+}
+
+/// What the server and `seed-catalog` print when `CATALOG_VERSION` names another catalog than the
+/// compiled-in one, which both serve and seed regardless.
+pub fn stale_catalog_version_warning(configured: &str) -> String {
+    let compiled = jackioh_cards::catalog_version();
+    format!(
+        "CATALOG_VERSION is {}, but this build's catalog is {} (the newest patch in crates/cards/patches/patches.json): serving and seeding {compiled}, and ignoring the environment's value. Set it to {compiled}, or unset it, to silence this.",
+        quoted(configured),
+        quoted(compiled)
+    )
 }

@@ -14,25 +14,19 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-005";
 
+/// The draw and the heal are the declared numbers `draw` and `heal` (R386): 2 and 2, 5 and 5 on the
+/// Radiant face, read off the face that is running.
 pub fn script() -> CardScripts {
     let base = Script {
-        cry: Some(hook(|_ctx| {
+        cry: Some(hook(|ctx| {
             vec![
-                draw(json_as(json!({ "count": 2 }))),
-                heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": 2 }))),
+                draw(json_as(json!({ "count": param(&*ctx, "draw") }))),
+                heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": param(&*ctx, "heal") }))),
             ]
         })),
         ..Script::default()
     };
-    let radiant = Script {
-        cry: Some(hook(|_ctx| {
-            vec![
-                draw(json_as(json!({ "count": 5 }))),
-                heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": 5 }))),
-            ]
-        })),
-        ..Script::default()
-    };
+    let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
@@ -114,6 +108,28 @@ mod tests {
             assert_eq!(s.hand(PlayerId::P1).len(), 5);
             s.expect_in_zone("core-020", "hand");
             s.expect_in_zone("core-008", "library");
+        }
+
+        #[test]
+        fn r386_an_upgrade_draws_3_or_heals_3_and_a_degrade_draws_1_or_heals_1() {
+            for (upgrade, key, cards, health) in
+                [(true, "draw", 3, 22), (true, "heal", 2, 23), (false, "draw", 1, 22), (false, "heal", 2, 21)]
+            {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    // #10 Rapid Replenish, a (0) Spell, keeps the turn from auto-ending (R82).
+                    "p1": { "hand": ["core-005", "core-010"], "health": 20, "library": ["core-025", "core-007", "core-012", "core-011"] }
+                }));
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, "core-005", key)
+                } else {
+                    crate::degrade_number(&mut s, "core-005", key)
+                };
+                assert_eq!(moved, if upgrade { 3 } else { 1 });
+                s.play("core-005", json!({}));
+                assert_eq!(s.hand(PlayerId::P1).len(), cards + 1);
+                s.expect_health(PlayerId::P1, health);
+            }
         }
     }
 }

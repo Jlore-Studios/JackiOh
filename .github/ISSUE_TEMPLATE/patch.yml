@@ -1,0 +1,60 @@
+name: Patch
+description: A numbered release of the game (cards, rules, the client, the server's features) that is more than one fix or tweak.
+title: "Patch v0.3.X: "
+labels: ["patch"]
+type: Task
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Titles, labels and version numbers follow [docs/issues-and-patches.md](https://github.com/Jlore-Studios/JackiOh/blob/main/docs/issues-and-patches.md).
+
+        - **Title:** `Patch v0.3.X: <what it does>`, a short phrase. Keep the `X`: the branch that makes the patch's pending fragment names the number (Version numbers). A part of a multi-part patch is `Patch v0.3.X (part n of m): …`, a sub-issue of its tracker.
+        - **Small?** One fix, one card's numbers or text, or one cosmetic or client tweak, with no new mechanic, keyword, ruling set or feature, is a micro patch: use the Micro patch form instead.
+        - **Type:** this form sets Task. Change it to Feature for something new for players (a mode, a screen, a system).
+        - **Who does it:** when it is ready, label it `method:manual` (people) or `method:use-bot` (the night bot). Triage reads it two minutes later, so set a difficulty and a priority first if you have them.
+  - type: textarea
+    id: what
+    attributes:
+      label: What it does
+      description: What changes for players or for the code, and why. Name the cards, rules (SPEC sections, R-numbers) and screens it touches.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance
+      description: What a test can check once it is done, one item per line. A ruling the spec does not make yet gets a new note and a test named after it (CLAUDE.md rule 3).
+      placeholder: |
+        - …
+        - …
+    validations:
+      required: true
+  - type: input
+    id: links
+    attributes:
+      label: Blocked by, part of
+      description: "Open issues that must close first, and the tracker this is a part of: `Blocked by #125`, `Part of #80`. Triage links them as issue dependencies."
+      placeholder: "Blocked by #… · Part of #…"
+  - type: dropdown
+    id: difficulty
+    attributes:
+      label: Difficulty (a guess)
+      description: The weakest model tier that may build it. Set the matching `difficulty:*` label to make it binding; with none, the bot's planner rates it.
+      options:
+        - Not sure (the planner rates it)
+        - "easy: small, one crate or app, no engine, AI, catalog, card or migration work"
+        - "medium: the rest"
+        - "hard: engine rules, the AI, design across crates, a migration, or about 40 files or more"
+      default: 0
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: The night bot's pickup order. Set the matching `priority:*` label too.
+      options:
+        - No priority
+        - high
+        - medium
+        - low
+      default: 0

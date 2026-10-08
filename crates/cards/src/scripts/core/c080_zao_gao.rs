@@ -41,26 +41,15 @@ fn rush_token_id() -> String {
     crate::card_def("core-t-rush").id
 }
 
-const DISCARD_COUNT: i32 = 2;
 const TOKEN_COUNT: i32 = 2;
 
-/// What a face summons: whether the tokens are Radiant, and how many keywords each rolls (R21).
+/// What a face summons: whether the tokens are Radiant (R276, R354), and how many keywords each rolls
+/// (R21) — the declared number `keywords`, 2 and 3 on the Radiant face.
 #[derive(Clone, Copy)]
 struct Tokens {
     radiant: bool,
     keywords: i32,
 }
-
-/// Base: plain Rush Tokens, two keywords each.
-const BASE_TOKENS: Tokens = Tokens {
-    radiant: false,
-    keywords: 2,
-};
-/// Radiant (R276, R354): Radiant Rush Tokens, three keywords each.
-const RADIANT_TOKENS: Tokens = Tokens {
-    radiant: true,
-    keywords: 3,
-};
 
 /// One Rush Token with its rolled keywords (R21, R64).
 fn rush_token(def_id: &str, tokens: Tokens) -> Effect {
@@ -71,12 +60,17 @@ fn rush_token(def_id: &str, tokens: Tokens) -> Effect {
     })))
 }
 
-/// The faces differ only in the tokens they summon.
-fn zao_gao(rush_token_def: String, tokens: Tokens) -> Script {
+/// The faces differ only in the tokens they summon. The discard is the declared number `discard`
+/// (R386), less being better.
+fn zao_gao(rush_token_def: String, radiant: bool) -> Script {
     Script {
-        cry: Some(hook(move |_ctx| {
+        cry: Some(hook(move |ctx| {
+            let tokens = Tokens {
+                radiant,
+                keywords: param(&*ctx, "keywords"),
+            };
             // R16, R354: "random" is stated, so the match rng picks and nobody is asked.
-            let mut effects = vec![discard_random(json_as(json!({ "count": DISCARD_COUNT })))];
+            let mut effects = vec![discard_random(json_as(json!({ "count": param(&*ctx, "discard") })))];
             effects.extend((0..TOKEN_COUNT).map(|_| rush_token(&rush_token_def, tokens)));
             effects
         })),
@@ -87,8 +81,8 @@ fn zao_gao(rush_token_def: String, tokens: Tokens) -> Script {
 pub fn script() -> CardScripts {
     let rush = rush_token_id();
     CardScripts {
-        base: zao_gao(rush.clone(), BASE_TOKENS),
-        radiant: zao_gao(rush, RADIANT_TOKENS),
+        base: zao_gao(rush.clone(), false),
+        radiant: zao_gao(rush, true),
     }
 }
 
@@ -216,14 +210,49 @@ mod tests {
         fn r354_is_tagged_cn_and_prints_the_patch_s_random_discard_on_both_faces() {
             let def = crate::card_def(ID);
             assert_eq!(def.tags, vec![Tag::Cn]);
+            // The faces as printed: their declared numbers filled in (R386, R482).
             assert_eq!(
-                def.base.text,
+                fill_params(&def, FaceKind::Base, None),
                 "Discard 2 random cards. Summon 2 Rush Tokens, each with 2 random keywords."
             );
             assert_eq!(
-                def.radiant.text,
+                fill_params(&def, FaceKind::Radiant, None),
                 "Discard 2 random cards. Summon 2 Radiant Rush Tokens, each with 3 random keywords."
             );
+        }
+    }
+
+    #[test]
+    fn r386_an_upgrade_discards_1_and_a_degrade_3() {
+        for (upgrade, discards) in [(true, 1), (false, 3)] {
+            crate::register_all();
+            let mut s = board(false, &DISCARDABLE, None);
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, ZAO_GAO, "discard")
+            } else {
+                crate::degrade_number(&mut s, ZAO_GAO, "discard")
+            };
+            assert_eq!(moved, discards);
+            s.play(ZAO_GAO, json!({}));
+            let discarded = s.pile(P1, "graveyard").into_iter().filter(|card| card.def_id != ZAO_GAO).count();
+            assert_eq!(discarded, discards as usize);
+        }
+    }
+
+    #[test]
+    fn r386_an_upgrade_rolls_3_keywords_a_token_and_a_degrade_1() {
+        for (upgrade, keywords) in [(true, 3), (false, 1)] {
+            crate::register_all();
+            let mut s = board(false, &DISCARDABLE, None);
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, ZAO_GAO, "keywords")
+            } else {
+                crate::degrade_number(&mut s, ZAO_GAO, "keywords")
+            };
+            assert_eq!(moved, keywords);
+            s.play(ZAO_GAO, json!({}));
+            expect_pool_keywords(&s, 1, keywords as usize, &BASE_PRINTED);
+            expect_pool_keywords(&s, 2, keywords as usize, &BASE_PRINTED);
         }
     }
 

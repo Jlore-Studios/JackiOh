@@ -328,7 +328,10 @@ class RequiredChecksTests(unittest.TestCase):
         names = set()
         for path in WORKFLOWS.glob("*.yml"):
             text = path.read_text(encoding="utf-8")
-            if not re.search(r"^  pull_request:", text, re.M):
+            # A `pull_request_target` workflow that runs again on every push counts too: the title
+            # check (`pr-title.yml`, #187), should it be made required.
+            if not re.search(r"^  pull_request:|^  pull_request_target:\n\s+types: \[[^\]]*"
+                             r"\bsynchronize\b", text, re.M):
                 continue
             for raw in re.findall(r"^    name: (.+)$", text, re.M):
                 raw = raw.strip().strip('"')

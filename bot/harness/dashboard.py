@@ -308,11 +308,14 @@ def lanes_boxes(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> li
     if hosted and machine_box:
         lines.append("    hosted ~~~ machine")
     lines += [*BOX_STYLES, "```"]
-    planning = sum(1 for n in live if n and status_mod.record_of(state, n).get("action") == "plan")
-    building = len(live) - planning
-    plan_note = f"; planning {planning} of {pool.plan_lanes}" if pool.plan_lanes else ""
+    planning_runs = {n for n in live
+                     if n and status_mod.record_of(state, n).get("action") == "plan"}
+    # GitHub's runners have lanes of their own, apart from the night box's slots (`plan.Lanes`).
+    building = sum(1 for n, p in live.items() if n not in planning_runs and not pool.on_machine(p))
+    plan_note = f"; planning {len(planning_runs)} of {pool.plan_lanes}" if pool.plan_lanes else ""
     return lines + ["", f"<sub>{LEGEND}</sub>", "",
-                    f"<sub>Lanes: {building} of {pool.max_parallel} in use{plan_note}.</sub>"]
+                    f"<sub>Lanes on GitHub's runners: {building} of {pool.max_parallel} in use"
+                    f"{plan_note}.</sub>"]
 
 
 def subscription_table(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> list[str]:

@@ -43,3 +43,9 @@ package-lock.json
 target/
 .cache/
 apps/web/src/wasm/pkg/
+
+# The notebooks' project (analysis/README.md): its virtual environment, the record files it is pointed at
+# and Jupyter's autosaves.
+analysis/.venv/
+analysis/data/
+.ipynb_checkpoints/

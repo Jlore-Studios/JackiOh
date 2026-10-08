@@ -79,6 +79,17 @@ describe("scripts/ci-scope.sh", () => {
     expect(fullFor(".github/workflows/bot-night.yml", ".github/workflows/bot-commands.yml", "bot/tests/test_cross.py")).toBe("full=false");
     expect(fullFor(".github/workflows/triage.yml", ".github/workflows/deploy-watch.yml", ".github/workflows/ci-duration.yml")).toBe("full=false");
     expect(fullFor("CLAUDE.md", "AGENTS.md", "GEMINI.md", "bot/README.md")).toBe("full=false");
+    // The repository's meta, which only GitHub reads, and the pull request title check (#187).
+    expect(
+      fullFor(
+        "CONTRIBUTING.md",
+        ".github/ISSUE_TEMPLATE/patch.yml",
+        ".github/ISSUE_TEMPLATE/config.yml",
+        ".github/pull_request_template.md",
+        ".github/CODEOWNERS",
+        ".github/workflows/pr-title.yml",
+      ),
+    ).toBe("full=false");
     // Squishy (#60): its switches and its two workflows, which only the bot's harness reads.
     expect(fullFor(".squishy/config.json", ".github/workflows/squishy-run.yml", ".github/workflows/squishy-commands.yml")).toBe("full=false");
     // The training lanes' standing prompts and loop: Devin and the training box read them, no job does.
@@ -128,6 +139,9 @@ describe("scripts/ci-scope.sh", () => {
       ".harness-copy/x.json",
       ".squishy-copy/x.json",
       ".github/workflows/squishy-run.yml-not",
+      ".github/ISSUE_TEMPLATE-copy/x.yml",
+      ".github/CODEOWNERS.bak",
+      "docs/CONTRIBUTING.md",
     ]) {
       expect(fullFor(file), file).toBe("full=true");
       expect(fullFor("bot/harness/state.py", file), `bot + ${file}`).toBe("full=true");

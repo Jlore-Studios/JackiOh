@@ -91,17 +91,25 @@ def running_lines(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> 
     """Which subscriptions are running now: on what, for how long, and in which run."""
     cfg = ctx.cfg
     lanes = cfg.pool.max_parallel
-    planning = sum(1 for number in live if number and _record(state, number).get("action") == "plan")
-    free = max(0, lanes - (len(live) - planning))
+
+    def planning_run(number: int) -> bool:
+        return bool(number) and _record(state, number).get("action") == "plan"
+    planning = sum(1 for number in live if planning_run(number))
+    # GitHub's runners and the machine have lanes of their own (`plan.Lanes`).
+    hosted = sum(1 for number, provider_id in live.items()
+                 if not planning_run(number) and not cfg.pool.on_machine(provider_id))
+    free = max(0, lanes - hosted)
     planning_text = (f"; {planning} of {cfg.pool.plan_lanes} planning lanes"
                      if cfg.pool.plan_lanes else "")
     if not live:
-        return [f"- Running now: nothing ({free} of {lanes} lanes free"
+        return [f"- Running now: nothing ({free} of {lanes} lanes free on GitHub's runners"
+                + (f", {cfg.pool.machine_parallel} on the night box"
+                   if cfg.pool.machine_parallel else "")
                 + (f", and {cfg.pool.plan_lanes} for planning" if cfg.pool.plan_lanes else "")
                 + ")."]
     order = {provider_id: i for i, provider_id in enumerate(cfg.pool.priority)}
-    lines = [f"- **Running now** ({len(live) - planning} of {lanes} lanes, {free} free; "
-             f"{machine_text(cfg.pool, live)}, the rest on GitHub's runners{planning_text}):"]
+    lines = [f"- **Running now** ({hosted} of {lanes} lanes on GitHub's runners, {free} free; "
+             f"{machine_text(cfg.pool, live)}{planning_text}):"]
     for number, provider_id in sorted(live.items(),
                                       key=lambda kv: (order.get(kv[1], len(order)), kv[0])):
         record = _record(state, number)
@@ -173,8 +181,8 @@ def report(ctx: Context) -> str:
 
     held, live = lanes_now(ctx, state)
     lines += running_lines(ctx, state, live)
-    lines.append(f"- Subscriptions (at most {cfg.pool.max_parallel} at once, "
-                 f"{cfg.pool.machine_parallel} of them on the machine):")
+    lines.append(f"- Subscriptions (at most {cfg.pool.max_parallel} at once on GitHub's runners "
+                 f"and {cfg.pool.machine_parallel} on the machine):")
     lines += provider_lines(ctx, state, live)
     ended = ", ".join(f"#{n}" for n in sorted(held) if n and n not in live)
     lines.append(f"- Working on: {_numbers(labelled(LABEL_WORKING))}"

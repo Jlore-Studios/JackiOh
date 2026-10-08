@@ -1427,6 +1427,162 @@ mod m6_t4_the_match_actor {
 }
 
 // ---------------------------------------------------------------------------
+// R384 — an Activate ability over the socket (#491)
+// ---------------------------------------------------------------------------
+
+/// SPEC §10.2 lists `activate` among the actions a client sends, and `legal_actions` lists every
+/// Activate ability (R384) and, since R752, every Heroic Power's power as one. The socket's whitelist
+/// (`protocol::CLIENT_ACTION_TYPES`) had only the `activatePower` alias, so online every activation a
+/// client sent back from its own legal array was answered `malformed` and applied nothing (#491).
+mod r384_activate_over_the_socket {
+    use super::*;
+    use jackioh_engine::ActionType;
+    use jackioh_server::actor::protocol::{
+        ActionMessage, CLIENT_ACTION_TYPES, ClientMessage, SERVER_ONLY_ACTION_TYPES, parse_client_message,
+    };
+
+    /// p1's turns the walk below waits through at most for the rolled power's price: Heroic Power's
+    /// dearest power costs (3), p1's third turn's mana.
+    const TURNS_TO_AFFORD_ANY_POWER: usize = 3;
+
+    #[test]
+    fn r384_every_action_type_but_the_server_only_ones_is_one_a_client_may_send() {
+        for kind in ActionType::ALL {
+            assert_ne!(
+                CLIENT_ACTION_TYPES.contains(kind),
+                SERVER_ONLY_ACTION_TYPES.contains(kind),
+                "{kind} must be either a client's action or the server's own (§10.2, R79)"
+            );
+        }
+    }
+
+    #[test]
+    fn r384_parses_an_activate_field_by_field_and_drops_a_smuggled_player_id() {
+        let parsed = parse_client_message(
+            &json!({
+                "type": "action",
+                "action": {
+                    "type": "activate",
+                    "instanceId": "c7",
+                    "ability": "eat",
+                    "targets": [{ "pick": "hero", "player": "p2" }],
+                    "modes": ["mana"],
+                    "tributes": ["c3"],
+                    "playerId": "p2",
+                    "nonce": "act-1",
+                },
+            })
+            .to_string(),
+        );
+        assert_eq!(
+            parsed,
+            Ok(ClientMessage::Action(ActionMessage {
+                nonce: "act-1".to_string(),
+                body: serde_json::from_value(json!({
+                    "type": "activate",
+                    "instanceId": "c7",
+                    "ability": "eat",
+                    "targets": [{ "pick": "hero", "player": "p2" }],
+                    "modes": ["mana"],
+                    "tributes": ["c3"],
+                }))
+                .expect("an activate body"),
+            }))
+        );
+
+        // Only the instance is required, as the reducer reads it (an `activate` naming no ability is
+        // the card's only one); a field of the wrong shape is malformed, never passed on.
+        let bare = parse_client_message(
+            &json!({ "type": "action", "action": { "type": "activate", "instanceId": "c7", "nonce": "act-2" } })
+                .to_string(),
+        );
+        assert!(matches!(bare, Ok(ClientMessage::Action(_))), "{bare:?}");
+        for wrong in [
+            json!({ "type": "activate", "nonce": "bad" }),
+            json!({ "type": "activate", "instanceId": "c7", "ability": 3, "nonce": "bad" }),
+            json!({ "type": "activate", "instanceId": "c7", "targets": ["c1"], "nonce": "bad" }),
+            json!({ "type": "activate", "instanceId": "c7", "modes": [1], "nonce": "bad" }),
+            json!({ "type": "activate", "instanceId": "c7", "tributes": "c3", "nonce": "bad" }),
+        ] {
+            let parsed = parse_client_message(&json!({ "type": "action", "action": wrong }).to_string());
+            assert!(parsed.is_err(), "{wrong} parsed as {parsed:?}");
+        }
+    }
+
+    /// The `activate` p1's own legal array lists on `card`, if any.
+    fn listed_activation(socket: &Client, card: &str) -> Option<Value> {
+        legal_of(socket)
+            .into_iter()
+            .find(|action| action["type"] == "activate" && action["instanceId"] == card)
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r384_r752_the_activate_a_seats_legal_array_lists_is_sent_back_verbatim_and_applied() {
+        let h = harness(Options {
+            decks: Decks::Scripted {
+                p1: vec!["core-098"],
+                p2: vec![],
+            },
+            ..Options::default()
+        })
+        .await;
+
+        // #98 Heroic Power is Quickdraw, so it opens in p1's hand, and costs (0).
+        let power = in_hand(&h.p1, "core-098");
+        let play = legal_of(&h.p1)
+            .into_iter()
+            .find(|action| action["type"] == "play" && action["instanceId"] == power)
+            .expect("Heroic Power is playable on turn 1");
+        send(&h, &h.p1, "play-power", play).await;
+        assert_eq!(errors(&h.p1), Vec::<Value>::new());
+
+        // The power it rolled costs (1) to (3): p1's turns pass until the mana pays it.
+        let mut activation = listed_activation(&h.p1, &power);
+        for round in 0..TURNS_TO_AFFORD_ANY_POWER {
+            if activation.is_some() {
+                break;
+            }
+            send(
+                &h,
+                &h.p1,
+                &format!("p1-end-{round}"),
+                json!({ "type": "endTurn" }),
+            )
+            .await;
+            send(
+                &h,
+                &h.p2,
+                &format!("p2-end-{round}"),
+                json!({ "type": "endTurn" }),
+            )
+            .await;
+            activation = listed_activation(&h.p1, &power);
+        }
+        let activation = activation.expect("the rolled power is listed as an `activate` once p1 can pay it");
+
+        send(&h, &h.p1, "activate-power", activation.clone()).await;
+        assert_eq!(errors(&h.p1), Vec::<Value>::new(), "the activation was refused");
+        assert_eq!(
+            acks(&h.p1).last().map(|ack| ack["nonce"].clone()),
+            Some(json!("activate-power"))
+        );
+        let row = h.last_row().await;
+        assert_eq!(row["action"]["type"], json!("activate"));
+        assert_eq!(row["action"]["playerId"], json!("p1"));
+        assert_eq!(row["action"]["ability"], activation["ability"]);
+
+        // Applied: the power's one use this turn is spent, so it is listed no more.
+        let state = h.actor.engine_state();
+        let card = jackioh_engine::find_instance(&state, &power).expect("Heroic Power is on the field");
+        assert_eq!(
+            jackioh_engine::subsystems::activate::uses_this_turn(&state, card),
+            1
+        );
+        assert_eq!(listed_activation(&h.p1, &power), None);
+    }
+}
+
+// ---------------------------------------------------------------------------
 // R643 — the emote protocol and its shared rate limit (§9.5, §10.10)
 // ---------------------------------------------------------------------------
 

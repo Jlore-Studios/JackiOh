@@ -53,15 +53,15 @@ fn library_is_larger(state: &GameState, controller: PlayerId) -> bool {
     mine > theirs
 }
 
-/// `max_cost` is the whole of the radiant text: 1 or less on the base face, 2 or less on it.
-fn intern_stimmy(max_cost: i32) -> Script {
-    // R65: outside play an X-cost card counts as 0 and an embiggen card as its base price, which is
-    // what `recruit`'s filter reads off the library (`query_cost` in effects/summon.rs).
-    let recruit_unit = recruit(json_as(json!({ "filter": { "type": "Unit", "costRange": { "max": max_cost } } })));
-
-    let at_end_of_any_turn = TriggerDef::new("intern-stimmy-window", &[GameEventType::TurnEnded], move |ctx, _event| {
+/// The cost limit is the whole of the radiant text: 1 or less on the base face, 2 or less on it — the
+/// declared number `costLimit` (R386), read off the face that is up.
+fn intern_stimmy() -> Script {
+    let at_end_of_any_turn = TriggerDef::new("intern-stimmy-window", &[GameEventType::TurnEnded], |ctx, _event| {
         if library_is_larger(ctx.state, ctx.controller) {
-            vec![recruit_unit.clone()]
+            // R65: outside play an X-cost card counts as 0 and an embiggen card as its base price, which
+            // is what `recruit`'s filter reads off the library (`query_cost` in effects/summon.rs).
+            let max_cost = param(&*ctx, "costLimit");
+            vec![recruit(json_as(json!({ "filter": { "type": "Unit", "costRange": { "max": max_cost } } })))]
         } else {
             vec![]
         }
@@ -77,10 +77,9 @@ fn intern_stimmy(max_cost: i32) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    CardScripts {
-        base: intern_stimmy(1),
-        radiant: intern_stimmy(2),
-    }
+    let base = intern_stimmy();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
 }
 
 // #71 Intern Stimmy — SPEC §8.3, BUILD M4-T4: "Trap window at the end of any turn with library >
@@ -115,6 +114,29 @@ mod tests {
             .iter()
             .filter(|event| serde_json::to_value(event).expect("an event serialises")["type"] == "trapFired")
             .count()
+    }
+
+    #[test]
+    fn r386_an_upgrade_recruits_a_2_cost_unit_and_a_radiant_degrade_skips_it() {
+        for (radiant, upgrade, recruited) in [(false, true, "core-001"), (true, false, "core-003")] {
+            let mut s = setup(json!({
+                "seed": "core-071-tuned",
+                "p1": {
+                    "backrow": [{ "def": "core-071", "radiant": radiant }],
+                    "library": ["core-001", "core-003", "core-005"],
+                    "hand": ["core-005"],
+                },
+                "p2": { "library": ["core-005"], "hand": ["core-005"] },
+            }));
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, "core-071", "costLimit")
+            } else {
+                crate::degrade_number(&mut s, "core-071", "costLimit")
+            };
+            assert_eq!(moved, if upgrade { 2 } else { 1 });
+            s.end_turn();
+            assert_eq!(s.unit(P1, 1).map(|card| card.def_id), Some(recruited.to_string()));
+        }
     }
 
     mod intern_stimmy_base {

@@ -222,8 +222,8 @@ Running the lanes:
   build of the CLI (on 2026-10-07 it took 7.5 minutes on four vCPUs busy with other builds, and
   the engine's crate held about 1.4 GB while it compiled); clippy, the cargo tests and the web's
   unit tests (`"machine": false`) run in CI. The
-  Claude accounts run on GitHub's runners, so `max_parallel` is 10: six here and up to four
-  Claude jobs there. The Free plan's largest machines are the 2-vCPU `m7i-flex.large` and
+  Claude accounts run on GitHub's runners, under `max_parallel` (11), apart from these six. The
+  Free plan's largest machines are the 2-vCPU `m7i-flex.large` and
   `c7i-flex.large`.
 - **Memory** (#317): EC2 records only the CPU (hourly averages above 60% in 27 of the 48 hours
   to 2026-10-05, peaks of 100%), so `setup.sh` installs the CloudWatch agent, which sends

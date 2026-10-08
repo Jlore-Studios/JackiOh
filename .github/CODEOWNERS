@@ -1,0 +1,7 @@
+# The paths the bots may not change (CLAUDE.md, The night bot): a pull request that touches them
+# asks a person's review (#187). GitHub only requests the review; it is required only when branch
+# protection on main turns on "Require review from Code Owners".
+/.github/   @jgoetzmann @MaxGoetzmann
+/bot/       @jgoetzmann @MaxGoetzmann
+/.harness/  @jgoetzmann @MaxGoetzmann
+/.squishy/  @jgoetzmann @MaxGoetzmann

@@ -297,8 +297,22 @@ mod tests {
                 assert!(!text.contains("Playing it") && !text.contains("Once per turn, spend"));
             }
             assert_eq!(
-                def["params"],
-                json!([{ "key": "shot", "base": 2, "radiant": 4, "better": "up", "step": 2, "min": 1 }]),
+                def["params"][0],
+                json!({ "key": "shot", "base": 2, "radiant": 4, "better": "up", "step": 2, "min": 1 }),
+            );
+            // #493: the other powers' numbers, each one a power's (`n98_heroic_power_the_numbers_r386`).
+            let keys: Vec<Value> = def["params"]
+                .as_array()
+                .cloned()
+                .unwrap_or_default()
+                .iter()
+                .map(|param| param["key"].clone())
+                .collect();
+            assert_eq!(
+                keys,
+                ["shot", "tapDraw", "tapDamage", "ping", "stitchCost", "armor", "insect", "discount", "fruitCost"]
+                    .map(|key| json!(key))
+                    .to_vec(),
             );
             assert_eq!(def["refs"], json!([RUSH_TOKEN, FELINOR_TOKEN, GHOUL_TOKEN]));
         }
@@ -313,7 +327,9 @@ mod tests {
                 assert!(base.contains(&format!("({}) {}: {}", entry.x, entry.title, entry.label)));
                 assert!(radiant.contains(&format!("({}) {}: {}", entry.x, entry.radiant_title, entry.radiant_label)));
             }
-            assert!(radiant.contains("(1) Tank Up: Your hero gains 4 Armor, then this power refreshes."));
+            // The printed words, the card's numbers filled in (B3.4 rule 5).
+            let printed = fill_params(&crate::card_def(HEROIC), FaceKind::Radiant, None);
+            assert!(printed.contains("(1) Tank Up: Your hero gains 4 Armor, then this power refreshes."));
         }
 
         #[test]
@@ -801,6 +817,199 @@ mod tests {
             s.activate(&card, json!({}));
             s.answer(json!(must(offered_ids(&s).into_iter().next(), "an offered Trap")));
             assert!(must(s.backrow(P1, 2), "the summoned Trap").radiant);
+        }
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // #493: each power's number is one the card declares (B3.4 rule 5, R386), so a Degrade, an
+    // Upgrade or KY's Constant moves it; the engine reads it as `crate::config` prints it, moved by
+    // the card's tuning (`subsystems::hero_power::power_number`).
+    // -------------------------------------------------------------------------------------------
+
+    mod n98_heroic_power_the_numbers_r386 {
+        use super::*;
+
+        /// #57 Conjure KY, a (2) Spell: a discount of 2 takes it to (0) where 1 leaves it at (1).
+        const CONJURE_KY: &str = "core-057";
+
+        fn tuned(s: &mut Scenario, key: &str, upgrade: bool) -> i32 {
+            if upgrade {
+                crate::upgrade_number(s, HEROIC, key)
+            } else {
+                crate::degrade_number(s, HEROIC, key)
+            }
+        }
+
+        #[test]
+        fn r386_the_catalog_prints_each_power_s_number_as_the_engine_reads_it_on_each_face() {
+            crate::register_all();
+            let printed: Vec<(String, i64, i64)> = def_json(HEROIC)["params"]
+                .as_array()
+                .cloned()
+                .unwrap_or_default()
+                .iter()
+                .map(|param| {
+                    (
+                        param["key"].as_str().unwrap_or_default().to_string(),
+                        param["base"].as_i64().unwrap_or_default(),
+                        param["radiant"].as_i64().unwrap_or_default(),
+                    )
+                })
+                .collect();
+            let both = |base: i32, radiant: i32| (i64::from(base), i64::from(radiant));
+            for (key, (base, radiant)) in [
+                (subsystems::LIFE_TAP_DRAW_PARAM, both(subsystems::LIFE_TAP_DRAW, subsystems::LIFE_TAP_DRAW)),
+                (subsystems::LIFE_TAP_DAMAGE_PARAM, both(subsystems::LIFE_TAP_DAMAGE, subsystems::LIFE_TAP_DAMAGE)),
+                (subsystems::PING_PARAM, both(subsystems::PING_DAMAGE, subsystems::PING_DAMAGE)),
+                (subsystems::STITCHING_PARAM, both(subsystems::STITCHING_MAX_COST, subsystems::STITCHING_MAX_COST)),
+                (subsystems::ARMOR_PARAM, both(subsystems::ARMOR_UP_ARMOR, subsystems::TANK_UP_ARMOR)),
+                (subsystems::DIE_INSECT_PARAM, both(subsystems::DIE_INSECT_DAMAGE, subsystems::DIE_INSECT_DAMAGE)),
+                (subsystems::BRAINSTORM_PARAM, both(subsystems::BRAINSTORM_DISCOUNT, subsystems::BRAINSTORM_DISCOUNT)),
+                (subsystems::PLUCK_PARAM, both(subsystems::PLUCK_COST, subsystems::PLUCK_COST)),
+            ] {
+                assert!(printed.contains(&(key.to_string(), base, radiant)), "{key}");
+            }
+        }
+
+        #[test]
+        fn r386_life_tap_an_upgrade_draws_2_and_a_degrade_finds_the_draw_at_its_floor_of_1() {
+            crate::register_all();
+            let (mut s, card) = on_field(
+                "draw",
+                OnField {
+                    p1: Some(json!({ "library": [MENACE, JAMMED], "hand": [SPARE], "mana": 8 })),
+                    ..OnField::default()
+                },
+            );
+            assert!(!crate::can_degrade_number(&s, HEROIC, "tapDraw"));
+            assert_eq!(tuned(&mut s, "tapDraw", true), 2);
+            s.activate(&card, json!({}));
+            assert_eq!(hand_ids(&s), vec![SPARE.to_string(), MENACE.to_string(), JAMMED.to_string()]);
+            s.expect_health(P1, 28);
+        }
+
+        #[test]
+        fn r386_a_radiant_life_tap_upgraded_draws_2_from_each_player_s_deck() {
+            crate::register_all();
+            let (mut s, card) = on_field(
+                "draw",
+                OnField {
+                    radiant_face: true,
+                    p1: Some(json!({ "library": [MENACE, SPARE], "hand": [SPARE], "mana": 8 })),
+                    p2: Some(json!({ "library": [JAMMED, FREE] })),
+                    ..OnField::default()
+                },
+            );
+            assert_eq!(tuned(&mut s, "tapDraw", true), 2);
+            s.activate(&card, json!({}));
+            assert_eq!(
+                hand_ids(&s),
+                [SPARE, MENACE, SPARE, JAMMED, FREE].map(str::to_string).to_vec(),
+            );
+            s.expect_health(P1, 30);
+        }
+
+        #[test]
+        fn r386_life_tap_an_upgrade_takes_1_damage_and_a_degrade_3() {
+            crate::register_all();
+            for (upgrade, damage) in [(true, 1), (false, 3)] {
+                let (mut s, card) = on_field(
+                    "draw",
+                    OnField {
+                        p1: Some(json!({ "library": [MENACE, JAMMED], "hand": [SPARE], "mana": 8 })),
+                        ..OnField::default()
+                    },
+                );
+                assert_eq!(tuned(&mut s, "tapDamage", upgrade), damage);
+                s.activate(&card, json!({}));
+                s.expect_health(P1, 30 - damage);
+            }
+        }
+
+        #[test]
+        fn r386_ping_an_upgrade_deals_2_and_a_degrade_finds_it_at_its_floor_of_1() {
+            crate::register_all();
+            let (mut s, card) = on_field("ping", OnField::default());
+            assert!(!crate::can_degrade_number(&s, HEROIC, "ping"));
+            assert_eq!(tuned(&mut s, "ping", true), 2);
+            s.activate(&card, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
+            s.expect_health(P2, 28);
+        }
+
+        #[test]
+        fn r386_stitching_a_degrade_offers_units_that_cost_1_or_less_and_an_upgrade_3_or_less() {
+            crate::register_all();
+            for (upgrade, max_cost) in [(false, 1), (true, 3)] {
+                let (mut s, card) = on_field("stitching", OnField::default());
+                assert_eq!(tuned(&mut s, "stitchCost", upgrade), max_cost);
+                s.activate(&card, json!({}));
+                for step in [1, 2] {
+                    let pending = js(must(s.state().pending.as_ref(), "a discover prompt"));
+                    assert_eq!(pending["prompt"], json!(format!("Discover a Unit that costs ({max_cost}) or less")));
+                    let offered = offered_ids(&s);
+                    assert_eq!(offered.len(), 3, "Discover {step}");
+                    for id in &offered {
+                        let cost = def_json(id)["cost"].clone();
+                        assert!(cost.as_i64().is_some_and(|price| price <= i64::from(max_cost)), "{id}");
+                    }
+                    s.answer(json!(must(offered.first().cloned(), "an offered Unit")));
+                }
+                assert_eq!(events_of(&s, "fused").len(), 1);
+            }
+        }
+
+        #[test]
+        fn r386_armor_up_an_upgrade_gives_3_armor_and_a_degraded_tank_up_keeps_3() {
+            crate::register_all();
+            for (radiant_face, upgrade) in [(false, true), (true, false)] {
+                let (mut s, card) = on_field("armor", OnField { radiant_face, ..turns() });
+                assert_eq!(tuned(&mut s, "armor", upgrade), 3);
+                s.activate(&card, json!({}));
+                assert_eq!(view_json(&s, P1)["you"]["hero"]["armor"], 3);
+            }
+        }
+
+        #[test]
+        fn r386_die_insect_an_upgrade_deals_10_and_a_degrade_6() {
+            crate::register_all();
+            for (upgrade, damage) in [(true, 10), (false, 6)] {
+                let (mut s, card) =
+                    on_field("insect", OnField { p2: Some(json!({ "field": [MENACE] })), ..OnField::default() });
+                assert_eq!(tuned(&mut s, "insect", upgrade), damage);
+                s.activate(&card, json!({}));
+                assert_eq!(
+                    events_of(&s, "damage").iter().map(|event| event["amount"].clone()).collect::<Vec<_>>(),
+                    vec![json!(damage)],
+                );
+            }
+        }
+
+        #[test]
+        fn r386_ky_brainstorm_an_upgrade_takes_2_off_each_spell_and_a_degrade_finds_it_at_its_floor_of_1() {
+            crate::register_all();
+            let (mut s, card) = on_field(
+                "brainstorm",
+                OnField { p1: Some(json!({ "hand": [SPARE, CONJURE_KY], "mana": 8 })), ..OnField::default() },
+            );
+            assert!(!crate::can_degrade_number(&s, HEROIC, "discount"));
+            assert_eq!(tuned(&mut s, "discount", true), 2);
+            s.activate(&card, json!({}));
+            let hand = s.hand(P1);
+            let conjure = must(hand.iter().find(|entry| entry.def_id == CONJURE_KY).cloned(), "Conjure KY");
+            assert_eq!(effective(&s, &conjure), 0);
+            assert_eq!(effective(&s, &must(hand.iter().find(|entry| entry.def_id == SPARE).cloned(), "Reno")), 3);
+        }
+
+        #[test]
+        fn r386_pluck_a_degrade_makes_the_fruit_cost_1_and_an_upgrade_finds_it_at_its_floor_of_0() {
+            crate::register_all();
+            let (mut s, card) = on_field("pluck", OnField::default());
+            assert!(!crate::can_upgrade_number(&s, HEROIC, "fruitCost"));
+            assert_eq!(tuned(&mut s, "fruitCost", false), 1);
+            s.activate(&card, json!({}));
+            let fruit = must(s.hand(P1).last().cloned(), "the Fruit");
+            assert!(tags_of(&fruit.def_id).contains(&json!("Fruit")));
+            assert_eq!(effective(&s, &fruit), 1);
         }
     }
 }

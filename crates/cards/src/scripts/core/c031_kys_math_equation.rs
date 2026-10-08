@@ -6,7 +6,7 @@
 //!   R429 the Fib index is the times this card has been played, THIS play included, + 1 (radiant + 3).
 //!        The engine counts the plays on the instance at §10.5 step 4 (`StaticFlags.countsPlays`,
 //!        `timesPlayedOf`), casts included (R70) and countered plays never, and the count rides the
-//!        card through every zone like `costMod` (R78). So the 1st play deals Fib(2) = 1, the 2nd
+//!        card through every zone like `radiant` (R78). So the 1st play deals Fib(2) = 1, the 2nd
 //!        Fib(3) = 2, the 3rd 3, the 4th 5, the 5th 8 (radiant 3, 5, 8, 13, 21).
 //!   R67  its cost plays no part in the damage any more: `costMod`, player discounts and the cost
 //!        paid change its price, never what it deals.
@@ -120,9 +120,9 @@ fn return_to_hand(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     if !was_played_this_turn(ctx.state, self_.owner, &self_) {
         return vec![];
     }
-    // R78: the +1 rides on the instance in every zone. It is the price of the return, so it lands only
-    // on a card that reached the hand: a full hand burns the card back to the graveyard (§2.4, R4),
-    // which is no return at all. R429: never above (4), so at (4) or more it adds nothing.
+    // R78: the +1 rides on the instance in the hand, until a graveyard takes it off again (R766). It
+    // is the price of the return, so it lands only on a card that reached the hand: a full hand burns
+    // the card back to the graveyard (§2.4, R4), which is no return at all. R429: never above (4), so at (4) or more it adds nothing.
     let raise = RETURN_COST_STEP.min(RETURN_COST_CAP - own_cost(ctx.state, &self_)).max(0);
     let mut effects = vec![bounce(json_as(json!({ "target": { "of": "self" } })))];
     if raise > 0 {
@@ -371,22 +371,35 @@ mod tests {
         }
 
         #[test]
-        fn r429_the_return_never_lifts_its_cost_above_4_from_3_it_reaches_4_and_at_4_it_adds_nothing() {
+        fn r429_r766_the_return_never_lifts_its_cost_above_4_from_3_it_reaches_4_and_at_4_it_adds_nothing() {
             crate::register_all();
-            let mut three = board(BoardOptions {
-                cost_mod: Some(2),
-                ..BoardOptions::default()
-            });
+            // R766: a price the equation had in hand stays behind in the graveyard it returns from, so a
+            // (3) or a (4) equation comes back at its printed (1) plus the return's (1).
+            for raised in [2, 3] {
+                let mut s = board(BoardOptions {
+                    cost_mod: Some(raised),
+                    ..BoardOptions::default()
+                });
+                s.play("31", at_enemy_hero());
+                s.end_turn();
+                s.expect_in_zone("31", "hand");
+                assert_eq!(s.card("31").cost_mod, 1);
+                assert_eq!(effective_cost(s.state(), s.card("31"), Default::default()), 2);
+            }
+
+            // R429's cap reads the cost the equation has where it lies, as for one whose own cost there
+            // is (3) or (4) (a fusion's printed cost, R77): from (3) it reaches (4), and at (4) it adds
+            // nothing.
+            let mut three = board(BoardOptions::default());
             three.play("31", at_enemy_hero());
+            three.card_mut("31").cost_mod = 2;
             three.end_turn();
             three.expect_in_zone("31", "hand");
             assert_eq!(effective_cost(three.state(), three.card("31"), Default::default()), 4);
 
-            let mut four = board(BoardOptions {
-                cost_mod: Some(3),
-                ..BoardOptions::default()
-            });
+            let mut four = board(BoardOptions::default());
             four.play("31", at_enemy_hero());
+            four.card_mut("31").cost_mod = 3;
             four.end_turn();
             four.expect_in_zone("31", "hand");
             assert_eq!(four.card("31").cost_mod, 3);
@@ -394,15 +407,17 @@ mod tests {
         }
 
         #[test]
-        fn r429_r65_a_0_equation_n95_s_cost_override_comes_back_costing_1() {
+        fn r429_r65_r766_a_0_equation_n95_s_cost_override_stays_in_the_graveyard_so_it_comes_back_costing_2() {
             crate::register_all();
             let mut s = board(BoardOptions::default());
             let id = s.card("31").id.clone();
             find_instance_mut(s.state_mut(), &id).expect("the equation in hand").cost_override = Some(0);
             s.play("31", at_enemy_hero());
             s.expect_mana(P1, 10);
+            // R766: it reaches the graveyard as the printed (1) card, so the return prices it (1) + (1).
+            assert_eq!(s.card("31").cost_override, None);
             s.end_turn();
-            assert_eq!(effective_cost(s.state(), s.card("31"), Default::default()), 1);
+            assert_eq!(effective_cost(s.state(), s.card("31"), Default::default()), 2);
         }
 
         #[test]

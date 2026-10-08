@@ -28,7 +28,7 @@ from typing import Any
 from harness import asks, disk, failures, issueplan, memory, review_rule
 from harness import easy as easy_mod
 from harness import journal as journal_mod
-from harness import stepup
+from harness import stepup, triage
 from harness import split as split_mod
 from harness import gates as gates_mod
 from harness import plan as plan_mod
@@ -1031,7 +1031,9 @@ class Deliverer:
             self._fail(number, "build")
             return
         body = self._pull_body(number, approved)
-        title = str(self.result.get("title") or self.plan.get("title") or f"Build #{number}")
+        # A title the title check passes (#187): the builder's, else the issue's.
+        title = triage.pull_title(str(self.result.get("title") or ""),
+                                  str(self.plan.get("title") or "")) or f"Build #{number}"
         pull = self._open_pull()
         if pull is None:
             pull = self._create_pull(title, branch, body, draft=not (approved or built))

@@ -50,13 +50,10 @@ fn targets() -> Vec<TargetDecl> {
     }]
 }
 
-/// "Heal a target 2X".
-const HEAL_PER_X: i32 = 2;
-
 /// "Gain floor(X/2) mana next turn": one mana for every two X.
 const X_PER_MANA: i32 = 2;
 
-/// The base face uses X as it was paid; the radiant face uses 2X ("Uses 2X", R275).
+/// The base face uses X as it was paid; the radiant face uses 2X ("Uses 2X", R275) for its mana mode.
 const BASE_USES: i32 = 1;
 const RADIANT_USES: i32 = 2;
 
@@ -65,18 +62,25 @@ fn amount_x(ctx: &EffectContext<'_>, uses: i32) -> i32 {
     ctx.x.max(0) * uses
 }
 
-/// `uses` is the whole of the radiant difference: every mode reads 2X instead of X.
+/// `uses` is the mana mode's radiant difference. The damage and heal modes' multiples are the declared
+/// numbers `damage` and `heal` (R386): X and 2X, 2X and 4X on the Radiant face, where `damage` is
+/// tuned alone (R749: the base face's "Deal X damage" prints no number and is always 1X).
 fn dividend(uses: i32) -> Script {
     Script {
         modes: modes(),
         targets: targets(),
         cry: Some(hook(move |ctx| {
+            let paid = ctx.x.max(0);
             let x = amount_x(ctx, uses);
             let mode = chosen_options(ctx).into_iter().next();
             match mode.as_deref() {
-                Some(MODE_DAMAGE) => vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": x })))],
+                Some(MODE_DAMAGE) => {
+                    let amount = param(&*ctx, "damage") * paid;
+                    vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))]
+                }
                 Some(MODE_HEAL) => {
-                    vec![heal(json_as(json!({ "target": { "of": "chosen" }, "amount": HEAL_PER_X * x })))]
+                    let amount = param(&*ctx, "heal") * paid;
+                    vec![heal(json_as(json!({ "target": { "of": "chosen" }, "amount": amount })))]
                 }
                 // floor(x / 2) on a non-negative x.
                 Some(MODE_MANA) => {
@@ -411,6 +415,46 @@ mod tests {
                     Some(true)
                 );
             }
+
+            #[test]
+            fn r386_an_upgrade_deals_3x_and_a_degrade_1x() {
+                for (upgrade, per_x) in [(true, 3), (false, 1)] {
+                    crate::register_all();
+                    let mut s = dividend_in("dividend-radiant-tuned", true, None);
+                    let moved = if upgrade {
+                        crate::upgrade_number(&mut s, DIVIDEND, "damage")
+                    } else {
+                        crate::degrade_number(&mut s, DIVIDEND, "damage")
+                    };
+                    assert_eq!(moved, per_x);
+                    s.play(DIVIDEND, json!({ "x": 2, "modes": ["damage"], "targets": at_hero("p2") }));
+                    s.expect_health(P2, 30 - 2 * per_x);
+                }
+            }
+        }
+
+        #[test]
+        fn r386_an_upgrade_heals_3x_and_a_radiant_degrade_3x() {
+            for (radiant, upgrade, per_x) in [(false, true, 3), (true, false, 3)] {
+                crate::register_all();
+                let mut s = dividend_in("dividend-heal-tuned", radiant, Some(10));
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, DIVIDEND, "heal")
+                } else {
+                    crate::degrade_number(&mut s, DIVIDEND, "heal")
+                };
+                assert_eq!(moved, per_x);
+                s.play(DIVIDEND, json!({ "x": 2, "modes": ["heal"], "targets": at_hero("p1") }));
+                s.expect_health(P1, 10 + 2 * per_x);
+            }
+        }
+
+        #[test]
+        fn r749_the_base_face_s_1x_damage_is_never_tuned() {
+            crate::register_all();
+            let s = dividend_in("dividend-base-untuned", false, None);
+            assert!(!crate::can_upgrade_number(&s, DIVIDEND, "damage"));
+            assert!(!crate::can_degrade_number(&s, DIVIDEND, "damage"));
         }
     }
 }

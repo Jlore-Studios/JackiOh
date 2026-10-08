@@ -797,7 +797,9 @@ pub const SCORER_LOW_HEALTH: i32 = 10;
 /// viewer's own a heal's, and the board's units come after them (`subsystems::scorer`).
 pub const SCORER_DRY_RUN_PLAYS: usize = 8;
 
-/// R753: Life Tap's "Take 2 damage", dealt to its own hero by the card (`subsystems::hero_power`).
+/// R753: Life Tap's "Draw 1" (on the Radiant face, from each player's deck) and its "Take 2 damage",
+/// dealt to its own hero by the card (`subsystems::hero_power`).
+pub const LIFE_TAP_DRAW: i32 = 1;
 pub const LIFE_TAP_DAMAGE: i32 = 2;
 /// R754: how far Steady Shot's Radiant face raises its declared number (`"shot"`) per use.
 pub const STEADY_SHOT_RAISE: i32 = 2;

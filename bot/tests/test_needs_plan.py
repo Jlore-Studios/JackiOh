@@ -172,7 +172,8 @@ class PlanningLaneTests(unittest.TestCase):
     def test_a_planning_run_starts_with_every_build_lane_taken(self):
         gh = FakeGitHub()
         ctx = lane_ctx(gh, max_parallel=2)
-        busy(gh, ctx, ("agy", 53), ("muse", 54))
+        # GitHub's two lanes and the machine's two slots, each held apart from the other.
+        busy(gh, ctx, ("agy", 53), ("muse", 54), ("claude-4", 55), ("claude-5", 56))
         queue(gh, ctx, 3, planned=False)
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["provider"]), ("plan", "claude-3"))
@@ -180,7 +181,7 @@ class PlanningLaneTests(unittest.TestCase):
         gh = FakeGitHub()
         ctx = make_ctx(gh, at=NIGHT, cfg=with_lanes(make_config(
             env=secrets(*providers.SECRETS), machine=MACHINE), 2))
-        busy(gh, ctx, ("agy", 53), ("muse", 54))
+        busy(gh, ctx, ("agy", 53), ("muse", 54), ("claude-4", 55), ("claude-5", 56))
         queue(gh, ctx, 3, planned=False)
         self.assertIn("every lane is busy", plan_mod.make(ctx)["reason"])
 
