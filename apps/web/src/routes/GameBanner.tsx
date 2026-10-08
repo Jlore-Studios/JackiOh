@@ -52,7 +52,7 @@ export function GameBanner({ testId, title, children, action, data = {} }: GameB
       </div>
       {"href" in action ? (
         <a
-          className="game-banner__action"
+          className="game-banner__action button-primary"
           href={action.href}
           data-testid={action.testId}
           onClick={followInApp(action.href)}
@@ -60,7 +60,7 @@ export function GameBanner({ testId, title, children, action, data = {} }: GameB
           {action.label}
         </a>
       ) : (
-        <button type="button" className="game-banner__action" data-testid={action.testId} onClick={action.onPress}>
+        <button type="button" className="game-banner__action button-primary" data-testid={action.testId} onClick={action.onPress}>
           {action.label}
         </button>
       )}

@@ -48,8 +48,10 @@
   font-size: 14px;
 }
 
-/* The way back: the tavern's gold call to action, sized for a notice rather than a screen. */
-.tavern .game-banner .game-banner__action {
+/* The way back: the tavern's gold call to action (`button-primary`), sized for a notice rather than a
+   screen. The extra element and classes outrank tavern.css's `.tavern.app-shell button.button-primary`
+   and its states, and index.css's `.button-primary`, on the practice menu and the landing alike. */
+.tavern section.game-banner > .game-banner__action.button-primary {
   flex: none;
   display: inline-flex;
   align-items: center;
@@ -78,26 +80,38 @@
   transition: transform 90ms ease-out, filter 140ms ease-out;
 }
 
-.tavern .game-banner .game-banner__action:hover,
-.tavern .game-banner .game-banner__action:hover:not(:disabled) {
+.tavern section.game-banner > .game-banner__action.button-primary:hover,
+.tavern section.game-banner > .game-banner__action.button-primary:hover:not(:disabled) {
   border-color: #6b4212;
   background: linear-gradient(180deg, #fff0bf 0%, var(--tavern-gold) 42%, #dc9b33 58%, #a86a1f 100%);
   color: var(--tavern-ink);
   filter: brightness(1.07);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.2),
+    0 3px 0 #4a2a0e,
+    0 8px 16px rgba(0, 0, 0, 0.45),
+    0 0 22px rgba(255, 179, 71, 0.45);
 }
 
-.tavern .game-banner .game-banner__action:active {
+.tavern section.game-banner > .game-banner__action.button-primary:active,
+.tavern section.game-banner > .game-banner__action.button-primary:active:not(:disabled) {
   transform: translateY(2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2),
+    0 1px 0 #4a2a0e,
+    0 4px 10px rgba(0, 0, 0, 0.45);
 }
 
-.tavern .game-banner .game-banner__action:focus-visible {
+.tavern section.game-banner > .game-banner__action.button-primary:focus-visible {
   outline: 2px solid var(--tavern-gold-pale);
   outline-offset: 3px;
 }
 
 /* On a phone the way back takes the whole width under the words, an easy thumb target. */
 @media (max-width: 520px) {
-  .tavern .game-banner .game-banner__action {
+  .tavern section.game-banner > .game-banner__action.button-primary {
     flex: 1 1 100%;
   }
 }
