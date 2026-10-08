@@ -4332,9 +4332,10 @@
     "what": "build #527 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-08T22:56:47Z",
+    "at": "2026-10-08T23:07:24Z",
     "notes": [
-      "#580: typed it Task"
+      "#544 needs a plan",
+      "#550 needs a plan"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
