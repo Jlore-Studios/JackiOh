@@ -98,7 +98,9 @@ function signInThroughForm(email: string): void {
   cy.get('[data-testid="login-email"]').clear().type(email);
   cy.get('[data-testid="login-password"]').clear().type(PASSWORD, { log: false });
   cy.get('[data-testid="login-submit"]').click();
-  cy.location("pathname", { timeout: 40_000 }).should("eq", "/decks");
+  // Issue #479: a sign-in lands on the main menu, which says so once the server has answered.
+  cy.location("pathname", { timeout: 40_000 }).should("eq", "/");
+  cy.get('[data-testid="landing"]', { timeout: 40_000 }).should("have.attr", "data-account", "signed-in");
 }
 
 (ONLINE ? describe : describe.skip)("the deployed stack, two real accounts", () => {
@@ -134,9 +136,16 @@ function signInThroughForm(email: string): void {
     cy.get('[data-testid="login-password"]').type(PASSWORD, { log: false });
     cy.get('[data-testid="login-submit"]').click();
 
-    // The gate sends an active account to /decks; a pending one would be bounced to /invite.
-    cy.location("pathname", { timeout: 40_000 }).should("eq", "/decks");
+    // Issue #479: a sign-in lands on the main menu.
+    cy.location("pathname", { timeout: 40_000 }).should("eq", "/");
+    cy.get('[data-testid="landing-account"]', { timeout: 40_000 }).should("exist");
     cy.get('[data-testid="login-error"]').should("not.exist");
+
+    // Past the invite gate: the gate leaves an active account on /decks; a pending one would be
+    // bounced to /invite.
+    cy.get('[data-testid="landing-build-decks"]').click();
+    cy.get('[data-testid="deck-list"]', { timeout: 40_000 }).should("exist");
+    cy.location("pathname").should("eq", "/decks");
   });
 
   it("the collection and the three seeded decks come back from Render", () => {

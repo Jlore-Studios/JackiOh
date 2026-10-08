@@ -48,7 +48,7 @@ import type {
   PracticeSnapshot,
   PracticeStartConfig,
 } from "../practice/protocol.ts";
-import { PRACTICE_RESUME_STORAGE_KEY, readPracticeResume } from "../practice/resume.ts";
+import { PRACTICE_RESUME_STORAGE_KEY, readPracticeResume, readPracticeResumeState } from "../practice/resume.ts";
 import { memorySaveStore } from "../practice/saveStore.ts";
 import { practiceTestid } from "../practice/testids.ts";
 import { baseView, emptySide } from "../test/fixtures.ts";
@@ -85,6 +85,12 @@ const T = {
   deckPreview: "practice-deck-preview",
   deckCurve: "practice-deck-curve",
   menu: "practice-menu",
+  leaveSave: "practice-leave-save",
+  resumeLost: "practice-resume-lost",
+  resumeBanner: "practice-resume-banner",
+  resume: "practice-resume",
+  liveBanner: "live-game-banner",
+  rejoin: "live-game-rejoin",
 } as const;
 
 const PRESET_VALUES = PRACTICE_PRESETS.map((preset) => `preset:${preset.id}`);
@@ -582,6 +588,8 @@ describe("B32 /practice shows setup to anyone", () => {
       deckPreview: T.deckPreview,
       deckCurve: T.deckCurve,
       menu: T.menu,
+      leaveSave: T.leaveSave,
+      resumeLost: T.resumeLost,
     });
     expect(practiceTestid.deckCard("core-001")).toBe("practice-deck-card-core-001");
     expect(practiceTestid.difficulty("easy")).toBe(T.easy);
@@ -1352,6 +1360,259 @@ describe("R668 resuming a practice game after a reload", () => {
     concedeOnBoard();
     await screen.findByTestId(T.result);
     expect(readPracticeResume()).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R765: Save and leave, Leave without saving, and the banners atop the practice menu
+// ---------------------------------------------------------------------------------------------
+
+describe("R765 leaving a practice game: Save and leave, or Leave without saving", () => {
+  const KEPT: PracticeStartConfig = { seed: "kept1", difficulty: "medium", humanSeat: "p1", deck: { kind: "random" } };
+
+  /** What the device holds: the setup, and `saved` when it was left with Save and leave. */
+  function keep(config: PracticeStartConfig, saved: boolean): void {
+    window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify(saved ? { ...config, saved: true } : config));
+  }
+
+  function resumes(host: RouteHost): PracticeStartConfig[] {
+    return host.requests.flatMap((body) => (body.type === "resume" ? [body.config] : []));
+  }
+
+  async function askToLeave(control: "newGame" | "menu"): Promise<HTMLElement> {
+    fireEvent.click(screen.getByTestId(T[control]));
+    return screen.findByTestId(T.leave);
+  }
+
+  it("R765 a free game's question offers Keep playing, Save and leave and Leave without saving; a lesson's keeps Leave game", async () => {
+    visit("?seed=save1&difficulty=easy&deck=random&seat=p1");
+    renderRoute(routeHost());
+    await screen.findByTestId(T.hud);
+    const leave = await askToLeave("newGame");
+    expect(leave).toHaveAttribute("data-can-save", "true");
+    expect(leave).toHaveTextContent("practice menu");
+    // Staying is still the default.
+    expect(screen.getByTestId(T.leaveStay)).toHaveFocus();
+    expect(screen.getByTestId(T.leaveSave)).toHaveTextContent("Save and leave");
+    expect(screen.getByTestId(T.leaveConfirm)).toHaveTextContent("Leave without saving");
+    cleanup();
+
+    visit(`?lesson=${TUTORIAL_LESSONS[0]?.id ?? ""}`);
+    renderRoute(routeHost());
+    await screen.findByTestId("game");
+    fireEvent.click(screen.getByTestId(tutorialTestid.exit));
+    const lessonLeave = await screen.findByTestId(T.leave);
+    expect(lessonLeave).toHaveAttribute("data-can-save", "false");
+    expect(screen.queryByTestId(T.leaveSave)).toBeNull();
+    expect(screen.getByTestId(T.leaveConfirm)).toHaveTextContent("Leave game");
+  });
+
+  it("R765 Save and leave from New game keeps the game: the setup shows its banner, and so does the next visit, with no resume", async () => {
+    visit("?seed=save2&difficulty=hard&deck=random&seat=p2");
+    renderRoute(routeHost());
+    await screen.findByTestId(T.hud);
+    await askToLeave("newGame");
+    fireEvent.click(screen.getByTestId(T.leaveSave));
+
+    expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
+    const banner = screen.getByTestId(T.resumeBanner);
+    expect(banner).toHaveAttribute("data-difficulty", "hard");
+    expect(banner).toHaveTextContent("Game in progress");
+    expect(banner).toHaveTextContent("Hard");
+    expect(banner).toHaveTextContent("Starting a new game ends it.");
+    expect(screen.getByTestId(T.resume)).toHaveTextContent("Resume");
+    const kept = { seed: "save2", difficulty: "hard", humanSeat: "p2", deck: { kind: "random" } } as const;
+    expect(readPracticeResumeState()).toEqual({ config: kept, saved: true });
+    cleanup();
+
+    // The next visit, a reload included, shows the menu with the banner and asks the worker nothing.
+    visit("");
+    const next = routeHost();
+    renderRoute(next);
+    expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
+    expect(screen.getByTestId(T.resumeBanner)).toBeInTheDocument();
+    expect(resumes(next)).toEqual([]);
+    expect(next.starts()).toEqual([]);
+  });
+
+  it("R765 Resume picks the saved game up as a resume, and a reload after that picks it up at once (R668)", async () => {
+    keep(KEPT, true);
+    const host = routeHost();
+    renderRoute(host);
+    await screen.findByTestId(T.setup);
+    fireEvent.click(screen.getByTestId(T.resume));
+
+    const hud = await screen.findByTestId(T.hud);
+    expect(hud).toHaveAttribute("data-difficulty", "medium");
+    expect(hud).toHaveAttribute("data-human-seat", "p1");
+    expect(resumes(host)).toEqual([KEPT]);
+    expect(host.starts()).toEqual([]);
+    // Back in the game: a reload now picks it up without the menu.
+    expect(readPracticeResumeState()).toEqual({ config: KEPT, saved: false });
+    cleanup();
+
+    const reload = routeHost();
+    renderRoute(reload);
+    await screen.findByTestId(T.hud);
+    expect(resumes(reload)).toEqual([KEPT]);
+    expect(screen.queryByTestId(T.resumeBanner)).toBeNull();
+  });
+
+  it("R765 Leave without saving gives the game up: no banner now, and none on the next visit", async () => {
+    visit("?seed=drop1&difficulty=easy&deck=random&seat=p1");
+    renderRoute(routeHost());
+    await screen.findByTestId(T.hud);
+    await askToLeave("newGame");
+    fireEvent.click(screen.getByTestId(T.leaveConfirm));
+
+    expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
+    expect(screen.queryByTestId(T.resumeBanner)).toBeNull();
+    expect(readPracticeResumeState()).toBeNull();
+    cleanup();
+
+    visit("");
+    const next = routeHost();
+    renderRoute(next);
+    expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
+    expect(screen.queryByTestId(T.resumeBanner)).toBeNull();
+    expect(resumes(next)).toEqual([]);
+  });
+
+  it("R765 Save and leave from Menu goes to the main menu, and /practice then shows the banner", async () => {
+    visit("?seed=save3&difficulty=easy&deck=random&seat=p1");
+    renderRoute(routeHost());
+    await screen.findByTestId(T.hud);
+    const leave = await askToLeave("menu");
+    expect(leave).toHaveTextContent("main menu");
+    fireEvent.click(screen.getByTestId(T.leaveSave));
+    expect(window.location.pathname).toBe("/");
+    expect(readPracticeResumeState()?.saved).toBe(true);
+    cleanup();
+
+    visit("");
+    renderRoute(routeHost());
+    expect(await screen.findByTestId(T.resumeBanner)).toBeInTheDocument();
+    expect(screen.getByTestId(T.setup)).toBeInTheDocument();
+  });
+
+  it("R765 starting a new game from the setup ends the saved one, and the banner is gone", async () => {
+    keep(KEPT, true);
+    const host = routeHost();
+    renderRoute(host);
+    await screen.findByTestId(T.resumeBanner);
+    fireEvent.click(screen.getByTestId(T.start));
+
+    await screen.findByTestId(T.hud);
+    expect(resumes(host)).toEqual([]);
+    expect(host.starts()).toHaveLength(1);
+    const started = host.starts()[0];
+    expect(started?.seed).not.toBe(KEPT.seed);
+    // The new game is the one kept now, with the player in it.
+    expect(readPracticeResumeState()).toEqual({
+      config: { seed: started?.seed, difficulty: started?.difficulty, humanSeat: started?.humanSeat, deck: started?.deck },
+      saved: false,
+    });
+
+    await askToLeave("newGame");
+    fireEvent.click(screen.getByTestId(T.leaveConfirm));
+    expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
+    expect(screen.queryByTestId(T.resumeBanner)).toBeNull();
+  });
+
+  it("R765 starting a tutorial lesson from the path ends the saved game too", async () => {
+    keep(KEPT, true);
+    renderRoute(routeHost());
+    await screen.findByTestId(T.resumeBanner);
+    const first = TUTORIAL_LESSONS[0]?.id ?? "";
+    fireEvent.click(screen.getByTestId(tutorialTestid.lessonStart(first)));
+    await screen.findByTestId("game");
+    expect(readPracticeResumeState()).toBeNull();
+  });
+
+  it("R765 a Resume the worker cannot fold says so on the setup, and the banner is gone", async () => {
+    keep(KEPT, true);
+    renderRoute(routeHost({ resume: "failed" }));
+    await screen.findByTestId(T.resumeBanner);
+    fireEvent.click(screen.getByTestId(T.resume));
+
+    const lost = await screen.findByTestId(T.resumeLost);
+    expect(lost).toHaveAttribute("role", "status");
+    expect(screen.getByTestId(T.setup)).toBeInTheDocument();
+    expect(screen.queryByTestId(T.resumeBanner)).toBeNull();
+    expect(screen.queryByTestId(T.error)).toBeNull();
+    expect(readPracticeResumeState()).toBeNull();
+  });
+
+  it("R765 Back while a resume is still folding keeps the game, saved for the banner; Back from a new game's deal gives it up", async () => {
+    keep(KEPT, false);
+    const hold: RouteHost = routeHost();
+    // A resume that never answers: the loading screen's Back is the way out.
+    hold.factory.mockImplementation(() => ({
+      request: (body) =>
+        body.type === "resume" ? new Promise<PracticeResponse>(() => {}) : routeHost().factory().request(body),
+      dispose: () => undefined,
+    }));
+    renderRoute(hold);
+    await screen.findByTestId(T.loading);
+    fireEvent.click(screen.getByTestId("nav-back"));
+
+    expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
+    expect(screen.getByTestId(T.resumeBanner)).toBeInTheDocument();
+    expect(readPracticeResumeState()).toEqual({ config: KEPT, saved: true });
+    cleanup();
+
+    visit("?seed=hold2&difficulty=easy&deck=random&seat=p1");
+    renderRoute(routeHost({ start: "hold" }));
+    await screen.findByTestId(T.loading);
+    fireEvent.click(screen.getByTestId("nav-back"));
+    expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
+    expect(screen.queryByTestId(T.resumeBanner)).toBeNull();
+  });
+
+  it("R765 a reload in the middle of a game, never left through the menu, still picks it up at once (R668)", async () => {
+    keep(KEPT, false);
+    const host = routeHost();
+    renderRoute(host);
+    await screen.findByTestId(T.hud);
+    expect(resumes(host)).toEqual([KEPT]);
+    expect(screen.queryByTestId(T.setup)).toBeNull();
+  });
+});
+
+describe("R765 the practice menu offers the way back into a live online game", () => {
+  function inGame(currentMatchId: string | null, currentSeriesId: string | null = null): Account {
+    const base = signedIn("active");
+    if (base.kind !== "ready") throw new Error("signedIn is ready");
+    return { ...base, me: { ...base.me, currentMatchId, currentSeriesId } };
+  }
+
+  it("R765 an account in a match sees the live banner atop the menu, and Rejoin links the board", async () => {
+    renderRoute(routeHost(), { account: inGame("m-5"), loadDecks: vi.fn(() => Promise.resolve(decksResponse(null))) });
+    const banner = await screen.findByTestId(T.liveBanner);
+    expect(banner).toHaveAttribute("data-kind", "match");
+    expect(screen.getByTestId(T.rejoin)).toHaveAttribute("href", "/match/m-5");
+    expect(screen.getByTestId(T.setup)).toBeInTheDocument();
+  });
+
+  it("R765 between the games of a series it rejoins the series screen; with no game there is no banner", async () => {
+    renderRoute(routeHost(), { account: inGame(null, "s-5"), loadDecks: vi.fn(() => Promise.resolve(decksResponse(null))) });
+    expect(await screen.findByTestId(T.rejoin)).toHaveAttribute("href", "/series/s-5");
+    cleanup();
+
+    renderRoute(routeHost(), { account: inGame(null), loadDecks: vi.fn(() => Promise.resolve(decksResponse(null))) });
+    await screen.findByTestId(T.setup);
+    expect(screen.queryByTestId(T.liveBanner)).toBeNull();
+  });
+
+  it("R765 both banners show at once: the saved practice game first, then the live one", async () => {
+    window.localStorage.setItem(
+      PRACTICE_RESUME_STORAGE_KEY,
+      JSON.stringify({ seed: "both1", difficulty: "easy", humanSeat: "p1", deck: { kind: "random" }, saved: true }),
+    );
+    renderRoute(routeHost(), { account: inGame("m-6"), loadDecks: vi.fn(() => Promise.resolve(decksResponse(null))) });
+    const live = await screen.findByTestId(T.liveBanner);
+    const saved = screen.getByTestId(T.resumeBanner);
+    expect(saved.compareDocumentPosition(live) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 

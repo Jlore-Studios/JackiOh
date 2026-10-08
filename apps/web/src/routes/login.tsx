@@ -5,7 +5,9 @@
 // WHAT IT DOES NOT DECIDE. Nothing here judges whether a password is wrong, whether an email is
 // verified, or whether the account is pending: `net/auth.ts` reduces every refusal to one of its own
 // sentences (R160, R192), `/api/auth/me` answers the status, and the gate in `main.tsx` acts on it.
-// Signing in sends the player to `/decks`; a pending account is bounced on to `/invite` from there.
+// Signing in sends the player to the main menu, whichever screen sent them here (issue #479); from
+// there the gate sends a pending account on to `/invite` from any gated screen. A sign-in that fails
+// stays here, with its sentence above the form and the form as the player left it.
 // The checks in `auth/validation.ts` only save a round trip; the provider still has the last word.
 //
 // HOW THE SCREEN CAN BE OPENED.
@@ -99,8 +101,7 @@
 //
 // WHAT HAPPENED IS SAID FIRST. The notice and the error sit above the form, and a sign-up that
 // succeeded moves focus to its notice (the form it leaves behind reads "Sign in", which is the step
-// after the inbox). A refused field takes focus. A sign-in goes back to the screen that sent the
-// player here (`net/return-to.ts`), else to `/decks`.
+// after the inbox). A refused field takes focus. A sign-in goes to the main menu.
 
 import { useEffect, useRef, useState, type FormEvent, type ReactElement } from "react";
 
@@ -143,7 +144,6 @@ import {
 } from "../net/auth.ts";
 import { forgetVerifier, newestFlow } from "../auth/pkce.ts";
 import { loginModeOf, loginReasonOf, navigate, paths } from "../net/navigate.ts";
-import { takeReturnTo } from "../net/return-to.ts";
 import {
   forgetPendingEmail,
   pendingEmail,
@@ -664,10 +664,10 @@ export default function LoginRoute(): ReactElement {
   function keepSession(session: Session): void {
     // Replaces (and revokes) any other session this browser held (R194).
     adoptSession(session);
-    // Back to the gated screen that sent the player here, else `/decks`, the first gated
-    // screen; the one gate in `main.tsx` redirects from there, so this file needs no notion of
-    // account status. Always a fixed `paths` value, never a URL from the query (B35).
-    navigate(takeReturnTo() ?? paths.decks, { replace: true });
+    // To the main menu, whichever screen sent the player here (issue #479). The one gate in
+    // `main.tsx` handles a pending account on any gated screen, so this file needs no notion of
+    // account status. A fixed `paths` value, never a URL from the query (B35).
+    navigate(paths.landing, { replace: true });
   }
 
   /** R665: the session is kept at once, or held for its authenticator code first. */

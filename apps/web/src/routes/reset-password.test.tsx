@@ -173,7 +173,7 @@ describe("B31 with a recovery session", () => {
     );
   });
 
-  it("R193 B31 saves the password, then stores the session, releases the recovery and goes to /decks", async () => {
+  it("R193 B31 saves the password, then stores the session, releases the recovery and goes to the main menu", async () => {
     const calls = provider(200, { id: "user-1", email: EMAIL });
     render(<ResetPasswordRoute />);
     setField(resetTestid.password, PASSWORD);
@@ -181,7 +181,7 @@ describe("B31 with a recovery session", () => {
     submit();
 
     await waitFor(() => {
-      expect(window.location.pathname).toBe(paths.decks);
+      expect(window.location.pathname).toBe(paths.landing);
     });
     expect(calls).toHaveLength(1);
     const call = calls[0] as Call;
@@ -317,7 +317,7 @@ describe("B31 the reset form and the browser", () => {
     setField(resetTestid.confirm, PASSWORD);
     submit();
     await waitFor(() => {
-      expect(window.location.pathname).toBe(paths.decks);
+      expect(window.location.pathname).toBe(paths.landing);
     });
     expect(pendingReset()).toBeNull();
   });
@@ -516,7 +516,7 @@ describe("R194 saving revokes the session the reset replaces", () => {
     setField(resetTestid.confirm, PASSWORD);
     submit();
     await waitFor(() => {
-      expect(window.location.pathname).toBe(paths.decks);
+      expect(window.location.pathname).toBe(paths.landing);
     });
     expect(readSession()?.accessToken).toBe(RECOVERY.accessToken);
     await waitFor(() => {
@@ -609,7 +609,7 @@ describe("R194 a recovery session that runs out while the form is open", () => {
     setField(resetTestid.confirm, PASSWORD);
     submit();
     await waitFor(() => {
-      expect(window.location.pathname).toBe(paths.decks);
+      expect(window.location.pathname).toBe(paths.landing);
     });
     expect(refreshes).toEqual([{ refresh_token: "recovery-refresh-1" }]);
     expect(bearers).toEqual(["Bearer recovery-access-2"]);
@@ -630,7 +630,7 @@ describe("R194 a recovery session that runs out while the form is open", () => {
     setField(resetTestid.confirm, PASSWORD);
     submit();
     await waitFor(() => {
-      expect(window.location.pathname).toBe(paths.decks);
+      expect(window.location.pathname).toBe(paths.landing);
     });
     expect(refreshes).toEqual([{ refresh_token: "recovery-refresh-1" }]);
     expect(bearers).toEqual(["Bearer recovery-access-2"]);
@@ -644,7 +644,7 @@ describe("R194 a recovery session that runs out while the form is open", () => {
     setField(resetTestid.confirm, PASSWORD);
     submit();
     await waitFor(() => {
-      expect(window.location.pathname).toBe(paths.decks);
+      expect(window.location.pathname).toBe(paths.landing);
     });
     expect(bearers).toEqual(["Bearer recovery-access-1", "Bearer recovery-access-2"]);
     expect(refreshes).toHaveLength(1);

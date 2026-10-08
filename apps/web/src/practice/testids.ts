@@ -30,10 +30,17 @@ export const practiceTestid = {
   menu: "practice-menu",
   /** "Leave this game?": the confirmation `newGame` or `menu` opens while a game is in progress. */
   leave: "practice-leave",
-  /** In the confirmation: abandon the game and go back to setup. */
+  /**
+   * In the confirmation: abandon the game ("Leave without saving" for a free game, R765; "Leave game"
+   * for a lesson) and go where `newGame` or `menu` goes.
+   */
   leaveConfirm: "practice-leave-confirm",
+  /** R765: in a free game's confirmation, "Save and leave": keep the game for the practice menu's banner. */
+  leaveSave: "practice-leave-save",
   /** In the confirmation: close it and carry on. */
   leaveStay: "practice-leave-stay",
+  /** R765: on the setup, after the banner's Resume found no game to pick up; role="status". */
+  resumeLost: "practice-resume-lost",
   /** The end-of-game dialog; data-outcome="win|loss|draw". */
   result: "practice-result",
   /** In the result dialog: the same difficulty and deck again, with a fresh seed and seat. */

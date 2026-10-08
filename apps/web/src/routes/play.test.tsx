@@ -16,9 +16,11 @@ import type { CardDef, CardDefs } from "@jackioh/shared";
 import { validateDeck, validateTrio, type LoadoutResult } from "@jackioh/validator";
 
 import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
+import { readQueued, rememberQueued } from "../net/liveGame.ts";
 import {
   ApiRequestError,
   createRoom,
+  dequeue,
   enqueue,
   getCatalog,
   getCollection,
@@ -665,6 +667,49 @@ describe("the lobby's queue state", () => {
       },
       { timeout: 5000 },
     );
+  });
+
+  it("R765 Find a match remembers the queue for the rest of the client, and Leave forgets it", async () => {
+    vi.mocked(enqueue).mockResolvedValue(openTicket("random"));
+    vi.mocked(dequeue).mockResolvedValue({ cancelled: true, ticketId: "tk-1" });
+    await renderLobby();
+    pickMode("random");
+    fireEvent.click(screen.getByTestId(playTestid.queue));
+    await screen.findByTestId(playTestid.searching);
+    expect(readQueued()).toBe("random");
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent("You can leave this screen while you wait.");
+
+    fireEvent.click(screen.getByTestId(playTestid.leaveQueue));
+    await screen.findByText("Left the queue.");
+    expect(readQueued()).toBeNull();
+  });
+
+  it("R765 back on /play, the lobby picks up the wait it left: the mode, the queued notice, Leave and the watch", async () => {
+    rememberQueued("bo3");
+    vi.mocked(dequeue).mockResolvedValue({ cancelled: true, ticketId: "tk-1" });
+    render(<PlayRoute token={TOKEN} />);
+    // Conquest picks a trio, so its select is the one shown.
+    await screen.findByTestId(playTestid.trioSelect);
+
+    expect(screen.getByTestId(playTestid.searching)).toHaveAttribute("data-mode", "bo3");
+    expect(screen.getByTestId(playModeTestid("bo3"))).toBeChecked();
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent(`In the ${MODE_LABEL.bo3} queue.`);
+    expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
+    expect(screen.getByTestId(playTestid.leaveQueue)).not.toBeDisabled();
+    expect(enqueue).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId(playTestid.leaveQueue));
+    await screen.findByText("Left the queue.");
+    expect(dequeue).toHaveBeenCalledWith(TOKEN);
+    expect(readQueued()).toBeNull();
+  });
+
+  it("R765 a pairing the lobby finds forgets the queue, so nothing else follows it", async () => {
+    rememberQueued("bo1");
+    vi.mocked(getMe).mockResolvedValue(me("match-5"));
+    render(<PlayRoute token={TOKEN} />);
+    expect(await screen.findByTestId(playTestid.status)).toHaveTextContent(MATCH_FOUND_STATUS);
+    expect(readQueued()).toBeNull();
   });
 
   it("a join that pairs at once announces before navigating", async () => {

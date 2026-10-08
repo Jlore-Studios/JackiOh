@@ -159,7 +159,7 @@ describe("R664 signing in with an email code", () => {
       token: "123456",
     });
     expect(readSession()?.accessToken).toBe(AAL1);
-    expect(window.location.pathname).toBe(paths.decks);
+    expect(window.location.pathname).toBe(paths.landing);
   });
 
   it("R664 an address with no confirmed account reads the same notice (R192)", async () => {
@@ -206,7 +206,7 @@ describe("R664 signing in with an email code", () => {
     await settle();
     expect(calls[0]?.body).toEqual({ auth_code: CODE, code_verifier: kept?.verifier });
     expect(readSession()?.accessToken).toBe(AAL1);
-    expect(window.location.pathname).toBe(paths.decks);
+    expect(window.location.pathname).toBe(paths.landing);
     // Kept, so not revoked.
     expect(paths_(calls)).not.toContain("POST /auth/v1/logout");
   });
@@ -250,7 +250,7 @@ describe("R665 the second step for an account with an authenticator app", () => 
     ]);
     expect(calls[1]?.auth).toBe(`Bearer ${AAL1}`);
     expect(readSession()?.accessToken).toBe(AAL2);
-    expect(window.location.pathname).toBe(paths.decks);
+    expect(window.location.pathname).toBe(paths.landing);
   });
 
   it("R665 a wrong code says so and keeps the step open", async () => {
@@ -322,7 +322,7 @@ describe("R665 the second step for an account with an authenticator app", () => 
     signInWithPassword();
     await settle();
     expect(readSession()?.accessToken).toBe(AAL1);
-    expect(window.location.pathname).toBe(paths.decks);
+    expect(window.location.pathname).toBe(paths.landing);
   });
 });
 
@@ -354,7 +354,7 @@ describe("R666 OAuth providers, behind configuration", () => {
     render(<LoginRoute />);
     await settle();
     expect(readSession()?.accessToken).toBe(AAL1);
-    expect(window.location.pathname).toBe(paths.decks);
+    expect(window.location.pathname).toBe(paths.landing);
   });
 
   it("R666 a provider that sends the player back with an error says so in our words", async () => {
