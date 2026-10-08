@@ -2,7 +2,6 @@ name: Bug
 description: Something that behaves wrongly. A rule, a card, a crash, a failing job.
 title: "Patch v0.3.Y: "
 labels: ["patch"]
-type: Bug
 body:
   - type: markdown
     attributes:
@@ -10,7 +9,7 @@ body:
         Titles and labels follow [docs/issues-and-patches.md](https://github.com/Jlore-Studios/JackiOh/blob/main/docs/issues-and-patches.md).
 
         - **Title:** a fix to the game is usually a micro patch, `Patch v0.3.Y: <what the fix does>`. For a failing job or tool, retitle it `CI: …` and swap `patch` for `architecture`. A bug in the night bot or Squishy goes through the Night bot form.
-        - **Who does it:** when it is ready, label it `method:manual` (people) or `method:use-bot` (the night bot). Triage reads it two minutes later.
+        - **Who does it:** choose below, or later label it `method:manual` (people) or `method:use-bot` (the night bot). Either way triage classifies it: its type (Task, Bug or Feature), labels, title and assignees. The difficulty and priority you choose here become labels too; with no difficulty, the bot's planner rates it.
   - type: textarea
     id: happens
     attributes:
@@ -54,10 +53,20 @@ body:
     id: priority
     attributes:
       label: Priority
-      description: The night bot's pickup order. Set the matching `priority:*` label too.
+      description: The night bot's pickup order; a choice here becomes its `priority:*` label.
       options:
         - No priority
         - high
         - medium
         - low
+      default: 0
+  - type: dropdown
+    id: method
+    attributes:
+      label: Who does it
+      description: "A choice here is a method label: triage then labels, titles, types and assigns the issue, and the night bot queues a `method:use-bot` one. Or decide later and add `method:manual` or `method:use-bot` yourself."
+      options:
+        - Decide later
+        - People (method:manual)
+        - The night bot (method:use-bot)
       default: 0
