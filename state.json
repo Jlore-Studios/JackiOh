@@ -3846,12 +3846,10 @@
     "what": "plan #509 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-08T09:49:59Z",
+    "at": "2026-10-08T10:00:54Z",
     "notes": [
       "answered a comment on #436 that was never answered",
-      "answered a comment on #430 that was never answered",
-      "#509 needs a plan",
-      "started a night run, as a lane was free: #509 (medium) is queued to build, for `claude-3`: plan on `claude-3` (claude, `opus`, strong)"
+      "answered a comment on #430 that was never answered"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
