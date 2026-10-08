@@ -796,6 +796,11 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
     });
   }
 
+  /** R767: the link's "pick for <mode>" notice goes once the mode it names is no longer the one chosen. */
+  function dropLinkStatus(named: QueueMode): void {
+    setStatus((current) => (current === roomLinkStatus(named) ? null : current));
+  }
+
   function onJoin(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     if (choice === null) return;
@@ -811,6 +816,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
         const roomMode = roomModeOf(cause);
         if (roomMode === null) throw cause;
         setMode(roomMode);
+        dropLinkStatus(chosen.mode);
         setError({ message: roomModeMessage(roomMode), issues: [], seriesId: null });
       }
     });
@@ -897,6 +903,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
                   data-testid={playModeTestid(option)}
                   disabled={locked}
                   onChange={() => {
+                    dropLinkStatus(mode);
                     setMode(option);
                   }}
                 />

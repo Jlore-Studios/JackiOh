@@ -861,8 +861,18 @@ describe("R767 a room shared as a link", () => {
     expect(vi.mocked(joinRoom)).toHaveBeenCalledWith(TOKEN, "ABC234", { mode: "bo1", deckId: AGGRO.id });
     expect(error).toHaveTextContent(`This room plays ${MODE_LABEL.bo3}: pick a trio and join again.`);
     expect(screen.getByTestId(playModeTestid("bo3"))).toBeChecked();
+    // The notice named the link's mode; it must not sit beside an error that says the opposite.
+    expect(screen.queryByTestId(playTestid.status)).toBeNull();
     // The code stays, so joining again is one press.
     expect(screen.getByTestId(playTestid.joinInput)).toHaveValue("ABC234");
+  });
+
+  it("R767 the link's notice goes when the player picks another mode", async () => {
+    openLink("?room=abc234&mode=bo1");
+    await screen.findByTestId(playTestid.deckSelect);
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent(roomLinkStatus("bo1"));
+    fireEvent.click(screen.getByTestId(playModeTestid("bo3")));
+    expect(screen.queryByTestId(playTestid.status)).toBeNull();
   });
 
   it("R767 a lobby still queued keeps its queue's mode and notice; the link fills in only the code", async () => {
