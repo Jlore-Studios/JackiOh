@@ -3671,6 +3671,8 @@
       "stop_requested": false
     },
     "536": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
@@ -3678,9 +3680,13 @@
       "onto": "bot/issue-575",
       "part_of": 575,
       "pending_request": false,
+      "provider": "claude-2",
       "queued_at": "2026-10-08T09:30:58Z",
       "requested_by": "squishy-squooby",
-      "stop_requested": false
+      "run_id": "37849583254",
+      "started_at": "2026-10-08T21:51:20Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "537": {
       "failures": 0,
@@ -4287,9 +4293,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-08T21:50:37Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37849470550",
-    "what": "plan #530 on claude-6"
+    "at": "2026-10-08T21:51:20Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37849583254",
+    "what": "plan #536 on claude-2"
   },
   "last_sweep": {
     "at": "2026-10-08T21:49:26Z",
