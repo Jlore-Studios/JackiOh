@@ -339,7 +339,7 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
     }
 
     #[test]
-    fn r78_leaving_the_field_resets_the_instance_while_cost_mod_cost_override_and_radiant_persist() {
+    fn r78_r766_leaving_the_field_for_a_graveyard_resets_the_instance_and_its_price_while_radiant_persists() {
         let mut state = game("r78-reset");
         let unit = put_radiant(&mut state, &plain.id, slot(P1, Units, 1));
 
@@ -410,9 +410,9 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
         assert_eq!(after.controller, P1);
         assert_eq!(after.zone, Zone::Graveyard { player: P1 });
 
-        // The three that persist in every zone.
-        assert_eq!(after.cost_mod, 2);
-        assert_eq!(after.cost_override, Some(1));
+        // Radiant persists in every zone; R766 takes the two cost layers off in a graveyard.
+        assert_eq!(after.cost_mod, 0);
+        assert_eq!(after.cost_override, None);
         assert!(after.radiant);
     }
 
