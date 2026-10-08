@@ -9,7 +9,8 @@
 //! `export { … } from` included), web tests and e2e specs among them: the 42 a one-line grep found,
 //! and the 8 the e2e specs import in multi-line lists (`05-reconnect`, `06-room-code`,
 //! `10-invite-gate`, `19-queue-modes-and-series`; v0.3.0 part 36). A name added to it needs a
-//! constant in `config.rs`; a name the client stops importing can leave it.
+//! constant in `config.rs`; a name the client stops importing can leave it. `ROOM_CODE_FORMAT` joined
+//! them for the lobby's room links (R767).
 
 use serde_json::{Value, json};
 
@@ -131,6 +132,16 @@ fn constants() -> Vec<(&'static str, Value)> {
             "REDEMPTION_RESPONSE_FLOOR_MS",
             json!(c::REDEMPTION_RESPONSE_FLOOR_MS),
         ),
+        (
+            "ROOM_CODE_FORMAT",
+            json!({
+                "alphabet": c::ROOM_CODE_FORMAT.alphabet,
+                "length": c::ROOM_CODE_FORMAT.length,
+                "groupSize": c::ROOM_CODE_FORMAT.group_size,
+                "separator": c::ROOM_CODE_FORMAT.separator,
+                "maxInputLength": c::ROOM_CODE_FORMAT.max_input_length,
+            }),
+        ),
         ("ROOM_CODE_LENGTH", json!(c::ROOM_CODE_LENGTH)),
         ("SERIES_MAX_GAMES", json!(c::SERIES_MAX_GAMES)),
         ("SERIES_PICK_SECONDS", json!(c::SERIES_PICK_SECONDS)),
@@ -165,8 +176,8 @@ fn every_name_is_listed_once() {
     names.dedup();
     assert_eq!(names.len(), listed, "a constant is listed twice");
     assert_eq!(
-        listed, 50,
-        "the 50 names the client imported from apps/server/src/config.ts"
+        listed, 51,
+        "the 50 names the client imported from apps/server/src/config.ts, and ROOM_CODE_FORMAT (R767)"
     );
 }
 

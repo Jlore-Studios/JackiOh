@@ -21,6 +21,10 @@
 // other screen the route table follows it and takes the player to the game once they are paired,
 // and back here the lobby picks the wait up again, with Leave as the way out.
 //
+// A ROOM LINK (R767). A room's ticket shares it as a link (`net/roomLink.ts`). A lobby opened on one
+// fills in the join form, chooses the link's mode, says what to pick and focuses it, and never joins
+// by itself: the mode is a hint, and the server's refusal (R264) still decides.
+//
 // THE QUEUE'S COUNTS (R505) are on the mode tiles and nowhere else: each tile says how many are
 // waiting for its mode. The Find a match box says what this screen is doing (queued, looking for
 // an opponent, the room code) and repeats no count, and neither does the queued notice.
@@ -65,6 +69,7 @@ import {
 } from "../net/api.ts";
 import { MATCH_FOUND_STATUS, forgetQueued, liveGameOf, readQueued, rememberQueued } from "../net/liveGame.ts";
 import { navigate, paths } from "../net/navigate.ts";
+import { forgetRoomLink, readRoomLink, roomLinkUrl, sendRoomLink } from "../net/roomLink.ts";
 import { rankWords } from "../rank/rank.ts";
 import { BackLink, followInApp } from "./nav.tsx";
 import "../auth/tavern.css";
@@ -105,6 +110,8 @@ export const playTestid = {
   seriesLink: "play-series-link",
   /** Copies the created room's code to the clipboard. */
   copyRoomCode: "play-copy-room-code",
+  /** R767: shares the created room as a link: the share sheet, else the clipboard. */
+  copyRoomLink: "play-copy-room-link",
   /** The "searching" indicator shown while this screen is queued (`data-mode`). */
   searching: "play-searching",
   /** R661: the player's own visible rank, in `rankWords`' words, with the season. */
@@ -350,6 +357,12 @@ export function roomModeMessage(mode: QueueMode): string {
   return `This room plays ${MODE_LABEL[mode]}: pick a ${mode === "bo3" ? "trio" : "deck"} and join again.`;
 }
 
+/** R767: what the lobby says when it opens on a room link, for the mode it chose. */
+export function roomLinkStatus(mode: QueueMode): string {
+  if (mode === "random") return `No deck needed for ${MODE_LABEL[mode]}: press Join.`;
+  return `Pick a ${mode === "bo3" ? "trio" : "deck"} for ${MODE_LABEL[mode]}, then press Join.`;
+}
+
 // ---------------------------------------------------------------------------------------------
 // the wait
 // ---------------------------------------------------------------------------------------------
@@ -527,9 +540,10 @@ function Searching({ mode }: { mode: QueueMode }): ReactElement {
   );
 }
 
-/** The created room's code as a ticket to hand over, with a copy button. */
+/** The created room's code as a ticket to hand over, with a button to copy it and one to share it as a link (R767). */
 function RoomTicket({ room }: { room: Room }): ReactElement {
   const [copied, setCopied] = useState(false);
+  const [linkSent, setLinkSent] = useState<"shared" | "copied" | null>(null);
   function copy(): void {
     // The clipboard can be refused (an insecure origin, a denied permission): the code stays on
     // screen to read out either way, so a refusal only means the button says nothing.
@@ -539,6 +553,10 @@ function RoomTicket({ room }: { room: Room }): ReactElement {
       },
       () => undefined,
     );
+  }
+  function sendLink(): void {
+    // R767: a refusal (a closed share sheet, a denied clipboard) says nothing, as the code's button does.
+    attempt(() => sendRoomLink(roomLinkUrl(room.code, room.mode))).then(setLinkSent, () => undefined);
   }
   return (
     <div className="play-ticket">
@@ -551,6 +569,14 @@ function RoomTicket({ room }: { room: Room }): ReactElement {
       </span>
       <button type="button" className="play-ticket__copy" data-testid={playTestid.copyRoomCode} onClick={copy}>
         {copied ? "Copied" : "Copy"}
+      </button>
+      <button
+        type="button"
+        className="play-ticket__copy play-ticket__copy--link"
+        data-testid={playTestid.copyRoomLink}
+        onClick={sendLink}
+      >
+        {linkSent === "shared" ? "Link shared" : linkSent === "copied" ? "Link copied" : "Copy invite link"}
       </button>
     </div>
   );
@@ -594,18 +620,24 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
    * lobby picks the wait up again, in that mode, with Leave as the way out.
    */
   const [rejoined] = useState(readQueued);
+  /** R767: the room link this tab opened, read once; the effect below forgets it. */
+  const [link] = useState(readRoomLink);
+  const stored = useMemo(readStoredChoice, []);
+  // A queue this tab is in comes before a link's hint, and the hint before the last choice.
+  const [mode, setMode] = useState<QueueMode>(rejoined ?? link?.mode ?? stored.mode ?? "bo1");
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState<string | null>(() => (rejoined === null ? null : queuedStatus(rejoined)));
+  const [status, setStatus] = useState<string | null>(() => {
+    if (rejoined !== null) return queuedStatus(rejoined);
+    return link === null ? null : roomLinkStatus(mode);
+  });
   const [error, setError] = useState<LobbyError | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
-  const [joinCode, setJoinCode] = useState("");
+  const [joinCode, setJoinCode] = useState(link?.code ?? "");
   /** True while this screen is waiting to be paired: queued, or hosting an unclaimed room. */
   const [waiting, setWaiting] = useState(rejoined !== null);
   const [population, setPopulation] = useState<PopulationResponse | null>(null);
   const [rank, setRank] = useState<OwnRankResponse | null>(null);
 
-  const stored = useMemo(readStoredChoice, []);
-  const [mode, setMode] = useState<QueueMode>(rejoined ?? stored.mode ?? "bo1");
   const [deckId, setDeckId] = useState<string | null>(stored.deckId ?? null);
   const [trioId, setTrioId] = useState<string | null>(stored.trioId ?? null);
 
@@ -679,6 +711,25 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
       ...(trioShown === undefined ? {} : { trioId: trioShown }),
     });
   }, [data, mode, deckShown, trioShown]);
+
+  // R767: the link is used once. It was read above, and a later visit to this screen starts empty.
+  useEffect(() => {
+    forgetRoomLink();
+  }, []);
+  // R767: a lobby opened on a link puts the cursor on the pick it asks for, once that pick is on screen
+  // (Best of 1's deck and Conquest's trio wait for the decks; All Random has only Join to press).
+  const deckSelect = useRef<HTMLSelectElement>(null);
+  const trioSelect = useRef<HTMLSelectElement>(null);
+  const joinSubmit = useRef<HTMLButtonElement>(null);
+  const focusPending = useRef(link !== null && rejoined === null);
+  useEffect(() => {
+    if (!focusPending.current) return;
+    if (mode !== "random" && lobby.kind === "loading") return;
+    focusPending.current = false;
+    if (mode === "bo1") deckSelect.current?.focus();
+    else if (mode === "bo3") trioSelect.current?.focus();
+    else joinSubmit.current?.focus();
+  }, [lobby.kind, mode]);
 
   function run(work: () => Promise<void>): void {
     if (busy) return;
@@ -888,6 +939,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
                 <label htmlFor="play-deck">Your deck</label>
                 <select
                   id="play-deck"
+                  ref={deckSelect}
                   className="lobby-select"
                   data-testid={playTestid.deckSelect}
                   value={deck?.id ?? ""}
@@ -917,6 +969,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
                 <label htmlFor="play-trio">Your trio</label>
                 <select
                   id="play-trio"
+                  ref={trioSelect}
                   className="lobby-select"
                   data-testid={playTestid.trioSelect}
                   value={trio?.id ?? ""}
@@ -1005,7 +1058,12 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
                     setJoinCode(event.target.value);
                   }}
                 />
-                <button type="submit" data-testid={playTestid.joinSubmit} disabled={busy || noChoice || locked}>
+                <button
+                  type="submit"
+                  ref={joinSubmit}
+                  data-testid={playTestid.joinSubmit}
+                  disabled={busy || noChoice || locked}
+                >
                   Join
                 </button>
               </div>
