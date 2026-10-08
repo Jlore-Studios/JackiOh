@@ -2,7 +2,6 @@ name: Patch
 description: A numbered release of the game (cards, rules, the client, the server's features) that is more than one fix or tweak.
 title: "Patch v0.3.X: "
 labels: ["patch"]
-type: Task
 body:
   - type: markdown
     attributes:
@@ -11,8 +10,7 @@ body:
 
         - **Title:** `Patch v0.3.X: <what it does>`, a short phrase. Keep the `X`: the branch that makes the patch's pending fragment names the number (Version numbers). A part of a multi-part patch is `Patch v0.3.X (part n of m): …`, a sub-issue of its tracker.
         - **Small?** One fix, one card's numbers or text, or one cosmetic or client tweak, with no new mechanic, keyword, ruling set or feature, is a micro patch: use the Micro patch form instead.
-        - **Type:** this form sets Task. Change it to Feature for something new for players (a mode, a screen, a system).
-        - **Who does it:** when it is ready, label it `method:manual` (people) or `method:use-bot` (the night bot). Triage reads it two minutes later, so set a difficulty and a priority first if you have them.
+        - **Who does it:** choose below, or later label it `method:manual` (people) or `method:use-bot` (the night bot). Either way triage classifies it: its type (Task, Bug or Feature), labels, title and assignees. The difficulty and priority you choose here become labels too; with no difficulty, the bot's planner rates it.
   - type: textarea
     id: what
     attributes:
@@ -40,7 +38,7 @@ body:
     id: difficulty
     attributes:
       label: Difficulty (a guess)
-      description: The weakest model tier that may build it. Set the matching `difficulty:*` label to make it binding; with none, the bot's planner rates it.
+      description: The weakest model tier that may build it. A choice here becomes its `difficulty:*` label; with none, the bot's planner rates it.
       options:
         - Not sure (the planner rates it)
         - "easy: small, one crate or app, no engine, AI, catalog, card or migration work"
@@ -51,10 +49,20 @@ body:
     id: priority
     attributes:
       label: Priority
-      description: The night bot's pickup order. Set the matching `priority:*` label too.
+      description: The night bot's pickup order; a choice here becomes its `priority:*` label.
       options:
         - No priority
         - high
         - medium
         - low
+      default: 0
+  - type: dropdown
+    id: method
+    attributes:
+      label: Who does it
+      description: "A choice here is a method label: triage then labels, titles, types and assigns the issue, and the night bot queues a `method:use-bot` one. Or decide later and add `method:manual` or `method:use-bot` yourself."
+      options:
+        - Decide later
+        - People (method:manual)
+        - The night bot (method:use-bot)
       default: 0

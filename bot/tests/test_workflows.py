@@ -278,16 +278,16 @@ class TriageWorkflowTests(unittest.TestCase):
         return dict(re.findall(r"^\s+([\w-]+):\s*(\w+)", block, re.M))
 
     def test_issues_on_a_method_label_pull_requests_when_opened_never_their_code(self):
-        self.assertRegex(self.text, r"issues:\n\s+types: \[labeled\]")
+        self.assertRegex(self.text, r"issues:\n\s+types: \[labeled, opened\]")
         self.assertRegex(self.text, r"pull_request_target:\n\s+types: \[opened\]")
         # A person can call it on any thread by number; the gate reads that thread read-only.
         self.assertRegex(self.text, r"workflow_dispatch:\n\s+inputs:\n\s+number:")
         self.assertIn("|| inputs.number }}", self.text)
         self.assertNotRegex(self.text, r"^  pull_request:", "would run the pull request's code")
         refs = re.findall(r"ref: (.*)", self.text)
-        self.assertEqual(len(refs), 3)
+        self.assertEqual(len(refs), 4)
         self.assertTrue(all("default_branch" in ref for ref in refs), refs)
-        self.assertEqual(self.text.count("persist-credentials: false"), 3)
+        self.assertEqual(self.text.count("persist-credentials: false"), 4)
         self.assertNotIn("secrets.", self.text)
 
     def test_a_label_that_is_no_method_label_never_cancels_the_method_run(self):
@@ -316,8 +316,25 @@ class TriageWorkflowTests(unittest.TestCase):
                          {"contents": "read", "issues": "write", "pull-requests": "write"})
         self.assertIn("always() && needs.gate.outputs.go == 'true'", job(self.text, "apply"))
 
+    def test_an_issue_forms_answers_become_labels_and_start_triage(self):
+        """#187: a trusted person's form issue gets its dropdowns as labels (`form_labels`), the
+        method last, then a dispatch of triage, since labels this workflow's token puts on start
+        no workflow. The body reaches Python through the environment, never the script."""
+        form = job(self.text, "form")
+        self.assertIn("github.event.action == 'opened'", form)
+        self.assertIn("""contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), """
+                      "github.event.issue.author_association)", form)
+        self.assertEqual(self.grants("form"),
+                         {"contents": "read", "issues": "write", "actions": "write"})
+        self.assertIn("BODY: ${{ github.event.issue.body }}", form)
+        self.assertEqual(self.text.count("github.event.issue.body"), 1)
+        self.assertIn("from harness.triage import form_labels", form)
+        self.assertIn('gh workflow run triage.yml -R "$REPO" --ref "$DEFAULT_BRANCH" -f number="$NUMBER"',
+                      form)
+        self.assertLess(form.index("--add-label \"$label\""), form.index("--add-label \"$method\""))
+
     def test_every_job_has_a_timeout_and_actionlint_reads_it(self):
-        for name in ("gate", "classify", "apply"):
+        for name in ("gate", "classify", "apply", "form"):
             self.assertIn("timeout-minutes:", job(self.text, name), name)
         self.assertIn(".github/workflows/triage.yml", read("bot-selftest.yml"))
 
