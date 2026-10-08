@@ -4791,14 +4791,18 @@
         {
           "at": "2026-10-08T10:44:15Z",
           "minutes": 20.4
+        },
+        {
+          "at": "2026-10-08T11:23:57Z",
+          "minutes": 22.1
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-08T13:00:00Z",
-          "utilization": 0.63
+          "utilization": 0.84
         },
-        "observed_at": "2026-10-08T10:44:15Z",
+        "observed_at": "2026-10-08T11:23:57Z",
         "status": "allowed"
       }
     },
