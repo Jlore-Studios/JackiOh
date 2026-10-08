@@ -37,6 +37,11 @@
 // runs, and a test that failed half-way must not poison the next one. Each `it` also ends by taking
 // both accounts out of whatever it made.
 //
+// LEAVING THE LOBBY (R765). The All Random game is also the one that proves the queue follows the
+// player: the browser leaves `/play` for the main menu while it is queued and is taken to the board
+// when seat two's ticket pairs with it, then leaves the board, finds the main menu's banner and
+// rejoins through it, and once the game is over the banner is gone.
+//
 // Needs: M6 and M7 (server, match actor, queue, results) and TASK 1's modes, series and lobby, against
 // the `E2E=1` server and a `build:e2e` client. See e2e/README.md.
 
@@ -58,6 +63,9 @@ import {
   type E2EAccount,
 } from "../../support/config.ts";
 import {
+  LIVE_GAME_BANNER,
+  LIVE_GAME_REJOIN,
+  NAV_BACK,
   PLAY_CREATE_ROOM,
   PLAY_DECK_SELECT,
   PLAY_QUEUE,
@@ -391,10 +399,11 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
     me(seatTwo).its("currentMatchId").should("eq", null);
   });
 
-  it("All Random needs no saved deck: both players are dealt one (R258)", () => {
+  it("All Random needs no saved deck: both players are dealt one (R258); the queue takes the player to it from the main menu, whose banner rejoins it while it is live (R765)", () => {
     const seed = seedFor("19-random");
     const seatOne = accounts.p1();
     const seatTwo = accounts.p2();
+    let matchId = "";
 
     // Neither player has a single saved deck.
     cy.clearDecks(seatOne);
@@ -408,6 +417,11 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
     cy.get(ts(PLAY_TRIO_SELECT)).should("not.exist");
     findMatch();
 
+    // R765: the ticket waits on the server, so the player may leave the lobby while it does. The
+    // pairing finds them on the main menu.
+    cy.get(ts(NAV_BACK)).click();
+    cy.location("pathname").should("eq", "/");
+
     cy.then(() => {
       enqueue(seatTwo, { mode: "random", seed }).should((response) => {
         expect(response.status, "R258: All Random is queued with no deck at all").to.eq(200);
@@ -415,7 +429,8 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       });
     });
 
-    landedOn(MATCH_PATH, PAIRING_TIMEOUT_MS).then((matchId) => {
+    landedOn(MATCH_PATH, PAIRING_TIMEOUT_MS).then((id) => {
+      matchId = id;
       cy.wsPlayer({ action: "connect", name: SEAT_TWO, url: server.ws(), token: seatTwo.token, matchId }).then(
         (result) => {
           const hand = socketHand(result.view);
@@ -429,12 +444,27 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
     });
     browserHand().should("have.length.at.least", constants.OPENING_DRAW[0]);
 
+    // R765: away from the board while the match is live (the mulligan's picker covers the board's
+    // Back, so the player opens the main menu itself), the main menu says so, and Rejoin goes back
+    // to it as a reconnect does (§9.5): the same match, the same hand.
+    cy.visit("/");
+    cy.then(() => {
+      cy.get(ts(LIVE_GAME_BANNER), { timeout: timeouts.view }).should("have.attr", "data-kind", "match");
+      cy.get(ts(LIVE_GAME_REJOIN)).should("have.attr", "href", `/match/${matchId}`).click();
+      cy.location("pathname").should("eq", `/match/${matchId}`);
+    });
+    browserHand().should("have.length.at.least", constants.OPENING_DRAW[0]);
+
     // Seat two concedes: the other half of this file's level endings.
     cy.then(() => {
       seatTwoConcedes();
     });
     cy.get(ts(RESULT_OVERLAY), { timeout: timeouts.view }).should("contain.text", "Win");
     me(seatOne).its("currentMatchId").should("eq", null);
+    // The game is over, so the main menu, once it has read the account, offers no way back into it.
+    cy.visit("/");
+    cy.get(`[data-testid="landing"][data-account="signed-in"]`, { timeout: timeouts.view }).should("exist");
+    cy.get(ts(LIVE_GAME_BANNER)).should("not.exist");
   });
 
   it("a Conquest series: sealed picks, the picked decks, won decks locked, the last deck picked for you, three wins end it and rate it once (R330–R338, R262)", () => {

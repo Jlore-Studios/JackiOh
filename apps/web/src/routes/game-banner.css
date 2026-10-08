@@ -1,0 +1,157 @@
+/* R765: the banner that tops a menu while the player has a game to go back to (GameBanner.tsx), and
+   the "Match found!" notice a pairing shows on any screen but /play.
+
+   Both are the tavern's notice: an even gold hairline and a faint gold wash, as
+   `.tavern.app-shell .notice` draws one (auth/tavern.css). It is spelled out here because the
+   landing page is a tavern without the app shell, and over its hearth the notice needs a dark
+   ground under the wash to stay readable. Scoped under `.tavern`, like everything the tavern adds,
+   with one more element in each selector than the tavern notice it refines. */
+
+.tavern section.notice.game-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--tavern-content);
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(201, 149, 63, 0.45);
+  border-radius: 10px;
+  background:
+    linear-gradient(90deg, rgba(201, 149, 63, 0.14), rgba(201, 149, 63, 0.05)),
+    rgba(18, 11, 7, 0.82);
+  color: color-mix(in srgb, var(--tavern-parchment) 90%, transparent);
+  line-height: 1.45;
+  text-align: left;
+}
+
+.tavern .game-banner .game-banner__text {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.tavern .game-banner .game-banner__title {
+  margin: 0;
+  color: var(--tavern-gold-pale);
+  font-family: var(--tavern-serif);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.tavern .game-banner .game-banner__body {
+  margin: 2px 0 0;
+  color: inherit;
+  font-size: 14px;
+}
+
+/* The way back: the tavern's gold call to action (`button-primary`), sized for a notice rather than a
+   screen. The extra element and classes outrank tavern.css's `.tavern.app-shell button.button-primary`
+   and its states, and index.css's `.button-primary`, on the practice menu and the landing alike. */
+.tavern section.game-banner > .game-banner__action.button-primary {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 20px;
+  border: 2px solid #6b4212;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #fff0bf 0%, var(--tavern-gold) 42%, #dc9b33 58%, #a86a1f 100%);
+  color: var(--tavern-ink);
+  font-family: var(--tavern-serif);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  text-decoration: none;
+  text-shadow: 0 1px 0 rgba(255, 246, 214, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.2),
+    0 3px 0 #4a2a0e,
+    0 8px 16px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  transition: transform 90ms ease-out, filter 140ms ease-out;
+}
+
+.tavern section.game-banner > .game-banner__action.button-primary:hover,
+.tavern section.game-banner > .game-banner__action.button-primary:hover:not(:disabled) {
+  border-color: #6b4212;
+  background: linear-gradient(180deg, #fff0bf 0%, var(--tavern-gold) 42%, #dc9b33 58%, #a86a1f 100%);
+  color: var(--tavern-ink);
+  filter: brightness(1.07);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.2),
+    0 3px 0 #4a2a0e,
+    0 8px 16px rgba(0, 0, 0, 0.45),
+    0 0 22px rgba(255, 179, 71, 0.45);
+}
+
+.tavern section.game-banner > .game-banner__action.button-primary:active,
+.tavern section.game-banner > .game-banner__action.button-primary:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2),
+    0 1px 0 #4a2a0e,
+    0 4px 10px rgba(0, 0, 0, 0.45);
+}
+
+.tavern section.game-banner > .game-banner__action.button-primary:focus-visible {
+  outline: 2px solid var(--tavern-gold-pale);
+  outline-offset: 3px;
+}
+
+/* On a phone the way back takes the whole width under the words, an easy thumb target. */
+@media (max-width: 520px) {
+  .tavern section.game-banner > .game-banner__action.button-primary {
+    flex: 1 1 100%;
+  }
+}
+
+/* ---- "Match found!" over any screen ------------------------------------------------------ */
+
+.tavern.queue-found {
+  position: fixed;
+  z-index: 90;
+  top: max(12px, env(safe-area-inset-top));
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.tavern.queue-found .queue-found__notice {
+  max-width: 480px;
+  margin: 0;
+  padding: 12px 18px;
+  border: 1px solid var(--tavern-gold);
+  border-radius: 10px;
+  background:
+    linear-gradient(90deg, rgba(201, 149, 63, 0.2), rgba(201, 149, 63, 0.08)),
+    rgba(18, 11, 7, 0.95);
+  color: var(--tavern-parchment);
+  font-weight: 700;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tavern.queue-found .queue-found__notice {
+    animation: queue-found-in calc(180ms * var(--anim-scale, 1)) ease-out both;
+  }
+}
+
+@keyframes queue-found-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}

@@ -11,6 +11,9 @@
 // beat, not a minute: a sleeping server can take most of one to wake, so after
 // `GATE_SLOW_NOTICE_SECONDS` the corner offers what this device's own storage says (Account when it
 // holds a session, else Sign in) without waiting for the server's answer.
+//
+// R765: the same read says whether the player is in an online game. While they are, a banner tops
+// the page with the way back to it (`GameBanner.tsx`, kept current by `net/liveGame.ts`).
 
 import { Suspense, lazy, useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -24,6 +27,7 @@ import { CardFace } from "../cards/CardFace.tsx";
 import { useInspectTrigger } from "../cards/inspect/useInspectTrigger.tsx";
 import { faceModel } from "../cards/model.ts";
 import { useAccount, type Account } from "../net/gate.ts";
+import { useLiveGame } from "../net/liveGame.ts";
 import { useSettingsAccountSync } from "../settings/accountSync.ts";
 import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
@@ -42,6 +46,7 @@ import {
   type FanFace,
   type RandomSource,
 } from "./landingFan.ts";
+import { LiveGameBanner } from "./GameBanner.tsx";
 import { followInApp } from "./nav.tsx";
 import { SiteFooter } from "./SiteFooter.tsx";
 
@@ -408,6 +413,8 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
   const account = useAccount();
   // R634: the first screen most visits see keeps an active account's settings level with this device's.
   useSettingsAccountSync(account);
+  // R765: the player's live online game, for the banner at the top.
+  const liveGame = useLiveGame(account);
   const motion = useMotion();
   // R374: one deal per visit — per mount of the page. R639: a device that has logged enough games
   // deals from every shipped set instead of Core alone, favouring cards that print at full size.
@@ -461,6 +468,12 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
             <SettingsButton placement="nav" />
           </div>
         </header>
+
+        {liveGame === null ? null : (
+          <div className="landing-banners">
+            <LiveGameBanner game={liveGame} />
+          </div>
+        )}
 
         <div className="landing-hero-inner">
           <div className="landing-title-block">
