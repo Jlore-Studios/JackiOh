@@ -4254,11 +4254,8 @@
     "what": "plan #530 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-08T19:58:07Z",
-    "notes": [
-      "created the label `bot:fullsend`",
-      "created the label `bot:tree`"
-    ],
+    "at": "2026-10-08T20:08:54Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
