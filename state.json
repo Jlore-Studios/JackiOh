@@ -2793,10 +2793,7 @@
       "run_id": "37747314725",
       "started_at": "2026-10-08T08:03:53Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6055457390",
-        "c:6055475844"
-      ]
+      "taken_asks": []
     },
     "44": {
       "action": "build",
