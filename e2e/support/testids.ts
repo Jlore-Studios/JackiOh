@@ -608,10 +608,30 @@ export const PRACTICE_NEW_GAME = "practice-new-game";
 export const PRACTICE_MENU = "practice-menu";
 /** "Leave this game?": the confirmation PRACTICE_NEW_GAME or PRACTICE_MENU opens while a game is in progress. */
 export const PRACTICE_LEAVE = "practice-leave";
-/** In the confirmation: abandon the game and go back to setup. */
+/**
+ * In the confirmation: abandon the game ("Leave without saving" for a free game, R765; "Leave game"
+ * for a lesson) and go where PRACTICE_NEW_GAME or PRACTICE_MENU goes.
+ */
 export const PRACTICE_LEAVE_CONFIRM = "practice-leave-confirm";
+/** R765: in a free game's confirmation, "Save and leave": keep the game for the practice menu's banner. */
+export const PRACTICE_LEAVE_SAVE = "practice-leave-save";
 /** In the confirmation: close it and carry on. */
 export const PRACTICE_LEAVE_STAY = "practice-leave-stay";
+/** R765: on the setup, after the banner's Resume found no game to pick up; role="status". */
+export const PRACTICE_RESUME_LOST = "practice-resume-lost";
+/** R765: atop the setup while a game left with Save and leave is kept; `data-difficulty`. */
+export const PRACTICE_RESUME_BANNER = "practice-resume-banner";
+/** R765: in PRACTICE_RESUME_BANNER, back into that game. */
+export const PRACTICE_RESUME = "practice-resume";
+/**
+ * R765: atop the landing page and the practice setup while the player's online game is live;
+ * `data-kind="match|series"`. `apps/web/src/routes/GameBanner.tsx`'s `gameBannerTestid`.
+ */
+export const LIVE_GAME_BANNER = "live-game-banner";
+/** R765: in LIVE_GAME_BANNER, a link back to the board (or the series screen between games). */
+export const LIVE_GAME_REJOIN = "live-game-rejoin";
+/** R765: "Match found!" over any screen but `/play`, while the queue's pairing takes the player there. */
+export const QUEUE_FOUND = "queue-found";
 /** The end-of-game dialog; data-outcome="win|loss|draw". */
 export const PRACTICE_RESULT = "practice-result";
 /** In the result dialog: the same difficulty and deck again, with a fresh seed and seat. */

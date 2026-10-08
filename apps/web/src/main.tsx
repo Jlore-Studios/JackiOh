@@ -34,6 +34,11 @@
 // EMAILED LINKS ON ANY PATH (R193). Before the route switch runs, a link is scrubbed from the
 // address bar, on `/login` too (whose screen is a lazy chunk that may be slow or fail to load), and
 // one that landed anywhere else (Supabase's Site URL fallback) is handed to `/login`.
+//
+// THE QUEUE FOLLOWS THE PLAYER (R765). A player queued on `/play` may go anywhere in the client while
+// they wait. The route table's own `useQueueFollow` (`net/liveGame.ts`) watches the account on every
+// screen but `/play`, which watches for itself, and when the queue pairs them it says so over the
+// screen (`QueueFound`) and takes them to the game.
 
 import {
   Component,
@@ -53,6 +58,7 @@ import { useSecondsUntil } from "./auth/cooldown.ts";
 import { adoptAuthRedirect, sessionIdFromToken } from "./auth/redirect.ts";
 import { shellTestid } from "./auth/testids.ts";
 import { useAccount, type Account } from "./net/gate.ts";
+import { useQueueFollow } from "./net/liveGame.ts";
 import { useSettingsAccountSync } from "./settings/accountSync.ts";
 import {
   SITE_ORIGIN,
@@ -68,6 +74,7 @@ import type { MeResponse } from "./net/api.ts";
 // Static, not lazy: the gate's own panels offer "Sign out", which must work synchronously from a
 // screen that failed to load anything else, so account.tsx is in the entry chunk either way.
 import AccountRoute, { signOut, signOutLabel, useSigningOut } from "./routes/account.tsx";
+import { QueueFound } from "./routes/GameBanner.tsx";
 import LandingRoute from "./routes/landing.tsx";
 import { followInApp } from "./routes/nav.tsx";
 import { readSettings } from "./settings/store.ts";
@@ -478,6 +485,8 @@ export function App(): ReactElement {
   useState(() => adoptAuthRedirect(paths.login));
   const path = usePathname();
   useDocumentHead(path);
+  // R765: a pairing finds the player on any screen; see THE QUEUE FOLLOWS THE PLAYER above.
+  const found = useQueueFollow(path);
 
   const route = ((): ReactElement => {
     if (path === paths.landing) return <LandingRoute />;
@@ -541,9 +550,12 @@ export function App(): ReactElement {
 
   // Keyed by the path, so moving to another screen clears a failed load's panel.
   return (
-    <RouteErrorBoundary key={path}>
-      <Suspense fallback={<Loading what="Loading…" slow />}>{route}</Suspense>
-    </RouteErrorBoundary>
+    <>
+      <RouteErrorBoundary key={path}>
+        <Suspense fallback={<Loading what="Loading…" slow />}>{route}</Suspense>
+      </RouteErrorBoundary>
+      <QueueFound game={found} />
+    </>
   );
 }
 

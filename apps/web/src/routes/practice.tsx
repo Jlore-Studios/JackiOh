@@ -24,6 +24,10 @@
 //
 // With none of the params that start a game, a free game left in progress on this device (a reload,
 // a closed tab) picks up where it was (R668, `practice/resume.ts`); one that starts a game discards it.
+// R765: a free game's "New game" and "Menu" offer Save and leave as well as Leave without saving. A
+// game saved that way is not picked up on the next visit: the setup shows, topped by a banner that
+// offers it back (Resume), and starting any other game from here ends it. While the player's online
+// game is live, a banner offers the way back to that too (`net/liveGame.ts`, `GameBanner.tsx`).
 
 import {
   useCallback,
@@ -43,9 +47,11 @@ import Game from "../game/Game.tsx";
 import { reducedMotionNow } from "../game/animations.ts";
 import { getFxSettings } from "../fx/settings.ts";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
-import { getDecks, type DecksResponse } from "../net/api.ts";
+import { getDecks, getMe, type DecksResponse, type MeResponse } from "../net/api.ts";
 import { useAccount, type Account } from "../net/gate.ts";
+import { useLiveGame } from "../net/liveGame.ts";
 import { navigate, paths } from "../net/navigate.ts";
+import { GameBanner, LiveGameBanner, gameBannerTestid } from "./GameBanner.tsx";
 import { BackLink } from "./nav.tsx";
 import {
   PRACTICE_DEFAULT_DIFFICULTY,
@@ -69,7 +75,7 @@ import { deckChoiceFromValue, deckChoiceValue, isAutostartDeckValue, isDeckValue
 import { createPracticeHost, type PracticeHost } from "../practice/host.ts";
 import { usePracticeEmotes } from "../practice/emotes.ts";
 import type { PracticeDebug, PracticeDeckChoice, PracticeStartConfig } from "../practice/protocol.ts";
-import { clearPracticeResume, readPracticeResume } from "../practice/resume.ts";
+import { clearPracticeResume, readPracticeResumeState, writePracticeResume } from "../practice/resume.ts";
 import { ModifierList } from "../practice/ModifierList.tsx";
 import { PracticeLeave, type PracticeLeaveTo } from "../practice/PracticeLeave.tsx";
 import { OUTCOME_TITLE, PracticeResult, outcomeOf } from "../practice/PracticeResult.tsx";
@@ -446,6 +452,8 @@ export type PracticeRouteProps = {
   tutorialAccount?: TutorialAccountApi;
   /** default the lessons' own coach scripts (`tutorial/scripts`) */
   coachScript?: (lessonId: string) => LessonScript | undefined;
+  /** default `GET /api/auth/me`: R765's re-read of the player's live online game, for its banner */
+  loadMe?: (token: string) => Promise<MeResponse>;
 };
 
 type ScreenProps = Omit<PracticeRouteProps, "account"> & { account: Account };
@@ -471,6 +479,7 @@ function PracticeScreen({
   loadDecks,
   tutorialAccount,
   coachScript,
+  loadMe,
 }: ScreenProps): ReactElement {
   const params = useMemo(() => readPracticeParams(window.location.search), []);
   const saved = useSavedDecks(account, loadDecks ?? getDecks);
@@ -489,15 +498,28 @@ function PracticeScreen({
 
   /**
    * R668: the free game this device left in progress, read once; a URL that starts a game wins, and
-   * that game's own deal replaces it.
+   * that game's own deal replaces it. R765: a game the player was in is picked up at once; one they
+   * left with Save and leave waits on the setup's banner.
    */
-  const resumeFrom = useRef<PracticeStartConfig | null>(null);
-  /** The game to play, fixed (seed and seat included) when it is chosen; null shows the setup. */
-  const [game, setGame] = useState<PracticeStartConfig | null>(() => {
+  const [arrival] = useState(() => {
     const autostart = autostartConfig(params);
-    resumeFrom.current = autostart === null ? readPracticeResume() : null;
-    return autostart ?? resumeFrom.current;
+    const kept = autostart === null ? readPracticeResumeState() : null;
+    return { autostart, kept };
   });
+  /** The game being picked up again (R668, R765); compared by identity with `game`. */
+  const resumeFrom = useRef<PracticeStartConfig | null>(
+    arrival.kept !== null && !arrival.kept.saved ? arrival.kept.config : null,
+  );
+  /** The game to play, fixed (seed and seat included) when it is chosen; null shows the setup. */
+  const [game, setGame] = useState<PracticeStartConfig | null>(() => arrival.autostart ?? resumeFrom.current);
+  /** R765: the game kept with Save and leave, which the setup's banner offers back; null when none. */
+  const [savedGame, setSavedGame] = useState<PracticeStartConfig | null>(() =>
+    arrival.kept !== null && arrival.kept.saved ? arrival.kept.config : null,
+  );
+  /** R765: the banner's Resume found nothing to fold, and the setup says so. */
+  const [resumeLost, setResumeLost] = useState(false);
+  /** The live online game, for the banner beside the practice one (R765). */
+  const liveGame = useLiveGame(account, loadMe ?? getMe);
   const [controller, setController] = useState<PracticeController | null>(null);
   /** A lesson's coach, fed by the controller from its first snapshot on; null for a practice game. */
   const [tracker, setTracker] = useState<CoachTracker | null>(null);
@@ -538,9 +560,13 @@ function PracticeScreen({
   // no game to show a failure for: the player lands on the setup, as on a fresh visit.
   // A failure later in the resumed game, with a board already shown, is reported like any other.
   const resumeFailed = state.phase === "failed" && state.snapshot === null && game !== null && resumeFrom.current === game;
+  /** R765: whether the resume in flight was asked for by the banner's Resume, which then says it failed. */
+  const resumeAsked = useRef(false);
   useEffect(() => {
     if (!resumeFailed) return;
     resumeFrom.current = null;
+    setResumeLost(resumeAsked.current);
+    resumeAsked.current = false;
     setGame(null);
   }, [resumeFailed]);
   const startedDefs = state.defs;
@@ -581,18 +607,40 @@ function PracticeScreen({
   // The tutorial's own handle for the e2e lesson spec (tutorial/devHandle.ts), under the same rule.
   useTutorialDevHandle(tracker, game?.lesson ?? null);
 
+  /** R765: starting any game from here ends the one kept with Save and leave. */
+  const dropSavedGame = useCallback(() => {
+    clearPracticeResume();
+    setSavedGame(null);
+    setResumeLost(false);
+  }, []);
+
   const onStart = useCallback(
     (choice: PracticeSetupChoice) => {
       writeStoredSetup(choice.difficulty, choice.deck);
+      dropSavedGame();
       setGame(configFor(choice, params));
     },
-    [params],
+    [params, dropSavedGame],
   );
 
   /** A lesson always plays on its own seed and seat, from the path, the URL or its result dialog. */
-  const onStartLesson = useCallback((lesson: TutorialLesson) => {
-    setGame(lessonStartConfig(lesson));
-  }, []);
+  const onStartLesson = useCallback(
+    (lesson: TutorialLesson) => {
+      dropSavedGame();
+      setGame(lessonStartConfig(lesson));
+    },
+    [dropSavedGame],
+  );
+
+  /** R765: the banner's Resume: the saved game picked up as a reload would pick it up (R668). */
+  const onResume = useCallback(() => {
+    if (savedGame === null) return;
+    resumeFrom.current = savedGame;
+    resumeAsked.current = true;
+    setSavedGame(null);
+    setResumeLost(false);
+    setGame(savedGame);
+  }, [savedGame]);
 
   /**
    * "New game" or "Menu" in the middle of a game asks first. The question belongs to the game it
@@ -609,7 +657,7 @@ function PracticeScreen({
     setLeaveAskedFor(null);
   }, []);
 
-  // Leaving a game gives it up (R668): no reload brings it back.
+  // Leaving a game without saving it gives it up (R668, R765): no reload and no banner brings it back.
   const onNewGame = useCallback(() => {
     setLeaveAskedFor(null);
     clearPracticeResume();
@@ -621,6 +669,40 @@ function PracticeScreen({
     clearPracticeResume();
     navigate(paths.landing);
   }, []);
+
+  /**
+   * R765: Save and leave keeps the game where it is (the worker's save is already its last answer)
+   * and marks it left on purpose, so the next `/practice` shows the setup with its banner instead of
+   * picking it up.
+   */
+  const onSaveAndLeave = useCallback(() => {
+    if (leaveAskedFor === null) return;
+    const { game: left, to } = leaveAskedFor;
+    setLeaveAskedFor(null);
+    writePracticeResume(left, { saved: true });
+    if (to === "menu") {
+      navigate(paths.landing);
+      return;
+    }
+    setSavedGame(left);
+    setGame(null);
+  }, [leaveAskedFor]);
+
+  /**
+   * The loading screen's way back. A start in flight is given up; a resume in flight is not the
+   * player's to lose (R765): its game is kept as saved, and the setup's banner offers it again.
+   */
+  const onBackFromLoading = useCallback(() => {
+    if (game === null || resumeFrom.current !== game) {
+      onNewGame();
+      return;
+    }
+    resumeFrom.current = null;
+    resumeAsked.current = false;
+    writePracticeResume(game, { saved: true });
+    setSavedGame(game);
+    setGame(null);
+  }, [game, onNewGame]);
 
   /** "Exit tutorial" in the middle of a lesson asks first, as "New game" does. */
   const onAskExitLesson = useCallback(() => {
@@ -734,6 +816,27 @@ function PracticeScreen({
         {/* The page's one H1, first in the outline and read, not drawn: Back and the path say where
             the player is. */}
         <h1 className="tutorial-sr-only">Practice</h1>
+        {savedGame === null && liveGame === null && !resumeLost ? null : (
+          <div className="practice-banners">
+            {savedGame === null ? null : (
+              <GameBanner
+                testId={gameBannerTestid.practice}
+                title="Game in progress"
+                action={{ label: "Resume", testId: gameBannerTestid.practiceResume, onPress: onResume }}
+                data={{ difficulty: savedGame.difficulty }}
+              >
+                Your {DIFFICULTY_LABEL[savedGame.difficulty]} game against the AI is saved where you left it.
+                Starting a new game ends it.
+              </GameBanner>
+            )}
+            {resumeLost ? (
+              <p className="notice" data-testid={practiceTestid.resumeLost} role="status">
+                Your saved game could not be picked up again, so it has been dropped.
+              </p>
+            ) : null}
+            <LiveGameBanner game={liveGame} />
+          </div>
+        )}
         <TutorialPath onStart={onStartLesson} />
         <header className="practice-lobby__header" ref={practiceHeader}>
           <h2 className="practice-lobby__title">Practice against the AI</h2>
@@ -781,7 +884,7 @@ function PracticeScreen({
       <Shell variant="lobby">
         {/* A worker that never answers must not trap the page: back to the setup, which has its own
             way out (integration: every screen has a way back). */}
-        <BackLink onPress={onNewGame} />
+        <BackLink onPress={onBackFromLoading} />
         <div className="practice-stage">
           <div className="practice-shuffle" aria-hidden="true">
             <span />
@@ -913,6 +1016,8 @@ function PracticeScreen({
           to={leaveAskedFor.to}
           onStay={onStay}
           onLeave={leaveAskedFor.to === "menu" ? onMenu : onNewGame}
+          // R765: a free game may be kept; a lesson is never kept (R668), so it keeps its own flow.
+          {...(leaveAskedFor.to === "lessons" ? {} : { onSaveAndLeave })}
         />
       ) : null}
       {result === null || resultClosedFor === game || resultReadyFor !== game ? null : coached !== null ? (

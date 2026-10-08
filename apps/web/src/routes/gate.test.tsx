@@ -9,6 +9,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 
+import { readQueued, rememberQueued } from "../net/liveGame.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 
 // `main.tsx` is the app's entry point and mounts itself, except under vitest — see the guard at the
@@ -302,6 +303,36 @@ describe("/match/<id>", () => {
     const url = StubSocket.opened[0] ?? "";
     expect(url).toContain("token=tok-1");
     expect(url).toContain("matchId=m-42");
+  });
+
+  it("R765 a tab queued on /play is taken from any other screen to its game once the queue pairs it", async () => {
+    signedIn("tok-1");
+    rememberQueued("bo1");
+    let paired = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: unknown) => {
+        const url = String(input);
+        if (url.endsWith("/api/auth/me")) {
+          return Promise.resolve(jsonResponse(200, { ...meBody("active"), currentMatchId: paired ? "m-77" : null }));
+        }
+        if (url.endsWith("/api/catalog")) return Promise.resolve(jsonResponse(200, { version: "v1", defs: {} }));
+        return Promise.resolve(jsonResponse(404, { error: { code: "not_found", message: `no stub for ${url}` } }));
+      }),
+    );
+    at("/");
+    render(<App />);
+    expect(await screen.findByTestId("landing", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByTestId("queue-found")).toBeNull();
+
+    paired = true;
+    expect(await screen.findByTestId("queue-found", undefined, { timeout: 10_000 })).toHaveTextContent("Match found!");
+    expect(readQueued(), "paired: out of the queue").toBeNull();
+    await waitFor(() => {
+      expect(pathname()).toBe("/match/m-77");
+    }, SLOW);
+    expect(await screen.findByTestId("match-connecting", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByTestId("queue-found")).toBeNull();
   });
 
   it("a pending account cannot reach a match either (§9.4: 'no ... queue or match')", async () => {
