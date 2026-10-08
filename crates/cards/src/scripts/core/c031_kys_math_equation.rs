@@ -24,13 +24,15 @@
 //! every end of turn for the rest of the game. R429: the return raises the card's own cost (R65:
 //! `costOverride` or printed, plus `costMod`) by 1, but never above (4) — at (4) it adds nothing.
 //!
-//! R429, R766 (issue #557): the climb survives the graveyard. R766 takes every card's price off as it
-//! reaches a graveyard, this one's included, so the card lying there costs its printed (1); but its
-//! own return gives back the `costMod` it was played at, which §10.5 step 7 notes for it as it lands
-//! (`StaticFlags.returnKeepsPrice`, read by `return_price_of`), plus the return's (1), capped at (4).
-//! So it comes back at (2), then (3), then (4), and stays at (4). Its `costOverride` (a "(0)" given in
-//! a hand) is no part of that price and stays gone, and a #31 that reaches its graveyard any other way
-//! (discarded, burned, countered) was never flagged for a return, so nothing is noted for it.
+//! R429, R766 (issues #557, #572): the climb survives the graveyard, and only the climb. R766 takes every
+//! card's price off as it reaches a graveyard, this one's included, so the card lying there costs its
+//! printed (1); but its own return gives back the climb its earlier returns gave it, which it carries
+//! into its play and §10.5 step 7 notes for it as it lands (`StaticFlags.returnKeepsPrice`, read by
+//! `return_price_of`), plus the return's (1), capped at (4). So it comes back at (2), then (3), then
+//! (4), and stays at (4). Any other change to its price — a discount or a surcharge it was played at,
+//! a Degrade's cost step, its `costOverride` (a "(0)" given in a hand) — is no part of that and stays
+//! gone, and a #31 that reaches its graveyard any other way (discarded, burned, countered) was never
+//! flagged for a return, so nothing is noted for it.
 
 use jackioh_engine::prelude::*;
 
@@ -110,7 +112,7 @@ fn blast(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
 }
 
 /// R65 outside a hand: the card's own cost, `costOverride` or printed, plus `costMod`, floored at 0 —
-/// with `carried`, the price its return gives back (R429, R766), added to `costMod`.
+/// with `carried`, the climb its return gives back (R429, R766), added to `costMod`.
 fn own_cost(state: &GameState, self_: &CardInstance, carried: i32) -> i32 {
     (self_.cost_override.unwrap_or_else(|| printed_cost(state, self_)) + self_.cost_mod + carried).max(0)
 }
@@ -129,20 +131,23 @@ fn return_to_hand(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     if !was_played_this_turn(ctx.state, self_.owner, &self_) {
         return vec![];
     }
-    // R429, R766: the `costMod` it was played at, which the graveyard took off it and its return gives
-    // back (noted as its play landed it, `return_price_of`), and the return's +1 on top. R429: never
-    // above (4), so at (4) or more the +1 adds nothing and the price it was played at is all it gets.
+    // R429, R766 (issue #572): the climb its earlier returns gave it, which the graveyard took off it and
+    // its return gives back (noted as its play landed it, `return_price_of`), and the return's +1 on top.
+    // R429: never above (4), so at (4) the +1 adds nothing and the climb it had is all it gets.
     let carried = return_price_of(&self_);
     let raise = RETURN_COST_STEP
         .min(RETURN_COST_CAP - own_cost(ctx.state, &self_, carried))
         .max(0);
     // R78: the price rides on the instance in the hand, until a graveyard takes it off again (R766). It
     // is the price of the return, so it lands only on a card that reached the hand: a full hand burns
-    // the card back to the graveyard (§2.4, R4), which is no return at all.
+    // the card back to the graveyard (§2.4, R4), which is no return at all. `returnPrice` notes it as the
+    // climb beside the `costMod`, so the next return gives back this and nothing else (issue #572).
     let price = carried + raise;
     let mut effects = vec![bounce(json_as(json!({ "target": { "of": "self" } })))];
     if price != 0 {
-        effects.push(set_cost_mod(json_as(json!({ "amount": price, "inHandOnly": true }))));
+        effects.push(set_cost_mod(json_as(
+            json!({ "amount": price, "inHandOnly": true, "returnPrice": true }),
+        )));
     }
     effects
 }
@@ -404,21 +409,52 @@ mod tests {
         }
 
         #[test]
-        fn r429_r766_the_return_never_lifts_its_cost_above_4_from_3_it_reaches_4_and_at_4_or_more_it_adds_nothing() {
+        fn r429_r766_the_return_never_lifts_its_cost_above_4_from_3_it_reaches_4_and_at_4_it_adds_nothing() {
             crate::register_all();
-            // R429, R766 (issue #557): the price the equation was played at comes back with it, so a (3)
-            // equation returns at (4), a (4) one at (4), and a (5) one (a surcharge) keeps its (5): the cap
-            // stops the +1 and never lowers a price.
-            for (raised, back_at) in [(2, 4), (3, 4), (4, 5)] {
+            // R429, R766: two real climbs take the equation to (3); its next return reaches (4), and the
+            // one after that adds nothing (the cap stops the +1).
+            let mut s = board(BoardOptions::default());
+            let equation = s.card("31").clone();
+            climb_once(&mut s, &equation);
+            assert_eq!(climb_once(&mut s, &equation), (2, 3));
+            assert_eq!(climb_once(&mut s, &equation), (3, 4));
+            assert_eq!(climb_once(&mut s, &equation), (4, 4));
+            assert_eq!(return_price_of(s.card(&equation)), 3);
+        }
+
+        #[test]
+        fn r429_r766_a_discount_or_a_surcharge_it_was_played_at_stays_behind_it_returns_at_printed_plus_its_climb() {
+            crate::register_all();
+            // R766, issue #572: its return gives back only the climb its own returns gave it. A price put
+            // on it any other way (here a `costMod` it starts in hand with: a discount, a cost step, a
+            // surcharge) stays behind in the graveyard, so a first return is (1) + (1) whatever it cost.
+            for raised in [-1, 2, 4] {
                 let mut s = board(BoardOptions {
                     cost_mod: Some(raised),
                     ..BoardOptions::default()
                 });
                 s.play("31", at_enemy_hero());
-                s.expect_mana(P1, 10 - (1 + raised));
+                s.expect_mana(P1, 10 - (1 + raised).max(0));
+                assert_eq!(return_price_of(s.card("31")), 0);
                 s.end_turn();
                 s.expect_in_zone("31", "hand");
-                assert_eq!(effective_cost(s.state(), s.card("31"), Default::default()), back_at);
+                assert_eq!(effective_cost(s.state(), s.card("31"), Default::default()), 2);
+                assert_eq!(return_price_of(s.card("31")), 1);
+            }
+
+            // A climbed equation, back at (2), changed in hand by (1) less or by (2) more: it is played at
+            // (1) or (4), and either way its return gives back its climb of (1) and adds (1): (3).
+            for change in [-1, 2] {
+                let mut s = board(BoardOptions::default());
+                let equation = s.card("31").clone();
+                assert_eq!(climb_once(&mut s, &equation), (1, 2));
+                find_instance_mut(s.state_mut(), &equation.id)
+                    .expect("the equation in hand")
+                    .cost_mod += change;
+                let (paid, back_at) = climb_once(&mut s, &equation);
+                assert_eq!(paid, 2 + change);
+                assert_eq!(back_at, 3);
+                assert_eq!(s.card(&equation).cost_mod, 2);
             }
         }
 
@@ -438,7 +474,7 @@ mod tests {
         }
 
         #[test]
-        fn r429_r766_lying_in_its_graveyard_it_costs_its_printed_1_and_the_price_it_was_played_at_waits_for_its_return() {
+        fn r429_r766_lying_in_its_graveyard_it_costs_its_printed_1_and_the_climb_it_was_played_at_waits_for_its_return() {
             crate::register_all();
             let mut s = play_and_come_back(board(BoardOptions::default()));
             let equation = s.card("31").clone();
@@ -451,14 +487,15 @@ mod tests {
             s.expect_in_zone(&equation, "graveyard");
             assert_eq!(s.card(&equation).cost_mod, 0);
             assert_eq!(effective_cost(s.state(), s.card(&equation), Default::default()), 1);
-            // ...and the (2) it was played at, its `costMod` of 1, waits for its own return.
+            // ...and the climb it was played at, the (1) its first return gave it, waits for its own return.
             assert_eq!(return_price_of(s.card(&equation)), 1);
 
             s.end_turn();
 
             s.expect_in_zone(&equation, "hand");
             assert_eq!(effective_cost(s.state(), s.card(&equation), Default::default()), 3);
-            assert_eq!(return_price_of(s.card(&equation)), 0);
+            // Back in hand it carries its climb, now (2), into its next play (issue #572).
+            assert_eq!(return_price_of(s.card(&equation)), 2);
         }
 
         #[test]
@@ -494,8 +531,8 @@ mod tests {
         #[test]
         fn r4_r429_r766_a_full_hand_burns_the_return_and_the_price_it_was_played_at_goes_with_it() {
             crate::register_all();
-            // A (3) equation whose return a full hand burns: the price it was played at was the return's
-            // to give, and there was no return, so it lies in the graveyard at its printed (1) (§2.4).
+            // A (3) equation whose return a full hand burns: there was no return, so it lies in the graveyard
+            // at its printed (1) (§2.4), and its price (no climb of its own) is gone with the rest (R766).
             let mut hand = vec![json!({ "def": "31", "costMod": 2 }), json!("5")];
             hand.extend(std::iter::repeat_n(json!("15"), 8));
             let mut s = scenario(json!({
