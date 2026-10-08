@@ -18,6 +18,8 @@
 //!    does not come back at the end of a later turn it was not played on.
 //!  - R215 (round 8, lens "engine invariants"): radiant #52's "costing 0" is announced with a
 //!    `costChanged` once the card has landed, as #31's +1 and #72r's 0 are (§10.3).
+//!  - R766, R429 (issue #557): a return Spell played at a price comes back at its printed cost (#23),
+//!    except #31, whose own return gives back the price it was played at, plus (1), to (4).
 //!
 //! Port of `packages/cards/test/hand-returns.test.ts` (SURFACE §4.1, §8). TS's live card objects are
 //! owned copies here, read back from the state by id after every step and written through
@@ -463,5 +465,49 @@ mod r215_10_3_a_price_given_as_a_card_reaches_a_hand_is_announced {
             hidden_from: None,
         };
         assert!(s.last_events()[bounced..].contains(&announced));
+    }
+}
+
+mod r766_r429_only_kys_math_equations_own_return_gives_back_the_price_it_was_played_at {
+    use super::*;
+
+    /// p1 plays `def` from its hand at a `costMod` of 2 (a (3) card), the turn ends and the card has
+    /// made its end-of-turn return: its `costMod` and what it costs back in hand.
+    fn returned_at_a_price_of_2(def: &str, opts: Value) -> (i32, i32) {
+        let mut g = scenario(json!({
+            "p1": {
+                "hand": [{ "def": def, "costMod": 2 }],
+                "field": [TIMMY],
+                "mana": 10,
+                "library": [VANILLA, VANILLA, VANILLA, VANILLA],
+            },
+            "p2": { "field": [TIMMY], "library": [VANILLA, VANILLA, VANILLA, VANILLA] },
+        }));
+        let card = g.card(def).clone();
+        assert_eq!(effective_cost(g.state(), g.card(&card.id), Default::default()), 3);
+        g.play(&card.id, opts);
+        g.expect_mana(P1, 7);
+        g.end_turn();
+        g.expect_in_zone(&card.id, "hand");
+        (
+            g.card(&card.id).cost_mod,
+            effective_cost(g.state(), g.card(&card.id), Default::default()),
+        )
+    }
+
+    #[test]
+    fn r766_a_reoccurring_dream_played_at_3_returns_at_its_printed_1_its_price_left_in_the_graveyard_23() {
+        // Another Spell with §5.1's end-of-turn return: R766's reset is all it gets.
+        assert_eq!(returned_at_a_price_of_2(DREAM, json!({})), (0, 1));
+    }
+
+    #[test]
+    fn r429_r766_a_kys_math_equation_played_at_3_returns_at_4_its_own_return_gives_the_price_back_31() {
+        // The one exception (issue #557): #31's return gives back the price it was played at, plus (1),
+        // to a maximum of (4).
+        assert_eq!(
+            returned_at_a_price_of_2(KY_MATH, json!({ "targets": at_p2() })),
+            (3, 4)
+        );
     }
 }
