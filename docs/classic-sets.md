@@ -489,6 +489,11 @@ Edition), and the AI card Fine-Tuning (B8).
    and never deletes it); a threshold ("the 3rd card", "(4)+ Mana") moves toward harder for a
    Degrade. Every Classic and Classic+ card's numbers are listed in its entry below. Core cards can
    declare theirs in the same patch or later; until then their Degrade simply has fewer options.
+   Since then a number may also say where it is tuned: `tunedOn: "radiant"` or `"base"` for a number
+   only that face prints, which the other face never draws and reads as printed (R749, R1426: every
+   number only the base face prints is marked), and `power` for a number that belongs to one of the
+   card's Activate abilities, which the Number row and KY's Constant reach only while the card has that
+   ability, its tuning kept meanwhile (R1425: #98 Heroic Power's powers).
 6. **On the field** the stats change moves max health, and "not below 1 health" is current health. In
    a hand or deck it changes the face the card will enter with.
 7. **View and hidden information.** A changed card shows its current cost, stats, keywords and numbers

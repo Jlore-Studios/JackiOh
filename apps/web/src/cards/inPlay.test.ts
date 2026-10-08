@@ -58,6 +58,15 @@ describe("#98 Heroic Power's rolled power, in words (R752)", () => {
   it("is the card the catalog calls #98", () => {
     expect(CATALOG[HEROIC_POWER_ID]?.index).toBe("98");
   });
+
+  it("R1425 fills each power's words with the numbers the catalog gives that power, and only those", () => {
+    const params = CATALOG[HEROIC_POWER_ID]?.params ?? [];
+    for (const [name, words] of Object.entries(POWER_WORDS)) {
+      const written = [...`${words.base} ${words.radiant}`.matchAll(/\{(\w+)\}/g)].map((match) => match[1]);
+      const own = params.filter((param) => param.power === name).map((param) => param.key);
+      expect([...new Set(written)].sort(), name).toEqual([...own].sort());
+    }
+  });
 });
 
 describe("Call to Chaos in play", () => {

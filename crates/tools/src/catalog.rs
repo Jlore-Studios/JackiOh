@@ -531,7 +531,9 @@ fn validate_face(
 
 /// B3.4 rule 5: `params` — distinct camelCase keys, integer values within [min, max], a direction,
 /// a positive step — each written `{key}` in at least one face's text, and every `{key}` a text
-/// writes declared.
+/// writes declared. A number one face alone writes may be tuned on that face only (`tunedOn`, R749),
+/// and one only the base face writes must be (R1426); a number that belongs to a power names it by
+/// its Activate ability's id (`power`, R1425).
 fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
     let params = value.get("params");
     let texts: Vec<String> = ["base", "radiant"]
@@ -638,19 +640,19 @@ fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
                     fail(failures, &p_at, &format!("{key}: {n} is above its max {max}"));
                 }
             }
-            // R749: a number tuned on the Radiant face only is one the base face does not print.
-            let radiant_only = tuned_on.and_then(Json::as_str) == Some("radiant");
-            if tuned_on.is_some() && !radiant_only {
+            // R749, R1426: a number tuned on one face only is one the other face does not print.
+            let tuned_face = tuned_on.and_then(Json::as_str);
+            if tuned_on.is_some() && !matches!(tuned_face, Some("radiant" | "base")) {
                 fail(
                     failures,
                     &p_at,
                     &format!(
-                        "{key}: `tunedOn` is \"radiant\" when present (got {})",
+                        "{key}: `tunedOn` is \"radiant\" or \"base\" when present (got {})",
                         describe(tuned_on)
                     ),
                 );
             }
-            if radiant_only && writes(&texts[0], key) {
+            if tuned_face == Some("radiant") && writes(&texts[0], key) {
                 fail(
                     failures,
                     &p_at,
@@ -659,12 +661,43 @@ fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
                     ),
                 );
             }
+            if tuned_face == Some("base") && writes(&texts[1], key) {
+                fail(
+                    failures,
+                    &p_at,
+                    &format!(
+                        "{key}: tuned on the base face only, but the Radiant face's text writes {{{key}}}"
+                    ),
+                );
+            }
+            // R1426: a number only the base face prints is tuned on the base face only.
+            if tuned_face != Some("base") && writes(&texts[0], key) && !writes(&texts[1], key) {
+                fail(
+                    failures,
+                    &p_at,
+                    &format!(
+                        "{key}: only the base face's text writes {{{key}}}, so it is `tunedOn: \"base\"`"
+                    ),
+                );
+            }
+            // R1425: the power a number belongs to, named by its Activate ability's id.
+            let power = param.get("power");
+            if power.is_some() && !power.and_then(Json::as_str).is_some_and(is_camel_word) {
+                fail(
+                    failures,
+                    &p_at,
+                    &format!(
+                        "{key}: `power` names an Activate ability by its id, a camelCase word (got {})",
+                        describe(power)
+                    ),
+                );
+            }
             let extra: Vec<&str> = param
                 .keys()
                 .map(String::as_str)
                 .filter(|k| {
                     ![
-                        "key", "base", "radiant", "better", "step", "min", "max", "tunedOn",
+                        "key", "base", "radiant", "better", "step", "min", "max", "tunedOn", "power",
                     ]
                     .contains(k)
                 })
@@ -1789,6 +1822,72 @@ mod tests {
                 "x.radiant.text: {draw|…} needs a singular and a different plural wording",
             ]
         );
+    }
+
+    /// `validate_params` on one card whose faces read `base` and `radiant` and declare `params`.
+    fn params_failures(params: &str, base: &str, radiant: &str) -> Vec<String> {
+        let value = parse_object(&format!(
+            r#"{{"params":{params},"base":{{"text":"{base}"}},"radiant":{{"text":"{radiant}"}}}}"#
+        ));
+        let mut failures = Vec::new();
+        validate_params(&mut failures, "x", &value);
+        failures
+    }
+
+    #[test]
+    fn r1426_a_number_only_the_base_face_writes_is_tuned_there_alone_and_one_the_radiant_face_writes_is_not()
+    {
+        let marked = r#"[{"key":"cards","base":1,"radiant":1,"better":"up","tunedOn":"base"}]"#;
+        let unmarked = r#"[{"key":"cards","base":1,"radiant":1,"better":"up"}]"#;
+        // Mind Melt's shape: the base face alone writes the number, tuned there alone.
+        assert_eq!(
+            params_failures(marked, "Exile {cards}.", "Exile every card of a cost."),
+            Vec::<String>::new()
+        );
+        // The Radiant face writes it too, so it is no base-only number.
+        assert_eq!(
+            params_failures(marked, "Exile {cards}.", "Exile {cards} twice."),
+            ["x.params[0]: cards: tuned on the base face only, but the Radiant face's text writes {cards}"]
+        );
+        // A number only the base face writes and not marked is refused.
+        assert_eq!(
+            params_failures(unmarked, "Exile {cards}.", "Exile every card of a cost."),
+            ["x.params[0]: cards: only the base face's text writes {cards}, so it is `tunedOn: \"base\"`"]
+        );
+        // Both faces write it: tuned on both, unmarked.
+        assert_eq!(
+            params_failures(unmarked, "Exile {cards}.", "Exile {cards} twice."),
+            Vec::<String>::new()
+        );
+        // A face that is neither.
+        assert_eq!(
+            params_failures(
+                r#"[{"key":"cards","base":1,"radiant":1,"better":"up","tunedOn":"both"}]"#,
+                "Exile {cards}.",
+                "Exile {cards} twice."
+            ),
+            ["x.params[0]: cards: `tunedOn` is \"radiant\" or \"base\" when present (got \"both\")"]
+        );
+    }
+
+    #[test]
+    fn r1425_a_number_names_the_power_it_belongs_to_by_its_activate_ability_s_id() {
+        let with_power = |power: &str| {
+            params_failures(
+                &format!(r#"[{{"key":"shot","base":2,"radiant":4,"better":"up","power":{power}}}]"#),
+                "Deal {shot} damage.",
+                "Deal {shot} damage twice.",
+            )
+        };
+        assert_eq!(with_power(r#""burn""#), Vec::<String>::new());
+        for (power, shown) in [(r#""Steady Shot""#, "\"Steady Shot\""), ("3", "3")] {
+            assert_eq!(
+                with_power(power),
+                [format!(
+                    "x.params[0]: shot: `power` names an Activate ability by its id, a camelCase word (got {shown})"
+                )]
+            );
+        }
     }
 
     #[test]

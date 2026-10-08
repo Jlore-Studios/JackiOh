@@ -198,10 +198,16 @@ export type Param = {
   /** It never goes above this (100 for a percentage). */
   max?: number;
   /**
-   * R749: the one face a Degrade, an Upgrade or KY's Constant may move it on, for a number only that
-   * face prints; on the other face it always reads its printed value. Absent, both faces.
+   * R749, R1426: the one face a Degrade, an Upgrade or KY's Constant may move it on, for a number only
+   * that face prints; on the other face it always reads its printed value. Absent, both faces.
    */
-  tunedOn?: "radiant";
+  tunedOn?: "radiant" | "base";
+  /**
+   * R1425: the power the number belongs to, the id of the card's Activate ability that is that power
+   * (#98's stored power name). A Degrade, an Upgrade or KY's Constant reaches it only while the card
+   * has that power; meanwhile it keeps its tuning. Absent, the card's number whatever its power.
+   */
+  power?: string;
 };
 
 /**

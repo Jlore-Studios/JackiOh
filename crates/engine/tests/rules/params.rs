@@ -1,8 +1,8 @@
 //! Declared numbers (docs/classic-sets.md B3.4 rule 5, R386): `param(ctx, key)` in a card script, the
 //! pure `paramValue` the view and a `preview` hook read, the default steps and the bounds, a number
 //! KY's Constant set and the steps after it, a fused card's ingredients each reading their own
-//! declaration (R102), a number tuned on the Radiant face only (R749), and a card resolving with the
-//! number as it stands.
+//! declaration (R102), a number tuned on the Radiant face only (R749) or the base face only (R1426),
+//! and a card resolving with the number as it stands.
 //!
 //! Port of `packages/engine/test/params.test.ts`. TS handed `param` plain objects shaped like a
 //! context (`{ state, self, radiant, defId, data }`); here each is an `EffectContext` with those
@@ -17,7 +17,9 @@ use jackioh_engine::effects::tune::TuneDirection;
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 
 use crate::rules::fixtures::harness::{in_hand, put, sink_for, slot};
-use crate::rules::fixtures::instance_data::{body, instance_game, nerfer, numbered, radiant_number};
+use crate::rules::fixtures::instance_data::{
+    base_number, body, instance_game, nerfer, numbered, radiant_number,
+};
 
 fn game() -> GameState {
     let mut state = instance_game("params", None);
@@ -153,6 +155,60 @@ mod r386_b3_4_rule_5_declared_numbers {
         );
         step_param(live_mut(&mut state, &shining), "times", 1);
         assert_eq!(value(&state, &shining, "times"), 3);
+    }
+
+    #[test]
+    fn r1426_a_number_tuned_on_base_reads_its_printed_value_on_the_radiant_face_whatever_its_steps_and_steps_on_the_base_face()
+     {
+        let mut state = game();
+        // The Radiant face prints no number: no change finds one to move, KY's Constant lists none, and a
+        // step or a value recorded anyway leaves it at its printed 2.
+        let shining = one(in_hand(&mut state, &base_number.id, P1, 1));
+        live_mut(&mut state, &shining).radiant = true;
+        assert!(!param_in_reach(
+            &state,
+            &live(&state, &shining),
+            &base_number.params.as_ref().expect("params")[0]
+        ));
+        assert!(steppable_params(&state, &live(&state, &shining), TuneDirection::Upgrade).is_empty());
+        assert!(steppable_params(&state, &live(&state, &shining), TuneDirection::Degrade).is_empty());
+        assert!(
+            !numbers_on(&state, &live(&state, &shining))
+                .iter()
+                .any(|entry| entry.id == "param:cards")
+        );
+        step_param(live_mut(&mut state, &shining), "cards", 2);
+        assert_eq!(value(&state, &shining, "cards"), 2);
+        set_param(live_mut(&mut state, &shining), "cards", 3);
+        assert_eq!(value(&state, &shining, "cards"), 2);
+        assert_eq!(
+            params_view(&state, &live(&state, &shining)).and_then(|view| view.get("cards").copied()),
+            Some(2)
+        );
+        // The base face prints it, so it is tuned as any number is.
+        let card = one(in_hand(&mut state, &base_number.id, P1, 1));
+        assert_eq!(value(&state, &card, "cards"), 2);
+        assert_eq!(
+            steppable_params(&state, &live(&state, &card), TuneDirection::Upgrade)
+                .iter()
+                .map(|entry| entry.delta)
+                .collect::<Vec<_>>(),
+            vec![1]
+        );
+        assert_eq!(
+            numbers_on(&state, &live(&state, &card))
+                .iter()
+                .find(|entry| entry.id == "param:cards")
+                .map(|entry| entry.value),
+            Some(2)
+        );
+        step_param(live_mut(&mut state, &card), "cards", 1);
+        assert_eq!(value(&state, &card, "cards"), 3);
+        // The card turned Radiant keeps its step for the base face, and reads its printed number now.
+        live_mut(&mut state, &card).radiant = true;
+        assert_eq!(value(&state, &card, "cards"), 2);
+        live_mut(&mut state, &card).radiant = false;
+        assert_eq!(value(&state, &card, "cards"), 3);
     }
 
     #[test]

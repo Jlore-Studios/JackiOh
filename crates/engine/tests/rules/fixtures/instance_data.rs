@@ -379,6 +379,21 @@ pub static radiant_number: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
+/// R1426: the mirror, Classic #11 Mind Melt's shape: a number only the base face prints (`cards` 2,
+/// more is better), tuned on that face only.
+pub static base_number: LazyLock<CardDef> = LazyLock::new(|| {
+    def(
+        "base-number",
+        4426,
+        json!({
+            "type": "Spell",
+            "params": [{ "key": "cards", "base": 2, "radiant": 2, "better": "up", "tunedOn": "base" }],
+            "base": { "keywords": [], "text": "Exile {cards|card|cards}." },
+            "radiant": { "keywords": [], "text": "Exile them all." },
+        }),
+    )
+});
+
 pub static INSTANCE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
         brittle_unit.clone(),
@@ -406,6 +421,7 @@ pub static INSTANCE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         military.clone(),
         educator.clone(),
         radiant_number.clone(),
+        base_number.clone(),
     ]
 });
 

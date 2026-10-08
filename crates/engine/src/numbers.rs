@@ -16,9 +16,7 @@ use crate::brittle_count::active_brittle_count;
 use crate::layers::{card_keywords, printed_keywords_of, stats_with_buffs, unit_view};
 use crate::script::{ActivationUses, Script};
 use crate::state::{CardInstance, GameState};
-use crate::wire::{
-    AttackHealth, CardType, Keyword, KeywordKind, ParamBetter, ParamTunedOn, Row, Zone, has_keyword,
-};
+use crate::wire::{AttackHealth, CardType, Keyword, KeywordKind, ParamBetter, Row, Zone, has_keyword};
 
 /// B3.4 rule 3: the numbered keywords, by the tuning key each is read under (`tuning::tuned_count`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -286,7 +284,8 @@ pub fn number_key(ref_: &NumberRef) -> String {
 }
 
 /// B3.4, Classic+ #41 KY's Constant: every number on the card now, in a fixed order — cost, attack,
-/// health, the numbered keywords, the declared numbers. An Immutable card has none a change may reach
+/// health, the numbered keywords, the declared numbers in reach (`params::param_in_reach`: the ones its
+/// face prints, R749, R1426, and its power's now, R1425). An Immutable card has none a change may reach
 /// (B3.4 rule 2), so it lists none.
 pub fn numbers_on(state: &GameState, card: &CardInstance) -> Vec<NumberOnCard> {
     let keywords = if in_unit_row(card) {
@@ -322,8 +321,9 @@ pub fn numbers_on(state: &GameState, card: &CardInstance) -> Vec<NumberOnCard> {
         );
     }
     for param in crate::params::params_of(state, &card.def_id).iter() {
-        // R749: a number the base face does not print is not on it.
-        if param.tuned_on == Some(ParamTunedOn::Radiant) && !card.radiant {
+        // R749, R1426: a number the face does not print is not on it; R1425: nor is the number of a
+        // power the card does not have now.
+        if !crate::params::param_in_reach(state, card, param) {
             continue;
         }
         // The key as a word, never a raw `{key}` placeholder (a label is shown as it is).

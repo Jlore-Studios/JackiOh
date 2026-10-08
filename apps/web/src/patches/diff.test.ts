@@ -141,6 +141,32 @@ describe("R388 a card's changes, from two snapshots", () => {
     expect(delta !== null && dataOnly(delta)).toBe(true);
   });
 
+  it("R388 R1426 R1425 a number newly tuned on the base face only, or newly its power's, is a params change", () => {
+    const bolt = fixtureDef(V3, "core-002");
+    const baseOnly = { ...bolt, params: (bolt.params ?? []).map((param) => ({ ...param, tunedOn: "base" as const })) };
+    expect(changed(diffCard(bolt, baseOnly))).toEqual([
+      {
+        kind: "value",
+        field: "params",
+        label: expect.any(String) as string,
+        before: "damage 4, Radiant 6, step 1, at least 1, more is better",
+        after: "damage 4, Radiant 6, step 1, at least 1, tuned on the base face only, more is better",
+      },
+    ]);
+    const powered = { ...bolt, params: (bolt.params ?? []).map((param) => ({ ...param, power: "burn" })) };
+    const delta = diffCard(bolt, powered);
+    expect(changed(delta)).toEqual([
+      {
+        kind: "value",
+        field: "params",
+        label: expect.any(String) as string,
+        before: "damage 4, Radiant 6, step 1, at least 1, more is better",
+        after: "damage 4, Radiant 6, step 1, at least 1, tuned only while the card has Steady Shot, more is better",
+      },
+    ]);
+    expect(delta !== null && dataOnly(delta)).toBe(true);
+  });
+
   it("R388 R277 the text diff is R277's: one alignment, marks never start or end on a separator", () => {
     const diff = wordDiff("Cast on draw: Your opponent has 1 less mana next turn.", "Cast on draw: Your opponent has 1 less mana next turn. Discard 1.");
     expect(diff.removed).toEqual([]);
