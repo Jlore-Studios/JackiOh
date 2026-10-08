@@ -3081,11 +3081,13 @@
         "trail": "- Bash: {\"command\": \"git status --short && git log --oneline -1\", \"description\": \"Check worktree status and head commit\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-506/.bot-plan.md\", \"content\": \"# Plan draft, issue #506 (Night bot: Test)\\n\\nFound: the issue is a pickup test. Its acceptance says \\\"If you pick this\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Easy-rule line 7 wants a unit test the plan names, and an empty change has nothing to test. Since I can't tell that line holds, it stays at the medium the item already carries.\"} --> **Goal.** Issue #506 only tests whether the night bot picks up an issue. \u2026"
       },
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-08T08:17:42Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "claude-3",
+      "question": "Issue #506 is a pickup test. Its acceptance says no change is needed and the issue can be closed. The reviewer blocks the branch only because its diff is empty, and that empty diff is what the acceptance asks for. Can a person close #506 (and drop its bot:build queue entry)? The bot has no GitHub credential, and any later pass could only get a non-empty diff by adding a file the task does not need, which breaks the acceptance and Never rule 6.",
       "run_id": "37748911613",
       "started_at": "2026-10-08T08:18:47Z",
       "stop_requested": false,
