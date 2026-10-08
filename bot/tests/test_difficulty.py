@@ -129,11 +129,11 @@ class BuilderTests(unittest.TestCase):
         and claude-1 (twice each: two lanes) with Sonnet; then claude-4, claude-6 and
         claude-5 with
         Sonnet, their stand-in for Devin while Devin's lanes are full (`takes_over`, #317 part
-        9); then the medium models, Muse first on both its lanes; and claude-2 builds only after
-        all of them (`build_last`)."""
+        9); then the medium models, Muse first on all four of its lanes; and claude-2 builds only
+        after all of them (`build_last`)."""
         gh = FakeGitHub()
         ctx = ctx_for(gh, machine=ALL_MACHINE)
-        for number in range(3, 16):
+        for number in range(3, 18):
             queue(gh, ctx, number, EASY)
             ctx.store.update(lambda s, n=number: state_item(s, n).update(
                 queued_at=f"2026-09-{n + 10:02d}T00:00:00Z"))
@@ -143,7 +143,7 @@ class BuilderTests(unittest.TestCase):
                                                          dataclasses.replace(ctx.cfg.pool.get(
                                                              "devin"), lanes=1)})))
         order = []
-        for _ in range(13):
+        for _ in range(15):
             planned = plan_mod.make(ctx)
             if planned["action"] == "none":
                 break
@@ -157,8 +157,7 @@ class BuilderTests(unittest.TestCase):
                                  ("claude-1", "sonnet"), ("claude-1", "sonnet"),
                                  ("claude-4", "sonnet"),
                                  ("claude-6", "sonnet"), ("claude-5", "sonnet"),
-                                 ("muse", "muse-spark-1.3-contributor"),
-                                 ("muse", "muse-spark-1.3-contributor"),
+                                 *[("muse", "muse-spark-1.3-contributor")] * 4,
                                  ("agy", "gemini-3.8-flash-high")])
 
     def test_a_sonnet_stand_in_builds_only_easy_items_devin_cannot_take(self):
@@ -239,7 +238,8 @@ class BuilderTests(unittest.TestCase):
              ("claude-1", 64), ("claude-4", 52), ("claude-6", 71), ("claude-5", 70), ("agy", 53))
         ctx = make_ctx(gh, at=NIGHT, cfg=dataclasses.replace(
             ctx.cfg, pool=dataclasses.replace(ctx.cfg.pool, max_parallel=20, machine_parallel=20)))
-        busy(gh, ctx, ("muse", 54), ("muse", 62), ("gpt", 55))  # Muse has two lanes
+        busy(gh, ctx, ("muse", 54), ("muse", 62), ("muse", 66), ("muse", 67),  # Muse has four lanes
+             ("gpt", 55))
         queue(gh, ctx, 3, EASY)
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["provider"], seats(planned)["build"][1]), ("devin", "swe-2-max"))
@@ -260,7 +260,7 @@ class BuilderTests(unittest.TestCase):
         busy(gh, ctx, ("claude-3", 50), ("claude-3", 57), ("claude-7", 72), ("claude-7", 73),
              ("claude-1", 51),
              ("claude-1", 58), ("claude-4", 52), ("claude-6", 71), ("claude-5", 70), ("agy", 53),
-             ("muse", 54), ("muse", 56), ("gpt", 55))
+             ("muse", 54), ("muse", 56), ("muse", 60), ("muse", 61), ("gpt", 55))
         queue(gh, ctx, 3, MEDIUM)
         self.assertEqual(seats(plan_mod.make(ctx))["build"], ("claude-2", "sonnet", "medium"))
 

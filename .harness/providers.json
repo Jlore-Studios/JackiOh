@@ -194,7 +194,7 @@
       "quiet_check": false
     },
     "muse": {
-      "note": "Meta's Muse Code CLI, logged in on the machine as agent-muse (`muse login`). Its usage is the TUI's `/usage` panel (`muse exec` runs no slash commands), read before the run, after every call and every ten minutes during one. Two lanes, `night-vm-muse` and `night-vm-muse-2`, under the one login.",
+      "note": "Meta's Muse Code CLI, logged in on the machine as agent-muse (`muse login`). Its usage is the TUI's `/usage` panel (`muse exec` runs no slash commands), read before the run, after every call and every ten minutes during one. Four lanes, `night-vm-muse` and `night-vm-muse-2` to `night-vm-muse-4`, under the one login; `bot/machine/register-runners.sh` registers one runner per lane.",
       "enabled": true,
       "cli": "muse",
       "family": "muse",
@@ -203,7 +203,7 @@
       "tier": "medium",
       "login": "machine",
       "runs_on": "night-vm-muse",
-      "lanes": 2,
+      "lanes": 4,
       "schedule": { "mode": "always" },
       "limits": { "mode": "caps", "five_hour": 0.95, "seven_day": 1.0 },
       "quiet_check": false

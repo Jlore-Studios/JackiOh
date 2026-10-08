@@ -602,11 +602,11 @@ class MatchingTests(unittest.TestCase):
 
     def test_each_subscription_takes_as_many_items_as_its_lanes(self):
         gh = FakeGitHub()
-        for n in (3, 4, 5, 6, 7):
+        for n in (3, 4, 5, 6, 7, 8, 9):
             gh.add_issue(n, labels=(LABEL_BUILD,))
         ctx = ctx_for(gh, at=DAY)
         taken = []
-        for _ in range(5):
+        for _ in range(7):
             planned = plan_mod.make(ctx)
             if planned["action"] == "none":
                 break
@@ -614,22 +614,24 @@ class MatchingTests(unittest.TestCase):
             ctx.store.update(lambda s, n=planned["number"], r=str(len(taken)): state_item(
                 s, n).update(run_id=r))
             taken.append((planned["number"], planned["provider"]))
-        # Muse, first of the medium models, has two lanes, so it takes two items before agy and
-        # gpt, next in the usage order.
-        self.assertEqual(taken, [(3, "muse"), (4, "muse"), (5, "agy"), (6, "gpt")])
+        # Muse, first of the medium models, has four lanes, so it takes four items before agy
+        # and gpt, next in the usage order.
+        self.assertEqual(taken, [(3, "muse"), (4, "muse"), (5, "muse"), (6, "muse"), (7, "agy"),
+                                 (8, "gpt")])
         # By day the Claude accounts are closed, and each machine subscription holds its lanes.
         self.assertIn("`muse` is busy", planned["reason"])
         # Each claim with work and a lane left started the next run.
-        self.assertEqual(len(gh.dispatches), 3)
+        self.assertEqual(len(gh.dispatches), 5)
 
     def test_with_the_machine_subscriptions_full_github_takes_the_claude_accounts(self):
-        """Each machine subscription holds as many runs as its lanes (Muse two); a Claude account
+        """Each machine subscription holds as many runs as its lanes (Muse four); a Claude account
         on GitHub's runners still takes work, up to `max_parallel` in all."""
         gh = FakeGitHub()
         for n in (3, 4, 5, 6):
             gh.add_issue(n, labels=(LABEL_BUILD,))
         ctx = ctx_for(gh, at=NIGHT, env=secrets("CLAUDE_CODE_OAUTH_TOKEN_2"), machine=MACHINE)
-        for n, provider in ((40, "gpt"), (41, "agy"), (42, "muse"), (43, "muse")):
+        for n, provider in ((40, "gpt"), (41, "agy"), (42, "muse"), (43, "muse"), (44, "muse"),
+                            (45, "muse")):
             gh.add_issue(n, labels=(LABEL_WORKING,))
             gh.runs[str(n)] = {"status": "in_progress"}
             ctx.store.update(lambda s, n=n, p=provider: state_item(s, n).update(run_id=str(n),

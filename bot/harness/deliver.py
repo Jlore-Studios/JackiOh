@@ -35,14 +35,14 @@ from harness import plan as plan_mod
 from harness import providers as providers_mod
 from harness import vault
 from harness.clock import iso, parse_iso
-from harness.config import (DIFFICULTIES, DIFFICULTY_LABELS, LABEL_APPROVED, LABEL_BLOCKED,
-                            LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_NEEDS_PLAN,
+from harness.config import (COMMIT_PREFIX, DIFFICULTIES, DIFFICULTY_LABELS, LABEL_APPROVED,
+                            LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_NEEDS_PLAN,
                             LABEL_NEEDS_REVIEW, LABEL_PLANNED, LABEL_PR, LABEL_PR_OPEN, LABEL_READY,
                             LABEL_REVISE, LABEL_STUCK, LABEL_SUGGESTION, LABEL_TREE, OTHERS,
                             PLAN_FLOOR, SLASH, STATE_BRANCH, TITLE)
 from harness.context import Context
 from harness.errors import GitError, GitHubError
-from harness.git import Git, matches
+from harness.git import Git, Identity, matches
 from harness.queue import (PRIORITY_TIERS, branch_for_issue, cleared, difficulty_of, label_names,
                            set_mode,
                            labelled_difficulty, open_pull_for_branch, rating_source,
@@ -266,6 +266,14 @@ class Deliverer:
         number = int(self.plan["number"])
         if self.plan["action"] in ("plan", "build"):
             self.plan["branch"] = branch_for_issue(number)
+            # Where a fullsend part lands (#505) comes from the state file, which deliver wrote
+            # when it opened the part, never from the plan file alone.
+            record = self._record(number)
+            parent = int(record.get("part_of") or 0)
+            self.plan.pop("onto", None)
+            self.plan.pop("part_of", None)
+            if parent and record.get("onto") == branch_for_issue(parent):
+                self.plan.update(onto=branch_for_issue(parent), part_of=parent)
             return
         pull = self.gh.get_pull(number)
         head = pull.get("head") or {}
@@ -353,7 +361,7 @@ class Deliverer:
         if record.get("stop_requested") and (started is None or stopped is None or stopped >= started):
             self.result.update(status="stopped", reason=f"stopped by @{record.get('stopped_by')}")
             return "stopped"
-        if status in ("approved", "built", "not_approved", "blocked") and (
+        if status in ("approved", "built", "not_approved", "blocked", "part") and (
                 state.get("halted") or self.ctx.repo_halted()):
             self.result.update(status="interrupted", interrupt="halt",
                                reason="the bot was halted before this work could be published")
@@ -405,9 +413,17 @@ class Deliverer:
         if status == "interrupted":
             self._interrupted(number, kind)
             return
-        if status == "split" and str(self.plan.get("mode") or "").startswith("split"):
+        mode = str(self.plan.get("mode") or "")
+        if status == "split" and (mode.startswith("split") or mode == "fullsend"):
             self._split_out(number)
             self._settle(number)
+            return
+        if status == "part":
+            if self.plan.get("onto"):
+                self._land_part(number)
+            else:
+                self.result["reason"] = "a fullsend part whose tree's branch is not on record"
+                self._fail(number, "build")
             return
         if kind == "revise":
             self._revise(number, status)
@@ -583,7 +599,7 @@ class Deliverer:
                 settled[:] = asks.pop_taken(entry)
 
         self.ctx.store.update(change, f"asks #{number}")
-        answered = not blocked and status in ("approved", "built", "reviewed", "split")
+        answered = not blocked and status in ("approved", "built", "reviewed", "split", "part")
         asks.react(self.gh, settled, asks.DONE if answered else asks.NO_ANSWER)
 
     def _keep_handoff(self, number: int) -> None:
@@ -595,7 +611,7 @@ class Deliverer:
         planner goes on from and no builder reads. Before this a cut-off plan kept nothing (#37)."""
         status = str(self.result.get("status"))
         handoff = self.result.get("handoff")
-        finished = status in ("approved", "reviewed", "split")
+        finished = status in ("approved", "reviewed", "split", "part")
         if not finished and not isinstance(handoff, dict):
             return
         kept: dict[str, Any] | None = None
@@ -896,18 +912,19 @@ class Deliverer:
         return True
 
     def _bundle_counts(self) -> dict[str, int]:
-        """Lines added plus removed per path of the bundle's head against `main`."""
+        """Lines added plus removed per path of the bundle's head against `main`, or, for a
+        fullsend part (#505), against its tree's branch: the parts before it are not its change."""
         name = self.result.get("bundle")
         branch = str(self.plan.get("branch") or "")
         if not name or not branch or not (self.out_dir / str(name)).is_file():
             return {}
-        default = self.cfg.default_branch
+        base = str(self.plan.get("onto") or self.cfg.default_branch)
         try:
             self.repo.run("fetch", "--quiet", "--no-tags", "origin",
-                          f"+refs/heads/{default}:refs/remotes/origin/{default}")
+                          f"+refs/heads/{base}:refs/remotes/origin/{base}")
             local = f"deliver/measure/{branch}"
             self.repo.fetch_bundle(self.out_dir / str(name), branch, local)
-            return self.repo.numstat(f"origin/{default}", local)
+            return self.repo.numstat(f"origin/{base}", local)
         except GitError:
             return {}
 
@@ -1102,9 +1119,12 @@ class Deliverer:
         sub-issues are opened in build order, each with its plan as the **Plan** section of its
         description (which both bots build from without planning again), its type labels as far
         as the repository has them, the parent's priority, its difficulty, and the queue label of
-        whoever builds it: this bot's for `split`, the other bot's for `split-bot`. Then they
-        become GitHub sub-issues of the parent, linked by "blocked by", and the parent becomes a
-        tree (`squishy:tree`) with a checklist."""
+        whoever builds it: this bot's for `split` and `fullsend`, the other bot's for `split-bot`.
+        Then they become GitHub sub-issues of the parent, linked by "blocked by", and the parent
+        becomes a tree (`squishy:tree`) with a checklist.
+
+        A fullsend split (#505) first makes the parent's own branch from `main`'s head, the branch
+        its parts land on (`_land_part`), and each part's record says so (`onto`, `part_of`)."""
         tree = split_mod.from_dict(self.result.get("tree"), DIFFICULTIES)
         mode = str(self.plan.get("mode") or "split")
         names = self._labels(number)
@@ -1112,6 +1132,13 @@ class Deliverer:
             self.result["reason"] = "the split could not be used: " + "; ".join(tree.problems)
             self._fail(number, "build")
             return
+        onto = ""
+        if mode == "fullsend" and not tree.done:
+            onto, problem = self._integration_branch(number)
+            if problem:
+                self.result["reason"] = problem
+                self._fail(number, "build")
+                return
         set_state_label(self.ctx, number, names, None)
         set_mode(self.ctx, number, names, "")
         if tree.done:
@@ -1137,7 +1164,7 @@ class Deliverer:
         for issue in split_mod.ordered(tree.issues):
             waits = [numbers[k] for k in issue.blocked_by if k in numbers]
             waits += list(issue.blocked_by_issues)
-            text = split_mod.body(issue, number, who, waits)
+            text = split_mod.body(issue, number, who, waits, onto=onto)
             if issue.plan:
                 text = issueplan.with_plan(text, redact(issue.plan), who)
             labels = [label for label in issue.labels if label in repo_labels
@@ -1153,6 +1180,8 @@ class Deliverer:
             numbers[issue.key] = int(created.get("number") or 0)
             ids[issue.key] = int(created.get("id") or 0)
             made.append((issue, numbers[issue.key]))
+            if onto:
+                self._remember(numbers[issue.key], onto=onto, part_of=number)
         for issue, child in made:
             self._try(lambda c=ids[issue.key]: self.gh.add_sub_issue(number, c))
             for key in issue.blocked_by:
@@ -1168,11 +1197,165 @@ class Deliverer:
         if LABEL_TREE not in self._labels(number):
             self.gh.add_labels(number, [LABEL_TREE])
         self.gh.create_comment(number, split_mod.checklist(
-            number, made, builder=builder, summary=tree.summary, link=self._link()))
+            number, made, builder=builder, summary=tree.summary, link=self._link(), onto=onto))
         children = [child for _, child in made]
-        self._remember(number, tree={"mode": mode, "children": children,
-                                     "at": iso(self.ctx.now())}, closeout=False)
+        self._remember(number, tree={"mode": mode, "children": children, "at": iso(self.ctx.now()),
+                                     **({"onto": onto} if onto else {})}, closeout=False)
         self.log.append(f"#{number}: split into {', '.join(f'#{c}' for c in children)}")
+
+    def _integration_branch(self, number: int) -> tuple[str, str]:
+        """The branch a fullsend tree's parts land on (#505): the parent's own, made from `main`'s
+        head when GitHub does not have it yet. `(branch, problem)`."""
+        onto = branch_for_issue(number)
+        default = self.cfg.default_branch
+        self.repo.run("fetch", "--quiet", "--no-tags", "origin",
+                      f"+refs/heads/{default}:refs/remotes/origin/{default}")
+        self.repo.run("fetch", "--quiet", "--no-tags", "origin",
+                      f"+refs/heads/{onto}:refs/remotes/origin/{onto}", check=False)
+        if self.repo.rev(f"origin/{onto}"):
+            return onto, ""  # a later stage of the same tree lands on what is there
+        sha = self.repo.rev(f"origin/{default}") or ""
+        if self.cfg.dry_run:
+            self.log.append(f"dry run: would make {onto} at {sha}")
+            return onto, ""
+        url = f"{self.cfg.server_url}/{self.cfg.repo}.git"
+        try:
+            self.repo.push(url, f"{sha}:refs/heads/{onto}", self.cfg.write_token)
+        except GitError as exc:
+            return "", f"the branch its parts land on, `{onto}`, could not be made: {exc}"
+        self.log.append(f"made {onto} at {sha[:12]} for #{number}'s parts")
+        return onto, ""
+
+    def _land_part(self, number: int) -> None:
+        """A fullsend part's end (#505): its change lands on its tree's branch (`onto`), never on
+        `main`, with no pull request. It fast-forwards the branch, or joins the parts that landed
+        while it was built in a merge commit; the branch is never pushed with force. A part that
+        conflicts with them, or loses the race to push twice, is kept on its own branch instead
+        (`parked` on the parent's record), for the reconcile to merge. The bundle is refused as
+        `_publish` refuses one: the head the result names, descending from where the work started,
+        no forbidden path, no conflict marker. Either way the part closes as done: the reconcile
+        checks and reviews every part at once."""
+        onto, parent = str(self.plan["onto"]), int(self.plan["part_of"])
+        if self._easy_breach(number, "build"):
+            return
+        sha, problem = self._land(onto, number)
+        own = branch_for_issue(number)
+        parked = ""
+        if not problem and not sha:
+            parked = own
+            problem = self._park(own)
+        if problem:
+            self.result["reason"] = problem
+            self._fail(number, "build")
+            return
+        if parked:
+            def change(state: dict[str, Any]) -> None:
+                entry = state_item(state, parent)
+                entry["parked"] = sorted({*(str(b) for b in entry.get("parked") or []), parked})
+            self.ctx.store.update(change, f"#{number} parked for #{parent}")
+        elif self.repo.rev(f"origin/{own}"):
+            # A cut-off run's work, kept there, is on `onto` now.
+            self._try(lambda: self.gh.delete_branch(own))
+        set_state_label(self.ctx, number, self._labels(number), None)
+        if parked:
+            said = (f"It conflicts with the parts already on `{onto}`, so it is kept on "
+                    f"`{parked}` instead, for #{parent}'s reconcile to merge.")
+            self.log.append(f"#{number}: parked on {parked} for #{parent}")
+        else:
+            said = f"It landed on `{onto}` at `{sha[:12]}`."
+            self.log.append(f"#{number}: landed on {onto} at {sha[:12]}")
+        self.gh.create_comment(number, f"Built on {self._built_on()} ({self._link()}), as a "
+                               f"fullsend part of #{parent}, with no checks or review of its own. "
+                               f"{said} Once every part of #{parent} has closed, one run "
+                               "reconciles them, makes every check green and opens one pull "
+                               "request into `main`. Closing this.")
+        self._try(lambda: self.gh.update_issue(number, state="closed", state_reason="completed"))
+        self._remember(number, landed=sha, parked_on=parked, last_findings=[], question="",
+                       failures=0, forced=False, interruptions=0, died=0, pending_request=False)
+
+    def _land(self, onto: str, number: int) -> tuple[str, str]:
+        """Push the part's bundle onto `onto`: `(sha landed, problem)`, and `("", "")` when it
+        conflicts with what is there, or the push lost the race twice."""
+        name = self.result.get("bundle")
+        branch = str(self.plan.get("branch") or "")
+        if not name or not (self.out_dir / str(name)).is_file():
+            return "", "the run left no bundle to land"
+        base = f"origin/{onto}"
+        own = branch_for_issue(number)
+        for ref in (onto, own):
+            self.repo.run("fetch", "--quiet", "--no-tags", "origin",
+                          f"+refs/heads/{ref}:refs/remotes/origin/{ref}", check=False)
+        if self.repo.rev(base) is None:
+            return "", f"the branch its parts land on, `{onto}`, is gone"
+        local = f"deliver/{branch}"
+        try:
+            head = self.repo.fetch_bundle(self.out_dir / str(name), branch, local)
+        except GitError as exc:
+            return "", f"the bundle could not be read: {exc}"
+        if head != self.result.get("head"):
+            return "", "the bundle's head is not the head the result names"
+        start = str(self.result.get("start") or "")
+        if not start or self.repo.run("merge-base", "--is-ancestor", start, head,
+                                      check=False).returncode != 0:
+            return "", "the bundle does not descend from the commit the work started at"
+        forbidden = self.repo.unsanctioned(local, [start, self.repo.merge_base(base, local)],
+                                           self.cfg.forbidden_paths)
+        if forbidden:
+            return "", f"the change touches paths the bot may not change: {', '.join(forbidden)}"
+        markers = self.repo.markers(local, self.repo.changed_paths(base, local))
+        if markers:
+            return "", ("conflict markers are still in " + ", ".join(f"`{p}`" for p in markers[:8])
+                        + (", …" if len(markers) > 8 else "") + ", so I landed nothing")
+        if self.cfg.dry_run:
+            self.log.append(f"dry run: would land {head} on {onto}")
+            return head, ""
+        url = f"{self.cfg.server_url}/{self.cfg.repo}.git"
+        for _ in range(2):
+            tip = self.repo.rev(base) or ""
+            if self.repo.run("merge-base", "--is-ancestor", tip, local,
+                             check=False).returncode == 0:
+                target = head  # nothing landed since it started: a fast-forward
+            else:
+                target = self._merge_commit(tip, local,
+                                            f"{COMMIT_PREFIX}: land #{number} on {onto}")
+                if not target:
+                    return "", ""  # it conflicts with the parts that landed meanwhile
+            try:
+                self.repo.push(url, f"{target}:refs/heads/{onto}", self.cfg.write_token)
+                return target, ""
+            except GitError:
+                # Another part landed first: read the branch again, and try once more.
+                self.repo.run("fetch", "--quiet", "--no-tags", "origin",
+                              f"+refs/heads/{onto}:refs/remotes/origin/{onto}", check=False)
+        return "", ""
+
+    def _merge_commit(self, tip: str, local: str, message: str) -> str:
+        """A merge commit of `local` onto `tip`, made without a worktree, or "" when the two
+        conflict."""
+        probe = self.repo.run("merge-tree", "--write-tree", "--no-messages", tip, local,
+                              check=False)
+        tree = probe.stdout.split()[0] if probe.returncode == 0 and probe.stdout.strip() else ""
+        if not tree:
+            return ""
+        who = Identity.bot(self.cfg.bot_login, self.cfg.bot_user_id)
+        env = {"GIT_AUTHOR_NAME": who.name, "GIT_AUTHOR_EMAIL": who.email,
+               "GIT_COMMITTER_NAME": who.name, "GIT_COMMITTER_EMAIL": who.email}
+        return self.repo.run("commit-tree", tree, "-p", tip, "-p", local, "-m", message,
+                             extra_env=env).stdout.strip()
+
+    def _park(self, own: str) -> str:
+        """Keep a part that could not land on its own branch, for the reconcile: "" when it is
+        there, or the problem."""
+        if self.cfg.dry_run:
+            self.log.append(f"dry run: would keep the part on {own}")
+            return ""
+        url = f"{self.cfg.server_url}/{self.cfg.repo}.git"
+        try:
+            self.repo.push(url, f"deliver/{self.plan.get('branch')}:refs/heads/{own}",
+                           self.cfg.write_token)
+        except GitError as exc:
+            return f"it could not land, and keeping it on `{own}` was refused: {exc}"
+        return ""
 
     def _not_approved_head(self) -> str:
         """The first words of a comment on a build or revision that was not approved: the real

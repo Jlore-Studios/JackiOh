@@ -41,7 +41,7 @@ from harness.config import (LABELS, LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_
                             LABEL_REVISE, LABEL_TREE, LABEL_WORKING, MODES, NIGHT_WORKFLOW)
 from harness.context import Context
 from harness.errors import GitHubError
-from harness.queue import is_human, label_names, queue_build, queue_revise
+from harness.queue import branch_for_issue, is_human, label_names, queue_build, queue_revise
 from harness.state import item as state_item
 
 LOOKBACK = timedelta(days=3)
@@ -222,7 +222,9 @@ def _comments(ctx: Context, since: datetime) -> list[str]:
                     return None
                 payload = {"action": "created", "comment": comment,
                            "issue": ctx.gh.get_issue(number)}
-            events.on_comment(ctx, payload, review_comment=review_comment)
+            out = events.on_comment(ctx, payload, review_comment=review_comment)
+            if not out or out[0].startswith(("ignored", "no command")):
+                return None  # nothing was answered: the other bot's words, say (#504)
             return f"answered a comment on #{number} that was never answered"
         _each(found, act, notes)
     return notes
@@ -308,8 +310,10 @@ def _failed_ci(ctx: Context, since: datetime) -> list[str]:
 def _trees(ctx: Context, since: datetime) -> list[str]:
     """A tree the bot split (#60) whose sub-issues have all closed is queued for its close-out:
     the same split session, which checks the parent's end state against `main` and closes it, or
-    opens the sub-issues still missing. One stopped (`stop`) or blocked is left alone."""
-    splits = [mode for mode in MODES if mode.startswith("split")]
+    opens the sub-issues still missing. A fullsend tree's close-out is its reconcile (#505): an
+    ordinary build of the parent on its own branch, where its parts landed, which opens one pull
+    request into `main`. One stopped (`stop`) or blocked is left alone."""
+    splits = [mode for mode in MODES if mode.startswith("split") or mode == "fullsend"]
     if not splits:
         return []
     state = ctx.store.load()
@@ -332,6 +336,12 @@ def _trees(ctx: Context, since: datetime) -> list[str]:
         reply = queue_build(ctx, number, by=ctx.cfg.bot_login, mode=mode)
         ctx.store.update(lambda s: state_item(s, number).update(closeout=True),
                          f"close-out #{number}")
+        if mode == "fullsend":
+            ctx.gh.create_comment(number, "Every part of this has closed, so its reconcile is "
+                                  "queued: one run merges the parts on "
+                                  f"`{branch_for_issue(number)}`, makes every check green and opens "
+                                  f"one pull request into `main`. {reply}")
+            return f"#{number}: its parts have all closed; queued its reconcile"
         ctx.gh.create_comment(number, "Every sub-issue of this has closed, so its close-out is "
                               f"queued: it checks this issue against `main`, and closes it when its "
                               f"end state holds or opens what is still missing. {reply}")
