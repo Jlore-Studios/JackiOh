@@ -39,6 +39,11 @@ use crate::state::{
 };
 use crate::wire::{GameEvent, GameOverReason, PLAYER_IDS, Phase, PlayerId, Winner, opponent_of};
 
+/// R846 (Meditative #19.1): the id owed extra turns travel under — one badge per player, which
+/// `modifierChanged` names as turns are owed and as the last one is taken, and which the view
+/// lists while any is owed (R169).
+pub const EXTRA_TURN_MODIFIER_ID: &str = "extraTurns";
+
 /// `prompts.runResume(sink, resume, { controller })`.
 fn run_resume_for(sink: &mut EngineSink, resume: &Resume, controller: PlayerId) {
     let _ = crate::prompts::run_resume(
@@ -345,6 +350,12 @@ fn due_before_of(data: &IndexMap<String, Value>) -> u32 {
 /// trigger's prompt open with the turn's draw landing *inside* it, where R62 puts the draw after the
 /// triggers — the same bug the end of turn had.
 pub fn start_turn(sink: &mut EngineSink, player: PlayerId) {
+    begin_turn(sink, player, false);
+}
+
+/// R845 (Meditative #19.1): one turn's start, extra or not. An extra turn is a whole §2.2 turn —
+/// the count grows, the refresh runs (lost or not), and every stage after it follows.
+fn begin_turn(sink: &mut EngineSink, player: PlayerId, extra: bool) {
     sink.state.active = player;
     sink.state.turn += 1;
     sink.state.phase = Phase::Start;
@@ -378,16 +389,29 @@ pub fn start_turn(sink: &mut EngineSink, player: PlayerId) {
     reset_exertion(sink, player);
 
     let turn = sink.state.turn;
-    sink.events.push(GameEvent::TurnStarted { player, turn });
+    sink.events.push(GameEvent::TurnStarted {
+        player,
+        turn,
+        extra: extra.then_some(true),
+    });
     let side = &mut sink.state.players[player];
     let rider = side.mana.next_turn_mod;
     crate::mana::refresh_mana(side);
+    let lost_spent = crate::mana::spend_lost_refresh(side);
     sink.events.push(crate::mana::mana_event(player, side));
     // R169: the refresh spends the rider (§6.3 Mana), and its badge goes with it.
     if rider != 0 {
         sink.events.push(GameEvent::ModifierChanged {
             player,
             modifier_id: crate::mana::NEXT_REFRESH_MODIFIER_ID.to_string(),
+            added: false,
+        });
+    }
+    // R844: a spent loss's badge goes with it.
+    if lost_spent {
+        sink.events.push(GameEvent::ModifierChanged {
+            player,
+            modifier_id: crate::mana::LOST_REFRESH_MODIFIER_ID.to_string(),
             added: false,
         });
     }
@@ -826,6 +850,26 @@ fn end_of_turn_delayed_settle(sink: &mut EngineSink, player: PlayerId) {
 /// check and the next turn (R62's order: cleanup, then the cap, then the opponent's turn). Left to the
 /// next turn's first loop, a trigger answering them resolved after that turn had begun, and at the
 /// cap the game was drawn before it could.
+/// R846 (Meditative #19.1): spend one owed extra turn of the player whose turn just ended.
+/// Returns true when one was owed, so the cleanup starts their turn again instead of the
+/// opponent's. The count is `None` at 0, so a game without one hashes as before.
+fn take_owed_extra_turn(sink: &mut EngineSink, player: PlayerId) -> bool {
+    let owed = sink.state.players[player].extra_turns.unwrap_or(0);
+    if owed <= 0 {
+        return false;
+    }
+    let left = owed - 1;
+    sink.state.players[player].extra_turns = if left == 0 { None } else { Some(left) };
+    if left == 0 {
+        sink.events.push(GameEvent::ModifierChanged {
+            player,
+            modifier_id: EXTRA_TURN_MODIFIER_ID.to_string(),
+            added: false,
+        });
+    }
+    true
+}
+
 fn end_of_turn_cleanup_settle(sink: &mut EngineSink, player: PlayerId) {
     crate::triggers::settle(sink, crate::triggers::SettleOptions::default());
     if sink.state.result.is_some() {
@@ -845,6 +889,12 @@ fn end_of_turn_cleanup_settle(sink: &mut EngineSink, player: PlayerId) {
 
     if sink.state.turn >= TURN_CAP_PLAYER_TURNS {
         end_game(sink, Winner::Draw, GameOverReason::TurnCap);
+        return;
+    }
+
+    // R846: an owed extra turn starts the same player's turn again, counting toward the cap above.
+    if take_owed_extra_turn(sink, player) {
+        begin_turn(sink, player, true);
         return;
     }
 

@@ -96,6 +96,8 @@ const RETURNS_OFF_THE_FIELD: &[&str] = &[
     "classicplus-014 base",
     "classicplus-014 radiant",
     "classicplus-021 radiant",
+    "meditative-008 base",
+    "meditative-008 radiant",
 ];
 
 // ---------------------------------------------------------------------------------------------

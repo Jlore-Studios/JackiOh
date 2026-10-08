@@ -1252,6 +1252,21 @@
     "classicplus-t-ai-10": { // Fine-Tuning
       cast: { voice: "sapi-synth-deep", text: "Adjusting weights. Improving slightly." },
     },
+    "meditative-008": { // Reach the Summit
+      cast: { voice: "announcer", text: "One step closer to the summit!" },
+    },
+    "meditative-018": { // Expedition12
+      cast: { voice: "prof", text: "Sacrifice now, shine later." },
+    },
+    "meditative-019": { // Expedition1234
+      cast: { voice: "prof", text: "The long road it is." },
+    },
+    "meditative-019-1": { // Temporal Rift
+      cast: { voice: "alien", text: "Again. Once more. Again." },
+    },
+    "meditative-020": { // Aestheticize the Game
+      cast: { voice: "announcer", text: "A win, but make it beautiful." },
+    },
   },
   emotes: {
     vanilla: {

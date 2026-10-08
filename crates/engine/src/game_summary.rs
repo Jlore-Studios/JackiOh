@@ -73,7 +73,7 @@ fn leave(hands: &mut Hands, instance_id: &str) {
 fn read(reading: &mut Reading, events: &[GameEvent]) {
     for (at, event) in events.iter().enumerate() {
         match event {
-            GameEvent::TurnStarted { player, turn } => {
+            GameEvent::TurnStarted { player, turn, .. } => {
                 reading.current_turn = *turn;
                 // §2.1: the mulligans have resolved and The Coin is dealt; the first turn's draw comes next.
                 if reading.opening.is_none() {

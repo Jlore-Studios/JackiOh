@@ -80,12 +80,21 @@ function isTurnEvent(event: GameEvent): event is Extract<GameEvent, { type: "tur
   return event.type === "turnStarted" || event.type === "turnAutoEnded";
 }
 
-function bannerText(view: PlayerView, lastType: string | undefined, startedFor?: PlayerId): string | null {
+function bannerText(
+  view: PlayerView,
+  lastType: string | undefined,
+  startedFor?: PlayerId,
+  extra?: boolean,
+): string | null {
   if (view.result !== null) return "Game over";
   if (lastType === "turnAutoEnded") return "No moves left. Turn ended.";
   // #37: while a `turnStarted` entry plays, the board is still the view from before the turn began,
   // so its banner names the turn that is starting, not the one (or the mulligan) being left.
-  if (startedFor !== undefined) return startedFor === view.viewer ? "Your turn" : "Opponent's turn";
+  // R845: an extra turn's banner says so.
+  if (startedFor !== undefined) {
+    if (extra === true) return startedFor === view.viewer ? "Your extra turn" : "Opponent's extra turn";
+    return startedFor === view.viewer ? "Your turn" : "Opponent's turn";
+  }
   if (view.phase === "mulligan") return "Mulligan";
   return view.active === view.viewer ? "Your turn" : "Opponent's turn";
 }
@@ -540,7 +549,12 @@ export default function Game({
   // the board catching up (#37).
   const burstTurn = burst.flatMap((entry) => entry.events).findLast(isTurnEvent);
   const lastTurnEvent = burstTurn ?? [...shown.events].reverse().find(isTurnEvent);
-  const banner = bannerText(shown, lastTurnEvent?.type, burstTurn?.type === "turnStarted" ? burstTurn.player : undefined);
+  const banner = bannerText(
+    shown,
+    lastTurnEvent?.type,
+    burstTurn?.type === "turnStarted" ? burstTurn.player : undefined,
+    burstTurn?.type === "turnStarted" && burstTurn.extra === true,
+  );
 
   return (
     <div

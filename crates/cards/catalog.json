@@ -10815,5 +10815,248 @@
       "keywords": [],
       "text": "End of turn: Upgrade 2 random cards in your hand."
     }
+  },
+  "meditative-008": {
+    "id": "meditative-008",
+    "index": "8",
+    "name": "Reach the Summit",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "Quickdraw",
+      "Wincon"
+    ],
+    "rarity": "Mythic",
+    "token": false,
+    "cost": 0,
+    "params": [
+      {
+        "key": "heal",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "draw",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "discards",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "exiles",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "adds",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 114,
+    "base": {
+      "keywords": [],
+      "text": "Ascent level: starts at 0. This costs (Ascent level).\nGain the effect of your Ascent level. Then your Ascent level goes up by 1.\nEnd of turn: Return this to hand.\nAscent 0: Heal your hero {heal}.\nAscent 1: Deal {damage} damage.\nAscent 2: Draw {draw|card|cards}.\nAscent 3: Your opponent discards {discards|random card|random cards}.\nAscent 4: Exile {exiles|random enemy permanent|random enemy permanents}.\nAscent 5: Add {adds|random Radiant card|random Radiant cards} to your hand. They cost (0).\nAscent 6: Reach for the stars.\nAscent 7: And when they're near...\nAscent 8: Push even harder.\nAscent 9: And you might just...\nAscent 10: Win the game."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Ascent level: starts at 0. This costs (Ascent level - 1), never less than (0).\nGain the effect of your Ascent level. Then your Ascent level goes up by 1.\nEnd of turn: Return this to hand.\nAscent 0: Heal your hero {heal}.\nAscent 1: Deal {damage} damage.\nAscent 2: Draw {draw|card|cards}.\nAscent 3: Your opponent discards {discards|random card|random cards}.\nAscent 4: Exile {exiles|random enemy permanent|random enemy permanents}.\nAscent 5: Add {adds|random Radiant card|random Radiant cards} to your hand. They cost (0).\nAscent 6: Reach for the stars.\nAscent 7: And when they're near...\nAscent 8: Push even harder.\nAscent 9: And you might just...\nAscent 10: Win the game."
+    }
+  },
+  "meditative-018": {
+    "id": "meditative-018",
+    "index": "18",
+    "name": "Expedition12",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "Quickdraw"
+    ],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 1,
+    "loc": 39,
+    "base": {
+      "keywords": [],
+      "text": "Lose all mana next turn. Choose a card in your hand. It becomes Radiant."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Echo 1\nLose all mana next turn. Choose a card in your hand. It becomes Radiant."
+    }
+  },
+  "meditative-019": {
+    "id": "meditative-019",
+    "index": "19",
+    "name": "Expedition1234",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "Quickdraw"
+    ],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "meditative-019-1"
+    ],
+    "params": [
+      {
+        "key": "turns",
+        "base": 3,
+        "radiant": 3,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 20,
+    "base": {
+      "keywords": [],
+      "text": "Lose all mana for your next {turns|turn|turns}. Add a Temporal Rift to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Lose all mana for your next {turns|turn|turns}. Add a Radiant Temporal Rift to your hand."
+    }
+  },
+  "meditative-019-1": {
+    "id": "meditative-019-1",
+    "index": "19.1",
+    "name": "Temporal Rift",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "token": true,
+    "cost": 2,
+    "refs": [
+      "meditative-019-1"
+    ],
+    "params": [
+      {
+        "key": "mana",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      },
+      {
+        "key": "nextMana",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      },
+      {
+        "key": "draw",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 18,
+    "base": {
+      "keywords": [],
+      "text": "Take an extra turn after this one.\nYou can take only one extra turn from Temporal Rift each game."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Take an extra turn after this one. Gain {mana} mana and {nextMana} mana next turn. Draw {draw|card|cards}.\nYou can take only one extra turn from Temporal Rift each game."
+    }
+  },
+  "meditative-020": {
+    "id": "meditative-020",
+    "index": "20",
+    "name": "Aestheticize the Game",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "Quickdraw",
+      "Wincon"
+    ],
+    "rarity": "Mythic",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "health",
+        "base": 100,
+        "radiant": 90,
+        "better": "down",
+        "step": 10,
+        "min": 10
+      },
+      {
+        "key": "graveyard",
+        "base": 100,
+        "radiant": 90,
+        "better": "down",
+        "step": 10,
+        "min": 10
+      },
+      {
+        "key": "board",
+        "base": 100,
+        "radiant": 90,
+        "better": "down",
+        "step": 10,
+        "min": 10
+      },
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 38,
+    "base": {
+      "keywords": [],
+      "text": "Choose one. For the rest of the game, you also win while it is true: your hero has {health} or more Health; your graveyard holds {graveyard} or more cards; or your Units have {board} or more Attack and {board} or more Health in total."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Choose one. For the rest of the game, you also win while it is true: your hero has {health} or more Health; your graveyard holds {graveyard} or more cards; or your Units have {board} or more Attack and {board} or more Health in total.\nDraw {draw|card|cards}."
+    }
   }
 }

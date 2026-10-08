@@ -372,6 +372,18 @@ describe("R745 the log keeps the whole game, not only the view's window", () => 
     expect(lines()).toEqual(["Turn 3: You", said(1), "Turn 4: Opponent", said(2)]);
   });
 
+  it("writes (extra turn) on an extra turn's line", () => {
+    render(
+      <Log
+        view={withEvents(baseView(), [
+          { type: "turnStarted", player: "p1", turn: 3 },
+          { type: "turnStarted", player: "p1", turn: 4, extra: true },
+        ])}
+      />,
+    );
+    expect(lines()).toEqual(["Turn 3: You", "Turn 4: You (extra turn)"]);
+  });
+
   it("R745 says in one line where a view shares no event with the one before, and keeps what it had", () => {
     const events = game(80);
     const { rerender } = render(<Log view={withEvents(baseView(), windowOf(events, 32))} />);

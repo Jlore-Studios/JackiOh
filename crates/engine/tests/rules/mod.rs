@@ -5,6 +5,7 @@
 pub mod activate;
 pub mod after_attack;
 pub mod ai_policy;
+pub mod alt_wins;
 pub mod animated;
 pub mod announce;
 pub mod armor_absorbed;
@@ -92,6 +93,7 @@ pub mod effects_tune;
 pub mod effects_turn_end;
 pub mod embiggen_cost;
 pub mod endgame;
+pub mod extra_turns;
 pub mod faces;
 pub mod fixtures;
 pub mod fuse;

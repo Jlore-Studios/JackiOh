@@ -490,6 +490,11 @@ pub enum GameEvent {
     TurnStarted {
         player: PlayerId,
         turn: i32,
+        /// R845 (Meditative #19.1): set on an extra turn's banner turn. Only ever `Some(true)`,
+        /// so a normal turn serialises exactly as before.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        extra: Option<bool>,
     },
     TurnEnded {
         player: PlayerId,
@@ -991,6 +996,10 @@ string_union! {
         MatchCeiling = "match-ceiling",
         /// R679: a Glitch voided the match — no winner, no result, no record (§2.5).
         Voided = "voided",
+        /// R850 (Meditative #8, #20): a player holding an alternative win won.
+        AltWin = "alt-win",
+        /// R850 (Meditative #8): an effect won the game for a player outright.
+        WonByEffect = "won-by-effect",
     }
 }
 
