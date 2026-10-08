@@ -141,7 +141,7 @@ mod tests {
                 assert_eq!(def.base.attack, Some(1));
                 assert_eq!(def.base.health, Some(1));
                 assert!(def.base.keywords.is_empty());
-                assert!(def.base.text.contains("2 Tributes"));
+                assert!(fill_params(&def, FaceKind::Base, None).contains("2 Tributes"));
             }
 
             #[test]
@@ -188,6 +188,22 @@ mod tests {
                 assert_eq!(tribute_value_of(s.state(), &lane(1)), 2);
                 assert_eq!(tribute_value_of(s.state(), &lane(2)), 1);
                 assert_eq!(tribute_value_of(s.state(), &lane(3)), 1);
+            }
+
+            #[test]
+            fn r386_an_upgrade_makes_it_worth_3_tributes_and_a_degrade_1() {
+                for (upgrade, worth) in [(true, 3), (false, 1)] {
+                    crate::register_all();
+                    let mut s = scenario(json!({ "seed": SEED, "p1": { "field": ["core-t-sheep"] } }));
+                    let sheep = s.unit(P1, 1).expect("the Sheep Token").id;
+                    let moved = if upgrade {
+                        crate::upgrade_number(&mut s, &sheep, "worth")
+                    } else {
+                        crate::degrade_number(&mut s, &sheep, "worth")
+                    };
+                    assert_eq!(moved, worth);
+                    assert_eq!(tribute_value_of(s.state(), s.card(sheep.as_str())), worth);
+                }
             }
 
             #[test]

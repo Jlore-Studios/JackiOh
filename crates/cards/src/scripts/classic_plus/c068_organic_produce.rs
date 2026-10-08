@@ -12,8 +12,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-068";
 
-/// The Radiant face's "Each costs (0)."
-const FREE: i32 = 0;
+// The Radiant face's "Each costs (0).": the declared number `setCost` (R386), less being better.
 
 fn static_flags() -> StaticFlags {
     StaticFlags {
@@ -37,7 +36,7 @@ pub fn script() -> CardScripts {
             vec![add_random_from_catalog(json_as(json!({
                 "query": { "tags": ["Fruit"] },
                 "count": param(ctx, "fruits"),
-                "costOverride": FREE
+                "costOverride": param(ctx, "setCost")
             })))]
         })),
         ..Script::default()
@@ -351,6 +350,19 @@ mod tests {
             let before = hand_ids(&s);
             s.play(PRODUCE, json!({ "zone": 1 }));
             assert_eq!(s.hand(P1).into_iter().filter(|card| !before.contains(&card.id)).count(), 3);
+        }
+
+        #[test]
+        fn r386_a_degrade_makes_the_radiant_fruits_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
+            crate::register_all();
+            let mut s = scenario(json!({ "p1": { "hand": [{ "def": PRODUCE, "radiant": true }, FILLER] }, "p2": { "hand": [FILLER] } }));
+            assert!(!crate::can_upgrade_number(&s, PRODUCE, "setCost"));
+            assert_eq!(crate::degrade_number(&mut s, PRODUCE, "setCost"), 1);
+            let before = hand_ids(&s);
+            s.play(PRODUCE, json!({ "zone": 1 }));
+            let made: Vec<CardInstance> = s.hand(P1).into_iter().filter(|card| !before.contains(&card.id)).collect();
+            assert_eq!(made.len(), 2);
+            assert!(made.iter().all(|card| card.cost_override == Some(1)));
         }
     }
 }

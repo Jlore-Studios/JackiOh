@@ -90,7 +90,7 @@ mod tests {
     const ARMORED: &str = "core-025"; // (4) 7/7 Armor 7
     const DUPLICATING: &str = "core-012"; // (2) 3/4, Cry: summon a copy of this
     const HIT_JOB: &str = "core-016"; // (3) Spell: no number other than 3
-    const DIVIDEND: &str = "core-024"; // (X) Spell: an X is never a number
+    const CHALICE: &str = "classic-087"; // (X) Field Spell: an X is never a number
     const GIFT: &str = "classicplus-042-1"; // (4) Field Spell with mana 1, discards 1, heal 5
     const FILLER: &str = "core-005";
 
@@ -166,7 +166,7 @@ mod tests {
 
         #[test]
         fn r386_offers_only_hand_cards_with_a_number_other_than_3_never_one_whose_numbers_are_all_3_nor_an_x() {
-            let s = constant(&[TIMMY, HIT_JOB, DIVIDEND, VANILLA], false, None);
+            let s = constant(&[TIMMY, HIT_JOB, CHALICE, VANILLA], false, None);
             assert_eq!(sorted(offered(&s)), sorted(vec![TIMMY.to_string(), VANILLA.to_string()]));
         }
 

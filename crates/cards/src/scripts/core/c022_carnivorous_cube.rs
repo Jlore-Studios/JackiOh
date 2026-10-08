@@ -160,7 +160,8 @@ pub fn script() -> CardScripts {
             let Some(eaten) = eaten_of(ctx) else {
                 return vec![]; // R41: nothing eaten → Death does nothing.
             };
-            vec![copy_of(&eaten), copy_of(&eaten)]
+            // "Summon 2 copies of it": the declared number `copies` (R386).
+            (0..param(&*ctx, "copies")).map(|_| copy_of(&eaten)).collect()
         })),
         ..Script::default()
     };
@@ -308,6 +309,33 @@ mod tests {
                 // R57: a copy is a fresh card at full health, not the corpse.
                 s.expect_stats(&copy, json!({ "attack": 3, "maxHealth": 3, "health": 3 }));
                 assert!(!copy.radiant);
+            }
+
+            #[test]
+            fn r386_an_upgrade_summons_3_copies_and_a_degrade_1() {
+                for (upgrade, copies) in [(true, 3), (false, 1)] {
+                    crate::register_all();
+                    let mut s = scenario(json!({
+                        "seed": "cube-death",
+                        "p1": { "hand": [CUBE, FILLER], "field": [TIMMY] },
+                        "p2": { "hand": [FILLER], "field": [HITTER] },
+                    }));
+                    let timmy = s.card(TIMMY).id.clone();
+                    s.play(CUBE, json!({ "targets": [{ "pick": "instance", "instanceId": timmy }] }));
+                    let cube = s.card(CUBE).clone();
+                    let moved = if upgrade {
+                        crate::upgrade_number(&mut s, CUBE, "copies")
+                    } else {
+                        crate::degrade_number(&mut s, CUBE, "copies")
+                    };
+                    assert_eq!(moved, copies);
+
+                    s.end_turn();
+                    s.attack(HITTER, &cube);
+
+                    let made = row(&s, P1).iter().filter(|lane| lane.as_deref() == Some(TIMMY)).count();
+                    assert_eq!(made, copies as usize);
+                }
             }
 
             #[test]

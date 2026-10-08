@@ -28,15 +28,16 @@ pub const ID: &str = "core-077";
 /// R363: the least current cost the discount reaches, checked after every other modifier (R65).
 const TARGET_COST: i32 = 4;
 
-/// The two faces differ only in how much the discount is worth.
-fn professor_curvature(amount: i32) -> Script {
+/// The two faces differ only in how much the discount is worth: the declared number `discount`
+/// (R386), 1 and 2 on the Radiant face, read off the face that is running.
+fn professor_curvature() -> Script {
     Script {
-        cry: Some(hook(move |ctx| {
+        cry: Some(hook(|ctx| {
             vec![add_player_modifier(json_as(json!({
                 "player": "self",
                 "mod": {
                     "kind": "costDiscount",
-                    "amount": amount,
+                    "amount": param(&*ctx, "discount"),
                     "minCurrentCost": TARGET_COST,
                     // R48: it covers the controller's NEXT turn, so it survives the turn it was created on.
                     "expiry": { "until": "nextTurnOf", "player": ctx.controller, "fromTurn": ctx.state.turn },
@@ -48,10 +49,9 @@ fn professor_curvature(amount: i32) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    CardScripts {
-        base: professor_curvature(1),
-        radiant: professor_curvature(2),
-    }
+    let base = professor_curvature();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
 }
 
 // #77 Professor Curvature — SPEC §8.3, R48, R65, R363.
@@ -138,6 +138,22 @@ mod tests {
     fn labels(view: &PlayerView, mine: bool) -> Vec<String> {
         let side = if mine { &view.you } else { &view.opponent };
         side.modifiers.iter().map(|modifier| modifier.label.clone()).collect()
+    }
+
+    #[test]
+    fn r386_an_upgrade_makes_the_discount_2_and_a_radiant_degrade_1() {
+        for (radiant, upgrade, discount) in [(false, true, 2), (true, false, 1)] {
+            let mut s = board(radiant);
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, CURVATURE, "discount")
+            } else {
+                crate::degrade_number(&mut s, CURVATURE, "discount")
+            };
+            assert_eq!(moved, discount);
+            s.play(CURVATURE, json!({}));
+            to_my_next_turn(&mut s);
+            assert_eq!(hand_cost(&s, COST_4), 4 - discount);
+        }
     }
 
     mod professor_curvature_base {

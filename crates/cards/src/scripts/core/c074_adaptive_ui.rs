@@ -56,29 +56,26 @@ fn chosen_x(ctx: &EffectContext<'_>) -> i32 {
     ctx.x.max(0)
 }
 
-/// The four multipliers are the whole of the radiant text.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct Per {
-    damage: i32,
-    heal: i32,
-    draw: i32,
-    stats: i32,
-}
-
-fn adaptive_ui(per: Per) -> Script {
+/// The four multipliers are the whole of the radiant text: the declared numbers `damage`, `heal`,
+/// `draw` and `ghoul` (R386), 2, 3, 2 and 3 on the Radiant face and tuned there alone — the base face
+/// prints a bare X, which is always 1X (R749).
+fn adaptive_ui() -> Script {
     Script {
         targets: targets(),
-        cry: Some(hook(move |ctx| {
+        cry: Some(hook(|ctx| {
             let x = chosen_x(ctx);
             // R348 keeps a play from choosing X = 0; a run with none makes nothing, and no 0/0 token.
             if x == 0 {
                 return vec![];
             }
-            let stats = per.stats * x;
+            let stats = param(&*ctx, "ghoul") * x;
+            let amount = param(&*ctx, "damage") * x;
+            let healed = param(&*ctx, "heal") * x;
+            let drawn = param(&*ctx, "draw") * x;
             vec![
-                damage(json_as(json!({ "to": { "of": "chosen" }, "amount": per.damage * x }))),
-                heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": per.heal * x }))),
-                draw(json_as(json!({ "count": per.draw * x }))),
+                damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount }))),
+                heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": healed }))),
+                draw(json_as(json!({ "count": drawn }))),
                 summon(json_as(json!({ "defId": GHOUL_TOKEN, "statsOverride": { "attack": stats, "health": stats } }))),
             ]
         })),
@@ -87,10 +84,9 @@ fn adaptive_ui(per: Per) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    CardScripts {
-        base: adaptive_ui(Per { damage: 1, heal: 1, draw: 1, stats: 1 }),
-        radiant: adaptive_ui(Per { damage: 2, heal: 3, draw: 2, stats: 3 }),
-    }
+    let base = adaptive_ui();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
 }
 
 // #74 Adaptive UI — SPEC §8.3, BUILD M4-T4: "X=2: 2 damage, heal 2, draw 2, a 2/2 Ghoul Token;
@@ -349,6 +345,41 @@ mod tests {
             s.end_turn().end_turn();
             s.attack(&ghoul, "hero");
             s.expect_health(P2, 27);
+        }
+    }
+
+    #[test]
+    fn r386_each_radiant_multiplier_moves_one_step_and_the_base_face_has_none_to_move() {
+        // Radiant at X = 1: 2 damage, heal 3, draw 2, a 3/3 Ghoul. One Upgrade of each makes it 3, 4,
+        // 3 and 4/4; one Degrade 1, 2, 1 and 2/2.
+        for (upgrade, damage, healed, drawn, ghoul) in [(true, 3, 4, 3, 4), (false, 1, 2, 1, 2)] {
+            let mut s = setup(json!({
+                "seed": "core-074-tuned",
+                "p1": {
+                    "hand": [{ "def": "core-074", "radiant": true }, "core-005"],
+                    "library": ["core-035", "core-036", "core-013", "core-011"],
+                    "health": 20,
+                },
+                "p2": { "hand": ["core-005"], "health": 30 },
+            }));
+            for key in ["damage", "heal", "draw", "ghoul"] {
+                if upgrade {
+                    crate::upgrade_number(&mut s, "core-074", key);
+                } else {
+                    crate::degrade_number(&mut s, "core-074", key);
+                }
+            }
+            s.play("core-074", json!({ "x": 1, "targets": at_enemy_hero() }));
+            s.expect_health(P2, 30 - damage);
+            s.expect_health(P1, 20 + healed);
+            assert_eq!(s.pile(P1, "library").len(), 4 - drawn as usize);
+            let token = s.unit(P1, 1).expect("a Ghoul Token in lane 1");
+            s.expect_stats(&token, json!({ "attack": ghoul, "health": ghoul }));
+        }
+        let s = setup(json!({ "p1": { "hand": ["core-074"] } }));
+        for key in ["damage", "heal", "draw", "ghoul"] {
+            assert!(!crate::can_upgrade_number(&s, "core-074", key));
+            assert!(!crate::can_degrade_number(&s, "core-074", key));
         }
     }
 }

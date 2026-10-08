@@ -52,26 +52,17 @@ pub const ID: &str = "core-090-1";
 /// R350: the step the end-of-turn delayed effect re-enters (§10.6: `script.resume[step]`).
 const COPIES_STEP: &str = "copies";
 
-/// One face's two numbers (TS `{ damage: number; copies: number }`).
-#[derive(Clone, Copy)]
-struct Face {
-    damage: i32,
-    copies: i32,
-}
-
-/// "take 1 damage; shuffle 2 copies", radiant "take 2 damage; 3 copies".
-const BASE: Face = Face { damage: 1, copies: 2 };
-const RADIANT: Face = Face { damage: 2, copies: 3 };
-
-/// The two numbers are the whole of the radiant text.
-fn virus(face: Face) -> Script {
+/// The two numbers are the whole of the radiant text: "take 1 damage; shuffle 2 copies", radiant "take
+/// 2 damage; 3 copies" — the declared numbers `damage` and `copies` (R386), each less being better for
+/// the virus's controller, the player who draws it.
+fn virus() -> Script {
     Script {
         static_flags: Some(StaticFlags {
             cast_on_draw: Some(true),
             ..StaticFlags::default()
         }),
-        cry: Some(hook(move |_ctx| {
-            let amount = face.damage;
+        cry: Some(hook(|ctx| {
+            let amount = param(&*ctx, "damage");
             vec![
                 damage(json_as(json!({ "to": { "of": "selfHero" }, "amount": amount }))),
                 // R350: the copies at the end of the turn this is cast on, whoever's turn that is.
@@ -85,10 +76,10 @@ fn virus(face: Face) -> Script {
         resume: IndexMap::from([(
             // R57: fresh copies with the flag of the face that was cast; R80 and R316 at a full library.
             COPIES_STEP,
-            hook(move |ctx| {
+            hook(|ctx| {
                 let mut args = json!({
                     "defId": ID,
-                    "count": face.copies,
+                    "count": param(&*ctx, "copies"),
                     "player": "self",
                     "radiant": ctx.radiant,
                 });
@@ -103,7 +94,7 @@ fn virus(face: Face) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    let base = virus(BASE);
-    let radiant = virus(RADIANT);
+    let base = virus();
+    let radiant = virus();
     CardScripts { base, radiant }
 }

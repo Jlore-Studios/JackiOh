@@ -46,14 +46,13 @@ fn drawn_into_hand(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
         .collect()
 }
 
-/// "They cost (1) less."
-const RISKY_DISCOUNT: i32 = -1;
-
 fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let library: Vec<String> = zone_cards(&*ctx.state, ctx.controller, OffFieldZone::Library)
         .iter()
         .map(|card| card.id.clone())
         .collect();
+    // "They cost (1) less": the declared number `discount` (R386).
+    let discount = param(&*ctx, "discount");
     vec![
         remember(json_as(json!({ "key": LIBRARY_KEY, "value": library }))),
         draw(json_as(json!({ "count": param(&*ctx, "draw") }))),
@@ -61,10 +60,10 @@ fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
             cards: Arc::new(|now: &mut EffectContext<'_>| {
                 drawn_into_hand(now).into_iter().map(|card| card.id).collect()
             }),
-            each: Arc::new(|instance_id: &str| {
+            each: Arc::new(move |instance_id: &str| {
                 set_cost_mod(json_as(json!({
                     "target": { "of": "instance", "instanceId": instance_id },
-                    "amount": RISKY_DISCOUNT
+                    "amount": -discount
                 })))
             }),
         }),
@@ -163,7 +162,8 @@ mod tests {
             js(&def().params),
             json!([
                 { "key": "draw", "base": 3, "radiant": 3, "better": "up", "step": 1, "min": 1 },
-                { "key": "threshold", "base": 0, "radiant": 1, "better": "up", "step": 1, "min": 0 }
+                { "key": "threshold", "base": 0, "radiant": 1, "better": "up", "step": 1, "min": 0 },
+                { "key": "discount", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1 }
             ])
         );
         let scripts = script();
@@ -336,6 +336,18 @@ mod tests {
             s.play(RISKY, json!({}));
             s.expect_in_zone(ARMOR, "hand");
             assert_eq!(hand_costs(&s).get(ARMOR).copied(), Some(1));
+        }
+
+        /// R386 its discount is declared: an Upgrade's step takes (2) off, so a (2) card is kept at (0),
+        /// and a Degrade finds the discount at its floor of 1
+        #[test]
+        fn r386_its_discount_is_declared_an_upgrade_s_step_keeps_a_2_card_at_0() {
+            let mut s = scenario(json!({ "p1": { "hand": [RISKY, VANILLA], "library": [ARMOR, FILLER, FILLER] } }));
+            assert!(!crate::can_degrade_number(&s, RISKY, "discount"));
+            assert_eq!(crate::upgrade_number(&mut s, RISKY, "discount"), 2);
+            s.play(RISKY, json!({}));
+            s.expect_in_zone(ARMOR, "hand");
+            assert_eq!(hand_costs(&s).get(ARMOR).copied(), Some(0));
         }
     }
 

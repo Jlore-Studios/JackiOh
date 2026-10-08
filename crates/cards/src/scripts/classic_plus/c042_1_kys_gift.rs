@@ -29,8 +29,10 @@ pub fn script() -> CardScripts {
                 heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": param(&*ctx, "heal") }))),
             ];
             let radiant = ctx.radiant;
+            // "They cost (0)": the declared number `setCost` (R386).
+            let cost = param(&*ctx, "setCost");
             effects.extend(pools().into_iter().map(|query| {
-                add_random_from_catalog(json_as(json!({ "query": query, "costOverride": 0, "radiant": radiant })))
+                add_random_from_catalog(json_as(json!({ "query": query, "costOverride": cost, "radiant": radiant })))
             }));
             effects
         })),
@@ -121,7 +123,20 @@ mod tests {
         assert!(Arc::ptr_eq(base, radiant));
         let params: Vec<Value> =
             def.params.unwrap_or_default().iter().map(|entry| json!([entry.key, entry.base, entry.radiant])).collect();
-        assert_eq!(params, vec![json!(["mana", 1, 2]), json!(["discards", 1, 2]), json!(["heal", 5, 10])]);
+        assert_eq!(
+            params,
+            vec![json!(["mana", 1, 2]), json!(["discards", 1, 2]), json!(["heal", 5, 10]), json!(["setCost", 0, 0])]
+        );
+    }
+
+    #[test]
+    fn r386_a_degrade_makes_the_four_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
+        let mut s = gift(false, json!({}), json!({}));
+        assert!(!crate::can_upgrade_number(&s, GIFT, "setCost"));
+        assert_eq!(crate::degrade_number(&mut s, GIFT, "setCost"), 1);
+        s.end_turn();
+        let made = s.hand(P1).into_iter().filter(|card| card.cost_override == Some(1)).count();
+        assert_eq!(made, 4);
     }
 
     mod base {

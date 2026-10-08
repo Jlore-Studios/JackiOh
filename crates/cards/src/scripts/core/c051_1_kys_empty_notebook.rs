@@ -24,23 +24,19 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-051-1";
 
-/// §8: base draws 1, radiant draws 2.
-const BASE_DRAW: i32 = 1;
-const RADIANT_DRAW: i32 = 2;
-
-/// A spell's script is its `cry` hook (§10.9): the on-resolve hook, fired by `run_hook`.
-fn notebook(count: i32) -> Script {
+/// A spell's script is its `cry` hook (§10.9): the on-resolve hook, fired by `run_hook`. §8: base
+/// draws 1, radiant draws 2 — the declared number `draw` (R386), read off the face that is running.
+fn notebook() -> Script {
     Script {
-        cry: Some(hook(move |_ctx| vec![draw(json_as(json!({ "count": count })))])),
+        cry: Some(hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])),
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
-    CardScripts {
-        base: notebook(BASE_DRAW),
-        radiant: notebook(RADIANT_DRAW),
-    }
+    let base = notebook();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
 }
 
 // #51.1 KY's Empty Notebook (SPEC §8.3, §7, §5.1, §6.3 Draw; R4, R11, R50, R60).
@@ -62,6 +58,22 @@ mod tests {
     /// The ids a query answers, in its order (TS `.map((card) => card.id)`).
     fn ids<T: std::borrow::Borrow<CardDef>>(defs: Vec<T>) -> Vec<String> {
         defs.iter().map(|def| <T as std::borrow::Borrow<CardDef>>::borrow(def).id.clone()).collect()
+    }
+
+    #[test]
+    fn r386_an_upgrade_draws_2_and_a_radiant_degrade_1() {
+        for (radiant, upgrade, draws) in [(false, true, 2), (true, false, 1)] {
+            crate::register_all();
+            let mut s = scenario(json!({ "p1": { "hand": [{ "def": "core-051-1", "radiant": radiant }, ANCHOR], "library": LIBRARY } }));
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, "core-051-1", "draw")
+            } else {
+                crate::degrade_number(&mut s, "core-051-1", "draw")
+            };
+            assert_eq!(moved, draws);
+            s.play("core-051-1", json!({}));
+            assert_eq!(s.state().players.p1.library.len(), LIBRARY.len() - draws as usize);
+        }
     }
 
     mod n51_1_ky_s_empty_notebook_base {

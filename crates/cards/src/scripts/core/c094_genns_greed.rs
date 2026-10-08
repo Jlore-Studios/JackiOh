@@ -38,15 +38,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-094";
 
-/// TS `{ base: …, radiant: … } as const`.
-struct PerFace {
-    base: i32,
-    radiant: i32,
-}
-
-/// §8: base "gain 2 mana"; radiant "Gain 6".
-const MANA: PerFace = PerFace { base: 2, radiant: 6 };
-
 /// §8 #94: the one cost the draw clause names.
 const DRAWN_COST: i32 = 2;
 
@@ -63,8 +54,10 @@ fn drawn_cards(ctx: &EffectContext<'_>) -> Vec<String> {
         .collect()
 }
 
-fn greed(mana: i32) -> Hook {
-    hook(move |_ctx| {
+/// §8: base "gain 2 mana"; radiant "Gain 6" — the declared number `mana` (R386).
+fn greed() -> Hook {
+    hook(|ctx| {
+        let mana = param(&*ctx, "mana");
         vec![
             // §8 "Draw every 2-cost card from your library": one draw per card, so each counts on the draw
             // counter, emits its own `drawn` event and meets the hand cap on its own (§2.4, R4, R55). The
@@ -89,11 +82,11 @@ fn greed(mana: i32) -> Hook {
 pub fn script() -> CardScripts {
     CardScripts {
         base: Script {
-            cry: Some(greed(MANA.base)),
+            cry: Some(greed()),
             ..Script::default()
         },
         radiant: Script {
-            cry: Some(greed(MANA.radiant)),
+            cry: Some(greed()),
             ..Script::default()
         },
     }
@@ -210,6 +203,26 @@ mod tests {
             // 4 − 4 cost + 2 gained.
             s.expect_mana(P1, 2);
             assert_eq!(s.state().players[P1].mana.max, 4);
+        }
+
+        #[test]
+        fn r386_an_upgrade_gains_3_and_a_radiant_degrade_5() {
+            for (radiant, upgrade, mana) in [(false, true, 3), (true, false, 5)] {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "core-094-mana-tuned",
+                    "p1": { "hand": [{ "def": GREED, "radiant": radiant }, "core-005"], "library": [FILLER_SPELL] },
+                    "p2": { "hand": ["core-005"] },
+                }));
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, GREED, "mana")
+                } else {
+                    crate::degrade_number(&mut s, GREED, "mana")
+                };
+                assert_eq!(moved, mana);
+                s.play(GREED, json!({}));
+                s.expect_mana(P1, mana);
+            }
         }
 
         #[test]

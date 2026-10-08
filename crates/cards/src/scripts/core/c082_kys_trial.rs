@@ -82,8 +82,9 @@ fn trial(costs_zero: bool) -> Script {
                     return vec![];
                 };
                 let mut args = json!({ "defId": def_id, "radiant": true });
+                // "It costs (0)": the declared number `setCost` (R386).
                 if costs_zero {
-                    args["costOverride"] = json!(0);
+                    args["costOverride"] = json!(param(&*ctx, "setCost"));
                 }
                 vec![add_to_hand(json_as(args))]
             }),
@@ -281,6 +282,23 @@ mod tests {
             // R65 starts the calculation from `costOverride`, so 0 here is a card that costs 0 in hand and
             // keeps costing 0 in every zone (R78).
             assert_eq!(added.and_then(|card| card.cost_override), Some(0));
+        }
+
+        #[test]
+        fn r386_a_degrade_makes_the_card_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
+            crate::register_all();
+            let mut s = scenario(json!({ "seed": "kys-trial", "p1": { "hand": [{ "def": TRIAL, "radiant": true }] } }));
+            assert!(!crate::can_upgrade_number(&s, TRIAL, "setCost"));
+            assert_eq!(crate::degrade_number(&mut s, TRIAL, "setCost"), 1);
+            s.play(TRIAL, json!({}));
+            let first = s.state().pending.as_ref().and_then(|p| p.options.first().cloned());
+            let chosen = card_numbered(&first.as_ref().map(|o| mode_option(&o.selection)).unwrap_or_default())
+                .unwrap_or_default();
+
+            s.answer(json!(first.map(|o| o.key).unwrap_or_default()));
+
+            let added = s.hand(Some(P1)).into_iter().find(|card| card.def_id == chosen);
+            assert_eq!(added.and_then(|card| card.cost_override), Some(1));
         }
     }
 

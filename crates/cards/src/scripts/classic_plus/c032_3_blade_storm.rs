@@ -21,9 +21,8 @@ pub const ID: &str = "classicplus-032-3";
 /// Whirlwind (C+ #21), which the base face casts round after round.
 const WHIRLWIND: &str = "classicplus-021";
 
-/// The Radiant face's printed hit of each round: "Deal 1 damage". Not a declared number (§8.7 tunes only `rounds`).
-const HIT: i32 = 1;
-
+/// The Radiant face's hit of each round, "Deal 1 damage", is the declared number `damage` (R386, patch
+/// v0.3.2); the base face's rounds cast Whirlwind, whose own 1 is Whirlwind's number.
 pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(hook(|ctx| {
@@ -37,7 +36,7 @@ pub fn script() -> CardScripts {
     let radiant = Script {
         cry: Some(hook(|ctx| {
             vec![damage_rounds_until_death(json_as(json!({
-                "amount": HIT,
+                "amount": param(&*ctx, "damage"),
                 "rounds": param(&*ctx, "rounds"),
                 "side": "enemy",
             })))]
@@ -173,7 +172,10 @@ mod tests {
             assert_eq!(BLADE_STORM_ROUNDS, 30);
             assert_eq!(
                 js(&def.params),
-                json!([{ "key": "rounds", "base": BLADE_STORM_ROUNDS, "radiant": BLADE_STORM_ROUNDS, "better": "up", "step": 8, "min": 1 }])
+                json!([
+                    { "key": "rounds", "base": BLADE_STORM_ROUNDS, "radiant": BLADE_STORM_ROUNDS, "better": "up", "step": 8, "min": 1 },
+                    { "key": "damage", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1 }
+                ])
             );
             assert_eq!(def.base.text, "Cast Whirlwind until a Unit dies.");
         }
@@ -338,5 +340,18 @@ mod tests {
                 assert!(hits(&s, s.unit(P1, 1)).is_empty());
             }
         }
+
+            #[test]
+            fn r386_an_upgrade_hits_for_2_each_round_and_a_degrade_finds_the_hit_at_its_floor_of_1() {
+                crate::register_all();
+                let mut own = json!({ "field": [TIMMY] });
+                own["hand"] = json!([{ "def": STORM, "radiant": true }, FILLER]);
+                let mut s = scenario(json!({ "p1": own, "p2": { "hand": [FILLER], "field": [MENACE] } }));
+                assert!(!crate::can_degrade_number(&s, STORM, "damage"));
+                assert_eq!(crate::upgrade_number(&mut s, STORM, "damage"), 2);
+                s.play(STORM, json!({}));
+                // 2 a round into a 9/9: it dies in the fifth.
+                assert_eq!(hits(&s, s.unit(P2, 1).or_else(|| Some(s.card(MENACE).clone()))), [2, 2, 2, 2, 2]);
+            }
     }
 }

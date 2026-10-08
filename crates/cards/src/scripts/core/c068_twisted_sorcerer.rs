@@ -37,18 +37,17 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-068";
 
-/// §8.3: "below 10" is strict — at exactly 10 the small number is dealt.
-const LOW_HERO_HEALTH: i32 = 10;
-
 /// §8 Conventions: every legal unit and hero on either side (R90: a bare `target` is units only).
 fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
 }
 
-/// "If your hero is below 10", strictly. §10.9: a hook may read state to compute an effect's
-/// arguments; it never writes, and R195's `condition_met` reads the same thing through this function.
-fn hero_is_low(state: &GameState, controller: PlayerId) -> bool {
-    hero_of(state, controller).health < LOW_HERO_HEALTH
+/// "If your hero is below 10", strictly: at exactly the threshold the small number is dealt. The 10 is
+/// the declared number `threshold` (R386), more being better (the high number comes sooner). §10.9: a
+/// hook may read state to compute an effect's arguments; it never writes, and R195's `condition_met`
+/// reads the same thing through this function.
+fn hero_is_low(state: &GameState, controller: PlayerId, threshold: i32) -> bool {
+    hero_of(state, controller).health < threshold
 }
 
 /// §10.9: a hook may read state to compute an effect's arguments; it never writes. The read goes
@@ -56,35 +55,29 @@ fn hero_is_low(state: &GameState, controller: PlayerId) -> bool {
 /// card file spelling out the shape of `PlayerState`, so this file names the fact it needs and not
 /// the field it lives in.
 ///
-/// `low` is dealt normally, `high` when the controller's hero is below the threshold at resolution.
-fn sorcerer(low: i32, high: i32) -> Script {
+/// The declared number `damage` is dealt normally, `lowDamage` when the controller's hero is below the
+/// threshold at resolution (R386): base "deal 4 damage …, 8 if your hero is below 10", Radiant "8 …,
+/// 16" (R275), read off the face that is running.
+fn sorcerer() -> Script {
     Script {
         targets: targets(),
-        cry: Some(hook(move |ctx| {
-            let amount = if hero_is_low(ctx.state, ctx.controller) { high } else { low };
+        cry: Some(hook(|ctx| {
+            let low = hero_is_low(ctx.state, ctx.controller, param(&*ctx, "threshold"));
+            let amount = if low { param(&*ctx, "lowDamage") } else { param(&*ctx, "damage") };
             vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))]
         })),
-        // R195: hand only — the glow says playing it now deals `high`.
+        // R195: hand only — the glow says playing it now deals `lowDamage`.
         condition_met: Some(condition_hook(|ctx| {
-            ctx.zone == ConditionZone::Hand && hero_is_low(ctx.state, ctx.controller)
+            ctx.zone == ConditionZone::Hand && hero_is_low(ctx.state, ctx.controller, param(&ctx, "threshold"))
         })),
         ..Script::default()
     }
 }
 
-/// Base: "deal 4 damage …, 8 if your hero is below 10".
-const BASE_DAMAGE: i32 = 4;
-const BASE_LOW_DAMAGE: i32 = 8;
-
-/// Radiant: "deal 8 damage …, 16 if your hero is below 10" (R275).
-const RADIANT_DAMAGE: i32 = 8;
-const RADIANT_LOW_DAMAGE: i32 = 16;
-
 pub fn script() -> CardScripts {
-    CardScripts {
-        base: sorcerer(BASE_DAMAGE, BASE_LOW_DAMAGE),
-        radiant: sorcerer(RADIANT_DAMAGE, RADIANT_LOW_DAMAGE),
-    }
+    let base = sorcerer();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
 }
 
 // #68 Twisted Sorcerer — SPEC §8.3, BUILD M4-T4: "4 damage, 8 when hero < 10 at resolution;
@@ -302,6 +295,42 @@ mod tests {
             let targets = on_unit(&s, P2, 1);
             s.play(SOURCERER, json!({ "targets": targets }));
             s.expect_stats("core-025", json!({ "health": 6, "maxHealth": 7 }));
+        }
+    }
+
+    #[test]
+    fn r386_an_upgrade_deals_5_or_10_and_a_degrade_3_or_6() {
+        for (upgrade, key, health, dealt) in [
+            (true, "damage", 30, 5),
+            (true, "lowDamage", 5, 10),
+            (false, "damage", 30, 3),
+            (false, "lowDamage", 5, 6),
+        ] {
+            let mut s = board(json!({ "p1": { "hand": [SOURCERER], "health": health } }));
+            if upgrade {
+                crate::upgrade_number(&mut s, SOURCERER, key);
+            } else {
+                crate::degrade_number(&mut s, SOURCERER, key);
+            }
+            s.play(SOURCERER, json!({ "targets": at_enemy_hero() }));
+            s.expect_health(P2, 30 - dealt);
+        }
+    }
+
+    #[test]
+    fn r386_an_upgrade_moves_the_threshold_to_12_and_a_degrade_to_8() {
+        // At 10 health the printed "below 10" deals 4; an upgraded "below 12" deals 8, and at 9 health a
+        // degraded "below 8" deals 4.
+        for (upgrade, threshold, health, dealt) in [(true, 12, 10, 8), (false, 8, 9, 4)] {
+            let mut s = board(json!({ "p1": { "hand": [SOURCERER], "health": health } }));
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, SOURCERER, "threshold")
+            } else {
+                crate::degrade_number(&mut s, SOURCERER, "threshold")
+            };
+            assert_eq!(moved, threshold);
+            s.play(SOURCERER, json!({ "targets": at_enemy_hero() }));
+            s.expect_health(P2, 30 - dealt);
         }
     }
 }

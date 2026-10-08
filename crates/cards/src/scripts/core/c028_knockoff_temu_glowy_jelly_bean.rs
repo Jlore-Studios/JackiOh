@@ -28,20 +28,20 @@ pub const ID: &str = "core-028";
 /// exactly (§9.3); §8.2 writes the same three zones as "your library, hand and field".
 const ZONES: [&str; 3] = ["hand", "library", "field"];
 
-fn knockoff_temu(count: i32) -> Script {
+/// The count is the declared number `cards` (R386): 2, 5 on the Radiant face.
+fn knockoff_temu() -> Script {
     Script {
-        cry: Some(hook(move |_ctx| {
-            vec![set_radiant_random(json_as(json!({ "zones": ZONES, "count": count })))]
+        cry: Some(hook(|ctx| {
+            vec![set_radiant_random(json_as(json!({ "zones": ZONES, "count": param(&*ctx, "cards") })))]
         })),
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
-    CardScripts {
-        base: knockoff_temu(2),
-        radiant: knockoff_temu(5),
-    }
+    let base = knockoff_temu();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
 }
 
 // #28 Knockoff Temu Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 28): "2 different non-Radiant
@@ -249,6 +249,26 @@ mod tests {
 
             // Three cards are left in the union once #28 has gone to the graveyard, and all three convert.
             assert_eq!(radiant_in_pool(s.state()).len(), 3);
+        }
+    }
+
+    #[test]
+    fn r386_an_upgrade_flags_3_cards_and_a_degrade_1() {
+        for (upgrade, cards) in [(true, 3), (false, 1)] {
+            crate::register_all();
+            let mut s = knockoff(json!({
+                "hand": ["core-028", "core-005", "core-016", "core-010"],
+                "library": ["core-013", "core-043", "core-047"],
+                "field": ["core-025"],
+            }));
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, "core-028", "cards")
+            } else {
+                crate::degrade_number(&mut s, "core-028", "cards")
+            };
+            assert_eq!(moved, cards);
+            s.play("core-028", json!({}));
+            assert_eq!(radiant_in_pool(s.state()).len(), cards as usize);
         }
     }
 }

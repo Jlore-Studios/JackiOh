@@ -37,9 +37,10 @@ pub fn script() -> CardScripts {
     };
 
     let radiant = Script {
-        cry: Some(hook(|_ctx| {
+        // "costs (0)": the declared number `setCost` (R386).
+        cry: Some(hook(|ctx| {
             vec![add_cost_rule(json_as(json!({
-                "rule": { "types": REACHES, "setTo": 0 },
+                "rule": { "types": REACHES, "setTo": param(&*ctx, "setCost") },
                 "lasts": "used",
             })))]
         })),
@@ -92,11 +93,14 @@ mod tests {
         use super::*;
 
         #[test]
-        fn declares_its_one_number_discount_r386() {
+        fn declares_its_two_numbers_discount_and_the_radiant_set_cost_r386() {
             crate::register_all();
             assert_eq!(
                 js(&crate::card_def(TRICKSTER).params),
-                json!([{ "key": "discount", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1 }])
+                json!([
+                    { "key": "discount", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1 },
+                    { "key": "setCost", "base": 0, "radiant": 0, "better": "down", "step": 1, "min": 0 }
+                ])
             );
             let scripts = script();
             assert!(scripts.base.targets.is_empty());
@@ -302,6 +306,19 @@ mod tests {
                 s.expect_mana(P1, 3);
                 // Consumed by that play.
                 assert_eq!(cost_of(&s, EXPERIMENT), 2);
+            }
+
+            #[test]
+            fn r386_a_degrade_makes_the_next_one_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [{ "def": TRICKSTER, "radiant": true }, MANA_WELL, STOCKPILE] },
+                    "p2": { "hand": [STOCKPILE] },
+                }));
+                assert!(!crate::can_upgrade_number(&s, TRICKSTER, "setCost"));
+                assert_eq!(crate::degrade_number(&mut s, TRICKSTER, "setCost"), 1);
+                s.play(TRICKSTER, json!({}));
+                assert_eq!(cost_of(&s, MANA_WELL), 1);
             }
 
             #[test]

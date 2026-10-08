@@ -49,7 +49,8 @@ pub const ID: &str = "core-041";
 
 /// §7: the Sheep Token, whose only generator is this card.
 const SHEEP_TOKEN: &str = "core-t-sheep";
-/// #55 Lava Golem, added by the radiant text at cost 0 (`costOverride`, R65).
+/// #55 Lava Golem, added by the radiant text at cost 0 (`costOverride`, R65): the declared number
+/// `setCost` (R386).
 const LAVA_GOLEM: &str = "core-055";
 
 /// The two faces differ only in whether the Lava Golem comes with the Sheep. (TS `TrapTrigger`, which
@@ -58,7 +59,7 @@ fn sheepish(lava_golem: bool) -> TriggerDef {
     TriggerDef::new(
         if lava_golem { "sheepish-radiant" } else { "sheepish" },
         &[GameEventType::CardResolved],
-        move |_ctx, event| {
+        move |ctx, event| {
             let GameEvent::CardResolved {
                 instance_id, permanent, ..
             } = event
@@ -75,7 +76,8 @@ fn sheepish(lava_golem: bool) -> TriggerDef {
             // R120: §8's conventions make an "Also" clause independent, so it still lands when an
             // Immutable target refused the Transform (R17, R23) and the trap is still consumed (R61).
             if lava_golem {
-                effects.push(add_to_hand(json_as(json!({ "defId": LAVA_GOLEM, "costOverride": 0 }))));
+                let cost = param(&*ctx, "setCost");
+                effects.push(add_to_hand(json_as(json!({ "defId": LAVA_GOLEM, "costOverride": cost }))));
             }
             effects
         },
@@ -379,6 +381,17 @@ mod tests {
             let golem = golem.expect("a Lava Golem in p2's hand");
             // R65: a `costOverride` of 0 is what "It costs (0)" means, and it survives every zone.
             assert_eq!(golem.cost_override, Some(0));
+        }
+
+        #[test]
+        fn r386_a_degrade_makes_the_lava_golem_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
+            let mut s = trap_set(json!("core-053"), true);
+            assert!(!crate::can_upgrade_number(&s, "core-041", "setCost"));
+            assert_eq!(crate::degrade_number(&mut s, "core-041", "setCost"), 1);
+            s.play("core-053", json!({ "zone": 1 }));
+
+            let golem = s.hand("p2").into_iter().find(|card| card.def_id == "core-055");
+            assert_eq!(golem.and_then(|card| card.cost_override), Some(1));
         }
 
         #[test]

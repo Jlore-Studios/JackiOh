@@ -20,22 +20,19 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-t-coin";
 
-/// §7: base gains 1, radiant 2.
-const BASE_MANA: i32 = 1;
-const RADIANT_MANA: i32 = 2;
-
-/// A spell's script is its `cry` hook (§10.9): the on-resolve hook, fired by `runHook`.
-fn coin(amount: i32) -> Script {
+/// A spell's script is its `cry` hook (§10.9): the on-resolve hook, fired by `runHook`. §7: base gains
+/// 1, radiant 2 — the declared number `mana` (R386), read off the face that is running.
+fn coin() -> Script {
     Script {
-        cry: Some(hook(move |_ctx| vec![gain_mana(json_as(json!({ "amount": amount })))])),
+        cry: Some(hook(|ctx| vec![gain_mana(json_as(json!({ "amount": param(&*ctx, "mana") })))])),
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: coin(BASE_MANA),
-        radiant: coin(RADIANT_MANA),
+        base: coin(),
+        radiant: coin(),
     }
 }
 
@@ -165,8 +162,9 @@ mod tests {
             assert!(def.token);
             assert_eq!(def.tags, vec![Tag::Token]);
             assert_eq!(js(&def.rarity), json!("Token"));
-            assert_eq!(def.base.text, "Gain 1 mana this turn.");
-            assert_eq!(def.radiant.text, "Gain 2 mana this turn.");
+            // As printed: its declared `mana` filled in (R386, R482).
+            assert_eq!(fill_params(&def, FaceKind::Base, None), "Gain 1 mana this turn.");
+            assert_eq!(fill_params(&def, FaceKind::Radiant, None), "Gain 2 mana this turn.");
             // TS `expect(base).not.toBe(radiant)`: two scripts, two hooks.
             let scripts = script();
             assert!(!Arc::ptr_eq(
@@ -218,6 +216,25 @@ mod tests {
             s.expect_mana(P1, 5);
             assert_eq!(s.state().players.p1.mana.max, 4);
             s.expect_events(json!(["cardPlayed", "manaChanged"]));
+        }
+
+        #[test]
+        fn r386_an_upgrade_gains_2_and_a_radiant_degrade_1() {
+            for (radiant, upgrade, gain) in [(false, true, 2), (true, false, 1)] {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": SEED,
+                    "p1": { "hand": [{ "def": "core-t-coin", "radiant": radiant }, "core-010"] }
+                }));
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, "core-t-coin", "mana")
+                } else {
+                    crate::degrade_number(&mut s, "core-t-coin", "mana")
+                };
+                assert_eq!(moved, gain);
+                s.play("core-t-coin", json!({}));
+                s.expect_mana(P1, 4 + gain);
+            }
         }
 
         #[test]

@@ -20,8 +20,9 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-021";
 
-/// One Hinder face: how much lower the opponent's refresh is, and whether the caster discards 1.
-fn hinder(lower: i32, discards: bool) -> Script {
+/// One Hinder face: whether the caster discards 1. How much lower the opponent's refresh is, is the
+/// declared number `mana` (R386): 1, 2 on the Radiant face.
+fn hinder(discards: bool) -> Script {
     let static_flags = Some(StaticFlags {
         cast_on_draw: Some(true),
         ..StaticFlags::default()
@@ -29,8 +30,8 @@ fn hinder(lower: i32, discards: bool) -> Script {
     if !discards {
         return Script {
             static_flags,
-            cry: Some(hook(move |_ctx| {
-                vec![next_turn_mana(json_as(json!({ "amount": -lower, "player": "enemy" })))]
+            cry: Some(hook(|ctx| {
+                vec![next_turn_mana(json_as(json!({ "amount": -param(&*ctx, "mana"), "player": "enemy" })))]
             })),
             ..Script::default()
         };
@@ -38,9 +39,9 @@ fn hinder(lower: i32, discards: bool) -> Script {
     Script {
         static_flags,
         // R682: "Discard 1" — one random card of the caster's own hand.
-        cry: Some(hook(move |_ctx| {
+        cry: Some(hook(|ctx| {
             vec![
-                next_turn_mana(json_as(json!({ "amount": -lower, "player": "enemy" }))),
+                next_turn_mana(json_as(json!({ "amount": -param(&*ctx, "mana"), "player": "enemy" }))),
                 discard_random(json_as(json!({ "count": 1 }))),
             ]
         })),
@@ -50,8 +51,8 @@ fn hinder(lower: i32, discards: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: hinder(1, true),
-        radiant: hinder(2, false),
+        base: hinder(true),
+        radiant: hinder(false),
     }
 }
 
@@ -288,6 +289,23 @@ mod tests {
                 assert_eq!(s.state().active, P2);
                 s.expect_mana(P2, 0);
                 assert_eq!(s.view(P2).you.mana, ManaView { current: 0, max: 1 });
+            }
+        }
+
+        #[test]
+        fn r386_an_upgrade_in_the_deck_takes_2_mana_and_a_radiant_degrade_1() {
+            for (radiant, upgrade, mana) in [(false, true, 2), (true, false, 1)] {
+                crate::register_all();
+                let mut s = hinder_on_top("hinder-tuned", radiant, None, &[P1_FILLER]);
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, HINDER, "mana")
+                } else {
+                    crate::degrade_number(&mut s, HINDER, "mana")
+                };
+                assert_eq!(moved, mana);
+                let mut s = draw_hinder(s);
+                s.end_turn();
+                s.expect_mana(P2, 4 - mana);
             }
         }
 

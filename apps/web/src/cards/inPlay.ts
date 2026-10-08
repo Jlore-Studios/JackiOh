@@ -58,13 +58,13 @@ type PowerWords = { x: number; title: string; radiantTitle: string; base: string
  */
 export const POWER_WORDS: Readonly<Record<string, PowerWords>> = {
   recruit: { x: 3, title: "Expedition Map", radiantTitle: "Expedition Map", base: "Recruit a permanent.", radiant: "Recruit a permanent. Make it Radiant." },
-  draw: { x: 1, title: "Life Tap", radiantTitle: "Life Tap", base: "Draw 1. Take 2 damage.", radiant: "Draw 1 from each player's deck." },
+  draw: { x: 1, title: "Life Tap", radiantTitle: "Life Tap", base: "Draw {tapDraw}. Take {tapDamage} damage.", radiant: "Draw {tapDraw} from each player's deck." },
   ping: {
     x: 1,
     title: "Ping",
     radiantTitle: "Ping",
-    base: "Pierce. Deal 1 damage.",
-    radiant: "Pierce. Deal 1 damage. If this kills a Unit, summon a Ghoul Token with its stats.",
+    base: "Pierce. Deal {ping} damage.",
+    radiant: "Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats.",
   },
   burn: {
     x: 1,
@@ -80,30 +80,30 @@ export const POWER_WORDS: Readonly<Record<string, PowerWords>> = {
     x: 2,
     title: "Stitching",
     radiantTitle: "Stitching",
-    base: "Discover two (2) Cost or less Units. Fuse them.",
-    radiant: "Discover two Radiant (2) Cost or less Units. Fuse them.",
+    base: "Discover two ({stitchCost}) Cost or less Units. Fuse them.",
+    radiant: "Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them.",
   },
   armor: {
     x: 1,
     title: "Armor Up",
     radiantTitle: "Tank Up",
-    base: "Your hero gains 2 Armor until your next turn.",
-    radiant: "Your hero gains 4 Armor, then this power refreshes.",
+    base: "Your hero gains {armor} Armor until your next turn.",
+    radiant: "Your hero gains {armor} Armor, then this power refreshes.",
   },
-  insect: { x: 2, title: "Die Insect", radiantTitle: "Die Insect", base: "Deal 8 damage to a random enemy.", radiant: "Lucky 1. Deal 8 damage to a random enemy." },
+  insect: { x: 2, title: "Die Insect", radiantTitle: "Die Insect", base: "Deal {insect} damage to a random enemy.", radiant: "Lucky 1. Deal {insect} damage to a random enemy." },
   brainstorm: {
     x: 2,
     title: "KY Brainstorm",
     radiantTitle: "KY Brainstorm",
-    base: "Add a random KY card to your hand. Reduce the cost of all Spells in your hand by (1).",
-    radiant: "Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by (1).",
+    base: "Add a random KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).",
+    radiant: "Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).",
   },
   pluck: {
     x: 2,
     title: "Pluck",
     radiantTitle: "Pluck",
-    base: "Add a random Fruit to your hand. It costs (0).",
-    radiant: "Add a random Radiant Fruit to your hand. It costs (0).",
+    base: "Add a random Fruit to your hand. It costs ({fruitCost}).",
+    radiant: "Add a random Radiant Fruit to your hand. It costs ({fruitCost}).",
   },
   tricks: { x: 3, title: "Terminus Tricks", radiantTitle: "Terminus Tricks", base: "Discover a Trap to summon.", radiant: "Discover a Radiant Trap to summon." },
 };
@@ -117,7 +117,7 @@ export function powerTitle(power: RolledPower, radiant: boolean): string {
 /**
  * A Heroic Power's text in play (R752): its keyword line, then the one power it rolled — its name,
  * then on a line of its own its Activate and X and its words, R366's layout — with the card's
- * numbers (`{shot}`) filled in from `values`. Only the rolled power shows, so the other twelve add no
+ * numbers (`{shot}`, `{ping}`, …) filled in from `values`. Only the rolled power shows, so the other twelve add no
  * clutter. Null for a name this table does not know, which leaves the printed text in place.
  */
 export function powerText(

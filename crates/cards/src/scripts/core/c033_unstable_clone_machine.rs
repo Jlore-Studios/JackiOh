@@ -90,10 +90,8 @@ fn answers(ctx: &EffectContext<'_>, event: &ResolvedEvent<'_>) -> bool {
     event.instance_id != self_.id
 }
 
-/// Three copies per play, on both faces (§8.2 row 33).
-const COPIES: i32 = 3;
-
 /// `all_radiant` is the radiant face: every copy is Radiant; the base face keeps the played flag.
+/// Three copies per play, on both faces (§8.2 row 33): the declared number `copies` (R386).
 fn after_play(all_radiant: bool) -> TriggerDef {
     TriggerDef::new(
         if all_radiant {
@@ -114,7 +112,7 @@ fn after_play(all_radiant: bool) -> TriggerDef {
             // Trap set face-down stays unnamed to the other player.
             vec![shuffle_into(json_as(json!({
                 "defId": event.def_id,
-                "count": COPIES,
+                "count": param(&*ctx, "copies"),
                 "radiant": flag,
                 "copyOf": event.instance_id,
             })))]
@@ -539,6 +537,25 @@ mod tests {
             let theirs = view_json(&s, "p2");
             assert!(theirs["opponent"]["ownLibrary"].is_null());
             assert_eq!(theirs["opponent"]["libraryCount"], json!(4));
+        }
+    }
+
+    #[test]
+    fn r386_an_upgrade_shuffles_4_copies_and_a_degrade_2() {
+        for (upgrade, copies) in [(true, 4), (false, 2)] {
+            let mut s = scn(json!({
+                "seed": "clone-tuned",
+                "p1": { "hand": ["15"], "backrow": ["33"], "field": ["43"], "library": ["25"] },
+                "p2": { "field": ["15"] },
+            }));
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, "core-033", "copies")
+            } else {
+                crate::degrade_number(&mut s, "core-033", "copies")
+            };
+            assert_eq!(moved, copies);
+            s.play("15", json!({}));
+            assert_eq!(copies_in(&s.pile("p1", "library"), "core-015").len(), copies as usize);
         }
     }
 }

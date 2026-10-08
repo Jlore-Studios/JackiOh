@@ -36,6 +36,8 @@ pub const ID: &str = "core-065-1";
 /// controller has while draining the fused card itself, which is not one.
 fn attack_drain_aura(spares_own_kind: bool) -> AuraHook {
     aura_hook(move |args| {
+        // "−2 attack": the declared number `drain` (R386), less being better for the Pillow's controller.
+        let drain = param(&args, "drain");
         let controller = args.self_.controller;
         vec![AuraEntry {
             applies: Box::new(move |unit: &CardInstance| {
@@ -44,7 +46,7 @@ fn attack_drain_aura(spares_own_kind: bool) -> AuraHook {
                     && !(spares_own_kind && unit.def_id == ID)
             }),
             mod_: StatMod {
-                attack: Some(-2),
+                attack: Some(-drain),
                 ..StatMod::default()
             },
         }]
@@ -99,6 +101,23 @@ mod tests {
 
     fn sel(card: &CardInstance) -> Value {
         json!({ "pick": "instance", "instanceId": card.id })
+    }
+
+    #[test]
+    fn r386_an_upgrade_drains_1_attack_and_a_degrade_3() {
+        for (upgrade, drain) in [(true, 1), (false, 3)] {
+            crate::register_all();
+            let mut s = scenario(json!({ "p1": { "field": [PILLOW, TIMMY] } }));
+            let pillow = unit_at(&s, P1, 1);
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, &pillow.id, "drain")
+            } else {
+                crate::degrade_number(&mut s, &pillow.id, "drain")
+            };
+            assert_eq!(moved, drain);
+            let timmy = unit_at(&s, P1, 2);
+            s.expect_stats(&timmy, json!({ "attack": 3 - drain, "maxHealth": 3 }));
+        }
     }
 
     mod spikey_pillow {

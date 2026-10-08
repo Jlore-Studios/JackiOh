@@ -21,8 +21,9 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-047";
 
-/// The two faces differ only in how much the target is healed.
-fn fig_of_life(amount: i32) -> Script {
+/// The two faces differ only in how much the target is healed: the declared number `heal` (R386), 20
+/// and 50 on the Radiant face, read off the face that is running.
+fn fig_of_life() -> Script {
     Script {
         // R19: any unit or hero, either side.
         // R656: a heal helps, so a random cast that targets enemies aims this at friends.
@@ -33,18 +34,17 @@ fn fig_of_life(amount: i32) -> Script {
             "filter": { "side": "any", "of": ["unit", "hero"] },
             "aim": "help",
         }))],
-        cry: Some(hook(move |_ctx| {
-            vec![heal(json_as(json!({ "target": { "of": "chosen" }, "amount": amount })))]
+        cry: Some(hook(|ctx| {
+            vec![heal(json_as(json!({ "target": { "of": "chosen" }, "amount": param(&*ctx, "heal") })))]
         })),
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
-    CardScripts {
-        base: fig_of_life(20),
-        radiant: fig_of_life(50),
-    }
+    let base = fig_of_life();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
 }
 
 // #47 Fig of Life — SPEC §8.2, BUILD M4-T4: "Heals a unit up to max or the hero without cap (R19);
@@ -233,6 +233,24 @@ mod tests {
                 );
                 // A declared target is not a prompt (R81), so nothing here opens one.
                 assert!(face.modes.is_empty());
+            }
+        }
+
+        #[test]
+        fn r386_an_upgrade_heals_25_and_a_degrade_15() {
+            for (upgrade, heal) in [(true, 25), (false, 15)] {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [FIG], "health": 5, "field": [BYSTANDER] },
+                    "p2": { "field": [BYSTANDER] },
+                }));
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, FIG, "heal")
+                } else {
+                    crate::degrade_number(&mut s, FIG, "heal")
+                };
+                assert_eq!(moved, heal);
+                s.play(FIG, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
+                s.expect_health(PlayerId::P1, 5 + heal);
             }
         }
     }

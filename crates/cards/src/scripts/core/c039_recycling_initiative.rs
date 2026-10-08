@@ -58,33 +58,30 @@ use jackioh_engine::state::find_instance;
 
 pub const ID: &str = "core-039";
 
-/// Radiant: "the copies cost 1 less".
-const DISCOUNT: i32 = 1;
-
-/// What a face does to each copy: the discount, and whether the copy is Radiant regardless.
+/// What a face does to each copy: whether it is Radiant regardless and costs less. Base: a plain copy
+/// at its printed price, radiant flag kept (R57). Radiant: a Radiant copy that costs (1) less, the
+/// declared number `discount` (R386).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct CopyTerms {
-    discount: i32,
     radiant: bool,
 }
 
-/// Base: a plain copy at its printed price, radiant flag kept (R57).
-const BASE_TERMS: CopyTerms = CopyTerms {
-    discount: 0,
-    radiant: false,
-};
+const BASE_TERMS: CopyTerms = CopyTerms { radiant: false };
 
-/// Radiant: a Radiant copy, one cheaper.
-const RADIANT_TERMS: CopyTerms = CopyTerms {
-    discount: DISCOUNT,
-    radiant: true,
-};
+const RADIANT_TERMS: CopyTerms = CopyTerms { radiant: true };
 
 /// The step the end-of-turn delayed effect re-enters (§10.6: `script.resume[step]`).
 const COPY_STEP: &str = "copies";
 
 /// The one thing the continuation captures: which play was this card's own (R71's "every other").
 const SELF_KEY: &str = "selfId";
+
+/// The copies' discount: none on the base face; on the Radiant face the card's `discount` as it stands
+/// in exile, where the continuation finds it (R386 keeps its tuning there), or the printed one when the
+/// card has ceased to exist (R127: the continuation still names its definition).
+fn discount_of(ctx: &EffectContext<'_>, terms: CopyTerms) -> i32 {
+    if terms.radiant { param(ctx, "discount") } else { 0 }
+}
 
 /// The captured id, narrowed rather than cast: `data` is JSON that crossed a phase boundary.
 fn excluded_id(ctx: &EffectContext<'_>) -> Option<String> {
@@ -102,6 +99,7 @@ fn excluded_id(ctx: &EffectContext<'_>) -> Option<String> {
 /// each id yields one copy; deduping by id leaves R86's skip untouched.
 fn copies_of_other_plays(ctx: &EffectContext<'_>, terms: CopyTerms) -> Vec<Effect> {
     let self_id = excluded_id(ctx);
+    let discount = discount_of(ctx, terms);
     let mut out: Vec<Effect> = Vec::new();
     let mut seen: IndexSet<String> = IndexSet::new();
 
@@ -124,8 +122,8 @@ fn copies_of_other_plays(ctx: &EffectContext<'_>, terms: CopyTerms) -> Vec<Effec
             // R57: a fresh copy carries the radiant flag and nothing else; the radiant face sets it.
             "radiant": terms.radiant || card.radiant,
         });
-        if terms.discount != 0 {
-            args["costMod"] = json!(-terms.discount);
+        if discount != 0 {
+            args["costMod"] = json!(-discount);
         }
         out.push(add_to_hand(json_as(args)));
     }
@@ -488,6 +486,27 @@ mod tests {
             }
             // The originals on the field are untouched: only the copies are Radiant.
             assert_eq!(s.unit("p1", 1).map(|card| card.radiant), Some(false));
+        }
+
+        #[test]
+        fn r386_an_upgrade_makes_the_copies_cost_2_less_kept_in_exile_and_a_degrade_finds_the_discount_at_its_floor() {
+            let mut s = scn(json!({
+                "p1": {
+                    "hand": [BIG_D, { "def": RECYCLING, "radiant": true }, STOCKPILE],
+                    "library": [MENACE, POSTDOC],
+                },
+                "p2": spare(),
+            }));
+            assert!(!crate::can_degrade_number(&s, RECYCLING, "discount"));
+            assert_eq!(crate::upgrade_number(&mut s, RECYCLING, "discount"), 2);
+
+            s.play(BIG_D, json!({ "zone": 1 })); // printed cost 2
+            s.play(RECYCLING, json!({}));
+            s.end_turn();
+
+            let copy = copy_in_hand(&s, BIG_D);
+            assert_eq!(copy.cost_mod, -2);
+            assert_eq!(view_cost(&s, "p1", &copy.id), 0);
         }
 
         #[test]

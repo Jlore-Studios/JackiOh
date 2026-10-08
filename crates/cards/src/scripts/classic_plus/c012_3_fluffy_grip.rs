@@ -10,24 +10,25 @@ pub const ID: &str = "classicplus-012-3";
 
 pub fn script() -> CardScripts {
     CardScripts {
+        // "It costs (0)": the declared number `setCost` (R386), on both faces.
         base: Script {
-            cry: Some(hook(|_ctx| {
+            cry: Some(hook(|ctx| {
                 vec![take_from_library(json_as(json!({
                     "from": "enemy",
                     "pick": "random",
                     "filter": { "type": "Unit" },
-                    "costOverride": 0,
+                    "costOverride": param(&*ctx, "setCost"),
                 })))]
             })),
             ..Script::default()
         },
         radiant: Script {
-            cry: Some(hook(|_ctx| {
+            cry: Some(hook(|ctx| {
                 vec![take_from_library(json_as(json!({
                     "from": "enemy",
                     "pick": "random",
                     "filter": { "type": "Unit" },
-                    "costOverride": 0,
+                    "costOverride": param(&*ctx, "setCost"),
                     "radiant": true,
                 })))]
             })),
@@ -74,6 +75,20 @@ mod tests {
 
     fn def_ids(cards: &[CardInstance]) -> Vec<String> {
         cards.iter().map(|card| card.def_id.clone()).collect()
+    }
+
+    #[test]
+    fn r386_a_degrade_makes_the_taken_unit_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "hand": [GRIP, FILLER] },
+            "p2": { "hand": [FILLER], "library": [MENACE] },
+        }));
+        assert!(!crate::can_upgrade_number(&s, GRIP, "setCost"));
+        assert_eq!(crate::degrade_number(&mut s, GRIP, "setCost"), 1);
+        s.play(GRIP, json!({}));
+        let taken = s.hand(P1).into_iter().find(|card| card.def_id == MENACE);
+        assert_eq!(taken.and_then(|card| card.cost_override), Some(1));
     }
 
     mod base {

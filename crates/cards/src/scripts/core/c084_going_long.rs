@@ -34,7 +34,9 @@ pub const ID: &str = "core-084";
 
 /// Both faces are the same script: §6.2's Quickdraw flag and the `heroArmor` flag. The four values
 /// live in `config.HERO_ARMOR` and are selected by the instance's `radiant` and `embiggened`, not by
-/// this file — a Field Spell with no Cry, no trigger and no ability has nothing else to declare.
+/// this file — a Field Spell with no Cry, no trigger and no ability has nothing else to declare. The
+/// card declares them as `armor` and `paidArmor` (R386), which `damage::hero_armor_of` reads through
+/// `params::declared_or`, so a Degrade or an Upgrade moves the Armor the price selects.
 fn going_long() -> Script {
     Script {
         static_flags: Some(StaticFlags {
@@ -133,6 +135,26 @@ mod tests {
 
     fn targeting(instance_id: &str) -> Value {
         json!([{ "pick": "instance", "instanceId": instance_id }])
+    }
+
+    #[test]
+    fn r386_an_upgrade_gives_armor_3_or_paid_5_and_a_degrade_armor_1_or_paid_3() {
+        for (upgrade, embiggen, armor) in [(true, false, 3), (false, false, 1), (true, true, 5), (false, true, 3)] {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [GOING_LONG, STOCKPILE], "field": [SCARAB], "library": [MENACE, TIMMY] },
+                "p2": spare(json!({ "field": [BIGOT] })),
+            }));
+            let key = if embiggen { "paidArmor" } else { "armor" };
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, GOING_LONG, key)
+            } else {
+                crate::degrade_number(&mut s, GOING_LONG, key)
+            };
+            assert_eq!(moved, armor);
+            s.play(GOING_LONG, json!({ "zone": 1, "embiggen": embiggen }));
+            assert_eq!(shown_armor(&s, P1), armor);
+        }
     }
 
     mod n84_going_long_the_opening_hand {
