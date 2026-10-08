@@ -62,7 +62,7 @@ pub static uncounted: LazyLock<CardDef> = LazyLock::new(|| def("uncounted", 4402
 pub static marker: LazyLock<CardDef> = LazyLock::new(|| def("marker", 4403, "Unit", json!({ "health": 3 })));
 /// A Trap that watches nothing: a face-down card to mark (R33).
 pub static quiet_trap: LazyLock<CardDef> = LazyLock::new(|| def("quiet-trap", 4404, "Trap", json!({})));
-/// R429, R766: a Spell with an end-of-turn return whose return keeps the price it was played at
+/// R429, R766: a Spell with an end-of-turn return whose return keeps the climb it was played at
 /// (`StaticFlags.returnKeepsPrice`, #31 KY's Math Equation's shape). Its return itself does nothing, so
 /// the card stays in its graveyard and the note's lifetime can be read there.
 pub static priced_return: LazyLock<CardDef> =

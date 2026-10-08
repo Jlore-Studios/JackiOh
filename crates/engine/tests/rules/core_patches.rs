@@ -265,23 +265,24 @@ mod r429_10_5_step_4_counts_the_plays_of_a_card_that_asks {
 }
 
 // ---------------------------------------------------------------------------------------------
-// R429, R766 (issue #557): the price a return that keeps it was played at
+// R429, R766 (issues #557, #572): the climb a return that keeps it was played at
 // ---------------------------------------------------------------------------------------------
 
 mod r429_r766_step_7_notes_the_price_a_return_that_keeps_it_was_played_at {
     use super::*;
     use jackioh_engine::mana::effective_cost;
     use jackioh_engine::query::return_price_of;
-    use jackioh_engine::resolve::RETURN_PRICE_KEY;
+    use jackioh_engine::resolve::{RETURN_PRICE_KEY, add_return_price};
 
-    /// p1 plays its copy of `def` from hand at `cost_mod`: the state after the play, and the card's id.
-    fn play_at(seed: &str, def: &CardDef, cost_mod: i32) -> (GameState, String) {
+    /// p1 plays its copy of `def` from hand at `cost_mod`, `climb` of it the price its own earlier
+    /// returns gave it (`setCostMod`'s `returnPrice`): the state after the play, and the card's id.
+    fn play_at(seed: &str, def: &CardDef, cost_mod: i32, climb: i32) -> (GameState, String) {
         let mut state = board(seed);
         put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
         let card = first_in_hand(&mut state, &def.id, P1, "the returning Spell");
-        find_instance_mut(&mut state, &card.id)
-            .expect("the Spell in hand")
-            .cost_mod = cost_mod;
+        let held = find_instance_mut(&mut state, &card.id).expect("the Spell in hand");
+        held.cost_mod = cost_mod;
+        add_return_price(held, climb);
         state.players.p1.mana.current = 10;
         let played = act(
             &state,
@@ -304,16 +305,18 @@ mod r429_r766_step_7_notes_the_price_a_return_that_keeps_it_was_played_at {
     }
 
     #[test]
-    fn r429_r766_a_spell_whose_return_keeps_its_price_lies_in_its_graveyard_at_its_printed_cost_with_the_price_it_was_played_at_noted()
+    fn r429_r766_a_spell_whose_return_keeps_its_price_lies_in_its_graveyard_at_its_printed_cost_with_the_climb_it_was_played_at_noted()
      {
-        let (state, id) = play_at("r766-noted", &priced_return, 2);
+        // Played at a `costMod` of 3, 2 of it its climb and 1 a surcharge (issue #572).
+        let (state, id) = play_at("r766-noted", &priced_return, 3, 2);
         let card = lying(&state, &id);
         // R155: step 7 flagged it for its end-of-turn return.
         assert_eq!(card.return_to_hand_at_end_of_turn, Some(true));
         // R766: lying in the graveyard it is its printed card, price included.
         assert_eq!(card.cost_mod, 0);
         assert_eq!(effective_cost(&state, &card, Default::default()), 1);
-        // R429: the price it was played at waits for its return, and survives JSON (§9.3).
+        // R429: the climb it was played at, and not the surcharge, waits for its return, and survives
+        // JSON (§9.3).
         assert_eq!(return_price_of(&card), 2);
         assert_eq!(return_price_of(&lying(&round_trip(&state), &id)), 2);
     }
@@ -321,16 +324,20 @@ mod r429_r766_step_7_notes_the_price_a_return_that_keeps_it_was_played_at {
     #[test]
     fn r766_a_return_that_does_not_ask_and_a_price_of_0_note_nothing() {
         // #23 Reoccurring Dream's shape: flagged for its return, and R766's reset is all it gets.
-        let (state, id) = play_at("r766-plain", &plain_return, 2);
+        let (state, id) = play_at("r766-plain", &plain_return, 2, 2);
         let card = lying(&state, &id);
         assert_eq!(card.return_to_hand_at_end_of_turn, Some(true));
         assert_eq!(card.cost_mod, 0);
         assert!(card.memory.get(RETURN_PRICE_KEY).is_none());
         assert_eq!(return_price_of(&card), 0);
 
-        // A card that asks but was played at no price: nothing to note, so its state is the one it had
-        // before the note existed.
-        let (state, id) = play_at("r766-zero", &priced_return, 0);
+        // A card that asks but has no climb: nothing to note, whatever else it was played at (issue
+        // #572), so its state is the one it had before the note existed.
+        let (state, id) = play_at("r766-zero", &priced_return, 0, 0);
+        assert!(lying(&state, &id).memory.get(RETURN_PRICE_KEY).is_none());
+        let (state, id) = play_at("r766-discounted", &priced_return, -1, 0);
+        assert!(lying(&state, &id).memory.get(RETURN_PRICE_KEY).is_none());
+        let (state, id) = play_at("r766-surcharged", &priced_return, 2, 0);
         assert!(lying(&state, &id).memory.get(RETURN_PRICE_KEY).is_none());
     }
 
@@ -338,7 +345,7 @@ mod r429_r766_step_7_notes_the_price_a_return_that_keeps_it_was_played_at {
     fn r766_r155_the_note_goes_with_the_flag_as_the_card_leaves_the_graveyard_and_as_the_turn_ends() {
         // Taken out of the graveyard (a return, #72's Discover, a play from there): the landing it was
         // noted for is spent.
-        let (mut state, id) = play_at("r766-leaves", &priced_return, 2);
+        let (mut state, id) = play_at("r766-leaves", &priced_return, 2, 2);
         let mut card = lying(&state, &id);
         move_to_zone(
             &mut state,
@@ -354,7 +361,7 @@ mod r429_r766_step_7_notes_the_price_a_return_that_keeps_it_was_played_at {
 
         // Left lying there to the end of the turn (this fixture's return does nothing): cleanup ends
         // the return, and the note with it.
-        let (state, id) = play_at("r766-cleanup", &priced_return, 2);
+        let (state, id) = play_at("r766-cleanup", &priced_return, 2, 2);
         let ended = act(&state, json!({ "type": "endTurn", "playerId": "p1" })).state;
         let card = lying(&ended, &id);
         assert_ne!(card.return_to_hand_at_end_of_turn, Some(true));
@@ -363,12 +370,13 @@ mod r429_r766_step_7_notes_the_price_a_return_that_keeps_it_was_played_at {
 
     #[test]
     fn r766_a_spell_whose_return_keeps_its_price_reaching_its_graveyard_any_other_way_has_nothing_noted() {
-        // Discarded from a hand at a price: never played, never flagged, so R766's reset is all there is.
+        // Discarded from a hand at a price and a climb: never played, never flagged, so R766's reset is
+        // all there is, and the climb goes with the rest of its memory (R78).
         let mut state = board("r766-discarded");
         let card = first_in_hand(&mut state, &priced_return.id, P1, "the returning Spell");
-        find_instance_mut(&mut state, &card.id)
-            .expect("the Spell in hand")
-            .cost_mod = 2;
+        let held = find_instance_mut(&mut state, &card.id).expect("the Spell in hand");
+        held.cost_mod = 2;
+        add_return_price(held, 2);
         let mut discarded = card.clone();
         move_to_zone(
             &mut state,
