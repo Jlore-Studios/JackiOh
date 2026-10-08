@@ -654,10 +654,19 @@ Cypress.Commands.add("answerPrompt", (kind: PromptKind | null, answer: PromptAns
   if (answer.hero !== undefined) {
     cy.get(ts(heroId(answer.hero))).click();
   }
+  // #492: a few X values are cards, one click each, and more keep the stepper, typed and confirmed.
   if (answer.x !== undefined) {
-    cy.get(root).within(() => {
-      cy.get(ts(PROMPT_X_INPUT)).clear();
-      cy.get(ts(PROMPT_X_INPUT)).type(String(answer.x));
+    const x = String(answer.x);
+    cy.get(root).then(($root) => {
+      if ($root.find(ts(PROMPT_X_INPUT)).length === 0) {
+        cy.wrap($root, { log: false }).find(ts(promptOptionId(x))).click();
+        return;
+      }
+      cy.wrap($root, { log: false }).within(() => {
+        cy.get(ts(PROMPT_X_INPUT)).clear();
+        cy.get(ts(PROMPT_X_INPUT)).type(x);
+        cy.get(ts(PROMPT_SUBMIT)).click();
+      });
     });
   }
 
@@ -667,7 +676,7 @@ Cypress.Commands.add("answerPrompt", (kind: PromptKind | null, answer: PromptAns
     (answer.zones?.length ?? 0) +
     (answer.first ?? 0) +
     (answer.embiggen === undefined ? 0 : 1);
-  const needsSubmit = answer.submit ?? (picks > 1 || answer.x !== undefined);
+  const needsSubmit = answer.submit ?? picks > 1;
   if (needsSubmit) {
     cy.get(root).within(() => {
       cy.get(ts(PROMPT_SUBMIT)).click();

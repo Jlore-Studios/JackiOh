@@ -190,7 +190,7 @@ export type PromptAnswer = {
   zones?: ZoneRef[];
   /** A hero target (`target` prompts that may hit a hero). */
   hero?: Side;
-  /** The value for an `x` prompt. */
+  /** The value for an `x` prompt: its card when the picker shows a few (#492), else typed and confirmed. */
   x?: number;
   /** Press submit even for a single-pick kind (multi-select kinds always submit). */
   submit?: boolean;

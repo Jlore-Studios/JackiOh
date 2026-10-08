@@ -33,6 +33,12 @@ export const BACKROW_LANES = 5;
 export const DISCOVER_OPTION_LIMIT = 5;
 
 /**
+ * #492: a play's X offered as this many values or fewer is picked from cards in the middle of the
+ * screen, as a short "Choose one" is; more values keep the X stepper.
+ */
+export const X_CARD_LIMIT = 4;
+
+/**
  * Lanes are 1-based, because the engine's are: `crates/engine/src/zones.rs` numbers a row's slots
  * from 1 and reads a unit pile at `lane - 1`, and `e2e/support/types.ts` declares
  * `Lane = 1 | 2 | 3 | 4 | 5`. A `ZoneChoice` inside a `play` action therefore carries 1..5, so

@@ -63,7 +63,7 @@ export function promptOptionId(key: string): string {
 /** A4: the confirm button of a multi-select prompt (tribute, mulligan, hand-with-min>1). */
 export const PROMPT_SUBMIT = "prompt-submit";
 
-/** A4: the numeric input of an `x` / `embiggen` prompt. */
+/** A4: the numeric input of an `x` prompt with more values than its cards take (#492). */
 export const PROMPT_X_INPUT = "prompt-x";
 
 /** A5: the result overlay (BUILD M5-T4 `gameOver`: "overlay text Win / Loss / Draw"). */

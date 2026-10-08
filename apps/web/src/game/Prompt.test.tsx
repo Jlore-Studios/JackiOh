@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import Prompt from "./Prompt.tsx";
 import { IDLE, type Interaction } from "./actions.ts";
+import { X_CARD_LIMIT } from "./contract.ts";
 import { baseView, card, emptySide, pendingFor, unit, waitingPending } from "../test/fixtures.ts";
 
 afterEach(cleanup);
@@ -333,28 +334,48 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     expect(screen.getByTestId("prompt-option-alpha")).toHaveTextContent(/^Alpha$/);
   });
 
-  it("x is a numeric stepper over the values the engine listed", () => {
+  it("x is a numeric stepper over the values the engine listed, when it lists more than a few", () => {
     const onAction = vi.fn();
     const view = viewWith();
-    const interaction = playing([
-      { type: "play", instanceId: "h2", x: 0 },
-      { type: "play", instanceId: "h2", x: 1 },
-      { type: "play", instanceId: "h2", x: 2 },
-    ]);
+    // One value more than the card picker takes: 0 to X_CARD_LIMIT.
+    const values = Array.from({ length: X_CARD_LIMIT + 1 }, (_, x) => x);
+    const interaction = playing(values.map((x): ActionBody => ({ type: "play", instanceId: "h2", x })));
 
     render(<Prompt view={view} interaction={interaction} onAction={onAction} />);
 
     expect(kindOfModal()).toBe("x");
+    expect(screen.getByTestId("prompt-modal")).not.toHaveAttribute("data-prompt-layout");
     expect(screen.getByTestId("x-stepper")).toBeInTheDocument();
     expect(screen.getByTestId("x-value")).toHaveTextContent("0");
 
     // The stepper never walks past the ends of the engine's list.
-    fireEvent.click(screen.getByTestId("x-plus"));
-    fireEvent.click(screen.getByTestId("x-plus"));
-    fireEvent.click(screen.getByTestId("x-plus"));
-    expect(screen.getByTestId("x-value")).toHaveTextContent("2");
+    for (let press = 0; press <= values.length; press += 1) fireEvent.click(screen.getByTestId("x-plus"));
+    expect(screen.getByTestId("x-value")).toHaveTextContent(String(X_CARD_LIMIT));
 
     fireEvent.click(screen.getByTestId("prompt-submit"));
+
+    expect(onAction).toHaveBeenCalledWith({ type: "play", instanceId: "h2", x: X_CARD_LIMIT });
+  });
+
+  it("#492 a few X values are cards in the middle, the card once per X, and a card sends its X", () => {
+    const onAction = vi.fn();
+    const interaction = playing([
+      { type: "play", instanceId: "h2", x: 1 },
+      { type: "play", instanceId: "h2", x: 2 },
+      { type: "play", instanceId: "h2", x: 3 },
+    ], "h2");
+
+    render(<Prompt view={viewWith()} interaction={interaction} onAction={onAction} />);
+
+    expect(kindOfModal()).toBe("x");
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-prompt-layout", "cards");
+    expect(screen.getByTestId("prompt-cards")).toHaveAttribute("data-choice", "x");
+    expect(screen.queryByTestId("x-stepper")).toBeNull();
+    expect(optionTestids()).toEqual(["prompt-option-1", "prompt-option-2", "prompt-option-3"]);
+    expect(screen.getByTestId("prompt-option-2")).toHaveTextContent("X = 2");
+    expect(screen.getByTestId("prompt-option-2").querySelector(".cf")).not.toBeNull();
+
+    fireEvent.click(screen.getByTestId("prompt-option-2"));
 
     expect(onAction).toHaveBeenCalledWith({ type: "play", instanceId: "h2", x: 2 });
   });
@@ -372,7 +393,7 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     expect(onAction).toHaveBeenCalledWith({ type: "play", instanceId: "h2", x: 1 });
   });
 
-  it("embiggen is a two-way toggle", () => {
+  it("#492 embiggen is two cards in the middle, the card at its normal price and at its embiggen price", () => {
     const onAction = vi.fn();
     const view = viewWith();
     const interaction = playing([
@@ -383,8 +404,13 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     render(<Prompt view={view} interaction={interaction} onAction={onAction} />);
 
     expect(kindOfModal()).toBe("embiggen");
-    expect(screen.getByTestId("embiggen-toggle")).toBeInTheDocument();
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-prompt-layout", "cards");
+    expect(screen.getByTestId("prompt-cards")).toHaveAttribute("data-choice", "embiggen");
     expect(optionTestids()).toEqual(["prompt-option-false", "prompt-option-true"]);
+    expect(screen.getByTestId("prompt-option-false")).toHaveAttribute("data-price", "normal");
+    expect(screen.getByTestId("prompt-option-false")).toHaveTextContent("Normal");
+    expect(screen.getByTestId("prompt-option-true")).toHaveAttribute("data-price", "embiggen");
+    expect(screen.getByTestId("prompt-option-true")).toHaveTextContent("Embiggened");
 
     fireEvent.click(screen.getByTestId("prompt-option-true"));
 
@@ -483,8 +509,9 @@ describe("the R81 kinds render the same picker when the engine does open them as
     ["zone", [{ key: "zone:p1:units:1", label: "Unit lane 1", player: "p1", row: "units", lane: 1 }], "prompt-option-zone:p1:units:1"],
     ["tribute", [{ key: "instance:u1", label: "One", instanceId: "u1" }], "prompt-option-instance:u1"],
     ["direction", [{ key: "mode:left", label: "left" }, { key: "mode:right", label: "right" }], "direction-left"],
-    ["x", [{ key: "0", label: "0" }, { key: "1", label: "1" }], "x-stepper"],
-    ["embiggen", [{ key: "false", label: "Normal" }, { key: "true", label: "Embiggened" }], "embiggen-toggle"],
+    // More X values than the card picker takes keep the stepper; a few are cards (#492, below).
+    ["x", Array.from({ length: X_CARD_LIMIT + 1 }, (_, x) => ({ key: String(x), label: String(x) })), "x-stepper"],
+    ["embiggen", [{ key: "false", label: "Normal" }, { key: "true", label: "Embiggened" }], "prompt-cards"],
   ];
 
   for (const [kind, options, present] of cases) {
@@ -500,6 +527,25 @@ describe("the R81 kinds render the same picker when the engine does open them as
       expect(screen.getByTestId(present)).toBeInTheDocument();
     });
   }
+
+  it("#492 an x prompt of a few values is the card picker too, each number on a card", () => {
+    const onAction = vi.fn();
+    const view = viewWith({
+      pending: pendingFor("x", [
+        { key: "1", label: "1" },
+        { key: "2", label: "2" },
+      ]),
+    });
+
+    render(<Prompt view={view} onAction={onAction} />);
+
+    expect(kindOfModal()).toBe("x");
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-prompt-layout", "cards");
+    expect(screen.queryByTestId("x-stepper")).toBeNull();
+    expect(screen.getByTestId("prompt-option-2")).toHaveAttribute("data-number", "2");
+    fireEvent.click(screen.getByTestId("prompt-option-2"));
+    expect(onAction).toHaveBeenCalledWith({ type: "answer", choiceId: "ch1", selection: [{ pick: "mode", option: "2" }] });
+  });
 });
 
 // ---------------------------------------------------------------------------------------------
