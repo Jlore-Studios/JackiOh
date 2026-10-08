@@ -2747,10 +2747,7 @@
     },
     "436": {
       "action": "build",
-      "asks": [
-        "c:6055457390",
-        "c:6055475844"
-      ],
+      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-07T14:07:24Z",
@@ -2781,10 +2778,13 @@
       "question": "Issue #436's slow job, rust (test), runs only on staging (the v0.3.0 Rust rewrite): main, which this branch builds on, has no Rust crates and no such job, so no pull request into main can make it faster. The fix is a change to staging's .github/workflows/ci.yml and .github/actions/setup/action.yml, which the bot may not edit; the Plan in this issue's description has it as a measured, linted diff for git apply. Will a person apply it on staging (or fold it into the v0.3.0 cutover pull request) and close this issue once a staging CI run shows every rust (test ...) piece under five minutes, or is there something on main you want built instead?",
       "queued_at": "2026-10-08T08:00:38Z",
       "requested_by": "jgoetzmann",
-      "run_id": "37634115640",
-      "started_at": "2026-10-07T14:08:20Z",
+      "run_id": "37747314725",
+      "started_at": "2026-10-08T08:03:53Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6055457390",
+        "c:6055475844"
+      ]
     },
     "44": {
       "action": "build",
@@ -3211,9 +3211,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-08T07:15:23Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37742245508",
-    "what": "build #444 on claude-3"
+    "at": "2026-10-08T08:03:53Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37747314725",
+    "what": "build #436 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-08T08:02:54Z",
