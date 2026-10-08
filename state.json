@@ -4033,10 +4033,14 @@
     "what": "build #527 on claude-2"
   },
   "last_sweep": {
-    "at": "2026-10-08T11:56:24Z",
+    "at": "2026-10-08T12:09:25Z",
     "notes": [
       "answered a comment on #436 that was never answered",
-      "answered a comment on #430 that was never answered"
+      "answered a comment on #430 that was never answered",
+      "#522 needs a plan",
+      "#523 needs a plan",
+      "#525 needs a plan",
+      "#527 needs a plan"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
