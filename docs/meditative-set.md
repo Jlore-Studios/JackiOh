@@ -4893,6 +4893,15 @@ Every part is an issue under the tracker #496, titled `Patch v0.3.X: Meditative,
 each waiting only for what its "Blocked by" line names. The night bot builds every part but the
 foundation and the release, which the orchestrating session builds.
 
+Two kinds of part. The card parts (MS01, MB01–MB26) and MN08 are parts of the Meditative patch: they
+land behind the release gate ([[R1420]]), so players meet none of their cards before the release (MR),
+and they need no fragment. The other MN parts (MN01–MN07, MN09) change what players see and hear in
+every game, the shipped sets included. Each is a patch of its own (`docs/issues-and-patches.md`, A patch
+that takes several pull requests), titled without the set's name where it is not about the set, and
+goes live when it merges: MN01 with its own pending fragment for the shipped texts it renames, the
+others with no card data change. MN06's option leans on the newest shipped set, Classic+ until the
+release and Meditative from it; MN07's set mark and set filter have nothing to show until the release.
+
 **Rulings.** Each part takes its R-numbers from its block, in order: MB01–MB26 twenty each, MB01
 R780–R799 up to MB26 R1280–R1299; MS01 R1300–R1319; MN01–MN09 ten each, MN01 R1320–R1329 up to MN09
 R1400–R1409; MR R1410–R1419; the foundation (MF) R1420–R1429, the top block, so that once it is on `main`

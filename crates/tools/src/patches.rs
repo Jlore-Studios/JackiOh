@@ -1827,7 +1827,10 @@ fn entry_ships(entry: &js::Object) -> bool {
 /// catalog holds before it ships is in no snapshot and no fragment claims its cards; the patch that
 /// adds it to `SHIPPED_SETS` claims every one of them at once.
 pub fn shipped_view(catalog: Catalog) -> Catalog {
-    catalog.into_iter().filter(|(_, entry)| entry_ships(entry)).collect()
+    catalog
+        .into_iter()
+        .filter(|(_, entry)| entry_ships(entry))
+        .collect()
 }
 
 /// R1420: `catalog.json`'s text as a snapshot holds it. The text itself when every entry ships, so a
@@ -2126,8 +2129,8 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
     };
     let current = fs::read_to_string(&paths.catalog)
         .with_context(|| format!("{} cannot be read", paths.catalog.display()))?;
-    let current = shipped_text(&current)
-        .with_context(|| format!("{} is not a catalog", paths.catalog.display()))?;
+    let current =
+        shipped_text(&current).with_context(|| format!("{} is not a catalog", paths.catalog.display()))?;
     if last.raw != current {
         bail!(
             "catalog.json changed after {} added pending/{}, so the newest snapshot would not be catalog.json; nothing was shipped",
@@ -2899,7 +2902,10 @@ mod tests {
                 let temp = TempDir::new("jackioh-ship-unshipped-");
                 let root = temp.path();
                 let dir = root.join("crates/cards/patches");
-                let base = catalog_of(vec![in_set(card("aaa", 1), "Core"), in_set(card("bbb", 1), "Core")]);
+                let base = catalog_of(vec![
+                    in_set(card("aaa", 1), "Core"),
+                    in_set(card("bbb", 1), "Core"),
+                ]);
                 git(root, &["init", "-q", "-b", "main"], None);
                 let mut files = vec![
                     ("crates/cards/catalog.json", json(&base)),
@@ -2907,7 +2913,10 @@ mod tests {
                         "crates/cards/patches/patches.json",
                         json(&[base_patch(
                             "base notes",
-                            vec![PatchChange::added("aaa", "Card aaa"), PatchChange::added("bbb", "Card bbb")],
+                            vec![
+                                PatchChange::added("aaa", "Card aaa"),
+                                PatchChange::added("bbb", "Card bbb"),
+                            ],
                         )]),
                     ),
                     ("crates/cards/patches/v0.1.1.json", json(&base)),
@@ -2920,7 +2929,11 @@ mod tests {
                 files.extend(version_sites("v0.1.1"));
                 write_files(root, &files);
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "base"], Some("2026-10-08T12:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "base"],
+                    Some("2026-10-08T12:00:00+00:00"),
+                );
 
                 // A batch adds a Meditative card: nothing to claim, and the check passes.
                 let mut with_card = base.clone();
@@ -2928,7 +2941,11 @@ mod tests {
                 write_files(root, &[("crates/cards/catalog.json", json(&with_card))]);
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "a card of a set being built"], Some("2026-10-08T13:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "a card of a set being built"],
+                    Some("2026-10-08T13:00:00+00:00"),
+                );
 
                 // A shipped card changes beside it: the fragment claims that card alone.
                 let mut changed = with_card.clone();
@@ -2942,7 +2959,11 @@ mod tests {
                 assert_eq!(written.cards, strings(&["aaa"]));
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
                 git(root, &["add", "-A"], None);
-                git(root, &["commit", "-q", "-m", "v0.2.0"], Some("2026-10-08T14:00:00+00:00"));
+                git(
+                    root,
+                    &["commit", "-q", "-m", "v0.2.0"],
+                    Some("2026-10-08T14:00:00+00:00"),
+                );
 
                 assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.2.0"]));
                 let snapshot: Catalog = serde_json::from_str(&read(&dir.join("v0.2.0.json"))).unwrap();
@@ -2950,7 +2971,10 @@ mod tests {
                 assert_eq!(cost_of(&snapshot, "aaa"), Some(3.0));
                 let catalog: Catalog =
                     serde_json::from_str(&read(&root.join("crates/cards/catalog.json"))).unwrap();
-                assert!(catalog.contains_key("med"), "catalog.json keeps the card being built");
+                assert!(
+                    catalog.contains_key("med"),
+                    "catalog.json keeps the card being built"
+                );
             }
 
             #[test]
@@ -2963,7 +2987,10 @@ mod tests {
                     card("bbb", 2),
                 ]));
                 let view = crate::patches::shipped_text(&mixed).unwrap();
-                assert_eq!(view, json(&catalog_of(vec![in_set(card("aaa", 1), "Core"), card("bbb", 2)])));
+                assert_eq!(
+                    view,
+                    json(&catalog_of(vec![in_set(card("aaa", 1), "Core"), card("bbb", 2)]))
+                );
             }
 
             // The issue's acceptance scenario on a three-card catalog: branch A adds fragment v0.2.5

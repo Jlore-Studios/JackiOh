@@ -558,13 +558,22 @@ mod naming_build_m4_t2_m4_t3 {
             index_of("classic-plus/012-8-frostspatula"),
             index_of("classic-plus/012-the-mother-pancake").map(|at| at + 8)
         );
+        // Classic+ ends with its ten shared tokens, the AI generated cards; a set after it in catalog
+        // order (Meditative, R1420) follows them.
+        let classic_plus_end = ordered
+            .iter()
+            .rposition(|path| path.starts_with("classic-plus/"))
+            .expect("Classic+ has files");
         assert_eq!(
-            ordered[ordered.len() - 10],
+            ordered[classic_plus_end - 9],
             "classic-plus/t-ai-01-helpful-assistant"
         );
-        assert_eq!(
-            ordered.last().map(String::as_str),
-            Some("classic-plus/t-ai-10-fine-tuning")
+        assert_eq!(ordered[classic_plus_end], "classic-plus/t-ai-10-fine-tuning");
+        assert!(
+            ordered[classic_plus_end + 1..]
+                .iter()
+                .all(|path| path.starts_with("meditative/")),
+            "only a set after Classic+ follows it"
         );
         // Catalog.json's own order, but for the shared tokens, which the files sort by name.
         let shared = |path: &str| path.starts_with("t-") || path.contains("/t-");
@@ -631,12 +640,14 @@ mod naming {
     /// Every shipped id is `<set>-<prefix>`, the set segment holding no hyphen (`classicplus`, B2.2).
     const SET_SEGMENT_SEPARATOR: char = '-';
 
-    /// The shipped sets' id segments and the folder each one's scripts and tests live in, in catalog
-    /// order: Core at the top of `src/scripts/` and `test/`, the others in a folder of their own.
+    /// The catalog's sets' id segments and the folder each one's scripts and tests live in, in catalog
+    /// order: Core at the top of `src/scripts/` and `test/`, the others in a folder of their own. A set
+    /// that has not shipped (R1420) is listed too: its cards are in the catalog and have files.
     const SET_FOLDERS: &[(&str, &str)] = &[
         ("core", ""),
         ("classic", "classic"),
         ("classicplus", "classic-plus"),
+        ("meditative", "meditative"),
     ];
 
     /// `classic-043` -> `classic`; `None` for an id whose set segment names no shipped set.
@@ -671,7 +682,7 @@ mod naming {
             .map(|(segment, _)| *segment)
     }
 
-    /// Catalog order of the sets (Core, Classic, Classic+), for sorting; an unknown set sorts last.
+    /// Catalog order of the sets (Core, Classic, Classic+, Meditative), for sorting; an unknown set sorts last.
     pub fn set_rank(id: Option<&str>) -> usize {
         match id.and_then(set_segment_of) {
             Some(segment) => SET_FOLDERS

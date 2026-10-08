@@ -28,8 +28,8 @@ use crate::config::{
 use crate::rng::Rng;
 use crate::state::GameState;
 use crate::wire::{
-    CardCost, CardDef, CardDefs, CardType, CatalogQuery, CostRange, FusedIngredient, OneOrMany, Rarity,
-    CATALOG_SETS, SetName, Tag, set_ships,
+    CATALOG_SETS, CardCost, CardDef, CardDefs, CardType, CatalogQuery, CostRange, FusedIngredient, OneOrMany,
+    Rarity, SetName, Tag, set_ships,
 };
 
 /// A hasher for the registries' card ids (`catalog-NNN`, `classicplus-NNN`, …): short strings looked

@@ -177,9 +177,9 @@ fn sets() -> Vec<SetExpectation> {
             segment: "meditative",
             cards: 99,
             card_defined_tokens: texts(&[
-                "19.1", "22.1", "28.1", "30.1", "39.1", "39.2", "39.3", "39.4", "39.5", "45.1",
-                "49.1", "49.2", "49.3", "70.1", "71.1", "91.1", "93.1", "93.2", "93.3", "95.1",
-                "96.1", "97.1", "97.2", "97.3", "97.4", "97.5", "97.6", "97.7", "97.8", "97.9",
+                "19.1", "22.1", "28.1", "30.1", "39.1", "39.2", "39.3", "39.4", "39.5", "45.1", "49.1",
+                "49.2", "49.3", "70.1", "71.1", "91.1", "93.1", "93.2", "93.3", "95.1", "96.1", "97.1",
+                "97.2", "97.3", "97.4", "97.5", "97.6", "97.7", "97.8", "97.9",
             ]),
             shared_tokens: Vec::new(),
             rarities: &[
@@ -1608,7 +1608,11 @@ fn run_check() -> anyhow::Result<()> {
             .iter()
             .map(|(r, n)| format!("{n} {r}"))
             .collect();
-        let shipped = if expectation.ships() { "" } else { " (not shipped yet, R1420)" };
+        let shipped = if expectation.ships() {
+            ""
+        } else {
+            " (not shipped yet, R1420)"
+        };
         println!(
             "  {}{shipped}: {} cards + {tokens} tokens; rarities {}",
             expectation.set,
@@ -1683,25 +1687,48 @@ mod tests {
         };
         entry.insert("id".to_string(), Json::from(id));
         entry.insert("index".to_string(), Json::from(index));
-        entry.insert("name".to_string(), Json::from(format!("Meditative fixture {index}")));
+        entry.insert(
+            "name".to_string(),
+            Json::from(format!("Meditative fixture {index}")),
+        );
         entry.insert("set".to_string(), Json::from("Meditative"));
         Json::Object(entry)
     }
 
     #[test]
     fn r1420_holds_a_set_being_built_to_its_shape_alone_outside_the_totals() {
+        // The real catalog with the Meditative entries the card parts have added so far taken out,
+        // so this test counts its own fixture alone.
         let mut catalog = shipped_catalog();
-        catalog.insert("meditative-002".to_string(), meditative_entry("2", "meditative-002"));
+        catalog.retain(|_, entry| {
+            entry
+                .as_object()
+                .and_then(|entry| entry.get("set"))
+                .and_then(Json::as_str)
+                != Some("Meditative")
+        });
+        catalog.insert(
+            "meditative-002".to_string(),
+            meditative_entry("2", "meditative-002"),
+        );
         let report = check_catalog(&catalog);
         assert_eq!(report.failures, Vec::<String>::new());
         assert_eq!(
-            (report.entries, report.non_token_count, report.token_count, report.unshipped_count),
+            (
+                report.entries,
+                report.non_token_count,
+                report.token_count,
+                report.unshipped_count
+            ),
             (318, 268, 50, 1)
         );
 
         // An index the brief does not list, or an id that does not follow it, still fails.
         let mut wrong = shipped_catalog();
-        wrong.insert("meditative-150".to_string(), meditative_entry("150", "meditative-150"));
+        wrong.insert(
+            "meditative-150".to_string(),
+            meditative_entry("150", "meditative-150"),
+        );
         wrong.insert("meditative-x".to_string(), meditative_entry("3", "meditative-x"));
         let failures = check_catalog(&wrong).failures.join("\n");
         assert!(failures.contains("unexpected index \"150\""), "{failures}");

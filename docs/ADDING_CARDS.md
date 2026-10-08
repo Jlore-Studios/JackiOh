@@ -45,7 +45,11 @@ Also grep the Markdown for the stated totals (`268 cards`, `318`) and update the
 - The set's cards are in no pool that names no set, in no deck and in no random deck. A test that needs them there opens the set
   with the engine testkit's `preview_sets(&[SetName::Meditative])` (one thread, until its guard drops).
 - `cargo jackioh fuzz` previews every set, so the card is fuzzed from the day it lands, while the golden traces deal from the
-  shipped sets and must not move. `docs/meditative-set.md` M3 says the rest.
+  shipped sets and must not move.
+- Its `card-audio.json5` entry is written as for any card, but no voice file is expected for it until the set ships
+  (`gen-voice.mjs --check` leaves it out), so [§7](#7-what-cannot-be-done-on-linux)'s rendering is owed by the release, not by the card.
+- Tests that count the catalog count the sets that ship (`set_is_open` in Rust, `setShips` in the web), never every entry.
+  `docs/meditative-set.md` M3 says the rest.
 
 ## 2. Templates
 

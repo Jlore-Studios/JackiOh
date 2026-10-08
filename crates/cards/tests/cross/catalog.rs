@@ -4169,16 +4169,7 @@ const MEDITATIVE: &[SpecRow] = &[
         st(1, 1),
         st(2, 2),
     ),
-    row(
-        "89",
-        "Jlarna",
-        c(0),
-        T::Spell,
-        &[],
-        R::Rare,
-        NO_STATS,
-        NO_STATS,
-    ),
+    row("89", "Jlarna", c(0), T::Spell, &[], R::Rare, NO_STATS, NO_STATS),
     row(
         "90",
         "Spell Basket",
@@ -4209,16 +4200,7 @@ const MEDITATIVE: &[SpecRow] = &[
         st(5, 10),
         st(10, 20),
     ),
-    row(
-        "92",
-        "Unan",
-        c(3),
-        T::Unit,
-        &[],
-        R::Rare,
-        st(3, 13),
-        st(6, 26),
-    ),
+    row("92", "Unan", c(3), T::Unit, &[], R::Rare, st(3, 13), st(6, 26)),
     row(
         "93",
         "Growing Felinor",
@@ -4409,16 +4391,7 @@ const MEDITATIVE: &[SpecRow] = &[
         st(0, 20),
         st(0, 50),
     ),
-    row(
-        "98",
-        "Showdown",
-        c(2),
-        T::Spell,
-        &[],
-        R::Rare,
-        NO_STATS,
-        NO_STATS,
-    ),
+    row("98", "Showdown", c(2), T::Spell, &[], R::Rare, NO_STATS, NO_STATS),
     row(
         "99",
         "Paranoia",
@@ -4548,16 +4521,27 @@ fn ships(set: &str) -> bool {
 /// B2.1's totals, as SET_SIZES sums them over the sets that ship: the only count of the whole
 /// catalog this file keeps.
 fn total_cards() -> usize {
-    SET_SIZES.iter().filter(|size| ships(size.set)).map(|size| size.cards).sum()
+    SET_SIZES
+        .iter()
+        .filter(|size| ships(size.set))
+        .map(|size| size.cards)
+        .sum()
 }
 
 fn total_tokens() -> usize {
-    SET_SIZES.iter().filter(|size| ships(size.set)).map(|size| size.tokens).sum()
+    SET_SIZES
+        .iter()
+        .filter(|size| ships(size.set))
+        .map(|size| size.tokens)
+        .sum()
 }
 
 /// The entries of the sets that ship (R1420).
 fn shipped_entries() -> Vec<&'static CardDef> {
-    entries().into_iter().filter(|entry| set_ships(entry.set)).collect()
+    entries()
+        .into_iter()
+        .filter(|entry| set_ships(entry.set))
+        .collect()
 }
 
 /// A set's SET_SIZES row as one number (cards + tokens), for the fixture-row counts below.
@@ -4733,7 +4717,11 @@ mod catalog_membership_build_m4_t1_b2_1 {
         let tokens = shipped_entries().into_iter().filter(|entry| entry.token).count();
         assert_eq!(cards, total_cards(), "entries with token: false");
         assert_eq!(tokens, total_tokens(), "entries with token: true");
-        assert_eq!(shipped_entries().len(), total_cards() + total_tokens(), "shipped catalog entries");
+        assert_eq!(
+            shipped_entries().len(),
+            total_cards() + total_tokens(),
+            "shipped catalog entries"
+        );
         for size in SET_SIZES {
             let in_set: Vec<&CardDef> = entries()
                 .into_iter()
@@ -4748,8 +4736,18 @@ mod catalog_membership_build_m4_t1_b2_1 {
                 assert_eq!(tokens, size.tokens, "{} tokens", size.set);
             } else {
                 // R1420: a set being built holds no more than its brief lists.
-                assert!(cards <= size.cards, "{} cards: {cards} of at most {}", size.set, size.cards);
-                assert!(tokens <= size.tokens, "{} tokens: {tokens} of at most {}", size.set, size.tokens);
+                assert!(
+                    cards <= size.cards,
+                    "{} cards: {cards} of at most {}",
+                    size.set,
+                    size.cards
+                );
+                assert!(
+                    tokens <= size.tokens,
+                    "{} tokens: {tokens} of at most {}",
+                    size.set,
+                    size.tokens
+                );
             }
         }
     }
@@ -4911,7 +4909,11 @@ mod r1420_every_meditative_entry_equals_its_fixture_row_while_the_set_is_built {
                 .filter(|row| !by_key.contains_key(&key_of("Meditative", row.index)))
                 .map(|row| row.name)
                 .collect();
-            assert_eq!(missing, Vec::<&str>::new(), "a shipped set holds every card it lists");
+            assert_eq!(
+                missing,
+                Vec::<&str>::new(),
+                "a shipped set holds every card it lists"
+            );
         }
     }
 }

@@ -471,14 +471,23 @@ mod r1423_give_control_hands_a_card_to_the_other_player {
     use super::*;
 
     fn gives(state: &mut GameState, card: &CardInstance) -> Vec<GameEvent> {
-        run(state, give_control(json_as(json!({ "instanceId": card.id }))), as_p1())
+        run(
+            state,
+            give_control(json_as(json!({ "instanceId": card.id }))),
+            as_p1(),
+        )
     }
 
     #[test]
     fn r1423_gives_your_unit_to_the_enemy_in_its_own_lane_owner_unchanged_and_summoning_sick() {
         let mut state = game();
         state.turn = 4;
-        let mine = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let mine = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
         let events = gives(&mut state, &mine);
         assert_eq!(id_at(&state, PlayerId::P2, Row::Units, 2), Some(mine.id.clone()));
         assert_eq!(id_at(&state, PlayerId::P1, Row::Units, 2), None);
@@ -493,8 +502,18 @@ mod r1423_give_control_hands_a_card_to_the_other_player {
     #[test]
     fn r1423_takes_the_receivers_first_free_zone_when_its_lane_is_taken_and_does_nothing_with_no_room() {
         let mut state = game();
-        let mine = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
-        put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let mine = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
         gives(&mut state, &mine);
         assert_eq!(live(&state, &mine.id).controller, PlayerId::P2);
         assert_ne!(id_at(&state, PlayerId::P2, Row::Units, 1), Some(mine.id.clone()));
@@ -502,7 +521,12 @@ mod r1423_give_control_hands_a_card_to_the_other_player {
         let mut full = game();
         let given = put(&mut full, &plain.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
         for lane in 1..=5 {
-            put(&mut full, &plain.id, slot(PlayerId::P2, Row::Units, lane), json!({}));
+            put(
+                &mut full,
+                &plain.id,
+                slot(PlayerId::P2, Row::Units, lane),
+                json!({}),
+            );
         }
         assert_eq!(gives(&mut full, &given).len(), 0);
         assert_eq!(live(&full, &given.id).controller, PlayerId::P1);
@@ -511,7 +535,12 @@ mod r1423_give_control_hands_a_card_to_the_other_player {
     #[test]
     fn r1423_gives_an_enemy_card_back_to_its_controllers_opponent_and_ignores_a_card_off_the_field() {
         let mut state = game();
-        let theirs = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 4), json!({}));
+        let theirs = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P2, Row::Units, 4),
+            json!({}),
+        );
         // "The other player" is the card's controller's opponent, whoever runs the effect.
         gives(&mut state, &theirs);
         assert_eq!(live(&state, &theirs.id).controller, PlayerId::P1);

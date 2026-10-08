@@ -991,10 +991,19 @@ mod get_api_catalog {
         let app = test_app().await;
         let (status, _headers, body) = call(&app, "GET", "/api/catalog", None, Value::Null).await;
         assert_eq!(status, 200);
-        let defs: Value = serde_json::from_str(jackioh_cards::catalog_json()).expect("catalog.json");
+        // R1420: the entries of the sets that ship.
+        let file: serde_json::Map<String, Value> =
+            serde_json::from_str(jackioh_cards::catalog_json()).expect("catalog.json");
+        let defs = Value::Object(file.into_iter().filter(|(_, def)| ships(def)).collect());
         assert_eq!(
             body,
             json!({ "version": jackioh_cards::catalog_version(), "defs": defs })
         );
     }
+}
+
+/// R1420: whether an entry's set ships: the server serves, seeds and counts only those.
+fn ships(def: &Value) -> bool {
+    serde_json::from_value::<jackioh_engine::SetName>(def["set"].clone())
+        .map_or(true, jackioh_engine::set_ships)
 }

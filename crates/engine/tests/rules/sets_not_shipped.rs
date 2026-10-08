@@ -42,12 +42,24 @@ fn defs() -> CardDefs {
     defs.push(card("core-031", "Core", "31", &["KY"], false));
     defs.push(card("classic-003", "Classic", "3", &["Book"], false));
     defs.push(card("classicplus-038-1", "Classic+", "38.1", &["Prime"], true));
-    defs.push(card("classicplus-046-1", "Classic+", "46.1", &["Felinor", "Prime"], true));
+    defs.push(card(
+        "classicplus-046-1",
+        "Classic+",
+        "46.1",
+        &["Felinor", "Prime"],
+        true,
+    ));
     defs.push(card("classicplus-t-ai-01", "Classic+", "T-AI-1", &["AI"], true));
     defs.push(card("core-022", "Core", "22", &["Human"], false));
     defs.push(card("meditative-033", "Meditative", "33", &["CN"], false));
     defs.push(card("meditative-034", "Meditative", "34", &["CN", "KY"], false));
-    defs.push(card("meditative-045-1", "Meditative", "45.1", &["CN", "KY", "Prime"], true));
+    defs.push(card(
+        "meditative-045-1",
+        "Meditative",
+        "45.1",
+        &["CN", "KY", "Prime"],
+        true,
+    ));
     defs.into_iter().map(|def| (def.id.clone(), def)).collect()
 }
 
@@ -60,7 +72,10 @@ fn pool(args: Value) -> Vec<String> {
 }
 
 fn meditative(ids: &[String]) -> Vec<String> {
-    ids.iter().filter(|id| id.starts_with("meditative-")).cloned().collect()
+    ids.iter()
+        .filter(|id| id.starts_with("meditative-"))
+        .cloned()
+        .collect()
 }
 
 mod r1420_a_set_the_catalog_holds_before_it_ships {
@@ -78,7 +93,10 @@ mod r1420_a_set_the_catalog_holds_before_it_ships {
         setup();
         assert_eq!(meditative(&pool(json!({}))), Vec::<String>::new());
         assert_eq!(meditative(&pool(json!({ "tags": ["CN"] }))), Vec::<String>::new());
-        assert_eq!(meditative(&pool(json!({ "withTokens": true }))), Vec::<String>::new());
+        assert_eq!(
+            meditative(&pool(json!({ "withTokens": true }))),
+            Vec::<String>::new()
+        );
         assert_eq!(pool(json!({ "tags": ["KY"] })), vec!["core-031"]);
     }
 
@@ -112,13 +130,17 @@ mod r1420_a_set_the_catalog_holds_before_it_ships {
         assert!(!set_is_open(SetName::Meditative));
         assert_eq!(meditative(&pool(json!({}))), Vec::<String>::new());
 
-        let other_thread = std::thread::spawn(|| {
-            register_catalog(defs());
-            let _preview = preview_every_set();
-            set_is_open(SetName::Meditative)
-        });
-        assert!(other_thread.join().expect("the thread runs"));
-        assert!(!set_is_open(SetName::Meditative), "a preview reaches no other thread");
+        // Nested guards restore what was open before them: `preview_every_set` inside a narrower
+        // preview, then the narrower one, then nothing.
+        {
+            let _outer = preview_sets(&[SetName::Meditative]);
+            {
+                let _inner = preview_every_set();
+                assert!(set_is_open(SetName::Meditative));
+            }
+            assert!(set_is_open(SetName::Meditative));
+        }
+        assert!(!set_is_open(SetName::Meditative));
     }
 
     #[test]
@@ -165,7 +187,11 @@ mod r1420_a_set_the_catalog_holds_before_it_ships {
             .map(|error| error.message.clone())
             .collect();
         assert_eq!(l3.len(), 1, "{:?}", result.errors);
-        assert!(l3[0].contains("the Meditative set has not shipped yet"), "{}", l3[0]);
+        assert!(
+            l3[0].contains("the Meditative set has not shipped yet"),
+            "{}",
+            l3[0]
+        );
     }
 }
 
@@ -214,7 +240,12 @@ mod r1422_any_tags_asks_for_at_least_one_of_its_tags {
         // A Prime tag among them takes its tokens, as `tags` does (R1421).
         assert_eq!(
             pool(json!({ "anyTags": ["Prime", "Book"] })),
-            vec!["classic-003", "classicplus-038-1", "classicplus-046-1", "meditative-045-1"]
+            vec![
+                "classic-003",
+                "classicplus-038-1",
+                "classicplus-046-1",
+                "meditative-045-1"
+            ]
         );
     }
 }
@@ -224,8 +255,19 @@ mod r1424_the_tribal_tags_name_peoples_and_factions {
 
     #[test]
     fn r1424_the_tribes_are_human_felinor_ky_cn_and_jlockeed_and_no_family_or_mechanic_tag() {
-        assert_eq!(TRIBAL_TAGS, &[Tag::Human, Tag::Felinor, Tag::Ky, Tag::Cn, Tag::Jlockeed]);
-        for tag in [Tag::Book, Tag::Fruit, Tag::Pancake, Tag::Ai, Tag::Prime, Tag::Wincon, Tag::Token] {
+        assert_eq!(
+            TRIBAL_TAGS,
+            &[Tag::Human, Tag::Felinor, Tag::Ky, Tag::Cn, Tag::Jlockeed]
+        );
+        for tag in [
+            Tag::Book,
+            Tag::Fruit,
+            Tag::Pancake,
+            Tag::Ai,
+            Tag::Prime,
+            Tag::Wincon,
+            Tag::Token,
+        ] {
             assert!(!TRIBAL_TAGS.contains(&tag), "{tag} is no tribe");
         }
     }
