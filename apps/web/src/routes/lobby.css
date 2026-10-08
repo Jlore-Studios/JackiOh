@@ -616,6 +616,11 @@
   font-size: 14px;
 }
 
+/* R767: the link's button sits beside Copy, which keeps the auto margin. */
+.tavern.app-shell.play-screen .play-ticket__copy--link {
+  margin-left: 0;
+}
+
 .tavern.play-screen .play-join {
   display: flex;
   flex-direction: column;
