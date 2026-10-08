@@ -22,7 +22,7 @@ Closes #
 ## Rulings and patch version
 
 - R-rows added or changed: <!-- `spec/rulings/R<nnnn>.md` (the next free number, CLAUDE.md rule 3), or "none" -->
-- Patch version: <!-- the pending fragment's version (`v0.3.X` until it is named), `Y` for a micro patch, or "none" (no card data change) -->
+- Patch version: <!-- the pending fragment's version (the next number, docs/issues-and-patches.md, Version numbers), `Y` for a micro patch, or "none" (no card data change) -->
 
 ## Gates
 
