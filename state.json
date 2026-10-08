@@ -5,30 +5,6 @@
   "halt": {},
   "halted": false,
   "handled": {
-    "c:5969836811": {
-      "at": "2026-10-03T13:55:08Z",
-      "lines": [
-        "/harness Put an Opus agent on this. Decide if the CI checks are out of date."
-      ]
-    },
-    "c:5970217178": {
-      "at": "2026-10-03T14:43:53Z",
-      "lines": [
-        "/harness skip the vercel check"
-      ]
-    },
-    "c:5970226112": {
-      "at": "2026-10-03T14:46:18Z",
-      "lines": [
-        "/harness pick up the dead bots burden"
-      ]
-    },
-    "c:5970229268": {
-      "at": "2026-10-03T14:46:58Z",
-      "lines": [
-        "/harness pick up the dead bots burden"
-      ]
-    },
     "c:5970513515": {
       "at": "2026-10-03T15:20:28Z",
       "lines": [
@@ -507,6 +483,12 @@
       "at": "2026-10-08T08:05:11Z",
       "lines": [
         "@jgoetzmann-bot pick this up"
+      ]
+    },
+    "c:6062922287": {
+      "at": "2026-10-08T15:11:09Z",
+      "lines": [
+        "(named the bot)"
       ]
     }
   },
