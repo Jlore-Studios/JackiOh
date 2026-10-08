@@ -3410,7 +3410,7 @@
       "asks": [],
       "failures": 0,
       "forced": false,
-      "interruptions": 0,
+      "interruptions": 1,
       "kind": "build",
       "pending_request": false,
       "provider": "claude-2",
