@@ -1042,7 +1042,9 @@ pub fn remove_from_any_zone(state: &mut GameState, instance: &mut CardInstance) 
 
 /// R78: leaving the field resets an instance, while costMod, costOverride and radiant persist. R215
 /// applies the same reset to a hand or library card that reaches a graveyard or exile, and to a card
-/// leaving the resolving zone once its play is over.
+/// leaving the resolving zone once its play is over. The price is not touched here: a card bounced to a
+/// hand or shuffled into a library keeps it, and R766 takes it off only a card that reaches a graveyard
+/// or an exile pile (`reset_price`).
 ///
 /// Patch v0.2.0 adds three more that persist in every zone (R385, R386, B5 E39): `tuning` (what
 /// Degrade, Upgrade and KY's Constant changed), `brittle` (the Brittle count) and `enchantments` —
@@ -1077,6 +1079,16 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.reborn_spent = None;
     // B5 E35: Berserk is a status of the unit on the field, lost as it leaves (R78).
     instance.berserk = None;
+}
+
+/// R766 (#473): a card that reaches a graveyard or an exile pile is its printed card again, its price
+/// included — `costMod` (a discount, a surcharge, a Degrade's or Upgrade's cost step, KY's Constant's
+/// cost) and `costOverride` (a "(0)" given in a hand) both go, so it costs its printed cost (R65), or a
+/// fused card its fused definition's (R77). Its Radiant face, its `tuning`, its Brittle and times-played
+/// counts and its enchantments are what the card is or what happened to it, not a price, and stay.
+pub fn reset_price(instance: &mut CardInstance) {
+    instance.cost_mod = 0;
+    instance.cost_override = None;
 }
 
 /// R174: drop the delayed effects aimed at a card that is leaving the field (`DelayedEffect.watch`).
@@ -1304,14 +1316,21 @@ pub fn move_to_zone(
 
     // R215: a card that reaches a graveyard or an exile pile from a hand or a library is reset too, so
     // what comes back from there is the printed card (#89's hand buffs, #98's rolled power, R151) —
-    // R78's reset, with `costMod`, `costOverride` and `radiant` kept in every zone as R78 keeps them.
+    // R78's reset, with `radiant` and the rest of what R78 keeps in every zone left alone.
     // So is a card that lands from the resolving zone (§10.5 step 7): its play is over, and a #95 an
     // earlier Call to Chaos cast (R87) carries no link of that chain (R28) back into a play of its own.
-    let pile_to_pile = (from == ZoneName::Hand || from == ZoneName::Library)
-        && (zone == OffFieldZone::Graveyard || zone == OffFieldZone::Exile);
+    let to_graveyard_or_exile = zone == OffFieldZone::Graveyard || zone == OffFieldZone::Exile;
+    let pile_to_pile = (from == ZoneName::Hand || from == ZoneName::Library) && to_graveyard_or_exile;
     let landed = from == ZoneName::Resolving;
     if (was_on_field || pile_to_pile || landed) && options.keep_state != Some(true) {
         reset_instance(instance);
+    }
+    // R766 (#473): and a card that reaches a graveyard or an exile pile, from wherever it came, costs its
+    // printed cost again: both cost layers go with it (`reset_price`). A price given on the way to a
+    // hand or a library stays (R215's hand prices, R742's gift, R78's bounce). A card a replacement
+    // sends elsewhere instead (below) lands as the graveyard would have had it land, price included.
+    if to_graveyard_or_exile && from != zone.zone_name() && options.keep_state != Some(true) {
+        reset_price(instance);
     }
 
     let owner = instance.owner;

@@ -369,7 +369,7 @@ mod exile_s6_3_m3_t1 {
     }
 
     #[test]
-    fn r78_exile_resets_the_instance_but_keeps_cost_mod_and_radiant() {
+    fn r78_r766_exile_resets_the_instance_and_its_price_but_keeps_radiant() {
         let mut state = game("effects-move");
         let victim = put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 1), json!({}));
         {
@@ -391,7 +391,8 @@ mod exile_s6_3_m3_t1 {
         assert_eq!(now.damage, 0);
         assert_eq!(now.buffs, AttackHealth { attack: 0, health: 0 });
         assert!(now.radiant);
-        assert_eq!(now.cost_mod, -2);
+        // R766: an exile pile takes the price too, so the card costs its printed cost there.
+        assert_eq!(now.cost_mod, 0);
     }
 }
 

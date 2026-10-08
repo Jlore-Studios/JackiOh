@@ -394,7 +394,8 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
     }
 
     #[test]
-    fn r78_cost_mod_and_cost_override_persist_when_the_card_leaves_the_field_while_buffs_reset() {
+    fn r78_r766_cost_mod_and_cost_override_go_with_the_buffs_when_the_card_leaves_the_field_for_a_graveyard()
+    {
         let mut state = new_game("cost-persists", None);
         let unit = put(&mut state, &plain.id, slot(P1, Units, 1), json!({}));
         let mut sink = sink_for(&mut state);
@@ -425,11 +426,12 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
             Default::default(),
         );
 
+        // R766: a graveyard takes both cost layers with the buffs, so it costs its printed (1) there.
         let after = live(sink.state, &unit);
-        assert_eq!(after.cost_mod, 2);
-        assert_eq!(after.cost_override, Some(3));
+        assert_eq!(after.cost_mod, 0);
+        assert_eq!(after.cost_override, None);
         assert_eq!(after.buffs, AttackHealth { attack: 0, health: 0 });
-        assert_eq!(effective_cost(sink.state, after, CostOptions::default()), 5);
+        assert_eq!(effective_cost(sink.state, after, CostOptions::default()), 1);
     }
 }
 

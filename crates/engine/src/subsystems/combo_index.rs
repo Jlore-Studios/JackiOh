@@ -265,7 +265,7 @@ pub fn step_e() -> Effect {
 
 /// Grade D: "2 different random hand cards cost 1 less". R27 says the two are different and R60
 /// gives all of them when fewer exist, which is what a shuffle-and-take does. The discount is a
-/// `costMod` on the instance, so it travels with the card between zones (R78) and R65 applies it.
+/// `costMod` on the instance, so it travels with the card to a hand or a library (R78, R766) and R65 applies it.
 pub fn step_d() -> Effect {
     Effect::new("comboIndexStepD", |ctx| {
         let controller = ctx.controller;

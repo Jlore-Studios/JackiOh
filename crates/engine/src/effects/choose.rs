@@ -1142,7 +1142,7 @@ fn filter_types(filter: &LibraryFilter) -> Option<Vec<CardType>> {
 /// R65: a library card's cost is R65's one calculation for that instance (`effective_cost`), which is
 /// what #30 Archivist and #94 Genn's Greed read (R24, R66): a card never played has no X (so an X-cost
 /// card reads 0) and no embiggen price (its base), and its `costMod` and `costOverride` travel with
-/// it into every zone (R78), so #95's "every card in your library costs 2 less" moves its bracket.
+/// it into a hand and a library (R78, R766), so #95's "every card in your library costs 2 less" moves its bracket.
 pub fn matches_library_filter(state: &GameState, card: &CardInstance, filter: &LibraryFilter) -> bool {
     // R218: a unit-token card leaves a library only by being drawn or played (R11), so a reveal that
     // puts the pick in a hand passes over it, as a Recruit does.
