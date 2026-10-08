@@ -63,7 +63,7 @@ export function enchantmentWords(enchantment: Enchantment, radiant = false): str
     case "targetEnemies":
       return "Targets enemies";
     case "swapsBook":
-      return `End of turn: Become a different ${radiant ? "Radiant " : ""}Book`;
+      return `End of turn: Become a random other ${radiant ? "Radiant " : ""}Book`;
   }
 }
 

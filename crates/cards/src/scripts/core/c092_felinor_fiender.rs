@@ -1,7 +1,7 @@
 //! #92 Felinor Fiender (SPEC §8.4, §3.2, §10.4 layer 2, R13, R39, R362, BUILD M4-T4 row 92).
 //!
-//! Base: "Stack. Has the stats of all your Felinors, including those under Stack." Radiant: "Stack.
-//! Has twice the stats of all your Felinors, including those under Stack." (patch v0.1.1: the Radiant
+//! Base: "Stack. Also has the stats of all your Felinors, including those under Stack." Radiant:
+//! "Stack. Also has twice the stats of all your Felinors, including those under Stack." (patch v0.1.1: the Radiant
 //! face traded Charge for twice the count). Both faces print Stack alone (§8 Conventions), so §10.4
 //! layer 1 already grants it and this file grants nothing. The printed 5/7 → 10/14 stays: "has the
 //! stats of" is R39's printed-plus-the-sum, and R362 doubles only the sum on the Radiant face.

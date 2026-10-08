@@ -1,5 +1,6 @@
 //! #41 Sheepish (SPEC §8.2). Trap, cost 1, Epic.
-//!   Base:    "When your opponent plays a Unit and its Cry resolves: Transform it into a Sheep Token."
+//!   Base:    "Reveals when your opponent plays a Unit: After it resolves, transform it into a Sheep
+//!            Token."
 //!   Radiant: the same, "Add a Lava Golem to your hand. It costs (0)." — the Radiant face adds the
 //!            Lava Golem and keeps every clause of the base face (§8 Conventions, R277).
 //!
@@ -8,7 +9,7 @@
 //! a Sheep. That moment is §10.5 step 7's `cardResolved`, the event #60 Bear Honeypot, #33 Unstable
 //! Clone Machine and #85 Unlicensed Experimentation answer too (R17's other half, R61). A cast Unit
 //! resolves the same way (R70), so a cast is answered after its Cry as well. A Unit with no Cry is
-//! answered at the same step: "its Cry resolves" names the moment, not a condition on the text.
+//! answered at the same step: "after it resolves" names the moment, not a condition on the text.
 //!
 //! `cardResolved` rather than `summoned`: the condition is "your opponent PLAYS a Unit", and the play
 //! pipeline's step-7 event carries the player who played it, where `summoned` also covers Recruit,

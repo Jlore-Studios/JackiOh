@@ -54,7 +54,7 @@ describe("the privacy policy", () => {
   it("shows the date it was last updated", () => {
     render(<PrivacyRoute />);
     expect(screen.getByTestId(privacyTestid.updated)).toHaveTextContent(`Last updated ${PRIVACY_LAST_UPDATED}`);
-    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-03");
+    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-08");
   });
 
   it("names what is collected, who handles it, and how to delete an account", () => {

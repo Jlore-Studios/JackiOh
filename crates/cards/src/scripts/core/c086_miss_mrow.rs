@@ -1,7 +1,7 @@
 //! #86 "Miss" Mrow (SPEC §8.4, R12, R13, R15, R42, R78, R171, R361).
 //!
-//! Base: "Can't attack. Death: Take control of the Unit that destroyed this." Radiant: "Rush. Death:
-//! Take control of the Unit that destroyed this." (patch v0.1.1: the Death used to steal every enemy
+//! Base: "Can't attack. Death: Steal the Unit that destroyed this." Radiant: "Rush. Death: Steal the
+//! Unit that destroyed this." (patch v0.1.1: the Death used to steal every enemy
 //! unit, and the Radiant face used to print Taunt).
 //!
 //! The Death clause is the same on both faces, so both faces run one Death hook and differ only in
@@ -26,7 +26,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-086";
 
-/// "Death: Take control of the Unit that destroyed this" — identical on both faces.
+/// "Death: Steal the Unit that destroyed this" — identical on both faces.
 fn death() -> Hook {
     hook(|ctx| {
         let killer = killer_of(ctx.state, ctx.self_.as_ref()).map(|killer| killer.id.clone());

@@ -20,6 +20,10 @@
 //     first turn (§9.9's `min(turns + 1, 7)`, R181), and its log, with the Hard handicap the page
 //     reports, folds in Node to the browser's own hash (Easy stores no handicap, R180, so this is
 //     the game that proves the handicapped replay end to end);
+//   * a reload in the middle of a game picks it up on the same state (R668);
+//   * Save and leave keeps the game: the setup, and a reload of it, show the practice menu with its
+//     banner rather than the game, and Resume picks it up on the same log and hash; Leave without
+//     saving keeps nothing, and the next visit shows no banner (R765);
 //   * nothing ever requests `/api` or opens a WebSocket.
 //
 // House rules (BUILD M8): seeds come from `seedFor`, every wait is `cy.settled()` or a retried
@@ -49,7 +53,14 @@ import {
   PRACTICE_DECK,
   PRACTICE_ERROR,
   PRACTICE_HUD,
+  PRACTICE_LEAVE,
+  PRACTICE_LEAVE_CONFIRM,
+  PRACTICE_LEAVE_SAVE,
+  PRACTICE_MENU,
+  PRACTICE_NEW_GAME,
   PRACTICE_RESULT,
+  PRACTICE_RESUME,
+  PRACTICE_RESUME_BANNER,
   PRACTICE_SETUP,
   PRACTICE_START,
   PRACTICE_THINKING,
@@ -602,6 +613,59 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
             expect(after.hash, "the same state").to.eq(before.hash);
           });
       });
+
+    expectNoServer();
+  });
+
+  it("R765 Save and leave keeps the game for the menu's banner, Resume picks it up on the same state, and Leave without saving keeps nothing", () => {
+    visitPractice(practiceUrl(`${SEED}:save`, "medium", "p2"), { reducedMotion: true });
+    cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT }).should("have.attr", "data-difficulty", "medium");
+    keepWholeHand();
+    // On the human's own turn the AI owes nothing, so the state holds still while the game is away.
+    reachHumanTurn();
+
+    practiceHandle()
+      .then((handle) => handle.snapshot())
+      .then((before) => {
+        expect(before.log.some((action) => action.playerId === "p1"), "the AI acted").to.eq(true);
+
+        cy.get(ts(PRACTICE_NEW_GAME)).click();
+        cy.get(ts(PRACTICE_LEAVE)).should("have.attr", "data-can-save", "true");
+        cy.get(ts(PRACTICE_LEAVE_SAVE)).click();
+        cy.get(ts(PRACTICE_SETUP), { timeout: BOOT_TIMEOUT }).should("be.visible");
+        cy.get(ts(PRACTICE_RESUME_BANNER)).should("have.attr", "data-difficulty", "medium");
+        cy.get(ts(PRACTICE_HUD)).should("not.exist");
+
+        // A reload now keeps the player on the menu: the game was left on purpose, not in play.
+        visitPractice("/practice?pace=fast");
+        cy.get(ts(PRACTICE_SETUP), { timeout: BOOT_TIMEOUT }).should("be.visible");
+        cy.get(ts(PRACTICE_RESUME_BANNER)).should("be.visible");
+        cy.get(ts(PRACTICE_HUD)).should("not.exist");
+
+        cy.get(ts(PRACTICE_RESUME)).click();
+        cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT })
+          .should("have.attr", "data-difficulty", "medium")
+          .and("have.attr", "data-human-seat", "p2");
+        cy.get(ts(PRACTICE_ERROR)).should("not.exist");
+        reachHumanTurn();
+        practiceHandle()
+          .then((handle) => handle.snapshot())
+          .then((after) => {
+            expect(after.seed).to.eq(before.seed);
+            expect(after.log, "the same log, folded back").to.deep.eq(before.log);
+            expect(after.hash, "the same state").to.eq(before.hash);
+          });
+      });
+
+    // Leave without saving: out to the main menu, and the practice menu offers nothing back.
+    cy.get(ts(PRACTICE_MENU)).click();
+    cy.get(ts(PRACTICE_LEAVE)).should("be.visible");
+    cy.get(ts(PRACTICE_LEAVE_CONFIRM)).click();
+    cy.location("pathname").should("eq", "/");
+    visitPractice("/practice?pace=fast");
+    cy.get(ts(PRACTICE_SETUP), { timeout: BOOT_TIMEOUT }).should("be.visible");
+    cy.get(ts(PRACTICE_RESUME_BANNER)).should("not.exist");
+    cy.get(ts(PRACTICE_HUD)).should("not.exist");
 
     expectNoServer();
   });

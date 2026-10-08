@@ -3,6 +3,10 @@
 // A game against the AI costs nothing to abandon, but it is still minutes of play one stray tap
 // from gone, and "New game" sits in the HUD beside the board. Staying is the default: it has the
 // focus, and Escape or a click outside the panel means stay.
+//
+// R765: a free game is the player's to keep. Its question offers Save and leave, which keeps the
+// game for the practice menu's banner, beside Leave without saving, which gives it up. A tutorial
+// lesson is never kept (R668), so its question keeps the one way out it always had.
 
 import { useEffect, useId, useRef, type ReactElement } from "react";
 
@@ -18,18 +22,34 @@ export type PracticeLeaveTo = "setup" | "menu" | "lessons";
 type PracticeLeaveProps = {
   to: PracticeLeaveTo;
   onStay(): void;
+  /** Leave and give the game up. */
   onLeave(): void;
+  /** R765: leave and keep the game; offered only when given (a free game, never a lesson). */
+  onSaveAndLeave?: () => void;
+};
+
+/** Where the player lands, in the question's own words. */
+const LEAVE_TO: Record<PracticeLeaveTo, string> = {
+  setup: "choosing a difficulty and a deck",
+  menu: "the main menu",
+  lessons: "the lessons",
 };
 
 const LEAVE_BODY: Record<PracticeLeaveTo, string> = {
-  setup: "It ends here and you go back to choosing a difficulty and a deck.",
-  menu: "It ends here and you go back to the main menu.",
-  lessons: "It ends here and you go back to the lessons. You can start it again any time.",
+  setup: `It ends here and you go back to ${LEAVE_TO.setup}.`,
+  menu: `It ends here and you go back to ${LEAVE_TO.menu}.`,
+  lessons: `It ends here and you go back to ${LEAVE_TO.lessons}. You can start it again any time.`,
 };
 
-export function PracticeLeave({ to, onStay, onLeave }: PracticeLeaveProps): ReactElement {
+/** R765: a free game's question, which can keep it. */
+function saveBody(to: PracticeLeaveTo): string {
+  return `You go back to ${LEAVE_TO[to]}. Save it to pick it up later from the practice menu, or leave without saving and it ends here.`;
+}
+
+export function PracticeLeave({ to, onStay, onLeave, onSaveAndLeave }: PracticeLeaveProps): ReactElement {
   const titleId = useId();
   const stay = useRef<HTMLButtonElement>(null);
+  const canSave = onSaveAndLeave !== undefined;
 
   useEffect(() => {
     stay.current?.focus();
@@ -55,6 +75,7 @@ export function PracticeLeave({ to, onStay, onLeave }: PracticeLeaveProps): Reac
       <section
         className="practice-leave"
         data-testid={practiceTestid.leave}
+        data-can-save={canSave ? "true" : "false"}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -62,8 +83,8 @@ export function PracticeLeave({ to, onStay, onLeave }: PracticeLeaveProps): Reac
         <h2 className="practice-leave__title" id={titleId}>
           Leave this game?
         </h2>
-        <p className="practice-leave__body">{LEAVE_BODY[to]}</p>
-        <div className="practice-leave__actions">
+        <p className="practice-leave__body">{canSave ? saveBody(to) : LEAVE_BODY[to]}</p>
+        <div className={canSave ? "practice-leave__actions practice-leave__actions--save" : "practice-leave__actions"}>
           <button
             ref={stay}
             type="button"
@@ -73,13 +94,23 @@ export function PracticeLeave({ to, onStay, onLeave }: PracticeLeaveProps): Reac
           >
             Keep playing
           </button>
+          {canSave ? (
+            <button
+              type="button"
+              className="practice-result__secondary"
+              data-testid={practiceTestid.leaveSave}
+              onClick={onSaveAndLeave}
+            >
+              Save and leave
+            </button>
+          ) : null}
           <button
             type="button"
             className="practice-result__secondary"
             data-testid={practiceTestid.leaveConfirm}
             onClick={onLeave}
           >
-            Leave game
+            {canSave ? "Leave without saving" : "Leave game"}
           </button>
         </div>
       </section>

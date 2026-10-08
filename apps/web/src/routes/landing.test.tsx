@@ -21,6 +21,7 @@ import { setReducedMotion } from "../test/setup.ts";
 import { seeded } from "../test/random.ts";
 import { PLAYER_STATS_KEY, PLAYER_STATS_VERSION, ROTATION_INTERVAL_MS, ROTATION_MIN_GAMES, ROTATION_SWAP_MS } from "../stats/config.ts";
 import { dropPlayerStatsCache } from "../stats/store.ts";
+import { gameBannerTestid } from "./GameBanner.tsx";
 import LandingRoute from "./landing.tsx";
 import { EVEN, FAN_POOL, ROTATION_POOL, dealLandingFan, featureWeight, rotateFan } from "./landingFan.ts";
 import { siteFooterTestid } from "./SiteFooter.tsx";
@@ -662,5 +663,72 @@ describe("R639 your table", () => {
     expect(table.querySelector('[data-stat="played"]')?.textContent).toContain("played 9×");
     fireEvent.click(screen.getByTestId(landingTestid.statsClear));
     expect(screen.queryByTestId(landingTestid.stats)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R765: the way back into a live online game, at the top of the main menu
+// ---------------------------------------------------------------------------------------------
+
+describe("R765 the main menu's live-game banner", () => {
+  /** `/api/auth/me` for an active account in `currentMatchId` (or a series between its games). */
+  function serveInGame(currentMatchId: string | null, currentSeriesId: string | null = null): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: unknown) => {
+        const url = typeof input === "string" ? input : String((input as URL).href ?? input);
+        if (url.endsWith("/api/auth/me")) {
+          return Promise.resolve(
+            jsonResponse(200, {
+              profile: { id: "profile-1", status: "active" },
+              needsInviteCode: false,
+              emailVerified: true,
+              currentMatchId,
+              currentSeriesId,
+              email: "player@example.test",
+            }),
+          );
+        }
+        return Promise.resolve(jsonResponse(404, { error: { code: "not_found", message: `no stub for ${url}` } }));
+      }),
+    );
+  }
+
+  it("R765 a signed-in player whose match is live sees the banner on top, and Rejoin is a link to the board", async () => {
+    signedIn();
+    serveInGame("m-3");
+    render(<LandingRoute />);
+
+    const banner = await screen.findByTestId(gameBannerTestid.live, undefined, SLOW);
+    expect(banner).toHaveAttribute("data-kind", "match");
+    expect(banner).toHaveTextContent("You're in a game");
+    const rejoin = within(banner).getByTestId(gameBannerTestid.rejoin);
+    // At the top: before the wordmark and the calls to action.
+    const title = screen.getByRole("heading", { level: 1, name: "JackiOh" });
+    expect(banner.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await expectLeadsTo(rejoin, paths.match("m-3"));
+  });
+
+  it("R765 between the games of a Conquest series it rejoins the series screen", async () => {
+    signedIn();
+    serveInGame(null, "s-3");
+    render(<LandingRoute />);
+    const rejoin = await screen.findByTestId(gameBannerTestid.rejoin, undefined, SLOW);
+    expect(rejoin).toHaveAttribute("href", paths.series("s-3"));
+  });
+
+  it("R765 no live game, or no account, shows no banner", async () => {
+    signedIn();
+    serveInGame(null);
+    render(<LandingRoute />);
+    await screen.findByTestId(landingTestid.account, undefined, SLOW);
+    expect(screen.queryByTestId(gameBannerTestid.live)).toBeNull();
+    cleanup();
+
+    window.localStorage.clear();
+    serveInGame("m-3");
+    render(<LandingRoute />);
+    await screen.findByTestId(landingTestid.signIn, undefined, SLOW);
+    expect(screen.queryByTestId(gameBannerTestid.live)).toBeNull();
   });
 });

@@ -464,11 +464,11 @@
     "loc": 46,
     "base": {
       "keywords": [],
-      "text": "When any player ends a turn with unspent mana: Summon an X/X Bread Token for you. X = that player's unspent mana."
+      "text": "Reveals when any player ends a turn with unspent mana: Summon an X/X Bread Token for you. X = that player's unspent mana."
     },
     "radiant": {
       "keywords": [],
-      "text": "When any player ends a turn with unspent mana: Summon an X/X Bread Token for you. X = 3 × that player's unspent mana."
+      "text": "Reveals when any player ends a turn with unspent mana: Summon an X/X Bread Token for you. X = 3 × that player's unspent mana."
     }
   },
   "core-019": {
@@ -927,13 +927,13 @@
       "attack": 4,
       "health": 5,
       "keywords": [],
-      "text": "Start of turn: Add a random card from your GY to your hand."
+      "text": "Start of turn: Add a random card from your graveyard to your hand."
     },
     "radiant": {
       "attack": 8,
       "health": 10,
       "keywords": [],
-      "text": "Start of turn: Discover a card from your GY. It costs (1) less."
+      "text": "Start of turn: Discover a card from your graveyard. It costs (1) less."
     }
   },
   "core-038": {
@@ -1013,11 +1013,11 @@
     "loc": 29,
     "base": {
       "keywords": [],
-      "text": "When your opponent plays a Unit and its Cry resolves: Transform it into a Sheep Token."
+      "text": "Reveals when your opponent plays a Unit: After it resolves, transform it into a Sheep Token."
     },
     "radiant": {
       "keywords": [],
-      "text": "When your opponent plays a Unit and its Cry resolves: Transform it into a Sheep Token. Add a Lava Golem to your hand. It costs (0)."
+      "text": "Reveals when your opponent plays a Unit: After it resolves, transform it into a Sheep Token. Add a Lava Golem to your hand. It costs (0)."
     }
   },
   "core-042": {
@@ -1401,7 +1401,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt, Tribute 3\nCan use opposing Units as Tributes. If opposing Units are used, summon for your opponent."
+      "text": "Taunt, Tribute 3\nCan use enemy Units as Tributes. If any are used, summon this for your opponent."
     },
     "radiant": {
       "attack": 20,
@@ -1411,7 +1411,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt, Tribute 3\nCan use opposing Units as Tributes."
+      "text": "Taunt, Tribute 3\nCan use enemy Units as Tributes."
     }
   },
   "core-056": {
@@ -1551,11 +1551,11 @@
     "loc": 39,
     "base": {
       "keywords": [],
-      "text": "When your opponent plays a (1) Cost or less card, if you have an empty unit zone: Summon 2 Rush Tokens. If it's a Unit, they attack it."
+      "text": "Reveals when your opponent plays a (1) Cost or less card, if you have an empty unit zone: Summon 2 Rush Tokens. If it's a Unit, they attack it."
     },
     "radiant": {
       "keywords": [],
-      "text": "When your opponent plays a card, if you have an empty unit zone: Fill your board with Rush Tokens. If it's a Unit, they attack it."
+      "text": "Reveals when your opponent plays a card, if you have an empty unit zone: Fill your board with Rush Tokens. If it's a Unit, they attack it."
     }
   },
   "core-061": {
@@ -1843,11 +1843,11 @@
     "loc": 21,
     "base": {
       "keywords": [],
-      "text": "At the end of any turn, if your deck has more cards than your opponent's: Recruit a (1) Cost or less Unit."
+      "text": "Reveals when any turn ends, if your deck has more cards than your opponent's: Recruit a (1) Cost or less Unit."
     },
     "radiant": {
       "keywords": [],
-      "text": "At the end of any turn, if your deck has more cards than your opponent's: Recruit a (2) Cost or less Unit."
+      "text": "Reveals when any turn ends, if your deck has more cards than your opponent's: Recruit a (2) Cost or less Unit."
     }
   },
   "core-072": {
@@ -1863,11 +1863,11 @@
     "loc": 17,
     "base": {
       "keywords": [],
-      "text": "Discover a card from your GY. It costs (1) less. Exile this."
+      "text": "Discover a card from your graveyard. It costs (1) less. Exile this."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discover a card from your GY. It costs (0). Exile this."
+      "text": "Discover a card from your graveyard. It costs (0). Exile this."
     }
   },
   "core-073": {
@@ -2018,11 +2018,11 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Your next Spell gains Echo +1."
+      "text": "Your next Spell gains Echo +1. Then this goes to the graveyard."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your next Spell gains Echo +2."
+      "text": "Your next Spell gains Echo +2. Then this goes to the graveyard."
     }
   },
   "core-080": {
@@ -2111,11 +2111,11 @@
     "loc": 47,
     "base": {
       "keywords": [],
-      "text": "Replace every card in your hand, deck, board, GY and exile with a random Legendary."
+      "text": "Replace every card in your hand, deck, board, graveyard and exile with a random Legendary."
     },
     "radiant": {
       "keywords": [],
-      "text": "Replace every card in your hand, deck, board, GY and exile with a random Radiant Legendary."
+      "text": "Replace every card in your hand, deck, board, graveyard and exile with a random Radiant Legendary."
     }
   },
   "core-084": {
@@ -2156,11 +2156,11 @@
     "loc": 58,
     "base": {
       "keywords": [],
-      "text": "When your opponent plays a permanent of a type you control: Fuse it onto a random permanent of yours of that type."
+      "text": "Reveals when your opponent plays a permanent of a type you control: Fuse it onto a random permanent of yours of that type."
     },
     "radiant": {
       "keywords": [],
-      "text": "When your opponent plays a permanent of a type you control: Fuse it onto every permanent of yours of that type."
+      "text": "Reveals when your opponent plays a permanent of a type you control: Fuse it onto every permanent of yours of that type."
     }
   },
   "core-086": {
@@ -2184,7 +2184,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Can't attack\nDeath: Take control of the Unit that destroyed this."
+      "text": "Can't attack\nDeath: Steal the Unit that destroyed this."
     },
     "radiant": {
       "attack": 2,
@@ -2194,7 +2194,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nDeath: Take control of the Unit that destroyed this."
+      "text": "Rush\nDeath: Steal the Unit that destroyed this."
     }
   },
   "core-087": {
@@ -2379,7 +2379,7 @@
           "kind": "Stack"
         }
       ],
-      "text": "Stack\nHas the stats of all your Felinors, including those under Stack."
+      "text": "Stack\nAlso has the stats of all your Felinors, including those under Stack."
     },
     "radiant": {
       "attack": 10,
@@ -2389,7 +2389,7 @@
           "kind": "Stack"
         }
       ],
-      "text": "Stack\nHas twice the stats of all your Felinors, including those under Stack."
+      "text": "Stack\nAlso has twice the stats of all your Felinors, including those under Stack."
     }
   },
   "core-093": {
@@ -2408,11 +2408,11 @@
     "loc": 23,
     "base": {
       "keywords": [],
-      "text": "Grade (starts at E).\nEnd of turn: if you played N+ cards this turn, go up a grade and trigger every step from E to it. N = the grades from E to the current one.\nE: Copy a random card you played this turn into your hand.\nD: 2 random cards in hand cost (1) less.\nC: Opponent exiles a random hand card.\nB: Make a random card in hand Radiant.\nA: 8 Lifesteal damage to the enemy hero.\nS: Trigger E–A again."
+      "text": "Grade (starts at E).\nEnd of turn: If you played N+ cards this turn, go up a grade and trigger every step from E to it. N = the grades from E to the current one.\nE: Copy a random card you played this turn into your hand.\nD: 2 random cards in hand cost (1) less.\nC: Opponent exiles a random hand card.\nB: Make a random card in hand Radiant.\nA: 8 Lifesteal damage to the enemy hero.\nS: Trigger E–A again."
     },
     "radiant": {
       "keywords": [],
-      "text": "Grade (starts at E).\nStart of turn: Add a Combo-Fodder to your hand.\nEnd of turn: if you played N+ cards this turn, go up a grade and trigger every step from E to it. N = the grades from E to the current one.\nE: Copy a random card you played this turn into your hand.\nD: 2 random cards in hand cost (1) less.\nC: Opponent exiles a random hand card.\nB: Make a random card in hand Radiant.\nA: 8 Lifesteal damage to the enemy hero.\nS: Trigger E–A again."
+      "text": "Grade (starts at E).\nStart of turn: Add a Combo-Fodder to your hand.\nEnd of turn: If you played N+ cards this turn, go up a grade and trigger every step from E to it. N = the grades from E to the current one.\nE: Copy a random card you played this turn into your hand.\nD: 2 random cards in hand cost (1) less.\nC: Opponent exiles a random hand card.\nB: Make a random card in hand Radiant.\nA: 8 Lifesteal damage to the enemy hero.\nS: Trigger E–A again."
     }
   },
   "core-093-1": {
@@ -2558,11 +2558,11 @@
     "loc": 28,
     "base": {
       "keywords": [],
-      "text": "When your opponent declares an attack that would be lethal to your hero: Cancel it. The rest of their turn is played at random."
+      "text": "Reveals when your opponent declares an attack that would be lethal to your hero: Cancel it. The rest of their turn is played at random."
     },
     "radiant": {
       "keywords": [],
-      "text": "When your opponent declares an attack that would be lethal to your hero: Cancel it and destroy the attacker. The rest of their turn is played at random."
+      "text": "Reveals when your opponent declares an attack that would be lethal to your hero: Cancel it and destroy the attacker. The rest of their turn is played at random."
     }
   },
   "core-097": {
@@ -3629,13 +3629,13 @@
       "attack": 5,
       "health": 4,
       "keywords": [],
-      "text": "Activate ♾️: Tribute a Unit. Deal damage equal to {multiplier}× its Attack."
+      "text": "Activate ♾️: Tribute another Unit. Deal damage equal to {multiplier}× its Attack."
     },
     "radiant": {
       "attack": 10,
       "health": 8,
       "keywords": [],
-      "text": "Activate ♾️: Tribute a Unit. Deal damage equal to {multiplier}× its Attack."
+      "text": "Activate ♾️: Tribute another Unit. Deal damage equal to {multiplier}× its Attack."
     }
   },
   "classic-022": {
@@ -4557,7 +4557,7 @@
       "attack": 4,
       "health": 3,
       "keywords": [],
-      "text": "Cry: Destroy a permanent whose card takes more lines of code to implement than this one."
+      "text": "Cry: Choose a permanent. If its card takes more lines of code to implement than this one, destroy it."
     },
     "radiant": {
       "attack": 8,
@@ -4802,11 +4802,11 @@
     "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Deal {damage} damage.\nEnd of turn: Become a different Book."
+      "text": "Deal {damage} damage.\nEnd of turn: Become a random other Book."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal {damage} damage.\nEnd of turn: Become a different Radiant Book."
+      "text": "Deal {damage} damage.\nEnd of turn: Become a random other Radiant Book."
     }
   },
   "classic-056": {
@@ -6250,7 +6250,7 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Cry and start of turn: Summon a Right-house defender or a Wrong-House Attacker."
+      "text": "Cry and start of turn: Summon a Right-house defender or a Wrong-House Attacker at random."
     },
     "radiant": {
       "keywords": [],
@@ -6883,11 +6883,11 @@
     "loc": 31,
     "base": {
       "keywords": [],
-      "text": "Summon the five-stack: Top Loser, Jungle Loser, Mid Loser, Support Loser and Bot Loser, into your unit zones 1 to 5 in that order. An occupied or Locked zone is skipped."
+      "text": "Summon the five-stack: Top Loser, Jungle Loser, Mid Loser, Support Loser and Bot Loser, into your unit zones 1 to 5 in that order, skipping any occupied or Locked zone. Trigger Mid Loser's Cry."
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon the Radiant five-stack: Radiant Top Loser, Radiant Jungle Loser, Radiant Mid Loser, Radiant Support Loser and Radiant Bot Loser, into your unit zones 1 to 5 in that order. An occupied or Locked zone is skipped."
+      "text": "Summon the Radiant five-stack: Radiant Top Loser, Radiant Jungle Loser, Radiant Mid Loser, Radiant Support Loser and Radiant Bot Loser, into your unit zones 1 to 5 in that order, skipping any occupied or Locked zone. Trigger Mid Loser's Cry."
     }
   },
   "classicplus-019-1": {
@@ -8436,11 +8436,11 @@
     "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Add {books|random Book|random Books} to your hand. Each costs (0)."
+      "text": "Add {books|random Book|random Books} to your hand. Each costs (0) and is Temporary."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {books|random Radiant Book|random Radiant Books} to your hand. Each costs (0)."
+      "text": "Add {books|random Radiant Book|random Radiant Books} to your hand. Each costs (0) and is Temporary."
     }
   },
   "classicplus-055": {

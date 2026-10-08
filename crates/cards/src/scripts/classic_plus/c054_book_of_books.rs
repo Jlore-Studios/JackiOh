@@ -1,6 +1,8 @@
 //! C+ #54 Book of Books (SPEC §8.7 row 54). (1) Spell, Book, Epic.
-//!   Base:    "Add {books|random Book|random Books} to your hand. Each costs (0)." — books 2
-//!   Radiant: "Add {books|random Radiant Book|random Radiant Books} to your hand. Each costs (0)."
+//!   Base:    "Add {books|random Book|random Books} to your hand. Each costs (0) and is Temporary."
+//!            — books 2
+//!   Radiant: "Add {books|random Radiant Book|random Radiant Books} to your hand. Each costs (0) and
+//!            is Temporary."
 //!   Engine:  "Non-token Books of every set (R380) but this one (R387), repeats allowed (R60);
 //!            `costOverride` 0 and Temporary (R637), so an unplayed Book is discarded at the end of the
 //!            turn; the hand cap burns extras (§2.4). Tunes: books 2 ↑."
