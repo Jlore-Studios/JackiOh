@@ -3064,6 +3064,7 @@
     "506": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-08T08:17:41Z",
         "difficulty": "medium",
@@ -3071,6 +3072,7 @@
         "tier": "strong",
         "why": "Easy-rule line 7 wants a unit test the plan names, and an empty change has nothing to test. Since I can't tell that line holds, it stays at the medium the item already carries."
       },
+      "forced": false,
       "handoff": {
         "at": "2026-10-08T08:17:23Z",
         "family": "claude",
@@ -3080,6 +3082,7 @@
         "reason": "planned on opus",
         "trail": "- Bash: {\"command\": \"git status --short && git log --oneline -1\", \"description\": \"Check worktree status and head commit\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-506/.bot-plan.md\", \"content\": \"# Plan draft, issue #506 (Night bot: Test)\\n\\nFound: the issue is a pickup test. Its acceptance says \\\"If you pick this\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Easy-rule line 7 wants a unit test the plan names, and an empty change has nothing to test. Since I can't tell that line holds, it stays at the medium the item already carries.\"} --> **Goal.** Issue #506 only tests whether the night bot picks up an issue. \u2026"
       },
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
