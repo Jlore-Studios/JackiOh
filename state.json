@@ -3030,6 +3030,14 @@
       "started_at": "2026-10-03T16:52:25Z",
       "stop_requested": false
     },
+    "490": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-08T02:53:54Z",
+      "issue": 432,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "51": {
       "failures": 0,
       "forced": false,
