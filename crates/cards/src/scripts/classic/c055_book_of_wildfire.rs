@@ -1,6 +1,6 @@
 //! C #55 Book of Wildfire (SPEC §8.6 row 55, BUILD M9 Classic row C 55). (1) Spell, Book, Epic.
-//!   Base:    "Deal {damage} damage. / End of turn: Become a different Book." (4)
-//!   Radiant: "Deal {damage} damage. / End of turn: Become a different Radiant Book." (8)
+//!   Base:    "Deal {damage} damage. / End of turn: Become a random other Book." (4)
+//!   Radiant: "Deal {damage} damage. / End of turn: Become a random other Radiant Book." (8)
 //!   Engine:  "One targeted hit, as C #16 Book of Flame. The designer's second 'Book of Flame' is
 //!            renamed so that the two names never collide and no text that names Book of Flame (C #23
 //!            Devil's Pact, C #29 Book of Vital Kill) finds it (R381). At the end of its owner's turn,
@@ -183,8 +183,11 @@ mod tests {
         fn r671_prints_the_swap_on_both_faces_the_radiant_one_naming_a_radiant_book() {
             crate::register_all();
             let def = js(&crate::card_def(ID));
-            assert_eq!(def["base"]["text"], "Deal {damage} damage.\nEnd of turn: Become a different Book.");
-            assert_eq!(def["radiant"]["text"], "Deal {damage} damage.\nEnd of turn: Become a different Radiant Book.");
+            assert_eq!(def["base"]["text"], "Deal {damage} damage.\nEnd of turn: Become a random other Book.");
+            assert_eq!(
+                def["radiant"]["text"],
+                "Deal {damage} damage.\nEnd of turn: Become a random other Radiant Book."
+            );
             assert!(def.get("refs").is_none());
         }
 
