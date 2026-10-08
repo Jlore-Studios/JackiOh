@@ -27,6 +27,8 @@ const HINDER: &str = "core-021";
 const FULLSEND: &str = "core-078";
 const SCARAB: &str = "core-007";
 const POINTMASTER: &str = "core-020";
+const PUNISH: &str = "classic-020";
+const DOOM: &str = "destroy a Unit at the start of your next turn";
 
 use super::scenario;
 
@@ -148,6 +150,46 @@ mod r216_nothing_happens_after_the_game_is_over {
             joined(&types)
         );
         assert_eq!(g.state().players.p1.fatigue_count, 2);
+    }
+
+    #[test]
+    fn r216_r437_a_marked_unit_that_dies_with_its_hero_says_nothing_of_its_mark_after_game_over_2_5() {
+        // Fuzz seed 329 (#562): p1's The Power to Punish marks p2's Pointmaster for a destroy at the
+        // start of p1's next turn (R437's red mark). Shredder's end-of-turn 2 damage kills the
+        // Pointmaster and p2's hero in one state check, which ends the game (§2.5). The destroy went
+        // with its Unit, but the mark's `marked` (added: false) may not follow `gameOver`.
+        let mut s = scenario(json!({
+            "seed": "r216-marked-after-game-over",
+            "p1": { "field": [SHREDDER], "backrow": [PUNISH] },
+            "p2": { "health": 2, "field": [POINTMASTER] },
+        }));
+        let pointmaster = s.card(POINTMASTER).clone();
+        s.activate(
+            PUNISH,
+            json!({ "modes": [DOOM], "targets": [{ "pick": "instance", "instanceId": pointmaster.id }] }),
+        );
+        assert!(
+            s.last_events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::Marked { added: true, .. }))
+        );
+        s.end_turn();
+
+        assert_eq!(
+            s.state().result,
+            Some(GameResult {
+                winner: Winner::P1,
+                reason: GameOverReason::HeroDeath
+            })
+        );
+        let types = types_of(s.last_events());
+        assert!(types.contains(&GameEventType::Destroyed), "{}", joined(&types));
+        assert_eq!(
+            after_game_over(&types),
+            Vec::<GameEventType>::new(),
+            "{}",
+            joined(&types)
+        );
     }
 }
 

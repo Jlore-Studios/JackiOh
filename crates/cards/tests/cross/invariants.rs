@@ -20,6 +20,7 @@ const HIT_JOB: &str = "core-016";
 const MY_PAWN: &str = "core-096";
 const SHEEPISH: &str = "core-041";
 const RUSH_TOKEN: &str = "core-t-rush";
+const APPROPRIATIONS: &str = "classicplus-040";
 
 use super::scenario;
 
@@ -612,6 +613,40 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
                 &view,
                 &legal_actions(g.state(), PlayerId::P1)
             ),
+            no_violations()
+        );
+    }
+
+    #[test]
+    fn r316_i6_lets_a_card_a_full_library_refused_before_it_existed_be_named_openly_when_it_copies_nothing() {
+        // Fuzz seed 5967, handicapped (#562): Classic+ #40 Appropriations' Education into a full deck.
+        // Its random Books are never created (R80) and copy no card, so both seats read them (R316):
+        // they were never in any pile. A Book is no token, so R11's rule above does not cover them.
+        let library: Vec<&str> = (0..LIBRARY_CAP).map(|_| VANILLA).collect();
+        let mut g = scenario(json!({ "p1": { "hand": [APPROPRIATIONS], "library": library } }));
+        g.play(APPROPRIATIONS, json!({ "x": 1, "modes": ["Education"] }));
+        let refused: Vec<String> = g
+            .last_events()
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::LibraryOverflow {
+                    instance_id,
+                    outcome: LibraryOverflowOutcome::NotCreated,
+                    copy_of: None,
+                    ..
+                } => Some(instance_id.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(refused.len(), 2);
+        for seat in [PlayerId::P1, PlayerId::P2] {
+            let sent = serde_json::to_string(&view_for(g.state(), seat).events).expect("events serialise");
+            for id in &refused {
+                assert!(sent.contains(id.as_str()), "{seat}: {sent}");
+            }
+        }
+        assert_eq!(
+            create_invariant_monitor(g.state()).hidden(g.state()),
             no_violations()
         );
     }
