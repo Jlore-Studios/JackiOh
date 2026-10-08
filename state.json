@@ -4412,6 +4412,22 @@
         "status": "allowed"
       }
     },
+    "claude-7": {
+      "spent": [
+        {
+          "at": "2026-10-08T08:19:55Z",
+          "minutes": 10.6
+        }
+      ],
+      "usage": {
+        "five_hour": {
+          "resets_at": "2026-10-08T13:00:00Z",
+          "utilization": 0.11
+        },
+        "observed_at": "2026-10-08T08:19:55Z",
+        "status": "allowed"
+      }
+    },
     "devin": {
       "refused_until": "2026-10-05T23:01:07Z",
       "spent": [
