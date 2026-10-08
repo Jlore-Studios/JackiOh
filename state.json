@@ -3074,6 +3074,13 @@
     "508": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-08T08:32:14Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "adds ruling R768 (rule 3 hot spot) and spans the engine, wasm and web, so it fails easy rules 2, 3 and 5; it is not hard because it adds read-only entry points beside `fold` and touches no rule, resolution loop or AI search"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
