@@ -11,7 +11,7 @@ Animated, Brittle and Temporary are printed on, or given to, cards that are not 
 | Keyword | Rule | Engine semantics | Cards |
 | --- | --- | --- | --- |
 | Taunt | Enemies must attack Taunt units first | Attack-target validator; Defense Position adds it; an Indestructible unit never has it, whatever grants it ([[R347]]) | #19, #55, #56, all units in Defense |
-| Armor X | Reduce each damage instance by X | Pipeline step 2; stacks (printed + Defense 1 + auras); "Armor 1" when unnumbered | #1 aura, #9r, #25, #45r, #84 (hero) |
+| Armor X | Reduce each damage instance by X | Pipeline step 2; stacks (printed + Defense 1 + auras); "Armor 1" when unnumbered. The `damage` event carries what it took (`absorbed`, [[R1360]]), and a hit it takes whole is reported by `damageAbsorbed`, which nothing answers ([[R1361]]) | #1 aura, #9r, #25, #45r, #84 (hero) |
 | Rush | May attack units, not heroes, on summon turn | Sickness exemption for unit targets | #11, #14, #32, #56, #86r, #89, #91, Rush Token, Felinor Token r, Chaos Golem |
 | Charge | May attack units and heroes on summon turn | Full sickness exemption | #11r, #45, #95.1r, #100r |
 | First Strike | Deals damage before non-First-Strike units | Combat step 1 | #11, #14, #20, Chaos Golem |
@@ -21,7 +21,7 @@ Animated, Brittle and Temporary are printed on, or given to, cards that are not 
 | Divine Shield | Negate the first damage instance, then lose it | Pipeline step 1 | #3, #20r, #50r, #56, #89r, Chaos Golem |
 | Trample | Excess damage hits the hero | Pipeline step 9; any damage the unit deals ([[R63]]) | Random-keyword pool only |
 | Cleave | Also damages units adjacent to the target | Pipeline step 10, combat only, belongs to the attack ([[R63]]) | #32r, Rush Token r |
-| Pierce | Its damage ignores Armor | Pipeline step 2 skipped for each of its hits, on a unit or a hero; a unit's keyword read through the layers, or a spell's printed on its face ([[R346]]) | #44, Ghoul Token, random-keyword pool |
+| Pierce | Its damage ignores Armor | Pipeline step 2 skipped for each of its hits, on a unit or a hero; a unit's keyword read through the layers, or a spell's printed on its face ([[R346]]). So its hits carry no `absorbed` and are never a `damageAbsorbed` ([[R1360]]) | #44, Ghoul Token, random-keyword pool |
 | Indestructible | Can't be destroyed or damaged; can be exiled or sacrificed | Pipeline step 4; state check skips it unless its max health is 0 or less ([[R69]]); on would-destroy: Attack Position, lose Taunt this turn ([[R46]]); while Indestructible it has no Taunt to lose ([[R347]]) | #66, #98 |
 | Immutable | Text can't be changed or transformed | Blocks Transform, Vanilla, Fuse-onto, Degrade and Upgrade ([[R23]], [[R386]]), Silence-like effects; Radiant still allowed (it is the card's own text) | #19r, #66r |
 | Stack | May be played onto an occupied zone | Zone becomes a pile; only the top is active (section 3.2) | #92 |

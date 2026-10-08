@@ -89,6 +89,8 @@ const S2 = {
   FX_WALLS_TRAUMA: 0.45,
   FX_BRAND_SLAM_AT: 0.35,
   FX_BRAND_TAIL_MS: 700,
+  // Patch v0.3.X (MN05): Armor's shield flash (R1363).
+  FX_SHIELD_TAIL_MS: 450,
   FX_CHAOS_LAND_AT: 0.4,
   FX_CHAOS_STAGGER: 0.2,
   FX_CHAOS_LAND_LAST: 0.85,

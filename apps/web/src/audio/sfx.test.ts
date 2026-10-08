@@ -23,6 +23,9 @@ const UNION_ORDER: SfxId[] = [
   "emoteSob", "emoteYawn", "emoteLaugh", "emoteAngry", "emoteWahWah",
   // Patch v0.2.X (R669): the play sting.
   "sting",
+  // Patch v0.3.X (MN05): Armor (R1363) and the niche moments (R1364–R1366).
+  "armorClank", "armorRing", "overkill", "crumble", "unlock", "steal", "give", "counterspell", "bleat", "fuse",
+  "degrade", "upgrade",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -74,6 +77,19 @@ const DURATION_MS: Record<SfxId, number> = {
   emoteAngry: 700,
   emoteWahWah: 1800,
   sting: 800,
+  // Patch v0.3.X (MN05).
+  armorClank: 350,
+  armorRing: 850,
+  overkill: 550,
+  crumble: 650,
+  unlock: 400,
+  steal: 400,
+  give: 550,
+  counterspell: 600,
+  bleat: 650,
+  fuse: 650,
+  degrade: 520,
+  upgrade: 500,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }, { tier: "rare" }, { tier: "epic" }];

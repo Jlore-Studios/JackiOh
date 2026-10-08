@@ -201,8 +201,15 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
         );
       }
       return `${name.def(event.defId)} entered ${name.whose(event.player)} ${zoneLabel(event.row, event.lane)}`;
-    case "damage":
-      return `${capitalised(name.instance(event.targetId))} took ${event.amount} damage${event.combat ? " in combat" : ""}`;
+    case "damage": {
+      // R1360: the Armor's part of the hit, where it took one.
+      const absorbed = event.absorbed ?? 0;
+      const armor = absorbed > 0 ? `, ${String(absorbed)} absorbed by Armor` : "";
+      return `${capitalised(name.instance(event.targetId))} took ${event.amount} damage${event.combat ? " in combat" : ""}${armor}`;
+    }
+    case "damageAbsorbed":
+      // R1361: the Armor took the whole hit, so nothing was dealt.
+      return `${capitalised(name.instance(event.targetId))}'s Armor absorbed ${String(event.absorbed)} damage${event.combat ? " in combat" : ""}`;
     case "healthLost":
       return `${name.seat(event.player)} lost ${event.amount} health`;
     case "healed":
@@ -452,6 +459,7 @@ function cardOf(event: GameEvent, view: PlayerView, remembered: ReadonlyMap<stri
     case "fused":
       return byDef(event.defId, event.resultInstanceId);
     case "damage":
+    case "damageAbsorbed":
     case "healed":
       return byInstance(event.targetId);
     case "divineShieldLost":
