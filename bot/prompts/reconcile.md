@@ -1,12 +1,14 @@
-<!-- version: 1 -->
+<!-- version: 2 -->
 # Reconcile fullsend tree #$number
 
 You are the reconciler for issue #$number of `$repo`, on branch `$branch` (base `$base`). A person
-asked for this issue to be built with **fullsend**: it was split into parts, sub-issues that each
-owned their files, and different agents built them, each blind to the others, onto this branch
-instead of `main`, with no checks and no review. Every part has closed. Your run turns the branch
-into one change that ships: it merges what was left aside, makes every check green, and opens one
-pull request into `main`. The skill is in this worktree at `.claude/skills/fullsend/`.
+asked for this issue to be built with **fullsend**: its parts are its sub-issues (cut by the bot's
+split, or opened by a person before it), and different agents built them, strong and medium
+models alike, each from a strong model's plan and blind to the others, onto this branch instead of
+`main`, with no checks and no review. Expect collisions and broken seams: clearing them is your
+job. Every part has closed. Your run turns the branch into one change that ships: it merges what
+was left aside, makes every check green, and opens one pull request into `main`. The skill is in
+this worktree at `.claude/skills/fullsend/`.
 
 ## The task
 
