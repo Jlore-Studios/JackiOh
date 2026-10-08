@@ -83,8 +83,9 @@ export const BANNED_RULES_WORDS: readonly string[] = [
   "Immutable", "Indestructible", "Stack", "Echo", "Combo", "Discover", "Recruit", "Tribute",
   "Embiggen", "Radiant", "Armor", "Rush", "Charge", "Cry", "Deathrattle", "Battlecry", "mana",
   "damage", "summon", "exile", "fatigue", "backrow", "graveyard",
-  // Patch v0.2.0's rules words (docs/classic-sets.md B3, B5).
-  "Animated", "Activate", "Brittle", "Degrade", "Upgrade", "Spell Damage", "Immune to Spells", "Counter",
+  // Patch v0.2.0's rules words (docs/classic-sets.md B3, B5), Degrade and Upgrade read as Nerf and Buff since
+  // patch v0.3.4 (R1320).
+  "Animated", "Activate", "Brittle", "Nerf", "Buff", "Spell Damage", "Immune to Spells", "Counter",
   "Flicker", "Plague Counter",
 ];
 

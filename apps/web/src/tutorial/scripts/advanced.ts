@@ -259,7 +259,7 @@ export const script: LessonScript = {
     info({
       id: "radiant",
       title: "Radiant cards",
-      text: "Every card has an upgraded Radiant form with a gold face. Look at The Rock in your hand and note its stats.",
+      text: "Every card has a stronger Radiant form with a gold face. Look at The Rock in your hand and note its stats.",
       anchor: { kind: "handCard", defId: THE_ROCK },
       when: (ctx) => myMain(ctx) && beanOnRock(ctx).length > 0,
       moot: (ctx) => outOfReach(ctx, (now) => beanOnRock(now).length > 0),
@@ -267,7 +267,7 @@ export const script: LessonScript = {
     makeRadiant,
     info({
       id: "radiant-after",
-      title: "Upgraded",
+      title: "Stronger",
       text: "The Rock is Radiant now: a gold face and stronger stats. Compare them with before. It stays Radiant for the rest of the game.",
       anchor: { kind: "handCard", defId: THE_ROCK },
       when: (ctx) => rockRadiant(ctx.view),

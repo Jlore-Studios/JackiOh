@@ -71,7 +71,7 @@ export const POWER_WORDS: Readonly<Record<string, PowerWords>> = {
     title: "Steady Shot",
     radiantTitle: "Steady Shot",
     base: "Deal {shot} damage to the enemy hero.",
-    radiant: "Deal {shot} damage to the enemy hero. Upgrade this permanently by +2 damage.",
+    radiant: "Deal {shot} damage to the enemy hero. Buff this permanently by +2 damage.",
   },
   rush: { x: 2, title: "Ranching", radiantTitle: "Ranching", base: "Summon a Rush Token.", radiant: "Summon a Radiant Rush Token." },
   felinor: { x: 1, title: "Cat Cafe", radiantTitle: "Cat Cafe", base: "Summon a Felinor Token.", radiant: "Summon a random Felinor." },
