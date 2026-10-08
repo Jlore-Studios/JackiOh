@@ -3137,6 +3137,13 @@
     "509": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-08T10:04:16Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule 3 fails: the change edits spec/rulings/R0768.md's proven_in and regenerates spec/INDEX.md; it also runs past 400 lines with its tests, so it cannot be easy"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
