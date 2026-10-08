@@ -123,5 +123,10 @@
     "version": "v0.3.3",
     "commit": "764bd0ad79ce2eff8768e7e1bc53d72169f2399f",
     "blob": "e9e04a2be49352b085ae78e353681c4b545e021b"
+  },
+  {
+    "version": "v0.3.4",
+    "commit": "858fcc5a33a33b9155f47031d05d620538c67858",
+    "blob": "6d949c305beffc85f0ef86181a0177f3e8403763"
   }
 ]
