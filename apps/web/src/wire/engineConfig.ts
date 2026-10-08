@@ -19,4 +19,6 @@ export const HUMAN_HANDICAP: Handicap = {"deckSize":20,"manaBonus":0,"manaCap":4
 export const LIBRARY_CAP = 60;
 export const MAX_COPIES = 1;
 export const MAX_MANA = 4;
+export const REPLAY_CHECKPOINT_EVERY = 16;
+export const REPLAY_PAGE_STEPS = 16;
 export const TURN_CAP_PLAYER_TURNS = 60;

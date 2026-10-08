@@ -14,6 +14,7 @@ opaque `EngineState` brand (CLAUDE.md rule 7) and hands back on every call.
 | `create_game(args)`, `begin_game(state)`, `reduce(state, action)` | a `GameState`, then `ReduceResult`s (`{ state, events, error? }`) |
 | `legal_actions(state, player)`, `view_for(state, player)`, `seat_to_act(state)` | as the engine's |
 | `hash_state(state)`, `fold(args)` | the state hash, and a log folded (`{ state, errors }`) |
+| `replay_open(args, record)`, `replay_page(checkpoints, seat, from, count)` | R768's `ReplayOpen`, then `ReplayPage` |
 | `last_board_for`, `seat_played_by`, `find_instance` | as the engine's |
 | `ai_to_act(state, seat)`, `ai_decide(state, seat, options, deadline_ms)` | the AI; `options` is `{ rngSeed, rngCursor, budget? }`, the answer `{ decision, rngCursor }` |
 | `build_ai_deck(options)` | `{ deck, rngCursor }` |

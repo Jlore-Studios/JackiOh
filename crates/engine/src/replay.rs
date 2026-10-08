@@ -13,9 +13,13 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::config::Handicap;
+use crate::config::{Handicap, REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS};
 use crate::state::{CreateGameOptions, GameState, LastBoardInput, create_game};
-use crate::wire::{Action, CardDefs, PerPlayerOpt, PlayerId};
+use crate::view_for::view_for;
+use crate::wire::{
+    Action, CardDefs, PerPlayerOpt, PlayerId, ReplayCheckpoints, ReplayOpen, ReplayPage, ReplayRecord,
+    ReplayRefusal, ReplayStep,
+};
 
 /// Canonical JSON: keys sorted, so two equal states always produce the same text.
 ///
@@ -839,16 +843,7 @@ pub type FoldResult = ReplayResult;
 /// setup is not: `create_game` throws on a deck its seat's handicap does not allow, so a handicapped
 /// game folded without its handicaps fails loudly instead of replaying a different game (R180).
 pub fn fold(input: &ReplayInput) -> ReplayResult {
-    let start = create_game(&CreateGameOptions {
-        seed: input.seed.clone(),
-        decks: input.decks.clone(),
-        catalog: input.catalog.clone(),
-        handicaps: input.handicaps.clone(),
-        dealt: input.dealt.clone(),
-        last_boards: input.last_boards.clone(),
-        glitch_boards: input.glitch_boards.clone(),
-    });
-    let mut state = crate::reduce::begin_game(&start).state;
+    let mut state = opening(input);
     let mut errors: Vec<FoldError> = Vec::new();
 
     for action in &input.log {
@@ -864,6 +859,114 @@ pub fn fold(input: &ReplayInput) -> ReplayResult {
     }
 
     ReplayResult { state, errors }
+}
+
+/// The state after `begin_game`: `fold`'s start, and a replay's step 0 (R768).
+fn opening(input: &ReplayInput) -> GameState {
+    let start = create_game(&CreateGameOptions {
+        seed: input.seed.clone(),
+        decks: input.decks.clone(),
+        catalog: input.catalog.clone(),
+        handicaps: input.handicaps.clone(),
+        dealt: input.dealt.clone(),
+        last_boards: input.last_boards.clone(),
+        glitch_boards: input.glitch_boards.clone(),
+    });
+    crate::reduce::begin_game(&start).state
+}
+
+/// R768: fold a finished game once and check it before any step is shown. A game of another
+/// catalog version than `build_version` is refused as `earlier_patch`, before anything is folded;
+/// a log that does not fold to `record.final_hash` is refused as `rules_changed`. Otherwise the
+/// answer holds the step count (step 0 is the state after `begin_game`, step k the state after the
+/// k-th accepted action: a rejected one is no step) and a state every `REPLAY_CHECKPOINT_EVERY`
+/// accepted actions. As with `fold`, a setup `create_game` refuses panics; the WASM binding checks
+/// it first.
+pub fn replay_open(input: &ReplayInput, record: &ReplayRecord, build_version: &str) -> ReplayOpen {
+    if record.catalog_version != build_version {
+        return ReplayOpen::Refused {
+            reason: ReplayRefusal::EarlierPatch,
+        };
+    }
+    let mut state = opening(input);
+    let mut checkpoints = ReplayCheckpoints {
+        accepted: Vec::new(),
+        states: vec![state.clone()],
+    };
+    for action in &input.log {
+        let result = crate::reduce::reduce(&state, action);
+        if result.error.is_some() {
+            continue;
+        }
+        state = result.state;
+        checkpoints.accepted.push(action.clone());
+        if checkpoints.accepted.len().is_multiple_of(REPLAY_CHECKPOINT_EVERY) {
+            checkpoints.states.push(state.clone());
+        }
+    }
+    if hash_state(&state) != record.final_hash {
+        return ReplayOpen::Refused {
+            reason: ReplayRefusal::RulesChanged,
+        };
+    }
+    ReplayOpen::Ready {
+        steps: checkpoints.accepted.len() + 1,
+        checkpoints,
+    }
+}
+
+/// R768: steps `[from, from + count)` of an opened replay as `seat` saw them, each `view_for` (never
+/// the clock's) and its turn. `count` is capped at REPLAY_PAGE_STEPS and at the last step, and the
+/// page ends early rather than make more than REPLAY_CHECKPOINT_EVERY `reduce` calls, so the next
+/// page starts at `from + steps.len()`. `reduces` counts them (a pure crate keeps no counter).
+pub fn replay_page(checkpoints: &ReplayCheckpoints, seat: PlayerId, from: usize, count: usize) -> ReplayPage {
+    let total = checkpoints.accepted.len() + 1;
+    let wanted = count.min(REPLAY_PAGE_STEPS).min(total.saturating_sub(from));
+    let mut page = ReplayPage {
+        from,
+        steps: Vec::new(),
+        reduces: 0,
+    };
+    let mut at = from - from % REPLAY_CHECKPOINT_EVERY;
+    let Some(mut state) = checkpoints.states.get(at / REPLAY_CHECKPOINT_EVERY).cloned() else {
+        return page;
+    };
+    while page.steps.len() < wanted {
+        if at >= from {
+            page.steps.push(ReplayStep {
+                step: at,
+                turn: state.turn,
+                view: view_for(&state, seat),
+            });
+            if page.steps.len() == wanted {
+                break;
+            }
+        }
+        let next = at + 1;
+        let saved = if next.is_multiple_of(REPLAY_CHECKPOINT_EVERY) {
+            checkpoints.states.get(next / REPLAY_CHECKPOINT_EVERY)
+        } else {
+            None
+        };
+        if let Some(saved) = saved {
+            state = saved.clone();
+        } else {
+            let Some(action) = checkpoints.accepted.get(at) else {
+                break;
+            };
+            if page.reduces == REPLAY_CHECKPOINT_EVERY {
+                break;
+            }
+            let result = crate::reduce::reduce(&state, action);
+            page.reduces += 1;
+            if result.error.is_some() {
+                break;
+            }
+            state = result.state;
+        }
+        at = next;
+    }
+    page
 }
 
 #[cfg(test)]

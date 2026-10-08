@@ -135,4 +135,6 @@ after [[R703]]. It edits [[§10.10]], [[R374]] and [[R639]].
 
 **[[R767]] is a room shared as a link (issue #432, 2026-10-08)**: the room ticket's Copy invite link, and the lobby that opens on one with its join form filled in. It takes the next number after [[R766]]. It edits [[§9.5]].
 
+**[[R768]] is what a replay shows (issue #508, part 1 of #430, 2026-10-08)**: a seat's view at any step of a finished game, refused on another catalog version or a final-hash mismatch. It takes the next number after [[R767]]. It edits [[§9.3]].
+
 The table's rows are the ruling notes in `rulings/`, one per row (`rulings/R0195.md` is [[R195]]), each with its ruling, the cards and sections it affects, and the tests that prove it. [INDEX.md](INDEX.md) lists them all, one line each.

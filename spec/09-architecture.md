@@ -36,7 +36,7 @@ The match actor (Durable Object or equivalent) is the only stateful component: i
 - Mid-action choices are state, not callbacks: a choice made during resolution (Discover, mulligan, chained steps, Echo repeats, triggered effects) sets `state.pending` and returns; the answer is another action. The choices a card declares for its own play (zone, X, embiggen, Tribute, targets, modes) travel in the `play` action instead ([[R81]]). This is what makes prompts identical in live play, replays and tests.
 - Every action carries a client nonce, deduped server-side.
 - `reduce` refuses illegal actions itself and returns the reason; client greying-out is UX only.
-- Append-only action log per match; snapshots are a later optimisation.
+- Append-only action log per match; snapshots are a later optimisation. A replay shows a seat each step exactly as `view_for` did, and is refused on another catalog version or a final-hash mismatch ([[R768]]).
 
 ### 9.4 Accounts, collection, loadouts
 
