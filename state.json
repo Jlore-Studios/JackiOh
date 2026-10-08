@@ -5253,14 +5253,18 @@
         {
           "at": "2026-10-08T18:54:00Z",
           "minutes": 30.9
+        },
+        {
+          "at": "2026-10-08T18:54:44Z",
+          "minutes": 5.3
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-08T23:00:00Z",
-          "utilization": 1.0
+          "utilization": 1.01
         },
-        "observed_at": "2026-10-08T18:54:00Z",
+        "observed_at": "2026-10-08T18:54:44Z",
         "rejected_resets_at": "2026-10-08T23:00:00Z",
         "status": "rejected"
       }
