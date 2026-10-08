@@ -108,5 +108,10 @@
     "version": "v0.2.11",
     "commit": "d79927e13dfbeef7267501c7330ec6376c9f7b5c",
     "blob": "d74a733519b2e233a1a4b37a1143f637acfb678c"
+  },
+  {
+    "version": "v0.3.1",
+    "commit": "70b6e415a2877480e62864e24801ed3694a8c173",
+    "blob": "c1fcf9d167c4f4f813504185fc3479c2629bc430"
   }
 ]
