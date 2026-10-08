@@ -177,7 +177,9 @@ pub fn scripts() -> IndexMap<String, CardScripts> {
         (
             SPAWNER,
             Script {
-                end_of_turn: Some(hook(|_ctx| vec![effects::summon(json_as(json!({ "defId": TICKER })))])),
+                end_of_turn: Some(hook(|_ctx| {
+                    vec![effects::summon(json_as(json!({ "defId": TICKER })))]
+                })),
                 ..Script::default()
             },
         ),
@@ -235,9 +237,15 @@ pub fn scripts() -> IndexMap<String, CardScripts> {
         (
             TRIGGERER,
             Script {
-                targets: vec![TargetDecl::target(1, 1, json!({ "side": "ally", "of": ["unit"] }))],
+                targets: vec![TargetDecl::target(
+                    1,
+                    1,
+                    json!({ "side": "ally", "of": ["unit"] }),
+                )],
                 cry: Some(hook(|_ctx| {
-                    vec![effects::trigger_cry(json_as(json!({ "target": { "of": "chosen" } })))]
+                    vec![effects::trigger_cry(json_as(
+                        json!({ "target": { "of": "chosen" } }),
+                    ))]
                 })),
                 ..Script::default()
             },
@@ -246,7 +254,9 @@ pub fn scripts() -> IndexMap<String, CardScripts> {
             FEAR,
             Script {
                 cry: Some(hook(|_ctx| {
-                    vec![effects::trigger_turn_hooks(effects::TriggerTurnHooksArgs { times: 2 })]
+                    vec![effects::trigger_turn_hooks(effects::TriggerTurnHooksArgs {
+                        times: 2,
+                    })]
                 })),
                 ..Script::default()
             },

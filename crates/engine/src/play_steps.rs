@@ -1851,7 +1851,9 @@ fn resolve_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
                 let face = text_face_of(sink.state, &card);
                 // R822, R823: a permanent's Cry runs again under its player's Cry multiplier, read now; a
                 // Spell's resolution is no Cry, though it runs from the same hook.
-                if is_permanent(sink.state, &card) && crate::scripts::script_of(sink.state, &face).cry.is_some() {
+                if is_permanent(sink.state, &card)
+                    && crate::scripts::script_of(sink.state, &face).cry.is_some()
+                {
                     let extra = extra_runs(sink.state, run.player, Multiplied::CryAndDeath);
                     if extra > 0 {
                         run.extra_cries = Some(extra as u32);

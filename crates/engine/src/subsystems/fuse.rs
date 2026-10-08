@@ -51,12 +51,15 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::config::{CRAFTED_CARD_COST, FUSE_COST_CAP, FUSE_MIN_INGREDIENTS, FUSED_ID_CAP, TRIGGER_EXTRA_NONE};
+use crate::config::{
+    CRAFTED_CARD_COST, FUSE_COST_CAP, FUSE_MIN_INGREDIENTS, FUSED_ID_CAP, TRIGGER_EXTRA_NONE,
+};
 use crate::script::{
     ActivationDecl, AuraEntry, AuraHook, CardScripts, ConditionContext, ConditionHook, Effect, EffectApply,
     EffectContext, EffectPart, EngineSink, FlagOrCount, Hook, HookArgs, PlagueMultiplierHook, QuestBook,
-    Script, SetStat, SetStatHook, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef, TriggerExtraHook,
-    TriggerRun, WouldCounterHook, aura_hook, condition_hook, hook, read_hook, target_check, would_counter_hook,
+    Script, SetStat, SetStatHook, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef,
+    TriggerExtraHook, TriggerRun, WouldCounterHook, aura_hook, condition_hook, hook, read_hook, target_check,
+    would_counter_hook,
 };
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
 use crate::wire::{

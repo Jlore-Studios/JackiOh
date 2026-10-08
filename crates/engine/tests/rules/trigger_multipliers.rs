@@ -80,16 +80,26 @@ fn on_field(s: &Scenario, player: PlayerId, def_id: &str) -> usize {
 
 #[test]
 fn r820_the_highest_multiplier_holds_and_two_never_add() {
-    let mut s = game(json!({ "backrow": [JOINT, JOINT_TWO], "field": [TICKER] }), json!({}));
+    let mut s = game(
+        json!({ "backrow": [JOINT, JOINT_TWO], "field": [TICKER] }),
+        json!({}),
+    );
     assert_eq!(extra_runs(s.state(), P1, Multiplied::TurnHooks), 2);
     assert_eq!(extra_runs(s.state(), P2, Multiplied::TurnHooks), 0);
     s.end_turn();
-    assert_eq!(health(&s, P2), 27, "three runs of the Ticker's end of turn, not four");
+    assert_eq!(
+        health(&s, P2),
+        27,
+        "three runs of the Ticker's end of turn, not four"
+    );
 }
 
 #[test]
 fn r820_a_fused_card_gives_its_ingredients_highest_extra() {
-    let mut s = game(json!({ "field": [EXTRA_UNIT_ONE], "hand": [EXTRA_UNIT_TWO] }), json!({}));
+    let mut s = game(
+        json!({ "field": [EXTRA_UNIT_ONE], "hand": [EXTRA_UNIT_TWO] }),
+        json!({}),
+    );
     let kept = s.unit(P1, 1).expect("the first unit");
     let added = s.hand(P1)[0].clone();
     let mut events: Vec<GameEvent> = Vec::new();
@@ -107,7 +117,10 @@ fn r820_a_fused_card_gives_its_ingredients_highest_extra() {
         .expect("the fusion keeps the unit");
     }
     let fused = s.card(kept.id.as_str()).clone();
-    assert_ne!(fused.def_id, EXTRA_UNIT_ONE, "the kept unit wears the fused definition");
+    assert_ne!(
+        fused.def_id, EXTRA_UNIT_ONE,
+        "the kept unit wears the fused definition"
+    );
     assert_eq!(extra_runs(s.state(), P1, Multiplied::TurnHooks), 2);
 }
 
@@ -131,13 +144,20 @@ fn r821_start_of_turn_hooks_too() {
 fn r821_a_copy_whose_card_left_fizzles() {
     let mut s = game(json!({ "backrow": [JOINT], "field": [LEAVER] }), json!({}));
     s.end_turn();
-    assert_eq!(health(&s, P2), 29, "the copy finds the Leaver in hand and fizzles");
+    assert_eq!(
+        health(&s, P2),
+        29,
+        "the copy finds the Leaver in hand and fizzles"
+    );
     assert!(s.hand(P1).iter().any(|card| card.def_id == LEAVER));
 }
 
 #[test]
 fn r821_the_opponents_hooks_run_once() {
-    let mut s = game(json!({ "backrow": [JOINT, LIVING] }), json!({ "field": [TICKER] }));
+    let mut s = game(
+        json!({ "backrow": [JOINT, LIVING] }),
+        json!({ "field": [TICKER] }),
+    );
     s.end_turn();
     assert_eq!(s.state().active, P2);
     assert_eq!(health(&s, P1), 29, "p2's Ticker runs once: p2 has no multiplier");
@@ -163,10 +183,17 @@ fn r822_a_spells_resolution_does_not_repeat() {
 
 #[test]
 fn r823_a_target_gone_since_fizzles() {
-    let mut s = game(json!({ "backrow": [DOUBLE], "hand": [AIMER] }), json!({ "field": [PAWN] }));
+    let mut s = game(
+        json!({ "backrow": [DOUBLE], "hand": [AIMER] }),
+        json!({ "field": [PAWN] }),
+    );
     let target = s.unit(P2, 1).expect("p2's first pawn");
     s.play(AIMER, json!({ "targets": [instance(&target)] }));
-    assert_eq!(damage_events_on(&s, &target.id), 1, "the extra Cry finds its target gone");
+    assert_eq!(
+        damage_events_on(&s, &target.id),
+        1,
+        "the extra Cry finds its target gone"
+    );
     s.expect_in_zone(target, "graveyard");
 }
 
@@ -179,12 +206,19 @@ fn r823_a_cry_that_asks_survives_a_json_round_trip() {
     *s.state_mut() = serde_json::from_str(&saved).expect("and reads back");
     s.answer(json!("right"));
     assert!(s.state().pending.is_none());
-    assert_eq!(health(&s, P2), 30 - 2 * (1 + 4 + 2), "each run deals 1, then 4, then 2");
+    assert_eq!(
+        health(&s, P2),
+        30 - 2 * (1 + 4 + 2),
+        "each run deals 1, then 4, then 2"
+    );
 }
 
 #[test]
 fn r823_a_triggered_cry_reuses_its_answers() {
-    let mut s = game(json!({ "backrow": [DOUBLE], "field": [AIMER], "hand": [TRIGGERER] }), json!({}));
+    let mut s = game(
+        json!({ "backrow": [DOUBLE], "field": [AIMER], "hand": [TRIGGERER] }),
+        json!({}),
+    );
     let aimer = s.unit(P1, 1).expect("the aimer");
     s.play(TRIGGERER, json!({ "targets": [instance(&aimer)] }));
     s.answer(json!([hero(P2)]));
@@ -203,12 +237,19 @@ fn r823_a_death_runs_again_for_its_controller() {
     s.play(BOLT, json!({ "targets": [instance(&mine)] }));
     assert_eq!(health(&s, P2), 28, "p1's Dier's Death runs twice");
     s.play(BOLT, json!({ "targets": [instance(&theirs)] }));
-    assert_eq!(health(&s, P1), 29, "p2's Dier's Death runs once: p2 has no multiplier");
+    assert_eq!(
+        health(&s, P1),
+        29,
+        "p2's Dier's Death runs once: p2 has no multiplier"
+    );
 }
 
 #[test]
 fn r823_dying_together_doubles_nothing() {
-    let mut s = game(json!({ "backrow": [DOUBLE], "field": [DIER], "hand": [NUKE] }), json!({}));
+    let mut s = game(
+        json!({ "backrow": [DOUBLE], "field": [DIER], "hand": [NUKE] }),
+        json!({}),
+    );
     s.play(NUKE, json!({}));
     assert_eq!(health(&s, P2), 29, "Double Counting left the field with the Dier");
 }
@@ -219,7 +260,11 @@ fn r823_dying_together_doubles_nothing() {
 fn r824_each_round_follows_the_last_and_the_turn_goes_on() {
     let mut s = game(json!({ "field": [SPAWNER], "hand": [FEAR] }), json!({}));
     s.play(FEAR, json!({}));
-    assert_eq!(on_field(&s, P1, TICKER), 2, "each round's Spawner summons a Ticker");
+    assert_eq!(
+        on_field(&s, P1, TICKER),
+        2,
+        "each round's Spawner summons a Ticker"
+    );
     assert_eq!(
         health(&s, P2),
         29,
@@ -231,7 +276,10 @@ fn r824_each_round_follows_the_last_and_the_turn_goes_on() {
 
 #[test]
 fn r824_rounds_are_multiplied() {
-    let mut s = game(json!({ "backrow": [JOINT], "field": [TICKER], "hand": [FEAR] }), json!({}));
+    let mut s = game(
+        json!({ "backrow": [JOINT], "field": [TICKER], "hand": [FEAR] }),
+        json!({}),
+    );
     s.play(FEAR, json!({}));
     assert_eq!(health(&s, P2), 26, "two rounds, each run twice");
 }

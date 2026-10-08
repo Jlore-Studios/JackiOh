@@ -32,6 +32,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+use crate::multipliers::{Multiplied, extra_runs};
 use crate::play_choices::{
     DECLARATION_SLICES_KEY, active_target_decls, declaration_slices, declared_modes, declared_targets,
     legal_selections_for, targets_follow_modes,
@@ -41,7 +42,6 @@ use crate::prompts::{
     close_prompt, hero_option_label, in_offered_order, open_prompt, resume_at, run_hook_resumable,
     run_resume, why_answer_refused,
 };
-use crate::multipliers::{Multiplied, extra_runs};
 use crate::script::EngineSink;
 use crate::state::{CardInstance, EngineError, GameState, PromptOption, Resume, WorkItem, find_instance};
 use crate::state_check::state_check;

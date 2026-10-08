@@ -27,10 +27,10 @@ pub fn script() -> CardScripts {
 
 // Meditative #9 Joint Filing — SPEC §8.8 row 9, BUILD M10 row M 9: "While it acts, each of your
 // start-of-turn and end-of-turn hooks runs twice, each copy its own queue entry right behind the
-// original, with a state check between (R59, MD-A11) and fresh random numbers; a card gone before its
+// original, with a state check between (R59, R821) and fresh random numbers; a card gone before its
 // copy pops fizzles (R153); M 8 in your graveyard returns once …; delayed effects, the opponent's turn
 // hooks and the end-of-turn trap window are not multiplied (R62); two Joint Filings give one extra, not
-// two (MD-A10); M 12's triggered End of turn effects are multiplied too; leaving the field ends it;
+// two (R820); M 12's triggered End of turn effects are multiplied too; leaving the field ends it;
 // extra reads through `param()`; radiant three runs in all".
 //
 // Core #13 Jlockeed Shredder-10's end of turn (2 to each enemy Unit and the enemy hero) and Core #58

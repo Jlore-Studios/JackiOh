@@ -49,6 +49,7 @@ pub mod self_generation;
 pub mod setup_and_mulligan;
 pub mod stacks_and_reborn;
 pub mod tributes;
+pub mod trigger_multipliers;
 pub mod trigger_stays;
 pub mod turn_clock_and_legality;
 pub mod turn_stages;
