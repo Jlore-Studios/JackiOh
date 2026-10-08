@@ -4751,14 +4751,18 @@
         {
           "at": "2026-10-08T10:04:13Z",
           "minutes": 12.0
+        },
+        {
+          "at": "2026-10-08T10:44:15Z",
+          "minutes": 20.4
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-08T13:00:00Z",
-          "utilization": 0.56
+          "utilization": 0.63
         },
-        "observed_at": "2026-10-08T10:04:13Z",
+        "observed_at": "2026-10-08T10:44:15Z",
         "status": "allowed"
       }
     },
