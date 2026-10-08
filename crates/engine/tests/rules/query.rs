@@ -529,3 +529,48 @@ mod the_classic_c1_c45_reads_max_mana_c_c36_burn {
         assert_eq!(max_mana_of(&state, P2), 0);
     }
 }
+
+/// R901: the highest cost among the permanents acting for a side (Meditative #30 Fickle E-Kitten)
+mod r901_highest_permanent_cost_meditative_30 {
+    use super::*;
+    use crate::rules::fixtures::combat::big_body;
+    use crate::rules::fixtures::generation::{plain_trap, register_generation, x_unit};
+
+    #[test]
+    fn r901_highest_permanent_cost_is_none_for_a_side_with_no_permanent() {
+        let mut state = board("highest-none");
+        assert_eq!(highest_permanent_cost(&state, P1), None);
+        put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({}));
+        assert_eq!(highest_permanent_cost(&state, P1), None);
+        assert_eq!(highest_permanent_cost(&state, P2), Some(1));
+    }
+
+    #[test]
+    fn r901_reads_every_unit_top_and_backrow_card_at_its_cost_now_cost_mod_included() {
+        let mut state = board("highest-reads");
+        register_generation();
+        let unit = put(&mut state, &big_body.id, slot(P1, Row::Units, 2), json!({}));
+        let trap = put(&mut state, &plain_trap.id, slot(P1, Row::Backrow, 4), json!({}));
+        assert_eq!(highest_permanent_cost(&state, P1), Some(3));
+        // A face-down Trap counts at the cost R351's view shows both players: its override here.
+        must(find_instance_mut(&mut state, &trap.id), "the trap").cost_override = Some(5);
+        assert_eq!(highest_permanent_cost(&state, P1), Some(5));
+        must(find_instance_mut(&mut state, &unit.id), "the unit").cost_mod = 4;
+        assert_eq!(highest_permanent_cost(&state, P1), Some(7));
+        // The other side's cards never count toward this one.
+        let big = put(&mut state, &big_body.id, slot(P2, Row::Units, 1), json!({}));
+        must(find_instance_mut(&mut state, &big.id), "p2's unit").cost_override = Some(9);
+        assert_eq!(highest_permanent_cost(&state, P1), Some(7));
+        assert_eq!(highest_permanent_cost(&state, P2), Some(9));
+    }
+
+    #[test]
+    fn r901_r396_an_x_card_counts_at_the_x_it_was_played_for_and_0_without_one() {
+        let mut state = board("highest-x");
+        register_generation();
+        let card = put(&mut state, &x_unit.id, slot(P1, Row::Units, 1), json!({}));
+        assert_eq!(highest_permanent_cost(&state, P1), Some(0));
+        must(find_instance_mut(&mut state, &card.id), "the X unit").x = Some(4);
+        assert_eq!(highest_permanent_cost(&state, P1), Some(4));
+    }
+}

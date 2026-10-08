@@ -396,3 +396,15 @@ pub fn fusable_permanents_of(state: &GameState, player: PlayerId, except: Option
         .filter(|held| Some(held.id.as_str()) != except && !unit_has(state, held, KeywordKind::Immutable))
         .collect()
 }
+
+/// R901 (Meditative #30 Fickle E-Kitten's "a more expensive permanent than you"): the highest cost
+/// among the permanents acting for this player, the tops of their unit piles and their backrow (R13),
+/// each read at R396's `cost_now`: an X card at the X it was played for, 0 without one, any other at
+/// its cost as it stands. A face-down card is never an X card, so it counts at `effective_cost`, the
+/// cost R351's view shows both players. `None` when the side holds no permanent.
+pub fn highest_permanent_cost(state: &GameState, player: PlayerId) -> Option<i32> {
+    permanents_held_by(state, player)
+        .iter()
+        .map(|held| crate::mana::cost_now(state, held))
+        .max()
+}

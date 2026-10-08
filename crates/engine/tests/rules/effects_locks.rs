@@ -1,14 +1,14 @@
 //! The Lock variants and Unlock (docs/classic-sets.md B5 E20; SPEC §3.2 Lock): a whole lane (Classic #71
 //! Lane Eater), the zone a permanent was just played into (Classic #84 Lockdown, Classic+ #34 Memory
 //! Leak), a random zone not already Locked (Classic+ #34), the firing trap's own zone (Classic+ #1 Doom
-//! Shroom), and Unlock (Classic+ #77 Anti-Softlock) — each played through `reduce`, replayed, and read
-//! from both seats. Fixtures: `fixtures/field.ts`.
+//! Shroom), and Unlock (Classic+ #77 Anti-Softlock) and a random Locked zone's Unlock (Meditative #27
+//! Clip-Farming Lawyer, R900) — each played through `reduce`, replayed, and read from both seats. Fixtures: `fixtures/field.ts`.
 //!
 //! Port of `packages/engine/test/effects-locks.test.ts`.
 
 use jackioh_engine::effects::counters::{lock, unlock};
 use jackioh_engine::effects::locks::{
-    lock_lane, lock_own_zone, lock_played_zone, lock_random_zone, unlock_all,
+    lock_lane, lock_own_zone, lock_played_zone, lock_random_zone, unlock_all, unlock_random_zone,
 };
 use jackioh_engine::testkit::*;
 
@@ -416,6 +416,102 @@ mod b5_e20_unlock {
         assert_eq!(
             sink.events.iter().map(GameEvent::event_type).collect::<Vec<_>>(),
             vec![GameEventType::Locked, GameEventType::Unlocked]
+        );
+    }
+}
+
+/// R900: Unlock one random Locked zone (Meditative #27 Clip-Farming Lawyer)
+mod r900_unlock_a_random_locked_zone_meditative_27 {
+    use super::*;
+
+    /// The Locked zones after one `unlock_random_zone` over `scope` on a board with p1's unit zone 2,
+    /// p2's backrow zone 5 and p2's unit zone 4 Locked, with the events and rng draws it took.
+    fn unlock_once(seed: &str, scope: Value) -> (Vec<String>, Vec<GameEvent>, u32) {
+        let mut state = playing(seed);
+        state.players[PlayerId::P1].locks.units[1] = true;
+        state.players[PlayerId::P2].locks.backrow[4] = true;
+        state.players[PlayerId::P2].locks.units[3] = true;
+        let mut sink = sink_for(&state);
+        let cursor = sink.rng.cursor();
+        sink.apply_as_p1(&mut state, unlock_random_zone(json_as(scope)), None);
+        let draws = sink.rng.cursor() - cursor;
+        (locked_zones(&state), sink.events, draws)
+    }
+
+    #[test]
+    fn r900_unlocks_one_of_the_locked_zones_of_either_side_and_row_from_the_match_rng_and_replays_to_the_same_zone()
+    {
+        let all = ["p1:units:2", "p2:units:4", "p2:backrow:5"];
+        let mut opened: Vec<String> = Vec::new();
+        for n in 0..24 {
+            let seed = format!("unlock-random-{n}");
+            let (locked, events, draws) = unlock_once(&seed, json!({}));
+            assert_eq!(locked.len(), 2);
+            assert_eq!(draws, 1);
+            let open: Vec<&str> = all
+                .iter()
+                .copied()
+                .filter(|zone| !locked.iter().any(|still| still == zone))
+                .collect();
+            assert_eq!(open.len(), 1);
+            let parts: Vec<&str> = open[0].split(':').collect();
+            assert_eq!(
+                serde_json::to_value(&events).expect("events serialise"),
+                json!([{ "type": "unlocked", "player": parts[0], "row": parts[1], "lane": parts[2].parse::<i32>().expect("a lane") }])
+            );
+            assert_eq!(unlock_once(&seed, json!({})).0, locked);
+            if !opened.iter().any(|zone| zone == open[0]) {
+                opened.push(open[0].to_string());
+            }
+        }
+        // Uniform over both sides and both rows: every Locked zone is picked by some seed.
+        opened.sort();
+        assert_eq!(opened, vec!["p1:units:2", "p2:backrow:5", "p2:units:4"]);
+    }
+
+    #[test]
+    fn r900_r129_opens_nothing_and_draws_nothing_when_no_zone_of_the_scope_is_locked() {
+        let mut state = playing("unlock-random-none");
+        state.players[PlayerId::P1].locks.units[1] = true;
+        let mut sink = sink_for(&state);
+        let cursor = sink.rng.cursor();
+        sink.apply_as_p1(
+            &mut state,
+            unlock_random_zone(json_as(json!({ "side": "enemy" }))),
+            None,
+        );
+        assert_eq!(sink.rng.cursor(), cursor);
+        assert_eq!(sink.events, Vec::<GameEvent>::new());
+        assert_eq!(locked_zones(&state), vec!["p1:units:2"]);
+    }
+
+    #[test]
+    fn r900_a_scope_narrows_the_pick_to_its_side_and_rows() {
+        for n in 0..8 {
+            let seed = format!("unlock-random-scope-{n}");
+            let (locked, _, draws) =
+                unlock_once(&seed, json!({ "side": "enemy", "rows": ["backrow"] }));
+            assert_eq!(locked, vec!["p1:units:2", "p2:units:4"]);
+            assert_eq!(draws, 1);
+        }
+    }
+
+    #[test]
+    fn r900_an_occupied_zone_is_a_fair_pick_and_its_card_stays() {
+        let mut state = playing("unlock-random-occupied");
+        let unit = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
+        state.players[PlayerId::P2].locks.units[0] = true;
+        let mut sink = sink_for(&state);
+        sink.apply_as_p1(&mut state, unlock_random_zone(json_as(json!({}))), None);
+        assert_eq!(locked_zones(&state), Vec::<String>::new());
+        assert_eq!(
+            id_at(&state, slot(PlayerId::P2, Row::Units, 1)),
+            Some(unit.id.clone())
         );
     }
 }
