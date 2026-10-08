@@ -6932,5 +6932,196 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.3.1",
+    "date": "2026-10-08",
+    "title": "Patch v0.3.1: card text pass",
+    "source": "issue #480",
+    "notes": "Text only; no card does anything new. Every Trap's condition reads \"Reveals when\". Twinspell says it goes to the graveyard, Book of Books that its Books are Temporary, League of Losers that Mid Loser's Cry fires, The House that its summon is random, and Book of Wildfire that the Book it becomes is random. Sheepish fires on any Unit once it resolves, Felinor Fiender keeps its own stats, Turtinator tributes another Unit, and Hired Shrimp's base face lets you guess any permanent. \"Miss\" Mrow steals, Lava Golem says it is the one summoned for your opponent, and GY is written out as graveyard.",
+    "commits": [
+      "70b6e415a2877480e62864e24801ed3694a8c173"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-018",
+        "name": "Bread and Butter",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-037",
+        "name": "Gravedigger",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-041",
+        "name": "Sheepish",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-055",
+        "name": "Lava Golem",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-060",
+        "name": "Bear Honeypot",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-071",
+        "name": "Intern Stimmy",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-072",
+        "name": "Reminisce",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-079",
+        "name": "Twinspell",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-083",
+        "name": "Transmogulate",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-085",
+        "name": "Unlicensed Experimentation",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-086",
+        "name": "\"Miss\" Mrow",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-092",
+        "name": "Felinor Fiender",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-093",
+        "name": "Combo-Index",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-096",
+        "name": "My Pawn",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-021",
+        "name": "Turtinator",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-048",
+        "name": "Hired Shrimp",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "classic-055",
+        "name": "Book of Wildfire",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-007",
+        "name": "The House",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "classicplus-019",
+        "name": "League of Losers",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-054",
+        "name": "Book of Books",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]
