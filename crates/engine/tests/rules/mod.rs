@@ -7,6 +7,7 @@ pub mod after_attack;
 pub mod ai_policy;
 pub mod animated;
 pub mod announce;
+pub mod armor_absorbed;
 pub mod audit;
 pub mod auto_end_turn;
 pub mod backrow_death;

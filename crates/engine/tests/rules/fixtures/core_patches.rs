@@ -1,6 +1,6 @@
 //! Fixtures for the engine half of patch v0.2.0's Core patches and cosmetics (test/corePatches.test.ts):
-//! the play count R429 keeps (`timesPlayed`) and the mark R437 puts on a card a delayed effect waits
-//! for. Test-only
+//! the play count R429 keeps (`timesPlayed`), the price a return that keeps it is noted with (R429,
+//! R766, issue #557) and the mark R437 puts on a card a delayed effect waits for. Test-only
 //! definitions and scripts, prefixed `cp-` and indexed from 4400, so they collide with no other file's.
 //!
 //! Port of `packages/engine/test/fixtures/corePatches.ts`. TS numbered its defs with a module counter
@@ -62,6 +62,13 @@ pub static uncounted: LazyLock<CardDef> = LazyLock::new(|| def("uncounted", 4402
 pub static marker: LazyLock<CardDef> = LazyLock::new(|| def("marker", 4403, "Unit", json!({ "health": 3 })));
 /// A Trap that watches nothing: a face-down card to mark (R33).
 pub static quiet_trap: LazyLock<CardDef> = LazyLock::new(|| def("quiet-trap", 4404, "Trap", json!({})));
+/// R429, R766: a Spell with an end-of-turn return whose return keeps the climb it was played at
+/// (`StaticFlags.returnKeepsPrice`, #31 KY's Math Equation's shape). Its return itself does nothing, so
+/// the card stays in its graveyard and the note's lifetime can be read there.
+pub static priced_return: LazyLock<CardDef> =
+    LazyLock::new(|| def("priced-return", 4405, "Spell", json!({})));
+/// The same return without the flag (#23 Reoccurring Dream's shape).
+pub static plain_return: LazyLock<CardDef> = LazyLock::new(|| def("plain-return", 4406, "Spell", json!({})));
 
 pub static CORE_PATCH_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
@@ -69,6 +76,8 @@ pub static CORE_PATCH_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         uncounted.clone(),
         marker.clone(),
         quiet_trap.clone(),
+        priced_return.clone(),
+        plain_return.clone(),
     ]
 });
 
@@ -150,5 +159,25 @@ pub static CORE_PATCH_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLoc
         ),
         (marker.id.clone(), both(marker_script())),
         (quiet_trap.id.clone(), both(Script::default())),
+        (
+            priced_return.id.clone(),
+            both(Script {
+                static_flags: Some(StaticFlags {
+                    return_keeps_price: Some(true),
+                    ..StaticFlags::default()
+                }),
+                cry: Some(hook(|_ctx| vec![])),
+                end_of_turn: Some(hook(|_ctx| vec![])),
+                ..Script::default()
+            }),
+        ),
+        (
+            plain_return.id.clone(),
+            both(Script {
+                cry: Some(hook(|_ctx| vec![])),
+                end_of_turn: Some(hook(|_ctx| vec![])),
+                ..Script::default()
+            }),
+        ),
     ])
 });

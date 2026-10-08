@@ -274,7 +274,7 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
     if verb == "run":
         target = command.args.lstrip("#")
         return _run_now(ctx, int(target) if target.isdigit() else None)
-    if verb in ("suggest", "oneshot", "split") and not commands.offered(verb):
+    if verb in ("suggest", "oneshot", "split", "fullsend") and not commands.offered(verb):
         return _not_mine(verb)
     if verb == "suggest":
         def wanted(state: dict[str, Any]) -> None:
@@ -306,7 +306,7 @@ def execute(ctx: Context, command: Command, thread: dict[str, Any], user: dict[s
     notes_line = ""
     if command.args:
         notes_line = " I will read your notes with the rest of the thread."
-    if verb in ("oneshot", "split"):
+    if verb in ("oneshot", "split", "fullsend"):
         if is_pr:
             return f"`{verb}` works on an issue; on a pull request, ask for a revision."
         first, _, rest = command.args.partition(" ")

@@ -31,7 +31,7 @@ use serde_json::{Value, json};
 
 use jackioh_engine::{PlayerId, pick_portrait_from_seed};
 
-use crate::actor::engine::deal_random_deck;
+use crate::actor::engine::{deal_random_deck, lean_of};
 use crate::api::crypto::{is_well_formed_code, normalize_code, random_code};
 use crate::api::decks::{
     FrozenChoice, ModeChoiceInput, assert_not_in_series, freeze_choice, read_mode_choice,
@@ -185,7 +185,7 @@ fn choice_mode(choice: &ModeChoiceInput) -> QueueMode {
     match choice {
         ModeChoiceInput::Bo1 { .. } => QueueMode::Bo1,
         ModeChoiceInput::Bo3 { .. } => QueueMode::Bo3,
-        ModeChoiceInput::Random => QueueMode::Random,
+        ModeChoiceInput::Random { .. } => QueueMode::Random,
     }
 }
 
@@ -194,7 +194,7 @@ fn frozen_mode(frozen: &FrozenChoice) -> QueueMode {
     match frozen {
         FrozenChoice::Bo1 { .. } => QueueMode::Bo1,
         FrozenChoice::Bo3 { .. } => QueueMode::Bo3,
-        FrozenChoice::Random => QueueMode::Random,
+        FrozenChoice::Random { .. } => QueueMode::Random,
     }
 }
 
@@ -292,12 +292,18 @@ fn room_seats(
 ) -> Result<(MatchSeat, MatchSeat), ApiError> {
     if room.mode == QueueMode::Random {
         // R258: dealt from the match seed and the seat, and frozen into the match row like any deck.
-        // R642: the portraits are dealt the same way, uniformly and seat by seat.
+        // R642: the portraits are dealt the same way, uniformly and seat by seat. R1372: each seat's
+        // deck leans on the newest set exactly when its own player asked, the host when the room was
+        // made and the joiner now.
+        let joiner_lean = match joiner {
+            FrozenChoice::Random { lean_newest } => *lean_newest,
+            _ => false,
+        };
         return Ok((
             MatchSeat {
                 profile_id: room.host_profile_id.clone(),
                 player: PlayerId::P1,
-                deck: deal_random_deck(&format!("{seed}:p1-deck")),
+                deck: deal_random_deck(&format!("{seed}:p1-deck"), lean_of(room.host_lean_newest)),
                 portrait: Some(
                     pick_portrait_from_seed(&format!("{seed}:portrait:p1"))
                         .as_str()
@@ -307,7 +313,7 @@ fn room_seats(
             MatchSeat {
                 profile_id: joiner_id.to_string(),
                 player: PlayerId::P2,
-                deck: deal_random_deck(&format!("{seed}:p2-deck")),
+                deck: deal_random_deck(&format!("{seed}:p2-deck"), lean_of(joiner_lean)),
                 portrait: Some(
                     pick_portrait_from_seed(&format!("{seed}:portrait:p2"))
                         .as_str()
@@ -377,6 +383,8 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
                 FrozenChoice::Bo3 { trio } => Some(trio.clone()),
                 _ => None,
             },
+            // R1372: an All Random host's lean waits with the room for the deal at the join.
+            host_lean_newest: matches!(frozen, FrozenChoice::Random { lean_newest: true }),
             catalog_version: app.catalog.version.clone(),
             created_at: now,
             expires_at,

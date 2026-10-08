@@ -27,9 +27,10 @@ from typing import Any, Mapping
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 #: The modes a bot may have beyond a plain build (#60): `oneshot` builds an issue in one run with
-#: fullsend, `split` breaks it into sub-issues the bot builds itself, and `split-bot` into
-#: sub-issues for the other bot.
-MODES = ("oneshot", "split", "split-bot")
+#: fullsend, `split` breaks it into sub-issues the bot builds itself, `split-bot` into sub-issues
+#: for the other bot, and `fullsend` (#505) into parts the bot lands on one branch of the issue's
+#: own, which a last run then reconciles into one pull request.
+MODES = ("oneshot", "split", "split-bot", "fullsend")
 
 
 @dataclass(frozen=True)

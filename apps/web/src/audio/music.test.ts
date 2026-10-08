@@ -1,7 +1,8 @@
 // R631 (SPEC §10.11 "Music"): the music player, on the real engine over the strict fake Web Audio
 // context. Changes wait for a bar line and crossfade; a sting hands off on its last bar line; the
 // opponent's turn is a mix; a station track resumes; nothing is scheduled on a stopped context; and
-// the engine ducks the music under voice lines and the big effects.
+// the engine ducks the music under voice lines and the big effects. R1350, R1351: a card's intro on
+// top of the music, the duck under it, and what cuts it.
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -10,6 +11,9 @@ import {
   MUSIC_DUCK_GAIN,
   MUSIC_FADE_S,
   MUSIC_HANDOFF_FADE_S,
+  MUSIC_INTRO_CUT_FADE_S,
+  MUSIC_INTRO_DUCK_GAIN,
+  MUSIC_INTRO_LATE_S,
   MUSIC_LEAD_S,
   MUSIC_OPEN_LOWPASS_HZ,
   MUSIC_OPPONENT_GAIN,
@@ -36,6 +40,9 @@ const MANIFEST: MusicManifest = {
     "tavern-start": { hash: "x", bytes: 1, bpm: 120, beatsPerBar: 4, loop: false, intro: 6, duration: 8.5, loopStart: null, loopEnd: null, handoff: 6 },
     // Six-second bars: a next bar line can be further off than MUSIC_BAR_WAIT_MAX_S.
     victory: loop({ bpm: 40, intro: 2, loopStart: 5, loopEnd: 29, duration: 29.5 }),
+    // R1350: two cards' intros, two bars of music (4 s) and a second of ring-out.
+    "intro-a": { hash: "x", bytes: 1, bpm: 120, beatsPerBar: 4, loop: false, intro: 4, duration: 5, loopStart: null, loopEnd: null, handoff: 4 },
+    "intro-b": { hash: "x", bytes: 1, bpm: 120, beatsPerBar: 4, loop: false, intro: 4, duration: 5, loopStart: null, loopEnd: null, handoff: 4 },
   },
 };
 
@@ -471,5 +478,225 @@ describe("R631 the engine ducks the music", () => {
     writeAudioSettings({ duckMusic: false });
     r.engine.playSfx("trapSting");
     expect(duck.param("gain").targets()).toEqual([]);
+  });
+});
+
+describe("R1350 a card's intro on top of the music", () => {
+  /** The engine's music bus: what the player's chain feeds. */
+  function busOf(r: Rig): FakeNode {
+    const out = r.engine.musicOutput();
+    if (out === null) throw new Error("no music bus");
+    return r.audio.nodeOf(out.input);
+  }
+
+  /** The bed every track plays into, ahead of the turn's low-pass: what an intro ducks. */
+  function bedOf(audio: FakeAudio): FakeNode {
+    const [bed] = audio.inputsOf(filterOf(audio));
+    if (bed === undefined) throw new Error("no bed");
+    return bed;
+  }
+
+  /** Started intro sources, oldest first: on the music bus, but not through the turn's low-pass. */
+  function clips(r: Rig): { source: FakeNode; gain: FakeNode }[] {
+    const filter = filterOf(r.audio);
+    const bus = busOf(r);
+    return r.audio
+      .startedSources()
+      .filter((n) => n.kind === "bufferSource" && !r.audio.reaches(n, filter) && r.audio.reaches(n, bus))
+      .map((source) => {
+        const gain = source.connections.find((c): c is FakeNode => "kind" in c && c.kind === "gain");
+        if (gain === undefined) throw new Error("an intro with no gain");
+        return { source, gain };
+      });
+  }
+
+  async function playing(): Promise<Rig> {
+    const r = await rig();
+    r.player.request({ track: "tavern-1" });
+    await settle();
+    r.audio.advance(2.5);
+    return r;
+  }
+
+  it("R1350 plays once, at once, on the music bus beside the track playing and not through the opponent's-turn low-pass", async () => {
+    const r = await playing();
+    r.player.request({ track: "tavern-1", opponentTurn: true });
+    r.player.playIntro("intro-a");
+    await settle();
+    const [clip] = clips(r);
+    expect(clip?.source.startTime).toBeCloseTo(2.5 + MUSIC_LEAD_S, 9);
+    expect(clip?.source.loop).toBe(false);
+    expect(r.fetch.urls()).toContain("/audio/music/intro-a.m4a");
+    expect(r.player.intro()).toBe("intro-a");
+    // The track goes on under it.
+    expect(voices(r.audio)).toHaveLength(1);
+    expect(voices(r.audio)[0]?.source.stopTime).toBeNull();
+    expect(r.player.current()).toBe("tavern-1");
+    expect(r.audio.violations).toEqual([]);
+  });
+
+  it("R1350 ducks the bed to MUSIC_INTRO_DUCK_GAIN for its music, and lets it back up as its last bar ends", async () => {
+    const r = await playing();
+    r.player.playIntro("intro-a");
+    await settle();
+    const start = 2.5 + MUSIC_LEAD_S;
+    const targets = bedOf(r.audio).param("gain").targets();
+    expect(targets.map((t) => t.value)).toEqual([MUSIC_INTRO_DUCK_GAIN, 1]);
+    expect(targets[0]?.time).toBeCloseTo(start, 9);
+    expect(targets[1]?.time).toBeCloseTo(start + 4, 9);
+    // A track that comes in meanwhile (a theme) comes in ducked: it plays into the same bed.
+    r.player.request({ track: "tavern-danger" });
+    await settle();
+    const danger = voices(r.audio)[1];
+    expect(danger !== undefined && r.audio.reaches(danger.source, bedOf(r.audio))).toBe(true);
+  });
+
+  it("R1350 follows the music's volume and mute: through the music bus, and nothing fetched or played muted or at zero", async () => {
+    writeAudioSettings({ muted: true });
+    const r = await playing();
+    r.player.playIntro("intro-a");
+    writeAudioSettings({ muted: false, music: 0 });
+    r.player.playIntro("intro-a");
+    await settle();
+    expect(r.fetch.urls()).not.toContain("/audio/music/intro-a.m4a");
+    writeAudioSettings({ music: 0.5 });
+    await settle();
+    // Nothing was saved up: an intro asked for unheard is gone.
+    expect(r.player.intro()).toBeNull();
+    r.player.playIntro("intro-a");
+    await settle();
+    const [clip] = clips(r);
+    expect(clip !== undefined && r.audio.reaches(clip.source, busOf(r))).toBe(true);
+  });
+
+  it("R1350 holds nothing: the voice channel stays free, so practice's pacing never waits on it", async () => {
+    const r = await playing();
+    r.player.playIntro("intro-a");
+    await settle();
+    expect(r.player.intro()).toBe("intro-a");
+    expect(r.engine.speaking()).toBe(false);
+  });
+
+  it("R1350 fetches the intros asked for ahead only between animation bursts, and plays from what it fetched", async () => {
+    const r = await playing();
+    r.player.setBusy(true);
+    r.player.preloadIntros(["intro-a"]);
+    await settle();
+    expect(r.fetch.urls()).not.toContain("/audio/music/intro-a.m4a");
+    r.player.setBusy(false);
+    await settle();
+    expect(r.fetch.urls().filter((u) => u === "/audio/music/intro-a.m4a")).toHaveLength(1);
+    r.player.playIntro("intro-a");
+    await settle();
+    expect(clips(r)).toHaveLength(1);
+    expect(r.fetch.urls().filter((u) => u === "/audio/music/intro-a.m4a")).toHaveLength(1);
+  });
+});
+
+describe("R1351 what cuts an intro short", () => {
+  function introGains(r: Rig): FakeNode[] {
+    const filter = filterOf(r.audio);
+    return r.audio
+      .startedSources()
+      .filter((n) => n.kind === "bufferSource" && !r.audio.reaches(n, filter))
+      .map((n) => n.connections.find((c): c is FakeNode => "kind" in c && c.kind === "gain"))
+      .filter((g): g is FakeNode => g !== undefined);
+  }
+
+  it("R1351 a second intro cuts the first with a MUSIC_INTRO_CUT_FADE_S fade, and the bed stays down for the second", async () => {
+    const r = await rig();
+    r.player.request({ track: "tavern-1" });
+    await settle();
+    r.player.playIntro("intro-a");
+    await settle();
+    r.audio.advance(2);
+    r.player.playIntro("intro-b");
+    await settle();
+    const at = 2 + MUSIC_LEAD_S;
+    const [first, second] = introGains(r);
+    expect(rampsTo(first as FakeNode, 0)).toEqual([at + MUSIC_INTRO_CUT_FADE_S]);
+    expect(r.audio.startedSources().filter((n) => n.kind === "bufferSource").at(-1)?.startTime).toBeCloseTo(at, 9);
+    expect(second).toBeDefined();
+    expect(r.player.intro()).toBe("intro-b");
+    const bed = r.audio.inputsOf(filterOf(r.audio))[0];
+    expect(bed?.param("gain").targets().at(-1)).toMatchObject({ value: 1 });
+    expect(bed?.param("gain").targets().at(-1)?.time).toBeCloseTo(at + 4, 9);
+    expect(started(r)).toEqual(["tavern-1", "intro-a", "intro-b"]);
+  });
+
+  it("R1351 the same intro asked for again while it plays or loads (copies of one card arriving together) changes nothing", async () => {
+    const r = await rig();
+    r.player.request({ track: "tavern-1" });
+    await settle();
+    r.fetch.modes.set("/audio/music/intro-a.m4a", "hang");
+    r.player.playIntro("intro-a");
+    r.player.playIntro("intro-a");
+    expect(r.fetch.urls().filter((u) => u === "/audio/music/intro-a.m4a")).toHaveLength(1);
+    r.fetch.release("/audio/music/intro-a.m4a");
+    await settle();
+    r.audio.advance(0.5);
+    r.player.playIntro("intro-a");
+    await settle();
+    expect(introGains(r)).toHaveLength(1);
+    expect(started(r)).toEqual(["tavern-1", "intro-a"]);
+    // Once it is over, the card played again opens it again.
+    r.audio.advance(5);
+    r.player.playIntro("intro-a");
+    await settle();
+    expect(introGains(r)).toHaveLength(2);
+  });
+
+  it("R1351 stopIntro cuts it with the same fade and lets the bed straight back up", async () => {
+    const r = await rig();
+    r.player.request({ track: "tavern-1" });
+    await settle();
+    r.player.playIntro("intro-a");
+    await settle();
+    r.audio.advance(1);
+    r.player.stopIntro();
+    const [gain] = introGains(r);
+    expect(rampsTo(gain as FakeNode, 0)).toEqual([1 + MUSIC_INTRO_CUT_FADE_S]);
+    expect(r.player.intro()).toBeNull();
+    const bed = r.audio.inputsOf(filterOf(r.audio))[0];
+    expect(bed?.param("gain").targets().at(-1)).toMatchObject({ value: 1, time: 1 });
+    expect(r.audio.violations).toEqual([]);
+  });
+
+  it("R1351 an intro asked for while the context is not running is dropped, never played on its resume", async () => {
+    const r = await rig();
+    r.player.request({ track: "tavern-1" });
+    await settle();
+    r.audio.state = "interrupted";
+    r.player.playIntro("intro-a");
+    r.engine.unlock();
+    await settle();
+    expect(r.player.intro()).toBeNull();
+    expect(introGains(r)).toHaveLength(0);
+  });
+
+  it("R1351 an intro whose file is not ready MUSIC_INTRO_LATE_S after its moment is dropped", async () => {
+    const r = await rig();
+    r.player.request({ track: "tavern-1" });
+    await settle();
+    r.fetch.modes.set("/audio/music/intro-a.m4a", "hang");
+    r.player.playIntro("intro-a");
+    await settle();
+    r.audio.advance(MUSIC_INTRO_LATE_S + 0.1);
+    r.fetch.release("/audio/music/intro-a.m4a");
+    await settle();
+    expect(r.player.intro()).toBeNull();
+    expect(introGains(r)).toHaveLength(0);
+  });
+
+  it("R1351 a stop while its file loads calls it off", async () => {
+    const r = await rig();
+    r.player.request({ track: "tavern-1" });
+    await settle();
+    r.fetch.modes.set("/audio/music/intro-a.m4a", "hang");
+    r.player.playIntro("intro-a");
+    r.player.stopIntro();
+    r.fetch.release("/audio/music/intro-a.m4a");
+    await settle();
+    expect(introGains(r)).toHaveLength(0);
   });
 });

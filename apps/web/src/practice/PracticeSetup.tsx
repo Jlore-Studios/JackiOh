@@ -8,6 +8,10 @@
 // Each tier is still a real `<input type="radio">` (the testids name it), drawn as a small gem in
 // the card's corner rather than hidden, so keyboard, screen reader and a plain click all work on
 // the input itself.
+//
+// R1373: the Random deck carries "More cards from the newest set" (`game/LeanNewest.tsx`). It is the
+// human's own random deck only (the AI deals its deck as ever), the worker deals it, and the switch
+// is remembered with the rest of the setup whichever deck is picked.
 
 import { useId, useState, type FormEvent, type ReactElement } from "react";
 
@@ -22,6 +26,7 @@ import {
 
 import type { CardDefs } from "@jackioh/shared";
 
+import { LeanNewestToggle } from "../game/LeanNewest.tsx";
 import { paths } from "../net/navigate.ts";
 import { DeckPreview } from "./DeckPreview.tsx";
 import {
@@ -36,7 +41,11 @@ import { practiceTestid } from "./testids.ts";
 import { DIFFICULTY_LABEL, DIFFICULTY_TAGLINE, TierCrest } from "./Tier.tsx";
 import "./practice.css";
 
-export type PracticeSetupChoice = { difficulty: Difficulty; deck: PracticeDeckChoice };
+/**
+ * What Start chose. `leanNewest` is the R1373 switch as the player left it, for the setup to
+ * remember; the deck carries it only when it is the Random deck.
+ */
+export type PracticeSetupChoice = { difficulty: Difficulty; deck: PracticeDeckChoice; leanNewest?: boolean };
 
 /**
  * What the player's account offers the deck picker, and why when it offers nothing, so the hint
@@ -58,7 +67,7 @@ export type SavedDecks =
 
 type PracticeSetupProps = {
   saved: SavedDecks;
-  initial: { difficulty: Difficulty; deck: string };
+  initial: { difficulty: Difficulty; deck: string; leanNewest?: boolean };
   /** The worker's catalog for the deck preview; null while it loads or when it could not be read. */
   defs: CardDefs | null;
   defsFailed: boolean;
@@ -153,19 +162,22 @@ function tierStats(handicap: Handicap): TierStat[] {
 export function PracticeSetup({ saved, initial, defs, defsFailed, onStart }: PracticeSetupProps): ReactElement {
   const [difficulty, setDifficulty] = useState<Difficulty>(initial.difficulty);
   const [deck, setDeck] = useState<string>(initial.deck);
+  const [leanNewest, setLeanNewest] = useState<boolean>(initial.leanNewest ?? false);
   const baseId = useId();
 
   const savedDecks = saved.kind === "ready" ? saved.decks : null;
   const options = deckOptions(savedDecks);
   // A remembered saved deck that is gone, not complete or not loaded yet falls back to random.
   const selected = options.some((option) => option.value === deck && !option.disabled) ? deck : "random";
-  const choice: PracticeDeckChoice = deckChoiceFromValue(selected, savedDecks) ?? { kind: "random" };
+  const picked: PracticeDeckChoice = deckChoiceFromValue(selected, savedDecks) ?? { kind: "random" };
+  // R1373: only the Random deck leans, and only when the switch is on.
+  const choice: PracticeDeckChoice = picked.kind === "random" && leanNewest ? { kind: "random", leanNewest: true } : picked;
   const preview = previewFor(choice, savedDecks);
   const hint = savedHint(saved);
 
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    onStart({ difficulty, deck: choice });
+    onStart({ difficulty, deck: choice, leanNewest });
   }
 
   return (
@@ -244,6 +256,9 @@ export function PracticeSetup({ saved, initial, defs, defsFailed, onStart }: Pra
               {hint}
             </p>
           )}
+          {choice.kind === "random" ? (
+            <LeanNewestToggle checked={leanNewest} testid={practiceTestid.leanNewest} onChange={setLeanNewest} />
+          ) : null}
           <DeckPreview
             title={preview.title}
             identity={preview.identity}

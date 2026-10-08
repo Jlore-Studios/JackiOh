@@ -978,6 +978,7 @@ mod r280_a_fused_core_card_lists_its_ingredients_previews_in_order {
                             min: None,
                             max: None,
                             tuned_on: None,
+                            power: None,
                         })
                         .collect(),
                 );

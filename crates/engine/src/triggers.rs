@@ -815,10 +815,10 @@ fn events_after_dispatched(sink: &EngineSink<'_>, at: Option<usize>) -> Vec<Game
         {
             return true;
         }
-        frontier
-            .elsewhere
-            .iter()
-            .any(|&position| list.get(position) == Some(&item.event))
+        frontier.elsewhere.iter().any(|&position| {
+            list.get(position)
+                .is_some_and(|listed| listed.as_rules_read() == item.event)
+        })
     };
     let mut out: Vec<GameEvent> = sink
         .state
@@ -850,13 +850,17 @@ fn events_after_dispatched(sink: &EngineSink<'_>, at: Option<usize>) -> Vec<Game
 /// The event's place in the action's list is found by value here; the loop itself knows it exactly
 /// (`dispatch_new_events`), since TS found it by identity.
 pub fn dispatch_event(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<QueuedTrigger> {
-    let at = sink.events.iter().position(|listed| listed == event);
-    dispatch_event_at(sink, event, at)
+    let at = sink
+        .events
+        .iter()
+        .position(|listed| listed == event || listed.as_rules_read() == *event);
+    dispatch_event_at(sink, &event.as_rules_read(), at)
 }
 
 fn dispatch_event_at(sink: &mut EngineSink<'_>, event: &GameEvent, at: Option<usize>) -> Vec<QueuedTrigger> {
-    // R240, R63: a hit of 0 is a report (an absorbed fatigue draw), not a damage instance, and nothing
-    // — no trap, no trigger — answers it.
+    // R63: a hit of 0 is a report, not a damage instance, and nothing — no trap, no trigger, no quest —
+    // answers it. R1361: that is what a `damageAbsorbed` is to the rules (`GameEvent::as_rules_read`),
+    // the report of a hit Armor took whole, an absorbed fatigue draw's included (R240, R1362).
     if let GameEvent::Damage { amount, .. } = event
         && *amount <= 0
     {
@@ -1164,6 +1168,22 @@ pub fn set_dispatched(sink: &mut EngineSink<'_>, at: usize) {
     sink.frontier.get_mut().collected = at;
 }
 
+/// R1361: the report at `at` in the action's list (`damageAbsorbed`) is answered by nothing, so the
+/// frontier never takes it: it is delivered, to nobody, as it is emitted, and takes no number from
+/// `state.next_seq` (R68's one counter). A game where Armor took a hit whole so folds to the state it
+/// always did, which is what lets a recorded game's replay keep its final hash (R768).
+pub fn withhold_report(sink: &mut EngineSink<'_>, at: usize) {
+    sink.frontier.get_mut().elsewhere.insert(at);
+}
+
+/// R1362: the one report that keeps a place in R68's order — an absorbed fatigue draw's, which takes
+/// the number R240's `damage` of 0 took before it — rejoins the frontier, which holds it as that same
+/// hit of 0 (`GameEvent::as_rules_read`) and answers it with nothing. `at` is its place in the
+/// action's list.
+pub fn order_report(sink: &mut EngineSink<'_>, at: usize) {
+    sink.frontier.get_mut().elsewhere.shift_remove(&at);
+}
+
 /// Mark events a nested `reduce` has already dispatched (see `Frontier.elsewhere`). TS marked the
 /// objects; here they are the entries of the action's list that are these events — its tail, where
 /// both callers have just pushed them, or else the latest unmarked entry equal to each.
@@ -1205,7 +1225,8 @@ fn collect_events(sink: &mut SettleSink<'_>) {
         let seq = sink.state.next_seq;
         sink.state.next_seq += 1;
         sink.frontier.get_mut().positions.insert(seq, at);
-        let event = sink.events[at].clone();
+        // R1360: the frontier holds the event as the rules read it, without the client's `absorbed`.
+        let event = sink.events[at].as_rules_read();
         sink.state.dispatch.push(DispatchItem {
             id: format!("e{seq}"),
             seq,

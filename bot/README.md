@@ -134,6 +134,81 @@ The issue is the spec, so write it the way you would for a careful contributor: 
 happen, where, and how you would check it. The builder reads the issue body, every comment from
 people on the trust list, `CLAUDE.md` and `SPEC.md`. Comments from anyone else are left out.
 
+## Fullsend
+
+Label an issue **`bot:fullsend`**, or comment **`/harness fullsend`**, to have it built the way
+[fullsend](../.claude/skills/fullsend/SKILL.md) builds a project: many builders at once, each
+blind to the others, reconciled at the end (#505). It suits a big issue that splits into parts
+touching different files. Squishy has the same mode, `squishy:fullsend` ([Squishy](#squishy)).
+
+1. **The split.** A fullsend item counts as `difficulty:hard`, whatever its label says, so a
+   strong model takes it. Its first run splits it as Squishy's `split` does (`prompts/split.md`,
+   `harness/split.py`), told also that the parts land on one branch and are reconciled there
+   (`split.FULLSEND_NOTES`): vertical slices, no file in two parts, `blocked_by` only where one
+   part reads another's code, and no "make it green" part. Deliver then makes the issue's own
+   branch, `bot/issue-<n>`, from `main`'s head: the integration branch. It opens the parts as
+   sub-issues, each queued as `bot:build` with its plan, its difficulty and a record of where it
+   lands (`onto`, `part_of`), and labels the parent `bot:tree`.
+
+   **An issue split already.** On an issue whose sub-issues someone opened before (a tracker split
+   by hand), `fullsend` takes those as its parts and splits nothing (`queue.adopt`): it makes the
+   integration branch from `main`'s head through the API, writes each open sub-issue's `onto` and
+   `part_of`, queues any that was not queued, and labels the parent `bot:tree`. A sub-issue
+   labelled `human` or the other bot's, one a run holds, or one with a pull request of the bot's
+   open is left to finish on `main`, and the reconcile waits for it to close too.
+2. **The parts.** A part is a queued issue like any other, with its own difficulty and its own
+   plan from a model of its plan floor (a strong one above easy), which the planning lane writes
+   for the parts before the other items ([Who takes what](#subscriptions)). Once its plan is on
+   record, the subscriptions whose strongest seat is weakest take it first, and one with no seat
+   of its difficulty's tier may build it on a medium seat (`config.PART_FLOOR`): Muse builds a
+   hard part from Opus's plan, while a Claude account still builds a hard one on Opus, never on
+   Sonnet. The parts build side by side with the parts that do not wait for them. Its run starts from the integration branch, not `main`, and measures every diff against
+   it (`work.Worker._part`): one builder pass and the path guard, and no checks, self check,
+   catch-up with `main` or review. Deliver lands the change on the integration branch
+   (`deliver.Deliverer._land_part`): a fast-forward when nothing landed since the part started,
+   and otherwise a merge commit made without a worktree (`git merge-tree`); a push that loses a
+   race is tried once more. It refuses what `_publish` refuses: a bundle that is not the head the
+   result names, does not descend from where the work started, changes a forbidden path or holds a
+   conflict marker. A part that conflicts with the parts before it, or loses the race twice, is
+   kept on its own branch, `bot/issue-<part>`, and listed on the parent's record (`parked`).
+   Either way the part closes as completed, with a comment saying where its change is. No part
+   ever has a pull request.
+3. **The reconcile.** Nothing builds the parent while a part is open: `/harness fullsend`,
+   `bot:build` and the queue all leave it alone. When the last part closes, the sweep queues its
+   reconcile, an ordinary build of the parent on the integration branch, by a strong model again,
+   whose first prompt is `prompts/reconcile.md`. It merges the parked branches, follows
+   fullsend's Phases 3 to 6 in its one worktree (classify the damage, one winner per collision
+   and the losers deleted, green with the code losing to a test by default, then the cull), and
+   checks the issue's "Done when". Then it goes through the checks and the adversarial review like
+   any build, and deliver opens one pull request from the integration branch into `main`, which
+   closes the issue under [the review rule](#difficulty-and-tiers) and auto-merge.
+
+Why it is built this way:
+
+- **No review or pull request per part.** The reconcile's review and CI read the whole diff, and
+  parts that need each other could not pass alone; a pull request per part into the branch would
+  pay for review and CI twice.
+- **Only deliver writes the integration branch**, by a fast-forward or a merge commit on top of
+  it, never with force, so a part that landed is never lost.
+- **The parent's own branch is the integration branch**, so the reconcile is an ordinary build:
+  it already starts from that branch and merges `main` into it, and its pull request closes the
+  parent.
+- **One label per bot** (`bot:fullsend`, `squishy:fullsend`), so each issue has one owner
+  (`queue.owner`).
+- **Medium builders, strong planners and a strong reconcile.** A part is one blind pass whose
+  every flaw the reconcile's build, checks and review must clear anyway, so its builder may be a
+  tier under its difficulty once a strong model has planned it: the strong models spend their
+  hours on the plans and the reconcile, and the medium subscriptions (Muse's four lanes) on the
+  building.
+
+What to watch: the parent is hard, so three failures of its own block it instead of stepping it
+up. `/harness rebuild` on the reconcile's pull request builds the issue again from `main`,
+without its parts: their work stays on the old branch, kept as `bot/old/issue-<n>-<date>`. Parked
+branches stay on GitHub after the reconcile; delete them once its pull request has merged. A
+comment left on a part while it is built gets no pass of its own, since the part closes when it
+lands; say it on the parent, whose thread the reconcile reads. The status issue shows a queued
+fullsend item without a kind, and the statistics count its runs as splits and builds.
+
 ## No request is lost
 
 Every way of asking either gets an answer at once, or is found again later:
@@ -196,6 +271,7 @@ code blocks are ignored, so quoting the bot back at it runs nothing.
 | Verb | What it does | Where | Level |
 |---|---|---|---|
 | `build [notes]` | queue this issue (on a PR, same as `revise`) | issue | 2 |
+| `fullsend [notes]` | split this issue into parts that land on its own branch, then reconcile them into one pull request into `main` ([Fullsend](#fullsend)) | issue | 2 |
 | `revise <notes>` | queue a revision of this pull request | PR | 2 |
 | `review [strong\|medium] [notes]` | queue a review run of this bot pull request's head, by that tier or stronger, and no revision | PR | 2 |
 | `rebuild` | close this bot pull request (or the issue's), keep its branch as `bot/old/issue-<n>-<date>`, and build the issue again from `main` | issue or PR | 2 |
@@ -265,6 +341,8 @@ in place of the `bot:*` ones.
 | `bot:build` | an issue waiting for a free subscription |
 | `bot:needs-plan` | the Needs plan stage, beside `bot:build`: it waits for a plan its difficulty may build from (a medium or strong model's for an easy or unrated item, a strong one's for the rest), which goes into its description; the planner rates an unrated item |
 | `bot:planned` | it has a plan, in its description (the builder starts from it); it stays after the item leaves the queue |
+| `bot:fullsend` | beside `bot:build`: build it as [fullsend](#fullsend), in parts that land on its own branch, then one reconcile and one pull request; it counts as `difficulty:hard` |
+| `bot:tree` | a fullsend parent whose parts the bot opened and watches; once they have all closed, the sweep queues its reconcile |
 | `bot:revise` | a pull request waiting for a revision |
 | `bot:cross-review` | a bot pull request waiting for a review run before auto-merge: one strong model, or a second medium one |
 | `bot:working` | a run holds it right now |
@@ -380,7 +458,7 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh` | on the machine, as `agent-gpt` | any time | 100% of the week (Codex reports it) |
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | 95% of 5 hours, all of the week (its own `agy -p /usage`, the Gemini pool's row) |
 | `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2, free on the CLI until 2026-10-16); off from 2026-10-05 to 2026-10-06 (#311: every call failed in seconds), on again since a `devin -p` call answered on the machine (#318) | on the machine, as `agent-devin` | any time until 2026-10-15 (`off_from`) | none: until it refuses |
-| `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh`, on two lanes | on the machine, as `agent-muse` | any time | 95% of 5 hours, all of the week (its TUI's `/usage` panel) |
+| `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh`, on four lanes | on the machine, as `agent-muse` | any time | 95% of 5 hours, all of the week (its TUI's `/usage` panel) |
 
 The Claude accounts' model jobs run on GitHub's runners (`ubuntu-latest`), which install their
 CLI each time; every other subscription's runs on its own runner on the machine, `night-vm-<id>`.
@@ -437,7 +515,7 @@ prints each one and whether it could start now, and `/harness status` does the s
     `claude-4` started just under its 70% cap and was stopped four minutes in.
   - **One run at a time** on a capped subscription, its planning run included: two runs
     deciding from one reading pass a cap together. A subscription given more `lanes` takes that
-    many (Muse has two, on one login): each run takes its own reading before it starts and
+    many (Muse has four, on one login): each run takes its own reading before it starts and
     watches it during every call, so two of them pass a cap by at most one reading's worth.
   - **A refusal** parks the subscription until the reset its message names ("resets in
     1h44m44s", "try again in 5 days 2 hours"). One that names none waits for the window the
@@ -458,9 +536,9 @@ accounts' lanes added up, so it holds none of them back), `machine_parallel` how
 on the bot's machine (6; its two vCPUs run each job's checks; GitHub's runners have four each),
 each apart from the other, so Claude runs never wait for the night box's slots nor its runs for
 GitHub's lanes; `plan_lanes` is how many planning runs may go on top of those (the planning
-lane, below; 4), `priority` the usage order (below), and `tiers` each tier's models in the
+lane, below; 6), `priority` the usage order (below), and `tiers` each tier's models in the
 order the router tries them after `priority`. A subscription's own `lanes`
-(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can fill its box alone, Muse's is 2, and claude-1, claude-2, claude-3 and claude-7 have 2 each. A `secret` must be one of the names the workflows hand over (the seven Claude ones,
+(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can fill its box alone, Muse's is 4, and claude-1, claude-2, claude-3 and claude-7 have 2 each. A `secret` must be one of the names the workflows hand over (the seven Claude ones,
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
 **Who takes what.** Each run takes one item on one subscription, and a subscription works on as
@@ -518,7 +596,9 @@ Muse first (the most reliable builder, #305), then agy and Codex; then claude-2,
 for planning and reviewing; then Devin, last. For building alone, claude-2 is `build_last`: it
 builds only when no other subscription that may is free, Devin included. Devin is `easy_first`:
 it may build only easy items, so it takes them ahead of everyone while it has a free lane, and
-the stronger models keep the medium and hard items only they may build. (There is no training
+the stronger models keep the medium and hard items only they may build. A fullsend part, once
+planned, goes first to the medium subscriptions (Muse first), which may build it whatever its
+difficulty ([Fullsend](#fullsend)). (There is no training
 lane in the harness any more, and no `training` label: the AI's two training lanes run as
 services on the training box, [`machine/`](machine/README.md#the-training-box).)
 
@@ -526,11 +606,14 @@ services on the training box, [`machine/`](machine/README.md#the-training-box).)
   from. A queued item without one carries `bot:needs-plan`: one with no plan, and one whose plan
   came from a model under its plan floor (a medium model's plan of a medium or hard item). A
   planner on the **planning lane** plans those first: `plan_lanes` runs on top of
-  `max_parallel`, which take no build lane, so a subscription plans one item while it builds
-  another. Each subscription offers its strongest seat; the strong ones go first, and an item
-  takes the first that meets its floor (a medium planner takes only easy and unrated items). A
-  subscription with usage caps plans only while it holds nothing else, and builds nothing while
-  it plans. The lane takes the easy items first (Devin waits on those), then the rest in the usual
+  `max_parallel`, which take no build lane, so a subscription plans while it builds, up to as
+  many items at once as its `lanes`. Planning comes first: the strong models write the plans the
+  medium ones (Muse above all) build from before they build anything themselves. Each
+  subscription offers its strongest seat; the strong ones go first, within a tier the one
+  planning least, and an item takes the first that meets its floor (a medium planner takes only
+  easy and unrated items). A subscription with usage caps plans only while it holds nothing else,
+  and builds nothing while it plans. The lane takes the easy items first (Devin waits on those),
+  then fullsend parts (Muse builds those, [Fullsend](#fullsend)), then the rest in the usual
   order, ahead of every build. The planner reads the task and the code, writes nothing but its
   draft ([handing work over](#the-self-check-loop)), and must leave a weak builder no gap to fill
   (`bot/prompts/plan.md`): the files to touch by path (the
@@ -1011,7 +1094,7 @@ days.
 `@squishy-squooby` is a second bot (#60): this harness again, run from `.squishy/` instead of
 `.harness/` (each of its workflows sets `HARNESS_HOME=.squishy`, `harness/identity.py`). It works
 like the night bot, under its own names, on its own Claude Max account, and it makes no
-suggestions. On top of a plain build it has three modes.
+suggestions. On top of a plain build it has four modes.
 
 | | Night bot | Squishy |
 |---|---|---|
@@ -1034,6 +1117,7 @@ fixes, handoffs, the rules about `human` and priorities, and the paths no change
 | `squishy:oneshot` | `/squishy oneshot` | the whole issue in one run with [fullsend](../.claude/skills/fullsend/SKILL.md): a spec first, then builders and spec-testers at once, each in its own git worktree and branch (`squishy/oneshot-<n>/<slice>`), merged back and reconciled against the tests, then the checks and the review as for any build (`prompts/oneshot.md`). Every phase is a commit, so a run that is cut off resumes from its last phase on the issue's branch. It builds the ordinary way, and says why, when fullsend does not fit. `.fullsend/` never ships |
 | `squishy:split` | `/squishy split` | one Opus session reads the issue and the code and answers with sub-issues (`prompts/split.md`, `harness/split.py`); deliver opens them as GitHub sub-issues of the issue, linked by "blocked by", each with its plan as its **Plan** section, its difficulty and the parent's priority, queued as `squishy:build` |
 | `squishy:split-bot` | `/squishy split bot` | the same, queued for the night bot as `bot:build`; a Plan section counts as a strong plan, so the night bot builds them without planning again |
+| `squishy:fullsend` | `/squishy fullsend` | the night bot's [fullsend](#fullsend), under Squishy's names: parts Squishy builds onto `squishy/issue-<n>`, each a run of its own with no pull request, then one reconcile run and one pull request into `main`. Where `oneshot` runs fullsend's builders as agents inside one run, here each part is a run, so no single run has to hold the whole issue |
 
 A split leaves the parent labelled `squishy:tree` with a checklist. When every sub-issue has
 closed, the sweep queues its close-out: the same session checks the parent's "Done when" against
@@ -1074,8 +1158,9 @@ python3 -m harness --help                     # every command
 
 `bot selftest` in CI runs the suite on Python 3.12 and 3.13 and runs actionlint over the bot's
 workflows. The prompts are in `bot/prompts/`, one per role: `system`, `plan`, `build`, `fix`, `revise`,
-`review` and `suggest` (the self check runs `review` with a header saying it is a self check), and
-Squishy's `oneshot` and `split`. The bots cannot edit anything in `bot/`, `.harness/`, `.squishy/` or
+`review` and `suggest` (the self check runs `review` with a header saying it is a self check),
+Squishy's `oneshot` and `split` (which both bots' fullsend splits with too), and `reconcile`, the
+first prompt of a fullsend reconcile. The bots cannot edit anything in `bot/`, `.harness/`, `.squishy/` or
 `.github/workflows/`, so changes there come from people. Squishy's own cases run in a process
 started as Squishy (`tests/squishy_cases.py`, from `tests/test_squishy.py`).
 
@@ -1083,7 +1168,7 @@ started as Squishy (`tests/squishy_cases.py`, from `tests/test_squishy.py`).
 |---|---|
 | `config.py` | `<home>/config.json` and the environment; with `identity.py`, the only reader of `os.environ` |
 | `identity.py` | which bot this process is (`HARNESS_HOME`): the night bot's or Squishy's labels, command, branches, state, workflow, marker and modes |
-| `split.py` | Squishy's splits: the tree a split session answers with, checked, ordered and worded |
+| `split.py` | the splits, Squishy's and both bots' fullsend: the tree a split session answers with, checked, ordered and worded |
 | `gh.py` | the GitHub client; the only module that sends a token or writes to GitHub |
 | `trust.py`, `commands.py` | who may command it, and how a comment is read |
 | `events.py`, `queue.py` | the event workflow: commands, labels, assignment, reviews, CI |

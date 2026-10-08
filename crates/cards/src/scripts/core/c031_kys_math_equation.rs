@@ -23,6 +23,16 @@
 //! one-shot by reading the turn log: the return happens on the turn the card was played, not at
 //! every end of turn for the rest of the game. R429: the return raises the card's own cost (R65:
 //! `costOverride` or printed, plus `costMod`) by 1, but never above (4) — at (4) it adds nothing.
+//!
+//! R429, R766 (issues #557, #572): the climb survives the graveyard, and only the climb. R766 takes every
+//! card's price off as it reaches a graveyard, this one's included, so the card lying there costs its
+//! printed (1); but its own return gives back the climb its earlier returns gave it, which it carries
+//! into its play and §10.5 step 7 notes for it as it lands (`StaticFlags.returnKeepsPrice`, read by
+//! `return_price_of`), plus the return's (1), capped at (4). So it comes back at (2), then (3), then
+//! (4), and stays at (4). Any other change to its price — a discount or a surcharge it was played at,
+//! a Degrade's cost step, its `costOverride` (a "(0)" given in a hand) — is no part of that and stays
+//! gone, and a #31 that reaches its graveyard any other way (discarded, burned, countered) was never
+//! flagged for a return, so nothing is noted for it.
 
 use jackioh_engine::prelude::*;
 
@@ -101,9 +111,10 @@ fn blast(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))]
 }
 
-/// R65 outside a hand: the card's own cost, `costOverride` or printed, plus `costMod`, floored at 0.
-fn own_cost(state: &GameState, self_: &CardInstance) -> i32 {
-    (self_.cost_override.unwrap_or_else(|| printed_cost(state, self_)) + self_.cost_mod).max(0)
+/// R65 outside a hand: the card's own cost, `costOverride` or printed, plus `costMod`, floored at 0 —
+/// with `carried`, the climb its return gives back (R429, R766), added to `costMod`.
+fn own_cost(state: &GameState, self_: &CardInstance, carried: i32) -> i32 {
+    (self_.cost_override.unwrap_or_else(|| printed_cost(state, self_)) + self_.cost_mod + carried).max(0)
 }
 
 /// "End of turn: Return this to your hand. It costs (1) more, to a maximum of (4)." Only on the turn
@@ -120,13 +131,23 @@ fn return_to_hand(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     if !was_played_this_turn(ctx.state, self_.owner, &self_) {
         return vec![];
     }
-    // R78: the +1 rides on the instance in the hand, until a graveyard takes it off again (R766). It
+    // R429, R766 (issue #572): the climb its earlier returns gave it, which the graveyard took off it and
+    // its return gives back (noted as its play landed it, `return_price_of`), and the return's +1 on top.
+    // R429: never above (4), so at (4) the +1 adds nothing and the climb it had is all it gets.
+    let carried = return_price_of(&self_);
+    let raise = RETURN_COST_STEP
+        .min(RETURN_COST_CAP - own_cost(ctx.state, &self_, carried))
+        .max(0);
+    // R78: the price rides on the instance in the hand, until a graveyard takes it off again (R766). It
     // is the price of the return, so it lands only on a card that reached the hand: a full hand burns
-    // the card back to the graveyard (§2.4, R4), which is no return at all. R429: never above (4), so at (4) or more it adds nothing.
-    let raise = RETURN_COST_STEP.min(RETURN_COST_CAP - own_cost(ctx.state, &self_)).max(0);
+    // the card back to the graveyard (§2.4, R4), which is no return at all. `returnPrice` notes it as the
+    // climb beside the `costMod`, so the next return gives back this and nothing else (issue #572).
+    let price = carried + raise;
     let mut effects = vec![bounce(json_as(json!({ "target": { "of": "self" } })))];
-    if raise > 0 {
-        effects.push(set_cost_mod(json_as(json!({ "amount": raise, "inHandOnly": true }))));
+    if price != 0 {
+        effects.push(set_cost_mod(json_as(
+            json!({ "amount": price, "inHandOnly": true, "returnPrice": true }),
+        )));
     }
     effects
 }
@@ -150,10 +171,12 @@ fn preview(formula: Formula) -> PreviewHook {
     })
 }
 
-/// R429: §10.5 step 4 counts this card's plays on its instance.
+/// R429: §10.5 step 4 counts this card's plays on its instance, and step 7 notes the price it was
+/// played at for its own return (R766, issue #557).
 fn static_flags() -> Option<StaticFlags> {
     Some(StaticFlags {
         counts_plays: Some(true),
+        return_keeps_price: Some(true),
         ..StaticFlags::default()
     })
 }
@@ -252,6 +275,21 @@ mod tests {
         s.end_turn();
         assert_eq!(s.state().active, P1);
         s
+    }
+
+    /// R429, R766: one turn of the climb — p1 plays `equation` at the enemy hero with mana to spare,
+    /// the turn ends (its return), and p2's turn passes. The mana the play took, and what the equation
+    /// costs back in hand.
+    fn climb_once(s: &mut Scenario, equation: &CardInstance) -> (i32, i32) {
+        s.state_mut().players.p1.mana.current = 10;
+        s.play(equation, at_enemy_hero());
+        let paid = 10 - s.state().players.p1.mana.current;
+        s.end_turn();
+        s.expect_in_zone(equation, "hand");
+        let cost = effective_cost(s.state(), s.card(equation), Default::default());
+        s.end_turn();
+        assert_eq!(s.state().active, P1);
+        (paid, cost)
     }
 
     /// TS `/^p[12]\b/.test(label)`: the label starts with a seat id as a whole word.
@@ -373,37 +411,183 @@ mod tests {
         #[test]
         fn r429_r766_the_return_never_lifts_its_cost_above_4_from_3_it_reaches_4_and_at_4_it_adds_nothing() {
             crate::register_all();
-            // R766: a price the equation had in hand stays behind in the graveyard it returns from, so a
-            // (3) or a (4) equation comes back at its printed (1) plus the return's (1).
-            for raised in [2, 3] {
+            // R429, R766: two real climbs take the equation to (3); its next return reaches (4), and the
+            // one after that adds nothing (the cap stops the +1).
+            let mut s = board(BoardOptions::default());
+            let equation = s.card("31").clone();
+            climb_once(&mut s, &equation);
+            assert_eq!(climb_once(&mut s, &equation), (2, 3));
+            assert_eq!(climb_once(&mut s, &equation), (3, 4));
+            assert_eq!(climb_once(&mut s, &equation), (4, 4));
+            assert_eq!(return_price_of(s.card(&equation)), 3);
+        }
+
+        #[test]
+        fn r429_r766_a_discount_or_a_surcharge_it_was_played_at_stays_behind_it_returns_at_printed_plus_its_climb() {
+            crate::register_all();
+            // R766, issue #572: its return gives back only the climb its own returns gave it. A price put
+            // on it any other way (here a `costMod` it starts in hand with: a discount, a cost step, a
+            // surcharge) stays behind in the graveyard, so a first return is (1) + (1) whatever it cost.
+            for raised in [-1, 2, 4] {
                 let mut s = board(BoardOptions {
                     cost_mod: Some(raised),
                     ..BoardOptions::default()
                 });
                 s.play("31", at_enemy_hero());
+                s.expect_mana(P1, 10 - (1 + raised).max(0));
+                assert_eq!(return_price_of(s.card("31")), 0);
                 s.end_turn();
                 s.expect_in_zone("31", "hand");
-                assert_eq!(s.card("31").cost_mod, 1);
                 assert_eq!(effective_cost(s.state(), s.card("31"), Default::default()), 2);
+                assert_eq!(return_price_of(s.card("31")), 1);
             }
 
-            // R429's cap reads the cost the equation has where it lies, as for one whose own cost there
-            // is (3) or (4) (a fusion's printed cost, R77): from (3) it reaches (4), and at (4) it adds
-            // nothing.
-            let mut three = board(BoardOptions::default());
-            three.play("31", at_enemy_hero());
-            three.card_mut("31").cost_mod = 2;
-            three.end_turn();
-            three.expect_in_zone("31", "hand");
-            assert_eq!(effective_cost(three.state(), three.card("31"), Default::default()), 4);
+            // A climbed equation, back at (2), changed in hand by (1) less or by (2) more: it is played at
+            // (1) or (4), and either way its return gives back its climb of (1) and adds (1): (3).
+            for change in [-1, 2] {
+                let mut s = board(BoardOptions::default());
+                let equation = s.card("31").clone();
+                assert_eq!(climb_once(&mut s, &equation), (1, 2));
+                find_instance_mut(s.state_mut(), &equation.id)
+                    .expect("the equation in hand")
+                    .cost_mod += change;
+                let (paid, back_at) = climb_once(&mut s, &equation);
+                assert_eq!(paid, 2 + change);
+                assert_eq!(back_at, 3);
+                assert_eq!(s.card(&equation).cost_mod, 2);
+            }
+        }
 
-            let mut four = board(BoardOptions::default());
-            four.play("31", at_enemy_hero());
-            four.card_mut("31").cost_mod = 3;
-            four.end_turn();
-            four.expect_in_zone("31", "hand");
-            assert_eq!(four.card("31").cost_mod, 3);
-            assert_eq!(effective_cost(four.state(), four.card("31"), Default::default()), 4);
+        #[test]
+        fn r429_r766_the_climb_survives_its_own_return_it_comes_back_at_2_then_3_then_4_and_stays_at_4() {
+            crate::register_all();
+            let mut s = board(BoardOptions::default());
+            let equation = s.card("31").clone();
+
+            let climb: Vec<(i32, i32)> = (0..4).map(|_| climb_once(&mut s, &equation)).collect();
+
+            // (mana the play took, its cost back in hand): (1) → (2) → (3) → (4) → (4).
+            assert_eq!(climb, vec![(1, 2), (2, 3), (3, 4), (4, 4)]);
+            assert_eq!(s.card(&equation).cost_mod, 3);
+            // Its damage climbs by its own count all the while, never by its cost (R67): 1 + 2 + 3 + 5.
+            s.expect_health(P2, 30 - 11);
+        }
+
+        #[test]
+        fn r429_r766_lying_in_its_graveyard_it_costs_its_printed_1_and_the_climb_it_was_played_at_waits_for_its_return() {
+            crate::register_all();
+            let mut s = play_and_come_back(board(BoardOptions::default()));
+            let equation = s.card("31").clone();
+            assert_eq!(effective_cost(s.state(), s.card(&equation), Default::default()), 2);
+            s.state_mut().players.p1.mana.current = 10;
+
+            s.play(&equation, at_enemy_hero());
+
+            // R766: in the graveyard it is the printed (1) card, its price gone with the rest...
+            s.expect_in_zone(&equation, "graveyard");
+            assert_eq!(s.card(&equation).cost_mod, 0);
+            assert_eq!(effective_cost(s.state(), s.card(&equation), Default::default()), 1);
+            // ...and the climb it was played at, the (1) its first return gave it, waits for its own return.
+            assert_eq!(return_price_of(s.card(&equation)), 1);
+
+            s.end_turn();
+
+            s.expect_in_zone(&equation, "hand");
+            assert_eq!(effective_cost(s.state(), s.card(&equation), Default::default()), 3);
+            // Back in hand it carries its climb, now (2), into its next play (issue #572).
+            assert_eq!(return_price_of(s.card(&equation)), 2);
+        }
+
+        #[test]
+        fn r766_r429_an_equation_discarded_at_a_price_reaches_its_graveyard_at_its_printed_1_and_stays_there() {
+            crate::register_all();
+            // #76 Field of Dreams replaces the hand (R31): the (3) equation is discarded, never played.
+            let mut s = scenario(json!({
+                "seed": "ky-math-discarded",
+                "p1": {
+                    "hand": [{ "def": "31", "costMod": 2 }, "76"],
+                    "field": ["15"],
+                    "library": ["15", "15", "15", "15"],
+                    "mana": 10,
+                },
+                "p2": { "field": ["15"], "library": ["15", "15", "15", "15"] },
+            }));
+            let equation = s.card("31").clone();
+            assert_eq!(effective_cost(s.state(), s.card(&equation), Default::default()), 3);
+
+            s.play("76", json!({}));
+
+            s.expect_in_zone(&equation, "graveyard");
+            assert_eq!(s.card(&equation).cost_mod, 0);
+            assert_eq!(effective_cost(s.state(), s.card(&equation), Default::default()), 1);
+            assert_eq!(return_price_of(s.card(&equation)), 0);
+
+            // Never played, so it has no return to make (R155), and no price to make it with.
+            s.end_turn();
+            s.expect_in_zone(&equation, "graveyard");
+            assert_eq!(s.card(&equation).cost_mod, 0);
+        }
+
+        #[test]
+        fn r4_r429_r766_a_full_hand_burns_the_return_and_the_price_it_was_played_at_goes_with_it() {
+            crate::register_all();
+            // A (3) equation whose return a full hand burns: there was no return, so it lies in the graveyard
+            // at its printed (1) (§2.4), and its price (no climb of its own) is gone with the rest (R766).
+            let mut hand = vec![json!({ "def": "31", "costMod": 2 }), json!("5")];
+            hand.extend(std::iter::repeat_n(json!("15"), 8));
+            let mut s = scenario(json!({
+                "seed": "ky-math-burned",
+                "p1": { "hand": hand, "field": ["15"], "library": ["15", "15", "15", "15"], "mana": 10 },
+                "p2": { "field": ["15"], "library": ["15", "15", "15", "15"] },
+            }));
+            let equation = s.card("31").clone();
+            s.play(&equation, at_enemy_hero());
+            s.play("5", json!({})); // #5 Stockpile: 8 in hand, draws 2 → the hand is full as the turn ends
+            assert_eq!(s.hand(P1).len(), 10);
+
+            s.end_turn();
+
+            s.expect_in_zone(&equation, "graveyard");
+            assert_eq!(s.card(&equation).cost_mod, 0);
+            assert_eq!(effective_cost(s.state(), s.card(&equation), Default::default()), 1);
+            assert_eq!(return_price_of(s.card(&equation)), 0);
+        }
+
+        #[test]
+        fn r429_r766_r77_a_fused_equation_printed_at_3_comes_back_at_4_and_stays_at_4() {
+            crate::register_all();
+            // Craft a Card's shape (R77): #31 and two #5 Stockpiles fused into one hand card, whose printed
+            // cost is min(1 + 1 + 1, 4) = (3). Its return is #31's, so it climbs the same way, from (3).
+            let library: Vec<&str> = vec!["15"; 12];
+            let mut s = scenario(json!({
+                "seed": "ky-math-fused",
+                "p1": { "hand": ["31", "5", "5"], "field": ["15"], "library": library, "mana": 10 },
+                "p2": { "field": ["15"], "library": ["15", "15", "15", "15"] },
+            }));
+            let ingredients = s.hand(P1);
+            let fused = {
+                let mut events: Vec<GameEvent> = Vec::new();
+                let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
+                let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+                subsystems::fuse::fuse(
+                    &mut sink,
+                    subsystems::fuse::FuseArgs {
+                        ingredients,
+                        to_hand: Some(P1),
+                        ..Default::default()
+                    },
+                )
+            }
+            .expect("the fused equation in hand");
+            assert_eq!(printed_cost(s.state(), s.card(&fused)), 3);
+
+            let first = climb_once(&mut s, &fused);
+            let second = climb_once(&mut s, &fused);
+
+            // From its printed (3) the first return reaches the cap, and at (4) the next adds nothing.
+            assert_eq!(first.1, 4);
+            assert_eq!(second, (4, 4));
+            assert_eq!(s.card(&fused).cost_mod, 1);
         }
 
         #[test]
@@ -476,6 +660,14 @@ mod tests {
             assert_eq!(scripts.base.static_flags.as_ref().and_then(|flags| flags.counts_plays), Some(true));
             assert_eq!(scripts.radiant.static_flags.as_ref().and_then(|flags| flags.counts_plays), Some(true));
         }
+
+        #[test]
+        fn r429_r766_both_faces_ask_step_7_to_note_the_price_their_return_gives_back() {
+            let scripts = script();
+            for face in [&scripts.base, &scripts.radiant] {
+                assert_eq!(face.static_flags.as_ref().and_then(|flags| flags.return_keeps_price), Some(true));
+            }
+        }
     }
 
     mod n31_ky_s_math_equation_radiant {
@@ -510,6 +702,23 @@ mod tests {
             });
             third.play("31", at_enemy_hero());
             third.expect_health(P2, 22);
+        }
+
+        #[test]
+        fn r429_r766_radiant_the_climb_is_the_same_2_then_3_then_4_and_it_stays_at_4() {
+            crate::register_all();
+            let mut s = board(BoardOptions {
+                radiant: true,
+                ..BoardOptions::default()
+            });
+            let equation = s.card("31").clone();
+
+            let climb: Vec<(i32, i32)> = (0..4).map(|_| climb_once(&mut s, &equation)).collect();
+
+            assert_eq!(climb, vec![(1, 2), (2, 3), (3, 4), (4, 4)]);
+            assert!(s.card(&equation).radiant);
+            // Fib(4) + Fib(5) + Fib(6) + Fib(7) = 3 + 5 + 8 + 13.
+            s.expect_health(P2, 30 - 29);
         }
 
         #[test]

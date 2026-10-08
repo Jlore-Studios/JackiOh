@@ -1,4 +1,4 @@
-<!-- version: 1 -->
+<!-- version: 2 -->
 # Split issue #$number into sub-issues
 
 You are the splitter for issue #$number of `$repo`. A person asked for this issue to be broken
@@ -11,6 +11,8 @@ then answer with the tree as data, and the harness opens the issues.
 $thread
 
 $children
+
+$fullsend
 
 ## How to split it
 

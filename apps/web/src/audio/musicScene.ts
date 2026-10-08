@@ -3,13 +3,14 @@
 //
 // `appAudio.ts` turns the menu on for as long as the page-wide audio is held. Each mounted Game
 // enters the scene (`useGameAudio`); the newest board's director then decides, and when the last
-// board leaves, the menu theme comes back.
+// board leaves, the menu theme comes back. A card's intro (R1350) is the newest board's alone too:
+// an older board asks for none, and a board that leaves cuts the one it started (R1351).
 
 import { getMusicPlayer, type MusicRequest } from "./music.ts";
 import type { MusicSink } from "./musicDirector.ts";
 import { MENU_TRACK } from "./musicData.ts";
 
-type Claim = { request: MusicRequest | null };
+type Claim = { request: MusicRequest | null; intro: boolean };
 
 let menuHolders = 0;
 const claims: Claim[] = [];
@@ -44,12 +45,26 @@ export function holdMenuMusic(): () => void {
 
 /** A mounted board's way to the music; `leave()` hands it back. */
 export function enterGameMusic(): MusicSink & { leave(): void } {
-  const claim: Claim = { request: null };
+  const claim: Claim = { request: null, intro: false };
   claims.push(claim);
+  const holds = (): boolean => claims[claims.length - 1] === claim;
   return {
     request(request) {
       claim.request = request;
-      if (claims[claims.length - 1] === claim) apply();
+      if (holds()) apply();
+    },
+    playIntro(id) {
+      if (!holds()) return;
+      claim.intro = true;
+      getMusicPlayer().playIntro(id);
+    },
+    stopIntro() {
+      if (!holds() || !claim.intro) return;
+      claim.intro = false;
+      getMusicPlayer().stopIntro();
+    },
+    preloadIntros(ids) {
+      if (holds()) getMusicPlayer().preloadIntros(ids);
     },
     resetResume() {
       getMusicPlayer().resetResume();
@@ -60,6 +75,7 @@ export function enterGameMusic(): MusicSink & { leave(): void } {
     leave() {
       const at = claims.indexOf(claim);
       if (at < 0) return;
+      if (holds() && claim.intro) getMusicPlayer().stopIntro();
       claims.splice(at, 1);
       apply();
     },

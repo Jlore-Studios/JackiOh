@@ -734,7 +734,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "base"
       }
     ],
     "loc": 85,
@@ -1941,7 +1942,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "base"
       }
     ],
     "loc": 39,
@@ -2393,7 +2395,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "base"
       },
       {
         "key": "setCost",
@@ -3359,7 +3362,8 @@
         "radiant": 4,
         "better": "up",
         "step": 2,
-        "min": 1
+        "min": 1,
+        "power": "burn"
       },
       {
         "key": "tapDraw",
@@ -3367,7 +3371,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "power": "draw"
       },
       {
         "key": "tapDamage",
@@ -3375,7 +3380,9 @@
         "radiant": 2,
         "better": "down",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "base",
+        "power": "draw"
       },
       {
         "key": "ping",
@@ -3383,7 +3390,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "power": "ping"
       },
       {
         "key": "stitchCost",
@@ -3391,7 +3399,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "power": "stitching"
       },
       {
         "key": "armor",
@@ -3399,7 +3408,8 @@
         "radiant": 4,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "power": "armor"
       },
       {
         "key": "insect",
@@ -3407,7 +3417,8 @@
         "radiant": 8,
         "better": "up",
         "step": 2,
-        "min": 1
+        "min": 1,
+        "power": "insect"
       },
       {
         "key": "discount",
@@ -3415,7 +3426,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "power": "brainstorm"
       },
       {
         "key": "fruitCost",
@@ -3423,7 +3435,8 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0
+        "min": 0,
+        "power": "pluck"
       }
     ],
     "loc": 11,
@@ -3761,7 +3774,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "base"
       },
       {
         "key": "setCost",
@@ -4111,7 +4125,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "base"
       }
     ],
     "loc": 23,
@@ -4183,7 +4198,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "base"
       },
       {
         "key": "recruits",
@@ -5269,7 +5285,8 @@
         "radiant": 5,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "base"
       }
     ],
     "loc": 29,
@@ -5541,7 +5558,8 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "base"
       }
     ],
     "loc": 16,
@@ -5678,7 +5696,8 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "base"
       }
     ],
     "loc": 26,
@@ -6056,7 +6075,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "base"
       },
       {
         "key": "threshold",
@@ -6785,7 +6805,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "base"
       }
     ],
     "loc": 17,
@@ -7134,7 +7155,8 @@
         "radiant": 4,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "base"
       },
       {
         "key": "draw",

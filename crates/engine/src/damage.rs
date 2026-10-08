@@ -15,6 +15,10 @@
 //!     (`replacements::healing_replaced`);
 //!   - E7 set health (`set_hero_health`): no pipeline, not damage, not a heal.
 //!
+//! Patch v0.3.X (docs/meditative-set.md M8, MN05) reports what Armor does: the `damage` event carries
+//! the Armor's part of the hit (`absorbed`, R1360), and a hit the Armor takes whole, which R63's zero
+//! rule stops, is reported by `damageAbsorbed` (R1361), a report that nothing answers.
+//!
 //! Port of `packages/engine/src/damage.ts` (part 3). TS's `DamageTarget` held the live
 //! `CardInstance`; here a unit target carries the instance as the caller had it, and every read and
 //! write of the target goes to the card under that id in the state as it stands now (the TS object
@@ -371,14 +375,22 @@ fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redire
     // instance on its own hero and pays this step like any other hit (R125); only "lose health"
     // bypasses the pipeline (R18), and that never comes through here.
     // Step 3 on a hero, with E6's divisors between the two: `hero_hit_amount`.
+    // R1360: `absorbed` is what the Armor took off the hit at step 2, and nothing after it — not a
+    // hero's divisors or cap — so a hit that pierces has none.
     let mut amount = amount_in;
+    let mut absorbed = 0;
     match (target, &unit) {
         (DamageTarget::Hero { player }, _) => {
-            amount = hero_hit_amount(sink.state, *player, amount, pierces(sink.state, source, flags));
+            let pierce = pierces(sink.state, source, flags);
+            if !pierce {
+                absorbed = hero_armor_of(sink.state, *player).clamp(0, amount_in);
+            }
+            amount = hero_hit_amount(sink.state, *player, amount, pierce);
         }
         (DamageTarget::Unit { .. }, Some(live)) => {
             if !pierces(sink.state, source, flags) {
                 amount = (amount - armor_of(&crate::layers::unit_view(sink.state, live).keywords)).max(0);
+                absorbed = (amount_in - amount).max(0);
             }
         }
         (DamageTarget::Unit { .. }, None) => {}
@@ -403,6 +415,25 @@ fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redire
         }
     }
 
+    // The zero rule: a hit reduced to 0 by steps 2 and 3 stops there, emits no `damage` and triggers
+    // nothing (R63). R1361: one the target's Armor took whole is reported by `damageAbsorbed`, a
+    // report nothing answers (`triggers::dispatch_event`); a hit a cap alone stopped is not Armor's.
+    // The rule stands before step 4, as §4.4 orders it, so an Indestructible unit's Armor that takes
+    // a hit whole reports it like any other unit's.
+    if amount <= 0 {
+        if absorbed > 0 && absorbed >= amount_in {
+            sink.events.push(GameEvent::DamageAbsorbed {
+                source_id: source.map(|card| card.id.clone()),
+                target_id: target_id(target),
+                absorbed,
+                combat: flags.is_some_and(|flags| flags.combat == Some(true)),
+            });
+            let at = sink.events.len() - 1;
+            crate::triggers::withhold_report(sink, at);
+        }
+        return 0;
+    }
+
     // Step 4: Indestructible units take nothing, and emit no damage event.
     if let Some(live) = &unit
         && has_keyword(
@@ -410,11 +441,6 @@ fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redire
             KeywordKind::Indestructible,
         )
     {
-        return 0;
-    }
-
-    // The zero rule: a hit reduced to 0 emits nothing and triggers nothing (R63).
-    if amount <= 0 {
         return 0;
     }
 
@@ -473,6 +499,7 @@ fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redire
         target_id: target_id(target),
         amount: dealt,
         combat: flags.is_some_and(|flags| flags.combat == Some(true)),
+        absorbed,
     });
 
     // Step 6 (on-damage triggers) is dispatched by the trigger loop from the `damage` event (§10.3).

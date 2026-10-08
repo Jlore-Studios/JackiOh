@@ -28,6 +28,7 @@ use std::time::Duration;
 
 use serde_json::{Value, json};
 
+use jackioh_engine::newest_shipped_set;
 use jackioh_engine::wire::{DEFAULT_PORTRAIT, pick_portrait_from_seed};
 use jackioh_server::actor::engine::deal_random_deck;
 use jackioh_server::actor::rooms::{e2e_room_seed_count, script_room_codes};
@@ -788,12 +789,95 @@ mod r264_rooms_carry_a_mode {
         assert_eq!(
             row["decks"],
             json!([
-                deal_random_deck(&format!("{seed}:p1-deck")),
-                deal_random_deck(&format!("{seed}:p2-deck"))
+                deal_random_deck(&format!("{seed}:p1-deck"), None),
+                deal_random_deck(&format!("{seed}:p2-deck"), None)
             ])
         );
         assert_eq!(in_match_of(&h.app, HOST).await, json!(match_id));
         assert_eq!(in_match_of(&h.app, GUEST).await, json!(match_id));
+    }
+
+    /// R1372: the share of a dealt deck from the newest set, which a deck that leans on it holds at
+    /// least `ceil(DECK_SIZE × leanMinShare)` of (R1370).
+    fn newest_in(deck: &Value) -> usize {
+        let newest = newest_shipped_set();
+        deck.as_array()
+            .map(|ids| {
+                ids.iter()
+                    .filter(|id| {
+                        id.as_str()
+                            .and_then(|id| jackioh_cards::CATALOG.get(id))
+                            .is_some_and(|def| def.set == newest)
+                    })
+                    .count()
+            })
+            .unwrap_or(0)
+    }
+
+    fn lean_floor() -> usize {
+        (f64::from(jackioh_engine::config::DECK_SIZE) * jackioh_ai::AI_DECK.lean_min_share).ceil() as usize
+    }
+
+    #[tokio::test]
+    async fn r1372_an_all_random_room_leans_the_host_s_deck_alone_when_only_the_host_asked() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(false).await;
+        let code = create_in(&h, json!({ "mode": "random", "leanNewest": true })).await;
+        assert_eq!(h.rooms().await[0]["hostLeanNewest"], true);
+
+        let (status, answer) = join_with(&h, &code, json!({ "mode": "random" })).await;
+        assert_eq!(status, 200, "{answer}");
+        let row = started(&h.app).await.remove(0);
+        let seed = row["seed"].as_str().unwrap_or_default().to_string();
+        let newest = Some(newest_shipped_set());
+        assert_eq!(
+            row["decks"],
+            json!([
+                deal_random_deck(&format!("{seed}:p1-deck"), newest),
+                deal_random_deck(&format!("{seed}:p2-deck"), None)
+            ])
+        );
+        assert!(newest_in(&row["decks"][0]) >= lean_floor(), "{}", row["decks"][0]);
+    }
+
+    #[tokio::test]
+    async fn r1372_an_all_random_room_leans_the_joiner_s_deck_alone_when_only_the_joiner_asked() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(false).await;
+        let code = create_in(&h, json!({ "mode": "random" })).await;
+        assert_eq!(h.rooms().await[0]["hostLeanNewest"], false);
+
+        let (status, answer) = join_with(&h, &code, json!({ "mode": "random", "leanNewest": true })).await;
+        assert_eq!(status, 200, "{answer}");
+        let row = started(&h.app).await.remove(0);
+        let seed = row["seed"].as_str().unwrap_or_default().to_string();
+        let newest = Some(newest_shipped_set());
+        assert_eq!(
+            row["decks"],
+            json!([
+                deal_random_deck(&format!("{seed}:p1-deck"), None),
+                deal_random_deck(&format!("{seed}:p2-deck"), newest)
+            ])
+        );
+        assert!(newest_in(&row["decks"][1]) >= lean_floor(), "{}", row["decks"][1]);
+        // The lean is real: the same seed deals the joiner another deck without it.
+        assert_ne!(
+            row["decks"][1],
+            json!(deal_random_deck(&format!("{seed}:p2-deck"), None))
+        );
+    }
+
+    #[tokio::test]
+    async fn r1372_a_lean_that_is_not_a_boolean_is_refused_and_one_that_is_absent_is_off() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(false).await;
+        let (status, refused) =
+            create(&h.app, &h.host, json!({ "mode": "random", "leanNewest": "yes" })).await;
+        assert_eq!(status, 400, "{refused}");
+        assert!(h.rooms().await.is_empty());
+        let (status, made) = create(&h.app, &h.host, json!({ "mode": "random", "leanNewest": null })).await;
+        assert_eq!(status, 200, "{made}");
+        assert_eq!(h.rooms().await[0]["hostLeanNewest"], false);
     }
 
     #[tokio::test]

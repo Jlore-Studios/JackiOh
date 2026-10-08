@@ -224,6 +224,7 @@ pub fn rotate_rings(sink: &mut EngineSink<'_>, args: &RotationArgs) -> RotationR
                 row: entry.to.row,
                 lane: entry.to.lane,
                 former_id: None,
+                how: None,
             });
         }
     }

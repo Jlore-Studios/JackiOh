@@ -1025,6 +1025,8 @@ pub fn remove_from_any_zone(state: &mut GameState, instance: &mut CardInstance) 
             // it back there this turn — a discard (#76), a burn — is no play of its, and it stays (R153).
             if zone == OffFieldZone::Graveyard {
                 instance.return_to_hand_at_end_of_turn = None;
+                // R429, R766: and the price noted for that return goes with it.
+                crate::resolve::forget_return_price(instance);
             }
             return;
         }

@@ -51,7 +51,7 @@ import initWasm, {
   view_for,
 } from "./pkg/jackioh_wasm.js";
 
-import type { Action, ActionBody, CardDefs, GameEvent, PlayerId, PlayerView } from "../wire/index.ts";
+import type { Action, ActionBody, CardDefs, GameEvent, PlayerId, PlayerView, SetName } from "../wire/index.ts";
 import type { CardInstance } from "../wire/generated/CardInstance.ts";
 import type { GameState } from "../wire/generated/GameState.ts";
 import type { ReplayCheckpoints } from "../wire/generated/ReplayCheckpoints.ts";
@@ -318,6 +318,8 @@ export type AiDeckRequest = StreamAt & {
   include?: readonly string[];
   /** R390: these ids' weights multiplied by `by`. */
   boost?: { ids: readonly string[]; by: number };
+  /** R1370: a set at least `AI_DECK.leanMinShare` of the deck comes from; absent, none. */
+  leanSet?: SetName;
 };
 
 export function buildAiDeck(request: AiDeckRequest): { deck: string[]; rngCursor: number } {
@@ -331,15 +333,38 @@ export function chooseAction(state: GameState, seat: PlayerId, stream: StreamAt)
   );
 }
 
+/** The deck builder's numbers (`crates/ai/src/deck.rs`'s `AI_DECK`, SPEC §9.9, R1370), as it states them. */
+export type AiDeckConstants = {
+  curve: Record<"0-1" | "2" | "3" | "4+", number>;
+  curveShiftPerMana: number;
+  curveTolerance: number;
+  minUnitShare: number;
+  themeChance: number;
+  minThemeSize: number;
+  themeBoost: number;
+  themeMinShare: number;
+  curveBoost: number;
+  curveOverflow: number;
+  unitBoost: number;
+  uncastable: number;
+  costSlack: number;
+  minPool: number;
+  /** R1370: a deck that leans on a set holds at least ceil(size × leanMinShare) of its cards. */
+  leanMinShare: number;
+  /** R1370: weight for a card of the leaned set while the deck is short of it. */
+  leanBoost: number;
+};
+
 export type AiConstants = {
   AI_BUDGET: SearchBudget;
   AI_GATE_BUDGET: SearchBudget;
   SHADOW_BAN_IDS: readonly string[];
+  AI_DECK: AiDeckConstants;
 };
 
 let constantsCache: AiConstants | null = null;
 
-/** The AI's budgets and its shadow-ban ids, as the Rust AI states them. */
+/** The AI's budgets, its shadow-ban ids and its deck builder's numbers, as the Rust AI states them. */
 export function aiConstants(): AiConstants {
   return call("constants", () => {
     constantsCache ??= parsed<AiConstants>(constants());

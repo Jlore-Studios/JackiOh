@@ -462,11 +462,15 @@ export async function putPlayerSettings(
 
 export type QueueMode = "bo1" | "bo3" | "random";
 
-/** What a queue ticket or a room is made with: a deck, a trio, or nothing at all. */
+/**
+ * What a queue ticket or a room is made with: a deck, a trio, or nothing at all. All Random's
+ * `leanNewest` is the player's "More cards from the newest set" for their own dealt deck (R1372),
+ * sent only when it is on: the server resolves the set and deals the deck (CLAUDE.md rule 7).
+ */
 export type ModeChoice =
   | { mode: "bo1"; deckId: string }
   | { mode: "bo3"; trioId: string }
-  | { mode: "random" };
+  | { mode: "random"; leanNewest?: true };
 
 /** `POST /api/queue`. `matchId` for a paired Best-of-1 or All Random game, `seriesId` for Conquest. */
 export type EnqueueResponse = {
@@ -689,19 +693,34 @@ export type RematchStakes = 1 | 2;
 /** `POST /api/matches/:id/rematch`: the created game, or null while the seats disagree. */
 export type RematchOfferResponse = { matchId: string | null };
 
-/** `GET /api/matches/:id/rematch`: both seats' offers, the opponent's presence, the created game. */
+/**
+ * `GET /api/matches/:id/rematch`: both seats' offers, the opponent's presence, the created game, and
+ * the mode a rematch plays (R1372: All Random's offers carry "More cards from the newest set"). A
+ * server from before the mode answers without it.
+ */
 export type RematchStatusResponse = {
   youOffered: RematchStakes | null;
   opponentOffer: RematchStakes | null;
   opponentHere: boolean;
   matchId: string | null;
+  mode?: QueueMode;
 };
 
-export function rematchOffer(token: string, matchId: string, stakes: RematchStakes): Promise<RematchOfferResponse> {
+/**
+ * `POST /api/matches/:id/rematch`. `leanNewest` (R1372) is this seat's "More cards from the newest
+ * set" for an All Random rematch's dealt deck, sent only when it is on; a Best-of-1 rematch replays
+ * its decks and the server reads no lean.
+ */
+export function rematchOffer(
+  token: string,
+  matchId: string,
+  stakes: RematchStakes,
+  leanNewest = false,
+): Promise<RematchOfferResponse> {
   return apiRequest<RematchOfferResponse>(`/api/matches/${encodeURIComponent(matchId)}/rematch`, {
     method: "POST",
     token,
-    body: { stakes },
+    body: leanNewest ? { stakes, leanNewest: true } : { stakes },
   });
 }
 

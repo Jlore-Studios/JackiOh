@@ -89,15 +89,18 @@ class IdentityCases(unittest.TestCase):
         self.assertEqual(queue_mod.wip_branch(5), "squishy/wip/5")
         self.assertEqual(config.COMMIT_PREFIX, "squishy")
         self.assertEqual(set(MODE_LABELS), {"squishy:oneshot", "squishy:split",
-                                            "squishy:split-bot"})
+                                            "squishy:split-bot", "squishy:fullsend"})
 
     def test_its_labels_and_no_suggestions(self):
         self.assertNotIn("squishy:suggestion", LABELS)
         self.assertNotIn("squishy:approved", LABELS)
         for name in ("squishy:build", "squishy:oneshot", "squishy:split", "squishy:split-bot",
-                     LABEL_TREE, "human"):
+                     "squishy:fullsend", LABEL_TREE, "human"):
             self.assertIn(name, LABELS)
         self.assertIn("Squishy", LABELS["squishy:working"][1])
+        self.assertIn("Queued for Squishy to split into parts", LABELS["squishy:fullsend"][1])
+        self.assertIn("whose sub-issues Squishy made", LABELS[LABEL_TREE][1])
+        self.assertIn("that the night bot builds", LABELS["squishy:split-bot"][1])
         self.assertTrue(all(len(d) <= config.LABEL_DESCRIPTION_MAX for _, d in LABELS.values()))
         self.assertFalse(make_config(env=ENV).suggestions_enabled)
 
@@ -110,6 +113,8 @@ class IdentityCases(unittest.TestCase):
         text = commands.help_text(bot)
         self.assertIn("`oneshot [notes]`", text)
         self.assertIn("`split [bot] [notes]`", text)
+        self.assertIn("`fullsend [notes]`", text)
+        self.assertIn("`build`, `oneshot`, `split`, `fullsend` or `revise`", text)
         self.assertNotIn("`suggest`", text)
         self.assertIn("`/squishy help`", commands.pointer(bot))
 
@@ -257,6 +262,37 @@ class SplitCases(unittest.TestCase):
         self.assertIn("#41 [closed] Part 1: the engine", prompts[0])
         self.assertEqual(world.gh.get_issue(40)["state"], "closed")
         self.assertNotIn(LABEL_TREE, world.gh.label_names(40))
+
+    def test_fullsend_lands_on_squishys_branch(self):
+        world, result = self.split("fullsend")
+        self.assertEqual(result["status"], "split")
+        onto = "squishy/issue-40"
+        self.assertEqual(git(world.origin, "rev-parse", f"refs/heads/{onto}"),
+                         git(world.origin, "rev-parse", "refs/heads/main"))
+        for child in (41, 42):
+            self.assertIn("squishy:build", world.gh.label_names(child))
+            record = world.ctx.store.load()["items"][str(child)]
+            self.assertEqual((record["onto"], record["part_of"]), (onto, 40))
+        self.assertEqual(world.gh.label_names(40), {"priority:high", LABEL_TREE})
+        self.assertIn(f"This is a fullsend tree: each part lands on `{onto}`",
+                      world.gh.bot_comments(40)[-1])
+
+        def build(request: RunRequest) -> RunResult:
+            (request.cwd / "src" / "engine.ts").write_text("rule\n")
+            return RunResult(True, DONE)
+        runner = FakeRunner({"build": build})
+        planned, result = world.run(runner)
+        self.assertEqual((planned["number"], planned["onto"], result["status"]), (41, onto, "part"))
+        self.assertEqual([call.role for call in runner.calls], ["build"])
+        self.assertEqual(git(world.origin, "show", f"refs/heads/{onto}:src/engine.ts"), "rule")
+        self.assertEqual(world.gh.get_issue(41)["state"], "closed")
+        self.assertEqual(world.gh.list_pulls(state="all"), [])
+
+    def test_the_night_bots_fullsend_is_left_alone(self):
+        world = World()
+        world.gh.add_issue(44, labels=("bot:fullsend",))
+        self.assertIn("is the night bot's (@jgoetzmann-bot)", world.ask(44, "/squishy fullsend")[0])
+        self.assertEqual(world.gh.label_names(44), {"bot:fullsend"})
 
     def test_stop_on_a_tree_stops_its_sub_issues(self):
         world, _ = self.split("split")

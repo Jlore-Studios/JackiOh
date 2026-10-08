@@ -132,7 +132,7 @@ mod tests {
             assert_eq!(def["id"], TYRANT);
             assert_eq!(
                 def["params"],
-                json!([{ "key": "spells", "base": 3, "radiant": 3, "better": "up", "step": 1, "min": 1 }]),
+                json!([{ "key": "spells", "base": 3, "radiant": 3, "better": "up", "step": 1, "min": 1, "tunedOn": "base" }]),
             );
             let scripts = script();
             assert!(scripts.base.resume.contains_key("cast"));
