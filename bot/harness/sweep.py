@@ -222,7 +222,9 @@ def _comments(ctx: Context, since: datetime) -> list[str]:
                     return None
                 payload = {"action": "created", "comment": comment,
                            "issue": ctx.gh.get_issue(number)}
-            events.on_comment(ctx, payload, review_comment=review_comment)
+            out = events.on_comment(ctx, payload, review_comment=review_comment)
+            if not out or out[0].startswith(("ignored", "no command")):
+                return None  # nothing was answered: the other bot's words, say (#504)
             return f"answered a comment on #{number} that was never answered"
         _each(found, act, notes)
     return notes

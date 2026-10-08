@@ -380,7 +380,7 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh` | on the machine, as `agent-gpt` | any time | 100% of the week (Codex reports it) |
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | 95% of 5 hours, all of the week (its own `agy -p /usage`, the Gemini pool's row) |
 | `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2, free on the CLI until 2026-10-16); off from 2026-10-05 to 2026-10-06 (#311: every call failed in seconds), on again since a `devin -p` call answered on the machine (#318) | on the machine, as `agent-devin` | any time until 2026-10-15 (`off_from`) | none: until it refuses |
-| `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh`, on two lanes | on the machine, as `agent-muse` | any time | 95% of 5 hours, all of the week (its TUI's `/usage` panel) |
+| `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh`, on four lanes | on the machine, as `agent-muse` | any time | 95% of 5 hours, all of the week (its TUI's `/usage` panel) |
 
 The Claude accounts' model jobs run on GitHub's runners (`ubuntu-latest`), which install their
 CLI each time; every other subscription's runs on its own runner on the machine, `night-vm-<id>`.
@@ -437,7 +437,7 @@ prints each one and whether it could start now, and `/harness status` does the s
     `claude-4` started just under its 70% cap and was stopped four minutes in.
   - **One run at a time** on a capped subscription, its planning run included: two runs
     deciding from one reading pass a cap together. A subscription given more `lanes` takes that
-    many (Muse has two, on one login): each run takes its own reading before it starts and
+    many (Muse has four, on one login): each run takes its own reading before it starts and
     watches it during every call, so two of them pass a cap by at most one reading's worth.
   - **A refusal** parks the subscription until the reset its message names ("resets in
     1h44m44s", "try again in 5 days 2 hours"). One that names none waits for the window the
