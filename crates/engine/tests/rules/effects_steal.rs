@@ -158,7 +158,8 @@ mod r15_steal_s6_3_m3_t1 {
         assert_eq!(
             of_type(&events, "controlChanged"),
             vec![
-                json!({ "type": "controlChanged", "instanceId": victim.id, "controller": "p1", "row": "units", "lane": 3 })
+                // R1366: the event says it was a steal.
+                json!({ "type": "controlChanged", "instanceId": victim.id, "controller": "p1", "row": "units", "lane": 3, "how": "steal" })
             ]
         );
     }
@@ -301,7 +302,7 @@ mod r15_steal_s6_3_m3_t1 {
         assert_eq!(
             of_type(&events, "controlChanged"),
             vec![
-                json!({ "type": "controlChanged", "instanceId": hidden.id, "controller": "p1", "row": "backrow", "lane": 4 })
+                json!({ "type": "controlChanged", "instanceId": hidden.id, "controller": "p1", "row": "backrow", "lane": 4, "how": "steal" })
             ]
         );
     }
@@ -551,5 +552,35 @@ mod r1423_give_control_hands_a_card_to_the_other_player {
             .expect("a hand card");
         assert_eq!(gives(&mut state, &held).len(), 0);
         assert_eq!(live(&state, &held.id).controller, PlayerId::P1);
+    }
+
+    /// R1366: a steal and a give say which they are, for the client's sound, and the rules read
+    /// neither (`GameEvent::as_rules_read`).
+    #[test]
+    fn r1366_a_steal_and_a_give_say_which_they_are_and_the_rules_read_neither() {
+        let mut state = game();
+        let theirs = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P2, Row::Units, 2),
+            json!({}),
+        );
+        let stolen = of_type(&controls(&mut state, &theirs), "controlChanged");
+        assert_eq!(stolen.len(), 1);
+        assert_eq!(stolen[0]["how"], json!("steal"));
+
+        let mine = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 4),
+            json!({}),
+        );
+        let events = gives(&mut state, &mine);
+        let given = of_type(&events, "controlChanged");
+        assert_eq!(given.len(), 1);
+        assert_eq!(given[0]["how"], json!("give"));
+        let read = serde_json::to_value(events[0].as_rules_read()).expect("an event serialises");
+        assert_eq!(read.get("how"), None);
+        assert_eq!(read["controller"], json!("p2"));
     }
 }

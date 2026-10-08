@@ -400,6 +400,8 @@ pub fn clone_of(
         Zone::Resolving { player },
     );
     copy.radiant = source.radiant;
+    // ME-CN, R1300: a copy of a Chinese card is Chinese, as a copy of a Radiant card is Radiant.
+    copy.chinese = source.chinese;
     copy.buffs = AttackHealth {
         attack: source.buffs.attack,
         health: source.buffs.health,

@@ -14,7 +14,7 @@ use std::sync::LazyLock;
 
 use jackioh_engine::effects::{
     buff_cards, choose_mode, choose_target, chosen_tuning_number, damage, degrade, discover_number, draw,
-    enchant, gain_brittle, give_brittle, grant_keyword_cards, set_number, upgrade,
+    enchant, gain_brittle, give_brittle, grant_keyword_cards, set_number, translate, upgrade,
 };
 use jackioh_engine::testkit::*;
 
@@ -379,6 +379,35 @@ pub static radiant_number: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
+/// R1431: the mirror, Classic #11 Mind Melt's shape: a number only the base face prints (`cards` 2,
+/// more is better), tuned on that face only.
+pub static base_number: LazyLock<CardDef> = LazyLock::new(|| {
+    def(
+        "base-number",
+        4426,
+        json!({
+            "type": "Spell",
+            "params": [{ "key": "cards", "base": 2, "radiant": 2, "better": "up", "tunedOn": "base" }],
+            "base": { "keywords": [], "text": "Exile {cards|card|cards}." },
+            "radiant": { "keywords": [], "text": "Exile them all." },
+        }),
+    )
+});
+
+/// ME-CN, R1300: Meditative #32's "Get ready to learn Chinese": every card in both hands and both decks
+/// is shown in Chinese from now on.
+pub static translator: LazyLock<CardDef> = LazyLock::new(|| {
+    def(
+        "translator",
+        4427,
+        json!({
+            "type": "Spell",
+            "base": { "keywords": [], "text": "Translate" },
+            "radiant": { "keywords": [], "text": "Translate" },
+        }),
+    )
+});
+
 pub static INSTANCE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
         brittle_unit.clone(),
@@ -406,6 +435,8 @@ pub static INSTANCE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         military.clone(),
         educator.clone(),
         radiant_number.clone(),
+        base_number.clone(),
+        translator.clone(),
     ]
 });
 
@@ -660,6 +691,17 @@ pub static INSTANCE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
                 cry: Some(hook(|_ctx| {
                     vec![enchant(json_as(
                         json!({ "scope": { "zones": ["hand"] }, "enchantment": { "kind": "castOnDraw" } }),
+                    ))]
+                })),
+                ..Script::default()
+            }),
+        ),
+        (
+            translator.id.clone(),
+            both(Script {
+                cry: Some(hook(|_ctx| {
+                    vec![translate(json_as(
+                        json!({ "scope": { "side": "any", "zones": ["hand", "library"] } }),
                     ))]
                 })),
                 ..Script::default()

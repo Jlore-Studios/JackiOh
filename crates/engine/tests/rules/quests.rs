@@ -536,6 +536,27 @@ mod e33_quests_each_goal_counted_and_not_counted {
     }
 
     #[test]
+    fn r404_r1361_damage_to_enemies_a_hit_armor_takes_whole_is_no_damage_and_counts_for_nothing() {
+        let mut state = quest_board("q-damage-armor");
+        let target = put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({}));
+        live_mut(&mut state, &target)
+            .granted_keywords
+            .push(Keyword::Armor { n: BOLT });
+        let Played {
+            state: mut s1, card, ..
+        } = goal(&mut state, "damageToEnemies", P1);
+        let blocked = play_new(&mut s1, &bolt().id, P1, &[target.id.as_str()]);
+        // R63, R1361: the Armor took the bolt whole, which is reported and is no damage instance, so
+        // the quest that counts damage to enemies has nothing to count.
+        assert_eq!(
+            events_of_type(&blocked.events, GameEventType::DamageAbsorbed).len(),
+            1
+        );
+        assert!(events_of_type(&blocked.events, GameEventType::Damage).is_empty());
+        assert_eq!(progress_of(&blocked.state, &card, ONLY_QUEST), 0);
+    }
+
+    #[test]
     fn r404_damage_to_enemies_a_unit_token_that_dies_in_the_combat_still_dealt_its_damage_the_opponents_hits_count_for_nothing()
      {
         let mut state = quest_board("q-damage-token");

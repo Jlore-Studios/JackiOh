@@ -6,8 +6,8 @@
 //!   §7.4), which also proves what `buildRegistry` threw on (a file's `ID` names a real catalog card,
 //!   no two files claim one) and what `missing-tests.ts` listed (a catalog id with no file).
 //! - `register_all()`: hands the catalog and every card's scripts to the engine, once.
-//! - `catalog_json()`, `flavour_json()`, `catalog_version()`: the data, compiled in (SURFACE §3: data
-//!   reaches a pure crate only at compile time).
+//! - `catalog_json()`, `flavour_json()`, `chinese_json()`, `chinese_terms_json()`, `catalog_version()`:
+//!   the data, compiled in (SURFACE §3: data reaches a pure crate only at compile time).
 //! - `CATALOG`, `CATALOG_IDS`, `CATALOG_VERSION`, `card_def`, `card_def_by_index`: `catalog-data.ts`'s
 //!   readers of the shipped catalog, under their TS names (SURFACE §4.2).
 //!
@@ -41,6 +41,18 @@ pub fn catalog_json() -> &'static str {
 /// `packages/cards/flavour.json` as compiled in (the client's flavour lines and artists).
 pub fn flavour_json() -> &'static str {
     include_str!("../flavour.json")
+}
+
+/// ME-CN, R1303: `crates/cards/chinese.json` as compiled in, every card's name and faces in Simplified
+/// Chinese (the client's `apps/web/src/cards/chinese.ts`). A sidecar like `flavour.json`: no rule reads it.
+pub fn chinese_json() -> &'static str {
+    include_str!("../chinese.json")
+}
+
+/// ME-CN, R1303: `crates/cards/chinese-terms.json` as compiled in, the frame's words in Chinese (types,
+/// tags, rarities, keywords, labels, Radiant, Created and the glossary).
+pub fn chinese_terms_json() -> &'static str {
+    include_str!("../chinese-terms.json")
 }
 
 /// §9.4: the catalog version the engine registers — the newest entry of `patches/patches.json`,

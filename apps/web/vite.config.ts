@@ -26,7 +26,7 @@ export const jackiohAliases: Alias[] = [
   { find: /^@jackioh\/engine\/config$/, replacement: `${WIRE}engineConfig.ts` },
   { find: /^@jackioh\/engine$/, replacement: `${WIRE}engine.ts` },
   { find: /^@jackioh\/validator$/, replacement: `${WIRE}validator.ts` },
-  { find: /^@jackioh\/cards\/(catalog|flavour)\.json$/, replacement: `${REPO}crates/cards/$1.json` },
+  { find: /^@jackioh\/cards\/(catalog|flavour|chinese|chinese-terms)\.json$/, replacement: `${REPO}crates/cards/$1.json` },
   { find: /^@jackioh\/cards$/, replacement: `${WIRE}cards.ts` },
   { find: /^@jackioh\/ai(?:\/config)?$/, replacement: `${WIRE}ai.ts` },
   { find: /^@jackioh\/server-config$/, replacement: `${WIRE}serverConfig.ts` },

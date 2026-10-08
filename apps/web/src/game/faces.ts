@@ -9,7 +9,8 @@
 // card standing as a Unit (R383), a face's own type (B2.7), a quest line (E33, R404) and the Spell
 // text a copier has (E14, R399: its `copies` drawn from that Spell's definition). Everything is read
 // off the view — never worked out — so none of it is a rule (CLAUDE.md rule 7). The collection's
-// faces, the card as printed, are the deck builder's own (`faceModel` with no `inPlay`).
+// faces, the card as printed, are the deck builder's own (`faceModel` with no `inPlay`). A card the
+// view says is Chinese (`CardView.chinese`, ME-CN, R1301) is drawn in the Chinese table's words.
 //
 // The definition comes from the public catalog (§5.1, `CatalogContext`), else from the match-made
 // definitions the view carries beside the cards it names (R243), else from nothing: the card is
@@ -95,6 +96,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
     name: info.name,
     ...(type === undefined ? {} : { type }),
     radiant: card.radiant,
+    // R1301: the view says the card is shown in Chinese; never a card the viewer may not read.
+    chinese: card.chinese === true,
     liveCost: card.cost,
     ...(unit === undefined
       ? {}

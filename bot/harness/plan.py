@@ -58,7 +58,7 @@ from harness.clock import iso, parse_iso
 from harness.config import (DIFFICULTIES, HALT_PATH, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS,
                             LABEL_NEEDS_PLAN, LABEL_PLANNED, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
                             LABEL_SUGGESTION, LABEL_WORKING, MIN_TIER, NIGHT_WORKFLOW, OTHERS,
-                            SLASH, STATE_BRANCH)
+                            PART_FLOOR, SLASH, STATE_BRANCH)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.prompts import data
@@ -309,29 +309,46 @@ def ranked(pool: Pool, seats: list[Seat]) -> list[Seat]:
     return sorted(seats, key=lambda seat: (order.get(seat.provider.id, len(order)), seat.rank))
 
 
-def builder_seat(pool: Pool, providers: list[Provider], difficulty: str) -> tuple[Seat | None, str]:
+def builder_seat(pool: Pool, providers: list[Provider], difficulty: str, *,
+                 part: bool = False) -> tuple[Seat | None, str]:
     """Who builds an item of `difficulty`: the first free subscription in the usage order with a
     seat that meets its tier, on its weakest such seat; with a note when that seat is above the
-    tier, saying why (none of that tier is free, or the usage order puts this one first)."""
+    tier, saying why (none of that tier is free, or the usage order puts this one first).
+
+    A fullsend `part` (#505), whose plan is on record by now, goes first to the subscriptions
+    whose strongest seat is weakest, and one with no seat of its tier may build it on a seat of
+    `PART_FLOOR`: Muse builds a hard part from Opus's plan, and the strong models keep to the
+    planning and to the reconcile that checks and reviews every part."""
     floor = MIN_TIER[difficulty]
     free = {provider.id for provider in providers}
+
+    def strongest(provider: Provider) -> int:
+        seat = pool.best_seat(provider)
+        return TIER_RANK[seat.tier] if seat is not None else 0
     # An easy item goes first to a subscription marked `easy_first` (Devin), which may build
     # nothing harder; one marked `build_last` (claude-2) builds only after every other one.
     order = sorted(providers, key=lambda provider: (
-        not (provider.easy_first and difficulty == "easy"), provider.build_last))
+        not (provider.easy_first and difficulty == "easy"), strongest(provider) if part else 0,
+        provider.build_last))
 
-    def builds(seat: Seat) -> bool:
+    def builds(provider: Provider, seat: Seat) -> bool:
         # A stand-in (`takes_over`, Sonnet for Devin) builds only an easy item, and only while
         # the subscription it stands in for cannot take it (#317 part 9).
         if seat.takes_over and (difficulty != "easy" or seat.takes_over in free):
             return False
-        return tier_at_least(seat.tier, floor)
-    usable = [(provider, [seat for seat in pool.seats(provider) if builds(seat)])
+        if tier_at_least(seat.tier, floor):
+            return True
+        return (part and tier_at_least(seat.tier, PART_FLOOR)
+                and pool.best_seat(provider, floor) is None)
+    usable = [(provider, [seat for seat in pool.seats(provider) if builds(provider, seat)])
               for provider in order]
     for index, (provider, seats) in enumerate(usable):
         if not seats:
             continue
         seat = min(seats, key=lambda s: (TIER_RANK[s.tier], s.rank))
+        if not tier_at_least(seat.tier, floor):
+            return seat, (f"a fullsend part, built on {seat.tier} from its plan: its tree's "
+                          "reconcile checks and reviews it")
         if seat.tier == floor:
             return seat, ""
         later = [s.describe() for _, others in usable[index + 1:] for s in others
@@ -348,21 +365,26 @@ def builder_seat(pool: Pool, providers: list[Provider], difficulty: str) -> tupl
 def lane_planners(ctx: Context, state: dict[str, Any], lanes: Lanes, *, forced: bool,
                   quiet_ok: str) -> list[Seat]:
     """The planning lane's planners: the strongest seat of each subscription that may plan now
-    (at least medium), the strong ones first, each tier in the usage order. A planning run there
-    takes no build lane, so a subscription plans one item while it builds another; one the quiet
-    check guards plans only when it holds nothing else. Which item a planner may take is the
-    item's plan floor (`queue.plan_floor`): a medium one plans only easy or unrated items. A plan
-    is no short call (an Opus planner spent 20 minutes on #37), so like a build it starts only
-    `start_headroom` under each cap."""
+    (at least medium), the strong ones first, and within a tier the one holding the fewest plans
+    first, then the usage order. A planning run there takes no build lane, so a subscription plans
+    while it builds, as many items at once as it has lanes: planning comes first, so the strong
+    models write the plans the medium ones build from before they build themselves. One the quiet
+    check guards, or one with caps, plans only when it holds nothing else. Which item a planner
+    may take is the item's plan floor (`queue.plan_floor`): a medium one plans only easy or
+    unrated items. A plan is no short call (an Opus planner spent 20 minutes on #37), so like a
+    build it starts only `start_headroom` under each cap."""
     if lanes.plan_free <= 0:
         return []
     cfg = ctx.cfg
     seats = []
     for provider in cfg.pool.ordered():
         seat = cfg.pool.best_seat(provider, "medium")
-        if seat is None or "plan" not in provider.roles or lanes.planning_by(provider.id):
+        if seat is None or "plan" not in provider.roles:
             continue
-        if (provider.quiet_check or provider.limits.stops) and lanes.count(provider.id):
+        planning = lanes.planning_by(provider.id)
+        if planning >= provider.lanes:
+            continue
+        if (provider.quiet_check or provider.limits.stops) and (planning or lanes.count(provider.id)):
             continue  # one run at a time on a guarded or capped subscription (`Lanes.full`)
         if machine_full(cfg.pool, provider, lanes):
             continue
@@ -372,7 +394,8 @@ def lane_planners(ctx: Context, state: dict[str, Any], lanes: Lanes, *, forced: 
         if providers_mod.availability(provider, state, ctx.now(), cfg.timezone, cfg.secrets,
                                       forced=forced, starting=True) is None:
             seats.append(seat)
-    return sorted(ranked(cfg.pool, seats), key=lambda seat: -TIER_RANK[seat.tier])
+    return sorted(ranked(cfg.pool, seats), key=lambda seat: (
+        -TIER_RANK[seat.tier], lanes.planning_by(seat.provider.id)))
 
 
 def run_reviewer(pool: Pool, provider: Provider, difficulty: str) -> Seat | None:
@@ -436,7 +459,8 @@ def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lan
         # weak builder resolves badly (#203, #214, #287): only a builder that reviews in its own
         # run takes one (#317 part 2), and none at all may wait for one.
         builders = [p for p in builders if run_reviewer(pool, p, candidate.difficulty)]
-    builder, note = builder_seat(pool, builders, candidate.difficulty)
+    builder, note = builder_seat(pool, builders, candidate.difficulty,
+                                 part=candidate.part and plan_meets(candidate))
     if builder is None:
         return None
     notes = [f"#{candidate.number}: {note}"] if note else []
@@ -466,13 +490,15 @@ def pairs(ctx: Context, state: dict[str, Any], queue: list[Candidate], lanes: La
                                          KIND_ORDER[c.kind], -DIFFICULTIES.index(c.difficulty),
                                          c.queued_at, c.number))
     # The Needs plan stage first: a planner on the planning lane, which takes no build lane,
-    # plans the items a builder that cannot plan (Devin) waits on before the rest, each by a model
-    # that meets its plan floor (medium for an easy or unrated item, strong for the rest).
+    # plans the items a builder that cannot plan (Devin) waits on before the rest, then the
+    # fullsend parts a medium subscription (Muse) builds from their plans, each by a model that
+    # meets its plan floor (medium for an easy or unrated item, strong for the rest).
     planning: list[tuple[Candidate, Assignment]] = []
     planners = lane_planners(ctx, state, lanes, forced=force, quiet_ok=quiet_ok)
     if planners:
         for candidate in sorted((c for c in order if needs_plan(c)),
-                                key=lambda c: (not (force or c.forced), c.difficulty != "easy")):
+                                key=lambda c: (not (force or c.forced), c.difficulty != "easy",
+                                               not c.part)):
             seat = next((s for s in planners if tier_at_least(s.tier, plan_floor(candidate))),
                         None)
             if seat is None:
@@ -1002,18 +1028,44 @@ def claim(ctx: Context, candidate: Candidate,
                              "by": str(by.get("provider") or "")}
         if candidate.mode:
             planned["mode"] = candidate.mode
-            if candidate.mode.startswith("split"):
+            if candidate.mode.startswith("split") or candidate.mode == "fullsend":
                 planned["children"] = tree_text(ctx, number)
                 planned["builders"] = split_builders(candidate.mode)
+            if candidate.mode == "fullsend":
+                # The parts its reconcile merges first: those that could not land (#505).
+                planned["parked"] = [str(b) for b in record.get("parked") or []]
+        if record.get("onto"):
+            # A fullsend part (#505): it lands on its tree's branch, not `main`.
+            planned["onto"] = str(record["onto"])
+            planned["part_of"] = int(record.get("part_of") or 0)
         if record.get("previous_pr"):
             planned["previous_pr"] = record["previous_pr"]
             planned["previous_branch"] = str(record.get("previous_branch") or "")
             planned["previous_why"] = str(record.get("previous_why") or "")
-        if candidate.mode.startswith("split"):
+        if candidate.mode == "fullsend" and planned.get("children"):
+            message = (f"Starting work on this now{run_link(cfg)}: the reconcile of this fullsend "
+                       f"tree. Every part has closed, so this run merges them on "
+                       f"`{planned['branch']}`, follows fullsend's reconcile and makes every check "
+                       "green, for one pull request into `main`. "
+                       f"{_start_message(assignment, cfg)}")
+        elif candidate.mode == "fullsend":
+            message = (f"Splitting this now for fullsend{run_link(cfg)}, on "
+                       f"{assignment.build.describe()}: one session reads it and the code and "
+                       "answers with parts that each own their files. When the run ends I open "
+                       f"them, and each lands on `{planned['branch']}`, not `main`, with no pull "
+                       "request of its own; once they have all closed, one run reconciles them "
+                       "into one pull request.")
+        elif candidate.mode.startswith("split"):
             message = (f"Splitting this now{run_link(cfg)}, on {assignment.build.describe()}: "
                        "one session reads it and the code and answers with sub-issues, each small "
                        f"enough for one run. When the run ends I open them, queued for "
                        f"{split_builders(candidate.mode)} in the order they depend on each other.")
+        elif planned.get("onto") and assignment.action == "build":
+            message = (f"Starting work on this now{run_link(cfg)}: a fullsend part, "
+                       f"difficulty:{candidate.difficulty}, built on "
+                       f"{assignment.build.describe()}. It lands on `{planned['onto']}`, the "
+                       f"branch of #{planned['part_of']}, with no checks, review or pull request "
+                       "of its own: the tree's reconcile checks and reviews every part at once.")
         elif candidate.mode == "oneshot":
             message = (f"Starting a one-shot build of this now{run_link(cfg)}, on "
                        f"{assignment.build.describe()}, with fullsend: a spec first, then many "
@@ -1137,7 +1189,8 @@ def claim(ctx: Context, candidate: Candidate,
 
 
 def split_builders(mode: str) -> str:
-    """Who builds a split's sub-issues (#60): this bot for `split`, the other bot for `split-bot`."""
+    """Who builds a split's sub-issues (#60): this bot for `split` and `fullsend`, the other bot
+    for `split-bot`."""
     if mode == "split-bot" and OTHERS:
         return f"{OTHERS[0].name} (@{OTHERS[0].login})"
     return "me"

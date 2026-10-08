@@ -33,6 +33,13 @@
 // #57 Echo, B5 E14, R399, R511) prints the Spell text the view says it has (`InPlay.copies`), filled
 // with the numbers it reads on the card, in place of its own copying sentence; it keeps its own name,
 // cost, type and art, and `copying` names the card it copies for the inspect notes.
+//
+// ME-CN, R1301: a card the view says is Chinese (`FaceSource.chinese`) prints its name and both
+// faces' texts from the Chinese table (chinese.ts), a copier's copied text and a fused card's
+// ingredients' included, filled with the same numbers; its preview labels are the table's too. A
+// Radiant face's gold diff compares the two Chinese faces (R1302). The English face's name and text
+// ride along (`englishName`, `englishText`), never printed: the art's motif and the glossary's terms
+// are read from them.
 
 import {
   fillParams,
@@ -61,6 +68,7 @@ import {
   powerText,
   type RolledPower,
 } from "./inPlay.ts";
+import { chineseDef, chinesePreviewLabel } from "./chinese.ts";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { radiantMarks, type TextRange } from "./radiantDiff.ts";
 import { faceTuning, filledText, type FaceTuning, type TunedRange } from "./tuning.ts";
@@ -185,6 +193,12 @@ export type FaceModel = {
   quest?: QuestView | null;
   /** B5 E14, R511: in play, the Spell a copier's text is now (`CardView.copies`); null when it copies none. */
   copying?: { defId: string; name: string; radiant: boolean } | null;
+  /** ME-CN, R1301: the face prints its words in Chinese (`FaceSource.chinese`). Absent otherwise. */
+  chinese?: boolean;
+  /** R1301: on a Chinese face, the name the English face prints, which picks the art's motif (R503). */
+  englishName?: string;
+  /** R1301: on a Chinese face, the text the English face prints, whose terms the glossary explains. */
+  englishText?: string;
 };
 /**
  * What a game adds to a face (R243, SPEC §10.10); its presence is what makes a face one in play.
@@ -234,6 +248,8 @@ export type FaceSource = {
   live?: { attack: number; health: number; maxHealth: number; keywords: readonly Keyword[] };
   /** Set on every face drawn in a game, absent in the collection (see the header). */
   inPlay?: InPlay;
+  /** ME-CN, R1301: the view says the card is Chinese (`CardView.chinese`); its words are the table's. */
+  chinese?: boolean;
 };
 
 /** The gem of a card nobody can name: no catalog, no live cost. */
@@ -245,7 +261,11 @@ const UNKNOWN_TYPE: CardType = "Unit";
 export function faceModel(source: FaceSource): FaceModel {
   // R102, B3.4: a fused definition declares no numbers of its own, and its text still writes its
   // ingredients' `{key}`s; in play the view's numbers fill them (and are, for it, the printed ones).
-  const def = withViewParams(source.def, source.inPlay?.params);
+  const filled = withViewParams(source.def, source.inPlay?.params);
+  // ME-CN, R1301: a Chinese card's name and texts are the table's; its numbers, keywords and all else
+  // stay the definition's.
+  const chinese = source.chinese === true;
+  const def = chinese && filled !== undefined ? chineseDef(filled) : filled;
   const printed = def === undefined ? undefined : source.radiant ? def.radiant : def.base;
   // B2.7: a face may carry its own type (Classic+ #22 Blood Moon's Radiant face is a Field Trap), and
   // the card's type is its face's (§5.2); in play the view's word for it comes first.
@@ -256,8 +276,10 @@ export function faceModel(source: FaceSource): FaceModel {
   const printedText = textOf(def, source.radiant);
   // B3.4: in play a card's numbers are the ones the view says it has now (a Degrade, an Upgrade).
   const ownText = inPlay?.params === undefined ? printedText : textOf(def, source.radiant, inPlay.params);
-  // B5 E14, R511: a copier's own words are the copied Spell's text, filled with the numbers it reads.
-  const copies = inPlay?.copies;
+  // B5 E14, R511: a copier's own words are the copied Spell's text, filled with the numbers it reads
+  // (in Chinese on a Chinese copier, R1301).
+  const viewCopies = inPlay?.copies;
+  const copies = viewCopies === undefined || !chinese ? viewCopies : { ...viewCopies, def: chineseDef(viewCopies.def) };
   const liveText = copies === undefined ? ownText : copiedText(ownText, def, textOf(copies.def, copies.radiant, copies.params));
   const text = inPlay === undefined ? printedText : textInPlay(def, source.radiant, liveText, inPlay);
   const keywords = source.live?.keywords ?? printed?.keywords ?? [];
@@ -268,6 +290,14 @@ export function faceModel(source: FaceSource): FaceModel {
   // line of keywords gained since printing leaves them out.
   const tuning = inPlay === undefined ? null : faceTuning(def, source.radiant, inPlay.tuning, inPlay.params);
   const tunedKeys = new Set((tuning?.added ?? []).map(keywordKey));
+  // R280, R1301: a Chinese card's preview labels are the table's, filled with the numbers its face is.
+  const preview = inPlay?.preview ?? [];
+  const values =
+    chinese && filled !== undefined
+      ? preview.map((entry) => ({ ...entry, label: chinesePreviewLabel(filled, source.radiant, entry.label, inPlay?.params) }))
+      : preview;
+  // R1301: the same card's English face, for what is read off its words and never printed.
+  const english = chinese ? faceModel({ ...source, chinese: false }) : null;
 
   return {
     defId: source.defId,
@@ -286,7 +316,7 @@ export function faceModel(source: FaceSource): FaceModel {
     text,
     // The renderer links only the names that stand in the text, so play's own words link what they name.
     refs: [...(copies?.def.refs ?? []), ...(def?.refs ?? [])],
-    values: printsItsText ? (inPlay?.preview ?? []) : [],
+    values: printsItsText ? values : [],
     keywords,
     inPlay: inPlay !== undefined,
     vanilla,
@@ -305,6 +335,7 @@ export function faceModel(source: FaceSource): FaceModel {
     marks: inPlay?.marks ?? [],
     quest: inPlay?.quest ?? null,
     copying: copies === undefined ? null : { defId: copies.def.id, name: copies.def.name, radiant: copies.radiant },
+    ...(english === null ? {} : { chinese: true, englishName: english.name, englishText: english.text.full }),
   };
 }
 

@@ -8,10 +8,14 @@
 //! series' continue flow owns what comes next.
 //!
 //! Two endpoints (TS's `createRematchRoutes()`; the route table is `app.rs`'s, SURFACE §11.2):
-//!  - `POST /api/matches/:matchId/rematch { stakes }` (`offer_rematch`, active) upserts the caller's
-//!    offer and, when the seats' stakes match, creates the game and answers its id;
+//!  - `POST /api/matches/:matchId/rematch { stakes, leanNewest? }` (`offer_rematch`, active) upserts
+//!    the caller's offer and, when the seats' stakes match, creates the game and answers its id;
 //!  - `GET /api/matches/:matchId/rematch` (`rematch_status`, active) answers what each seat offered,
-//!    whether the opponent is here, and the created game, if any.
+//!    whether the opponent is here, the created game, if any, and the mode the rematch plays.
+//!
+//! R1372: an All Random rematch deals fresh decks, and each seat's offer carries its player's "More
+//! cards from the newest set" for their own seat (`leanNewest`, absent = off; the latest offer's
+//! stands). A Best-of-1 rematch replays its frozen decks and reads no lean.
 //!
 //! The response carries only offer stakes, presence booleans and ids — never decks, hands or
 //! ratings (CLAUDE.md rule 7).
@@ -30,6 +34,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::api::collection::caller_profile;
+use crate::api::decks::lean_newest_of;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::api::queue::{new_seed, new_uuid};
 use crate::app::{App, now_ms};
@@ -51,7 +56,9 @@ pub struct RematchOfferBody {
     pub match_id: Option<String>,
 }
 
-/// `GET /api/matches/:matchId/rematch`: both offers, the opponent's presence, the created game.
+/// `GET /api/matches/:matchId/rematch`: both offers, the opponent's presence, the created game, and
+/// the mode a rematch of this match plays (R1372: the death screen offers "More cards from the
+/// newest set" only beside an All Random one).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct RematchStatusBody {
@@ -59,11 +66,14 @@ pub struct RematchStatusBody {
     pub opponent_offer: Option<RematchStakes>,
     pub opponent_here: bool,
     pub match_id: Option<String>,
+    pub mode: QueueMode,
 }
 
 struct OfferEntry {
     /// Seat -> the stakes it offered.
     offers: IndexMap<PlayerId, RematchStakes>,
+    /// R1372: seat -> its latest offer's "More cards from the newest set".
+    leans: IndexMap<PlayerId, bool>,
     /// `now` of the latest offer; the sweep reads this.
     at: i64,
     /// The game equal stakes made, once made.
@@ -158,12 +168,14 @@ fn seat_of(match_row: &MatchRow, profile_id: &str) -> Option<PlayerId> {
 /// Creates the rematch both seats offered, exactly like `queue.rs`'s `start_paired_match` makes a
 /// paired match: a Best-of-1 replays the finished row's frozen decks and portraits under a fresh
 /// seed, an All Random deals fresh decks from that seed (`{seed}:p1-deck`, `{seed}:p2-deck`, the
-/// same suffix scheme), and both profiles go in-match in one transaction first.
+/// same suffix scheme), each leaning on the newest set when its seat's offer asked (`leans`, seat
+/// order, R1372), and both profiles go in-match in one transaction first.
 async fn create_rematch(
     app: &Arc<App>,
     finished: &MatchRow,
     mode: QueueMode,
     stakes: RematchStakes,
+    leans: (bool, bool),
     match_id: &str,
 ) -> Result<(), ApiError> {
     let seed = new_seed();
@@ -182,7 +194,10 @@ async fn create_rematch(
             profile_id: finished.players.0.clone(),
             player: PlayerId::P1,
             deck: if random {
-                crate::actor::engine::deal_random_deck(&format!("{seed}:p1-deck"))
+                crate::actor::engine::deal_random_deck(
+                    &format!("{seed}:p1-deck"),
+                    crate::actor::engine::lean_of(leans.0),
+                )
             } else {
                 finished.decks.0.clone()
             },
@@ -196,7 +211,10 @@ async fn create_rematch(
             profile_id: finished.players.1.clone(),
             player: PlayerId::P2,
             deck: if random {
-                crate::actor::engine::deal_random_deck(&format!("{seed}:p2-deck"))
+                crate::actor::engine::deal_random_deck(
+                    &format!("{seed}:p2-deck"),
+                    crate::actor::engine::lean_of(leans.1),
+                )
             } else {
                 finished.decks.1.clone()
             },
@@ -371,6 +389,8 @@ pub async fn offer_rematch(app: &Arc<App>, req: Req) -> ApiResult {
 async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let stakes = stakes_of(&req.body)?;
+    // R1372: absent is off, so an offer from a client before it is a plain rematch.
+    let lean_newest = lean_newest_of(&req.body)?;
     let (match_row, seat) = callers_match(app, &req, &profile).await?;
     // R672: only a ranked match can spawn a double-or-nothing.
     if stakes == STAKE_DOUBLE && match_row.ranked != Some(true) {
@@ -401,6 +421,7 @@ async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
                 match_row.id.clone(),
                 OfferEntry {
                     offers: IndexMap::new(),
+                    leans: IndexMap::new(),
                     at: now,
                     match_id: None,
                     generation,
@@ -414,10 +435,13 @@ async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
         };
         entry.at = now;
         entry.offers.insert(seat, stakes);
+        entry.leans.insert(seat, lean_newest);
         if entry.offers.get(&seat.opponent()) == Some(&stakes) && entry.match_id.is_none() {
             let new_id = new_uuid();
             entry.match_id = Some(new_id.clone());
-            (Some((new_id, entry.generation)), None)
+            let lean_of = |at: PlayerId| entry.leans.get(&at).copied().unwrap_or(false);
+            let leans = (lean_of(PlayerId::P1), lean_of(PlayerId::P2));
+            (Some((new_id, entry.generation, leans)), None)
         } else {
             (None, entry.match_id.clone())
         }
@@ -425,10 +449,10 @@ async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
 
     let match_id = match claimed {
         None => answered,
-        Some((new_id, generation)) => {
+        Some((new_id, generation, leans)) => {
             let created = async {
                 let mode = rematch_mode(app, &match_row).await?;
-                create_rematch(app, &match_row, mode, stakes, &new_id).await
+                create_rematch(app, &match_row, mode, stakes, leans, &new_id).await
             }
             .await;
             if let Err(error) = created {
@@ -478,6 +502,8 @@ async fn rematch_status_route(app: &App, req: Req) -> ApiResult {
         }
     };
     let presence = app.matches.presence_of(&match_row.id);
+    // R1372: the mode a rematch would play, read as the rematch itself reads it.
+    let mode = rematch_mode(app, &match_row).await?;
     let status = RematchStatusBody {
         you_offered,
         opponent_offer,
@@ -485,6 +511,7 @@ async fn rematch_status_route(app: &App, req: Req) -> ApiResult {
         // socket closed: leaving, logging out and closing the tab all read as gone.
         opponent_here: presence.is_some_and(|presence| presence[seat.opponent()]),
         match_id: created,
+        mode,
     };
     Ok(json(
         200,

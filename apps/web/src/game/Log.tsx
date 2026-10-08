@@ -18,7 +18,9 @@
 // line never opens a card it does not print: a sentinel, a hero, a draw or a line that says "a
 // unit" opens nothing. What opens is the card in play (faces.ts, SPEC §10.10): as it stands where
 // the view still lists it, else its definition as the game shows it; and a match-made card (a
-// Fuse's, R243) is named and drawn from the definition the view carries for it.
+// Fuse's, R243) is named and drawn from the definition the view carries for it. A card the view
+// says is Chinese (ME-CN, R1301) is named by its Chinese name, and a translation itself gets no line:
+// the card's words changed language, and the board already shows it.
 //
 // The window is not the whole game: the lines whose events have left it come from
 // `useLogHistory.ts` (R745), kept as they read when they arrived, with a definition's face and no
@@ -29,6 +31,7 @@ import { Fragment, memo, useContext, useLayoutEffect, useRef, type MouseEvent, t
 import type { GameEvent, LibraryOverflowOutcome, PlayerId, PlayerView, PromptKind } from "@jackioh/shared";
 
 import { costPhrase, useInspectTrigger } from "../cards/index.ts";
+import { chineseName } from "../cards/chinese.ts";
 import { GLITCH_WORDS } from "../cards/glitch.ts";
 import { markWords } from "../cards/marks.ts";
 import { chaosNames, chaosRollOf } from "../fx/chaos.ts";
@@ -201,8 +204,15 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
         );
       }
       return `${name.def(event.defId)} entered ${name.whose(event.player)} ${zoneLabel(event.row, event.lane)}`;
-    case "damage":
-      return `${capitalised(name.instance(event.targetId))} took ${event.amount} damage${event.combat ? " in combat" : ""}`;
+    case "damage": {
+      // R1360: the Armor's part of the hit, where it took one.
+      const absorbed = event.absorbed ?? 0;
+      const armor = absorbed > 0 ? `, ${String(absorbed)} absorbed by Armor` : "";
+      return `${capitalised(name.instance(event.targetId))} took ${event.amount} damage${event.combat ? " in combat" : ""}${armor}`;
+    }
+    case "damageAbsorbed":
+      // R1361: the Armor took the whole hit, so nothing was dealt.
+      return `${capitalised(name.instance(event.targetId))}'s Armor absorbed ${String(event.absorbed)} damage${event.combat ? " in combat" : ""}`;
     case "healthLost":
       return `${name.seat(event.player)} lost ${event.amount} health`;
     case "healed":
@@ -367,6 +377,9 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       // R437: the mark by the name its badge says (cards/marks.ts), never the engine's key; a marked
       // card the viewer may not read (a face-down trap) is "a card".
       return event.added ? `${capitalised(name.instance(event.instanceId, "a card"))} was marked (${markWords(event.mark).name})` : null;
+    case "translated":
+      // R1301: only the language the card is shown in changed; its face says so.
+      return null;
   }
 }
 
@@ -378,7 +391,11 @@ function namingFor(view: PlayerView, lookup: CardLookup | null, remembered: Read
       if (instanceId === `hero-${view.you.player}`) return "your hero";
       if (instanceId === `hero-${view.opponent.player}`) return "the opponent's hero";
       const defId = defIdOfInstance(view, instanceId) ?? remembered.get(instanceId);
-      return defId === undefined ? unknown : (lookup?.(defId, false)?.name ?? defId);
+      if (defId === undefined) return unknown;
+      const info = lookup?.(defId, false);
+      const english = info?.name ?? defId;
+      // R1301: a card the view shows in Chinese is named in Chinese.
+      return cardInView(view, instanceId)?.chinese === true ? chineseName(defId, english, info?.def) : english;
     },
     seat: (player) => seatLabel(view, player),
     whose: (player) => whoseLabel(view, player),
@@ -452,6 +469,7 @@ function cardOf(event: GameEvent, view: PlayerView, remembered: ReadonlyMap<stri
     case "fused":
       return byDef(event.defId, event.resultInstanceId);
     case "damage":
+    case "damageAbsorbed":
     case "healed":
       return byInstance(event.targetId);
     case "divineShieldLost":

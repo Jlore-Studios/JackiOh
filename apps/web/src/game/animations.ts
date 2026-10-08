@@ -725,6 +725,26 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "banner" },
     target: () => testid.banner,
   },
+  // ME-CN, R1301: the card pulses as its words turn Chinese; the view after it draws them so. Only
+  // the language changed, so no effect decorates it.
+  translated: {
+    animation: "jk-radiant-pulse",
+    durationMs: 400,
+    testid: "card-<instanceId>",
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
+  // R1361, R1363 (MN05): the Armor took the whole hit. The target braces with a steel glint and no
+  // number, since nothing was dealt, and the effects layer blooms a shield over it (fx/shield.ts).
+  damageAbsorbed: {
+    animation: "jk-armor-absorb",
+    durationMs: 300,
+    testid: "card-<targetId> | hero-<side>",
+    fx: { recipe: "armor" },
+    target: (e, view) => {
+      const side = heroSide(view, e.targetId);
+      return side !== null ? testid.hero(side) : locateInstance(view, e.targetId);
+    },
+  },
 };
 
 /* ------------------------------------------------------------------------------------------- *

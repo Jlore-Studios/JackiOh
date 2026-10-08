@@ -15,6 +15,8 @@ for adding, changing or removing a card (CLAUDE.md rule 10).
 crates/cards
 ├── catalog.json        the card data, proved against spec §8 by tests/cross/catalog.rs
 ├── flavour.json        flavour lines and artist credits, not card data (R660)
+├── chinese.json        Simplified Chinese names and faces, not card data (R1303)
+├── chinese-terms.json  the frame's Chinese words: types, tags, rarities, keywords, labels (R1303)
 ├── patches/            the catalog's history (R388, R646): patches.json, one snapshot per patch,
 │                       shipped.json, index.json, and pending/ (one fragment per patch being built)
 ├── build.rs            generates the registry from src/scripts/** and compiles the catalog version in
@@ -252,3 +254,14 @@ is no patch and claims no fragment. `tests/cross/flavour.rs` holds every key to 
 entry to a flavour line, and each line to one trimmed line under its cap (120 characters, 60 for an
 artist); the client's test also refuses rules words. Real art is credited when it lands
 (`apps/web/src/cards/art/ART.md`).
+
+## 8. Chinese text (R1303)
+
+`chinese.json` is keyed by catalog id, `{ name, base, radiant, previews? }`: the name and both faces
+in Simplified Chinese, one Chinese line per English line. It is not card data: an edit to it is no
+patch and claims no fragment. Each face keeps exactly its English face's `{key}`s (an English
+`{key|one|many}` becomes `{key}` plus a measure word), names every `refs` card by its Chinese name,
+and carries `previews` exactly where the script declares `preview`. `chinese-terms.json` holds the
+frame's words: types, tags, rarities, keywords, labels, Radiant, Created and the glossary.
+`tests/cross/chinese.rs` proves both files. Every card added later adds its Chinese entry in the
+same change ([`docs/ADDING_CARDS.md`](../../docs/ADDING_CARDS.md)).

@@ -158,7 +158,7 @@ mod tests {
         fn declares_its_one_number_budget_r386() {
             crate::register_all();
             let def = js(&registered_catalog()[BACK]);
-            assert_eq!(def["params"], json!([{ "key": "budget", "base": 5, "radiant": 5, "better": "up", "step": 1, "min": 1 }]));
+            assert_eq!(def["params"], json!([{ "key": "budget", "base": 5, "radiant": 5, "better": "up", "step": 1, "min": 1, "tunedOn": "base" }]));
             let scripts = script();
             assert!(scripts.base.targets.is_empty());
             assert!(scripts.radiant.targets.is_empty());

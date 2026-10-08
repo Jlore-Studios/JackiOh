@@ -6,6 +6,7 @@
   "operator": "jgoetzmann",
   "timezone": "America/Chicago",
   "identity": {
+    "modes": ["fullsend"],
     "others": [
       {
         "name": "Squishy",

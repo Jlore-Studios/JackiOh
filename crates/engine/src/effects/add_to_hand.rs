@@ -33,6 +33,8 @@ struct HandRiders {
     cost_mod: Option<i32>,
     /// R637: the card is Temporary (a granted keyword) while it is in a hand.
     temporary: Option<bool>,
+    /// ME-CN, R1300: the card is a copy of a Chinese card, so it is Chinese too.
+    chinese: Option<bool>,
 }
 
 /// `costMod` ADDS (R65 sums it); `costOverride` and `radiant` replace.
@@ -45,6 +47,10 @@ struct HandRiders {
 fn apply_radiant_rider(card: &mut CardInstance, riders: &HandRiders) {
     if riders.radiant == Some(true) {
         card.radiant = true;
+    }
+    // ME-CN, R1300: what the card is shown in, like what face it wears, so a burned card keeps it too.
+    if riders.chinese == Some(true) {
+        card.chinese = Some(true);
     }
 }
 
@@ -112,6 +118,10 @@ pub struct AddToHandArgs {
     pub cost_mod: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub temporary: Option<bool>,
+    /// ME-CN, R1300: the card made is a copy of a Chinese card (T-AI-5, Counterspell, Recycling
+    /// Initiative), so it is Chinese too.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chinese: Option<bool>,
 }
 
 impl AddToHandArgs {
@@ -122,6 +132,7 @@ impl AddToHandArgs {
             cost_override: self.cost_override,
             cost_mod: self.cost_mod,
             temporary: self.temporary,
+            chinese: self.chinese,
         }
     }
 }
@@ -201,6 +212,7 @@ impl AddRandomFromCatalogArgs {
             cost_override: self.cost_override,
             cost_mod: self.cost_mod,
             temporary: self.temporary,
+            chinese: None,
         }
     }
 }

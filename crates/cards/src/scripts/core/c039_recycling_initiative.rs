@@ -125,6 +125,10 @@ fn copies_of_other_plays(ctx: &EffectContext<'_>, terms: CopyTerms) -> Vec<Effec
         if discount != 0 {
             args["costMod"] = json!(-discount);
         }
+        // R1300: a copy of a Chinese card is Chinese.
+        if card.chinese == Some(true) {
+            args["chinese"] = json!(true);
+        }
         out.push(add_to_hand(json_as(args)));
     }
 
@@ -407,6 +411,26 @@ mod tests {
             let copy = copy_in_hand(&s, TIMMY);
             assert!(copy.radiant);
             assert_eq!(copy.cost_mod, 0);
+        }
+
+        #[test]
+        fn r1300_a_copy_of_a_chinese_card_is_chinese() {
+            for chinese in [true, false] {
+                let mut s = scn(json!({
+                    "p1": { "hand": [TIMMY, RECYCLING, STOCKPILE], "library": [MENACE, POSTDOC] },
+                    "p2": spare(),
+                }));
+                let played = s.card(TIMMY).id.clone();
+                if chinese && let Some(card) = find_instance_mut(s.state_mut(), &played) {
+                    card.chinese = Some(true);
+                }
+
+                s.play(TIMMY, json!({ "zone": 1 }));
+                s.play(RECYCLING, json!({}));
+                s.end_turn();
+
+                assert_eq!(copy_in_hand(&s, TIMMY).chinese, chinese.then_some(true));
+            }
         }
 
         #[test]

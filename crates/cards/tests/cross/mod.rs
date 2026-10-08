@@ -12,6 +12,7 @@ pub mod activate_listed;
 pub mod after_resolution;
 pub mod card_text;
 pub mod catalog;
+pub mod chinese;
 pub mod combat_windows;
 pub mod condition_active;
 pub mod control_change;

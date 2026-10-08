@@ -16,7 +16,7 @@
 //! `readPatches`) is compiled in with `include_str!` (a pure crate's tests read no files).
 
 use indexmap::{IndexMap, IndexSet};
-use jackioh_cards::{CATALOG, catalog_json};
+use jackioh_cards::{CATALOG, catalog_json, chinese_terms_json};
 use jackioh_engine::{CardDef, FaceKind, Keyword, KeywordKind, fill_params};
 use serde_json::{Map, Value, json};
 
@@ -65,7 +65,7 @@ fn keyword_label(keyword: &Keyword) -> String {
 }
 
 /// The labels that start a line of their own (R366; Activate is B3.2's, Quest Classic #90's).
-const LABELS: &[&str] = &[
+pub(super) const LABELS: &[&str] = &[
     "Cry:",
     "Death:",
     "Start of turn:",
@@ -384,10 +384,14 @@ fn ends_with_a_full_stop(line: &str) -> bool {
     line.ends_with('.') || line.ends_with(".\"") || line.ends_with(".\u{201d}")
 }
 
-/// Every R366 check a face fails, by name; empty when it passes them all.
+/// Every R366 check a face fails, by name; empty when it passes them all. A face printed in Chinese
+/// is read by Chinese punctuation instead (R1302).
 fn failures(face: &Face) -> Vec<String> {
     let text = face.text.as_str();
     let keywords = &face.keywords;
+    if text.chars().any(is_cjk) {
+        return cjk_failures(text, keywords);
+    }
     let mut out: Vec<String> = Vec::new();
     if says_library(text) {
         out.push("says library, not deck".to_string());
@@ -486,6 +490,112 @@ fn failures(face: &Face) -> Vec<String> {
         for label in LABELS {
             if matches!(line.find(label), Some(index) if index > 0) {
                 out.push(format!("does not start \"{label}\" on a line of its own"));
+            }
+        }
+    }
+    out
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1302 (MD-B13, ME-CN): a face printed in Chinese (Meditative #32's Radiant face, and every face of
+// the Chinese table, `chinese.rs`) is R366's shape in Chinese punctuation: the keyword list is joined
+// with "，" on a line of its own with no full stop, a labelled ability ("战吼：") starts a sentence of
+// its own, every other line ends with "。", and a cost stays "(N)". No ASCII "." "," ";" or ":" is
+// written, and no full-width bracket.
+// ---------------------------------------------------------------------------------------------
+
+/// A character a Chinese face is written in: CJK punctuation, the unified ideographs (with extension
+/// A) and the full-width forms ("，", "：", "（").
+pub(super) fn is_cjk(c: char) -> bool {
+    matches!(c, '\u{3000}'..='\u{303f}' | '\u{3400}'..='\u{4dbf}' | '\u{4e00}'..='\u{9fff}' | '\u{ff00}'..='\u{ffef}')
+}
+
+/// `chinese-terms.json` (R1303), the frame's words in Chinese.
+pub(super) fn chinese_terms() -> Value {
+    serde_json::from_str(chinese_terms_json()).expect("crates/cards/chinese-terms.json is JSON")
+}
+
+/// How a printed keyword reads in Chinese text: its word with the number written on ("护甲7",
+/// "幸运1"), the Bread Token's "护甲X" and "法术伤害+2", as `keyword_label` reads the English.
+pub(super) fn chinese_keyword_label(keyword: &Keyword, terms: &Value) -> String {
+    let word = terms["keywords"][keyword.kind().as_str()]
+        .as_str()
+        .unwrap_or_else(|| panic!("chinese-terms.json has no keyword {}", keyword.kind().as_str()));
+    match keyword.n() {
+        None => word.to_string(),
+        Some(n) if keyword.kind() == KeywordKind::SpellDamage => format!("{word}+{n}"),
+        Some(0) if keyword.kind() == KeywordKind::Armor => format!("{word}X"),
+        Some(n) => format!("{word}{n}"),
+    }
+}
+
+/// `/^(献祭|回响)\d+$/`: a Tribute or Echo count in the keyword list, as `is_tribute_or_echo_count`.
+fn is_chinese_tribute_or_echo_count(item: &str) -> bool {
+    ["献祭", "回响"].iter().any(|word| {
+        item.strip_prefix(word)
+            .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+    })
+}
+
+/// `/。[”」]?$/`.
+fn ends_with_a_chinese_full_stop(line: &str) -> bool {
+    line.ends_with('。') || line.ends_with("。”") || line.ends_with("。」")
+}
+
+/// Every R1302 check a Chinese face fails, by name; empty when it passes them all. `keywords` are the
+/// face's printed keywords, which the first line must list.
+pub(super) fn cjk_failures(text: &str, keywords: &[Keyword]) -> Vec<String> {
+    let terms = chinese_terms();
+    let ability_labels: Vec<&str> = LABELS
+        .iter()
+        .map(|label| {
+            terms["labels"][*label]
+                .as_str()
+                .unwrap_or_else(|| panic!("chinese-terms.json has no label {label}"))
+        })
+        .collect();
+    let mut out: Vec<String> = Vec::new();
+    let lines: Vec<&str> = if text.is_empty() {
+        Vec::new()
+    } else {
+        text.split('\n').collect()
+    };
+    let labels: Vec<String> = keywords
+        .iter()
+        .map(|keyword| chinese_keyword_label(keyword, &terms))
+        .collect();
+    let list_item =
+        |item: &str| labels.iter().any(|label| label == item) || is_chinese_tribute_or_echo_count(item);
+    let lead: Vec<&str> = lines.first().copied().unwrap_or("").split('，').collect();
+    let has_list = !lines.is_empty() && lead.iter().copied().all(list_item);
+    for label in &labels {
+        if !has_list || !lead.contains(&label.as_str()) {
+            out.push(format!("does not lead with its keyword {label}"));
+        }
+    }
+    for (at, line) in lines.iter().enumerate() {
+        if let Some(mark) = line.chars().find(|c| matches!(c, '.' | ',' | ';' | ':')) {
+            out.push(format!("writes the ASCII \"{mark}\" in \"{line}\""));
+        }
+        if line.contains(['（', '）']) {
+            out.push(format!("writes a full-width bracket in \"{line}\", not \"(N)\""));
+        }
+        if at == 0 && has_list {
+            if line.ends_with('。') {
+                out.push("ends its keyword line with a full stop".to_string());
+            }
+            continue;
+        }
+        if !ends_with_a_chinese_full_stop(line) {
+            out.push(format!("does not end the line \"{line}\" with \"。\""));
+        }
+        // A label opens its ability: at a line's start or after another label's words ("战吼和回合开始
+        // 时：", C+ #7's "Cry and start of turn:"), never after a sentence that ended on the line.
+        for label in &ability_labels {
+            for (index, _) in line.match_indices(label) {
+                if line[..index].ends_with(['。', '；']) {
+                    out.push(format!("does not start \"{label}\" on a line of its own"));
+                }
             }
         }
     }
@@ -1464,6 +1574,64 @@ mod patch_v0_2_9_wording_issue_44 {
             .map(described)
             .collect();
         assert_eq!(wrong, Vec::<String>::new());
+    }
+}
+
+mod r1302_a_face_printed_in_chinese {
+    use super::*;
+
+    /// A face of `card` that prints `text`, as `faces_of` builds one.
+    fn face(id: &str, text: &str, keywords: Vec<Keyword>) -> Face {
+        Face {
+            card: &CATALOG[id],
+            face: FaceKind::Base,
+            text: text.to_string(),
+            keywords,
+        }
+    }
+
+    #[test]
+    fn r1302_a_face_printed_in_chinese_is_read_by_chinese_punctuation() {
+        // Meditative #32's Radiant face (docs/meditative-set.md, #32), the first printed in Chinese.
+        let printed = "随机一项效果：准备好学中文；将你手牌中的每张牌变形为同一张随机的光辉中国牌，它们的法力值消耗为(0)；召唤{units}个随机的光辉中国单位。";
+        assert_eq!(failures(&face("core-005", printed, vec![])), Vec::<String>::new());
+        // The keyword list leads, joined with "，" and with no full stop; a label opens its line.
+        let lead = "嘲讽，护甲7\n亡语：抽一张牌。";
+        let keywords = vec![Keyword::Taunt, Keyword::Armor { n: 7 }];
+        assert_eq!(
+            failures(&face("core-005", lead, keywords.clone())),
+            Vec::<String>::new()
+        );
+        // C+ #7's "Cry and start of turn:": a label after another label's words is still its opening.
+        assert_eq!(
+            cjk_failures("战吼和回合开始时：召唤一个单位。", &[]),
+            Vec::<String>::new()
+        );
+        for wrong in [
+            "抽两张牌.",
+            "抽一张牌。战吼：抽一张牌。",
+            "法力值消耗为（0）。",
+            "抽一张牌",
+            "抽一张牌，然后,弃一张牌。",
+            "嘲讽，护甲7。\n亡语：抽一张牌。",
+        ] {
+            assert_ne!(
+                failures(&face("core-005", wrong, keywords.clone())),
+                Vec::<String>::new(),
+                "{wrong}"
+            );
+        }
+        assert!(
+            cjk_failures("亡语：抽一张牌。", &keywords)
+                .iter()
+                .any(|why| why.contains("嘲讽"))
+        );
+        // English stays English: a face with no Chinese character is read by R366's checks.
+        assert!(
+            failures(&face("core-005", "Draw a card", vec![]))
+                .iter()
+                .any(|why| why.contains("full stop"))
+        );
     }
 }
 

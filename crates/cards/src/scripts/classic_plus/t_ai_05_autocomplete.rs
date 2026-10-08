@@ -25,6 +25,10 @@ fn autocomplete(ctx: &EffectContext<'_>, cost_override: Option<i32>) -> Vec<Effe
         return vec![];
     };
     let mut args = json!({ "defId": last.def_id, "radiant": last.radiant });
+    // R1300: a copy of a Chinese card is Chinese.
+    if last.chinese == Some(true) {
+        args["chinese"] = json!(true);
+    }
     if let Some(cost) = cost_override {
         args["costOverride"] = json!(cost);
     }
@@ -283,6 +287,28 @@ mod tests {
                 );
                 s.play(AUTOCOMPLETE, json!({}));
                 assert_eq!(copy_of(&s, MENACE).map(|card| card.radiant), Some(true));
+            }
+
+            #[test]
+            fn r1300_a_copy_of_a_chinese_card_is_chinese() {
+                for chinese in [true, false] {
+                    crate::register_all();
+                    let mut s = scenario(json!({
+                        "active": "p2",
+                        "p1": { "hand": [AUTOCOMPLETE, VANILLA], "library": [TIMMY, TIMMY, TIMMY] },
+                        "p2": { "hand": [MENACE, VANILLA], "library": [VANILLA, VANILLA, VANILLA], "mana": 9 },
+                    }));
+                    let played = s.card(MENACE).id.clone();
+                    if chinese && let Some(card) = find_instance_mut(s.state_mut(), &played) {
+                        card.chinese = Some(true);
+                    }
+                    s.play(MENACE, json!({ "zone": 1 }));
+                    s.end_turn();
+
+                    s.play(AUTOCOMPLETE, json!({}));
+
+                    assert_eq!(copy_of(&s, MENACE).and_then(|card| card.chinese), chinese.then_some(true));
+                }
             }
 
             #[test]

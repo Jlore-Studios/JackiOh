@@ -108,3 +108,14 @@ export const SLAM_LAND_AT = 0.55;
 
 /** #185: a slam's pitch varies by up to this much either way. */
 export const SLAM_PITCH_SPREAD = 0.05;
+
+/**
+ * R1363 (MN05): whether a hit's target's Armor took half or more of it — `absorbed` of the whole
+ * `absorbed + amount` the hit came in with, which the `damage` event carries (R1360). The sound's
+ * dull clank and the effects layer's small shield flash both key on this one test; a hit Armor had
+ * no part in (`absorbed` 0 or absent) never passes it, and one Armor took whole is `damageAbsorbed`.
+ */
+export function armorTookHalf(absorbed: number | undefined, amount: number): boolean {
+  const took = absorbed ?? 0;
+  return took > 0 && took * 2 >= took + amount;
+}

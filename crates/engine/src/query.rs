@@ -191,6 +191,18 @@ pub fn was_played_this_turn<'a>(state: &GameState, player: PlayerId, card: impl 
         .any(|played| played == id)
 }
 
+/// R429, R766 (issues #557, #572): the price a Spell whose return keeps it (`StaticFlags.returnKeepsPrice`,
+/// #31 KY's Math Equation) has had from its own returns — its climb, and no other change to its price —
+/// as it carries it in a hand and into its play, and as §10.5 step 7 notes it again while it lies in its
+/// graveyard flagged for its end-of-turn return (R155). 0 for any other card, and for one that has not
+/// climbed (`resolve::RETURN_PRICE_KEY`).
+pub fn return_price_of(card: &CardInstance) -> i32 {
+    card.memory
+        .get(crate::resolve::RETURN_PRICE_KEY)
+        .and_then(Value::as_i64)
+        .map_or(0, |price| price as i32)
+}
+
 /// R427, R174: whether the card a play's `cardResolved` names has left the field since the play
 /// resolved — taken off it by something answering the play, an earlier trap of the same dispatch —
 /// rather than during its own resolution, before the event (its `permanent` was already false then).

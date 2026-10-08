@@ -15,7 +15,8 @@ use super::targets::{PlayerSpec, player_of};
 
 /// R57 as patch v0.2.0 extends it (B3.4 rule 4, R443): a copy shuffled into a library carries its
 /// source's `tuning` and enchantments beside the radiant flag — never its Brittle count, which a copy
-/// never inherits. `source` is the card copied, when it still exists and is of the copy's definition.
+/// never inherits — and its `chinese` flag (ME-CN, R1300). `source` is the card copied, when it still
+/// exists and is of the copy's definition.
 fn carry_from(copy: &mut CardInstance, source: Option<&CardInstance>) {
     let Some(source) = source else {
         return;
@@ -23,6 +24,7 @@ fn carry_from(copy: &mut CardInstance, source: Option<&CardInstance>) {
     if source.def_id != copy.def_id {
         return;
     }
+    copy.chinese = source.chinese;
     if let Some(tuning) = copy_tuning(source.tuning.as_ref()) {
         copy.tuning = Some(tuning);
     }

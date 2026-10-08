@@ -16,7 +16,13 @@ import type { Tuning } from "./Tuning";
  * `CardView` field is repeated here, since this one makes `type` required — all but `embiggenCost`,
  * which only a card in its owner's hand carries (#492).
  */
-export type PublicBackrowView = { instanceId: string, defId: string, radiant: boolean, cost: number, attack?: number, health?: number, power?: string, conditionActive?: true, counteredOnPlay?: true, preview?: Array<PreviewValue>, brittle?: number, params?: { [key in string]: number }, tuning?: Tuning, enchantments?: Array<Enchantment>, keywords?: Array<Keyword>, marks?: Array<CardMark>, activations?: Array<ActivationView>, quest?: QuestView, copies?: CopiedTextView, 
+export type PublicBackrowView = { instanceId: string, defId: string, radiant: boolean, 
+/**
+ * ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
+ * may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
+ * Only ever `Some(true)`.
+ */
+chinese?: true, cost: number, attack?: number, health?: number, power?: string, conditionActive?: true, counteredOnPlay?: true, preview?: Array<PreviewValue>, brittle?: number, params?: { [key in string]: number }, tuning?: Tuning, enchantments?: Array<Enchantment>, keywords?: Array<Keyword>, marks?: Array<CardMark>, activations?: Array<ActivationView>, quest?: QuestView, copies?: CopiedTextView, 
 /**
  * Always `false` here (the discriminant).
  */

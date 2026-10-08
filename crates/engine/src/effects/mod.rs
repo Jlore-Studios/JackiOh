@@ -65,6 +65,7 @@ pub mod summon_this;
 pub mod swap;
 pub mod targets;
 pub mod transform;
+pub mod translate;
 pub mod tune;
 pub mod turn_end;
 
@@ -126,6 +127,7 @@ pub use summon_this::*;
 pub use swap::*;
 pub use targets::*;
 pub use transform::*;
+pub use translate::*;
 pub use tune::*;
 pub use turn_end::*;
 

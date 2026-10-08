@@ -97,4 +97,10 @@ berserk?: true,
  * zone and through leaving the field, like `costMod` (R78's reset leaves it alone); a copy or a
  * Transform is a new card with a count of its own (R57).
  */
-timesPlayed?: number, };
+timesPlayed?: number, 
+/**
+ * ME-CN, R1300: the card is shown in Chinese (`effects::translate`). Presentation only: no rule
+ * reads it. Kept in every zone and through R78's and R766's resets; a copy keeps it, a
+ * Transform's new card is without it. Only ever `Some(true)`.
+ */
+chinese?: true, };

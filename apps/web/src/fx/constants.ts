@@ -96,6 +96,9 @@ export const FX_WALLS_TRAUMA = 0.45;
 // over FX_BRAND_TAIL_MS after it.
 export const FX_BRAND_SLAM_AT = 0.35;
 export const FX_BRAND_TAIL_MS = 700;
+// R1363 (MN05): a shield flashes up as Armor takes a hit, from the moment the hit lands, and fades
+// over FX_SHIELD_TAIL_MS after the entry.
+export const FX_SHIELD_TAIL_MS = 450;
 // R436: Call to Chaos's reveal. Line i lands at (FX_CHAOS_LAND_AT + i × stagger) of the entry, the
 // stagger shrinking so the last line lands by FX_CHAOS_LAND_LAST; each reel runs past
 // FX_CHAOS_REEL_DECOYS other names first. The reveal lasts D + FX_BANNER_TAIL_MS.

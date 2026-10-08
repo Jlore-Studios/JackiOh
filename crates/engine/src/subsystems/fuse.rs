@@ -1017,6 +1017,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 anti_oneshot: flags(|f| f.anti_oneshot),
                 hero_armor: summed_count(defined.iter().map(|f| f.hero_armor)),
                 counts_plays: flags(|f| f.counts_plays),
+                return_keeps_price: flags(|f| f.return_keeps_price),
                 carrier: flags(|f| f.carrier),
                 fuses_carried: flags(|f| f.fuses_carried),
                 radiant_plays_tagged: match tagged.len() {
@@ -1773,6 +1774,14 @@ fn craft_in_hand(
     }
     // R102, B3.4 rule 4, R443: as `keep_instance`'s.
     carry_instance_data(&mut card, ingredients);
+    // ME-CN, R1300: a newly made fused card is Chinese when any ingredient was (a kept instance keeps
+    // its own flag, as it keeps its id).
+    if ingredients
+        .iter()
+        .any(|ingredient| ingredient.chinese == Some(true))
+    {
+        card.chinese = Some(true);
+    }
     for ingredient in ingredients {
         crate::zones::cease_to_exist(sink.state, &mut ingredient.clone());
     }

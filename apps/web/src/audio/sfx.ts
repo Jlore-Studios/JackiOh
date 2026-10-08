@@ -40,6 +40,8 @@ export const SFX_IDS: readonly SfxId[] = [
   "manaCrack", "bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat", "clockTick",
   "emoteSob", "emoteYawn", "emoteLaugh", "emoteAngry", "emoteWahWah",
   "sting",
+  "armorClank", "armorRing", "overkill", "crumble", "unlock", "steal", "give", "counterspell", "bleat", "fuse",
+  "degrade", "upgrade",
 ];
 
 /** Every card family a summon or spell may be given (types.ts SfxTimbre), for the tests. */
@@ -1309,6 +1311,241 @@ const sting: SfxRecipe = (ctx, out, at, params) => {
   return len;
 };
 
+/* ------------------------------------------------------------------------------------------- *
+ * Patch v0.3.X (docs/meditative-set.md M8, MN05): Armor (R1363) and the niche moments (R1364–R1366)
+ * ------------------------------------------------------------------------------------------- */
+
+/**
+ * R1363: Armor takes half or more of a hit (`damage.absorbed`), under the hit's own impact: a dull
+ * clank, a muffled ring-modulated plate struck low, over a short thud and a scrape of grit.
+ */
+const armorClank: SfxRecipe = (ctx, out, at) => {
+  const len = 0.32;
+  const k = kit(ctx, out, at, len);
+  const ring = level(k, 0);
+  const carrier = oscillator(k, "square", 140);
+  const modulator = oscillator(k, "square", 213);
+  chain(carrier, ring);
+  modulator.connect(ring.gain);
+  chain(ring, biquad(k, "lowpass", 900, 2), envelope(k, 0, 0.003, 0.3, 0.22), out);
+  run(k, carrier, 0, 0.22);
+  run(k, modulator, 0, 0.22);
+  const thud = tone(k, out, "sine", 120, 0, 0.003, 0.3, len);
+  glide(k, thud.frequency, 70, len);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "bandpass", 1800, 2), envelope(k, 0, 0.001, 0.6, 0.04), out);
+  run(k, noise, 0, 0.04);
+  return len;
+};
+
+/**
+ * R1363: Armor takes the whole hit (`damageAbsorbed`): a bright ring, a struck shield's metallic
+ * partials (FM bells at inharmonic ratios) after a sharp tick, with a glint shimmering on top.
+ */
+const armorRing: SfxRecipe = (ctx, out, at) => {
+  const len = 0.8;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "highpass", 3000, 0), envelope(k, 0, 0.001, 0.6, 0.03), out);
+  run(k, noise, 0, 0.03);
+  fmBell(k, out, 1568, 1.41, 600, 0, 0.002, 0.32, len);
+  fmBell(k, out, 2349, 2.76, 400, 0.004, 0.002, 0.18, 0.64);
+  const shimmer = tremolo(k, 14, 0.2);
+  chain(shimmer, out);
+  tone(k, shimmer, "sine", 3951, 0.01, 0.002, 0.08, 0.5);
+  return len;
+};
+
+/**
+ * R1364: a hit that does far more than the health left (overkill), on top of its impact: a wet
+ * crunch, band-passed noise chopped by a fast gate, over a deep sub falling away.
+ */
+const overkill: SfxRecipe = (ctx, out, at) => {
+  const len = 0.5;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const crunch = modulatedGain(k, "square", 37, 0.5, 0.5);
+  chain(noise, biquad(k, "bandpass", 700, 1.2), crunch, envelope(k, 0, 0.003, 1.3, 0.22), out);
+  run(k, noise, 0, 0.22);
+  const sub = tone(k, out, "sine", 80, 0.01, 0.005, 0.6, len);
+  glide(k, sub.frequency, 38, len);
+  return len;
+};
+
+/** R1365's crumble: the grains of rubble, falling faster then thinning out. */
+const CRUMBLE_GRAINS: readonly number[] = [0.04, 0.07, 0.09, 0.13, 0.16, 0.2, 0.25, 0.29, 0.34, 0.4, 0.47];
+
+/**
+ * R1365: a Brittle count runs out (`crumbled`): the card cracks dry and falls apart, a snap, then
+ * grit trickling down over a low rubble that settles — stone, not glass, and nothing killed it.
+ */
+const crumble: SfxRecipe = (ctx, out, at) => {
+  const len = 0.6;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "highpass", 2500, 0), envelope(k, 0, 0.001, 0.5, 0.05), out);
+  clickTrain(k, out, CRUMBLE_GRAINS, 1400, 3, 1.6, 0.04);
+  const rubble = biquad(k, "lowpass", 1200, 0);
+  glide(k, rubble.frequency, 300, len);
+  chain(noise, rubble, envelope(k, 0.03, 0.04, 0.5, len), out);
+  run(k, noise, 0, len);
+  return len;
+};
+
+/**
+ * R1365: a Locked zone opens (`unlocked`), which `lock` closed: a latch clicks, the shackle springs
+ * up with a rising twang, and a small clink rings out.
+ */
+const unlock: SfxRecipe = (ctx, out, at) => {
+  const len = 0.34;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "highpass", 2500, 0), envelope(k, 0, 0.001, 0.8, 0.02), out);
+  chain(noise, biquad(k, "bandpass", 3200, 4), envelope(k, 0.06, 0.001, 0.9, 0.09), out);
+  run(k, noise, 0, 0.09);
+  const shackle = tone(k, out, "triangle", 520, 0.05, 0.004, 0.35, len);
+  glide(k, shackle.frequency, 1040, 0.2);
+  tone(k, out, "sine", 1568, 0.08, 0.003, 0.18, len);
+  return len;
+};
+
+/**
+ * R1366: a card taken (`stolen`, and a `controlChanged` toward the player who acts): a quick
+ * upward whip of air, the grab's thump, and a sly falling blip.
+ */
+const steal: SfxRecipe = (ctx, out, at) => {
+  const len = 0.36;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const band = biquad(k, "bandpass", 700, 1.6);
+  glide(k, band.frequency, 4200, 0.1);
+  chain(noise, band, envelope(k, 0, 0.02, 1.8, 0.13), out);
+  run(k, noise, 0, 0.13);
+  const grab = tone(k, out, "sine", 260, 0.11, 0.003, 0.6, 0.24);
+  glide(k, grab.frequency, 130, 0.24);
+  const sly = tone(k, out, "triangle", 880, 0.15, 0.004, 0.22, len);
+  glide(k, sly.frequency, 587, len);
+  return len;
+};
+
+/**
+ * R1366: a card handed over (a `controlChanged` away from the player who acts, R1423's give): a
+ * soft breath of air settling, then a warm two-note chime falling, a gift set down.
+ */
+const give: SfxRecipe = (ctx, out, at) => {
+  const len = 0.5;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const band = biquad(k, "bandpass", 2400, 1.2);
+  glide(k, band.frequency, 900, 0.25);
+  chain(noise, band, envelope(k, 0, 0.06, 1.1, 0.28), out);
+  run(k, noise, 0, 0.28);
+  fmBell(k, out, 784, 2, 160, 0.12, 0.005, 0.36, 0.42);
+  fmBell(k, out, 659, 2, 160, 0.22, 0.005, 0.34, len);
+  return len;
+};
+
+/**
+ * R1365: a Counter cancels a play (`countered`): a dissonant pair slammed shut and falling an
+ * octave, then the spell's hiss fizzling away.
+ */
+const counterspell: SfxRecipe = (ctx, out, at) => {
+  const len = 0.55;
+  const k = kit(ctx, out, at, len);
+  const shut = biquad(k, "lowpass", 2600, 2);
+  glide(k, shut.frequency, 400, 0.3);
+  chain(shut, envelope(k, 0, 0.004, 0.32, 0.32), out);
+  for (const hz of [622, 659]) {
+    const sq = oscillator(k, "square", hz);
+    glide(k, sq.frequency, hz / 2, 0.3);
+    chain(sq, shut);
+    run(k, sq, 0, 0.32);
+  }
+  const noise = noiseSource(k);
+  const hiss = biquad(k, "highpass", 3000, 0);
+  glide(k, hiss.frequency, 1200, len);
+  chain(noise, hiss, envelope(k, 0.18, 0.02, 0.35, len), out);
+  run(k, noise, 0.18, len);
+  return len;
+};
+
+/**
+ * R1365: a card transformed into a Sheep (`transformed`, a Sheep the viewer can read): its bleat, a
+ * buzzing sawtooth through a nasal formant, wavering fast and sinking a little.
+ */
+const bleat: SfxRecipe = (ctx, out, at) => {
+  const len = 0.62;
+  const k = kit(ctx, out, at, len);
+  const voice = oscillator(k, "sawtooth", 560);
+  glide(k, voice.frequency, 470, len);
+  vibrato(k, voice.frequency, 9, 34, 0, len);
+  chain(voice, biquad(k, "bandpass", 1300, 2.5), biquad(k, "lowpass", 2600, 0), heldEnvelope(k, 0, 0.05, 0.9, 0.38, 0.6, len), out);
+  run(k, voice, 0, len);
+  return len;
+};
+
+/**
+ * R1365: cards fuse into one (`fused`): two tones from either side converge on one note under a
+ * swirl of air, which locks with a bell and a soft thump.
+ */
+const fuse: SfxRecipe = (ctx, out, at) => {
+  const len = 0.6;
+  const k = kit(ctx, out, at, len);
+  const rising = tone(k, out, "triangle", 330, 0, 0.06, 0.22, 0.4);
+  glide(k, rising.frequency, 523, 0.32);
+  const falling = tone(k, out, "triangle", 784, 0, 0.06, 0.22, 0.4);
+  glide(k, falling.frequency, 523, 0.32);
+  const noise = noiseSource(k);
+  const swirl = biquad(k, "bandpass", 600, 3);
+  glide(k, swirl.frequency, 2600, 0.32);
+  chain(noise, swirl, envelope(k, 0, 0.12, 0.7, 0.36), out);
+  run(k, noise, 0, 0.36);
+  fmBell(k, out, 523, 2, 220, 0.32, 0.004, 0.3, len);
+  tone(k, out, "sine", 110, 0.32, 0.004, 0.4, 0.5);
+  return len;
+};
+
+/**
+ * R1365: a Nerf (`degraded`, one change): the card goes out of tune, two detuned squares beating
+ * against each other as they sag a sixth, wobbling, through a closing filter.
+ */
+const degrade: SfxRecipe = (ctx, out, at) => {
+  const len = 0.48;
+  const k = kit(ctx, out, at, len);
+  const muffle = biquad(k, "lowpass", 1800, 1);
+  glide(k, muffle.frequency, 500, len);
+  chain(muffle, envelope(k, 0, 0.01, 0.17, len), out);
+  const pairs: readonly (readonly [number, number])[] = [
+    [523, 349],
+    [554, 330],
+  ];
+  for (const [from, to] of pairs) {
+    const sq = oscillator(k, "square", from);
+    glide(k, sq.frequency, to, 0.4);
+    vibrato(k, sq.frequency, 7, 12, 0.1, len);
+    chain(sq, muffle);
+    run(k, sq, 0, len);
+  }
+  return len;
+};
+
+/**
+ * R1365: a Buff (`upgraded`, one change): the card tunes up, a quick three-note climb of bright
+ * blips into a ringing ping.
+ */
+const upgrade: SfxRecipe = (ctx, out, at) => {
+  const len = 0.46;
+  const k = kit(ctx, out, at, len);
+  const bright = biquad(k, "lowpass", 3200, 0);
+  chain(bright, out);
+  [523, 659, 784].forEach((hz, i) => {
+    const start = 0.055 * i;
+    tone(k, bright, "square", hz, start, 0.003, 0.22, start + 0.09);
+  });
+  fmBell(k, out, 1047, 3, 300, 0.17, 0.003, 0.4, len);
+  return len;
+};
+
 export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   draw: { recipe: draw, durationMs: 180, gain: 1 },
   play: { recipe: play, durationMs: 260, gain: 0.82 },
@@ -1356,6 +1593,18 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   emoteAngry: { recipe: emoteAngry, durationMs: 700, gain: 0.8 },
   emoteWahWah: { recipe: emoteWahWah, durationMs: 1800, gain: 0.8 },
   sting: { recipe: sting, durationMs: 800, gain: 1 },
+  armorClank: { recipe: armorClank, durationMs: 350, gain: 0.8 },
+  armorRing: { recipe: armorRing, durationMs: 850, gain: 0.8 },
+  overkill: { recipe: overkill, durationMs: 550, gain: 0.8 },
+  crumble: { recipe: crumble, durationMs: 650, gain: 0.8 },
+  unlock: { recipe: unlock, durationMs: 400, gain: 0.8 },
+  steal: { recipe: steal, durationMs: 400, gain: 0.8 },
+  give: { recipe: give, durationMs: 550, gain: 0.8 },
+  counterspell: { recipe: counterspell, durationMs: 600, gain: 0.8 },
+  bleat: { recipe: bleat, durationMs: 650, gain: 0.8 },
+  fuse: { recipe: fuse, durationMs: 650, gain: 0.8 },
+  degrade: { recipe: degrade, durationMs: 520, gain: 0.8 },
+  upgrade: { recipe: upgrade, durationMs: 500, gain: 0.8 },
 };
 
 /**
