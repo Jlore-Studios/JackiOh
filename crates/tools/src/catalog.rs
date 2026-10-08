@@ -1606,7 +1606,8 @@ mod tests {
     #[test]
     fn a_broken_entry_fails_naming_the_entry_and_the_field() {
         let mut catalog = shipped_catalog();
-        let mut entry = catalog["core-001"].as_object().expect("core-001").clone();
+        // #2 Bigot, a Unit that declares no numbers, so the one param below is the only one.
+        let mut entry = catalog["core-002"].as_object().expect("core-002").clone();
         // A Unit face without its attack, a param no face writes, and a field nobody knows.
         if let Some(Json::Object(base)) = entry.get_mut("base") {
             base.shift_remove("attack");
@@ -1618,9 +1619,9 @@ mod tests {
             ))]),
         );
         entry.insert("colour".to_string(), Json::from("red"));
-        catalog.insert("core-001".to_string(), Json::Object(entry));
+        catalog.insert("core-002".to_string(), Json::Object(entry));
         let failures = check_catalog(&catalog).failures;
-        let at = "catalog[\"core-001\"]";
+        let at = "catalog[\"core-002\"]";
         for expected in [
             format!("{at}.base: Unit face must carry an integer `attack` (got undefined)"),
             format!("{at}.params[0]: amount: no face's text writes {{amount}}"),
