@@ -7,8 +7,12 @@ modes `squishy:oneshot`, `squishy:split`, `squishy:split-bot` and a split's pare
 in [its section](../bot/README.md#squishy).
 
 Open an issue through one of the forms **New issue** lists (`.github/ISSUE_TEMPLATE/`: Patch, Micro
-patch, Bug, Architecture or CI, Night bot): each starts the title, puts on the type labels and sets
-the issue type, and asks for what a builder needs. A pull request starts from
+patch, Bug, Architecture or CI, Night bot): each starts the title, puts on the type labels and asks
+for what a builder needs. Its Difficulty, Priority and Who does it dropdowns become the
+`difficulty:*`, `priority:*` and `method:*` labels a person would set by hand (`triage.yml`'s `form`
+job), and a method starts triage at once, which gives the issue its type (Task, Bug or Feature), its
+labels, title and assignees, and queues a `method:use-bot` one for the night bot. "Decide later"
+leaves the method label to you, as before. A pull request starts from
 `.github/pull_request_template.md` ([Pull requests](#pull-requests)). `CONTRIBUTING.md` is the short
 version of this page for people and agents.
 

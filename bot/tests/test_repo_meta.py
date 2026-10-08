@@ -129,7 +129,7 @@ class IssueFormTests(unittest.TestCase):
         self.assertEqual(sorted(self.forms), ["architecture.yml", "bug.yml", "micro-patch.yml",
                                               "night-bot.yml", "patch.yml"])
 
-    def test_each_form_titles_labels_and_types_its_issue(self):
+    def test_each_form_titles_and_labels_its_issue_and_leaves_its_type_to_triage(self):
         for name, text in self.forms.items():
             title = re.search(r'^title: "(.*)"$', text, re.M).group(1)
             self.assertTrue(triage.follows_convention(title + "what it does"), name)
@@ -137,15 +137,69 @@ class IssueFormTests(unittest.TestCase):
             # The sync creates every one, and every issue carries a type label.
             self.assertLessEqual(set(labels), set(config.LABELS), name)
             self.assertTrue(set(labels) & set(config.TYPE_LABELS), name)
-            self.assertIn(re.search(r"^type: (\w+)$", text, re.M).group(1),
-                          triage.DEFAULT_ISSUE_TYPES, name)
+            # Triage's model types it (Task, Bug, Feature) and only types an untyped issue; a
+            # `human` label would keep a method label from ever reaching triage.
+            self.assertNotRegex(text, r"(?m)^type:", name)
+            self.assertNotIn(config.LABEL_HUMAN, labels, name)
             self.assertIn("docs/issues-and-patches.md", text, name)
+
+    def dropdowns(self, text: str) -> dict[str, tuple[str, list[str]]]:
+        """Each dropdown's id: (its label, its options), from the form's YAML."""
+        found = {}
+        for block in re.split(r"(?m)^  - type: ", text)[1:]:
+            if not block.startswith("dropdown"):
+                continue
+            ident = re.search(r"(?m)^    id: (\S+)$", block).group(1)
+            label = re.search(r"(?m)^      label: (.+)$", block).group(1).strip()
+            options = [o.strip().strip('"') for o in re.findall(r"(?m)^        - (.+)$", block)]
+            found[ident] = (label, options)
+        return found
+
+    def test_every_form_asks_who_does_it_and_each_answer_is_its_label(self):
+        """`triage.yml`'s `form` job turns the dropdowns into the labels a person would set by
+        hand: the method last, since it starts triage, and nothing for "Decide later", "Not sure"
+        or "No priority"."""
+        for name, text in self.forms.items():
+            dropdowns = self.dropdowns(text)
+            self.assertIn("method", dropdowns, name)
+            for ident, (label, options) in dropdowns.items():
+                answers = [triage.form_labels(f"### {label}\n\n{option}") for option in options]
+                if ident == "method":
+                    self.assertEqual(answers, [[], [config.LABEL_METHOD_MANUAL],
+                                               [config.LABEL_METHOD_BOT]], name)
+                elif ident == "difficulty":
+                    self.assertEqual(answers, [[], *([d] for d in config.DIFFICULTY_LABELS)], name)
+                elif ident == "priority":
+                    self.assertEqual(answers, [[], [config.LABEL_PRIORITY_HIGH],
+                                               [config.LABEL_PRIORITY_MEDIUM],
+                                               [config.LABEL_PRIORITY_LOW]], name)
 
     def test_no_blank_issues_and_a_link_to_the_conventions(self):
         text = (FORMS / "config.yml").read_text(encoding="utf-8")
         self.assertIn("blank_issues_enabled: false", text)
         self.assertIn("/blob/main/docs/issues-and-patches.md", text)
         self.assertTrue((ROOT / "docs" / "issues-and-patches.md").is_file())
+
+
+class FormLabelsTests(unittest.TestCase):
+    """`triage.form_labels`: an issue form's body as GitHub writes it, to labels."""
+
+    BODY = ("### What it does\n\nA thing.\r\n\r\n### Difficulty (a guess)\n\nhard: engine rules, the AI\n\n"
+            "### Priority\n\nlow\n\n### Who does it\n\nThe night bot (method:use-bot)\n")
+
+    def test_the_answers_in_order_the_method_last(self):
+        self.assertEqual(triage.form_labels(self.BODY),
+                         ["difficulty:hard", config.LABEL_PRIORITY_LOW, config.LABEL_METHOD_BOT])
+
+    def test_nothing_from_a_body_no_form_wrote_or_unanswered_fields(self):
+        self.assertEqual(triage.form_labels(""), [])
+        self.assertEqual(triage.form_labels("Please fix the method:use-bot thing"), [])
+        self.assertEqual(triage.form_labels("### Priority\n\n_No response_\n\n### Who does it\n\n"
+                                            "Decide later"), [])
+
+    def test_text_a_person_wrote_is_not_an_answer(self):
+        body = "### What it does\n\nUse method:use-bot here, and priority high\n"
+        self.assertEqual(triage.form_labels(body), [])
 
 
 class LabelListTests(unittest.TestCase):
