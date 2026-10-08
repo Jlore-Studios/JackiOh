@@ -4348,11 +4348,8 @@
     "what": "plan #517 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-08T23:07:24Z",
-    "notes": [
-      "#544 needs a plan",
-      "#550 needs a plan"
-    ],
+    "at": "2026-10-08T23:18:03Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
