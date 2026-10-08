@@ -3006,6 +3006,13 @@
     "505": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-08T08:19:58Z",
+        "difficulty": "hard",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "design across the bot harness (identity, queue, plan, work, deliver, sweep, prompts, both configs) in about 22 files, all of them paths the bots may not change"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
