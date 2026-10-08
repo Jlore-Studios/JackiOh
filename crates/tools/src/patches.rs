@@ -3597,7 +3597,7 @@ mod tests {
 
             // TS's Render start command ran `scripts/catalog-version.mjs` before `release`. The Docker
             // image needs no start command: the server compiles the version in from patches.json and
-            // refuses to boot on a different `CATALOG_VERSION` (SURFACE §11.3), and `cargo jackioh
+            // serves it whatever `CATALOG_VERSION` says (SURFACE §11.3), and `cargo jackioh
             // catalog-version` prints the same newest patch for the workflows that read it.
             #[test]
             fn r388_serves_the_catalog_version_from_the_patch_list_so_a_stale_dashboard_value_is_never_served()

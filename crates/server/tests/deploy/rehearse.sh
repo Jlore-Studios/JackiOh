@@ -24,11 +24,11 @@
 #      the service in RENDER_GIT_COMMIT (deploy-watch.yml compares that header with each push); the
 #      container runs under the free instance's INSTANCE_MEMORY_MB and must use less than
 #      MEMORY_LIMIT_MB of it (headroom); and a second boot must migrate nothing.
-#   4. CATALOG_VERSION is the server's to check now (docs/v0.3.0/SURFACE.md §11.3): the binary
-#      compiles its catalog version in from crates/cards/patches/patches.json and refuses to boot
-#      when the environment's disagrees. So a last boot with a stale value, as one left in Render's
-#      dashboard would be, must exit non-zero without ever serving, and must leave the database
-#      stamped with render.yaml's version, never the stale one.
+#   4. CATALOG_VERSION cannot stop a deploy (docs/v0.3.0/SURFACE.md §11.3, #488): the binary
+#      compiles its catalog version in from crates/cards/patches/patches.json and serves it whatever
+#      the environment says. So a last boot with a stale value, as one left in Render's dashboard
+#      would be, must still serve render.yaml's version, warn naming the stale value, and leave the
+#      database stamped with render.yaml's version, never the stale one.
 #
 # Needs Docker, or an existing superuser connection via REHEARSAL_PGHOST / REHEARSAL_PGPORT
 # (a socket directory or a host) and REHEARSAL_PGPASSWORD; it creates and drops its own database.
@@ -272,44 +272,21 @@ if ! grep -q "migrate: nothing to do" "$LOG_DIR/deploy-boot-2.log"; then
 fi
 stop_server
 
-echo "--- a stale CATALOG_VERSION: the boot is refused, the database keeps render.yaml's ---"
+echo "--- a stale CATALOG_VERSION: the boot serves the compiled-in catalog and says so ---"
 start_server "$LOG_DIR/deploy-boot-stale.log" "$STALE_CATALOG_VERSION"
-i=0
-while running; do
-  if curl -fs -o /dev/null "http://localhost:$PORT_UNDER_TEST/api/catalog"; then
-    save_log
-    echo "FAIL: the server served with CATALOG_VERSION=$STALE_CATALOG_VERSION; it must refuse to boot"
-    cat "$LOG_DIR/deploy-boot-stale.log"
-    exit 1
-  fi
-  i=$((i + 1))
-  if [ "$i" -ge "$READY_SECONDS" ]; then
-    save_log
-    echo "FAIL: the server neither served nor exited within ${READY_SECONDS}s on a stale CATALOG_VERSION"
-    cat "$LOG_DIR/deploy-boot-stale.log"
-    exit 1
-  fi
-  sleep 1
-done
-code=$(docker inspect -f '{{.State.ExitCode}}' "$SERVER")
+check_boot "$LOG_DIR/deploy-boot-stale.log"
 save_log
-if [ "$code" = "0" ]; then
-  echo "FAIL: a boot with CATALOG_VERSION=$STALE_CATALOG_VERSION exited 0; it must fail so Render keeps the previous deploy"
-  cat "$LOG_DIR/deploy-boot-stale.log"
-  exit 1
-fi
 if ! grep -q "$STALE_CATALOG_VERSION" "$LOG_DIR/deploy-boot-stale.log"; then
-  echo "FAIL: the refusal does not name the stale CATALOG_VERSION"
+  echo "FAIL: the boot does not warn about the stale CATALOG_VERSION"
   cat "$LOG_DIR/deploy-boot-stale.log"
   exit 1
 fi
-echo "refused, exit $code: $(grep "$STALE_CATALOG_VERSION" "$LOG_DIR/deploy-boot-stale.log" | head -n 1)"
+echo "warned: $(grep "$STALE_CATALOG_VERSION" "$LOG_DIR/deploy-boot-stale.log" | head -n 1)"
 stamped=$(stamped_version)
 if [ "$stamped" != "$CATALOG_VERSION" ]; then
-  echo "FAIL: the database is stamped $stamped after the refused boot, render.yaml says $CATALOG_VERSION"
+  echo "FAIL: the database is stamped $stamped after the stale boot, render.yaml says $CATALOG_VERSION"
   exit 1
 fi
-docker rm -f "$SERVER" >/dev/null 2>&1 || true
-SERVER_UP=""
+stop_server
 
 echo "--- the deploy rehearsal passed ---"
