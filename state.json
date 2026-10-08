@@ -3464,7 +3464,7 @@
         "reason": "dependency install failed on untouched main (exit 127): \nbash: line 1: rustup: command not found\n",
         "trail": ""
       },
-      "interruptions": 1,
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "onto": "bot/issue-575",
