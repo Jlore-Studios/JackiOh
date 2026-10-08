@@ -5221,14 +5221,18 @@
         {
           "at": "2026-10-08T18:23:32Z",
           "minutes": 17.6
+        },
+        {
+          "at": "2026-10-08T18:47:10Z",
+          "minutes": 21.3
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-08T23:00:00Z",
-          "utilization": 0.33
+          "utilization": 0.83
         },
-        "observed_at": "2026-10-08T18:23:32Z",
+        "observed_at": "2026-10-08T18:47:10Z",
         "status": "allowed"
       }
     },
