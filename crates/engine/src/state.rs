@@ -826,6 +826,12 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub draws: Option<DrawCount>,
+    // ---- Meditative player fields (docs/meditative-set.md M5, D14) ----
+    /// ME-JADE, R961: this player's Jade Counter, public, which only rises (`effects::jade`). Absent until
+    /// it first rises, so a game without a Jade hashes as it did before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub jade: Option<i32>,
 }
 
 /// Ceaseless Void's four game counters (R55): `GameState.counters`.
@@ -1309,6 +1315,7 @@ pub fn create_player_state() -> PlayerState {
         carried: None,
         game_log: None,
         draws: None,
+        jade: None,
     }
 }
 

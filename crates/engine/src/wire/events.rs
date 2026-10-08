@@ -742,6 +742,15 @@ pub enum GameEvent {
         absorbed: i32,
         combat: bool,
     },
+    // -------------------------------------------------------------------------------------------
+    // Patch v0.3.X (docs/meditative-set.md M5, MB10's ME-JADE). Its BUILD M5-T4 row, `ANIMATIONS`
+    // and `SOUND_CUES` rows came with it, and `viewFor` sends it to both seats as it is.
+    // -------------------------------------------------------------------------------------------
+    /// R961: a player's Jade Counter rose to `value` (`effects::jade`). Public: a player and a number.
+    JadeChanged {
+        player: PlayerId,
+        value: i32,
+    },
 }
 
 /// serde's `skip_serializing_if` for a number left off the wire at 0 (D14: `damage.absorbed`).
@@ -841,6 +850,7 @@ string_union! {
         Glitched = "glitched",
         Translated = "translated",
         DamageAbsorbed = "damageAbsorbed",
+        JadeChanged = "jadeChanged",
     }
 }
 
@@ -973,6 +983,7 @@ impl GameEvent {
             GameEvent::Marked { .. } => GameEventType::Marked,
             GameEvent::Translated { .. } => GameEventType::Translated,
             GameEvent::DamageAbsorbed { .. } => GameEventType::DamageAbsorbed,
+            GameEvent::JadeChanged { .. } => GameEventType::JadeChanged,
         }
     }
 }
@@ -1029,7 +1040,7 @@ mod tests {
             r#"{"type":"gameOver","winner":"draw","reason":"turn-cap"}"#
         );
         assert_eq!(over.event_type().as_str(), "gameOver");
-        assert_eq!(GAME_EVENT_TYPES.len(), 67);
+        assert_eq!(GAME_EVENT_TYPES.len(), 68);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no
