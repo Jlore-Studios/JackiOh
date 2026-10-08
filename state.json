@@ -4341,13 +4341,13 @@
   "machine_disk": {
     "issue": null,
     "reading": {
-      "at": "2026-10-08T22:58:59Z",
-      "free": 24762097664,
-      "percent": 60,
+      "at": "2026-10-08T23:04:20Z",
+      "free": 27932606464,
+      "percent": 54,
       "total": 61285326848
     },
-    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37839583330",
-    "runner": "night-vm-muse",
+    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37857167201",
+    "runner": "night-vm-muse-4",
     "shown": null
   },
   "machine_memory": [
