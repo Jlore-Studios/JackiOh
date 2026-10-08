@@ -2741,7 +2741,9 @@
     },
     "436": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6055457390"
+      ],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-07T14:07:24Z",
@@ -2750,6 +2752,7 @@
         "tier": "strong",
         "why": "rule line 7 fails: the fix is a change to staging's .github/ files, which no unit test on main can check and only a person may make; the item is already labelled medium"
       },
+      "failures": 0,
       "forced": false,
       "handoff": {
         "at": "2026-10-07T14:09:36Z",
@@ -2769,6 +2772,8 @@
       "planned_tier": "strong",
       "provider": "claude-3",
       "question": "Issue #436's slow job, rust (test), runs only on staging (the v0.3.0 Rust rewrite): main, which this branch builds on, has no Rust crates and no such job, so no pull request into main can make it faster. The fix is a change to staging's .github/workflows/ci.yml and .github/actions/setup/action.yml, which the bot may not edit; the Plan in this issue's description has it as a measured, linted diff for git apply. Will a person apply it on staging (or fold it into the v0.3.0 cutover pull request) and close this issue once a staging CI run shows every rust (test ...) piece under five minutes, or is there something on main you want built instead?",
+      "queued_at": "2026-10-08T07:59:50Z",
+      "requested_by": "jgoetzmann",
       "run_id": "37634115640",
       "started_at": "2026-10-07T14:08:20Z",
       "stop_requested": false,
