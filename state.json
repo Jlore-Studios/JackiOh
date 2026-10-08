@@ -3969,28 +3969,10 @@
     "what": "build #527 on claude-2"
   },
   "last_sweep": {
-    "at": "2026-10-08T11:45:04Z",
+    "at": "2026-10-08T11:56:24Z",
     "notes": [
-      "#522 needs a plan",
-      "#523 needs a plan",
-      "#525 needs a plan",
-      "#527 needs a plan",
-      "#529 needs a plan",
-      "#530 needs a plan",
-      "#531 needs a plan",
-      "#534 needs a plan",
-      "#536 needs a plan",
-      "#537 needs a plan",
-      "#538 needs a plan",
-      "#541 needs a plan",
-      "#543 needs a plan",
-      "#544 needs a plan",
-      "#545 needs a plan",
-      "#547 needs a plan",
-      "#548 needs a plan",
-      "#549 needs a plan",
-      "#550 needs a plan",
-      "started a night run, as a lane was free: #516 (hard) is queued to build, for `claude-7`: plan on `claude-7` (claude, `opus`, strong)"
+      "answered a comment on #436 that was never answered",
+      "answered a comment on #430 that was never answered"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
