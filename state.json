@@ -3390,6 +3390,16 @@
       "stopped_at": "2026-10-03T04:51:49Z",
       "stopped_by": "MaxGoetzmann"
     },
+    "530": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-10-08T09:29:12Z",
+      "requested_by": "squishy-squooby",
+      "stop_requested": false
+    },
     "54": {
       "failures": 0,
       "forced": false,
