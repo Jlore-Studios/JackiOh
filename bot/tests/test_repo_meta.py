@@ -156,7 +156,7 @@ class LabelListTests(unittest.TestCase):
         docs = (ROOT / "docs" / "issues-and-patches.md").read_text(encoding="utf-8")
         table = re.search(r"^## Labels\n(.*?)^## ", docs, re.M | re.S).group(1)
         named = re.findall(r"^\| `([^`]+)` \|", table, re.M)
-        self.assertEqual(named[:5], ["patch", "major version", "architecture", "night bot", "Info"])
+        self.assertEqual(named[:6], ["patch", "large patch", "major version", "architecture", "night bot", "Info"])
         used = {*named, *dashboard.LABELS, *disk.LABELS, *stats.LABELS, *triage.TYPE_LABELS,
                 config.LABEL_HUMAN, config.LABEL_READY, *triage.METHODS, *config.DIFFICULTY_LABELS,
                 config.LABEL_PRIORITY_HIGH, config.LABEL_PRIORITY_MEDIUM, config.LABEL_PRIORITY_LOW}
