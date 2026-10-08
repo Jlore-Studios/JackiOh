@@ -3179,6 +3179,13 @@
     "510": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-08T11:24:01Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "a database migration (crates/server/migrations/0027) is on the rule's hard line, besides the actor seam, both store implementations and spec/"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
