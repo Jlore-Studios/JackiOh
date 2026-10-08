@@ -415,7 +415,7 @@ describe("B35 a sign-in goes back to the gated screen that sent the player to it
     ["a URL", "https://evil.example/play"],
     ["a match route, whose id is data", "/match/some-id"],
     ["a path that is not gated", "/reset-password"],
-  ] as const)("B35 a destination planted in storage (%s) is never followed: the sign-in lands on /decks", async (_name, planted) => {
+  ] as const)("B35 a destination planted in storage (%s) is never followed: the sign-in lands on the main menu", async (_name, planted) => {
     stubFetch((url) => {
       if (url.includes("/auth/v1/token")) return json(200, SIGNED_IN);
       if (url === `${API}/api/auth/me`) return json(200, me("active"));
@@ -431,7 +431,7 @@ describe("B35 a sign-in goes back to the gated screen that sent the player to it
     await waitFor(() => {
       expect(window.location.pathname).not.toBe(paths.login);
     }, SLOW);
-    expect(window.location.pathname).toBe(paths.decks);
+    expect(window.location.pathname).toBe(paths.landing);
   });
 
   it("B35 only fixed gated paths are remembered at all", () => {
