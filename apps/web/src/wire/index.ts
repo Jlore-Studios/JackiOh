@@ -189,6 +189,7 @@ export {
   fillParams,
   hasKeyword,
   keywordKey,
+  newestShippedSet,
   opponentOf,
   paramPlaceholders,
   setShips,

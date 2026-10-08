@@ -25,7 +25,8 @@ function isDeck(value: unknown): value is PracticeDeckChoice {
   const deck = value as Record<string, unknown>;
   switch (deck.kind) {
     case "random":
-      return true;
+      // R1373: a setup kept before the lean carries none, and reads as off.
+      return deck.leanNewest === undefined || typeof deck.leanNewest === "boolean";
     case "preset":
       return typeof deck.id === "string";
     case "saved":

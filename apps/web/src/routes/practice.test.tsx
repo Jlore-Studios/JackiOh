@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 
 import { AI_GATE_BUDGET } from "@jackioh/ai";
-import { opponentOf } from "@jackioh/shared";
+import { newestShippedSet, opponentOf } from "@jackioh/shared";
 import type { ActionBody, CardDefs, PlayerId } from "@jackioh/shared";
 
 import { setAudioEngineForTests } from "../audio/engine.ts";
@@ -880,6 +880,47 @@ describe("B33 starting renders the game under the practice HUD", () => {
     expect(hud).toHaveAttribute("data-human-seat", config.humanSeat);
     expect(hud).toHaveAttribute("data-ai-seat", opponentOf(config.humanSeat));
     expect(screen.queryByTestId(T.setup)).toBeNull();
+  });
+
+  it("R1373 the Random deck's switch travels on the deck choice, and a preset never carries it", async () => {
+    const host = routeHost();
+    renderRoute(host);
+    await settle();
+
+    fireEvent.change(screen.getByTestId(T.deck), { target: { value: "random" } });
+    const toggle = screen.getByTestId(practiceTestid.leanNewest);
+    expect(toggle).not.toBeChecked();
+    expect(toggle.closest("label")).toHaveTextContent(`More cards from the newest set (${newestShippedSet()})`);
+    fireEvent.click(toggle);
+    // Beside the Random deck only.
+    fireEvent.change(screen.getByTestId(T.deck), { target: { value: "preset:humans" } });
+    expect(screen.queryByTestId(practiceTestid.leanNewest)).toBeNull();
+    fireEvent.change(screen.getByTestId(T.deck), { target: { value: "random" } });
+    expect(screen.getByTestId(practiceTestid.leanNewest)).toBeChecked();
+    fireEvent.click(screen.getByTestId(T.start));
+    await screen.findByTestId(T.hud);
+
+    expect(host.starts()[0]?.deck).toEqual({ kind: "random", leanNewest: true });
+    // Remembered with the setup, for the next visit.
+    expect(JSON.parse(window.localStorage.getItem(PRACTICE_SETUP_KEY) ?? "null")).toEqual({
+      difficulty: "easy",
+      deck: "random",
+      leanNewest: true,
+    });
+  });
+
+  it("R1373 the remembered switch comes back on the next visit, and a preset started with it on keeps it for later", async () => {
+    window.localStorage.setItem(PRACTICE_SETUP_KEY, JSON.stringify({ difficulty: "easy", deck: "random", leanNewest: true }));
+    const host = routeHost();
+    renderRoute(host);
+    await settle();
+    expect(screen.getByTestId(practiceTestid.leanNewest)).toBeChecked();
+
+    fireEvent.change(screen.getByTestId(T.deck), { target: { value: "preset:humans" } });
+    fireEvent.click(screen.getByTestId(T.start));
+    await screen.findByTestId(T.hud);
+    expect(host.starts()[0]?.deck).toEqual({ kind: "preset", id: "humans" });
+    expect(JSON.parse(window.localStorage.getItem(PRACTICE_SETUP_KEY) ?? "null")).toMatchObject({ leanNewest: true });
   });
 
   it("B33 a saved deck chosen in setup travels as that deck's cards", async () => {

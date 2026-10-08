@@ -2,7 +2,8 @@
 //! #496 builds it. Its cards are in no pool that names no set, in no deck, and in no random deck,
 //! until the patch that lists the set; a pool that names the set, or names its cards, reaches them;
 //! and the testkit's preview opens the set on one thread, as the fuzz tool does. Also R1421 (a Prime
-//! pool holds the Prime tokens) and R1422 (`anyTags`), the pool pieces the set's cards share.
+//! pool holds the Prime tokens) and R1422 (`anyTags`), the pool pieces the set's cards share, and
+//! R1371 (the newest shipped set, which a preview never moves).
 //! Fixture definitions only (CLAUDE.md: the engine does not depend on crates/cards).
 
 use jackioh_engine::catalog::{deckable, set_is_open};
@@ -192,6 +193,27 @@ mod r1420_a_set_the_catalog_holds_before_it_ships {
             "{}",
             l3[0]
         );
+    }
+}
+
+mod r1371_the_newest_shipped_set {
+    use super::*;
+
+    #[test]
+    fn r1371_the_newest_shipped_set_is_the_last_entry_of_shipped_sets_and_a_preview_never_moves_it() {
+        let newest = newest_shipped_set();
+        assert_eq!(SHIPPED_SETS.last(), Some(&newest));
+        assert!(set_ships(newest));
+        // No set that ships comes after it in the catalog order (R1420's `CATALOG_SETS`).
+        let at = CATALOG_SETS
+            .iter()
+            .position(|set| *set == newest)
+            .expect("the newest set is in the catalog order");
+        assert!(CATALOG_SETS[at + 1..].iter().all(|set| !set_ships(*set)));
+        // A preview opens a set's pools on this thread; it ships nothing, so the newest set stays.
+        let _preview = preview_sets(&[SetName::Meditative]);
+        assert_eq!(newest_shipped_set(), newest);
+        assert_ne!(newest_shipped_set(), SetName::Meditative);
     }
 }
 

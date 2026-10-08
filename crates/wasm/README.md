@@ -17,10 +17,10 @@ opaque `EngineState` brand (CLAUDE.md rule 7) and hands back on every call.
 | `replay_open(args, record)`, `replay_page(checkpoints, seat, from, count)` | R768's `ReplayOpen`, then `ReplayPage` |
 | `last_board_for`, `seat_played_by`, `find_instance` | as the engine's |
 | `ai_to_act(state, seat)`, `ai_decide(state, seat, options, deadline_ms)` | the AI; `options` is `{ rngSeed, rngCursor, budget? }`, the answer `{ decision, rngCursor }` |
-| `build_ai_deck(options)` | `{ deck, rngCursor }` |
+| `build_ai_deck(options)` | `{ deck, rngCursor }`; `options` is `{ rngSeed, rngCursor, size }` and `AiDeckOptions`' own keys, `leanSet` among them (R1370) |
 | `choose_action(state, seat, rng_seed, rng_cursor)` | spec §10.7's random policy, `{ action, rngCursor }` |
 | `validator(call, input)` | one of the validator's functions (`validateDeck`, `validateTrio`, `checkDeckDraft`, `checkImportRoom`, …) by name |
-| `constants()`, `engine_tables()` | the AI budgets and shadow-ban ids; the Call to Chaos and Heroic Power tables the client prints |
+| `constants()`, `engine_tables()` | the AI budgets, shadow-ban ids and deck builder's numbers (`AI_DECK`); the Call to Chaos and Heroic Power tables the client prints |
 
 A binding returns `Err(JsError)`, which JavaScript sees as a thrown `Error` with the engine's message,
 where a JSON argument does not parse or the setup is refused (a deck or handicap `create_game` will

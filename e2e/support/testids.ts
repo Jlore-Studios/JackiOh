@@ -587,6 +587,8 @@ export const PRACTICE_DECK = "practice-deck";
 export const PRACTICE_DECK_HINT = "practice-deck-hint";
 /** The chosen deck: its name, its identity and, once the catalog is in, its curve and cards. */
 export const PRACTICE_DECK_PREVIEW = "practice-deck-preview";
+/** R1373: beside the Random deck only, "More cards from the newest set", a checkbox. */
+export const PRACTICE_LEAN_NEWEST = "practice-lean-newest";
 /** In the preview: one bar per cost, `data-cost` and `data-count`. */
 export const PRACTICE_DECK_CURVE = "practice-deck-curve";
 /** In the preview: one row per card of the chosen deck. */
@@ -894,6 +896,8 @@ export const PLAY_DECK_SELECT = "play-deck-select";
 export const PLAY_TRIO_SELECT = "play-trio-select";
 /** The client's verdict on the choice (`data-ready`): UX only, the server's is law (R253). */
 export const PLAY_VERDICT = "play-choice-verdict";
+/** R1372: All Random's "More cards from the newest set" checkbox, off unless this device turned it on. */
+export const PLAY_LEAN_NEWEST = "play-lean-newest";
 
 /** One mode radio (R257). */
 export function playModeId(mode: QueueMode): string {

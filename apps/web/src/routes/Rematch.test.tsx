@@ -19,6 +19,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GameResult } from "../game/Result.tsx";
 import { navigate, paths } from "../net/navigate.ts";
 import { rematchOffer, rematchStatus, type RematchOfferResponse, type RematchStatusResponse } from "../net/api.ts";
+import { PLAY_LEAN_NEWEST_KEY, leanNewestLabel } from "../game/LeanNewest.tsx";
 import RematchButtons, { RematchWatcher, rematchTestid } from "./Rematch.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
@@ -108,6 +109,48 @@ describe("RematchButtons", () => {
     await waitFor(() => {
       expect(vi.mocked(navigate)).toHaveBeenCalledWith(paths.match("match-9"));
     });
+  });
+
+  it("R1372 an All Random rematch offers the switch, starts it from the lobby's pick and sends leanNewest with the offer", async () => {
+    window.localStorage.setItem(PLAY_LEAN_NEWEST_KEY, "true");
+    try {
+      vi.mocked(rematchStatus).mockResolvedValue(statusOf({ mode: "random" }));
+      renderButtons();
+      const toggle = await screen.findByTestId(rematchTestid.leanNewest);
+      expect(toggle).toBeChecked();
+      expect(toggle.closest("label")).toHaveTextContent(leanNewestLabel());
+
+      fireEvent.click(screen.getByTestId(rematchTestid.offer));
+      await waitFor(() => {
+        expect(vi.mocked(rematchOffer)).toHaveBeenLastCalledWith(TOKEN, MATCH_ID, 1, true);
+      });
+
+      // Off, the offer carries no lean, and the device remembers the change for the lobby too.
+      fireEvent.click(screen.getByTestId(rematchTestid.leanNewest));
+      expect(window.localStorage.getItem(PLAY_LEAN_NEWEST_KEY)).toBe("false");
+      fireEvent.click(screen.getByTestId(rematchTestid.double));
+      await waitFor(() => {
+        expect(vi.mocked(rematchOffer)).toHaveBeenLastCalledWith(TOKEN, MATCH_ID, 2);
+      });
+    } finally {
+      window.localStorage.removeItem(PLAY_LEAN_NEWEST_KEY);
+    }
+  });
+
+  it("R1372 a Best-of-1 rematch replays its decks, so it shows no switch and sends no lean", async () => {
+    window.localStorage.setItem(PLAY_LEAN_NEWEST_KEY, "true");
+    try {
+      vi.mocked(rematchStatus).mockResolvedValue(statusOf({ mode: "bo1" }));
+      renderButtons();
+      await screen.findByTestId(rematchTestid.offer);
+      expect(screen.queryByTestId(rematchTestid.leanNewest)).toBeNull();
+      fireEvent.click(screen.getByTestId(rematchTestid.offer));
+      await waitFor(() => {
+        expect(vi.mocked(rematchOffer)).toHaveBeenLastCalledWith(TOKEN, MATCH_ID, 1);
+      });
+    } finally {
+      window.localStorage.removeItem(PLAY_LEAN_NEWEST_KEY);
+    }
   });
 
   it("double-or-nothing is disabled outside ranked matches", async () => {
