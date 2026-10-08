@@ -10,7 +10,8 @@
 //! and the 8 the e2e specs import in multi-line lists (`05-reconnect`, `06-room-code`,
 //! `10-invite-gate`, `19-queue-modes-and-series`; v0.3.0 part 36). A name added to it needs a
 //! constant in `config.rs`; a name the client stops importing can leave it. `ROOM_CODE_FORMAT` joined
-//! them for the lobby's room links (R767).
+//! them for the lobby's room links (R767), and `REPLAY_LIST_PAGE` and `REPLAY_REQUESTS_PER_MINUTE`
+//! for the online replays' list and allowance (R768).
 
 use serde_json::{Value, json};
 
@@ -128,6 +129,8 @@ fn constants() -> Vec<(&'static str, Value)> {
             json!(c::RATING_WINDOW_UNCAPPED_AFTER_SECONDS),
         ),
         ("REDEMPTION_IDENTICAL_ERROR", json!(c::REDEMPTION_IDENTICAL_ERROR)),
+        ("REPLAY_LIST_PAGE", json!(c::REPLAY_LIST_PAGE)),
+        ("REPLAY_REQUESTS_PER_MINUTE", json!(c::REPLAY_REQUESTS_PER_MINUTE)),
         (
             "REDEMPTION_RESPONSE_FLOOR_MS",
             json!(c::REDEMPTION_RESPONSE_FLOOR_MS),
@@ -176,8 +179,9 @@ fn every_name_is_listed_once() {
     names.dedup();
     assert_eq!(names.len(), listed, "a constant is listed twice");
     assert_eq!(
-        listed, 51,
-        "the 50 names the client imported from apps/server/src/config.ts, and ROOM_CODE_FORMAT (R767)"
+        listed, 53,
+        "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), and \
+         REPLAY_LIST_PAGE and REPLAY_REQUESTS_PER_MINUTE (R768)"
     );
 }
 

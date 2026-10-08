@@ -21,6 +21,7 @@ pub mod ranked;
 pub mod rate_limit;
 pub mod redeem_feedback;
 pub mod rematch;
+pub mod replays;
 pub mod results;
 pub mod retention;
 pub mod season;

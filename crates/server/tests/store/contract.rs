@@ -2649,7 +2649,31 @@ mod matches {
         assert!(!live_ids(&q!(harness, t => t.matches_live())).contains(&row.id));
     }
 
+    /// R768 (migration 0027): no hash until the result writes one, `matches_create` never writes
+    /// one, and only the first written is kept.
+    async fn r768_records_a_final_hash_once(harness: &StoreHarness) {
+        let row = live_match(harness).await;
+        let hash_of = |row: Option<MatchRow>| j(&must(row, "the match"))["finalHash"].clone();
+        assert_eq!(hash_of(q!(harness, t => t.matches_get(&row.id))), Value::Null);
+        q!(harness, t => t.matches_finish(&row.id, harness.now()));
+        q!(harness, t => t.matches_record_final_hash(&row.id, "hash-1"));
+        q!(harness, t => t.matches_record_final_hash(&row.id, "hash-2"));
+        assert_eq!(hash_of(q!(harness, t => t.matches_get(&row.id))), json!("hash-1"));
+        // An unknown id is a no-op.
+        q!(harness, t => t.matches_record_final_hash(&id(), "hash-3"));
+
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let forged: MatchRow = from(spread(
+            j(&match_row(&id(), &a.id, &b.id, harness, harness.now())),
+            json!({ "finalHash": "forged" }),
+        ));
+        q!(harness, t => t.matches_create(&forged));
+        assert_eq!(hash_of(q!(harness, t => t.matches_get(&forged.id))), Value::Null);
+    }
+
     both_stores!(
+        r768_records_a_final_hash_once,
         round_trips_a_match_row_clocks_included,
         refuses_a_second_match_with_the_same_id,
         appends_actions_in_order_and_reads_them_back,
@@ -2796,7 +2820,30 @@ mod rooms {
         );
     }
 
+    /// R768: a match's phase and seats, read whatever its status: a claimed room is `open`, the
+    /// match the registry writes for it `live`, then `over`; an unknown id is none.
+    async fn r768_reads_a_match_s_seats_in_every_status_an_open_one_included(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        q!(harness, t => t.rooms_create(&room(harness, "ABC234", &host.id, json!({}))));
+        let match_id = id();
+        must(
+            q!(harness, t => t.rooms_claim("ABC234", &guest.id, &match_id, harness.now())),
+            "the claim",
+        );
+        let seats = |phase: &str| json!({ "phase": phase, "players": [host.id, guest.id] });
+        assert_eq!(j(&q!(harness, t => t.matches_seats(&match_id))), seats("open"));
+
+        let row = match_row(&match_id, &host.id, &guest.id, harness, harness.now());
+        q!(harness, t => t.matches_create(&row));
+        assert_eq!(j(&q!(harness, t => t.matches_seats(&match_id))), seats("live"));
+        q!(harness, t => t.matches_finish(&match_id, harness.now()));
+        assert_eq!(j(&q!(harness, t => t.matches_seats(&match_id))), seats("over"));
+        assert!(q!(harness, t => t.matches_seats(&id())).is_none());
+    }
+
     both_stores!(
+        r768_reads_a_match_s_seats_in_every_status_an_open_one_included,
         creates_a_room_and_reads_it_back_by_code,
         r264_keeps_a_room_s_mode_and_a_best_of_3_host_s_frozen_trio,
         refuses_a_code_that_is_already_taken,
@@ -3775,6 +3822,115 @@ mod profiles_remove {
     }
 
     both_stores!(removes_the_profile_and_its_own_rows_and_keeps_the_other_player_s_finished_match);
+}
+
+// ---------------------------------------------------------------------------
+// Online replays (SPEC §9.3, R768)
+// ---------------------------------------------------------------------------
+
+mod replays {
+    use super::*;
+
+    /// A match between `p1` and `p2`, `actions` long, finished at `ended_at` with a result unless
+    /// `result` is false (`ended_at` none leaves it live).
+    async fn a_match(
+        harness: &StoreHarness,
+        (p1, p2): (&str, &str),
+        actions: i64,
+        ended_at: Option<i64>,
+        result: bool,
+    ) -> String {
+        let match_id = id();
+        let now = harness.now();
+        q!(harness, t => t.matches_create(&match_row(&match_id, p1, p2, harness, now)));
+        let rows: Vec<MatchActionRow> = (1..=actions)
+            .map(|seq| action_row(&match_id, seq, "p1", &format!("n{seq}"), now))
+            .collect();
+        if !rows.is_empty() {
+            q!(harness, t => t.matches_append_actions(&rows));
+        }
+        if result {
+            let row: ResultRow = from(json!({
+                "matchId": match_id,
+                "players": [p1, p2],
+                "winnerProfileId": p1,
+                "reason": "concede",
+                "turns": 3,
+                "endedAt": ended_at.unwrap_or(now),
+                "ratingBefore": [1000, 1000],
+                "ratingAfter": [1000, 1000],
+            }));
+            q!(harness, t => t.results_insert(&row));
+        }
+        if let Some(at) = ended_at {
+            q!(harness, t => t.matches_finish(&match_id, at));
+        }
+        match_id
+    }
+
+    /// R768: the finished matches a profile held a seat in that have a result and a kept log,
+    /// newest ended first and paged, each with its row, its result and its log's length; and one
+    /// finished match with a result read by id, whatever is left of its log.
+    async fn r768_lists_finished_matches_with_a_kept_log_newest_first(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let gone = active_profile(harness, None).await;
+        let now = harness.now();
+        let older = a_match(harness, (&a.id, &b.id), 2, Some(now - 4_000), true).await;
+        let as_p2 = a_match(harness, (&b.id, &a.id), 1, Some(now - 3_000), true).await;
+        let newer = a_match(harness, (&a.id, &b.id), 3, Some(now - 1_000), true).await;
+        let deleted = a_match(harness, (&a.id, &gone.id), 1, Some(now - 2_000), true).await;
+        let no_result = a_match(harness, (&a.id, &b.id), 1, Some(now), false).await;
+        let no_log = a_match(harness, (&a.id, &b.id), 0, Some(now), true).await;
+        let live = a_match(harness, (&a.id, &b.id), 1, None, false).await;
+        let others = a_match(harness, (&b.id, &c.id), 1, Some(now), true).await;
+        // A deleted opponent's seat empties in Postgres and keeps its id in memory (KNOWN
+        // DIVERGENCES, deleted accounts); either way the player keeps the replay.
+        assert!(q!(harness, t => t.profiles_remove(&gone.id)));
+
+        let listed = q!(harness, t => t.replays_list(&a.id, 10, 0));
+        let ids: Vec<&str> = listed.iter().map(|replay| replay.row.id.as_str()).collect();
+        assert_eq!(ids, vec![newer.as_str(), deleted.as_str(), as_p2.as_str(), older.as_str()]);
+        let actions: Vec<i64> = listed.iter().map(|replay| replay.actions).collect();
+        assert_eq!(actions, vec![3, 1, 1, 2]);
+        for replay in listed.iter().filter(|replay| replay.row.id != deleted) {
+            assert_eq!(
+                Some(&replay.row),
+                q!(harness, t => t.matches_get(&replay.row.id)).as_ref()
+            );
+            assert_eq!(
+                Some(&replay.result),
+                q!(harness, t => t.results_get_by_match(&replay.row.id)).as_ref()
+            );
+        }
+        assert_eq!(listed[1].row.players.0, a.id);
+        assert_eq!(listed[1].result.players.0, a.id);
+
+        // Paged by limit and offset.
+        for (offset, expected) in [
+            (0, vec![newer.clone(), deleted.clone()]),
+            (2, vec![as_p2.clone(), older.clone()]),
+            (4, Vec::new()),
+        ] {
+            let page = q!(harness, t => t.replays_list(&a.id, 2, offset));
+            let ids: Vec<String> = page.iter().map(|replay| replay.row.id.clone()).collect();
+            assert_eq!(ids, expected, "offset {offset}");
+        }
+        let for_c = q!(harness, t => t.replays_list(&c.id, 10, 0));
+        assert_eq!(ids_of(&for_c.iter().map(|replay| replay.row.clone()).collect::<Vec<_>>()), vec![others]);
+
+        // By id: a purged log reads as none of it; no result, live or unknown is none.
+        let read = must(q!(harness, t => t.replays_get(&newer)), "the replay");
+        assert_eq!(read, listed[0]);
+        let purged = must(q!(harness, t => t.replays_get(&no_log)), "the purged replay");
+        assert_eq!(purged.actions, 0);
+        for missing in [no_result, live, id()] {
+            assert!(q!(harness, t => t.replays_get(&missing)).is_none(), "{missing}");
+        }
+    }
+
+    both_stores!(r768_lists_finished_matches_with_a_kept_log_newest_first);
 }
 
 mod purge_expired {

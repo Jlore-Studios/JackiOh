@@ -1010,6 +1010,45 @@ mod m6_t4_the_match_actor {
         assert_eq!(match_row(&h.app, MATCH_ID).await["status"], json!("finished"));
     }
 
+    /// R768: the actor hands the final state's hash to the result, which writes it on the match;
+    /// a replay's fold of the row's seed, decks, boards and log ends on exactly that state.
+    #[tokio::test(start_paused = true)]
+    async fn r768_records_the_final_states_hash_with_the_result() {
+        use jackioh_server::actor::engine::{fold, fold_args, hash_state};
+        use jackioh_server::actor::match_actor::last_boards_of;
+
+        let h = harness(Options::default()).await;
+        assert!(match_row(&h.app, MATCH_ID).await.get("finalHash").is_none());
+        send(&h, &h.p1, "n1", json!({ "type": "endTurn" })).await;
+        send(
+            &h,
+            &h.p2,
+            "n2",
+            json!({ "type": "play", "instanceId": in_hand(&h.p2, "test-lethal") }),
+        )
+        .await;
+        assert!(result_row(&h.app, MATCH_ID).await.is_some(), "the match ended");
+
+        let row: MatchRow = serde_json::from_value(match_row(&h.app, MATCH_ID).await).expect("a MatchRow");
+        let log: Vec<Action> = match_actions(&h.app, MATCH_ID)
+            .await
+            .into_iter()
+            .map(|entry| serde_json::from_value(entry["action"].clone()).expect("an Action"))
+            .collect();
+        let (last_boards, glitch_boards) = last_boards_of(&row);
+        let folded = fold(&fold_args(
+            &row.seed,
+            &row.decks,
+            log,
+            last_boards,
+            glitch_boards,
+            None,
+        ));
+        assert!(folded.errors.is_empty(), "{:?}", folded.errors);
+        assert!(folded.state.result.is_some());
+        assert_eq!(row.final_hash, Some(hash_state(&folded.state)));
+    }
+
     // -------------------------------------------------------------------------
     // M6-T4 acceptance 3
     // -------------------------------------------------------------------------

@@ -43,7 +43,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 25 tables of migrations 0001-0026 ==='
+\echo '=== CHECK 2: the 25 tables of migrations 0001-0027 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -58,7 +58,7 @@ declare
   -- series (0009, R263), tutorial_progress (0011, R320), game_records (0014, R376), last_boards
   -- (0017, R565), player_settings (0018, R633), player_stats (0021, R654) and the ranked ladder's
   -- seasons/season_ranks/bot_ratings/rated_games (0022, R603-R612). 0005, 0006, 0008, 0010, 0012, 0013,
-  -- 0015, 0016, 0019, 0020, 0023, 0024, 0025 and 0026 add no table. The three loadout
+  -- 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026 and 0027 add no table. The three loadout
   -- tables stay after 0007, unread and unwritten (R254), so they are still expected here.
   expected constant text[] := array[
     'bot_ratings', 'cards', 'code_attempts', 'collection', 'collection_grants', 'decks', 'game_records',
