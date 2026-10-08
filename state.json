@@ -4254,10 +4254,10 @@
     "what": "plan #530 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-08T19:55:36Z",
+    "at": "2026-10-08T19:58:07Z",
     "notes": [
-      "answered a comment on #436 that was never answered",
-      "answered a comment on #430 that was never answered"
+      "created the label `bot:fullsend`",
+      "created the label `bot:tree`"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
