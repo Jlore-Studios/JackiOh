@@ -125,6 +125,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "0026_catalyst_prime_acclaimed_tags.sql",
         include_str!("../../migrations/0026_catalyst_prime_acclaimed_tags.sql"),
     ),
+    (
+        "0027_replay_final_hash.sql",
+        include_str!("../../migrations/0027_replay_final_hash.sql"),
+    ),
 ];
 
 /// One advisory lock id for the whole runner, so two deploys cannot interleave migrations. It is

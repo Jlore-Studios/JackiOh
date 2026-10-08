@@ -755,7 +755,7 @@ impl MatchActor {
     /// §9.5: "Every ending records a result and clears both players' in-match state." Once.
     async fn on_terminal(&self, snapshot: &MatchSnapshot) {
         let Some(result) = snapshot.result else { return };
-        let (swapped, last_boards) = {
+        let (swapped, last_boards, final_hash) = {
             let mut core = self.lock();
             if core.finished {
                 return;
@@ -766,7 +766,11 @@ impl MatchActor {
             for player in PLAYERS {
                 self.end_aim(&mut core, player);
             }
-            (core.swapped, engine::last_boards(&core.state))
+            (
+                core.swapped,
+                engine::last_boards(&core.state),
+                engine::hash_state(&core.state),
+            )
         };
         // R679: the one ending that records nothing. Only the engine's state reaches it.
         if result.reason == GameOverReason::Voided {
@@ -786,6 +790,8 @@ impl MatchActor {
             at,
             // R417, R565: each seat's board as the game ended, from its own side.
             last_boards: Some(last_boards),
+            // R768: the final state's hash, which the match's replay is held to.
+            final_hash: Some(final_hash),
         };
         if let Err(error) = crate::api::results::record_result(&self.shared.deps, input).await {
             tracing::error!(event = "match.recordResult.failed", matchId = %self.match_id_str(), message = %error);

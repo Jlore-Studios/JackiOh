@@ -199,6 +199,22 @@ pub const MATCH_ACTION_RETENTION_DAYS: i64 = 90;
 pub const RETENTION_PURGE_INTERVAL_SECONDS: i64 = 3600;
 
 // ---------------------------------------------------------------------------------------------
+// Online replays (R768, issue #510). A page of steps is the engine's `REPLAY_PAGE_STEPS`. PUBLIC:
+// the client reads the list's page and the routes' allowance.
+// ---------------------------------------------------------------------------------------------
+
+/// How many finished matches one page of `GET /api/replays` lists, newest first.
+pub const REPLAY_LIST_PAGE: usize = 10;
+/// How many opened replays (each its folded log's checkpoints, R768) the server keeps in memory at
+/// once; opening another drops the one used longest ago.
+pub const REPLAY_CACHE_MATCHES: usize = 16;
+/// How long an opened replay stays in memory after it was opened, in seconds.
+pub const REPLAY_CACHE_TTL_SECONDS: i64 = 600;
+/// Requests per minute per account to the two replay routes together, on top of R109's
+/// API-wide allowance: opening a replay folds a whole game.
+pub const REPLAY_REQUESTS_PER_MINUTE: usize = 60;
+
+// ---------------------------------------------------------------------------------------------
 // Constant-time failure (§9.4, BUILD M6-T1).
 // ---------------------------------------------------------------------------------------------
 

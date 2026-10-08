@@ -544,6 +544,43 @@ pub struct MatchRow {
     /// portraits existed; both seats then read as `vanilla`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub portraits: Option<(PortraitId, PortraitId)>,
+    /// R768: `hash_state` of the final state, written with the result (`matches_record_final_hash`,
+    /// migration 0027) and never by `matches_create`. Absent on a match that ended before it, on one
+    /// the reaper resolved (R112) and on one not over yet.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub final_hash: Option<String>,
+}
+
+store_union! {
+    /// R768: where a match stands, whatever its row's status: `open` while a claimed room or a queue
+    /// pair holds its id and no actor plays it yet, `live` while one does, `over` once it ended.
+    pub enum MatchPhase {
+        Open = "open",
+        Live = "live",
+        Over = "over",
+    }
+}
+
+/// R768: a match's phase and who holds a seat in it, an `open` one included (`matches_get` reads
+/// only live and finished matches).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct MatchSeats {
+    pub phase: MatchPhase,
+    /// The profiles seated so far, seat order; a seat not filled yet and a deleted account's are
+    /// left out.
+    pub players: Vec<String>,
+}
+
+/// R768: a finished match with a result, as its replay reads it: the row, the result and how many
+/// actions its log still holds (none once the retention purge has taken it).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ReplayRow {
+    #[serde(rename = "match")]
+    pub row: MatchRow,
+    pub result: ResultRow,
+    pub actions: i64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -1485,6 +1522,34 @@ impl Tx<'_> {
     /// unknown id.
     pub async fn matches_forget_voided(&mut self, match_id: &str) -> StoreResult<()> {
         dispatch!(self, matches_forget_voided(match_id))
+    }
+
+    /// R768: the final state's hash, written with the result and only once: a no-op on a match
+    /// that has one already, and on an unknown id.
+    pub async fn matches_record_final_hash(&mut self, match_id: &str, final_hash: &str) -> StoreResult<()> {
+        dispatch!(self, matches_record_final_hash(match_id, final_hash))
+    }
+
+    /// R768: the match's phase and its seated profiles, in every status, an `open` reservation
+    /// included; `None` for an id no match, room or queue pair holds.
+    pub async fn matches_seats(&mut self, match_id: &str) -> StoreResult<Option<MatchSeats>> {
+        dispatch!(self, matches_seats(match_id))
+    }
+
+    // -----------------------------------------------------------------------
+    // replays (R768)
+    // -----------------------------------------------------------------------
+
+    /// The finished matches `profile_id` held a seat in that have a result and a log the retention
+    /// purge has not taken, newest ended first (the id breaking a tie), `limit` of them from
+    /// `offset`.
+    pub async fn replays_list(&mut self, profile_id: &str, limit: i64, offset: i64) -> StoreResult<Vec<ReplayRow>> {
+        dispatch!(self, replays_list(profile_id, limit, offset))
+    }
+
+    /// One finished match with a result, whatever is left of its log; `None` for any other id.
+    pub async fn replays_get(&mut self, match_id: &str) -> StoreResult<Option<ReplayRow>> {
+        dispatch!(self, replays_get(match_id))
     }
 
     // -----------------------------------------------------------------------

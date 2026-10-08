@@ -14,6 +14,7 @@ pub mod http;
 pub mod queue;
 pub mod ranked;
 pub mod rematch;
+pub mod replays;
 pub mod results;
 pub mod retention;
 pub mod series;

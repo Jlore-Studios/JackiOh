@@ -8,9 +8,10 @@
 //! One function is that sentence: `record_result` is the `RecordResult` port the actor calls for
 //! every one of §2.5's seven endings — `hero-death`, `both-heroes-dead`, `concede`,
 //! `draw-accepted`, `turn-cap`, `disconnect` and `match-ceiling` — and it writes exactly one
-//! `results` row, rates both players when the match is ranked (R604) and clears both in-match
-//! flags in one transaction. (TS built it with the factory `createRecordResult(deps)`; with no
-//! ports in the Rust server it is the function itself, and `void_match` is `createVoidMatch`'s.)
+//! `results` row, rates both players when the match is ranked (R604), clears both in-match flags and
+//! stores the final state's hash on the match for its replay (R768) in one transaction. (TS built
+//! it with the factory `createRecordResult(deps)`; with no ports in the Rust server it is the
+//! function itself, and `void_match` is `createVoidMatch`'s.)
 //!
 //! It is idempotent by design, not by luck: the actor and the reaper can both reach the same
 //! terminal match (a crashed actor is exactly the case §9.5's reaper exists for), so the first
@@ -318,6 +319,12 @@ async fn write_once(
         tx.matches_finish(&input.match_id, input.at)
             .await
             .map_err(failed)?;
+        // R768: the final state's hash, with the result or not at all; the reaper has none to write.
+        if let Some(final_hash) = &input.final_hash {
+            tx.matches_record_final_hash(&input.match_id, final_hash)
+                .await
+                .map_err(failed)?;
+        }
     }
 
     // R263: the series' record of this game, and R262's rating move if it ends the series, in this
@@ -438,6 +445,7 @@ pub async fn reap_stuck_matches(app: &Arc<App>) -> Result<Vec<String>, ApiError>
             turns: REAPER_TURNS,
             at: now,
             last_boards: None,
+            final_hash: None,
         };
         let advanced = match write_result(app, &input, RatingPolicy::Unchanged).await {
             Ok(written) => written.series,

@@ -4,8 +4,9 @@
 //! The engine is pure and server-agnostic: it never reads a clock, opens a socket or touches
 //! Postgres. These functions are how the actor reaches it — `create_game` / `begin_game` / `reduce`
 //! to advance the match, `legal_actions` for the client's greying-out, `view_for` for the only thing
-//! a socket is allowed to carry (§10.8), and `fold` to rebuild a crashed actor from
-//! `(seed, decks, log)` (§9.5).
+//! a socket is allowed to carry (§10.8), `fold` to rebuild a crashed actor from
+//! `(seed, decks, log)` (§9.5), and `replay_open` / `replay_page` to serve a finished match's
+//! replay a seat's `view_for` at a time (R768, `api/replays.rs`).
 //!
 //! `EngineState` holds both hands and both libraries, so nothing outside the actor inspects it.
 //! Everything the rest of the server needs about the state comes back through `view_for` (per
@@ -39,7 +40,7 @@ use serde::{Deserialize, Serialize};
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::{
     Action, ActionBody, CreateGameOptions, DECK_SIZE, GameResult, GameState, GameSummary, LastBoardEntry,
-    Phase, PlayerId, PlayerView, Rng,
+    Phase, PlayerId, PlayerView, ReplayCheckpoints, ReplayOpen, ReplayPage, ReplayRecord, Rng,
 };
 
 pub use jackioh_engine::{FoldArgs, FoldResult, ReduceResult};
@@ -154,6 +155,24 @@ pub fn fold(args: &FoldArgs) -> FoldResult {
 
 pub fn hash_state(state: &EngineState) -> String {
     jackioh_engine::hash_state(state)
+}
+
+/// R768: a finished match's log folded once, checked against this build's catalog version and the
+/// match's recorded hash. Panics, as `fold` does, on a setup `create_game` refuses.
+pub fn replay_open(args: &FoldArgs, record: &ReplayRecord) -> ReplayOpen {
+    registered();
+    jackioh_engine::replay_open(args, record, jackioh_cards::catalog_version())
+}
+
+/// R768: steps `[from, from + count)` of an opened replay, each `view_for(state_k, seat)`.
+pub fn replay_page(checkpoints: &ReplayCheckpoints, seat: PlayerId, from: usize, count: usize) -> ReplayPage {
+    registered();
+    jackioh_engine::replay_page(checkpoints, seat, from, count)
+}
+
+/// R677: the seat the account that began the match in `home` plays in `state`.
+pub fn seat_played_by(state: &EngineState, home: PlayerId) -> PlayerId {
+    jackioh_engine::seat_played_by(state, home)
 }
 
 /// TS `snapshot`: the public bookkeeping, read off the state's own fields and the engine's own

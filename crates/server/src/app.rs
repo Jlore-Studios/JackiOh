@@ -54,6 +54,8 @@ pub struct App {
     /// §9.4's redemption circuit breaker (R106), held here for the same reason as the limiter
     /// (TS kept it in `createCodesRoutes()`'s closure).
     pub breaker: Mutex<api::codes::BreakerState>,
+    /// R768: the opened replays and the replay routes' own allowance, held here for the same reason.
+    pub replays: api::replays::Replays,
 }
 
 // ---------------------------------------------------------------------------
@@ -412,6 +414,19 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::None,
         h!(api::stats::get_players),
     ),
+    // api/replays.rs
+    (
+        "GET",
+        "/api/replays",
+        AuthLevel::Active,
+        h!(api::replays::list_replays),
+    ),
+    (
+        "GET",
+        "/api/replays/:matchId",
+        AuthLevel::Active,
+        h!(api::replays::get_replay),
+    ),
 ];
 
 /// TS `allRoutes()`.
@@ -483,6 +498,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         ),
         catalog,
         breaker: Mutex::new(api::codes::create_breaker_state()),
+        replays: api::replays::Replays::default(),
     });
 
     if app.env.e2e {

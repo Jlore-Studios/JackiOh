@@ -98,11 +98,11 @@ use crate::config::{
 };
 use crate::db::store::{
     BotRating, CodeAttempt, CodeAttemptResult, CollectionEntry, CollectionGrant, Db, FavouriteCard, FunStats,
-    GameRecordQuery, InviteCode, LastBoardEntry, LastBoardKind, MatchActionRow, MatchClocks, MatchRow,
-    MatchStatus, PerMode, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
+    GameRecordQuery, InviteCode, LastBoardEntry, LastBoardKind, MatchActionRow, MatchClocks, MatchPhase, MatchRow,
+    MatchSeats, MatchStatus, PerMode, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
     PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileRecord,
     ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult,
-    ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding,
+    ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding,
     SeriesRow, SeriesStatus, StoreError, Ticket, TicketStatus, TrioUpsertOutcome, TutorialMergeInput,
     TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome,
 };
@@ -990,7 +990,11 @@ pub fn matches_create(f: &mut FakeTx<'_>, row: &MatchRow) -> Result<(), StoreErr
     if f.tables().matches.iter().any(|existing| existing.id == row.id) {
         return Err(StoreError::from(format!("matches.id is unique: {}", row.id)));
     }
-    f.tables().matches.push(row.clone());
+    // R768: as in Postgres, only `matches_record_final_hash` writes the hash.
+    f.tables().matches.push(MatchRow {
+        final_hash: None,
+        ..row.clone()
+    });
     Ok(())
 }
 
@@ -1083,6 +1087,120 @@ pub fn matches_forget_voided(f: &mut FakeTx<'_>, match_id: &str) -> Result<(), S
     call(f, "matches.forgetVoided")?;
     forget_voided_rows(f.tables(), match_id);
     Ok(())
+}
+
+/// R768: written once; a no-op on a match that has a hash already, and on an unknown id.
+pub fn matches_record_final_hash(f: &mut FakeTx<'_>, match_id: &str, final_hash: &str) -> Result<(), StoreError> {
+    call(f, "matches.recordFinalHash")?;
+    if let Some(row) = f
+        .tables()
+        .matches
+        .iter_mut()
+        .find(|row| row.id == match_id && row.final_hash.is_none())
+    {
+        row.final_hash = Some(final_hash.to_string());
+    }
+    Ok(())
+}
+
+/// R768: a match row is `live` or `over`. The fake keeps no `open` row (`matches_discard_open`), so
+/// an id a claimed room or a claimed queue pair holds, with no match row yet, is the `open` one.
+pub fn matches_seats(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<MatchSeats>, StoreError> {
+    call(f, "matches.seats")?;
+    let tables: &FakeTables = f.tables();
+    if let Some(row) = tables.matches.iter().find(|row| row.id == match_id) {
+        return Ok(Some(MatchSeats {
+            phase: if row.status == MatchStatus::Finished {
+                MatchPhase::Over
+            } else {
+                MatchPhase::Live
+            },
+            players: vec![row.players.0.clone(), row.players.1.clone()],
+        }));
+    }
+    if let Some(room) = tables
+        .rooms
+        .iter()
+        .find(|room| room.match_id.as_deref() == Some(match_id))
+    {
+        let mut players = vec![room.host_profile_id.clone()];
+        players.extend(room.guest_profile_id.clone());
+        return Ok(Some(MatchSeats {
+            phase: MatchPhase::Open,
+            players,
+        }));
+    }
+    let players: Vec<String> = tables
+        .tickets
+        .iter()
+        .filter(|ticket| ticket.match_id.as_deref() == Some(match_id))
+        .map(|ticket| ticket.profile_id.clone())
+        .collect();
+    if players.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(MatchSeats {
+        phase: MatchPhase::Open,
+        players,
+    }))
+}
+
+/// R768: one finished match with a result, and how many actions its log holds.
+fn replay_row_in(tables: &FakeTables, row: &MatchRow) -> Option<ReplayRow> {
+    if row.status != MatchStatus::Finished {
+        return None;
+    }
+    let result = tables.results.iter().find(|result| result.match_id == row.id)?;
+    let actions = tables
+        .match_actions
+        .iter()
+        .filter(|action| action.match_id == row.id)
+        .count();
+    Some(ReplayRow {
+        row: row.clone(),
+        result: result.clone(),
+        actions: actions as i64,
+    })
+}
+
+/// R768: newest ended first, the id breaking a tie, as Postgres orders them.
+pub fn replays_list(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<ReplayRow>, StoreError> {
+    call(f, "replays.list")?;
+    let tables: &FakeTables = f.tables();
+    let mut rows: Vec<ReplayRow> = tables
+        .matches
+        .iter()
+        .filter(|row| row.players.0 == profile_id || row.players.1 == profile_id)
+        .filter_map(|row| replay_row_in(tables, row))
+        .filter(|replay| replay.actions > 0)
+        .collect();
+    rows.sort_by(|a, b| {
+        b.row
+            .finished_at
+            .cmp(&a.row.finished_at)
+            .then_with(|| b.row.id.cmp(&a.row.id))
+    });
+    Ok(rows
+        .into_iter()
+        .skip(usize::try_from(offset).unwrap_or(0))
+        .take(usize::try_from(limit).unwrap_or(0))
+        .collect())
+}
+
+/// R768: one finished match with a result.
+pub fn replays_get(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<ReplayRow>, StoreError> {
+    call(f, "replays.get")?;
+    let tables: &FakeTables = f.tables();
+    Ok(tables
+        .matches
+        .iter()
+        .find(|row| row.id == match_id)
+        .and_then(|row| replay_row_in(tables, row)))
 }
 
 // ---------------------------------------------------------------------------

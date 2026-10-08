@@ -111,7 +111,7 @@ fn initial_clocks(now: i64, ceiling_minutes: i64) -> MatchClocks {
 /// not shown going in. The match row does not record its mode, so it is read off what made the
 /// match (`matches_mode_of`, as `api/game_records.rs` files a record): the same answer at the start
 /// and at every rebuild, so a rebuilt actor folds the same game. Every other mode's decks were built.
-fn dealt_for(mode: Option<QueueMode>) -> Option<Vec<PlayerId>> {
+pub(crate) fn dealt_for(mode: Option<QueueMode>) -> Option<Vec<PlayerId>> {
     if matches!(mode, Some(QueueMode::Random)) {
         Some(PLAYER_IDS.to_vec())
     } else {
@@ -210,6 +210,8 @@ impl Registry {
                 portrait_or_default(first.portrait.as_deref()),
                 portrait_or_default(second.portrait.as_deref()),
             )),
+            // R768: written with the result, never at the start.
+            final_hash: None,
         };
         let dealt = dealt_for(derived_mode);
 

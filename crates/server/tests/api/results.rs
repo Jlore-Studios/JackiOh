@@ -392,6 +392,7 @@ async fn record(app: &Arc<App>, inputs: &[Value]) -> ResultRow {
             turns,
             at: now_ms(),
             last_boards: None,
+            final_hash: None,
         },
     )
     .await
@@ -568,6 +569,7 @@ mod results_m7_t2 {
                 turns,
                 at: now_ms(),
                 last_boards: None,
+                final_hash: None,
             },
         )
         .await
@@ -646,6 +648,7 @@ mod results_m7_t2 {
                 turns: 99,
                 at: now_ms() + 1,
                 last_boards: None,
+                final_hash: None,
             },
         )
         .await
@@ -723,6 +726,7 @@ mod results_m7_t2 {
                 turns: 12,
                 at: now_ms(),
                 last_boards: None,
+                final_hash: None,
             },
         )
         .await
@@ -1035,6 +1039,7 @@ mod results_m7_t2 {
                     turns: 3,
                     at: now_ms(),
                     last_boards: None,
+                    final_hash: None,
                 },
             )
             .await
