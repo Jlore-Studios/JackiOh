@@ -3191,11 +3191,13 @@
         "by": "`claude` (strong)",
         "sha": "a4155557a46d4007c2c17af1582c725bd8218d63"
       },
+      "closed_at": "2026-10-08T09:06:40Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-08T07:15:23Z",
       "issue": 444,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
