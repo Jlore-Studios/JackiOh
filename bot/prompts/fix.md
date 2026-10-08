@@ -37,10 +37,14 @@ $gate_list
 
 The very first line must be a single HTML comment carrying JSON, with nothing before it:
 
-    <!-- bot: {"status": "done", "title": "Pull request title, a sentence in the repository's style"} -->
+    <!-- bot: {"status": "done", "title": "Pull request title, as docs/issues-and-patches.md (Titles) sets it"} -->
 
 or `{"status": "blocked", "question": "..."}` when a person must decide something first.
 
-After that line, write the full pull request description in Markdown for the whole change on this
+The title becomes the squash commit's subject, and a check holds it to the convention: usually
+the issue's own title (`Patch v0.3.X: …`, `CI: …`, `Architecture: …`), with its version number
+kept. A title that breaks the convention is replaced by the issue's.
+
+After the first line, write the full pull request description in Markdown for the whole change on this
 branch (not only this pass): what changed and why, how it was tested, the decisions made, and for
 each finding above whether it held and what you did.

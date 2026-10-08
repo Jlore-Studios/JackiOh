@@ -1,0 +1,47 @@
+name: Night bot
+description: The night bot and Squishy themselves. bot/, .harness/, .squishy/ and their workflows.
+title: "Night bot: "
+labels: ["night bot", "human"]
+type: Task
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Titles and labels follow [docs/issues-and-patches.md](https://github.com/Jlore-Studios/JackiOh/blob/main/docs/issues-and-patches.md); how the bots work is [bot/README.md](https://github.com/Jlore-Studios/JackiOh/blob/main/bot/README.md).
+
+        - **Title:** `Night bot: <…>`, for Squishy's work too.
+        - **Who does it:** people. The bots may not change `bot/`, `.harness/`, `.squishy/` or `.github/`, so this form labels the issue `human` and neither bot queues, plans or builds it.
+  - type: textarea
+    id: what
+    attributes:
+      label: What and why
+      description: What the bot does today, what it should do, and the runs, issues or pull requests that show it.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance
+      description: What its tests (`cd bot && python3 -m unittest discover -s tests -t .`) or a run show once it is done.
+    validations:
+      required: true
+  - type: dropdown
+    id: bot
+    attributes:
+      label: Which bot
+      options:
+        - The night bot
+        - Squishy
+        - Both
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - No priority
+        - high
+        - medium
+        - low
+      default: 0

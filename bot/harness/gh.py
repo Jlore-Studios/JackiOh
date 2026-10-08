@@ -318,6 +318,25 @@ class GitHub:
         )
         return True
 
+    def sync_label(self, name: str, color: str, description: str) -> str:
+        """Create the label, or bring its colour and description to these (`harness setup`,
+        #187): "created", "updated", or "" when it matched already."""
+        quoted = urllib.parse.quote(name, safe="")
+        try:
+            found = self.request("GET", f"{self._r}/labels/{quoted}") or {}
+        except GitHubError as exc:
+            if exc.status != 404:
+                raise
+            self.request("POST", f"{self._r}/labels",
+                         {"name": name, "color": color, "description": description})
+            return "created"
+        if (str(found.get("color") or "").lower() == color.lower()
+                and str(found.get("description") or "") == description):
+            return ""
+        self.request("PATCH", f"{self._r}/labels/{quoted}",
+                     {"color": color, "description": description})
+        return "updated"
+
     # ------------------------------------------------------------------ pull requests
 
     def get_pull(self, number: int) -> dict[str, Any]:

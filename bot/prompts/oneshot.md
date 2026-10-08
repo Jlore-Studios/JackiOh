@@ -78,13 +78,17 @@ guessing.
 
 The very first line must be a single HTML comment carrying JSON, with nothing before it:
 
-    <!-- bot: {"status": "done", "title": "Pull request title, a sentence in the repository's style"} -->
+    <!-- bot: {"status": "done", "title": "Pull request title, as docs/issues-and-patches.md (Titles) sets it"} -->
 
 or, when you could not build it:
 
     <!-- bot: {"status": "blocked", "question": "The one question a person must answer, with the options you see"} -->
 
-After that line, write the pull request description in Markdown: what changed and why; whether
+The title becomes the squash commit's subject, and a check holds it to the convention: usually
+the issue's own title (`Patch v0.3.X: …`, `CI: …`, `Architecture: …`), with its version number
+kept. A title that breaks the convention is replaced by the issue's.
+
+After the first line, write the pull request description in Markdown: what changed and why; whether
 fullsend ran (its slices, how many agents, and what reconcile and cull removed) or why you built it
 the ordinary way; how you tested it (the commands you ran and what they printed); every decision
 the issue did not settle, with the alternative you rejected; and anything a reviewer should look at
