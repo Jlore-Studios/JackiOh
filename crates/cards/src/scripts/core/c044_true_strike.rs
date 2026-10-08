@@ -33,12 +33,14 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-044";
 
-/// The faces differ only in how much damage they deal.
-fn true_strike(amount: i32) -> Script {
+/// The faces differ only in how much damage they deal: the declared number `damage` (R386), 4 and 9 on
+/// the Radiant face, read off the face that is running.
+fn true_strike() -> Script {
     Script {
         targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))],
         // A Spell's script hangs off `cry`: that is its on-resolve hook (§10.9). R346: the hit pierces.
-        cry: Some(hook(move |_ctx| {
+        cry: Some(hook(|ctx| {
+            let amount = param(&*ctx, "damage");
             vec![
                 damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount, "ignoreArmor": true }))),
                 exile(json_as(json!({ "target": { "of": "self" } }))),
@@ -49,10 +51,9 @@ fn true_strike(amount: i32) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    CardScripts {
-        base: true_strike(4),
-        radiant: true_strike(9),
-    }
+    let base = true_strike();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
 }
 
 // #44 True Strike (SPEC §8.2, §4.4, §5.1, §6.3 Exile; R63, R65, R81, R90, R346).
@@ -297,6 +298,25 @@ mod tests {
         fn r81_the_radiant_face_declares_the_same_single_target() {
             let scripts = script();
             assert_eq!(scripts.radiant.targets, scripts.base.targets);
+        }
+    }
+
+    #[test]
+    fn r386_an_upgrade_deals_5_and_a_degrade_3() {
+        for (upgrade, amount) in [(true, 5), (false, 3)] {
+            let mut s = scenario(json!({
+                "seed": "true-strike",
+                "p1": { "hand": ["core-044", "core-021"] },
+                "p2": { "health": 30, "armor": 5 },
+            }));
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, "core-044", "damage")
+            } else {
+                crate::degrade_number(&mut s, "core-044", "damage")
+            };
+            assert_eq!(moved, amount);
+            s.play("core-044", json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
+            s.expect_health(PlayerId::P2, 30 - amount);
         }
     }
 }

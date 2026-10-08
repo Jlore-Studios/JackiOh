@@ -29,8 +29,10 @@ pub fn script() -> CardScripts {
         cry: Some(hook(|_ctx| vec![rush_token()])),
         ..Script::default()
     };
+    // "Summon 3 Rush Tokens": the declared number `tokens` (R386), tuned on the Radiant face only — the
+    // base face's "a Rush Token" is 1 and never moves (R749).
     let radiant = Script {
-        cry: Some(hook(|_ctx| vec![rush_token(), rush_token(), rush_token()])),
+        cry: Some(hook(|ctx| (0..param(&*ctx, "tokens")).map(|_| rush_token()).collect())),
         ..Script::default()
     };
     CardScripts { base, radiant }
@@ -162,6 +164,32 @@ mod tests {
                 );
                 assert_eq!(token_count(&s, PlayerId::P1), 1);
             }
+
+            #[test]
+            fn r386_an_upgrade_summons_4_tokens_and_a_degrade_2() {
+                for (upgrade, tokens) in [(true, 4), (false, 2)] {
+                    crate::register_all();
+                    let mut s = scenario(json!({
+                        "p1": { "hand": [{ "def": "core-015", "radiant": true }, "core-005"], "library": ["core-005"] }
+                    }));
+                    let moved = if upgrade {
+                        crate::upgrade_number(&mut s, "core-015", "tokens")
+                    } else {
+                        crate::degrade_number(&mut s, "core-015", "tokens")
+                    };
+                    assert_eq!(moved, tokens);
+                    s.play("core-015", json!({}));
+                    assert_eq!(token_count(&s, PlayerId::P1), tokens as usize);
+                }
+            }
+        }
+
+        #[test]
+        fn r749_the_base_face_s_one_token_is_never_tuned() {
+            crate::register_all();
+            let s = scenario(json!({ "p1": { "hand": ["core-015"] } }));
+            assert!(!crate::can_upgrade_number(&s, "core-015", "tokens"));
+            assert!(!crate::can_degrade_number(&s, "core-015", "tokens"));
         }
     }
 }

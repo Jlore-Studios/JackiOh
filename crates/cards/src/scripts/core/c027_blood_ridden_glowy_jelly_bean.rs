@@ -24,19 +24,19 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-027";
 
-/// §8.2: the blood price is the same on both faces; only the number of cards changes.
-const HEALTH_LOST: i32 = 5;
-
-fn blood_ridden(count: i32) -> Script {
+/// §8.2: the blood price is the same on both faces; only the number of cards changes. Both are
+/// declared numbers (R386): `loss`, 5, less being better, and `cards`, 2 on the Radiant face and tuned
+/// there alone (R749: the base face's "a random card" prints no number and is always 1).
+fn blood_ridden() -> Script {
     Script {
         static_flags: Some(StaticFlags {
             cast_on_draw: Some(true),
             ..StaticFlags::default()
         }),
-        cry: Some(hook(move |_ctx| {
+        cry: Some(hook(|ctx| {
             vec![
-                set_radiant_random(json_as(json!({ "zones": "hand", "count": count }))),
-                lose_health(json_as(json!({ "player": "self", "amount": HEALTH_LOST }))),
+                set_radiant_random(json_as(json!({ "zones": "hand", "count": param(&*ctx, "cards") }))),
+                lose_health(json_as(json!({ "player": "self", "amount": param(&*ctx, "loss") }))),
             ]
         })),
         ..Script::default()
@@ -44,10 +44,9 @@ fn blood_ridden(count: i32) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    CardScripts {
-        base: blood_ridden(1),
-        radiant: blood_ridden(2),
-    }
+    let base = blood_ridden();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
 }
 
 // #27 Blood Ridden Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 27): "Cast on draw; a random
@@ -233,5 +232,45 @@ mod tests {
             s.expect_in_zone("core-027", "graveyard");
             assert!(!s.state().players.p1.hand.iter().any(|card| card.def_id == "core-027"));
         }
+
+        #[test]
+        fn r386_an_upgrade_flags_3_cards_and_a_degrade_1() {
+            for (upgrade, cards) in [(true, 3), (false, 1)] {
+                crate::register_all();
+                let mut s = drawing(json!(["core-005", "core-016", "core-010", "core-011"]), true, None);
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, "core-027", "cards")
+                } else {
+                    crate::degrade_number(&mut s, "core-027", "cards")
+                };
+                assert_eq!(moved, cards);
+                s.start_turn();
+                assert_eq!(radiant_hand(s.state()).len(), cards as usize);
+            }
+        }
+    }
+
+    #[test]
+    fn r386_an_upgrade_loses_4_health_and_a_degrade_6() {
+        for (upgrade, loss) in [(true, 4), (false, 6)] {
+            crate::register_all();
+            let mut s = drawing(json!(["core-016"]), false, None);
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, "core-027", "loss")
+            } else {
+                crate::degrade_number(&mut s, "core-027", "loss")
+            };
+            assert_eq!(moved, loss);
+            s.start_turn();
+            s.expect_health(P1, 30 - loss);
+        }
+    }
+
+    #[test]
+    fn r749_the_base_face_s_one_card_is_never_tuned() {
+        crate::register_all();
+        let s = drawing(json!(["core-016"]), false, None);
+        assert!(!crate::can_upgrade_number(&s, "core-027", "cards"));
+        assert!(!crate::can_degrade_number(&s, "core-027", "cards"));
     }
 }

@@ -32,16 +32,15 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-046";
 
-/// One face's two prices (TS `{ paid2, paid4 }`): the penalty at the base price, then at the
-/// embiggen price (R65).
-struct Penalties {
-    paid2: i32,
-    paid4: i32,
+/// The penalty at the price this card was played for (R65): the declared number `debuff` at the base
+/// price and `paidDebuff` at the embiggen price (R386) — 1 and 2, 2 and 4 on the Radiant face.
+fn penalty(args: &HookArgs<'_>) -> i32 {
+    if args.self_.embiggened == Some(true) {
+        param(args, "paidDebuff")
+    } else {
+        param(args, "debuff")
+    }
 }
-
-/// The two prices of §8.2's cell: the base price, then the embiggen price (R65).
-const BASE_PENALTIES: Penalties = Penalties { paid2: 1, paid4: 2 };
-const RADIANT_PENALTIES: Penalties = Penalties { paid2: 2, paid4: 4 };
 
 /// `-penalty` on both stats.
 fn suppression(penalty: i32) -> StatMod {
@@ -56,29 +55,19 @@ fn suppression(penalty: i32) -> StatMod {
 /// The mod is negative on both stats, so §10.4 subtracts it from attack (floored at 0 on read) and
 /// from max health (not floored, R69).
 fn all_units(args: HookArgs<'_>) -> Vec<AuraEntry<'_>> {
-    let penalty = if args.self_.embiggened == Some(true) {
-        BASE_PENALTIES.paid4
-    } else {
-        BASE_PENALTIES.paid2
-    };
     vec![AuraEntry {
         applies: Box::new(|_unit: &CardInstance| true),
-        mod_: suppression(penalty),
+        mod_: suppression(penalty(&args)),
     }]
 }
 
 /// "Enemy units": enemy of this card's controller, which is control and not ownership (R12), so a
 /// stolen or rotated Suppressive Aura suppresses the other board from its new side.
 fn enemy_units(args: HookArgs<'_>) -> Vec<AuraEntry<'_>> {
-    let penalty = if args.self_.embiggened == Some(true) {
-        RADIANT_PENALTIES.paid4
-    } else {
-        RADIANT_PENALTIES.paid2
-    };
     let controller = args.self_.controller;
     vec![AuraEntry {
         applies: Box::new(move |unit: &CardInstance| unit.controller != controller),
-        mod_: suppression(penalty),
+        mod_: suppression(penalty(&args)),
     }]
 }
 
@@ -350,6 +339,44 @@ mod tests {
                 assert!(face.targets.is_empty());
                 assert!(face.modes.is_empty());
                 assert!(face.cry.is_none());
+            }
+        }
+
+        #[test]
+        fn r386_an_upgrade_makes_the_base_price_2_2_and_a_radiant_degrade_1_1() {
+            for (radiant, upgrade, debuff) in [(false, true, 2), (true, false, 1)] {
+                let mut g = scenario(json!({
+                    "p1": { "hand": [{ "def": AURA, "radiant": radiant }] },
+                    "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 1 }] },
+                }));
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut g, AURA, "debuff")
+                } else {
+                    crate::degrade_number(&mut g, AURA, "debuff")
+                };
+                assert_eq!(moved, debuff);
+                g.play(AURA, json!({}));
+                let theirs = unit_id(&g, PlayerId::P2, 1, "p2's 7/7");
+                g.expect_stats(theirs.as_str(), json!({ "attack": 7 - debuff, "maxHealth": 7 - debuff }));
+            }
+        }
+
+        #[test]
+        fn r386_an_upgrade_makes_the_paid_price_3_3_and_a_degrade_1_1() {
+            for (upgrade, debuff) in [(true, 3), (false, 1)] {
+                let mut g = scenario(json!({
+                    "p1": { "hand": [AURA] },
+                    "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 1 }] },
+                }));
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut g, AURA, "paidDebuff")
+                } else {
+                    crate::degrade_number(&mut g, AURA, "paidDebuff")
+                };
+                assert_eq!(moved, debuff);
+                g.play(AURA, json!({ "embiggen": true }));
+                let theirs = unit_id(&g, PlayerId::P2, 1, "p2's 7/7");
+                g.expect_stats(theirs.as_str(), json!({ "attack": 7 - debuff, "maxHealth": 7 - debuff }));
             }
         }
     }

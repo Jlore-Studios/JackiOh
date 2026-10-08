@@ -47,8 +47,8 @@ pub const ID: &str = "core-037";
 /// The step name the Discover's continuation carries (`prompts.ts`: `script.resume[step]`).
 const PICKED: &str = "picked";
 
-/// R65: "costs 1 less" is a −1 `costMod` on the chosen instance, permanent and zone-proof (R78).
-const DISCOUNT: i32 = -1;
+// R65: "costs 1 less" is a −1 `costMod` on the chosen instance, permanent and zone-proof (R78); the 1
+// is the declared number `discount` (R386).
 
 pub fn script() -> CardScripts {
     CardScripts {
@@ -67,13 +67,13 @@ pub fn script() -> CardScripts {
             })),
             resume: IndexMap::from([(
                 PICKED,
-                hook(|_ctx| {
+                hook(|ctx| {
                     vec![
                         bounce(json_as(json!({ "target": { "of": "chosen" } }))),
                         // R4: "it costs 1 less" is its price in the hand, so a pick a full hand burns keeps its cost.
                         set_cost_mod(json_as(json!({
                             "target": { "of": "chosen" },
-                            "amount": DISCOUNT,
+                            "amount": -param(&*ctx, "discount"),
                             "inHandOnly": true,
                         }))),
                     ]
@@ -308,6 +308,28 @@ mod tests {
 
             assert!(s.state().pending.is_none());
             assert_eq!(def_ids_in_hand(&s), strings(&[DRAWN]));
+        }
+
+        #[test]
+        fn r386_an_upgrade_makes_the_pick_cost_2_less_and_a_degrade_finds_the_discount_at_its_floor() {
+            let mut s = scn(json!({
+                "seed": SEED,
+                "p1": {
+                    "field": [{ "def": GRAVEDIGGER, "radiant": true }],
+                    "graveyard": [STOCKPILE, HIT_JOB, MANA_WELL],
+                    "library": [DRAWN],
+                },
+                "p2": { "hand": [STOCKPILE], "library": [STOCKPILE] },
+            }));
+            assert!(!crate::can_degrade_number(&s, GRAVEDIGGER, "discount"));
+            assert_eq!(crate::upgrade_number(&mut s, GRAVEDIGGER, "discount"), 2);
+
+            s.start_turn();
+            s.answer(json!(MANA_WELL));
+
+            let picked = s.card(MANA_WELL).clone();
+            assert_eq!(picked.cost_mod, -2);
+            assert_eq!(effective_cost(s.state(), s.card(&picked.id), Default::default()), 1);
         }
     }
 }

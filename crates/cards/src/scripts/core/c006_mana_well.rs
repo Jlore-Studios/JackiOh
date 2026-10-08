@@ -20,17 +20,18 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-006";
 
-/// The only difference between the two faces is how much mana the start of the turn gives.
-fn mana_well(amount: i32) -> Script {
+/// The only difference between the two faces is how much mana the start of the turn gives: the
+/// declared number `mana` (R386), 1 and 2 on the Radiant face, read off the face that is up.
+fn mana_well() -> Script {
     Script {
-        start_of_turn: Some(hook(move |_ctx| vec![gain_mana(json_as(json!({ "amount": amount })))])),
+        start_of_turn: Some(hook(|ctx| vec![gain_mana(json_as(json!({ "amount": param(&*ctx, "mana") })))])),
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
-    let base = mana_well(1);
-    let radiant = mana_well(2);
+    let base = mana_well();
+    let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
@@ -144,6 +145,30 @@ mod tests {
 
             s.expect_mana(PlayerId::P1, 6);
             assert_eq!(s.view(PlayerId::P1).you.mana.max, 4);
+        }
+
+        #[test]
+        fn r386_an_upgrade_gains_2_a_turn_and_a_radiant_degrade_1() {
+            for (radiant, upgrade, mana) in [(false, true, 6), (true, false, 5)] {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "core-006-tuned",
+                    "p1": {
+                        "backrow": [{ "def": "core-006", "radiant": radiant }],
+                        "hand": ["core-011"],
+                        "library": LIBRARY
+                    },
+                    "p2": { "hand": ["core-011"], "library": LIBRARY }
+                }));
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, "core-006", "mana")
+                } else {
+                    crate::degrade_number(&mut s, "core-006", "mana")
+                };
+                assert_eq!(moved, mana - 4);
+                s.start_turn();
+                s.expect_mana(PlayerId::P1, mana);
+            }
         }
     }
 }

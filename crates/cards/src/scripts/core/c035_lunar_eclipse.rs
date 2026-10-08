@@ -57,16 +57,17 @@ fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
 }
 
-/// 3 damage and −1, or 6 and −2. Both numbers come from the same cell, so one builder.
-fn eclipse(amount: i32, discount: i32) -> Hook {
-    hook(move |ctx| {
+/// 3 damage and −1, or 6 and −2: the declared numbers `damage` and `discount` (R386), read off the
+/// face that is running, so one hook serves both faces.
+fn eclipse() -> Hook {
+    hook(|ctx| {
         vec![
-            damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount }))),
+            damage(json_as(json!({ "to": { "of": "chosen" }, "amount": param(&*ctx, "damage") }))),
             add_player_modifier(json_as(json!({
                 "player": "self",
                 "mod": {
                     "kind": "costDiscount",
-                    "amount": discount,
+                    "amount": param(&*ctx, "discount"),
                     // "the next Spell you play": Spells only, and only the next one.
                     "onlyType": "Spell",
                     "oncePerTurn": true,
@@ -79,18 +80,13 @@ fn eclipse(amount: i32, discount: i32) -> Hook {
 }
 
 pub fn script() -> CardScripts {
-    CardScripts {
-        base: Script {
-            targets: targets(),
-            cry: Some(eclipse(3, 1)),
-            ..Script::default()
-        },
-        radiant: Script {
-            targets: targets(),
-            cry: Some(eclipse(6, 2)),
-            ..Script::default()
-        },
-    }
+    let base = Script {
+        targets: targets(),
+        cry: Some(eclipse()),
+        ..Script::default()
+    };
+    let radiant = base.clone();
+    CardScripts { base, radiant }
 }
 
 // #35 Lunar Eclipse — SPEC §8.2 row 35, BUILD M4-T4 must-pass row 35:
@@ -276,6 +272,41 @@ mod tests {
             s.end_turn();
 
             assert_eq!(s.state().players.p1.mods.len(), 0);
+        }
+    }
+
+    #[test]
+    fn r386_an_upgrade_deals_4_and_a_degrade_2() {
+        for (upgrade, amount) in [(true, 4), (false, 2)] {
+            let mut s = board();
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, "35", "damage")
+            } else {
+                crate::degrade_number(&mut s, "35", "damage")
+            };
+            assert_eq!(moved, amount);
+            s.play("35", json!({ "targets": at_enemy_hero() }));
+            s.expect_health("p2", 30 - amount);
+        }
+    }
+
+    #[test]
+    fn r386_an_upgrade_makes_the_discount_2_and_a_radiant_degrade_1() {
+        for (radiant, upgrade, discount) in [(false, true, 2), (true, false, 1)] {
+            let mut s = board();
+            s.card_mut("35").radiant = radiant;
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, "35", "discount")
+            } else {
+                crate::degrade_number(&mut s, "35", "discount")
+            };
+            assert_eq!(moved, discount);
+            s.play("35", json!({ "targets": at_enemy_hero() }));
+            s.expect_mana("p1", 3);
+            let hit_job = at_unit(&s, "p2", 1, "p2 lane 1");
+            s.play("16", hit_job);
+            // Hit Job's printed 3, less the discount.
+            s.expect_mana("p1", discount);
         }
     }
 }

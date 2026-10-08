@@ -127,6 +127,69 @@ pub(crate) fn merged(mut base: serde_json::Value, over: serde_json::Value) -> se
     base
 }
 
+/// R386, B3.4 rule 3's Number row: one Upgrade or Degrade of `card` that draws its declared number
+/// `key`, applied as `tune_once` applies that row — `step_param` by the step `steppable_params` offers
+/// that way. Panics unless a step that way can move the number; returns the value it moves to.
+#[cfg(test)]
+fn tune_number(
+    s: &mut jackioh_engine::testkit::Scenario,
+    card: &str,
+    key: &str,
+    direction: jackioh_engine::effects::TuneDirection,
+) -> i32 {
+    use jackioh_engine::prelude::{ParamValueOptions, param_value, step_param, steppable_params};
+    let instance = s.card(card).clone();
+    let before = param_value(s.state(), Some(&instance), key, ParamValueOptions::default());
+    let Some(item) = steppable_params(s.state(), &instance, direction)
+        .into_iter()
+        .find(|item| item.param.key == key)
+    else {
+        panic!("{card}: a {} cannot move its number \"{key}\" (R386)", direction.as_str());
+    };
+    step_param(s.card_mut(card), key, item.steps);
+    let after = param_value(s.state(), Some(s.card(card)), key, ParamValueOptions::default());
+    assert_eq!(after, before + item.delta, "{card} {key}");
+    after
+}
+
+/// `tune_number` for an Upgrade: the number one step better.
+#[cfg(test)]
+pub(crate) fn upgrade_number(s: &mut jackioh_engine::testkit::Scenario, card: &str, key: &str) -> i32 {
+    tune_number(s, card, key, jackioh_engine::effects::TuneDirection::Upgrade)
+}
+
+/// R386: whether a step `direction` would move `card`'s declared number `key` at all — false for a
+/// number already at the bound it would cross (an amount at 1, a cost set at (0)).
+#[cfg(test)]
+fn can_tune_number(
+    s: &jackioh_engine::testkit::Scenario,
+    card: &str,
+    key: &str,
+    direction: jackioh_engine::effects::TuneDirection,
+) -> bool {
+    jackioh_engine::prelude::steppable_params(s.state(), s.card(card), direction)
+        .iter()
+        .any(|item| item.param.key == key)
+}
+
+/// `can_tune_number` for an Upgrade.
+#[cfg(test)]
+pub(crate) fn can_upgrade_number(s: &jackioh_engine::testkit::Scenario, card: &str, key: &str) -> bool {
+    can_tune_number(s, card, key, jackioh_engine::effects::TuneDirection::Upgrade)
+}
+
+/// `can_tune_number` for a Degrade.
+#[cfg(test)]
+pub(crate) fn can_degrade_number(s: &jackioh_engine::testkit::Scenario, card: &str, key: &str) -> bool {
+    can_tune_number(s, card, key, jackioh_engine::effects::TuneDirection::Degrade)
+}
+
+/// `tune_number` for a Degrade: the number one step worse.
+#[cfg(test)]
+pub(crate) fn degrade_number(s: &mut jackioh_engine::testkit::Scenario, card: &str, key: &str) -> i32 {
+    tune_number(s, card, key, jackioh_engine::effects::TuneDirection::Degrade)
+}
+
 /// TS `s.unit(p, lane)?.id ?? ""`: the unit's instance id, or blank for an empty lane.
 #[cfg(test)]
 pub(crate) fn unit_or_blank(

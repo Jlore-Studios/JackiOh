@@ -36,9 +36,11 @@ fn ky_pool() -> Value {
 pub fn script() -> CardScripts {
     CardScripts {
         // A spell's script is its `cry` hook (§10.9; `run_hook` in engine/src/resolve.rs).
+        // The counts are the declared numbers `cards` (3, and 2 on the Radiant face) and the Radiant
+        // face's `radiantCards` (2), R386.
         base: Script {
-            cry: Some(hook(|_ctx| {
-                vec![add_random_from_catalog(json_as(json!({ "query": ky_pool(), "count": 3 })))]
+            cry: Some(hook(|ctx| {
+                vec![add_random_from_catalog(json_as(json!({ "query": ky_pool(), "count": param(&*ctx, "cards") })))]
             })),
             ..Script::default()
         },
@@ -46,10 +48,12 @@ pub fn script() -> CardScripts {
         // Conventions), so the radiant face adds 4 cards, not 3 + 4. The plain pair is rolled first so the
         // radiant flag lands on exactly the last two adds.
         radiant: Script {
-            cry: Some(hook(|_ctx| {
+            cry: Some(hook(|ctx| {
+                let plain = param(&*ctx, "cards");
+                let radiant = param(&*ctx, "radiantCards");
                 vec![
-                    add_random_from_catalog(json_as(json!({ "query": ky_pool(), "count": 2 }))),
-                    add_random_from_catalog(json_as(json!({ "query": ky_pool(), "count": 2, "radiant": true }))),
+                    add_random_from_catalog(json_as(json!({ "query": ky_pool(), "count": plain }))),
+                    add_random_from_catalog(json_as(json!({ "query": ky_pool(), "count": radiant, "radiant": true }))),
                 ]
             })),
             ..Script::default()
@@ -278,6 +282,38 @@ mod tests {
 
             assert_eq!(g.hand(P1).len(), 10);
             g.expect_events(json!(["burned"]));
+        }
+    }
+
+    #[test]
+    fn r386_an_upgrade_adds_4_cards_and_a_degrade_2() {
+        for (upgrade, cards) in [(true, 4), (false, 2)] {
+            crate::register_all();
+            let mut g = scenario(json!({ "p1": { "hand": ["core-057"] } }));
+            let moved = if upgrade {
+                crate::upgrade_number(&mut g, "core-057", "cards")
+            } else {
+                crate::degrade_number(&mut g, "core-057", "cards")
+            };
+            assert_eq!(moved, cards);
+            g.play("core-057", json!({}));
+            assert_eq!(g.hand(P1).len(), cards as usize);
+        }
+    }
+
+    #[test]
+    fn r386_an_upgrade_adds_3_radiant_cards_and_a_degrade_1() {
+        for (upgrade, cards) in [(true, 3), (false, 1)] {
+            crate::register_all();
+            let mut g = scenario(json!({ "p1": { "hand": [{ "def": "core-057", "radiant": true }] } }));
+            let moved = if upgrade {
+                crate::upgrade_number(&mut g, "core-057", "radiantCards")
+            } else {
+                crate::degrade_number(&mut g, "core-057", "radiantCards")
+            };
+            assert_eq!(moved, cards);
+            g.play("core-057", json!({}));
+            assert_eq!(g.hand(P1).iter().skip(2).filter(|card| card.radiant).count(), cards as usize);
         }
     }
 }
