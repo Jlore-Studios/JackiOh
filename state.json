@@ -3971,6 +3971,13 @@
     "560": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-08T14:50:28Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Small fails: 300-500 lines crosses the 400-line cap, so it cannot be easy no matter how cleanly it fits in one crate"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
