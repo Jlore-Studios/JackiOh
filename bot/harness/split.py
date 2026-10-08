@@ -11,6 +11,12 @@ with GitHub's own "blocked by" links between them, each queued for whoever build
 The same session closes a tree out: when every sub-issue has closed, the parent is split again
 with its sub-issues listed, and the answer is `"done": true` when the parent's end state holds on
 `main`, or the sub-issues still missing.
+
+Both bots' `fullsend` mode (#505) splits the same way, into parts that own their files
+(`FULLSEND_NOTES`), but each part lands on the parent's own branch (`onto`) instead of `main`,
+with no pull request, checks or review of its own (`work.Worker._part`, `deliver.Deliverer.
+_land_part`); once every part has closed, the parent's reconcile builds that branch into one pull
+request into `main` (`prompts/reconcile.md`).
 """
 
 from __future__ import annotations
@@ -28,6 +34,35 @@ TITLE_CHARS = 200
 BODY_CHARS = 20_000
 PLAN_CHARS = 30_000
 _KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,40}$")
+
+#: What a fullsend split is told beyond a split's rules (#505, `prompts/split.md`'s `$fullsend`):
+#: the parts land on one branch and are reconciled there, as `.claude/skills/fullsend/` shatters a
+#: build into slices (its Phase 1).
+FULLSEND_NOTES = """## This is a fullsend split
+
+A person asked for this issue to be built with **fullsend** (`.claude/skills/fullsend/SKILL.md`),
+and the rules below change for it in four ways.
+
+- **One branch, not `main`.** Each part lands on `{branch}`, the issue's own branch, not on
+  `main`, with no pull request, checks or review of its own. A part need not pass the checks on
+  its own: once every part has closed, one run reconciles the branch, makes every check green and
+  opens one pull request into `main`.
+- **Vertical slices that own their files.** Cut the issue as the skill's Phase 1 shatters a build:
+  each part owns its files outright, top to bottom, and no file is in two parts, so the parts with
+  no `blocked_by` are built side by side. Name each part's files in its body and its plan.
+- **`blocked_by` only where one part reads another's code.** A part that only needs another to
+  exist (a type, a function it calls) can follow the interface the issue and your plan fix, and
+  needs no link.
+- **No "make it green" part.** A part may test its own code, but the tests that need several
+  parts, and every fix that makes the checks pass, are the reconcile's: a part that only fixes the
+  others would wait for all of them.
+"""
+#: What a part's builder reads first (#505, `work.Worker._first_prompt`).
+PART_NOTE = ("This is part of fullsend tree #{parent}. Your change lands on `{onto}`, which holds "
+             "the parts built before yours, not on `main`, and the harness runs no checks and no "
+             "review on it. Change only the files your plan names. A check that is red because "
+             "another part is missing is expected: a later run reconciles the parts and makes "
+             "every check green.\n\n")
 _FENCE = re.compile(r"```json\s*\n(.*?)\n```", re.S)
 
 
@@ -190,16 +225,17 @@ def ordered(issues: list[SubIssue]) -> list[SubIssue]:
     return placed
 
 
-def body(issue: SubIssue, parent: int, who: str, waits: list[int]) -> str:
+def body(issue: SubIssue, parent: int, who: str, waits: list[int], onto: str = "") -> str:
     """A sub-issue's description, its plan aside (`issueplan.with_plan` adds that). The issues it
     waits for are named in a "Blocked by" line too, which the queue reads (`queue.waits_for`) even
-    if GitHub's own link could not be made."""
+    if GitHub's own link could not be made. A fullsend part (#505) says where it lands."""
     blocked = f"\n\nBlocked by {', '.join(f'#{n}' for n in waits)}." if waits else ""
-    return f"{issue.body}{blocked}\n\nPart of #{parent}, split by {who}."
+    lands = f"\n\nIts build lands on `{onto}`, not `main` (fullsend)." if onto else ""
+    return f"{issue.body}{blocked}{lands}\n\nPart of #{parent}, split by {who}."
 
 
 def checklist(parent: int, made: list[tuple[SubIssue, int]], *, builder: str, summary: str,
-              link: str) -> str:
+              link: str, onto: str = "") -> str:
     """The comment on the parent after a split: the tree, in build order, and how it goes on."""
     lines = [f"Split #{parent} into {len(made)} sub-issue(s) ({link}), queued for {builder} in "
              "this order; each waits for the ones it is blocked by:", ""]
@@ -209,6 +245,10 @@ def checklist(parent: int, made: list[tuple[SubIssue, int]], *, builder: str, su
         waits += [f"#{n}" for n in issue.blocked_by_issues]
         after = f" (after {', '.join(waits)})" if waits else ""
         lines.append(f"- [ ] #{number}{after}")
+    if onto:
+        lines += ["", f"This is a fullsend tree: each part lands on `{onto}`, not on `main`, with "
+                  "no pull request of its own. Once every part has closed, one run reconciles them "
+                  "on that branch, makes every check green and opens one pull request into `main`."]
     if summary:
         lines += ["", summary]
     return "\n".join(lines)

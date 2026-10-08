@@ -16,7 +16,7 @@
     "workflow": "squishy-run.yml",
     "marker": "<!-- jackioh-squishy -->",
     "trust": ".harness/trust.txt",
-    "modes": ["oneshot", "split", "split-bot"],
+    "modes": ["oneshot", "split", "split-bot", "fullsend"],
     "others": [{ "name": "the night bot", "login": "jgoetzmann-bot", "label_prefix": "bot:" }]
   },
   "max_turns": { "plan": 200, "build": 600, "fix": 300, "revise": 300, "review": 150, "suggest": 120 },

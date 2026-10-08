@@ -10,6 +10,10 @@ model, and on findings a fix and the checks and the self check again, up to
 seat of at least medium to review in the run (only weak ones) ends with the change built, for a
 review run to judge; a weak model reviews only in a review run, and only an easy item.
 
+A fullsend part (#505, `plan["onto"]`) is one builder pass from its tree's branch and nothing
+more (`_part`): its tree's reconcile, an ordinary build of the parent on that branch, runs the
+checks and the review for every part at once.
+
 This job holds no GitHub write credential. It writes `result.json` and a git bundle of the branch
 to the output directory; the deliver job checks the bundle itself and pushes it. Prompts are read
 into memory when the job starts, so nothing the model writes to disk can change what a later
@@ -682,6 +686,19 @@ class Worker:
                       f"+refs/heads/{default}:refs/remotes/origin/{default}")
         self.repo.run("fetch", "--quiet", "--no-tags", "origin",
                       f"+refs/heads/{branch}:refs/remotes/origin/{branch}", check=False)
+        onto = str(self.plan.get("onto") or "")
+        if onto:
+            # A fullsend part (#505) starts from its tree's branch, and that is its base: every
+            # diff it measures leaves out the parts that landed before it.
+            fetched = self.repo.run("fetch", "--quiet", "--no-tags", "origin",
+                                    f"+refs/heads/{onto}:refs/remotes/origin/{onto}", check=False)
+            if fetched.returncode != 0 or self.repo.rev(f"origin/{onto}") is None:
+                raise RuntimeError(f"the integration branch {onto} is gone")
+            self.base_ref = f"origin/{onto}"
+        for parked in self.plan.get("parked") or []:
+            # The parts a fullsend reconcile merges first (#505).
+            self.repo.run("fetch", "--quiet", "--no-tags", "origin",
+                          f"+refs/heads/{parked}:refs/remotes/origin/{parked}", check=False)
         remote = f"origin/{branch}"
         has_remote = self.repo.rev(remote) is not None
         if self.plan["action"] in ("revise", "review") and not has_remote:
@@ -1009,12 +1026,22 @@ class Worker:
                          f"it is also at the top of `{NOTES_FILE}`. Follow it unless the code "
                          "shows it is wrong, and say where you departed from it and why.\n\n"
                          + data(self.plan_text, "The plan"))
+        branch_state = self._branch_state()
+        if plan.get("onto"):
+            branch_state = split_mod.PART_NOTE.format(parent=plan.get("part_of"),
+                                                      onto=plan["onto"]) + branch_state
         values = dict(number=number, repo=self.cfg.repo, branch=plan["branch"], base=self.base_sha,
-                      thread=plan.get("thread", ""), branch_state=self._branch_state(),
+                      thread=plan.get("thread", ""), branch_state=branch_state,
                       previous=previous, gate_list=self._gate_list())
         if plan.get("mode") == "oneshot":
             prompt = self.render("oneshot", **values,
                                  slice_prefix=f"{BRANCH_PREFIX}oneshot-{number}/")
+        elif plan.get("mode") == "fullsend" and plan.get("children"):
+            parked = [str(b) for b in plan.get("parked") or []]
+            prompt = self.render(
+                "reconcile", **values, children=plan["children"],
+                parked=("\n".join(f"   - `origin/{b}`" for b in parked) if parked
+                        else "   None: every part landed on the branch."))
         else:
             prompt = self.render("build", **values)
         return "build", prompt + self._handoff_text()
@@ -1429,8 +1456,12 @@ class Worker:
         return report, results, guard, flagged
 
     def _item(self) -> None:
-        if str(self.plan.get("mode") or "").startswith("split"):
-            self._split()
+        mode = str(self.plan.get("mode") or "")
+        if mode.startswith("split") or (mode == "fullsend" and not self.plan.get("children")):
+            self._split()  # a fullsend with sub-issues already is its reconcile: a build (#505)
+            return
+        if self.plan.get("onto"):
+            self._part()
             return
         conflicts = self._prepare()
         assert self.wt is not None
@@ -1696,6 +1727,8 @@ class Worker:
             thread=self.plan.get("thread", ""),
             builders=str(self.plan.get("builders") or "I"),
             children=children or "The issue has no sub-issues yet.",
+            fullsend=(split_mod.FULLSEND_NOTES.format(branch=self.plan["branch"])
+                      if self.plan.get("mode") == "fullsend" else ""),
             easy_rule=self._easy_rule(), max_issues=split_mod.MAX_ISSUES,
         ) + self._handoff_text(builder=False)
         head = self.wt.head()
@@ -1718,6 +1751,38 @@ class Worker:
         said = "done" if tree.done else f"{len(tree.issues)} sub-issue(s)"
         self._came_of_it(said)
         self.result.update(status="split", reason=f"split: {said}")
+
+    def _part(self) -> None:
+        """A fullsend part (#505): one builder pass from its tree's branch (`onto`, the base
+        `_prepare` set), and the path guard, and nothing else: no checks, no self check, no
+        catch-up with `main` and no review. The parts land on that branch blind to each other, as
+        fullsend's builders write their slices, and the tree's reconcile checks and reviews them
+        all at once. The deliver job lands it (`deliver.Deliverer._land_part`)."""
+        conflicts = self._prepare()
+        assert self.wt is not None
+        if self.plan_seat is not None:
+            self._planning()
+            if self._rated_out():
+                self._finish()
+                return
+        self.check()
+        role, prompt = self._first_prompt(conflicts)
+        built, entry = self._build_pass(1, role, prompt, self._first_why(role, conflicts))
+        self.result["cycles"].append(entry)
+        if built is None:
+            return
+        guard = self._guard()
+        if self._only_forbidden():
+            return
+        self._last_checkpoint()
+        if not self.wt.changed_paths(self.base_ref):
+            self.result.update(status="failed", reason="the part changed nothing")
+        else:
+            self.result.update(status="part", reason="a fullsend part, for the reconcile: no "
+                               "checks or review")
+        self.result.update(title=built.title or self.plan.get("title", ""), report=built.body,
+                           findings=[f.to_dict() for f in guard])
+        self._finish()
 
     # ------------------------------------------------------------------ endings
 
