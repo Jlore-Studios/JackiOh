@@ -416,6 +416,37 @@ mod tests {
         shuffled_in(s, Some(player)).iter().filter(|event| event.def_id == VIRUS).count()
     }
 
+    #[test]
+    fn r386_the_virus_s_numbers_are_its_controllers_a_degrade_hurts_more_and_breeds_more_an_upgrade_less() {
+        // Upgrade and Degrade are the virus's controller's — the player who draws it — so a Degrade
+        // (Withering Storm's, on the deck it was shuffled into) makes it worse for them.
+        for (radiant, upgrade, damage, copies) in [(false, false, 2, 3), (true, true, 1, 2)] {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "core-090-1-tuned",
+                "p1": { "hand": [{ "def": VIRUS, "radiant": radiant }, "core-005"], "library": filler(3) },
+                "p2": { "hand": ["core-005"] },
+            }));
+            for (key, value) in [("damage", damage), ("copies", copies)] {
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, VIRUS, key)
+                } else {
+                    crate::degrade_number(&mut s, VIRUS, key)
+                };
+                assert_eq!(moved, value);
+            }
+
+            s.play(VIRUS, json!({}));
+            assert_eq!(damage_to(&s, "hero-p1"), vec![damage]);
+            s.end_turn();
+            assert_eq!(viruses_in(&s, P1), copies as usize);
+        }
+        // A base virus's 1 damage is the least it deals: no Upgrade lowers it.
+        crate::register_all();
+        let s = scenario(json!({ "p1": { "hand": [VIRUS] } }));
+        assert!(!crate::can_upgrade_number(&s, VIRUS, "damage"));
+    }
+
     mod n90_1_cn_virus_base {
         use super::*;
 

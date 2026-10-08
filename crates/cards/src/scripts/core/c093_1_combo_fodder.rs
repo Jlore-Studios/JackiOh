@@ -31,19 +31,17 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-093-1";
 
-/// §8: "Deal 2 damage", radiant "Deal 4 damage".
-const BASE_DAMAGE: i32 = 2;
-const RADIANT_DAMAGE: i32 = 4;
-
 /// R81: "a target" — any unit or hero on either side, picked with the play.
 fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
 }
 
-fn combo_fodder(amount: i32) -> Script {
+/// §8: "Deal 2 damage", radiant "Deal 4 damage": the declared number `damage` (R386).
+fn combo_fodder() -> Script {
     Script {
         targets: targets(),
-        cry: Some(hook(move |_ctx| {
+        cry: Some(hook(|ctx| {
+            let amount = param(&*ctx, "damage");
             vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount, "lifesteal": true })))]
         })),
         ..Script::default()
@@ -52,8 +50,8 @@ fn combo_fodder(amount: i32) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: combo_fodder(BASE_DAMAGE),
-        radiant: combo_fodder(RADIANT_DAMAGE),
+        base: combo_fodder(),
+        radiant: combo_fodder(),
     }
 }
 
@@ -184,6 +182,23 @@ mod tests {
             assert_eq!(damage_on(&s, "hero-p2"), vec![4]);
             s.expect_health(P2, 26).expect_health(P1, 24);
             s.expect_in_zone(&fodder, "graveyard");
+        }
+    }
+
+    #[test]
+    fn r386_an_upgrade_deals_3_and_a_degrade_1_and_the_lifesteal_heals_that() {
+        for (upgrade, amount) in [(true, 3), (false, 1)] {
+            crate::register_all();
+            let mut s = scenario(json!({ "p1": { "hand": [FODDER, ANCHOR], "health": 20 } }));
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, FODDER, "damage")
+            } else {
+                crate::degrade_number(&mut s, FODDER, "damage")
+            };
+            assert_eq!(moved, amount);
+            s.play(FODDER, at_hero("p2"));
+            assert_eq!(damage_on(&s, "hero-p2"), vec![amount]);
+            s.expect_health(P1, 20 + amount);
         }
     }
 }

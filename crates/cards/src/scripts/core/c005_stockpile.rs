@@ -117,7 +117,8 @@ mod tests {
             {
                 crate::register_all();
                 let mut s = scenario(json!({
-                    "p1": { "hand": ["core-005"], "health": 20, "library": ["core-025", "core-007", "core-012", "core-011"] }
+                    // #10 Rapid Replenish, a (0) Spell, keeps the turn from auto-ending (R82).
+                    "p1": { "hand": ["core-005", "core-010"], "health": 20, "library": ["core-025", "core-007", "core-012", "core-011"] }
                 }));
                 let moved = if upgrade {
                     crate::upgrade_number(&mut s, "core-005", key)
@@ -126,7 +127,7 @@ mod tests {
                 };
                 assert_eq!(moved, if upgrade { 3 } else { 1 });
                 s.play("core-005", json!({}));
-                assert_eq!(s.hand(PlayerId::P1).len(), cards);
+                assert_eq!(s.hand(PlayerId::P1).len(), cards + 1);
                 s.expect_health(PlayerId::P1, health);
             }
         }

@@ -22,20 +22,21 @@ pub fn script() -> CardScripts {
             never_defense: Some(true),
             ..StaticFlags::default()
         }),
-        death: Some(hook(|_ctx| {
+        // "It costs (0)": the declared number `setCost` (R386), on both faces.
+        death: Some(hook(|ctx| {
             vec![add_random_from_catalog(json_as(json!({
                 "query": { "tags": ["Jlockeed"] },
-                "costOverride": 0,
+                "costOverride": param(&*ctx, "setCost"),
             })))]
         })),
         ..Script::default()
     };
 
     let radiant = Script {
-        death: Some(hook(|_ctx| {
+        death: Some(hook(|ctx| {
             vec![add_random_from_catalog(json_as(json!({
                 "query": { "tags": ["Jlockeed"] },
-                "costOverride": 0,
+                "costOverride": param(&*ctx, "setCost"),
                 "radiant": true,
             })))]
         })),
@@ -287,6 +288,16 @@ mod tests {
             }
             assert!(!seen.contains(LOBBYIST));
             assert!(seen.iter().all(|id| POOL.contains(&id.as_str())));
+        }
+
+        #[test]
+        fn r386_a_degrade_makes_the_card_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
+            crate::register_all();
+            let mut s = board(Board { radiant: true, ..Board::default() });
+            assert!(!crate::can_upgrade_number(&s, LOBBYIST, "setCost"));
+            assert_eq!(crate::degrade_number(&mut s, LOBBYIST, "setCost"), 1);
+            let id = kill_lobbyist(&mut s);
+            assert_eq!(s.card(id.as_deref().unwrap_or("")).cost_override, Some(1));
         }
     }
 }

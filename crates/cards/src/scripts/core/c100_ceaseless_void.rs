@@ -68,11 +68,11 @@ fn printed_cost_of_def() -> i32 {
 
 /// R55: "Costs 1 less per card drawn, played, destroyed or exiled this game by either player",
 /// floored at 0 (§8.5's Engine cell). The four counters are game-level, so neither side's identity
-/// is read and nothing is stored on the instance.
-fn cost_now(state: &GameState, printed_cost: i32) -> i32 {
+/// is read and nothing is stored on the instance. The 1 is the declared number `discount` (R386).
+fn cost_now(state: &GameState, printed_cost: i32, discount: i32) -> i32 {
     let counters = &state.counters;
     let spent = counters.drawn + counters.played + counters.destroyed + counters.exiled;
-    (printed_cost - spent).max(0)
+    (printed_cost - discount * spent).max(0)
 }
 
 /// "Cry: exile all other permanents on both sides" — §3.1's two rows, both sides, this unit
@@ -88,7 +88,7 @@ fn exile_every_other_permanent() -> Vec<Effect> {
 pub fn script() -> CardScripts {
     let printed_cost = printed_cost_of_def();
     let void_ = Script {
-        cost: Some(cost_hook(move |args| cost_now(args.state, printed_cost))),
+        cost: Some(cost_hook(move |args| cost_now(args.state, printed_cost, param(&args, "discount")))),
         cry: Some(hook(|_ctx| exile_every_other_permanent())),
         // R662: the reductions have brought it within its controller's mana.
         condition_met: Some(condition_hook(|ctx| {
@@ -371,6 +371,17 @@ mod tests {
             // They add up: four counters at 25 is 100 spent.
             set_counters(&mut s, json!({ "drawn": 25, "played": 25, "destroyed": 25, "exiled": 25 }));
             assert_eq!(effective_cost(s.state(), &held(&s), Default::default()), 0);
+        }
+
+        #[test]
+        fn r386_an_upgrade_takes_2_off_per_card_and_a_degrade_finds_the_discount_at_its_floor_of_1() {
+            crate::register_all();
+            let mut s = void_scenario(json!({}));
+            set_counters(&mut s, json!({ "drawn": 10 }));
+            let id = held(&s).id;
+            assert!(!crate::can_degrade_number(&s, &id, "discount"));
+            assert_eq!(crate::upgrade_number(&mut s, &id, "discount"), 2);
+            assert_eq!(effective_cost(s.state(), &held(&s), Default::default()), PRINTED - 20);
         }
 
         #[test]

@@ -37,32 +37,8 @@ pub const ID: &str = "core-091";
 /// §8: "+1 Plague Counter" — one per damage instance.
 const TOKENS_PER_DAMAGE: i32 = 1;
 
-/// TS `"base" | "radiant"`: which face a value belongs to.
-#[derive(Clone, Copy)]
-enum Face {
-    Base,
-    Radiant,
-}
-
-/// TS `{ base: …, radiant: … } as const`: one value per face.
-#[derive(Clone, Copy)]
-struct PerFace<T: Copy> {
-    base: T,
-    radiant: T,
-}
-
-impl<T: Copy> PerFace<T> {
-    /// TS `VALUES[face]`.
-    fn of(self, face: Face) -> T {
-        match face {
-            Face::Base => self.base,
-            Face::Radiant => self.radiant,
-        }
-    }
-}
-
-/// §8: base "+1 mana per Plague Counter"; radiant "+2 mana per token".
-const MANA_PER_TOKEN: PerFace<i32> = PerFace { base: 1, radiant: 2 };
+// §8: base "+1 mana per Plague Counter"; radiant "+2 mana per token" — the declared number `mana`
+// (R386), read off the face that is up.
 
 /// "Whenever THIS takes damage": the event carries the target, so a hit this card DEALT — its own
 /// strike-back, its Trample overflow — is not a hit it took.
@@ -88,11 +64,11 @@ fn takes_damage() -> TriggerDef {
     .with_when(is_hit_on_self)
 }
 
-/// R280: the formula as each face prints it, which the preview labels its number with.
-const FORMULA: PerFace<&str> = PerFace {
-    base: "+1 mana per Plague Counter",
-    radiant: "+2 mana per Plague Counter",
-};
+/// R280: the formula as the face prints it, with its rate as it stands, which the preview labels its
+/// number with.
+fn formula(per_token: i32) -> String {
+    format!("+{per_token} mana per Plague Counter")
+}
 
 /// The mana the start-of-turn hook gains now: its own Plague Counters times the face's rate.
 fn mana_now(self_: Option<&CardInstance>, per_token: i32) -> i32 {
@@ -102,9 +78,9 @@ fn mana_now(self_: Option<&CardInstance>, per_token: i32) -> i32 {
 /// "Start of turn: +N mana per Plague Counter" (§2.2, R62: after the refresh, before the draw). With
 /// no tokens the card gains nothing and returns no effect at all, so it emits no `manaChanged` for a
 /// change of zero.
-fn mana_from_tokens(per_token: i32) -> Hook {
-    hook(move |ctx| {
-        let amount = mana_now(ctx.self_.as_ref(), per_token);
+fn mana_from_tokens() -> Hook {
+    hook(|ctx| {
+        let amount = mana_now(ctx.self_.as_ref(), param(&*ctx, "mana"));
         if amount <= 0 {
             vec![]
         } else {
@@ -113,15 +89,14 @@ fn mana_from_tokens(per_token: i32) -> Hook {
     })
 }
 
-fn fed_fauci(face: Face) -> Script {
-    let per_token = MANA_PER_TOKEN.of(face);
-    let formula = FORMULA.of(face);
+fn fed_fauci() -> Script {
     Script {
         triggers: vec![takes_damage()],
-        start_of_turn: Some(mana_from_tokens(per_token)),
-        preview: Some(condition_hook(move |ctx| {
+        start_of_turn: Some(mana_from_tokens()),
+        preview: Some(condition_hook(|ctx| {
+            let per_token = param(&ctx, "mana");
             vec![PreviewValue {
-                label: formula.to_string(),
+                label: formula(per_token),
                 value: mana_now(Some(ctx.self_), per_token),
                 display: None,
                 ids: None,
@@ -133,8 +108,8 @@ fn fed_fauci(face: Face) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: fed_fauci(Face::Base),
-        radiant: fed_fauci(Face::Radiant),
+        base: fed_fauci(),
+        radiant: fed_fauci(),
     }
 }
 
@@ -394,6 +369,32 @@ mod tests {
 
             assert_eq!(damage_events_on(s.events(), &fauci.id).len(), 0);
             assert_eq!(plague_on(&s, &fauci), 0);
+        }
+    }
+
+    #[test]
+    fn r386_an_upgrade_gains_2_a_counter_and_a_radiant_degrade_1_and_the_preview_says_so() {
+        for (radiant, upgrade, rate) in [(false, true, 2), (true, false, 1)] {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "active": "p2",
+                "p1": { "field": [{ "def": FAUCI, "radiant": radiant }], "hand": [GARY] },
+                "p2": { "field": [GARY], "hand": [GARY] },
+            }));
+            s.card_mut(FAUCI).counters.plague = Some(2);
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, FAUCI, "mana")
+            } else {
+                crate::degrade_number(&mut s, FAUCI, "mana")
+            };
+            assert_eq!(moved, rate);
+            let shown = serde_json::to_value(&s.view(P1).you.units[0]).unwrap_or_default();
+            assert_eq!(shown["preview"][0]["label"], json!(format!("+{rate} mana per Plague Counter")));
+            assert_eq!(shown["preview"][0]["value"], json!(2 * rate));
+
+            s.end_turn();
+
+            s.expect_mana(P1, 4 + 2 * rate);
         }
     }
 }

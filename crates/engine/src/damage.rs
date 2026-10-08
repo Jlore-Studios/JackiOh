@@ -112,7 +112,12 @@ pub fn hero_armor_of(state: &GameState, player: PlayerId) -> i32 {
         // text's card was played for — a Going Long fused onto a Going Long is Armor 4 as two apart are.
         for text in crate::scripts::texts_of(state, card) {
             let grants = text.flags.hero_armor.map_or(0, |grant| grant.count());
-            sum += grants.max(0) * side.on(text.embiggened);
+            if grants <= 0 {
+                continue;
+            }
+            // R386: the card's declared numbers `armor` and `paidArmor` where it declares them.
+            let key = if text.embiggened { "paidArmor" } else { "armor" };
+            sum += grants * crate::params::declared_or(state, card, key, side.on(text.embiggened));
         }
     }
     sum
@@ -175,7 +180,8 @@ pub fn hero_damage_cap(state: &GameState, player: PlayerId) -> Option<i32> {
     let mut caps: Vec<i32> = acting_texts_of(state, player)
         .iter()
         .filter(|card| crate::scripts::flags_of(state, card).anti_oneshot == Some(true))
-        .map(|card| ANTI_ONESHOT_CAP.on(card.radiant))
+        // R386: the cap is the card's declared number `cap` where it declares one.
+        .map(|card| crate::params::declared_or(state, card, "cap", ANTI_ONESHOT_CAP.on(card.radiant)))
         .collect();
     caps.extend(
         hero_guards_of(state, player)

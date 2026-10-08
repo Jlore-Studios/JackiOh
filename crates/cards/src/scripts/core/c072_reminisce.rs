@@ -45,7 +45,7 @@ pub const ID: &str = "core-072";
 const STEP_CHOSEN: &str = "chosen";
 
 /// `price` is the whole of the radiant text: −1 on the base face, a flat 0 on it.
-fn reminisce(price: impl Fn() -> Effect + Send + Sync + 'static) -> Script {
+fn reminisce(price: impl Fn(&EffectContext<'_>) -> Effect + Send + Sync + 'static) -> Script {
     Script {
         cry: Some(hook(|_ctx| {
             vec![
@@ -60,7 +60,7 @@ fn reminisce(price: impl Fn() -> Effect + Send + Sync + 'static) -> Script {
         resume: IndexMap::from([(
             // The answered selection arrives in `ctx.targets`, which `{ of: "chosen" }` reads (§10.6).
             STEP_CHOSEN,
-            hook(move |_ctx| vec![add_to_hand(json_as(json!({ "instance": { "of": "chosen" } }))), price()]),
+            hook(move |ctx| vec![add_to_hand(json_as(json!({ "instance": { "of": "chosen" } }))), price(ctx)]),
         )]),
         ..Script::default()
     }
@@ -69,11 +69,14 @@ fn reminisce(price: impl Fn() -> Effect + Send + Sync + 'static) -> Script {
 pub fn script() -> CardScripts {
     CardScripts {
         // R4: the price is the card's in the hand it reached, so a pick a full hand burns keeps its cost.
-        base: reminisce(|| {
-            set_cost_mod(json_as(json!({ "target": { "of": "chosen" }, "amount": -1, "inHandOnly": true })))
+        // "It costs (1) less" and "It costs (0)" are the declared numbers `discount` and `setCost` (R386).
+        base: reminisce(|ctx| {
+            let amount = -param(ctx, "discount");
+            set_cost_mod(json_as(json!({ "target": { "of": "chosen" }, "amount": amount, "inHandOnly": true })))
         }),
-        radiant: reminisce(|| {
-            set_cost_override(json_as(json!({ "target": { "of": "chosen" }, "cost": 0, "inHandOnly": true })))
+        radiant: reminisce(|ctx| {
+            let cost = param(ctx, "setCost");
+            set_cost_override(json_as(json!({ "target": { "of": "chosen" }, "cost": cost, "inHandOnly": true })))
         }),
     }
 }
@@ -116,6 +119,37 @@ mod tests {
 
     fn hand_def_ids(s: &Scenario) -> Vec<String> {
         s.hand(P1).into_iter().map(|card| card.def_id).collect()
+    }
+
+    /// R386: a Reminisce of the given face, with one Mana Well (printed 3) in the graveyard to take back.
+    fn tuned(radiant: bool, key: &str, upgrade: bool) -> CardInstance {
+        let mut s = setup(json!({
+            "seed": "core-072-tuned",
+            "p1": {
+                "hand": [{ "def": "core-072", "radiant": radiant }, "core-005"],
+                "graveyard": ["core-006"],
+                "library": ["core-035"],
+            },
+            "p2": { "hand": ["core-005"] },
+        }));
+        if upgrade {
+            crate::upgrade_number(&mut s, "core-072", key);
+        } else {
+            crate::degrade_number(&mut s, "core-072", key);
+        }
+        let well = s.pile(P1, "graveyard")[0].clone();
+        s.play("core-072", json!({}));
+        s.answer(json!(well.id));
+        s.card(&well.id).clone()
+    }
+
+    #[test]
+    fn r386_an_upgrade_makes_the_pick_cost_2_less_and_a_radiant_degrade_makes_it_cost_1() {
+        assert_eq!(tuned(false, "discount", true).cost_mod, -2);
+        assert_eq!(tuned(true, "setCost", false).cost_override, Some(1));
+        let s = setup(json!({ "p1": { "hand": ["core-072"] } }));
+        assert!(!crate::can_degrade_number(&s, "core-072", "discount"));
+        assert!(!crate::can_upgrade_number(&s, "core-072", "setCost"));
     }
 
     mod reminisce_base {

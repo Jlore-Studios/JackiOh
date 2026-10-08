@@ -30,7 +30,9 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-064";
 
-/// The printed thresholds: "1 or less", and "2 or less" on the radiant face.
+/// The printed thresholds: "1 or less", and "2 or less" on the radiant face. The card declares them as
+/// `giftLimit` (R386), and the engine reads the flag through `params::declared_or`, so a Degrade or an
+/// Upgrade moves the threshold step 3 uses.
 const BASE_THRESHOLD: i32 = 1;
 const RADIANT_THRESHOLD: i32 = 2;
 
@@ -93,6 +95,27 @@ mod tests {
     fn glows_in_hand(s: &Scenario, card: &str) -> bool {
         let id = s.card(card).id.clone();
         hand_glows(s, &id, P1)
+    }
+
+    #[test]
+    fn r386_an_upgrade_reaches_a_2_cost_card_and_a_radiant_degrade_stops_at_1() {
+        for (radiant, upgrade, limit, made_radiant) in [(false, true, 2, true), (true, false, 1, false)] {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "backrow": [{ "def": GIFTED, "radiant": radiant }], "hand": [POINTMASTER, MENACE], "mana": 4 }
+            }));
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, GIFTED, "giftLimit")
+            } else {
+                crate::degrade_number(&mut s, GIFTED, "giftLimit")
+            };
+            assert_eq!(moved, limit);
+            s.play(POINTMASTER, json!({}));
+            assert_eq!(s.card(POINTMASTER).radiant, made_radiant);
+        }
+        crate::register_all();
+        let s = scenario(json!({ "p1": { "backrow": [GIFTED] } }));
+        assert!(!crate::can_degrade_number(&s, GIFTED, "giftLimit"));
     }
 
     mod gifted_program {

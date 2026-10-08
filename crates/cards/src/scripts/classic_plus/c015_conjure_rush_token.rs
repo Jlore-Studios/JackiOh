@@ -9,13 +9,13 @@ pub const ID: &str = "classicplus-015";
 /// §7's shared Rush Token, 3/3 with Rush.
 const RUSH_TOKEN: &str = "core-t-rush";
 
-/// "Summon 3 Rush Tokens" on the Radiant face; the base face summons one.
-const RADIANT_TOKENS: usize = 3;
-
-fn conjure(tokens: usize) -> Hook {
-    hook(move |ctx| {
+/// "Summon 3 Rush Tokens" on the Radiant face: the declared number `tokens` (R386), tuned on the
+/// Radiant face only — the base face's "a Rush Token" is 1 and never moves (R749), so both faces read
+/// the one number.
+fn conjure() -> Hook {
+    hook(|ctx| {
         let keywords = param(&*ctx, "keywords");
-        (0..tokens)
+        (0..param(&*ctx, "tokens"))
             .map(|_| summon(json_as(json!({ "defId": RUSH_TOKEN, "randomKeywords": keywords }))))
             .collect()
     })
@@ -24,11 +24,11 @@ fn conjure(tokens: usize) -> Hook {
 pub fn script() -> CardScripts {
     CardScripts {
         base: Script {
-            cry: Some(conjure(1)),
+            cry: Some(conjure()),
             ..Script::default()
         },
         radiant: Script {
-            cry: Some(conjure(RADIANT_TOKENS)),
+            cry: Some(conjure()),
             ..Script::default()
         },
     }
@@ -251,6 +251,26 @@ mod tests {
             for token in &made {
                 assert_eq!(gained(&s, &token.id).len(), 2);
             }
+        }
+
+        /// R386 an Upgrade summons 4 tokens and a Degrade 2; the base face's one token is never tuned
+        #[test]
+        fn r386_an_upgrade_summons_4_tokens_and_a_degrade_2_and_the_base_face_s_one_is_never_tuned() {
+            for (upgrade, count) in [(true, 4), (false, 2)] {
+                let mut s =
+                    scenario(json!({ "p1": { "hand": [{ "def": CARD, "radiant": true }, FILLER] }, "p2": { "hand": [FILLER] } }));
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, CARD, "tokens")
+                } else {
+                    crate::degrade_number(&mut s, CARD, "tokens")
+                };
+                assert_eq!(moved, count);
+                s.play(CARD, json!({}));
+                assert_eq!(tokens(&s).len(), count as usize);
+            }
+            let s = scenario(json!({ "p1": { "hand": [CARD, FILLER] } }));
+            assert!(!crate::can_upgrade_number(&s, CARD, "tokens"));
+            assert!(!crate::can_degrade_number(&s, CARD, "tokens"));
         }
     }
 }

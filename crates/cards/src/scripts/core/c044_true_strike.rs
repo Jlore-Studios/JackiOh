@@ -115,8 +115,9 @@ mod tests {
             let def = def();
             assert_eq!(serde_json::to_value(&def.base.keywords).unwrap(), json!([{ "kind": "Pierce" }]));
             assert_eq!(serde_json::to_value(&def.radiant.keywords).unwrap(), json!([{ "kind": "Pierce" }]));
-            assert_eq!(def.base.text, "Pierce\nDeal 4 damage. Exile this.");
-            assert_eq!(def.radiant.text, "Pierce\nDeal 9 damage. Exile this.");
+            // The face as printed: its declared `damage` filled in (R386, R482).
+            assert_eq!(fill_params(&def, FaceKind::Base, None), "Pierce\nDeal 4 damage. Exile this.");
+            assert_eq!(fill_params(&def, FaceKind::Radiant, None), "Pierce\nDeal 9 damage. Exile this.");
         }
 
         /// "R346 the printed keyword is a Pierce of its own: the card as a source skips step 2 without the flag"

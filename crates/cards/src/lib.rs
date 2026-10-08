@@ -144,7 +144,10 @@ fn tune_number(
         .into_iter()
         .find(|item| item.param.key == key)
     else {
-        panic!("{card}: a {} cannot move its number \"{key}\" (R386)", direction.as_str());
+        panic!(
+            "{card}: a {} cannot move its number \"{key}\" (R386)",
+            direction.as_str()
+        );
     };
     step_param(s.card_mut(card), key, item.steps);
     let after = param_value(s.state(), Some(s.card(card)), key, ParamValueOptions::default());

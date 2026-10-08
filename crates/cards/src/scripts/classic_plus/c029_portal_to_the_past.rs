@@ -4,9 +4,7 @@
 //! The board is the caster's last board, a setup input frozen into the match (B5 E30,
 //! `subsystems/lastBoards`); an empty one (hotseat, a first game) gives nothing (R129).
 
-use jackioh_engine::effects::{
-    LAST_BOARD_CARD_COST, add_from_last_board, add_random_from_last_board, discover_from_last_board,
-};
+use jackioh_engine::effects::{add_from_last_board, add_random_from_last_board, discover_from_last_board};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-029";
@@ -14,12 +12,13 @@ pub const ID: &str = "classicplus-029";
 /// The step the Discover's answer re-enters (§10.6).
 const PICKED: &str = "picked";
 
+/// "It costs (0)", "Each costs (0)": the declared number `setCost` (R386), less being better.
 pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(hook(|_ctx| vec![discover_from_last_board(json_as(json!({ "step": PICKED })))])),
         resume: IndexMap::from([(
             PICKED,
-            hook(|_ctx| vec![add_from_last_board(json_as(json!({ "costOverride": LAST_BOARD_CARD_COST })))]),
+            hook(|ctx| vec![add_from_last_board(json_as(json!({ "costOverride": param(&*ctx, "setCost") })))]),
         )]),
         ..Script::default()
     };
@@ -27,7 +26,7 @@ pub fn script() -> CardScripts {
         cry: Some(hook(|ctx| {
             vec![add_random_from_last_board(json_as(json!({
                 "count": param(&*ctx, "cards"),
-                "costOverride": LAST_BOARD_CARD_COST,
+                "costOverride": param(&*ctx, "setCost"),
             })))]
         })),
         ..Script::default()
@@ -119,11 +118,25 @@ mod tests {
             assert!(matches_object(&js(&def), &json!({ "id": PORTAL, "type": "Spell", "cost": 3 })));
             assert_eq!(
                 js(&def.params),
-                json!([{ "key": "cards", "base": 3, "radiant": 3, "better": "up", "step": 1, "min": 1 }])
+                json!([
+                    { "key": "cards", "base": 3, "radiant": 3, "better": "up", "step": 1, "min": 1 },
+                    { "key": "setCost", "base": 0, "radiant": 0, "better": "down", "step": 1, "min": 0 }
+                ])
             );
             let scripts = script();
             assert!(!scripts.base.resume.is_empty());
             assert!(scripts.radiant.resume.is_empty());
+        }
+
+        #[test]
+        fn r386_a_degrade_makes_the_pick_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
+            crate::register_all();
+            let mut s = game(&[("core-025", true)], false, 1);
+            assert!(!crate::can_upgrade_number(&s, PORTAL, "setCost"));
+            assert_eq!(crate::degrade_number(&mut s, PORTAL, "setCost"), 1);
+            s.play(PORTAL, json!({}));
+            s.answer(json!("mode:core-025"));
+            assert!(matches_object(&js(&made(&s)), &json!([{ "defId": "core-025", "costOverride": 1 }])));
         }
 
         mod base_discover_a_card_from_the_board_your_last_game_ended_with_it_costs_0 {

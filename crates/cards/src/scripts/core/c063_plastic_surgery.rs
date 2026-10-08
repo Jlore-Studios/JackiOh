@@ -40,11 +40,14 @@ fn targets() -> Vec<TargetDecl> {
     ]
 }
 
-/// The radiant face is the same card at doubled numbers, so one factory carries both.
-fn surgery(stat: i32, keywords: i32) -> Script {
+/// The radiant face is the same card at doubled numbers, so one script carries both: the declared
+/// numbers `buff` (3, 6) and `keywords` (1, 2), R386.
+fn surgery() -> Script {
     Script {
         targets: targets(),
-        cry: Some(hook(move |_ctx| {
+        cry: Some(hook(|ctx| {
+            let stat = param(&*ctx, "buff");
+            let keywords = param(&*ctx, "keywords");
             vec![
                 buff(json_as(json!({ "target": { "of": "chosen" }, "attack": stat, "health": stat }))),
                 grant_random_keywords(json_as(json!({ "target": { "of": "chosen" }, "count": keywords }))),
@@ -55,10 +58,9 @@ fn surgery(stat: i32, keywords: i32) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    CardScripts {
-        base: surgery(3, 1),
-        radiant: surgery(6, 2),
-    }
+    let base = surgery();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
 }
 
 // #63 Plastic Surgery — SPEC §8.3, BUILD M4-T4 row 63.
@@ -118,6 +120,26 @@ mod tests {
                 _ => None,
             })
             .collect()
+    }
+
+    #[test]
+    fn r386_an_upgrade_gives_4_4_or_2_keywords_and_a_degrade_2_2_and_a_keyword_at_its_floor_of_1() {
+        for (upgrade, key, stat, keywords) in [(true, "buff", 4, 1), (true, "keywords", 3, 2), (false, "buff", 2, 1)] {
+            crate::register_all();
+            let mut s = scenario(json!({ "p1": { "hand": [SURGERY], "field": [FELINOR], "mana": 4 } }));
+            let felinor = s.card(FELINOR).clone();
+            assert!(!crate::can_degrade_number(&s, SURGERY, "keywords"));
+            if upgrade {
+                crate::upgrade_number(&mut s, SURGERY, key);
+            } else {
+                crate::degrade_number(&mut s, SURGERY, key);
+            }
+
+            s.play(SURGERY, json!({ "targets": [sel(&felinor)] }));
+
+            s.expect_stats(&felinor, json!({ "attack": 1 + stat, "maxHealth": 1 + stat }));
+            assert_eq!(granted_kinds(s.card(&felinor)).len(), keywords);
+        }
     }
 
     mod plastic_surgery {

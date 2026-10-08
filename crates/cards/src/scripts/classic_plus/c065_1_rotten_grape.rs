@@ -14,19 +14,20 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-065-1";
 
-/// §8.7: the health the base face costs its own hero.
-const BASE_LOSS: i32 = 5;
-/// §8.7: the Radiant face's smaller loss, its upgrade (R275).
-const RADIANT_LOSS: i32 = 1;
+/// §8.7: the health each face costs its own hero, 5, and the Radiant face's smaller 1, its upgrade
+/// (R275): the declared number `loss` (R386), less being better.
+fn rotten() -> Hook {
+    hook(|ctx| vec![lose_health(json_as(json!({ "player": "self", "amount": param(&*ctx, "loss") })))])
+}
 
 pub fn script() -> CardScripts {
     CardScripts {
         base: Script {
-            cry: Some(hook(|_ctx| vec![lose_health(json_as(json!({ "player": "self", "amount": BASE_LOSS })))])),
+            cry: Some(rotten()),
             ..Script::default()
         },
         radiant: Script {
-            cry: Some(hook(|_ctx| vec![lose_health(json_as(json!({ "player": "self", "amount": RADIANT_LOSS })))])),
+            cry: Some(rotten()),
             ..Script::default()
         },
     }
@@ -77,6 +78,24 @@ mod tests {
         let scripts = super::script();
         assert!(scripts.base.cry.is_some());
         assert!(scripts.radiant.cry.is_some());
+    }
+
+    #[test]
+    fn r386_an_upgrade_loses_4_and_a_degrade_6_and_the_radiant_1_is_at_its_floor() {
+        crate::register_all();
+        for (upgrade, loss) in [(true, 4), (false, 6)] {
+            let mut s = scenario(json!({ "p1": { "hand": [ROTTEN, FILLER] }, "p2": { "hand": [FILLER] } }));
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, ROTTEN, "loss")
+            } else {
+                crate::degrade_number(&mut s, ROTTEN, "loss")
+            };
+            assert_eq!(moved, loss);
+            s.play(ROTTEN, json!({}));
+            s.expect_health(PlayerId::P1, 30 - loss);
+        }
+        let s = scenario(json!({ "p1": { "hand": [{ "def": ROTTEN, "radiant": true }, FILLER] } }));
+        assert!(!crate::can_upgrade_number(&s, ROTTEN, "loss"));
     }
 
     mod base {

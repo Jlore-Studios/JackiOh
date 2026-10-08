@@ -78,23 +78,9 @@ const SELF_KEY: &str = "selfId";
 
 /// The copies' discount: none on the base face; on the Radiant face the card's `discount` as it stands
 /// in exile, where the continuation finds it (R386 keeps its tuning there), or the printed one when the
-/// card has ceased to exist.
+/// card has ceased to exist (R127: the continuation still names its definition).
 fn discount_of(ctx: &EffectContext<'_>, terms: CopyTerms) -> i32 {
-    if !terms.radiant {
-        return 0;
-    }
-    if ctx.live_self().is_some() {
-        return param(ctx, "discount");
-    }
-    param_value(
-        ctx.state,
-        None,
-        "discount",
-        ParamValueOptions {
-            def_id: Some(ID.to_string()),
-            radiant: Some(true),
-        },
-    )
+    if terms.radiant { param(ctx, "discount") } else { 0 }
 }
 
 /// The captured id, narrowed rather than cast: `data` is JSON that crossed a phase boundary.

@@ -239,9 +239,11 @@ pub fn gifted_makes_radiant(state: &GameState, player: PlayerId, cost_paid: i32)
         .as_deref()
         .unwrap_or(&[]);
     permanents_of(state, player).into_iter().any(|held| {
-        let Some(threshold) = crate::scripts::script_of(state, held).flags().gifted_program else {
+        let Some(printed) = crate::scripts::script_of(state, held).flags().gifted_program else {
             return false;
         };
+        // R386: the threshold is the card's declared number `giftLimit` where it declares one.
+        let threshold = crate::params::declared_or(state, held, "giftLimit", printed);
         if cost_paid > threshold {
             return false;
         }

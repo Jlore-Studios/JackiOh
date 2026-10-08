@@ -54,9 +54,15 @@ struct Stab {
     per_exiled: i32,
 }
 
-/// §8: "Deal 2 …, +1 per full 5 health …, +1 per card …"; radiant "Deal 4 …, per full 3 …, +2 per card …".
-const BASE_FACE: Stab = Stab { base: 2, step: 5, per_exiled: 1 };
-const RADIANT_FACE: Stab = Stab { base: 4, step: 3, per_exiled: 2 };
+/// §8: "Deal 2 …, +1 per full 5 health …, +1 per card …"; radiant "Deal 4 …, per full 3 …, +2 per
+/// card …": the declared numbers `damage`, `healthStep` and `perExile` (R386), as the card stands.
+fn numbers_of<C: ParamContext + ?Sized>(ctx: &C) -> Stab {
+    Stab {
+        base: param(ctx, "damage"),
+        step: param(ctx, "healthStep"),
+        per_exiled: param(ctx, "perExile"),
+    }
+}
 
 /// §10.9: a hook may read state to compute an effect's arguments; it never writes. Both reads go
 /// through the engine's read-only board surface (`hero_of`, `zone_count` in engine/src/query.rs), so
@@ -70,29 +76,26 @@ fn stab_amount(state: &GameState, controller: PlayerId, face: Stab) -> i32 {
 }
 
 fn spiteful_stab(face: FaceKind) -> Script {
-    let numbers = match face {
-        FaceKind::Base => BASE_FACE,
-        FaceKind::Radiant => RADIANT_FACE,
-    };
-    // R280: the label is the face's whole text, the formula as printed (TS `def[face].text`).
-    let label = crate::card_def(ID).face(face).text.clone();
+    let def = crate::card_def(ID);
     Script {
         targets: targets(),
-        cry: Some(hook(move |ctx| {
-            let amount = stab_amount(ctx.state, ctx.controller, numbers);
+        cry: Some(hook(|ctx| {
+            let amount = stab_amount(ctx.state, ctx.controller, numbers_of(&*ctx));
             vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))]
         })),
-        // R280: the label is the face's whole text, the formula as printed.
+        // R280: the label is the face's whole text, the formula as printed (TS `def[face].text`), with
+        // its declared numbers as the card stands (R386).
         preview: Some(condition_hook(move |ctx| {
             vec![PreviewValue {
-                label: label.clone(),
-                value: stab_amount(ctx.state, ctx.controller, numbers),
+                label: fill_params(&def, face, params_view(ctx.state, ctx.self_).as_ref()),
+                value: stab_amount(ctx.state, ctx.controller, numbers_of(&ctx)),
                 display: None,
                 ids: None,
             }]
         })),
         // R662: the scaling has kicked in.
-        condition_met: Some(condition_hook(move |ctx| {
+        condition_met: Some(condition_hook(|ctx| {
+            let numbers = numbers_of(&ctx);
             ctx.zone == ConditionZone::Hand && stab_amount(ctx.state, ctx.controller, numbers) > numbers.base
         })),
         ..Script::default()
@@ -389,6 +392,49 @@ mod tests {
             assert!(stab_glows(&on));
             on.play(STAB, json!({ "targets": at_enemy_hero() }));
             assert_eq!(dealt(&on), [5]);
+        }
+
+        /// R386: one of the three declared numbers stepped, then a stab from `health` with 1 card exiled.
+        fn tuned_stab(upgrade: bool, key: &str, health: i32) -> i64 {
+            let mut s = board(json!({ "p1": { "hand": [STAB], "health": health, "exile": pile_of(1) } }));
+            if upgrade {
+                crate::upgrade_number(&mut s, STAB, key);
+            } else {
+                crate::degrade_number(&mut s, STAB, key);
+            }
+            s.play(STAB, json!({ "targets": at_enemy_hero() }));
+            dealt(&s)[0]
+        }
+
+        #[test]
+        fn r386_each_number_moves_the_damage() {
+            // From 20 health the printed stab is 2 + floor(10 / 5) + 1 = 5.
+            assert_eq!(tuned_stab(true, "damage", 20), 6);
+            assert_eq!(tuned_stab(false, "damage", 20), 4);
+            assert_eq!(tuned_stab(true, "perExile", 20), 6);
+            // From 22 it is 2 + floor(8 / 5) + 1 = 4, and a step of 4 makes it 2 + 2 + 1.
+            assert_eq!(tuned_stab(true, "healthStep", 22), 5);
+            // From 25 it is 2 + floor(5 / 5) + 1 = 4, and a step of 6 makes it 2 + 0 + 1.
+            assert_eq!(tuned_stab(false, "healthStep", 25), 3);
+        }
+
+        #[test]
+        fn r280_r386_the_preview_label_prints_the_moved_numbers() {
+            let mut s = board(json!({ "p1": { "hand": [STAB] } }));
+            crate::upgrade_number(&mut s, STAB, "damage");
+            let card = s.card(STAB).id.clone();
+            let HandView::Cards(hand) = s.view(P1).you.hand else {
+                panic!("the viewer's own hand travels in full");
+            };
+            let shown = hand.into_iter().find(|entry| entry.instance_id == card).and_then(|entry| entry.preview);
+            let first = shown.unwrap_or_default().into_iter().next().map(|entry| (entry.label, entry.value));
+            assert_eq!(
+                first,
+                Some((
+                    "Deal 3 damage, +1 per full 5 health your hero is below 30, +1 per card in your exile.".to_string(),
+                    3
+                ))
+            );
         }
     }
 }

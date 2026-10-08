@@ -37,12 +37,22 @@ const SPIKEY_PILLOW: &str = "core-065-1";
 // options, not declared modes (R81), so they reach the client through `state.pending.options` and a
 // test reads them back from there rather than off the Script.
 const EXILE_BOTTOM: &str = "exile bottom";
-const LOSE_THREE: &str = "lose 3";
 const SUMMON_PILLOW: &str = "summon Spikey Pillow";
 const NOTHING: &str = "nothing";
 
-const BASE_OPTIONS: [&str; 3] = [EXILE_BOTTOM, LOSE_THREE, SUMMON_PILLOW];
-const RADIANT_OPTIONS: [&str; 4] = [NOTHING, EXILE_BOTTOM, LOSE_THREE, SUMMON_PILLOW];
+/// "lose 3", named with the health it loses: the declared number `loss` (R386), less being better,
+/// as the card stands when the prompt opens.
+fn lose_option(ctx: &EffectContext<'_>) -> String {
+    format!("lose {}", param(ctx, "loss"))
+}
+
+fn base_options(ctx: &EffectContext<'_>) -> Vec<String> {
+    vec![EXILE_BOTTOM.to_string(), lose_option(ctx), SUMMON_PILLOW.to_string()]
+}
+
+fn radiant_options(ctx: &EffectContext<'_>) -> Vec<String> {
+    vec![NOTHING.to_string(), EXILE_BOTTOM.to_string(), lose_option(ctx), SUMMON_PILLOW.to_string()]
+}
 
 /// The steps of the `resume` table (§10.6); the radiant face uses both.
 const STEP_FIRST: &str = "firstPick";
@@ -50,12 +60,14 @@ const STEP_SECOND: &str = "secondPick";
 
 /// What one answered option does. "nothing" and an answer that named no option are both the empty
 /// list: the trigger still fired and the card stays on the field.
-fn effects_for(option: Option<&str>) -> Vec<Effect> {
+fn effects_for(ctx: &EffectContext<'_>, option: Option<&str>) -> Vec<Effect> {
     match option {
         Some(EXILE_BOTTOM) => vec![exile_bottom_of_library(json_as(json!({ "player": "self" })))],
-        // R18: lost health, not damage.
-        Some(LOSE_THREE) => vec![lose_health(json_as(json!({ "player": "self", "amount": 3 })))],
         Some(SUMMON_PILLOW) => vec![summon(json_as(json!({ "defId": SPIKEY_PILLOW })))],
+        // R18: lost health, not damage.
+        Some(picked) if picked == lose_option(ctx) => {
+            vec![lose_health(json_as(json!({ "player": "self", "amount": param(ctx, "loss") })))]
+        }
         _ => vec![],
     }
 }
@@ -71,14 +83,20 @@ fn base() -> Script {
             quickdraw: Some(true),
             ..StaticFlags::default()
         }),
-        start_of_turn: Some(hook(|_ctx| {
+        start_of_turn: Some(hook(|ctx| {
             vec![choose_mode(json_as(json!({
-                "options": BASE_OPTIONS,
+                "options": base_options(ctx),
                 "step": STEP_FIRST,
                 "prompt": "Masochism Mask: choose one",
             })))]
         })),
-        resume: IndexMap::from([(STEP_FIRST, hook(|ctx| effects_for(pick_of(ctx).as_deref())))]),
+        resume: IndexMap::from([(
+            STEP_FIRST,
+            hook(|ctx| {
+                let picked = pick_of(ctx);
+                effects_for(ctx, picked.as_deref())
+            }),
+        )]),
         ..Script::default()
     }
 }
@@ -89,9 +107,9 @@ fn radiant() -> Script {
             quickdraw: Some(true),
             ..StaticFlags::default()
         }),
-        start_of_turn: Some(hook(|_ctx| {
+        start_of_turn: Some(hook(|ctx| {
             vec![choose_mode(json_as(json!({
-                "options": RADIANT_OPTIONS,
+                "options": radiant_options(ctx),
                 "step": STEP_FIRST,
                 "prompt": "Masochism Mask: choose twice (1 of 2)",
             })))]
@@ -103,16 +121,23 @@ fn radiant() -> Script {
             (
                 STEP_FIRST,
                 hook(|ctx| {
-                    let mut effects = effects_for(pick_of(ctx).as_deref());
+                    let picked = pick_of(ctx);
+                    let mut effects = effects_for(ctx, picked.as_deref());
                     effects.push(choose_mode(json_as(json!({
-                        "options": RADIANT_OPTIONS,
+                        "options": radiant_options(ctx),
                         "step": STEP_SECOND,
                         "prompt": "Masochism Mask: choose twice (2 of 2)",
                     }))));
                     effects
                 }),
             ),
-            (STEP_SECOND, hook(|ctx| effects_for(pick_of(ctx).as_deref()))),
+            (
+                STEP_SECOND,
+                hook(|ctx| {
+                    let picked = pick_of(ctx);
+                    effects_for(ctx, picked.as_deref())
+                }),
+            ),
         ]),
         ..Script::default()
     }
@@ -172,6 +197,25 @@ mod tests {
             "p1": { "backrow": [{ "def": MASK, "radiant": face_radiant }], "library": LIBRARY, "armor": 5 },
             "p2": { "hand": [MENACE], "field": [MENACE] },
         }))
+    }
+
+    #[test]
+    fn r386_an_upgrade_offers_lose_2_and_a_degrade_lose_4_and_the_answer_loses_that() {
+        for (upgrade, loss) in [(true, 2), (false, 4)] {
+            crate::register_all();
+            let mut s = mask_scenario(false);
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, MASK, "loss")
+            } else {
+                crate::degrade_number(&mut s, MASK, "loss")
+            };
+            assert_eq!(moved, loss);
+            s.start_turn();
+            let lose = format!("lose {loss}");
+            assert_eq!(option_labels(&s), [EXILE_BOTTOM.to_string(), lose.clone(), SUMMON_PILLOW.to_string()]);
+            s.answer(json!(lose));
+            s.expect_health(P1, 30 - loss);
+        }
     }
 
     mod masochism_mask {

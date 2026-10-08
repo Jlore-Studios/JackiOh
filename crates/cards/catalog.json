@@ -2063,14 +2063,24 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
+    "params": [
+      {
+        "key": "giftLimit",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 5,
     "base": {
       "keywords": [],
-      "text": "The first (1) Cost or less card you play each turn becomes Radiant as it's played."
+      "text": "The first ({giftLimit}) Cost or less card you play each turn becomes Radiant as it's played."
     },
     "radiant": {
       "keywords": [],
-      "text": "The first (2) Cost or less card you play each turn becomes Radiant as it's played."
+      "text": "The first ({giftLimit}) Cost or less card you play each turn becomes Radiant as it's played."
     }
   },
   "core-065": {
@@ -2088,14 +2098,24 @@
     "refs": [
       "core-065-1"
     ],
+    "params": [
+      {
+        "key": "loss",
+        "base": 3,
+        "radiant": 3,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 49,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Choose one: Exile the bottom card of your deck, lose 3 health, or summon a Spikey Pillow."
+      "text": "Start of turn: Choose one: Exile the bottom card of your deck, lose {loss} health, or summon a Spikey Pillow."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Choose twice: Nothing, exile the bottom card of your deck, lose 3 health, or summon a Spikey Pillow."
+      "text": "Start of turn: Choose twice: Nothing, exile the bottom card of your deck, lose {loss} health, or summon a Spikey Pillow."
     }
   },
   "core-065-1": {
@@ -2412,16 +2432,24 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "cap",
+        "base": 5,
+        "radiant": 3,
+        "better": "down",
+        "step": 1,
+        "min": 1
       }
     ],
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Your hero can't take more than 5 damage at once.\nCry: Draw {draw}."
+      "text": "Your hero can't take more than {cap} damage at once.\nCry: Draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero can't take more than 3 damage at once.\nCry: Draw {draw}."
+      "text": "Your hero can't take more than {cap} damage at once.\nCry: Draw {draw}."
     }
   },
   "core-074": {
@@ -2633,14 +2661,24 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
+    "params": [
+      {
+        "key": "echoGain",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Your next Spell gains Echo +1. Then this goes to the graveyard."
+      "text": "Your next Spell gains Echo +{echoGain}. Then this goes to the graveyard."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your next Spell gains Echo +2. Then this goes to the graveyard."
+      "text": "Your next Spell gains Echo +{echoGain}. Then this goes to the graveyard."
     }
   },
   "core-080": {
@@ -2779,14 +2817,32 @@
       "base": 2,
       "embiggen": 4
     },
+    "params": [
+      {
+        "key": "armor",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "paidArmor",
+        "base": 4,
+        "radiant": 8,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Your hero has Armor 2.\nPaid (4): Armor 4 instead."
+      "text": "Your hero has Armor {armor}.\nPaid (4): Armor {paidArmor} instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero has Armor 4.\nPaid (4): Armor 8 instead."
+      "text": "Your hero has Armor {armor}.\nPaid (4): Armor {paidArmor} instead."
     }
   },
   "core-085": {
@@ -3354,12 +3410,22 @@
     "rarity": "Mythic",
     "token": false,
     "cost": 100,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 18,
     "base": {
       "attack": 10,
       "health": 10,
       "keywords": [],
-      "text": "Cry: Exile all other permanents.\nCosts (1) less for each card drawn, played, destroyed or exiled this game."
+      "text": "Cry: Exile all other permanents.\nCosts ({discount}) less for each card drawn, played, destroyed or exiled this game."
     },
     "radiant": {
       "attack": 20,
@@ -3369,7 +3435,7 @@
           "kind": "Charge"
         }
       ],
-      "text": "Charge\nCry: Exile all other permanents.\nCosts (1) less for each card drawn, played, destroyed or exiled this game."
+      "text": "Charge\nCry: Exile all other permanents.\nCosts ({discount}) less for each card drawn, played, destroyed or exiled this game."
     }
   },
   "core-t-rush": {
@@ -8821,24 +8887,16 @@
         "better": "up",
         "step": 1,
         "min": 1
-      },
-      {
-        "key": "setCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
       }
     ],
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Fuse {cards|random AI generated card|random AI generated cards} and add the result to your hand. It costs ({setCost})."
+      "text": "Fuse {cards|random AI generated card|random AI generated cards} and add the result to your hand. It costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Fuse {cards|random Radiant AI generated card|random Radiant AI generated cards} and add the result to your hand. It costs ({setCost})."
+      "text": "Fuse {cards|random Radiant AI generated card|random Radiant AI generated cards} and add the result to your hand. It costs (0)."
     }
   },
   "classicplus-044": {
@@ -9979,17 +10037,6 @@
     "rarity": "Rare",
     "token": false,
     "cost": "X",
-    "params": [
-      {
-        "key": "upgrades",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
     "loc": 8,
     "base": {
       "attack": 0,
@@ -10009,7 +10056,7 @@
         "health": 7
       },
       "keywords": [],
-      "text": "This is a 7X/7X.\nCry: Upgrade this {upgrades}X times."
+      "text": "This is a 7X/7X.\nCry: Upgrade this 2X times."
     }
   },
   "classicplus-070": {

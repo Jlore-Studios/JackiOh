@@ -33,11 +33,13 @@ pub fn script() -> CardScripts {
             ..Script::default()
         },
         radiant: Script {
-            cry: Some(hook(move |_ctx| {
+            cry: Some(hook(move |ctx| {
+                // The +2/+2 is the declared number `buff` (R386).
+                let buff = param(&*ctx, "buff");
                 vec![
                     fill_board(json_as(json!({ "defId": radiant_token }))),
                     // "Then your units get +2/+2": after the fill, so the new tokens are included.
-                    buff_all_units(json_as(json!({ "side": "self", "attack": 2, "health": 2 }))),
+                    buff_all_units(json_as(json!({ "side": "self", "attack": buff, "health": buff }))),
                 ]
             })),
             ..Script::default()
@@ -167,6 +169,25 @@ mod tests {
             for lane in LANES {
                 let unit = unit_at(&s, PlayerId::P1, lane);
                 s.expect_stats(&unit, json!({ "attack": 5, "maxHealth": 5 }));
+            }
+        }
+
+        #[test]
+        fn r386_an_upgrade_gives_3_3_and_a_degrade_1_1() {
+            for (upgrade, buff) in [(true, 3), (false, 1)] {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [{ "def": FRIEND, "radiant": true }], "field": [TIMMY, TIMMY, TIMMY, TIMMY, TIMMY], "mana": 4 },
+                }));
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, FRIEND, "buff")
+                } else {
+                    crate::degrade_number(&mut s, FRIEND, "buff")
+                };
+                assert_eq!(moved, buff);
+                s.play(FRIEND, json!({}));
+                let unit = unit_at(&s, PlayerId::P1, 1);
+                s.expect_stats(&unit, json!({ "attack": 3 + buff, "maxHealth": 3 + buff }));
             }
         }
     }

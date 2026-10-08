@@ -21,7 +21,8 @@ fn book_of_books(radiant: bool) -> Script {
             vec![add_random_from_catalog(json_as(json!({
                 "query": { "tags": ["Book"] },
                 "count": param(&*ctx, "books"),
-                "costOverride": 0,
+                // "Each costs (0)": the declared number `setCost` (R386).
+                "costOverride": param(&*ctx, "setCost"),
                 "radiant": radiant,
                 "temporary": true,
             })))]
@@ -280,6 +281,17 @@ mod tests {
             b.play(BOOK, json!({}));
             let defs = |s: &Scenario| -> Vec<String> { added(s).into_iter().map(|(_, def_id)| def_id).collect() };
             assert_eq!(defs(&a), defs(&b));
+        }
+
+        #[test]
+        fn r386_a_degrade_makes_the_books_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
+            let mut s = book(false, None, None);
+            assert!(!crate::can_upgrade_number(&s, BOOK, "setCost"));
+            assert_eq!(crate::degrade_number(&mut s, BOOK, "setCost"), 1);
+            s.play(BOOK, json!({}));
+            let made = added_cards(&s);
+            assert_eq!(made.len(), 2);
+            assert!(made.iter().all(|card| card.cost_override == Some(1)));
         }
     }
 }

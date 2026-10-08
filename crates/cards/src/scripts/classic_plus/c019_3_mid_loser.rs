@@ -5,8 +5,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-019-3";
 
-/// "your opponent gains 1 mana next turn".
-const TAILS_MANA: i32 = 1;
+// "your opponent gains 1 mana next turn": the declared number `oppMana` (R386), less being better.
 
 /// One coin, Lucky X times more, heads kept if any of them lands heads.
 fn lands_heads(ctx: &mut EffectContext<'_>) -> bool {
@@ -32,7 +31,7 @@ fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let tails = param(&*ctx, "tails");
     vec![
         buff(json_as(json!({ "target": { "of": "self" }, "attack": -tails, "health": -tails }))),
-        next_turn_mana(json_as(json!({ "amount": TAILS_MANA, "player": "enemy" }))),
+        next_turn_mana(json_as(json!({ "amount": param(&*ctx, "oppMana"), "player": "enemy" }))),
     ]
 }
 
@@ -309,6 +308,17 @@ mod tests {
                 s.play(MID, json!({}));
                 assert_eq!(s.state().rng_cursor - cursor, 3);
             }
+        }
+
+        /// R386 the opponent's mana on tails is declared, less being better: a Degrade gives them 2, and an
+        /// Upgrade finds it at its floor of 1
+        #[test]
+        fn r386_a_degrade_gives_the_opponent_2_mana_on_tails_and_an_upgrade_finds_it_at_its_floor_of_1() {
+            let mut s = seeded(from_hand(false), |each| next_flip(each, 0) == Flip::Tails);
+            assert!(!crate::can_upgrade_number(&s, MID, "oppMana"));
+            assert_eq!(crate::degrade_number(&mut s, MID, "oppMana"), 2);
+            s.play(MID, json!({}));
+            assert_eq!(s.state().players[P2].mana.next_turn_mod, 2);
         }
     }
 }
