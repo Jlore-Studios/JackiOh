@@ -239,6 +239,12 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub times_played: Option<i32>,
+    /// ME-CN, R1300: the card is shown in Chinese (`effects::translate`). Presentation only: no rule
+    /// reads it. Kept in every zone and through R78's and R766's resets; a copy keeps it, a
+    /// Transform's new card is without it. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub chinese: Option<bool>,
 }
 
 /// B5 E12, R452: one cast being driven that makes its caster's choices at random (`random`), narrows
@@ -1235,6 +1241,10 @@ pub struct FaceUpRecord {
     pub radiant: bool,
     #[serde(rename = "type")]
     pub type_: CardType,
+    /// R1300: the played card was Chinese (T-AI-5's copy is too). Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub chinese: Option<bool>,
 }
 
 /// B5 E4, R451: a player's per-game play record (`PlayerState.gameLog`).
@@ -1519,6 +1529,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         enchantments: None,
         berserk: None,
         times_played: None,
+        chinese: None,
     };
     *next_id += 1;
     instance
