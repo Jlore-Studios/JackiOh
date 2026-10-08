@@ -265,8 +265,18 @@ than the screen does ([[R203]]).
   of the match. A change waits for the playing track's next bar line and crossfades. The music
   ducks under voice lines and the biggest effects. Every track quotes one motif. The tracks are
   composed as scores, rendered with an MIT-licensed SoundFont into AAC files under a size cap that
-  `gen:music --check` holds, and loop seamlessly. Their sources and licences are in
-  `assets/music/LICENSES.md`.
+  `gen:music --check` holds (raised for the card intros, [[R1352]]), and loop seamlessly. Their
+  sources and licences are in `assets/music/LICENSES.md`.
+- **Card intros** ([[R1350]]–[[R1352]], after Hearthstone's legendary music). Every Legendary and
+  Mythic card, and every token printed Legendary or Mythic, has a few bars of its own, 3 to 6 seconds
+  that play once: a score per card, on the motif, derived from its id, set and tags and hand-tuned
+  for the Mythics and the best-known Legendaries, rendered with the rest of the music and named by
+  the card's `intro` in `music-cards.json`. It plays on the music bus at the moment [[R204]] gives
+  the card's play or cast line, only for a card the viewer can read and never for a Trap's set, with
+  dynamic music on; it ducks the rest of the music for its span, the theme the card brings included,
+  and [[R669]]'s entrance sting and the card's line stay. It follows the music volume and the mute,
+  plays under Reduce Motion, and holds nothing practice's pacing waits on. A second Legendary played
+  meanwhile, the game's end, a hand-over or the board leaving cuts it short with a short fade.
 - **Settings.** Master, effects, voice and music volume, mute, voice on or off, the music station,
   dynamic music on or off, ducking, and keeping the music playing in a background tab. That last one
   is off by default: the music fades out when the page is hidden or the window loses focus, and back
