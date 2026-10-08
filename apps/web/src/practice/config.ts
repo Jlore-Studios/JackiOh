@@ -77,3 +77,6 @@ export const PRACTICE_SEED_MAX_LENGTH = 64;
 
 /** The sparks a Victory throws off, and the embers a Defeat sheds, in the result dialog. */
 export const PRACTICE_RESULT_PARTICLES = 18;
+
+/** R768: how many finished free games the practice worker keeps for replay; the oldest is dropped. */
+export const PRACTICE_REPLAYS_KEPT = 10;
