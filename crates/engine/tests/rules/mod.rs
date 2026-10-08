@@ -165,6 +165,7 @@ pub mod trap_cardresolved;
 pub mod trap_window_pause;
 pub mod tribute;
 pub mod tribute_zones;
+pub mod trigger_multipliers;
 pub mod trigger_zones;
 pub mod triggers;
 pub mod turn;

@@ -461,6 +461,9 @@ pub const BERSERK_MARK: MarkSpec = MarkSpec {
 pub const FUSED_ID_CAP: usize = 120;
 /// R471: the placement multiplier of a card that doubles nothing (the Plague Counters placed as written).
 pub const PLAGUE_MULTIPLIER_NONE: i32 = 1;
+/// R820: the extra runs of a player under no trigger multiplier (Meditative #9 Joint Filing, #10 Double
+/// Counting): each of their hooks runs once, as written.
+pub const TRIGGER_EXTRA_NONE: i32 = 0;
 
 // ---- v0.2.0 constants: Core patches (R423, R426–R431) ----
 /// R423: how many different effects a Radiant Call to Chaos rolls from its list — "Three different

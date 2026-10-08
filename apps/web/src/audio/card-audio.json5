@@ -1252,6 +1252,23 @@
     "classicplus-t-ai-10": { // Fine-Tuning
       cast: { voice: "sapi-synth-deep", text: "Adjusting weights. Improving slightly." },
     },
+    "meditative-009": { // Joint Filing
+      cast: { voice: "sapi-bureaucrat", text: "Filed twice, just to be sure." },
+    },
+    "meditative-010": { // Double Counting
+      cast: { voice: "sapi-bureaucrat", text: "One, two, and one, two again." },
+    },
+    "meditative-011": { // Double Header
+      cast: { voice: "announcer", text: "Two games, one ticket!" },
+    },
+    "meditative-012": { // Fear Mongerer
+      play: { voice: "hustler", text: "Be afraid. The end is near." },
+      death: { voice: "hustler", text: "Nothing to fear after all." },
+    },
+    "meditative-013": { // Gatling Pea
+      play: { voice: "kid", text: "Pea shooter, locked and loaded!" },
+      death: { voice: "kid", text: "Out of peas..." },
+    },
   },
   emotes: {
     vanilla: {

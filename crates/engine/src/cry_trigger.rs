@@ -41,11 +41,13 @@ use crate::prompts::{
     close_prompt, hero_option_label, in_offered_order, open_prompt, resume_at, run_hook_resumable,
     run_resume, why_answer_refused,
 };
+use crate::multipliers::{Multiplied, extra_runs};
 use crate::script::EngineSink;
-use crate::state::{CardInstance, EngineError, GameState, PromptOption, Resume, find_instance};
+use crate::state::{CardInstance, EngineError, GameState, PromptOption, Resume, WorkItem, find_instance};
+use crate::state_check::state_check;
 use crate::stays::{exit_mark, left_field_after};
 use crate::wire::{CardType, PlayerId, PromptKind, Row, Selection, Zone};
-use crate::work::{RUN_MARKS_KEY, begin_work_cascade, drain_work};
+use crate::work::{RUN_MARKS_KEY, begin_work_cascade, drain_work, paused, push_work};
 
 /// `resume.hook` of a prompt this sequence opened for itself: no card script holds the name.
 pub const TRIGGER_CRY_HOOK: &str = "@triggerCry";
@@ -300,10 +302,95 @@ fn continue_run(sink: &mut EngineSink, mut run: CryRun) {
     run_cry(sink, &run, &card);
 }
 
-/// The Cry itself, with the choices made: the card's own resumable hook (R113).
+/// The Cry itself, with the choices made: the card's own resumable hook (R113), then the extra runs
+/// its controller's Cry multiplier owes (R823), read as the Cry first runs.
 fn run_cry(sink: &mut EngineSink, run: &CryRun, card: &CardInstance) {
     // R174: the choices were made against the board as it stands now, and the Cry is aimed at that.
     let exits_from = exit_mark(sink.state);
+    let extra = extra_runs(sink.state, run.controller, Multiplied::CryAndDeath).max(0) as u32;
+    run_cry_once(sink, run, card, exits_from);
+    run_extra_cries(sink, run, extra, exits_from);
+}
+
+/// `resume.hook` of the work item that owes a triggered Cry's extra runs (R823): no card script holds
+/// the name.
+pub const EXTRA_CRY_HOOK: &str = "@extraCry";
+
+/// R823 (Meditative #10 Double Counting): a triggered Cry runs `left` more times, one after another,
+/// each a whole effect list the state check closes first (R59), reusing the answers its prompts got
+/// (R467) and aimed at the stays they were given on (R174). They end once the Unit is no longer where
+/// the trigger found it (`standing`). A pause owes the rest as one work item, at the moment it pauses
+/// (R117), behind the tail of the run that paused (R113).
+fn run_extra_cries(sink: &mut EngineSink, run: &CryRun, mut left: u32, exits_from: u32) {
+    while left > 0 {
+        if sink.state.result.is_some() {
+            return;
+        }
+        if paused(sink) {
+            owe_extra_cries(sink, run, left, exits_from);
+            return;
+        }
+        state_check(sink);
+        if sink.state.result.is_some() {
+            return;
+        }
+        if paused(sink) {
+            owe_extra_cries(sink, run, left, exits_from);
+            return;
+        }
+        let Some(card) = standing(sink.state, run) else {
+            return;
+        };
+        left -= 1;
+        run_cry_once(sink, run, &card, exits_from);
+    }
+}
+
+fn owe_extra_cries(sink: &mut EngineSink, run: &CryRun, left: u32, exits_from: u32) {
+    let mut data: IndexMap<String, Value> = IndexMap::new();
+    data.insert(
+        RUN_KEY.to_string(),
+        serde_json::to_value(run).unwrap_or(Value::Null),
+    );
+    data.insert(EXTRA_LEFT_KEY.to_string(), json!(left));
+    data.insert(EXTRA_EXITS_KEY.to_string(), json!(exits_from));
+    push_work(
+        sink,
+        Resume {
+            def_id: String::new(),
+            hook: EXTRA_CRY_HOOK.to_string(),
+            step: "run".to_string(),
+            radiant: false,
+            instance_id: None,
+            data,
+        },
+        Some(run.controller),
+    );
+}
+
+/// Where an owed run of extra Cries keeps how many are left, and the stays its choices were made on.
+const EXTRA_LEFT_KEY: &str = "left";
+const EXTRA_EXITS_KEY: &str = "exitsFrom";
+
+/// `work.rs`'s handler for `EXTRA_CRY_HOOK`: the extra runs a pause interrupted, continued (R113).
+pub fn run_owed_extra_cries(sink: &mut EngineSink, item: &WorkItem) {
+    let Some(run) = run_of(&item.resume.data) else {
+        return;
+    };
+    let number = |key: &str| {
+        item.resume
+            .data
+            .get(key)
+            .and_then(Value::as_u64)
+            .and_then(|n| u32::try_from(n).ok())
+    };
+    let left = number(EXTRA_LEFT_KEY).unwrap_or(0);
+    let exits_from = number(EXTRA_EXITS_KEY).unwrap_or_else(|| exit_mark(sink.state));
+    run_extra_cries(sink, &run, left, exits_from);
+}
+
+/// One run of the Cry, with the choices made, aimed at the stays they were made on (`exits_from`).
+fn run_cry_once(sink: &mut EngineSink, run: &CryRun, card: &CardInstance, exits_from: u32) {
     // R90, R102: a fused card's Cry hands each ingredient its own slice of the choices.
     let mut data: IndexMap<String, Value> = IndexMap::new();
     if sink.state.transient_defs.contains_key(&card.def_id) {

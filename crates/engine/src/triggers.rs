@@ -597,16 +597,95 @@ pub fn queue_hook(sink: &mut EngineSink<'_>, holder: &TriggerHolder, hook: HookN
 
 /// Queue one hook across the board in R68's order (§6.2, R62). The caller runs `settle` to drain it,
 /// which is what puts a state check between each two hooks and lets one that prompts pause the rest.
+///
+/// R820, R821 (Meditative #9 Joint Filing): a player's own start-of-turn and end-of-turn hooks run
+/// 1 + N times under a turn-hook multiplier, N read once as they are queued. Each copy is its own entry
+/// right behind the original, re-read as it pops like any entry (`run_queued_trigger`, R153), so a card
+/// gone by then fizzles. Only these two hooks: C #62's start of the opponent's turn, the delayed effects
+/// and the end-of-turn trap window are never queued here as the player's own (R62).
 pub fn queue_hooks_in_trigger_order(
     sink: &mut EngineSink<'_>,
     hook: HookName,
     only: Option<PlayerId>,
 ) -> Vec<QueuedTrigger> {
+    let copies = match (hook, only) {
+        (HookName::StartOfTurn | HookName::EndOfTurn, Some(player)) => {
+            1 + crate::multipliers::extra_runs(sink.state, player, crate::multipliers::Multiplied::TurnHooks)
+                .max(0) as usize
+        }
+        _ => 1,
+    };
     let holders = trigger_holders_with_hook(sink.state, hook, only);
-    holders
-        .iter()
-        .map(|holder| queue_hook(sink, holder, hook))
-        .collect()
+    let mut queued: Vec<QueuedTrigger> = Vec::new();
+    for holder in &holders {
+        for _ in 0..copies {
+            queued.push(queue_hook(sink, holder, hook));
+        }
+    }
+    queued
+}
+
+/// The `hook` of a queue entry that queues the next round of a player's end-of-turn hooks
+/// (`queue_turn_hook_rounds`, R824). No card's trigger id starts with `@`.
+pub const TURN_HOOKS_ROUND: &str = "@turnHooksRound";
+
+/// Where a round entry keeps how many rounds are still to be queued after the one it queues.
+const ROUNDS_LEFT_KEY: &str = "roundsLeft";
+
+/// R824 (Meditative #12 Fear Mongerer): "trigger your End of turn effects" `rounds` times, now. Each
+/// round queues `player`'s end-of-turn hooks as §2.2's end-of-turn trigger step would — the same
+/// holders, R68's order and R821's multiplier — and nothing else of the end of the turn: no trap window,
+/// no delayed effect, and the turn goes on (R62). The rounds run one after another: behind the first
+/// round's entries goes one entry that queues the next round as it pops, so a round reads the board the
+/// round before it left (a unit an end-of-turn hook summoned answers the next round).
+///
+/// The round entry does not wait for the queue to empty: a loop that pops only its own entries (a forced
+/// attack's playout, `effects::combat`) would wait on it for ever, so it simply takes its place in R68's
+/// queue.
+pub fn queue_turn_hook_rounds(sink: &mut EngineSink<'_>, player: PlayerId, rounds: i32) {
+    if rounds <= 0 {
+        return;
+    }
+    queue_hooks_in_trigger_order(sink, HookName::EndOfTurn, Some(player));
+    if rounds == 1 {
+        return;
+    }
+    let (id, seq) = next_entry_id(sink.state, false, "t");
+    let mut data: IndexMap<String, Value> = IndexMap::new();
+    data.insert("controller".to_string(), player_value(player));
+    data.insert(ROUNDS_LEFT_KEY.to_string(), Value::from(rounds - 1));
+    sink.state.trigger_queue.push(QueuedTrigger {
+        id,
+        seq,
+        instance_id: String::new(),
+        hook: TURN_HOOKS_ROUND.to_string(),
+        resume: Resume {
+            def_id: String::new(),
+            hook: TURN_HOOKS_ROUND.to_string(),
+            step: TRIGGER_STEP.to_string(),
+            radiant: false,
+            instance_id: None,
+            data,
+        },
+    });
+}
+
+/// A round entry popping (R824): the next round of its player's end-of-turn hooks, queued now.
+fn run_turn_hooks_round(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
+    let queued_for = entry.resume.data.get("controller").and_then(Value::as_str);
+    let Some(player) = PLAYER_IDS
+        .into_iter()
+        .find(|player| Some(player.as_str()) == queued_for)
+    else {
+        return;
+    };
+    let rounds = entry
+        .resume
+        .data
+        .get(ROUNDS_LEFT_KEY)
+        .and_then(Value::as_i64)
+        .map_or(0, |rounds| rounds.clamp(0, i64::from(i32::MAX)) as i32);
+    queue_turn_hook_rounds(sink, player, rounds);
 }
 
 /// Queue one hook across the board and resolve it, in R68's order (§6.2, R62, R59).
@@ -849,6 +928,10 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
         if let Some(event) = event {
             run_owed_traps(sink, &event, entry);
         }
+        return;
+    }
+    if entry.hook == TURN_HOOKS_ROUND {
+        run_turn_hooks_round(sink, entry);
         return;
     }
 

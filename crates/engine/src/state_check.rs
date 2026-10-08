@@ -729,6 +729,14 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
     for card in &read {
         crate::zones::remove_from_field(sink.state, &card.unit, Default::default());
     }
+    // R823 (Meditative #10 Double Counting): a Death hook runs again for each extra run its card's
+    // controller's multiplier gives, back to back on the same snapshot (R89), the multiplier read once
+    // the collected cards are off the field (R463), so one dying in this pass doubles nothing.
+    let mut extra: IndexMap<PlayerId, usize> = IndexMap::new();
+    for player in PLAYER_IDS {
+        let runs = crate::multipliers::extra_runs(sink.state, player, crate::multipliers::Multiplied::CryAndDeath);
+        extra.insert(player, runs.max(0) as usize);
+    }
 
     for mut card in read {
         let landed = crate::zones::move_to_zone(
@@ -744,6 +752,12 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             continue;
         }
         pass.owed.push(card.snapshot.clone());
+        let runs = extra.get(&card.snapshot.controller).copied().unwrap_or(0);
+        if runs > 0 && crate::scripts::script_of(sink.state, &card.snapshot).death.is_some() {
+            for _ in 0..runs {
+                pass.owed.push(card.snapshot.clone());
+            }
+        }
         pass.collected.push(CollectedEntry {
             id: card.unit.id.clone(),
             def_id: card.unit.def_id.clone(),

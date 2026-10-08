@@ -685,6 +685,9 @@ pub type ConditionalKeywordsHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> Vec<Keywo
 /// B5 E19, R471: what each Plague Counter placement onto this card is multiplied by.
 pub type PlagueMultiplierHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
 
+/// ME-TRIG, R820: how many extra times this card makes its controller's hooks of one kind run.
+pub type TriggerExtraHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
+
 /// Classic #88 Siphon Squad, R403: "When …, Tribute this".
 pub type TributeWhenHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> bool + Send + Sync>;
 
@@ -830,6 +833,17 @@ pub struct Script {
     /// the other side, queued right after the active player's at R62's start-of-turn trigger point, so
     /// R68's order (the active player's cards, then the opponent's) holds.
     pub start_of_opponent_turn: Option<Hook>,
+    // ---- Meditative (R1420) ----
+    /// ME-TRIG, R820, R821 (Meditative #9 Joint Filing): "Your Start of turn and End of turn effects
+    /// trigger N additional times" — N now, asked of the card acting on its controller's field as their
+    /// start-of-turn or end-of-turn hooks are queued (`multipliers::extra_runs`). A PURE READ, like
+    /// `aura`, so a Nerf or Buff of the declared number moves it; several cards do not add, the highest
+    /// holds.
+    pub turn_hook_extra: Option<TriggerExtraHook>,
+    /// ME-TRIG, R822, R823 (Meditative #10 Double Counting): "Your Cry and Death effects trigger N
+    /// additional times" — N now, asked as a permanent's Cry runs for its controller and as the cards a
+    /// state check collects have left the field. A PURE READ; the highest holds.
+    pub cry_death_extra: Option<TriggerExtraHook>,
 }
 
 impl Script {
