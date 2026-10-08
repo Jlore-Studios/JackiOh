@@ -1109,9 +1109,12 @@ pub fn mark_dispatched(sink: &mut EngineSink<'_>, events: &[GameEvent]) {
 /// frontier a replay builds is the frontier the live game had.
 fn collect_events(sink: &mut SettleSink<'_>) {
     // R437: a mark whose effect has stopped waiting goes, and says so, before the frontier moves; R750:
-    // a delayed destroy of a scope marks the Units it names now.
-    crate::effects::delay::refresh_scope_marks(sink);
-    crate::marks::sweep_marks(sink);
+    // a delayed destroy of a scope marks the Units it names now. R216: once the game is over neither
+    // speaks, since `gameOver` is the action's last event (the view reads only live marks, `marks_on`).
+    if sink.state.result.is_none() {
+        crate::effects::delay::refresh_scope_marks(sink);
+        crate::marks::sweep_marks(sink);
+    }
     let len = sink.events.len();
     let from = sink.frontier.get().collected;
     for at in from..len {
