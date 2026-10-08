@@ -456,6 +456,14 @@ mod tests {
     const EXPERIMENT: &str = "core-085";
     /// Field Spell: Indestructible; Activate: Tribute this
     const LOCKDOWN: &str = "classic-084";
+    /// C+ #54 Book of Books, (1) Spell: add 2 random Books to your hand, each costing (0)
+    const BOOK_OF_BOOKS: &str = "classicplus-054";
+    /// C+ #57 Book of Stats, (1) Spell: give a Unit +5/+5
+    const BOOK_OF_STATS: &str = "classicplus-057";
+    /// Issue #473's loop: the seeds tried for a Book of Books that adds a Book of Stats (one of 13 Books,
+    /// two adds, so the first few seeds find one), and the mana the replays may spend.
+    const BOOK_OF_STATS_SEEDS: u32 = 64;
+    const REPLAY_MANA: i32 = 6;
 
     /// TS's object spread: `extra`'s keys written over `target`'s.
     fn merge_into(target: &mut Value, extra: Value) {
@@ -1443,6 +1451,82 @@ mod tests {
                 assert!(line(&s).is_none());
                 s.end_turn();
                 assert!(!offers_play_of(&s, P1, &timmy.id));
+            }
+
+            #[test]
+            fn r766_issue_473_a_book_of_stats_book_of_books_priced_0_is_replayed_under_reward_l_at_its_printed_1_never_for_free() {
+                crate::register_all();
+                // Issue #473's sweep: C+ #54 priced a C+ #57 at (0), the Book reached the graveyard with its
+                // (0), and reward L replayed it for free until the action cap. #54's two Books are random, so
+                // the first seed that adds a Book of Stats is the game played.
+                let (mut s, stats) = (0..BOOK_OF_STATS_SEEDS)
+                    .find_map(|n| {
+                        let mut s = scenario(json!({
+                            "seed": format!("r766-book-of-stats-{n}"),
+                            "p1": {
+                                "hand": [BOOK_OF_BOOKS, NOTEBOOK, STOCKPILE, TIMMY],
+                                "library": SPARE_LIBRARY,
+                                "backrow": [ITD],
+                                "field": [VANILLA],
+                                "mana": REPLAY_MANA,
+                            },
+                            "p2": { "hand": [STOCKPILE], "library": SPARE_LIBRARY },
+                        }));
+                        s.play(BOOK_OF_BOOKS, json!({}));
+                        let stats = s.hand(P1).into_iter().find(|card| card.def_id == BOOK_OF_STATS)?;
+                        Some((s, stats))
+                    })
+                    .expect("a seed whose Book of Books adds a Book of Stats");
+                assert_eq!(s.card(&stats).cost_override, Some(0));
+
+                // Reward L, as the reward L test above earns it.
+                on_quest(&mut s, "9", 1, json!({}));
+                any_action(&mut s);
+                s.answer(json!("L"));
+                expect_line_matches(&s, json!({ "auras": ["L"] }));
+
+                // Played from the hand at its (0), the Book reaches the graveyard as the printed (1) Book.
+                let unit = must(s.unit(P1, 1), "p1's unit").id;
+                let mana = s.state().players[P1].mana.current;
+                s.play(&stats, json!({ "targets": [instance_pick(&unit)] }));
+                s.expect_mana(P1, mana);
+                s.expect_stats(&unit, json!({ "attack": 9, "health": 9 }));
+                let lying = s.card(&stats).clone();
+                assert_eq!(lying.zone.z(), ZoneName::Graveyard);
+                assert_eq!((lying.cost_mod, lying.cost_override), (0, None));
+                assert!(offers_play_of(&s, P1, &stats.id));
+
+                // Each replay from the graveyard pays (1) and lands it there at (1) again: as many replays as
+                // there is mana, and then none.
+                let mut replays = 0;
+                while offers_play_of(&s, P1, &stats.id) {
+                    assert!(replays < mana, "the Book was replayed past the mana it costs");
+                    let action = json!({
+                        "type": "play",
+                        "playerId": "p1",
+                        "instanceId": stats.id,
+                        "targets": [instance_pick(&unit)],
+                        "nonce": format!("r766-replay-{replays}"),
+                    });
+                    let result = reduce(s.state(), &json_as::<Action>(action));
+                    assert_eq!(result.error, None);
+                    let paid: Vec<i32> = result
+                        .events
+                        .iter()
+                        .filter_map(|event| match event {
+                            GameEvent::CardPlayed { cost_paid, from: Some(PlayedFrom::Graveyard), .. } => Some(*cost_paid),
+                            _ => None,
+                        })
+                        .collect();
+                    assert_eq!(paid, vec![1]);
+                    *s.state_mut() = result.state;
+                    replays += 1;
+                    assert_eq!(s.card(&stats).zone.z(), ZoneName::Graveyard);
+                }
+                assert_eq!(replays, mana);
+                s.expect_mana(P1, 0);
+                let buffed = 4 + 5 * (1 + mana);
+                s.expect_stats(&unit, json!({ "attack": buffed, "health": buffed }));
             }
 
             #[test]

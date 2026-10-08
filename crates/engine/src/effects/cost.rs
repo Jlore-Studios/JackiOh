@@ -1,5 +1,6 @@
 //! Cost changes on one card instance: the two inputs R65 reads before any player discount. Both
-//! persist in every zone (R78), so a card discounted in hand is still discounted from the graveyard.
+//! persist through a hand, a library and leaving the field (R78), and both go as the card reaches a
+//! graveyard or an exile pile (R766), so a card discounted in hand costs its printed cost there.
 //! The order the two combine is `effectiveCost`'s (§6.3 Cost, R65); nothing here recomputes it.
 //!
 //! Port of `packages/engine/src/effects/cost.ts`. TS wrote through the live instance; Rust writes

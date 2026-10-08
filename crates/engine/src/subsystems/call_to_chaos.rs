@@ -212,7 +212,7 @@ pub fn summon_rush_tokens() -> Effect {
 }
 
 /// 7. "Every card in your hand and library costs 2 less": the cards that are there when the effect
-///    resolves, each getting a permanent `costMod` that travels with it between zones (R78). It changes
+///    resolves, each getting a `costMod` that travels with it to a hand or a library (R78, R766). It changes
 ///    those cards, not the player, so a card drawn afterwards still pays full price.
 pub fn discount_hand_and_library() -> Effect {
     chaos_effect(ChaosEffectName::Discount, |ctx| {

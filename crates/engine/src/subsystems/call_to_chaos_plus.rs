@@ -75,7 +75,7 @@ fn add_free(name: &'static str, pool: Value, count: i32) -> Effect {
 /// the entry resolves is Replaced (§6.3, R35) one for one, where it lies, by a random card of the "Call
 /// to Chaos" pool (both editions, this one included: the text names its pool, R387, R28), each pick its
 /// own (R60), the old card ceasing to exist and the new one a card its owner was never shown (R311), with
-/// a `costOverride` of (0) it carries in every zone (R78). The deck keeps its size; an empty one draws
+/// a `costOverride` of (0) it carries until it reaches a graveyard or an exile pile (R78, R766). The deck keeps its size; an empty one draws
 /// nothing (R129).
 pub fn replace_deck_with_call_to_chaos() -> Effect {
     entry("replace", |ctx| {

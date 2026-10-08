@@ -6,8 +6,8 @@ Each player owns a hand, a library, a graveyard, an exile pile, a hero, 5 unit z
 | --- | --- | --- | --- | --- |
 | Hand | Any card | Owner | Index order for triggers ([[R68]]); random picks are uniform | Cap 10 (ruling) |
 | Library | Any card | The order: nobody. The contents: its owner, as a list without order of the cards they were shown going in, so a dealt deck's starting cards stay unknown until they leave it ([[R310]]–[[R312]], [[R433]]); the count is public | Top to bottom | Recruit scans top down; "bottom card" = last |
-| Graveyard (GY) | Cards that were destroyed, discarded or resolved, except unit tokens ([[R11]]) | Both | Chronological | Unit tokens never enter it; spell tokens do |
-| Exile | Exiled cards | Both | Chronological | Count feeds Echoes of the Forgotten and Spiteful Stab |
+| Graveyard (GY) | Cards that were destroyed, discarded or resolved, except unit tokens ([[R11]]) | Both | Chronological | Unit tokens never enter it; spell tokens do. A card arrives as its printed card, at its printed cost ([[R78]], [[R215]], [[R766]]) |
+| Exile | Exiled cards | Both | Chronological | Count feeds Echoes of the Forgotten and Spiteful Stab. A card arrives as in a graveyard ([[R766]]) |
 | Unit zone x5 | Units, or a Stack pile | Both | Lane 1 to 5, left to right from the owner's seat | Lock flag per zone |
 | Backrow zone x5 | Field Spells, Traps, Field Traps, or a backrow pile ([[§3.2]]) | Field Spells: both; Traps: the controller only, and the other player sees a face-down card and its cost even if they own it ([[R33]], [[R351]]) | Lane 1 to 5 | Lock flag per zone; traps hidden until they fire |
 | Hero | Health, hero armor, Heroic Power | Both |  | Health has no upper cap |

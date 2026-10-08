@@ -560,7 +560,7 @@ fn as_list<T: Clone + PartialEq>(value: Option<&OneOrMany<T>>) -> Vec<T> {
 /// instance (`effective_cost`), which R65 applies outside play ("library, hand, GY, pools, filters,
 /// comparisons") and #30 Archivist and #94 Genn's Greed already read library cards by (R24, R66): a
 /// card never played has no X (an X-cost card reads 0) and no embiggen price (its base), and its
-/// `costMod` and `costOverride` travel with it into every zone (R78), so a printed-3 Unit #95 made
+/// `costMod` and `costOverride` travel with it into a hand and a library (R78, R766), so a printed-3 Unit #95 made
 /// "cost 2 less" is a Unit costing 1 for #69 Call to Arms. The definition's printed cost would miss it.
 fn matches_filter(ctx: &EffectContext<'_>, card: &CardInstance, filter: &RecruitFilter) -> bool {
     let def = def_of(Some(&*ctx.state), &card.def_id);

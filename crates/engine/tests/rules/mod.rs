@@ -100,6 +100,7 @@ pub mod generation_replay;
 pub mod glitch;
 pub mod glow_facts;
 pub mod graveyard_play;
+pub mod graveyard_reset;
 pub mod handicap;
 pub mod hero_power;
 pub mod hotseat_smoke;

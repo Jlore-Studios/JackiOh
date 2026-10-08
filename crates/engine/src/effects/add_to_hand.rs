@@ -23,7 +23,8 @@ use crate::wire::{Keyword, Zone, ZoneName};
 /// `costOverride` — which is why both exist. #54 Straaza's "they cost 1" replaces the price outright
 /// (`costOverride: 1`), while #7 Jewelosco Scarab's and #39 Recycling Initiative's "costs 1 less"
 /// must survive alongside the next discount and the embiggen price it did not choose (`costMod: -1`).
-/// R78 keeps all three of `costMod`, `costOverride` and `radiant` in every zone.
+/// R78 keeps all three of `costMod`, `costOverride` and `radiant` in every zone, except that R766
+/// takes the two prices off a card that reaches a graveyard or an exile pile.
 #[derive(Clone, Debug, Default, PartialEq)]
 struct HandRiders {
     player: Option<PlayerSpec>,
