@@ -375,7 +375,8 @@ src/practice/
   lastBoard.ts        the human's last practice board (C+ #29, R417, R508) in localStorage
                       `jackioh.practice.lastBoard`, try/catch
   saveStore.ts        the worker's save of a free game in progress (R668): config, log, AI cursor,
-                      catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom)
+                      catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom), and the last
+                      PRACTICE_REPLAYS_KEPT finished free games (R768)
   resume.ts           the page's half (R668): only the setup it chose, in localStorage
                       `jackioh.practice.game`, try/catch, marked `saved` once left with Save and leave (R765)
   DeckPreview.tsx     the chosen deck's name, identity, mana curve and cards, before Start
@@ -401,6 +402,14 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   sends the same `resume`; the second forgets it. A reload while the player is in the game still
   resumes it at once, and starting any game from the setup or the lesson path ends the saved one.
   The same lobby shows the live online game's banner (Rejoin) for a signed-in player in a match.
+- A finished free game is kept for its replay (R768): when it ends the worker adds its config, log,
+  catalog version, final hash and a summary to the store, the newest PRACTICE_REPLAYS_KEPT of them, but
+  not a lesson or a game Glitch voided (R679). `{ type: "replays" }` answers the summaries, newest
+  first, each with `unavailable` set to `earlier_patch` or `rules_changed` when it was played on
+  another catalog or no longer folds to its hash; `{ type: "replay", game, from, count }` answers a
+  page of `{ step, turn, view }` in the seat the human played at each step (R677), and `total`. Both
+  are refused while a game is in progress, a game that is unavailable is refused with its reason, and
+  neither ever carries the log, the seed, the decks or a state. Nothing on screen sends them yet.
 - The one exception is `debug`, which carries the raw state, the log, the decks, the handicaps and
   the dealt seats for spec 13's replay check. The core answers it only when `MODE !== "production"`,
   and the route sets `window.__jackiohPractice` under the same condition, like `window.__jackioh`.
