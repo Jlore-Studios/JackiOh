@@ -8,6 +8,7 @@ pub fn scenario(setup: serde_json::Value) -> jackioh_engine::testkit::Scenario {
     jackioh_engine::testkit::scenario(setup)
 }
 
+pub mod activate_listed;
 pub mod after_resolution;
 pub mod card_text;
 pub mod catalog;
