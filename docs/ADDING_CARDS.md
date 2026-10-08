@@ -26,6 +26,7 @@ index in three digits after a `c`, then its slug with every `-` and `.` an `_` (
 | 9 | `crates/cards/flavour.json` | the card's flavour line, `"<id>": { "flavour": "…" }`: one short line in the source notes' voice, no rules words, at most 120 characters (R660); it is not card data, so no fragment claims it | `tests/cross/flavour.rs`, `apps/web/src/cards/flavour.test.tsx` |
 | 10 | a pinned pool, when the card joins one | `tests/cross/query.rs` names the pools the spec pins down card by card (the KY pool, the (1) Cost Traps, R35's Legendaries, …) | `tests/cross/query.rs` |
 | 11 | `crates/cards/patches/pending/<version>.json` | the fragment, `cargo jackioh patches …` ([§3](#3-the-patch-and-its-order)); the shipped history and the version sites move at promotion, not here | `patches check` |
+| 12 | a Legendary or Mythic, or a token printed so: `apps/web/scripts/music/tracks.mjs`, `apps/web/src/audio/music-cards.json`, `assets/music/LICENSES.md` | its intro (R1352): an `INTRO_CARDS` row (its facts, and a `tune` if it is hand-tuned), its `"intro": "intro-<id>"` entry, `pnpm --filter @jackioh/web gen:music` (FluidSynth and ffmpeg, Linux included) with the rendered file and manifest row committed, and its licence row | `music-assets.test.ts` (the daily audio run) |
 
 The catalog and pool counts elsewhere (the web's deck builder, Almanac and patch tests, the e2e component specs) count
 `catalog.json` and `patches.json` themselves and need no edit for a new card. The patch-list tests pin only the history shipped
@@ -48,6 +49,7 @@ Also grep the Markdown for the stated totals (`268 cards`, `318`) and update the
   shipped sets and must not move.
 - Its `card-audio.json5` entry is written as for any card, but no voice file is expected for it until the set ships
   (`gen-voice.mjs --check` leaves it out), so [§7](#7-what-cannot-be-done-on-linux)'s rendering is owed by the release, not by the card.
+  Its intro (row 12) is the release's too: the intros' totality test reads the sets that ship.
 - Tests that count the catalog count the sets that ship (`set_is_open` in Rust, `setShips` in the web), never every entry.
   `docs/meditative-set.md` M3 says the rest.
 
@@ -198,6 +200,8 @@ One more card shifts every random draw from the pool (R380), so tests and games 
   your card, print the failing game's state, find which card the panic or the diff names, and file it rather than editing the test.
 - **A renamed card** (a patch that changes a `name`) fails `voice-lines.test.ts` until its comment in `card-audio.json5`, the name on the
   line of its id, says the new name (R655).
+- **A card patched to Legendary or Mythic** (or a token's `printedRarity`) fails `music-assets.test.ts` until it has row 12's intro, and one
+  patched down from either until its `intro` is taken out (R1352).
 
 ## 5. Do not read
 

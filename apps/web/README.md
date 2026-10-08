@@ -124,10 +124,12 @@ src/
     usePickupSound.ts                        a Unit picked up to attack plays its attack hook (R655)
     card-audio.json5 voiceData.ts            every card's sounds (voices, effects, hooks; R655), hand-edited, and its parser
     voice-manifest.json                      the generated hash and size of each rendered line
-    music.ts musicScene.ts                   the music player (bar-line crossfades, the turn mix, focus) and menu vs board (R631)
+    music.ts musicScene.ts                   the music player (bar-line crossfades, the turn mix, focus, a card's intro on
+                                             top with the duck under it) and menu vs board (R631, R1350, R1351)
     musicDirector.ts musicPlan.ts            a board's music from the viewer's own view, and the priority stack
     musicData.ts music-manifest.json         the rendered tracks (loop points, tempo) and music-cards.json, the
-    music-cards.json                         Mythic themes, shared Legendary entrance themes and station switches by card id
+    music-cards.json                         Mythic themes, shared Legendary entrance themes, station switches and
+                                             every Legendary's and Mythic's intro (R1352) by card id
   fx/                   the effects layer (docs/polish/1-animations.md; SPEC §10.10, R200–R202)
     types.ts constants.ts   the cue contract and every FX number
     settings.ts         effects speed, intensity and motion (localStorage, jackioh.fx.v1)
@@ -514,7 +516,15 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
 - `node apps/web/scripts/gen-music.mjs --check` needs no renderer, runs anywhere, and is what
   `music-assets.test.ts` calls.
 - Record a new track's source in `assets/music/LICENSES.md`. A Mythic's theme, a Legendary's shared entrance
-  theme or a station switch is an entry in `src/audio/music-cards.json`, and the music system needs no change for it.
+  theme, a station switch or a card's intro is an entry in `src/audio/music-cards.json`, and the music system needs
+  no change for it.
+- A card's intro (R1352) is a score in `tracks.mjs`'s `INTRO_CARDS`: the card's facts as the catalog printed them and
+  its `tune`, from which `introSpec` derives the rest (key, tempo, meter, motif and answer from the id; instruments,
+  accompaniment and modes from the family; the set's glint; a Mythic's shimmer). It renders as a sting of a few bars
+  with a one-second faded tail (`tail`, `post.fadeOutS`), its loudness measured over the file it keeps
+  (`post.loudnessOverFile`); a track without those fields renders exactly as before. A Legendary or Mythic added to a
+  set that ships needs its `INTRO_CARDS` row, its `intro` in `music-cards.json`, a render and a licence row:
+  `music-assets.test.ts` refuses a shipped one without them.
 
 ## Regenerating the voice lines
 

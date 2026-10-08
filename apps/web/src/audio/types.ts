@@ -273,8 +273,12 @@ export type MusicManifest = {
   files: Record<string, MusicTrack>;
 };
 
-/** What a card does to the music when it is cast (music-cards.json, keyed by catalog id). */
-export type MusicCardEntry = { theme?: string; station?: MusicStation };
+/**
+ * What a card does to the music when it is cast (music-cards.json, keyed by catalog id): a theme it
+ * starts, a station it switches its caster to, and (R1350) the intro it opens its play with, a
+ * non-looping track of its own.
+ */
+export type MusicCardEntry = { theme?: string; station?: MusicStation; intro?: string };
 
 /** What the director and the UI need from an engine. */
 export type SoundSink = {

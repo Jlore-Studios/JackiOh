@@ -110,6 +110,14 @@ export function cc(sec, ch, t, controller, value) {
   sec.part.ccs.push({ t: sec.start + t, ch, cc: controller, value });
 }
 
+/**
+ * A pitch bend at beat `t` of the section: `value` in MIDI's -8192..8191, which FluidSynth reads as
+ * up to two semitones either way (a theremin's wobble, a trombone's droop). Bend back to 0 after.
+ */
+export function bend(sec, ch, t, value) {
+  sec.part.bends.push({ t: sec.start + t, ch, value });
+}
+
 /* ------------------------------------------------------------------------------------------- *
  * Accompaniment
  * ------------------------------------------------------------------------------------------- */
