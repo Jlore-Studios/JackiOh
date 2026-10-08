@@ -102,12 +102,15 @@ pub const SERVER_ONLY_ACTION_TYPES: &[ActionType] = &[
     ActionType::CeilingReached,
 ];
 
-/// Everything else in the §10.2 union that a socket may carry.
+/// Everything else in the §10.2 union that a socket may carry: every type `legal_actions` can list
+/// among them. R384's `activate` is the one every Activate ability and, since R752, every Heroic
+/// Power's power is listed as, so a whitelist without it refused them all online (#491).
 pub const CLIENT_ACTION_TYPES: &[ActionType] = &[
     ActionType::Mulligan,
     ActionType::Play,
     ActionType::Attack,
     ActionType::SwitchPosition,
+    ActionType::Activate,
     ActionType::ActivatePower,
     ActionType::Answer,
     ActionType::OfferDraw,
@@ -483,6 +486,48 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
                 instance_id: instance_id.to_string(),
             })
         }
+        ActionType::Activate => {
+            // R384: the ability, its declared targets and modes and a Tribute cost's units travel in
+            // the action, as a play's do (R81); whether they are legal is the reducer's call.
+            let Some(instance_id) = is_string(raw.get("instanceId")) else {
+                return Err(malformed(r#""activate.instanceId" must be a string"#));
+            };
+            let mut ability = None;
+            if let Some(value) = raw.get("ability") {
+                let Some(parsed) = value.as_str() else {
+                    return Err(malformed(r#""activate.ability" must be a string"#));
+                };
+                ability = Some(parsed.to_string());
+            }
+            let mut targets = None;
+            if let Some(value) = raw.get("targets") {
+                let Some(parsed) = parse_selections(value) else {
+                    return Err(malformed(r#""activate.targets" must be an array of selections"#));
+                };
+                targets = Some(parsed);
+            }
+            let mut modes = None;
+            if let Some(value) = raw.get("modes") {
+                let Some(parsed) = is_string_list(Some(value)) else {
+                    return Err(malformed(r#""activate.modes" must be an array of strings"#));
+                };
+                modes = Some(parsed);
+            }
+            let mut tributes = None;
+            if let Some(value) = raw.get("tributes") {
+                let Some(parsed) = is_string_list(Some(value)) else {
+                    return Err(malformed(r#""activate.tributes" must be an array of ids"#));
+                };
+                tributes = Some(parsed);
+            }
+            Ok(ActionBody::Activate {
+                instance_id: instance_id.to_string(),
+                ability,
+                targets,
+                modes,
+                tributes,
+            })
+        }
         ActionType::ActivatePower => {
             let Some(instance_id) = is_string(raw.get("instanceId")) else {
                 return Err(malformed(r#""activatePower.instanceId" must be a string"#));
@@ -527,10 +572,9 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
             Ok(ActionBody::SetAutoEndTurn { enabled })
         }
         // Unreachable: `CLIENT_ACTION_TYPES` admitted none of these.
-        ActionType::Activate
-        | ActionType::Timeout
-        | ActionType::DisconnectExpired
-        | ActionType::CeilingReached => Err(malformed(format!(r#""{type_}" is not an action type"#))),
+        ActionType::Timeout | ActionType::DisconnectExpired | ActionType::CeilingReached => {
+            Err(malformed(format!(r#""{type_}" is not an action type"#)))
+        }
     }
 }
 
