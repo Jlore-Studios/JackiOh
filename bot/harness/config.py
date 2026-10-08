@@ -139,6 +139,7 @@ _SHARED: dict[str, tuple[str, str]] = {
 #: #187; the colours are the ones they were made with.
 _TYPES: dict[str, tuple[str, str]] = {
     "patch": ("fbca04", "A numbered release of the game: cards, rules, the client, the server's features"),
+    "large patch": ("006b75", "A big patch, with patch: a new expansion or set, or a change to many cards at once"),
     "major version": ("0052cc", "A vX.Y.0 release that changes the game or the codebase broadly, and each of its parts"),
     "architecture": ("0e8a16", "The repository, tooling, CI, deploys and agent setup"),
     "night bot": ("5319e7", "The night bot and Squishy themselves: bot/, .harness/, .squishy/ and their workflows"),

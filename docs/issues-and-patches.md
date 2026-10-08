@@ -19,6 +19,7 @@ Every issue carries at least one type label:
 | Label | For |
 |---|---|
 | `patch` | A numbered release of the game: cards, rules, the client, the server's features |
+| `large patch` | A big patch, always with `patch`: a new expansion or set, or a change to many cards at once (a pass over every card's text or numbers) |
 | `major version` | A `vX.Y.0` release that changes the game or the codebase broadly enough to bump the minor or major version (v0.2.0, v0.3.0, v1.0.0), and each of its parts |
 | `architecture` | The repository, tooling, CI, deploys and agent setup |
 | `night bot` | The night bot and Squishy themselves: `bot/`, `.harness/`, `.squishy/` and their workflows |
