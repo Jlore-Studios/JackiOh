@@ -3069,6 +3069,14 @@
         }
       }
     },
+    "501": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-08T06:18:18Z",
+      "issue": 443,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "51": {
       "failures": 0,
       "forced": false,
