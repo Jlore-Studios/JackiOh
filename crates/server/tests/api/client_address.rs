@@ -851,7 +851,7 @@ fn valid_env() -> IndexMap<String, String> {
     ] {
         source.insert(name.to_string(), value.to_string());
     }
-    // SURFACE §11.3: the server refuses any version but the one it was compiled with.
+    // SURFACE §11.3: the server serves the version it was compiled with.
     source.insert(
         "CATALOG_VERSION".to_string(),
         jackioh_cards::catalog_version().to_string(),

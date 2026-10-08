@@ -87,7 +87,7 @@ placeholders (`app::load_server_env`).
 | `SUPABASE_SECRET_KEY` | yes | `sb_secret_…`; bypasses every RLS policy, server only |
 | `DATABASE_URL` | yes | the Postgres connection string for the transactions of §9.4 and §9.5 |
 | `CODE_PEPPER` | yes | ≥ 32 characters; keys the HMAC over invite codes and IP addresses |
-| `CATALOG_VERSION` | yes | must equal the version compiled into the binary (`cargo jackioh catalog-version`), or the server refuses to boot (R105, R388) |
+| `CATALOG_VERSION` | no | the server always serves the version compiled into the binary (`cargo jackioh catalog-version`); a different value only logs a warning, so a stale host value never stops a deploy (R105, R388, #488) |
 | `SUPABASE_JWKS_URL` | no | defaults to `${SUPABASE_URL}/auth/v1/.well-known/jwks.json` |
 | `SUPABASE_JWT_SECRET` | no | the HS256 fallback; discouraged |
 | `PORT` | no | default 8787 |

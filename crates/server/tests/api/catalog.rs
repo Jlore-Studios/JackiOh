@@ -15,8 +15,8 @@
 //!   * the catalog is compiled in (`jackioh_cards::catalog_json()`), so nothing is read from a file
 //!     at run time: TS's "refuses to invent a catalog when the file is missing or malformed" is
 //!     `crates/cards/build.rs` failing the build, and has no run-time test;
-//!   * its version is `jackioh_cards::catalog_version()`, and `CATALOG_VERSION` must equal it or the
-//!     server refuses to boot, so "the environment pins the version" became that refusal;
+//!   * its version is `jackioh_cards::catalog_version()`, whatever `CATALOG_VERSION` says (a different
+//!     value only warns, #488), so "the environment pins the version" is gone;
 //!   * `loadout-validator.ts` is gone: the binding tests hand `jackioh_engine::validator` the snapshot
 //!     a handler builds from the catalog handle (`snapshot` below), JSON in and JSON out (§10.1);
 //!   * `GET /api/catalog/:version` is not served, so of R388's four tests only the 404 one remains.
@@ -268,19 +268,23 @@ mod loaded_catalog {
     }
 
     /// TS let `loadCatalog({ version })` stamp any version. The compiled-in catalog has one version,
-    /// and §9.4's "both halves must agree" is now the boot refusal of SURFACE §11.3.
+    /// and the server serves it whatever `CATALOG_VERSION` says: a stale or missing value boots on
+    /// the compiled-in version, so a card patch ships without a hand edit on the host (#488).
     #[tokio::test]
-    async fn lets_the_environment_pin_the_version_only_to_the_compiled_in_one_section_9_4_both_halves_must_agree()
-     {
+    async fn serves_the_compiled_in_version_whatever_the_environment_says_section_9_4_both_halves_must_agree()
+    {
         let app = test_app().await;
         assert_eq!(app.catalog.version, jackioh_cards::catalog_version());
 
         let mut stale = valid_env();
         stale.insert("CATALOG_VERSION".to_string(), "core-2026-09".to_string());
-        match load_env(&stale) {
-            Ok(_) => panic!("a CATALOG_VERSION other than the compiled-in one must be refused"),
-            Err(problems) => assert!(problems.to_string().contains("CATALOG_VERSION"), "{problems}"),
-        }
+        let env = load_env(&stale).expect("a stale CATALOG_VERSION must not stop the boot");
+        assert_eq!(env.catalog_version, jackioh_cards::catalog_version());
+
+        let mut unset = valid_env();
+        unset.shift_remove("CATALOG_VERSION");
+        let env = load_env(&unset).expect("CATALOG_VERSION is optional");
+        assert_eq!(env.catalog_version, jackioh_cards::catalog_version());
     }
 
     #[tokio::test]

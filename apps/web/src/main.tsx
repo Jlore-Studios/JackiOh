@@ -35,6 +35,10 @@
 // address bar, on `/login` too (whose screen is a lazy chunk that may be slow or fail to load), and
 // one that landed anywhere else (Supabase's Site URL fallback) is handed to `/login`.
 //
+// A ROOM LINK (R767). Before the route switch runs, a room link on /play is taken out of the address
+// bar and kept for this tab (net/roomLink.ts), so the gate's way to /login cannot lose it; the lobby
+// uses it once.
+//
 // THE QUEUE FOLLOWS THE PLAYER (R765). A player queued on `/play` may go anywhere in the client while
 // they wait. The route table's own `useQueueFollow` (`net/liveGame.ts`) watches the account on every
 // screen but `/play`, which watches for itself, and when the queue pairs them it says so over the
@@ -59,6 +63,7 @@ import { adoptAuthRedirect, sessionIdFromToken } from "./auth/redirect.ts";
 import { shellTestid } from "./auth/testids.ts";
 import { useAccount, type Account } from "./net/gate.ts";
 import { useQueueFollow } from "./net/liveGame.ts";
+import { adoptRoomLink } from "./net/roomLink.ts";
 import { useSettingsAccountSync } from "./settings/accountSync.ts";
 import {
   SITE_ORIGIN,
@@ -483,6 +488,8 @@ function sessionKeyOf(token: string): string {
 export function App(): ReactElement {
   // Before the first read of the path: an emailed link is scrubbed, and moved to `/login` (R193).
   useState(() => adoptAuthRedirect(paths.login));
+  // R767: a room link leaves the address bar and waits in this tab before the gate can send a signed-out visitor to sign in.
+  useState(adoptRoomLink);
   const path = usePathname();
   useDocumentHead(path);
   // R765: a pairing finds the player on any screen; see THE QUEUE FOLLOWS THE PLAYER above.

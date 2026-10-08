@@ -25,7 +25,7 @@ e2e/
   cypress/e2e/03-trap-opponent-turn.cy.ts  BUILD M8: p2's set Sheepish fires on p1's turn when p1 plays a unit
   cypress/e2e/04-combat.cy.ts  BUILD M8: Taunt, Defense Position, First Strike and Divine Shield in combat
   cypress/e2e/05-reconnect.cy.ts  BUILD M8, networked: the same view and the same open prompt after a reload, the clock kept running
-  cypress/e2e/06-room-code.cy.ts  BUILD M8, networked: a room created in the browser and joined by `wsPlayer`
+  cypress/e2e/06-room-code.cy.ts  BUILD M8, networked: a room created in the browser and joined by `wsPlayer`; and a room shared as an invite link, opened and joined in the browser (R767)
   cypress/e2e/07-my-pawn-ai.cy.ts  BUILD M8: p2's My Pawn cancels p1's lethal attack, and an AI plays out p1's turn (R44)
   cypress/e2e/08-turn-cap-draw.cy.ts  BUILD M8: after the 60th player-turn, 30 each, the overlay says Draw (R2, R389)
   cypress/e2e/09-deckbuilder.cy.ts  BUILD M8, networked: the deck workshop and the queue's rules (§9.4, R250–R253)
