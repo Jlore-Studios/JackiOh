@@ -10,7 +10,9 @@ use indexmap::IndexMap;
 use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::wire::catalog_types::{CardDef, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row};
+use crate::wire::catalog_types::{
+    CardDef, CardElement, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row,
+};
 use crate::wire::events::{GameEvent, GameResult, Position};
 use crate::wire::string_union;
 
@@ -97,6 +99,11 @@ pub struct CardView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub brittle: Option<i32>,
+    /// R980: the card's element (Meditative #40 Feng Shui), where the viewer may read the card and a
+    /// Feng Shui acts.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub element: Option<CardElement>,
     /// B3.4, R386: the card's declared numbers as they stand now (its face's `params`, moved by
     /// Degrade, Upgrade and KY's Constant), by key, which the client fills into the face's `{key}`s.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -388,6 +395,9 @@ pub struct UnitView {
     pub brittle: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
+    pub element: Option<CardElement>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub params: Option<IndexMap<String, i32>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -510,6 +520,9 @@ pub struct PublicBackrowView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub brittle: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub element: Option<CardElement>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub params: Option<IndexMap<String, i32>>,

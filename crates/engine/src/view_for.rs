@@ -1821,6 +1821,22 @@ fn redact_event(
             rebuild(shown)
         }
 
+        // R983: only a face-up play is judged (R982), so the played card is public once it has been
+        // announced; it is judged by where it sits now, like the cards above, and so is its judge.
+        GameEventType::FengShui => {
+            let source_hidden = nullable_at(&shown, "sourceId").is_some_and(|source| hidden(&source));
+            if !hidden(&instance) && !source_hidden {
+                return event.clone();
+            }
+            if hidden(&instance) {
+                hide(&mut shown, &["instanceId"]);
+            }
+            if source_hidden {
+                hide(&mut shown, &["sourceId"]);
+            }
+            rebuild(shown)
+        }
+
         GameEventType::TurnCutShort => {
             if !nullable_at(&shown, "byInstanceId").is_some_and(|by| hidden(&by)) {
                 return event.clone();

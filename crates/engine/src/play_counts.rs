@@ -53,7 +53,7 @@ pub fn play_record_of(state: &GameState, card: &CardInstance) -> Option<PlayReco
 }
 
 /// A Trap or Field Trap is set face-down (§3.2, R33), so its play is never a face-up one (R451).
-fn played_face_down(type_: CardType) -> bool {
+pub(crate) fn played_face_down(type_: CardType) -> bool {
     type_ == CardType::Trap || type_ == CardType::FieldTrap
 }
 

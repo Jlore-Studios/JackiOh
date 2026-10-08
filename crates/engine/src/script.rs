@@ -532,6 +532,17 @@ pub struct StaticFlags {
     /// #22 Blood Moon's Radiant Field Trap, "From now on").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub heal_to_damage: Option<bool>,
+    // ---- Meditative ----
+    /// R981–R984, Meditative #40 Feng Shui: while this card acts on the field, it judges every face-up
+    /// play at §10.5 step 3 by its element against its player's last (`subsystems::feng_shui`). On its
+    /// Radiant face it rewards only its controller's plays and punishes only the opponent's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub feng_shui: Option<bool>,
+    /// R987, Meditative #40 Feng Shui: "You have Luck X". While this card acts on the field, every roll
+    /// with a best that its controller's cards make rolls X more times (`query::luck_of`); X is the
+    /// card's declared number `luck` where it declares it, else this.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub luck: Option<i32>,
 }
 
 string_union! {

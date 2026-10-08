@@ -189,6 +189,17 @@ string_union! {
 }
 
 string_union! {
+    /// R980: a card's element (Meditative #40 Feng Shui), in Hetu (河图) order 1–5. No tag (R986).
+    pub enum CardElement {
+        Water = "水",
+        Fire = "火",
+        Wood = "木",
+        Metal = "金",
+        Earth = "土",
+    }
+}
+
+string_union! {
     /// §8: Core's by mechanical complexity, Classic's and Classic+'s the designer's; every token carries "Token".
     pub enum Rarity {
         Common = "Common",

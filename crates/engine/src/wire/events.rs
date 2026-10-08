@@ -119,6 +119,14 @@ string_union! {
     }
 }
 
+string_union! {
+    /// R981: how a Feng Shui judged a play (`fengShui.outcome`). A neutral play has no event.
+    pub enum FengShuiOutcome {
+        Positive = "positive",
+        Negative = "negative",
+    }
+}
+
 /// `{ winner: PlayerId | "draw"; reason: GameOverReason }`: how a game ended (`GameState.result`,
 /// `PlayerView.result`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -714,6 +722,15 @@ pub enum GameEvent {
         player: PlayerId,
         outcome: GlitchOutcome,
     },
+    /// R983: the Feng Shui `source_id` judged the play of `instance_id` by `player` at §10.5 step 3:
+    /// `positive` (it was made Radiant) or `negative` (it was given Brittle 2, and the hit follows once
+    /// it has resolved). Public: only a face-up play is judged (R982), and a hidden id is redacted.
+    FengShui {
+        instance_id: String,
+        source_id: String,
+        player: PlayerId,
+        outcome: FengShuiOutcome,
+    },
     /// R437: a card gained or lost a mark — a pending effect aimed at it, shown on it in both views
     /// (#50 K-Pop Fanatic's steal is `"steal"`, purple). `color` is a key the client maps to a colour.
     Marked {
@@ -839,6 +856,7 @@ string_union! {
         TurnCutShort = "turnCutShort",
         Marked = "marked",
         Glitched = "glitched",
+        FengShui = "fengShui",
         Translated = "translated",
         DamageAbsorbed = "damageAbsorbed",
     }
@@ -970,6 +988,7 @@ impl GameEvent {
             GameEvent::DrawLimited { .. } => GameEventType::DrawLimited,
             GameEvent::TurnCutShort { .. } => GameEventType::TurnCutShort,
             GameEvent::Glitched { .. } => GameEventType::Glitched,
+            GameEvent::FengShui { .. } => GameEventType::FengShui,
             GameEvent::Marked { .. } => GameEventType::Marked,
             GameEvent::Translated { .. } => GameEventType::Translated,
             GameEvent::DamageAbsorbed { .. } => GameEventType::DamageAbsorbed,
@@ -1029,7 +1048,7 @@ mod tests {
             r#"{"type":"gameOver","winner":"draw","reason":"turn-cap"}"#
         );
         assert_eq!(over.event_type().as_str(), "gameOver");
-        assert_eq!(GAME_EVENT_TYPES.len(), 67);
+        assert_eq!(GAME_EVENT_TYPES.len(), 68);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

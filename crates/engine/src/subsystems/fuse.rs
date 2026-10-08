@@ -1030,6 +1030,8 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 cant_attack_or_be_attacked: flags(|f| f.cant_attack_or_be_attacked),
                 never_berserk: flags(|f| f.never_berserk),
                 heal_to_damage: flags(|f| f.heal_to_damage),
+                feng_shui: flags(|f| f.feng_shui),
+                luck: summed_number(defined.iter().map(|f| f.luck)),
             })
         }
     }
