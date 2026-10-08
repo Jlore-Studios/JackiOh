@@ -26,6 +26,9 @@ const UNION_ORDER: SfxId[] = [
   // Patch v0.3.X (MN05): Armor (R1363) and the niche moments (R1364–R1366).
   "armorClank", "armorRing", "overkill", "crumble", "unlock", "steal", "give", "counterspell", "bleat", "fuse",
   "degrade", "upgrade",
+  // Patch v0.3.X (MN03, R1345): the fourteen new emoji emotes.
+  "emoteWave", "emoteClap", "emoteThumbsUp", "emoteFacepalm", "emoteShrug", "emoteThinking", "emoteHeart",
+  "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -90,6 +93,21 @@ const DURATION_MS: Record<SfxId, number> = {
   fuse: 650,
   degrade: 520,
   upgrade: 500,
+  // Patch v0.3.X (MN03, R1345).
+  emoteWave: 500,
+  emoteClap: 650,
+  emoteThumbsUp: 400,
+  emoteFacepalm: 950,
+  emoteShrug: 600,
+  emoteThinking: 1000,
+  emoteHeart: 900,
+  emoteFire: 900,
+  emoteSkull: 450,
+  emoteSweat: 450,
+  emoteCool: 900,
+  emoteGasp: 500,
+  emoteSalute: 750,
+  emoteParty: 850,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }, { tier: "rare" }, { tier: "epic" }];
@@ -584,5 +602,41 @@ describe("R669 the play sting", () => {
     const panned = stingRun({ tier: "rare", pan: 0.6 });
     expect(panned.made.map((n) => n.kind)).toEqual(plain.made.map((n) => n.kind));
     expect(returnedSeconds(panned)).toBe(returnedSeconds(plain));
+  });
+});
+
+describe("R1345 MN03's fourteen emoji sounds", () => {
+  const NEW_EMOJI: readonly SfxId[] = [
+    "emoteWave", "emoteClap", "emoteThumbsUp", "emoteFacepalm", "emoteShrug", "emoteThinking", "emoteHeart",
+    "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
+  ];
+  const runs = NEW_EMOJI.map((id) => runRecipe(id, SFX[id].recipe, SFX[id].durationMs, {}));
+
+  it("R1345 each keeps every clause of the recipe contract", () => {
+    expect([
+      ...runs.flatMap(subsetProblems),
+      ...runs.flatMap(lengthProblems),
+      ...runs.flatMap(scheduleProblems),
+      ...runs.flatMap(stopProblems),
+      ...runs.flatMap(wiringProblems),
+      ...runs.flatMap(rampProblems),
+    ]).toEqual([]);
+  });
+
+  it("R1345 each is a sound of its own: no two build the same graph", () => {
+    const shapes = runs.map((run) =>
+      JSON.stringify([
+        run.made.map((node) => node.kind),
+        run.paramEvents.map(({ event }) => [event.method, "value" in event ? event.value : null]),
+      ]),
+    );
+    expect(new Set(shapes).size).toBe(NEW_EMOJI.length);
+  });
+
+  it("R1345 each is a short reaction, a second at most, at the five's level in the mix", () => {
+    for (const id of NEW_EMOJI) {
+      expect(SFX[id].durationMs, id).toBeLessThanOrEqual(1000);
+      expect(SFX[id].gain, id).toBe(SFX.emoteSob.gain);
+    }
   });
 });

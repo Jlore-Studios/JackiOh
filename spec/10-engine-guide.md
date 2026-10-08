@@ -190,7 +190,7 @@ A card's flavour line and its artist credit ([[R660]]) are words about the card,
 
 The homescreen's hand of cards ([[R374]]) rotates from the first visit ([[R704]]): every `ROTATION_INTERVAL_MS` (7 seconds) one slot swaps, left to right, for a card of the same rarity the hand is not showing, and the swap takes `ROTATION_SWAP_MS` (1.2 seconds), the card going out fizzling away (it greys, brightens and swells as it fades, as the board's refused card does, [[R318]]) while the new one fades in out of the same pale smoke. Until the device has logged `ROTATION_MIN_GAMES` (10) finished games ([[§9.11]], [[R639]]) the hand is dealt from, and swaps among, Core's non-token cards, every card equally likely; from then on it is dealt from, and swaps among, the non-token cards of every shipped set, and a card whose name and rules text print at the largest size, the two shortest length tiers of the card face's fit, is `FEATURE_WEIGHT_PLAIN` (4) times as likely as one whose text must be shrunk to fit. The hand stands still under reduced motion, while a pointer or focus is on it, while a card is open and while the page is hidden. Each face is a control: a click, a tap, or Enter or Space opens the card's detail view at full size; the card a swap is taking out is not one. Under the fold, "Your table" shows the record and the favourites the device kept, and a Clear control forgets them. Presentation only (CLAUDE.md rule 7).
 
-The hero each seat plays is a portrait ([[R641]]): the card art of its roster entry in `CardArt`'s `oval`, health badged on its lower right and armor on its lower left, the existing hero test id and click and drag target unchanged so attacks land on it as before. Clicking your own portrait opens the emote menu — unless the hero is a legal target or a card or attacker is selected, in which case the click does what it always did; targeting always wins. The menu arcs the five voice lines above the portrait with the five emoji in a row below — the arc flattens and the lines wrap onto a second row on a phone held upright — fits a 380 px screen, slides itself back inside the screen's edges wherever a seat puts its portrait, and closes on a pick, a click outside, Escape, the start of any drag or targeting, or the end of the match; in hotseat only the active seat's portrait opens one. Emotes are available from the mulligan through the results screen, never on a series screen, and practice and hotseat run them locally. A voice-line emote speaks the sender portrait's own line ([[§10.11]]) under a text bubble; an emoji pops out of the portrait, bounces, holds and fades, a fade only under Reduce Motion ([[R644]]). One emote per player shows at once, a new one replacing it, and a muted player's never arrive ([[R643]]). The deck builder's portrait picker previews all ten as they play in a match.
+The hero each seat plays is a portrait ([[R641]]): the card art of its roster entry in `CardArt`'s `oval`, health badged on its lower right and armor on its lower left, the existing hero test id and click and drag target unchanged so attacks land on it as before. Clicking your own portrait opens the emote menu — unless the hero is a legal target or a card or attacker is selected, in which case the click does what it always did; targeting always wins. The menu offers the seat's dealt hand and nothing else ([[R1341]], [[R1343]]): its three voice lines arced above the portrait with its five emoji in a row below — the arc flattens and the lines wrap onto a second row on a phone held upright — fits a 380 px screen, slides itself back inside the screen's edges wherever a seat puts its portrait, and closes on a pick, a click outside, Escape, the start of any drag or targeting, or the end of the match; in hotseat only the active seat's portrait opens one. Emotes are available from the mulligan through the results screen, never on a series screen, and practice and hotseat run them locally, dealing both seats' hands from the game's seed as a match does ([[R1341]]). A voice-line emote speaks the sender portrait's own line ([[§10.11]]) under a text bubble; an emoji — one of nineteen original stickers, fourteen of them MN03's ([[R1345]]) — pops out of the portrait, bounces, holds and fades, a fade only under Reduce Motion ([[R644]]). One emote per player shows at once, a new one replacing it, and a muted player's never arrive ([[R643]]). The deck builder's portrait picker previews the whole pool of twenty-four as they play in a match.
 
 ### 10.11 Audio
 
@@ -249,7 +249,9 @@ than the screen does ([[R203]]).
 - **Emote sounds.** Each emoji emote is a Web Audio synthesis on the effects channel, no files, like
   every other effect: Sob a wobbly falling whimper, Yawn a long falling breath, Laugh a quick bouncing
   "ha-ha", Angry a short growl, and Wah Wah the sad-trombone sting — four descending notes, the last
-  held with vibrato ([[R644]]).
+  held with vibrato ([[R644]]) — and each of MN03's fourteen a short sound of its own, a "hi-ya" for
+  Wave, a burst of claps for Clap, a bugle call for Salute and a popper's pop and tinkles for Party
+  among them ([[R1345]]). No emote added a voice line: the pool grew by emoji alone ([[R1340]]).
 - **Autoplay.** Nothing plays before the first user gesture, on any screen. The audio context is
   created and resumed inside that gesture, which is what iOS requires. Nothing is scheduled while
   the context is suspended (before the first gesture takes, or after the system interrupts it): a
@@ -265,8 +267,18 @@ than the screen does ([[R203]]).
   of the match. A change waits for the playing track's next bar line and crossfades. The music
   ducks under voice lines and the biggest effects. Every track quotes one motif. The tracks are
   composed as scores, rendered with an MIT-licensed SoundFont into AAC files under a size cap that
-  `gen:music --check` holds, and loop seamlessly. Their sources and licences are in
-  `assets/music/LICENSES.md`.
+  `gen:music --check` holds (raised for the card intros, [[R1352]]), and loop seamlessly. Their
+  sources and licences are in `assets/music/LICENSES.md`.
+- **Card intros** ([[R1350]]–[[R1352]], after Hearthstone's legendary music). Every Legendary and
+  Mythic card, and every token printed Legendary or Mythic, has a few bars of its own, 3 to 6 seconds
+  that play once: a score per card, on the motif, derived from its id, set and tags and hand-tuned
+  for the Mythics and the best-known Legendaries, rendered with the rest of the music and named by
+  the card's `intro` in `music-cards.json`. It plays on the music bus at the moment [[R204]] gives
+  the card's play or cast line, only for a card the viewer can read and never for a Trap's set, with
+  dynamic music on; it ducks the rest of the music for its span, the theme the card brings included,
+  and [[R669]]'s entrance sting and the card's line stay. It follows the music volume and the mute,
+  plays under Reduce Motion, and holds nothing practice's pacing waits on. A second Legendary played
+  meanwhile, the game's end, a hand-over or the board leaving cuts it short with a short fade.
 - **Settings.** Master, effects, voice and music volume, mute, voice on or off, the music station,
   dynamic music on or off, ducking, and keeping the music playing in a background tab. That last one
   is off by default: the music fades out when the page is hidden or the window loses focus, and back

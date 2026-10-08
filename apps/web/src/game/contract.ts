@@ -199,6 +199,8 @@ export type AnimationFrames = { frames: AnimatingMap; events: readonly GameEvent
  */
 export type HeroEmotes = {
   portrait: PortraitId;
+  /** R1343: the emotes the picker offers — the viewer's dealt hand, in the pool's order. */
+  hand: readonly EmoteId[];
   show: EmoteShow | null;
   menu: "emotes" | "mute" | null;
   muted: boolean;

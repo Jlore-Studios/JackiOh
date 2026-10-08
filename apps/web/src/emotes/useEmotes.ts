@@ -11,15 +11,17 @@
 //      the effects channel for an emoji. A muted or gate-dropped emote returns before this.
 //
 // Every route uses it the same way: `send` for the local seat (admit → show → play → emit), the
-// peer's relay through `receive`, `mute` from the opponent portrait's menu, and `portraitOf` from
-// the server's portraits frame (or the practice/hotseat route's own deal).
+// peer's relay through `receive`, `mute` from the opponent portrait's menu, and `portraitOf` and
+// `handOf` from the server's portraits frame (or the practice/hotseat route's own deal). A send
+// outside the seat's hand is dropped before the gate, as the server's relay drops it (R1342).
 
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
 import type { EmoteGate, EmoteId, PlayerId, PortraitId } from "@jackioh/shared";
-import { DEFAULT_PORTRAIT } from "@jackioh/shared";
+import { DEFAULT_PORTRAIT, handHolds } from "@jackioh/shared";
 
 import type { SoundSink } from "../audio/types.ts";
+import { handFor, type EmoteHands } from "./hand.ts";
 import { createEmoteSession, type EmoteSession, type EmoteShow } from "./session.ts";
 import { emoteShowInfo, playEmote } from "./play.ts";
 
@@ -40,6 +42,8 @@ export type EmotesApi = {
   gate: (player: PlayerId) => EmoteGate;
   /** `player`'s portrait id — the server's frame when it arrived, the default otherwise. */
   portraitOf: (player: PlayerId) => PortraitId;
+  /** `player`'s emote hand (R1341) — the dealt eight when known, the default hand otherwise. */
+  handOf: (player: PlayerId) => readonly EmoteId[];
   /** Raw session, for tests and for drivers that schedule their own shows. */
   session: EmoteSession;
 };
@@ -47,6 +51,11 @@ export type EmotesApi = {
 export function useEmotes(opts: {
   /** The portraits frame the match sent ({ p1, p2 }), or the route's own deal; null → vanilla. */
   portraits?: { p1: PortraitId; p2: PortraitId } | null;
+  /**
+   * R1341, R1342: each seat's emote hand — a match's frame gives the local seat's alone, hotseat
+   * and practice deal both; a seat with none shows the default hand (R1343).
+   */
+  hands?: EmoteHands | null;
   /** Where an admitted local emote goes — `MatchClient.sendEmote`, the AI hook, or nothing. */
   emit?: (emote: EmoteId) => void;
   /** The audio engine; null silences every emote (they still show). */
@@ -56,7 +65,7 @@ export function useEmotes(opts: {
   /** The seat `globalMute` spares: the local player. Hotseat passes the seat on move. */
   you?: PlayerId;
 }): EmotesApi {
-  const { portraits = null, emit, engine = null, globalMute = false, you = "p1" } = opts;
+  const { portraits = null, hands = null, emit, engine = null, globalMute = false, you = "p1" } = opts;
   const sessionRef = useRef<EmoteSession | null>(null);
   if (sessionRef.current === null) sessionRef.current = createEmoteSession();
   const session = sessionRef.current;
@@ -67,6 +76,7 @@ export function useEmotes(opts: {
     (player: PlayerId): PortraitId => portraits?.[player] ?? DEFAULT_PORTRAIT,
     [portraits],
   );
+  const handOf = useCallback((player: PlayerId): readonly EmoteId[] => handFor(hands, player), [hands]);
 
   // Expiry: one timeout per player, keyed to its show. Replaced shows leave stale timers that
   // expire checks the key on, so nothing needs cancelling except on unmount.
@@ -107,13 +117,16 @@ export function useEmotes(opts: {
   // arms its expiry and plays its sound.
   const send = useCallback(
     (player: PlayerId, emote: EmoteId): boolean => {
+      // R1342: only the seat's own hand goes out — the menu offers nothing else, and the server
+      // would drop it — and a refused emote spends none of the limit.
+      if (!handHolds(handOf(player), emote)) return false;
       const info = emoteShowInfo(portraitOf(player), emote);
       if (!session.send(player, emote, info.text, info.holdMs)) return false;
       showAndPlay(player, emote);
       emit?.(emote);
       return true;
     },
-    [emit, portraitOf, session, showAndPlay],
+    [emit, handOf, portraitOf, session, showAndPlay],
   );
 
   const receive = useCallback(
@@ -160,8 +173,9 @@ export function useEmotes(opts: {
       muted: (player: PlayerId) => session.muted(player),
       gate,
       portraitOf,
+      handOf,
       session,
     }),
-    [session, send, receive, mute, gate, portraitOf],
+    [session, send, receive, mute, gate, portraitOf, handOf],
   );
 }

@@ -16,7 +16,9 @@
 // The mount is mobile-ux.cy.tsx's: `Game` inside `.app-shell.app-shell--wide`, the narrowest
 // container the board is given, here with the routes' own `useEmotes` (no audio engine), so a pick
 // shows what it shows in a match. No portraits frame is passed, so both seats wear the default
-// portrait, vanilla, whose Well Played line is "Well played. Plainly.".
+// portrait, vanilla, whose Well Played line is "Well played. Plainly.", and the picker holds the
+// default hand (R1343): three voice lines, Well Played among them, and five emoji, the shape of
+// every hand a game deals.
 //
 // Every measurement is taken inside a `should` callback so it is retried until the layout has
 // settled after `cy.viewport()`, and until the bubble's pop-in has finished.
@@ -24,6 +26,7 @@
 import { StrictMode, useEffect, type ReactElement } from "react";
 
 import { useEmotes, type EmotesApi } from "../../../apps/web/src/emotes/useEmotes.ts";
+import { EMOTE_HAND_SIZE, EMOTE_HAND_VOICE } from "../../../apps/web/src/wire/emotes.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
 import { fullBoardView } from "../../../apps/web/src/test/fixtures.ts";
 
@@ -168,7 +171,7 @@ for (const viewport of VIEWPORTS) {
     it("#219 every emoji in the picker draws at least EMOJI_MIN_PX square", () => {
       openPicker();
       cy.get(`${ts("emote-menu")} .emote-emoji-pick .emote-emoji-svg`)
-        .should("have.length", 5)
+        .should("have.length", EMOTE_HAND_SIZE - EMOTE_HAND_VOICE)
         .each(($svg) => {
           const box = ($svg[0] as Element).getBoundingClientRect();
           expect(box.width, "an emoji's drawn width").to.be.at.least(EMOJI_MIN_PX - EPSILON);
@@ -179,7 +182,7 @@ for (const viewport of VIEWPORTS) {
     it(`#219 every voice label reads at least ${LABEL_MIN_PX}px${viewport.touch ? ", every item a 44px touch target" : ""}`, () => {
       openPicker();
       cy.get(`${ts("emote-menu")} .emote-item.emote-voice`)
-        .should("have.length", 5)
+        .should("have.length", EMOTE_HAND_VOICE)
         .each(($item) => {
           const item = $item[0] as Element;
           expect(fontSizePx(item), `the "${item.textContent ?? ""}" label`).to.be.at.least(LABEL_MIN_PX);
@@ -191,7 +194,7 @@ for (const viewport of VIEWPORTS) {
         });
       if (viewport.touch) {
         cy.get(`${ts("emote-menu")} .emote-item.emote-emoji-pick`)
-          .should("have.length", 5)
+          .should("have.length", EMOTE_HAND_SIZE - EMOTE_HAND_VOICE)
           .each(($item) => {
             const box = ($item[0] as Element).getBoundingClientRect();
             expect(box.width, "an emoji pick's width").to.be.at.least(TOUCH_PX - EPSILON);

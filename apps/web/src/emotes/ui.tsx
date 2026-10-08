@@ -1,8 +1,9 @@
 // The emote UI (issue §2, §5): the picker that opens on your own portrait, the one-item "Mute
-// emotes" menu on the opponent's, and the bubble/sticker that pops out of a hero.
+// emotes" menu on the opponent's, and the bubble/sticker that pops out of a hero. The picker offers
+// the seat's dealt hand and nothing else (R1343): its voice lines and its emoji, in the pool's order.
 //
 // Placement is inside the hero element (`position: relative`), so it needs no board coordinates:
-// the voice lines sit on an arc above the portrait, the emoji in a row under them, the bubble or
+// the hand's voice lines sit on an arc above the portrait, its emoji in a row under them, the bubble or
 // sticker beside the portrait — `.emote-*` in emotes.css owns the geometry, and an open menu only
 // measures itself once to slide back onto the screen (`useKeepOnScreen`, #219). Everything here is
 // cosmetic (R643): a menu pick reports the emote and the caller decides how it travels.
@@ -10,14 +11,14 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactElement, type RefObject } from "react";
 
 import type { EmojiEmoteId, EmoteId, VoiceEmoteId } from "@jackioh/shared";
-import { EMOJI_EMOTE_IDS, VOICE_EMOTE_IDS, isVoiceEmote, type EmoteGate } from "@jackioh/shared";
+import { isVoiceEmote, type EmoteGate } from "@jackioh/shared";
 
 import { EmojiArt, EMOJI_LABEL } from "./EmojiArt.tsx";
 import { EMOTE_MENU_EDGE_PX, EMOTE_MENU_TICK_MS } from "./config.ts";
 import type { EmoteShow as EmoteShowState } from "./session.ts";
 import "./emotes.css";
 
-const VOICE_LABEL: Record<VoiceEmoteId, string> = {
+export const VOICE_LABEL: Record<VoiceEmoteId, string> = {
   greetings: "Greetings",
   wellPlayed: "Well Played",
   oops: "Oops",
@@ -26,11 +27,18 @@ const VOICE_LABEL: Record<VoiceEmoteId, string> = {
 };
 
 /**
- * The arc the five voice buttons sit on: how far each dips below the arc's crown, in px. Each item
- * carries its drop as `--emote-arc-drop`, which emotes.css turns into a translateY, and flattens on
- * a phone held upright, where the voice lines wrap onto two rows.
+ * The arc the voice buttons sit on: an item `d` places from the middle dips `ARC_CURVE_PX × d²`
+ * below the arc's crown (rounded), so five lines drop 14, 4, 0, 4, 14 and a hand's three 4, 0, 4.
+ * Each item carries its drop as `--emote-arc-drop`, which emotes.css turns into a translateY, and
+ * flattens on a phone held upright, where the voice lines wrap onto two rows.
  */
-const ARC_DROP: readonly number[] = [14, 4, 0, 4, 14];
+const ARC_CURVE_PX = 3.5;
+
+/** The drop of the `index`th of `count` voice items on the arc. */
+export function arcDrop(index: number, count: number): number {
+  const fromMiddle = index - (count - 1) / 2;
+  return Math.round(ARC_CURVE_PX * fromMiddle * fromMiddle);
+}
 
 /**
  * Closes on an outside press, Escape or a drag beginning elsewhere — the issue's menu lifetime —
@@ -92,17 +100,20 @@ function useKeepOnScreen(ref: RefObject<HTMLDivElement | null>): void {
 }
 
 /**
- * Your portrait's menu: the five voice lines on their arc, the five emoji below. `gate` is the
- * shared limiter's live reading — while limited the items grey and carry the wait in seconds,
+ * Your portrait's menu: the hand's voice lines on their arc, its emoji below (R1343). `gate` is
+ * the shared limiter's live reading — while limited the items grey and carry the wait in seconds,
  * and the press reports nothing (R643). Re-polled every EMOTE_MENU_TICK_MS so the wait counts down.
  */
 export function EmoteMenu({
   side,
+  hand,
   gate,
   onPick,
   onClose,
 }: {
   side: "you" | "opponent";
+  /** The seat's dealt hand (R1341), in the pool's order: the menu shows these and nothing else. */
+  hand: readonly EmoteId[];
   gate: () => EmoteGate;
   onPick: (emote: EmoteId) => void;
   onClose: () => void;
@@ -118,6 +129,8 @@ export function EmoteMenu({
   const state = gate();
   const waitS = state.ok === false ? Math.ceil(state.retryAfterMs / 1000) : 0;
   const limited = state.ok === false;
+  const voices = hand.filter((emote): emote is VoiceEmoteId => isVoiceEmote(emote));
+  const emoji = hand.filter((emote): emote is EmojiEmoteId => !isVoiceEmote(emote));
 
   const pick = (emote: EmoteId) => () => {
     if (gate().ok === false) return;
@@ -140,7 +153,7 @@ export function EmoteMenu({
       onClick={(event) => event.stopPropagation()}
     >
       <div className="emote-voice-arc" role="none">
-        {VOICE_EMOTE_IDS.map((emote, index) => (
+        {voices.map((emote, index) => (
           <button
             key={emote}
             type="button"
@@ -149,7 +162,7 @@ export function EmoteMenu({
             data-testid={`emote-${emote}`}
             data-limited={limited ? "true" : undefined}
             disabled={limited}
-            style={{ "--emote-arc-drop": `${ARC_DROP[index] ?? 0}px` } as React.CSSProperties}
+            style={{ "--emote-arc-drop": `${arcDrop(index, voices.length)}px` } as React.CSSProperties}
             onClick={pick(emote)}
           >
             {VOICE_LABEL[emote]}
@@ -158,7 +171,7 @@ export function EmoteMenu({
         ))}
       </div>
       <div className="emote-emoji-row" role="none">
-        {EMOJI_EMOTE_IDS.map((emote) => (
+        {emoji.map((emote) => (
           <button
             key={emote}
             type="button"

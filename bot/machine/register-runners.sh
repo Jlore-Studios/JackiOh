@@ -17,8 +17,11 @@ labels="$(jq -r '.providers | to_entries[] | select(.value.runs_on // "" | start
 [ -n "$labels" ] || { echo "no provider in .harness/providers.json runs on night-vm-*" >&2; exit 1; }
 token="$(gh api -X POST "repos/$repo/actions/runners/registration-token" --jq .token)"
 
-remote="$(mktemp)"
-trap 'rm -f "$remote"' EXIT
+# A directory of its own: on-machine.sh packs the whole directory the script sits in, and the
+# shared temporary directory (macOS's $TMPDIR, /tmp) holds sockets and folders tar cannot read.
+scratch="$(mktemp -d)"
+trap 'rm -rf "$scratch"' EXIT
+remote="$scratch/register.sh"
 cat > "$remote" <<'EOF'
 #!/bin/bash
 # On the machine, as root: $1 the repository, $2 the registration token, then id=label=lanes.

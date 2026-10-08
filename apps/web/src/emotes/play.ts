@@ -17,13 +17,27 @@ import {
   SAPI_BASELINE_WPM,
 } from "./config.ts";
 
-/** The five emoji ids on the effects channel, in the issue's order (§4's synth recipes). */
+/** Every emoji id's sound on the effects channel: the issue's five (§4), then MN03's fourteen (R1345). */
 export const EMOJI_SFX: Record<EmojiEmoteId, SfxId> = {
   sob: "emoteSob",
   yawn: "emoteYawn",
   laugh: "emoteLaugh",
   angry: "emoteAngry",
   wahWah: "emoteWahWah",
+  wave: "emoteWave",
+  clap: "emoteClap",
+  thumbsUp: "emoteThumbsUp",
+  facepalm: "emoteFacepalm",
+  shrug: "emoteShrug",
+  thinking: "emoteThinking",
+  heart: "emoteHeart",
+  fire: "emoteFire",
+  skull: "emoteSkull",
+  sweat: "emoteSweat",
+  cool: "emoteCool",
+  gasp: "emoteGasp",
+  salute: "emoteSalute",
+  party: "emoteParty",
 };
 
 /**

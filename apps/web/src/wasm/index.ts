@@ -34,6 +34,7 @@ import initWasm, {
   choose_action,
   constants,
   create_game,
+  deal_emote_hand,
   engine_tables,
   find_instance,
   fold as fold_log,
@@ -51,7 +52,7 @@ import initWasm, {
   view_for,
 } from "./pkg/jackioh_wasm.js";
 
-import type { Action, ActionBody, CardDefs, GameEvent, PlayerId, PlayerView, SetName } from "../wire/index.ts";
+import type { Action, ActionBody, CardDefs, EmoteId, GameEvent, PlayerId, PlayerView, SetName } from "../wire/index.ts";
 import type { CardInstance } from "../wire/generated/CardInstance.ts";
 import type { GameState } from "../wire/generated/GameState.ts";
 import type { ReplayCheckpoints } from "../wire/generated/ReplayCheckpoints.ts";
@@ -263,6 +264,11 @@ export function seatPlayedBy(state: GameState, home: PlayerId): PlayerId {
 /** The card with this instance id, wherever it is, or undefined (TypeScript's `findInstance`). */
 export function findInstance(state: GameState, instanceId: string): CardInstance | undefined {
   return call("findInstance", () => parsed<CardInstance | null>(find_instance(stateJson(state), instanceId)) ?? undefined);
+}
+
+/** R1341: the emote hand `seat` is dealt in the game seeded `seed`, as the server's actor deals it. */
+export function dealEmoteHand(seed: string, seat: PlayerId): EmoteId[] {
+  return call("dealEmoteHand", () => parsed<EmoteId[]>(deal_emote_hand(seed, seat)));
 }
 
 let catalogCache: CardDefs | null = null;

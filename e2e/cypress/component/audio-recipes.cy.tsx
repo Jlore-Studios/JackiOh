@@ -68,6 +68,8 @@ const EXPECTED_IDS = [
   "sting",
   "armorClank", "armorRing", "overkill", "crumble", "unlock", "steal", "give", "counterspell", "bleat", "fuse",
   "degrade", "upgrade",
+  "emoteWave", "emoteClap", "emoteThumbsUp", "emoteFacepalm", "emoteShrug", "emoteThinking", "emoteHeart",
+  "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
 ] as const;
 
 /** The Surface's recipe table, `durationMs` column: the window each recipe must fall silent in. */
@@ -133,6 +135,21 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   fuse: 650,
   degrade: 520,
   upgrade: 500,
+  // Patch v0.3.X (MN03, R1345).
+  emoteWave: 500,
+  emoteClap: 650,
+  emoteThumbsUp: 400,
+  emoteFacepalm: 950,
+  emoteShrug: 600,
+  emoteThinking: 1000,
+  emoteHeart: 900,
+  emoteFire: 900,
+  emoteSkull: 450,
+  emoteSweat: 450,
+  emoteCool: 900,
+  emoteGasp: 500,
+  emoteSalute: 750,
+  emoteParty: 850,
 };
 
 /** B14's params sets, reused so the browser checks the same inputs the fake context does. */

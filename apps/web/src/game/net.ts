@@ -54,6 +54,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { ActionBody, Aim, EmoteId, PlayerId, PlayerView, PortraitId, PromptKind } from "@jackioh/shared";
 import { isEmoteId, isPortraitId, parseAim } from "@jackioh/shared";
 
+import { isEmoteHand } from "../emotes/hand.ts";
 import { matchSocketUrl } from "../net/api.ts";
 
 /** BUILD M5-T3: the dev handle exists only outside a production build. */
@@ -220,8 +221,11 @@ export type ServerFrame =
   | { type: "error"; code: string; message: string; nonce?: string }
   | { type: "prompt"; prompt: PromptFrame }
   | { type: "clock"; now: number; clocks: MatchClocks }
-  /** R642: both seats' hero portraits, on join and on reconnect. */
-  | { type: "portraits"; p1: PortraitId; p2: PortraitId }
+  /**
+   * R642: both seats' hero portraits, on join and on reconnect. R1342: `emotes` is this account's
+   * own dealt hand — null from a server that deals none, and the board then shows the default.
+   */
+  | { type: "portraits"; p1: PortraitId; p2: PortraitId; emotes: EmoteId[] | null }
   /** R643: an emote the opponent sent, relayed by the actor. */
   | { type: "emote"; from: PlayerId; emote: EmoteId }
   /** R738: what the opponent is aiming at now, or null when its aim has ended. */
@@ -292,7 +296,11 @@ export function parseServerFrame(text: string): ServerFrame | null {
     }
     case "portraits": {
       if (!isPortraitId(parsed.p1) || !isPortraitId(parsed.p2)) return null;
-      return { type: "portraits", p1: parsed.p1, p2: parsed.p2 };
+      // R1342: absent (or null) is a server that deals no hand; otherwise it must be a hand, or the
+      // frame is bad.
+      const emotes = parsed.emotes ?? null;
+      if (emotes !== null && !isEmoteHand(emotes)) return null;
+      return { type: "portraits", p1: parsed.p1, p2: parsed.p2, emotes };
     }
     case "emote": {
       if (!isEmoteId(parsed.emote)) return null;
@@ -365,6 +373,8 @@ export type MatchSnapshot = {
   ack: { nonce: string; seq: number } | null;
   /** R642: both seats' portraits, null until the first `portraits` frame arrives. */
   portraits: { p1: PortraitId; p2: PortraitId } | null;
+  /** R1342: this account's own emote hand, from the last `portraits` frame; null until one deals it. */
+  emoteHand: EmoteId[] | null;
   /**
    * R643: the last emote the opponent sent, with a `seq` that bumps on every relay so the same
    * emote twice in a row still notifies.
@@ -426,6 +436,7 @@ const INITIAL: MatchSnapshot = {
   prompt: null,
   ack: null,
   portraits: null,
+  emoteHand: null,
   emote: null,
   aim: null,
 };
@@ -516,7 +527,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
         patch({ clock: { now: frame.now, clocks: frame.clocks, receivedAt: monotonic() } });
         return;
       case "portraits":
-        patch({ portraits: { p1: frame.p1, p2: frame.p2 } });
+        patch({ portraits: { p1: frame.p1, p2: frame.p2 }, emoteHand: frame.emotes });
         return;
       case "emote":
         emoteSeq += 1;

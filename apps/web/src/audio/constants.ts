@@ -158,8 +158,12 @@ export const MUSIC_MYTHIC_PLAYS = 2;
 export const MUSIC_DECODED_MAX = 3;
 /** Fetched files kept, compressed, least recently used evicted. */
 export const MUSIC_BYTES_MAX = 8;
-/** §10.11's cap on the rendered music, counted in whole disk blocks (gen-music.mjs BUDGET_BYTES). */
-export const MUSIC_BUDGET_BYTES = 24 * 1024 * 1024;
+/**
+ * §10.11's cap on the rendered music, counted in whole disk blocks (gen-music.mjs BUDGET_BYTES).
+ * R1352 raised it from 24 MiB for the card intros: the shipped sets' 58 take about 3.1 MB, and the
+ * Meditative set's 22 come with its release, at the same encoding.
+ */
+export const MUSIC_BUDGET_BYTES = 28 * 1024 * 1024;
 
 // ---- Patch v0.2.X sound polish (#259, R669): stings, the mix's panning, ducking and reverb ----
 /** A played card's rarity sting starts this long after the card whoosh, so the two read as one. */
@@ -190,3 +194,23 @@ export const OVERKILL_DELAY_MS = 30;
 export const SHEEP_DEF_IDS: readonly string[] = ["core-t-sheep"];
 /** R1365: the bleat starts this long into the transform's puff, as the Sheep comes out of it. */
 export const BLEAT_DELAY_MS = 120;
+
+// ---- Patch v0.3.X sound (docs/meditative-set.md M8, MN04): a Legendary's or a Mythic's intro ----
+/** R1350: the bed (every other track the music plays) under a card's intro, for the intro's span. */
+export const MUSIC_INTRO_DUCK_GAIN = 0.35;
+/** R1350: how fast the bed dips as an intro starts, and comes back as its music ends (about three of these). */
+export const MUSIC_INTRO_DUCK_ATTACK_TC_S = 0.04;
+export const MUSIC_INTRO_DUCK_RELEASE_TC_S = 0.15;
+/** R1351: an intro cut short (by another, the game's end, a hand-over, the board leaving) fades out over this. */
+export const MUSIC_INTRO_CUT_FADE_S = 0.15;
+/** R1351: an intro whose file is not ready this long after its card's moment is dropped, never played late. */
+export const MUSIC_INTRO_LATE_S = 1;
+/** R1350: fetched intro files kept, compressed, and decoded intros kept, least recently used evicted. */
+export const MUSIC_INTRO_BYTES_MAX = 12;
+export const MUSIC_INTRO_DECODED_MAX = 4;
+/**
+ * R1352: an intro's music runs at least this long to its last bar line, and its whole file, ring-out
+ * included, at most MUSIC_INTRO_MAX_S (gen-music.mjs renders them; scripts/music/tracks.mjs INTRO_SPAN_S).
+ */
+export const MUSIC_INTRO_MIN_S = 3;
+export const MUSIC_INTRO_MAX_S = 6;
