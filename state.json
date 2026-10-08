@@ -3005,7 +3005,9 @@
     },
     "505": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6055546379"
+      ],
       "difficulty_by": {
         "at": "2026-10-08T08:19:58Z",
         "difficulty": "hard",
@@ -3036,9 +3038,7 @@
       "run_id": "37747787485",
       "started_at": "2026-10-08T08:08:18Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6055546379"
-      ]
+      "taken_asks": []
     },
     "506": {
       "action": "build",
