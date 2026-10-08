@@ -3396,6 +3396,7 @@
       "forced": false,
       "interruptions": 1,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-1",
       "queued_at": "2026-10-08T09:27:10Z",
