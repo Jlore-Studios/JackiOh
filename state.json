@@ -2988,6 +2988,13 @@
     "504": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-08T08:33:33Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule line 6 fails: the only fix is in bot/, which no bot may change, so the builder edits nothing and a person applies the patch"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
