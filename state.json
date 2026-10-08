@@ -4894,17 +4894,21 @@
         {
           "at": "2026-10-08T11:57:37Z",
           "minutes": 4.0
+        },
+        {
+          "at": "2026-10-08T17:14:05Z",
+          "minutes": 15.3
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-08T16:50:00Z",
-          "utilization": 0.94
+          "resets_at": "2026-10-08T21:50:00Z",
+          "utilization": 0.92
         },
-        "observed_at": "2026-10-08T11:57:37Z",
+        "observed_at": "2026-10-08T17:14:05Z",
         "seven_day": {
           "resets_at": "2026-10-10T05:00:00Z",
-          "utilization": 0.5
+          "utilization": 0.56
         },
         "status": "allowed_warning"
       }
