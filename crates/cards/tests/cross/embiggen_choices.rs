@@ -1,12 +1,15 @@
-//! #492: an Embiggen card's two prices are offered exactly when both are affordable (SPEC §2.3, R81).
+//! #492: an Embiggen card's two prices are offered exactly when both are affordable (SPEC §2.3, R81),
+//! and its owner's view says what the embiggen price comes to.
 //!
 //! An "A embiggen B" card's price is one of a play's own choices, and R81 puts it in the `play`
 //! action that `legalActions` enumerates: every play of the card is listed with `embiggen: false`,
 //! and, while B mana is there to pay, listed again with `embiggen: true` and every other choice the
-//! same. The client opens its price picker only off that list (CLAUDE.md rule 7), so this is the
-//! engine half of the choice; `apps/web/src/game/embiggen-real.test.tsx` is the client's, on the same
-//! cards. Every Embiggen card in the catalog is driven, on both faces, so a new one is covered the day
-//! it is added.
+//! same. The client opens its price picker only off that list (CLAUDE.md rule 7), and shows the
+//! Embiggened option at the view's `embiggenCost`, which must be what that play then charges: under
+//! Professor Curvature's "(4)+ Cost" discount (R363), which reaches B and not A, and AI Alignment
+//! Tax's surcharge (R455) too. This is the engine half of the choice;
+//! `apps/web/src/game/embiggen-real.test.tsx` is the client's, on the same cards. Every Embiggen card
+//! in the catalog is driven, on both faces, so a new one is covered the day it is added.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -34,9 +37,23 @@ fn holding(def_id: &str, radiant: bool, mana: i32) -> Scenario {
     }))
 }
 
-/// The `play`s `legalActions` lists for p1's one hand card, as (zone, embiggen) pairs.
-fn offered(g: &Scenario) -> Vec<(Option<ZoneChoice>, Option<bool>)> {
-    let card = g.hand(P1)[0].id.clone();
+/// Professor Curvature: "Cry: (4)+ Cost cards cost (1) less on your next turn."
+const CURVATURE: &str = "core-077";
+
+/// AI Alignment Tax: "Your opponent's cards cost (1) more during their next turn."
+const ALIGNMENT_TAX: &str = "classicplus-t-ai-07";
+
+/// p1's hand card of `def_id`.
+fn held(g: &Scenario, def_id: &str) -> String {
+    g.hand(P1)
+        .into_iter()
+        .find(|card| card.def_id == def_id)
+        .map(|card| card.id)
+        .unwrap_or_else(|| panic!("p1 holds no {def_id}"))
+}
+
+/// The `play`s `legalActions` lists for p1's hand card, as (zone, embiggen) pairs.
+fn offered(g: &Scenario, card: &str) -> Vec<(Option<ZoneChoice>, Option<bool>)> {
     legal_actions(g.state(), P1)
         .into_iter()
         .filter_map(|action| match action {
@@ -62,11 +79,11 @@ fn zones_at(plays: &[(Option<ZoneChoice>, Option<bool>)], embiggened: bool) -> V
 
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
-/// A play of p1's one hand card at the price asked for, through `reduce`.
-fn play(g: &Scenario, zone: Option<ZoneChoice>, embiggen: bool) -> ReduceResult {
+/// A play of p1's hand card at the price asked for, through `reduce`.
+fn play(g: &Scenario, card: &str, zone: Option<ZoneChoice>, embiggen: bool) -> ReduceResult {
     let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
     let body = ActionBody::Play {
-        instance_id: g.hand(P1)[0].id.clone(),
+        instance_id: card.to_string(),
         zone,
         x: None,
         embiggen: Some(embiggen),
@@ -101,7 +118,8 @@ fn r81_with_mana_for_the_embiggen_price_every_embiggen_card_is_offered_at_both_p
         for radiant in [false, true] {
             for mana in [embiggen, embiggen + 1] {
                 let g = holding(&id, radiant, mana);
-                let plays = offered(&g);
+                let card = held(&g, &id);
+                let plays = offered(&g, &card);
                 let normal = zones_at(&plays, false);
                 let bigger = zones_at(&plays, true);
                 let what = format!("{id} (radiant {radiant}) with {mana} mana");
@@ -118,14 +136,14 @@ fn r81_with_mana_for_the_embiggen_price_every_embiggen_card_is_offered_at_both_p
 
                 // Each form is accepted, and pays its own price.
                 let zone = normal[0];
-                let small = play(&g, zone, false);
+                let small = play(&g, &card, zone, false);
                 assert_eq!(small.error, None, "{what}: the normal play");
                 assert_eq!(
                     paid(&small),
                     Some((base, Some(false))),
                     "{what}: the normal play pays A"
                 );
-                let big = play(&g, zone, true);
+                let big = play(&g, &card, zone, true);
                 assert_eq!(big.error, None, "{what}: the embiggened play");
                 assert_eq!(
                     paid(&big),
@@ -143,7 +161,8 @@ fn r81_with_mana_for_the_normal_price_only_every_embiggen_card_is_offered_at_tha
         for radiant in [false, true] {
             for mana in base..embiggen {
                 let g = holding(&id, radiant, mana);
-                let plays = offered(&g);
+                let card = held(&g, &id);
+                let plays = offered(&g, &card);
                 let what = format!("{id} (radiant {radiant}) with {mana} mana");
                 assert!(!plays.is_empty(), "{what}: the normal price is offered");
                 assert!(
@@ -152,7 +171,7 @@ fn r81_with_mana_for_the_normal_price_only_every_embiggen_card_is_offered_at_tha
                 );
                 let zone = plays[0].0;
                 assert!(
-                    play(&g, zone, true).error.is_some(),
+                    play(&g, &card, zone, true).error.is_some(),
                     "{what}: the embiggen price is refused"
                 );
             }
@@ -166,10 +185,111 @@ fn r81_without_mana_for_the_normal_price_no_embiggen_card_is_offered() {
         for radiant in [false, true] {
             let g = holding(&id, radiant, base - 1);
             assert!(
-                offered(&g).is_empty(),
+                offered(&g, &held(&g, &id)).is_empty(),
                 "{id} (radiant {radiant}) with {} mana",
                 base - 1
             );
+        }
+    }
+}
+
+/// p1's own view of its hand card: (cost, embiggenCost).
+fn shown(g: &Scenario, card: &str) -> (i32, Option<i32>) {
+    let HandView::Cards(hand) = g.view(P1).you.hand else {
+        panic!("p1 reads its own hand");
+    };
+    let view = hand
+        .into_iter()
+        .find(|view| view.instance_id == card)
+        .expect("p1's view lists the card");
+    (view.cost, view.embiggen_cost)
+}
+
+/// The view's two prices, and that each is what its play then charges.
+fn view_prices_are_charged(g: &Scenario, card: &str, normal: i32, embiggened: i32, what: &str) {
+    assert_eq!(
+        shown(g, card),
+        (normal, Some(embiggened)),
+        "{what}: the view's cost and embiggenCost"
+    );
+    let zone = zones_at(&offered(g, card), true)
+        .first()
+        .copied()
+        .unwrap_or_else(|| panic!("{what}: the embiggen price is offered"));
+    assert_eq!(
+        paid(&play(g, card, zone, true)),
+        Some((embiggened, Some(true))),
+        "{what}: the embiggened play charges embiggenCost"
+    );
+    assert_eq!(
+        paid(&play(g, card, zone, false)),
+        Some((normal, Some(false))),
+        "{what}: the normal play charges cost"
+    );
+}
+
+/// Ends turns until p1's first turn after the setup turn `from`. R82 may already have ended a turn
+/// with nothing left to do in it, so the walk reads whose turn it is rather than counting.
+fn to_p1s_next_turn(g: &mut Scenario, from: i32) {
+    while g.state().active != P1 || g.state().turn <= from {
+        g.end_turn();
+    }
+}
+
+#[test]
+fn r81_every_embiggen_cards_view_shows_its_embiggen_price_as_it_stands_and_that_is_what_the_play_charges() {
+    for (id, base, embiggen) in embiggen_cards() {
+        for radiant in [false, true] {
+            let what = format!("{id} (radiant {radiant}) unchanged");
+            let g = holding(&id, radiant, embiggen);
+            view_prices_are_charged(&g, &held(&g, &id), base, embiggen, &what);
+
+            // The card's own discount reaches both prices (R65).
+            let g = scenario(json!({
+                "p1": { "hand": [{ "def": id, "radiant": radiant, "costMod": -1 }], "mana": embiggen },
+            }));
+            let what = format!("{id} (radiant {radiant}) at costMod -1");
+            view_prices_are_charged(&g, &held(&g, &id), base - 1, embiggen - 1, &what);
+        }
+    }
+}
+
+#[test]
+fn r363_professor_curvature_discounts_the_embiggen_price_and_not_the_base_one_and_the_view_says_so() {
+    for (id, base, embiggen) in embiggen_cards() {
+        assert!(
+            base < 4 && embiggen >= 4,
+            "{id}: the case needs A below (4) and B at (4)+"
+        );
+        for radiant in [false, true] {
+            let mut g = scenario(json!({
+                "p1": { "hand": [CURVATURE, { "def": id, "radiant": radiant }] },
+            }));
+            let from = g.state().turn;
+            g.play(CURVATURE, json!({}));
+            to_p1s_next_turn(&mut g, from);
+            g.state_mut().players.p1.mana.current = embiggen;
+            let what = format!("{id} (radiant {radiant}) under Professor Curvature");
+            view_prices_are_charged(&g, &held(&g, &id), base, embiggen - 1, &what);
+        }
+    }
+}
+
+#[test]
+fn r455_ai_alignment_tax_raises_both_prices_and_the_view_says_so() {
+    for (id, base, embiggen) in embiggen_cards() {
+        for radiant in [false, true] {
+            let mut g = scenario(json!({
+                "active": "p2",
+                "p1": { "hand": [{ "def": id, "radiant": radiant }] },
+                "p2": { "hand": [ALIGNMENT_TAX] },
+            }));
+            let from = g.state().turn;
+            g.play(ALIGNMENT_TAX, json!({}));
+            to_p1s_next_turn(&mut g, from);
+            g.state_mut().players.p1.mana.current = embiggen + 1;
+            let what = format!("{id} (radiant {radiant}) under AI Alignment Tax");
+            view_prices_are_charged(&g, &held(&g, &id), base + 1, embiggen + 1, &what);
         }
     }
 }

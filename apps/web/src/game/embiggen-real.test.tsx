@@ -6,8 +6,10 @@
 // in the middle of the screen, and sends the form picked; with only the normal form listed it asks
 // nothing about the price. Here the view and the legal list are `viewFor` and `legalActions` of real
 // states (the WebAssembly module, docs/v0.3.0/SURFACE.md §10.3), the board is `<Game/>`, and the play
-// is made the two ways a player makes it, click-click and drag to play. Every Embiggen card in the
-// catalog is driven, on both faces, so a new one is covered the day it is added.
+// is made the two ways a player makes it, click-click and drag to play. The Embiggened card shows the
+// view's `embiggenCost`, the engine's price for that play under every cost change (a discount R363's
+// "(4)+ Cost" threshold gives the embiggen price alone included), and the play then pays it. Every
+// Embiggen card in the catalog is driven, on both faces, so a new one is covered the day it is added.
 
 import { CATALOG } from "@jackioh/cards";
 import { DECK_SIZE } from "@jackioh/engine/config";
@@ -26,7 +28,7 @@ type GameState = Parameters<typeof reduce>[0];
 
 /** The fields of the state this file writes; everything else is the engine's, untouched. */
 type Instance = { id: string; defId: string; radiant: boolean; zone: { z: string; player: PlayerId }; [field: string]: unknown };
-type Side = { mana: { current: number; max: number }; hand: Instance[]; library: Instance[] };
+type Side = { mana: { current: number; max: number }; hand: Instance[]; library: Instance[]; mods: unknown[] };
 type Board = { active: PlayerId; turn: number; phase: string; players: Record<PlayerId, Side> };
 
 const lookup = lookupFromDefs(CATALOG);
@@ -48,11 +50,15 @@ function fillerDeck(): string[] {
     .map((def) => def.id);
 }
 
+/** A cost change on the board: the card's own `costMod` (R65), and p1's player modifiers (§10.1). */
+type CostChange = { costMod?: number; mods?: unknown[] };
+
 /**
  * p1's main phase on turn 9 with `defId` (on the face asked for) the only card in hand and `mana`
- * to spend. The card is a copy of one the engine dealt, so it carries every field a new card has.
+ * to spend, under `change`. The card is a copy of one the engine dealt, so it carries every field a
+ * new card has.
  */
-function board(defId: string, radiant: boolean, mana: number): { state: GameState; cardId: string } {
+function board(defId: string, radiant: boolean, mana: number, change: CostChange = {}): { state: GameState; cardId: string } {
   const deck = fillerDeck();
   const state = createGame({ seed: SEED, decks: [deck, deck] });
   const layout = state as unknown as Board;
@@ -64,7 +70,9 @@ function board(defId: string, radiant: boolean, mana: number): { state: GameStat
     layout.players[player].library = [];
     layout.players[player].hand = [];
   }
+  if (change.costMod !== undefined) card.costMod = change.costMod;
   layout.players.p1.hand.push(card);
+  layout.players.p1.mods = change.mods ?? [];
   layout.active = "p1";
   layout.turn = TURN;
   layout.phase = "main";
@@ -179,6 +187,57 @@ describe("#492 R81 every Embiggen card asks for its price when both are affordab
         const { body, paid } = sent(state, legal, onAction);
         expect(body).toEqual(expect.objectContaining({ type: "play", instanceId: cardId, embiggen: false }));
         expect(paid).toBe(base);
+      });
+    }
+  }
+});
+
+describe("#492 the Embiggened card shows the embiggen price as it stands, and the play pays it", () => {
+  /** p1's player modifiers live this turn (§10.1 `mods`, as the state holds them). */
+  const thisTurn = { until: "thisTurn", turn: TURN };
+  type Case = { name: string; change: CostChange; normal: (a: number) => number; embiggened: (b: number) => number; tone: string };
+  const cases: Case[] = [
+    { name: "its own discount (costMod -1)", change: { costMod: -1 }, normal: (a) => a - 1, embiggened: (b) => b - 1, tone: "down" },
+    {
+      // R363: Professor Curvature's shape reaches a price of 4 or more: the embiggen price, not the base one.
+      name: "a (4)+ Cost discount (R363)",
+      change: { mods: [{ id: "m492-curve", expiry: thisTurn, kind: "costDiscount", amount: 1, minCurrentCost: 4 }] },
+      normal: (a) => a,
+      embiggened: (b) => b - 1,
+      tone: "down",
+    },
+    {
+      name: "a surcharge of 1 (R455)",
+      change: { mods: [{ id: "m492-tax", expiry: thisTurn, kind: "costRule", rule: { amount: 1 } }] },
+      normal: (a) => a + 1,
+      embiggened: (b) => b + 1,
+      tone: "up",
+    },
+  ];
+
+  for (const { def, base, embiggen } of EMBIGGEN) {
+    for (const { name, change, normal, embiggened, tone } of cases) {
+      const price = embiggened(embiggen);
+      it(`${def.name} under ${name}: Normal says (${String(normal(base))}), Embiggened (${String(price)}), and the play pays that`, () => {
+        const { state, cardId } = board(def.id, false, price, change);
+        const { legal, onAction } = render492(state);
+        expect(viewFor(state, "p1").you.hand).toEqual(
+          expect.arrayContaining([expect.objectContaining({ instanceId: cardId, cost: normal(base), embiggenCost: price })]),
+        );
+
+        fireEvent.click(el(testid.handCard(cardId)));
+        expect(el("prompt-modal")).toHaveAttribute("data-prompt-kind", "embiggen");
+        expect(el("prompt-option-false")).toHaveTextContent(`Pay (${String(normal(base))})`);
+        expect(el("prompt-option-true")).toHaveTextContent(`Pay (${String(price)})`);
+        const gem = el("prompt-option-true").querySelector(".cost-gem");
+        expect(gem).toHaveAttribute("data-cost", String(price));
+        expect(gem).toHaveAttribute("data-tone", tone);
+
+        fireEvent.click(el("prompt-option-true"));
+        placeIfAsked();
+        const { paid, embiggened: was } = sent(state, legal, onAction);
+        expect(paid).toBe(price);
+        expect(was).toBe(true);
       });
     }
   }

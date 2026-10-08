@@ -13,7 +13,8 @@ import type { Tuning } from "./Tuning";
 
 /**
  * The public member of `BackrowView`: `CardView & { faceDown: false; type: CardType; … }`. Every
- * `CardView` field is repeated here, since this one makes `type` required.
+ * `CardView` field is repeated here, since this one makes `type` required — all but `embiggenCost`,
+ * which only a card in its owner's hand carries (#492).
  */
 export type PublicBackrowView = { instanceId: string, defId: string, radiant: boolean, cost: number, attack?: number, health?: number, power?: string, conditionActive?: true, counteredOnPlay?: true, preview?: Array<PreviewValue>, brittle?: number, params?: { [key in string]: number }, tuning?: Tuning, enchantments?: Array<Enchantment>, keywords?: Array<Keyword>, marks?: Array<CardMark>, activations?: Array<ActivationView>, quest?: QuestView, copies?: CopiedTextView, 
 /**

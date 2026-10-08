@@ -254,7 +254,7 @@ describe("#492 one card picker, front and centre, for every short choice", () =>
   const AURA = "core-046"; // Suppressive Aura, "2 embiggen 4"
   const APPROPRIATIONS = "classicplus-040"; // an X Spell with a "Choose one" of four
 
-  function handView(defId: string, over: { cost?: number; radiant?: boolean } = {}): PlayerView {
+  function handView(defId: string, over: { cost?: number; embiggenCost?: number; radiant?: boolean } = {}): PlayerView {
     return baseView({
       you: emptySide("p1", { hand: [card({ instanceId: "h1", defId, ...over })] }),
       opponent: emptySide("p2", { hand: { count: 3 } }),
@@ -285,7 +285,7 @@ describe("#492 one card picker, front and centre, for every short choice", () =>
 
   it("#492 the embiggen price is the card itself twice: at the price it shows in hand, and at its embiggen price", () => {
     const onAction = vi.fn();
-    renderPlay(handView(AURA, { cost: 2 }), PRICES, onAction);
+    renderPlay(handView(AURA, { cost: 2, embiggenCost: 4 }), PRICES, onAction);
 
     const modal = screen.getByTestId("prompt-modal");
     expect(modal).toHaveAttribute("data-prompt-kind", "embiggen");
@@ -310,19 +310,47 @@ describe("#492 one card picker, front and centre, for every short choice", () =>
   });
 
   it("#492 a Radiant card offers its Radiant face at both prices", () => {
-    renderPlay(handView(AURA, { cost: 2, radiant: true }), PRICES);
+    renderPlay(handView(AURA, { cost: 2, embiggenCost: 4, radiant: true }), PRICES);
     for (const key of ["false", "true"]) {
       const option = screen.getByTestId(`prompt-option-${key}`);
       expect(option.querySelector(".card-text")?.textContent).toBe(CATALOG[AURA]?.radiant.text);
     }
   });
 
-  it("#492 once a cost change moved the card off its printed price, the normal card shows the view's price and the embiggened one claims none", () => {
-    renderPlay(handView(AURA, { cost: 1 }), PRICES);
+  it("#492 under a discount both cards show the view's prices: cost on the Normal card, embiggenCost on the Embiggened one", () => {
+    renderPlay(handView(AURA, { cost: 1, embiggenCost: 3 }), PRICES);
     const normal = screen.getByTestId("prompt-option-false");
     const bigger = screen.getByTestId("prompt-option-true");
     expect(gem(normal)).toEqual({ text: "1", alt: null });
     expect(normal.querySelector(".prompt-card-caption-detail")?.textContent).toBe("Pay (1)");
+    expect(gem(bigger)).toEqual({ text: "3", alt: null });
+    expect(bigger.querySelector(".cost-gem")).toHaveAttribute("data-tone", "down");
+    expect(bigger.querySelector(".prompt-card-caption-detail")?.textContent).toBe("Pay (3)");
+    expect(bigger.getAttribute("aria-label")).toBe(`Embiggened: ${nameOf(AURA)}, costs (3)`);
+  });
+
+  it("#492 R363: a discount the embiggen price alone reaches lowers only the Embiggened card", () => {
+    // Professor Curvature's "(4)+ Cost" discount: 2 stays 2, 4 becomes 3. Only the view can say so.
+    renderPlay(handView(AURA, { cost: 2, embiggenCost: 3 }), PRICES);
+    expect(gem(screen.getByTestId("prompt-option-false"))).toEqual({ text: "2", alt: null });
+    expect(gem(screen.getByTestId("prompt-option-true"))).toEqual({ text: "3", alt: null });
+  });
+
+  it("#492 under a surcharge the Embiggened card's gem shows the raised price", () => {
+    renderPlay(handView(AURA, { cost: 3, embiggenCost: 5 }), PRICES);
+    const bigger = screen.getByTestId("prompt-option-true");
+    expect(gem(bigger)).toEqual({ text: "5", alt: null });
+    expect(bigger.querySelector(".cost-gem")).toHaveAttribute("data-tone", "up");
+    expect(bigger.querySelector(".prompt-card-caption-detail")?.textContent).toBe("Pay (5)");
+  });
+
+  it("#492 a card view without embiggenCost shows the printed embiggen price while the card stands at its printed price, and else claims none", () => {
+    renderPlay(handView(AURA, { cost: 2 }), PRICES);
+    expect(gem(screen.getByTestId("prompt-option-true"))).toEqual({ text: "4", alt: null });
+    cleanup();
+
+    renderPlay(handView(AURA, { cost: 1 }), PRICES);
+    const bigger = screen.getByTestId("prompt-option-true");
     // CLAUDE.md rule 7: the client never works out a discounted embiggen price.
     expect(gem(bigger)).toEqual({ text: "?", alt: null });
     expect(bigger.querySelector(".prompt-card-caption-detail")?.textContent).toBe("Pay the embiggen price");
@@ -348,7 +376,7 @@ describe("#492 one card picker, front and centre, for every short choice", () =>
     const modes = ["Military", "Education", "Culture", "Healthcare"];
     const pickers: [PlayerView, ActionBody[]][] = [
       [handView(APPROPRIATIONS), modes.map((mode): ActionBody => ({ type: "play", instanceId: "h1", x: 1, modes: [mode] }))],
-      [handView(AURA, { cost: 2 }), PRICES],
+      [handView(AURA, { cost: 2, embiggenCost: 4 }), PRICES],
       [handView(APPROPRIATIONS), [1, 2].map((x): ActionBody => ({ type: "play", instanceId: "h1", x }))],
     ];
     for (const [view, candidates] of pickers) {
