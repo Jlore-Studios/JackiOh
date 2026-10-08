@@ -191,6 +191,7 @@ export {
   keywordKey,
   opponentOf,
   paramPlaceholders,
+  setShips,
 } from "./catalog.ts";
 
 export * from "./codes.ts";

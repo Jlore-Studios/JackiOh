@@ -4,6 +4,7 @@
 // `@jackioh/validator`'s alone (SPEC §9.4, R253), called from workshop.ts; this module only turns
 // `GET /api/collection` into the validator's `Collection` and lists the cards a deck could hold.
 
+import { setShips } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { isGlitch } from "../../cards/glitch.ts";
@@ -20,8 +21,9 @@ export function collectionFrom(
 /**
  * The cards offered in the pool: everything the profile owns that the catalog knows about, in
  * catalog order (every non-token card when `collection` is null). Tokens are left out because
- * R251 and L3 keep them out of every deck — the pool is a shelf of cards a deck can hold, and the
- * validator still has the last word on anything that reaches a deck by another route (an import).
+ * R251 and L3 keep them out of every deck, and so are the cards of a set that has not shipped
+ * (R768) — the pool is a shelf of cards a deck can hold, and the validator still has the last word
+ * on anything that reaches a deck by another route (an import).
  */
 export function poolFrom(catalog: CatalogSnapshot, collection: Collection | null): readonly string[] {
   const ids = Object.keys(catalog.cards).filter((id) => {
@@ -30,6 +32,8 @@ export function poolFrom(catalog: CatalogSnapshot, collection: Collection | null
     if (def.token || def.tags.includes("Token")) return false;
     // R674: Glitch is never in a pool, a token or not.
     if (isGlitch(id)) return false;
+    // R768: nor is a card of a set that has not shipped yet.
+    if (!setShips(def.set)) return false;
     if (collection === null) return true;
     return (collection[id] ?? 0) > 0;
   });

@@ -30,7 +30,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, bail};
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::wire::{
-    CardType, KEYWORD_KINDS, PrintedRarity, Rarity, SetName, Tag, param_placeholders,
+    CardType, KEYWORD_KINDS, PrintedRarity, Rarity, SetName, Tag, param_placeholders, set_ships,
 };
 
 use crate::patches::js::{self, Json, Object};
@@ -73,7 +73,7 @@ const NUMBERED_KEYWORDS: &[&str] = &["Armor", "Lucky", "Brittle", "Spell Damage"
 
 /* ------------------------------------------------------------------------------- expectations */
 
-/// The id segment of each shipped set (B2.2: `classicplus` holds no hyphen).
+/// The id segment of each set the catalog holds (B2.2: `classicplus` holds no hyphen).
 struct SetExpectation {
     set: &'static str,
     segment: &'static str,
@@ -84,6 +84,19 @@ struct SetExpectation {
     /// Tokens no one card defines, indexed T-name.
     shared_tokens: Vec<String>,
     rarities: &'static [(&'static str, usize)],
+}
+
+impl SetExpectation {
+    /// R768: whether the set ships. A set that does not is checked for its shape alone: every entry
+    /// it holds must be one of its listed indices, once, and no rarity may pass its count, but none
+    /// need be there yet, and none counts toward the totals or the tag census, which are the
+    /// shipped catalog's.
+    fn ships(&self) -> bool {
+        SetName::ALL
+            .iter()
+            .find(|set| set.as_str() == self.set)
+            .is_some_and(|set| set_ships(*set))
+    }
 }
 
 fn range(prefix: &str, from: usize, to: usize) -> Vec<String> {
@@ -156,6 +169,27 @@ fn sets() -> Vec<SetExpectation> {
                 ("Mythic", 3),
             ],
         },
+        // R768: the Meditative set (issue #496, docs/meditative-set.md M2): 99 cards and the 30 tokens they
+        // define, the designer's rarities with five filled in by §8's rubric. It does not ship yet, so its
+        // entries are checked for their shape alone until the patch that lists it in SHIPPED_SETS.
+        SetExpectation {
+            set: "Meditative",
+            segment: "meditative",
+            cards: 99,
+            card_defined_tokens: texts(&[
+                "19.1", "22.1", "28.1", "30.1", "39.1", "39.2", "39.3", "39.4", "39.5", "45.1",
+                "49.1", "49.2", "49.3", "70.1", "71.1", "91.1", "93.1", "93.2", "93.3", "95.1",
+                "96.1", "97.1", "97.2", "97.3", "97.4", "97.5", "97.6", "97.7", "97.8", "97.9",
+            ]),
+            shared_tokens: Vec::new(),
+            rarities: &[
+                ("Common", 26),
+                ("Rare", 29),
+                ("Epic", 22),
+                ("Legendary", 16),
+                ("Mythic", 6),
+            ],
+        },
     ]
 }
 
@@ -186,6 +220,8 @@ fn expected_tag_count(tag: Tag) -> usize {
         Tag::Catalyst => 2,
         Tag::Prime => 2,
         Tag::Acclaimed => 2,
+        // The Meditative set's (R768): counted once it ships.
+        Tag::Wincon => 0,
         Tag::Token => 50,
     }
 }
@@ -731,14 +767,18 @@ pub struct CatalogReport {
     pub refs_count: usize,
     pub param_count: usize,
     pub loc_count: usize,
+    /// R768: the entries of sets that do not ship yet, which no total counts.
+    pub unshipped_count: usize,
 }
 
 /// `validate-catalog.ts`'s top level over a parsed catalog (an object keyed by card id).
 pub fn check_catalog(catalog: &Object) -> CatalogReport {
     let sets = sets();
-    let expected_non_token: usize = sets.iter().map(|set| set.cards).sum();
+    // R768: the totals are the shipped catalog's.
+    let expected_non_token: usize = sets.iter().filter(|set| set.ships()).map(|set| set.cards).sum();
     let expected_token: usize = sets
         .iter()
+        .filter(|set| set.ships())
         .map(|set| set.card_defined_tokens.len() + set.shared_tokens.len())
         .sum();
     let expected_total = expected_non_token + expected_token;
@@ -747,8 +787,21 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
     let mut failures: Vec<String> = Vec::new();
     let entries = catalog.len();
 
-    // 1. 111 entries. (TS checks the total here and again after the loop, so a wrong total fails
-    // twice; kept.)
+    // 1. 111 entries, R768's unshipped sets aside. (TS checks the total here and again after the
+    // loop, so a wrong total fails twice; kept.)
+    let unshipped_entries = catalog
+        .values()
+        .filter(|value| {
+            let Json::Object(value) = value else {
+                return false;
+            };
+            let set = value.get("set").and_then(Json::as_str);
+            sets.iter()
+                .find(|expectation| set == Some(expectation.set))
+                .is_some_and(|expectation| !expectation.ships())
+        })
+        .count();
+    let entries = entries - unshipped_entries;
     if entries != expected_total {
         fail(
             &mut failures,
@@ -768,6 +821,8 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
     let mut seen_indices: IndexMap<&str, IndexMap<String, Vec<String>>> = IndexMap::new();
     let mut loc_count = 0;
     let mut param_count = 0;
+    // R768: the entries of sets that do not ship yet, counted apart from the totals.
+    let mut unshipped_count = 0;
 
     for (key, value) in catalog {
         let at = format!("catalog[\"{key}\"]");
@@ -801,6 +856,11 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
         let set_of = sets
             .iter()
             .find(|expectation| set_value.and_then(Json::as_str) == Some(expectation.set));
+        // R768: an entry of a set that does not ship counts toward no total and no tag.
+        let counted = set_of.is_none_or(SetExpectation::ships);
+        if !counted {
+            unshipped_count += 1;
+        }
         match (index.and_then(Json::as_str), set_of) {
             (None, _) => fail(
                 &mut failures,
@@ -813,7 +873,7 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
                     &mut failures,
                     &at,
                     &format!(
-                        "`set` {} is not a set that ships ({})",
+                        "`set` {} is not a set the catalog holds ({})",
                         describe(set_value),
                         shipping.join(", ")
                     ),
@@ -877,8 +937,10 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
         match value.get("tags") {
             Some(Json::Array(tags)) => {
                 tag_list = tags.iter().map(|tag| js::to_js_string(Some(tag))).collect();
-                for tag in &tag_list {
-                    *tag_counts.entry(tag.clone()).or_default() += 1;
+                if counted {
+                    for tag in &tag_list {
+                        *tag_counts.entry(tag.clone()).or_default() += 1;
+                    }
                 }
                 for (i, tag) in tags.iter().enumerate() {
                     if !tag.as_str().is_some_and(|tag| tag_union.contains(&tag)) {
@@ -932,7 +994,9 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
                 }
                 let tagged_token = tag_list.iter().any(|tag| tag == "Token");
                 if token {
-                    token_count += 1;
+                    if counted {
+                        token_count += 1;
+                    }
                     // 9. every token carries the Token tag (§5.1: random pools filter on it).
                     if !tagged_token {
                         let listed = if tag_list.is_empty() {
@@ -947,7 +1011,9 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
                         );
                     }
                 } else {
-                    non_token_count += 1;
+                    if counted {
+                        non_token_count += 1;
+                    }
                     if tagged_token {
                         fail(&mut failures, &at, "non-token carries the \"Token\" tag");
                     }
@@ -1137,6 +1203,8 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
         let seen = seen_indices.get(expectation.set).unwrap_or(&empty);
         for index in &indices {
             match seen.get(index) {
+                // R768: a set that has not shipped need not hold every card yet.
+                None if !expectation.ships() => {}
                 None => fail(
                     &mut failures,
                     expectation.set,
@@ -1169,7 +1237,13 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
         let counted = rarity_counts.get(expectation.set).unwrap_or(&no_counts);
         for (rarity, expected) in expectation.rarities {
             let found = counted.get(*rarity).copied().unwrap_or(0);
-            if found != *expected {
+            // R768: a set that has not shipped may hold fewer, never more.
+            let wrong = if expectation.ships() {
+                found != *expected
+            } else {
+                found > *expected
+            };
+            if wrong {
                 fail(
                     &mut failures,
                     expectation.set,
@@ -1250,6 +1324,7 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
         refs_count: refs_by_card.len(),
         param_count,
         loc_count,
+        unshipped_count,
     }
 }
 
@@ -1533,11 +1608,18 @@ fn run_check() -> anyhow::Result<()> {
             .iter()
             .map(|(r, n)| format!("{n} {r}"))
             .collect();
+        let shipped = if expectation.ships() { "" } else { " (not shipped yet, R768)" };
         println!(
-            "  {}: {} cards + {tokens} tokens; rarities {}",
+            "  {}{shipped}: {} cards + {tokens} tokens; rarities {}",
             expectation.set,
             expectation.cards,
             rarities.join(", ")
+        );
+    }
+    if report.unshipped_count > 0 {
+        println!(
+            "  {} entries of sets that have not shipped, outside the totals (R768)",
+            report.unshipped_count
         );
     }
     let tags: Vec<String> = expected_tag_counts()
@@ -1592,6 +1674,38 @@ mod tests {
             (report.entries, report.non_token_count, report.token_count),
             (318, 268, 50)
         );
+    }
+
+    /// A Meditative entry made from Core #2's: its id, index, name and set its own.
+    fn meditative_entry(index: &str, id: &str) -> Json {
+        let Json::Object(mut entry) = shipped_catalog()["core-002"].clone() else {
+            panic!("core-002 is an object");
+        };
+        entry.insert("id".to_string(), Json::from(id));
+        entry.insert("index".to_string(), Json::from(index));
+        entry.insert("name".to_string(), Json::from(format!("Meditative fixture {index}")));
+        entry.insert("set".to_string(), Json::from("Meditative"));
+        Json::Object(entry)
+    }
+
+    #[test]
+    fn r768_holds_a_set_being_built_to_its_shape_alone_outside_the_totals() {
+        let mut catalog = shipped_catalog();
+        catalog.insert("meditative-002".to_string(), meditative_entry("2", "meditative-002"));
+        let report = check_catalog(&catalog);
+        assert_eq!(report.failures, Vec::<String>::new());
+        assert_eq!(
+            (report.entries, report.non_token_count, report.token_count, report.unshipped_count),
+            (318, 268, 50, 1)
+        );
+
+        // An index the brief does not list, or an id that does not follow it, still fails.
+        let mut wrong = shipped_catalog();
+        wrong.insert("meditative-150".to_string(), meditative_entry("150", "meditative-150"));
+        wrong.insert("meditative-x".to_string(), meditative_entry("3", "meditative-x"));
+        let failures = check_catalog(&wrong).failures.join("\n");
+        assert!(failures.contains("unexpected index \"150\""), "{failures}");
+        assert!(failures.contains("implies id \"meditative-003\""), "{failures}");
     }
 
     #[test]

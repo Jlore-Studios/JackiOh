@@ -11,7 +11,7 @@
 // so the route can print a readable sentence instead of showing a thrown stack, which is the same
 // trade `e2e/support/commands.ts` makes in `asDeck`.
 
-import type { CardCost, CardDef, CardDefs } from "@jackioh/shared";
+import { setShips, type CardCost, type CardDef, type CardDefs } from "@jackioh/shared";
 
 /**
  * SPEC §2.6 L2 / L3. Re-exported from the engine's own `config` entry point rather than restated:
@@ -47,11 +47,11 @@ export function printedCost(cost: CardCost): number {
 }
 
 /**
- * `validateDeck`'s Token test, mirrored: `def.token || def.tags.includes("Token")` (§2.6 L3).
- * A deck built from anything else would be refused by `createGame`.
+ * `validateDeck`'s L3, mirrored: not a Token (`def.token || def.tags.includes("Token")`, §2.6) and
+ * not a card of a set that has not shipped (R768). A deck built from anything else is refused.
  */
 function deckable(def: CardDef): boolean {
-  return !def.token && !def.tags.includes("Token");
+  return !def.token && !def.tags.includes("Token") && setShips(def.set);
 }
 
 /**
@@ -123,7 +123,11 @@ function refusal(deck: readonly string[], catalog: CardDefs, id: string, size: n
   for (const defId of deck) {
     const def = catalog[defId];
     if (def === undefined) return `deck "${id}": "${defId}" is not in the catalog (§9.4 L6)`;
-    if (!deckable(def)) return `deck "${id}": "${defId}" is a Token card and cannot be in a deck (§2.6 L3)`;
+    if (!deckable(def)) {
+      return setShips(def.set)
+        ? `deck "${id}": "${defId}" is a Token card and cannot be in a deck (§2.6 L3)`
+        : `deck "${id}": "${defId}" is a card of ${def.set}, which has not shipped yet (§2.6 L3, R768)`;
+    }
   }
   return null;
 }

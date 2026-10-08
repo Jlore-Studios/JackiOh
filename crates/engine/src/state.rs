@@ -1448,6 +1448,13 @@ pub fn validate_deck(deck: &[String], catalog: &CardDefs, label: &str, size: i32
                 "{label}: \"{def_id}\" is a Token card and cannot be in a deck (§2.6 L3)"
             )));
         }
+        // R768: nor is a card of a set that has not shipped, unless the testkit previews it.
+        if !crate::catalog::set_is_open(def.set) {
+            return Err(EngineError::new(format!(
+                "{label}: \"{def_id}\" is a card of {}, which has not shipped yet (§2.6 L3, R768)",
+                def.set.as_str()
+            )));
+        }
     }
     Ok(())
 }

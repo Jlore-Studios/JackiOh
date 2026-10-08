@@ -49,7 +49,7 @@ use indexmap::IndexMap;
 use jackioh_cards::CATALOG;
 use jackioh_engine::{
     CardCost, CardDef, CardFace, CardType, FaceKind, GLITCH_DEF_ID, KeywordKind, Rarity, SetName, Tag,
-    fill_params,
+    fill_params, set_ships,
 };
 use serde_json::Value;
 
@@ -3135,10 +3135,1307 @@ const CLASSIC_PLUS: &[SpecRow] = &[
 ];
 
 /// Each set's fixture, in catalog order (B2.2).
+/// R768: the Meditative set's rows, transcribed from docs/meditative-set.md's card headers (M6), in
+/// number order with each token after its card. The set does not ship yet: an entry it holds must
+/// equal its row, and a row with no entry is a card still being built, until it ships.
+const MEDITATIVE: &[SpecRow] = &[
+    row(
+        "1",
+        "Disruptive Disruptor",
+        c(2),
+        T::FieldSpell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "2",
+        "Rampaging Rhino",
+        c(2),
+        T::Unit,
+        &[],
+        R::Common,
+        st(5, 9),
+        st(11, 20),
+    ),
+    row(
+        "3",
+        "Jlockwork Machine",
+        c(3),
+        T::Unit,
+        &[],
+        R::Rare,
+        st(10, 10),
+        st(20, 20),
+    ),
+    row(
+        "4",
+        "Juicy Kumquat Melon",
+        c(4),
+        T::Spell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "5",
+        "Death by 1000 cuts",
+        c(1),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "6",
+        "Me no Likey",
+        c(0),
+        T::Spell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "7",
+        "Introspection",
+        c(4),
+        T::FieldSpell,
+        &[],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "8",
+        "Reach the Summit",
+        c(0),
+        T::Spell,
+        &[G::Quickdraw, G::Wincon],
+        R::Mythic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "9",
+        "Joint Filing",
+        c(2),
+        T::FieldSpell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "10",
+        "Double Counting",
+        c(2),
+        T::FieldSpell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "11",
+        "Double Header",
+        c(4),
+        T::FieldSpell,
+        &[],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "12",
+        "Fear Mongerer",
+        c(2),
+        T::Unit,
+        &[G::Human],
+        R::Epic,
+        st(6, 8),
+        st(12, 16),
+    ),
+    row(
+        "13",
+        "Gatling Pea",
+        c(2),
+        T::Unit,
+        &[],
+        R::Epic,
+        st(2, 6),
+        st(4, 12),
+    ),
+    row(
+        "14",
+        "Prime Time",
+        c(2),
+        T::Spell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "15",
+        "Smelly Steven",
+        c(2),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(5, 5),
+        st(10, 10),
+    ),
+    row(
+        "16",
+        "Trenful Trickster",
+        c(2),
+        T::Unit,
+        &[],
+        R::Rare,
+        st(1, 5),
+        st(2, 10),
+    ),
+    row(
+        "17",
+        "True Craft a Card",
+        c(0),
+        T::Spell,
+        &[],
+        R::Mythic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "18",
+        "Expedition12",
+        c(1),
+        T::Spell,
+        &[G::Quickdraw],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "19",
+        "Expedition1234",
+        c(1),
+        T::Spell,
+        &[G::Quickdraw],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "19.1",
+        "Temporal Rift",
+        c(2),
+        T::Spell,
+        &[G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "20",
+        "Aestheticize the Game",
+        c(1),
+        T::Spell,
+        &[G::Quickdraw, G::Wincon],
+        R::Mythic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "21",
+        "API Key Fishing",
+        emb(0, 1),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "22",
+        "Mind Games",
+        c(2),
+        T::Spell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "22.1",
+        "Fortify Mind",
+        c(0),
+        T::Spell,
+        &[G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "23",
+        "Golly Bob Howdy",
+        c(1),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(3, 5),
+        st(6, 10),
+    ),
+    row(
+        "24",
+        "Polymorph",
+        c(3),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "25",
+        "Blue-Eyes White Felinor",
+        c(1),
+        T::Unit,
+        &[G::Felinor],
+        R::Rare,
+        st(12, 9),
+        st(24, 18),
+    ),
+    row(
+        "26",
+        "Alternate Fate",
+        c(4),
+        T::FieldSpell,
+        &[],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "27",
+        "Clip-Farming Lawyer",
+        c(2),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(6, 5),
+        st(12, 10),
+    ),
+    row(
+        "28",
+        "Shade-iris",
+        c(2),
+        T::Unit,
+        &[],
+        R::Common,
+        st(7, 4),
+        st(14, 8),
+    ),
+    row(
+        "28.1",
+        "Ancient Curse",
+        c(2),
+        T::Spell,
+        &[G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "29",
+        "Forbiddenous Factory",
+        c(3),
+        T::FieldSpell,
+        &[G::Plague],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "30",
+        "Fickle E-Kitten",
+        c(1),
+        T::Unit,
+        &[G::Felinor],
+        R::Epic,
+        st(3, 4),
+        st(6, 8),
+    ),
+    row(
+        "30.1",
+        "Love Bomb",
+        c(1),
+        T::Spell,
+        &[G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "31",
+        "The Conductor",
+        c(3),
+        T::Unit,
+        &[G::Human],
+        R::Rare,
+        st(7, 9),
+        st(14, 18),
+    ),
+    row(
+        "32",
+        "Spiritually 中国",
+        c(2),
+        T::Spell,
+        &[G::Cn],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "33",
+        "First Day of 学校",
+        c(0),
+        T::Spell,
+        &[G::Cn],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "34",
+        "高考",
+        c(4),
+        T::Spell,
+        &[G::Cn, G::Ky],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "35",
+        "RCTA (CN)",
+        c(1),
+        T::Spell,
+        &[G::Cn],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "36",
+        "CN Peptides",
+        c(1),
+        T::Spell,
+        &[G::Cn],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "37",
+        "CN in a bottle",
+        X,
+        T::Spell,
+        &[G::Cn],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "38",
+        "H1B Printer",
+        c(2),
+        T::FieldSpell,
+        &[G::Cn, G::Ky],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "39",
+        "赌石 Addict",
+        c(2),
+        T::Unit,
+        &[G::Cn],
+        R::Rare,
+        st(4, 4),
+        st(8, 8),
+    ),
+    row(
+        "39.1",
+        "Auspicious Rock",
+        c(0),
+        T::Spell,
+        &[G::Cn, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "39.2",
+        "Jade",
+        c(0),
+        T::Spell,
+        &[G::Cn, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "39.3",
+        "Dud",
+        c(0),
+        T::Spell,
+        &[G::Cn, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "39.4",
+        "Red Jade",
+        c(0),
+        T::Spell,
+        &[G::Cn, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "39.5",
+        "Jade Beauty",
+        c(10),
+        T::Unit,
+        &[G::Cn, G::Token],
+        R::Token,
+        st(20, 20),
+        st(40, 40),
+    ),
+    row(
+        "40",
+        "Feng Shui",
+        c(2),
+        T::FieldSpell,
+        &[G::Cn],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "41",
+        "CN Smuggler",
+        c(2),
+        T::Unit,
+        &[G::Cn],
+        R::Rare,
+        st(4, 5),
+        st(8, 10),
+    ),
+    row(
+        "42",
+        "CN Flea Market",
+        c(0),
+        T::Spell,
+        &[G::Cn],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "43",
+        "CN Jade Market",
+        X,
+        T::Spell,
+        &[G::Cn],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "44",
+        "CN Jade Well",
+        c(3),
+        T::FieldSpell,
+        &[G::Cn],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "45",
+        "Knowledge Breaker",
+        c(1),
+        T::Unit,
+        &[G::Cn, G::Ky, G::Catalyst],
+        R::Legendary,
+        st(1, 3),
+        st(2, 6),
+    ),
+    row(
+        "45.1",
+        "Knowledge Breaker Prime",
+        c(4),
+        T::Unit,
+        &[G::Cn, G::Ky, G::Prime, G::Token],
+        R::Token,
+        st(6, 18),
+        st(12, 36),
+    ),
+    row(
+        "46",
+        "Conjure Intellect",
+        emb(2, 4),
+        T::Spell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "47",
+        "饕餮",
+        c(4),
+        T::Unit,
+        &[G::Cn],
+        R::Legendary,
+        st(8, 8),
+        st(16, 16),
+    ),
+    row(
+        "48",
+        "Tranquility",
+        c(2),
+        T::Spell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "49",
+        "YileGPT Tamed",
+        c(2),
+        T::Unit,
+        &[G::Cn, G::Acclaimed],
+        R::Mythic,
+        st(2, 6),
+        st(4, 12),
+    ),
+    row(
+        "49.1",
+        "YileGPT Unleashed",
+        c(10),
+        T::Unit,
+        &[G::Cn, G::Acclaimed, G::Token],
+        R::Token,
+        st(8, 20),
+        st(16, 40),
+    ),
+    row(
+        "49.2",
+        "Yile's Virus",
+        c(2),
+        T::Unit,
+        &[G::Cn, G::Acclaimed, G::Token],
+        R::Token,
+        st(0, 8),
+        st(0, 16),
+    ),
+    row(
+        "49.3",
+        "AI Girlfriend",
+        c(4),
+        T::FieldSpell,
+        &[G::Cn, G::Acclaimed, G::Token],
+        R::Token,
+        st(2, 30),
+        st(4, 60),
+    ),
+    row(
+        "50",
+        "CN Tech",
+        c(0),
+        T::Spell,
+        &[G::Cn],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "51",
+        "Devin Bot",
+        c(2),
+        T::Unit,
+        &[],
+        R::Legendary,
+        st(1, 1),
+        st(2, 2),
+    ),
+    row(
+        "52",
+        "Economic Anxiety",
+        c(1),
+        T::FieldSpell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "53",
+        "Prestige",
+        c(1),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "54",
+        "Money Machine",
+        c(1),
+        T::FieldSpell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "55",
+        "Dragon Fruit",
+        c(2),
+        T::Spell,
+        &[G::Cn, G::Fruit],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "56",
+        "House Party",
+        c(3),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "57",
+        "Clip-Farming Critikal",
+        c(1),
+        T::Unit,
+        &[],
+        R::Common,
+        st(5, 1),
+        st(10, 2),
+    ),
+    row(
+        "58",
+        "Permanent Underclassman",
+        c(2),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(3, 3),
+        st(6, 6),
+    ),
+    row(
+        "59",
+        "Permanent Upperclassman",
+        c(3),
+        T::Unit,
+        &[G::Human],
+        R::Rare,
+        st(3, 3),
+        st(6, 6),
+    ),
+    row(
+        "60",
+        "Eschews",
+        c(3),
+        T::FieldSpell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "61",
+        "Joon Jorker",
+        c(3),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(7, 5),
+        st(14, 10),
+    ),
+    row(
+        "62",
+        "Small Time Recruits",
+        c(0),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "63",
+        "Skull of J'Nari",
+        c(3),
+        T::FieldSpell,
+        &[],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "64",
+        "Traitorous Blood",
+        c(1),
+        T::Trap,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "65",
+        "Keymaster Keenus",
+        c(4),
+        T::Unit,
+        &[],
+        R::Legendary,
+        st(1, 1),
+        st(2, 2),
+    ),
+    row(
+        "66",
+        "Fiery Waraxe",
+        c(2),
+        T::FieldSpell,
+        &[],
+        R::Common,
+        st(3, 2),
+        st(6, 4),
+    ),
+    row(
+        "67",
+        "Sentient Cat Ears",
+        c(1),
+        T::Unit,
+        &[G::Felinor],
+        R::Epic,
+        st(1, 1),
+        st(2, 2),
+    ),
+    row(
+        "68",
+        "Catnip",
+        c(1),
+        T::FieldTrap,
+        &[G::Felinor],
+        R::Rare,
+        st(5, 5),
+        st(10, 10),
+    ),
+    row(
+        "69",
+        "The Maestro",
+        c(4),
+        T::Unit,
+        &[G::Human, G::Plague],
+        R::Rare,
+        st(4, 4),
+        st(8, 8),
+    ),
+    row(
+        "70",
+        "I'M WILL BE YOUR DOOM",
+        c(1),
+        T::Unit,
+        &[],
+        R::Common,
+        st(5, 8),
+        st(10, 16),
+    ),
+    row(
+        "70.1",
+        "Ready… I'm",
+        c(1),
+        T::Unit,
+        &[G::Token],
+        R::Token,
+        st(2, 1),
+        st(4, 2),
+    ),
+    row(
+        "71",
+        "Pareto Optimality",
+        c(2),
+        T::FieldSpell,
+        &[],
+        R::Mythic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "71.1",
+        "The Cane",
+        c(2),
+        T::FieldSpell,
+        &[G::Cn, G::Token],
+        R::Token,
+        st(3, 1),
+        st(6, 2),
+    ),
+    row(
+        "72",
+        "The Banisher",
+        c(1),
+        T::Unit,
+        &[],
+        R::Common,
+        st(2, 1),
+        st(4, 2),
+    ),
+    row(
+        "73",
+        "Plate Packer",
+        c(2),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(6, 6),
+        st(12, 12),
+    ),
+    row(
+        "74",
+        "Montaña Giant",
+        c(8),
+        T::Unit,
+        &[],
+        R::Epic,
+        st(8, 8),
+        st(16, 16),
+    ),
+    row(
+        "75",
+        "Ever Growing Tree",
+        c(4),
+        T::FieldSpell,
+        &[],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "76",
+        "Do or Die",
+        c(1),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "77",
+        "Bulk Booster",
+        c(3),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "78",
+        "Occidentless Mandate",
+        c(4),
+        T::Spell,
+        &[G::Cn],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "79",
+        "Touched by KY",
+        c(3),
+        T::Unit,
+        &[G::Ky],
+        R::Legendary,
+        st(4, 4),
+        st(8, 8),
+    ),
+    row(
+        "80",
+        "Aluneth",
+        c(3),
+        T::FieldSpell,
+        &[G::Quickdraw],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "81",
+        "Deadman's Hand",
+        emb(0, 2),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "82",
+        "Medina Outfitter",
+        c(1),
+        T::Unit,
+        &[],
+        R::Common,
+        st(1, 1),
+        st(2, 2),
+    ),
+    row(
+        "83",
+        "Medina Enforcer",
+        c(2),
+        T::Unit,
+        &[],
+        R::Rare,
+        st(4, 4),
+        st(8, 8),
+    ),
+    row(
+        "84",
+        "Volatility",
+        c(1),
+        T::Unit,
+        &[],
+        R::Common,
+        st(3, 3),
+        st(6, 6),
+    ),
+    row(
+        "85",
+        "Playtester",
+        c(2),
+        T::Unit,
+        &[],
+        R::Rare,
+        st(4, 5),
+        st(8, 10),
+    ),
+    row(
+        "86",
+        "Mayor Medinamogger",
+        c(2),
+        T::Unit,
+        &[],
+        R::Legendary,
+        st(5, 4),
+        st(10, 8),
+    ),
+    row(
+        "87",
+        "Tatches the Totem",
+        c(1),
+        T::Unit,
+        &[G::Human, G::Felinor, G::Ky, G::Cn, G::Jlockeed],
+        R::Legendary,
+        st(0, 3),
+        st(0, 6),
+    ),
+    row(
+        "88",
+        "The True Sheep",
+        c(4),
+        T::Unit,
+        &[],
+        R::Epic,
+        st(1, 1),
+        st(2, 2),
+    ),
+    row(
+        "89",
+        "Jlarna",
+        c(0),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "90",
+        "Spell Basket",
+        c(1),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "91",
+        "Windfast",
+        c(1),
+        T::Unit,
+        &[G::Catalyst],
+        R::Epic,
+        st(1, 1),
+        st(2, 2),
+    ),
+    row(
+        "91.1",
+        "Windfurious Prime",
+        c(3),
+        T::Unit,
+        &[G::Prime, G::Token],
+        R::Token,
+        st(5, 10),
+        st(10, 20),
+    ),
+    row(
+        "92",
+        "Unan",
+        c(3),
+        T::Unit,
+        &[],
+        R::Rare,
+        st(3, 13),
+        st(6, 26),
+    ),
+    row(
+        "93",
+        "Growing Felinor",
+        c(1),
+        T::Unit,
+        &[G::Felinor],
+        R::Common,
+        st(1, 1),
+        st(2, 2),
+    ),
+    row(
+        "93.1",
+        "Growing Felinor Sr",
+        c(1),
+        T::Unit,
+        &[G::Felinor, G::Token],
+        R::Token,
+        st(2, 2),
+        st(4, 4),
+    ),
+    row(
+        "93.2",
+        "Growing Felinor Sr Sr",
+        c(1),
+        T::Unit,
+        &[G::Felinor, G::Token],
+        R::Token,
+        st(3, 3),
+        st(6, 6),
+    ),
+    row(
+        "93.3",
+        "Growing Felinor Super Senior",
+        c(1),
+        T::Unit,
+        &[G::Felinor, G::Token],
+        R::Token,
+        st(4, 4),
+        st(8, 8),
+    ),
+    row(
+        "94",
+        "Shrinking Felinor",
+        c(4),
+        T::Unit,
+        &[G::Felinor],
+        R::Rare,
+        st(9, 11),
+        st(18, 22),
+    ),
+    row(
+        "95",
+        "Call to Chaos (Meditative Edition)",
+        c(4),
+        T::Spell,
+        &[G::CallToChaos],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "95.1",
+        "CN Golem",
+        c(4),
+        T::Unit,
+        &[G::Cn, G::Token],
+        R::Token,
+        st(10, 10),
+        st(20, 20),
+    ),
+    row(
+        "96",
+        "Meditative Journey",
+        c(2),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "96.1",
+        "Journey Complete",
+        c(2),
+        T::Spell,
+        &[G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "97",
+        "Jlockheed's Evil Blueprints",
+        c(0),
+        T::Spell,
+        &[G::Jlockeed],
+        R::Mythic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "97.1",
+        "Empty Plot",
+        c(0),
+        T::Unit,
+        &[G::Token],
+        R::Token,
+        st(0, 3),
+        st(0, 8),
+    ),
+    row(
+        "97.2",
+        "Wishing Well",
+        c(1),
+        T::Unit,
+        &[G::Token],
+        R::Token,
+        st(0, 6),
+        st(0, 12),
+    ),
+    row(
+        "97.3",
+        "School",
+        c(2),
+        T::Unit,
+        &[G::Token],
+        R::Token,
+        st(0, 8),
+        st(0, 16),
+    ),
+    row(
+        "97.4",
+        "Mega Church",
+        c(3),
+        T::Unit,
+        &[G::Token],
+        R::Token,
+        st(0, 5),
+        st(0, 10),
+    ),
+    row(
+        "97.5",
+        "Bunker",
+        c(2),
+        T::Unit,
+        &[G::Token],
+        R::Token,
+        st(5, 10),
+        st(10, 30),
+    ),
+    row(
+        "97.6",
+        "University",
+        c(4),
+        T::Unit,
+        &[G::Token],
+        R::Token,
+        st(0, 12),
+        st(0, 24),
+    ),
+    row(
+        "97.7",
+        "The Great Wall",
+        c(2),
+        T::Unit,
+        &[G::Token],
+        R::Token,
+        st(0, 50),
+        st(0, 100),
+    ),
+    row(
+        "97.8",
+        "Prison",
+        c(4),
+        T::Unit,
+        &[G::Token],
+        R::Token,
+        st(0, 16),
+        st(0, 32),
+    ),
+    row(
+        "97.9",
+        "Jlockheed's Headquarters",
+        c(4),
+        T::Unit,
+        &[G::Jlockeed, G::Token],
+        R::Token,
+        st(0, 20),
+        st(0, 50),
+    ),
+    row(
+        "98",
+        "Showdown",
+        c(2),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "99",
+        "Paranoia",
+        c(2),
+        T::FieldSpell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+];
+
 const FIXTURES: &[(SetName, &[SpecRow])] = &[
     (SetName::Core, CORE),
     (SetName::Classic, CLASSIC),
     (SetName::ClassicPlus, CLASSIC_PLUS),
+    (SetName::Meditative, MEDITATIVE),
 ];
 
 /// BUILD M4-T1 and B2.4, plus the mechanics patch's Plague and patch v0.2.Y's Catalyst, Prime and
@@ -3159,6 +4456,7 @@ const ALLOWED_TAGS: &[&str] = &[
     "Catalyst",
     "Prime",
     "Acclaimed",
+    "Wincon",
     "Token",
 ];
 
@@ -3194,6 +4492,17 @@ const RARITY_COUNTS: &[(&str, &[(&str, usize)])] = &[
             ("Mythic", 3),
         ],
     ),
+    // R768: docs/meditative-set.md M2's distribution, a ceiling until the set ships.
+    (
+        "Meditative",
+        &[
+            ("Common", 26),
+            ("Rare", 29),
+            ("Epic", 22),
+            ("Legendary", 16),
+            ("Mythic", 6),
+        ],
+    ),
 ];
 
 /// B2.1: cards and tokens per set.
@@ -3219,15 +4528,36 @@ const SET_SIZES: &[SetSize] = &[
         cards: 78,
         tokens: 38,
     },
+    // R768: docs/meditative-set.md M2, a ceiling until the set ships.
+    SetSize {
+        set: "Meditative",
+        cards: 99,
+        tokens: 30,
+    },
 ];
 
-/// B2.1's totals, as SET_SIZES sums them: the only count of the whole catalog this file keeps.
+/// R768: whether a set ships. A set that does not may hold fewer entries than its fixture and its
+/// counts, never more, and none of them counts toward the catalog's totals.
+fn ships(set: &str) -> bool {
+    SetName::ALL
+        .iter()
+        .find(|known| known.as_str() == set)
+        .is_some_and(|known| set_ships(*known))
+}
+
+/// B2.1's totals, as SET_SIZES sums them over the sets that ship: the only count of the whole
+/// catalog this file keeps.
 fn total_cards() -> usize {
-    SET_SIZES.iter().map(|size| size.cards).sum()
+    SET_SIZES.iter().filter(|size| ships(size.set)).map(|size| size.cards).sum()
 }
 
 fn total_tokens() -> usize {
-    SET_SIZES.iter().map(|size| size.tokens).sum()
+    SET_SIZES.iter().filter(|size| ships(size.set)).map(|size| size.tokens).sum()
+}
+
+/// The entries of the sets that ship (R768).
+fn shipped_entries() -> Vec<&'static CardDef> {
+    entries().into_iter().filter(|entry| set_ships(entry.set)).collect()
 }
 
 /// A set's SET_SIZES row as one number (cards + tokens), for the fixture-row counts below.
@@ -3370,6 +4700,8 @@ fn fixture_report(set: SetName) -> String {
         .map(|(_, rows)| *rows)
         .unwrap_or_default();
     rows.iter()
+        // R768: a row of a set that has not shipped, with no entry yet, is a card still being built.
+        .filter(|row| set_ships(set) || by_key.contains_key(&key_of(set.as_str(), row.index)))
         .filter_map(|row| {
             let problems = row_problems(set, row, &by_key);
             if problems.is_empty() {
@@ -3397,28 +4729,28 @@ mod catalog_membership_build_m4_t1_b2_1 {
 
     #[test]
     fn holds_b2_1_s_cards_and_tokens_every_entry_across_core_classic_and_classic_plus() {
-        let cards = entries().into_iter().filter(|entry| !entry.token).count();
-        let tokens = entries().into_iter().filter(|entry| entry.token).count();
+        let cards = shipped_entries().into_iter().filter(|entry| !entry.token).count();
+        let tokens = shipped_entries().into_iter().filter(|entry| entry.token).count();
         assert_eq!(cards, total_cards(), "entries with token: false");
         assert_eq!(tokens, total_tokens(), "entries with token: true");
-        assert_eq!(entries().len(), total_cards() + total_tokens(), "catalog entries");
+        assert_eq!(shipped_entries().len(), total_cards() + total_tokens(), "shipped catalog entries");
         for size in SET_SIZES {
             let in_set: Vec<&CardDef> = entries()
                 .into_iter()
                 .filter(|entry| entry.set.as_str() == size.set)
                 .collect();
-            assert_eq!(
+            let (cards, tokens) = (
                 in_set.iter().filter(|entry| !entry.token).count(),
-                size.cards,
-                "{} cards",
-                size.set
-            );
-            assert_eq!(
                 in_set.iter().filter(|entry| entry.token).count(),
-                size.tokens,
-                "{} tokens",
-                size.set
             );
+            if ships(size.set) {
+                assert_eq!(cards, size.cards, "{} cards", size.set);
+                assert_eq!(tokens, size.tokens, "{} tokens", size.set);
+            } else {
+                // R768: a set being built holds no more than its brief lists.
+                assert!(cards <= size.cards, "{} cards: {cards} of at most {}", size.set, size.cards);
+                assert!(tokens <= size.tokens, "{} tokens: {tokens} of at most {}", size.set, size.tokens);
+            }
         }
     }
 
@@ -3429,6 +4761,8 @@ mod catalog_membership_build_m4_t1_b2_1 {
         for size in SET_SIZES {
             for n in 1..=size.cards {
                 match by_key.get(&key_of(size.set, &n.to_string())) {
+                    // R768: a set that has not shipped need not hold every card yet.
+                    None if !ships(size.set) => {}
                     None => missing.push(format!("{} #{n} missing", size.set)),
                     Some(entry) if entry.token => {
                         missing.push(format!("{} #{n} ({}) is flagged token: true", size.set, entry.id));
@@ -3441,7 +4775,11 @@ mod catalog_membership_build_m4_t1_b2_1 {
                 .into_iter()
                 .filter(|entry| entry.set.as_str() == size.set && is_plain_index(&entry.index))
                 .count();
-            assert_eq!(plain, size.cards, "{} plain numeric indices", size.set);
+            if ships(size.set) {
+                assert_eq!(plain, size.cards, "{} plain numeric indices", size.set);
+            } else {
+                assert!(plain <= size.cards, "{} plain numeric indices", size.set);
+            }
         }
         assert_eq!(missing, Vec::<String>::new(), "indices");
     }
@@ -3560,6 +4898,24 @@ mod every_classic_plus_entry_equals_its_fixture_row_build_m4_t1_m9_t1 {
     }
 }
 
+mod r768_every_meditative_entry_equals_its_fixture_row_while_the_set_is_built {
+    use super::*;
+
+    #[test]
+    fn r768_every_meditative_entry_equals_its_fixture_row_and_none_is_missing_once_it_ships() {
+        assert_eq!(fixture_report(SetName::Meditative), "");
+        if set_ships(SetName::Meditative) {
+            let by_key = by_key();
+            let missing: Vec<&str> = MEDITATIVE
+                .iter()
+                .filter(|row| !by_key.contains_key(&key_of("Meditative", row.index)))
+                .map(|row| row.name)
+                .collect();
+            assert_eq!(missing, Vec::<&str>::new(), "a shipped set holds every card it lists");
+        }
+    }
+}
+
 mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
     use super::*;
 
@@ -3578,7 +4934,15 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
                 .iter()
                 .map(|(rarity, n)| ((*rarity).to_string(), *n))
                 .collect();
-            assert_eq!(counted, expected, "{set} rarity counts over its non-token cards");
+            if ships(set) {
+                assert_eq!(counted, expected, "{set} rarity counts over its non-token cards");
+            } else {
+                // R768: a set being built holds no more of a rarity than its brief lists.
+                for (rarity, n) in &counted {
+                    let most = expected.get(rarity).copied().unwrap_or(0);
+                    assert!(*n <= most, "{set}: {n} {rarity} non-token cards, at most {most}");
+                }
+            }
         }
     }
 

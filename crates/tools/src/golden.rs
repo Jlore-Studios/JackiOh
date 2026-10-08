@@ -40,7 +40,10 @@ use jackioh_engine::{
     Winner, begin_game, create_game, fold, hash_state, legal_actions, reduce, view_for,
 };
 
-use crate::fuzz::{SeedHandicap, actor_of, decks_for_seed, handicap_decks_for_seed, handicap_for_seed};
+use crate::fuzz::{
+    SHIPPED_FUZZ_POOL, SHIPPED_HANDICAP_POOL, SeedHandicap, actor_of, decks_for_seed_from,
+    handicap_decks_for_seed_from, handicap_for_seed,
+};
 
 // ---------------------------------------------------------------------------------------------
 // The recording's shape (§13.1, §13.3), as scripts/golden/record.ts has it
@@ -514,7 +517,8 @@ struct GameSpec {
     order: String,
 }
 
-/// §13.1: seed k's game, dealt and seeded as the fuzz file that owns k deals it.
+/// §13.1: seed k's game, dealt and seeded as the fuzz file that owns k deals it, from the shipped
+/// sets alone (R768), so a set still being built never moves a recorded game.
 fn spec_for_seed(k: u32) -> Result<GameSpec> {
     if (HANDICAP_FIRST..=HANDICAP_LAST).contains(&k) {
         let SeedHandicap { seat, handicap, .. } = handicap_for_seed(k);
@@ -522,7 +526,7 @@ fn spec_for_seed(k: u32) -> Result<GameSpec> {
         *handicaps.slot(seat) = Some(handicap);
         return Ok(GameSpec {
             seed: format!("jackioh-fuzz-handicap-{k}"),
-            decks: handicap_decks_for_seed(k, seat, &handicap),
+            decks: handicap_decks_for_seed_from(k, seat, &handicap, &SHIPPED_HANDICAP_POOL),
             handicaps: Some(handicaps),
             policy: format!("jackioh-fuzz-handicap-policy-{k}"),
             order: format!("jackioh-fuzz-handicap-policy-order-{k}"),
@@ -531,7 +535,7 @@ fn spec_for_seed(k: u32) -> Result<GameSpec> {
     if (PLAIN_FIRST..=PLAIN_LAST).contains(&k) {
         return Ok(GameSpec {
             seed: format!("jackioh-fuzz-{k}"),
-            decks: decks_for_seed(k),
+            decks: decks_for_seed_from(k, &SHIPPED_FUZZ_POOL),
             handicaps: None,
             policy: format!("jackioh-fuzz-policy-{k}"),
             order: format!("jackioh-fuzz-policy-order-{k}"),

@@ -7,7 +7,7 @@
 use jackioh_engine::testkit::*;
 
 use jackioh_engine::catalog::registered_catalog;
-use jackioh_engine::effects::{steal, steal_all};
+use jackioh_engine::effects::{give_control, steal, steal_all};
 use jackioh_engine::layers::unit_view;
 use jackioh_engine::resolve::{HookOptions, make_context};
 use jackioh_engine::rng::Rng;
@@ -462,5 +462,65 @@ mod r15_steal_s6_3_m3_t1 {
         // An empty `targets` list fizzles rather than picking something (§8 conventions).
         assert_eq!(run(&mut state, steal(Default::default()), as_p1()).len(), 0);
         assert_eq!(live(&state, &theirs.id).controller, PlayerId::P2);
+    }
+}
+
+/// R771: `give_control`, the mirror of a steal: a card on the field goes to the other side, placed
+/// per R15 and entering it per R171, its owner unchanged (R12).
+mod r771_give_control_hands_a_card_to_the_other_player {
+    use super::*;
+
+    fn gives(state: &mut GameState, card: &CardInstance) -> Vec<GameEvent> {
+        run(state, give_control(json_as(json!({ "instanceId": card.id }))), as_p1())
+    }
+
+    #[test]
+    fn r771_gives_your_unit_to_the_enemy_in_its_own_lane_owner_unchanged_and_summoning_sick() {
+        let mut state = game();
+        state.turn = 4;
+        let mine = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let events = gives(&mut state, &mine);
+        assert_eq!(id_at(&state, PlayerId::P2, Row::Units, 2), Some(mine.id.clone()));
+        assert_eq!(id_at(&state, PlayerId::P1, Row::Units, 2), None);
+        let now = live(&state, &mine.id);
+        assert_eq!(now.controller, PlayerId::P2);
+        assert_eq!(now.owner, PlayerId::P1);
+        // R171: it entered its new side this turn.
+        assert_eq!(now.summoned_turn, Some(4));
+        assert_eq!(of_type(&events, "controlChanged").len(), 1);
+    }
+
+    #[test]
+    fn r771_takes_the_receivers_first_free_zone_when_its_lane_is_taken_and_does_nothing_with_no_room() {
+        let mut state = game();
+        let mine = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        gives(&mut state, &mine);
+        assert_eq!(live(&state, &mine.id).controller, PlayerId::P2);
+        assert_ne!(id_at(&state, PlayerId::P2, Row::Units, 1), Some(mine.id.clone()));
+
+        let mut full = game();
+        let given = put(&mut full, &plain.id, slot(PlayerId::P1, Row::Units, 3), json!({}));
+        for lane in 1..=5 {
+            put(&mut full, &plain.id, slot(PlayerId::P2, Row::Units, lane), json!({}));
+        }
+        assert_eq!(gives(&mut full, &given).len(), 0);
+        assert_eq!(live(&full, &given.id).controller, PlayerId::P1);
+    }
+
+    #[test]
+    fn r771_gives_an_enemy_card_back_to_its_controllers_opponent_and_ignores_a_card_off_the_field() {
+        let mut state = game();
+        let theirs = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 4), json!({}));
+        // "The other player" is the card's controller's opponent, whoever runs the effect.
+        gives(&mut state, &theirs);
+        assert_eq!(live(&state, &theirs.id).controller, PlayerId::P1);
+
+        let held = in_hand(&mut state, &plain.id, PlayerId::P1, 1)
+            .into_iter()
+            .next()
+            .expect("a hand card");
+        assert_eq!(gives(&mut state, &held).len(), 0);
+        assert_eq!(live(&state, &held.id).controller, PlayerId::P1);
     }
 }
