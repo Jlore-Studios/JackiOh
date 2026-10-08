@@ -5234,16 +5234,19 @@
         {
           "at": "2026-10-08T12:02:16Z",
           "minutes": 11.3
+        },
+        {
+          "at": "2026-10-08T13:31:45Z",
+          "minutes": 24.5
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-08T13:00:00Z",
-          "utilization": 1.01
+          "resets_at": "2026-10-08T18:00:00Z",
+          "utilization": 0.9
         },
-        "observed_at": "2026-10-08T12:02:16Z",
-        "rejected_resets_at": "2026-10-08T13:00:00Z",
-        "status": "rejected"
+        "observed_at": "2026-10-08T13:31:45Z",
+        "status": "allowed_warning"
       }
     },
     "devin": {
