@@ -19,6 +19,7 @@ from harness import queue as queue_mod
 from harness.config import LABEL_BUILD, LABEL_TREE, LABEL_WORKING, LABELS, MODE_LABELS
 from harness.deliver import Deliverer
 from harness.runner import FakeRunner, RunRequest, RunResult
+from harness.state import item as state_item
 from harness.work import Worker
 
 from tests.fakes import OPERATOR, FakeGitHub, git, make_origin, push_branch
@@ -355,6 +356,105 @@ class EasyPartTests(unittest.TestCase):
                       world.gh.bot_comments(43)[-1])
         self.assertEqual(world.gh.get_issue(43)["state"], "open")
         self.assertIn(LABEL_BUILD, world.gh.label_names(43))
+
+
+TRACKER, PLANNED, UNQUEUED, PEOPLES, RUNNING, DONE_ALREADY = 60, 61, 62, 63, 64, 65
+TRACKER_ONTO = "bot/issue-60"
+
+
+class AdoptTests(unittest.TestCase):
+    """`fullsend` on an issue whose sub-issues a person opened already: they are its parts, with
+    no split, and a medium subscription builds each from a strong model's plan."""
+
+    def world(self, **kwargs) -> World:
+        world = World(**kwargs)
+        gh = world.gh
+        gh.add_issue(TRACKER, title="Patch v0.3.X: the set on one branch", body="Its parts below.")
+        gh.add_issue(PLANNED, title="Batch 1", labels=(LABEL_BUILD, "difficulty:hard"))
+        gh.add_issue(UNQUEUED, title="Batch 2", labels=("difficulty:medium",))
+        gh.add_issue(PEOPLES, title="The release", labels=("human",))
+        gh.add_issue(RUNNING, title="Batch 3", labels=(LABEL_WORKING, "difficulty:hard"))
+        gh.add_issue(DONE_ALREADY, title="The foundation", state="closed")
+        for child in (PLANNED, UNQUEUED, PEOPLES, RUNNING, DONE_ALREADY):
+            gh.add_sub_issue(TRACKER, gh.get_issue(child)["id"])
+        world.ctx.store.update(lambda s: state_item(s, PLANNED).update(
+            planned_at="2026-09-29T00:00:00Z", planned_tier="strong"))
+        gh.runs[str(RUNNING)] = {"status": "in_progress"}  # claude-1 is building it
+        world.ctx.store.update(lambda s: state_item(s, RUNNING).update(
+            run_id=str(RUNNING), provider="claude-1"))
+        return world
+
+    def adopt(self, world: World) -> str:
+        asked = commands.parse("/harness fullsend", "jgoetzmann-bot")
+        return events.run_commands(world.ctx, asked, world.gh.get_issue(TRACKER), OPERATOR, 3)[0]
+
+    def test_the_sub_issues_someone_opened_become_its_parts(self):
+        world = self.world()
+        reply = self.adopt(world)
+        self.assertIn(f"#{TRACKER}'s sub-issues are its fullsend parts now, with no split: "
+                      f"#{PLANNED}, #{UNQUEUED} land on `{TRACKER_ONTO}`", reply)
+        self.assertIn(f"#{PEOPLES} (labelled `human`), #{RUNNING} (a run holds it now)", reply)
+        self.assertEqual(world.gh.created_branches, [(TRACKER_ONTO, "head-of-main")])
+        items = world.ctx.store.load()["items"]
+        for part in (PLANNED, UNQUEUED):
+            self.assertEqual((items[str(part)]["onto"], items[str(part)]["part_of"]),
+                             (TRACKER_ONTO, TRACKER))
+        for kept in (PEOPLES, RUNNING, DONE_ALREADY):
+            self.assertNotIn("onto", items.get(str(kept), {}))
+        self.assertEqual(world.gh.label_names(UNQUEUED), {"difficulty:medium", LABEL_BUILD})
+        self.assertEqual(world.gh.label_names(TRACKER), {LABEL_TREE})
+        tree = items[str(TRACKER)]["tree"]
+        self.assertEqual((tree["mode"], tree["onto"], tree["adopted"]),
+                         ("fullsend", TRACKER_ONTO, True))
+        # Asked again, it waits for its parts as any fullsend tree does, and builds nothing.
+        self.assertIn(f"#{TRACKER}'s parts are still open (#{PLANNED}, #{UNQUEUED}, #{PEOPLES}, "
+                      f"#{RUNNING})", self.adopt(world))
+        found = {c.number: c for c in queue_mod.candidates(world.ctx, world.ctx.store.load())}
+        self.assertEqual(sorted(found), [PLANNED, UNQUEUED])
+        self.assertTrue(found[PLANNED].part and found[UNQUEUED].part)
+        # Once every sub-issue has closed, the sweep queues its reconcile.
+        for child in (PLANNED, UNQUEUED, PEOPLES, RUNNING):
+            world.gh.update_issue(child, state="closed")
+        self.assertEqual(sweep._trees(world.ctx, NIGHT),
+                         [f"#{TRACKER}: its parts have all closed; queued its reconcile"])
+        self.assertEqual(world.gh.label_names(TRACKER), {LABEL_TREE, LABEL_BUILD, FULLSEND})
+
+    def test_muse_builds_a_hard_part_from_its_plan_and_lands_it(self):
+        world = self.world(machine=("muse",))
+        self.adopt(world)
+        git(world.origin, "branch", TRACKER_ONTO, "main")  # what the adoption made on GitHub
+        planned = world.claim()
+        self.assertEqual((planned["number"], planned["provider"], planned["onto"]),
+                         (PLANNED, "muse", TRACKER_ONTO))
+        self.assertEqual(planned["seats"]["build"]["tier"], "medium")
+        self.assertIsNone(planned["seats"]["plan"])  # built from the strong plan on record
+        result = world.deliver(planned, world.work(planned, builds({"src/batch1.txt": "one\n"})))
+        self.assertEqual(result["status"], "part")
+        self.assertTrue(world.has(TRACKER_ONTO, "src/batch1.txt"))
+        self.assertFalse(world.has("main", "src/batch1.txt"))
+        self.assertEqual(world.gh.get_issue(PLANNED)["state"], "closed")
+        # The unplanned medium part is no medium model's to plan: claude-1 plans it in its run.
+        planned = world.claim()
+        self.assertEqual((planned["number"], planned["provider"]), (UNQUEUED, "claude-1"))
+        self.assertEqual(planned["seats"]["plan"]["tier"], "strong")
+
+
+class PartBuilderTests(unittest.TestCase):
+    def test_a_part_goes_to_the_medium_subscriptions_first_and_never_to_sonnet_at_hard(self):
+        pool = make_config(machine=("muse", "devin")).pool
+        claude, muse, devin = pool.get("claude-3"), pool.get("muse"), pool.get("devin")
+
+        def who(providers, difficulty, part):
+            seat, note = plan_mod.builder_seat(pool, providers, difficulty, part=part)
+            return ((seat.provider.id, seat.tier), note) if seat else (None, note)
+        self.assertEqual(who([claude, muse], "hard", False), (("claude-3", "strong"), ""))
+        self.assertEqual(who([claude, muse], "hard", True), (("muse", "medium"), (
+            "a fullsend part, built on medium from its plan: its tree's reconcile checks and "
+            "reviews it")))
+        self.assertEqual(who([claude], "hard", True), (("claude-3", "strong"), ""))
+        self.assertEqual(who([claude, muse], "medium", False)[0], ("claude-3", "medium"))
+        self.assertEqual(who([claude, muse], "medium", True), (("muse", "medium"), ""))
+        self.assertEqual(who([devin], "hard", True), (None, ""))  # never under PART_FLOOR
 
 
 class ReconcileTests(unittest.TestCase):

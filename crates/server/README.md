@@ -146,7 +146,9 @@ One socket per player per match, at `/ws/match` on the same port. The token come
 server echoes the `jackioh.v1` subprotocol when offered. The message union is `actor/protocol.rs`:
 the client sends `hello` and `action`, the server sends `hello`, `view`, `ack`, `error`, `prompt` and
 `clock`, and the cosmetic `portraits` (R642), `emote` (R643) and `aim` (R738) frames ride beside them,
-never part of an action or a view. A frame over `MAX_FRAME_BYTES` closes the socket with 1009.
+never part of an action or a view. The `portraits` frame also carries the receiving account's own emote
+hand, eight of the pool dealt from the match seed (R1341, R1342), and the actor drops an emote outside
+the sender's hand as silently as a rate-limited one. A frame over `MAX_FRAME_BYTES` closes the socket with 1009.
 
 What the actor holds, each with a test named after it:
 

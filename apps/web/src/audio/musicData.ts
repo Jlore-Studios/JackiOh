@@ -1,9 +1,10 @@
 // Music data access (SPEC §10.11 "Music", R631).
 //
 // `music-manifest.json` (the rendered tracks, written by `apps/web/scripts/gen-music.mjs`) and
-// `music-cards.json` (which cards play a theme or switch a station) are imported here and nowhere
-// else, and checked once at import, so a malformed table fails at load rather than playing nothing.
-// A card's entry is looked up by a defId the viewer can read: the sentinel is never in the table.
+// `music-cards.json` (which cards play a theme, switch a station or open their play with an intro of
+// their own, R1350) are imported here and nowhere else, and checked once at import, so a malformed
+// table fails at load rather than playing nothing. A card's entry is looked up by a defId the viewer
+// can read: the sentinel is never in the table.
 
 import { MUSIC_ROTATION_KEY, MUSIC_STATIONS } from "./constants.ts";
 import rawCards from "./music-cards.json";
@@ -82,7 +83,12 @@ export function parseMusicCards(raw: unknown, manifest: MusicManifest): Record<s
       if (station === undefined) fail("music-cards.json", `${defId}.station`, `must be one of ${MUSIC_STATIONS.join(", ")}`);
       out.station = station;
     }
-    if (out.theme === undefined && out.station === undefined) fail("music-cards.json", defId, "needs a theme or a station");
+    if (entry.intro !== undefined) {
+      // R1352: a card's intro is a sting of its own, which plays once.
+      if (typeof entry.intro !== "string" || manifest.files[entry.intro]?.loop !== false) fail("music-cards.json", `${defId}.intro`, "must name a track that plays once");
+      out.intro = entry.intro;
+    }
+    if (out.theme === undefined && out.station === undefined && out.intro === undefined) fail("music-cards.json", defId, "needs a theme, a station or an intro");
     cards[defId] = out;
   }
   return cards;

@@ -302,15 +302,17 @@ function targetSide(view: PlayerView, targetId: string): { side: Side; unit: boo
 function sweepStep(event: GameEvent): { target: string; tone: Sweep["tone"]; source?: string | null } | null {
   if (event.type === "damage") return event.combat ? null : { target: event.targetId, tone: "damage", source: event.sourceId };
   if (event.type === "divineShieldLost") return { target: event.instanceId, tone: "damage" };
+  // R1361: a hit the Armor took whole still reached its target, as a Divine Shield's does.
+  if (event.type === "damageAbsorbed") return event.combat ? null : { target: event.targetId, tone: "damage", source: event.sourceId };
   if (event.type === "healed") return { target: event.targetId, tone: "heal" };
   return null;
 }
 
 /**
  * The sweep that starts at `at`, if one does: a run of at least two non-combat hits from one source
- * (a Divine Shield that takes one of them counts as hit) or of heals, each on a different target, that
- * reaches at least one unit and every unit on each side it touches. A target hit again starts a new
- * round, and so a new sweep (Blade Storm's repeats).
+ * (a Divine Shield that takes one of them, or Armor that takes one whole, counts as hit) or of heals,
+ * each on a different target, that reaches at least one unit and every unit on each side it touches.
+ * A target hit again starts a new round, and so a new sweep (Blade Storm's repeats).
  */
 export function sweepAt(
   events: readonly GameEvent[],

@@ -348,6 +348,7 @@ pub fn restore_board(
                         row: slot.row,
                         lane: slot.lane,
                         former_id,
+                        how: None,
                     },
                 );
             }

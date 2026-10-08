@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 
 import {
+  BLEAT_DELAY_MS,
   BLOOD_BEAN_DEF_ID,
   CARD_EFFECT_DELAY_MS,
   CHAOS_REVEAL_MAX,
@@ -20,15 +21,29 @@ import {
   HINDER_DEF_ID,
   LANE_PAN_MAX,
   NEXT_REFRESH_MODIFIER_ID,
+  OVERKILL_DELAY_MS,
+  OVERKILL_MIN_EXCESS,
+  SHEEP_DEF_IDS,
   STING_DELAY_MS,
   VOICE_DELAY_MS,
   VOICE_PRIORITY,
 } from "./constants.ts";
-import { SOUND_CUES, cuesFor, lanePan, timbreFor, type CueCard, type CueContext, type PlayFrame } from "./cues.ts";
+import {
+  SOUND_CUES,
+  cuesFor,
+  healthBefore,
+  isOverkill,
+  lanePan,
+  timbreFor,
+  type CueCard,
+  type CueContext,
+  type PlayFrame,
+} from "./cues.ts";
 import { SFX_IDS, SFX_TIMBRES } from "./sfx.ts";
 import type { SfxId, SoundCue, CardAudioTable } from "./types.ts";
 import { cueCard } from "./useGameAudio.ts";
 import { themeFor } from "../cards/art/themes.ts";
+import { armorTookHalf } from "../game/damageFeel.ts";
 import { lookupFromDefs } from "../game/catalog.ts";
 import { baseView, emptySide, unit } from "../test/fixtures.ts";
 
@@ -198,6 +213,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   turnCutShort: { type: "turnCutShort", player: "p2", byInstanceId: "b5" },
   marked: { type: "marked", instanceId: "u6", mark: "steal", color: "purple", added: true },
   glitched: { type: "glitched", player: "p1", outcome: "swap" },
+  // Patch v0.3.X (MN05).
+  damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -227,7 +244,7 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   modifierChanged: "notify",
   radiantSet: "radiant",
   transformed: "poof",
-  fused: "poof",
+  fused: "fuse",
   positionSwitched: "whoosh",
   controlChanged: "whoosh",
   rotated: "whoosh",
@@ -247,15 +264,15 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   gameOver: "victory",
   // Patch v0.2.0.
   cardAnnounced: null,
-  countered: "cancel",
-  stolen: "whoosh",
-  unlocked: "lock",
+  countered: "counterspell",
+  stolen: "steal",
+  unlocked: "unlock",
   activated: "spell",
   animated: "summon",
   deanimated: "whoosh",
-  crumbled: "death",
-  degraded: "debuff",
-  upgraded: "buff",
+  crumbled: "crumble",
+  degraded: "degrade",
+  upgraded: "upgrade",
   numberChanged: "uiClick",
   redirected: "whoosh",
   healthSet: "drain",
@@ -268,6 +285,8 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   turnCutShort: "notify",
   marked: "brand",
   glitched: "whoosh",
+  // Patch v0.3.X (MN05).
+  damageAbsorbed: "armorRing",
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */
@@ -285,7 +304,6 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "keywordGranted",
   "counterChanged",
   "radiantSet",
-  "transformed",
   "fused",
   "positionSwitched",
   "controlChanged",
@@ -295,9 +313,11 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "attackDeclared",
   "attackCancelled",
   "turnAutoEnded",
+  "countered",
   "stolen",
   "unlocked",
   "deanimated",
+  "crumbled",
   "degraded",
   "upgraded",
   "numberChanged",
@@ -308,6 +328,7 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "flickered",
   "drawLimited",
   "marked",
+  "damageAbsorbed",
 ];
 
 /* --------------------------------------------------------------------------------------------- *
@@ -483,11 +504,14 @@ describe("R204: which moments speak", () => {
     const events: GameEvent[] = [
       { type: "bounced", instanceId: "u1", defId: UNIT, owner: "p1" },
       { type: "exiled", instanceId: "u1", defId: UNIT, owner: "p2" },
-      { type: "transformed", instanceId: "u1", fromDefId: UNIT, toDefId: TOKEN, newInstanceId: "u9" },
+      { type: "transformed", instanceId: "u1", fromDefId: TOKEN, toDefId: UNIT, newInstanceId: "u9" },
       { type: "fused", instanceIds: ["u1", "u2"], resultInstanceId: "u9", defId: UNIT },
     ];
     for (const event of events) expect(voices(event), event.type).toEqual([]);
-    expect(events.map((e) => onlySfx(e).id)).toEqual(["whoosh", "poof", "poof", "poof"]);
+    // R1365: a fuse has its own sound; a transform into anything but a Sheep is the plain puff.
+    expect(events.map((e) => onlySfx(e).id)).toEqual(["whoosh", "poof", "poof", "fuse"]);
+    // A transform into a Sheep bleats as an effect, and still speaks no line.
+    expect(voices(SAMPLES.transformed)).toEqual([]);
   });
 
   it("R204 (B56) a unit summoned without a play (a token, a Recruit, a Reborn, a copy) speaks its play line at the lowest priority", () => {
@@ -1084,8 +1108,9 @@ describe("R506 patch v0.2.0's moments sound the way they went", () => {
     expect(shape(set(health), ctx({ view }))).toEqual([sfx("notify")]);
   });
 
-  it("R506 a crumbling card shatters like glass, then falls, and never speaks", () => {
-    expect(shape(SAMPLES.crumbled)).toEqual(["sfx:death@70", "sfx:shieldShatter@0"]);
+  it("R506 R1365 a crumbling card cracks dry and falls apart in a sound of its own, and never speaks", () => {
+    expect(shape(SAMPLES.crumbled)).toEqual(["sfx:crumble@0"]);
+    expect(voices(SAMPLES.crumbled)).toEqual([]);
   });
 
   it("R203 R506 an Animated card lands with a summon sized by the Unit it is now, and no family accent", () => {
@@ -1283,5 +1308,177 @@ describe("R669 an effect about a unit on the field comes from its lane", () => {
     const summon: GameEvent = { type: "summoned", player: "p1", instanceId: "c1", defId: UNIT, row: "units", lane: 4 };
     const cues = cuesFor(summon, ctx({ newestView: () => newest }));
     expect(cues.find((c) => c.kind === "sfx" && c.id === "summon")).toMatchObject({ params: { pan: LANE_PAN_MAX / 2 } });
+  });
+});
+
+/* --------------------------------------------------------------------------------------------- *
+ * MN05 (docs/meditative-set.md M8): Armor's sounds and the niche moments
+ * --------------------------------------------------------------------------------------------- */
+
+/** A hit of `amount` with `absorbed` taken off it by Armor, on `targetId`. */
+type DamageEvent = Extract<GameEvent, { type: "damage" }>;
+
+function hitOn(targetId: string, amount: number, absorbed?: number): DamageEvent {
+  const event: DamageEvent = { type: "damage", sourceId: "s1", targetId, amount, combat: false };
+  return absorbed === undefined ? event : { ...event, absorbed };
+}
+
+/** The sfx ids an event plays, in order. */
+function ids(event: GameEvent, context: CueContext = ctx()): SfxId[] {
+  return cuesFor(event, context).flatMap((cue) => (cue.kind === "sfx" ? [cue.id] : []));
+}
+
+describe("R1363 Armor clanks when it takes half or more of a hit, and rings when it takes all of it", () => {
+  it("R1363 the half threshold is absorbed × 2 >= absorbed + amount, and a hit Armor had no part in never meets it", () => {
+    expect(armorTookHalf(2, 2)).toBe(true); // exactly half
+    expect(armorTookHalf(3, 2)).toBe(true);
+    expect(armorTookHalf(7, 3)).toBe(true);
+    expect(armorTookHalf(1, 2)).toBe(false); // a third
+    expect(armorTookHalf(2, 3)).toBe(false);
+    expect(armorTookHalf(0, 1)).toBe(false);
+    expect(armorTookHalf(undefined, 1)).toBe(false);
+  });
+
+  it("R1363 a hit Armor took half or more of clanks dully under its impact; less than half, or none, is the plain impact", () => {
+    expect(ids(hitOn("hero-p2", 2, 2))).toEqual(["impact", "armorClank"]);
+    expect(ids(hitOn("hero-p2", 3, 7))).toEqual(["impact", "armorClank"]);
+    expect(ids(hitOn("hero-p2", 3, 2))).toEqual(["impact"]);
+    expect(ids(hitOn("hero-p2", 3))).toEqual(["impact"]);
+    // A report of 0 dealt is silent, as before.
+    expect(ids(hitOn("hero-p2", 0, 3))).toEqual([]);
+  });
+
+  it("R1363 a hit Armor took whole rings bright, whatever its size, on either seat", () => {
+    const whole = (targetId: string, absorbed: number): GameEvent => ({ type: "damageAbsorbed", sourceId: null, targetId, absorbed, combat: false });
+    expect(ids(whole("hero-p1", 1))).toEqual(["armorRing"]);
+    expect(ids(whole("u6", 9))).toEqual(["armorRing"]);
+    expect(ids(whole("u6", 2), ctx({ view: baseView({ viewer: "p2", you: emptySide("p2"), opponent: emptySide("p1") }) }))).toEqual(["armorRing"]);
+  });
+
+  it("R1363 R669 both come from the unit's lane, and a hero's stay centred", () => {
+    const guard = unit("p2", { instanceId: "g1", health: 9, maxHealth: 9 });
+    const view = baseView({ opponent: emptySide("p2", { units: [guard, null, null, null, null] }) });
+    const clank = cuesFor(hitOn("g1", 1, 3), ctx({ view }));
+    expect(clank.map((cue) => (cue.kind === "sfx" ? [cue.id, cue.params?.pan] : null))).toEqual([
+      ["impact", -LANE_PAN_MAX],
+      ["armorClank", -LANE_PAN_MAX],
+    ]);
+    const ring = cuesFor({ type: "damageAbsorbed", sourceId: null, targetId: "g1", absorbed: 3, combat: true }, ctx({ view }));
+    expect(ring).toEqual([{ kind: "sfx", id: "armorRing", params: { pan: -LANE_PAN_MAX }, delayMs: 0 }]);
+    const hero = cuesFor({ type: "damageAbsorbed", sourceId: null, targetId: "hero-p2", absorbed: 3, combat: false }, ctx({ view }));
+    expect(hero).toEqual([{ kind: "sfx", id: "armorRing", delayMs: 0 }]);
+  });
+
+  it("R1363 R203 a hidden source changes nothing: the sound reads the event's numbers alone", () => {
+    expect(ids({ type: "damageAbsorbed", sourceId: HIDDEN_DEF_ID, targetId: "u6", absorbed: 4, combat: false })).toEqual(["armorRing"]);
+    expect(ids({ ...hitOn("hero-p1", 1, 4), sourceId: HIDDEN_DEF_ID })).toEqual(["impact", "armorClank"]);
+  });
+});
+
+describe("R1364 a hit that does far more than the health left is overkill", () => {
+  it("R1364 overkill is at least OVERKILL_MIN_EXCESS beyond the health, and at least that health beyond it", () => {
+    expect(OVERKILL_MIN_EXCESS).toBe(3);
+    expect(isOverkill(4, 1)).toBe(true); // 3 beyond 1
+    expect(isOverkill(3, 1)).toBe(false); // 2 beyond
+    expect(isOverkill(10, 5)).toBe(true); // 5 beyond 5
+    expect(isOverkill(9, 5)).toBe(false); // 4 beyond 5
+    expect(isOverkill(5, 0)).toBe(false); // already dead: nothing left to overkill
+    expect(isOverkill(5, null)).toBe(false);
+  });
+
+  it("R1364 the health is the view's, a unit's or a hero's, as the entry was planned against it", () => {
+    const small = unit("p2", { instanceId: "s2", health: 2, maxHealth: 3 });
+    const view = baseView({ opponent: emptySide("p2", { units: [null, null, small, null, null] }) });
+    expect(healthBefore(view, "s2")).toBe(2);
+    expect(healthBefore(view, "hero-p1")).toBe(view.you.hero.health);
+    expect(healthBefore(view, "gone")).toBeNull();
+  });
+
+  it("R1364 an overkill crunches just after the impact; a hit that only kills does not", () => {
+    const small = unit("p2", { instanceId: "s2", health: 2, maxHealth: 3 });
+    const view = baseView({ opponent: emptySide("p2", { units: [null, null, small, null, null] }) });
+    expect(shape(hitOn("s2", 5), ctx({ view }))).toEqual([sfx("impact"), sfx("overkill", OVERKILL_DELAY_MS)].sort());
+    expect(ids(hitOn("s2", 4), ctx({ view }))).toEqual(["impact"]);
+    expect(ids(hitOn("s2", 2), ctx({ view }))).toEqual(["impact"]);
+    // A hero at 3 taking 7 is overkilled too; one at 30 taking 7 is not.
+    const low = baseView({ opponent: emptySide("p2", { hero: { ...emptySide("p2").hero, health: 3 } }) });
+    expect(ids(hitOn("hero-p2", 7), ctx({ view: low }))).toEqual(["impact", "overkill"]);
+    expect(ids(hitOn("hero-p2", 7))).toEqual(["impact"]);
+  });
+});
+
+describe("R1365 the niche moments each have a sound of their own", () => {
+  it("R1365 a crumble, an unlock, a Counter, a fuse, a Nerf and a Buff each play their own sound and no other", () => {
+    expect(ids(SAMPLES.crumbled)).toEqual(["crumble"]);
+    expect(ids(SAMPLES.unlocked)).toEqual(["unlock"]);
+    expect(ids(SAMPLES.locked)).toEqual(["lock"]);
+    expect(ids(SAMPLES.countered)).toEqual(["counterspell"]);
+    expect(ids(SAMPLES.fused)).toEqual(["fuse"]);
+    expect(ids(SAMPLES.degraded)).toEqual(["degrade"]);
+    expect(ids(SAMPLES.upgraded)).toEqual(["upgrade"]);
+    // Each is that row's alone.
+    const own = ["crumble", "unlock", "counterspell", "fuse", "degrade", "upgrade", "armorRing"] as const;
+    for (const id of own) {
+      const rows = GAME_EVENT_TYPES.filter((type) => SOUND_CUES[type].sfx === id);
+      expect(rows, id).toHaveLength(1);
+    }
+  });
+
+  it("R1365 R440 a Nerf or a Buff sounds the same whatever it changed, on a card the viewer cannot read too", () => {
+    const changes = [
+      { kind: "cost", delta: 1 },
+      { kind: "stats", attack: -2, health: -2 },
+      { kind: "keyword", keyword: { kind: "Taunt" }, added: false },
+      { kind: "none" },
+    ] as const;
+    for (const change of changes) {
+      expect(ids({ type: "degraded", instanceId: "c1", defId: HIDDEN_DEF_ID, change })).toEqual(["degrade"]);
+      expect(ids({ type: "upgraded", instanceId: "c1", defId: UNIT, change })).toEqual(["upgrade"]);
+    }
+  });
+
+  it("R1365 a card transformed into a Sheep the viewer can read bleats as it comes out of the puff", () => {
+    expect(SHEEP_DEF_IDS).toContain(TOKEN);
+    expect(shape(SAMPLES.transformed)).toEqual([sfx("poof"), sfx("bleat", BLEAT_DELAY_MS)].sort());
+    // Into anything else, the plain puff.
+    expect(shape({ type: "transformed", instanceId: "u3", fromDefId: TOKEN, toDefId: UNIT, newInstanceId: "c90" })).toEqual([sfx("poof")]);
+  });
+
+  it("R1365 R203 a transform the viewer cannot read never bleats", () => {
+    const hidden: GameEvent = { type: "transformed", instanceId: HIDDEN_DEF_ID, fromDefId: HIDDEN_DEF_ID, toDefId: HIDDEN_DEF_ID, newInstanceId: HIDDEN_DEF_ID };
+    expect(shape(hidden)).toEqual([sfx("poof")]);
+  });
+});
+
+describe("R1366 a steal and a give", () => {
+  type ControlEvent = Extract<GameEvent, { type: "controlChanged" }>;
+  const control = (controller: PlayerId, how?: "steal" | "give"): ControlEvent => {
+    const event: ControlEvent = { type: "controlChanged", instanceId: "u6", controller, row: "units", lane: 2 };
+    return how === undefined ? event : { ...event, how };
+  };
+
+  it("R1366 a card taken into a hand is always a steal", () => {
+    expect(ids(SAMPLES.stolen)).toEqual(["steal"]);
+    expect(ids({ type: "stolen", instanceId: HIDDEN_DEF_ID, defId: HIDDEN_DEF_ID, from: "p1", to: "p2", zone: "library" })).toEqual(["steal"]);
+  });
+
+  it("R1366 a unit taken is a steal and one handed over a give, whichever seat it goes to and whoever's turn it is", () => {
+    for (const controller of ["p1", "p2"] as const) {
+      for (const view of [baseView(), baseView({ active: "p2" })]) {
+        expect(ids(control(controller, "steal"), ctx({ view }))).toEqual(["steal"]);
+        expect(ids(control(controller, "give"), ctx({ view }))).toEqual(["give"]);
+      }
+    }
+  });
+
+  it("R1366 a card a board move carries across (a swap, a rotation, a rollback) keeps the plain whoosh", () => {
+    expect(ids(control("p1"))).toEqual(["whoosh"]);
+    expect(ids({ type: "controlChanged", instanceId: HIDDEN_DEF_ID, controller: "p2", row: "backrow", lane: 1, how: "steal" })).toEqual(["steal"]);
+  });
+
+  it("R1366 R669 a unit changing sides is heard from its lane", () => {
+    const moved = unit("p2", { instanceId: "u6" });
+    const view = baseView({ opponent: emptySide("p2", { units: [null, null, null, null, moved] }) });
+    expect(cuesFor(control("p1", "steal"), ctx({ view }))).toEqual([{ kind: "sfx", id: "steal", params: { pan: LANE_PAN_MAX }, delayMs: 0 }]);
   });
 });

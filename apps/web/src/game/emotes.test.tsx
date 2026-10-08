@@ -1,5 +1,5 @@
-// The hero portraits and the emote menus (issue #75, SPEC §10.10, R641–R644): a portrait's art on
-// each seat's hero with the health and armor badges, your portrait's ten-item emote menu, the
+// The hero portraits and the emote menus (issue #75, SPEC §10.10, R641–R644, R1343): a portrait's art
+// on each seat's hero with the health and armor badges, your portrait's menu of your dealt hand, the
 // opponent's one-item mute, and every way the menu must leave — a pick, a press outside, Escape,
 // the start of a play or attack, a hotseat seat change and the end of the match.
 //
@@ -15,8 +15,9 @@ import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ActionBody, EmoteId, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
-import { EMOTE_IDS, PORTRAIT_IDS } from "@jackioh/shared";
+import { EMOTE_HAND_SIZE, EMOTE_HAND_VOICE, EMOTE_IDS, PORTRAIT_IDS } from "@jackioh/shared";
 
+import { DEFAULT_EMOTE_HAND, type EmoteHands } from "../emotes/hand.ts";
 import { useEmotes, type EmotesApi } from "../emotes/useEmotes.ts";
 import { baseView, card, emptySide, fullBoardView } from "../test/fixtures.ts";
 import { testid } from "./contract.ts";
@@ -28,6 +29,7 @@ function EmoteGame(props: {
   onAction: (body: ActionBody) => void;
   apiRef: { current: EmotesApi | null };
   portraits?: { p1: PortraitId; p2: PortraitId } | null;
+  hands?: EmoteHands | null;
   globalMute?: boolean;
   onSend?: (player: PlayerId, emote: EmoteId) => void;
 }): ReactElement {
@@ -35,6 +37,7 @@ function EmoteGame(props: {
     engine: null,
     you: props.view.viewer,
     portraits: props.portraits,
+    hands: props.hands,
     globalMute: props.globalMute,
   });
   props.apiRef.current = emotes;
@@ -55,6 +58,12 @@ function EmoteGame(props: {
 }
 
 const END_TURN: ActionBody = { type: "endTurn" };
+
+/** Two dealt hands (R1341): p1's is the engine's for "seed-actor". */
+const HANDS: EmoteHands = {
+  p1: ["greetings", "thanks", "threaten", "laugh", "wahWah", "wave", "thumbsUp", "party"],
+  p2: ["wellPlayed", "oops", "thanks", "sob", "clap", "skull", "cool", "gasp"],
+};
 
 /** The M5-T1 full board: u1–u5 are your units, u6–u10 the opponent's. */
 const BOARD: PlayerView = fullBoardView();
@@ -131,9 +140,9 @@ describe("the hero portraits (R641)", () => {
 });
 
 describe("your portrait's emote menu (R643)", () => {
-  it("R643 clicking your portrait opens the ten-emote menu on your hero", () => {
+  it("R643 R1343 clicking your portrait opens the menu of your dealt hand on your hero", () => {
     const api = { current: null as EmotesApi | null };
-    render(<EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} />);
+    render(<EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} hands={HANDS} />);
     expect(screen.queryByTestId("emote-menu")).toBeNull();
 
     fireEvent.click(screen.getByTestId("hero-you"));
@@ -142,19 +151,31 @@ describe("your portrait's emote menu (R643)", () => {
     const menu = within(you).getByTestId("emote-menu");
     // The menu mounts on the portrait itself — the picker's items hang off the hero.
     expect(menu.closest(".hero-portrait")).not.toBeNull();
-    expect(within(menu).getAllByRole("menuitem")).toHaveLength(10);
-    // Five voice lines arced above, five emoji in a row below (issue §2).
+    expect(within(menu).getAllByRole("menuitem")).toHaveLength(EMOTE_HAND_SIZE);
+    // The hand's voice lines arced above, its emoji in a row below (issue §2).
     const arc = menu.querySelector<HTMLElement>(".emote-voice-arc");
     const row = menu.querySelector<HTMLElement>(".emote-emoji-row");
     expect(arc).not.toBeNull();
     expect(row).not.toBeNull();
-    expect(within(arc as HTMLElement).getAllByRole("menuitem")).toHaveLength(5);
-    expect(within(row as HTMLElement).getAllByRole("menuitem")).toHaveLength(5);
+    expect(within(arc as HTMLElement).getAllByRole("menuitem")).toHaveLength(EMOTE_HAND_VOICE);
+    expect(within(row as HTMLElement).getAllByRole("menuitem")).toHaveLength(EMOTE_HAND_SIZE - EMOTE_HAND_VOICE);
     expect(within(arc as HTMLElement).getByRole("menuitem", { name: "Greetings" })).toBeInTheDocument();
-    expect(within(row as HTMLElement).getByRole("menuitem", { name: "Laugh" })).toBeInTheDocument();
+    expect(within(row as HTMLElement).getByRole("menuitem", { name: "Party" })).toBeInTheDocument();
+    // Exactly the viewer's hand: every emote of it, and none of the pool outside it.
     for (const emote of EMOTE_IDS) {
-      expect(within(menu).getByTestId(`emote-${emote}`)).toBeInTheDocument();
+      const held = (HANDS.p1 ?? []).includes(emote);
+      expect(within(menu).queryByTestId(`emote-${emote}`) !== null, emote).toBe(held);
     }
+  });
+
+  it("R1343 with no hand dealt yet the menu shows the default hand", () => {
+    const api = { current: null as EmotesApi | null };
+    render(<EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} />);
+    fireEvent.click(screen.getByTestId("hero-you"));
+    const menu = screen.getByTestId("emote-menu");
+    expect(within(menu).getAllByRole("menuitem").map((item) => item.dataset.testid)).toEqual(
+      DEFAULT_EMOTE_HAND.map((emote) => `emote-${emote}`),
+    );
   });
 
   it("R643 a picked voice line is sent as the viewer and shows its bubble on your hero", () => {
@@ -300,6 +321,30 @@ describe("your portrait's emote menu (R643)", () => {
     fireEvent.click(screen.getByTestId("hero-you"));
     expect(screen.getByTestId("emote-menu")).toBeInTheDocument();
   });
+
+  it("R1343 in hotseat each seat's menu offers that seat's own hand", () => {
+    const api = { current: null as EmotesApi | null };
+    const onSend = vi.fn();
+    const p2View = baseView({
+      viewer: "p2",
+      active: "p2",
+      you: { ...emptySide("p2"), hand: [card({ defId: "core-001" })] },
+      opponent: emptySide("p1", { hand: { count: 4 } }),
+    });
+    const { rerender } = render(
+      <EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} hands={HANDS} onSend={onSend} />,
+    );
+    fireEvent.click(screen.getByTestId("hero-you"));
+    expect(screen.getByTestId("emote-party")).toBeInTheDocument();
+    expect(screen.queryByTestId("emote-skull")).toBeNull();
+
+    rerender(<EmoteGame view={p2View} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} hands={HANDS} onSend={onSend} />);
+    fireEvent.click(screen.getByTestId("hero-you"));
+    expect(screen.queryByTestId("emote-party")).toBeNull();
+    fireEvent.click(screen.getByTestId("emote-skull"));
+    expect(onSend).toHaveBeenCalledWith("p2", "skull");
+    expect(within(screen.getByTestId("hero-you")).getByTestId("emote-bubble")).toHaveAttribute("data-emoji", "skull");
+  });
 });
 
 describe("targeting wins over the menus (R643)", () => {
@@ -360,7 +405,7 @@ describe("targeting wins over the menus (R643)", () => {
 });
 
 describe("the opponent's mute (R643)", () => {
-  it("R643 the opponent's portrait opens a one-item Mute emotes menu, never the ten", () => {
+  it("R643 the opponent's portrait opens a one-item Mute emotes menu, never the picker", () => {
     const api = { current: null as EmotesApi | null };
     render(<EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} />);
 
@@ -370,7 +415,7 @@ describe("the opponent's mute (R643)", () => {
     const menu = within(opponent).getByTestId("emote-mute-menu");
     expect(within(menu).getAllByRole("menuitem")).toHaveLength(1);
     expect(within(menu).getByTestId("emote-mute").textContent).toContain("Mute emotes");
-    // Their hero never gets your ten-item picker.
+    // Their hero never gets your picker.
     expect(screen.queryByTestId("emote-menu")).toBeNull();
   });
 

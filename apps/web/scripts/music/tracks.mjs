@@ -13,12 +13,14 @@
 // Each station has two in-game tracks (rotated across matches), a low-health variant (minor, faster,
 // with a low pulse and busier percussion) and a match-start sting. The menu theme, the three result
 // stings with their loops, the nine Mythic themes and the two shared Legendary themes are shared.
+// Every Legendary and Mythic card, tokens printed so included, has an intro of its own (R1352, at the
+// end of the file): a few bars on the motif, derived from the card and hand-tuned where it matters.
 
 import {
-  DR, DRUMS, GM, KIT, RHYTHMS,
-  arp, bass, comp, createSong, drums, instrument, line, melody, pad, pulse, pump, roots, section,
+  DR, DRUMS, GM, KIT, MOTIF_CELL, RHYTHMS,
+  alterOf, arp, bass, bend, cc, chordAt, chordPitches, comp, createSong, drums, instrument, line, melody, note, pad, pulse, pump, roots, section,
 } from "./compose.mjs";
-import { key } from "./theory.mjs";
+import { TONIC, key, pitch, rng, seedOf, voicing } from "./theory.mjs";
 
 /* ------------------------------------------------------------------------------------------- *
  * The motif
@@ -864,6 +866,871 @@ function legendaryTheme2() {
 }
 
 /* ------------------------------------------------------------------------------------------- *
+ * Card intros (R1352; docs/meditative-set.md M8, MN04)
+ *
+ * Every Legendary and Mythic card, and every token printed Legendary or Mythic, opens its play with a
+ * few bars of its own, after Hearthstone's legendary music: src/audio/music-cards.json's `intro`
+ * names each card's track, and the client plays it once over the board's music (R1350, R1351).
+ *
+ * An intro is derived from its card, so that no two sound alike:
+ *   - its id seeds every choice the card does not make for itself: the key, the tempo, the meter,
+ *     the motif's variant and the answer it gets, the progression, and a family's alternates;
+ *   - its family picks the instruments, the accompaniment and the modes it may take: its station
+ *     where music-cards.json gives one, else the first of its tags the card art reads (its tribe),
+ *     then the tags the art has no family for (Jlockeed, Acclaimed), else its type;
+ *   - its set lends a glint of its own into the cadence (Core a harp, Classic a dulcimer, Classic+ a
+ *     celesta), and a Mythic adds a prismatic shimmer over a soft choir.
+ * The melody is the JackiOh motif (MOTIF_CELL's contour, varied) and an answer that cadences on the
+ * tonic: two bars of 4/4 or three of 3/4, whose music runs INTRO_SPAN_S and then rings out for
+ * INTRO_TAIL_S, the last INTRO_FADE_S of it faded (gen-music.mjs's `tail` and `post.fadeOutS`).
+ *
+ * The Mythics are hand-tuned from their themes (each theme's key, tempo and forces, and the motif
+ * as the theme quotes it), and so are the best-known Legendaries: `tune` holds what a card sets for
+ * itself, and the derivation fills in the rest. A card's facts are written down here as the catalog
+ * printed them when its intro was composed, so a later change to a card's tags moves no rendered
+ * file without a new render.
+ * ------------------------------------------------------------------------------------------- */
+
+/** R1352: seconds of ring-out kept after an intro's last bar line, the last INTRO_FADE_S of them faded. */
+const INTRO_TAIL_S = 1;
+const INTRO_FADE_S = 0.6;
+/**
+ * R1352: how long an intro's music runs to its last bar line, in seconds (MUSIC_INTRO_MIN_S and,
+ * with the tail, MUSIC_INTRO_MAX_S in src/audio/constants.ts hold the files to it).
+ */
+const INTRO_SPAN_S = [3, 5];
+/** Where in INTRO_SPAN_S a derived intro's tempo lands, by its family's feel. */
+const INTRO_FEELS = { slow: [4.2, 4.95], mid: [3.7, 4.6], fast: [3.2, 4.1] };
+const INTRO_TONICS = Object.keys(TONIC);
+const INTRO_SETS = ["Core", "Classic", "Classic+", "Meditative"];
+/** The set's glint into the cadence (a set not listed here takes Classic+'s). */
+const INTRO_SET_GLINT = { Core: GM.harp, Classic: GM.dulcimer, "Classic+": GM.celesta };
+
+/** The first tag that names a family wins, in the card art's order, then the tags it draws none for. */
+const INTRO_TAG_FAMILIES = [
+  ["Call to Chaos", "chaos"], ["AI", "ai"], ["CN", "cn"], ["KY", "ky"], ["Book", "book"], ["Felinor", "felinor"],
+  ["Pancake", "pancake"], ["Fruit", "fruit"], ["Quickdraw", "quickdraw"], ["Human", "human"],
+  ["Jlockeed", "jlockeed"], ["Acclaimed", "acclaimed"],
+];
+const INTRO_TYPE_FAMILIES = { Unit: "unit", Spell: "spell", "Field Spell": "field-spell", Trap: "trap", "Field Trap": "field-trap" };
+
+/**
+ * Each family's forces: a lead (channel 0, the motif), a second (1, the harmony), a bass (2) and a
+ * colour (3), the accompaniment `style`, the modes it may take (the set picks among them first),
+ * its `feel` (how fast), the MIDI note its melody centres on, and alternates the id picks among.
+ */
+const INTRO_PALETTES = {
+  human: { lead: GM.horn, second: GM.strings, bass: GM.contrabass, color: GM.harp, style: "fanfare", modes: ["major", "mixolydian", "dorian"], feel: "mid", center: 64 },
+  felinor: { lead: GM.pizz, second: GM.strings, bass: GM.pizz, color: GM.glock, style: "pizz", modes: ["dorian", "major", "harmonic"], feel: "fast", center: 69, alts: { color: [GM.glock, GM.clarinet] } },
+  ky: { lead: GM.bells, second: GM.celesta, bass: GM.fretless, color: GM.vibes, style: "chime", modes: ["lydian", "major"], feel: "slow", center: 72, alts: { lead: [GM.bells, GM.vibes] } },
+  cn: { lead: GM.dulcimer, second: GM.strings, bass: GM.acBass, color: GM.kalimba, style: "sparkle", modes: ["major", "dorian"], feel: "mid", center: 72 },
+  book: { lead: GM.harpsichord, second: GM.pizz, bass: GM.bassoon, color: GM.celesta, style: "baroque", modes: ["harmonic", "dorian", "major"], feel: "mid", center: 69 },
+  chaos: { lead: GM.calliope, second: GM.xylophone, bass: GM.tuba, color: GM.glock, style: "carnival", modes: ["harmonic", "mixolydian"], feel: "fast", center: 74 },
+  ai: { lead: GM.square, second: GM.polysynth, bass: GM.synthBass2, color: GM.crystal, style: "synth", modes: ["minor", "dorian"], feel: "fast", center: 67 },
+  pancake: {
+    lead: GM.trumpet, second: GM.brass, bass: GM.tuba, color: GM.glock, style: "brass", modes: ["major", "lydian", "mixolydian"], feel: "mid", center: 70,
+    alts: { second: [GM.brass, GM.horn, GM.trombone], color: [GM.glock, GM.xylophone, GM.bells] },
+  },
+  fruit: { lead: GM.marimba, second: GM.kalimba, bass: GM.acBass, color: GM.steel, style: "bounce", modes: ["major", "mixolydian"], feel: "fast", center: 69 },
+  quickdraw: { lead: GM.whistle, second: GM.steel, bass: GM.acBass, color: GM.banjo, style: "gallop", modes: ["mixolydian", "dorian"], feel: "fast", center: 76 },
+  jlockeed: { lead: GM.synthBrass, second: GM.strings, bass: GM.contrabass, color: GM.bells, style: "march", modes: ["minor", "dorian"], feel: "mid", center: 65 },
+  acclaimed: { lead: GM.trumpet, second: GM.brass, bass: GM.contrabass, color: GM.orchHit, style: "boom", modes: ["minor", "harmonic"], feel: "mid", center: 67 },
+  tavern: { lead: GM.fiddle, second: GM.nylon, bass: GM.acBass, color: GM.harp, style: "bounce", modes: ["major", "mixolydian"], feel: "fast", center: 72 },
+  edm: { lead: GM.saw, second: GM.warmPad, bass: GM.synthBass2, color: GM.square, style: "synth", modes: ["minor"], feel: "fast", center: 67 },
+  lofi: { lead: GM.vibes, second: GM.ep1, bass: GM.fingerBass, color: GM.cleanGuitar, style: "chime", modes: ["major", "dorian"], feel: "slow", center: 69 },
+  epic: { lead: GM.horn, second: GM.strings, bass: GM.contrabass, color: GM.choir, style: "orchestral", modes: ["minor", "dorian"], feel: "mid", center: 62 },
+  unit: { lead: GM.trumpet, second: GM.horn, bass: GM.contrabass, color: GM.harp, style: "fanfare", modes: ["major", "dorian", "minor"], feel: "mid", center: 68, alts: { lead: [GM.trumpet, GM.horn], second: [GM.horn, GM.strings] } },
+  spell: { lead: GM.celesta, second: GM.strings, bass: GM.cello, color: GM.harp, style: "sparkle", modes: ["lydian", "major", "dorian"], feel: "mid", center: 76, alts: { lead: [GM.celesta, GM.glock, GM.flute] } },
+  "field-spell": { lead: GM.flute, second: GM.choir, bass: GM.cello, color: GM.harp, style: "swell", modes: ["major", "lydian", "mixolydian"], feel: "slow", center: 74, alts: { lead: [GM.flute, GM.oboe, GM.clarinet] } },
+  trap: { lead: GM.oboe, second: GM.tremolo, bass: GM.contrabass, color: GM.celesta, style: "dark", modes: ["harmonic", "phrygian", "minor"], feel: "slow", center: 67 },
+  "field-trap": { lead: GM.englishHorn, second: GM.organ, bass: GM.contrabass, color: GM.celesta, style: "dark", modes: ["phrygian", "harmonic"], feel: "slow", center: 64 },
+};
+
+/** The motif's contour as MOTIF_CELL steps it (rise 0–1–3, fall back by step), and its variants. */
+const INTRO_CONTOURS = [
+  MOTIF_CELL.map(([step]) => step),
+  [0, -1, -3, -2, -1, 0],
+  [0, 2, 4, 3, 2, 0],
+  [0, 1, 4, 3, 1, 0],
+  [0, 1, 3, 4, 3, 2],
+];
+/** Rhythms for the motif's six notes: a bar of 4/4, or a bar of 3/4. */
+const INTRO_CELLS = {
+  4: [MOTIF_CELL.map(([, beats]) => beats), [0.75, 0.25, 1.5, 0.5, 0.5, 0.5], [0.5, 0.5, 1, 0.5, 0.5, 1], [0.25, 0.25, 2, 0.5, 0.5, 0.5]],
+  3: [[0.5, 0.5, 1, 0.5, 0.25, 0.25], [0.25, 0.25, 1.5, 0.5, 0.25, 0.25], [0.5, 0.25, 0.25, 1, 0.5, 0.5]],
+};
+/** The answer, a closing bar that lands on the tonic (or its octave), in degrees of the key. */
+const INTRO_ANSWERS = {
+  4: [
+    [[4, 0.5], [3, 0.5], [2, 0.5], [1, 0.5], [0, 2]],
+    [[2, 1], [1, 0.5], [-1, 0.5], [0, 2]],
+    [[5, 0.5], [4, 0.5], [1, 1], [0, 2]],
+    [[4, 1], [6, 0.5], [7, 2.5]],
+    [[3, 0.5], [2, 0.5], [1, 0.5], [-1, 0.5], [0, 2]],
+    [[6, 0.5], [4, 0.5], [6, 1], [7, 2]],
+  ],
+  3: [
+    [[1, 0.5], [-1, 0.5], [0, 2]],
+    [[2, 1], [1, 0.5], [0, 1.5]],
+    [[4, 0.5], [6, 0.5], [7, 2]],
+  ],
+};
+/** Cadencing progressions, one entry per bar, by mode and meter. Harmonic minor's V is major already. */
+const INTRO_PROGRESSIONS = {
+  major: { 4: ["I", ["V", "I"]], alt4: [[["I", "IV"], ["V", "I"]], [["I", "vi"], ["IV", "I"]], [["vi", "IV"], ["V", "I"]]], 3: [["I", "IV", ["V", "I"]], ["I", "vi", ["V", "I"]], ["I", "V", "I"]] },
+  minor: { 4: ["i", ["V+", "i"]], alt4: [[["i", "VI"], ["V+", "i"]], [["i", "iv"], ["V+", "i"]], [["VI", "iv"], ["V+", "i"]]], 3: [["i", "iv", ["V+", "i"]], ["i", "VI", ["V+", "i"]], ["i", "VII", "i"]] },
+  harmonic: { 4: ["i", ["V", "i"]], alt4: [[["i", "iv"], ["V", "i"]], [["i", "VI"], ["V", "i"]], [["iv", "VI"], ["V", "i"]]], 3: [["i", "iv", ["V", "i"]], ["i", "V", "i"], ["i", "VI", ["V", "i"]]] },
+  dorian: { 4: ["i", ["IV", "i"]], alt4: [[["i", "VII"], ["IV", "i"]], [["i", "III"], ["IV", "i"]]], 3: [["i", "IV", "i"], ["i", "VII", ["IV", "i"]]] },
+  mixolydian: { 4: ["I", ["VII", "I"]], alt4: [[["I", "IV"], ["VII", "I"]], [["I", "v"], ["IV", "I"]]], 3: [["I", "VII", "I"], ["I", "IV", ["VII", "I"]]] },
+  lydian: { 4: ["I", ["II", "I"]], alt4: [[["I", "V"], ["II", "I"]], [["I", "vi"], ["II", "I"]]], 3: [["I", "II", "I"], ["I", "vi", ["II", "I"]]] },
+  phrygian: { 4: ["i", ["II", "i"]], alt4: [[["i", "vii"], ["II", "i"]], [["i", "iv"], ["II", "i"]]], 3: [["i", "II", "i"], ["i", "iv", ["II", "i"]]] },
+};
+/** The styles that may take a waltz's three bars of 3/4, and how often a derived intro does. */
+const INTRO_WALTZ_STYLES = new Set(["pizz", "carnival", "sparkle", "swell", "baroque", "bounce", "chime"]);
+const INTRO_WALTZ_CHANCE = 0.3;
+
+const introTrack = (card) => `intro-${card}`;
+
+function introFamily(card) {
+  if (card.station !== undefined) return card.station;
+  for (const [tag, family] of INTRO_TAG_FAMILIES) if (card.tags.includes(tag)) return family;
+  return INTRO_TYPE_FAMILIES[card.type];
+}
+
+/** The motif's bar and its answer (two bars of 4/4), or the motif, its sequence a step up and a close (3/4). */
+function introMelody(r, bpb) {
+  const anchor = r.pick([4, 4, 0, 2]);
+  const contour = r.pick(INTRO_CONTOURS);
+  const cell = r.pick(INTRO_CELLS[bpb]);
+  const motif = contour.map((step, i) => [anchor + step, cell[i]]);
+  const answer = r.pick(INTRO_ANSWERS[bpb]);
+  if (bpb === 4) return [...motif, ...answer];
+  const lift = r.pick([1, 2, -1]);
+  const again = r.pick(INTRO_CELLS[3]);
+  return [...motif, ...contour.map((step, i) => [anchor + lift + step, again[i]]), ...answer];
+}
+
+/** The beats of the voices in a melody, which must fill its bars exactly. */
+const beatsOf = (notes) => notes.reduce((sum, [, beats]) => sum + beats, 0);
+
+/** Everything an intro is built from: the derivation, with the card's own `tune` laid over it. */
+function introSpec(card) {
+  const r = rng(seedOf(`intro:${card.card}`));
+  const tune = card.tune ?? {};
+  const family = introFamily(card);
+  const base = INTRO_PALETTES[family];
+  const palette = { ...base };
+  for (const [part, options] of Object.entries(base.alts ?? {})) palette[part] = r.pick(options);
+  Object.assign(palette, tune.palette ?? {});
+  const tonic = tune.tonic ?? r.pick(INTRO_TONICS);
+  const setAt = Math.max(0, INTRO_SETS.indexOf(card.set));
+  const preferred = palette.modes[setAt % palette.modes.length];
+  const mode = tune.mode ?? (r.chance(0.65) ? preferred : r.pick(palette.modes));
+  // A card that sets its own tempo sets its meter with it (4/4 unless it says otherwise).
+  const waltz = INTRO_WALTZ_STYLES.has(palette.style) && r.chance(INTRO_WALTZ_CHANCE) && tune.bpm === undefined;
+  const bpb = tune.beatsPerBar ?? (waltz ? 3 : 4);
+  const bars = tune.bars ?? (bpb === 3 ? 3 : 2);
+  const [lo, hi] = INTRO_FEELS[palette.feel];
+  const span = lo + r.next() * (hi - lo);
+  const bpm = tune.bpm ?? Math.round((bars * bpb * 60) / span);
+  const derived = bpb === 4 || bpb === 3 ? introMelody(r, bpb) : null;
+  const melodyNotes = tune.melody ?? derived;
+  const progs = INTRO_PROGRESSIONS[mode];
+  const prog = tune.prog ?? (bpb === 3 ? r.pick(progs[3]) : r.chance(0.4) ? progs[4] : r.pick(progs.alt4));
+  const spec = {
+    card, family, palette, tonic, mode, bpm, bpb, bars, prog, melody: melodyNotes,
+    mythic: card.rarity === "Mythic", glint: INTRO_SET_GLINT[card.set] ?? INTRO_SET_GLINT["Classic+"], extra: tune.extra ?? null,
+  };
+  const seconds = (bars * bpb * 60) / bpm;
+  if (melodyNotes === null || Math.abs(beatsOf(melodyNotes) - bars * bpb) > 1e-9) throw new Error(`intro ${card.card}: its melody does not fill its ${bars} bars`);
+  if (prog.length !== bars) throw new Error(`intro ${card.card}: its progression has ${prog.length} bars, not ${bars}`);
+  if (seconds < INTRO_SPAN_S[0] - 1e-9 || seconds > INTRO_SPAN_S[1] + 1e-9) throw new Error(`intro ${card.card}: ${seconds.toFixed(2)} s is outside ${INTRO_SPAN_S.join("–")} s`);
+  return spec;
+}
+
+/* ----- the intros' gestures ----- */
+
+/** Where the last bar starts, in beats from the intro's top. */
+const lastBarOf = (sec) => (sec.bars - 1) * sec.song.beatsPerBar;
+
+/** The cadence's chords held through the last bar. */
+function holdCadence(sec, ch, center, vel) {
+  comp(sec, { ch, hits: [[0, sec.song.beatsPerBar, 1]], center, vel, from: lastBarOf(sec) });
+}
+
+/** A quick run up (or down) the chord sounding at `at`: a harp's glissando, a celesta's glint. */
+function glintRun(sec, ch, at, { count = 6, step = 0.125, center = 72, vel = 52, down = false } = {}) {
+  const voiced = voicing(chordPitches(sec.k, chordAt(sec, at)), center);
+  const ext = [...voiced, ...voiced.map((n) => n + 12), ...voiced.map((n) => n + 24)];
+  const n = Math.min(count, ext.length);
+  for (let i = 0; i < n; i += 1) {
+    const at2 = at + i * step;
+    if (at2 >= sec.beats - 1e-9) break;
+    note(sec, ch, at2, step * 2, ext[down ? n - 1 - i : i], vel * (0.75 + (0.25 * i) / n));
+  }
+}
+
+/** A timpani roll on the coming chord's root, from `at` for `beats`, into a stroke where it lands. */
+function timpaniRoll(sec, ch, at, beats, vel = 70) {
+  const land = Math.min(at + beats, sec.beats - 0.01);
+  const c = chordAt(sec, land);
+  const n = pitch(sec.k, c.root, -2, alterOf(c, c.root));
+  for (let t = 0; t < beats - 1e-9; t += 0.125) note(sec, ch, at + t, 0.125, n, vel * (0.35 + (0.55 * t) / beats), { exact: true });
+  if (at + beats < sec.beats - 1e-9) note(sec, ch, at + beats, 1.5, n, vel, { exact: true });
+}
+
+/** A drum part of one bar's pattern, bounded to the meter (a 4/4 pattern in a 3/4 bar loses its fourth beat). */
+function introDrums(sec, pattern, opts = {}) {
+  drums(sec, { pattern: pattern.filter(([t]) => t < sec.song.beatsPerBar - 1e-9), ...opts });
+}
+
+/** A drum part's `skip` that keeps only bar `n` (`drums` skips every bar it returns true for). */
+const onlyBar = (n) => (bar) => bar !== n;
+const onLastBar = (sec) => onlyBar(sec.bars - 1);
+/** A drum part's `skip` that keeps every bar but the last, which the cadence holds. */
+const beforeLastBar = (sec) => (bar) => bar === sec.bars - 1;
+
+/**
+ * The accompaniment under the lead, one per style: channel 1 the second, 2 the bass, 3 the colour,
+ * 4 timpani, and the drum kit each style names (`kit`). Every style ends on the cadence held.
+ */
+const INTRO_STYLES = {
+  /** Brass stabs, timpani, a harp's sweep up into the first chord: a herald. */
+  fanfare: {
+    kit: KIT.orchestra,
+    build(sec, s) {
+      const last = lastBarOf(sec);
+      comp(sec, { ch: 1, hits: [[0, 0.45, 1], [1.5, 0.4, 0.75], [2, 1.9, 0.9]], center: 58, vel: 60, until: last });
+      holdCadence(sec, 1, 58, 62);
+      bass(sec, { ch: 2, pattern: [[0, "R", 1.9, 1], [2, "5", 1.9, 0.85]], vel: 72 });
+      timpaniRoll(sec, 4, 0, 0.75, 66);
+      timpaniRoll(sec, 4, last - 0.5, 0.5, 74);
+      glintRun(sec, 3, 0, { count: 7, center: s.palette.center - 10, vel: 48 });
+      introDrums(sec, [[0, DR.crash, 62]], { skip: onLastBar(sec) });
+    },
+  },
+  /** Pizzicato: plucked chords on the off-beats over a walking bass, a triangle at either end. */
+  pizz: {
+    kit: KIT.standard,
+    build(sec, s) {
+      const bpb = sec.song.beatsPerBar;
+      const last = lastBarOf(sec);
+      comp(sec, { ch: 1, hits: bpb === 3 ? [[1, 0.3, 0.8], [2, 0.3, 0.7]] : [[1, 0.3, 0.8], [3, 0.3, 0.7]], center: 62, vel: 50, until: last });
+      holdCadence(sec, 1, 62, 46);
+      bass(sec, { ch: 2, pattern: [[0, "R", 0.45, 1], [1, "5", 0.45, 0.8], [2, "8", 0.45, 0.85], [3, "5", 0.45, 0.8]], vel: 70 });
+      glintRun(sec, 3, last, { count: 5, step: 0.25, center: s.palette.center + 4, vel: 44 });
+      introDrums(sec, [[0, DR.triOpen, 46]], { skip: (bar) => bar !== 0 && bar !== sec.bars - 1 });
+      introDrums(sec, [[0.5, DR.claves, 26], [1.5, DR.claves, 22], [2.5, DR.claves, 26], [3.5, DR.claves, 22]], { skip: onlyBar(0) });
+    },
+  },
+  /** Chimes over a warm hold: slow broken chords on the second, the colour holding the cadence. */
+  chime: {
+    kit: null,
+    build(sec, s) {
+      arp(sec, { ch: 1, step: 1, pattern: [0, 2, 1, 3], center: s.palette.center, vel: 44, gate: 1.6 });
+      bass(sec, { ch: 2, pattern: [[0, "R", 2.9, 1]], vel: 60 });
+      pad(sec, { ch: 7, center: 60, vel: 32 });
+      holdCadence(sec, 3, s.palette.center - 5, 40);
+    },
+  },
+  /** A baroque hall: sixteenth broken chords, a walking bass of eighths, a soft string hold. */
+  baroque: {
+    kit: null,
+    build(sec, s) {
+      const last = lastBarOf(sec);
+      arp(sec, { ch: 1, step: 0.25, pattern: [0, 2, 1, 2, 0, 2, 1, 2, 3, 2, 1, 2, 0, 2, 1, 2], center: 62, vel: 46, until: last });
+      holdCadence(sec, 1, 62, 46);
+      bass(sec, { ch: 2, pattern: [[0, "R", 0.45, 1], [0.5, "5", 0.45, 0.75], [1, "8", 0.45, 0.85], [1.5, "5", 0.45, 0.75]], octave: -1, vel: 62 });
+      pad(sec, { ch: 3, center: s.palette.center - 7, vel: 30 });
+    },
+  },
+  /** The fairground: oom-pah under the lead, a snare roll into the last bar and a cymbal on it. */
+  carnival: {
+    kit: KIT.standard,
+    build(sec, s) {
+      const bpb = sec.song.beatsPerBar;
+      const last = lastBarOf(sec);
+      bass(sec, { ch: 2, pattern: [[0, "R", 0.45, 1], [2, "5", 0.45, 0.9]], vel: 76 });
+      comp(sec, { ch: 1, hits: bpb === 3 ? [[1, 0.25, 0.9], [2, 0.25, 0.8]] : [[1, 0.25, 0.9], [3, 0.25, 0.8]], center: 64, vel: 52, until: last });
+      holdCadence(sec, 1, 64, 50);
+      glintRun(sec, 3, last - 0.75, { count: 6, center: s.palette.center, vel: 46 });
+      for (let t = last - 1; t < last - 1e-9; t += 0.125) note(sec, DRUMS, t, 0.1, DR.snare, 30 + 40 * (t - last + 1), { exact: true });
+      introDrums(sec, [[0, DR.crash, 66], [0, DR.kick, 70]], { skip: onLastBar(sec) });
+    },
+  },
+  /** Synths: a pad, a sixteenth arpeggio, a pulsing bass, a kick on every beat. */
+  synth: {
+    kit: KIT.electronic,
+    build(sec, s) {
+      const last = lastBarOf(sec);
+      pad(sec, { ch: 1, center: 60, vel: 44 });
+      arp(sec, { ch: 3, step: 0.25, pattern: [0, 1, 2, 3, 2, 1, 2, 3], center: s.palette.center, vel: 38, gate: 0.5, until: last });
+      pulse(sec, { ch: 2, step: 0.5, octave: -2, vel: 68, accent: [1, 0.7] });
+      introDrums(sec, [[0, DR.kick, 84], [1, DR.kick, 78], [1, DR.clap, 56], [2, DR.kick, 84], [3, DR.kick, 78], [3, DR.clap, 56], [0.5, DR.hat, 40], [1.5, DR.hat, 36], [2.5, DR.hat, 40], [3.5, DR.hat, 36]], { skip: beforeLastBar(sec) });
+      introDrums(sec, [[0, DR.kick, 88], [0, DR.open, 50]], { skip: onLastBar(sec) });
+    },
+  },
+  /** Bright brass: punchy section stabs, a tuba, the colour doubling the lead an octave up. */
+  brass: {
+    kit: KIT.orchestra,
+    build(sec, s) {
+      const last = lastBarOf(sec);
+      comp(sec, { ch: 1, hits: [[0, 0.4, 1], [1, 0.25, 0.7], [1.5, 0.4, 0.85]], center: 62, vel: 60, until: last });
+      holdCadence(sec, 1, 62, 64);
+      bass(sec, { ch: 2, pattern: [[0, "R", 0.9, 1], [1, "5", 0.45, 0.8], [1.5, "5", 0.45, 0.8]], vel: 74 });
+      line(sec, { ch: 3, notes: s.melody, octave: s.leadOctave + 1, vel: 44 });
+      roots(sec, { ch: 4, octave: -2, vel: 66, hits: [[0, 0.5, 1]] });
+      introDrums(sec, [[0, DR.crash, 60]], { skip: onLastBar(sec) });
+    },
+  },
+  /** A bouncing groove: a plucked broken chord, a skipping bass, hand drums. */
+  bounce: {
+    kit: KIT.standard,
+    build(sec, s) {
+      const last = lastBarOf(sec);
+      arp(sec, { ch: 1, step: 0.5, pattern: [0, 2, 1, 2, 3, 2, 1, 2], center: s.palette.center - 5, vel: 46, until: last });
+      bass(sec, { ch: 2, pattern: [[0, "R", 0.45, 1], [1.5, "5", 0.45, 0.8], [2, "8", 0.45, 0.9], [3, "5", 0.45, 0.8]], vel: 70 });
+      holdCadence(sec, 3, s.palette.center - 7, 42);
+      introDrums(sec, [[0, DR.bongoLo, 62], [0.5, DR.bongoHi, 42], [1, DR.congaHi, 50], [1.5, DR.bongoHi, 40], [2, DR.bongoLo, 58], [2.5, DR.shaker, 34], [3, DR.congaHi, 48], [3.5, DR.bongoHi, 40]], { skip: beforeLastBar(sec) });
+      introDrums(sec, [[0, DR.congaLo, 64], [0, DR.shaker, 36]], { skip: onLastBar(sec) });
+    },
+  },
+  /** A gallop: strummed chords on the long-short beat, an alternating bass, woodblock hooves. */
+  gallop: {
+    kit: KIT.standard,
+    build(sec, s) {
+      const last = lastBarOf(sec);
+      comp(sec, { ch: 1, hits: [[0, 0.2, 1], [0.75, 0.2, 0.6], [1, 0.2, 0.8], [2, 0.2, 0.9], [2.75, 0.2, 0.6], [3, 0.2, 0.8]], center: 60, vel: 50, until: last });
+      holdCadence(sec, 1, 60, 46);
+      bass(sec, { ch: 2, pattern: [[0, "R", 0.45, 1], [1, "5", 0.45, 0.8], [2, "R", 0.45, 0.9], [3, "5", 0.45, 0.8]], vel: 70 });
+      arp(sec, { ch: 3, step: 0.125, pattern: [0, 1, 2, 3, 4, 5, 4, 3], center: s.palette.center - 8, vel: 40, from: last, until: last + 1 });
+      introDrums(sec, [[0, DR.blockLo, 54], [0.75, DR.blockHi, 40], [1, DR.blockLo, 48], [2, DR.blockLo, 54], [2.75, DR.blockHi, 40], [3, DR.blockLo, 48]], { skip: beforeLastBar(sec) });
+    },
+  },
+  /** A march: chords on every beat, a snare's ruff and tap, timpani on the strong beats, bells to close. */
+  march: {
+    kit: KIT.orchestra,
+    build(sec, s) {
+      const last = lastBarOf(sec);
+      comp(sec, { ch: 1, hits: [[0, 0.4, 1], [1, 0.4, 0.7], [2, 0.4, 0.85], [3, 0.4, 0.7]], center: 58, vel: 56, until: last });
+      holdCadence(sec, 1, 58, 58);
+      bass(sec, { ch: 2, pattern: [[0, "R", 0.9, 1], [2, "5", 0.9, 0.85]], vel: 72 });
+      roots(sec, { ch: 4, octave: -2, vel: 64, hits: [[0, 0.5, 1], [2, 0.5, 0.8]] });
+      holdCadence(sec, 3, s.palette.center + 2, 40);
+      introDrums(sec, [[0, DR.snare, 62], [0.75, DR.snare, 38], [1, DR.snare, 50], [2, DR.snare, 62], [2.75, DR.snare, 38], [3, DR.snare, 50], [3.5, DR.snare, 42]], { skip: beforeLastBar(sec) });
+      introDrums(sec, [[0, DR.crash, 58]], { skip: onLastBar(sec) });
+    },
+  },
+  /** A blast: an orchestra hit on each downbeat, low stabs, a tom fill into the cadence. */
+  boom: {
+    kit: KIT.power,
+    build(sec, _s) {
+      const last = lastBarOf(sec);
+      const bpb = sec.song.beatsPerBar;
+      for (let bar = 0; bar < sec.bars; bar += 1) {
+        const c = chordAt(sec, bar * bpb);
+        note(sec, 3, bar * bpb, 0.9, pitch(sec.k, c.root, -1, alterOf(c, c.root)), 80, { exact: true });
+      }
+      comp(sec, { ch: 1, hits: [[0, 0.5, 1], [1.5, 0.3, 0.7]], center: 55, vel: 62, until: last });
+      holdCadence(sec, 1, 55, 64);
+      bass(sec, { ch: 2, pattern: [[0, "R", 1.9, 1], [2, "R", 1.9, 0.9]], vel: 76 });
+      timpaniRoll(sec, 4, last - 1, 1, 78);
+      introDrums(sec, [[0, DR.kick, 96], [0, DR.crash, 74], [2.5, DR.tomHi, 70], [3, DR.tomMid, 76], [3.5, DR.floorTom, 84]], { skip: beforeLastBar(sec) });
+      introDrums(sec, [[0, DR.kick, 100], [0, DR.crash2, 76]], { skip: onLastBar(sec) });
+    },
+  },
+  /** The orchestra: a string ostinato, the choir held, timpani strokes and a roll into the cadence. */
+  orchestral: {
+    kit: KIT.orchestra,
+    build(sec, _s) {
+      const last = lastBarOf(sec);
+      arp(sec, { ch: 1, step: 0.5, pattern: [0, 1, 2, 1, 0, 2, 3, 2], center: 52, vel: 52, gate: 0.6, until: last });
+      holdCadence(sec, 1, 55, 58);
+      bass(sec, { ch: 2, pattern: [[0, "R", 1.9, 1], [2, "R", 1.9, 0.8]], vel: 72 });
+      pad(sec, { ch: 3, center: 62, vel: 44 });
+      roots(sec, { ch: 4, octave: -2, vel: 62, hits: [[0, 1, 1]] });
+      timpaniRoll(sec, 4, last - 1, 1, 74);
+      introDrums(sec, [[0, DR.crash, 56]], { skip: onLastBar(sec) });
+    },
+  },
+  /** A spell's sparkle: strings held under a harp or celesta's rippling chord, a finger cymbal to close. */
+  sparkle: {
+    kit: KIT.standard,
+    build(sec, s) {
+      const last = lastBarOf(sec);
+      pad(sec, { ch: 1, center: 60, vel: 42 });
+      bass(sec, { ch: 2, pattern: [[0, "R", 1.9, 1], [2, "5", 1.9, 0.8]], octave: -1, vel: 58 });
+      arp(sec, { ch: 3, step: 0.5, pattern: [0, 1, 2, 3, 4, 3, 2, 1], center: s.palette.center - 12, vel: 42, until: last });
+      glintRun(sec, 3, last, { count: 7, center: s.palette.center - 12, vel: 46 });
+      introDrums(sec, [[0, DR.triOpen, 40]], { skip: onLastBar(sec) });
+    },
+  },
+  /** A field opening out: a choir and strings swelling in (expression), the harp walking, a soft roll. */
+  swell: {
+    kit: null,
+    build(sec, s) {
+      pad(sec, { ch: 1, center: 62, vel: 46 });
+      pad(sec, { ch: 7, center: 55, vel: 34 });
+      for (let t = 0; t < sec.song.beatsPerBar; t += 0.25) {
+        const v = 70 + (57 * t) / sec.song.beatsPerBar;
+        cc(sec, 1, t, 11, v);
+        cc(sec, 7, t, 11, v);
+      }
+      arp(sec, { ch: 3, step: 1, pattern: [0, 2, 4, 2], center: s.palette.center - 10, vel: 44 });
+      bass(sec, { ch: 2, pattern: [[0, "R", 1.9, 1]], octave: -1, vel: 58 });
+      timpaniRoll(sec, 4, lastBarOf(sec) - 1, 1, 56);
+    },
+  },
+  /** A trap springing: tremolo strings, a low drone, a timpani stroke and a roll, a glint falling. */
+  dark: {
+    kit: KIT.orchestra,
+    build(sec, s) {
+      const last = lastBarOf(sec);
+      pad(sec, { ch: 1, center: 57, vel: 52 });
+      bass(sec, { ch: 2, pattern: [[0, "R", 1.9, 1]], vel: 70 });
+      note(sec, 4, 0, 1.5, pitch(sec.k, 0, -2), 76, { exact: true });
+      timpaniRoll(sec, 4, last - 0.75, 0.75, 70);
+      glintRun(sec, 3, last, { count: 6, center: s.palette.center + 5, vel: 40, down: true });
+      introDrums(sec, [[0, DR.kick2, 58]], { skip: onlyBar(0) });
+    },
+  },
+  /** A chant: an organ held, the choir under the lead, a timpani stroke on every beat of the first bar. */
+  chant: {
+    kit: null,
+    build(sec, _s) {
+      pad(sec, { ch: 1, center: 57, vel: 46 });
+      pad(sec, { ch: 3, center: 62, vel: 40 });
+      bass(sec, { ch: 2, pattern: [[0, "R", 1.9, 1]], vel: 64 });
+      for (let t = 0; t < sec.song.beatsPerBar; t += 1) note(sec, 4, t, 0.5, pitch(sec.k, 0, -2), t === 0 ? 78 : 60, { exact: true });
+      timpaniRoll(sec, 4, lastBarOf(sec) - 0.5, 0.5, 68);
+    },
+  },
+};
+
+/** An intro's score: the lead on the motif, its style's accompaniment, the set's glint, a Mythic's shimmer. */
+function cardIntro(card) {
+  const s = introSpec(card);
+  const style = INTRO_STYLES[s.palette.style];
+  if (style === undefined) throw new Error(`intro ${card.card}: no style ${s.palette.style}`);
+  const song = createSong({ id: introTrack(card.card), bpm: s.bpm, beatsPerBar: s.bpb, key: key(s.tonic, s.mode) });
+  song.reverb = s.mythic ? { room: 0.85, damp: 0.3, width: 1, level: 0.66 } : { room: 0.72, damp: 0.38, width: 1, level: 0.58 };
+  song.post.fadeOutS = INTRO_FADE_S;
+  song.post.loudnessOverFile = true;
+  // The lead sits where its instrument sings: the melody's middle near the palette's centre.
+  const mean = s.melody.reduce((sum, [d]) => sum + pitch(song.key, d), 0) / s.melody.length;
+  s.leadOctave = Math.round((s.palette.center - mean) / 12);
+  instrument(song, 0, s.palette.lead, { volume: 100, pan: 62, reverb: 55 });
+  instrument(song, 1, s.palette.second, { volume: 80, pan: 50, reverb: 60 });
+  instrument(song, 2, s.palette.bass, { volume: 86, pan: 64, reverb: 35 });
+  instrument(song, 3, s.palette.color, { volume: 76, pan: 84, reverb: 65 });
+  instrument(song, 4, GM.timpani, { volume: 84, pan: 64, reverb: 60 });
+  instrument(song, 6, s.glint, { volume: 66, pan: 30, reverb: 70 });
+  instrument(song, 7, s.palette.extra ?? GM.warmPad, { volume: 74, pan: 76, reverb: 60 });
+  instrument(song, 10, GM.glock, { volume: 62, pan: 92, reverb: 55 });
+  if (s.mythic) {
+    instrument(song, 5, GM.choir, { volume: 62, pan: 64, reverb: 85 });
+    instrument(song, 8, GM.crystal, { volume: 70, pan: 96, reverb: 80 });
+  }
+  if (style.kit !== null) instrument(song, DRUMS, style.kit, { volume: 84, reverb: 45 });
+
+  const sec = section(song, "intro", s.bars, s.prog);
+  const last = lastBarOf(sec);
+  line(sec, { ch: 0, notes: s.melody, octave: s.leadOctave, vel: 90 });
+  style.build(sec, s);
+  // The set's glint sweeps up into the cadence; a Mythic's prism rings out of it over a soft choir.
+  glintRun(sec, 6, last - 0.625, { count: 5, center: 70, vel: 46 });
+  if (s.mythic) {
+    pad(sec, { ch: 5, center: 64, vel: 34 });
+    glintRun(sec, 8, last, { count: 8, step: 0.25, center: 76, vel: 44 });
+  }
+  s.extra?.(sec, s);
+  return { song, tail: INTRO_TAIL_S };
+}
+
+/* ----- hand-tuned gestures ----- */
+
+/** A theremin's wobble on `ch`: a slow vibrato in pitch bends across the whole intro, back to rest at its end. */
+function wobble(sec, ch, { depth = 1100, perBeat = 2 } = {}) {
+  for (let t = 0; t < sec.beats - 1e-9; t += 1 / 16) bend(sec, ch, t, depth * Math.sin(2 * Math.PI * perBeat * t));
+  bend(sec, ch, sec.beats, 0);
+}
+
+/** A trombone's droop on `ch`: the last note sags a semitone from `at` to the end. */
+function droop(sec, ch, at) {
+  const steps = 12;
+  for (let i = 0; i <= steps; i += 1) bend(sec, ch, at + ((sec.beats - at) * i) / steps, (-4096 * i) / steps);
+  bend(sec, ch, sec.beats + 0.5, 0);
+}
+
+/** A slot machine's reels: sixteenth notes spinning through the chord on `ch` (10, a glockenspiel), then a bell's ding per effect on 7. */
+function slotMachine(sec, ch, dings) {
+  const last = lastBarOf(sec);
+  arp(sec, { ch, step: 0.25, pattern: [0, 3, 1, 4, 2, 5, 3, 6], center: 74, vel: 38, gate: 0.4, until: last });
+  for (let i = 0; i < dings; i += 1) note(sec, 7, last + i * 0.5, 1.5, pitch(sec.k, 7 + 2 * i, 1), 70, { exact: true });
+}
+
+/** The League of Losers' tune, which each Loser plays in their own lane's colours and lets fall flat. */
+const LEAGUE_MOTIF = [[0, 0.5], [4, 0.5], [7, 1.5], [6, 0.5], [4, 0.5], [3, 0.5]];
+const LOSER_MELODY = [...LEAGUE_MOTIF, [2, 0.5], [1, 0.5], [0, 1], [-3, 2]];
+const LOSER_PROG = [["i", "VI"], ["iv", "i"]];
+
+/** The motif from the fifth, as the menu theme and every Mythic theme state it. */
+const THEME_MOTIF = MOTIF_CELL.map(([step, beats]) => [4 + step, beats]);
+/** The motif an octave up from the fifth (degrees 7–10), where the airier themes' melodies sit. */
+const HIGH_MOTIF = MOTIF_CELL.map(([step, beats]) => [7 + step, beats]);
+
+/**
+ * Every card intro, in catalog order: the card's id, name, set, type and tags as the catalog printed
+ * them, its printed rarity, its station where music-cards.json gives one, and its `tune`.
+ */
+const INTRO_CARDS = [
+  // ---- Core ----
+  {
+    card: "core-052", name: "Silly Silas", set: "Core", type: "Unit", tags: ["Human"], rarity: "Legendary",
+    // A comic turn: bassoon over an oom-pah tuba, a trill and a pratfall to the low fifth before it lands.
+    tune: {
+      palette: { lead: GM.bassoon, second: GM.pizz, bass: GM.tuba, color: GM.xylophone, style: "carnival", center: 58 },
+      tonic: "F", mode: "major", bpm: 126, prog: ["I", ["V", "I"]],
+      melody: [...MOTIF_CELL, [4, 0.25], [3, 0.25], [4, 0.25], [3, 0.25], [2, 0.5], [-3, 0.5], [0, 2]],
+    },
+  },
+  {
+    card: "core-083", name: "Transmogulate", set: "Core", type: "Spell", tags: [], rarity: "Legendary",
+    // Everything turns Legendary: a celesta in lydian, and brass taking the cadence as the change lands.
+    tune: {
+      palette: { lead: GM.celesta, color: GM.harp, extra: GM.brass },
+      tonic: "Ab", mode: "lydian", bpm: 104,
+      extra: (sec) => holdCadence(sec, 7, 60, 58),
+    },
+  },
+  {
+    card: "core-085", name: "Unlicensed Experimentation", set: "Core", type: "Trap", tags: [], rarity: "Legendary",
+    // A lab after hours: a theremin's wobble over tremolo strings, in phrygian.
+    tune: {
+      palette: { lead: GM.whistle, center: 76 },
+      tonic: "Gb", mode: "phrygian", bpm: 100,
+      extra: (sec) => wobble(sec, 0),
+    },
+  },
+  {
+    card: "core-087", name: "Pocket Chaos", set: "Core", type: "Spell", tags: [], rarity: "Legendary",
+    // A swap: the motif goes up on the xylophone and comes back upside down.
+    tune: {
+      palette: { lead: GM.xylophone, second: GM.calliope, bass: GM.tuba, color: GM.glock, style: "carnival", center: 76 },
+      tonic: "B", mode: "harmonic", bpm: 138, prog: ["i", ["V", "i"]],
+      melody: [...THEME_MOTIF, [3, 0.5], [1, 0.5], [2, 0.5], [-1, 0.5], [0, 2]],
+    },
+  },
+  {
+    card: "core-092", name: "Felinor Fiender", set: "Core", type: "Unit", tags: ["Human"], rarity: "Legendary",
+    // A prowl in pizzicato, a clarinet stacked a third above it (Stack).
+    tune: {
+      palette: { lead: GM.pizz, second: GM.strings, bass: GM.pizz, color: GM.glock, style: "pizz", center: 67, extra: GM.clarinet },
+      tonic: "D", mode: "dorian", bpm: 116, prog: ["i", ["IV", "i"]],
+      melody: [...THEME_MOTIF, [3, 0.75], [2, 0.25], [1, 0.5], [-1, 0.5], [0, 2]],
+      extra: (sec, s) => line(sec, { ch: 7, notes: s.melody.map(([d, b]) => [d + 2, b]), octave: s.leadOctave, vel: 58 }),
+    },
+  },
+  {
+    card: "core-093", name: "Combo-Index", set: "Core", type: "Field Spell", tags: [], rarity: "Legendary",
+    // The grades climb from E to S: the motif, then a run up through the scale to the octave.
+    tune: {
+      palette: { lead: GM.vibes, color: GM.harp, center: 72 },
+      tonic: "E", mode: "major", bpm: 112, prog: ["I", ["V", "I"]],
+      melody: [...MOTIF_CELL, [1, 0.25], [2, 0.25], [3, 0.25], [4, 0.25], [5, 0.25], [6, 0.25], [7, 2.5]],
+    },
+  },
+  {
+    card: "core-095", name: "Call to Chaos (Core Edition)", set: "Core", type: "Spell", tags: ["Call to Chaos"], rarity: "Legendary",
+    // The slot machine spins, and one bell rings for the one effect it rolls.
+    tune: {
+      palette: { extra: GM.bells },
+      tonic: "C", mode: "mixolydian", bpm: 138,
+      extra: (sec) => slotMachine(sec, 10, 1),
+    },
+  },
+  {
+    card: "core-096", name: "My Pawn", set: "Core", type: "Trap", tags: [], rarity: "Mythic",
+    // Its theme's baroque hall: the motif on pizzicato, the harpsichord's sixteenths, a bassoon walking.
+    tune: {
+      palette: { lead: GM.pizz, second: GM.harpsichord, bass: GM.bassoon, color: GM.strings, style: "baroque", center: 69 },
+      tonic: "E", mode: "harmonic", bpm: 104, prog: ["i", ["V", "i"]],
+      melody: [...THEME_MOTIF, [3, 0.5], [2, 0.5], [1, 0.5], [-1, 0.5], [0, 2]],
+    },
+  },
+  {
+    card: "core-097", name: "Zephyrs", set: "Core", type: "Spell", tags: [], rarity: "Mythic",
+    // Its theme's west wind: flute over string tremolo, the harp's glissando, the lydian fourth on top.
+    tune: {
+      palette: { lead: GM.flute, second: GM.tremolo, bass: GM.fretless, color: GM.harp, style: "swell", center: 79 },
+      tonic: "F", mode: "lydian", bpm: 96, prog: ["I", ["ii", "I"]],
+      melody: [...HIGH_MOTIF, [10, 0.5], [8, 0.5], [5, 0.5], [6, 0.5], [7, 2]],
+      extra: (sec) => glintRun(sec, 3, 0, { count: 9, step: 0.125, center: 60, vel: 50 }),
+    },
+  },
+  {
+    card: "core-098", name: "Heroic Power", set: "Core", type: "Field Spell", tags: ["Quickdraw"], rarity: "Mythic",
+    // Its theme's fanfare: the timpani's crescendo roll, then the motif on the trumpet, closed on the tonic.
+    tune: {
+      palette: { lead: GM.trumpet, second: GM.horn, bass: GM.contrabass, color: GM.strings, style: "fanfare", center: 70, extra: GM.trombone },
+      tonic: "C", mode: "major", bpm: 96, prog: ["I", ["V", "I"]],
+      melody: [...THEME_MOTIF, [2, 1], [1, 0.5], [-1, 0.5], [0, 2]],
+      extra: (sec) => {
+        timpaniRoll(sec, 4, 0, 1, 78);
+        bass(sec, { ch: 7, pattern: [[0, "R", 0.9, 1], [2, "5", 0.9, 0.8]], octave: -1, vel: 60 });
+      },
+    },
+  },
+  {
+    card: "core-099", name: "Craft a Card", set: "Core", type: "Spell", tags: [], rarity: "Mythic",
+    // Its theme's workshop: kalimba on the motif over marimba and woodblocks, climbing to the octave.
+    tune: {
+      palette: { lead: GM.kalimba, second: GM.marimba, bass: GM.pizz, color: GM.clarinet, style: "bounce", center: 76 },
+      tonic: "G", mode: "major", bpm: 108, prog: ["I", ["V", "I"]],
+      melody: [...HIGH_MOTIF, [8, 0.5], [9, 0.5], [11, 0.5], [13, 0.5], [14, 2]],
+      extra: (sec) => introDrums(sec, [[0, DR.blockLo, 56], [1, DR.blockHi, 44], [1.5, DR.blockHi, 36], [2, DR.blockLo, 52], [3, DR.blockHi, 44], [3.5, DR.claves, 40]], { skip: beforeLastBar(sec) }),
+    },
+  },
+  {
+    card: "core-100", name: "Ceaseless Void", set: "Core", type: "Unit", tags: [], rarity: "Mythic",
+    // Its theme's void: the motif stretched to twice its length on celesta stars, over choir and drone.
+    tune: {
+      palette: { lead: GM.celesta, second: GM.choir, bass: GM.contrabass, color: GM.metalPad, style: "chant", center: 79 },
+      tonic: "C", mode: "phrygian", bpm: 112, prog: ["i", ["ii", "i"]],
+      melody: [[0, 1], [1, 1], [3, 2.5], [2, 0.5], [1, 1], [0, 2]],
+    },
+  },
+  // ---- Classic ----
+  { card: "classic-004", name: "Palantir", set: "Classic", type: "Field Spell", tags: ["Jlockeed"], rarity: "Legendary" },
+  { card: "classic-007", name: "InfiniScepter", set: "Classic", type: "Field Spell", tags: [], rarity: "Legendary" },
+  {
+    card: "classic-009", name: "Income Tax", set: "Classic", type: "Trap", tags: [], rarity: "Legendary",
+    // The tax collector's march: a muted trumpet counting coins over a tuba.
+    tune: {
+      palette: { lead: GM.mutedTrumpet, second: GM.strings, bass: GM.tuba, color: GM.celesta, style: "march", center: 69 },
+      tonic: "G", mode: "harmonic", bpm: 116, prog: ["i", ["V", "i"]],
+      melody: [[4, 0.25], [4, 0.25], [5, 0.5], [7, 1.5], [6, 0.5], [5, 0.5], [4, 0.5], [3, 0.5], [2, 0.5], [1, 0.5], [-1, 0.5], [0, 2]],
+    },
+  },
+  { card: "classic-028", name: "Second Wind", set: "Classic", type: "Field Spell", tags: [], rarity: "Legendary" },
+  {
+    card: "classic-033", name: "Joro", set: "Classic", type: "Unit", tags: [], rarity: "Legendary",
+    // A spider on its web: harpsichord in harmonic minor, the answer creeping over the flat sixth.
+    tune: {
+      palette: { lead: GM.harpsichord, second: GM.pizz, bass: GM.cello, color: GM.celesta, style: "baroque", center: 67 },
+      tonic: "Db", mode: "harmonic", bpm: 108, prog: ["i", ["V", "i"]],
+      melody: [...MOTIF_CELL, [6, 0.5], [5, 0.5], [6, 0.5], [4, 0.5], [0, 2]],
+    },
+  },
+  { card: "classic-044", name: "Back from the GY", set: "Classic", type: "Spell", tags: [], rarity: "Legendary" },
+  {
+    card: "classic-045", name: "Nature Titan", set: "Classic", type: "Unit", tags: [], rarity: "Legendary",
+    // Something huge waking: horns on the motif widened to a fifth and an octave, choir, timpani.
+    tune: {
+      palette: { lead: GM.horn, second: GM.strings, bass: GM.contrabass, color: GM.choir, style: "orchestral", center: 60 },
+      tonic: "Eb", mode: "mixolydian", bpm: 96, prog: ["I", ["VII", "I"]],
+      melody: [[0, 1], [4, 0.5], [7, 1.5], [6, 0.5], [4, 0.5], [6, 1], [3, 1], [0, 2]],
+    },
+  },
+  {
+    card: "classic-056", name: "Spell Tyrant", set: "Classic", type: "Unit", tags: [], rarity: "Legendary",
+    // A tyrant's entrance: trombone and organ in B-flat minor.
+    tune: {
+      palette: { lead: GM.trombone, second: GM.organ, bass: GM.contrabass, color: GM.celesta, style: "fanfare", center: 58 },
+      tonic: "Bb", mode: "minor", bpm: 104,
+    },
+  },
+  {
+    card: "classic-080", name: "BOOM! Big Max", set: "Classic", type: "Unit", tags: ["Acclaimed"], rarity: "Legendary",
+    tune: { tonic: "D", mode: "harmonic", bpm: 120 },
+  },
+  {
+    card: "classic-085", name: "King Wagtoggle", set: "Classic", type: "Unit", tags: [], rarity: "Legendary",
+    // A royal herald: trumpet with a repeated-note pickup over strings, harpsichord and timpani.
+    tune: {
+      palette: { lead: GM.trumpet, second: GM.strings, bass: GM.contrabass, color: GM.harpsichord, style: "fanfare", center: 72 },
+      tonic: "D", mode: "major", bpm: 112, prog: ["I", ["V", "I"]],
+      melody: [[4, 0.25], [4, 0.25], [5, 0.5], [7, 1.5], [6, 0.5], [5, 0.5], [4, 0.5], [2, 0.5], [4, 0.5], [3, 0.5], [1, 0.5], [0, 2]],
+    },
+  },
+  {
+    card: "classic-090", name: "In Too Deep", set: "Classic", type: "Field Spell", tags: ["Quickdraw"], rarity: "Mythic",
+    // Its theme's deep water: the harp descending, vibes on the motif sinking back to the tonic.
+    tune: {
+      palette: { lead: GM.vibes, second: GM.haloPad, bass: GM.fretless, color: GM.harp, style: "swell", center: 74, extra: GM.atmosphere },
+      tonic: "Eb", mode: "lydian", bpm: 100, prog: ["I", ["ii", "I"]],
+      melody: [...HIGH_MOTIF, [5, 0.5], [4, 0.5], [2, 0.5], [1, 0.5], [0, 2]],
+      extra: (sec) => glintRun(sec, 3, 0, { count: 8, step: 0.25, center: 72, vel: 46, down: true }),
+    },
+  },
+  // ---- Classic+ ----
+  {
+    card: "classicplus-012", name: "The Mother Pancake", set: "Classic+", type: "Unit", tags: ["Pancake"], rarity: "Legendary",
+    // The whole griddle: bright brass, the motif opened to a fifth and an octave, a glockenspiel on top.
+    tune: {
+      palette: { second: GM.brass, color: GM.glock },
+      tonic: "Bb", mode: "major", bpm: 108, prog: ["I", ["V", "I"]],
+      melody: [[0, 0.5], [4, 0.5], [7, 1.5], [6, 0.5], [5, 0.5], [4, 0.5], [8, 0.5], [6, 0.5], [4, 0.5], [6, 0.5], [7, 2]],
+    },
+  },
+  { card: "classicplus-012-1", name: "Devour", set: "Classic+", type: "Spell", tags: ["Pancake", "Token"], rarity: "Legendary", tune: { mode: "minor" } },
+  { card: "classicplus-012-2", name: "Death Boil", set: "Classic+", type: "Spell", tags: ["Pancake", "Token"], rarity: "Legendary", tune: { mode: "harmonic" } },
+  { card: "classicplus-012-3", name: "Fluffy Grip", set: "Classic+", type: "Spell", tags: ["Pancake", "Token"], rarity: "Legendary" },
+  { card: "classicplus-012-4", name: "Powder Spray", set: "Classic+", type: "Spell", tags: ["Pancake", "Token"], rarity: "Legendary" },
+  { card: "classicplus-012-5", name: "Anti-Waffle Shell", set: "Classic+", type: "Field Spell", tags: ["Pancake", "Token"], rarity: "Legendary" },
+  { card: "classicplus-012-6", name: "Frozen Wastes", set: "Classic+", type: "Spell", tags: ["Pancake", "Token"], rarity: "Legendary", tune: { mode: "minor", palette: { color: GM.celesta } } },
+  { card: "classicplus-012-7", name: "Legion of the Hungry", set: "Classic+", type: "Field Spell", tags: ["Pancake", "Token"], rarity: "Legendary", tune: { palette: { style: "march" } } },
+  { card: "classicplus-012-8", name: "Frostspatula", set: "Classic+", type: "Field Spell", tags: ["Pancake", "Token"], rarity: "Legendary", tune: { palette: { color: GM.celesta } } },
+  { card: "classicplus-013", name: "Mommy Barker", set: "Classic+", type: "Unit", tags: ["Human", "Pancake"], rarity: "Legendary" },
+  {
+    card: "classicplus-019", name: "League of Losers", set: "Classic+", type: "Spell", tags: [], rarity: "Legendary",
+    // The match is starting: a synth-brass call to arms that its five Losers each go on to fumble.
+    tune: {
+      palette: { lead: GM.synthBrass, second: GM.strings, bass: GM.synthBass1, color: GM.bells, style: "orchestral", center: 64 },
+      tonic: "A", mode: "minor", bpm: 104, prog: [["i", "VI"], ["V+", "i"]],
+      melody: [...LEAGUE_MOTIF, [4, 0.5], [6, 0.5], [8, 1], [7, 2]],
+    },
+  },
+  {
+    card: "classicplus-019-1", name: "Top Loser", set: "Classic+", type: "Unit", tags: ["Token"], rarity: "Legendary",
+    // The top lane's tank: the League's call on a trombone that sags on its last note.
+    tune: {
+      palette: { lead: GM.trombone, second: GM.strings, bass: GM.tuba, color: GM.harp, style: "fanfare", center: 56 },
+      tonic: "A", mode: "minor", bpm: 100, prog: LOSER_PROG, melody: LOSER_MELODY,
+      extra: (sec) => droop(sec, 0, 6.5),
+    },
+  },
+  {
+    card: "classicplus-019-2", name: "Jungle Loser", set: "Classic+", type: "Unit", tags: ["Token"], rarity: "Legendary",
+    tune: {
+      palette: { lead: GM.panFlute, second: GM.marimba, bass: GM.acBass, color: GM.kalimba, style: "bounce", center: 74 },
+      tonic: "A", mode: "dorian", bpm: 120, prog: LOSER_PROG, melody: LOSER_MELODY,
+    },
+  },
+  {
+    card: "classicplus-019-3", name: "Mid Loser", set: "Classic+", type: "Unit", tags: ["Token"], rarity: "Legendary",
+    // The mid lane's mage flips a coin: two bright tings over a synth that comes down on tails.
+    tune: {
+      palette: { lead: GM.square, second: GM.polysynth, bass: GM.synthBass2, color: GM.crystal, style: "synth", center: 67, extra: GM.bells },
+      tonic: "A", mode: "minor", bpm: 128, prog: LOSER_PROG, melody: LOSER_MELODY,
+      extra: (sec) => {
+        note(sec, 7, 0, 0.5, pitch(sec.k, 7, 1), 64, { exact: true });
+        note(sec, 7, 0.5, 0.75, pitch(sec.k, 11, 1), 58, { exact: true });
+      },
+    },
+  },
+  {
+    card: "classicplus-019-4", name: "Support Loser", set: "Classic+", type: "Unit", tags: ["Token"], rarity: "Legendary",
+    tune: {
+      palette: { lead: GM.flute, second: GM.choir, bass: GM.cello, color: GM.harp, style: "swell", center: 74 },
+      tonic: "A", mode: "dorian", bpm: 100, prog: LOSER_PROG, melody: LOSER_MELODY,
+    },
+  },
+  {
+    card: "classicplus-019-5", name: "Bot Loser", set: "Classic+", type: "Unit", tags: ["Token"], rarity: "Legendary",
+    tune: {
+      palette: { lead: GM.saw, second: GM.square, bass: GM.synthBass2, color: GM.crystal, style: "synth", center: 69 },
+      tonic: "A", mode: "minor", bpm: 140, prog: LOSER_PROG, melody: LOSER_MELODY,
+    },
+  },
+  {
+    card: "classicplus-027", name: "Zephrys Zealotism", set: "Classic+", type: "Spell", tags: [], rarity: "Mythic",
+    // Its theme's chant: timpani on every beat, the motif on pan flute over organ and choir, in dorian.
+    tune: {
+      palette: { lead: GM.panFlute, second: GM.organ, bass: GM.contrabass, color: GM.choir, style: "chant", center: 74 },
+      tonic: "D", mode: "dorian", bpm: 104, prog: ["i", ["IV", "i"]],
+      melody: [...THEME_MOTIF, [5, 0.5], [3, 0.5], [2, 0.5], [1, 0.5], [0, 2]],
+    },
+  },
+  {
+    card: "classicplus-029", name: "Portal to the Past", set: "Classic+", type: "Spell", tags: [], rarity: "Mythic",
+    // Its theme's music box: the motif, then the motif turned back on itself, a viola rising against it.
+    tune: {
+      palette: { lead: GM.musicBox, second: GM.strings, bass: GM.cello, color: GM.glock, style: "sparkle", center: 79, extra: GM.viola },
+      tonic: "Bb", mode: "major", bpm: 100, prog: [["I", "vi"], ["V", "I"]],
+      melody: [...HIGH_MOTIF, [7, 0.25], [8, 0.25], [9, 0.5], [10, 1], [8, 0.5], [7, 1.5]],
+      extra: (sec) => line(sec, { ch: 7, notes: [[2, 1], [3, 1], [4, 1], [5, 1], [4, 2], [2, 2]], octave: -1, vel: 60 }),
+    },
+  },
+  { card: "classicplus-035", name: "Rollback", set: "Classic+", type: "Spell", tags: [], rarity: "Legendary" },
+  {
+    card: "classicplus-037", name: "Wardrum", set: "Classic+", type: "Unit", tags: ["Quickdraw", "Acclaimed"], rarity: "Legendary", station: "epic",
+    // Its Epic Orchestral station's forces, under war drums.
+    tune: {
+      tonic: "D", mode: "minor", bpm: 108,
+      extra: (sec) => introDrums(sec, [[0, DR.floorTom, 92], [0.75, DR.tomLo, 60], [1, DR.floorTom, 80], [2, DR.floorTom, 90], [2.5, DR.tomLo, 64], [3, DR.tomMid, 72], [3.5, DR.tomLo, 70]], { skip: beforeLastBar(sec) }),
+    },
+  },
+  { card: "classicplus-042", name: "KY's Test", set: "Classic+", type: "Spell", tags: ["KY"], rarity: "Legendary" },
+  { card: "classicplus-042-1", name: "KY's Gift", set: "Classic+", type: "Field Spell", tags: ["KY", "Token"], rarity: "Legendary" },
+  {
+    card: "classicplus-043", name: "AI Slop", set: "Classic+", type: "Spell", tags: [], rarity: "Legendary",
+    // Generated: the motif stutters in on a square wave over synths.
+    tune: {
+      palette: { lead: GM.square, second: GM.polysynth, bass: GM.synthBass2, color: GM.crystal, style: "synth", center: 67 },
+      tonic: "E", mode: "minor", bpm: 128, prog: ["i", ["V+", "i"]],
+      melody: [[4, 0.25], [4, 0.25], [4, 0.25], [5, 0.25], [7, 1.5], [6, 0.5], [5, 0.5], [4, 0.5], [3, 0.25], [3, 0.25], [2, 0.5], [1, 0.5], [-1, 0.5], [0, 2]],
+    },
+  },
+  { card: "classicplus-046", name: "Felinor Flagbearer", set: "Classic+", type: "Unit", tags: ["Felinor", "Catalyst"], rarity: "Legendary" },
+  { card: "classicplus-046-1", name: "Felinor Flagbearer Prime", set: "Classic+", type: "Unit", tags: ["Felinor", "Prime", "Token"], rarity: "Legendary" },
+  {
+    card: "classicplus-047", name: "Jogg's Box", set: "Classic+", type: "Spell", tags: [], rarity: "Legendary",
+    // A box of spells opening: a music box over strings, a celesta's ripple.
+    tune: {
+      palette: { lead: GM.musicBox, second: GM.strings, bass: GM.cello, color: GM.celesta, style: "sparkle", center: 79 },
+      tonic: "G", mode: "major", bpm: 112,
+    },
+  },
+  { card: "classicplus-048", name: "Jlockheed's Lobbyist", set: "Classic+", type: "Unit", tags: ["Jlockeed"], rarity: "Legendary" },
+  { card: "classicplus-065-4", name: "Golden Grape", set: "Classic+", type: "Spell", tags: ["Fruit", "Token"], rarity: "Legendary" },
+  {
+    card: "classicplus-065-5", name: "Mythic Grape", set: "Classic+", type: "Spell", tags: ["Fruit", "Token"], rarity: "Mythic",
+    // A grape gone prismatic: marimba and kalimba in lydian under the Mythic shimmer.
+    tune: { tonic: "D", mode: "lydian", bpm: 112 },
+  },
+  { card: "classicplus-073", name: "Call to Chaos (Classic+ Edition)", set: "Classic+", type: "Spell", tags: ["Call to Chaos"], rarity: "Legendary",
+    // Its own slot machine, on a square wave in harmonic minor.
+    tune: {
+      palette: { lead: GM.square, extra: GM.bells },
+      tonic: "E", mode: "harmonic", bpm: 144,
+      extra: (sec) => slotMachine(sec, 10, 1),
+    },
+  },
+  {
+    card: "classicplus-073-1", name: "Classic Golem", set: "Classic+", type: "Unit", tags: ["Token"], rarity: "Legendary",
+    // Stone on the march: low brass and timpani.
+    tune: { palette: { lead: GM.tuba, second: GM.trombone, bass: GM.contrabass, color: GM.harp, style: "march", center: 52 } },
+  },
+  {
+    card: "classicplus-074", name: "Twice Forward One Step Backwards", set: "Classic+", type: "Field Trap", tags: [], rarity: "Mythic",
+    // Its theme's lopsided waltz: the clarinet takes two steps forward and one back, bar after bar.
+    tune: {
+      palette: { lead: GM.clarinet, second: GM.pizz, bass: GM.bassoon, color: GM.accordion, style: "pizz", center: 70 },
+      tonic: "A", mode: "minor", bpm: 132, beatsPerBar: 3, bars: 3, prog: ["i", "V+", "i"],
+      melody: [[4, 0.5], [5, 0.5], [7, 1], [6, 0.5], [5, 0.5], [6, 0.5], [7, 0.5], [8, 1], [7, 0.5], [6, 0.5], [5, 0.5], [4, 0.5], [7, 2]],
+    },
+  },
+  {
+    card: "classicplus-075", name: "J-lease J-Jungle EX-plorer", set: "Classic+", type: "Unit", tags: [], rarity: "Legendary",
+    // Into the jungle: pan flute over marimba and bongos.
+    tune: {
+      palette: { lead: GM.panFlute, second: GM.marimba, bass: GM.acBass, color: GM.kalimba, style: "bounce", center: 74 },
+      tonic: "F", mode: "mixolydian", bpm: 120,
+    },
+  },
+  { card: "classicplus-075-1", name: "J-lease J-Jungle EX-plorer Pack", set: "Classic+", type: "Spell", tags: ["Token"], rarity: "Legendary" },
+  {
+    card: "classicplus-078", name: "Claude's Datacenter", set: "Classic+", type: "Field Spell", tags: [], rarity: "Legendary",
+    // Racks humming: an FM piano over a warm pad, crystal arpeggios, a pulse like fans spinning up.
+    tune: {
+      palette: { lead: GM.ep2, second: GM.warmPad, bass: GM.synthBass1, color: GM.crystal, style: "synth", center: 72 },
+      tonic: "C", mode: "dorian", bpm: 116,
+    },
+  },
+];
+
+/* ------------------------------------------------------------------------------------------- *
  * The track list
  * ------------------------------------------------------------------------------------------- */
 
@@ -928,4 +1795,9 @@ export const TRACKS = [
   { id: "mythic-portal-to-the-past", loop: true, build: portalToThePast },
   { id: "legendary-1", loop: true, build: legendaryTheme1 },
   { id: "legendary-2", loop: true, build: legendaryTheme2 },
+  // R1352: each Legendary's and Mythic's own intro, a sting that plays once.
+  ...INTRO_CARDS.map((card) => ({ id: introTrack(card.card), loop: false, build: () => cardIntro(card) })),
 ];
+
+/** R1352: which card each intro is, for music-cards.json's `intro` and the licence record. */
+export const INTRO_TRACKS = INTRO_CARDS.map((card) => ({ card: card.card, name: card.name, track: introTrack(card.card), family: introFamily(card) }));

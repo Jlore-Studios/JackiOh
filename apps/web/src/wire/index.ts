@@ -163,6 +163,7 @@ export const GAME_EVENT_TYPES = [
   "turnCutShort",
   "marked",
   "glitched",
+  "damageAbsorbed",
 ] as const satisfies readonly GameEventType[];
 
 /**

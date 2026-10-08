@@ -32,8 +32,8 @@ use indexmap::IndexMap;
 use tokio::sync::{mpsc, oneshot};
 
 use jackioh_engine::{
-    Action, ActionBody, Aim, AimEnd, GameOverReason, HandView, PLAYER_IDS, PendingView, PerPlayer, PlayerId,
-    PlayerView, PortraitId, aim_key, emote_gate, portrait_or_default,
+    Action, ActionBody, Aim, AimEnd, EmoteId, GameOverReason, HandView, PLAYER_IDS, PendingView, PerPlayer,
+    PlayerId, PlayerView, PortraitId, aim_key, deal_emote_hand, emote_gate, hand_holds, portrait_or_default,
 };
 
 use crate::actor::clock::{Timer, after, create_match_clock};
@@ -194,6 +194,10 @@ struct Shared {
     seats: (MatchSeat, MatchSeat),
     /// R642: the pair the `portraits` frame carries, `vanilla` for a match that predates them.
     portraits: (PortraitId, PortraitId),
+    /// R1341, R1342: each account's emote hand, keyed by the seat it began in (`home`) like the
+    /// sockets, dealt once from the match seed when the actor is built — the same eight after a
+    /// restart, a reconnect or a Glitch's swap (R677), since a hand belongs to the player.
+    emote_hands: PerPlayer<Vec<EmoteId>>,
     clock: MatchClock,
     inbox: mpsc::UnboundedSender<Task>,
     on_voided: Option<Box<dyn Fn() + Send + Sync>>,
@@ -297,6 +301,10 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
     let portraits = match_row
         .portraits
         .unwrap_or((portrait_or_default(None), portrait_or_default(None)));
+    let emote_hands = PerPlayer::new(
+        deal_emote_hand(&match_row.seed, PlayerId::P1),
+        deal_emote_hand(&match_row.seed, PlayerId::P2),
+    );
     let opening = engine::snapshot(&state);
 
     let core = Core {
@@ -335,6 +343,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         match_row,
         seats,
         portraits,
+        emote_hands,
         clock,
         inbox,
         on_voided,
@@ -385,12 +394,8 @@ impl MatchActor {
                 let player = playing(&core, home);
                 self.push_view(&core, player);
                 self.push_clock(&core, player);
-                // R642: portraits ride again on a reconnect, as on join.
-                self.send_to_home(
-                    &core,
-                    home,
-                    &portraits_message(self.shared.portraits.0, self.shared.portraits.1),
-                );
+                // R642: portraits ride again on a reconnect, as on join, with the account's hand (R1342).
+                self.send_to_home(&core, home, &self.portraits_for(home));
             }
             Task::Action { home, nonce, body } => {
                 // R677: the seat is the one this account plays when the action runs — a swap queued
@@ -430,15 +435,12 @@ impl MatchActor {
                     player
                 };
                 self.persist_clocks().await;
-                // §9.5: a fresh full view, never a log replay. R642: the portraits ride with it.
+                // §9.5: a fresh full view, never a log replay. R642: the portraits ride with it, and
+                // R1342 the account's own emote hand with them.
                 let core = self.lock();
                 self.push_view(&core, player);
                 self.push_clock(&core, player);
-                self.send_to_home(
-                    &core,
-                    home,
-                    &portraits_message(self.shared.portraits.0, self.shared.portraits.1),
-                );
+                self.send_to_home(&core, home, &self.portraits_for(home));
                 self.push_clock(&core, player.opponent());
             }
             Task::Idle(done) => {
@@ -450,6 +452,15 @@ impl MatchActor {
     // ---------------------------------------------------------------------
     // Sending. §10.8: a socket only ever carries this player's own view.
     // ---------------------------------------------------------------------
+
+    /// R642, R1342: the portraits frame for the account that began in `home`, with its own hand.
+    fn portraits_for(&self, home: PlayerId) -> ServerMessage {
+        portraits_message(
+            self.shared.portraits.0,
+            self.shared.portraits.1,
+            &self.shared.emote_hands[home],
+        )
+    }
 
     /// Sends to the account playing engine seat `player` now.
     fn send(&self, core: &Core, player: PlayerId, message: &ServerMessage) {
@@ -903,6 +914,13 @@ impl MatchActor {
                 self.enqueue(Task::Hello { home });
             }
             Ok(ClientMessage::Emote(emote)) => {
+                // R1342: an emote outside the sender's dealt hand is refused first, as silently as a
+                // rate-limited one and without spending the limit: the menu never offers it, so only
+                // a stale or a hand-made client sends one.
+                if !hand_holds(&self.shared.emote_hands[home], emote.emote) {
+                    tracing::warn!(event = "match.emote.outside_hand", matchId = %self.match_id_str(), player = %player, emote = %emote.emote);
+                    return;
+                }
                 // R643: same gate the client ran. A fail is a silent drop — no error, no rejected-action
                 // log; a pass relays to the opponent only (the sender already showed it locally).
                 let now = now_ms();

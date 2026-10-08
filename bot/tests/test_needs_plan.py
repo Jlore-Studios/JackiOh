@@ -120,6 +120,35 @@ class PlanningLaneTests(unittest.TestCase):
                          ("build", 4, "devin"))
         self.assertIsNone(seats(planned)["plan"])  # built from the plan, not planned again
 
+    def test_an_uncapped_account_plans_as_many_items_at_once_as_its_lanes(self):
+        """Planning comes first: claude-3 (two lanes, no caps) plans two items at once, before it
+        builds anything, so the medium models have plans to build from. Its third item it plans
+        and builds in one run, on a build lane."""
+        gh = FakeGitHub()
+        ctx = lane_ctx(gh, machine=(), env=secrets("CLAUDE_CODE_OAUTH_TOKEN_3"))
+        for number in (3, 4, 5):
+            queue(gh, ctx, number, planned=False)
+        made = []
+        for _ in range(2):
+            made.append(plan_mod.make(ctx))
+            running(gh, ctx, made[-1])
+        self.assertEqual([(p["action"], p["number"], p["provider"]) for p in made],
+                         [("plan", 3, "claude-3"), ("plan", 4, "claude-3")])
+        third = plan_mod.make(ctx)
+        self.assertEqual((third["action"], third["number"]), ("build", 5))
+        self.assertEqual(seats(third)["plan"], ("claude-3", "opus", "strong"))
+
+    def test_the_lane_plans_fullsend_parts_before_the_rest(self):
+        """A fullsend part waits on its plan for a medium subscription (Muse) to build it, so the
+        lane plans it before an older, harder item that is no part."""
+        gh = FakeGitHub()
+        ctx = lane_ctx(gh, machine=(), env=secrets("CLAUDE_CODE_OAUTH_TOKEN_3"))
+        queue(gh, ctx, 3, "difficulty:hard", planned=False)
+        queue(gh, ctx, 4, planned=False)
+        ctx.store.update(lambda s: state_item(s, 4).update(onto="bot/issue-9", part_of=9))
+        planned = plan_mod.make(ctx)
+        self.assertEqual((planned["action"], planned["number"]), ("plan", 4))
+
     def test_claude_1_never_plans_while_it_builds(self):
         """Two lanes let a second build start while one runs, but a capped subscription
         still never plans while it holds anything: two runs deciding from one reading go

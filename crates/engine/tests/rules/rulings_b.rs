@@ -1651,11 +1651,12 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert_eq!(deal_damage(&mut sink, hit(None, unit_hit(&shield), 0)), 0);
         assert_eq!(instance_in(sink.state, &shield.id).divine_shield_spent, None);
 
-        // A hit reduced to 0 by Armor emits no event and triggers nothing.
+        // A hit reduced to 0 by Armor emits no `damage` and triggers nothing: R1361's report alone.
         let armour = put(sink.state, ARMOURED, slot(P2, UNITS, 3), json!({})); // Armor 5
         let before = sink.events.len();
         assert_eq!(deal_damage(&mut sink, hit(None, unit_hit(&armour), 2)), 0);
-        assert_eq!(sink.events.len(), before);
+        let types: Vec<GameEventType> = sink.events[before..].iter().map(GameEvent::event_type).collect();
+        assert_eq!(types, vec![GameEventType::DamageAbsorbed]);
 
         // Cleave belongs to the attack, so it lands even when the hit on the defender was stopped.
         let mut cleave_game = game("r63-cleave");

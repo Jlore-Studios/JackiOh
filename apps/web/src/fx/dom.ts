@@ -1,8 +1,8 @@
 // DOM effects: the CSS half of the effects layer (docs/polish/1-animations.md S10, B39).
 //
 // The director hands every DOM cue (splat, rays, sheen, ghost, arrows, banner, result, R502's
-// fracture, Crushing Walls' walls, R437's brand, R436's chaos reveal, and issue #124's fog and
-// zone wave) to
+// fracture, Crushing Walls' walls, R437's brand, R436's chaos reveal, issue #124's fog and zone
+// wave, and R1363's shield flash) to
 // `mountDomEffect` at the moment the cue fires, with the anchor boxes it measured then. This module
 // appends exactly one element per cue and writes only data: its kind, its tone, its text as an
 // attribute, and its geometry and timing as `--fx-*` custom properties. Everything visual lives in
@@ -212,6 +212,13 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       if (at === null) return null;
       placeAtCentre(el, at);
       tint(el, cue.tint);
+      break;
+    }
+    case "shield": {
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      placeAtCentre(el, at);
+      el.setAttribute("data-size", cue.size);
       break;
     }
     case "chaos": {

@@ -24,7 +24,8 @@
 //! answered, so a return Spell cast then does not come back two turns later (R155, R62), and an
 //! end-of-turn clause a Spell arms on the other player's turn is not armed at all (R241, §6.2).
 //! Then, from the lens "engine invariants": the refresh's rider is a badge the view lists and the
-//! refresh reports spent (R169, §6.3 Mana), and a fatigue draw Armor absorbs is still reported (R240).
+//! refresh reports spent (R169, §6.3 Mana), and a fatigue draw Armor absorbs is still reported (R240),
+//! since patch v0.3.X by the pipeline's own `damageAbsorbed` (R1362).
 //!
 //! Port of `packages/cards/test/turn-stages.test.ts` (SURFACE §4.1, §8).
 
@@ -870,21 +871,27 @@ const HIT_JOB: &str = "core-016"; // a Spell with no hand trigger
 const STOCKPILE: &str = "core-005"; // likewise
 const GOING_LONG: &str = "core-084"; // Field Spell: your hero has Armor 2
 
-/// The `damage` events on p2's hero among `events`.
+/// The `damage` and `damageAbsorbed` events on p2's hero among `events`.
 fn hits_on_p2_hero(events: &[GameEvent]) -> Vec<GameEvent> {
     events
         .iter()
-        .filter(|event| matches!(event, GameEvent::Damage { target_id, .. } if target_id == "hero-p2"))
+        .filter(|event| match event {
+            GameEvent::Damage { target_id, .. } | GameEvent::DamageAbsorbed { target_id, .. } => {
+                target_id == "hero-p2"
+            }
+            _ => false,
+        })
         .cloned()
         .collect()
 }
 
-/// R240's report: `{ type: "damage", sourceId: null, targetId: "hero-p2", amount: 0, combat: false }`.
-fn zero_fatigue_report() -> GameEvent {
-    GameEvent::Damage {
+/// R240's report, R1362's form of it: `{ type: "damageAbsorbed", sourceId: null, targetId: "hero-p2",
+/// absorbed: 1, combat: false }`, the whole of the 1st fatigue hit taken by the Armor.
+fn absorbed_fatigue_report() -> GameEvent {
+    GameEvent::DamageAbsorbed {
         source_id: None,
         target_id: "hero-p2".to_string(),
-        amount: 0,
+        absorbed: 1,
         combat: false,
     }
 }
@@ -952,7 +959,7 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
     }
 
     #[test]
-    fn r240_r3_a_fatigue_draw_that_going_long_s_armor_absorbs_still_reports_itself_since_the_public_fatigue_count_moved_10_3()
+    fn r240_r1362_r3_a_fatigue_draw_that_going_long_s_armor_absorbs_still_reports_itself_since_the_public_fatigue_count_moved_10_3()
      {
         let mut s = scenario(json!({
             "seed": "r9-inv-fatigue",
@@ -970,10 +977,11 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
         assert_eq!(s.state().players.p2.hero.health, 30);
         assert_eq!(s.state().players.p2.fatigue_count, 1);
         assert_eq!(s.view(PlayerId::P1).opponent.fatigue_count, 1);
-        // §10.3: "every visible state change emits an event", so the draw reports itself — by a
-        // `damage` of 0 from no source on p2's hero, once, and by nothing else: R3 draws no card, so
+        // §10.3: "every visible state change emits an event", so the draw reports itself — R1362: by
+        // the pipeline's `damageAbsorbed` from no source on p2's hero, once, the whole 1 absorbed, and
+        // by nothing else: no `damage` (not even the 0 R240 once wrote), and R3 draws no card, so
         // there is no `drawn` for p2.
-        assert_eq!(hits_on_p2_hero(s.last_events()), vec![zero_fatigue_report()]);
+        assert_eq!(hits_on_p2_hero(s.last_events()), vec![absorbed_fatigue_report()]);
         assert!(!s.last_events().iter().any(|event| matches!(
             event,
             GameEvent::Drawn {
@@ -984,12 +992,18 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
     }
 
     /// TS `onHeroHit(ctx)`: a `damage` event whose target is a hero.
+    /// R1361: a report of a hit Armor took whole counts here too, so only the engine keeps it unanswered.
     fn on_hero_hit(event: &GameEvent) -> bool {
-        matches!(event, GameEvent::Damage { target_id, .. } if target_id.starts_with("hero-"))
+        match event {
+            GameEvent::Damage { target_id, .. } | GameEvent::DamageAbsorbed { target_id, .. } => {
+                target_id.starts_with("hero-")
+            }
+            _ => false,
+        }
     }
 
     #[test]
-    fn r240_r63_the_report_of_an_absorbed_fatigue_draw_is_answered_by_no_trigger_and_no_trap() {
+    fn r240_r1362_r63_the_report_of_an_absorbed_fatigue_draw_is_answered_by_no_trigger_and_no_trap() {
         let mut s = scenario(json!({
             "seed": "r11-fatigue-report",
             "p1": { "hand": [HIT_JOB], "field": [TEMPO_TIMMY], "library": [TEMPO_TIMMY, TEMPO_TIMMY] },
@@ -1001,9 +1015,10 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
             "fixture:r11-hero-hit-watcher",
             CardType::Unit,
             Script {
+                // R1361: it listens for the report too, which still wakes nothing.
                 triggers: vec![TriggerDef::new(
                     "on-hero-hit",
-                    &[GameEventType::Damage],
+                    &[GameEventType::Damage, GameEventType::DamageAbsorbed],
                     |_ctx, event| {
                         if on_hero_hit(event) {
                             vec![hit_enemy_hero(1)]
@@ -1022,9 +1037,11 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
             CardType::Trap,
             Script {
                 triggers: vec![
-                    TriggerDef::new("on-hero-hit", &[GameEventType::Damage], |_ctx, _event| {
-                        vec![hit_enemy_hero(1)]
-                    })
+                    TriggerDef::new(
+                        "on-hero-hit",
+                        &[GameEventType::Damage, GameEventType::DamageAbsorbed],
+                        |_ctx, _event| vec![hit_enemy_hero(1)],
+                    )
                     .with_when(|_ctx, event| on_hero_hit(event)),
                 ],
                 ..Script::default()
@@ -1045,9 +1062,9 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
 
         s.end_turn(); // p2's draw meets an empty library; Going Long's Armor 2 takes the whole 1
 
-        // The draw is reported by a `damage` of 0, and it is no damage instance (R63): the unit queues
-        // nothing for it, the trap stays set, and p2's hero keeps its 30.
-        assert_eq!(hits_on_p2_hero(s.last_events()), vec![zero_fatigue_report()]);
+        // The draw is reported by `damageAbsorbed` (R1362), and it is no damage instance (R63, R1361):
+        // the unit queues nothing for it, the trap stays set, and p2's hero keeps its 30.
+        assert_eq!(hits_on_p2_hero(s.last_events()), vec![absorbed_fatigue_report()]);
         assert!(!s.last_events().iter().any(|event| matches!(
             event,
             GameEvent::Damage { source_id: Some(source), .. } if *source == watcher.id
