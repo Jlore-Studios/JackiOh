@@ -285,7 +285,8 @@ fn cat_cafe(_ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
 /// then asks, after the state check that follows the hit (R59), whether the unit left the field in it
 /// (`leftFieldAfter` against the activation's own mark, which a pause keeps, R174) — killed, a Reborn
 /// body put back included — and if so summons a Ghoul Token for you with that unit's attack and health
-/// as it stood before the hit (its health undamaged: Ping kills only a unit left on 1).
+/// as it stood before the hit (its health undamaged: at its printed 1 damage Ping kills only a unit
+/// left on 1, and a tuned `ping` (#493) may kill more).
 fn ping(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     let hit = crate::effects::damage(json_as(json!({
         "to": { "of": "chosen" },
