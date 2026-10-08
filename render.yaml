@@ -51,10 +51,11 @@ services:
       - key: NODE_ENV
         value: production
       # R105's catalog version, as the patch command last wrote it. The server compiles its own
-      # catalog version in from crates/cards/patches/patches.json and refuses to boot when this
-      # value disagrees with it, so a value left stale in the dashboard, or one Render never synced,
-      # stops the deploy instead of being served. deploy-watch.yml, promote-production.yml and
-      # crates/server/tests/deploy/rehearse.sh read this line as the version main should serve, and
+      # catalog version in from crates/cards/patches/patches.json and serves that one whatever this
+      # value says: a value left stale in the dashboard, or one Render never synced, only logs a
+      # warning, so a card patch ships with no hand edit in Render (#488). deploy-watch.yml,
+      # promote-production.yml and crates/server/tests/deploy/rehearse.sh read this line as the
+      # version main should serve, and
       # R388's test holds it equal to patches.json; the bump of the line below is the same patch
       # commit's.
       - key: CATALOG_VERSION

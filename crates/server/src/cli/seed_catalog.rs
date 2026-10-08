@@ -9,10 +9,10 @@
 //!
 //! With no argument it seeds the catalog compiled into this binary (`jackioh_cards::catalog_json()`,
 //! crates/cards/catalog.json) at the version compiled in with it (`jackioh_cards::catalog_version()`,
-//! the newest entry of crates/cards/patches/patches.json). `CATALOG_VERSION` in the environment, when
-//! set, must name that same version: the server refuses to boot on a mismatch (SURFACE §11.3), so the
-//! seed refuses too, before it writes anything. With a path, it seeds that file instead (a fixture
-//! catalog), at `CATALOG_VERSION`, which is then required, as in TS.
+//! the newest entry of crates/cards/patches/patches.json). A `CATALOG_VERSION` in the environment
+//! that names another version is reported and ignored, as the server ignores it (SURFACE §11.3,
+//! #488), so a card patch is seeded without a hand edit anywhere. With a path, it seeds that file
+//! instead (a fixture catalog), at `CATALOG_VERSION`, which is then required, as in TS.
 
 use anyhow::{Result, anyhow};
 use indexmap::IndexMap;
@@ -238,11 +238,7 @@ pub async fn run(args: Vec<String>) -> Result<()> {
         None => {
             let compiled = jackioh_cards::catalog_version();
             if !configured.is_empty() && configured != compiled {
-                return Err(anyhow!(
-                    "CATALOG_VERSION is {configured}, but this build's catalog is {compiled} \
-                     (crates/cards/patches/patches.json). The server refuses to boot on that mismatch, \
-                     so nothing is seeded: set CATALOG_VERSION={compiled}, or leave it unset."
-                ));
+                eprintln!("{}", crate::env::stale_catalog_version_warning(&configured));
             }
             (
                 compiled.to_string(),
