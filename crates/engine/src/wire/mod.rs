@@ -12,6 +12,7 @@ pub mod catalog_types;
 pub mod codes;
 pub mod emotes;
 pub mod events;
+pub mod replays;
 pub mod stats;
 pub mod view;
 
@@ -21,6 +22,7 @@ pub use catalog_types::*;
 pub use codes::*;
 pub use emotes::*;
 pub use events::*;
+pub use replays::*;
 pub use stats::*;
 pub use view::*;
 

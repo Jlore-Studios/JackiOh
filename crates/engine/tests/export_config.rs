@@ -1,8 +1,8 @@
 //! Writes `apps/web/src/wire/engineConfig.ts`, the engine constants the web client imports as
 //! `@jackioh/engine/config` (docs/v0.3.0/SURFACE.md §5.1): the values and two types that a file under
 //! `apps/web/src` imports from it today (SURFACE's twelve, plus `LIBRARY_CAP`, which a web test
-//! imports), generated from `crates/engine/src/config.rs` so the client never restates a rules
-//! number (CLAUDE.md rule 9).
+//! imports, and R768's two replay constants), generated from `crates/engine/src/config.rs` so the
+//! client never restates a rules number (CLAUDE.md rule 9).
 //!
 //! `cargo test -p jackioh-engine --test export_config` writes it; the file is committed, and CI runs
 //! this test and fails on a diff, as it does for the ts-rs types under `wire/generated/` (V20).
@@ -19,7 +19,8 @@
 
 use jackioh_engine::config::{
     AI_DIFFICULTY, AI_TUTORIAL, COIN_DEF_ID, DECK_SIZE, DIFFICULTIES, DRAWS_PER_TURN, GLITCH_DEF_ID,
-    HERO_HEALTH, HUMAN_HANDICAP, LIBRARY_CAP, MAX_COPIES, MAX_MANA, TURN_CAP_PLAYER_TURNS,
+    HERO_HEALTH, HUMAN_HANDICAP, LIBRARY_CAP, MAX_COPIES, MAX_MANA, REPLAY_CHECKPOINT_EVERY,
+    REPLAY_PAGE_STEPS, TURN_CAP_PLAYER_TURNS,
 };
 use serde::Serialize;
 
@@ -81,6 +82,8 @@ fn engine_config_ts() -> String {
         constant("LIBRARY_CAP", None, &LIBRARY_CAP),
         constant("MAX_COPIES", None, &MAX_COPIES),
         constant("MAX_MANA", None, &MAX_MANA),
+        constant("REPLAY_CHECKPOINT_EVERY", None, &REPLAY_CHECKPOINT_EVERY),
+        constant("REPLAY_PAGE_STEPS", None, &REPLAY_PAGE_STEPS),
         constant("TURN_CAP_PLAYER_TURNS", None, &TURN_CAP_PLAYER_TURNS),
     ];
     constants.sort_by(|a, b| a.name.cmp(b.name));
@@ -103,8 +106,8 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    // Thirteen constants, each on its own line, the way the client and the diff check read them.
-    assert_eq!(text.matches("\nexport const ").count(), 13, "{text}");
+    // Fifteen constants, each on its own line, the way the client and the diff check read them.
+    assert_eq!(text.matches("\nexport const ").count(), 15, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }
 

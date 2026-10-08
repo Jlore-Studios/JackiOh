@@ -19,6 +19,7 @@ What the other crates call:
 | `view_for(&GameState, PlayerId) -> PlayerView` | the only thing a client may see (§10.8); `view_for_with_clock` adds the server's clock (R79) |
 | `seat_to_act(&GameState)` | the seat the game waits on first, for code that plays both seats (R265) |
 | `hash_state`, `fold`, `canonical`, `fnv1a32_utf16` (`replay.rs`) | the state hash, and an action log folded back into a state |
+| `replay_open`, `replay_page` (`replay.rs`, R768) | a finished game checked, then any seat's view at any step, a page at a time |
 | `summarize_game` (`game_summary.rs`) | a finished game's record for the card statistics (R376) |
 | `last_board_for`, `seat_played_by`, `seats_swapped`, `mulligan_owed` | the facts the server and practice read at the edges of a game (R417, R677, R265) |
 | `registered_catalog()` | the catalog `jackioh_cards::register_all()` installed |

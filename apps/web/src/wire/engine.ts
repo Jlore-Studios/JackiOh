@@ -20,6 +20,12 @@ import type { ActionBody, PlayerId } from "./index.ts";
 export * from "./engineConfig.ts";
 export type { GameState } from "./generated/GameState.ts";
 export type { CardInstance } from "./generated/CardInstance.ts";
+export type { ReplayCheckpoints } from "./generated/ReplayCheckpoints.ts";
+export type { ReplayOpen } from "./generated/ReplayOpen.ts";
+export type { ReplayPage } from "./generated/ReplayPage.ts";
+export type { ReplayRecord } from "./generated/ReplayRecord.ts";
+export type { ReplayRefusal } from "./generated/ReplayRefusal.ts";
+export type { ReplayStep } from "./generated/ReplayStep.ts";
 export { createRng, type Rng } from "./rng.ts";
 
 export {
@@ -32,6 +38,8 @@ export {
   legalActions,
   reduce,
   registeredCatalog,
+  replayOpen,
+  replayPage,
   seatPlayedBy,
   seatToAct,
   viewFor,
