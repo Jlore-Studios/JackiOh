@@ -98,7 +98,7 @@ mod tests {
             assert_eq!(
                 js(&crate::card_def(TRICKSTER).params),
                 json!([
-                    { "key": "discount", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1 },
+                    { "key": "discount", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1, "tunedOn": "base" },
                     { "key": "setCost", "base": 0, "radiant": 0, "better": "down", "step": 1, "min": 0 }
                 ])
             );
