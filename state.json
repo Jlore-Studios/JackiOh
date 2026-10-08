@@ -5,90 +5,6 @@
   "halt": {},
   "halted": false,
   "handled": {
-    "c:5970513515": {
-      "at": "2026-10-03T15:20:28Z",
-      "lines": [
-        "/harness status"
-      ]
-    },
-    "c:5971008062": {
-      "at": "2026-10-03T16:20:13Z",
-      "lines": [
-        "@jgoetzmann-bot try this again"
-      ]
-    },
-    "c:5971027039": {
-      "at": "2026-10-03T16:22:06Z",
-      "lines": [
-        "@jgoetzmann-bot is this getting proper attention?"
-      ]
-    },
-    "c:5971227964": {
-      "at": "2026-10-03T16:45:55Z",
-      "lines": [
-        "@jgoetzmann-bot Use your best judgement. As long as the checklist is fulfilled, whether is happens on this branch or the functionality already exists, it does not matter."
-      ]
-    },
-    "c:5972198034": {
-      "at": "2026-10-03T18:31:24Z",
-      "lines": [
-        "@jgoetzmann-bot override, I trust that you aren't touching anything that will blow up our pipelines"
-      ]
-    },
-    "c:5972203959": {
-      "at": "2026-10-03T18:32:12Z",
-      "lines": [
-        "@jgoetzmann-bot close it"
-      ]
-    },
-    "c:5972540839": {
-      "at": "2026-10-03T19:07:00Z",
-      "lines": [
-        "@jgoetzmann-bot try again"
-      ]
-    },
-    "c:5972554835": {
-      "at": "2026-10-03T19:08:33Z",
-      "lines": [
-        "@jgoetzmann-bot KEEP GOING! BELIEVE IN YOURSELF!"
-      ]
-    },
-    "c:5972560496": {
-      "at": "2026-10-03T19:09:17Z",
-      "lines": [
-        "@jgoetzmann-bot KEEP GOING! BELIEVE IN YOURSELF!"
-      ]
-    },
-    "c:5972563783": {
-      "at": "2026-10-03T19:09:42Z",
-      "lines": [
-        "@jgoetzmann-bot requeue"
-      ]
-    },
-    "c:5972573157": {
-      "at": "2026-10-03T19:10:44Z",
-      "lines": [
-        "@jgoetzmann-bot try again. The issue was Gemini running out of credits"
-      ]
-    },
-    "c:5972578425": {
-      "at": "2026-10-03T19:11:18Z",
-      "lines": [
-        "@jgoetzmann-bot requeue"
-      ]
-    },
-    "c:5972725326": {
-      "at": "2026-10-03T19:30:27Z",
-      "lines": [
-        "@jgoetzmann-bot try again. The issue was Gemini running out of credits."
-      ]
-    },
-    "c:5972730471": {
-      "at": "2026-10-03T19:31:05Z",
-      "lines": [
-        "@jgoetzmann-bot the issue was gemini running out of usage. Retry"
-      ]
-    },
     "c:5973893841": {
       "at": "2026-10-03T21:59:54Z",
       "lines": [
@@ -489,6 +405,12 @@
       "at": "2026-10-08T15:11:09Z",
       "lines": [
         "(named the bot)"
+      ]
+    },
+    "c:6068364993": {
+      "at": "2026-10-08T20:23:18Z",
+      "lines": [
+        "/harness fullsend"
       ]
     }
   },
