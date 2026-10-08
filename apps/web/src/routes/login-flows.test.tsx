@@ -970,7 +970,7 @@ describe("R193 B29 confirmation links", () => {
     setField(loginTestid.password, PASSWORD);
     submitForm();
     await waitFor(() => {
-      expect(window.location.pathname).toBe(paths.decks);
+      expect(window.location.pathname).toBe(paths.landing);
     });
     expect(readSession()?.accessToken).toBe(SIGNED_IN.body.access_token);
     expect(pendingEmail()).toBeNull();
@@ -1359,7 +1359,7 @@ describe("B33 /login?reason=expired", () => {
 // ---------------------------------------------------------------------------------------------
 
 describe("B35 fixed destinations", () => {
-  it("B35 /login?next=https://evil.example then a sign-in lands on /decks", async () => {
+  it("B35 /login?next=https://evil.example then a sign-in lands on the main menu", async () => {
     at("/login?next=https://evil.example/steal");
     const origin = window.location.origin;
     provider({ "/auth/v1/token": SIGNED_IN });
@@ -1369,7 +1369,7 @@ describe("B35 fixed destinations", () => {
     submitForm();
 
     await waitFor(() => {
-      expect(window.location.pathname).toBe(paths.decks);
+      expect(window.location.pathname).toBe(paths.landing);
     });
     expect(window.location.origin).toBe(origin);
     expect(window.location.href).not.toContain("evil.example");
@@ -1533,7 +1533,7 @@ describe("R194 a session another account replaces is revoked", () => {
     setField(loginTestid.password, PASSWORD);
     submitForm();
     await waitFor(() => {
-      expect(window.location.pathname).toBe(paths.decks);
+      expect(window.location.pathname).toBe(paths.landing);
     });
     await waitFor(() => {
       expect(bearers).toContain(`Bearer ${aAccess}`);

@@ -200,6 +200,18 @@
 
 /* --- layout of the hero ---------------------------------------------------------------------- */
 
+/* R765: the banner that offers the way back into a live online game (routes/GameBanner.tsx, drawn
+   by routes/game-banner.css), between the corner and the wordmark, as wide as the page's column. */
+.landing .landing-banners {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: var(--tavern-content);
+  margin: 8px auto 0;
+}
+
 .landing .landing-hero-inner {
   position: relative;
   z-index: 1;

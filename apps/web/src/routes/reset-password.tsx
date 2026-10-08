@@ -5,7 +5,8 @@
 // reload or a discarded tab does not spend the reset). This screen is the one place that session is
 // used: `PUT /auth/v1/user` with its access token sets the new password, and only then does the
 // session become the stored one (`adoptSession`, which revokes any session it replaces) and the
-// player go on to `/decks`. Until a password is saved nothing reaches `localStorage`.
+// player go on, signed in, to the main menu, where every sign-in lands (issue #479). Until a
+// password is saved nothing reaches `localStorage`.
 //
 // LEAVING LETS IT GO. The held session is abandoned as soon as the screen is left without saving, so
 // the next person at this computer cannot press Back and find a working "choose a new password"
@@ -260,7 +261,7 @@ export default function ResetPasswordRoute(): ReactElement {
         adoptSession(session);
         releaseRecoverySession();
         forgetPendingAddresses();
-        navigate(paths.decks);
+        navigate(paths.landing);
       })
       .catch((cause: unknown) => {
         setError(cause instanceof AuthError ? cause.message : AUTH_MESSAGES.service);

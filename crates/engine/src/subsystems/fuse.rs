@@ -12,8 +12,9 @@
 //! Second, the scripts are code, which no JSON state can hold. In TS the concatenated pair joined the
 //! process's script registry under the new def id, and `syncFusedScripts` re-registered any of a
 //! state's fused scripts the registry lacked wherever the engine was entered. Rust registers nothing
-//! (SURFACE §3, §6.6): the fused scripts are built on lookup — `scripts::script_of(state, def_id)`
-//! finds the fused definition in `state.transient_defs` and calls `compose_fused_scripts`, which
+//! (SURFACE §3, §6.6): the fused scripts are built from the state — `scripts::script_of(state, def_id)`
+//! finds the fused definition in `state.transient_defs` and answers the scripts `reduce` composed for it
+//! into `state.fused_scripts` (`scripts::sync_fused_scripts`), or calls `compose_fused_scripts`, which
 //! composes them from the ingredients' scripts by TS's `combineObjects` rules, then and there. R179's
 //! id names the ingredients (`t-<n>:<a>+<b>`), and the fused scripts are a function of the
 //! ingredients' ids and nothing else (`fused_script`), so one id means one pair of scripts in every
@@ -1537,11 +1538,11 @@ fn face_for(
 ) -> crate::scripts::ScriptRef {
     match fused_specs(state, def_id) {
         None => crate::scripts::face_ref(state, def_id, radiant),
-        Some(_) if seen.contains(def_id) => std::borrow::Cow::Owned(Script::default()),
+        Some(_) if seen.contains(def_id) => crate::scripts::ScriptRef::Composed(Arc::new(Script::default())),
         Some(specs) => {
             let mut inside = seen.clone();
             inside.insert(def_id.to_string());
-            std::borrow::Cow::Owned(fused_script(state, &specs, radiant, &inside))
+            crate::scripts::ScriptRef::Composed(Arc::new(fused_script(state, &specs, radiant, &inside)))
         }
     }
 }
@@ -1631,6 +1632,7 @@ pub fn rebuild_fused_def(state: &mut GameState, def_id: &str, owner: PlayerId) -
     let forced: Vec<bool> = specs.iter().map(|spec| spec.radiant == Some(true)).collect();
     let def = build_def(state, &ingredients, &defs, None, &forced, None, Some(def_id));
     state.transient_defs.insert(def_id.to_string(), def.clone());
+    crate::scripts::sync_fused_scripts(state);
     Some(def)
 }
 
@@ -1881,9 +1883,11 @@ pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
         None,
     );
 
-    // The def is match state; its id names the scripts, which `scripts::script_of` composes from it on
-    // every lookup (R179, SURFACE §6.6), and a digest id's list rides on the def (R468).
+    // The def is match state; its id names the scripts (R179, SURFACE §6.6), composed now into
+    // `state.fused_scripts` as TS registered them as it minted them, and a digest id's list rides on
+    // the def (R468).
     sink.state.transient_defs.insert(def.id.clone(), def.clone());
+    crate::scripts::sync_fused_scripts(sink.state);
 
     let result: CardInstance = if let Some(target) = &target {
         let mut result = keep_instance(sink.state, &def, &ingredients, target);

@@ -77,6 +77,17 @@
    what is practice's own, in the tavern's colours; a hairline is its brass at 30%, a stronger edge
    at 55%, as tavern.css draws them. */
 
+/* R765: the banners that top the lobby (a saved practice game, a live online game), as wide as the
+   column under them. Each is routes/GameBanner.tsx's, drawn by routes/game-banner.css. */
+.practice-banners {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: var(--tavern-content);
+  margin: 0 auto;
+}
+
 .practice-lobby__header {
   display: flex;
   flex-direction: column;
@@ -1220,6 +1231,16 @@
 
 .practice .practice-leave__actions .practice-result__secondary {
   min-height: 52px;
+}
+
+/* R765: a free game's three answers. Keep playing stays the wide default on top; the two ways out,
+   Save and leave and Leave without saving, share the row under it. */
+.practice-leave__actions--save {
+  flex-wrap: wrap;
+}
+
+.practice-leave__actions--save > .practice-play {
+  flex-basis: 100%;
 }
 
 /* ---- reduced motion ----------------------------------------------------------------------- */

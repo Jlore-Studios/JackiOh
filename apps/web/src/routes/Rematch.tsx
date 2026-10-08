@@ -50,6 +50,14 @@ function incomingWords(stakes: RematchStakes): string {
   return stakes === 2 ? "Your opponent wants double-or-nothing." : "Your opponent wants a rematch.";
 }
 
+/** Our own offer while it waits, so the line says which of the two buttons was pressed. */
+function waitingWords(stakes: RematchStakes): string {
+  return `${stakes === 2 ? "You offered double-or-nothing." : "You offered a rematch."} Waiting for your opponent…`;
+}
+
+/** A button's label while its offer is on its way (the `aria-busy` pattern of the app's other sends). */
+const OFFERING_LABEL = "Offering…";
+
 /**
  * The status, now and every `SERIES_POLL_SECONDS`: the opponent's offer, their presence, and
  * the game equal offers made. A created game takes both seats there at once. One
@@ -132,6 +140,11 @@ export default function RematchButtons({ token, matchId, connection, ranked }: R
   const incoming = status.opponentOffer !== null && status.opponentOffer !== status.youOffered;
   const waiting = status.youOffered !== null && status.matchId === null;
 
+  // The markup is the result panel's (Result.tsx `actions`): the two offers are its buttons, the
+  // incoming offer a line above them and the wait or the refusal a line below. reveal.css lays the
+  // block into the panel's own row of ways on, so the buttons carry no class of their own: the
+  // panel sizes them like its others and makes Rematch its primary (animations.css). The shell's
+  // `button-primary` is the lobby's blue call to action, not the board's gold one.
   return (
     <div className="rematch">
       {incoming ? (
@@ -143,27 +156,28 @@ export default function RematchButtons({ token, matchId, connection, ranked }: R
       <div className="rematch-buttons">
         <button
           type="button"
-          className="button-primary"
           data-testid={rematchTestid.offer}
           disabled={offering !== null}
+          aria-busy={offering === 1}
           onClick={() => void meet(1)}
         >
-          Rematch
+          {offering === 1 ? OFFERING_LABEL : "Rematch"}
         </button>
         <button
           type="button"
           data-testid={rematchTestid.double}
           disabled={offering !== null || !ranked}
+          aria-busy={offering === 2}
           title={ranked ? undefined : "Ranked games only"}
           onClick={() => void meet(2)}
         >
-          Double or nothing
+          {offering === 2 ? OFFERING_LABEL : "Double or nothing"}
         </button>
       </div>
       {ranked ? null : <p className="rematch-note">Double-or-nothing needs a ranked match.</p>}
       {waiting && error === null ? (
         <p className="rematch-status" data-testid={rematchTestid.status} role="status">
-          Waiting for your opponent…
+          {waitingWords(status.youOffered as RematchStakes)}
         </p>
       ) : null}
       {error !== null ? (

@@ -16,6 +16,11 @@
 // `SERIES_POLL_SECONDS` while it is actually waiting. A running game goes to the board; a series
 // between games goes to the series screen, where the next deck is picked.
 //
+// LEAVING WHILE QUEUED (R765). A ticket stays in the queue until it is paired or left, so the player
+// may leave this screen while they wait. The tab remembers the queue (`net/liveGame.ts`): on any
+// other screen the route table follows it and takes the player to the game once they are paired,
+// and back here the lobby picks the wait up again, with Leave as the way out.
+//
 // THE QUEUE'S COUNTS (R505) are on the mode tiles and nowhere else: each tile says how many are
 // waiting for its mode. The Find a match box says what this screen is doing (queued, looking for
 // an opponent, the room code) and repeats no count, and neither does the queued notice.
@@ -58,6 +63,7 @@ import {
   type SavedDeck,
   type SavedTrio,
 } from "../net/api.ts";
+import { MATCH_FOUND_STATUS, forgetQueued, liveGameOf, readQueued, rememberQueued } from "../net/liveGame.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { rankWords } from "../rank/rank.ts";
 import { BackLink, followInApp } from "./nav.tsx";
@@ -350,24 +356,18 @@ export function roomModeMessage(mode: QueueMode): string {
 
 /**
  * Where a paired profile goes: the board (`currentMatchId`) or, between the games of a series,
- * the series screen (`currentSeriesId`) — or nowhere yet. Pure, so the watch and its tests read
- * one implementation.
+ * the series screen (`currentSeriesId`) — or nowhere yet. Pure, and the same reading the rest of
+ * the client follows a pairing with (`net/liveGame.ts`'s `liveGameOf`), so the two cannot differ.
  */
 export function pairTargetOf(me: {
   currentMatchId: string | null;
   currentSeriesId?: string | null;
 }): string | null {
-  if (typeof me.currentMatchId === "string" && me.currentMatchId.length > 0) {
-    return paths.match(me.currentMatchId);
-  }
-  if (typeof me.currentSeriesId === "string" && me.currentSeriesId.length > 0) {
-    return paths.series(me.currentSeriesId);
-  }
-  return null;
+  return liveGameOf(me)?.path ?? null;
 }
 
 /** What the lobby says the moment a pairing lands, before it navigates there. */
-export const MATCH_FOUND_STATUS = "Match found! Taking you to your game…";
+export { MATCH_FOUND_STATUS };
 
 /**
  * Reads `/api/auth/me` once on every mount, and every `SERIES_POLL_SECONDS` while `waiting`, and
@@ -583,19 +583,29 @@ export type PlayRouteProps = { token: string };
 
 type Room = { code: string; mode: QueueMode };
 
+/** What the lobby says while it is queued in `mode` (R505: where you are, never a count). */
+export function queuedStatus(mode: QueueMode): string {
+  return `In the ${MODE_LABEL[mode]} queue. You will be taken to the game as soon as someone is found. You can leave this screen while you wait.`;
+}
+
 export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
+  /**
+   * R765: the queue this tab is still in, from a visit that left this screen while it waited: the
+   * lobby picks the wait up again, in that mode, with Leave as the way out.
+   */
+  const [rejoined] = useState(readQueued);
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(() => (rejoined === null ? null : queuedStatus(rejoined)));
   const [error, setError] = useState<LobbyError | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
   const [joinCode, setJoinCode] = useState("");
   /** True while this screen is waiting to be paired: queued, or hosting an unclaimed room. */
-  const [waiting, setWaiting] = useState(false);
+  const [waiting, setWaiting] = useState(rejoined !== null);
   const [population, setPopulation] = useState<PopulationResponse | null>(null);
   const [rank, setRank] = useState<OwnRankResponse | null>(null);
 
   const stored = useMemo(readStoredChoice, []);
-  const [mode, setMode] = useState<QueueMode>(stored.mode ?? "bo1");
+  const [mode, setMode] = useState<QueueMode>(rejoined ?? stored.mode ?? "bo1");
   const [deckId, setDeckId] = useState<string | null>(stored.deckId ?? null);
   const [trioId, setTrioId] = useState<string | null>(stored.trioId ?? null);
 
@@ -630,6 +640,8 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
   const goFound = useCallback((target: string): void => {
     if (foundTarget.current !== null) return;
     foundTarget.current = target;
+    // Paired: out of the queue, so nothing else follows it (R765).
+    forgetQueued();
     setFound(true);
     setStatus(MATCH_FOUND_STATUS);
     foundTimer.current = window.setTimeout(() => {
@@ -705,17 +717,18 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
       const result = await enqueue(token, chosen);
       if (follow(result)) return;
       setWaiting(true);
+      // R765: the queue follows the player off this screen (`net/liveGame.ts`).
+      rememberQueued(chosen.mode);
       refreshPopulation();
       // R505: the tile above says how many are waiting; the notice says only where you are.
-      setStatus(
-        `In the ${MODE_LABEL[chosen.mode]} queue. You will be taken to the game as soon as someone is found.`,
-      );
+      setStatus(queuedStatus(chosen.mode));
     });
   }
 
   function onLeaveQueue(): void {
     run(async () => {
       await dequeue(token);
+      forgetQueued();
       setWaiting(false);
       setStatus("Left the queue.");
     });

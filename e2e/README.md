@@ -1,4 +1,4 @@
-# `e2e/` — the thirty-five specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34` and the settings dialog's `35`, plus twelve component specs
+# `e2e/` — the thirty-five specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34` and the settings dialog's `35`, plus fourteen component specs
 
 Cypress runs against `apps/web` in `E2E=1` mode: the `/dev/hotseat` route for the local specs and
 a test server with fixture accounts for the networked ones, the Rust `jackioh-server` started with
@@ -33,7 +33,7 @@ e2e/
   cypress/e2e/11-radiant.cy.ts  BUILD M8: Glowy Jelly Bean on a hand card and Knockoff Temu on a field unit make them Radiant
   cypress/e2e/12-rotation-and-swaps.cy.ts  BUILD M8: Silly Silas moves every card one lane round the ring (R14), and Pocket Chaos's board swap flips the sides
   cypress/e2e/13-practice-vs-ai.cy.ts  SPEC §9.9, R187: practice against the AI on `build:e2e` with no server: the AI's mulligan and turns, a few human turns, the browser's game folding to the same hash in Node, and Concede
-  cypress/e2e/14-landing-and-sign-in.cy.ts  polish 5: the landing page and the way in, every `/api` call answered by `cy.intercept`
+  cypress/e2e/14-landing-and-sign-in.cy.ts  polish 5: the landing page and the way in, every `/api` call answered by `cy.intercept`; #479: a failed sign-in stays on the sign-in screen
   cypress/e2e/15-audio.cy.ts  polish 2 (SPEC §10.11): the first click unlocks audio, a unit played from hand logs its play line, mute survives a reload
   cypress/e2e/16-drag-to-play.cy.ts  polish 7, B40: drag to play and to attack in a seeded hotseat game, and drag to play turned off in the settings panel
   cypress/e2e/17-card-showcase-and-hovers.cy.ts  the opponent's played card held up for about a second (a back for a face-down set), a log line's card on hover and click, and a graveyard browsed on hover and in a dialog, on /dev/hotseat and /practice
@@ -67,6 +67,8 @@ e2e/
   cypress/component/mobile-ux.cy.tsx  polish 7: the glow colours from the computed box-shadow and the mobile layout only a real layout engine can measure
   cypress/component/practice-table.cy.tsx  the practice table at the viewports practice is played on, on the M5-T1 fixture board with a hand of 4, 7 and 10 cards
   cypress/component/radiant-marks.cy.tsx  the Radiant pass: the gold mark's weight, underline and contrast on both backgrounds, a reference's tooltip in the detail view, and a computed value inside its rules box
+  cypress/component/rematch-buttons.cy.tsx  #477, R672: the result panel's Rematch and Double or nothing at 1280x800 and 390x844, idle, unranked and with an offer each way: 44 px buttons as tall as Back to lobby and on its row, Rematch the panel's gold primary and Double or nothing drawn as the route's other buttons, the incoming offer above and the wait or the note below without widening the panel, all of it on the screen
+  cypress/component/stack-wheel-and-sweeps.cy.tsx  #124: a Stack pile's wheel (the top card forward, the buried cards as backs, shuffled by tap, buttons and keyboard), a sweep's one fog over the swept side and a whole-pile impact's one wave
   fixtures/decks/*.json    scenario decks, named for the spec that uses them; a deck may carry the seat's
                            `handicap` (R180: deckSize, manaBonus, manaCap, extraOpeningCards,
                            extraDrawsPerTurn, heroHealth?), and then holds its deckSize cards (R184)
@@ -271,7 +273,7 @@ waiting helpers (`settled`, `expectAnimating`, `waitForPrompt`, `noPrompt`):
 | 09 | M6-T3 (validator, deck and queue endpoints) and TASK 1's deck workshop. L1, L2, L4 and L5 are shown in the workshop's verdict and in `POST /api/queue`'s 422; L3 and L6 cannot reach the queue (D3/D4 refuse them at save, R250), so they are shown on a draft restored from the device mirror (A17), with the save's refusal and the queue's "no longer saved". |
 | 10 | M6-T1 (auth, invite gate) and the code screen. |
 | 13 | Polish 3 (SPEC §9.9): `/practice`, the practice worker and the AI (`crates/ai`, as WebAssembly), against `build:e2e` with no server. The replay check passes the game's handicaps to the fold (R180, R187). |
-| 14 | A built client only (`pnpm build:e2e`, then `vite preview`): no server and no auth provider. Every `${apiUrl}/api/*` call is a `cy.intercept` stub, sessions are seeded under `jackioh.e2e.session` in `onBeforeLoad`, and emailed links are visited as `/login#…`. It covers the landing page, the segmented code field, rate-limit feedback, emailed-link handling, the reset screen and the gate's exits (`docs/polish/5-sign-in.md`). |
+| 14 | A built client only (`pnpm build:e2e`, then `vite preview`): no server and no auth provider. Every `${apiUrl}/api/*` call is a `cy.intercept` stub, sessions are seeded under `jackioh.e2e.session` in `onBeforeLoad`, and emailed links are visited as `/login#…`. It covers the landing page, the segmented code field, rate-limit feedback, emailed-link handling, the reset screen and the gate's exits (`docs/polish/5-sign-in.md`), and a sign-in that fails, from the main menu or sent by a protected screen: it stays on the sign-in screen with its sentence and the form as it was (#479). A sign-in can only fail here, so that a successful one lands on the main menu is the web client's unit tests' and spec 99's. |
 | 15 | Polish 2 (SPEC §10.11): the audio layer on `/dev/hotseat`, M4 + M5, no server. Chrome for the audio context; it asserts the voice request in `window.__jackiohAudio`'s log, never the sound. |
 | 16 | Polish 7 (§10.8, R195): drag to play on `/dev/hotseat` with spec 04's decks and seed, M4 + M5, no server. The gestures are real pointer events from `support/ux.ts`, and the settings panel turns drag to play off. |
 | 17 | M4 + M5 and polish 3 (`/practice`), against `build:e2e` with no server: the opponent's-play showcase, the log's card lines and the pile browser (§10.8, §10.10, R97, R202, R227), with the selectors in `support/testids.ts` block A15. It uses spec 01's and spec 03's decks and seeds, and plays `/practice` at normal pacing, because `?pace=fast` releases the AI without waiting for the showcase. How long the showcase stood is read off a MutationObserver recorder in the page, never off a fixed wait. |

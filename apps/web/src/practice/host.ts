@@ -76,9 +76,15 @@ function createWorkerHost(): PracticeHost {
     resolve(response);
   };
 
-  worker.onerror = (event: ErrorEvent) => {
+  // A script error is an ErrorEvent with a message. A worker whose script never loaded (a deploy
+  // since this page loaded replaced the hashed chunk it names) fires a plain Event with none.
+  worker.onerror = (event: Event) => {
     event.preventDefault();
-    broken = `the practice worker failed: ${event.message === "" ? "unknown error" : event.message}`;
+    const message = (event as Partial<ErrorEvent>).message;
+    broken =
+      typeof message === "string" && message !== ""
+        ? `the practice worker failed: ${message}`
+        : "the practice worker could not start: reload the page (the site may have just been updated)";
     failAll(broken);
   };
 

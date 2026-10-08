@@ -88,6 +88,9 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) Unit 9/9
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
     const PALANTIR: &str = "classic-004"; // Base: when your opponent plays a Book, Tribute this to steal it (mandatory, no prompt).
+    const PILE_ON: &str = "classic-060"; // (5) Spell: Recruit every permanent in your deck; to the bottom of the deck, not the GY.
+    /// Pile On with C+ #39 Book Worm fused in, as R179 names it: a Spell, its first ingredient's type.
+    const FUSED_PILE_ON: &str = "t-1:classic-060+classicplus-039";
 
     /// TS `AT_P2: Selection[]`, as the JSON the harness takes.
     fn at_p2() -> Value {
@@ -467,6 +470,47 @@ mod tests {
                 assert_eq!(own_view(&s, PlayerId::P1).map(|card| card["conditionActive"].clone()), Some(json!(true)));
                 s.play(ECHO, json!({}));
                 assert_eq!(s.last_events().iter().map(js).filter(|event| event["type"] == "drawn").count(), 3);
+            }
+
+            #[test]
+            fn r399_a_fused_pile_on_back_at_the_bottom_of_its_deck_is_still_the_last_spell_and_echo_has_its_text() {
+                crate::register_all();
+                // Part 40's sweep (`sweep:easy:core-076:2`): Pile On with Book Worm fused in (R77, R179) goes
+                // back to the bottom of its deck by Pile On's own clause, where neither player sees it. The
+                // last Spell names it, and its definition stays the state's (`transient_defs`), so Echo is
+                // priced, listed and resolves its text.
+                let mut s = scenario(json!({
+                    "active": "p2",
+                    "p1": { "hand": [ECHO, VANILLA], "library": [STOCKPILE, MENACE, VANILLA, STOCKPILE] },
+                    "p2": { "hand": [PILE_ON], "field": [VANILLA], "library": [STOCKPILE, STOCKPILE] },
+                }));
+                let fused = subsystems::rebuild_fused_def(s.state_mut(), FUSED_PILE_ON, PlayerId::P2)
+                    .expect("Pile On and Book Worm fuse");
+                assert_eq!(fused.type_, CardType::Spell);
+                let pile_on = s.card(PILE_ON).id.clone();
+                s.card_mut(&pile_on).def_id = FUSED_PILE_ON.to_string();
+                s.play(&pile_on, json!({}));
+                s.end_turn();
+                assert_eq!(s.pile(PlayerId::P2, "library").last().map(|card| card.id.clone()), Some(pile_on));
+                assert_eq!(js(&last_spell_played(s.state())), json!({ "defId": FUSED_PILE_ON, "radiant": false }));
+                assert!(s.state().transient_defs.contains_key(FUSED_PILE_ON));
+
+                assert_eq!(
+                    echo_plays(&s, PlayerId::P1).iter().map(|play| (play["targets"].clone(), play["x"].clone())).collect::<Vec<_>>(),
+                    vec![(Value::Null, Value::Null)],
+                );
+                assert_eq!(
+                    own_view(&s, PlayerId::P1).map(|card| card["copies"]["defId"].clone()),
+                    Some(json!(FUSED_PILE_ON)),
+                );
+                let permanents = s.pile(PlayerId::P1, "library").iter().filter(|card| card.def_id != STOCKPILE).count();
+                assert_eq!(permanents, 2, "p1 drew its top Stockpile; a Menace and a Vanilla are left to Recruit");
+                s.play(ECHO, json!({}));
+                s.expect_mana(PlayerId::P1, 3);
+                // Pile On's text, for Echo's player: every permanent in p1's deck is Recruited.
+                assert!(s.pile(PlayerId::P1, "library").iter().all(|card| card.def_id == STOCKPILE));
+                let units = (1..=5).filter(|lane| s.unit(PlayerId::P1, *lane).is_some()).count();
+                assert_eq!(units, permanents);
             }
         }
 

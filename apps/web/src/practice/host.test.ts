@@ -134,6 +134,32 @@ describe("B37 with a Worker constructor, the host is a module worker", () => {
     host.dispose();
   });
 
+  it("B37 a worker error fails every waiting request, with the script's message or a reload hint", async () => {
+    vi.stubGlobal("Worker", SpyWorker);
+    const crashed = createPracticeHost();
+    const pending = crashed.request({ type: "debug" });
+    await flush();
+    onlyWorker().onerror?.({ message: "Uncaught RuntimeError: unreachable", preventDefault() {} });
+    await expect(pending).resolves.toMatchObject({
+      type: "failed",
+      message: "the practice worker failed: Uncaught RuntimeError: unreachable",
+    });
+    crashed.dispose();
+    SpyWorker.instances = [];
+
+    // A script that never loaded fires a plain Event: no message, so never "undefined".
+    const unloaded = createPracticeHost();
+    const first = unloaded.request({ type: "debug" });
+    await flush();
+    onlyWorker().onerror?.({ preventDefault() {} });
+    await expect(first).resolves.toMatchObject({
+      type: "failed",
+      message: "the practice worker could not start: reload the page (the site may have just been updated)",
+    });
+    await expect(unloaded.request({ type: "debug" })).resolves.toMatchObject({ type: "failed" });
+    unloaded.dispose();
+  });
+
   it("B37 dispose terminates the worker", () => {
     vi.stubGlobal("Worker", SpyWorker);
     const host = createPracticeHost();

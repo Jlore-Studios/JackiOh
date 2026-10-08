@@ -105,30 +105,46 @@
   }
 }
 
-/* R672: the death screen's way back in (routes/Rematch.tsx) — the two offers side by side, the
-   incoming offer above them, the wait below. Unanimated, so reduced motion needs no exception. */
-.rematch {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
+/* R672: the death screen's way back in (routes/Rematch.tsx), in the result panel's row of ways on
+   (Result.tsx). The block draws no box of its own (#477): its two offers join the row, ahead of
+   Back to lobby and View the board and sized like them (animations.css), the incoming offer is a
+   line of its own above them and the note, the wait or the refusal one below. Before, the block
+   was a column beside the row: the row stretched its other buttons to the column's height, and the
+   panel's primary rule painted the column itself. The lines wrap at the width the buttons give the
+   panel rather than stretch it to one long line (`contain: inline-size`; it was 824 px wide at
+   1280x800 with an offer in), so an offer arriving moves no button sideways. Unanimated, so reduced
+   motion needs no exception. */
+.result-overlay__actions > .rematch,
+.result-overlay__actions > .rematch > .rematch-buttons {
+  display: contents;
 }
 
-.rematch-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-}
-
-.rematch-incoming {
+/* The app shell dims and caps every paragraph (src/index.css), hence the two classes. */
+.rematch > .rematch-incoming,
+.rematch > .rematch-note,
+.rematch > .rematch-status {
+  flex: 1 0 100%;
+  contain: inline-size;
+  max-width: none;
   margin: 0;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* A call to act, so the brightest line in the panel after the outcome, as the draw offer's is. */
+.rematch > .rematch-incoming {
+  order: -1;
+  color: var(--text, #efe0bf);
   font-weight: 700;
 }
 
-.rematch-note,
-.rematch-status {
-  margin: 0;
-  font-size: 13px;
+.rematch > .rematch-note,
+.rematch > .rematch-status {
+  order: 1;
   color: var(--text-dim, #9aa1b8);
+}
+
+/* A refused offer reads as one: colour and words, never colour alone (auth.css's field error). */
+.rematch > .rematch-status[role="alert"] {
+  color: color-mix(in srgb, var(--opponent, #c0453f) 55%, var(--text, #efe0bf));
 }

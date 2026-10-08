@@ -96,6 +96,7 @@ describe("scripts/vercel-ignore.sh", () => {
       "crates/server/Cargo.toml",
       "crates/tools/Cargo.toml",
       "scripts/build-wasm.sh",
+      "scripts/vercel-install.sh",
       "apps/web/src/main.tsx",
       "apps/web/src/wasm/index.ts",
       "apps/web/src/wire/generated/PlayerView.ts",

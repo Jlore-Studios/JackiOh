@@ -327,7 +327,14 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
 routes/play.tsx         /play: the mode picker (Best of 1, Conquest, All Random, R257, R330), the deck or
                         trio choice with the validator's verdict as UX, the queue and the room code; it
                         waits on /api/auth/me's currentMatchId and currentSeriesId; it shows the player's
-                        own rank and links /leaderboard (R661)
+                        own rank and links /leaderboard (R661); a queue it joined is remembered for the
+                        tab, so the player may leave while they wait and it picks the wait up again (R765)
+net/liveGame.ts         R765: the player's online game, read off /api/auth/me: the queue this tab joined,
+                        which main.tsx's useQueueFollow follows on every screen but /play ("Match found!",
+                        then the game), and useLiveGame, the live match or series the menus' banner offers
+routes/GameBanner.tsx   R765: the one banner atop a menu while there is a game to go back to: a saved
+                        practice game (Resume, on /practice) and the live online game (Rejoin, on / and
+                        /practice); game-banner.css draws it as the tavern's notice
 routes/series.tsx       /series/:id: a Conquest series (R330–R336): score, both sides' won (locked) decks,
                         the history, forfeit between games, the result
 routes/SeriesPicker.tsx the deck-selection phase before each game, laid out as the mulligan (R331–R333,
@@ -365,7 +372,7 @@ src/practice/
   saveStore.ts        the worker's save of a free game in progress (R668): config, log, AI cursor,
                       catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom)
   resume.ts           the page's half (R668): only the setup it chose, in localStorage
-                      `jackioh.practice.game`, try/catch
+                      `jackioh.practice.game`, try/catch, marked `saved` once left with Save and leave (R765)
   DeckPreview.tsx     the chosen deck's name, identity, mana curve and cards, before Start
   ModifierList.tsx    every live R169 modifier in full, one tap from the HUD
 routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unchanged inside the worker's catalog
@@ -383,6 +390,12 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   `{ type: "resume", config }`, and the core folds the log back under the same nonces to the saved
   hash, with the AI's stream at its saved cursor, or answers `failed` and the route shows the setup.
   A lesson is never kept, so only a lesson in progress asks before the page unloads.
+- Keeping a free game is the player's choice when they leave it (R765). "Leave this game?" offers
+  Save and leave beside Leave without saving: the first marks the remembered setup `saved`, and the
+  next `/practice` shows the setup with a banner at its top (`routes/GameBanner.tsx`) whose Resume
+  sends the same `resume`; the second forgets it. A reload while the player is in the game still
+  resumes it at once, and starting any game from the setup or the lesson path ends the saved one.
+  The same lobby shows the live online game's banner (Rejoin) for a signed-in player in a match.
 - The one exception is `debug`, which carries the raw state, the log, the decks, the handicaps and
   the dealt seats for spec 13's replay check. The core answers it only when `MODE !== "production"`,
   and the route sets `window.__jackiohPractice` under the same condition, like `window.__jackioh`.
@@ -405,8 +418,9 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   (`data-showcase`, at most `PRACTICE_SHOWCASE_HOLD_MAX_MS`). `?pace=fast` waits for neither the
   voice nor the showcase. The controller's general form is `setHold(reason, held)`. The settings panel's "Reduce motion" gives the reduced pacing,
   as the media query does.
-- A game in progress asks before a reload or a closed tab ends it (`beforeunload`), and the HUD's
-  Menu leaves for the landing page, asking first while the game is on.
+- A lesson in progress asks before a reload or a closed tab ends it (`beforeunload`), and the HUD's
+  Menu leaves for the landing page, asking first (Save and leave, or Leave without saving) while the
+  game is on.
 
 ## The tutorial
 

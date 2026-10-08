@@ -1530,8 +1530,11 @@
   margin-top: 12px;
 }
 
+/* A way on can be a block of them rather than one button: the match's rematch offers
+   (routes/Rematch.tsx, laid into this row by reveal.css). Its buttons are the panel's buttons. */
 .result-overlay__actions > button,
 .result-overlay__actions > a,
+.result-overlay__actions > .rematch button,
 .result-overlay__reopen {
   min-height: 44px;
   padding: 8px 18px;
@@ -1539,8 +1542,11 @@
   font-weight: 700;
 }
 
-/* The route's first way on is the primary action, in the one primary colour (index.css). */
-.result-overlay__actions > :first-child:not(.result-overlay__view) {
+/* The route's first way on is the primary action, in the one primary colour (index.css). When that
+   is the rematch block, the block is no button: its first button, Rematch, is the primary (#477:
+   the rule used to paint the whole block gold and hand its ink to Double or nothing). */
+.result-overlay__actions > :first-child:not(.result-overlay__view, .rematch),
+.result-overlay__actions > .rematch:first-child .rematch-buttons > :first-child {
   border-color: var(--primary-edge, #fde68a);
   background: var(--primary-face, #d4a017);
   color: var(--primary-ink, #2b1800);
@@ -1548,7 +1554,8 @@
   box-shadow: var(--primary-shadow, none);
 }
 
-.result-overlay__actions > :first-child:not(.result-overlay__view):hover {
+.result-overlay__actions > :first-child:not(.result-overlay__view, .rematch):hover,
+.result-overlay__actions > .rematch:first-child .rematch-buttons > :first-child:hover:not(:disabled) {
   background: var(--primary-face-hover, #e3b12a);
 }
 
