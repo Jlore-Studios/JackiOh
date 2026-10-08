@@ -4169,10 +4169,11 @@
     "what": "build #560 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-08T14:44:30Z",
+    "at": "2026-10-08T14:52:23Z",
     "notes": [
       "answered a comment on #436 that was never answered",
-      "answered a comment on #430 that was never answered"
+      "answered a comment on #430 that was never answered",
+      "#562: typed it Bug"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
