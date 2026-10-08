@@ -11,6 +11,12 @@ import type { Tuning } from "./Tuning";
 
 export type CardView = { instanceId: string, defId: string, radiant: boolean, 
 /**
+ * ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
+ * may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
+ * Only ever `Some(true)`.
+ */
+chinese?: true, 
+/**
  * Cost as it stands now (§6.3 Cost, R65); "X" cards show 0 until X is chosen.
  */
 cost: number, 

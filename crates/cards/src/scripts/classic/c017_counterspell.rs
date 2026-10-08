@@ -51,16 +51,19 @@ fn counter_it(ctx: &EffectContext<'_>, announced: &Announced, copy: bool) -> Vec
     if !copy {
         return vec![countered];
     }
-    // Read before the counter moves it: the copy keeps the countered card's face (R57).
-    let radiant = find_instance(ctx.state, &announced.instance_id).is_some_and(|card| card.radiant);
-    vec![
-        countered,
-        add_to_hand(json_as(json!({
-            "defId": announced.def_id,
-            "radiant": radiant,
-            "costOverride": param(ctx, "setCost"),
-        }))),
-    ]
+    // Read before the counter moves it: the copy keeps the countered card's face (R57) and, a copy of a
+    // Chinese card being Chinese, its language (R1300).
+    let countered_card = find_instance(ctx.state, &announced.instance_id);
+    let radiant = countered_card.is_some_and(|card| card.radiant);
+    let mut args = json!({
+        "defId": announced.def_id,
+        "radiant": radiant,
+        "costOverride": param(ctx, "setCost"),
+    });
+    if countered_card.is_some_and(|card| card.chinese == Some(true)) {
+        args["chinese"] = json!(true);
+    }
+    vec![countered, add_to_hand(json_as(args))]
 }
 
 fn counterspell(copy: bool) -> TriggerDef {

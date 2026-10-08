@@ -15,4 +15,10 @@ cost?: number,
  * A face the option shows, when the card it names is Radiant (a Discover of Radiant cards).
  * Only ever `Some(true)`.
  */
-radiant?: true, };
+radiant?: true, 
+/**
+ * ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
+ * may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
+ * Only ever `Some(true)`.
+ */
+chinese?: true, };

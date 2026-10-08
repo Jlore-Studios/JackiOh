@@ -87,6 +87,7 @@ pub mod effects_summon_this;
 pub mod effects_swap;
 pub mod effects_targets;
 pub mod effects_transform;
+pub mod effects_translate;
 pub mod effects_tune;
 pub mod effects_turn_end;
 pub mod embiggen_cost;

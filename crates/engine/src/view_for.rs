@@ -278,6 +278,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         instance_id,
         def_id,
         radiant,
+        chinese: None,
         cost,
         embiggen_cost: None,
         attack: None,
@@ -319,6 +320,8 @@ fn card_view(state: &GameState, card: &CardInstance) -> CardView {
     view.enchantments = data.enchantments;
     view.marks = with_marks(state, &card.id);
     view.quest = quest;
+    // ME-CN, R1301: public as the card is, so every view built for a card the viewer may read carries it.
+    view.chinese = card.chinese;
     view
 }
 
@@ -497,6 +500,8 @@ fn unit_view_of(state: &GameState, pile: &[CardInstance], viewer: PlayerId) -> O
         } else {
             None
         },
+        // ME-CN, R1301: public on the field like the unit itself (the pile's top, R13).
+        chinese: card.chinese,
     })
 }
 
@@ -557,6 +562,7 @@ fn backrow_view(state: &GameState, card: Option<&CardInstance>, viewer: PlayerId
         instance_id: view.instance_id,
         def_id: view.def_id,
         radiant: view.radiant,
+        chinese: view.chinese,
         cost: view.cost,
         attack: view.attack,
         health: view.health,
@@ -924,6 +930,7 @@ fn bare_option(key: String, label: String) -> PendingOption {
         lane: None,
         cost: None,
         radiant: None,
+        chinese: None,
     }
 }
 
@@ -961,6 +968,10 @@ fn option_view(state: &GameState, viewer: PlayerId, option: &PromptOption) -> Pe
                 base.def_id = Some(card.def_id.clone());
                 if card.radiant {
                     base.radiant = Some(true);
+                }
+                // ME-CN, R1301: the chooser reads this card, so its language travels with it.
+                if card.chinese == Some(true) {
+                    base.chinese = Some(true);
                 }
             }
             base
@@ -1789,7 +1800,10 @@ fn redact_event(
             hide(&mut shown, &["instanceId", "defId"]);
             rebuild(shown)
         }
-        GameEventType::QuestProgressed | GameEventType::QuestCompleted | GameEventType::Marked => {
+        GameEventType::QuestProgressed
+        | GameEventType::QuestCompleted
+        | GameEventType::Marked
+        | GameEventType::Translated => {
             if !hidden(&instance) {
                 return event.clone();
             }

@@ -37,6 +37,12 @@ pub struct CardView {
     pub instance_id: String,
     pub def_id: String,
     pub radiant: bool,
+    /// ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
+    /// may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
+    /// Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub chinese: Option<bool>,
     /// Cost as it stands now (§6.3 Cost, R65); "X" cards show 0 until X is chosen.
     pub cost: i32,
     /// #492, R81, §10.8: an "A embiggen B" card in the viewer's own hand, what a play of it at its
@@ -431,6 +437,12 @@ pub struct UnitView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub berserk: Option<bool>,
+    /// ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
+    /// may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
+    /// Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub chinese: Option<bool>,
 }
 
 /// A public backrow card's counters: `grade` is #93 Combo-Index's counter, 1..6; `gradeLetter` is the
@@ -470,6 +482,12 @@ pub struct PublicBackrowView {
     pub instance_id: String,
     pub def_id: String,
     pub radiant: bool,
+    /// ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
+    /// may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
+    /// Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub chinese: Option<bool>,
     pub cost: i32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -917,6 +935,12 @@ pub struct PendingOption {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub radiant: Option<bool>,
+    /// ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
+    /// may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
+    /// Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub chinese: Option<bool>,
 }
 
 /// R265, R266: the concurrent mulligan as one seat may see it.

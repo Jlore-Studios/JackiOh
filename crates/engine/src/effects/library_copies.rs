@@ -60,6 +60,8 @@ pub fn add_library_copies(args: AddLibraryCopiesArgs) -> Effect {
                 Zone::Hand { player: controller },
             );
             copy.radiant = source.radiant;
+            // ME-CN, R1300: a copy of a Chinese card is Chinese.
+            copy.chinese = source.chinese;
             if let Some(stats) = source.stats_override {
                 copy.stats_override = Some(stats);
             }

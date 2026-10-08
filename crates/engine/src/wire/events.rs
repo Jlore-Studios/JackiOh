@@ -700,6 +700,11 @@ pub enum GameEvent {
         color: String,
         added: bool,
     },
+    /// ME-CN, R1301: a card both players read is shown in Chinese from now on (`effects::translate`).
+    /// A card someone cannot read is translated silently (R440), so the id always names a readable card.
+    Translated {
+        instance_id: String,
+    },
 }
 
 /// B3.4, R386: what one Degrade or Upgrade application changed. `cost` is a `costMod` step; `stats`
@@ -792,6 +797,7 @@ string_union! {
         TurnCutShort = "turnCutShort",
         Marked = "marked",
         Glitched = "glitched",
+        Translated = "translated",
     }
 }
 
@@ -868,6 +874,7 @@ impl GameEvent {
             GameEvent::TurnCutShort { .. } => GameEventType::TurnCutShort,
             GameEvent::Glitched { .. } => GameEventType::Glitched,
             GameEvent::Marked { .. } => GameEventType::Marked,
+            GameEvent::Translated { .. } => GameEventType::Translated,
         }
     }
 }
@@ -923,6 +930,6 @@ mod tests {
             r#"{"type":"gameOver","winner":"draw","reason":"turn-cap"}"#
         );
         assert_eq!(over.event_type().as_str(), "gameOver");
-        assert_eq!(GAME_EVENT_TYPES.len(), 65);
+        assert_eq!(GAME_EVENT_TYPES.len(), 66);
     }
 }

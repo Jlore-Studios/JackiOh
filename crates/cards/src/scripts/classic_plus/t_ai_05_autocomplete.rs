@@ -25,6 +25,10 @@ fn autocomplete(ctx: &EffectContext<'_>, cost_override: Option<i32>) -> Vec<Effe
         return vec![];
     };
     let mut args = json!({ "defId": last.def_id, "radiant": last.radiant });
+    // R1300: a copy of a Chinese card is Chinese.
+    if last.chinese == Some(true) {
+        args["chinese"] = json!(true);
+    }
     if let Some(cost) = cost_override {
         args["costOverride"] = json!(cost);
     }

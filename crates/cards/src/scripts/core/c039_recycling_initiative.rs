@@ -125,6 +125,10 @@ fn copies_of_other_plays(ctx: &EffectContext<'_>, terms: CopyTerms) -> Vec<Effec
         if discount != 0 {
             args["costMod"] = json!(-discount);
         }
+        // R1300: a copy of a Chinese card is Chinese.
+        if card.chinese == Some(true) {
+            args["chinese"] = json!(true);
+        }
         out.push(add_to_hand(json_as(args)));
     }
 
