@@ -57,7 +57,7 @@ const SILENT = 0.001;
 /** B16's tolerance. */
 const RMS_TOLERANCE = 0.01;
 
-/** The SfxId union from types.ts, in its order: SFX_IDS is "all 44, in the order of the union". */
+/** The SfxId union from types.ts, in its order: SFX_IDS is "every id, in the order of the union". */
 const EXPECTED_IDS = [
   "draw", "play", "summon", "attack", "impact", "shieldShatter", "heal", "buff", "debuff",
   "death", "burn", "trapSet", "trapSting", "spell", "mana", "turnStart", "victory",
@@ -66,6 +66,8 @@ const EXPECTED_IDS = [
   "manaCrack", "bloodDrain", "goldBurst", "castOnDraw", "chaosRoll", "brand", "heartbeat", "clockTick",
   "emoteSob", "emoteYawn", "emoteLaugh", "emoteAngry", "emoteWahWah",
   "sting",
+  "armorClank", "armorRing", "overkill", "crumble", "unlock", "steal", "give", "counterspell", "bleat", "fuse",
+  "degrade", "upgrade",
 ] as const;
 
 /** The Surface's recipe table, `durationMs` column: the window each recipe must fall silent in. */
@@ -118,6 +120,19 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   emoteWahWah: 1800,
   // Patch v0.2.X (R669).
   sting: 800,
+  // Patch v0.3.X (MN05): Armor (R1363) and the niche moments (R1364–R1366).
+  armorClank: 350,
+  armorRing: 850,
+  overkill: 550,
+  crumble: 650,
+  unlock: 400,
+  steal: 400,
+  give: 550,
+  counterspell: 600,
+  bleat: 650,
+  fuse: 650,
+  degrade: 520,
+  upgrade: 500,
 };
 
 /** B14's params sets, reused so the browser checks the same inputs the fake context does. */
@@ -167,7 +182,7 @@ function rms(samples: Float32Array): number {
 }
 
 describe("polish 2 — SFX recipes rendered by a real browser", () => {
-  it("B15 renders all 38 SfxIds, each with a recipe and the Surface's durationMs", () => {
+  it("B15 renders every SfxId, each with a recipe and the Surface's durationMs", () => {
     expect([...SFX_IDS], "SFX_IDS, in the order of the SfxId union").to.deep.eq([...EXPECTED_IDS]);
     for (const id of EXPECTED_IDS) {
       const spec = SFX[id];
@@ -359,6 +374,10 @@ const ROUTINE: readonly Cue[] = [
   { id: "sting", params: {} },
   { id: "sting", params: { tier: "rare" } },
   { id: "sting", params: { tier: "epic" } },
+  // MN05: Armor's clank and ring (R1363), overkill's crunch (R1364), the niche moments (R1365, R1366).
+  ...(["armorClank", "armorRing", "overkill", "crumble", "unlock", "steal", "give", "counterspell", "bleat", "fuse", "degrade", "upgrade"] as const).map(
+    (id): Cue => ({ id, params: {} }),
+  ),
 ];
 const ROUTINE_BAND = [-12, -4] as const;
 const UI_BANDS: Readonly<Record<"uiClick" | "uiHover", readonly [number, number]>> = { uiClick: [-15, -9], uiHover: [-22, -15] };

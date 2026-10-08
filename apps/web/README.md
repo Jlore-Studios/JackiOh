@@ -146,6 +146,8 @@ src/
     manaMarks.ts        R502: the crystals the next refresh will not fill, read off the view's rider badge and
                         marked on the board's trays (drawn in every mode: it is information)
     chaos.ts brand.ts   R436: Call to Chaos's effect names and slot-machine reveal; R437: a mark's brand
+    shield.ts           R1363: the shield Armor flashes up, small over a hit it took half or more of, full
+                        over one it took whole (`damageAbsorbed`)
     build.ts            the small cue builders the v0.2.0 recipes share
     FxLayer.tsx         the overlay Game mounts after the board; listens to the runner's signals, and reads
                         the newest view (`latest`) for a number no event carries
