@@ -1,6 +1,6 @@
 //! C+ #72 Book of Nerf (SPEC §8.7 row 72, R386; BUILD M9 row C+ 72). (1) Spell, Book, Epic.
-//!   Base:    "Degrade a permanent {times|time|times}." — times 5
-//!   Radiant: "Degrade a card {times|time|times}. It may be a card in your hand." — times 10
+//!   Base:    "Nerf a permanent {times|time|times}." — times 5
+//!   Radiant: "Nerf a card {times|time|times}. It may be a card in your hand." — times 10
 //!
 //! A declared target (R81): a permanent on either side, and on the Radiant face also a card in your own
 //! hand (a broader scope, R275). `times` separate Degrades, each its own draw (R386): attack floors at

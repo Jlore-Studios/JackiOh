@@ -701,9 +701,10 @@ pub const CHAOS_PLUS_BOOKS: i32 = 3;
 pub const CHAOS_PLUS_CLASSIC_CARDS: i32 = 3;
 /// §8.7 row 73 entries 1, 2, 4 and 9: the added and the replacing cards "cost (0)" (`costOverride`).
 pub const CHAOS_PLUS_COST: i32 = 0;
-/// §8.7 row 73 entry 5: "Upgrade every card in your hand and deck twice".
+/// §8.7 row 73 entry 5: "Buff every card in your hand and deck twice" (Buff is the engine's Upgrade, R1320).
 pub const CHAOS_PLUS_UPGRADES: i32 = 2;
-/// §8.7 row 73 entry 7: "Degrade every card on your opponent's field and in their hand three times".
+/// §8.7 row 73 entry 7: "Nerf every card on your opponent's field and in their hand three times" (Nerf is the
+/// engine's Degrade, R1320).
 pub const CHAOS_PLUS_DEGRADES: i32 = 3;
 
 // T-AI-4 Chain of Thought (SPEC §8.7, BUILD §2).

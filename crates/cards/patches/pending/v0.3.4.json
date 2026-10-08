@@ -1,0 +1,16 @@
+{
+  "version": "v0.3.4",
+  "title": "Patch v0.3.4: Degrade is Nerf and Upgrade is Buff",
+  "sources": "issue #543",
+  "notes": "Degrade is renamed Nerf and Upgrade is renamed Buff on every card that printed them, both faces, with their numbers kept: Withering Storm, Buff Billy, Chaos Machine, Book of Buff, Book of Nerf, Call to Chaos (Classic+ Edition), Fine-Tuning and Heroic Power's Radiant Steady Shot. Only the words change; the cards play as before (R1320).",
+  "cards": [
+    "core-098",
+    "classicplus-008",
+    "classicplus-069",
+    "classicplus-070",
+    "classicplus-071",
+    "classicplus-072",
+    "classicplus-073",
+    "classicplus-t-ai-10"
+  ]
+}

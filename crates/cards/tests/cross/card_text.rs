@@ -1523,3 +1523,84 @@ mod the_hand_written_patterns_read_as_their_regular_expressions {
         assert!(!your_turn_trigger("Start of turn: draw."));
     }
 }
+
+/// R1320 (patch v0.3.4, issue #543): players read Nerf for the engine's Degrade and Buff for its
+/// Upgrade (`degrade`, `upgrade`, `tune_once` and the events `degraded` and `upgraded` keep their
+/// names, as R373 kept `library`). Every entry of every set is read, the sets that have not shipped
+/// included, so a Meditative card that lands later is held to it too: it says Nerf and Buff.
+mod r1320_players_read_nerf_and_buff_issue_543 {
+    use super::*;
+
+    /// `/degrad|upgrad/i` anywhere: the old words in any form ("Degrade", "upgraded", "Upgrades").
+    fn says_degrade_or_upgrade(text: &str) -> bool {
+        has_text(text, "degrad") || has_text(text, "upgrad")
+    }
+
+    /// The faces patch v0.3.4 renamed, each with the words it prints now.
+    const RENAMED: &[(&str, FaceKind, &[&str])] = &[
+        ("classicplus-008", FaceKind::Base, &["Nerf"]),
+        ("classicplus-008", FaceKind::Radiant, &["Nerf"]),
+        ("classicplus-069", FaceKind::Base, &["Buff"]),
+        ("classicplus-069", FaceKind::Radiant, &["Buff"]),
+        ("classicplus-070", FaceKind::Base, &["Buff", "Nerf"]),
+        ("classicplus-070", FaceKind::Radiant, &["Buff", "Nerf"]),
+        ("classicplus-071", FaceKind::Base, &["Buff"]),
+        ("classicplus-071", FaceKind::Radiant, &["Buff"]),
+        ("classicplus-072", FaceKind::Base, &["Nerf"]),
+        ("classicplus-072", FaceKind::Radiant, &["Nerf"]),
+        ("classicplus-073", FaceKind::Base, &["Buff", "Nerf"]),
+        ("classicplus-073", FaceKind::Radiant, &["Buff", "Nerf"]),
+        ("classicplus-t-ai-10", FaceKind::Base, &["Buff"]),
+        ("classicplus-t-ai-10", FaceKind::Radiant, &["Buff"]),
+    ];
+
+    /// Core #98's Steady Shot raises its own damage (R754), which is no Buff: its Radiant face says so
+    /// in words that are no keyword's (R1320).
+    #[test]
+    fn r1320_steady_shot_says_its_raise_in_plain_words() {
+        let card = CATALOG.get("core-098").expect("the catalog has Heroic Power");
+        let text = fill_params(card, FaceKind::Radiant, None);
+        assert!(text.contains("This permanently deals 2 more damage."), "{text}");
+        assert!(!has_words(&text, "Buff", false), "{text}");
+    }
+
+    #[test]
+    fn r1320_no_face_and_no_name_of_any_entry_says_degrade_or_upgrade() {
+        let wrong: Vec<String> = faces_of(&entries())
+            .iter()
+            .filter(|face| says_degrade_or_upgrade(&face.text))
+            .map(described)
+            .collect();
+        assert_eq!(wrong, Vec::<String>::new());
+        let named: Vec<String> = entries()
+            .iter()
+            .filter(|card| says_degrade_or_upgrade(&card.name))
+            .map(|card| format!("{} {}", card.id, card.name))
+            .collect();
+        assert_eq!(named, Vec::<String>::new());
+    }
+
+    #[test]
+    fn r1320_the_renamed_faces_print_nerf_and_buff_as_whole_words() {
+        for (id, face, words) in RENAMED {
+            let card = CATALOG
+                .get(*id)
+                .unwrap_or_else(|| panic!("the catalog has no {id}"));
+            let text = fill_params(card, *face, None);
+            for word in *words {
+                assert!(has_words(&text, word, false), "{id} {face}: {word} in {text}");
+            }
+        }
+    }
+
+    #[test]
+    fn r1320_the_guard_flags_the_old_words_in_any_form_and_passes_the_new_ones() {
+        assert!(says_degrade_or_upgrade("Degrade a permanent 5 times."));
+        assert!(says_degrade_or_upgrade("Cry: Upgrade this X times."));
+        assert!(says_degrade_or_upgrade("It was upgraded."));
+        assert!(!says_degrade_or_upgrade("Nerf a permanent 5 times."));
+        assert!(!says_degrade_or_upgrade("Cry: Buff this X times."));
+        // Core #93 Combo-Index's grades are no tuning words.
+        assert!(!says_degrade_or_upgrade("go up a grade and trigger every step"));
+    }
+}

@@ -77,7 +77,7 @@ export function termsIn(text: string): GlossaryTermId[] {
 
 /**
  * The terms a face in play's states name (patch v0.2.0), so its badges are explained beside it: a
- * Brittle count (R385), an Upgrade's or a Degrade's changes and the keywords they added (R386), Cast on
+ * Brittle count (R385), a Buff's or a Nerf's changes and the keywords they added (R386, R1320), Cast on
  * draw riding the card (E39), and a card standing as a Unit (R383).
  */
 function stateTerms(face: FaceModel): GlossaryTermId[] {
@@ -85,8 +85,8 @@ function stateTerms(face: FaceModel): GlossaryTermId[] {
   if (face.brittle !== undefined && face.brittle !== null) ids.push("Brittle");
   const tuning = face.tuning;
   if (tuning !== undefined && tuning !== null) {
-    if (tuning.changes.some((change) => change.kind !== "set" && change.way === "better")) ids.push("Upgrade");
-    if (tuning.changes.some((change) => change.kind !== "set" && change.way === "worse")) ids.push("Degrade");
+    if (tuning.changes.some((change) => change.kind !== "set" && change.way === "better")) ids.push("Buff");
+    if (tuning.changes.some((change) => change.kind !== "set" && change.way === "worse")) ids.push("Nerf");
     for (const keyword of tuning.added) ids.push(keyword.kind);
   }
   if ((face.enchantments ?? []).some((entry) => entry.kind === "castOnDraw")) ids.push("Cast on draw");
