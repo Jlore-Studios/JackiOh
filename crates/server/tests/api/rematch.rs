@@ -12,6 +12,8 @@
 //!    an unranked match (422) are refused.
 //!  - Stale offers are ignored past `REMATCH_OFFER_TTL_MS`; `opponentHere` follows the opponent's
 //!    socket, false once it closes or the actor is gone.
+//!  - **R1372**: an All Random rematch leans the deck of each seat whose latest offer asked, and the
+//!    status names the mode the rematch plays.
 //!
 //! Port of `apps/server/test/api/rematch.test.ts`. Everything runs on tokio's paused clock through
 //! `test_app()`, with the real registry: the created rematch is asserted off the store and off
@@ -34,7 +36,7 @@ use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 use tokio::sync::MutexGuard;
 
-use jackioh_engine::PlayerId;
+use jackioh_engine::{PlayerId, newest_shipped_set};
 use jackioh_server::actor::engine::deal_random_deck;
 use jackioh_server::actor::ws_server::Socket;
 use jackioh_server::api::ranked::rate_ranked_game;
@@ -184,6 +186,18 @@ async fn offer(app: &Arc<App>, token: &str, match_id: &str, stakes: impl Seriali
         &format!("/api/matches/{match_id}/rematch"),
         token,
         Some(json!({ "stakes": stakes })),
+    )
+    .await
+}
+
+/// R1372: a normal offer that asks, or does not ask, for "More cards from the newest set".
+async fn lean_offer(app: &Arc<App>, token: &str, match_id: &str, lean_newest: bool) -> (u16, Value) {
+    request(
+        app,
+        "POST",
+        &format!("/api/matches/{match_id}/rematch"),
+        token,
+        Some(json!({ "stakes": STAKE_NORMAL, "leanNewest": lean_newest })),
     )
     .await
 }
@@ -537,11 +551,69 @@ mod rematch_offers {
         assert_eq!(
             rematch["decks"],
             json!([
-                deal_random_deck(&format!("{seed}:p1-deck")),
-                deal_random_deck(&format!("{seed}:p2-deck"))
+                deal_random_deck(&format!("{seed}:p1-deck"), None),
+                deal_random_deck(&format!("{seed}:p2-deck"), None)
             ])
         );
         assert_ne!(rematch["decks"], finished["decks"]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1372_an_all_random_rematch_leans_the_deck_of_exactly_the_seat_whose_offer_asked() {
+        let app = test_app().await;
+        let (a, b, finished_id) = names("lean-rematch");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        finished_match(&app, &finished_id, &a, &b, json!({})).await;
+        paired_tickets(&app, &finished_id, [&a, &b], "random").await;
+        // R1372: the death screen learns the rematch's mode, to offer the lean beside All Random only.
+        assert_eq!(status(&app, &token_a, &finished_id).await.1["mode"], "random");
+
+        // A (p1) asks first and then changes their mind: the latest offer's lean stands. B (p2) asks.
+        lean_offer(&app, &token_a, &finished_id, true).await;
+        offer(&app, &token_a, &finished_id, STAKE_NORMAL).await;
+        let (_, created) = lean_offer(&app, &token_b, &finished_id, true).await;
+        let rematch = match_row(
+            &app,
+            created["matchId"]
+                .as_str()
+                .expect("premise: the rematch was created"),
+        )
+        .await;
+        let seed = rematch["seed"].as_str().expect("a seed").to_string();
+        assert_eq!(
+            rematch["decks"],
+            json!([
+                deal_random_deck(&format!("{seed}:p1-deck"), None),
+                deal_random_deck(&format!("{seed}:p2-deck"), Some(newest_shipped_set()))
+            ])
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1372_a_best_of_1_rematch_replays_its_decks_whatever_an_offer_asks() {
+        let app = test_app().await;
+        let (a, b, finished_id) = names("lean-bo1");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        let finished = finished_match(&app, &finished_id, &a, &b, json!({})).await;
+        paired_tickets(&app, &finished_id, [&a, &b], "bo1").await;
+        assert_eq!(status(&app, &token_a, &finished_id).await.1["mode"], "bo1");
+
+        lean_offer(&app, &token_a, &finished_id, true).await;
+        let (_, created) = lean_offer(&app, &token_b, &finished_id, true).await;
+        let rematch = match_row(&app, created["matchId"].as_str().expect("the rematch")).await;
+        assert_eq!(rematch["decks"], finished["decks"]);
+        // And a lean that is not a boolean is refused like a malformed stake.
+        let (code, _) = request(
+            &app,
+            "POST",
+            &format!("/api/matches/{finished_id}/rematch"),
+            &token_a,
+            Some(json!({ "stakes": STAKE_NORMAL, "leanNewest": "please" })),
+        )
+        .await;
+        assert_eq!(code, 400);
     }
 
     #[tokio::test(start_paused = true)]

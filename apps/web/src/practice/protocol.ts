@@ -14,7 +14,11 @@ import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
 import type { Difficulty, Handicap } from "@jackioh/engine/config";
 
 export type PracticeDeckChoice =
-  | { kind: "random" }
+  /**
+   * R1373: `leanNewest`, "More cards from the newest set": the worker deals the random deck leaning
+   * on the newest set that ships (R1370, R1371). Absent is off.
+   */
+  | { kind: "random"; leanNewest?: boolean }
   | { kind: "preset"; id: string }
   /** `index` is the 1-based deck number the setup's `saved:<n>` value names. */
   | { kind: "saved"; index: number; cards: string[]; portrait?: string | null };

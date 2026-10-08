@@ -24,8 +24,8 @@ import {
 } from "@jackioh/engine";
 import type { GameState, Rng } from "@jackioh/engine";
 import type { Difficulty } from "@jackioh/engine/config";
-import { AI_GATE_BUDGET, SHADOW_BAN_IDS, aiToAct } from "@jackioh/ai";
-import { opponentOf } from "@jackioh/shared";
+import { AI_DECK, AI_GATE_BUDGET, SHADOW_BAN_IDS, aiToAct, buildAiDeck } from "@jackioh/ai";
+import { newestShippedSet, opponentOf } from "@jackioh/shared";
 import type { Action, ActionBody, PlayerId } from "@jackioh/shared";
 
 import { CATALOG_VERSION } from "@jackioh/cards";
@@ -964,6 +964,57 @@ describe("R433 practice's fresh random deck lists only the cards the human has b
     // Folded as if the deck had been built, the replay is a different game: every card of the
     // human's library reads as shown going in.
     expect(hashState(fold(base).state)).not.toBe(debug.hash);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R1373: the Random deck, more cards from the newest set
+// ---------------------------------------------------------------------------------------------
+
+describe("R1373 practice's Random deck with more cards from the newest set", () => {
+  /** How many of `deck`'s cards are of the newest set that ships (R1371). */
+  function ofNewest(deck: readonly string[]): number {
+    const defs = registeredCatalog();
+    return deck.filter((id) => defs[id]?.set === newestShippedSet()).length;
+  }
+
+  it("R1373 the worker leans the human's random deck on the newest set, and never the AI's", () => {
+    for (const humanSeat of ["p1", "p2"] as const) {
+      const seed = `r1373-lean:${humanSeat}`;
+      const plain = driver();
+      plain.send({ type: "start", config: config({ seed, humanSeat }) });
+      const plainDecks = debugOf(plain).decks;
+
+      const leaning = driver();
+      leaning.send({ type: "start", config: config({ seed, humanSeat, deck: { kind: "random", leanNewest: true } }) });
+      const debug = debugOf(leaning);
+      const human = seatIndex(humanSeat);
+      const ai = seatIndex(opponentOf(humanSeat));
+
+      // The human's deck is the deck builder's own deal with the lean (R1370), from the same stream.
+      expect(debug.decks[human]).toEqual(
+        buildAiDeck(createRng(`${seed}:human-deck`), DECK_SIZE, { banned: [], leanSet: newestShippedSet() }),
+      );
+      expect(ofNewest(debug.decks[human])).toBeGreaterThanOrEqual(Math.ceil(DECK_SIZE * AI_DECK.leanMinShare));
+      expect(debug.decks[human]).not.toEqual(plainDecks[human]);
+      // The AI deals its own deck as ever, and the dealt seat is still the human's (R433).
+      expect(debug.decks[ai]).toEqual(plainDecks[ai]);
+      expect(debug.dealt).toEqual([humanSeat]);
+    }
+  });
+
+  it("R1373 the switch off, or on a preset, changes nothing", () => {
+    const preset = PRACTICE_PRESETS[0];
+    if (preset === undefined) throw new Error("there is no practice preset");
+    const off = driver();
+    off.send({ type: "start", config: config({ seed: "r1373-off", deck: { kind: "random", leanNewest: false } }) });
+    const plain = driver();
+    plain.send({ type: "start", config: config({ seed: "r1373-off" }) });
+    expect(debugOf(off).decks).toEqual(debugOf(plain).decks);
+
+    const onPreset = driver();
+    onPreset.send({ type: "start", config: config({ seed: "r1373-preset", deck: { kind: "preset", id: preset.id } }) });
+    expect(debugOf(onPreset).decks[seatIndex("p2")]).toEqual([...preset.cards]);
   });
 });
 
