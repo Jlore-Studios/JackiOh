@@ -62,7 +62,9 @@ pub struct ActionMessage {
 /// R643: a cosmetic emote. Top-level on purpose — it is NOT an `ActionBody`, so it never reaches
 /// `reduce`, the action log or the replay hash, and it carries no nonce because there is nothing to
 /// ack: a rate-limited emote is silently dropped, and silence is exactly what a drop needs (R643).
-/// An `emote` value outside the ten `EMOTE_IDS` is `malformed`, the only way this frame can fail.
+/// An `emote` value outside the pool's `EMOTE_IDS` is `malformed`, the only way this frame can fail
+/// to parse; one in the pool but outside the sender's dealt hand parses, and the actor drops it as
+/// silently as a rate-limited one (R1342).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct EmoteMessage {
     pub emote: EmoteId,
@@ -198,7 +200,13 @@ pub enum ServerMessage {
     Clock { now: i64, clocks: MatchClocks },
     /// R642: both seats' hero portraits, sent on join and again on reconnect — a row on the match,
     /// never a field of `PlayerView` (portraits are cosmetic; `PlayerView` is a rules surface).
-    Portraits { p1: PortraitId, p2: PortraitId },
+    /// R1342: `emotes` is the receiving account's own hand of `EMOTE_HAND_SIZE`, dealt from the match
+    /// seed (`deal_emote_hand`), never the opponent's: a socket learns nothing it does not show.
+    Portraits {
+        p1: PortraitId,
+        p2: PortraitId,
+        emotes: Vec<EmoteId>,
+    },
     /// R643: an opponent's emote, relayed. The sender already sees their own locally and gets
     /// nothing back — the one asymmetry this frame has.
     Emote { from: PlayerId, emote: EmoteId },
@@ -238,8 +246,13 @@ pub fn clock_message(now: i64, clocks: MatchClocks) -> ServerMessage {
     ServerMessage::Clock { now, clocks }
 }
 
-pub fn portraits_message(p1: PortraitId, p2: PortraitId) -> ServerMessage {
-    ServerMessage::Portraits { p1, p2 }
+/// R642, R1342: the portraits frame one account receives, carrying that account's own emote hand.
+pub fn portraits_message(p1: PortraitId, p2: PortraitId, emotes: &[EmoteId]) -> ServerMessage {
+    ServerMessage::Portraits {
+        p1,
+        p2,
+        emotes: emotes.to_vec(),
+    }
 }
 
 pub fn emote_relay_message(from: PlayerId, emote: EmoteId) -> ServerMessage {
@@ -664,7 +677,7 @@ pub fn parse_client_message(text: &str) -> Result<ClientMessage, MalformedMessag
             }))
         }
         "emote" => {
-            // R643: the ten emote ids are the whole vocabulary; anything else is malformed, and there
+            // R643, R1340: the pool's ids are the whole vocabulary; anything else is malformed, and there
             // is nothing else on the frame to validate (no nonce, no seat — the actor stamps the seat).
             let value = parsed.get("emote").unwrap_or(&Value::Null);
             let emote = if is_emote_id(value) {

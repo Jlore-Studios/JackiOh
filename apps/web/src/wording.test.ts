@@ -15,6 +15,12 @@
 //
 // One file is read another way: cards/glossary.ts keeps SPEC's rule text verbatim and puts it into
 // players' words as it builds the table (`inPlayerWords`), and rules.test.ts proves the table.
+//
+// R1320 (patch v0.3.4, issue #543): Degrade is read as Nerf and Upgrade as Buff. Nothing a player
+// reads says either old word in any form: no client string, no card's text or name, no flavour line
+// and no voice line. The engine's names stay as machine words (the events `degraded` and `upgraded`,
+// the sounds `degrade` and `upgrade`, the tuned verdict `data-tuned="upgraded"`), each lower-case with
+// no space; so here a string is flagged when it says an old word and has a space or a capital in it.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -23,7 +29,10 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
+import { CATALOG } from "@jackioh/cards";
+
 import { costPhrase, faceDownLabel } from "./cards/faceDown.ts";
+import { CARD_FLAVOUR } from "./cards/flavour.ts";
 
 const SRC = dirname(fileURLToPath(import.meta.url));
 
@@ -181,3 +190,73 @@ describe("patch v0.2.1 vocabulary table (SPEC §11 R366)", () => {
   });
 });
 
+
+/** R1320: Degrade and Upgrade in any form ("Degraded", "upgrades"), but not a grade ("go up a grade"). */
+const OLD_TUNING_WORDS = /\b(degrad|upgrad)\w*/i;
+
+/** R1320: an old word a player could read: the words with a space, or with a capital (a label, "Upgraded"). */
+function saysOldTuningWord(text: string): boolean {
+  const trimmed = text.trim();
+  return OLD_TUNING_WORDS.test(trimmed) && /[\sA-Z]/.test(trimmed);
+}
+
+/** The voice lines' words (`text: "…"`), read off `card-audio.json5` as the file is written. */
+function voiceLineTexts(): string[] {
+  const file = readFileSync(join(SRC, "audio/card-audio.json5"), "utf8");
+  return [...file.matchAll(/\btext:\s*"((?:[^"\\]|\\.)*)"/g)].map((match) => match[1] ?? "");
+}
+
+describe("R1320 players read Nerf and Buff", () => {
+  it("R1320 no text a player can read in the client says Degrade or Upgrade", () => {
+    const files = sources(SRC);
+    expect(files.length).toBeGreaterThan(100);
+    const found = files
+      .flatMap(wordsIn)
+      .filter(({ text }) => saysOldTuningWord(text))
+      .map(({ at, text }) => `${at}: ${JSON.stringify(text)}`);
+    expect(found).toEqual([]);
+  });
+
+  it("R1320 no card's text or name, of any set, shipped or not, says Degrade or Upgrade in any form", () => {
+    const cards = Object.values(CATALOG);
+    expect(cards.length).toBeGreaterThan(300);
+    const found = cards.flatMap((card) =>
+      [
+        { where: `${card.id} name`, text: card.name },
+        { where: `${card.id} base`, text: card.base.text },
+        { where: `${card.id} radiant`, text: card.radiant.text },
+      ]
+        .filter(({ text }) => OLD_TUNING_WORDS.test(text))
+        .map(({ where, text }) => `${where}: ${JSON.stringify(text)}`),
+    );
+    expect(found).toEqual([]);
+    // The cards that tune print the new words (C+ #71 Book of Buff, C+ #72 Book of Nerf).
+    expect(CATALOG["classicplus-071"]?.base.text).toMatch(/^Buff a card /);
+    expect(CATALOG["classicplus-072"]?.base.text).toMatch(/^Nerf a permanent /);
+  });
+
+  it("R1320 no flavour line and no voice line says Degrade or Upgrade in any form", () => {
+    const flavour = Object.entries(CARD_FLAVOUR).flatMap(([id, entry]) =>
+      entry.flavour !== undefined && OLD_TUNING_WORDS.test(entry.flavour) ? [`${id}: ${entry.flavour}`] : [],
+    );
+    expect(flavour).toEqual([]);
+    const voices = voiceLineTexts();
+    expect(voices.length).toBeGreaterThan(300);
+    expect(voices.filter((text) => OLD_TUNING_WORDS.test(text))).toEqual([]);
+  });
+
+  it("R1320 the guard flags the old words where a player would read them and passes machine words", () => {
+    expect(saysOldTuningWord("Upgraded")).toBe(true);
+    expect(saysOldTuningWord("Degrade")).toBe(true);
+    expect(saysOldTuningWord("Book of Nerf was degraded")).toBe(true);
+    expect(saysOldTuningWord("Upgrade hand and Deck twice")).toBe(true);
+    // Machine words stay: an event type, a sound id, a verdict.
+    expect(saysOldTuningWord("degraded")).toBe(false);
+    expect(saysOldTuningWord("upgrade")).toBe(false);
+    expect(saysOldTuningWord("upgraded")).toBe(false);
+    // The new words, and a grade that is no tuning word.
+    expect(saysOldTuningWord("Book of Buff was buffed")).toBe(false);
+    expect(saysOldTuningWord("Nerfed")).toBe(false);
+    expect(OLD_TUNING_WORDS.test("go up a grade and trigger every step")).toBe(false);
+  });
+});

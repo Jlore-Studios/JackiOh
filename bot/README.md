@@ -149,9 +149,20 @@ touching different files. Squishy has the same mode, `squishy:fullsend` ([Squish
    branch, `bot/issue-<n>`, from `main`'s head: the integration branch. It opens the parts as
    sub-issues, each queued as `bot:build` with its plan, its difficulty and a record of where it
    lands (`onto`, `part_of`), and labels the parent `bot:tree`.
-2. **The parts.** A part is a queued issue like any other, with its own difficulty, so the
-   cheapest builder that difficulty allows takes it, side by side with the parts that do not wait
-   for it. Its run starts from the integration branch, not `main`, and measures every diff against
+
+   **An issue split already.** On an issue whose sub-issues someone opened before (a tracker split
+   by hand), `fullsend` takes those as its parts and splits nothing (`queue.adopt`): it makes the
+   integration branch from `main`'s head through the API, writes each open sub-issue's `onto` and
+   `part_of`, queues any that was not queued, and labels the parent `bot:tree`. A sub-issue
+   labelled `human` or the other bot's, one a run holds, or one with a pull request of the bot's
+   open is left to finish on `main`, and the reconcile waits for it to close too.
+2. **The parts.** A part is a queued issue like any other, with its own difficulty and its own
+   plan from a model of its plan floor (a strong one above easy), which the planning lane writes
+   for the parts before the other items ([Who takes what](#subscriptions)). Once its plan is on
+   record, the subscriptions whose strongest seat is weakest take it first, and one with no seat
+   of its difficulty's tier may build it on a medium seat (`config.PART_FLOOR`): Muse builds a
+   hard part from Opus's plan, while a Claude account still builds a hard one on Opus, never on
+   Sonnet. The parts build side by side with the parts that do not wait for them. Its run starts from the integration branch, not `main`, and measures every diff against
    it (`work.Worker._part`): one builder pass and the path guard, and no checks, self check,
    catch-up with `main` or review. Deliver lands the change on the integration branch
    (`deliver.Deliverer._land_part`): a fast-forward when nothing landed since the part started,
@@ -184,6 +195,11 @@ Why it is built this way:
   parent.
 - **One label per bot** (`bot:fullsend`, `squishy:fullsend`), so each issue has one owner
   (`queue.owner`).
+- **Medium builders, strong planners and a strong reconcile.** A part is one blind pass whose
+  every flaw the reconcile's build, checks and review must clear anyway, so its builder may be a
+  tier under its difficulty once a strong model has planned it: the strong models spend their
+  hours on the plans and the reconcile, and the medium subscriptions (Muse's four lanes) on the
+  building.
 
 What to watch: the parent is hard, so three failures of its own block it instead of stepping it
 up. `/harness rebuild` on the reconcile's pull request builds the issue again from `main`,
@@ -520,9 +536,9 @@ accounts' lanes added up, so it holds none of them back), `machine_parallel` how
 on the bot's machine (6; its two vCPUs run each job's checks; GitHub's runners have four each),
 each apart from the other, so Claude runs never wait for the night box's slots nor its runs for
 GitHub's lanes; `plan_lanes` is how many planning runs may go on top of those (the planning
-lane, below; 4), `priority` the usage order (below), and `tiers` each tier's models in the
+lane, below; 6), `priority` the usage order (below), and `tiers` each tier's models in the
 order the router tries them after `priority`. A subscription's own `lanes`
-(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can fill its box alone, Muse's is 2, and claude-1, claude-2, claude-3 and claude-7 have 2 each. A `secret` must be one of the names the workflows hand over (the seven Claude ones,
+(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can fill its box alone, Muse's is 4, and claude-1, claude-2, claude-3 and claude-7 have 2 each. A `secret` must be one of the names the workflows hand over (the seven Claude ones,
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
 **Who takes what.** Each run takes one item on one subscription, and a subscription works on as
@@ -580,7 +596,9 @@ Muse first (the most reliable builder, #305), then agy and Codex; then claude-2,
 for planning and reviewing; then Devin, last. For building alone, claude-2 is `build_last`: it
 builds only when no other subscription that may is free, Devin included. Devin is `easy_first`:
 it may build only easy items, so it takes them ahead of everyone while it has a free lane, and
-the stronger models keep the medium and hard items only they may build. (There is no training
+the stronger models keep the medium and hard items only they may build. A fullsend part, once
+planned, goes first to the medium subscriptions (Muse first), which may build it whatever its
+difficulty ([Fullsend](#fullsend)). (There is no training
 lane in the harness any more, and no `training` label: the AI's two training lanes run as
 services on the training box, [`machine/`](machine/README.md#the-training-box).)
 
@@ -588,11 +606,14 @@ services on the training box, [`machine/`](machine/README.md#the-training-box).)
   from. A queued item without one carries `bot:needs-plan`: one with no plan, and one whose plan
   came from a model under its plan floor (a medium model's plan of a medium or hard item). A
   planner on the **planning lane** plans those first: `plan_lanes` runs on top of
-  `max_parallel`, which take no build lane, so a subscription plans one item while it builds
-  another. Each subscription offers its strongest seat; the strong ones go first, and an item
-  takes the first that meets its floor (a medium planner takes only easy and unrated items). A
-  subscription with usage caps plans only while it holds nothing else, and builds nothing while
-  it plans. The lane takes the easy items first (Devin waits on those), then the rest in the usual
+  `max_parallel`, which take no build lane, so a subscription plans while it builds, up to as
+  many items at once as its `lanes`. Planning comes first: the strong models write the plans the
+  medium ones (Muse above all) build from before they build anything themselves. Each
+  subscription offers its strongest seat; the strong ones go first, within a tier the one
+  planning least, and an item takes the first that meets its floor (a medium planner takes only
+  easy and unrated items). A subscription with usage caps plans only while it holds nothing else,
+  and builds nothing while it plans. The lane takes the easy items first (Devin waits on those),
+  then fullsend parts (Muse builds those, [Fullsend](#fullsend)), then the rest in the usual
   order, ahead of every build. The planner reads the task and the code, writes nothing but its
   draft ([handing work over](#the-self-check-loop)), and must leave a weak builder no gap to fill
   (`bot/prompts/plan.md`): the files to touch by path (the

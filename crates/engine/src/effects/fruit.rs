@@ -223,6 +223,7 @@ pub fn draw_priced(args: DrawPricedArgs) -> Effect {
                 target: Some(target),
                 amount,
                 in_hand_only: Some(true),
+                ..SetCostModArgs::default()
             });
             (price.apply)(ctx);
         }

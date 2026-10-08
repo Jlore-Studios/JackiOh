@@ -131,13 +131,13 @@ export type ZoneImpact = Pile & { count: number; events: number };
  * The cards whose changes to cards nobody may read land in one library their public text names
  * (R440: each such change is reported, its card hidden, its pile not said), relative to the player of
  * the card resolving: `enemy` for the other player's library, `own` for its own. A card whose hidden
- * changes reach more than one pile (a hand and a deck, C+ #73's Upgrade) is not listed: its changes
+ * changes reach more than one pile (a hand and a deck, C+ #73's Buff) is not listed: its changes
  * stay where the view puts them, which is nowhere. Add a definition here when its text names the one
  * deck its hidden changes are in.
  */
 export const HIDDEN_PILE_OF: Readonly<Record<string, "own" | "enemy">> = {
-  // C+ #8 Withering Storm: base "Degrade 4 random cards in your opponent's deck", radiant "Degrade
-  // every card in your opponent's deck".
+  // C+ #8 Withering Storm: base "Nerf 4 random cards in your opponent's deck", radiant "Nerf every
+  // card in your opponent's deck".
   "classicplus-008": "enemy",
   // Core #42: "Exile 7 random cards from your deck".
   "core-042": "own",
@@ -302,15 +302,17 @@ function targetSide(view: PlayerView, targetId: string): { side: Side; unit: boo
 function sweepStep(event: GameEvent): { target: string; tone: Sweep["tone"]; source?: string | null } | null {
   if (event.type === "damage") return event.combat ? null : { target: event.targetId, tone: "damage", source: event.sourceId };
   if (event.type === "divineShieldLost") return { target: event.instanceId, tone: "damage" };
+  // R1361: a hit the Armor took whole still reached its target, as a Divine Shield's does.
+  if (event.type === "damageAbsorbed") return event.combat ? null : { target: event.targetId, tone: "damage", source: event.sourceId };
   if (event.type === "healed") return { target: event.targetId, tone: "heal" };
   return null;
 }
 
 /**
  * The sweep that starts at `at`, if one does: a run of at least two non-combat hits from one source
- * (a Divine Shield that takes one of them counts as hit) or of heals, each on a different target, that
- * reaches at least one unit and every unit on each side it touches. A target hit again starts a new
- * round, and so a new sweep (Blade Storm's repeats).
+ * (a Divine Shield that takes one of them, or Armor that takes one whole, counts as hit) or of heals,
+ * each on a different target, that reaches at least one unit and every unit on each side it touches.
+ * A target hit again starts a new round, and so a new sweep (Blade Storm's repeats).
  */
 export function sweepAt(
   events: readonly GameEvent[],

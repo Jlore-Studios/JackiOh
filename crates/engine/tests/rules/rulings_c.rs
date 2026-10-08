@@ -1241,6 +1241,17 @@ fn hits(events: &[GameEvent]) -> Vec<Hit> {
         .collect()
 }
 
+/// R1361: the hit each `damageAbsorbed` reports the Armor took whole, in order.
+fn absorbed_whole(events: &[GameEvent]) -> Vec<i32> {
+    events
+        .iter()
+        .filter_map(|event| match event {
+            GameEvent::DamageAbsorbed { absorbed, .. } => Some(*absorbed),
+            _ => None,
+        })
+        .collect()
+}
+
 /// `eventsOfType(events, type)`, counted.
 fn count_of(events: &[GameEvent], kind: GameEventType) -> usize {
     events.iter().filter(|event| event.event_type() == kind).count()
@@ -3215,7 +3226,8 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
     }
 
     #[test]
-    fn r124_adds_hero_armor_up_across_its_sources_where_the_anti_oneshot_cap_instead_takes_the_smallest() {
+    fn r124_r1361_adds_hero_armor_up_across_its_sources_where_the_anti_oneshot_cap_instead_takes_the_smallest()
+     {
         let mut state = game("r124-armor-adds");
 
         // Bare: step 2 has nothing to subtract, so the whole hit lands.
@@ -3233,11 +3245,20 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         // Plus any Armor written on the hero itself, on top of both.
         state.players.p2.hero.armor = 4 + 1;
         assert_eq!(hit_hero(&mut state, 6).0, 1);
-        // And enough of it zeroes the hit, which R63 makes no damage instance at all.
+        // And enough of it zeroes the hit, which R63 makes no damage instance at all: R1361's report of
+        // the Armor taking it whole is all that comes of it.
         state.players.p2.hero.armor = 6;
         let stopped = hit_hero(&mut state, 6);
         assert_eq!(stopped.0, 0);
-        assert!(stopped.1.is_empty());
+        assert_eq!(
+            stopped.1,
+            vec![GameEvent::DamageAbsorbed {
+                source_id: None,
+                target_id: "hero-p2".to_string(),
+                absorbed: 6,
+                combat: false,
+            }]
+        );
 
         // The opposite case, in the same pipeline: step 3's Anti-oneshot cap is a *ceiling*, so two of
         // those cards give the smallest cap either provides, never their sum.
@@ -3256,7 +3277,7 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
     }
 
     #[test]
-    fn r125_sends_fatigue_through_the_whole_damage_pipeline_so_armor_absorbs_the_early_draws() {
+    fn r125_r1362_sends_fatigue_through_the_whole_damage_pipeline_so_armor_absorbs_the_early_draws() {
         // The control first: with no Armor, the Nth empty draw takes the full N (§2.4, R3). Without this
         // the assertions below could pass on a fatigue that never fired.
         let mut bare = game("r125-no-armor");
@@ -3274,7 +3295,8 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
 
         // Now behind Going Long's Armor 3. Fatigue is an ordinary damage instance on its own hero, so
         // step 2 applies: draws 1 to 3 are absorbed entirely, and R63's zero rule makes each no damage
-        // instance. Each is still a draw that happened, so it is reported by a hit of 0 (R240).
+        // instance. Each is still a draw that happened, so it is reported (R240), by the pipeline's
+        // `damageAbsorbed` with the whole hit (R1362), and by no `damage`.
         let mut armoured = game("r125-armour");
         armoured.players.p1.library = vec![];
         armoured.players.p1.hero.armor = 3;
@@ -3289,13 +3311,8 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
             assert_eq!(armoured.players.p1.fatigue_count, n);
             assert_eq!(armoured.players.p1.hero.health, full);
         }
-        assert_eq!(
-            hits(&sink.events),
-            [0, 0, 0]
-                .iter()
-                .map(|amount| Hit::new("", "hero-p1", *amount))
-                .collect::<Vec<_>>()
-        );
+        assert!(hits(&sink.events).is_empty());
+        assert_eq!(absorbed_whole(&sink.events), vec![1, 2, 3]);
 
         // The escalating Nth-draw damage is what eventually beats the Armor: the 4th draw is 4, so 1
         // gets through, and the 5th lets 2 through.
@@ -3311,11 +3328,12 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         assert_eq!(armoured.players.p1.hero.health, full - 1 - 2);
         assert_eq!(
             hits(&sink.events),
-            [0, 0, 0, 1, 2]
+            [1, 2]
                 .iter()
                 .map(|amount| Hit::new("", "hero-p1", *amount))
                 .collect::<Vec<_>>()
         );
+        assert_eq!(absorbed_whole(&sink.events), vec![1, 2, 3]);
 
         // Step 3's cap rides along too, since it is the same pipeline: a fatigue above the cap is
         // clamped to it.

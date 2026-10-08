@@ -315,7 +315,8 @@ mod the_damage_pipeline_s4_4_m2_t3 {
             );
             assert_eq!(
                 to_json(&events_of_type(sink.events, GameEventType::Damage)[0]),
-                json!({ "type": "damage", "sourceId": source.id, "targetId": target.id, "amount": 3, "combat": true })
+                // R1360: the Armor 7 took the rest, and the event says so.
+                json!({ "type": "damage", "sourceId": source.id, "targetId": target.id, "amount": 3, "combat": true, "absorbed": 7 })
             );
             let now = live(sink.state, &target.id);
             assert_eq!(now.damage, 3);
@@ -326,13 +327,14 @@ mod the_damage_pipeline_s4_4_m2_t3 {
             assert_eq!(hit(sink, None, on_hero(P2), 4, None), 3);
             assert_eq!(
                 to_json(&events_of_type(sink.events, GameEventType::Damage)[1]),
-                json!({ "type": "damage", "sourceId": null, "targetId": "hero-p2", "amount": 3, "combat": false })
+                json!({ "type": "damage", "sourceId": null, "targetId": "hero-p2", "amount": 3, "combat": false, "absorbed": 1 })
             );
         });
     }
 
     #[test]
-    fn r63_step_6_an_instance_armor_reduces_to_0_emits_no_damage_event_and_a_0_hit_is_no_instance_at_all() {
+    fn r63_r1361_step_6_an_instance_armor_reduces_to_0_emits_no_damage_event_and_a_0_hit_is_no_instance_at_all()
+     {
         // M1 has no trigger dispatch, so what step 6 makes observable is the `damage` event an
         // on-damage trigger such as Fed Fauci's Plague Counter would fire from: one per instance dealt,
         // none at all for an instance stopped before step 5.
@@ -342,7 +344,12 @@ mod the_damage_pipeline_s4_4_m2_t3 {
         with_sink(&mut state, |sink| {
             assert_eq!(hit(sink, None, on_unit(&armour.id), 7, None), 0);
             assert_eq!(live(sink.state, &armour.id).damage, 0);
-            assert_eq!(sink.events.len(), 0);
+            // R1361: the Armor took it whole, which is reported, and is no `damage`.
+            assert_eq!(
+                to_json(&*sink.events),
+                json!([{ "type": "damageAbsorbed", "sourceId": null, "targetId": armour.id, "absorbed": 7, "combat": false }])
+            );
+            sink.events.clear();
 
             // A hit of 0 before step 1 is not a damage instance: the shield is still there.
             assert_eq!(hit(sink, None, on_unit(&shield.id), 0, None), 0);
@@ -680,7 +687,8 @@ mod on_damage_triggers_s4_4_step_6_m2_t3 {
     use super::*;
 
     #[test]
-    fn r63_gives_fed_fauci_one_plague_counter_per_damage_instance_and_none_for_an_instance_armor_zeroed() {
+    fn r63_r1361_gives_fed_fauci_one_plague_counter_per_damage_instance_and_none_for_an_instance_armor_zeroed()
+     {
         let mut state = game();
         let fauci_def = fed_fauci();
         let mut catalog = registered_catalog().clone();
@@ -720,14 +728,16 @@ mod on_damage_triggers_s4_4_step_6_m2_t3 {
             settle(sink, Default::default());
             assert_eq!(live(sink.state, &fauci.id).counters.plague, Some(2));
 
-            // An instance Armor reduces to 0 emits no `damage` event, so step 6 never runs (R63).
+            // An instance Armor reduces to 0 emits no `damage` event, so step 6 never runs (R63): the
+            // `damageAbsorbed` that reports it is all it emits, and nothing answers that (R1361).
             find_instance_mut(sink.state, &fauci.id)
                 .expect("on the field")
                 .granted_keywords
                 .push(Keyword::Armor { n: 7 });
             let before = sink.events.len();
             assert_eq!(hit(sink, None, on_unit(&fauci.id), 7, None), 0);
-            assert_eq!(sink.events[before..].len(), 0);
+            let types: Vec<GameEventType> = sink.events[before..].iter().map(GameEvent::event_type).collect();
+            assert_eq!(types, vec![GameEventType::DamageAbsorbed]);
             settle(sink, Default::default());
             assert_eq!(live(sink.state, &fauci.id).counters.plague, Some(2));
 

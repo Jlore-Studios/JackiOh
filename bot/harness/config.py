@@ -219,6 +219,10 @@ DIFFICULTY_LABELS = {f"difficulty:{name}": name for name in DIFFICULTIES}
 DEFAULT_DIFFICULTY = "medium"
 #: The weakest tier that may build an item of each difficulty (`providers.TIERS`).
 MIN_TIER = {"easy": "weak", "medium": "medium", "hard": "strong"}
+#: The weakest tier that may build a fullsend part (#505) of any difficulty once its plan meets
+#: its plan floor, on a subscription with no seat of the part's own tier (Muse): a part lands with
+#: no checks or review, and its tree's reconcile, a strong model's, checks and reviews them all.
+PART_FLOOR = "medium"
 #: The weakest tier whose plan an item of each difficulty builds from (#317 part 6): a medium
 #: model may plan an easy item, only a strong one anything harder. An item no one has rated yet
 #: (`UNRATED_PLAN_FLOOR`) may be rated and planned by a medium model, whose plan then stands only

@@ -15,7 +15,13 @@ export type SfxId =
   // Patch v0.2.X (R644): the five emoji emotes (issue §4), synthesized on the effects channel.
   | "emoteSob" | "emoteYawn" | "emoteLaugh" | "emoteAngry" | "emoteWahWah"
   // Patch v0.2.X (#259, R669): the play sting of a card below Legendary.
-  | "sting";
+  | "sting"
+  // Patch v0.3.X (MN05): Armor's clank and ring (R1363), and the niche moments (R1364–R1366).
+  | "armorClank" | "armorRing" | "overkill" | "crumble" | "unlock" | "steal" | "give" | "counterspell" | "bleat" | "fuse"
+  | "degrade" | "upgrade"
+  // Patch v0.3.X (MN03, #545, R1345): the fourteen new emoji emotes, synthesized like the five.
+  | "emoteWave" | "emoteClap" | "emoteThumbsUp" | "emoteFacepalm" | "emoteShrug" | "emoteThinking" | "emoteHeart"
+  | "emoteFire" | "emoteSkull" | "emoteSweat" | "emoteCool" | "emoteGasp" | "emoteSalute" | "emoteParty";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`, which follows the
@@ -270,8 +276,12 @@ export type MusicManifest = {
   files: Record<string, MusicTrack>;
 };
 
-/** What a card does to the music when it is cast (music-cards.json, keyed by catalog id). */
-export type MusicCardEntry = { theme?: string; station?: MusicStation };
+/**
+ * What a card does to the music when it is cast (music-cards.json, keyed by catalog id): a theme it
+ * starts, a station it switches its caster to, and (R1350) the intro it opens its play with, a
+ * non-looping track of its own.
+ */
+export type MusicCardEntry = { theme?: string; station?: MusicStation; intro?: string };
 
 /** What the director and the UI need from an engine. */
 export type SoundSink = {

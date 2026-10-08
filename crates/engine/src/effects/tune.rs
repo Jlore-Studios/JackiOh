@@ -1,6 +1,7 @@
 //! Degrade and Upgrade (docs/classic-sets.md B3.4, R386), and Classic+ #41 KY's Constant's "change a
 //! number to 3": the verbs that write a card's `tuning` (`tuning.rs` holds the readers, `numbers.rs`
-//! the numbers on a card).
+//! the numbers on a card). Players read Degrade as Nerf and Upgrade as Buff (patch v0.3.4, R1320); the
+//! engine keeps its names here, as `degrade`, `upgrade`, `tune_once`, `TuneDirection` and the events.
 //!
 //! One application is one change, drawn from the menu rows that can change the card now (B3.4 rule 3):
 //!
@@ -700,17 +701,18 @@ fn tune_effect(kind: &'static str, direction: TuneDirection, args: TuneArgs) -> 
     })
 }
 
-/// B3.4, R386: Degrade — `times` applications to each card reached, each one change drawn from the
-/// menu (this file's header). Classic+ #8 Withering Storm ("Degrade 4 random cards in your opponent's
-/// deck": `{ scope: { side: "enemy", zones: ["library"] }, random: 4 }`), #72 Book of Nerf, #70 Chaos
-/// Machine, #73's "Degrade every card on your opponent's field and in their hand three times".
+/// B3.4, R386: Degrade, which players read as Nerf (R1320) — `times` applications to each card reached,
+/// each one change drawn from the menu (this file's header). Classic+ #8 Withering Storm ("Nerf 4 random
+/// cards in your opponent's deck": `{ scope: { side: "enemy", zones: ["library"] }, random: 4 }`), #72
+/// Book of Nerf, #70 Chaos Machine, #73's "Nerf every card on your opponent's field and in their hand
+/// three times".
 pub fn degrade(args: TuneArgs) -> Effect {
     tune_effect("degrade", TuneDirection::Degrade, args)
 }
 
-/// B3.4, R386: Upgrade — Degrade's mirror (B9 #7). Classic+ #69 Buff Billy ("Upgrade this X times":
-/// `{ target: { of: "self" }, times: ctx.x }`), #71 Book of Buff, #70, #73's "every card in your hand
-/// and deck twice", T-AI-10 Fine-Tuning.
+/// B3.4, R386: Upgrade, which players read as Buff (R1320) — Degrade's mirror (B9 #7). Classic+ #69 Buff
+/// Billy ("Buff this X times": `{ target: { of: "self" }, times: ctx.x }`), #71 Book of Buff, #70, #73's
+/// "every card in your hand and deck twice", T-AI-10 Fine-Tuning.
 pub fn upgrade(args: TuneArgs) -> Effect {
     tune_effect("upgrade", TuneDirection::Upgrade, args)
 }

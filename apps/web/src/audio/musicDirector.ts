@@ -21,6 +21,13 @@
 //   firing only, as a cast would.
 // - A hotseat hand-over is a new viewer: the arriving seat hears its own station and situation, and
 //   no theme carries over.
+// - R1350: a Legendary or Mythic card the viewer can read opens its play with its own intro
+//   (music-cards.json's `intro`), at the moment R204 gives its play or cast line: a played card's
+//   `cardPlayed` (never a Trap's, which is its set), a Unit an effect puts on the field without
+//   playing it on its `summoned`, and a Trap at its first firing. Only with dynamic music on, and
+//   before the theme the same card may start, so the intro is on top when the theme comes in.
+//   R1351: the result, a hand-over, dynamic music turned off and the board leaving each cut it short.
+//   The intros of the cards in the viewer's own hand are fetched ahead, between animation bursts.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { HERO_HEALTH } from "@jackioh/engine/config";
@@ -38,6 +45,12 @@ export type MusicSink = {
   request(request: MusicRequest): void;
   resetResume(): void;
   preload(ids: readonly string[]): void;
+  /** R1350: a card's intro, on top of the music. */
+  playIntro(id: string): void;
+  /** R1351: the intro playing is cut short. */
+  stopIntro(): void;
+  /** R1350: intros the viewer may soon play, fetched ahead. */
+  preloadIntros(ids: readonly string[]): void;
 };
 
 export type MusicDirector = {
@@ -104,6 +117,15 @@ function castOf(event: GameEvent, lines: CardAudioTable, fired: Set<string>): { 
   return null;
 }
 
+/**
+ * R1350: a Unit an effect put onto the field without playing it (a token, a copy, Recruit, Reborn),
+ * which R204 gives its play line on its `summoned`: on a units row, readable, and no play of it heard.
+ */
+function arrivalOf(event: GameEvent, playedUnits: ReadonlySet<string>): string | null {
+  if (event.type !== "summoned" || event.row !== "units" || event.defId === HIDDEN_DEF_ID) return null;
+  return playedUnits.has(event.instanceId) ? null : event.defId;
+}
+
 function heroHit(event: GameEvent, viewer: PlayerId): boolean {
   if (event.type === "damage") return event.amount > 0 && event.targetId === `hero-${viewer}`;
   if (event.type === "healthLost") return event.amount > 0 && event.player === viewer;
@@ -125,6 +147,10 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
   let rotation = 0;
   const stations = new Map<PlayerId, MusicStation>();
   const fired = new Set<string>();
+  /** R1350: the Units whose own play was heard, so their `summoned` opens nothing again (R204). */
+  const playedUnits = new Set<string>();
+  /** R1350: the intros already asked to be fetched ahead. */
+  const preloaded = new Set<string>();
   let lowHealth = false;
   let opponentTurn = false;
   let result: MusicMoment["result"] = null;
@@ -147,7 +173,10 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
   function push(): void {
     if (disposed || viewer === null) return;
     const dynamic = settings().dynamicMusic;
-    if (!dynamic) endTheme();
+    if (!dynamic) {
+      endTheme();
+      sink.stopIntro();
+    }
     // A spent theme lets go as soon as the viewer is away from low health.
     if (theme?.spent === true && !lowHealth) endTheme();
     const choice = chooseMusic(
@@ -164,7 +193,23 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
     const inPlay = view.phase === "start" || view.phase === "main" || view.phase === "end";
     opponentTurn = inPlay && view.active !== view.viewer;
     result = view.result === null ? null : view.result.winner === "draw" ? "draw" : view.result.winner === view.viewer ? "victory" : "defeat";
-    if (result !== null) endTheme();
+    if (result !== null) {
+      endTheme();
+      sink.stopIntro();
+    }
+  }
+
+  /** R1350: the intros of the cards in the viewer's own hand (every one readable), fetched ahead once each. */
+  function preloadHand(view: PlayerView): void {
+    if (!settings().dynamicMusic || !Array.isArray(view.you.hand)) return;
+    const ids: string[] = [];
+    for (const card of view.you.hand) {
+      const id = cards[card.defId]?.intro;
+      if (id === undefined || preloaded.has(id)) continue;
+      preloaded.add(id);
+      ids.push(id);
+    }
+    if (ids.length > 0) sink.preloadIntros(ids);
   }
 
   function startTheme(defId: string, track: string): void {
@@ -201,8 +246,10 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
         return;
       }
       if (view.viewer !== viewer) {
-        // A hotseat hand-over: the arriving seat's own music, at once.
+        // A hotseat hand-over: the arriving seat's own music, at once, and nothing of the last seat's.
         endTheme();
+        sink.stopIntro();
+        playedUnits.clear();
         read(view);
         push();
       }
@@ -212,6 +259,7 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
       if (disposed || latest === null) return;
       read(latest);
       push();
+      preloadHand(latest);
     },
 
     onEvent(event, view) {
@@ -224,7 +272,13 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
         return;
       }
       const cast = castOf(event, lines, fired);
-      if (cast === null || !settings().dynamicMusic) return;
+      if (cast !== null && event.type === "cardPlayed" && entryFor(lines, cast.defId)?.kind === "unit") playedUnits.add(event.instanceId);
+      if (!settings().dynamicMusic) return;
+      // R1350: the card's intro first, so the theme it may start comes in under it.
+      const opens = cast?.defId ?? arrivalOf(event, playedUnits);
+      const intro = opens === null ? undefined : cards[opens]?.intro;
+      if (intro !== undefined) sink.playIntro(intro);
+      if (cast === null) return;
       const entry = cards[cast.defId];
       if (entry === undefined) return;
       if (entry.station !== undefined) {
@@ -240,6 +294,7 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
       if (disposed) return;
       disposed = true;
       endTheme();
+      sink.stopIntro();
       unsubscribe();
     },
   };

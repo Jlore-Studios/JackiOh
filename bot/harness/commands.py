@@ -303,8 +303,9 @@ VERB_HELP: dict[str, tuple[str, str, str]] = {
               "closes, I check this issue's end state and close it or add what is missing.",
               "{slash} split bot"),
     "fullsend": ("fullsend [notes]", "Split this issue into parts, sub-issues that each own their "
-                 "files, and build each onto one branch of this issue's own, not `main`, with no "
-                 "pull request, checks or review of its own. When the last part closes, one run "
+                 "files (or take the sub-issues it has already as its parts), and build each onto "
+                 "one branch of this issue's own, not `main`, with no pull request, checks or "
+                 "review of its own. When the last part closes, one run "
                  "reconciles the branch with fullsend, makes every check green and opens one pull "
                  "request into `main`, reviewed like any build.", "{slash} fullsend"),
     "revise": ("revise <notes>", "Queue a revision of this pull request with your notes. "

@@ -140,6 +140,13 @@ def is_fullsend(mode: str, record: dict[str, Any]) -> bool:
     return mode == "fullsend" or tree.get("mode") == "fullsend"
 
 
+def is_part(record: dict[str, Any]) -> bool:
+    """A fullsend part (#505): its record says it lands on its tree's branch, as deliver wrote
+    when it opened the part, or `adopt` when it took in an issue someone had opened."""
+    parent = int(record.get("part_of") or 0)
+    return bool(parent) and record.get("onto") == branch_for_issue(parent)
+
+
 def open_parts(ctx: Context, number: int) -> list[int]:
     """The sub-issues of issue `number` still open: while a fullsend tree has any, its parts are
     still landing on its branch, and nothing builds the issue itself (#505)."""
@@ -262,9 +269,12 @@ def queue_build(ctx: Context, number: int, *, by: str, force: bool = False,
               if asked == "fullsend" or LABEL_TREE in names else {})
     if is_fullsend(asked, record):
         try:
-            parts = open_parts(ctx, number)
+            children = ctx.gh.list_sub_issues(number)
         except GitHubError as exc:
             return f"#{number}'s parts could not be read ({str(exc)[:200]}), so I queued nothing."
+        parts = [int(child["number"]) for child in children if child.get("state") == "open"]
+        if parts and not is_fullsend("", record):
+            return adopt(ctx, number, names, children, by=by)  # someone opened its parts already
         if parts:
             if label_present and LABEL_BUILD in names:
                 ctx.gh.remove_label(number, LABEL_BUILD)
@@ -295,6 +305,69 @@ def queue_build(ctx: Context, number: int, *, by: str, force: bool = False,
                 + _label_note(names))
     return (f"Queued #{number}; I will {words} {_when(ctx, state)}.{_halt_note(ctx, state)}"
             f"{_label_note(names)}")
+
+
+def adopt(ctx: Context, number: int, names: set[str], children: list[dict[str, Any]], *,
+          by: str) -> str:
+    """`fullsend` on an issue whose sub-issues someone opened already, a tracker split by hand:
+    they are its parts, with no split (#505). Its branch is made at `main`'s head; each open
+    sub-issue the bot may build gets the record that sends its build there (`is_part`), and is
+    queued if it was not; and the issue becomes a tree, whose reconcile the sweep queues once
+    every sub-issue has closed (`sweep._trees`). One labelled `human` or the other bot's, one a
+    run holds, or one with a pull request of mine open finishes on `main` as it is, and the
+    reconcile waits for it to close too."""
+    onto = branch_for_issue(number)
+    try:
+        if ctx.gh.branch_sha(onto) is None:
+            sha = ctx.gh.branch_sha(ctx.cfg.default_branch)
+            if not sha:
+                return f"`{ctx.cfg.default_branch}` could not be read, so I adopted nothing."
+            ctx.gh.create_branch(onto, sha)
+    except GitHubError as exc:
+        return (f"The branch #{number}'s parts would land on, `{onto}`, could not be made "
+                f"({str(exc)[:200]}), so I adopted nothing.")
+    adopted: list[dict[str, Any]] = []
+    kept: list[str] = []
+    for child in children:
+        if child.get("state") != "open":
+            continue
+        child_names = label_names(child)
+        other = owner(child)
+        why = ("labelled `human`" if is_human(child_names)
+               else f"{other.name}'s" if other is not None
+               else "a run holds it now" if LABEL_WORKING in child_names
+               else "a pull request of mine is open" if LABEL_PR_OPEN in child_names else "")
+        if why:
+            kept.append(f"#{child['number']} ({why})")
+        else:
+            adopted.append(child)
+
+    def change(state: dict[str, Any]) -> None:
+        for child in adopted:
+            state_item(state, int(child["number"])).update(onto=onto, part_of=number)
+        state_item(state, number).update(tree={
+            "mode": "fullsend", "children": [int(c["number"]) for c in children],
+            "at": iso(ctx.now()), "onto": onto, "adopted": True}, closeout=False)
+    ctx.store.update(change, f"adopt #{number}'s sub-issues as its parts")
+    for child in adopted:
+        if not label_names(child) & set(STATE_LABELS):
+            queue_build(ctx, int(child["number"]), by=by)
+    names = set_mode(ctx, number, names, "")
+    set_state_label(ctx, number, names, None)
+    if LABEL_TREE not in names:
+        ctx.gh.add_labels(number, [LABEL_TREE])
+    listed = ", ".join(f"#{child['number']}" for child in adopted) or "none of them"
+    said = (f"#{number}'s sub-issues are its fullsend parts now, with no split: {listed} land on "
+            f"`{onto}`, made at `{ctx.cfg.default_branch}`'s head, each as soon as it is built, "
+            "with no checks, review or pull request of its own. A strong model plans each one "
+            "first, and a medium subscription (Muse first) may build it from that plan, whatever "
+            "its difficulty. Once every sub-issue has closed I queue the reconcile: a strong model "
+            f"merges the parts on `{onto}`, makes every check green and opens one pull request "
+            f"into `{ctx.cfg.default_branch}`.")
+    if kept:
+        said += (f" These finish on `{ctx.cfg.default_branch}` as they are, and the reconcile "
+                 f"waits for them to close too: {', '.join(kept)}.")
+    return said
 
 
 def queue_revise(ctx: Context, number: int, *, by: str, force: bool = False, source: str = "request",
@@ -472,6 +545,9 @@ class Candidate:
     #: For a build: how it is built (`mode_of`, #60): "" for a plain build, or `oneshot`,
     #: `split`, `split-bot` or `fullsend`.
     mode: str = ""
+    #: For a build: a fullsend part (#505, `is_part`), which lands on its tree's branch with no
+    #: checks or review, so a medium subscription may build it from its plan (`PART_FLOOR`).
+    part: bool = False
 
 
 def cleared(record: dict[str, Any]) -> dict[str, Any]:
@@ -668,7 +744,7 @@ def candidates(ctx: Context, state: dict[str, Any],
                 rated=kind != "build" or rated(names, record),
                 conflict=kind == "revise" and record.get("source") == "conflict",
                 review_floor=str(record.get("review_floor") or "") if kind == "review" else "",
-                mode=mode)
+                mode=mode, part=kind == "build" and not mode and is_part(record))
             if kind == "build" and not found[number].forced:
                 builds.append(thread)
     waiting = waits_for(ctx, builds) if builds else {}

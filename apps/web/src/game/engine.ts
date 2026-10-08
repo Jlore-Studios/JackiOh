@@ -12,7 +12,7 @@
 // action builders and the animation table compile and test with no engine at all, and tests install
 // a scripted port with `setEnginePort`.
 
-import type { Action, ActionBody, CardDefs, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
+import type { Action, ActionBody, CardDefs, EmoteId, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import type { Handicap } from "@jackioh/engine/config";
 
 import * as wasm from "../wasm/index.ts";
@@ -52,6 +52,11 @@ export type EnginePort = {
   hashState: (state: EngineState) => string;
   /** The card catalog, for the dev deck picker. */
   catalog?: () => CardDefs;
+  /**
+   * R1341: the emote hand a seat is dealt in the game seeded `seed`, as the server deals it. A
+   * scripted port may leave it out, and both seats then show the default hand (R1343).
+   */
+  dealEmoteHand?: (seed: string, seat: PlayerId) => EmoteId[];
 };
 
 /** The functions `enginePort()` needs from the WebAssembly wrapper, for the missing-export report. */
@@ -119,6 +124,7 @@ export function enginePort(): EnginePort {
     viewFor: (state, player) => wasm.viewFor(raw(state), player),
     hashState: (state) => wasm.hashState(raw(state)),
     catalog: () => wasm.registeredCatalog(),
+    dealEmoteHand: (seed, seat) => wasm.dealEmoteHand(seed, seat),
   };
 }
 

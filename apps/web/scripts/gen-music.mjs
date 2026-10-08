@@ -23,6 +23,12 @@
 // LOOP_GUARD_S before the loop's end to LOOP_TAIL_S after it (`seam`). So the jump is exact even on
 // a decoder that keeps AAC's encoder priming (2112 samples, about 48 ms, of delay) or trims more.
 //
+// CARD INTROS (R1352). A Legendary's or a Mythic's intro is a sting of its own: a few bars that play
+// once, then a short tail (the score's `tail`, not STING_TAIL_S) whose last `post.fadeOutS` seconds
+// fade to silence, so the file ends clean wherever the reverb is, and its loudness is measured over
+// the file it keeps (`post.loudnessOverFile`), so it sits at every other track's level. A track that
+// names none of these renders exactly as before, and its hash does not move.
+//
 // It is idempotent by input: a track renders again only when its hash (the MIDI bytes, the render
 // and post settings and the encoding) differs from the manifest's, or its file is missing or has the
 // wrong size. `--check` runs anywhere (it needs neither FluidSynth nor ffmpeg) and touches nothing:
@@ -65,8 +71,12 @@ const RENDER_PAD_S = 4;
 /** Loudness: every track is scaled to this RMS, then held under PEAK_DB by a soft limiter. */
 const TARGET_RMS_DB = -20;
 const PEAK_DB = -1.5;
-/** MUSIC_BUDGET_BYTES in src/audio/constants.ts: the whole set, counted in whole disk blocks. */
-const BUDGET_BYTES = 24 * 1024 * 1024;
+/**
+ * MUSIC_BUDGET_BYTES in src/audio/constants.ts: the whole set, counted in whole disk blocks. R1352
+ * raised it from 24 MiB for the card intros (the shipped sets' and, with its release, the Meditative
+ * set's), at the same encoding as every track.
+ */
+const BUDGET_BYTES = 28 * 1024 * 1024;
 const BLOCK_BYTES = 4096;
 const FILE_MODE = 0o644;
 const USAGE = "usage: node scripts/gen-music.mjs [--check] [--force] [--only <id>] [--root <webDir>]";
@@ -128,7 +138,8 @@ function layoutOf(track) {
   const introS = song.parts.intro.beats * spb;
   const bodyS = song.parts.body.beats * spb;
   if (!track.loop) {
-    return { duration: introS + STING_TAIL_S, handoff: introS, loopStart: null, loopEnd: null, introS };
+    // R1352: a card intro keeps its own, shorter tail; every other sting keeps STING_TAIL_S.
+    return { duration: introS + (track.tail ?? STING_TAIL_S), handoff: introS, loopStart: null, loopEnd: null, introS };
   }
   const loopStart = introS + LOOP_LEAD_S;
   const loopEnd = loopStart + bodyS;
@@ -300,11 +311,28 @@ function lofi(audio, track, layout) {
   }
 }
 
-/** Scales to TARGET_RMS_DB, then a soft knee keeps every peak under PEAK_DB. */
-function loudness(left, right) {
+/** R1352: a raised-cosine fade over the file's last `seconds`, so a short tail ends in silence. */
+function fadeTail(audio, layout, seconds) {
+  const end = Math.round(layout.duration * audio.rate);
+  const n = Math.max(1, Math.round(seconds * audio.rate));
+  for (const data of [audio.left, audio.right]) {
+    for (let i = Math.max(0, end - n); i < data.length; i += 1) {
+      const k = end - i;
+      data[i] *= k <= 0 ? 0 : 0.5 - 0.5 * Math.cos((Math.PI * Math.min(k, n)) / n);
+    }
+  }
+}
+
+/**
+ * Scales to TARGET_RMS_DB, then a soft knee keeps every peak under PEAK_DB. The RMS is measured over
+ * the whole render, RENDER_PAD_S included, or over its first `frames` only (R1352: a card intro is
+ * measured over the file it keeps, so a few seconds of music are not lifted for the padding after).
+ */
+function loudness(left, right, frames = left.length) {
+  const n = Math.min(frames, left.length);
   let sum = 0;
-  for (let i = 0; i < left.length; i += 1) sum += left[i] * left[i] + right[i] * right[i];
-  const rms = Math.sqrt(sum / (2 * Math.max(1, left.length)));
+  for (let i = 0; i < n; i += 1) sum += left[i] * left[i] + right[i] * right[i];
+  const rms = Math.sqrt(sum / (2 * Math.max(1, n)));
   const gain = rms > 0 ? Math.pow(10, TARGET_RMS_DB / 20) / rms : 1;
   const ceiling = Math.pow(10, PEAK_DB / 20);
   const knee = ceiling * 0.7;
@@ -365,8 +393,9 @@ function build(track, midi, scratch, sf2, outFile) {
   const audio = render(track, midi, scratch, sf2);
   const layout = layoutOf(track);
   if (track.song.post.lofi !== undefined) lofi(audio, track, layout);
-  loudness(audio.left, audio.right);
+  loudness(audio.left, audio.right, track.song.post.loudnessOverFile === true ? Math.round(layout.duration * audio.rate) : undefined);
   if (track.loop) seam(audio, layout);
+  if (track.song.post.fadeOutS !== undefined) fadeTail(audio, layout, track.song.post.fadeOutS);
   encode(track, audio, layout, outFile, scratch);
 }
 
