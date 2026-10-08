@@ -56,7 +56,7 @@ import {
 } from "@jackioh/engine";
 import { AI_DIFFICULTY, AI_TUTORIAL, DECK_SIZE, type Handicap } from "@jackioh/engine/config";
 import { AI_BUDGET, aiToAct, buildAiDeck, decide, type SearchBudget } from "@jackioh/ai";
-import { DEFAULT_PORTRAIT, opponentOf, type Action, type ActionBody, type PlayerId } from "@jackioh/shared";
+import { DEFAULT_PORTRAIT, newestShippedSet, opponentOf, type Action, type ActionBody, type PlayerId } from "@jackioh/shared";
 
 import { PRACTICE_AI_CLOCK_MS, PRACTICE_REPLAYS_KEPT } from "./config.ts";
 import { lessonById } from "../tutorial/lessons.ts";
@@ -127,12 +127,17 @@ function messageOf(cause: unknown): string {
 /**
  * The human's deck: a random draw at the spec's own size, a named preset's list, or a saved
  * loadout deck. `createGame` checks a preset or a saved deck like any other (§2.6): the engine's
- * ruling, printed as given.
+ * ruling, printed as given. R1373: a random deck the player asked to lean on the newest set leans on
+ * the newest set that ships (R1371), resolved here, where the deck is dealt; the AI's own deck never
+ * leans.
  */
 function humanDeckFor(seed: string, choice: PracticeDeckChoice): string[] {
   switch (choice.kind) {
     case "random":
-      return buildAiDeck(createRng(`${seed}:human-deck`), DECK_SIZE, { banned: [] });
+      return buildAiDeck(createRng(`${seed}:human-deck`), DECK_SIZE, {
+        banned: [],
+        ...(choice.leanNewest === true ? { leanSet: newestShippedSet() } : {}),
+      });
     case "preset": {
       const preset = presetById(choice.id);
       if (preset === undefined) throw new Error(`unknown preset deck "${choice.id}"`);

@@ -9,11 +9,17 @@
 // IT ENFORCES NOTHING (CLAUDE.md rule 7). It sends offer intent, polls the status the server
 // computes, and navigates to the game the server made. The only numbers it reads are the server's
 // (`youOffered`, `opponentOffer`, `opponentHere`, `matchId`).
+//
+// R1372: beside an All Random rematch (the status's `mode`) it offers "More cards from the newest
+// set" for this player's own fresh deck, the lobby's pick on this device to begin with, and sends it
+// with the offer (`leanNewest`); the server deals the deck. A Best-of-1 rematch replays its decks, so
+// it shows no switch.
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
 
 import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
 import type { ConnectionState } from "../game/net.ts";
+import { LeanNewestToggle, readPlayLeanNewest, writePlayLeanNewest } from "../game/LeanNewest.tsx";
 import { navigate, paths } from "../net/navigate.ts";
 import {
   rematchOffer,
@@ -32,6 +38,8 @@ export const rematchTestid = {
   incoming: "rematch-incoming",
   /** What this component is doing: waiting, or why an offer failed. */
   status: "rematch-status",
+  /** R1372: an All Random rematch's "More cards from the newest set" checkbox. */
+  leanNewest: "rematch-lean-newest",
 } as const;
 
 export type RematchButtonsProps = {
@@ -106,6 +114,8 @@ export default function RematchButtons({ token, matchId, connection, ranked }: R
   const [status, setStatus] = useState<RematchStatusResponse | null>(null);
   const [offering, setOffering] = useState<RematchStakes | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** R1372: this seat's lean for an All Random rematch, the lobby's pick on this device to begin with. */
+  const [leanNewest, setLeanNewest] = useState(readPlayLeanNewest);
 
   useRematchStatus(token, matchId, (answer) => {
     setStatus(answer);
@@ -116,12 +126,17 @@ export default function RematchButtons({ token, matchId, connection, ranked }: R
   // first read reads the same as gone: no buttons on an unknown presence.
   if (connection !== "open" || status === null || !status.opponentHere) return null;
 
+  /** Only an All Random rematch deals fresh decks, so only its offer carries a lean (R1372). */
+  const random = status.mode === "random";
+
   async function meet(stakes: RematchStakes): Promise<void> {
     if (offering !== null) return;
     setOffering(stakes);
     setError(null);
     try {
-      const answer = await rematchOffer(token, matchId, stakes);
+      const answer = await (random && leanNewest
+        ? rematchOffer(token, matchId, stakes, true)
+        : rematchOffer(token, matchId, stakes));
       if (answer.matchId !== null) navigate(paths.match(answer.matchId));
       else {
         const refresh = await rematchStatus(token, matchId).catch(() => null);
@@ -175,6 +190,17 @@ export default function RematchButtons({ token, matchId, connection, ranked }: R
         </button>
       </div>
       {ranked ? null : <p className="rematch-note">Double-or-nothing needs a ranked match.</p>}
+      {random ? (
+        <LeanNewestToggle
+          checked={leanNewest}
+          disabled={offering !== null}
+          testid={rematchTestid.leanNewest}
+          onChange={(on) => {
+            setLeanNewest(on);
+            writePlayLeanNewest(on);
+          }}
+        />
+      ) : null}
       {waiting && error === null ? (
         <p className="rematch-status" data-testid={rematchTestid.status} role="status">
           {waitingWords(status.youOffered as RematchStakes)}

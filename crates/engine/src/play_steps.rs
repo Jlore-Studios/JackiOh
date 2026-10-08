@@ -69,7 +69,9 @@ use crate::prompts::{
 use crate::random_cast::{
     count_chain_cast, prefer_enemies, prefer_friends, random_cast_of, random_picks, with_cast_mode,
 };
-use crate::resolve::{CastOptions, HookName, MANA_BEFORE_PLAY_KEY, flag_return_to_hand_at_end_of_turn};
+use crate::resolve::{
+    CastOptions, HookName, MANA_BEFORE_PLAY_KEY, flag_return_to_hand_at_end_of_turn, note_return_price,
+};
 use crate::script::{EngineSink, FlagOrCount};
 use crate::state::{
     AnnounceRecord, CardInstance, CastMode, EngineError, GameState, ModifierExpiry, ModifierKind, PlayRecord,
@@ -2361,10 +2363,17 @@ fn resolve_repeat(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
 /// way returns from it at the end of the turn. `resolve::flag_return_to_hand_at_end_of_turn` holds the
 /// three conditions; it runs after the landing because "reached the graveyard" is one of them, and it
 /// is a no-op for everything else the step lands — a permanent, and a Spell that exiled itself (#39).
+///
+/// R429, R766: and beside the flag, for a Spell whose return keeps its price (#31), the `costMod` it
+/// was played at, which the landing has just taken off it (`resolve::note_return_price`).
 fn finish_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
     // E39, R410, R455 (Classic+ #14 Forever&): a Spell with the return comes back once it has landed.
-    let landing = find_instance(sink.state, &run.instance_id)
-        .is_some_and(|card| matches!(card.zone, Zone::Resolving { .. }));
+    let resolving = find_instance(sink.state, &run.instance_id)
+        .filter(|card| matches!(card.zone, Zone::Resolving { .. }));
+    let landing = resolving.is_some();
+    // R429, R766: the price the card was played at, read before the landing takes it off (R766), for a
+    // return that keeps it (`note_return_price` below).
+    let played_at = resolving.map_or(0, |card| card.cost_mod);
     let arrived = arrived_during(sink.state, run);
     land_after_resolution(
         sink,
@@ -2386,6 +2395,7 @@ fn finish_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
         return_after_resolving(sink, run);
     }
     flag_return_to_hand_at_end_of_turn(sink.state, &run.instance_id);
+    note_return_price(sink.state, &run.instance_id, played_at);
 }
 
 /// E39, R410, R455 (Classic+ #14 Forever&: "After this resolves, return it to hand"): a Spell

@@ -238,8 +238,8 @@ mod all_randoms_deal_r258_src_match_engine_real_ts {
         // The smallest deck the engine accepts is the one size it accepts: L2's `DECK_SIZE`.
         let size = decks_the_engine_accepts(&pool, "r258-size").1.0.len();
 
-        let p1 = deal_random_deck("r258-match:p1-deck");
-        let p2 = deal_random_deck("r258-match:p2-deck");
+        let p1 = deal_random_deck("r258-match:p1-deck", None);
+        let p2 = deal_random_deck("r258-match:p2-deck", None);
 
         for deck in [&p1, &p2] {
             assert_eq!(deck.len(), size);
@@ -259,9 +259,9 @@ mod all_randoms_deal_r258_src_match_engine_real_ts {
         assert_eq!(snapshot(&state).phase, Phase::Setup);
 
         // Seeded: the same seed deals the same deck, in the same order, every time and in any process…
-        assert_eq!(deal_random_deck("r258-match:p1-deck"), p1);
+        assert_eq!(deal_random_deck("r258-match:p1-deck", None), p1);
         // (TS asked a second, freshly built port here; the Rust port is functions, so asking again is it.)
-        assert_eq!(deal_random_deck("r258-match:p1-deck"), p1);
+        assert_eq!(deal_random_deck("r258-match:p1-deck", None), p1);
         // …and another seed deals another deck.
         assert_ne!(p2, p1);
     }

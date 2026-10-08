@@ -704,6 +704,10 @@ pub struct AiOptions<'a> {
     pub should_stop: Option<&'a dyn Fn() -> bool>,  // TS shouldStop; the browser's clock, never read by this crate
 }
 pub fn build_ai_deck(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> Vec<String>;
+    // AiDeckOptions { banned, include, theme, mana_cap, boost, lean_set: Option<SetName> } (serde camelCase;
+    // `leanSet`, R1370: at least ceil(size × AI_DECK.lean_min_share) of the deck from that set; absent, the
+    // draw is exactly the pre-R1370 one)
+pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> TracedAiDeck;  // { deck, lean_forced }
 pub fn redact(state: &GameState, seat: PlayerId) -> GameState;
 pub fn ai_to_act(state: &GameState, seat: PlayerId) -> bool;
 pub fn random_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option<ActionBody>;   // §10.7's policy, via subsystems::choose_action
@@ -739,11 +743,11 @@ keeps behind its opaque `EngineState` brand.
     // options: { rngSeed, rngCursor, budget? }; answers { decision: Decision | null, rngCursor };
     // should_stop = js_sys::Date::now() >= deadline_ms (deadline_ms <= 0: no clock)
 #[wasm_bindgen] pub fn build_ai_deck(options_json: &str) -> String;
-    // options: { rngSeed, rngCursor, size, banned?, manaCap?, theme?, include?, boost? }; answers { deck, rngCursor }
+    // options: { rngSeed, rngCursor, size, banned?, manaCap?, theme?, include?, boost?, leanSet? }; answers { deck, rngCursor }
 #[wasm_bindgen] pub fn validator(call: &str, input_json: &str) -> String;
     // call ∈ validateDeck | validateTrio | validateLoadout | checkDeckDraft | checkTrioDraft | checkImportRoom | trioConflicts | normalizeName;
     // the input and output are those TS functions' argument and result, as JSON
-#[wasm_bindgen] pub fn constants() -> String;                                      // { AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS } for practice, the tutorial harness and their tests
+#[wasm_bindgen] pub fn constants() -> String;                                      // { AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, AI_DECK } for practice, the tutorial harness, the lean toggle (R1370) and their tests
 #[wasm_bindgen] pub fn find_instance(state_json: &str, instance_id: &str) -> String;  // CardInstance JSON or "null" (state.rs's find_instance)
 #[wasm_bindgen] pub fn choose_action(state_json: &str, seat: &str, rng_seed: &str, rng_cursor: f64) -> String;
     // §10.7's random policy (subsystems::ai_policy::choose_action); answers { action: ActionBody | null, rngCursor }
@@ -936,6 +940,16 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
 - **Routes dropped** (unused): `POST /api/auth/signup` (503 in production), `GET /api/catalog/:version`.
   `POST /api/auth/signin` stays under `E2E=1` only. The legacy queue body (`deckIndex`, no `mode`)
   goes; `e2e/cypress/e2e/99-online-smoke.cy.ts` moves to `{ mode: "bo1", deckId }` (part 21).
+- **All Random's lean** (#549, R1372): "More cards from the newest set" is a request field, not a
+  socket frame (the queue, the rooms and the rematch are HTTP routes, and `actor/protocol.rs` carries
+  none of them): `leanNewest: true` on `POST /api/queue` and `POST /api/rooms` / `POST
+  /api/rooms/:code/join` in mode `random`, and on `POST /api/matches/:id/rematch`; absent or `null` is
+  off, anything but a boolean is 400. `GET /api/matches/:id/rematch` answers `mode` beside the offers.
+  The ask waits in `tickets.lean_newest` and, for a room's host, `matches.room_lean_newest` (migration
+  0027); a rematch offer's waits with the offer in memory. `actor::engine::deal_random_deck(seed, lean:
+  Option<SetName>)` deals a seat's deck, `lean_of(lean_newest)` resolving the engine's
+  `newest_shipped_set()` (R1371) at deal time; the client mirrors it as `newestShippedSet()` in
+  `src/wire/catalog.ts` to name the set, and never deals.
 - **Kept on purpose**: E2E mode (fixture tokens and codes are a contract with `e2e/support/config.ts`),
   rematch offers held in memory, finished actors kept in memory, the `vanilla` portrait default for
   old rows, `matches.mode` fallbacks for old rows, the retired `loadouts` tables.

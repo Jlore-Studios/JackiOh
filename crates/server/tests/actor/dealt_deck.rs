@@ -75,8 +75,8 @@ async fn start(app: &Arc<App>, match_id: &str, seed: &str) {
         "catalogVersion": TEST_CATALOG_VERSION,
         "ranked": false,
         "seats": [
-            { "profileId": P1, "player": "p1", "deck": deal_random_deck(&format!("{seed}:p1-deck")) },
-            { "profileId": P2, "player": "p2", "deck": deal_random_deck(&format!("{seed}:p2-deck")) },
+            { "profileId": P1, "player": "p1", "deck": deal_random_deck(&format!("{seed}:p1-deck"), None) },
+            { "profileId": P2, "player": "p2", "deck": deal_random_deck(&format!("{seed}:p2-deck"), None) },
         ],
     }))
     .expect("a StartMatchInput");

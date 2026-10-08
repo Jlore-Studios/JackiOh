@@ -244,6 +244,15 @@ pub fn set_ships(set: SetName) -> bool {
     SHIPPED_SETS.contains(&set)
 }
 
+/// R1371: the newest set that ships, the last entry of `SHIPPED_SETS` (catalog order): Classic+
+/// until the Meditative set ships, then whichever set ships after it. "More cards from the newest
+/// set" (R1372, R1373) leans a random deck on it, and every caller asks this function at deal time
+/// rather than naming a set. A set previewed under the testkit (R1420) is not shipped, so it is
+/// never the newest: a test that leans on one names it.
+pub fn newest_shipped_set() -> SetName {
+    SHIPPED_SETS[SHIPPED_SETS.len() - 1]
+}
+
 /// §5: 0 to 6, 100 (Ceaseless Void), X, or "A embiggen B".
 ///
 /// TS `number | "X" | { base: number; embiggen: number }`, serialised exactly so (a number, the

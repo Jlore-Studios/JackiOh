@@ -13,6 +13,8 @@ export const practiceTestid = {
   deckHint: "practice-deck-hint",
   /** The chosen deck: its name, its identity and, once the catalog is in, its curve and cards. */
   deckPreview: "practice-deck-preview",
+  /** R1373: beside the Random deck only, "More cards from the newest set", a checkbox. */
+  leanNewest: "practice-lean-newest",
   /** In the preview: one bar per cost, `data-cost` and `data-count`. */
   deckCurve: "practice-deck-curve",
   /** In the preview: one row per card of the chosen deck. */

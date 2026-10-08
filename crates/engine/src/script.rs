@@ -481,6 +481,12 @@ pub struct StaticFlags {
     /// (`CardInstance.timesPlayed`, `times_played.rs`) — #31 KY's Math Equation's "times played".
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub counts_plays: Option<bool>,
+    /// R429, R766 (issue #557): this Spell's own end-of-turn return (§5.1, R155) gives back the price
+    /// it was played at. R766 still takes the price off it in the graveyard it lands in, so §10.5 step 7
+    /// notes the `costMod` it had there (`resolve::note_return_price`) for its return to read
+    /// (`query::return_price_of`) — #31 KY's Math Equation's climb, (2), (3), (4).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub return_keeps_price: Option<bool>,
     // ---- v0.2.0 static flags, by workstream: field (B3.1, E20, E21, E22) ----
     /// B5 E21, R446: "A Unit may be played on top of this". While this backrow card acts in its zone, a
     /// Unit its controller plays may name that zone and stand on it: a Unit for every rule that can

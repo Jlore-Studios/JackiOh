@@ -258,3 +258,44 @@ pub fn flag_return_to_hand_at_end_of_turn(state: &mut GameState, instance_id: &s
         card.return_to_hand_at_end_of_turn = Some(true);
     }
 }
+
+/// R429, R766 (issue #557): where §10.5 step 7 notes the price a Spell whose return keeps it
+/// (`StaticFlags.returnKeepsPrice`, #31 KY's Math Equation) was played at — the `costMod` it had as it
+/// landed. R766 takes that price off it in the graveyard as it takes it off every card, so the card
+/// lying there costs its printed cost; the note is what its own end-of-turn return reads
+/// (`query::return_price_of`) to give the price back in the hand it returns to, which is how #31 climbs
+/// (2), (3), (4). Engine bookkeeping in the card's `memory`, as R178's `@exileOnLanding` is, and it
+/// lives exactly as long as R155's flag beside it: written with the flag, and gone with it as the card
+/// leaves the graveyard (`zones::remove_from_any_zone`) or the turn's cleanup ends the return
+/// (`turn::clear_return_flags`).
+pub const RETURN_PRICE_KEY: &str = "@returnPrice";
+
+/// R429, R766: note `price`, the `costMod` the card had as step 7 landed it, on a card step 7 has just
+/// flagged for its end-of-turn return (R155) and whose script asks. A card that was not flagged — a
+/// countered play never reaches step 7, a discarded card was never played, a Spell that exiled itself
+/// is not in the graveyard — gets no note, so R766's reset is all there is for it. Nothing is written
+/// for a price of 0, so a game whose #31 never climbs hashes as it did before the note existed.
+pub fn note_return_price(state: &mut GameState, instance_id: &str, price: i32) {
+    if price == 0 {
+        return;
+    }
+    let Some(card) = find_instance(state, instance_id) else {
+        return;
+    };
+    if card.return_to_hand_at_end_of_turn != Some(true) {
+        return;
+    }
+    if crate::scripts::script_of(state, card).flags().return_keeps_price != Some(true) {
+        return;
+    }
+    if let Some(card) = find_instance_mut(state, instance_id) {
+        card.memory
+            .insert(RETURN_PRICE_KEY.to_string(), Value::from(price));
+    }
+}
+
+/// R155, R766: the note goes wherever R155's flag goes — off a card leaving the graveyard, and off
+/// every flagged card at the end of the turn its return belonged to.
+pub fn forget_return_price(card: &mut CardInstance) {
+    card.memory.shift_remove(RETURN_PRICE_KEY);
+}
