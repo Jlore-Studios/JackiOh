@@ -18,15 +18,14 @@ fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
 }
 
-/// §8.7: "It costs (0)".
-const SET_COST: i32 = 0;
-
+/// §8.7: "Each costs (0)": the declared number `setCost` (R386), less being better.
 pub fn script() -> CardScripts {
     let base = Script {
         targets: targets(),
         cry: Some(hook(|ctx| {
             let mut effects = vec![damage_enemy_or_heal_friend(json_as(json!({ "amount": param(ctx, "amount") })))];
-            effects.extend((0..param(ctx, "draw")).map(|_| draw_priced(json_as(json!({ "costOverride": SET_COST })))));
+            let cost = param(ctx, "setCost");
+            effects.extend((0..param(ctx, "draw")).map(|_| draw_priced(json_as(json!({ "costOverride": cost })))));
             effects
         })),
         ..Script::default()
@@ -97,6 +96,17 @@ mod tests {
             json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }])
         );
         assert!(Arc::ptr_eq(base.cry.as_ref().unwrap(), radiant.cry.as_ref().unwrap()));
+    }
+
+    #[test]
+    fn r386_a_degrade_makes_the_drawn_card_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
+        crate::register_all();
+        let mut s = scenario(json!({ "p1": { "hand": [GRAPE, FILLER], "library": [DECK_B] }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
+        assert!(!crate::can_upgrade_number(&s, GRAPE, "setCost"));
+        assert_eq!(crate::degrade_number(&mut s, GRAPE, "setCost"), 1);
+        let targets = unit_at(&s, P2);
+        s.play(GRAPE, json!({ "targets": targets }));
+        assert_eq!(s.card(DECK_B).cost_override, Some(1));
     }
 
     mod base {

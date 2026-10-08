@@ -46,7 +46,7 @@ describe("#98 Heroic Power's rolled power, in words (R752)", () => {
     expect(powerText({ name: "discover" }, true, "Indestructible")).toBe(
       "Indestructible\nWitness Value\nActivate: Spend (2): Discover a Radiant Unit.",
     );
-    expect(powerText({ name: "armor" }, true, "")).toBe("Tank Up\nActivate: Spend (1): Your hero gains 4 Armor, then this power refreshes.");
+    expect(powerText({ name: "armor" }, true, "", { armor: 4 })).toBe("Tank Up\nActivate: Spend (1): Your hero gains 4 Armor, then this power refreshes.");
     expect(powerText({ name: "burn" }, false, "", { shot: 6 })).toBe("Steady Shot\nActivate: Spend (1): Deal 6 damage to the enemy hero.");
     expect(powerTitle({ name: "armor" }, false)).toBe("Armor Up");
   });

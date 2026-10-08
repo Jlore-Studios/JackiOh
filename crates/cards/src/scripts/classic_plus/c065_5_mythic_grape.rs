@@ -18,13 +18,11 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-065-5";
 
-/// §8.7: "They cost (0)".
-const SET_COST: i32 = 0;
-
+/// §8.7: "They cost (0)": the declared number `setCost` (R386), less being better.
 fn mythic_grape(radiant: bool) -> Script {
     Script {
-        cry: Some(hook(move |_ctx| {
-            let mut args = json!({ "query": { "rarity": "Mythic" }, "costOverride": SET_COST });
+        cry: Some(hook(move |ctx| {
+            let mut args = json!({ "query": { "rarity": "Mythic" }, "costOverride": param(&*ctx, "setCost") });
             if radiant {
                 args["radiant"] = json!(true);
             }
@@ -76,6 +74,18 @@ mod tests {
         let CardScripts { base, radiant } = script();
         assert!(base.cry.is_some());
         assert!(radiant.cry.is_some());
+    }
+
+    #[test]
+    fn r386_a_degrade_makes_the_mythics_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
+        crate::register_all();
+        let mut s = scenario(json!({ "p1": { "hand": [MYTHIC_GRAPE, FILLER, TIMMY] }, "p2": { "hand": [FILLER] } }));
+        assert!(!crate::can_upgrade_number(&s, MYTHIC_GRAPE, "setCost"));
+        assert_eq!(crate::degrade_number(&mut s, MYTHIC_GRAPE, "setCost"), 1);
+        s.play(MYTHIC_GRAPE, json!({}));
+        let hand = s.hand(P1);
+        assert_eq!(hand.len(), 2);
+        assert!(hand.iter().all(|card| card.cost_override == Some(1)));
     }
 
     mod base {

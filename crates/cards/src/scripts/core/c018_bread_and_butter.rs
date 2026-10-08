@@ -53,7 +53,9 @@ fn unspent_on(event: &GameEvent) -> i32 {
     }
 }
 
-/// One face's trigger: `multiplier` is §8's X (base) or 3X (radiant).
+/// The trigger, the same on both faces: the multiplier is §8's X (base) or 3X (radiant), the declared
+/// number `multiplier` (R386), tuned on the Radiant face only (R749: the base face's "X = that
+/// player's unspent mana" prints no number and is always 1).
 ///
 /// The condition is written twice on purpose, because the two dispatch paths read it differently:
 ///   - `traps.rs`'s `fire_trap` filters on `when`, and a trap no trigger admitted stays armed and
@@ -63,9 +65,9 @@ fn unspent_on(event: &GameEvent) -> i32 {
 ///
 /// Either way nothing is summoned and nothing is revealed at 0 unspent. (TS annotated it
 /// `TrapTrigger`, where `when` was declared; Rust's one `TriggerDef` carries `when` itself.)
-fn bread_trigger(multiplier: i32) -> TriggerDef {
-    TriggerDef::new("bread-and-butter", &[GameEventType::TurnEnded], move |_ctx, event| {
-        let x = unspent_on(event) * multiplier;
+fn bread_trigger() -> TriggerDef {
+    TriggerDef::new("bread-and-butter", &[GameEventType::TurnEnded], |ctx, event| {
+        let x = unspent_on(event) * param(&*ctx, "multiplier");
         if x <= 0 {
             return vec![];
         }
@@ -83,36 +85,29 @@ fn bread_trigger(multiplier: i32) -> TriggerDef {
     .with_when(|_ctx, event| unspent_on(event) > 0)
 }
 
-/// §8: X on the base face, 3 × the unspent mana on the Radiant one.
-#[derive(Clone, Copy)]
-struct Face {
-    multiplier: i32,
-    /// R280: the formula as the face prints it, which the preview labels its number with.
-    formula: &'static str,
+/// R280: the formula as the face prints it, which the preview labels its number with — X on the base
+/// face, `multiplier` × the unspent mana on the Radiant one, with the multiplier as it stands.
+fn formula(radiant: bool, multiplier: i32) -> String {
+    if radiant {
+        format!("X = {multiplier} \u{00d7} that player's unspent mana")
+    } else {
+        "X = that player's unspent mana".to_string()
+    }
 }
-
-const BASE: Face = Face {
-    multiplier: 1,
-    formula: "X = that player's unspent mana",
-};
-
-const RADIANT: Face = Face {
-    multiplier: 3,
-    formula: "X = 3 \u{00d7} that player's unspent mana",
-};
 
 /// R280: the Bread Token's X if the active player ended the turn now. `your_turn` names the active
 /// player without the card reading `state.active` (README §1).
-fn preview(face: Face) -> PreviewHook {
-    condition_hook(move |ctx: ConditionContext<'_>| {
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| {
         let active = if ctx.your_turn {
             ctx.controller
         } else {
             opponent_of(ctx.controller)
         };
+        let multiplier = param(&ctx, "multiplier");
         vec![PreviewValue {
-            label: face.formula.to_string(),
-            value: unspent_mana_of(ctx.state, active) * face.multiplier,
+            label: formula(ctx.radiant, multiplier),
+            value: unspent_mana_of(ctx.state, active) * multiplier,
             display: None,
             ids: None,
         }]
@@ -136,17 +131,12 @@ fn condition_met() -> ConditionHook {
 
 pub fn script() -> CardScripts {
     let base = Script {
-        triggers: vec![bread_trigger(BASE.multiplier)],
-        preview: Some(preview(BASE)),
+        triggers: vec![bread_trigger()],
+        preview: Some(preview()),
         condition_met: Some(condition_met()),
         ..Script::default()
     };
-    let radiant = Script {
-        triggers: vec![bread_trigger(RADIANT.multiplier)],
-        preview: Some(preview(RADIANT)),
-        condition_met: Some(condition_met()),
-        ..Script::default()
-    };
+    let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
@@ -310,6 +300,42 @@ mod tests {
 
             let token = unit_at(&s, PlayerId::P1, 1);
             expect_bread(&mut s, &token, 6);
+        }
+
+        #[test]
+        fn r386_an_upgrade_makes_it_4x_and_a_degrade_2x_and_the_preview_reads_the_moved_multiplier() {
+            for (upgrade, multiplier) in [(true, 4), (false, 2)] {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "backrow": [{ "def": "core-018", "radiant": true }], "mana": 2, "library": ["core-010"] },
+                    "p2": { "field": ["core-012"], "library": ["core-010"] }
+                }));
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, "core-018", "multiplier")
+                } else {
+                    crate::degrade_number(&mut s, "core-018", "multiplier")
+                };
+                assert_eq!(moved, multiplier);
+                let shown = serde_json::to_value(&s.view(PlayerId::P1).you.backrow[0]).unwrap_or_default();
+                assert_eq!(
+                    shown["preview"][0]["label"],
+                    json!(format!("X = {multiplier} \u{00d7} that player's unspent mana"))
+                );
+                assert_eq!(shown["preview"][0]["value"], json!(2 * multiplier));
+
+                s.end_turn();
+
+                let token = unit_at(&s, PlayerId::P1, 1);
+                expect_bread(&mut s, &token, 2 * multiplier);
+            }
+        }
+
+        #[test]
+        fn r749_the_base_face_s_multiplier_of_1_is_never_tuned() {
+            crate::register_all();
+            let s = scenario(json!({ "p1": { "backrow": ["core-018"] } }));
+            assert!(!crate::can_upgrade_number(&s, "core-018", "multiplier"));
+            assert!(!crate::can_degrade_number(&s, "core-018", "multiplier"));
         }
 
         #[test]

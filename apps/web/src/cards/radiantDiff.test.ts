@@ -45,7 +45,9 @@ function marks(base: string, radiant: string): string[] {
 describe("R277 the word diff", () => {
   it("R277 marks a changed number and nothing else (the user's example: True Strike's 9)", () => {
     expect(marks("Deal 4 damage to the enemy hero", "Deal 9 damage to the enemy hero")).toEqual(["9"]);
-    expect(marks(CATALOG["core-044"]?.base.text ?? "", CATALOG["core-044"]?.radiant.text ?? "")).toEqual(["9"]);
+    const trueStrike = CATALOG["core-044"];
+    if (trueStrike === undefined) throw new Error("the catalog has no core-044");
+    expect(marks(fillParams(trueStrike, "base"), fillParams(trueStrike, "radiant"))).toEqual(["9"]);
   });
 
   it("R277 marks an added phrase as one stretch, over its spaces and inner separators", () => {

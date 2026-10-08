@@ -117,7 +117,7 @@ describe("R279 a reference that is a control opens the card it names", () => {
     const tooltip = screen.getByTestId(REF_TOOLTIP_TESTID);
     expect(tooltip).toHaveAttribute("data-ref-face", "radiant");
     expect(tooltip.querySelector(".cf")).toHaveAttribute("data-radiant-face", "true");
-    expect(tooltip.querySelector(".card-text")).toHaveTextContent(def("core-090-1").radiant.text);
+    expect(tooltip.querySelector(".card-text")).toHaveTextContent(fillParams(def("core-090-1"), "radiant"));
   });
 
   it("R279 a mouse resting on it opens the tooltip after the delay, and leaving closes it", () => {

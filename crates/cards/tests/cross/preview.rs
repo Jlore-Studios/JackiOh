@@ -113,8 +113,9 @@ fn face_of(radiant: bool) -> FaceKind {
 }
 
 /// `cardDef(id)[face].text`.
+/// A face's text as it is printed: its declared numbers filled in at their printed values (R386, R482).
 fn text_of(id: &str, face: FaceKind) -> String {
-    card_def(id).face(face).text.clone()
+    fill_params(&card_def(id), face, None)
 }
 
 /// TS `CARDS[id]?.[face].preview`.
@@ -959,11 +960,29 @@ mod r280_a_fused_core_card_lists_its_ingredients_previews_in_order {
                 { "label": text_of(SPITEFUL_STAB, FaceKind::Base), "value": 5 },
             ])
         );
+        // A fused definition declares no numbers of its own (R102); its text writes its ingredients'
+        // `{key}`s, which the view's numbers fill, as the client fills them (R386).
+        let values = params_view(s.state(), s.card(fused.id.as_str())).unwrap_or_default();
         let text = must(
-            s.state()
-                .transient_defs
-                .get(&fused.def_id)
-                .map(|def| def.base.text.clone()),
+            s.state().transient_defs.get(&fused.def_id).map(|def| {
+                let mut def = def.clone();
+                def.params = Some(
+                    values
+                        .iter()
+                        .map(|(key, value)| Param {
+                            key: key.clone(),
+                            base: *value,
+                            radiant: *value,
+                            better: ParamBetter::Up,
+                            step: None,
+                            min: None,
+                            max: None,
+                            tuned_on: None,
+                        })
+                        .collect(),
+                );
+                fill_params(&def, FaceKind::Base, None)
+            }),
             "the fused def",
         );
         for entry in &list {

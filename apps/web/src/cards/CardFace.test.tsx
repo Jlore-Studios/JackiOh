@@ -569,7 +569,7 @@ describe("B14: the radiant face", () => {
     for (const id of ["core-038", "core-080", "core-093-1", "core-095-1", "core-096"]) {
       const cf = catalogFace(id, true);
       expect(cf.getAttribute("data-radiant-face"), id).toBe("true");
-      expect(one(cf, ".cf-text-base").textContent, id).toBe(def(id).radiant.text);
+      expect(one(cf, ".cf-text-base").textContent, id).toBe(fillParams(def(id), "radiant"));
       expect(cf.querySelectorAll(".cf-mark").length, id).toBeGreaterThan(0);
       cleanup();
     }

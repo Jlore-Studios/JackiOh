@@ -20,8 +20,10 @@ const STOCKPILE: &str = "core-005";
 fn bauble_bubble(radiant: bool) -> Script {
     Script {
         death: Some(hook(move |ctx| {
+            // "Each costs (0)": the declared number `setCost` (R386).
+            let cost = param(&*ctx, "setCost");
             (0..param(&*ctx, "cards"))
-                .map(|_| add_to_hand(json_as(json!({ "defId": STOCKPILE, "costOverride": 0, "radiant": radiant }))))
+                .map(|_| add_to_hand(json_as(json!({ "defId": STOCKPILE, "costOverride": cost, "radiant": radiant }))))
                 .collect()
         })),
         ..Script::default()
@@ -292,6 +294,17 @@ mod tests {
             let bauble = s.card(BAUBLE).id.clone();
             s.play(COLLATERAL, json!({ "targets": [{ "pick": "instance", "instanceId": bauble }] }));
             assert_eq!(stockpiles(&s), Vec::<(String, String)>::new());
+        }
+
+        #[test]
+        fn r386_a_degrade_makes_the_stockpiles_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
+            let mut s = bubble(false, json!([NETHER, FILLER]), None, json!([]));
+            assert!(!crate::can_upgrade_number(&s, BAUBLE, "setCost"));
+            assert_eq!(crate::degrade_number(&mut s, BAUBLE, "setCost"), 1);
+            s.play(NETHER, json!({}));
+            let added: Vec<CardInstance> = stockpiles(&s).iter().map(|(id, _)| s.card(id).clone()).collect();
+            assert_eq!(added.len(), 2);
+            assert!(added.iter().all(|card| card.cost_override == Some(1)));
         }
     }
 }

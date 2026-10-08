@@ -175,9 +175,11 @@ pub fn echo_grant_of(state: &GameState, player: PlayerId, modifier: &PlayerModif
     if !matches!(source.zone, Zone::Field { .. }) || source.controller != player {
         return 0;
     }
+    // R386: the grant is the permanent's declared number `echoGain` where it declares one.
     0.max(
         crate::scripts::flags_of(state, source)
             .echo_grant
+            .map(|printed| crate::params::declared_or(state, source, "echoGain", printed))
             .unwrap_or(*amount),
     )
 }

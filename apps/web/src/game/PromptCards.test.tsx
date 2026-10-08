@@ -7,7 +7,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import type { ActionBody, PlayerView } from "@jackioh/shared";
+import { fillParams, type ActionBody, type PlayerView } from "@jackioh/shared";
 
 import { CARD_SETTINGS_DEFAULTS, INSPECT_HOVER, closeInspect, writeCardSettings } from "../cards/index.ts";
 import { HOVER_DELAY_MS } from "../cards/inspect/constants.ts";
@@ -31,6 +31,13 @@ function nameOf(defId: string): string {
   const def = CATALOG[defId];
   if (def === undefined) throw new Error(`the catalog has no ${defId}`);
   return def.name;
+}
+
+/** A face's printed text as a card prints it: its declared numbers filled in (B3.4 rule 5, R280). */
+function printedText(defId: string, face: "base" | "radiant"): string {
+  const def = CATALOG[defId];
+  if (def === undefined) throw new Error(`the catalog has no ${defId}`);
+  return fillParams(def, face);
 }
 
 /** The printed price a face's gem shows for a card with no live cost (a Discover option). */
@@ -296,7 +303,7 @@ describe("#492 one card picker, front and centre, for every short choice", () =>
     const bigger = screen.getByTestId("prompt-option-true");
     for (const option of [normal, bigger]) {
       expect(option.querySelector(".cf-option > .cf .card-name")?.textContent).toBe(nameOf(AURA));
-      expect(option.querySelector(".card-text")?.textContent).toBe(CATALOG[AURA]?.base.text);
+      expect(option.querySelector(".card-text")?.textContent).toBe(printedText(AURA, "base"));
     }
     expect(gem(normal)).toEqual({ text: "2", alt: null });
     expect(normal.querySelector(".prompt-card-caption")?.textContent).toBe("NormalPay (2)");
@@ -313,7 +320,7 @@ describe("#492 one card picker, front and centre, for every short choice", () =>
     renderPlay(handView(AURA, { cost: 2, embiggenCost: 4, radiant: true }), PRICES);
     for (const key of ["false", "true"]) {
       const option = screen.getByTestId(`prompt-option-${key}`);
-      expect(option.querySelector(".card-text")?.textContent).toBe(CATALOG[AURA]?.radiant.text);
+      expect(option.querySelector(".card-text")?.textContent).toBe(printedText(AURA, "radiant"));
     }
   });
 

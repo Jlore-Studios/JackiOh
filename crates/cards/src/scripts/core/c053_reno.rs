@@ -24,19 +24,17 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-053";
 
-/// The floor each face raises the hero to. §8: base 30, radiant 60.
-const BASE_FLOOR: i32 = 30;
-const RADIANT_FLOOR: i32 = 60;
-
 /// "If your hero is below `floor`": strictly below, read through the engine's `hero_of`.
 fn below_floor(state: &GameState, controller: PlayerId, floor: i32) -> bool {
     hero_of(state, controller).health < floor
 }
 
-/// The two faces differ only in the number, so one builder writes both (§8 Conventions).
-fn reno(floor: i32) -> Script {
+/// The two faces differ only in the number, so one script serves both (§8 Conventions): the floor the
+/// hero is raised to is the declared number `health` (R386), 30 and 60 on the Radiant face.
+fn reno() -> Script {
     Script {
-        cry: Some(hook(move |ctx| {
+        cry: Some(hook(|ctx| {
+            let floor = param(&*ctx, "health");
             if below_floor(&*ctx.state, ctx.controller, floor) {
                 vec![heal(json_as(json!({ "target": { "of": "selfHero" }, "upTo": floor })))]
             } else {
@@ -44,18 +42,17 @@ fn reno(floor: i32) -> Script {
             }
         })),
         // R195: hand only — the glow asks whether playing Reno now would set the hero to the floor.
-        condition_met: Some(condition_hook(move |c| {
-            c.zone == ConditionZone::Hand && below_floor(c.state, c.controller, floor)
+        condition_met: Some(condition_hook(|c| {
+            c.zone == ConditionZone::Hand && below_floor(c.state, c.controller, param(&c, "health"))
         })),
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
-    CardScripts {
-        base: reno(BASE_FLOOR),
-        radiant: reno(RADIANT_FLOOR),
-    }
+    let base = reno();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
 }
 
 // #53 Reno (SPEC §8.3, §6.3 Heal, §3, R19; BUILD M4-T4 row 53: "12 → 30; 35 stays 35; radiant 60").
@@ -190,6 +187,22 @@ mod tests {
 
             s.play("core-053", json!({}));
             s.expect_stats("core-053", json!({ "attack": 8, "maxHealth": 12 }));
+        }
+    }
+
+    #[test]
+    fn r386_an_upgrade_heals_up_to_38_and_a_degrade_up_to_22() {
+        for (upgrade, floor) in [(true, 38), (false, 22)] {
+            crate::register_all();
+            let mut s = scenario(json!({ "p1": { "hand": ["core-053", "core-005"], "health": 12 } }));
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, "core-053", "health")
+            } else {
+                crate::degrade_number(&mut s, "core-053", "health")
+            };
+            assert_eq!(moved, floor);
+            s.play("core-053", json!({}));
+            s.expect_health(PlayerId::P1, floor);
         }
     }
 }

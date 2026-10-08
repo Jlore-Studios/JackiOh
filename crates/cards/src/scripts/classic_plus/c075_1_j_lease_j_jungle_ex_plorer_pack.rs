@@ -17,8 +17,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-075-1";
 
-/// §8.7 row 75.1: "Each costs (0)" on the Radiant face.
-const SET_COST: i32 = 0;
+// §8.7 row 75.1: "Each costs (0)" on the Radiant face: the declared number `setCost` (R386).
 
 fn pack(free: bool) -> Script {
     Script {
@@ -33,7 +32,7 @@ fn pack(free: bool) -> Script {
                 "radiant": true,
             });
             if free {
-                args["costOverride"] = json!(SET_COST);
+                args["costOverride"] = json!(param(&*ctx, "setCost"));
             }
             vec![add_random_from_catalog(json_as(args))]
         })),
@@ -294,6 +293,18 @@ mod tests {
                         .all(|event| s.card(instance_id_of(event).as_str()).cost_override.is_none())
                 );
             }
+        }
+
+        #[test]
+        fn r386_a_degrade_makes_the_radiant_cards_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
+            crate::register_all();
+            let mut s = scenario(json!({ "p1": { "hand": [{ "def": PACK, "radiant": true }, STOCKPILE] }, "p2": { "hand": [MENACE] } }));
+            assert!(!crate::can_upgrade_number(&s, PACK, "setCost"));
+            assert_eq!(crate::degrade_number(&mut s, PACK, "setCost"), 1);
+            s.play(PACK, json!({}));
+            let added = of_type(generated(&s), GameEventType::AddedToHand);
+            assert_eq!(added.len(), 5);
+            assert!(added.iter().all(|event| s.card(instance_id_of(event).as_str()).cost_override == Some(1)));
         }
     }
 }

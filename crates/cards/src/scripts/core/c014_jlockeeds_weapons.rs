@@ -22,9 +22,11 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-014";
 
-/// +`attack` attack, Rush and First Strike to the controller's units on the field (§10.4 layer 5).
-fn weapons_aura(attack: i32) -> AuraHook {
-    aura_hook(move |args: HookArgs<'_>| {
+/// +`attack` attack, Rush and First Strike to the controller's units on the field (§10.4 layer 5);
+/// `attack` is the declared number (R386), 4 and 10 on the Radiant face.
+fn weapons_aura() -> AuraHook {
+    aura_hook(|args: HookArgs<'_>| {
+        let attack = param(&args, "attack");
         let controller = args.self_.controller;
         vec![AuraEntry {
             applies: Box::new(move |unit: &CardInstance| {
@@ -41,13 +43,10 @@ fn weapons_aura(attack: i32) -> AuraHook {
 
 pub fn script() -> CardScripts {
     let base = Script {
-        aura: Some(weapons_aura(4)),
+        aura: Some(weapons_aura()),
         ..Script::default()
     };
-    let radiant = Script {
-        aura: Some(weapons_aura(10)),
-        ..Script::default()
-    };
+    let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
@@ -215,6 +214,22 @@ mod tests {
                 s.attack("core-015", "core-002");
                 s.expect_in_zone(&bigot, "graveyard");
                 assert!(s.unit(PlayerId::P2, 1).is_none());
+            }
+        }
+
+        #[test]
+        fn r386_an_upgrade_gives_5_attack_and_a_degrade_3() {
+            for (upgrade, attack) in [(true, 5), (false, 3)] {
+                crate::register_all();
+                let mut s = scenario(json!({ "p1": { "backrow": ["core-014"], "field": ["core-008"] } }));
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, "core-014", "attack")
+                } else {
+                    crate::degrade_number(&mut s, "core-014", "attack")
+                };
+                assert_eq!(moved, attack);
+                // Mr. Vanilla is a 4/4.
+                s.expect_stats("core-008", json!({ "attack": 4 + attack, "health": 4 }));
             }
         }
     }

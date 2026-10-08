@@ -42,7 +42,8 @@ pub fn script() -> CardScripts {
     CardScripts {
         base: infinite_reserves(),
         radiant: Script {
-            cry: Some(hook(|_ctx| vec![draw(json_as(json!({ "count": 3 })))])),
+            // "Cry: Draw 3": the declared number `draw` (R386).
+            cry: Some(hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])),
             ..infinite_reserves()
         },
     }
@@ -235,6 +236,25 @@ mod tests {
             assert_eq!(s.hand(P1).len(), 4);
             s.expect_health(P1, 30);
             assert_eq!(s.state().players.p1.fatigue_count, 0);
+        }
+
+        #[test]
+        fn r386_an_upgrade_draws_4_and_a_degrade_2() {
+            for (upgrade, draws) in [(true, 4), (false, 2)] {
+                let mut s = setup(json!({
+                    "seed": "core-075-tuned",
+                    "p1": { "hand": [{ "def": "core-075", "radiant": true }, "core-005"], "library": [] },
+                    "p2": { "hand": ["core-005"] },
+                }));
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, "core-075", "draw")
+                } else {
+                    crate::degrade_number(&mut s, "core-075", "draw")
+                };
+                assert_eq!(moved, draws);
+                s.play("core-075", json!({}));
+                assert_eq!(rush_tokens_in_hand(&s, P1).len(), draws as usize);
+            }
         }
     }
 }

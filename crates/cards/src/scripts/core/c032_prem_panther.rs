@@ -17,10 +17,8 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-032";
 
-/// §8 row 32: "draw 2 for each Unit that attack destroyed".
-const DRAW_PER_UNIT: i32 = 2;
-
-/// TS `const afterAttack: Hook`.
+/// TS `const afterAttack: Hook`. §8 row 32: "draw 2 for each Unit that attack destroyed", the 2 the
+/// declared number `draw` (R386).
 fn after_attack() -> Hook {
     hook(|ctx| {
         let Some(facts) = after_attack_of(ctx) else {
@@ -29,7 +27,7 @@ fn after_attack() -> Hook {
         if facts.destroyed_ids.is_empty() {
             return vec![];
         }
-        vec![draw(json_as(json!({ "count": DRAW_PER_UNIT * facts.destroyed_ids.len() as i32 })))]
+        vec![draw(json_as(json!({ "count": param(&*ctx, "draw") * facts.destroyed_ids.len() as i32 })))]
     })
 }
 
@@ -426,6 +424,29 @@ mod tests {
 
             s.expect_in_zone(&panther, "field");
             assert_eq!(s.hand("p1").len(), 2);
+        }
+    }
+
+    #[test]
+    fn r386_an_upgrade_draws_3_for_the_kill_and_a_degrade_1() {
+        for (upgrade, draws) in [(true, 3), (false, 1)] {
+            let mut s = scn(json!({
+                "seed": "panther-kill",
+                "p1": { "field": ["32", "15"], "library": ["15", "15", "15", "15"] },
+                "p2": { "field": ["15"] },
+            }));
+            let prey = must(s.unit("p2", 1), "p2 lane 1");
+            let panther = must(s.unit("p1", 1), "the Panther");
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, &panther.id, "draw")
+            } else {
+                crate::degrade_number(&mut s, &panther.id, "draw")
+            };
+            assert_eq!(moved, draws);
+
+            s.attack(&panther, &prey);
+
+            assert_eq!(s.hand("p1").len(), draws as usize);
         }
     }
 }

@@ -72,8 +72,12 @@ pub fn script() -> CardScripts {
     };
     let radiant = Script {
         modes: modes(),
-        // "; then draw 1": the draw follows whichever mode resolved, on all three of them.
-        cry: Some(hook(|ctx| vec![chosen_effect(ctx), draw(json_as(json!({ "count": 1 })))])),
+        // "; then draw 1": the draw follows whichever mode resolved, on all three of them. Its count is
+        // the declared number `draw` (R386).
+        cry: Some(hook(|ctx| {
+            let count = param(&*ctx, "draw");
+            vec![chosen_effect(ctx), draw(json_as(json!({ "count": count })))]
+        })),
         ..Script::default()
     };
     CardScripts { base, radiant }
@@ -309,6 +313,23 @@ mod tests {
             s.play("core-017", json!({ "modes": [BOUNCE_ENEMY] }));
 
             s.expect_in_zone(&token, "gone");
+        }
+
+        #[test]
+        fn r386_an_upgrade_draws_2_and_a_degrade_finds_the_draw_at_its_floor_of_1() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": ["core-017"], "library": ["core-010", "core-011"], "mana": 4 },
+                "p2": { "field": ["core-t-rush"] }
+            }));
+            make_radiant(&mut s, "core-017");
+            assert!(!crate::can_degrade_number(&s, "core-017", "draw"));
+            assert_eq!(crate::upgrade_number(&mut s, "core-017", "draw"), 2);
+
+            s.play("core-017", json!({ "modes": [BOUNCE_ENEMY] }));
+
+            s.expect_in_zone("core-010", "hand");
+            s.expect_in_zone("core-011", "hand");
         }
     }
 }

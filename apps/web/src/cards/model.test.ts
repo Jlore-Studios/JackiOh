@@ -511,7 +511,7 @@ describe("a face in play is the card as the view says it stands; the collection'
     expect(f.vanilla).toBe(true);
     expect(f.text).toEqual({ full: VANILLA_TEXT, marks: [] });
     expect(f.gained).toEqual([{ kind: "Taunt" }]);
-    expect(f.printed).toEqual({ full: def("core-091").base.text, marks: [] });
+    expect(f.printed).toEqual({ full: fillParams(def("core-091"), "base"), marks: [] });
   });
 
   it("a unit in play prints the keywords it has gained since it was printed, and only those", () => {

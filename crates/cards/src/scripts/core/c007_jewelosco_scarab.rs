@@ -28,8 +28,8 @@ pub const ID: &str = "core-007";
 /// The cost bracket each face Discovers from (§8.1).
 const BASE_COST: i32 = 2;
 const RADIANT_COST: i32 = 3;
-/// "It costs 1 less": a permanent −1 `costMod` on the card the radiant face found (§8.1, R65).
-const RADIANT_DISCOUNT: i32 = 1;
+// "It costs (1) less": a permanent `costMod` on the card the radiant face found (§8.1, R65), by the
+// declared number `discount` (R386).
 
 fn discover(cost: i32) -> Vec<Effect> {
     vec![discover_from_catalog(json_as(json!({
@@ -67,7 +67,7 @@ pub fn script() -> CardScripts {
                 // §8.1 asks for a permanent `costMod`, not a `costOverride`: R65 starts from the override
                 // in place of the printed cost, which would also erase any other discount the card
                 // carries.
-                vec![add_to_hand(json_as(json!({ "defId": def_id, "costMod": -RADIANT_DISCOUNT })))]
+                vec![add_to_hand(json_as(json!({ "defId": def_id, "costMod": -param(&*ctx, "discount") })))]
             }),
         )]),
         ..Script::default()
@@ -245,6 +245,24 @@ mod tests {
                 .find(|card| Some(&card.instance_id) == added_id.as_ref());
             // "It costs 1 less": a permanent −1 costMod on the chosen card, so 3 reads as 2 (R65, R78).
             assert_eq!(in_hand.map(|card| card.cost), Some(2));
+        }
+
+        #[test]
+        fn r386_an_upgrade_makes_the_radiant_discount_2_and_a_degrade_finds_it_at_its_floor_of_1() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "core-007-radiant",
+                "p1": { "hand": [{ "def": "core-007", "radiant": true }], "library": ["core-020"] },
+                "p2": { "field": ["core-020"] }
+            }));
+            assert!(!crate::can_degrade_number(&s, "core-007", "discount"));
+            assert_eq!(crate::upgrade_number(&mut s, "core-007", "discount"), 2);
+            s.play("core-007", json!({}));
+            let chosen = offered(&s)[0].clone();
+            s.answer(json!(chosen));
+            let added_id = s.hand(PlayerId::P1).into_iter().find(|card| card.def_id == chosen).map(|card| card.id);
+            let in_hand = hand_view(&s).into_iter().find(|card| Some(&card.instance_id) == added_id.as_ref());
+            assert_eq!(in_hand.map(|card| card.cost), Some(1));
         }
     }
 }

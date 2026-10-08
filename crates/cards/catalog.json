@@ -11,18 +11,28 @@
     "rarity": "Common",
     "token": false,
     "cost": 2,
+    "params": [
+      {
+        "key": "armor",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 15,
     "base": {
       "attack": 0,
       "health": 7,
       "keywords": [],
-      "text": "Aura: Your Units in Defense Position have +2 Armor."
+      "text": "Aura: Your Units in Defense Position have +{armor} Armor."
     },
     "radiant": {
       "attack": 0,
       "health": 14,
       "keywords": [],
-      "text": "Aura: Your Units in Defense Position have +4 Armor."
+      "text": "Aura: Your Units in Defense Position have +{armor} Armor."
     }
   },
   "core-002": {
@@ -112,18 +122,44 @@
     "rarity": "Common",
     "token": false,
     "cost": 1,
+    "params": [
+      {
+        "key": "coins",
+        "base": 5,
+        "radiant": 7,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "perHeads",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "perTails",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 13,
     "base": {
       "attack": 1,
       "health": 1,
       "keywords": [],
-      "text": "Cry: Flip 5 coins. Gain +1 attack per heads and +1 health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
+      "text": "Cry: Flip {coins|coin|coins}. Gain +{perHeads} attack per heads and +{perTails} health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
     },
     "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Flip 7 coins. Gain +2 attack per heads and +2 health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
+      "text": "Cry: Flip {coins|coin|coins}. Gain +{perHeads} attack per heads and +{perTails} health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
     }
   },
   "core-005": {
@@ -136,14 +172,32 @@
     "rarity": "Common",
     "token": false,
     "cost": 1,
+    "params": [
+      {
+        "key": "draw",
+        "base": 2,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "heal",
+        "base": 2,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 7,
     "base": {
       "keywords": [],
-      "text": "Draw 2. Heal your hero 2."
+      "text": "Draw {draw}. Heal your hero {heal}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw 5. Heal your hero 5."
+      "text": "Draw {draw}. Heal your hero {heal}."
     }
   },
   "core-006": {
@@ -156,14 +210,24 @@
     "rarity": "Common",
     "token": false,
     "cost": 3,
+    "params": [
+      {
+        "key": "mana",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Gain 1 mana."
+      "text": "Start of turn: Gain {mana} mana."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Gain 2 mana."
+      "text": "Start of turn: Gain {mana} mana."
     }
   },
   "core-007": {
@@ -176,6 +240,16 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 29,
     "base": {
       "attack": 1,
@@ -187,7 +261,7 @@
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Discover a (3) Cost card. It costs (1) less."
+      "text": "Cry: Discover a (3) Cost card. It costs ({discount}) less."
     }
   },
   "core-008": {
@@ -255,14 +329,32 @@
     "rarity": "Common",
     "token": false,
     "cost": 0,
+    "params": [
+      {
+        "key": "combo",
+        "base": 3,
+        "radiant": 3,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "draw",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Combo 3: Draw 3."
+      "text": "Combo {combo}: Draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Combo 3: Draw 6."
+      "text": "Combo {combo}: Draw {draw}."
     }
   },
   "core-011": {
@@ -343,18 +435,28 @@
     "rarity": "Common",
     "token": false,
     "cost": 3,
+    "params": [
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 10,
     "base": {
       "attack": 8,
       "health": 10,
       "keywords": [],
-      "text": "End of turn: Deal 2 damage to each enemy Unit and the enemy hero."
+      "text": "End of turn: Deal {damage} damage to each enemy Unit and the enemy hero."
     },
     "radiant": {
       "attack": 16,
       "health": 20,
       "keywords": [],
-      "text": "End of turn: Deal 5 damage to each enemy Unit and the enemy hero."
+      "text": "End of turn: Deal {damage} damage to each enemy Unit and the enemy hero."
     }
   },
   "core-014": {
@@ -369,14 +471,24 @@
     "rarity": "Common",
     "token": false,
     "cost": 4,
+    "params": [
+      {
+        "key": "attack",
+        "base": 4,
+        "radiant": 10,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 12,
     "base": {
       "keywords": [],
-      "text": "Aura: Your Units have +4 attack, Rush and First Strike."
+      "text": "Aura: Your Units have +{attack} attack, Rush and First Strike."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your Units have +10 attack, Rush and First Strike."
+      "text": "Aura: Your Units have +{attack} attack, Rush and First Strike."
     }
   },
   "core-015": {
@@ -394,6 +506,17 @@
     "refs": [
       "core-t-rush"
     ],
+    "params": [
+      {
+        "key": "tokens",
+        "base": 1,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
     "loc": 11,
     "base": {
       "attack": 1,
@@ -405,7 +528,7 @@
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Summon 3 Rush Tokens."
+      "text": "Cry: Summon {tokens|Rush Token|Rush Tokens}."
     }
   },
   "core-016": {
@@ -438,6 +561,16 @@
     "rarity": "Rare",
     "token": false,
     "cost": 4,
+    "params": [
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 24,
     "base": {
       "keywords": [],
@@ -445,7 +578,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one: Bounce all Units, Bounce all enemy Units, or destroy all enemy Units. Then draw 1."
+      "text": "Choose one: Bounce all Units, Bounce all enemy Units, or destroy all enemy Units. Then draw {draw}."
     }
   },
   "core-018": {
@@ -461,6 +594,17 @@
     "refs": [
       "core-t-bread"
     ],
+    "params": [
+      {
+        "key": "multiplier",
+        "base": 1,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
     "loc": 46,
     "base": {
       "keywords": [],
@@ -468,7 +612,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when any player ends a turn with unspent mana: Summon an X/X Bread Token for you. X = 3 × that player's unspent mana."
+      "text": "Reveals when any player ends a turn with unspent mana: Summon an X/X Bread Token for you. X = {multiplier} × that player's unspent mana."
     }
   },
   "core-019": {
@@ -553,14 +697,24 @@
     "rarity": "Common",
     "token": false,
     "cost": 0,
+    "params": [
+      {
+        "key": "mana",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: Your opponent has 1 less mana next turn. Discard 1."
+      "text": "Cast on draw: Your opponent has {mana} less mana next turn. Discard 1."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cast on draw: Your opponent has 2 less mana next turn."
+      "text": "Cast on draw: Your opponent has {mana} less mana next turn."
     }
   },
   "core-022": {
@@ -573,12 +727,22 @@
     "rarity": "Epic",
     "token": false,
     "cost": 3,
+    "params": [
+      {
+        "key": "copies",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 85,
     "base": {
       "attack": 4,
       "health": 6,
       "keywords": [],
-      "text": "Cry: Tribute one of your other Units and remember it.\nDeath: Summon 2 copies of it."
+      "text": "Cry: Tribute one of your other Units and remember it.\nDeath: Summon {copies|copy|copies} of it."
     },
     "radiant": {
       "attack": 8,
@@ -622,14 +786,33 @@
     "rarity": "Epic",
     "token": false,
     "cost": "X",
+    "params": [
+      {
+        "key": "damage",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      },
+      {
+        "key": "heal",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 46,
     "base": {
       "keywords": [],
-      "text": "Choose one: Deal X damage, heal a target 2X, or gain floor(X/2) mana next turn.\nEnd of turn: Return this to hand."
+      "text": "Choose one: Deal X damage, heal a target {heal}X, or gain floor(X/2) mana next turn.\nEnd of turn: Return this to hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one: Deal 2X damage, heal a target 4X, or gain X mana next turn.\nEnd of turn: Return this to hand."
+      "text": "Choose one: Deal {damage}X damage, heal a target {heal}X, or gain X mana next turn.\nEnd of turn: Return this to hand."
     }
   },
   "core-025": {
@@ -699,14 +882,33 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
+    "params": [
+      {
+        "key": "cards",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      },
+      {
+        "key": "loss",
+        "base": 5,
+        "radiant": 5,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 13,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: Make a random card in your hand Radiant. Lose 5 health."
+      "text": "Cast on draw: Make a random card in your hand Radiant. Lose {loss} health."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cast on draw: Make 2 random cards in your hand Radiant. Lose 5 health."
+      "text": "Cast on draw: Make {cards|random card|random cards} in your hand Radiant. Lose {loss} health."
     }
   },
   "core-028": {
@@ -719,14 +921,24 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
+    "params": [
+      {
+        "key": "cards",
+        "base": 2,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 9,
     "base": {
       "keywords": [],
-      "text": "Make 2 random cards among your deck, hand and board Radiant."
+      "text": "Make {cards|random card|random cards} among your deck, hand and board Radiant."
     },
     "radiant": {
       "keywords": [],
-      "text": "Make 5 random cards among your deck, hand and board Radiant."
+      "text": "Make {cards|random card|random cards} among your deck, hand and board Radiant."
     }
   },
   "core-029": {
@@ -807,6 +1019,16 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
+    "params": [
+      {
+        "key": "draw",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 9,
     "base": {
       "attack": 5,
@@ -816,7 +1038,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nAfter this attacks, draw 2 for each Unit that attack destroyed."
+      "text": "Rush\nAfter this attacks, draw {draw} for each Unit that attack destroyed."
     },
     "radiant": {
       "attack": 10,
@@ -829,7 +1051,7 @@
           "kind": "Cleave"
         }
       ],
-      "text": "Rush, Cleave\nAfter this attacks, draw 2 for each Unit that attack destroyed."
+      "text": "Rush, Cleave\nAfter this attacks, draw {draw} for each Unit that attack destroyed."
     }
   },
   "core-033": {
@@ -842,14 +1064,24 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
+    "params": [
+      {
+        "key": "copies",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "After you play a card, shuffle 3 copies of it into your deck."
+      "text": "After you play a card, shuffle {copies|copy|copies} of it into your deck."
     },
     "radiant": {
       "keywords": [],
-      "text": "After you play a card, shuffle 3 Radiant copies of it into your deck."
+      "text": "After you play a card, shuffle {copies|Radiant copy|Radiant copies} of it into your deck."
     }
   },
   "core-034": {
@@ -882,14 +1114,32 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 21,
     "base": {
       "keywords": [],
-      "text": "Deal 3 damage. Your next Spell this turn costs (1) less."
+      "text": "Deal {damage} damage. Your next Spell this turn costs ({discount}) less."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal 6 damage. Your next Spell this turn costs (2) less."
+      "text": "Deal {damage} damage. Your next Spell this turn costs ({discount}) less."
     }
   },
   "core-036": {
@@ -922,6 +1172,16 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 15,
     "base": {
       "attack": 4,
@@ -933,7 +1193,7 @@
       "attack": 8,
       "health": 10,
       "keywords": [],
-      "text": "Start of turn: Discover a card from your graveyard. It costs (1) less."
+      "text": "Start of turn: Discover a card from your graveyard. It costs ({discount}) less."
     }
   },
   "core-038": {
@@ -966,6 +1226,16 @@
     "rarity": "Epic",
     "token": false,
     "cost": 0,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 50,
     "base": {
       "keywords": [],
@@ -973,7 +1243,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Exile this.\nEnd of turn: Add a Radiant copy of each other card you played this turn to your hand. They cost (1) less."
+      "text": "Exile this.\nEnd of turn: Add a Radiant copy of each other card you played this turn to your hand. They cost ({discount}) less."
     }
   },
   "core-040": {
@@ -1010,6 +1280,16 @@
       "core-t-sheep",
       "core-055"
     ],
+    "params": [
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
+      }
+    ],
     "loc": 29,
     "base": {
       "keywords": [],
@@ -1017,7 +1297,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when your opponent plays a Unit: After it resolves, transform it into a Sheep Token. Add a Lava Golem to your hand. It costs (0)."
+      "text": "Reveals when your opponent plays a Unit: After it resolves, transform it into a Sheep Token. Add a Lava Golem to your hand. It costs ({setCost})."
     }
   },
   "core-042": {
@@ -1081,6 +1361,16 @@
     "rarity": "Common",
     "token": false,
     "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 4,
+        "radiant": 9,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 12,
     "base": {
       "keywords": [
@@ -1088,7 +1378,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Pierce\nDeal 4 damage. Exile this."
+      "text": "Pierce\nDeal {damage} damage. Exile this."
     },
     "radiant": {
       "keywords": [
@@ -1096,7 +1386,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Pierce\nDeal 9 damage. Exile this."
+      "text": "Pierce\nDeal {damage} damage. Exile this."
     }
   },
   "core-045": {
@@ -1156,14 +1446,32 @@
       "base": 2,
       "embiggen": 4
     },
+    "params": [
+      {
+        "key": "debuff",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "paidDebuff",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 18,
     "base": {
       "keywords": [],
-      "text": "Aura: All Units have −1/−1.\nPaid (4): −2/−2 instead."
+      "text": "Aura: All Units have −{debuff}/−{debuff}.\nPaid (4): −{paidDebuff}/−{paidDebuff} instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Enemy Units have −2/−2.\nPaid (4): −4/−4 instead."
+      "text": "Aura: Enemy Units have −{debuff}/−{debuff}.\nPaid (4): −{paidDebuff}/−{paidDebuff} instead."
     }
   },
   "core-047": {
@@ -1178,14 +1486,24 @@
     "rarity": "Common",
     "token": false,
     "cost": 3,
+    "params": [
+      {
+        "key": "heal",
+        "base": 20,
+        "radiant": 50,
+        "better": "up",
+        "step": 5,
+        "min": 1
+      }
+    ],
     "loc": 9,
     "base": {
       "keywords": [],
-      "text": "Heal a target 20."
+      "text": "Heal a target {heal}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Heal a target 50."
+      "text": "Heal a target {heal}."
     }
   },
   "core-048": {
@@ -1296,14 +1614,24 @@
     "rarity": "Token",
     "token": true,
     "cost": 1,
+    "params": [
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "Draw 1."
+      "text": "Draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw 2."
+      "text": "Draw {draw}."
     }
   },
   "core-052": {
@@ -1344,18 +1672,28 @@
     "rarity": "Common",
     "token": false,
     "cost": 3,
+    "params": [
+      {
+        "key": "health",
+        "base": 30,
+        "radiant": 60,
+        "better": "up",
+        "step": 8,
+        "min": 1
+      }
+    ],
     "loc": 15,
     "base": {
       "attack": 4,
       "health": 6,
       "keywords": [],
-      "text": "Cry: Heal your hero up to 30 health."
+      "text": "Cry: Heal your hero up to {health} health."
     },
     "radiant": {
       "attack": 8,
       "health": 12,
       "keywords": [],
-      "text": "Cry: Heal your hero up to 60 health."
+      "text": "Cry: Heal your hero up to {health} health."
     }
   },
   "core-054": {
@@ -1368,18 +1706,28 @@
     "rarity": "Common",
     "token": false,
     "cost": 4,
+    "params": [
+      {
+        "key": "setCost",
+        "base": 1,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
+      }
+    ],
     "loc": 16,
     "base": {
       "attack": 8,
       "health": 8,
       "keywords": [],
-      "text": "Cry: Add 2 random (3) or (4) Cost Units to your hand. They cost (1)."
+      "text": "Cry: Add 2 random (3) or (4) Cost Units to your hand. They cost ({setCost})."
     },
     "radiant": {
       "attack": 16,
       "health": 16,
       "keywords": [],
-      "text": "Cry: Add 2 random Radiant (3) or (4) Cost Units to your hand. They cost (0)."
+      "text": "Cry: Add 2 random Radiant (3) or (4) Cost Units to your hand. They cost ({setCost})."
     }
   },
   "core-055": {
@@ -1479,14 +1827,32 @@
     "rarity": "Common",
     "token": false,
     "cost": 2,
+    "params": [
+      {
+        "key": "cards",
+        "base": 3,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "radiantCards",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Add 3 random KY cards to your hand."
+      "text": "Add {cards|random KY card|random KY cards} to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add 2 random KY cards and 2 random Radiant KY cards to your hand."
+      "text": "Add {cards|random KY card|random KY cards} and {radiantCards|random Radiant KY card|random Radiant KY cards} to your hand."
     }
   },
   "core-058": {
@@ -1502,6 +1868,16 @@
     "refs": [
       "core-t-rush"
     ],
+    "params": [
+      {
+        "key": "buff",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 11,
     "base": {
       "keywords": [],
@@ -1509,7 +1885,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Summon a Rush Token.\nAura: Your Rush Tokens have +3/+3."
+      "text": "Start of turn: Summon a Rush Token.\nAura: Your Rush Tokens have +{buff}/+{buff}."
     }
   },
   "core-059": {
@@ -1525,14 +1901,24 @@
       "base": 2,
       "embiggen": 4
     },
+    "params": [
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
+      }
+    ],
     "loc": 14,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Add a random card to your hand.\nPaid (4): It costs (0)."
+      "text": "Start of turn: Add a random card to your hand.\nPaid (4): It costs ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Add a random Radiant card to your hand.\nPaid (4): It costs (0)."
+      "text": "Start of turn: Add a random Radiant card to your hand.\nPaid (4): It costs ({setCost})."
     }
   },
   "core-060": {
@@ -1548,10 +1934,20 @@
     "refs": [
       "core-t-rush"
     ],
+    "params": [
+      {
+        "key": "costLimit",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 39,
     "base": {
       "keywords": [],
-      "text": "Reveals when your opponent plays a (1) Cost or less card, if you have an empty unit zone: Summon 2 Rush Tokens. If it's a Unit, they attack it."
+      "text": "Reveals when your opponent plays a ({costLimit}) Cost or less card, if you have an empty unit zone: Summon 2 Rush Tokens. If it's a Unit, they attack it."
     },
     "radiant": {
       "keywords": [],
@@ -1599,6 +1995,16 @@
     "refs": [
       "core-t-felinor"
     ],
+    "params": [
+      {
+        "key": "buff",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 11,
     "base": {
       "keywords": [],
@@ -1606,7 +2012,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Fill your board with Felinor Tokens. Give your Units +2/+2."
+      "text": "Fill your board with Felinor Tokens. Give your Units +{buff}/+{buff}."
     }
   },
   "core-063": {
@@ -1619,14 +2025,32 @@
     "rarity": "Common",
     "token": false,
     "cost": 1,
+    "params": [
+      {
+        "key": "buff",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "keywords",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Give a Unit +3/+3 and 1 random keyword."
+      "text": "Give a Unit +{buff}/+{buff} and {keywords|random keyword|random keywords}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Give a Unit +6/+6 and 2 random keywords."
+      "text": "Give a Unit +{buff}/+{buff} and {keywords|random keyword|random keywords}."
     }
   },
   "core-064": {
@@ -1639,14 +2063,24 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
+    "params": [
+      {
+        "key": "giftLimit",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 5,
     "base": {
       "keywords": [],
-      "text": "The first (1) Cost or less card you play each turn becomes Radiant as it's played."
+      "text": "The first ({giftLimit}) Cost or less card you play each turn becomes Radiant as it's played."
     },
     "radiant": {
       "keywords": [],
-      "text": "The first (2) Cost or less card you play each turn becomes Radiant as it's played."
+      "text": "The first ({giftLimit}) Cost or less card you play each turn becomes Radiant as it's played."
     }
   },
   "core-065": {
@@ -1664,14 +2098,24 @@
     "refs": [
       "core-065-1"
     ],
+    "params": [
+      {
+        "key": "loss",
+        "base": 3,
+        "radiant": 3,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 49,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Choose one: Exile the bottom card of your deck, lose 3 health, or summon a Spikey Pillow."
+      "text": "Start of turn: Choose one: Exile the bottom card of your deck, lose {loss} health, or summon a Spikey Pillow."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Choose twice: Nothing, exile the bottom card of your deck, lose 3 health, or summon a Spikey Pillow."
+      "text": "Start of turn: Choose twice: Nothing, exile the bottom card of your deck, lose {loss} health, or summon a Spikey Pillow."
     }
   },
   "core-065-1": {
@@ -1689,18 +2133,28 @@
     "refs": [
       "core-065-1"
     ],
+    "params": [
+      {
+        "key": "drain",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 21,
     "base": {
       "attack": 0,
       "health": 2,
       "keywords": [],
-      "text": "Can't be in Defense Position.\nAura: Your Units have −2 attack."
+      "text": "Can't be in Defense Position.\nAura: Your Units have −{drain} attack."
     },
     "radiant": {
       "attack": 0,
       "health": 4,
       "keywords": [],
-      "text": "Can't be in Defense Position.\nAura: Your Units other than Spikey Pillows have −2 attack."
+      "text": "Can't be in Defense Position.\nAura: Your Units other than Spikey Pillows have −{drain} attack."
     }
   },
   "core-066": {
@@ -1776,18 +2230,44 @@
     "rarity": "Common",
     "token": false,
     "cost": 2,
+    "params": [
+      {
+        "key": "damage",
+        "base": 4,
+        "radiant": 8,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "lowDamage",
+        "base": 8,
+        "radiant": 16,
+        "better": "up",
+        "step": 2,
+        "min": 1
+      },
+      {
+        "key": "threshold",
+        "base": 10,
+        "radiant": 10,
+        "better": "up",
+        "step": 2,
+        "min": 1
+      }
+    ],
     "loc": 24,
     "base": {
       "attack": 5,
       "health": 5,
       "keywords": [],
-      "text": "Cry: Deal 4 damage, or 8 if your hero has less than 10 health."
+      "text": "Cry: Deal {damage} damage, or {lowDamage} if your hero has less than {threshold} health."
     },
     "radiant": {
       "attack": 10,
       "health": 10,
       "keywords": [],
-      "text": "Cry: Deal 8 damage, or 16 if your hero has less than 10 health."
+      "text": "Cry: Deal {damage} damage, or {lowDamage} if your hero has less than {threshold} health."
     }
   },
   "core-069": {
@@ -1800,14 +2280,24 @@
     "rarity": "Common",
     "token": false,
     "cost": 2,
+    "params": [
+      {
+        "key": "costLimit",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 13,
     "base": {
       "keywords": [],
-      "text": "Recruit 3 (1) Cost or less Units."
+      "text": "Recruit 3 ({costLimit}) Cost or less Units."
     },
     "radiant": {
       "keywords": [],
-      "text": "Recruit 3 (2) Cost or less Units."
+      "text": "Recruit 3 ({costLimit}) Cost or less Units."
     }
   },
   "core-070": {
@@ -1820,14 +2310,40 @@
     "rarity": "Common",
     "token": false,
     "cost": 3,
+    "params": [
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "healthStep",
+        "base": 5,
+        "radiant": 3,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "perExile",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 24,
     "base": {
       "keywords": [],
-      "text": "Deal 2 damage, +1 per full 5 health your hero is below 30, +1 per card in your exile."
+      "text": "Deal {damage} damage, +1 per full {healthStep} health your hero is below 30, +{perExile} per card in your exile."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal 4 damage, +1 per full 3 health your hero is below 30, +2 per card in your exile."
+      "text": "Deal {damage} damage, +1 per full {healthStep} health your hero is below 30, +{perExile} per card in your exile."
     }
   },
   "core-071": {
@@ -1840,14 +2356,24 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
+    "params": [
+      {
+        "key": "costLimit",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 21,
     "base": {
       "keywords": [],
-      "text": "Reveals when any turn ends, if your deck has more cards than your opponent's: Recruit a (1) Cost or less Unit."
+      "text": "Reveals when any turn ends, if your deck has more cards than your opponent's: Recruit a ({costLimit}) Cost or less Unit."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when any turn ends, if your deck has more cards than your opponent's: Recruit a (2) Cost or less Unit."
+      "text": "Reveals when any turn ends, if your deck has more cards than your opponent's: Recruit a ({costLimit}) Cost or less Unit."
     }
   },
   "core-072": {
@@ -1860,14 +2386,32 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
+      }
+    ],
     "loc": 17,
     "base": {
       "keywords": [],
-      "text": "Discover a card from your graveyard. It costs (1) less. Exile this."
+      "text": "Discover a card from your graveyard. It costs ({discount}) less. Exile this."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discover a card from your graveyard. It costs (0). Exile this."
+      "text": "Discover a card from your graveyard. It costs ({setCost}). Exile this."
     }
   },
   "core-073": {
@@ -1880,14 +2424,32 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
+    "params": [
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "cap",
+        "base": 5,
+        "radiant": 3,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Your hero can't take more than 5 damage at once.\nCry: Draw 1."
+      "text": "Your hero can't take more than {cap} damage at once.\nCry: Draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero can't take more than 3 damage at once.\nCry: Draw 2."
+      "text": "Your hero can't take more than {cap} damage at once.\nCry: Draw {draw}."
     }
   },
   "core-074": {
@@ -1903,6 +2465,44 @@
     "refs": [
       "core-t-ghoul"
     ],
+    "params": [
+      {
+        "key": "damage",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      },
+      {
+        "key": "heal",
+        "base": 1,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      },
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      },
+      {
+        "key": "ghoul",
+        "base": 1,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
     "loc": 26,
     "base": {
       "keywords": [],
@@ -1910,7 +2510,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal 2X damage. Heal your hero 3X. Draw 2X. Summon a 3X/3X Ghoul Token."
+      "text": "Deal {damage}X damage. Heal your hero {heal}X. Draw {draw}X. Summon a {ghoul}X/{ghoul}X Ghoul Token."
     }
   },
   "core-075": {
@@ -1926,6 +2526,16 @@
     "refs": [
       "core-t-rush"
     ],
+    "params": [
+      {
+        "key": "draw",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 9,
     "base": {
       "keywords": [],
@@ -1933,7 +2543,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw 3."
+      "text": "Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw {draw}."
     }
   },
   "core-076": {
@@ -1971,18 +2581,28 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 19,
     "base": {
       "attack": 3,
       "health": 3,
       "keywords": [],
-      "text": "Cry: (4)+ Cost cards cost (1) less on your next turn."
+      "text": "Cry: (4)+ Cost cards cost ({discount}) less on your next turn."
     },
     "radiant": {
       "attack": 6,
       "health": 6,
       "keywords": [],
-      "text": "Cry: (4)+ Cost cards cost (2) less on your next turn."
+      "text": "Cry: (4)+ Cost cards cost ({discount}) less on your next turn."
     }
   },
   "core-078": {
@@ -1995,14 +2615,40 @@
     "rarity": "Epic",
     "token": false,
     "cost": 4,
+    "params": [
+      {
+        "key": "refresh",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "comboDraw",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 32,
     "base": {
       "keywords": [],
-      "text": "Refresh 3 mana. Your cards cost (1) less this turn.\nEnd of turn: Exile your hand."
+      "text": "Refresh {refresh} mana. Your cards cost ({discount}) less this turn.\nEnd of turn: Exile your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Refresh 3 mana. Your cards cost (1) less and gain \"Combo: Draw 1\" this turn.\nEnd of turn: Exile your hand."
+      "text": "Refresh {refresh} mana. Your cards cost ({discount}) less and gain \"Combo: Draw {comboDraw}\" this turn.\nEnd of turn: Exile your hand."
     }
   },
   "core-079": {
@@ -2015,14 +2661,24 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
+    "params": [
+      {
+        "key": "echoGain",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Your next Spell gains Echo +1. Then this goes to the graveyard."
+      "text": "Your next Spell gains Echo +{echoGain}. Then this goes to the graveyard."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your next Spell gains Echo +2. Then this goes to the graveyard."
+      "text": "Your next Spell gains Echo +{echoGain}. Then this goes to the graveyard."
     }
   },
   "core-080": {
@@ -2040,14 +2696,32 @@
     "refs": [
       "core-t-rush"
     ],
+    "params": [
+      {
+        "key": "discard",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "keywords",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 20,
     "base": {
       "keywords": [],
-      "text": "Discard 2 random cards. Summon 2 Rush Tokens, each with 2 random keywords."
+      "text": "Discard {discard|random card|random cards}. Summon 2 Rush Tokens, each with {keywords|random keyword|random keywords}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discard 2 random cards. Summon 2 Radiant Rush Tokens, each with 3 random keywords."
+      "text": "Discard {discard|random card|random cards}. Summon 2 Radiant Rush Tokens, each with {keywords|random keyword|random keywords}."
     }
   },
   "core-081": {
@@ -2088,6 +2762,16 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
+    "params": [
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
+      }
+    ],
     "loc": 29,
     "base": {
       "keywords": [],
@@ -2095,7 +2779,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Discover among 3 different random numbers from 1–100. Add the Radiant Core card with that number to your hand. It costs (0)."
+      "text": "Discover among 3 different random numbers from 1–100. Add the Radiant Core card with that number to your hand. It costs ({setCost})."
     }
   },
   "core-083": {
@@ -2133,14 +2817,32 @@
       "base": 2,
       "embiggen": 4
     },
+    "params": [
+      {
+        "key": "armor",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "paidArmor",
+        "base": 4,
+        "radiant": 8,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Your hero has Armor 2.\nPaid (4): Armor 4 instead."
+      "text": "Your hero has Armor {armor}.\nPaid (4): Armor {paidArmor} instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero has Armor 4.\nPaid (4): Armor 8 instead."
+      "text": "Your hero has Armor {armor}.\nPaid (4): Armor {paidArmor} instead."
     }
   },
   "core-085": {
@@ -2313,14 +3015,32 @@
     "rarity": "Token",
     "token": true,
     "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 1,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "copies",
+        "base": 2,
+        "radiant": 3,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: Take 1 damage. At the end of this turn, shuffle 2 copies of this into your deck."
+      "text": "Cast on draw: Take {damage} damage. At the end of this turn, shuffle {copies|copy|copies} of this into your deck."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cast on draw: Take 2 damage. At the end of this turn, shuffle 3 copies of this into your deck."
+      "text": "Cast on draw: Take {damage} damage. At the end of this turn, shuffle {copies|copy|copies} of this into your deck."
     }
   },
   "core-091": {
@@ -2336,6 +3056,16 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
+    "params": [
+      {
+        "key": "mana",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 34,
     "base": {
       "attack": 1,
@@ -2345,7 +3075,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nWhenever this takes damage, it gets a Plague Counter.\nStart of turn: +1 mana per Plague Counter."
+      "text": "Rush\nWhenever this takes damage, it gets a Plague Counter.\nStart of turn: +{mana} mana per Plague Counter."
     },
     "radiant": {
       "attack": 2,
@@ -2355,7 +3085,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nWhenever this takes damage, it gets a Plague Counter.\nStart of turn: +2 mana per Plague Counter."
+      "text": "Rush\nWhenever this takes damage, it gets a Plague Counter.\nStart of turn: +{mana} mana per Plague Counter."
     }
   },
   "core-092": {
@@ -2427,6 +3157,16 @@
     "rarity": "Token",
     "token": true,
     "cost": 0,
+    "params": [
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 14,
     "base": {
       "keywords": [
@@ -2434,7 +3174,7 @@
           "kind": "Lifesteal"
         }
       ],
-      "text": "Lifesteal\nDeal 2 damage."
+      "text": "Lifesteal\nDeal {damage} damage."
     },
     "radiant": {
       "keywords": [
@@ -2442,7 +3182,7 @@
           "kind": "Lifesteal"
         }
       ],
-      "text": "Lifesteal\nDeal 4 damage."
+      "text": "Lifesteal\nDeal {damage} damage."
     }
   },
   "core-094": {
@@ -2455,14 +3195,24 @@
     "rarity": "Epic",
     "token": false,
     "cost": 4,
+    "params": [
+      {
+        "key": "mana",
+        "base": 2,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 17,
     "base": {
       "keywords": [],
-      "text": "Draw every (2) Cost card from your deck. Exile every odd Cost card in your deck, hand and graveyard, except X Cost cards. Gain 2 mana."
+      "text": "Draw every (2) Cost card from your deck. Exile every odd Cost card in your deck, hand and graveyard, except X Cost cards. Gain {mana} mana."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw every (2) Cost card from your deck. Exile every odd Cost card in your deck, hand and graveyard, except X Cost cards. Gain 6 mana."
+      "text": "Draw every (2) Cost card from your deck. Exile every odd Cost card in your deck, hand and graveyard, except X Cost cards. Gain {mana} mana."
     }
   },
   "core-095": {
@@ -2610,6 +3360,70 @@
         "better": "up",
         "step": 2,
         "min": 1
+      },
+      {
+        "key": "tapDraw",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "tapDamage",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "ping",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "stitchCost",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "armor",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "insect",
+        "base": 8,
+        "radiant": 8,
+        "better": "up",
+        "step": 2,
+        "min": 1
+      },
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "fruitCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
       }
     ],
     "loc": 11,
@@ -2619,7 +3433,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nStart of game: Gain one of 13 random powers. Each is an Activate that spends its (X).\n(3) Expedition Map: Recruit a permanent.\n(1) Life Tap: Draw 1. Take 2 damage.\n(1) Steady Shot: Deal {shot} damage to the enemy hero.\n(2) Ranching: Summon a Rush Token.\n(1) Cat Cafe: Summon a Felinor Token.\n(1) Ping: Pierce. Deal 1 damage.\n(2) Witness Value: Discover a Unit.\n(2) Stitching: Discover two (2) Cost or less Units. Fuse them.\n(1) Armor Up: Your hero gains 2 Armor until your next turn.\n(2) Die Insect: Deal 8 damage to a random enemy.\n(2) KY Brainstorm: Add a random KY card to your hand. Reduce the cost of all Spells in your hand by (1).\n(2) Pluck: Add a random Fruit to your hand. It costs (0).\n(3) Terminus Tricks: Discover a Trap to summon."
+      "text": "Indestructible\nStart of game: Gain one of 13 random powers. Each is an Activate that spends its (X).\n(3) Expedition Map: Recruit a permanent.\n(1) Life Tap: Draw {tapDraw}. Take {tapDamage} damage.\n(1) Steady Shot: Deal {shot} damage to the enemy hero.\n(2) Ranching: Summon a Rush Token.\n(1) Cat Cafe: Summon a Felinor Token.\n(1) Ping: Pierce. Deal {ping} damage.\n(2) Witness Value: Discover a Unit.\n(2) Stitching: Discover two ({stitchCost}) Cost or less Units. Fuse them.\n(1) Armor Up: Your hero gains {armor} Armor until your next turn.\n(2) Die Insect: Deal {insect} damage to a random enemy.\n(2) KY Brainstorm: Add a random KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(2) Pluck: Add a random Fruit to your hand. It costs ({fruitCost}).\n(3) Terminus Tricks: Discover a Trap to summon."
     },
     "radiant": {
       "keywords": [
@@ -2627,7 +3441,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nStart of game: Gain one of 13 random powers. Each is an Activate that spends its (X).\n(3) Expedition Map: Recruit a permanent. Make it Radiant.\n(1) Life Tap: Draw 1 from each player's deck.\n(1) Steady Shot: Deal {shot} damage to the enemy hero. Upgrade this permanently by +2 damage.\n(2) Ranching: Summon a Radiant Rush Token.\n(1) Cat Cafe: Summon a random Felinor.\n(1) Ping: Pierce. Deal 1 damage. If this kills a Unit, summon a Ghoul Token with its stats.\n(2) Witness Value: Discover a Radiant Unit.\n(2) Stitching: Discover two Radiant (2) Cost or less Units. Fuse them.\n(1) Tank Up: Your hero gains 4 Armor, then this power refreshes.\n(2) Die Insect: Lucky 1. Deal 8 damage to a random enemy.\n(2) KY Brainstorm: Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by (1).\n(2) Pluck: Add a random Radiant Fruit to your hand. It costs (0).\n(3) Terminus Tricks: Discover a Radiant Trap to summon."
+      "text": "Indestructible\nStart of game: Gain one of 13 random powers. Each is an Activate that spends its (X).\n(3) Expedition Map: Recruit a permanent. Make it Radiant.\n(1) Life Tap: Draw {tapDraw} from each player's deck.\n(1) Steady Shot: Deal {shot} damage to the enemy hero. Upgrade this permanently by +2 damage.\n(2) Ranching: Summon a Radiant Rush Token.\n(1) Cat Cafe: Summon a random Felinor.\n(1) Ping: Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats.\n(2) Witness Value: Discover a Radiant Unit.\n(2) Stitching: Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them.\n(1) Tank Up: Your hero gains {armor} Armor, then this power refreshes.\n(2) Die Insect: Lucky 1. Deal {insect} damage to a random enemy.\n(2) KY Brainstorm: Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(2) Pluck: Add a random Radiant Fruit to your hand. It costs ({fruitCost}).\n(3) Terminus Tricks: Discover a Radiant Trap to summon."
     }
   },
   "core-099": {
@@ -2660,12 +3474,22 @@
     "rarity": "Mythic",
     "token": false,
     "cost": 100,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 18,
     "base": {
       "attack": 10,
       "health": 10,
       "keywords": [],
-      "text": "Cry: Exile all other permanents.\nCosts (1) less for each card drawn, played, destroyed or exiled this game."
+      "text": "Cry: Exile all other permanents.\nCosts ({discount}) less for each card drawn, played, destroyed or exiled this game."
     },
     "radiant": {
       "attack": 20,
@@ -2675,7 +3499,7 @@
           "kind": "Charge"
         }
       ],
-      "text": "Charge\nCry: Exile all other permanents.\nCosts (1) less for each card drawn, played, destroyed or exiled this game."
+      "text": "Charge\nCry: Exile all other permanents.\nCosts ({discount}) less for each card drawn, played, destroyed or exiled this game."
     }
   },
   "core-t-rush": {
@@ -2727,18 +3551,28 @@
     "rarity": "Token",
     "token": true,
     "cost": 1,
+    "params": [
+      {
+        "key": "worth",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 3,
     "base": {
       "attack": 1,
       "health": 1,
       "keywords": [],
-      "text": "Worth 2 Tributes."
+      "text": "Worth {worth|Tribute|Tributes}."
     },
     "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Worth 3 Tributes."
+      "text": "Worth {worth|Tribute|Tributes}."
     }
   },
   "core-t-felinor": {
@@ -2815,14 +3649,24 @@
     "rarity": "Token",
     "token": true,
     "cost": 0,
+    "params": [
+      {
+        "key": "mana",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "Gain 1 mana this turn."
+      "text": "Gain {mana} mana this turn."
     },
     "radiant": {
       "keywords": [],
-      "text": "Gain 2 mana this turn."
+      "text": "Gain {mana} mana this turn."
     }
   },
   "core-t-ghoul": {
@@ -2918,6 +3762,14 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
       }
     ],
     "loc": 8,
@@ -2931,7 +3783,7 @@
       "attack": 4,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Your next Trap or Field Spell costs (0)."
+      "text": "Cry: Your next Trap or Field Spell costs ({setCost})."
     }
   },
   "classic-003": {
@@ -5616,16 +6468,24 @@
         "better": "up",
         "step": 1,
         "min": 0
+      },
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
       }
     ],
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "Draw {draw}. They cost (1) less. Then exile each of them that costs more than ({threshold})."
+      "text": "Draw {draw}. They cost ({discount}) less. Then exile each of them that costs more than ({threshold})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw {draw}. They cost (1) less. Then exile each of them that costs more than ({threshold})."
+      "text": "Draw {draw}. They cost ({discount}) less. Then exile each of them that costs more than ({threshold})."
     }
   },
   "classic-080": {
@@ -6489,14 +7349,24 @@
     "printedRarity": "Legendary",
     "token": true,
     "cost": 1,
+    "params": [
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
+      }
+    ],
     "loc": 7,
     "base": {
       "keywords": [],
-      "text": "Steal a random Unit from your opponent's deck and put it in your hand. It costs (0)."
+      "text": "Steal a random Unit from your opponent's deck and put it in your hand. It costs ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal a random Unit from your opponent's deck and put it in your hand. It costs (0) and becomes Radiant."
+      "text": "Steal a random Unit from your opponent's deck and put it in your hand. It costs ({setCost}) and becomes Radiant."
     }
   },
   "classicplus-012-4": {
@@ -6759,6 +7629,15 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "tokens",
+        "base": 1,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 11,
@@ -6768,7 +7647,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon 3 Rush Tokens. Each gains {keywords|random keyword|random keywords}."
+      "text": "Summon {tokens|Rush Token|Rush Tokens}. Each gains {keywords|random keyword|random keywords}."
     }
   },
   "classicplus-016": {
@@ -6792,6 +7671,15 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "tokens",
+        "base": 1,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 11,
@@ -6801,7 +7689,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon 3 Rush Tokens. Each gains {keywords|random keyword|random keywords}."
+      "text": "Summon {tokens|Rush Token|Rush Tokens}. Each gains {keywords|random keyword|random keywords}."
     }
   },
   "classicplus-017": {
@@ -6825,6 +7713,15 @@
         "better": "up",
         "step": 2,
         "min": 1
+      },
+      {
+        "key": "tokens",
+        "base": 1,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 11,
@@ -6834,7 +7731,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon 3 Rush Tokens. Each gains {keywords|random keyword|random keywords}."
+      "text": "Summon {tokens|Rush Token|Rush Tokens}. Each gains {keywords|random keyword|random keywords}."
     }
   },
   "classicplus-018": {
@@ -7000,6 +7897,14 @@
         "better": "down",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "oppMana",
+        "base": 1,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1
       }
     ],
     "loc": 18,
@@ -7007,7 +7912,7 @@
       "attack": 5,
       "health": 5,
       "keywords": [],
-      "text": "Cry: Flip a coin. Heads (Fed): This gets +{heads}/+{heads}. Tails (Int): This gets −{tails}/−{tails} and your opponent gains 1 mana next turn."
+      "text": "Cry: Flip a coin. Heads (Fed): This gets +{heads}/+{heads}. Tails (Int): This gets −{tails}/−{tails} and your opponent gains {oppMana} mana next turn."
     },
     "radiant": {
       "attack": 10,
@@ -7018,7 +7923,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\nCry: Flip a coin. Heads (Fed): This gets +{heads}/+{heads}. Tails (Int): This gets −{tails}/−{tails} and your opponent gains 1 mana next turn."
+      "text": "Lucky 1\nCry: Flip a coin. Heads (Fed): This gets +{heads}/+{heads}. Tails (Int): This gets −{tails}/−{tails} and your opponent gains {oppMana} mana next turn."
     }
   },
   "classicplus-019-4": {
@@ -7241,6 +8146,14 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "setCost",
+        "base": 1,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 0
       }
     ],
     "loc": 24,
@@ -7250,7 +8163,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {cards|random card|random cards} to your hand. Each may be a token. Give each Brittle {brittle}. Each costs (1)."
+      "text": "Add {cards|random card|random cards} to your hand. Each may be a token. Give each Brittle {brittle}. Each costs ({setCost})."
     }
   },
   "classicplus-024": {
@@ -7431,16 +8344,24 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
       }
     ],
     "loc": 9,
     "base": {
       "keywords": [],
-      "text": "Discover a card from the board your last game ended with. It costs (0)."
+      "text": "Discover a card from the board your last game ended with. It costs ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {cards|random card|random cards} from the board your last game ended with to your hand. Each costs (0)."
+      "text": "Add {cards|random card|random cards} from the board your last game ended with to your hand. Each costs ({setCost})."
     }
   },
   "classicplus-030": {
@@ -7584,6 +8505,14 @@
         "better": "up",
         "step": 8,
         "min": 1
+      },
+      {
+        "key": "damage",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
       }
     ],
     "loc": 9,
@@ -7593,7 +8522,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal 1 damage to all enemy Units. Repeat until a Unit dies, up to {rounds|time|times}."
+      "text": "Deal {damage} damage to all enemy Units. Repeat until a Unit dies, up to {rounds|time|times}."
     }
   },
   "classicplus-033": {
@@ -7984,16 +8913,24 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
       }
     ],
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a random Book, a random KY card, a random Legendary card and a random (4) Cost card to your hand. They cost (0)."
+      "text": "Start of turn: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a random Book, a random KY card, a random Legendary card and a random (4) Cost card to your hand. They cost ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a random Radiant Book, a random Radiant KY card, a random Radiant Legendary card and a random Radiant (4) Cost card to your hand. They cost (0)."
+      "text": "Start of turn: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a random Radiant Book, a random Radiant KY card, a random Radiant Legendary card and a random Radiant (4) Cost card to your hand. They cost ({setCost})."
     }
   },
   "classicplus-043": {
@@ -8204,18 +9141,28 @@
     "rarity": "Legendary",
     "token": false,
     "cost": 1,
+    "params": [
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
+      }
+    ],
     "loc": 8,
     "base": {
       "attack": 0,
       "health": 3,
       "keywords": [],
-      "text": "Can't be in Defense Position.\nDeath: Add a random Jlockheed card to your hand. It costs (0)."
+      "text": "Can't be in Defense Position.\nDeath: Add a random Jlockheed card to your hand. It costs ({setCost})."
     },
     "radiant": {
       "attack": 0,
       "health": 6,
       "keywords": [],
-      "text": "Death: Add a random Radiant Jlockheed card to your hand. It costs (0)."
+      "text": "Death: Add a random Radiant Jlockheed card to your hand. It costs ({setCost})."
     }
   },
   "classicplus-049": {
@@ -8431,16 +9378,24 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
       }
     ],
     "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Add {books|random Book|random Books} to your hand. Each costs (0) and is Temporary."
+      "text": "Add {books|random Book|random Books} to your hand. Each costs ({setCost}) and is Temporary."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {books|random Radiant Book|random Radiant Books} to your hand. Each costs (0) and is Temporary."
+      "text": "Add {books|random Radiant Book|random Radiant Books} to your hand. Each costs ({setCost}) and is Temporary."
     }
   },
   "classicplus-055": {
@@ -8670,16 +9625,24 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
       }
     ],
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "Death: Add {cards|Stockpile|Stockpiles} to your hand. Each costs (0)."
+      "text": "Death: Add {cards|Stockpile|Stockpiles} to your hand. Each costs ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Death: Add {cards|Radiant Stockpile|Radiant Stockpiles} to your hand. Each costs (0)."
+      "text": "Death: Add {cards|Radiant Stockpile|Radiant Stockpiles} to your hand. Each costs ({setCost})."
     }
   },
   "classicplus-062": {
@@ -8717,14 +9680,24 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
+    "params": [
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
+      }
+    ],
     "loc": 16,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Add a random Fruit to your hand. It costs (0)."
+      "text": "Start of turn: Add a random Fruit to your hand. It costs ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Add a random Radiant Fruit to your hand. It costs (0)."
+      "text": "Start of turn: Add a random Radiant Fruit to your hand. It costs ({setCost})."
     }
   },
   "classicplus-064": {
@@ -8829,14 +9802,24 @@
     "printedRarity": "Common",
     "token": true,
     "cost": 1,
+    "params": [
+      {
+        "key": "loss",
+        "base": 5,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 5,
     "base": {
       "keywords": [],
-      "text": "Your hero loses 5 health."
+      "text": "Your hero loses {loss} health."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero loses 1 health."
+      "text": "Your hero loses {loss} health."
     }
   },
   "classicplus-065-2": {
@@ -8869,16 +9852,24 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
       }
     ],
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Deal {amount} damage to an enemy or heal an ally {amount}.\nDraw {draw}. Reduce its cost by (1)."
+      "text": "Deal {amount} damage to an enemy or heal an ally {amount}.\nDraw {draw}. Reduce its cost by ({discount})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal {amount} damage to an enemy or heal an ally {amount}.\nDraw {draw}. Reduce their cost by (1)."
+      "text": "Deal {amount} damage to an enemy or heal an ally {amount}.\nDraw {draw}. Reduce their cost by ({discount})."
     }
   },
   "classicplus-065-3": {
@@ -8911,16 +9902,24 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
       }
     ],
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs (0)."
+      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs (0)."
+      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs ({setCost})."
     }
   },
   "classicplus-065-4": {
@@ -8961,14 +9960,24 @@
     "printedRarity": "Mythic",
     "token": true,
     "cost": 0,
+    "params": [
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
+      }
+    ],
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Replace your hand with random Mythic cards. They cost (0)."
+      "text": "Replace your hand with random Mythic cards. They cost ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Replace your hand with random Radiant Mythic cards. They cost (0)."
+      "text": "Replace your hand with random Radiant Mythic cards. They cost ({setCost})."
     }
   },
   "classicplus-066": {
@@ -9060,6 +10069,14 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
       }
     ],
     "loc": 11,
@@ -9069,7 +10086,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Cry: Add {fruits|random Fruit|random Fruits} to your hand. Each costs (0).\nAura: Fruits you play are Radiant."
+      "text": "Cry: Add {fruits|random Fruit|random Fruits} to your hand. Each costs ({setCost}).\nAura: Fruits you play are Radiant."
     }
   },
   "classicplus-069": {
@@ -9381,6 +10398,14 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
       }
     ],
     "loc": 17,
@@ -9390,7 +10415,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Cast on draw: Add {cards|random Radiant Classic or Classic+ card|random Radiant Classic or Classic+ cards} to your hand. Each costs (0)."
+      "text": "Cast on draw: Add {cards|random Radiant Classic or Classic+ card|random Radiant Classic or Classic+ cards} to your hand. Each costs ({setCost})."
     }
   },
   "classicplus-076": {

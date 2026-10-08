@@ -120,11 +120,13 @@ describe("R280 what a formula comes to now", () => {
   it("R280 R102 a fused card's values follow their own lines: the nth entry with a label after its nth occurrence", () => {
     // #85 fusing a Fed Fauci onto a Fed Fauci: one text per ingredient, and one value each.
     const fused = fusedDef([def("core-091"), def("core-091")]);
+    const printed = Object.fromEntries((def("core-091").params ?? []).map((param) => [param.key, param.base]));
     const face = faceModel({
       defId: fused.id,
       def: fused,
       radiant: false,
       inPlay: {
+        params: printed,
         preview: [
           { label: "+1 mana per Plague Counter", value: 2 },
           { label: "+1 mana per Plague Counter", value: 3 },

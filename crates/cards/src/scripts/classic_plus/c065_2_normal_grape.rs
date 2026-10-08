@@ -27,15 +27,15 @@ fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
 }
 
-/// §8.7: "It costs (1) less" — a discount that stacks with every other modifier (R65).
-const DISCOUNT: i32 = -1;
-
+/// §8.7: "Reduce its cost by (1)" — a discount that stacks with every other modifier (R65), the
+/// declared number `discount` (R386).
 pub fn script() -> CardScripts {
     let base = Script {
         targets: targets(),
         cry: Some(hook(|ctx| {
             let mut effects = vec![damage_enemy_or_heal_friend(json_as(json!({ "amount": param(ctx, "amount") })))];
-            effects.extend((0..param(ctx, "draw")).map(|_| draw_priced(json_as(json!({ "costMod": DISCOUNT })))));
+            let discount = -param(ctx, "discount");
+            effects.extend((0..param(ctx, "draw")).map(|_| draw_priced(json_as(json!({ "costMod": discount })))));
             effects
         })),
         ..Script::default()
@@ -110,6 +110,17 @@ mod tests {
             json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }])
         );
         assert!(Arc::ptr_eq(base.cry.as_ref().unwrap(), radiant.cry.as_ref().unwrap()));
+    }
+
+    #[test]
+    fn r386_an_upgrade_makes_the_drawn_card_cost_2_less_and_a_degrade_finds_the_discount_at_its_floor_of_1() {
+        crate::register_all();
+        let mut s = scenario(json!({ "p1": { "hand": [GRAPE, FILLER], "library": [DECK_B] }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
+        assert!(!crate::can_degrade_number(&s, GRAPE, "discount"));
+        assert_eq!(crate::upgrade_number(&mut s, GRAPE, "discount"), 2);
+        let targets = unit_at(&s, P2, 1);
+        s.play(GRAPE, json!({ "targets": targets }));
+        assert_eq!(s.card(DECK_B).cost_mod, -2);
     }
 
     mod base {

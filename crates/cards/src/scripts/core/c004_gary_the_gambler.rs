@@ -23,15 +23,17 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-004";
 
+/// The coins and the gain per side are the declared numbers `coins`, `perHeads` and `perTails`
+/// (R386): 5, 1 and 1, and 7, 2 and 2 on the Radiant face, read off the face that is up.
 pub fn script() -> CardScripts {
     let base = Script {
-        cry: Some(hook(|_ctx| {
+        cry: Some(hook(|ctx| {
             vec![
                 flip_coins(json_as(json!({
                     "target": { "of": "self" },
-                    "coins": 5,
-                    "perHeads": { "attack": 1 },
-                    "perTails": { "health": 1 }
+                    "coins": param(&*ctx, "coins"),
+                    "perHeads": { "attack": param(&*ctx, "perHeads") },
+                    "perTails": { "health": param(&*ctx, "perTails") }
                 }))),
                 flip_coin_keyword(json_as(json!({
                     "target": { "of": "self" },
@@ -42,24 +44,7 @@ pub fn script() -> CardScripts {
         })),
         ..Script::default()
     };
-    let radiant = Script {
-        cry: Some(hook(|_ctx| {
-            vec![
-                flip_coins(json_as(json!({
-                    "target": { "of": "self" },
-                    "coins": 7,
-                    "perHeads": { "attack": 2 },
-                    "perTails": { "health": 2 }
-                }))),
-                flip_coin_keyword(json_as(json!({
-                    "target": { "of": "self" },
-                    "headsKeyword": { "kind": "Divine Shield" },
-                    "tailsKeyword": { "kind": "Rush" }
-                }))),
-            ]
-        })),
-        ..Script::default()
-    };
+    let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
@@ -222,6 +207,44 @@ mod tests {
             let mut kinds: Vec<String> = seen.into_iter().collect();
             kinds.sort();
             assert_eq!(kinds, vec!["Divine Shield".to_string(), "Rush".to_string()]);
+        }
+
+        #[test]
+        fn r386_an_upgrade_flips_6_coins_and_a_degrade_4() {
+            for (upgrade, coins) in [(true, 6), (false, 4)] {
+                crate::register_all();
+                let mut s = scenario(json!({ "seed": "core-004-tuned", "p1": { "hand": ["core-004"] } }));
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, "core-004", "coins")
+                } else {
+                    crate::degrade_number(&mut s, "core-004", "coins")
+                };
+                assert_eq!(moved, coins);
+                s.play("core-004", json!({}));
+                let (heads, tails) = gains(&s, "core-004");
+                assert_eq!(heads + tails, coins);
+            }
+        }
+
+        #[test]
+        fn r386_an_upgrade_makes_heads_worth_2_attack_and_tails_2_health_and_a_radiant_degrade_1() {
+            crate::register_all();
+            let mut s = scenario(json!({ "seed": "core-004-tuned", "p1": { "hand": ["core-004"] } }));
+            assert_eq!(crate::upgrade_number(&mut s, "core-004", "perHeads"), 2);
+            assert_eq!(crate::upgrade_number(&mut s, "core-004", "perTails"), 2);
+            s.play("core-004", json!({}));
+            let (attack, health) = gains(&s, "core-004");
+            assert_eq!((attack % 2, health % 2, attack / 2 + health / 2), (0, 0, 5));
+
+            let mut radiant = scenario(json!({
+                "seed": "core-004-tuned",
+                "p1": { "hand": [{ "def": "core-004", "radiant": true }] }
+            }));
+            assert_eq!(crate::degrade_number(&mut radiant, "core-004", "perHeads"), 1);
+            assert_eq!(crate::degrade_number(&mut radiant, "core-004", "perTails"), 1);
+            radiant.play("core-004", json!({}));
+            let (attack, health) = gains(&radiant, "core-004");
+            assert_eq!(attack + health, 7);
         }
     }
 }

@@ -29,18 +29,17 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-010";
 
-/// "Combo 3" (§6.2): three or more cards played earlier this turn.
-const COMBO: i32 = 3;
-const BASE_DRAW: i32 = 3;
-const RADIANT_DRAW: i32 = 6;
-
-/// The only difference between the two faces is how many cards the met Combo draws.
-fn rapid_replenish(count: i32) -> Script {
+/// "Combo 3" (§6.2): three or more cards played earlier this turn — the declared number `combo`, a
+/// threshold, less being better (R386) — and the draw, the declared number `draw`: 3, 6 on the
+/// Radiant face. The only difference between the two faces is how many cards the met Combo draws.
+fn rapid_replenish() -> Script {
     Script {
-        cry: Some(hook(move |ctx| {
+        cry: Some(hook(|ctx| {
+            let combo = param(&*ctx, "combo");
+            let count = param(&*ctx, "draw");
             // The plays before this one, at play time: not this spell, and not a card its step 5 cast.
             let earlier = played_earlier(ctx.state, ctx.controller, ctx.live_self());
-            if earlier >= COMBO {
+            if earlier >= combo {
                 vec![draw(json_as(json!({ "count": count })))]
             } else {
                 vec![]
@@ -49,15 +48,16 @@ fn rapid_replenish(count: i32) -> Script {
         // R195: hand only. The condition is about a play; a Spell never sits on the field. In hand,
         // `played_earlier` is every play this turn.
         condition_met: Some(condition_hook(|ctx: ConditionContext<'_>| {
-            ctx.zone == ConditionZone::Hand && played_earlier(ctx.state, ctx.controller, ctx.self_) >= COMBO
+            ctx.zone == ConditionZone::Hand
+                && played_earlier(ctx.state, ctx.controller, ctx.self_) >= param(&ctx, "combo")
         })),
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
-    let base = rapid_replenish(BASE_DRAW);
-    let radiant = rapid_replenish(RADIANT_DRAW);
+    let base = rapid_replenish();
+    let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
@@ -196,6 +196,56 @@ mod tests {
             assert_eq!(s.pile(PlayerId::P1, "library").len(), library);
             assert_eq!(s.hand(PlayerId::P1).len(), 1);
             s.expect_in_zone("core-010", "graveyard");
+        }
+
+        #[test]
+        fn r386_an_upgrade_meets_combo_2_and_a_degrade_needs_combo_4() {
+            for (upgrade, combo, drawn) in [(true, 2, 3), (false, 4, 0)] {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "core-010-tuned",
+                    "p1": { "hand": ["core-011", "core-011", "core-011", "core-010"], "mana": 10, "library": LIBRARY },
+                    "p2": { "field": ["core-020"] }
+                }));
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, "core-010", "combo")
+                } else {
+                    crate::degrade_number(&mut s, "core-010", "combo")
+                };
+                assert_eq!(moved, combo);
+                // Two plays meet an upgraded Combo 2; three do not meet a degraded Combo 4.
+                let plays = if upgrade { 2 } else { 3 };
+                for _ in 0..plays {
+                    s.play("core-011", json!({}));
+                }
+                let library = s.pile(PlayerId::P1, "library").len();
+                s.play("core-010", json!({}));
+                assert_eq!(library - s.pile(PlayerId::P1, "library").len(), drawn);
+            }
+        }
+
+        #[test]
+        fn r386_an_upgrade_draws_4_and_a_degrade_2() {
+            for (upgrade, count) in [(true, 4), (false, 2)] {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "core-010-tuned",
+                    "p1": { "hand": ["core-011", "core-011", "core-011", "core-010"], "mana": 10, "library": LIBRARY },
+                    "p2": { "field": ["core-020"] }
+                }));
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, "core-010", "draw")
+                } else {
+                    crate::degrade_number(&mut s, "core-010", "draw")
+                };
+                assert_eq!(moved, count);
+                for _ in 0..3 {
+                    s.play("core-011", json!({}));
+                }
+                let library = s.pile(PlayerId::P1, "library").len();
+                s.play("core-010", json!({}));
+                assert_eq!(library - s.pile(PlayerId::P1, "library").len(), count as usize);
+            }
         }
     }
 

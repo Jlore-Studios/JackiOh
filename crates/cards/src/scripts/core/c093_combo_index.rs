@@ -530,8 +530,10 @@ mod tests {
             let mut expected = vec![base[0], "Start of turn: Add a Combo-Fodder to your hand."];
             expected.extend_from_slice(&base[1..]);
             assert_eq!(radiant, expected);
-            assert_eq!(crate::card_def(COMBO_FODDER).base.text, "Lifesteal\nDeal 2 damage.");
-            assert_eq!(crate::card_def(COMBO_FODDER).radiant.text, "Lifesteal\nDeal 4 damage.");
+            // As printed: Combo-Fodder's declared `damage` filled in (R386, R482).
+            let fodder = crate::card_def(COMBO_FODDER);
+            assert_eq!(fill_params(&fodder, FaceKind::Base, None), "Lifesteal\nDeal 2 damage.");
+            assert_eq!(fill_params(&fodder, FaceKind::Radiant, None), "Lifesteal\nDeal 4 damage.");
         }
     }
 

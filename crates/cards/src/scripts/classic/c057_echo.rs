@@ -218,7 +218,8 @@ mod tests {
                 assert_eq!(js(&last_spell_played(s.state())), json!({ "defId": CN_VIRUS, "radiant": false }));
                 assert_eq!(
                     own_view(&s, PlayerId::P1).map(|card| card["copies"].clone()),
-                    Some(json!({ "defId": CN_VIRUS, "radiant": false })),
+                    // The copy's view carries CN-Virus's declared numbers, so its text fills (R386).
+                    Some(json!({ "defId": CN_VIRUS, "radiant": false, "params": { "copies": 2, "damage": 1 } })),
                 );
             }
 

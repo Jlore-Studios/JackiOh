@@ -14,9 +14,11 @@ pub const ID: &str = "core-001";
 
 /// Armor +n on the controller's own units that are on the field in Defense Position (§4.1, §10.4).
 /// "Your units" is the controller's side, so an enemy unit in Defense Position gets nothing, and the
-/// aura reads the position off the instance on every read rather than storing a total.
-fn defense_armor_aura(n: i32) -> AuraHook {
-    aura_hook(move |args: HookArgs<'_>| {
+/// aura reads the position off the instance on every read rather than storing a total. n is the
+/// declared number `armor` (R386): 2, 4 on the Radiant face.
+fn defense_armor_aura() -> AuraHook {
+    aura_hook(|args: HookArgs<'_>| {
+        let n = param(&args, "armor");
         let controller = args.self_.controller;
         vec![AuraEntry {
             applies: Box::new(move |unit: &CardInstance| {
@@ -34,13 +36,11 @@ fn defense_armor_aura(n: i32) -> AuraHook {
 
 pub fn script() -> CardScripts {
     let base = Script {
-        aura: Some(defense_armor_aura(2)),
+        aura: Some(defense_armor_aura()),
         ..Script::default()
     };
-    let radiant = Script {
-        aura: Some(defense_armor_aura(4)),
-        ..Script::default()
-    };
+    // The same aura: the Radiant face's 4 is its declared `armor`, read off the face that is up.
+    let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
@@ -124,6 +124,26 @@ mod tests {
             // 9 attack − (7 printed Armor + 1 Defense Position) = 1. If the aura reached across the
             // board it would be 9 − 10 = 0 and the enemy would be untouched.
             .expect_stats("core-025", json!({ "health": 6, "maxHealth": 7 }));
+        }
+
+        #[test]
+        fn r386_an_upgrade_moves_the_armor_to_3_and_a_degrade_to_1_and_the_aura_gives_that() {
+            for (upgrade, armor, health) in [(true, 3, 6), (false, 1, 4)] {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "active": "p2",
+                    "p1": { "field": ["core-001", { "def": "core-019", "position": "DEF" }] },
+                    "p2": { "field": ["core-025"] }
+                }));
+                let moved = if upgrade {
+                    crate::upgrade_number(&mut s, "core-001", "armor")
+                } else {
+                    crate::degrade_number(&mut s, "core-001", "armor")
+                };
+                assert_eq!(moved, armor);
+                // 7 attack − (1 Defense Position + `armor`).
+                s.attack("core-025", "core-019").expect_stats("core-019", json!({ "health": health }));
+            }
         }
     }
 }
