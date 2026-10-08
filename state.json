@@ -4277,6 +4277,16 @@
       "stall_some": 0.0,
       "swapped": 0,
       "total": 8154005504
+    },
+    {
+      "at": "2026-10-08T14:49:21Z",
+      "high_swap": 0,
+      "low_available": 6573015040,
+      "runner": "night-vm-muse-2",
+      "stall_full": 0.0,
+      "stall_some": 0.0,
+      "swapped": 0,
+      "total": 8154005504
     }
   ],
   "providers": {
