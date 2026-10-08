@@ -290,6 +290,12 @@ To run it on a thread again: `gh workflow run triage.yml -f number=<n>` (or **Ru
 the triage workflow's Actions page). Called that way it classifies an issue with no method label
 too (its labels, type, title and links), without queueing or assigning it.
 
+An issue a trusted person opens through a form (`.github/ISSUE_TEMPLATE/`) needs no label by hand:
+its Difficulty, Priority and Who does it answers become `difficulty:*`, `priority:*` and the method
+label as it opens (the `form` job, `triage.form_labels`), the method last, and the job then
+dispatches triage on it, since labels the workflow's own token puts on start no workflow. The forms
+set no issue type and never `human`, so triage types the issue and a method always reaches it.
+
 - **Afterwards:** once everything else is done, triage takes off the labels that asked for it:
   the method label, `bot:approved`, the `bot:suggestion` of a suggestion a person decided on
   (so an approved one is built as any queued issue), and for `method:manual` the bot's queue

@@ -2,7 +2,6 @@ name: Architecture or CI
 description: The repository, tooling, CI, deploys and agent setup.
 title: "Architecture: "
 labels: ["architecture"]
-type: Task
 body:
   - type: markdown
     attributes:
@@ -10,7 +9,7 @@ body:
         Titles and labels follow [docs/issues-and-patches.md](https://github.com/Jlore-Studios/JackiOh/blob/main/docs/issues-and-patches.md).
 
         - **Title:** `Architecture: <…>`, or `CI: <…>` for CI's jobs and checks. Keep the alerts' own titles (`ci-duration.yml` finds its issue by its exact title).
-        - **Who does it:** a change to `.github/`, `bot/`, `.harness/` or `.squishy/` is people's work (`human`): the night bot may not change those paths. Otherwise label it `method:manual` or `method:use-bot` when it is ready.
+        - **Who does it:** a change to `.github/`, `bot/`, `.harness/` or `.squishy/` is people's work: the night bot may not change those paths, so choose People for it. Choose below, or later label it `method:manual` (people) or `method:use-bot` (the night bot). Either way triage classifies it: its type (Task, Bug or Feature), labels, title and assignees. The difficulty and priority you choose here become labels too; with no difficulty, the bot's planner rates it.
   - type: dropdown
     id: kind
     attributes:
@@ -51,7 +50,7 @@ body:
     id: difficulty
     attributes:
       label: Difficulty (a guess)
-      description: Set the matching `difficulty:*` label to make it binding; with none, the bot's planner rates it.
+      description: A choice here becomes its `difficulty:*` label; with none, the bot's planner rates it.
       options:
         - Not sure (the planner rates it)
         - easy
@@ -62,10 +61,20 @@ body:
     id: priority
     attributes:
       label: Priority
-      description: The night bot's pickup order. Set the matching `priority:*` label too.
+      description: The night bot's pickup order; a choice here becomes its `priority:*` label.
       options:
         - No priority
         - high
         - medium
         - low
+      default: 0
+  - type: dropdown
+    id: method
+    attributes:
+      label: Who does it
+      description: "A choice here is a method label: triage then labels, titles, types and assigns the issue, and the night bot queues a `method:use-bot` one. Or decide later and add `method:manual` or `method:use-bot` yourself."
+      options:
+        - Decide later
+        - People (method:manual)
+        - The night bot (method:use-bot)
       default: 0

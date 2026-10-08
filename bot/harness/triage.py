@@ -216,6 +216,29 @@ def starts_triage(label: str) -> bool:
     return name.startswith("method:") or name in {alias.lower() for alias in ALIASES}
 
 
+#: An issue form's answers in the body GitHub writes: `### <field label>`, a blank line, the answer.
+_FORM_ANSWER = re.compile(r"^### (.+?)[ \t]*\n+(.*?)\s*(?=^### |\Z)", re.M | re.S)
+_PRIORITIES = (config_mod.LABEL_PRIORITY_HIGH, config_mod.LABEL_PRIORITY_MEDIUM,
+               config_mod.LABEL_PRIORITY_LOW)
+
+
+def form_labels(body: str) -> list[str]:
+    """The labels an issue form's dropdowns ask for (`.github/ISSUE_TEMPLATE/`), which
+    `triage.yml`'s `form` job puts on when a trusted person opens the issue, as if they had set
+    them by hand: "Difficulty" and "Priority" first, then the method from "Who does it" last,
+    since a method starts triage and triage reads the others. "Not sure", "No priority" and
+    "Decide later" ask for nothing; neither does a body no form wrote."""
+    answers = {m.group(1).strip().lower(): m.group(2).strip().lower()
+               for m in _FORM_ANSWER.finditer((body or "").replace("\r\n", "\n"))}
+    labels = []
+    difficulty = next((v for k, v in answers.items() if k.startswith("difficulty")), "")
+    labels += [name for name, level in config_mod.DIFFICULTY_LABELS.items()
+               if difficulty.startswith(level)][:1]
+    labels += [name for name in _PRIORITIES if answers.get("priority") == name.split(":")[1]]
+    labels += [m for m in METHODS if m in answers.get("who does it", "")][:1]
+    return labels
+
+
 def method_of(thread: Mapping[str, Any]) -> str:
     """The thread's one method label, or "" with none or both."""
     found = methods_on(str(label.get("name")) for label in thread.get("labels") or [])

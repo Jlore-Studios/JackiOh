@@ -874,6 +874,16 @@ pub const TRAINING_UNBAN: TrainingGate = TrainingGate {
     vs_parent: 75,
 };
 
+// ---------------------------------------------------------------------------------------------
+// Replays (R768, issue #508).
+// ---------------------------------------------------------------------------------------------
+
+/// R768: a replay keeps the state every this many accepted actions, so reaching any step costs at
+/// most this many `reduce` calls, and so does a page (`replay::replay_page`).
+pub const REPLAY_CHECKPOINT_EVERY: usize = 16;
+/// R768: the most steps one page of a replay gives.
+pub const REPLAY_PAGE_STEPS: usize = 16;
+
 #[cfg(test)]
 mod tests {
     use super::*;

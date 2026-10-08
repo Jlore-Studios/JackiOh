@@ -43,6 +43,8 @@ import initWasm, {
   last_board_for,
   legal_actions,
   reduce as reduce_action,
+  replay_open,
+  replay_page,
   seat_played_by,
   seat_to_act,
   validator as validator_call,
@@ -52,6 +54,10 @@ import initWasm, {
 import type { Action, ActionBody, CardDefs, GameEvent, PlayerId, PlayerView } from "../wire/index.ts";
 import type { CardInstance } from "../wire/generated/CardInstance.ts";
 import type { GameState } from "../wire/generated/GameState.ts";
+import type { ReplayCheckpoints } from "../wire/generated/ReplayCheckpoints.ts";
+import type { ReplayOpen } from "../wire/generated/ReplayOpen.ts";
+import type { ReplayPage } from "../wire/generated/ReplayPage.ts";
+import type { ReplayRecord } from "../wire/generated/ReplayRecord.ts";
 import type { Handicap } from "../wire/engineConfig.ts";
 import type { Decision, SearchBudget } from "../wire/ai.ts";
 
@@ -232,6 +238,16 @@ export function hashState(state: GameState): string {
 /** Fold a recorded log from scratch (SPEC §9.2, §9.3). Throws on a setup `createGame` refuses. */
 export function fold(input: FoldInput): FoldResult {
   return call("fold", () => parsed<FoldResult>(fold_log(json(input))));
+}
+
+/** R768: a finished game's replay, its log checked against its catalog version and final hash. */
+export function replayOpen(input: FoldInput, record: ReplayRecord): ReplayOpen {
+  return call("replayOpen", () => parsed<ReplayOpen>(replay_open(json(input), json(record))));
+}
+
+/** R768: steps [from, from + count) as `seat` saw them; continue at `from + steps.length`. */
+export function replayPage(checkpoints: ReplayCheckpoints, seat: PlayerId, from: number, count: number): ReplayPage {
+  return call("replayPage", () => parsed<ReplayPage>(replay_page(json(checkpoints), seat, from, count)));
 }
 
 /** R417, R508: the board `seat` takes away. */

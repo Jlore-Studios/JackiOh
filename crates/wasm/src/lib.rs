@@ -34,7 +34,7 @@ use std::str::FromStr;
 
 use jackioh_engine::{
     self as engine, Action, CardDefs, CreateGameArgs, DECK_SIZE, FoldArgs, GameState, PLAYER_IDS,
-    PerPlayerOpt, PlayerId, ReduceResult, Rng,
+    PerPlayerOpt, PlayerId, ReduceResult, ReplayCheckpoints, ReplayRecord, Rng,
 };
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -281,6 +281,32 @@ pub fn fold(args_json: &str) -> Result<String, JsError> {
     check_setup(&setup)?;
     let args: FoldArgs = parse("fold", args_json)?;
     to_json(&engine::fold(&args))
+}
+
+/// R768: `ReplayOpen`. The setup is checked as `fold` checks it, but only on this build's catalog
+/// version: a game of another is refused as `earlier_patch` before its decks are read.
+#[wasm_bindgen]
+pub fn replay_open(args_json: &str, record_json: &str) -> Result<String, JsError> {
+    let record: ReplayRecord = parse("replayOpen: the record", record_json)?;
+    let build = jackioh_cards::catalog_version();
+    if record.catalog_version == build {
+        let setup: CreateGameArgs = parse("replayOpen", args_json)?;
+        check_setup(&setup)?;
+    }
+    let args: FoldArgs = parse("replayOpen", args_json)?;
+    to_json(&engine::replay_open(&args, &record, build))
+}
+
+/// R768: `ReplayPage`, `{ from, steps: [{ step, turn, view }], reduces }`.
+#[wasm_bindgen]
+pub fn replay_page(checkpoints_json: &str, seat: &str, from: u32, count: u32) -> Result<String, JsError> {
+    let checkpoints: ReplayCheckpoints = parse("replayPage: the checkpoints", checkpoints_json)?;
+    to_json(&engine::replay_page(
+        &checkpoints,
+        player(seat)?,
+        from as usize,
+        count as usize,
+    ))
 }
 
 /// `LastBoardEntry[]`: the board `seat` takes away (R417, R508).
