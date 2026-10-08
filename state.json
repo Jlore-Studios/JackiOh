@@ -5,162 +5,6 @@
   "halt": {},
   "halted": false,
   "handled": {
-    "c:5946333060": {
-      "at": "2026-10-02T05:48:56Z",
-      "lines": [
-        "@jgoetzmann-bot status"
-      ]
-    },
-    "c:5946888700": {
-      "at": "2026-10-02T06:44:16Z",
-      "lines": [
-        "/harness build"
-      ]
-    },
-    "c:5946889038": {
-      "at": "2026-10-02T06:44:20Z",
-      "lines": [
-        "/harness build"
-      ]
-    },
-    "c:5946889549": {
-      "at": "2026-10-02T06:44:21Z",
-      "lines": [
-        "(named the bot)"
-      ]
-    },
-    "c:5946895298": {
-      "at": "2026-10-02T06:44:55Z",
-      "lines": [
-        "(named the bot)"
-      ]
-    },
-    "c:5946907338": {
-      "at": "2026-10-02T06:46:07Z",
-      "lines": [
-        "/harness build"
-      ]
-    },
-    "c:5947044737": {
-      "at": "2026-10-02T06:59:23Z",
-      "lines": [
-        "/harness stop"
-      ]
-    },
-    "c:5947044954": {
-      "at": "2026-10-02T06:59:25Z",
-      "lines": [
-        "/harness stop"
-      ]
-    },
-    "c:5947045153": {
-      "at": "2026-10-02T06:59:28Z",
-      "lines": [
-        "/harness stop"
-      ]
-    },
-    "c:5947169962": {
-      "at": "2026-10-02T07:10:51Z",
-      "lines": [
-        "@jgoetzmann-bot status"
-      ]
-    },
-    "c:5957930923": {
-      "at": "2026-10-02T17:40:26Z",
-      "lines": [
-        "@jgoetzmann-bot work --force"
-      ]
-    },
-    "c:5957934128": {
-      "at": "2026-10-02T17:40:28Z",
-      "lines": [
-        "@jgoetzmann-bot status"
-      ]
-    },
-    "c:5961370035": {
-      "at": "2026-10-02T20:58:21Z",
-      "lines": [
-        "/harness build let them become rare. These few core set changes are permitted"
-      ]
-    },
-    "c:5962569204": {
-      "at": "2026-10-02T22:37:19Z",
-      "lines": [
-        "@jgoetzmann-bot status"
-      ]
-    },
-    "c:5962582547": {
-      "at": "2026-10-02T22:38:38Z",
-      "lines": [
-        "/harness status"
-      ]
-    },
-    "c:5962814612": {
-      "at": "2026-10-02T23:09:21Z",
-      "lines": [
-        "@jgoetzmann-bot status"
-      ]
-    },
-    "c:5962835533": {
-      "at": "2026-10-02T23:09:23Z",
-      "lines": [
-        "@jgoetzmann-bot status"
-      ]
-    },
-    "c:5962836193": {
-      "at": "2026-10-02T23:09:33Z",
-      "lines": [
-        "@jgoetzmann-bot status --force"
-      ]
-    },
-    "c:5964126592": {
-      "at": "2026-10-03T01:30:55Z",
-      "lines": [
-        "@jgoetzmann-bot is this issue still needed? Close if not, otherwise impelment."
-      ]
-    },
-    "c:5964394636": {
-      "at": "2026-10-03T02:03:32Z",
-      "lines": [
-        "/harness status"
-      ]
-    },
-    "c:5965533265": {
-      "at": "2026-10-03T04:30:11Z",
-      "lines": [
-        "@jgoetzmann-bot Just add them yourself. MANUAL HUMAN OVERRIDE"
-      ]
-    },
-    "c:5965682507": {
-      "at": "2026-10-03T04:51:23Z",
-      "lines": [
-        "@jgoetzmann-bot stop` on both this issue and #53 follows, so the night bot doesn't queue a revision on the same branch while I'm working."
-      ]
-    },
-    "c:5965685626": {
-      "at": "2026-10-03T04:51:39Z",
-      "lines": [
-        "/harness stop"
-      ]
-    },
-    "c:5965685882": {
-      "at": "2026-10-03T04:51:46Z",
-      "lines": [
-        "/harness stop"
-      ]
-    },
-    "c:5965999156": {
-      "at": "2026-10-03T05:35:05Z",
-      "lines": [
-        "@jgoetzmann-bot force override, you can commit this"
-      ]
-    },
-    "c:5966646815": {
-      "at": "2026-10-03T07:11:24Z",
-      "lines": [
-        "@jgoetzmann-bot status"
-      ]
-    },
     "c:5969836811": {
       "at": "2026-10-03T13:55:08Z",
       "lines": [
@@ -639,6 +483,12 @@
       "at": "2026-10-06T15:04:33Z",
       "lines": [
         "/harness build"
+      ]
+    },
+    "c:6055457390": {
+      "at": "2026-10-08T07:59:46Z",
+      "lines": [
+        "/harness revise. Just pushed the rust patch in, see if this is still needed or if you can close it and if it is continue work"
       ]
     }
   },
