@@ -18,8 +18,9 @@
 //!    does not come back at the end of a later turn it was not played on.
 //!  - R215 (round 8, lens "engine invariants"): radiant #52's "costing 0" is announced with a
 //!    `costChanged` once the card has landed, as #31's +1 and #72r's 0 are (§10.3).
-//!  - R766, R429 (issue #557): a return Spell played at a price comes back at its printed cost (#23),
-//!    except #31, whose own return gives back the price it was played at, plus (1), to (4).
+//!  - R766, R429 (issues #557, #572): a return Spell played at a price comes back at its printed cost
+//!    (#23), and so does #31, except for the climb its own returns gave it: that comes back, plus (1),
+//!    to (4).
 //!
 //! Port of `packages/cards/test/hand-returns.test.ts` (SURFACE §4.1, §8). TS's live card objects are
 //! owned copies here, read back from the state by id after every step and written through
@@ -468,7 +469,7 @@ mod r215_10_3_a_price_given_as_a_card_reaches_a_hand_is_announced {
     }
 }
 
-mod r766_r429_only_kys_math_equations_own_return_gives_back_the_price_it_was_played_at {
+mod r766_r429_only_kys_math_equations_own_return_gives_back_a_price_its_climb {
     use super::*;
 
     /// p1 plays `def` from its hand at a `costMod` of 2 (a (3) card), the turn ends and the card has
@@ -502,12 +503,12 @@ mod r766_r429_only_kys_math_equations_own_return_gives_back_the_price_it_was_pla
     }
 
     #[test]
-    fn r429_r766_a_kys_math_equation_played_at_3_returns_at_4_its_own_return_gives_the_price_back_31() {
-        // The one exception (issue #557): #31's return gives back the price it was played at, plus (1),
-        // to a maximum of (4).
+    fn r429_r766_a_kys_math_equation_played_at_3_by_a_price_not_its_own_returns_at_2_31() {
+        // The one exception (issues #557, #572) is #31's climb, which its own returns give it: a price
+        // put on it any other way stays in the graveyard, so it comes back at its printed (1) plus (1).
         assert_eq!(
             returned_at_a_price_of_2(KY_MATH, json!({ "targets": at_p2() })),
-            (3, 4)
+            (1, 2)
         );
     }
 }

@@ -259,18 +259,22 @@ pub fn flag_return_to_hand_at_end_of_turn(state: &mut GameState, instance_id: &s
     }
 }
 
-/// R429, R766 (issue #557): where §10.5 step 7 notes the price a Spell whose return keeps it
-/// (`StaticFlags.returnKeepsPrice`, #31 KY's Math Equation) was played at — the `costMod` it had as it
-/// landed. R766 takes that price off it in the graveyard as it takes it off every card, so the card
-/// lying there costs its printed cost; the note is what its own end-of-turn return reads
-/// (`query::return_price_of`) to give the price back in the hand it returns to, which is how #31 climbs
-/// (2), (3), (4). Engine bookkeeping in the card's `memory`, as R178's `@exileOnLanding` is, and it
-/// lives exactly as long as R155's flag beside it: written with the flag, and gone with it as the card
-/// leaves the graveyard (`zones::remove_from_any_zone`) or the turn's cleanup ends the return
-/// (`turn::clear_return_flags`).
+/// R429, R766 (issues #557, #572): the price a Spell whose return keeps it
+/// (`StaticFlags.returnKeepsPrice`, #31 KY's Math Equation) has had from its own returns — its climb,
+/// (2), (3), (4) — and nothing else. Its return writes it on the card in the hand it returns to, beside
+/// the same amount in its `costMod` (`setCostMod`'s `returnPrice`), and the card carries it through a
+/// hand, a library and its next play; any other change to its price (a discount, a surcharge, a cost
+/// step) is in its `costMod` alone. R766 takes the price off it in the graveyard as it takes it off
+/// every card, so the card lying there costs its printed cost; §10.5 step 7 reads the note before the
+/// landing and writes it again on the card it lands (`note_return_price`), which is what its own
+/// end-of-turn return reads (`query::return_price_of`). Engine bookkeeping in the card's `memory`, as
+/// R178's `@exileOnLanding` is: in the graveyard it lives exactly as long as R155's flag beside it,
+/// gone with it as the card leaves (`zones::remove_from_any_zone`) or the turn's cleanup ends the
+/// return (`turn::clear_return_flags`), and a card that reaches a graveyard or exile any other way
+/// loses it with the rest of its memory (R78).
 pub const RETURN_PRICE_KEY: &str = "@returnPrice";
 
-/// R429, R766: note `price`, the `costMod` the card had as step 7 landed it, on a card step 7 has just
+/// R429, R766: note `price`, the climb the card carried into its play, on a card step 7 has just
 /// flagged for its end-of-turn return (R155) and whose script asks. A card that was not flagged — a
 /// countered play never reaches step 7, a discarded card was never played, a Spell that exiled itself
 /// is not in the graveyard — gets no note, so R766's reset is all there is for it. Nothing is written
@@ -294,8 +298,18 @@ pub fn note_return_price(state: &mut GameState, instance_id: &str, price: i32) {
     }
 }
 
-/// R155, R766: the note goes wherever R155's flag goes — off a card leaving the graveyard, and off
-/// every flagged card at the end of the turn its return belonged to.
+/// R429, R766 (issue #572): add `amount` to the climb noted on `card`, as its own return prices it in
+/// the hand it returns to (`setCostMod`'s `returnPrice`).
+pub fn add_return_price(card: &mut CardInstance, amount: i32) {
+    let price = crate::query::return_price_of(card) + amount;
+    if price == 0 {
+        forget_return_price(card);
+    } else {
+        card.memory
+            .insert(RETURN_PRICE_KEY.to_string(), Value::from(price));
+    }
+}
+
 pub fn forget_return_price(card: &mut CardInstance) {
     card.memory.shift_remove(RETURN_PRICE_KEY);
 }
