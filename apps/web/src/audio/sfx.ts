@@ -42,6 +42,8 @@ export const SFX_IDS: readonly SfxId[] = [
   "sting",
   "armorClank", "armorRing", "overkill", "crumble", "unlock", "steal", "give", "counterspell", "bleat", "fuse",
   "degrade", "upgrade",
+  "emoteWave", "emoteClap", "emoteThumbsUp", "emoteFacepalm", "emoteShrug", "emoteThinking", "emoteHeart",
+  "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
 ];
 
 /** Every card family a summon or spell may be given (types.ts SfxTimbre), for the tests. */
@@ -1280,6 +1282,196 @@ const emoteWahWah: SfxRecipe = (ctx, out, at) => {
 };
 
 /* ------------------------------------------------------------------------------------------- *
+ * R1345, MN03's fourteen emoji emotes (#545): one sticker sound each, synthesized like the five
+ * above and played on the effects channel. Short and light — a reaction, never a card moment.
+ * ------------------------------------------------------------------------------------------- */
+
+/** Wave: a bright two-note "hi-ya" — a quick chirp, then a higher one sliding up with a wiggle. */
+const emoteWave: SfxRecipe = (ctx, out, at) => {
+  const len = 0.5;
+  const k = kit(ctx, out, at, len);
+  const soft = biquad(k, "lowpass", 2600, 0.7);
+  chain(soft, out);
+  tone(k, soft, "triangle", 660, 0, 0.006, 0.32, 0.15);
+  const ya = tone(k, soft, "triangle", 880, 0.16, 0.01, 0.34, len);
+  glide(k, ya.frequency, 990, 0.3);
+  vibrato(k, ya.frequency, 9, 14, 0.2, len);
+  return len;
+};
+
+/** Clap: a ragged burst of applause — a run of hand claps on two noise bands. */
+const emoteClap: SfxRecipe = (ctx, out, at) => {
+  const len = 0.62;
+  const k = kit(ctx, out, at, len);
+  clickTrain(k, out, [0, 0.09, 0.17, 0.27, 0.34, 0.44, 0.52], 1500, 0.9, 0.42, 0.07);
+  clickTrain(k, out, [0.04, 0.13, 0.22, 0.31, 0.39, 0.48], 900, 0.8, 0.3, 0.06);
+  return len;
+};
+
+/** Thumbs Up: a warm "uh-huh" — two round blips, the second a fourth above the first. */
+const emoteThumbsUp: SfxRecipe = (ctx, out, at) => {
+  const len = 0.4;
+  const k = kit(ctx, out, at, len);
+  const warm = biquad(k, "lowpass", 1500, 0.7);
+  chain(warm, out);
+  tone(k, warm, "square", 392, 0, 0.006, 0.24, 0.12);
+  tone(k, warm, "square", 523, 0.14, 0.006, 0.26, len);
+  return len;
+};
+
+/** Facepalm: a soft slap, then a long groan falling away under it. */
+const emoteFacepalm: SfxRecipe = (ctx, out, at) => {
+  const len = 0.95;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "lowpass", 1200, 0.7), envelope(k, 0, 0.002, 0.45, 0.09), out);
+  run(k, noise, 0, 0.09);
+  const muffle = biquad(k, "lowpass", 900, 0.8);
+  chain(muffle, out);
+  const groan = oscillator(k, "sawtooth", 250, 0.1);
+  glide(k, groan.frequency, 150, len);
+  vibrato(k, groan.frequency, 5, 6, 0.3, len);
+  chain(groan, heldEnvelope(k, 0.1, 0.08, 0.3, 0.6, 0.18, len), muffle);
+  run(k, groan, 0.1, len);
+  return len;
+};
+
+/** Shrug: a lilting "meh" — a note, a step down, and a lazy slide back up. */
+const emoteShrug: SfxRecipe = (ctx, out, at) => {
+  const len = 0.6;
+  const k = kit(ctx, out, at, len);
+  const soft = biquad(k, "lowpass", 1800, 0.7);
+  chain(soft, out);
+  tone(k, soft, "triangle", 466, 0, 0.01, 0.3, 0.2);
+  const meh = tone(k, soft, "triangle", 392, 0.22, 0.01, 0.3, len);
+  glide(k, meh.frequency, 440, len);
+  return len;
+};
+
+/** Thinking: a soft rising "hmm" — a hum with a slow wobble and a quiet octave over it. */
+const emoteThinking: SfxRecipe = (ctx, out, at) => {
+  const len = 1;
+  const k = kit(ctx, out, at, len);
+  const hum = oscillator(k, "sine", 220, 0);
+  glide(k, hum.frequency, 262, 0.85);
+  vibrato(k, hum.frequency, 5, 5, 0.2, len);
+  chain(hum, heldEnvelope(k, 0, 0.12, 0.36, 0.75, 0.24, len), out);
+  run(k, hum, 0, len);
+  const octave = oscillator(k, "sine", 440, 0);
+  glide(k, octave.frequency, 524, 0.85);
+  chain(octave, heldEnvelope(k, 0, 0.15, 0.08, 0.75, 0.05, len), out);
+  run(k, octave, 0, len);
+  return len;
+};
+
+/** Heart: two soft heartbeat thumps, then a little warm chime. */
+const emoteHeart: SfxRecipe = (ctx, out, at) => {
+  const len = 0.9;
+  const k = kit(ctx, out, at, len);
+  for (const start of [0, 0.18]) {
+    const thump = tone(k, out, "sine", 95, start, 0.008, 0.42, start + 0.14);
+    glide(k, thump.frequency, 55, start + 0.14);
+  }
+  fmBell(k, out, 1047, 2, 260, 0.36, 0.004, 0.24, len);
+  return len;
+};
+
+/** Fire: a crackling whoosh — a roar of noise swelling and brightening, with sparks popping in it. */
+const emoteFire: SfxRecipe = (ctx, out, at) => {
+  const len = 0.9;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const roar = biquad(k, "bandpass", 450, 0.7);
+  chain(noise, roar, heldEnvelope(k, 0, 0.25, 0.4, 0.6, 0.26, len), out);
+  glide(k, roar.frequency, 1300, 0.6);
+  run(k, noise, 0, len);
+  clickTrain(k, out, [0.12, 0.21, 0.33, 0.4, 0.52, 0.63, 0.71], 3200, 1.2, 0.26, 0.03);
+  return len;
+};
+
+/** Skull: a hollow bony rattle — a quick run of wooden knocks falling down a scale. */
+const emoteSkull: SfxRecipe = (ctx, out, at) => {
+  const len = 0.45;
+  const k = kit(ctx, out, at, len);
+  const hollow = biquad(k, "bandpass", 1100, 1.2);
+  chain(hollow, out);
+  [880, 784, 698, 622, 554].forEach((hz, i) => {
+    const start = 0.07 * i;
+    tone(k, hollow, "triangle", hz, start, 0.002, 0.42, start + 0.07);
+  });
+  clickTrain(k, out, [0, 0.07, 0.14, 0.21, 0.28], 1900, 1.4, 0.16, 0.025);
+  return len;
+};
+
+/** Sweat: a nervous gulp — a quick blip leaping up, and a second one dropping away. */
+const emoteSweat: SfxRecipe = (ctx, out, at) => {
+  const len = 0.45;
+  const k = kit(ctx, out, at, len);
+  const up = tone(k, out, "sine", 260, 0, 0.006, 0.38, 0.17);
+  glide(k, up.frequency, 620, 0.1);
+  const down = tone(k, out, "sine", 520, 0.2, 0.006, 0.32, len);
+  glide(k, down.frequency, 300, len);
+  return len;
+};
+
+/** Cool: a smooth "yeah" — a low glide up into a held note, a shimmer on top. */
+const emoteCool: SfxRecipe = (ctx, out, at) => {
+  const len = 0.9;
+  const k = kit(ctx, out, at, len);
+  const smooth = biquad(k, "lowpass", 1300, 0.8);
+  chain(smooth, out);
+  const yeah = oscillator(k, "sawtooth", 196, 0);
+  glide(k, yeah.frequency, 294, 0.3);
+  vibrato(k, yeah.frequency, 5, 4, 0.35, len);
+  chain(yeah, heldEnvelope(k, 0, 0.05, 0.34, 0.6, 0.22, len), smooth);
+  run(k, yeah, 0, len);
+  fmBell(k, out, 1175, 3, 200, 0.3, 0.004, 0.16, len);
+  return len;
+};
+
+/** Gasp: a sharp intake of breath — a short rush of noise climbing in pitch. */
+const emoteGasp: SfxRecipe = (ctx, out, at) => {
+  const len = 0.5;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  const breath = biquad(k, "bandpass", 600, 0.9);
+  chain(noise, breath, envelope(k, 0, 0.18, 0.5, len), out);
+  glide(k, breath.frequency, 2400, 0.3);
+  run(k, noise, 0, len);
+  return len;
+};
+
+/** Salute: a two-note bugle call — a fourth up, the top note held with a little vibrato. */
+const emoteSalute: SfxRecipe = (ctx, out, at) => {
+  const len = 0.75;
+  const k = kit(ctx, out, at, len);
+  const brass = biquad(k, "lowpass", 2000, 0.9);
+  chain(brass, out);
+  tone(k, brass, "sawtooth", 392, 0, 0.02, 0.3, 0.18);
+  const call = oscillator(k, "sawtooth", 523, 0.2);
+  vibrato(k, call.frequency, 6, 7, 0.4, len);
+  chain(call, heldEnvelope(k, 0.2, 0.03, 0.34, 0.6, 0.24, len), brass);
+  run(k, call, 0.2, len);
+  return len;
+};
+
+/** Party: a popper's pop, and a shower of bright tinkles falling out of it. */
+const emoteParty: SfxRecipe = (ctx, out, at) => {
+  const len = 0.85;
+  const k = kit(ctx, out, at, len);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "highpass", 1800, 0.7), envelope(k, 0, 0.001, 0.4, 0.05), out);
+  run(k, noise, 0, 0.05);
+  const pop = tone(k, out, "sine", 160, 0.004, 0.003, 0.36, 0.12);
+  glide(k, pop.frequency, 60, 0.12);
+  [1568, 2093, 1760, 2349, 1976].forEach((hz, i) => {
+    const start = 0.08 + 0.09 * i;
+    fmBell(k, out, hz, 2, 180, start, 0.002, 0.14, Math.min(len, start + 0.3));
+  });
+  return len;
+};
+
+/* ------------------------------------------------------------------------------------------- *
  * Patch v0.2.X (#259, R669): the play sting
  * ------------------------------------------------------------------------------------------- */
 
@@ -1605,6 +1797,20 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   fuse: { recipe: fuse, durationMs: 650, gain: 0.8 },
   degrade: { recipe: degrade, durationMs: 520, gain: 0.8 },
   upgrade: { recipe: upgrade, durationMs: 500, gain: 0.8 },
+  emoteWave: { recipe: emoteWave, durationMs: 500, gain: 0.8 },
+  emoteClap: { recipe: emoteClap, durationMs: 650, gain: 0.8 },
+  emoteThumbsUp: { recipe: emoteThumbsUp, durationMs: 400, gain: 0.8 },
+  emoteFacepalm: { recipe: emoteFacepalm, durationMs: 950, gain: 0.8 },
+  emoteShrug: { recipe: emoteShrug, durationMs: 600, gain: 0.8 },
+  emoteThinking: { recipe: emoteThinking, durationMs: 1000, gain: 0.8 },
+  emoteHeart: { recipe: emoteHeart, durationMs: 900, gain: 0.8 },
+  emoteFire: { recipe: emoteFire, durationMs: 900, gain: 0.8 },
+  emoteSkull: { recipe: emoteSkull, durationMs: 450, gain: 0.8 },
+  emoteSweat: { recipe: emoteSweat, durationMs: 450, gain: 0.8 },
+  emoteCool: { recipe: emoteCool, durationMs: 900, gain: 0.8 },
+  emoteGasp: { recipe: emoteGasp, durationMs: 500, gain: 0.8 },
+  emoteSalute: { recipe: emoteSalute, durationMs: 750, gain: 0.8 },
+  emoteParty: { recipe: emoteParty, durationMs: 850, gain: 0.8 },
 };
 
 /**

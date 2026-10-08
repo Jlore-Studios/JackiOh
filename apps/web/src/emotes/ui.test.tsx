@@ -10,14 +10,27 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { EMOJI_EMOTE_IDS, VOICE_EMOTE_IDS, type EmoteGate } from "@jackioh/shared";
+import {
+  EMOJI_EMOTE_IDS,
+  EMOTE_HAND_SIZE,
+  EMOTE_HAND_VOICE,
+  EMOTE_IDS,
+  VOICE_EMOTE_IDS,
+  isVoiceEmote,
+  type EmoteGate,
+  type EmoteId,
+} from "@jackioh/shared";
 
-import { EMOJI_LABEL } from "./EmojiArt.tsx";
+import { EmojiArt, EMOJI_LABEL } from "./EmojiArt.tsx";
 import { EMOTE_MENU_EDGE_PX } from "./config.ts";
-import { EmoteMenu, EmoteShow, MuteMenu, menuShift } from "./ui.tsx";
+import { DEFAULT_EMOTE_HAND } from "./hand.ts";
+import { EmoteMenu, EmoteShow, MuteMenu, VOICE_LABEL, arcDrop, menuShift } from "./ui.tsx";
 import type { EmoteShow as EmoteShowState } from "./session.ts";
 
 const noop = (): void => undefined;
+
+/** A dealt hand (the engine's `deal_emote_hand("seed-actor", p1)`, R1341): three lines, five emoji. */
+const HAND: readonly EmoteId[] = ["greetings", "thanks", "threaten", "laugh", "wahWah", "wave", "thumbsUp", "party"];
 
 const OPEN: EmoteGate = { ok: true, sentAt: [] };
 const LIMITED: EmoteGate = { ok: false, retryAfterMs: 2400, sentAt: [0] };
@@ -53,29 +66,42 @@ describe("R644 EmoteShow", () => {
   });
 });
 
-describe("R643 the emote picker", () => {
-  it("R643 offers the five voice lines on their arc and the five emoji below, ten items", () => {
-    render(<EmoteMenu side="you" gate={() => OPEN} onPick={noop} onClose={noop} />);
+describe("R643 R1343 the emote picker", () => {
+  it("R1343 offers the dealt hand and nothing else: its voice lines on the arc, its emoji below", () => {
+    render(<EmoteMenu side="you" hand={HAND} gate={() => OPEN} onPick={noop} onClose={noop} />);
 
     const items = screen.getAllByRole("menuitem");
-    expect(items).toHaveLength(VOICE_EMOTE_IDS.length + EMOJI_EMOTE_IDS.length);
-    for (const emote of [...VOICE_EMOTE_IDS, ...EMOJI_EMOTE_IDS]) {
-      expect(screen.getByTestId(`emote-${emote}`)).toBe(items.find((item) => item.dataset.testid === `emote-${emote}`));
-    }
+    expect(items).toHaveLength(EMOTE_HAND_SIZE);
+    // In the hand's own (the pool's) order, the lines first, then the emoji.
+    expect(items.map((item) => item.dataset.testid)).toEqual(HAND.map((emote) => `emote-${emote}`));
+    const arc = screen.getByTestId("emote-menu").querySelector(".emote-voice-arc");
+    const row = screen.getByTestId("emote-menu").querySelector(".emote-emoji-row");
+    expect(arc?.querySelectorAll(".emote-item")).toHaveLength(EMOTE_HAND_VOICE);
+    expect(row?.querySelectorAll(".emote-item")).toHaveLength(EMOTE_HAND_SIZE - EMOTE_HAND_VOICE);
     // The voice items are labelled by name; the emoji carry their title/aria label and a sticker.
-    for (const label of ["Greetings", "Well Played", "Oops", "Thanks", "Threaten"]) {
+    for (const label of ["Greetings", "Thanks", "Threaten"]) {
       expect(screen.getByRole("menuitem", { name: label })).toBeInTheDocument();
     }
-    for (const emote of EMOJI_EMOTE_IDS) {
-      const item = screen.getByRole("menuitem", { name: EMOJI_LABEL[emote] });
+    for (const emote of HAND.filter((id) => !isVoiceEmote(id))) {
+      const item = screen.getByRole("menuitem", { name: EMOJI_LABEL[emote as keyof typeof EMOJI_LABEL] });
       expect(item.querySelector("svg.emote-emoji-svg")).not.toBeNull();
     }
+    // Nothing of the pool outside the hand is offered.
+    for (const emote of EMOTE_IDS.filter((id) => !HAND.includes(id))) {
+      expect(screen.queryByTestId(`emote-${emote}`), emote).toBeNull();
+    }
+  });
+
+  it("R1343 the default hand, before a deal arrives, is three lines and patch v0.2.X's five emoji", () => {
+    expect(DEFAULT_EMOTE_HAND).toEqual(["greetings", "wellPlayed", "oops", "sob", "yawn", "laugh", "angry", "wahWah"]);
+    render(<EmoteMenu side="you" hand={DEFAULT_EMOTE_HAND} gate={() => OPEN} onPick={noop} onClose={noop} />);
+    expect(screen.getAllByRole("menuitem")).toHaveLength(EMOTE_HAND_SIZE);
   });
 
   it("R643 a press reports the emote and closes the menu", () => {
     const onPick = vi.fn();
     const onClose = vi.fn();
-    render(<EmoteMenu side="you" gate={() => OPEN} onPick={onPick} onClose={onClose} />);
+    render(<EmoteMenu side="you" hand={HAND} gate={() => OPEN} onPick={onPick} onClose={onClose} />);
 
     fireEvent.click(screen.getByTestId("emote-thanks"));
 
@@ -83,36 +109,36 @@ describe("R643 the emote picker", () => {
     expect(onPick).toHaveBeenCalledWith("thanks");
     expect(onClose).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByTestId("emote-laugh"));
-    expect(onPick).toHaveBeenLastCalledWith("laugh");
+    fireEvent.click(screen.getByTestId("emote-party"));
+    expect(onPick).toHaveBeenLastCalledWith("party");
     expect(onPick).toHaveBeenCalledTimes(2);
   });
 
   it("R643 while the shared gate says limited, every item greys out with the wait and reports nothing", () => {
     const onPick = vi.fn();
     const onClose = vi.fn();
-    render(<EmoteMenu side="you" gate={() => LIMITED} onPick={onPick} onClose={onClose} />);
+    render(<EmoteMenu side="you" hand={HAND} gate={() => LIMITED} onPick={onPick} onClose={onClose} />);
 
     const items = screen.getAllByRole("menuitem");
-    expect(items).toHaveLength(10);
+    expect(items).toHaveLength(EMOTE_HAND_SIZE);
     for (const item of items) {
       expect(item).toBeDisabled();
       expect(item).toHaveAttribute("data-limited", "true");
     }
     // Each item carries the wait in seconds — ceil(2400 / 1000) — the same reading the server drops on.
     const waits = document.querySelectorAll(".emote-wait");
-    expect(waits).toHaveLength(10);
+    expect(waits).toHaveLength(EMOTE_HAND_SIZE);
     expect(waits[0]).toHaveTextContent("3");
 
     // The press is still guarded: a limited menu reports nothing and stays open.
-    fireEvent.click(screen.getByTestId("emote-oops"));
+    fireEvent.click(screen.getByTestId("emote-threaten"));
     expect(onPick).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
   });
 
   it("R643 the menu closes on a press outside it and on Escape, but not on a press inside", () => {
     const onClose = vi.fn();
-    render(<EmoteMenu side="you" gate={() => OPEN} onPick={noop} onClose={onClose} />);
+    render(<EmoteMenu side="you" hand={HAND} gate={() => OPEN} onPick={noop} onClose={onClose} />);
 
     fireEvent.pointerDown(screen.getByTestId("emote-menu"));
     expect(onClose).not.toHaveBeenCalled();
@@ -183,7 +209,7 @@ describe("#219 an open menu measures itself and slides back on screen", () => {
   it("#219 your picker writes the shift menuShift computes into --emote-menu-shift", () => {
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(rect(-131, 189, 320));
     vi.spyOn(document.documentElement, "clientWidth", "get").mockReturnValue(360);
-    render(<EmoteMenu side="you" gate={() => OPEN} onPick={noop} onClose={noop} />);
+    render(<EmoteMenu side="you" hand={HAND} gate={() => OPEN} onPick={noop} onClose={noop} />);
 
     expect(screen.getByTestId("emote-menu").style.getPropertyValue("--emote-menu-shift")).toBe("139px");
   });
@@ -197,7 +223,7 @@ describe("#219 an open menu measures itself and slides back on screen", () => {
   });
 
   it("#219 with nothing to measure (jsdom's zero rects) the menu stays centred — no property", () => {
-    render(<EmoteMenu side="you" gate={() => OPEN} onPick={noop} onClose={noop} />);
+    render(<EmoteMenu side="you" hand={HAND} gate={() => OPEN} onPick={noop} onClose={noop} />);
 
     expect(screen.getByTestId("emote-menu").style.getPropertyValue("--emote-menu-shift")).toBe("");
   });
@@ -214,7 +240,7 @@ describe("#219 an open menu measures itself and slides back on screen", () => {
     vi.spyOn(document.documentElement, "clientWidth", "get").mockReturnValue(360);
     render(
       <StrictMode>
-        <EmoteMenu side="you" gate={() => OPEN} onPick={noop} onClose={noop} />
+        <EmoteMenu side="you" hand={HAND} gate={() => OPEN} onPick={noop} onClose={noop} />
       </StrictMode>,
     );
 
@@ -261,8 +287,17 @@ describe("#219 emotes.css lays the menus and bubble out at readable sizes", () =
 });
 
 describe("#219 each voice item carries its arc drop as the --emote-arc-drop the sheet reads", () => {
-  it("#219 the five drops, crown in the middle, and no inline transform left", () => {
-    render(<EmoteMenu side="you" gate={() => OPEN} onPick={noop} onClose={noop} />);
+  it("#219 R1343 a hand's three lines drop 4, 0, 4, crown in the middle, and no inline transform left", () => {
+    render(<EmoteMenu side="you" hand={HAND} gate={() => OPEN} onPick={noop} onClose={noop} />);
+
+    const items = HAND.filter((emote) => isVoiceEmote(emote)).map((emote) => screen.getByTestId(`emote-${emote}`));
+    expect(items.map((item) => item.style.getPropertyValue("--emote-arc-drop"))).toEqual(["4px", "0px", "4px"]);
+    expect(items[0]?.style.transform).toBe("");
+  });
+
+  it("#219 the same curve gives all five lines the arc they always had: 14, 4, 0, 4, 14", () => {
+    const fiveLines: readonly EmoteId[] = [...VOICE_EMOTE_IDS, "sob", "yawn", "laugh"];
+    render(<EmoteMenu side="you" hand={fiveLines} gate={() => OPEN} onPick={noop} onClose={noop} />);
 
     const items = VOICE_EMOTE_IDS.map((emote) => screen.getByTestId(`emote-${emote}`));
     expect(items.map((item) => item.style.getPropertyValue("--emote-arc-drop"))).toEqual([
@@ -272,7 +307,89 @@ describe("#219 each voice item carries its arc drop as the --emote-arc-drop the 
       "4px",
       "14px",
     ]);
-    expect(items[0]?.style.transform).toBe("");
+    expect([0, 1, 2, 3, 4].map((index) => arcDrop(index, 5))).toEqual([14, 4, 0, 4, 14]);
+    expect([0, 1, 2].map((index) => arcDrop(index, 3))).toEqual([4, 0, 4]);
+  });
+});
+
+// R1345: MN03's fourteen emoji are stickers like the five — inline SVG and no words, each with its
+// own accessible name, and still under Reduce Motion but for the fade.
+describe("R1345 every emoji of the pool is an inline sticker with its own name", () => {
+  it("R1345 each draws one emote-emoji-svg, hidden from the accessibility tree, with no <text> in it", () => {
+    for (const emote of EMOJI_EMOTE_IDS) {
+      const { container, unmount } = render(<EmojiArt emoji={emote} />);
+      const svgs = container.querySelectorAll("svg");
+      expect(svgs, emote).toHaveLength(1);
+      expect(svgs[0]).toHaveClass("emote-emoji-svg");
+      expect(svgs[0]).toHaveAttribute("aria-hidden", "true");
+      expect(svgs[0]?.getAttribute("viewBox"), emote).toBe("0 0 48 48");
+      expect(container.querySelector("text"), `${emote} draws words`).toBeNull();
+      expect(container.querySelector("image, foreignObject, use"), `${emote} borrows art`).toBeNull();
+      expect(container.textContent, emote).toBe("");
+      unmount();
+    }
+  });
+
+  it("R1345 no two stickers are the same drawing", () => {
+    const drawings = EMOJI_EMOTE_IDS.map((emote) => {
+      const { container, unmount } = render(<EmojiArt emoji={emote} />);
+      const markup = container.innerHTML;
+      unmount();
+      return markup;
+    });
+    expect(new Set(drawings).size).toBe(EMOJI_EMOTE_IDS.length);
+  });
+
+  it("R1345 each emoji has its own non-empty label, which a menu holding it names the item by", () => {
+    const labels = EMOJI_EMOTE_IDS.map((emote) => EMOJI_LABEL[emote]);
+    expect(labels.every((label) => label.trim().length > 0)).toBe(true);
+    expect(new Set([...labels, ...Object.values(VOICE_LABEL)]).size).toBe(EMOTE_IDS.length);
+    const newEmoji = EMOJI_EMOTE_IDS.slice(5);
+    expect(newEmoji.length).toBeGreaterThanOrEqual(14);
+    for (let at = 0; at < newEmoji.length; at += EMOTE_HAND_SIZE) {
+      const hand = newEmoji.slice(at, at + EMOTE_HAND_SIZE);
+      const { unmount } = render(<EmoteMenu side="you" hand={hand} gate={() => OPEN} onPick={noop} onClose={noop} />);
+      for (const emote of hand) {
+        const item = screen.getByRole("menuitem", { name: EMOJI_LABEL[emote] });
+        expect(item).toHaveAttribute("title", EMOJI_LABEL[emote]);
+        expect(item.dataset.testid).toBe(`emote-${emote}`);
+      }
+      unmount();
+    }
+  });
+
+  it("R1345 every part that moves inside a sticker is stilled under Reduce Motion, by the query and by the flag", () => {
+    const moving = new Set<string>();
+    for (const emote of EMOJI_EMOTE_IDS) {
+      const { container, unmount } = render(<EmojiArt emoji={emote} />);
+      for (const element of container.querySelectorAll("[class]")) {
+        for (const name of (element.getAttribute("class") ?? "").split(/\s+/)) {
+          const rule = new RegExp(`^\\.${name}\\s*\\{[^}]*animation:`, "m");
+          if (name !== "emote-emoji-svg" && rule.test(emotesCss)) moving.add(name);
+        }
+      }
+      unmount();
+    }
+    // The five's tear and trombone, and MN03's six moving parts.
+    expect([...moving].sort()).toEqual(
+      [
+        "emote-clap-hands",
+        "emote-confetti",
+        "emote-flame",
+        "emote-heartbeat",
+        "emote-sweat-drop",
+        "emote-tear",
+        "emote-trombone",
+        "emote-wave-hand",
+      ].sort(),
+    );
+    const media = /@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/.exec(emotesCss)?.[1] ?? "";
+    for (const name of moving) {
+      expect(media, `${name} under prefers-reduced-motion`).toMatch(new RegExp(`\\.${name}\\b[^{]*\\{\\s*animation:\\s*none`));
+      expect(emotesCss, `${name} under data-reduce-motion`).toMatch(
+        new RegExp(`:root\\[data-reduce-motion="true"\\] \\.${name}[,\\s][^{]*\\{\\s*animation:\\s*none`),
+      );
+    }
   });
 });
 

@@ -116,6 +116,7 @@ export default function Hero(props: HeroProps): ReactElement {
         {props.emotes?.menu === "emotes" && (
           <EmoteMenu
             side={side}
+            hand={props.emotes.hand}
             gate={props.emotes.gate}
             onPick={props.emotes.onPick}
             onClose={props.emotes.onCloseMenu}

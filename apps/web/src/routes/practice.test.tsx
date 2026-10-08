@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 
 import { AI_GATE_BUDGET } from "@jackioh/ai";
+import { dealEmoteHand } from "@jackioh/engine";
 import { newestShippedSet, opponentOf } from "@jackioh/shared";
 import type { ActionBody, CardDefs, PlayerId } from "@jackioh/shared";
 
@@ -1023,6 +1024,18 @@ describe("B33 starting renders the game under the practice HUD", () => {
     await waitFor(() => {
       expect(host.requests).toContainEqual({ type: "act", action: { type: "endTurn" } });
     });
+  });
+
+  it("R1341 the player's emote menu offers the hand the game's seed deals their seat, as a match would", async () => {
+    visit("?seed=hand1&difficulty=easy&deck=random&seat=p2");
+    const host = routeHost();
+    renderRoute(host);
+    await screen.findByTestId(T.hud);
+
+    fireEvent.click(screen.getByTestId("hero-you"));
+    const menu = await screen.findByTestId("emote-menu");
+    const offered = Array.from(menu.querySelectorAll<HTMLElement>("[role=menuitem]")).map((item) => item.dataset.testid);
+    expect(offered).toEqual(dealEmoteHand("hand1", "p2").map((emote) => `emote-${emote}`));
   });
 
   it("the board's Concede asks first: Keep playing sends nothing, and only the dialog's Concede concedes", async () => {

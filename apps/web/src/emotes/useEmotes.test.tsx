@@ -1,8 +1,8 @@
 // useEmotes: the React half of the emote session (R643, R644). The pure half is proved in
 // session.test.ts; what this file proves is what only the hook does — a send shows and sounds
 // locally without waiting for the relay, a muted or device-muted emote never reaches the audio
-// engine, a newer emote's expiry timer is the only one that lands, and `globalMute` spares the
-// seat `you` names.
+// engine, a newer emote's expiry timer is the only one that lands, `globalMute` spares the
+// seat `you` names, and a send outside the seat's dealt hand goes nowhere (R1342, R1343).
 //
 // The engine seam is SoundSink's two methods, so it is a pair of spies. The expiry timers are
 // `window.setTimeout`, which `vi.useFakeTimers()` owns — `useEmotes` injects no clock of its own,
@@ -11,12 +11,19 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { EMOTE_COOLDOWN_MS, type EmoteId, type PortraitId } from "@jackioh/shared";
+import { EMOTE_COOLDOWN_MS, EMOTE_IDS, type EmoteId, type PortraitId } from "@jackioh/shared";
 
 import { VOICE_PRIORITY } from "../audio/constants.ts";
 import type { SoundSink } from "../audio/types.ts";
 import { EMOTE_EMOJI_MS } from "./config.ts";
+import { DEFAULT_EMOTE_HAND, type EmoteHands } from "./hand.ts";
 import { useEmotes } from "./useEmotes.ts";
+
+/** Two dealt hands (the engine's for "seed-actor" holds p1's, R1341). */
+const HANDS: EmoteHands = {
+  p1: ["greetings", "thanks", "threaten", "laugh", "wahWah", "wave", "thumbsUp", "party"],
+  p2: ["wellPlayed", "oops", "thanks", "sob", "clap", "skull", "cool", "gasp"],
+};
 
 type Sink = SoundSink & {
   playSfx: ReturnType<typeof vi.fn>;
@@ -30,6 +37,7 @@ function engineSpy(): Sink {
 
 type Options = {
   portraits?: { p1: PortraitId; p2: PortraitId } | null;
+  hands?: EmoteHands | null;
   emit?: (emote: EmoteId) => void;
   engine?: SoundSink | null;
   globalMute?: boolean;
@@ -114,7 +122,7 @@ describe("R643 a local send", () => {
   it("R643 the gate the menu reads opens again once the cooldown has passed", () => {
     vi.useFakeTimers();
     const emit = vi.fn();
-    const { result } = hook({ emit, engine: null });
+    const { result } = hook({ emit, engine: null, hands: HANDS });
 
     act(() => {
       expect(result.current.send("p1", "thanks")).toBe(true);
@@ -131,6 +139,58 @@ describe("R643 a local send", () => {
       expect(result.current.send("p1", "thanks")).toBe(true);
     });
     expect(emit).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("R1342 R1343 the seat's dealt hand", () => {
+  it("R1343 handOf reads each seat's dealt hand, and the default hand for a seat with none", () => {
+    const dealt = hook({ hands: HANDS });
+    expect(dealt.result.current.handOf("p1")).toEqual(HANDS.p1);
+    expect(dealt.result.current.handOf("p2")).toEqual(HANDS.p2);
+    dealt.unmount();
+
+    // A match tells the client its own hand alone: the other seat reads the default.
+    const own = hook({ hands: { p2: HANDS.p2 } });
+    expect(own.result.current.handOf("p2")).toEqual(HANDS.p2);
+    expect(own.result.current.handOf("p1")).toEqual(DEFAULT_EMOTE_HAND);
+    own.unmount();
+
+    const waiting = hook();
+    expect(waiting.result.current.handOf("p1")).toEqual(DEFAULT_EMOTE_HAND);
+    waiting.unmount();
+  });
+
+  it("R1342 a send outside the seat's hand shows nothing, sounds nothing, emits nothing and spends no limit", () => {
+    vi.useFakeTimers();
+    const engine = engineSpy();
+    const emit = vi.fn();
+    const { result } = hook({ hands: HANDS, emit, engine, you: "p1" });
+    const outside = EMOTE_IDS.filter((id) => !(HANDS.p1 ?? []).includes(id));
+    expect(outside.length).toBeGreaterThan(0);
+
+    act(() => {
+      for (const emote of outside) expect(result.current.send("p1", emote), emote).toBe(false);
+    });
+    expect(result.current.visible("p1")).toBeNull();
+    expect(emit).not.toHaveBeenCalled();
+    expect(engine.playSfx).not.toHaveBeenCalled();
+    expect(engine.playVoice).not.toHaveBeenCalled();
+    // …so the gate is as open as before the refusals, and a dealt emote goes out at once.
+    expect(result.current.gate("p1").ok).toBe(true);
+    act(() => {
+      expect(result.current.send("p1", "party")).toBe(true);
+    });
+    expect(emit).toHaveBeenCalledWith("party");
+  });
+
+  it("R1342 each seat is held to its own hand: p2 may send what p1 may not", () => {
+    const emit = vi.fn();
+    const { result } = hook({ hands: HANDS, emit, engine: null });
+    act(() => {
+      expect(result.current.send("p1", "skull")).toBe(false);
+      expect(result.current.send("p2", "skull")).toBe(true);
+    });
+    expect(emit).toHaveBeenCalledTimes(1);
   });
 });
 

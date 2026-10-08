@@ -1,7 +1,7 @@
-// Practice's emote driver (R642–R645): the AI's persona, both portraits, and the wiring that
-// turns the worker's snapshots into persona triggers — all on the page side, since the persona
-// is presentation, not part of the AI's decisions (issue §6: "a separate RNG outside the engine
-// and AI search").
+// Practice's emote driver (R642–R645, R1341, R1344): the AI's persona, both portraits and both
+// hands, and the wiring that turns the worker's snapshots into persona triggers — all on the page
+// side, since the persona is presentation, not part of the AI's decisions (issue §6: "a separate
+// RNG outside the engine and AI search").
 //
 // The split mirrors the match route's: `useEmotes` owns what every route shares (the session,
 // the sounds, the shared gate, the mutes), and this hook owns what only practice has:
@@ -9,6 +9,8 @@
 //   - The portraits (R642): the human's from their deck — saved deck's stored id, `vanilla` for
 //     a preset (a preset is not a saved deck, so it carries none) or a lesson — and a random one
 //     when the deck itself is random; the AI's always random except the tutorial's `vanilla`.
+//   - The hands (R1341): each seat's eight, dealt from the game's seed as a match deals them — the
+//     human's menu shows theirs, and the AI's persona chooses within its own (R1344).
 //   - The persona (R645): dealt once per game from §6's weights — the tutorial is always Silent —
 //     fed `onEvents` deltas off the snapshot's redacted event window (`newEventsSince`, the same
 //     function the board's animation runner uses), `onPlayerEmote` from the player's sends, and
@@ -25,6 +27,7 @@ import { AI_EMOTE } from "@jackioh/ai/config";
 
 import { getAudioEngine } from "../audio/index.ts";
 import { newEventsSince } from "../game/animations.ts";
+import { dealEmoteHands } from "../emotes/deal.ts";
 import { useEmotes, type EmotesApi } from "../emotes/useEmotes.ts";
 import { useSetting } from "../settings/index.ts";
 import type { PracticeSnapshot, PracticeStartConfig } from "./protocol.ts";
@@ -42,10 +45,13 @@ function dealPortraits(config: PracticeStartConfig): { human: PortraitId; ai: Po
   return { human, ai: pickPortrait(Math.random) };
 }
 
-/** The persona one game plays (R645): the tutorial is always Silent (issue §6). */
-function dealPersona(config: PracticeStartConfig, seat: PlayerId): EmotePersona {
+/**
+ * The persona one game plays (R645): the tutorial is always Silent (issue §6). It chooses within
+ * the AI seat's own dealt hand (R1344).
+ */
+function dealPersona(config: PracticeStartConfig, seat: PlayerId, hand: readonly EmoteId[]): EmotePersona {
   const persona = config.lesson === undefined ? pickPersona(Math.random) : "silent";
-  return createEmotePersona({ persona, seat, rng: Math.random });
+  return createEmotePersona({ persona, seat, rng: Math.random, hand });
 }
 
 /**
@@ -68,13 +74,16 @@ export function usePracticeEmotes(
     config: PracticeStartConfig;
     persona: EmotePersona;
     portraits: { p1: PortraitId; p2: PortraitId };
+    hands: { p1: readonly EmoteId[]; p2: readonly EmoteId[] };
   } | null>(null);
   if (config !== null && aiSeat !== null && deal?.config !== config) {
     const { human, ai } = dealPortraits(config);
+    const hands = dealEmoteHands(config.seed);
     setDeal({
       config,
-      persona: dealPersona(config, aiSeat),
+      persona: dealPersona(config, aiSeat, hands[aiSeat]),
       portraits: config.humanSeat === "p1" ? { p1: human, p2: ai } : { p1: ai, p2: human },
+      hands,
     });
   }
   const dealRef = useRef(deal);
@@ -116,6 +125,7 @@ export function usePracticeEmotes(
 
   const emotes = useEmotes({
     portraits: deal?.portraits ?? null,
+    hands: deal?.hands ?? null,
     emit: onPlayerEmote,
     engine: getAudioEngine(),
     globalMute: globalMuteEmotes,

@@ -50,8 +50,8 @@ use std::time::Duration;
 use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::{
     Action, ActionBody, COIN_DEF_ID, CardCost, CardDef, CreateGameArgs, DEFAULT_PORTRAIT, EMOTE_COOLDOWN_MS,
-    EMOTE_IDS, EMOTE_WINDOW_MAX, EMOTE_WINDOW_MS, GameOverReason, GameResult, PLAYER_IDS, Phase, PlayerId,
-    Winner, emote_gate, opponent_of,
+    EMOTE_HAND_SIZE, EMOTE_IDS, EMOTE_WINDOW_MAX, EMOTE_WINDOW_MS, GameOverReason, GameResult, PLAYER_IDS,
+    Phase, PlayerId, Winner, deal_emote_hand, emote_gate, opponent_of,
 };
 use jackioh_server::actor::match_actor::MatchActor;
 use jackioh_server::actor::ws_server::{Socket, WS_CLOSE, WS_PATH};
@@ -1605,6 +1605,26 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
         socket.of_type("emote")
     }
 
+    /// R1342: the hand the account's last portraits frame dealt it — the only emotes it may send.
+    fn hand(socket: &Client) -> Vec<String> {
+        let frame = socket
+            .of_type("portraits")
+            .last()
+            .cloned()
+            .expect("a portraits frame");
+        frame["emotes"]
+            .as_array()
+            .expect("the frame's emote hand")
+            .iter()
+            .map(|id| id.as_str().expect("an emote id").to_string())
+            .collect()
+    }
+
+    /// The `n`th emote of the hand `socket` was dealt.
+    fn dealt(socket: &Client, n: usize) -> String {
+        hand(socket).get(n).cloned().expect("a hand of EMOTE_HAND_SIZE")
+    }
+
     /// The rows anything but the clock wrote since the walk (see the module comment).
     async fn client_rows(h: &Harness) -> Vec<Value> {
         h.rows()
@@ -1622,15 +1642,16 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
     #[tokio::test(start_paused = true)]
     async fn r643_relays_a_valid_emote_to_the_opponent_alone_stamped_with_the_senders_seat() {
         let h = harness(Options::default()).await;
+        let (p1_emote, p2_emote) = (dealt(&h.p1, 4), dealt(&h.p2, 1));
         h.p1.clear();
         h.p2.clear();
 
-        h.p1.receive_json(json!({ "type": "emote", "emote": "laugh" }));
+        h.p1.receive_json(json!({ "type": "emote", "emote": p1_emote }));
         h.idle().await;
 
         assert_eq!(
             relays(&h.p2),
-            vec![json!({ "type": "emote", "from": "p1", "emote": "laugh" })]
+            vec![json!({ "type": "emote", "from": "p1", "emote": p1_emote })]
         );
         // The sender sees their own locally: nothing comes back — no relay, no ack, no error.
         assert_eq!(relays(&h.p1), Vec::<Value>::new());
@@ -1639,39 +1660,41 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
 
         // …and in the other direction, stamped with p2's seat. The two seats keep their own rate-limit
         // windows, so p2's send immediately after p1's is still inside no cooldown.
-        h.p2.receive_json(json!({ "type": "emote", "emote": "thanks" }));
+        h.p2.receive_json(json!({ "type": "emote", "emote": p2_emote }));
         h.idle().await;
         assert_eq!(
             relays(&h.p1),
-            vec![json!({ "type": "emote", "from": "p2", "emote": "thanks" })]
+            vec![json!({ "type": "emote", "from": "p2", "emote": p2_emote })]
         );
         assert_eq!(relays(&h.p2).len(), 1);
         assert_eq!(errors(&h.p2), Vec::<Value>::new());
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r643_relays_every_id_of_the_ten_and_writes_none_of_them_to_the_log() {
+    async fn r643_r1342_relays_every_emote_of_the_senders_hand_and_writes_none_of_them_to_the_log() {
         let h = harness(Options::default()).await;
+        let held = hand(&h.p1);
+        assert_eq!(held.len(), EMOTE_HAND_SIZE);
         h.p1.clear();
         h.p2.clear();
 
         let mut sent_at: Vec<i64> = Vec::new();
-        for emote in EMOTE_IDS {
-            h.p1.receive_json(json!({ "type": "emote", "emote": emote.as_str() }));
+        for emote in &held {
+            h.p1.receive_json(json!({ "type": "emote", "emote": emote }));
             sent_at.push(now());
             h.idle().await;
-            // A whole window between sends, so the ten are admitted on their own merits.
+            // A whole window between sends, so the eight are admitted on their own merits.
             advance(EMOTE_WINDOW_MS).await;
         }
 
-        let expected: Vec<Value> = EMOTE_IDS
+        let expected: Vec<Value> = held
             .iter()
-            .map(|emote| json!({ "type": "emote", "from": "p1", "emote": emote.as_str() }))
+            .map(|emote| json!({ "type": "emote", "from": "p1", "emote": emote }))
             .collect();
         assert_eq!(relays(&h.p2), expected);
-        // PREMISE: every send really did land inside its own gate — none of the ten was a silent drop
-        // this test happened not to look at.
-        assert_eq!(sent_at.len(), EMOTE_IDS.len());
+        // PREMISE: every send really did land inside its own gate — none of the eight was a silent
+        // drop this test happened not to look at.
+        assert_eq!(sent_at.len(), EMOTE_HAND_SIZE);
         // §9.3, R643: no `ActionBody`, so no seq is spent, no ack is owed, no row is written and no
         // rejected-action entry is logged.
         assert_eq!(client_rows(&h).await, Vec::<Value>::new());
@@ -1731,20 +1754,21 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
     #[tokio::test(start_paused = true)]
     async fn r643_drops_an_emote_sent_inside_the_cooldown_silently_and_resumes_after_it() {
         let h = harness(Options::default()).await;
+        let (first, second) = (dealt(&h.p1, 0), dealt(&h.p1, 5));
         h.p1.clear();
         h.p2.clear();
 
-        h.p1.receive_json(json!({ "type": "emote", "emote": "greetings" }));
+        h.p1.receive_json(json!({ "type": "emote", "emote": first }));
         h.idle().await;
         assert_eq!(
             relays(&h.p2),
-            vec![json!({ "type": "emote", "from": "p1", "emote": "greetings" })]
+            vec![json!({ "type": "emote", "from": "p1", "emote": first })]
         );
 
         // Inside EMOTE_COOLDOWN_MS the shared gate says no: nothing reaches the opponent, no error
         // reaches the sender, and nothing is written — silence is what a drop needs (R643).
         let entries_before = h.log.entries().len();
-        h.p1.receive_json(json!({ "type": "emote", "emote": "laugh" }));
+        h.p1.receive_json(json!({ "type": "emote", "emote": second }));
         h.idle().await;
         assert_eq!(relays(&h.p2).len(), 1);
         assert_eq!(errors(&h.p1), Vec::<Value>::new());
@@ -1760,15 +1784,16 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
             gate.retry_after_ms.unwrap_or(0)
         })
         .await;
-        h.p1.receive_json(json!({ "type": "emote", "emote": "laugh" }));
+        h.p1.receive_json(json!({ "type": "emote", "emote": second }));
         h.idle().await;
         let sent: Vec<Value> = relays(&h.p2).iter().map(|frame| frame["emote"].clone()).collect();
-        assert_eq!(sent, vec![json!("greetings"), json!("laugh")]);
+        assert_eq!(sent, vec![json!(first), json!(second)]);
     }
 
     #[tokio::test(start_paused = true)]
     async fn r643_relays_emote_window_max_spaced_emotes_and_silently_drops_the_next_inside_the_window() {
         let h = harness(Options::default()).await;
+        let emote = dealt(&h.p1, 2);
         h.p1.clear();
         h.p2.clear();
 
@@ -1776,7 +1801,7 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
         // thing being measured, not the pause.
         let mut sent_at: Vec<i64> = Vec::new();
         for n in 0..EMOTE_WINDOW_MAX {
-            h.p1.receive_json(json!({ "type": "emote", "emote": "thanks" }));
+            h.p1.receive_json(json!({ "type": "emote", "emote": emote }));
             sent_at.push(now());
             h.idle().await;
             assert_eq!(relays(&h.p2).len(), n + 1);
@@ -1786,7 +1811,7 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
         assert!(now() - sent_at.first().copied().unwrap_or(0) < EMOTE_WINDOW_MS);
 
         let entries_before = h.log.entries().len();
-        h.p1.receive_json(json!({ "type": "emote", "emote": "thanks" }));
+        h.p1.receive_json(json!({ "type": "emote", "emote": emote }));
         h.idle().await;
         assert_eq!(relays(&h.p2).len(), EMOTE_WINDOW_MAX);
         assert_eq!(errors(&h.p1), Vec::<Value>::new());
@@ -1803,7 +1828,7 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
             gate.retry_after_ms.unwrap_or(0)
         })
         .await;
-        h.p1.receive_json(json!({ "type": "emote", "emote": "thanks" }));
+        h.p1.receive_json(json!({ "type": "emote", "emote": emote }));
         h.idle().await;
         assert_eq!(relays(&h.p2).len(), EMOTE_WINDOW_MAX + 1);
     }
@@ -1811,6 +1836,7 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
     #[tokio::test(start_paused = true)]
     async fn r643_spends_none_of_the_seats_9_8_action_budget_a_flooded_seats_emote_still_relays() {
         let h = harness(Options::default()).await;
+        let emote = dealt(&h.p1, 3);
         h.p1.clear();
         h.p2.clear();
 
@@ -1827,11 +1853,82 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
 
         // The emote never counted and is not counted now: it is no ActionBody (R643), so §9.8's limit
         // does not see it and its own limit — the shared gate — still admits the first send.
-        h.p1.receive_json(json!({ "type": "emote", "emote": "oops" }));
+        h.p1.receive_json(json!({ "type": "emote", "emote": emote }));
         h.idle().await;
         assert_eq!(
             relays(&h.p2),
-            vec![json!({ "type": "emote", "from": "p1", "emote": "oops" })]
+            vec![json!({ "type": "emote", "from": "p1", "emote": emote })]
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1342_refuses_an_emote_of_the_pool_outside_the_senders_hand_silently_and_spends_no_limit() {
+        let h = harness(Options::default()).await;
+        let held = hand(&h.p1);
+        let outside: Vec<&'static str> = EMOTE_IDS
+            .iter()
+            .map(|id| id.as_str())
+            .filter(|id| !held.iter().any(|kept| kept == id))
+            .collect();
+        // PREMISE: the pool is bigger than the hand, so there is something to refuse.
+        assert_eq!(outside.len(), EMOTE_IDS.len() - EMOTE_HAND_SIZE);
+        let inside = dealt(&h.p1, 0);
+        h.p1.clear();
+        h.p2.clear();
+
+        for emote in &outside {
+            h.p1.receive_json(json!({ "type": "emote", "emote": emote }));
+        }
+        h.idle().await;
+        // Refused: never relayed, no error (the id is in the pool, so the frame parsed), no row.
+        assert_eq!(relays(&h.p2), Vec::<Value>::new());
+        assert_eq!(errors(&h.p1), Vec::<Value>::new());
+        assert_eq!(client_rows(&h).await, Vec::<Value>::new());
+        assert!(
+            h.log
+                .events()
+                .iter()
+                .any(|event| event == "match.emote.outside_hand")
+        );
+        assert!(
+            !h.log
+                .events()
+                .iter()
+                .any(|event| event == "match.action.rejected" || event == "match.frame.malformed")
+        );
+
+        // …and the refusals spent none of the limit: a dealt emote right after them, with no time
+        // passing, is admitted as the first of the window.
+        h.p1.receive_json(json!({ "type": "emote", "emote": inside }));
+        h.idle().await;
+        assert_eq!(
+            relays(&h.p2),
+            vec![json!({ "type": "emote", "from": "p1", "emote": inside })]
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1342_each_seat_is_held_to_its_own_hand_not_the_opponents() {
+        let h = harness(Options::default()).await;
+        let (mine, theirs) = (hand(&h.p1), hand(&h.p2));
+        // An emote only p2 was dealt is outside p1's hand: p1's send of it is refused.
+        let only_theirs = theirs
+            .iter()
+            .find(|id| !mine.contains(id))
+            .cloned()
+            .expect("PREMISE: the seats' hands differ (they agree about 1 match in 10^5)");
+        h.p1.clear();
+        h.p2.clear();
+
+        h.p1.receive_json(json!({ "type": "emote", "emote": only_theirs }));
+        h.idle().await;
+        assert_eq!(relays(&h.p2), Vec::<Value>::new());
+
+        h.p2.receive_json(json!({ "type": "emote", "emote": only_theirs }));
+        h.idle().await;
+        assert_eq!(
+            relays(&h.p1),
+            vec![json!({ "type": "emote", "from": "p2", "emote": only_theirs })]
         );
     }
 }
@@ -1842,7 +1939,8 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
 
 /// A match's two portraits are the match row's data (R642): fixed when the seats are, sent to each
 /// client on attach and again on a reconnect's `hello`, in a frame of their own — a portrait is
-/// never part of `PlayerView`.
+/// never part of `PlayerView`. The frame carries the receiving account's own emote hand (R1342),
+/// dealt from the match seed (R1341).
 mod r642_the_portraits_frame_9_5 {
     use super::*;
 
@@ -1850,8 +1948,22 @@ mod r642_the_portraits_frame_9_5 {
         socket.of_type("portraits")
     }
 
+    /// R1341: the hand the seat's account is dealt in this match, as the wire spells it.
+    async fn hand_dealt(h: &Harness, seat: PlayerId) -> Value {
+        let seed = match_row(&h.app, MATCH_ID).await["seed"]
+            .as_str()
+            .expect("the match row's seed")
+            .to_string();
+        json!(
+            deal_emote_hand(&seed, seat)
+                .iter()
+                .map(|id| id.as_str())
+                .collect::<Vec<_>>()
+        )
+    }
+
     #[tokio::test(start_paused = true)]
-    async fn r642_sends_both_seats_portraits_on_attach_in_their_own_frame_never_on_the_view() {
+    async fn r642_r1342_sends_both_portraits_and_the_accounts_own_hand_on_attach_never_on_the_view() {
         let h = harness(Options {
             portraits: Some(["gary", "shredder"]),
             ..Options::default()
@@ -1864,48 +1976,60 @@ mod r642_the_portraits_frame_9_5 {
             json!(["gary", "shredder"])
         );
 
-        for socket in [&h.p1, &h.p2] {
+        for seat in PLAYER_IDS {
+            let socket = h.socket(seat);
             assert_eq!(
                 portraits_sent(socket),
-                vec![json!({ "type": "portraits", "p1": "gary", "p2": "shredder" })]
+                vec![json!({
+                    "type": "portraits",
+                    "p1": "gary",
+                    "p2": "shredder",
+                    "emotes": hand_dealt(&h, seat).await,
+                })]
             );
-            // …and the view frame carries neither key: `PlayerView` is a rules surface (R641, R642).
+            // …and the view frame carries none of it: `PlayerView` is a rules surface (R641, R642,
+            // R1342).
             let view = socket.of_type("view").last().cloned().expect("a view frame");
             assert!(view["view"].get("portrait").is_none());
             assert!(view["view"].get("portraits").is_none());
+            assert!(view["view"].get("emotes").is_none());
         }
+        // Each account hears its own hand and never the opponent's.
+        assert_ne!(
+            portraits_sent(&h.p1)[0]["emotes"],
+            portraits_sent(&h.p2)[0]["emotes"]
+        );
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r642_sends_them_again_on_a_reconnects_fresh_view_and_again_on_hello() {
+    async fn r642_r1341_sends_them_again_on_a_reconnects_fresh_view_and_on_hello_with_the_same_hand() {
         let h = harness(Options {
             portraits: Some(["timmy", "dfender"]),
             ..Options::default()
         })
         .await;
         assert_eq!(portraits_sent(&h.p1).len(), 1);
+        let frame = json!({
+            "type": "portraits",
+            "p1": "timmy",
+            "p2": "dfender",
+            "emotes": hand_dealt(&h, P1).await,
+        });
+        assert_eq!(portraits_sent(&h.p1), vec![frame.clone()]);
 
         h.p1.drop_transport();
         h.idle().await;
         let revived = Client::new();
         h.actor.attach(P1, revived.socket());
         h.idle().await;
-        // §9.5's fresh full view rides with the portraits again, as on the first attach.
+        // §9.5's fresh full view rides with the portraits again, as on the first attach, and R1341's
+        // hand is the one the first attach dealt.
         assert_eq!(views(&revived).len(), 1);
-        assert_eq!(
-            portraits_sent(&revived),
-            vec![json!({ "type": "portraits", "p1": "timmy", "p2": "dfender" })]
-        );
+        assert_eq!(portraits_sent(&revived), vec![frame.clone()]);
 
         revived.receive_json(json!({ "type": "hello" }));
         h.idle().await;
-        assert_eq!(
-            portraits_sent(&revived),
-            vec![
-                json!({ "type": "portraits", "p1": "timmy", "p2": "dfender" }),
-                json!({ "type": "portraits", "p1": "timmy", "p2": "dfender" }),
-            ]
-        );
+        assert_eq!(portraits_sent(&revived), vec![frame.clone(), frame]);
     }
 
     #[tokio::test(start_paused = true)]
@@ -1952,9 +2076,14 @@ mod r642_the_portraits_frame_9_5 {
         settle().await;
 
         let default = serde_json::to_value(DEFAULT_PORTRAIT).expect("PortraitId serialises");
+        // R1341: an old row still has its seed, so its seats are dealt their hands like any other.
+        let hand: Vec<&str> = deal_emote_hand("seed-legacy", P1)
+            .iter()
+            .map(|id| id.as_str())
+            .collect();
         assert_eq!(
             portraits_sent(&socket),
-            vec![json!({ "type": "portraits", "p1": default, "p2": default })]
+            vec![json!({ "type": "portraits", "p1": default, "p2": default, "emotes": hand })]
         );
     }
 }

@@ -4811,12 +4811,13 @@ Each item is a part of its own (M10). Readings, with what exists today:
   a soft animated idle — breathing light, drifting motes — that Reduce motion stills), in the inspect
   view, on the board and in the deck builder's picker. Presentation only.
 - **MN03 Emotes, more of them, dealt each game.** Today ten fixed emotes, five voice lines per portrait
-  and five shared emoji ([[R643]]–[[R645]]). Reading: a pool of at least 24 — the ten, plus new voice
-  lines per portrait and new emoji (SVG and procedural sound, as the five are) — of which each seat is
-  dealt a hand of 8 at random each game from the match seed (as [[R642]] deals All Random portraits), the
-  same on reconnect and replay, sent with the portraits message, never in the view; the menu shows that
-  hand, the AI personas ([[R645]]) choose within it, and the rate limits stay. New voice lines' text goes
-  in `card-audio.json5`; their rendering is owed to a person with macOS (issue #103).
+  and five shared emoji ([[R643]]–[[R645]]). Reading: a pool of at least 24 — the ten, plus new emoji
+  (SVG and procedural sound, as the five are) — of which each seat is dealt a hand of 8 at random each
+  game from the match seed (as [[R642]] deals All Random portraits), the same on reconnect and replay,
+  sent with the portraits message, never in the view; the menu shows that hand, the AI personas
+  ([[R645]]) choose within it, and the rate limits stay. As amended on #545: no new voice lines, since a
+  line renders on macOS alone and the voice-asset check expects a file for every one. Built as
+  [[R1340]]–[[R1345]]: fourteen new emoji, 24 in all, and a hand of three voice lines and five emoji.
 - **MN04 Intro music for Legendaries and Mythics.** Today every Mythic has a looping theme of its own and
   every Legendary shares `legendary-1` or `legendary-2` (`music-cards.json`, [[R631]]), and a played
   Legendary or Mythic gets the procedural `entrance` sting ([[R669]]). Reading, as Hearthstone's

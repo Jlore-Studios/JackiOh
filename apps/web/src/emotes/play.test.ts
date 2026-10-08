@@ -1,8 +1,8 @@
 // What a shown emote sounds and reads like (play.ts, R644): a voice-line emote is its portrait's
 // own line — played on the voice channel as the `emote-<portrait>` defId at react priority, the
 // way R204's death line cuts in — and captioned by a bubble holding that line's text for the
-// line's audible span, two to four seconds. An emoji emote is one of the five synthesized effects
-// on the effects channel and a two-second sticker with no words. The SoundSink is a two-method
+// line's audible span, two to four seconds. An emoji emote is one of the nineteen synthesized
+// effects on the effects channel (R1345) and a two-second sticker with no words. The SoundSink is a two-method
 // seam, so the engine here is a pair of spies — no Web Audio is constructed.
 
 import { describe, expect, it, vi } from "vitest";
@@ -44,13 +44,27 @@ function sink(): SoundSink & {
   };
 }
 
-/** The issue §4 mapping: each emoji's own recipe on the effects channel. */
+/** The issue §4 mapping, and MN03's (R1345): each emoji's own recipe on the effects channel. */
 const EMOJI_RECIPE: Record<EmojiEmoteId, SfxId> = {
   sob: "emoteSob",
   yawn: "emoteYawn",
   laugh: "emoteLaugh",
   angry: "emoteAngry",
   wahWah: "emoteWahWah",
+  wave: "emoteWave",
+  clap: "emoteClap",
+  thumbsUp: "emoteThumbsUp",
+  facepalm: "emoteFacepalm",
+  shrug: "emoteShrug",
+  thinking: "emoteThinking",
+  heart: "emoteHeart",
+  fire: "emoteFire",
+  skull: "emoteSkull",
+  sweat: "emoteSweat",
+  cool: "emoteCool",
+  gasp: "emoteGasp",
+  salute: "emoteSalute",
+  party: "emoteParty",
 };
 
 describe("R644 the voice emotes", () => {
@@ -110,7 +124,7 @@ function emoteLineCheck(portrait: string): unknown {
 }
 
 describe("R644 the emoji emotes", () => {
-  it("R644 every EMOJI_EMOTE_IDS id plays its own synthesized effect on the effects channel", () => {
+  it("R644 R1345 every EMOJI_EMOTE_IDS id plays its own synthesized effect on the effects channel", () => {
     const engine = sink();
 
     for (const emote of EMOJI_EMOTE_IDS) {
@@ -124,6 +138,8 @@ describe("R644 the emoji emotes", () => {
     }
     // An emoji has no line: the voice channel is never touched, whichever portrait sent it.
     expect(engine.playVoice).not.toHaveBeenCalled();
+    // Each sticker its own sound: no two emoji share a recipe.
+    expect(new Set(Object.values(EMOJI_SFX)).size).toBe(EMOJI_EMOTE_IDS.length);
   });
 
   it("R644 an emoji's show is the sticker's two seconds and no text — the same for every portrait", () => {

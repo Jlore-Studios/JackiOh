@@ -749,6 +749,7 @@ keeps behind its opaque `EngineState` brand.
     // the input and output are those TS functions' argument and result, as JSON
 #[wasm_bindgen] pub fn constants() -> String;                                      // { AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, AI_DECK } for practice, the tutorial harness, the lean toggle (R1370) and their tests
 #[wasm_bindgen] pub fn find_instance(state_json: &str, instance_id: &str) -> String;  // CardInstance JSON or "null" (state.rs's find_instance)
+#[wasm_bindgen] pub fn deal_emote_hand(seed: &str, seat: &str) -> String;          // EmoteId[]: the seat's emote hand for that seed (wire/emotes.rs's deal_emote_hand, R1341), for hotseat and practice
 #[wasm_bindgen] pub fn choose_action(state_json: &str, seat: &str, rng_seed: &str, rng_cursor: f64) -> String;
     // §10.7's random policy (subsystems::ai_policy::choose_action); answers { action: ActionBody | null, rngCursor }
 #[wasm_bindgen] pub fn engine_tables() -> String;
@@ -770,7 +771,8 @@ wasm32-unknown-unknown` and downloads `wasm-bindgen-cli` 0.2.129's release tarba
 `export function loadWasmSync(bytes: BufferSource): void` (for jsdom tests, from
 `apps/web/src/test/setup.ts`), and one typed function per binding that parses and stringifies, named
 as the TS engine named it (`createGame`, `reduce`, `legalActions`, `viewFor`, `hashState`, `fold`,
-`lastBoardFor`, `seatPlayedBy`, `aiToAct`, `decide`, `buildAiDeck`, `registeredCatalog`, `findInstance`, …).
+`lastBoardFor`, `seatPlayedBy`, `aiToAct`, `decide`, `buildAiDeck`, `registeredCatalog`, `findInstance`,
+`dealEmoteHand`, …).
 `apps/web/src/main.tsx` awaits `loadWasm()` before the first render (the deck builder calls the
 validator synchronously); `practice.worker.ts` awaits it before handling a message.
 
@@ -797,7 +799,8 @@ The hand-kept helpers are the runtime values the web imports from `@jackioh/shar
 `readCodeInput`, `normalizeCodeText`, `findCodeInText`, `formattedCaret`, `isCodeSeparator`,
 `excludedCharacters`, `portraitOrDefault`, `pickPortrait`, `isPortraitId`, `PORTRAITS`,
 `PORTRAIT_IDS`, `DEFAULT_PORTRAIT`, `isEmoteId`, `isVoiceEmote`, `emoteGate`, `EMOJI_EMOTE_IDS`,
-`VOICE_EMOTE_IDS`, `parseAim`, `aimKey`, and `stats.ts`'s formatters): part 21 copies their TS
+`VOICE_EMOTE_IDS`, `EMOTE_IDS`, `EMOTE_HAND_SIZE`, `EMOTE_HAND_VOICE`, `handHolds`, `parseAim`, `aimKey`, and
+`stats.ts`'s formatters): part 21 copies their TS
 sources from `packages/shared/src/` into `apps/web/src/wire/{catalog,codes,emotes,aim,stats}.ts`
 unchanged. The Rust server needs the same functions; part 5 ports them to `crates/engine/src/wire/`.
 Both sides test against one fixture, `crates/engine/tests/fixtures/code-input-cases.json` (from
@@ -950,6 +953,18 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   Option<SetName>)` deals a seat's deck, `lean_of(lean_newest)` resolving the engine's
   `newest_shipped_set()` (R1371) at deal time; the client mirrors it as `newestShippedSet()` in
   `src/wire/catalog.ts` to name the set, and never deals.
+- **The emote hand** (#545, R1340–R1345): the pool is twenty-four `EmoteId`s (the ten, then MN03's
+  fourteen emoji), and each seat is dealt `EMOTE_HAND_SIZE` (8) of them, `EMOTE_HAND_VOICE` (3) voice
+  lines and five emoji, by `jackioh_engine::deal_emote_hand(seed, seat)` on the stream
+  `"{seed}:emotes:{seat}"` (never the match rng). The actor deals each account's hand by the seat it
+  began in when it is built, and the `portraits` frame gains the receiving account's own:
+  `{ "type": "portraits", "p1", "p2", "emotes": EmoteId[] }` (`ServerMessage::Portraits { p1, p2,
+  emotes }`), on attach and on `hello` alike; the opponent's hand is never sent. An `emote` frame whose
+  id is in the pool but not in the sender's hand parses, and the actor drops it before the rate gate
+  (`hand_holds`), relaying nothing, answering nothing and logging `match.emote.outside_hand`; an id
+  outside the pool is still `malformed`. The client reads a missing or `null` `emotes` as a server that
+  deals none and shows its default hand (`apps/web/src/emotes/hand.ts`); hotseat and practice deal
+  both seats through the `deal_emote_hand` binding.
 - **Kept on purpose**: E2E mode (fixture tokens and codes are a contract with `e2e/support/config.ts`),
   rematch offers held in memory, finished actors kept in memory, the `vanilla` portrait default for
   old rows, `matches.mode` fallbacks for old rows, the retired `loadouts` tables.

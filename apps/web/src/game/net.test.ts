@@ -368,6 +368,40 @@ describe("portraits and emotes", () => {
     expect(parseServerFrame(JSON.stringify({ type: "portraits", p1: "core-008", p2: "shredder" }))).toBeNull();
   });
 
+  it("R1342 a `portraits` frame carries this account's own emote hand, which replaces the last", () => {
+    const h = connected();
+    const hand = ["greetings", "thanks", "threaten", "laugh", "wahWah", "wave", "thumbsUp", "party"];
+    h.socket().deliver({ type: "portraits", p1: "gary", p2: "shredder", emotes: hand });
+    expect(h.client.snapshot().portraits).toEqual({ p1: "gary", p2: "shredder" });
+    expect(h.client.snapshot().emoteHand).toEqual(hand);
+
+    // The reconnect's frame holds the same hand (R1341); a frame from a server that deals none
+    // leaves the client on its default hand.
+    h.socket().deliver({ type: "portraits", p1: "gary", p2: "shredder", emotes: hand });
+    expect(h.client.snapshot().emoteHand).toEqual(hand);
+    h.socket().deliver({ type: "portraits", p1: "gary", p2: "shredder" });
+    expect(h.client.snapshot().emoteHand).toBeNull();
+    expect(h.client.snapshot().portraits).toEqual({ p1: "gary", p2: "shredder" });
+  });
+
+  it("R1342 a `portraits` frame whose emotes are not a hand of eight pool ids is refused whole", () => {
+    const h = connected();
+    const hand = ["greetings", "thanks", "threaten", "laugh", "wahWah", "wave", "thumbsUp", "party"];
+    for (const emotes of [
+      hand.slice(0, 7),
+      [...hand, "sob"],
+      [...hand.slice(0, 7), "greetings"],
+      [...hand.slice(0, 7), "poke"],
+      "greetings",
+      [1, 2, 3, 4, 5, 6, 7, 8],
+    ]) {
+      expect(parseServerFrame(JSON.stringify({ type: "portraits", p1: "gary", p2: "shredder", emotes })), JSON.stringify(emotes)).toBeNull();
+      h.socket().deliver({ type: "portraits", p1: "gary", p2: "shredder", emotes });
+    }
+    expect(h.client.snapshot().portraits).toBeNull();
+    expect(h.client.snapshot().emoteHand).toBeNull();
+  });
+
   it("R643 an `emote` relay lands with a seq that bumps, so the same emote twice still notifies twice", () => {
     const h = connected();
     let notified = 0;
