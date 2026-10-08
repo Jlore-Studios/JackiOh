@@ -3928,6 +3928,13 @@
     "559": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-08T14:48:08Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "easy line 1 (Small) fails: the issue sizes this at 400-700 lines, over the 400-line cap"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
