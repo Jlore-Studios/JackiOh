@@ -6,6 +6,8 @@
  * tokens) and AI (the ten AI generated cards); the v0.2.x mechanics patch adds Plague (every card
  * that uses Plague Counters); patch v0.2.Y adds Catalyst (Classic+ #38 Solarius and #46 Felinor
  * Flagbearer), Prime (their Prime tokens, Classic+ #38.1 Solarius Prime and #46.1 Felinor
- * Flagbearer Prime) and Acclaimed (Classic #80 BOOM! Big Max and Classic+ #37 Wardrum).
+ * Flagbearer Prime) and Acclaimed (Classic #80 BOOM! Big Max and Classic+ #37 Wardrum); the
+ * Meditative set adds Wincon (its #8 Reach the Summit and #20 Aestheticize the Game, which win the
+ * game another way, R1420's set).
  */
-export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Token";
+export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Token";

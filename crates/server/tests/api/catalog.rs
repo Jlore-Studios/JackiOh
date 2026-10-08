@@ -117,8 +117,17 @@ fn from_json<T: DeserializeOwned>(value: Value) -> T {
 }
 
 /// The catalog file the server loads, as raw defs, so the tests below count it and not a transcription.
+/// R1420: whether an entry's set ships: the server serves, seeds and counts only those.
+fn ships(def: &Value) -> bool {
+    serde_json::from_value::<jackioh_engine::SetName>(def["set"].clone())
+        .map_or(true, jackioh_engine::set_ships)
+}
+
+/// `catalog.json`'s entries of the sets that ship (R1420), as the server loads and serves them.
 fn catalog_file() -> Value {
-    serde_json::from_str(jackioh_cards::catalog_json()).expect("catalog.json is JSON")
+    let file: serde_json::Map<String, Value> =
+        serde_json::from_str(jackioh_cards::catalog_json()).expect("catalog.json is JSON");
+    Value::Object(file.into_iter().filter(|(_, def)| ships(def)).collect())
 }
 
 fn sorted_keys(object: &Value) -> Vec<String> {

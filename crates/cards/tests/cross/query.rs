@@ -17,6 +17,7 @@
 
 use jackioh_cards::query::{CardQuery, TRAP_TYPES, catalog, pool, query, query_cost};
 use jackioh_cards::{CATALOG, card_def_by_index};
+use jackioh_engine::catalog::set_is_open;
 use jackioh_engine::testkit::{json_as, register_catalog};
 use jackioh_engine::{CardCost, CardDef, CardDefs, CardType, GLITCH_DEF_ID, Rarity, SetName, Tag};
 use serde_json::{Value, json};
@@ -59,8 +60,12 @@ fn token_ids() -> Vec<String> {
 }
 
 /// Every non-token def, in catalog order — the pool a plain query answers (R380).
+/// The non-token cards of the sets that ship (R1420): a pool that names no set reaches no other.
 fn non_token() -> Vec<&'static CardDef> {
-    CATALOG.values().filter(|def| !def.token).collect()
+    CATALOG
+        .values()
+        .filter(|def| !def.token && set_is_open(def.set))
+        .collect()
 }
 
 /// TS `beforeAll(() => registerCatalog(CATALOG, CATALOG_VERSION))`: each Rust test runs on its own
@@ -723,8 +728,9 @@ mod r382_the_fruit_pool_holds_the_five_grapes_a_pool_that_takes_every_token_take
     fn r382_classic_plus_23_dropshipping_s_pool_takes_every_card_and_every_token_of_every_set_but_itself() {
         register();
         let every = ids(pool("classicplus-023", &q(json!({ "withTokens": true }))));
-        // R674: Glitch is the one token no pool takes.
-        assert_eq!(every.len(), CATALOG.len() - 2);
+        // R674: Glitch is the one token no pool takes; R1420: a set that has not shipped is in none.
+        let open = CATALOG.values().filter(|def| set_is_open(def.set)).count();
+        assert_eq!(every.len(), open - 2);
         assert!(!every.contains(&"classicplus-023".to_string()));
         assert!(!every.contains(&GLITCH_DEF_ID.to_string()));
         for id in GRAPES.iter().copied().chain([

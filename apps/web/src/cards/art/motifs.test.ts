@@ -264,7 +264,7 @@ describe("R503 a card's motif comes from its name", () => {
   });
 
   it("R503 every Classic and Classic+ entry has a motif but for the few whose names draw nothing", () => {
-    const bare = DEFS.filter((card) => card.set !== "Core")
+    const bare = DEFS.filter((card) => card.set === "Classic" || card.set === "Classic+")
       .filter((card) => motifFor(card.name, themeFor(card.tags, card.type)) === null)
       .map((card) => card.name);
     expect(bare.sort()).toEqual(

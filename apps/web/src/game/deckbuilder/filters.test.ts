@@ -11,6 +11,7 @@ import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 import { describe, expect, it } from "vitest";
 
 import { CATALOG as CORE_CATALOG } from "@jackioh/cards";
+import { setShips } from "@jackioh/shared";
 import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 
 import {
@@ -651,6 +652,8 @@ describe("the Jlockeed tag (R278)", () => {
 
 describe("the almanac's pool (R630)", () => {
   const REAL: CatalogSnapshot = { version: "almanac-test", cards: CORE_CATALOG };
+  /** R1420: the catalog's cards of the sets that ship, the shelf the almanac shows. */
+  const SHIPPED: readonly CardDef[] = Object.values(CORE_CATALOG).filter((d) => setShips(d.set));
 
   it("R630 shows every catalog card, the token included, filtered and sorted like the pool", () => {
     // The token costs 1 and sorts after Bramble Cat, the other 1-cost card, by name.
@@ -671,8 +674,8 @@ describe("the almanac's pool (R630)", () => {
   it("R630 the Token chip keeps the tokens and nothing else", () => {
     expect(almanacPool(CATALOG, filter({ tags: new Set<Tag>(["Token"]) }), DEFAULT_SORT)).toEqual([TOKEN]);
     const tokens = almanacPool(REAL, filter({ tags: new Set<Tag>(["Token"]) }), DEFAULT_SORT);
-    // R674: every token but Glitch.
-    const realTokens = Object.values(CORE_CATALOG).filter((d) => d.token && d.id !== GLITCH_DEF_ID);
+    // R674: every token but Glitch; R1420: of the sets that ship.
+    const realTokens = SHIPPED.filter((d) => d.token && d.id !== GLITCH_DEF_ID);
     expect(tokens).toHaveLength(realTokens.length);
     expect(new Set(tokens)).toEqual(new Set(realTokens.map((d) => d.id)));
   });
@@ -685,9 +688,29 @@ describe("the almanac's pool (R630)", () => {
 
   it("R630 shows the whole real catalog, the deck builder's pool plus every token (Glitch excepted, R674)", () => {
     const all = almanacPool(REAL, DEFAULT_FILTER, DEFAULT_SORT);
-    expect([...all].sort()).toEqual(Object.keys(CORE_CATALOG).filter((id) => id !== GLITCH_DEF_ID).sort());
+    expect([...all].sort()).toEqual(SHIPPED.map((d) => d.id).filter((id) => id !== GLITCH_DEF_ID).sort());
     const deckable = visiblePool(REAL, null, DEFAULT_FILTER, DEFAULT_SORT);
-    expect(all.length - deckable.length).toBe(Object.values(CORE_CATALOG).filter((d) => d.token && d.id !== GLITCH_DEF_ID).length);
+    expect(all.length - deckable.length).toBe(SHIPPED.filter((d) => d.token && d.id !== GLITCH_DEF_ID).length);
+  });
+
+  it("R1420 shows no card of a set that has not shipped, on the almanac's shelf or in the deck builder's pool", () => {
+    const base = CORE_CATALOG["core-002"];
+    if (base === undefined) throw new Error("no core-002 in the catalog");
+    const building: CardDef = { ...base, id: "meditative-002", index: "2", set: "Meditative", name: "Set being built" };
+    const token: CardDef = { ...building, id: "meditative-002-1", index: "2.1", token: true, tags: ["Token"], rarity: "Token" };
+    const withSet: CatalogSnapshot = {
+      version: "r1420-test",
+      cards: { ...CORE_CATALOG, [building.id]: building, [token.id]: token },
+    };
+    for (const f of [DEFAULT_FILTER, filter({ tags: new Set<Tag>(["Token"]) }), filter({ ownedOnly: false })]) {
+      expect(almanacPool(withSet, f, DEFAULT_SORT)).not.toContain(building.id);
+      expect(almanacPool(withSet, f, DEFAULT_SORT)).not.toContain(token.id);
+      expect(visiblePool(withSet, null, f, DEFAULT_SORT)).not.toContain(building.id);
+    }
+    expect(visiblePool(withSet, { [building.id]: 1 }, filter({ ownedOnly: true }), DEFAULT_SORT)).not.toContain(building.id);
+    expect(almanacPool(withSet, DEFAULT_FILTER, DEFAULT_SORT)).toEqual(almanacPool(REAL, DEFAULT_FILTER, DEFAULT_SORT));
+    expect(setShips("Meditative")).toBe(false);
+    expect(setShips("Core")).toBe(true);
   });
 
   it("R674 Glitch is in neither the almanac's pool nor the deck builder's, under any filter", () => {
@@ -709,7 +732,8 @@ describe("the almanac's pool (R630)", () => {
 
   it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI and Token", () => {
     expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Token"]);
-    const carried = new Set(Object.values(CORE_CATALOG).flatMap((d) => d.tags));
+    // R1420: the tags the cards of the shipped sets carry; a set being built adds its tags when it ships.
+    const carried = new Set(SHIPPED.flatMap((d) => d.tags));
     expect(new Set(ALMANAC_TAGS)).toEqual(carried);
     expect(filterTagId("Token")).toBe("db-filter-tag-token");
     expect(filterTagId("AI")).toBe("db-filter-tag-ai");
