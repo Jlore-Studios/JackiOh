@@ -7,6 +7,8 @@
 // from the voices bank (with its text); its key is `<defId>-<hook>`. An assignment that is only an
 // effect renders nothing. Which hooks a card may carry is voiceData.ts's to check (CARD_HOOKS); this
 // script holds every catalog card to SPEC §10.11's lines: a Unit's play and death, anything else's cast.
+// A card of a set that has not shipped (R1420) is held to its lines too, but renders no file until its
+// set ships: no player meets it before then, and its files are owed with the patch that ships it.
 //
 //   node apps/web/scripts/gen-voice.mjs [--check] [--force] [--only <defId>] [--root <webDir>] [--catalog <file>]
 //   pnpm --filter @jackioh/web gen:voice
@@ -90,6 +92,8 @@ const USAGE =
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 /** Found from the script, not from `--root`, so a temp copy of the web dir is still checked against it. */
 const CATALOG = path.resolve(SCRIPT_DIR, "../../../crates/cards/catalog.json");
+// R1420: the client's mirror of the engine's SHIPPED_SETS, read from this script's own tree.
+const WIRE_CATALOG = path.resolve(SCRIPT_DIR, "../src/wire/catalog.ts");
 const POWERSHELL_WSL = "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe";
 
 function usage(message) {
@@ -316,6 +320,27 @@ function catalogProblems(catalog, table, expected) {
   return problems;
 }
 
+/** R1420: the sets that ship, as `src/wire/catalog.ts` lists them. */
+function shippedSets() {
+  const text = fs.readFileSync(WIRE_CATALOG, "utf8");
+  const match = /export const SHIPPED_SETS = (\[[^\]]*\])/.exec(text);
+  if (!match) throw new Error(`${WIRE_CATALOG}: no SHIPPED_SETS`);
+  return new Set(JSON.parse(match[1]));
+}
+
+/**
+ * R1420: a card of a set that has not shipped renders no file yet. Its lines are written and
+ * checked like any card's, and their files are owed when its set ships, since no player meets the
+ * card before then. An entry that names no set (a test's fixture) counts as shipped.
+ */
+function dropUnshipped(catalog, expected) {
+  const shipped = shippedSets();
+  for (const [key, want] of [...expected]) {
+    const set = isObject(catalog) && isObject(catalog[want.defId]) ? catalog[want.defId].set : undefined;
+    if (typeof set === "string" && !shipped.has(set)) expected.delete(key);
+  }
+}
+
 function load(root, catalogPath) {
   const files = {
     table: path.join(root, "src/audio/card-audio.json5"),
@@ -336,7 +361,9 @@ function load(root, catalogPath) {
   const expected = expectedKeys(table, dataProblems);
 
   try {
-    dataProblems.push(...catalogProblems(readJson(catalogPath), table, expected));
+    const catalog = readJson(catalogPath);
+    dataProblems.push(...catalogProblems(catalog, table, expected));
+    dropUnshipped(catalog, expected);
   } catch (err) {
     dataProblems.push(`catalog: ${err.message}`);
   }

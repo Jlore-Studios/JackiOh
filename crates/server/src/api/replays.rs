@@ -50,7 +50,9 @@ use crate::api::http::{
     log_warn, now_ms, ok_of, rate_limited,
 };
 use crate::app::App;
-use crate::config::{REPLAY_CACHE_MATCHES, REPLAY_CACHE_TTL_SECONDS, REPLAY_LIST_PAGE, REPLAY_REQUESTS_PER_MINUTE};
+use crate::config::{
+    REPLAY_CACHE_MATCHES, REPLAY_CACHE_TTL_SECONDS, REPLAY_LIST_PAGE, REPLAY_REQUESTS_PER_MINUTE,
+};
 use crate::db::store::{MatchPhase, QueueMode, ReplayRow, ResultRow};
 
 /// Unit conversions, not configuration.
@@ -442,7 +444,10 @@ pub async fn get_replay(app: &Arc<App>, req: Req) -> ApiResult {
         return Err(no_such_replay());
     };
     if seats.phase != MatchPhase::Over {
-        return Err(ApiError::new(ApiErrorCode::Conflict, "this match has not finished"));
+        return Err(ApiError::new(
+            ApiErrorCode::Conflict,
+            "this match has not finished",
+        ));
     }
     let Some(replay) = tx.replays_get(match_id).await? else {
         return Err(no_such_replay());

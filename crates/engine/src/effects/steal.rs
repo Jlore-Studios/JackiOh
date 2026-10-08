@@ -62,6 +62,14 @@ fn destination_for(ctx: &EffectContext<'_>, thief: PlayerId, from: &ZoneSlot) ->
 /// means nothing off it, R12), when that player already controls it (R76), or when the row has no
 /// free zone: then it stays with its owner (R15).
 fn take_control(ctx: &mut EffectContext<'_>, card: &CardInstance) -> bool {
+    let receiver = ctx.controller;
+    move_control(ctx, card, receiver)
+}
+
+/// One card to `receiver`'s side, as `take_control` moves it: R15's zone, R171's entry, the
+/// `controlChanged` event, and nothing at all when the card is off the field, dormant (R13), already
+/// `receiver`'s (R76), or finds no free zone (R15).
+fn move_control(ctx: &mut EffectContext<'_>, card: &CardInstance, receiver: PlayerId) -> bool {
     let Some(from) = slot_of(ctx.state, card) else {
         return false;
     };
@@ -70,12 +78,12 @@ fn take_control(ctx: &mut EffectContext<'_>, card: &CardInstance) -> bool {
     if !is_active_on_field(ctx.state, card) {
         return false;
     }
-    if card.controller == ctx.controller {
+    if card.controller == receiver {
         return false;
     }
     let previous = card.controller;
 
-    let Some(to) = destination_for(ctx, ctx.controller, &from) else {
+    let Some(to) = destination_for(ctx, receiver, &from) else {
         return false;
     };
 
@@ -116,6 +124,21 @@ pub fn steal(args: StealTarget) -> Effect {
             return;
         };
         take_control(ctx, &card);
+    })
+}
+
+/// R1423: give a card on the field to the other player, the mirror of `steal`: the player who
+/// controls it now loses it to their opponent, placed per R15 and entering that side per R171
+/// (Meditative #6 Me no Likey gives one of your Units to the enemy, #30 Fickle E-Kitten gives
+/// itself away). The same no-ops as a steal: a card off the field or dormant under a Stack (R13),
+/// or one the receiving side has no free zone for, stays where it is (R15).
+pub fn give_control(args: StealTarget) -> Effect {
+    Effect::new("giveControl", move |ctx| {
+        let Some(card) = instance_of(ctx, &args) else {
+            return;
+        };
+        let receiver = opponent_of(card.controller);
+        move_control(ctx, &card, receiver);
     })
 }
 

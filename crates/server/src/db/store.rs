@@ -1543,7 +1543,12 @@ impl Tx<'_> {
     /// The finished matches `profile_id` held a seat in that have a result and a log the retention
     /// purge has not taken, newest ended first (the id breaking a tie), `limit` of them from
     /// `offset`.
-    pub async fn replays_list(&mut self, profile_id: &str, limit: i64, offset: i64) -> StoreResult<Vec<ReplayRow>> {
+    pub async fn replays_list(
+        &mut self,
+        profile_id: &str,
+        limit: i64,
+        offset: i64,
+    ) -> StoreResult<Vec<ReplayRow>> {
         dispatch!(self, replays_list(profile_id, limit, offset))
     }
 

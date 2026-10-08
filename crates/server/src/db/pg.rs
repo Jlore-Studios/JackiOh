@@ -70,13 +70,14 @@ use crate::auth::is_uuid;
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
     BotRating, CodeAttempt, CollectionEntry, CollectionGrant, FrozenDeck, FrozenTrio, GameRecordQuery,
-    InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, MatchSeats, PerMode, PlayerSettingsGroup,
-    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
-    PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileRecord, ProfileStatus,
-    PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow,
-    RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow,
-    SeriesSide, StoreError, Ticket, TicketStatus, TrioUpsertOutcome, TutorialHiddenChoice,
-    TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome,
+    InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, MatchSeats, PerMode,
+    PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
+    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileRecord,
+    ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput,
+    RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck,
+    SavedTrio, Season, SeasonStanding, SeriesRow, SeriesSide, StoreError, Ticket, TicketStatus,
+    TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
+    UpsertOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -2853,7 +2854,11 @@ pub async fn matches_forget_voided(t: &mut PgTx<'_>, match_id: &str) -> Result<(
 }
 
 /// R768 (migration 0027): the `final_hash is null` guard is what makes it written once.
-pub async fn matches_record_final_hash(t: &mut PgTx<'_>, match_id: &str, final_hash: &str) -> Result<(), StoreError> {
+pub async fn matches_record_final_hash(
+    t: &mut PgTx<'_>,
+    match_id: &str,
+    final_hash: &str,
+) -> Result<(), StoreError> {
     if !is_uuid(match_id) {
         return Ok(());
     }
@@ -2874,11 +2879,12 @@ pub async fn matches_seats(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<Ma
         return Ok(None);
     }
     run_as(t, None).await?;
-    let row = sqlx::query("select status, p1_profile_id, p2_profile_id from public.matches where id = $1::uuid")
-        .bind(match_id)
-        .fetch_optional(&mut **t)
-        .await
-        .map_err(db_error)?;
+    let row =
+        sqlx::query("select status, p1_profile_id, p2_profile_id from public.matches where id = $1::uuid")
+            .bind(match_id)
+            .fetch_optional(&mut **t)
+            .await
+            .map_err(db_error)?;
     let Some(row) = row else {
         return Ok(None);
     };
@@ -2967,11 +2973,12 @@ pub async fn replays_get(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<Repl
         return Ok(None);
     }
     run_as(t, None).await?;
-    let counted = sqlx::query("select count(*) as actions from public.match_actions where match_id = $1::uuid")
-        .bind(match_id)
-        .fetch_one(&mut **t)
-        .await
-        .map_err(db_error)?;
+    let counted =
+        sqlx::query("select count(*) as actions from public.match_actions where match_id = $1::uuid")
+            .bind(match_id)
+            .fetch_one(&mut **t)
+            .await
+            .map_err(db_error)?;
     replay_row(t, match_id, get(&counted, "actions")?).await
 }
 

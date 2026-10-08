@@ -18,7 +18,7 @@ use std::sync::Arc;
 
 use axum::body::Body;
 use axum::response::Response;
-use jackioh_engine::{CardDef, CardDefs, Tag};
+use jackioh_engine::{CardDef, CardDefs, Tag, set_ships};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
@@ -186,6 +186,11 @@ pub async fn load_catalog(options: LoadCatalogOptions) -> Result<Catalog, Catalo
         let def: CardDef = serde_json::from_value(value).map_err(|_| {
             CatalogUnavailableError::new(CATALOG_SOURCE, format!("\"{key}\" is not a CardDef"))
         })?;
+        // R1420: a set the catalog holds that has not shipped is no card the server knows of: it is
+        // in no deck, no statistic and no `GET /api/catalog` until `SHIPPED_SETS` lists it.
+        if !set_ships(def.set) {
+            continue;
+        }
         defs.insert(key, def);
     }
 

@@ -50,6 +50,9 @@ import { fileURLToPath } from "node:url";
 import JSON5 from "json5";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import type { SetName } from "@jackioh/shared";
+import { setShips } from "@jackioh/shared";
+
 import { VOICE_BUDGET_BYTES, VOICE_FILE_MAX_MS } from "./constants.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -93,7 +96,13 @@ function writeJson(path: string, value: unknown): void {
 
 // ------------------------------------------------------------------------------ expectations ---
 
-const CATALOG = readJson(CATALOG_PATH) as Record<string, { type?: unknown }>;
+const CATALOG = readJson(CATALOG_PATH) as Record<string, { type?: unknown; set?: unknown }>;
+
+/** R1420: a card of a set that has not shipped renders no file until its set ships. */
+function voicedNow(key: string): boolean {
+  const set = CATALOG[splitKey(key).defId]?.set;
+  return typeof set !== "string" || setShips(set as SetName);
+}
 
 /** SPEC §10.11's lines: a play and a death line per Unit (tokens included), one cast line per everything else. */
 const REQUIRED_KEYS: readonly string[] = Object.entries(CATALOG).flatMap(([id, card]) =>
@@ -131,7 +140,7 @@ const EXPECTED_EMOTE_KEYS: readonly string[] = Object.keys(
  * Every hook the committed file voices, plus every emote line; a hook that is only an effect
  * renders no file.
  */
-const EXPECTED_KEYS: readonly string[] = [...voicedKeys(AUDIO), ...EXPECTED_EMOTE_KEYS];
+const EXPECTED_KEYS: readonly string[] = [...voicedKeys(AUDIO).filter(voicedNow), ...EXPECTED_EMOTE_KEYS];
 const EXPECTED_FILES: readonly string[] = EXPECTED_KEYS.map((key) => `${key}.m4a`);
 /** Core's own count (44 units, 67 spells and traps) plus whatever the other sets bring. */
 const EXPECTED_FILE_COUNT = EXPECTED_KEYS.length;
@@ -262,7 +271,7 @@ function runCheck(extraArgs: readonly string[] = []): CheckRun {
 }
 
 /** A problem line starts with the key it is about (Surface: "each starting with the key"). */
-const KEY_AT_START = /^((?:core|classic|classicplus)-[a-z0-9]+(?:-[a-z0-9]+)*-(?:play|attack|death|cast))(?![a-z0-9])/;
+const KEY_AT_START = /^((?:core|classic|classicplus|meditative)-[a-z0-9]+(?:-[a-z0-9]+)*-(?:play|attack|death|cast))(?![a-z0-9])/;
 
 /** The keys the run reported a problem for, sorted and deduplicated. */
 function reportedKeys(run: CheckRun): string[] {
@@ -630,6 +639,36 @@ describe("gen-voice.mjs --check (B37)", () => {
     writeJson(catalog, { ...CATALOG, "classicplus-999": { type: "Spell" } });
     return { root, catalog };
   }
+
+  /**
+   * R1420: a voiced card of `set` that the catalog --catalog names holds and no file renders, with
+   * the committed voices and an invented id (`meditative-999`), so no real catalog has it.
+   */
+  function unrenderedTree(set: string): { root: string; catalog: string } {
+    const root = copyWebTree();
+    editAudio(root, (table) => {
+      cardsOf(table)["meditative-999"] = { cast: { voice: "narrator", text: "Breathe in. Breathe out." } };
+    });
+    const catalog = join(root, "catalog.json");
+    writeJson(catalog, { ...CATALOG, "meditative-999": { type: "Spell", set } });
+    return { root, catalog };
+  }
+
+  it(
+    "R1420 owes no file for a line of a set that has not shipped, and the same line on a shipped card is missing",
+    () => {
+      const unshipped = unrenderedTree("Meditative");
+      const quiet = runCheck(["--root", unshipped.root, "--catalog", unshipped.catalog]);
+      expect(quiet.status, describeRun(quiet)).toBe(0);
+      expect(reportedKeys(quiet)).toEqual([]);
+
+      const shipped = unrenderedTree("Core");
+      const loud = runCheck(["--root", shipped.root, "--catalog", shipped.catalog]);
+      expect(loud.status, describeRun(loud)).toBe(1);
+      expect(reportedKeys(loud)).toContain("meditative-999-cast");
+    },
+    CHECK_TIMEOUT_MS,
+  );
 
   it(
     "R501 accepts a line voiced by a SAPI voice, hashed over its own fields, against the catalog --catalog names",

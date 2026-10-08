@@ -3891,7 +3891,10 @@ mod replays {
 
         let listed = q!(harness, t => t.replays_list(&a.id, 10, 0));
         let ids: Vec<&str> = listed.iter().map(|replay| replay.row.id.as_str()).collect();
-        assert_eq!(ids, vec![newer.as_str(), deleted.as_str(), as_p2.as_str(), older.as_str()]);
+        assert_eq!(
+            ids,
+            vec![newer.as_str(), deleted.as_str(), as_p2.as_str(), older.as_str()]
+        );
         let actions: Vec<i64> = listed.iter().map(|replay| replay.actions).collect();
         assert_eq!(actions, vec![3, 1, 1, 2]);
         for replay in listed.iter().filter(|replay| replay.row.id != deleted) {
@@ -3918,7 +3921,10 @@ mod replays {
             assert_eq!(ids, expected, "offset {offset}");
         }
         let for_c = q!(harness, t => t.replays_list(&c.id, 10, 0));
-        assert_eq!(ids_of(&for_c.iter().map(|replay| replay.row.clone()).collect::<Vec<_>>()), vec![others]);
+        assert_eq!(
+            ids_of(&for_c.iter().map(|replay| replay.row.clone()).collect::<Vec<_>>()),
+            vec![others]
+        );
 
         // By id: a purged log reads as none of it; no result, live or unknown is none.
         let read = must(q!(harness, t => t.replays_get(&newer)), "the replay");

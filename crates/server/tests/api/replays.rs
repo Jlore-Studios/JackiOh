@@ -443,7 +443,13 @@ mod r768_the_steps {
         assert_eq!(body["steps"].as_array().map(Vec::len), Some(REPLAY_PAGE_STEPS));
         let (status, body) = get(&app, "/api/replays/m-cap?from=3&count=2", &tokens.a).await;
         assert_eq!(status, 200, "{body}");
-        assert_eq!(body["steps"], json!([step_of(&played, 3, PlayerId::P1), step_of(&played, 4, PlayerId::P1)]));
+        assert_eq!(
+            body["steps"],
+            json!([
+                step_of(&played, 3, PlayerId::P1),
+                step_of(&played, 4, PlayerId::P1)
+            ])
+        );
 
         let total = played.steps();
         for query in [
@@ -675,7 +681,13 @@ mod r768_the_list {
                 "opponentTag": player_tag(B),
             })
         };
-        let mut bad_hash = entry("m-bad-hash", now - 1_000, "p1", Value::Null, ["vanilla", "vanilla"]);
+        let mut bad_hash = entry(
+            "m-bad-hash",
+            now - 1_000,
+            "p1",
+            Value::Null,
+            ["vanilla", "vanilla"],
+        );
         bad_hash["unavailable"] = json!("rules_changed");
         assert_eq!(
             body["replays"],
@@ -729,9 +741,10 @@ mod r768_the_list {
         .await;
         assert_eq!(status, 200, "{second}");
         assert_eq!(
-            second["replays"]
-                .as_array()
-                .map(|entries| entries.iter().map(|entry| entry["matchId"].clone()).collect::<Vec<_>>()),
+            second["replays"].as_array().map(|entries| entries
+                .iter()
+                .map(|entry| entry["matchId"].clone())
+                .collect::<Vec<_>>()),
             Some(vec![json!(format!("m-page-{REPLAY_LIST_PAGE:02}"))])
         );
         assert!(second["nextOffset"].is_null());

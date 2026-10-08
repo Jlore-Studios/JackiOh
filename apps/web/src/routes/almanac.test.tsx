@@ -10,6 +10,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { CardDef, Tag } from "@jackioh/shared";
+import { setShips } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -52,7 +53,10 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const SLOW = { timeout: 10_000 } as const;
 
 /** R674: every card the almanac shows: the catalog's, Glitch excepted. */
-const CARDS: readonly CardDef[] = Object.values(ALMANAC_CATALOG.cards).filter((def) => def.id !== GLITCH_DEF_ID);
+// The cards of the sets that ship (R1420): a set the catalog holds before it ships is not on the shelf.
+const CARDS: readonly CardDef[] = Object.values(ALMANAC_CATALOG.cards).filter(
+  (def) => def.id !== GLITCH_DEF_ID && setShips(def.set),
+);
 const TOKENS: readonly CardDef[] = CARDS.filter((def) => def.token);
 
 function at(path: string): void {

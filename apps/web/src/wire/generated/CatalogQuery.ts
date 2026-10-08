@@ -10,9 +10,15 @@ import type { Tag } from "./Tag";
  * §5.1: the one query every random pool and Discover goes through. Every field narrows; `{}` is every
  * non-token card of every set (R380: a pool that names no set draws from all of them).
  */
-export type CatalogQuery = { type?: OneOrMany<CardType>, cost?: number, costRange?: CostRange, tags?: Array<Tag>, notTags?: Array<Tag>, rarity?: OneOrMany<Rarity>, 
+export type CatalogQuery = { type?: OneOrMany<CardType>, cost?: number, costRange?: CostRange, tags?: Array<Tag>, notTags?: Array<Tag>, 
 /**
- * A set, or several ("Classic or Classic+"). Absent is every set (R380).
+ * R1422: has at least one of these tags ("a random Human, Book, CN, or AI-Generated card"), where
+ * `tags` asks for every one of its tags. A Fruit or Prime tag here takes its tokens as `tags`
+ * does (R382, R1421).
+ */
+anyTags?: Array<Tag>, rarity?: OneOrMany<Rarity>, 
+/**
+ * A set, or several ("Classic or Classic+"). Absent is every set that ships (R380, R1420).
  */
 set?: OneOrMany<SetName>, 
 /**

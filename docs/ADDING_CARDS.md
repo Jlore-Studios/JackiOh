@@ -35,6 +35,22 @@ before yours, so a pending-claimed card needs no edit there (R646). What stays h
 Also grep the Markdown for the stated totals (`268 cards`, `318`) and update them: the READMEs, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`,
 `spec/`, `docs/architecture.md`.
 
+**A card of a set that has not shipped** (the Meditative set while issue #496 builds it, R1420) differs in five places:
+- Its script goes in `src/scripts/meditative/`.
+- Rows 1, 4, 5, 6 and 7 are already written. §8.8, §7, the `MEDITATIVE` fixture, the census in `crates/tools/src/catalog.rs`,
+  `docs/radiant-audit.md` and BUILD M10 list every card of the set, so a card part corrects its rows only where its build
+  decided otherwise.
+- There is no row 11. The patches tool reads the catalog without the set, so its cards need no fragment until the release
+  claims the whole set at once. The stated totals above don't move either: they count the shipped sets.
+- The set's cards are in no pool that names no set, in no deck and in no random deck. A test that needs them there opens the set
+  with the engine testkit's `preview_sets(&[SetName::Meditative])` (one thread, until its guard drops).
+- `cargo jackioh fuzz` previews every set, so the card is fuzzed from the day it lands, while the golden traces deal from the
+  shipped sets and must not move.
+- Its `card-audio.json5` entry is written as for any card, but no voice file is expected for it until the set ships
+  (`gen-voice.mjs --check` leaves it out), so [§7](#7-what-cannot-be-done-on-linux)'s rendering is owed by the release, not by the card.
+- Tests that count the catalog count the sets that ship (`set_is_open` in Rust, `setShips` in the web), never every entry.
+  `docs/meditative-set.md` M3 says the rest.
+
 ## 2. Templates
 
 **Catalog entry** (C+ #6). `loc` is the script's lines of code, from `cargo jackioh catalog loc <script path>` once the script is written

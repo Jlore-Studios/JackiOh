@@ -170,9 +170,14 @@ mod read_catalog_ {
 
     #[tokio::test]
     async fn reads_the_real_catalog_json_every_entry_cards_and_tokens_in_three_sets() {
-        let raw: IndexMap<String, Value> =
+        let mut raw: IndexMap<String, Value> =
             serde_json::from_str(&std::fs::read_to_string(REAL_CATALOG).expect("the real catalog reads"))
                 .expect("the real catalog is a record");
+        // R1420: a set that has not shipped is not seeded.
+        raw.retain(|_, entry| {
+            serde_json::from_value::<jackioh_engine::SetName>(entry["set"].clone())
+                .map_or(true, jackioh_engine::set_ships)
+        });
         let entries = read_catalog(REAL_CATALOG)
             .await
             .expect("the real catalog is read");

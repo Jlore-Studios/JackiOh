@@ -16,6 +16,7 @@
 
 import {
   SHIPPED_SETS,
+  setShips,
   fillParams,
   type CardCost,
   type CardDef,
@@ -291,8 +292,8 @@ export function visiblePool(
 }
 
 /**
- * What the almanac's grid shows (R630): every catalog card, tokens included, Glitch excepted (R674),
- * filtered, then sorted.
+ * What the almanac's grid shows (R630): every catalog card, tokens included, Glitch excepted (R674)
+ * and the cards of a set that has not shipped (R1420), filtered, then sorted.
  * There is no collection, so `filter.ownedOnly` is not read.
  */
 export function almanacPool(
@@ -301,8 +302,12 @@ export function almanacPool(
   sort: PoolSort,
   winRates?: ReadonlyMap<string, CardWinRateInfo>,
 ): readonly string[] {
-  // R674: every card but Glitch, which the almanac never shows.
-  return filteredAndSorted(Object.keys(catalog.cards).filter((id) => !isGlitch(id)), catalog, filter, sort, winRates);
+  // R674: every card but Glitch, which the almanac never shows; R1420: none of a set not shipped yet.
+  const shelf = Object.keys(catalog.cards).filter((id) => {
+    const def = catalog.cards[id];
+    return def !== undefined && !isGlitch(id) && setShips(def.set);
+  });
+  return filteredAndSorted(shelf, catalog, filter, sort, winRates);
 }
 
 function filteredAndSorted(

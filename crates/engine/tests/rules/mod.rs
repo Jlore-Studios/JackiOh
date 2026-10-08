@@ -150,6 +150,7 @@ pub mod rulings_c;
 pub mod rulings_config;
 pub mod scorer;
 pub mod self_tribute;
+pub mod sets_not_shipped;
 pub mod setup;
 pub mod setup_aside;
 pub mod shuffle_random;

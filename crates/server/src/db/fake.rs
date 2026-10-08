@@ -98,13 +98,14 @@ use crate::config::{
 };
 use crate::db::store::{
     BotRating, CodeAttempt, CodeAttemptResult, CollectionEntry, CollectionGrant, Db, FavouriteCard, FunStats,
-    GameRecordQuery, InviteCode, LastBoardEntry, LastBoardKind, MatchActionRow, MatchClocks, MatchPhase, MatchRow,
-    MatchSeats, MatchStatus, PerMode, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
-    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileRecord,
-    ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult,
-    ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding,
-    SeriesRow, SeriesStatus, StoreError, Ticket, TicketStatus, TrioUpsertOutcome, TutorialMergeInput,
-    TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome,
+    GameRecordQuery, InviteCode, LastBoardEntry, LastBoardKind, MatchActionRow, MatchClocks, MatchPhase,
+    MatchRow, MatchSeats, MatchStatus, PerMode, PlayerSettingsLimits, PlayerSettingsMergeInput,
+    PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile,
+    ProfileCreateInput, ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow,
+    RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult,
+    Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, SeriesStatus, StoreError, Ticket,
+    TicketStatus, TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
+    UpsertOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -1090,7 +1091,11 @@ pub fn matches_forget_voided(f: &mut FakeTx<'_>, match_id: &str) -> Result<(), S
 }
 
 /// R768: written once; a no-op on a match that has a hash already, and on an unknown id.
-pub fn matches_record_final_hash(f: &mut FakeTx<'_>, match_id: &str, final_hash: &str) -> Result<(), StoreError> {
+pub fn matches_record_final_hash(
+    f: &mut FakeTx<'_>,
+    match_id: &str,
+    final_hash: &str,
+) -> Result<(), StoreError> {
     call(f, "matches.recordFinalHash")?;
     if let Some(row) = f
         .tables()

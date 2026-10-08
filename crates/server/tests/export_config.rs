@@ -129,12 +129,12 @@ fn constants() -> Vec<(&'static str, Value)> {
             json!(c::RATING_WINDOW_UNCAPPED_AFTER_SECONDS),
         ),
         ("REDEMPTION_IDENTICAL_ERROR", json!(c::REDEMPTION_IDENTICAL_ERROR)),
-        ("REPLAY_LIST_PAGE", json!(c::REPLAY_LIST_PAGE)),
-        ("REPLAY_REQUESTS_PER_MINUTE", json!(c::REPLAY_REQUESTS_PER_MINUTE)),
         (
             "REDEMPTION_RESPONSE_FLOOR_MS",
             json!(c::REDEMPTION_RESPONSE_FLOOR_MS),
         ),
+        ("REPLAY_LIST_PAGE", json!(c::REPLAY_LIST_PAGE)),
+        ("REPLAY_REQUESTS_PER_MINUTE", json!(c::REPLAY_REQUESTS_PER_MINUTE)),
         (
             "ROOM_CODE_FORMAT",
             json!({

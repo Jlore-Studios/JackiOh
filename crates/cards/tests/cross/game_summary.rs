@@ -18,17 +18,18 @@
 //! Port of `packages/cards/test/game-summary.test.ts` (part 5).
 
 use jackioh_cards::{CATALOG, register_all};
+use jackioh_engine::catalog::deckable;
 use jackioh_engine::testkit::*;
 
 const GAMES: i32 = 40;
 const MAX_ACTIONS: usize = 3000;
 const MY_PAWN: &str = "core-096";
 
-/// Every catalog id that is not a Token, sorted.
+/// Every catalog id a deck may hold (no Token, and a set that ships, R1420), sorted.
 fn pool() -> Vec<String> {
     let mut ids: Vec<String> = CATALOG
         .iter()
-        .filter(|(_, def)| !def.token && !def.tags.contains(&Tag::Token))
+        .filter(|(_, def)| deckable(def) && !def.tags.contains(&Tag::Token))
         .map(|(id, _)| id.clone())
         .collect();
     ids.sort();
