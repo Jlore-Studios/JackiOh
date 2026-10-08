@@ -28,8 +28,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::config::{
-    ARMOR_UP_ARMOR, BRAINSTORM_DISCOUNT, DIE_INSECT_DAMAGE, DIE_INSECT_LUCKY, LIFE_TAP_DAMAGE, PING_DAMAGE,
-    PLUCK_COST, STEADY_SHOT_RAISE, STITCHING_INGREDIENTS, STITCHING_MAX_COST, TANK_UP_ARMOR,
+    ARMOR_UP_ARMOR, BRAINSTORM_DISCOUNT, DIE_INSECT_DAMAGE, DIE_INSECT_LUCKY, LIFE_TAP_DAMAGE, LIFE_TAP_DRAW,
+    PING_DAMAGE, PLUCK_COST, STEADY_SHOT_RAISE, STITCHING_INGREDIENTS, STITCHING_MAX_COST, TANK_UP_ARMOR,
 };
 use crate::damage::DamageTarget;
 use crate::effects::TargetSpec;
@@ -68,6 +68,28 @@ const TOKEN_SET: SetName = SetName::Core;
 /// R754: Steady Shot's declared number ("{shot}"); how far its Radiant face raises it per use is
 /// `STEADY_SHOT_RAISE` (`crate::config`).
 pub const STEADY_SHOT_PARAM: &str = "shot";
+
+/// B3.4 rule 5 (#493): the other numbers #98 declares, one per power's number. Each is printed in
+/// `crate::config` and moved by the card's tuning (`power_number`), so a Degrade, an Upgrade or KY's
+/// Constant changes the power the card has as its text says.
+pub const LIFE_TAP_DRAW_PARAM: &str = "tapDraw";
+pub const LIFE_TAP_DAMAGE_PARAM: &str = "tapDamage";
+pub const PING_PARAM: &str = "ping";
+pub const ARMOR_PARAM: &str = "armor";
+pub const DIE_INSECT_PARAM: &str = "insect";
+pub const BRAINSTORM_PARAM: &str = "discount";
+pub const PLUCK_PARAM: &str = "fruitCost";
+pub const STITCHING_PARAM: &str = "stitchCost";
+
+/// A power's number as the card stands (#493): `printed`, the engine's number for the face running,
+/// moved by as much as the card's tuning has moved its declared number `key` (`params::declared_or`).
+/// A card that declares no `key` (a test's fixture) reads `printed` as it is.
+fn power_number(ctx: &EffectContext<'_>, key: &str, printed: i32) -> i32 {
+    match ctx.live_self() {
+        Some(card) => crate::params::declared_or(&*ctx.sink.state, card, key, printed),
+        None => printed,
+    }
+}
 /// The data key a paused Stitching carries its Discover picks in (§10.6).
 const STITCHING_PICKS_KEY: &str = "picks";
 
@@ -205,19 +227,24 @@ fn expedition_map(_ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     vec![crate::effects::recruit(json_as(json!({ "radiant": radiant })))]
 }
 
-/// Life Tap (R753): draw, then 2 damage to your hero; Radiant: the top card of each player's deck.
-fn life_tap(_ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
+/// Life Tap (R753): draw {tapDraw}, then {tapDamage} damage to your hero; Radiant: {tapDraw} from
+/// your deck, then as many off the top of the opponent's.
+fn life_tap(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
+    let draws = power_number(ctx, LIFE_TAP_DRAW_PARAM, LIFE_TAP_DRAW);
+    let own = crate::effects::draw(json_as(json!({ "count": draws })));
     if radiant {
-        return vec![
-            crate::effects::draw(json_as(json!({ "count": 1 }))),
-            crate::effects::draw_from_opponent(json_as(json!({ "end": "top" }))),
-        ];
+        let mut effects = vec![own];
+        for _ in 0..draws {
+            effects.push(crate::effects::draw_from_opponent(json_as(
+                json!({ "end": "top" }),
+            )));
+        }
+        return effects;
     }
+    let damage = power_number(ctx, LIFE_TAP_DAMAGE_PARAM, LIFE_TAP_DAMAGE);
     vec![
-        crate::effects::draw(json_as(json!({ "count": 1 }))),
-        crate::effects::damage(json_as(
-            json!({ "to": { "of": "selfHero" }, "amount": LIFE_TAP_DAMAGE }),
-        )),
+        own,
+        crate::effects::damage(json_as(json!({ "to": { "of": "selfHero" }, "amount": damage }))),
     ]
 }
 
@@ -262,7 +289,7 @@ fn cat_cafe(_ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
 fn ping(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     let hit = crate::effects::damage(json_as(json!({
         "to": { "of": "chosen" },
-        "amount": PING_DAMAGE,
+        "amount": power_number(ctx, PING_PARAM, PING_DAMAGE),
         "ignoreArmor": true
     })));
     if !radiant {
@@ -330,6 +357,7 @@ fn stitched_so_far(ctx: &EffectContext<'_>) -> Vec<String> {
 /// Units are Radiant and so is the result. A Discover with no pool left fizzles, and fewer than two
 /// picks fuse nothing.
 fn stitching(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
+    let max_cost = power_number(ctx, STITCHING_PARAM, STITCHING_MAX_COST);
     let answered = crate::effects::chosen_options(ctx).first().cloned();
     let mut picks = stitched_so_far(ctx);
     if let Some(answered) = answered {
@@ -345,11 +373,11 @@ fn stitching(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     }
     vec![crate::effects::discover_from_catalog(json_as(json!({
         "step": POWER_RESUME,
-        "query": { "type": "Unit", "costRange": { "max": STITCHING_MAX_COST } },
+        "query": { "type": "Unit", "costRange": { "max": max_cost } },
         "prompt": if radiant {
-            "Discover a Radiant Unit that costs (2) or less"
+            format!("Discover a Radiant Unit that costs ({max_cost}) or less")
         } else {
-            "Discover a Unit that costs (2) or less"
+            format!("Discover a Unit that costs ({max_cost}) or less")
         },
         "data": { POWER_DATA_KEY: "stitching", STITCHING_PICKS_KEY: picks }
     })))]
@@ -399,16 +427,18 @@ pub fn refresh_power() -> Effect {
 /// keeps, then the power refreshes (`refreshPower`).
 fn armor_up(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     if radiant {
+        let armor = power_number(ctx, ARMOR_PARAM, TANK_UP_ARMOR);
         return vec![
-            crate::effects::gain_hero_armor(json_as(json!({ "amount": TANK_UP_ARMOR }))),
+            crate::effects::gain_hero_armor(json_as(json!({ "amount": armor }))),
             refresh_power(),
         ];
     }
+    let armor = power_number(ctx, ARMOR_PARAM, ARMOR_UP_ARMOR);
     let opponent = opponent_of(ctx.controller);
     vec![crate::effects::add_player_modifier(json_as(json!({
         "mod": {
             "kind": "heroArmor",
-            "amount": ARMOR_UP_ARMOR,
+            "amount": armor,
             "expiry": { "until": "nextTurnOf", "player": opponent, "fromTurn": ctx.sink.state.turn }
         }
     })))]
@@ -445,9 +475,9 @@ fn better_insect_pick(state: &GameState) -> impl Fn(InsectPick, InsectPick) -> I
     }
 }
 
-/// Die Insect (R758): 8 damage to a random enemy — one pick over the enemy Units acting on the field
-/// and the enemy hero, each as likely. The Radiant face is Lucky 1: two picks, the better kept.
-fn die_insect(radiant: bool) -> Effect {
+/// Die Insect (R758): {insect} (8) damage to a random enemy — one pick over the enemy Units acting on
+/// the field and the enemy hero, each as likely. The Radiant face is Lucky 1: two picks, the better kept.
+fn die_insect(radiant: bool, amount: i32) -> Effect {
     Effect::new("dieInsect", move |ctx| {
         let mut pool: Vec<InsectPick> =
             crate::effects::cards_in_scope(ctx, &json_as(json!({ "side": "enemy" })))
@@ -467,14 +497,17 @@ fn die_insect(radiant: bool) -> Effect {
             None => json!({ "of": "enemyHero" }),
             Some(card) => json!({ "of": "instance", "instanceId": card.id }),
         };
-        let hit = crate::effects::damage(json_as(json!({ "to": to, "amount": DIE_INSECT_DAMAGE })));
+        let hit = crate::effects::damage(json_as(json!({ "to": to, "amount": amount })));
         (hit.apply)(ctx);
     })
 }
 
 /// TS `(_ctx, radiant) => [dieInsect(radiant)]`, as a named builder so the table stays `const`.
-fn die_insect_power(_ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
-    vec![die_insect(radiant)]
+fn die_insect_power(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
+    vec![die_insect(
+        radiant,
+        power_number(ctx, DIE_INSECT_PARAM, DIE_INSECT_DAMAGE),
+    )]
 }
 
 /// R759: the Spells (the Spell type, not Field Spells) in the activating player's hand, read once.
@@ -489,8 +522,9 @@ fn spells_in_hand(ctx: &EffectContext<'_>) -> Vec<String> {
 }
 
 /// KY Brainstorm (R759): a random KY card of every set (R380) to your hand — Radiant on the Radiant
-/// face — then every Spell in your hand, that card included, costs (1) less there.
-fn ky_brainstorm(_ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
+/// face — then every Spell in your hand, that card included, costs ({discount}) less there.
+fn ky_brainstorm(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
+    let discount = power_number(ctx, BRAINSTORM_PARAM, BRAINSTORM_DISCOUNT);
     let add = if radiant {
         json!({ "query": { "tags": ["KY"] }, "radiant": true })
     } else {
@@ -500,10 +534,10 @@ fn ky_brainstorm(_ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
         crate::effects::add_random_from_catalog(json_as(add)),
         crate::effects::each::for_each_card(crate::effects::each::ForEachCardArgs {
             cards: std::sync::Arc::new(|ctx: &mut EffectContext<'_>| spells_in_hand(ctx)),
-            each: std::sync::Arc::new(|instance_id: &str| {
+            each: std::sync::Arc::new(move |instance_id: &str| {
                 crate::effects::set_cost_mod(json_as(json!({
                     "target": { "of": "instance", "instanceId": instance_id },
-                    "amount": -BRAINSTORM_DISCOUNT,
+                    "amount": -discount,
                     "inHandOnly": true
                 })))
             }),
@@ -511,12 +545,14 @@ fn ky_brainstorm(_ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     ]
 }
 
-/// Pluck (R760): a random Fruit (R382's pool, a Grape rolled again) to your hand, costing (0); Radiant on the Radiant face.
-fn pluck(_ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
+/// Pluck (R760): a random Fruit (R382's pool, a Grape rolled again) to your hand, costing ({fruitCost}),
+/// (0) as printed; Radiant on the Radiant face.
+fn pluck(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
+    let cost = power_number(ctx, PLUCK_PARAM, PLUCK_COST);
     let args = if radiant {
-        json!({ "query": { "tags": ["Fruit"] }, "costOverride": PLUCK_COST, "radiant": true })
+        json!({ "query": { "tags": ["Fruit"] }, "costOverride": cost, "radiant": true })
     } else {
-        json!({ "query": { "tags": ["Fruit"] }, "costOverride": PLUCK_COST })
+        json!({ "query": { "tags": ["Fruit"] }, "costOverride": cost })
     };
     vec![crate::effects::add_random_from_catalog(json_as(args))]
 }
@@ -558,8 +594,8 @@ pub const HERO_POWERS: &[HeroPower] = &[
         title: "Life Tap",
         radiant_title: "Life Tap",
         x: 1,
-        label: "Draw 1. Take 2 damage.",
-        radiant_label: "Draw 1 from each player's deck.",
+        label: "Draw {tapDraw}. Take {tapDamage} damage.",
+        radiant_label: "Draw {tapDraw} from each player's deck.",
         targets: None,
         build: life_tap,
     },
@@ -568,8 +604,8 @@ pub const HERO_POWERS: &[HeroPower] = &[
         title: "Ping",
         radiant_title: "Ping",
         x: 1,
-        label: "Pierce. Deal 1 damage.",
-        radiant_label: "Pierce. Deal 1 damage. If this kills a Unit, summon a Ghoul Token with its stats.",
+        label: "Pierce. Deal {ping} damage.",
+        radiant_label: "Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats.",
         targets: Some(ping_targets),
         build: ping,
     },
@@ -618,8 +654,8 @@ pub const HERO_POWERS: &[HeroPower] = &[
         title: "Stitching",
         radiant_title: "Stitching",
         x: 2,
-        label: "Discover two (2) Cost or less Units. Fuse them.",
-        radiant_label: "Discover two Radiant (2) Cost or less Units. Fuse them.",
+        label: "Discover two ({stitchCost}) Cost or less Units. Fuse them.",
+        radiant_label: "Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them.",
         targets: None,
         build: stitching,
     },
@@ -628,8 +664,8 @@ pub const HERO_POWERS: &[HeroPower] = &[
         title: "Armor Up",
         radiant_title: "Tank Up",
         x: 1,
-        label: "Your hero gains 2 Armor until your next turn.",
-        radiant_label: "Your hero gains 4 Armor, then this power refreshes.",
+        label: "Your hero gains {armor} Armor until your next turn.",
+        radiant_label: "Your hero gains {armor} Armor, then this power refreshes.",
         targets: None,
         build: armor_up,
     },
@@ -638,8 +674,8 @@ pub const HERO_POWERS: &[HeroPower] = &[
         title: "Die Insect",
         radiant_title: "Die Insect",
         x: 2,
-        label: "Deal 8 damage to a random enemy.",
-        radiant_label: "Lucky 1. Deal 8 damage to a random enemy.",
+        label: "Deal {insect} damage to a random enemy.",
+        radiant_label: "Lucky 1. Deal {insect} damage to a random enemy.",
         targets: None,
         build: die_insect_power,
     },
@@ -648,8 +684,8 @@ pub const HERO_POWERS: &[HeroPower] = &[
         title: "KY Brainstorm",
         radiant_title: "KY Brainstorm",
         x: 2,
-        label: "Add a random KY card to your hand. Reduce the cost of all Spells in your hand by (1).",
-        radiant_label: "Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by (1).",
+        label: "Add a random KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).",
+        radiant_label: "Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).",
         targets: None,
         build: ky_brainstorm,
     },
@@ -658,8 +694,8 @@ pub const HERO_POWERS: &[HeroPower] = &[
         title: "Pluck",
         radiant_title: "Pluck",
         x: 2,
-        label: "Add a random Fruit to your hand. It costs (0).",
-        radiant_label: "Add a random Radiant Fruit to your hand. It costs (0).",
+        label: "Add a random Fruit to your hand. It costs ({fruitCost}).",
+        radiant_label: "Add a random Radiant Fruit to your hand. It costs ({fruitCost}).",
         targets: None,
         build: pluck,
     },
