@@ -30,8 +30,8 @@ NAME = IDENTITY.name
 TITLE = IDENTITY.title
 #: Its slash command (`/harness`, `/squishy`).
 SLASH = IDENTITY.slash
-#: The modes it has beyond a plain build (`identity.MODES`): Squishy's `oneshot`, `split` and
-#: `split-bot`; none for the night bot.
+#: The modes it has beyond a plain build (`identity.MODES`): Squishy's `oneshot`, `split`,
+#: `split-bot` and `fullsend`; the night bot's `fullsend` (#505).
 MODES = IDENTITY.modes
 #: The other bots in the repository, whose issues this one leaves alone (`queue.owner`).
 OTHERS = IDENTITY.others
@@ -113,13 +113,17 @@ _OWN: dict[str, tuple[str, str]] = {
     "stuck": ("d93f0b", "It failed every review round it had: a comment says why, for a person to review"),
 }
 #: The labels of the modes (`identity.MODES`), for a bot that has them, and of a parent whose
-#: sub-issues the bot made (`squishy:tree`).
+#: sub-issues the bot made (`bot:tree`, `squishy:tree`).
 _MODE_LABELS: dict[str, tuple[str, str]] = {
     "oneshot": ("5319e7", "Queued for Squishy to build in one run, many agents at once (fullsend)"),
     "split": ("1d76db", "Queued for Squishy to break into sub-issues that Squishy builds"),
     "split-bot": ("0e8a16", "Queued for Squishy to break into sub-issues that the night bot builds"),
-    "tree": ("c5def5", "A parent whose sub-issues Squishy made and watches; it closes when they are done"),
+    "fullsend": ("b60205", "Queued for the night bot to split into parts that land on one branch, then reconcile into one PR"),
+    "tree": ("c5def5", "A parent whose sub-issues the night bot made and watches; it closes once their work is on main"),
 }
+#: The mode labels both bots have (#505), written as the night bot says them and said by the
+#: running bot (`said`). The others are Squishy's alone, and `split-bot` names both bots.
+_SAID_MODE_LABELS = ("fullsend", "tree")
 #: Labels both bots use, kept as the night bot wrote them whichever bot creates them.
 _SHARED: dict[str, tuple[str, str]] = {
     "ready for merge": ("0e8a16", "The night bot's reviews approved it, but auto-merge could not turn on: a person merges it"),
@@ -161,7 +165,8 @@ LABELS: dict[str, tuple[str, str]] = {
     # name: (color, description)
     **{f"{LABEL_PREFIX}{name}": (color, said(text)) for name, (color, text) in _OWN.items()
        if IDENTITY.suggestions or name not in _NO_SUGGESTIONS},
-    **{f"{LABEL_PREFIX}{name}": entry for name, entry in _MODE_LABELS.items()
+    **{f"{LABEL_PREFIX}{name}": (color, said(text) if name in _SAID_MODE_LABELS else text)
+       for name, (color, text) in _MODE_LABELS.items()
        if name == "tree" and MODES or name in MODES},
     **_SHARED,
     **_TYPES,
@@ -192,9 +197,10 @@ LABEL_PLANNED = f"{LABEL_PREFIX}planned"
 #: A build or revision used every review round (`max_review_cycles`) without an approval; its
 #: comment says why, round by round (`failures.py`), for a person to review.
 LABEL_STUCK = f"{LABEL_PREFIX}stuck"
-#: A mode's label beside the queue label (`queue.mode_of`): `squishy:oneshot`, `squishy:split`
-#: and `squishy:split-bot` say how the queued item is built (#60). `squishy:tree` marks a parent
-#: whose sub-issues the bot made, until they are all closed and it closes too.
+#: A mode's label beside the queue label (`queue.mode_of`): `squishy:oneshot`, `squishy:split`,
+#: `squishy:split-bot` and `bot:fullsend` say how the queued item is built (#60, #505).
+#: `squishy:tree` marks a parent whose sub-issues the bot made, until their work is on `main` and
+#: it closes too.
 MODE_LABELS = {f"{LABEL_PREFIX}{mode}": mode for mode in MODES}
 LABEL_TREE = f"{LABEL_PREFIX}tree"
 #: People do a thread labelled `human` (#96): a decision, an account or a secret, or repository

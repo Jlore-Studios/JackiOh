@@ -223,8 +223,8 @@ class CommandTests(unittest.TestCase):
         self.assertEqual(set(commands.VERB_HELP), set(commands.VERBS))
 
     def test_help_mentions_every_verb(self):
-        """Every verb the bot has; the night bot has no modes, so `oneshot` and `split` are
-        Squishy's alone (#60)."""
+        """Every verb the bot has; the night bot's one mode is `fullsend` (#505), so `oneshot`
+        and `split` are Squishy's alone (#60)."""
         text = commands.help_text(self.bot)
         for verb in commands.VERBS:
             if commands.offered(verb):

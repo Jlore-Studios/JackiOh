@@ -189,7 +189,7 @@ struct Finish<'a> {
     id: &'a str,
     /// The seats as the match began (A first unless a test says otherwise).
     players: (&'a str, &'a str),
-    /// The final hash `api/results.rs` records; `None` for a match from before migration 0027.
+    /// The final hash `api/results.rs` records; `None` for a match from before migration 0028.
     hash: Option<String>,
     ended_at: i64,
     /// Fields laid over the match row's JSON (`catalogVersion`, `mode`, `portraits`).

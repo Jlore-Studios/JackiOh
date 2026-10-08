@@ -12,11 +12,13 @@ from harness.config import (LABELS, LABEL_BLOCKED, LABEL_BUILD, LABEL_NEEDS_PLAN
                             LABEL_PR_OPEN, LABEL_REVISE)
 from harness.errors import GitHubError, StateConflict
 from harness.state import item as state_item
+from harness.trust import Trust
 
 from tests.fakes import BOT, OPERATOR, STRANGER, FakeGitHub
 from tests.support import DAY, NIGHT, make_ctx
 
 TRUST = "jgoetzmann 3 id:95732896\nhelper 2\n"
+SQUISHY = {"login": "squishy-squooby", "id": 334289562}
 AN_HOUR_AGO = iso(DAY - timedelta(hours=1))
 JUST_NOW = iso(DAY - timedelta(minutes=2))
 LAST_WEEK = iso(DAY - timedelta(days=5))
@@ -58,6 +60,18 @@ class LostCommentTests(Base):
         self.assertEqual(sweep.sweep(self.ctx), [])
         self.assertEqual(len(self.replies(5)), before)
         self.assertFalse(self.ctx.store.load()["halted"])
+
+    def test_the_other_bots_words_are_never_reported_as_answered(self):
+        # #504: a comment from Squishy's account that names the night bot is no command of its
+        # own, so every sweep left it unanswered, and every sweep said it had answered it.
+        self.ctx.trust = Trust.parse(TRUST + "squishy-squooby 3 id:334289562\n")
+        for body in ("@jgoetzmann\n\n#5 is the night bot's (@jgoetzmann-bot): it carries the "
+                     "night bot's labels, so I leave it alone.",
+                     "/harness revised. Just pushed the rust patch in, see if this is still needed"):
+            self.gh.add_comment(5, body, SQUISHY, "COLLABORATOR", created_at=AN_HOUR_AGO)
+        self.assertEqual(sweep.sweep(self.ctx), [])
+        self.assertEqual(sweep.sweep(self.ctx), [])
+        self.assertEqual(self.replies(5), [])
 
     def test_a_line_comment_on_a_diff_is_answered_too(self):
         self.gh.add_pull(9, "bot/issue-5", labels=(LABEL_PR,))

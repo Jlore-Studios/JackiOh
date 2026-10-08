@@ -38,7 +38,9 @@ tx.commit().await?`.
 
 **The seams to the pure crates.** `actor/engine.rs` is the one path to the engine's game functions
 (`create_game`, `begin_game`, `reduce`, `legal_actions`, `view_for`, `fold`) and deals All Random's
-decks with `jackioh_ai::build_ai_deck` (R258); it calls `jackioh_cards::register_all()` first. The
+decks with `jackioh_ai::build_ai_deck` (R258), leaning a seat's deck on the newest set that ships
+when its player asked (`deal_random_deck(seed, lean_of(lean_newest))`, R1372); it calls
+`jackioh_cards::register_all()` first. The
 deck and trio rules are `jackioh_engine::validator`, the same module the client runs through WASM;
 no rule is restated here. The catalog and its version are compiled in from `crates/cards`.
 

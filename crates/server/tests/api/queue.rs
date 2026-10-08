@@ -14,6 +14,8 @@
 //!    mode. A Best-of-3 pair becomes a series (R259), not a match.
 //!  - **R258**: All Random deals both decks from the match seed and needs no saved deck.
 //!  - **R264**: a profile in a series that is not over can neither queue nor be paired.
+//!  - **R1372**: an All Random ticket's `leanNewest` leans the deck dealt to its own seat on the
+//!    newest set, and only that seat's.
 //!
 //! Port of `apps/server/test/api/queue.test.ts`. Everything runs on tokio's paused clock through
 //! `test_app()`, so `enqueuedAt` and the widening window are set by this file rather than by the
@@ -46,7 +48,7 @@ use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 use tokio::sync::MutexGuard;
 
-use jackioh_engine::{DEFAULT_PORTRAIT, pick_portrait_from_seed};
+use jackioh_engine::{DEFAULT_PORTRAIT, newest_shipped_set, pick_portrait_from_seed};
 use jackioh_server::actor::engine::deal_random_deck;
 use jackioh_server::api::collection::grant_entire_catalog;
 use jackioh_server::api::http::AuthLevel;
@@ -1205,8 +1207,8 @@ mod r258_all_random {
         assert_eq!(row["ranked"], true);
         assert_eq!(to_json(&q!(app, matches_mode_of(&match_id))), json!("random"));
         let seed = row["seed"].as_str().expect("a seed").to_string();
-        let p1_deck = json!(deal_random_deck(&format!("{seed}:p1-deck")));
-        let p2_deck = json!(deal_random_deck(&format!("{seed}:p2-deck")));
+        let p1_deck = json!(deal_random_deck(&format!("{seed}:p1-deck"), None));
+        let p2_deck = json!(deal_random_deck(&format!("{seed}:p2-deck"), None));
         assert_eq!(seat_deck(&app, &match_id, "rng-one").await, p1_deck);
         assert_eq!(seat_deck(&app, &match_id, "rng-two").await, p2_deck);
         // Two seats, two different deals.
@@ -1236,11 +1238,94 @@ mod r258_all_random {
         assert_eq!(row["seed"], "spec-seed");
         assert_eq!(
             seat_deck(&app, &match_id, "pin-one").await,
-            json!(deal_random_deck("spec-seed:p1-deck"))
+            json!(deal_random_deck("spec-seed:p1-deck", None))
         );
         assert_eq!(
             seat_deck(&app, &match_id, "pin-two").await,
-            json!(deal_random_deck("spec-seed:p2-deck"))
+            json!(deal_random_deck("spec-seed:p2-deck", None))
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1372 — All Random's "More cards from the newest set", per seat
+// ---------------------------------------------------------------------------------------------
+
+mod r1372_more_cards_from_the_newest_set {
+    use super::*;
+
+    /// How many of a dealt deck's cards are of the newest set that ships (R1371).
+    fn newest_in(deck: &Value) -> usize {
+        let newest = newest_shipped_set();
+        deck.as_array()
+            .map(|ids| {
+                ids.iter()
+                    .filter(|id| {
+                        id.as_str()
+                            .and_then(|id| jackioh_cards::CATALOG.get(id))
+                            .is_some_and(|def| def.set == newest)
+                    })
+                    .count()
+            })
+            .unwrap_or(0)
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1372_leans_the_deck_of_exactly_the_seat_whose_ticket_asked_and_pairs_it_with_one_that_did_not()
+    {
+        let app = test_app().await;
+        let one = active_profile(&app, "lean-one", 1000.0).await;
+        let two = active_profile(&app, "lean-two", 1000.0).await;
+
+        let (status, first) = enqueue_with(&app, &one, json!({ "mode": "random", "leanNewest": true })).await;
+        assert_eq!(status, 200, "{first}");
+        // The ask waits in the ticket, as a Best-of-1 deck would (migration 0027's column).
+        assert_eq!(
+            ticket(&app, first["ticketId"].as_str().unwrap_or("")).await["leanNewest"],
+            true
+        );
+        // The older ticket is p1 (R166), as in R258's test above.
+        tokio::time::advance(Duration::from_millis(1)).await;
+        let (_, second) = enqueue_with(&app, &two, json!({ "mode": "random" })).await;
+        assert_eq!(
+            second["status"], "matched",
+            "a ticket that leans pairs with one that does not"
+        );
+
+        let match_id = second["matchId"].as_str().expect("a match id").to_string();
+        let row = q!(app, matches_get(&match_id))
+            .map(|row| to_json(&row))
+            .expect("the match row");
+        let seed = row["seed"].as_str().expect("a seed").to_string();
+        let leaned = json!(deal_random_deck(
+            &format!("{seed}:p1-deck"),
+            Some(newest_shipped_set())
+        ));
+        let plain = json!(deal_random_deck(&format!("{seed}:p2-deck"), None));
+        assert_eq!(seat_deck(&app, &match_id, "lean-one").await, leaned);
+        assert_eq!(seat_deck(&app, &match_id, "lean-two").await, plain);
+        // Frozen into the match row like any dealt deck, so `(seed, decks, log)` replays it (R258).
+        assert_eq!(row["decks"], json!([leaned, plain]));
+        // R1370: at least half of the asking seat's deck is of the newest set.
+        let floor =
+            (f64::from(jackioh_engine::config::DECK_SIZE) * jackioh_ai::AI_DECK.lean_min_share).ceil();
+        assert!(newest_in(&leaned) as f64 >= floor, "{leaned}");
+        assert_ne!(leaned, json!(deal_random_deck(&format!("{seed}:p1-deck"), None)));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1372_an_enqueue_without_the_field_does_not_lean_and_one_that_is_not_a_boolean_is_refused() {
+        let app = test_app().await;
+        let one = active_profile(&app, "lean-absent", 1000.0).await;
+        let (status, refused) = enqueue_with(&app, &one, json!({ "mode": "random", "leanNewest": 1 })).await;
+        assert_eq!(status, 400, "{refused}");
+        assert!(tickets_table(&app).await.is_empty());
+
+        let (status, queued) = enqueue_with(&app, &one, json!({ "mode": "random" })).await;
+        assert_eq!(status, 200, "{queued}");
+        assert_eq!(
+            ticket(&app, queued["ticketId"].as_str().unwrap_or("")).await["leanNewest"],
+            false
         );
     }
 }

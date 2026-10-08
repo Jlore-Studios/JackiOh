@@ -17,9 +17,10 @@ from tests.test_cross import ALL
 from tests.test_flow import Harness
 from tests.test_work import APPROVE, builder, reviewer
 
-#: Runs holding every lane of the machine's subscriptions (Muse has two); someone closed #5
+#: Runs holding every lane of the machine's subscriptions (Muse has four); someone closed #5
 #: while its run went on.
-RUNS = ((5, "gpt", "51"), (6, "agy", "61"), (7, "muse", "71"), (9, "muse", "91"))
+RUNS = ((5, "gpt", "51"), (6, "agy", "61"), (7, "muse", "71"), (9, "muse", "91"),
+        (10, "muse", "101"), (11, "muse", "111"))
 
 
 class ClosedWhileWorkingTests(unittest.TestCase):
@@ -36,8 +37,8 @@ class ClosedWhileWorkingTests(unittest.TestCase):
         self.assertEqual(planned["action"], "none")
         self.assertIn("`gpt` is busy", planned["reason"])  # its lane is still the closed #5's
         text = report(ctx)
-        # Its four runs are on the machine, whose slots are apart from GitHub's lanes.
-        self.assertIn("0 of 11 lanes on GitHub's runners, 11 free; 4 of "
+        # Its six runs are on the machine, whose slots are apart from GitHub's lanes.
+        self.assertIn("0 of 11 lanes on GitHub's runners, 11 free; 6 of "
                       f"{ctx.cfg.pool.machine_parallel} on the night box", text)
         self.assertIn("`gpt` (codex", text)
 

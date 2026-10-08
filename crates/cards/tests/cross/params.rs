@@ -303,3 +303,113 @@ mod b3_4_params_the_numbers_a_card_declares {
         assert!(!many_with_a_singular("Summon 2 Units."));
     }
 }
+
+/// Which declared numbers a Degrade, an Upgrade or KY's Constant reaches (`param_in_reach`): a number
+/// only one face prints is tuned on that face alone (R749, R1431), and a number that belongs to a power
+/// is tuned only while the card has that power (R1430).
+mod r1430_r1431_the_numbers_a_change_reaches {
+    use super::*;
+    use jackioh_engine::effects::TuneDirection;
+    use jackioh_engine::testkit::{numbers_on, param_value, step_param, steppable_params};
+    use jackioh_engine::{ParamTunedOn, PlayerId};
+
+    fn writes(text: &str, key: &str) -> bool {
+        param_placeholders(text)
+            .iter()
+            .any(|placeholder| placeholder.key == key)
+    }
+
+    #[test]
+    fn r1431_every_number_only_the_base_face_prints_is_tuned_there_alone_and_reads_printed_on_the_radiant_face()
+     {
+        let mut base_only: Vec<String> = Vec::new();
+        for card in entries() {
+            for param in card.params.iter().flatten() {
+                let alone = writes(&card.base.text, &param.key) && !writes(&card.radiant.text, &param.key);
+                assert_eq!(
+                    alone,
+                    param.tuned_on == Some(ParamTunedOn::Base),
+                    "{} {}: tuned on the base face only exactly when the base face alone prints it",
+                    card.id,
+                    param.key
+                );
+                if !alone {
+                    continue;
+                }
+                base_only.push(format!("{} {}", card.id, param.key));
+                // #98's Life Tap damage is Life Tap's (R1430): its own test rolls the power first.
+                if param.power.is_some() {
+                    continue;
+                }
+                let printed = param.radiant;
+                let mut s = super::super::scenario(json!({
+                    "p1": { "hand": [{ "def": card.id, "radiant": true }, { "def": card.id }] }
+                }));
+                let [shining, plain] = [0, 1].map(|at| s.hand(PlayerId::P1)[at].id.clone());
+                for direction in [TuneDirection::Upgrade, TuneDirection::Degrade] {
+                    let reached = steppable_params(s.state(), s.card(shining.as_str()), direction);
+                    assert!(
+                        !reached.iter().any(|entry| entry.param.key == param.key),
+                        "{} {}: drawn on the Radiant face",
+                        card.id,
+                        param.key
+                    );
+                }
+                let id = format!("param:{}", param.key);
+                assert!(
+                    !numbers_on(s.state(), s.card(shining.as_str()))
+                        .iter()
+                        .any(|entry| entry.id == id)
+                );
+                assert!(
+                    numbers_on(s.state(), s.card(plain.as_str()))
+                        .iter()
+                        .any(|entry| entry.id == id)
+                );
+                for card_id in [&shining, &plain] {
+                    step_param(s.card_mut(card_id.as_str()), &param.key, 1);
+                }
+                let read = |s: &jackioh_engine::testkit::Scenario, at: &str| {
+                    param_value(s.state(), Some(s.card(at)), &param.key, Default::default())
+                };
+                assert_eq!(read(&s, &shining), printed, "{} {}", card.id, param.key);
+                assert_ne!(read(&s, &plain), param.base, "{} {}", card.id, param.key);
+            }
+        }
+        // The thirteen numbers patch v0.3.3 marked (issue #556).
+        assert_eq!(base_only.len(), 13, "{base_only:#?}");
+    }
+
+    #[test]
+    fn r1430_every_number_that_belongs_to_a_power_names_an_activate_ability_its_card_declares_on_both_faces()
+    {
+        jackioh_cards::register_all();
+        let scripts = jackioh_cards::scripts_of();
+        let mut owned: Vec<String> = Vec::new();
+        for card in entries() {
+            for param in card.params.iter().flatten() {
+                let Some(power) = param.power.as_deref() else {
+                    continue;
+                };
+                owned.push(format!("{} {}", card.id, param.key));
+                let script = scripts
+                    .get(&card.id)
+                    .unwrap_or_else(|| panic!("{} has a script", card.id));
+                for face in [&script.base, &script.radiant] {
+                    assert!(
+                        face.activations.iter().any(|decl| decl.id == power),
+                        "{} {}: no Activate ability \"{power}\"",
+                        card.id,
+                        param.key
+                    );
+                }
+            }
+        }
+        // Only #98 Heroic Power's numbers belong to a power, all nine of them.
+        assert_eq!(owned.len(), 9, "{owned:#?}");
+        assert!(
+            owned.iter().all(|entry| entry.starts_with("core-098 ")),
+            "{owned:#?}"
+        );
+    }
+}

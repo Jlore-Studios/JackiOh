@@ -6,7 +6,7 @@ workflow sets `HARNESS_HOME=.squishy`, and the harness reads these files from `m
 
 | File | What it does |
 |---|---|
-| `config.json` | The same knobs as `.harness/config.json`, with Squishy's account, no suggestions and no quiet check, and its `identity`: its name, its slash command (`/squishy`), its label and branch prefixes (`squishy:`, `squishy/`), its state and journal branches, its workflow (`squishy-run.yml`), its marker, its modes (`oneshot`, `split`, `split-bot`) and the other bot whose issues it leaves alone |
+| `config.json` | The same knobs as `.harness/config.json`, with Squishy's account, no suggestions and no quiet check, and its `identity`: its name, its slash command (`/squishy`), its label and branch prefixes (`squishy:`, `squishy/`), its state and journal branches, its workflow (`squishy-run.yml`), its marker, its modes (`oneshot`, `split`, `split-bot`, `fullsend`) and the other bot whose issues it leaves alone |
 | `providers.json` | One subscription, `claude-squishy`: Squishy's own Claude Max account (`CLAUDE_CODE_OAUTH_TOKEN_SQUISHY`), Opus for every role, on GitHub's runners |
 | `HALT` | Absent normally. Commit a file here to stop Squishy's model calls; `/squishy halt` and `/squishy start` are the everyday switch |
 

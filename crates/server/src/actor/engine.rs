@@ -31,16 +31,17 @@
 //!
 //! All Random's deck (R258) is dealt here too, by `jackioh_ai::build_ai_deck` — the same weighted
 //! draw `apps/web/src/practice/core.ts` deals a human who asks for a random deck, with nothing
-//! banned. It reads the registered catalog, so it belongs behind the same `register_all()` as the
-//! match itself, and the ai crate is pure and seeded like the engine: one seed, one deck, in any
-//! process.
+//! banned, leaning on the newest set for a seat whose player asked for that (R1372). It reads the
+//! registered catalog, so it belongs behind the same `register_all()` as the match itself, and the ai
+//! crate is pure and seeded like the engine: one seed, one deck, in any process.
 
 use serde::{Deserialize, Serialize};
 
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::{
     Action, ActionBody, CreateGameOptions, DECK_SIZE, GameResult, GameState, GameSummary, LastBoardEntry,
-    Phase, PlayerId, PlayerView, ReplayCheckpoints, ReplayOpen, ReplayPage, ReplayRecord, Rng,
+    Phase, PlayerId, PlayerView, ReplayCheckpoints, ReplayOpen, ReplayPage, ReplayRecord, Rng, SetName,
+    newest_shipped_set,
 };
 
 pub use jackioh_engine::{FoldArgs, FoldResult, ReduceResult};
@@ -195,7 +196,10 @@ pub fn snapshot(state: &EngineState) -> MatchSnapshot {
 /// random deck-builder with nothing banned, seeded so the same seed deals the same deck in any
 /// process. Callers seed it `"{seed}:p1-deck"` and `"{seed}:p2-deck"`. It lives here because the
 /// deck-builder needs the registered catalog, and this module is the one path to it.
-pub fn deal_random_deck(seed: &str) -> Vec<String> {
+///
+/// R1372: `lean` is the set the seat's deck leans on (`lean_of`), at least half of it from that set
+/// (R1370); `None` deals the deck R258 always dealt for that seed.
+pub fn deal_random_deck(seed: &str, lean: Option<SetName>) -> Vec<String> {
     registered();
     // R258: `banned: []` is practice's "random deck for a human" (no shadow-ban: R186's list shapes
     // the AI's own decks, not a player's), and `DECK_SIZE` is the size L2 asks of every deck.
@@ -204,9 +208,16 @@ pub fn deal_random_deck(seed: &str) -> Vec<String> {
         DECK_SIZE,
         &AiDeckOptions {
             banned: Some(vec![]),
+            lean_set: lean,
             ..AiDeckOptions::default()
         },
     )
+}
+
+/// R1372: the set a seat's All Random deck leans on, from its player's "More cards from the newest
+/// set": the newest set that ships when the deck is dealt (R1371), or none.
+pub fn lean_of(lean_newest: bool) -> Option<SetName> {
+    lean_newest.then(newest_shipped_set)
 }
 
 /// R417, R565: each seat's last board from a finished game, seat order — every card on the field,

@@ -1,4 +1,4 @@
--- Online replays (migration 0027, issue #510, SPEC §9.3, R768). Runs after 14_patch_retcon.sql;
+-- Online replays (migration 0028, issue #510, SPEC §9.3, R768). Runs after 14_patch_retcon.sql;
 -- profiles 1 and 2 are active by then (03 activated them).
 \set ON_ERROR_STOP on
 
@@ -15,7 +15,7 @@ declare
   v_hash text;
   v_role text;
 begin
-  -- A match from before 0027, or one the reaper resolved (R112), carries no hash.
+  -- A match from before 0028, or one the reaper resolved (R112), carries no hash.
   insert into public.matches (id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
                               catalog_version, ceiling_at, started_at, ended_at)
   values (mid, 'over', 'seed-0768', p1, p2, '[]', '[]', 'core-1', now(), now(), now());

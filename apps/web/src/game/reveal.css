@@ -144,6 +144,17 @@
   color: var(--text-dim, #9aa1b8);
 }
 
+/* R1372: an All Random rematch's "More cards from the newest set" (game/LeanNewest.tsx), a line of
+   its own below the offers like the note, never a stray item in the row of buttons. */
+.rematch > .lean-newest {
+  flex: 1 0 100%;
+  contain: inline-size;
+  justify-content: center;
+  order: 1;
+  margin: 0;
+  color: var(--text-dim, #9aa1b8);
+}
+
 /* A refused offer reads as one: colour and words, never colour alone (auth.css's field error). */
 .rematch > .rematch-status[role="alert"] {
   color: color-mix(in srgb, var(--opponent, #c0453f) 55%, var(--text, #efe0bf));

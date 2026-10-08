@@ -65,6 +65,19 @@ export function setShips(set: SetName): boolean {
   return (SHIPPED_SETS as readonly SetName[]).includes(set);
 }
 
+/**
+ * R1371: the newest set that ships, the last entry of `SHIPPED_SETS`: Classic+ until the Meditative
+ * set ships. The engine's `newest_shipped_set`, mirrored, so "More cards from the newest set" names
+ * the set it leans on (R1372, R1373) without ever writing one down. Which set a deck leans on is
+ * still the dealer's to resolve: the server's for All Random, the practice worker's for its random
+ * deck.
+ */
+export function newestShippedSet(): SetName {
+  const newest = SHIPPED_SETS[SHIPPED_SETS.length - 1];
+  if (newest === undefined) throw new Error("SHIPPED_SETS lists no set");
+  return newest;
+}
+
 /** §5: 0 to 6, 100 (Ceaseless Void), X, or "A embiggen B". */
 export type CardCost = number | "X" | { base: number; embiggen: number };
 
@@ -198,10 +211,16 @@ export type Param = {
   /** It never goes above this (100 for a percentage). */
   max?: number;
   /**
-   * R749: the one face a Degrade, an Upgrade or KY's Constant may move it on, for a number only that
-   * face prints; on the other face it always reads its printed value. Absent, both faces.
+   * R749, R1431: the one face a Degrade, an Upgrade or KY's Constant may move it on, for a number only
+   * that face prints; on the other face it always reads its printed value. Absent, both faces.
    */
-  tunedOn?: "radiant";
+  tunedOn?: "radiant" | "base";
+  /**
+   * R1430: the power the number belongs to, the id of the card's Activate ability that is that power
+   * (#98's stored power name). A Degrade, an Upgrade or KY's Constant reaches it only while the card
+   * has that power; meanwhile it keeps its tuning. Absent, the card's number whatever its power.
+   */
+  power?: string;
 };
 
 /**

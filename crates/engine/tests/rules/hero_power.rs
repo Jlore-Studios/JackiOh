@@ -18,6 +18,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use serde::Serialize;
 
 use jackioh_engine::effects::bounce;
+use jackioh_engine::effects::tune::TuneDirection;
 use jackioh_engine::subsystems::activate::uses_this_turn;
 use jackioh_engine::subsystems::hero_power::{
     HERO_POWER_NAMES, HERO_POWERS, POWER_KEY, POWER_RESUME, STEADY_SHOT_PARAM, ensure_power, hero_power,
@@ -65,7 +66,8 @@ fn def(name: &str, type_: &str, index: u32, extra: Value) -> CardDef {
     ))
 }
 
-/// §8 #98's shape since R752: a Quickdraw Field Spell that costs (0) and declares Steady Shot's number.
+/// §8 #98's shape since R752: a Quickdraw Field Spell that costs (0) and declares Steady Shot's number,
+/// which belongs to the Steady Shot power (R1430).
 fn heroic() -> CardDef {
     def(
         "heroic",
@@ -75,7 +77,7 @@ fn heroic() -> CardDef {
             "cost": 0,
             "tags": ["Quickdraw"],
             "rarity": "Mythic",
-            "params": [{ "key": STEADY_SHOT_PARAM, "base": 2, "radiant": 4, "better": "up", "step": STEADY_SHOT_RAISE, "min": 1 }],
+            "params": [{ "key": STEADY_SHOT_PARAM, "base": 2, "radiant": 4, "better": "up", "step": STEADY_SHOT_RAISE, "min": 1, "power": "burn" }],
         }),
     )
 }
@@ -549,6 +551,70 @@ mod heroic_power_the_powers_r753_r758 {
             shining.turn += 2;
             shining.players.p1.mana.current = 4;
         }
+    }
+
+    #[test]
+    fn r1430_steady_shot_s_number_is_in_reach_only_while_the_card_has_steady_shot_and_keeps_its_tuning_meanwhile()
+     {
+        let mut state = game("r1430-shot");
+        let card = powered(&mut state, "burn", false, 1);
+        keep_turn(&mut state);
+        let decl = param_decl_of(&state, &card.def_id, STEADY_SHOT_PARAM).expect("shot is declared");
+        let keys = |state: &GameState, card: &CardInstance, direction: TuneDirection| -> Vec<String> {
+            steppable_params(state, card, direction)
+                .into_iter()
+                .map(|entry| entry.param.key)
+                .collect()
+        };
+        let lists_shot = |state: &GameState, card: &CardInstance| {
+            numbers_on(state, card)
+                .iter()
+                .any(|entry| entry.id == format!("param:{STEADY_SHOT_PARAM}"))
+        };
+
+        // Under Steady Shot the number is the card's: a change reaches it and KY's Constant lists it.
+        let now = on_field_now(&state, &card.id);
+        assert!(param_in_reach(&state, &now, &decl));
+        assert_eq!(
+            keys(&state, &now, TuneDirection::Upgrade),
+            vec![STEADY_SHOT_PARAM.to_string()]
+        );
+        assert!(lists_shot(&state, &now));
+        step_param(
+            find_instance_mut(&mut state, &card.id).expect("the Heroic Power"),
+            STEADY_SHOT_PARAM,
+            1,
+        );
+
+        // Rerolled into Ping: nothing reaches it or lists it, and it keeps its step.
+        let pinged = set_memory(&mut state, &card.id, POWER_KEY, json!("ping"));
+        assert!(!param_in_reach(&state, &pinged, &decl));
+        assert!(keys(&state, &pinged, TuneDirection::Upgrade).is_empty());
+        assert!(keys(&state, &pinged, TuneDirection::Degrade).is_empty());
+        assert!(!lists_shot(&state, &pinged));
+        assert_eq!(
+            param_value(&state, Some(&pinged), STEADY_SHOT_PARAM, Default::default()),
+            2 + STEADY_SHOT_RAISE
+        );
+
+        // A card with no power has no power's number in reach.
+        let bare = {
+            let live = find_instance_mut(&mut state, &card.id).expect("the Heroic Power");
+            live.memory.shift_remove(POWER_KEY);
+            live.clone()
+        };
+        assert!(!param_in_reach(&state, &bare, &decl));
+
+        // Back to Steady Shot: the step counts again, and the shot deals it.
+        let back = set_memory(&mut state, &card.id, POWER_KEY, json!("burn"));
+        assert!(param_in_reach(&state, &back, &decl));
+        assert!(lists_shot(&state, &back));
+        let shot = use_power(&state, &back, None);
+        assert_eq!(shot.error, None);
+        assert_eq!(
+            shot.state.players.p2.hero.health,
+            HERO_HEALTH - 2 - STEADY_SHOT_RAISE
+        );
     }
 
     #[test]

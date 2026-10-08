@@ -2649,7 +2649,7 @@ mod matches {
         assert!(!live_ids(&q!(harness, t => t.matches_live())).contains(&row.id));
     }
 
-    /// R768 (migration 0027): no hash until the result writes one, `matches_create` never writes
+    /// R768 (migration 0028): no hash until the result writes one, `matches_create` never writes
     /// one, and only the first written is kept.
     async fn r768_records_a_final_hash_once(harness: &StoreHarness) {
         let row = live_match(harness).await;
@@ -2760,6 +2760,37 @@ mod rooms {
         assert!(claimed["hostTrio"].is_null());
     }
 
+    /// R1372: an All Random host's "More cards from the newest set" waits with the room until the join
+    /// (`matches.room_lean_newest`, migration 0027), and a room that asked nothing reads false.
+    async fn r1372_keeps_an_all_random_host_s_lean_until_the_room_is_claimed(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        let leaning = room(
+            harness,
+            "DEF567",
+            &host.id,
+            json!({ "mode": "random", "hostDeck": [], "hostLeanNewest": true }),
+        );
+        assert!(q!(harness, t => t.rooms_create(&leaning)));
+        let found = j(&must(q!(harness, t => t.rooms_get("DEF567")), "the room"));
+        assert_eq!(found["hostLeanNewest"], true);
+        let claimed = j(&must(
+            q!(harness, t => t.rooms_claim("DEF567", &guest.id, &id(), harness.now())),
+            "the claim",
+        ));
+        assert_eq!(claimed["hostLeanNewest"], true);
+
+        let plain = room(
+            harness,
+            "EFG678",
+            &host.id,
+            json!({ "mode": "random", "hostDeck": [] }),
+        );
+        assert!(q!(harness, t => t.rooms_create(&plain)));
+        let found = j(&must(q!(harness, t => t.rooms_get("EFG678")), "the room"));
+        assert_eq!(found["hostLeanNewest"], false);
+    }
+
     async fn refuses_a_code_that_is_already_taken(harness: &StoreHarness) {
         let host = active_profile(harness, None).await;
         let other = active_profile(harness, None).await;
@@ -2846,6 +2877,7 @@ mod rooms {
         r768_reads_a_match_s_seats_in_every_status_an_open_one_included,
         creates_a_room_and_reads_it_back_by_code,
         r264_keeps_a_room_s_mode_and_a_best_of_3_host_s_frozen_trio,
+        r1372_keeps_an_all_random_host_s_lean_until_the_room_is_claimed,
         refuses_a_code_that_is_already_taken,
         lets_exactly_one_guest_claim_a_room,
         refuses_a_claim_after_the_room_has_expired,
@@ -3005,6 +3037,39 @@ mod tickets {
         assert!(!q!(harness, t => t.tickets_claim_pair(&row.id, &row.id, &id(), harness.now())));
     }
 
+    /// R1372: an All Random ticket's "More cards from the newest set" waits in the ticket until it is
+    /// paired (`tickets.lean_newest`, migration 0027), and a ticket that asked nothing reads false.
+    async fn r1372_keeps_an_all_random_ticket_s_lean_until_it_is_paired(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let leaning = ticket(
+            harness,
+            &a.id,
+            json!({ "mode": "random", "deck": [], "leanNewest": true }),
+        );
+        let plain = ticket(harness, &b.id, json!({ "mode": "random", "deck": [] }));
+        q!(harness, t => t.tickets_insert(&leaning));
+        q!(harness, t => t.tickets_insert(&plain));
+        assert_eq!(
+            q!(harness, t => t.tickets_get(&leaning.id)),
+            Some(leaning.clone())
+        );
+        assert!(leaning.lean_newest);
+        assert!(!plain.lean_newest);
+        let open = q!(harness, t => t.tickets_list_open());
+        let lean_of = |ticket_id: &str| {
+            open.iter()
+                .find(|row| row.id == ticket_id)
+                .map(|row| row.lean_newest)
+        };
+        assert_eq!(lean_of(&leaning.id), Some(true));
+        assert_eq!(lean_of(&plain.id), Some(false));
+        assert_eq!(
+            q!(harness, t => t.tickets_open_for_profile(&a.id)).map(|row| row.lean_newest),
+            Some(true)
+        );
+    }
+
     /// The whole queue path: claim the pair, then write the match the pair produced (§9.5).
     async fn becomes_a_live_match_once_the_pair_is_claimed_and_the_match_created(harness: &StoreHarness) {
         let a = active_profile(harness, None).await;
@@ -3025,6 +3090,7 @@ mod tickets {
         inserts_a_ticket_and_finds_the_profile_s_open_one,
         r257_keeps_a_ticket_s_mode_and_a_best_of_3_ticket_s_trio_and_counts_open_tickets_per_mode,
         r642_keeps_a_best_of_3_ticket_s_per_deck_portraits_and_absence_stays_absent,
+        r1372_keeps_an_all_random_ticket_s_lean_until_it_is_paired,
         refuses_a_second_open_ticket_for_one_profile,
         cancels_an_open_ticket_and_cancelling_twice_is_harmless,
         claims_a_pair_exactly_once,

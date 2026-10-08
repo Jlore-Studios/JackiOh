@@ -630,6 +630,8 @@ pub fn clear_return_flags(state: &mut GameState) {
                 && card.return_to_hand_at_end_of_turn == Some(true)
             {
                 card.return_to_hand_at_end_of_turn = None;
+                // R429, R766: the price noted for the return ends with it.
+                crate::resolve::forget_return_price(card);
             }
         }
     }

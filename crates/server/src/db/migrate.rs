@@ -126,8 +126,12 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         include_str!("../../migrations/0026_catalyst_prime_acclaimed_tags.sql"),
     ),
     (
-        "0027_replay_final_hash.sql",
-        include_str!("../../migrations/0027_replay_final_hash.sql"),
+        "0027_lean_newest.sql",
+        include_str!("../../migrations/0027_lean_newest.sql"),
+    ),
+    (
+        "0028_replay_final_hash.sql",
+        include_str!("../../migrations/0028_replay_final_hash.sql"),
     ),
 ];
 
