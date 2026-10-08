@@ -180,3 +180,13 @@ export const REVERB_SFX_SEND = 0.3;
 export const REVERB_VOICE_SEND = 0.3;
 /** The impulse's noise is filled from this seed, so every run of the mix is identical. */
 export const REVERB_SEED = 0x52564242; // "RVBB"
+
+// ---- Patch v0.3.X sound (docs/meditative-set.md M8, MN05): Armor and the niche moments ----
+/** R1364: a hit is overkill when what it does beyond the health left is at least this, and at least that health. */
+export const OVERKILL_MIN_EXCESS = 3;
+/** R1364: the overkill crunch lands this long after the hit's impact, so the two read as one blow. */
+export const OVERKILL_DELAY_MS = 30;
+/** R1365: the Sheep a card may be transformed into (`transformed.toDefId`), which bleats as it appears. */
+export const SHEEP_DEF_IDS: readonly string[] = ["core-t-sheep"];
+/** R1365: the bleat starts this long into the transform's puff, as the Sheep comes out of it. */
+export const BLEAT_DELAY_MS = 120;

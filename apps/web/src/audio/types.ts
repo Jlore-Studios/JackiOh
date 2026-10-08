@@ -15,7 +15,10 @@ export type SfxId =
   // Patch v0.2.X (R644): the five emoji emotes (issue §4), synthesized on the effects channel.
   | "emoteSob" | "emoteYawn" | "emoteLaugh" | "emoteAngry" | "emoteWahWah"
   // Patch v0.2.X (#259, R669): the play sting of a card below Legendary.
-  | "sting";
+  | "sting"
+  // Patch v0.3.X (MN05): Armor's clank and ring (R1363), and the niche moments (R1364–R1366).
+  | "armorClank" | "armorRing" | "overkill" | "crumble" | "unlock" | "steal" | "give" | "counterspell" | "bleat" | "fuse"
+  | "degrade" | "upgrade";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`, which follows the

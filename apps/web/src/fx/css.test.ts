@@ -186,6 +186,7 @@ const DOM_KINDS = {
   fracture: "fx-fracture-crack",
   walls: "fx-walls-close",
   brand: "fx-brand-slam",
+  shield: "fx-shield-flash",
   chaos: "fx-chaos-in",
   fog: "fx-fog-roll",
   zone: "fx-zone-wave",

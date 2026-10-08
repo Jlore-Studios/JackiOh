@@ -94,6 +94,11 @@ export type FxTint = { rim: string; core: string; glow: string };
 /** R437: a mark branded onto a card: a sigil in the mark's colours slams on and fades into the aura. */
 export type FxBrandCue = { kind: "brand"; at: FxAnchor; tint: FxTint; delayMs: number; durationMs: number };
 /**
+ * R1363 (MN05): a shield flashing up over a hero or a unit as its Armor takes a hit: `small` when the
+ * Armor took half or more of a hit that still landed, `full` when it took the whole hit.
+ */
+export type FxShieldCue = { kind: "shield"; size: "small" | "full"; at: FxAnchor; delayMs: number; durationMs: number };
+/**
  * One line of a Call to Chaos reveal: a reel of effect names that spins and lands on `text`, the
  * last name in `reel`, at `landMs` after the cue fires.
  */
@@ -164,6 +169,7 @@ export type FxDomCue =
   | FxFractureCue
   | FxWallsCue
   | FxBrandCue
+  | FxShieldCue
   | FxChaosCue
   | FxFogCue
   | FxZoneCue;
@@ -203,7 +209,8 @@ export type FxRecipe =
   | "overflow"
   | "chaos"
   | "brand"
-  | "rewind";
+  | "rewind"
+  | "armor";
 
 /** The optional `fx` field of an `ANIMATIONS` row: which recipe decorates the event. Data only. */
 export type FxDescriptor = { readonly recipe: FxRecipe };
