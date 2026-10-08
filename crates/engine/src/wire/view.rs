@@ -39,6 +39,13 @@ pub struct CardView {
     pub radiant: bool,
     /// Cost as it stands now (§6.3 Cost, R65); "X" cards show 0 until X is chosen.
     pub cost: i32,
+    /// #492, R81, §10.8: an "A embiggen B" card in the viewer's own hand, what a play of it at its
+    /// embiggen price costs now, every cost change applied: the price §10.5 step 1 reads for a play
+    /// with `embiggen: true` (`play_choices::embiggen_play_cost`), where `cost` is its normal price.
+    /// Absent on every other card, and never on the opponent's cards.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub embiggen_cost: Option<i32>,
     /// R243: a Unit card's stats in its owner's hand, as they stand: its printed face (the radiant one
     /// when it is Radiant, a fused card's summed one) plus the permanent buffs it has gained there
     /// (§10.4 layers 1, 3 and 4 — #89 Corpse Eater feeds in hand). Set on the viewer's own hand cards
@@ -340,7 +347,8 @@ pub struct AnimatedView {
 }
 
 /// `CardView & { … }`: a unit on the field. Every `CardView` field is repeated here, since the unit
-/// makes `attack`, `health` and `keywords` required where the card view has them optional.
+/// makes `attack`, `health` and `keywords` required where the card view has them optional — all but
+/// `embiggenCost`, which only a card in its owner's hand carries (#492).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -448,7 +456,8 @@ pub struct BackrowCounters {
 }
 
 /// The public member of `BackrowView`: `CardView & { faceDown: false; type: CardType; … }`. Every
-/// `CardView` field is repeated here, since this one makes `type` required.
+/// `CardView` field is repeated here, since this one makes `type` required — all but `embiggenCost`,
+/// which only a card in its owner's hand carries (#492).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",

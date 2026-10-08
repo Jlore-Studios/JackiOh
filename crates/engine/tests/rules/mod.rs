@@ -89,6 +89,7 @@ pub mod effects_targets;
 pub mod effects_transform;
 pub mod effects_tune;
 pub mod effects_turn_end;
+pub mod embiggen_cost;
 pub mod endgame;
 pub mod faces;
 pub mod fixtures;

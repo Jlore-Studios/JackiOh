@@ -98,7 +98,7 @@ placeholders (`app::load_server_env`).
 | `RENDER_GIT_COMMIT` | no | set by Render; `GET /api/catalog` reports it as `x-deployed-commit` |
 
 `mint-code` and `seed-accounts` read the same environment (`seed-accounts` also
-`SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards` and `stats-import` read
+`SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards`, `stats-import` and `stats-export` read
 `DATABASE_URL`. The client's half is `VITE_*` (`apps/web/.env.example`); `env.rs`'s
 `PUBLIC_ENV_VARS` and `SERVER_ONLY_ENV_VARS` are disjoint by design.
 
@@ -174,10 +174,21 @@ target/release/jackioh-server stats-cards --card=core-002 --json
 cargo jackioh stats --patch v0.2.5 --out v0.2.5-dev.jsonl                   # a pre-release AI run
 target/release/jackioh-server stats-import v0.2.5-dev.jsonl                 # loaded; refused whole unless every line is a dev record
 target/release/jackioh-server stats-cards --source=dev --patch=v0.2.5       # read beside the same patch's live games
+target/release/jackioh-server stats-export --out=live.jsonl                 # the records stats-cards reads, a line each, in id order
+cargo jackioh stats report live.jsonl --json                                # the same figures with no database
 ```
 
 `stats-cards` takes `--source=live|dev|all` (live unless told otherwise), `--mode=bo1|bo3|random`,
 `--patch=<version>`, `--pilot=human|ai|unified`, `--card=<id>` and `--json`.
+
+`stats-export` writes the records a `stats-cards` call with the same `--source`, `--mode` and `--patch` reads,
+one `GameRecord` (R376) per line in id order, to the file `--out=<file>` names (required, resolved against
+the directory the command was started in, an existing file replaced). Every seat of every game is in the file,
+so `--pilot` and `--card` are not its flags: they are the reader's. The file is what `cargo jackioh stats --out`
+writes, so `cargo jackioh stats report` reads it, `analysis/` loads it and `stats-import` takes it when it holds
+only development records (a live record is refused, R378). It reads
+`DATABASE_URL` like `stats-cards`, writes nothing to the database, and holds live games unless `--source=dev`
+or `--source=all` asks for a development run's (R378).
 
 ## Tests
 

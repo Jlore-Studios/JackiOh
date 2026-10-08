@@ -42,7 +42,9 @@
 //!     Chalice's warning) on the viewer's own hand cards only (`counterWarning.ts` owns that rule);
 //!     `preview` (what a formula comes to now) on every card view the viewer may read — the viewer's
 //!     hand, the top of a unit pile and a backrow card face-up to the viewer — and on no other
-//!     (`preview.ts` owns that rule).
+//!     (`preview.ts` owns that rule). #492, R81: a fourth, `embiggenCost` (what a play at the card's
+//!     embiggen price costs now, `play_choices::embiggen_play_cost`), on the viewer's own hand cards
+//!     only, beside the normal price `cost` already is.
 //!
 //! Stats are never read off an instance: `layers.unitView` recomputes every stat and keyword on read
 //! (§10.4), so no stored total ever reaches the client.
@@ -74,6 +76,7 @@ use crate::mana::{NEXT_REFRESH_MODIFIER_ID, effective_cost, modifier_is_live};
 use crate::marks::marks_on;
 use crate::own_library::own_library_view;
 use crate::params::params_view;
+use crate::play_choices::embiggen_play_cost;
 use crate::preview::{backrow_is_public, is_face_down, preview_of};
 use crate::script::ConditionZone;
 use crate::setup::{mulligan_prompt_for, returned_awaiting_shuffle};
@@ -276,6 +279,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         def_id,
         radiant,
         cost,
+        embiggen_cost: None,
         attack: None,
         health: None,
         power: None,
@@ -376,6 +380,15 @@ fn with_condition(mut view: CardView, active: bool) -> CardView {
     if active {
         view.condition_active = Some(true);
     }
+    view
+}
+
+/// #492, R81: an embiggen card in the viewer's own hand carries what a play of it at its embiggen
+/// price costs now (`embiggenCost`), read by the function step 1 prices that play with
+/// (`play_choices::embiggen_play_cost`), beside the `cost` its normal price comes to. Absent on every
+/// other card; this file asks it only of the viewer's own hand.
+fn with_embiggen_cost(mut view: CardView, state: &GameState, card: &CardInstance) -> CardView {
+    view.embiggen_cost = embiggen_play_cost(state, card);
     view
 }
 
@@ -815,7 +828,7 @@ fn side_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> SideView 
                     with_preview(
                         with_counter_warning(
                             with_condition(
-                                hand_card_view(state, card),
+                                with_embiggen_cost(hand_card_view(state, card), state, card),
                                 condition_active(state, card, viewer, ConditionZone::Hand),
                             ),
                             countered.contains(&card.id),

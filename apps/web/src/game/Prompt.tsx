@@ -59,6 +59,7 @@ import {
 
 import type {
   ActionBody,
+  CardDef,
   CardView,
   MulliganView,
   PendingView,
@@ -568,21 +569,30 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
 /** R247: a Discover option that is a number rather than a card (#82 KY's Trial). */
 const NUMBER_OPTION = /^\d+$/;
 
-/** #492: the gem of an embiggened option whose price the face cannot vouch for (`pricedFace`). */
+/** #492: the gem of an embiggened option whose price nothing vouches for (`pricedFace`). */
 const UNKNOWN_PRICE = "?";
 
 /**
  * #492: an embiggen option's face at the price its form is played for. The normal form is the card
- * as the view shows it, at the price it costs now, without the embiggen price beside the gem. The
- * embiggened form is the same face at the embiggen price the gem shows beside it (`FaceCost.alt`,
- * cards/model.ts), the price the card's own text names ("Paid (4)"). Once a cost change has moved
- * the card off its printed price the face drops that price, and the gem says "?": the client never
- * works out an embiggen price itself (CLAUDE.md rule 7), and the engine charges the price it rules.
+ * as the view shows it, at the price it costs now (`CardView.cost`), without the embiggen price
+ * beside the gem. The embiggened form is the same face at the view's `embiggenCost`: what a play at
+ * the embiggen price costs now, every discount and surcharge applied, which the engine reads with the
+ * function it charges that play by. Its tone is set against the printed embiggen price, as the hand's
+ * gem is against the printed one. A card view without the field (one that is not in its owner's hand)
+ * falls back to the embiggen price the face shows beside its gem (`FaceCost.alt`, cards/model.ts),
+ * which a face shows only while the card stands at its printed price, and else to "?": the client
+ * never works out an embiggen price itself (CLAUDE.md rule 7).
  */
-function pricedFace(face: FaceModel, price: EmbiggenPrice): FaceModel {
+function pricedFace(face: FaceModel, price: EmbiggenPrice, card: CardView | undefined, def: CardDef | undefined): FaceModel {
   if (price === "normal") return { ...face, cost: { ...face.cost, alt: null } };
-  const text = face.cost.alt ?? UNKNOWN_PRICE;
-  return { ...face, cost: { text, value: text, tone: "base", alt: null } };
+  const live = card?.embiggenCost;
+  if (live === undefined) {
+    const text = face.cost.alt ?? UNKNOWN_PRICE;
+    return { ...face, cost: { text, value: text, tone: "base", alt: null } };
+  }
+  const printed = typeof def?.cost === "object" ? def.cost.embiggen : live;
+  const tone = live < printed ? "down" : live > printed ? "up" : "base";
+  return { ...face, cost: { text: String(live), value: String(live), tone, alt: null } };
 }
 
 /** What an embiggen option pays, in R432's words: "Pay (4)". */
@@ -625,7 +635,8 @@ function CardOption(props: {
             ...(cost === undefined ? {} : { liveCost: cost }),
             inPlay: {},
           });
-  const face = drawn === null || props.item.price === undefined ? drawn : pricedFace(drawn, props.item.price);
+  const face =
+    drawn === null || props.item.price === undefined ? drawn : pricedFace(drawn, props.item.price, props.item.card, info.def);
   // #492: what this card picks, under its face; an embiggen option also says what it pays.
   const caption = face === null ? undefined : props.item.caption;
   const pays = face === null || props.item.price === undefined ? undefined : priceLine(face);
