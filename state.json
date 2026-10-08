@@ -4179,11 +4179,12 @@
     "what": "build #560 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-08T14:52:23Z",
+    "at": "2026-10-08T15:04:49Z",
     "notes": [
       "answered a comment on #436 that was never answered",
       "answered a comment on #430 that was never answered",
-      "#562: typed it Bug"
+      "#562 needs a plan",
+      "started a night run, as a lane was free: #562 (medium) is queued to build, for `muse`: plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
