@@ -53,13 +53,20 @@ pub(crate) fn literal<T: Serialize>(value: &T) -> String {
     }
 }
 
-fn one_of<T: Copy + Serialize>(name: &str, raw: &str, allowed: &[T]) -> anyhow::Result<T> {
+/// The value of a `--name=value` flag among `allowed`, or a refusal listing them and ending with the
+/// command's own `usage`.
+pub(crate) fn one_of<T: Copy + Serialize>(
+    name: &str,
+    raw: &str,
+    allowed: &[T],
+    usage: &str,
+) -> anyhow::Result<T> {
     if let Some(found) = allowed.iter().find(|value| literal(*value) == raw) {
         return Ok(*found);
     }
     let names: Vec<String> = allowed.iter().map(literal).collect();
     bail!(
-        "--{name} must be one of {} (got {}).\n\n{USAGE}",
+        "--{name} must be one of {} (got {}).\n\n{usage}",
         names.join(", "),
         quoted(raw)
     )
@@ -68,7 +75,7 @@ fn one_of<T: Copy + Serialize>(name: &str, raw: &str, allowed: &[T]) -> anyhow::
 /// TS's `/^--(?<name>[a-z]+)=(?<value>.+)$/u`: the name, then the value, or `None` when the argument
 /// is not of that form. `.` matches anything but a line terminator, so a value holding one does not
 /// match either.
-fn flag(arg: &str) -> Option<(&str, &str)> {
+pub(crate) fn flag(arg: &str) -> Option<(&str, &str)> {
     let rest = arg.strip_prefix("--")?;
     let (name, value) = rest.split_once('=')?;
     if name.is_empty() || !name.bytes().all(|byte| byte.is_ascii_lowercase()) {
@@ -99,10 +106,10 @@ pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions
             bail!("Unrecognised argument {}.\n\n{USAGE}", quoted(arg));
         };
         match name {
-            "source" => filter.source = one_of::<SourceFilter>(name, raw, SOURCE_FILTERS)?,
-            "mode" => filter.mode = Some(one_of::<GameMode>(name, raw, GAME_MODES)?),
+            "source" => filter.source = one_of::<SourceFilter>(name, raw, SOURCE_FILTERS, USAGE)?,
+            "mode" => filter.mode = Some(one_of::<GameMode>(name, raw, GAME_MODES, USAGE)?),
             "patch" => filter.patch = Some(raw.to_owned()),
-            "pilot" => filter.pilot = one_of::<PilotFilter>(name, raw, PILOT_FILTERS)?,
+            "pilot" => filter.pilot = one_of::<PilotFilter>(name, raw, PILOT_FILTERS, USAGE)?,
             "card" => card = Some(raw.to_owned()),
             _ => bail!("Unrecognised option --{name}.\n\n{USAGE}"),
         }
