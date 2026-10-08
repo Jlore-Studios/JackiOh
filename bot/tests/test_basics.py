@@ -36,7 +36,7 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(dict(first_caps.limits.stops), {"five_hour": 0.98})  # no weekly cap
         self.assertEqual(cfg.max_self_check_rounds, 3)
         self.assertIn("plan", cfg.max_turns)
-        self.assertEqual((cfg.pool.max_parallel, cfg.pool.machine_parallel), (10, 6))
+        self.assertEqual((cfg.pool.max_parallel, cfg.pool.machine_parallel), (11, 6))
         self.assertIn(".github/", cfg.forbidden_paths)
         self.assertIn("bot/", cfg.forbidden_paths)
         self.assertIn(".harness/", cfg.forbidden_paths)

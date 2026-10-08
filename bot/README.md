@@ -4,8 +4,9 @@
 free: up to seven Claude accounts (Opus at extra-high effort), ChatGPT through the Codex CLI,
 Google through the Antigravity CLI (`agy`), Meta through Muse Code and Cognition through the
 Devin CLI, each with its own hours
-and limits ([Subscriptions](#subscriptions)). Up to ten items run at once: the Claude accounts' on
-GitHub's runners, and at most six on the bot's own machine, the night box. (The AI's two training
+and limits ([Subscriptions](#subscriptions)). Up to eleven items run at once on GitHub's runners
+(the Claude accounts') and, apart from those, up to six on the bot's own machine, the night box:
+neither waits on the other. (The AI's two training
 lanes run on a box of their own, outside the harness: [`machine/`](machine/README.md#the-training-box).)
 Every model has a tier (weak,
 medium or strong) and every item a difficulty (easy, medium or hard), which decides who may plan,
@@ -435,12 +436,14 @@ prints each one and whether it could start now, and `/harness status` does the s
   work, and the planner opens one issue with the reason, asking a person what it should do now.
   Devin's is 2026-10-15, the day before SWE-2 stops being free on its CLI.
 
-At the top level, `max_parallel` is how many run at once, `machine_parallel` how many of them
-may be on the bot's machine (6; its two vCPUs run each job's checks; GitHub's runners have four
-each and no such limit), `plan_lanes` how many planning runs may go on top of those (the planning
-lane, below; 2), `priority` the usage order (below), and `tiers` each tier's models in the
+At the top level, `max_parallel` is how many run at once on GitHub's runners (11, the Claude
+accounts' lanes added up, so it holds none of them back), `machine_parallel` how many run at once
+on the bot's machine (6; its two vCPUs run each job's checks; GitHub's runners have four each),
+each apart from the other, so Claude runs never wait for the night box's slots nor its runs for
+GitHub's lanes; `plan_lanes` is how many planning runs may go on top of those (the planning
+lane, below; 4), `priority` the usage order (below), and `tiers` each tier's models in the
 order the router tries them after `priority`. A subscription's own `lanes`
-(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can fill its box alone, Muse's is 2, and claude-1, claude-2 and claude-3 have 2 each. A `secret` must be one of the names the workflows hand over (the seven Claude ones,
+(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can fill its box alone, Muse's is 2, and claude-1, claude-2, claude-3 and claude-7 have 2 each. A `secret` must be one of the names the workflows hand over (the seven Claude ones,
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
 **Who takes what.** Each run takes one item on one subscription, and a subscription works on as

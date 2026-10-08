@@ -498,7 +498,8 @@ def cmd_providers(cfg: Config, args: argparse.Namespace) -> int:
         print(f"{provider.id:10} {provider.cli:7} {seats:36} "
               f"hours: {provider.hours(cfg.timezone):34} limits: {caps:28} "
               f"{'ready' if reason is None else reason}")
-    print(f"at most {cfg.pool.max_parallel} at once; priority {', '.join(cfg.pool.priority)}")
+    print(f"at most {cfg.pool.max_parallel} at once on GitHub's runners and "
+          f"{cfg.pool.machine_parallel} on the machine; priority {', '.join(cfg.pool.priority)}")
     # A tier's entries name models; whether one checks itself is its subscription's seat's.
     checking = {seat.model for provider in cfg.pool.ordered() for seat in cfg.pool.seats(provider)
                 if seat.self_check}

@@ -262,11 +262,13 @@ def tier_at_least(tier: str, floor: str) -> bool:
 
 @dataclass(frozen=True)
 class Pool:
+    #: How many runs may go at once on GitHub's runners (the Claude accounts').
     max_parallel: int
     priority: tuple[str, ...]
     providers: Mapping[str, Provider]
-    #: How many of those runs may be on the bot's machine at once (`runs_on` not GitHub's): its
-    #: two vCPUs run every machine job's checks, while each of GitHub's runners has its own four.
+    #: How many runs may go at once on the bot's machine (`runs_on` not GitHub's), apart from
+    #: `max_parallel`, so neither waits on the other: its two vCPUs run every machine job's
+    #: checks, while each of GitHub's runners has its own four.
     machine_parallel: int = 0
     #: How many planning runs may go at once on top of `max_parallel` (the planning lane): a
     #: strong model plans the Needs plan stage there while the build lanes are full.
@@ -549,8 +551,8 @@ def parse(raw: Any) -> Pool:
         raise ConfigError(f"{PROVIDERS_PATH}: max_parallel must be at least 1")
     tiers = _tiers(raw.get("tiers"))
     machine = int(raw.get("machine_parallel", lanes))
-    if not 0 <= machine <= lanes:
-        raise ConfigError(f"{PROVIDERS_PATH}: machine_parallel must be from 0 to max_parallel")
+    if machine < 0:
+        raise ConfigError(f"{PROVIDERS_PATH}: machine_parallel must be 0 or more")
     plan_lanes = int(raw.get("plan_lanes", 0))
     if plan_lanes < 0:
         raise ConfigError(f"{PROVIDERS_PATH}: plan_lanes must be 0 or more")

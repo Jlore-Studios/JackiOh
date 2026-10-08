@@ -1,5 +1,5 @@
 {
-  "max_parallel": 10,
+  "max_parallel": 11,
   "machine_parallel": 6,
   "plan_lanes": 4,
   "start_headroom": { "five_hour": 0.05, "seven_day": 0.05 },
@@ -141,6 +141,7 @@
       "login": "secret",
       "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
       "runs_on": "ubuntu-latest",
+      "lanes": 2,
       "schedule": { "mode": "always" },
       "limits": { "mode": "none" },
       "quiet_check": false
