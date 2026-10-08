@@ -505,7 +505,7 @@ A table `eventType → { animation, durationMs, testid }` with exactly one row p
 | `cardResolved` | Brief settle flash on the resolved card, or on its graveyard pile when it has already left | 150 ms | element gains `data-animating="cardResolved"`; fires once per play, after the Cry and any Echo repeats (§10.5 step 7, R17) | — |
 | `summoned` | Card scales in at zone | 250 ms | same; a permanent played from hand emits `cardPlayed` then `summoned` for the same card, and the client plays the pair as one motion | `summon`: dust slam and ring, shake by stats; Legendary and Mythic rays |
 | `attackDeclared` | Attacker lunges toward target and back | 350 ms | attacker translates ≥ 20 px toward target | `lunge`: dust kick under the attacker |
-| `damage` | Red number pops on target, target shakes; hero portrait shakes | 300 ms | `.damage-pop` text equals amount | `impact`: projectile if non-combat, spark burst, red splat, shake by amount |
+| `damage` | Red number pops on target, target shakes; hero portrait shakes | 300 ms | `.damage-pop` text equals amount | `impact`: projectile if non-combat, spark burst, red splat, shake by amount; a small shield flash where Armor took half or more of the hit (R1363) |
 | `healed` | Green number pops | 300 ms | `.heal-pop` text equals amount | `heal`: holy rays, sparkles, green splat |
 | `destroyed` | Card dissolves, then slides to GY count | 350 ms | GY counter increments after animation | `death`: crack, embers, smoke |
 | `exiled` | Card fades to black and shrinks | 350 ms | exile counter increments | `void`: void ring and wisps |
@@ -565,7 +565,9 @@ A table `eventType → { animation, durationMs, testid }` with exactly one row p
 | `turnCutShort` | Banner "Turn ended" on both seats | 600 ms | banner text; `end-turn` disabled (§6.3 End the turn) | `banner`: muted "Turn ended" |
 | `marked` | The marked card takes its mark: a corruption sparkle in the mark's colour, purple for #50's pending steal (R437) | 400 ms | the card carries `data-mark`; a face-down card's back carries it | `radiant`-style pulse in the mark's colour |
 | `glitched` | A Glitch resolved (issue #170): a glitch banner names its outcome — the match resets, the seats swap, other games' boards appear, or the match never happened (R676–R679) | 600 ms | the board carries the banner | `banner` fx; static under Reduce motion |
+| `translated` | The card redraws in Chinese with a radiant-style pulse (R1301) | 400 ms | the card's face shows its Chinese name when the entry ends | none |
 | `numberChanged` | The changed number on the card flashes and ticks to its new value; a back on a seat that may not read the card | 300 ms | the number shown equals the view's `{key}` value (C+ #41) | `glint`: arcane glint |
+| `damageAbsorbed` | The target's Armor took the whole hit (patch v0.3.X, R1361): the card or hero portrait braces with a steel glint, no shake and no number, since nothing was dealt | 300 ms | the target gains `data-animating="damageAbsorbed"`; its health is unchanged | `armor`: a full shield blooms over the target with a frost ring and sparks (R1363) |
 
 The FX column names the effect recipe that decorates each row (`ANIMATIONS[type].fx`), specified with its cues in `docs/polish/1-animations.md`. Effects run on the `apps/web/src/fx` layer, start with their row's entry and pace nothing: the durations and acceptance cells above are unchanged, no effect carries a `data-animating` of its own, whatever trails an entry is gone within `FX_MAX_TAIL_MS` of its end, and the stage effects (a stand-in for a moved card, a hidden card, an aimed lunge) last no longer than the view swap (R200). The viewer's effects speed scales the durations (R201), and effects read only the redacted stream (R202).
 

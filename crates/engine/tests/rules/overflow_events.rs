@@ -197,9 +197,10 @@ mod r315_fatigue {
         );
     }
 
-    /// "R315 still reports a fatigue draw whose whole hit Armor absorbs, ahead of R240's zero"
+    /// "R315 still reports a fatigue draw whose whole hit Armor absorbs, ahead of R240's report", which
+    /// since patch v0.3.X is the pipeline's `damageAbsorbed` (R1362).
     #[test]
-    fn r315_r240_still_reports_a_fatigue_draw_whose_whole_hit_armor_absorbs_ahead_of_the_zero() {
+    fn r315_r240_r1362_still_reports_a_fatigue_draw_whose_whole_hit_armor_absorbs_ahead_of_the_report() {
         let mut state = new_game("r315-armor", None);
         set_library(&mut state, PlayerId::P1, &[] as &[&str]);
         state.players.p1.hero.armor = 3;
@@ -210,7 +211,7 @@ mod r315_fatigue {
             Value::Array(values(&sink.events)),
             json!([
                 { "type": "fatigue", "player": "p1", "count": 1, "amount": 1 },
-                { "type": "damage", "sourceId": null, "targetId": "hero-p1", "amount": 0, "combat": false },
+                { "type": "damageAbsorbed", "sourceId": null, "targetId": "hero-p1", "absorbed": 1, "combat": false },
             ])
         );
     }

@@ -85,7 +85,11 @@ fn with_texts(card: &CardDef, base: &str, radiant: &str) -> CardDef {
 
 /// A Chinese face as a player reads it: its params filled at the face's printed values.
 fn chinese_face(card: &CardDef, entry: &Map<String, Value>, face: FaceKind) -> String {
-    fill_params(&with_texts(card, text(entry, "base"), text(entry, "radiant")), face, None)
+    fill_params(
+        &with_texts(card, text(entry, "base"), text(entry, "radiant")),
+        face,
+        None,
+    )
 }
 
 /// A preview template (a key or a value of `previews`) filled at `face`'s printed values.
@@ -139,7 +143,11 @@ fn preview_labels(id: &str) -> Vec<(FaceKind, String)> {
         let view = serde_json::to_value(s.view(PlayerId::P1)).expect("a view serialises");
         views.extend(view["you"]["hand"].as_array().cloned().unwrap_or_default());
         if card.type_ != CardType::Spell {
-            let row = if card.type_ == CardType::Unit { "field" } else { "backrow" };
+            let row = if card.type_ == CardType::Unit {
+                "field"
+            } else {
+                "backrow"
+            };
             let s = super::scenario(json!({
                 "p1": { row: [{ "def": id, "radiant": radiant, "faceUp": true }], "library": libraries },
                 "p2": { "library": libraries, "field": ["core-019"] },
@@ -167,9 +175,15 @@ mod r1303_the_chinese_tables {
     #[test]
     fn r1303_every_key_is_a_catalog_entry_and_every_entry_has_a_key() {
         let sidecar = table();
-        let strangers: Vec<&String> = sidecar.keys().filter(|id| !CATALOG.contains_key(id.as_str())).collect();
+        let strangers: Vec<&String> = sidecar
+            .keys()
+            .filter(|id| !CATALOG.contains_key(id.as_str()))
+            .collect();
         assert_eq!(strangers, Vec::<&String>::new());
-        let without: Vec<&String> = CATALOG.keys().filter(|id| !sidecar.contains_key(id.as_str())).collect();
+        let without: Vec<&String> = CATALOG
+            .keys()
+            .filter(|id| !sidecar.contains_key(id.as_str()))
+            .collect();
         assert_eq!(without, Vec::<&String>::new());
         // In the catalog's order, so a card's entry is found where its catalog entry is.
         assert!(sidecar.keys().eq(CATALOG.keys()));
@@ -196,7 +210,9 @@ mod r1303_the_chinese_tables {
             for field in ["name", "base", "radiant"] {
                 match entry.get(field).and_then(Value::as_str) {
                     None => problems.push(format!("{id}: {field} is not a string")),
-                    Some(value) if value.trim() != value => problems.push(format!("{id}: {field} has space at an end")),
+                    Some(value) if value.trim() != value => {
+                        problems.push(format!("{id}: {field} has space at an end"))
+                    }
                     Some(_) => {}
                 }
             }
@@ -215,15 +231,23 @@ mod r1303_the_chinese_tables {
             }
             let previews = entry.get("previews");
             if previews.is_some() != previewed.contains(&id) {
-                problems.push(format!("{id}: previews {:?}, preview declared {}", previews.is_some(), previewed.contains(&id)));
+                problems.push(format!(
+                    "{id}: previews {:?}, preview declared {}",
+                    previews.is_some(),
+                    previewed.contains(&id)
+                ));
             }
             if let Some(previews) = previews {
                 match previews.as_object() {
                     None => problems.push(format!("{id}: previews is not an object")),
                     Some(previews) => {
                         for (label, chinese) in previews {
-                            if !chinese.as_str().is_some_and(|value| !value.is_empty() && value.trim() == value) {
-                                problems.push(format!("{id}: the preview \"{label}\" is not a trimmed string"));
+                            if !chinese
+                                .as_str()
+                                .is_some_and(|value| !value.is_empty() && value.trim() == value)
+                            {
+                                problems
+                                    .push(format!("{id}: the preview \"{label}\" is not a trimmed string"));
                             }
                         }
                     }
@@ -264,11 +288,21 @@ mod r1303_the_chinese_tables {
             }
             // A Chinese label may print a number its English leaves out (C+ #74's "每打出{plays}张牌" for
             // "your opponent plays"), but only one the card declares, so the client can fill it.
-            let declared: Vec<&str> = card.params.iter().flatten().map(|param| param.key.as_str()).collect();
+            let declared: Vec<&str> = card
+                .params
+                .iter()
+                .flatten()
+                .map(|param| param.key.as_str())
+                .collect();
             for (key, chinese) in previews {
-                let written = keys_of(key).0.into_iter().chain(keys_of(chinese.as_str().unwrap_or("")).0);
+                let written = keys_of(key)
+                    .0
+                    .into_iter()
+                    .chain(keys_of(chinese.as_str().unwrap_or("")).0);
                 for written in written.filter(|written| !declared.contains(&written.as_str())) {
-                    problems.push(format!("{id}: \"{key}\" writes {{{written}}}, which the card does not declare"));
+                    problems.push(format!(
+                        "{id}: \"{key}\" writes {{{written}}}, which the card does not declare"
+                    ));
                 }
             }
         }
@@ -286,7 +320,9 @@ mod r1303_the_chinese_tables {
                 let (english, _) = keys_of(&card.face(face).text);
                 let (chinese, agreeing) = keys_of(text(&entry, face_field(face)));
                 if english != chinese {
-                    problems.push(format!("{id} {face}: writes {chinese:?}, its English {english:?}"));
+                    problems.push(format!(
+                        "{id} {face}: writes {chinese:?}, its English {english:?}"
+                    ));
                 }
                 // A measure word follows the number ("抽{draw}张牌"): Chinese nouns do not agree.
                 if agreeing {
@@ -362,8 +398,10 @@ mod r1303_the_chinese_tables {
         let terms = chinese_terms();
         // serde_json's map is sorted, so both sides are compared as sorted lists.
         let named = |group: &str| -> Vec<String> {
-            let mut names: Vec<String> =
-                terms[group].as_object().map(|words| words.keys().cloned().collect()).unwrap_or_default();
+            let mut names: Vec<String> = terms[group]
+                .as_object()
+                .map(|words| words.keys().cloned().collect())
+                .unwrap_or_default();
             names.sort();
             names
         };
@@ -372,13 +410,26 @@ mod r1303_the_chinese_tables {
             names.sort();
             names
         };
-        assert_eq!(named("types"), all(CardType::ALL.iter().map(|t| t.as_str()).collect()));
+        assert_eq!(
+            named("types"),
+            all(CardType::ALL.iter().map(|t| t.as_str()).collect())
+        );
         assert_eq!(named("tags"), all(Tag::ALL.iter().map(|t| t.as_str()).collect()));
-        assert_eq!(named("rarities"), all(Rarity::ALL.iter().map(|r| r.as_str()).collect()));
-        assert_eq!(named("keywords"), all(KeywordKind::ALL.iter().map(|k| k.as_str()).collect()));
+        assert_eq!(
+            named("rarities"),
+            all(Rarity::ALL.iter().map(|r| r.as_str()).collect())
+        );
+        assert_eq!(
+            named("keywords"),
+            all(KeywordKind::ALL.iter().map(|k| k.as_str()).collect())
+        );
         assert_eq!(named("labels"), all(LABELS.to_vec()));
         let mut problems: Vec<String> = Vec::new();
-        let plain = |value: &Value| value.as_str().is_some_and(|word| !word.is_empty() && word.trim() == word);
+        let plain = |value: &Value| {
+            value
+                .as_str()
+                .is_some_and(|word| !word.is_empty() && word.trim() == word)
+        };
         for group in ["types", "tags", "rarities", "keywords", "labels"] {
             for (english, word) in terms[group].as_object().into_iter().flatten() {
                 if !plain(word) {
@@ -393,7 +444,10 @@ mod r1303_the_chinese_tables {
         }
         // The glossary's entries are the client's GLOSSARY's, which chinese.test.tsx proves.
         for (term, entry) in terms["glossary"].as_object().into_iter().flatten() {
-            if !plain(&entry["label"]) || !plain(&entry["rule"]) || entry.as_object().is_none_or(|e| e.len() != 2) {
+            if !plain(&entry["label"])
+                || !plain(&entry["rule"])
+                || entry.as_object().is_none_or(|e| e.len() != 2)
+            {
                 problems.push(format!("glossary {term}"));
             }
         }
@@ -402,7 +456,12 @@ mod r1303_the_chinese_tables {
                 problems.push(format!("the label {english} does not end with \"：\""));
             }
         }
-        let unique: IndexSet<&str> = terms["keywords"].as_object().into_iter().flatten().filter_map(|(_, w)| w.as_str()).collect();
+        let unique: IndexSet<&str> = terms["keywords"]
+            .as_object()
+            .into_iter()
+            .flatten()
+            .filter_map(|(_, w)| w.as_str())
+            .collect();
         assert_eq!(unique.len(), KeywordKind::ALL.len(), "two keywords share a word");
         assert_eq!(problems, Vec::<String>::new());
     }
@@ -418,7 +477,10 @@ mod r1303_the_chinese_tables {
             for named in card.refs.iter().flatten() {
                 let chinese = without_edition(text(&sidecar[named.as_str()], "name"));
                 let english = CATALOG[named.as_str()].name.split(" (").next().unwrap_or("");
-                let faces: Vec<FaceKind> = FACES.into_iter().filter(|face| text(entry, face_field(*face)).contains(chinese)).collect();
+                let faces: Vec<FaceKind> = FACES
+                    .into_iter()
+                    .filter(|face| text(entry, face_field(*face)).contains(chinese))
+                    .collect();
                 if faces.is_empty() {
                     problems.push(format!("{id}: names {named} but no face says {chinese}"));
                 }

@@ -103,7 +103,11 @@ pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance)
     if let Some(log) = state.players[player].game_log.as_mut() {
         // R1300: a Chinese card's record is Chinese, so T-AI-5's copy of it is too; a card that
         // records itself as another card's play (`records_play_as`) records that card as printed.
-        let chinese = if record.def_id == card.def_id { card.chinese } else { None };
+        let chinese = if record.def_id == card.def_id {
+            card.chinese
+        } else {
+            None
+        };
         log.last_face_up_play = Some(FaceUpRecord {
             def_id: record.def_id,
             radiant: record.radiant,

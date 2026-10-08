@@ -2,7 +2,8 @@
 // bus, and moves between tracks musically.
 //
 //   voice gain ─┐
-//   voice gain ─┴─▶ turn low-pass ─▶ turn gain ─▶ focus gain ─▶ engine music bus ─▶ duck ─▶ master
+//   voice gain ─┴─▶ bed ─▶ turn low-pass ─▶ turn gain ─▶ focus gain ─▶ engine music bus ─▶ duck ─▶ master
+//                                           intro gain ─┘
 //
 // A REQUEST NAMES WHAT SHOULD PLAY, never when. Asking for the track already playing does nothing,
 // so a Mythic played again while its theme runs does not restart it. A change waits for the playing
@@ -17,6 +18,20 @@
 // focus (the page hidden, or the window blurred) fades the music out unless the player turned on
 // `playMusicInBackground`. Muted, or with the music at zero, nothing new loads or starts; the music picks up the moment
 // it can be heard again.
+//
+// A CARD'S INTRO (R1350, R1351) is a clip that plays once on top of whatever plays: a Legendary's or
+// a Mythic's few bars, asked for at its card's moment. It goes straight into the focus gain, so it
+// follows the music volume, the mute and the page's focus but not the opponent's-turn low-pass, and
+// while its music runs (to its last bar line, the manifest's `handoff`) the bed it sits on ducks to
+// MUSIC_INTRO_DUCK_GAIN and comes back. The bed is every track: a change asked for meanwhile (the
+// theme the card brings) is made as ever, on a bar line, and comes in ducked until the intro's music
+// ends. Another card's intro cuts it with a MUSIC_INTRO_CUT_FADE_S fade, as `stopIntro` does, and
+// the same intro asked for again while its music runs (copies of one card arriving together)
+// changes nothing, as a theme asked for again does not restart; one
+// whose file is not ready MUSIC_INTRO_LATE_S after it was asked for is dropped. An intro asked for is
+// fetched at once even while the board animates (it is the card's moment, like a voice line), and
+// `preloadIntros` fetches ahead between bursts. Intro files have caches of their own, so they never
+// push a track's bytes out.
 //
 // Like the engine, nothing is scheduled on a context that is not running, and the player never
 // throws. A turn or focus change that arrives while the context is suspended is applied the moment
@@ -33,6 +48,13 @@ import {
   MUSIC_FADE_S,
   MUSIC_FOCUS_TC_S,
   MUSIC_HANDOFF_FADE_S,
+  MUSIC_INTRO_BYTES_MAX,
+  MUSIC_INTRO_CUT_FADE_S,
+  MUSIC_INTRO_DECODED_MAX,
+  MUSIC_INTRO_DUCK_ATTACK_TC_S,
+  MUSIC_INTRO_DUCK_GAIN,
+  MUSIC_INTRO_DUCK_RELEASE_TC_S,
+  MUSIC_INTRO_LATE_S,
   MUSIC_LEAD_S,
   MUSIC_OPEN_LOWPASS_HZ,
   MUSIC_OPPONENT_GAIN,
@@ -57,6 +79,18 @@ export type MusicLogEntry = { kind: "start" | "stop"; track: string; at: number 
 
 export type MusicPlayer = {
   request(request: MusicRequest): void;
+  /**
+   * R1350: plays a card's intro (a track that plays once) on top of the music, ducking the rest
+   * until its music ends; a second one cuts the first (R1351). Ignored muted, at zero, or while the
+   * context is not running.
+   */
+  playIntro(id: string): void;
+  /** R1351: cuts the intro playing (or about to) short with MUSIC_INTRO_CUT_FADE_S, and lets the bed back up. */
+  stopIntro(): void;
+  /** R1350: fetches these intros' files in the background, between animation bursts. */
+  preloadIntros(ids: readonly string[]): void;
+  /** The intro playing, else null. */
+  intro(): string | null;
   /** Forgets where each station track left off (a new match). */
   resetResume(): void;
   /** Fetches these tracks' files in the background, between animation bursts. */
@@ -124,7 +158,10 @@ type Voice = {
   stopping: boolean;
 };
 
-type Graph = { ctx: AudioContext; filter: BiquadFilterNode; turn: GainNode; focus: GainNode };
+/** R1350: a card's intro, from its start until its source ends or it is cut. `end` is its music's end. */
+type Clip = { id: string; source: AudioBufferSourceNode; gain: GainNode; startAt: number; end: number; stopping: boolean };
+
+type Graph = { ctx: AudioContext; bed: GainNode; filter: BiquadFilterNode; turn: GainNode; focus: GainNode };
 
 function barLength(track: MusicTrack): number {
   return (60 / track.bpm) * track.beatsPerBar;
@@ -169,6 +206,12 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
   /** Tracks whose file could not be fetched or decoded: tried again when a request names them anew, or at a turn boundary. */
   const failed = new Set<string>();
   let heldPreload: string[] = [];
+  /** R1350: the intro playing, the one being loaded (with the context time it was asked for), and their caches. */
+  let clip: Clip | null = null;
+  let pendingIntro: { id: string; asked: number } | null = null;
+  const introBytes = new Map<string, Promise<ArrayBuffer | null>>();
+  const introDecoded = new Map<string, AudioBuffer>();
+  let heldIntroPreload: string[] = [];
   let watched: AudioEngine | null = null;
   let unwatch: (() => void) | null = null;
   const unsubscribeSettings = subscribeSettings(() => {
@@ -213,7 +256,11 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     if (graph !== null && graph.ctx === out.context) return graph;
     // A new context (a test swapped the engine): the old one's voices went with it.
     voices = [];
+    clip = null;
+    pendingIntro = null;
+    introDecoded.clear();
     const ctx = out.context;
+    const bed = ctx.createGain();
     const filter = ctx.createBiquadFilter();
     filter.type = "lowpass";
     filter.frequency.value = opponent ? MUSIC_OPPONENT_LOWPASS_HZ : MUSIC_OPEN_LOWPASS_HZ;
@@ -221,10 +268,11 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     turn.gain.value = opponent ? MUSIC_OPPONENT_GAIN : 1;
     const focus = ctx.createGain();
     focus.gain.value = focusTarget();
+    bed.connect(filter);
     filter.connect(turn);
     turn.connect(focus);
     focus.connect(out.input);
-    graph = { ctx, filter, turn, focus };
+    graph = { ctx, bed, filter, turn, focus };
     appliedTurn = opponent;
     appliedFocus = focus.gain.value;
     return graph;
@@ -345,7 +393,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     gain.gain.setValueAtTime(0, at);
     gain.gain.linearRampToValueAtTime(1, at + fadeIn);
     source.connect(gain);
-    gain.connect(g.filter);
+    gain.connect(g.bed);
     const voice: Voice = { id, track, source, gain, origin: at - offset, startAt: at, fade: { t0: at, v0: 0, t1: at + fadeIn, v1: 1 }, stopping: false };
     source.onended = () => {
       voices = voices.filter((v) => v !== voice);
@@ -484,6 +532,107 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     const ids = heldPreload;
     heldPreload = [];
     for (const id of ids) if (manifest.files[id] !== undefined) void fetchCached(id);
+    const intros = heldIntroPreload;
+    heldIntroPreload = [];
+    for (const id of intros) if (manifest.files[id] !== undefined) void fetchIntro(id);
+  }
+
+  /* ----- a card's intro (R1350, R1351) ----- */
+
+  /** A track that plays once, as every intro is. */
+  function isClip(id: string): boolean {
+    const track = manifest.files[id];
+    return track !== undefined && !track.loop && track.handoff !== null;
+  }
+
+  /** An intro's compressed bytes, from its own cache (a failure is not kept, so it is tried again). */
+  function fetchIntro(id: string): Promise<ArrayBuffer | null> {
+    const cached = introBytes.get(id);
+    if (cached !== undefined) {
+      introBytes.delete(id);
+      introBytes.set(id, cached);
+      return cached;
+    }
+    const pending = (async (): Promise<ArrayBuffer | null> => {
+      try {
+        return await fetchBytes(musicUrl(id));
+      } catch {
+        return null;
+      }
+    })();
+    introBytes.set(id, pending);
+    void pending.then((raw) => {
+      if (raw === null && introBytes.get(id) === pending) introBytes.delete(id);
+    });
+    while (introBytes.size > MUSIC_INTRO_BYTES_MAX) {
+      const oldest = introBytes.keys().next().value;
+      if (oldest === undefined) break;
+      introBytes.delete(oldest);
+    }
+    return pending;
+  }
+
+  async function decodeIntro(id: string, c: AudioContext): Promise<AudioBuffer | null> {
+    try {
+      const raw = await fetchIntro(id);
+      if (raw === null) return null;
+      const buffer = await c.decodeAudioData(raw.slice(0));
+      introDecoded.delete(id);
+      introDecoded.set(id, buffer);
+      while (introDecoded.size > MUSIC_INTRO_DECODED_MAX) {
+        const oldest = introDecoded.keys().next().value;
+        if (oldest === undefined) break;
+        introDecoded.delete(oldest);
+      }
+      return buffer;
+    } catch {
+      return null;
+    }
+  }
+
+  /** The bed dips for an intro from `from` and comes back as its music ends at `until`. */
+  function duckBed(from: number, until: number): void {
+    if (graph === null) return;
+    const param = graph.bed.gain;
+    param.cancelScheduledValues(from);
+    param.setTargetAtTime(MUSIC_INTRO_DUCK_GAIN, from, MUSIC_INTRO_DUCK_ATTACK_TC_S);
+    param.setTargetAtTime(1, until, MUSIC_INTRO_DUCK_RELEASE_TC_S);
+  }
+
+  /** Fades an intro out from `at` over MUSIC_INTRO_CUT_FADE_S and stops it. */
+  function cutClip(c: Clip, at: number): void {
+    if (c.stopping) return;
+    c.stopping = true;
+    if (clip === c) clip = null;
+    push({ kind: "stop", track: c.id, at });
+    const from = Math.max(at, c.startAt);
+    const param = c.gain.gain;
+    param.cancelScheduledValues(from);
+    param.setValueAtTime(1, from);
+    param.linearRampToValueAtTime(0, from + MUSIC_INTRO_CUT_FADE_S);
+    c.source.stop(from + MUSIC_INTRO_CUT_FADE_S + STOP_GRACE_S);
+  }
+
+  function startClip(id: string, buffer: AudioBuffer): void {
+    const g = graph;
+    const track = manifest.files[id];
+    if (g === null || track === undefined) return;
+    const at = g.ctx.currentTime + MUSIC_LEAD_S;
+    if (clip !== null) cutClip(clip, at);
+    const source = g.ctx.createBufferSource();
+    source.buffer = buffer;
+    const gain = g.ctx.createGain();
+    source.connect(gain);
+    gain.connect(g.focus);
+    const mine: Clip = { id, source, gain, startAt: at, end: at + (track.handoff ?? track.duration), stopping: false };
+    source.onended = () => {
+      if (clip === mine) clip = null;
+      quietly(() => gain.disconnect());
+    };
+    source.start(at);
+    clip = mine;
+    push({ kind: "start", track: id, at });
+    duckBed(at, mine.end);
   }
 
   return {
@@ -511,6 +660,54 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     resetResume() {
       resumeAt.clear();
     },
+    playIntro(id) {
+      if (disposed) return;
+      quietly(() => {
+        if (!isClip(id) || !audible() || pendingIntro?.id === id) return;
+        // Nothing waits for a resume: an intro asked for on a stopped context is dropped.
+        if (ensureGraph() === null || !running() || graph === null) return;
+        const c = graph.ctx;
+        // R1351: an intro whose music still runs is not restarted by its own card again, as a theme is not.
+        if (clip !== null && !clip.stopping && clip.id === id && c.currentTime < clip.end) return;
+        const ready = introDecoded.get(id);
+        if (ready !== undefined) {
+          pendingIntro = null;
+          introDecoded.delete(id);
+          introDecoded.set(id, ready);
+          startClip(id, ready);
+          return;
+        }
+        const ask = { id, asked: c.currentTime };
+        pendingIntro = ask;
+        void decodeIntro(id, c).then((buffer) => {
+          // A newer intro, a stop, or a new context since: this one is no longer wanted.
+          if (pendingIntro !== ask || disposed) return;
+          pendingIntro = null;
+          quietly(() => {
+            if (buffer === null || graph === null || graph.ctx !== c || !running() || !audible()) return;
+            if (c.currentTime - ask.asked > MUSIC_INTRO_LATE_S) return;
+            startClip(id, buffer);
+          });
+        });
+      });
+    },
+    stopIntro() {
+      pendingIntro = null;
+      if (disposed || clip === null || graph === null) return;
+      quietly(() => {
+        if (graph === null || clip === null) return;
+        const now = graph.ctx.currentTime;
+        cutClip(clip, now);
+        const param = graph.bed.gain;
+        param.cancelScheduledValues(now);
+        param.setTargetAtTime(1, now, MUSIC_INTRO_DUCK_RELEASE_TC_S);
+      });
+    },
+    preloadIntros(ids) {
+      heldIntroPreload = [...new Set([...heldIntroPreload, ...ids.filter((id) => !introBytes.has(id))])];
+      pumpPreload();
+    },
+    intro: () => (clip !== null && !clip.stopping ? clip.id : null),
     preload(ids) {
       heldPreload = [...new Set([...heldPreload, ...ids])];
       pumpPreload();
@@ -536,6 +733,13 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
         quietly(() => v.source.stop());
         quietly(() => v.gain.disconnect());
       }
+      const c = clip;
+      if (c !== null) {
+        quietly(() => c.source.stop());
+        quietly(() => c.gain.disconnect());
+      }
+      clip = null;
+      pendingIntro = null;
       voices = [];
       entries = [];
     },

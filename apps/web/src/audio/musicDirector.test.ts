@@ -1,6 +1,7 @@
 // R631 (SPEC §10.11 "Music"): the game's music director. It follows the viewer's own view, starts a
 // Mythic theme or a station switch at the moment R204 gives a card's cast line and only for a card
 // the viewer can read, ends a theme on the viewer's next hit, and opens a match on its sting.
+// R1350, R1351: a Legendary's or a Mythic's intro at its card's moment, and what cuts it.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -11,7 +12,7 @@ import type { MusicRequest } from "./music.ts";
 import { MUSIC_ROTATION_KEY } from "./constants.ts";
 import { LOW_HEALTH_AT, createMusicDirector, rotationFor, type MusicDirector } from "./musicDirector.ts";
 import type { AudioSettings } from "./types.ts";
-import { baseView, emptySide } from "../test/fixtures.ts";
+import { baseView, card, emptySide } from "../test/fixtures.ts";
 
 /** #97 Zephyrs (a Mythic Spell), #96 My Pawn (a Mythic Trap), #50 K-Pop Fanatic (EDM), #4 Gary (Tavern). */
 const ZEPHYRS = "core-097";
@@ -27,6 +28,12 @@ type Rig = {
   last(): MusicRequest;
   resets: number;
   preloads: string[][];
+  /** R1350: the intros asked for, in order; how many times one was cut; the intros fetched ahead. */
+  intros: string[];
+  stops: number;
+  introPreloads: string[][];
+  /** Every intro and request, in the order the director made them. */
+  order: string[];
   settings: AudioSettings;
   setSettings(patch: Partial<AudioSettings>): void;
   /** Fires the pending timer (a Mythic theme's end), if one is armed. */
@@ -48,6 +55,10 @@ function rig(options: { settings?: Partial<AudioSettings>; rotation?: number } =
     },
     resets: 0,
     preloads: [],
+    intros: [],
+    stops: 0,
+    introPreloads: [],
+    order: [],
     settings: { ...DEFAULT_AUDIO_SETTINGS, ...options.settings },
     setSettings(patch) {
       r.settings = { ...r.settings, ...patch };
@@ -64,11 +75,22 @@ function rig(options: { settings?: Partial<AudioSettings>; rotation?: number } =
   };
   r.director = createMusicDirector({
     sink: {
-      request: (req) => requests.push(req),
+      request: (req) => {
+        requests.push(req);
+        r.order.push(`request ${String(req.track)}`);
+      },
       resetResume: () => {
         r.resets += 1;
       },
       preload: (ids) => r.preloads.push([...ids]),
+      playIntro: (id) => {
+        r.intros.push(id);
+        r.order.push(`intro ${id}`);
+      },
+      stopIntro: () => {
+        r.stops += 1;
+      },
+      preloadIntros: (ids) => r.introPreloads.push([...ids]),
     },
     settings: () => r.settings,
     subscribeSettings: (l) => {
@@ -407,6 +429,162 @@ describe("R631 a hotseat hand-over", () => {
     expect(r.last()).toMatchObject({ track: "tavern-1", opponentTurn: false });
     // An event planned against the other seat's view is not this seat's.
     r.director.onEvent(played(ZEPHYRS, "p1"), p1);
+    expect(r.last().track).toBe("tavern-1");
+  });
+});
+
+/** Units put onto the field: #52 Silly Silas (played, a Legendary) and C+ #19.1 Top Loser (a token printed Legendary). */
+const TOP_LOSER = "classicplus-019-1";
+const summonedOf = (defId: string, instanceId: string, row: "units" | "backrow" = "units"): GameEvent => ({ type: "summoned", player: "p1", instanceId, defId, row, lane: 1 });
+
+describe("R1350 a Legendary's or a Mythic's intro", () => {
+  it("R1350 a readable Legendary or Mythic opens its play with its own intro, from either seat, before the theme it brings", () => {
+    for (const seat of ["p1", "p2"] as const) {
+      const r = rig();
+      const view = midGame();
+      r.director.onView(view);
+      r.order.length = 0;
+      r.director.onEvent(played(ZEPHYRS, seat), view);
+      expect(r.intros, seat).toEqual(["intro-core-097"]);
+      expect(r.order, seat).toEqual(["intro intro-core-097", "request mythic-zephyrs"]);
+    }
+  });
+
+  it("R1350 a played Unit opens on its cardPlayed, and its own summoned adds nothing", () => {
+    const r = rig();
+    const view = midGame();
+    r.director.onView(view);
+    r.director.onEvent(played(SILLY_SILAS), view);
+    r.director.onEvent(summonedOf(SILLY_SILAS, `i-${SILLY_SILAS}`), view);
+    expect(r.intros).toEqual(["intro-core-052"]);
+  });
+
+  it("R1350 a Unit an effect puts onto the field without playing it (a token) opens on its summoned", () => {
+    const r = rig();
+    const view = midGame();
+    r.director.onView(view);
+    r.director.onEvent(summonedOf(TOP_LOSER, "t1"), view);
+    expect(r.intros).toEqual(["intro-classicplus-019-1"]);
+    // A summon to the backrow is a Trap's arrival, which sounds like every Trap's (R203).
+    r.director.onEvent(summonedOf(TOP_LOSER, "t2", "backrow"), view);
+    expect(r.intros).toHaveLength(1);
+  });
+
+  it("R1350 a card behind the sentinel opens nothing, played or summoned", () => {
+    const r = rig();
+    const view = midGame();
+    r.director.onView(view);
+    r.director.onEvent({ type: "cardPlayed", player: "p2", instanceId: "hidden", defId: "hidden", costPaid: 3 }, view);
+    r.director.onEvent(summonedOf("hidden", "hidden"), view);
+    r.director.onEvent({ type: "trapFired", instanceId: "t1", defId: "hidden", controller: "p2", row: "backrow", lane: 2 }, view);
+    expect(r.intros).toEqual([]);
+  });
+
+  it("R1350 a Trap's set opens nothing; its first firing opens its intro, and a firing again does not", () => {
+    const r = rig();
+    const view = midGame();
+    r.director.onView(view);
+    r.director.onEvent(played(MY_PAWN), view);
+    expect(r.intros).toEqual([]);
+    r.director.onEvent({ type: "trapFired", instanceId: "t1", defId: MY_PAWN, controller: "p1", row: "backrow", lane: 2 }, view);
+    expect(r.intros).toEqual(["intro-core-096"]);
+    const fuse: GameEvent = { type: "trapFired", instanceId: "t5", defId: "classicplus-074", controller: "p1", row: "backrow", lane: 3 };
+    r.director.onEvent(fuse, view);
+    r.director.onEvent(fuse, view);
+    expect(r.intros).toEqual(["intro-core-096", "intro-classicplus-074"]);
+  });
+
+  it("R1350 a card that is neither Legendary nor Mythic opens nothing", () => {
+    const r = rig();
+    const view = midGame();
+    r.director.onView(view);
+    r.director.onEvent(played(K_POP), view);
+    expect(r.intros).toEqual([]);
+  });
+
+  it("R1350 with dynamic music off no card opens an intro", () => {
+    const r = rig({ settings: { dynamicMusic: false } });
+    const view = midGame();
+    r.director.onView(view);
+    r.director.onEvent(played(ZEPHYRS), view);
+    r.director.onEvent(summonedOf(TOP_LOSER, "t1"), view);
+    expect(r.intros).toEqual([]);
+  });
+
+  it("R1350 the same card played again asks for its intro again (the player keeps one already playing, R1351), though its theme does not restart", () => {
+    const r = rig();
+    const view = midGame();
+    r.director.onView(view);
+    r.director.onEvent(played(ZEPHYRS), view);
+    r.director.onEvent({ type: "cardPlayed", player: "p1", instanceId: "i-second", defId: ZEPHYRS, costPaid: 3 }, view);
+    expect(r.intros).toEqual(["intro-core-097", "intro-core-097"]);
+  });
+
+  it("R1350 fetches the intros of the viewer's own hand ahead, once each", () => {
+    const r = rig();
+    const view = midGame({ you: emptySide("p1", { hand: [card({ defId: ZEPHYRS }), card({ defId: K_POP }), card({ defId: SILLY_SILAS })] }) });
+    r.director.onView(view);
+    r.director.settle();
+    r.director.settle();
+    expect(r.introPreloads).toEqual([["intro-core-097", "intro-core-052"]]);
+  });
+});
+
+describe("R1351 what cuts an intro short", () => {
+  it("R1351 the game's end cuts it", () => {
+    const r = rig();
+    const view = midGame();
+    r.director.onView(view);
+    r.director.onEvent(played(ZEPHYRS), view);
+    const before = r.stops;
+    r.director.onView(midGame({ phase: "over", result: { winner: "p1", reason: "hero-death" } }));
+    r.director.settle();
+    expect(r.stops).toBeGreaterThan(before);
+    expect(r.last().track).toBe("victory");
+  });
+
+  it("R1351 a hotseat hand-over cuts it, and the arriving seat's own plays open theirs", () => {
+    const r = rig();
+    const p1 = midGame();
+    r.director.onView(p1);
+    r.director.onEvent(played(SILLY_SILAS, "p1"), p1);
+    const before = r.stops;
+    const p2 = midGame({ viewer: "p2", active: "p2", you: emptySide("p2"), opponent: emptySide("p1") });
+    r.director.onView(p2);
+    expect(r.stops).toBeGreaterThan(before);
+    // A Unit the last seat's view saw played is the arriving seat's news only by its own events.
+    r.director.onEvent(summonedOf(SILLY_SILAS, `i-${SILLY_SILAS}`), p2);
+    expect(r.intros).toEqual(["intro-core-052", "intro-core-052"]);
+  });
+
+  it("R1351 turning dynamic music off cuts it", () => {
+    const r = rig();
+    const view = midGame();
+    r.director.onView(view);
+    r.director.onEvent(played(ZEPHYRS), view);
+    const before = r.stops;
+    r.setSettings({ dynamicMusic: false });
+    expect(r.stops).toBeGreaterThan(before);
+  });
+
+  it("R1351 the board leaving cuts it", () => {
+    const r = rig();
+    const view = midGame();
+    r.director.onView(view);
+    r.director.onEvent(played(ZEPHYRS), view);
+    const before = r.stops;
+    r.director.dispose();
+    expect(r.stops).toBe(before + 1);
+  });
+
+  it("R1351 the viewer's hero taking a hit ends the theme but leaves the intro playing", () => {
+    const r = rig();
+    const view = midGame();
+    r.director.onView(view);
+    r.director.onEvent(played(ZEPHYRS), view);
+    const before = r.stops;
+    r.director.onEvent(hitOn("p1"), view);
+    expect(r.stops).toBe(before);
     expect(r.last().track).toBe("tavern-1");
   });
 });

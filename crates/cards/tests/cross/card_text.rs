@@ -1598,9 +1598,15 @@ mod r1302_a_face_printed_in_chinese {
         // The keyword list leads, joined with "，" and with no full stop; a label opens its line.
         let lead = "嘲讽，护甲7\n亡语：抽一张牌。";
         let keywords = vec![Keyword::Taunt, Keyword::Armor { n: 7 }];
-        assert_eq!(failures(&face("core-005", lead, keywords.clone())), Vec::<String>::new());
+        assert_eq!(
+            failures(&face("core-005", lead, keywords.clone())),
+            Vec::<String>::new()
+        );
         // C+ #7's "Cry and start of turn:": a label after another label's words is still its opening.
-        assert_eq!(cjk_failures("战吼和回合开始时：召唤一个单位。", &[]), Vec::<String>::new());
+        assert_eq!(
+            cjk_failures("战吼和回合开始时：召唤一个单位。", &[]),
+            Vec::<String>::new()
+        );
         for wrong in [
             "抽两张牌.",
             "抽一张牌。战吼：抽一张牌。",
@@ -1609,11 +1615,23 @@ mod r1302_a_face_printed_in_chinese {
             "抽一张牌，然后,弃一张牌。",
             "嘲讽，护甲7。\n亡语：抽一张牌。",
         ] {
-            assert_ne!(failures(&face("core-005", wrong, keywords.clone())), Vec::<String>::new(), "{wrong}");
+            assert_ne!(
+                failures(&face("core-005", wrong, keywords.clone())),
+                Vec::<String>::new(),
+                "{wrong}"
+            );
         }
-        assert!(cjk_failures("亡语：抽一张牌。", &keywords).iter().any(|why| why.contains("嘲讽")));
+        assert!(
+            cjk_failures("亡语：抽一张牌。", &keywords)
+                .iter()
+                .any(|why| why.contains("嘲讽"))
+        );
         // English stays English: a face with no Chinese character is read by R366's checks.
-        assert!(failures(&face("core-005", "Draw a card", vec![])).iter().any(|why| why.contains("full stop")));
+        assert!(
+            failures(&face("core-005", "Draw a card", vec![]))
+                .iter()
+                .any(|why| why.contains("full stop"))
+        );
     }
 }
 

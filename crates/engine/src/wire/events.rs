@@ -91,6 +91,16 @@ string_union! {
 }
 
 string_union! {
+    /// R1366: `controlChanged.how`, the verb that moved the card: §6.3 Steal (`steal`), or R1423's give
+    /// to the other player (`give`). Absent for a card a board move carried across (a board swap, a
+    /// rotation across the centre line, a rollback's restore).
+    pub enum ControlHow {
+        Steal = "steal",
+        Give = "give",
+    }
+}
+
+string_union! {
     /// `redirected.what`.
     pub enum RedirectWhat {
         Damage = "damage",
@@ -226,11 +236,17 @@ pub enum GameEvent {
         #[cfg_attr(feature = "ts", ts(optional))]
         exits_from: Option<u32>,
     },
+    /// §4.4 step 5: `amount` is what got through. `absorbed` (R1360) is what the target's Armor took
+    /// off this hit at step 2 — never the hero's divisors or cap, Divine Shield or Indestructible, and 0
+    /// under Pierce — and is left off the wire at 0 (D14), so a hit Armor had no part in serialises as
+    /// it did before the field existed. Public, as `amount` is.
     Damage {
         source_id: Option<String>,
         target_id: String,
         amount: i32,
         combat: bool,
+        #[serde(default, skip_serializing_if = "is_zero")]
+        absorbed: i32,
     },
     HealthLost {
         player: PlayerId,
@@ -285,8 +301,9 @@ pub enum GameEvent {
     },
     /// §2.4, R3, R315: a draw from an empty library that fatigues. `count` is the owner's fatigue count
     /// after this draw (the Nth) and `amount` is the hit it deals before Armor (`FATIGUE_DAMAGE(count)`).
-    /// The `damage` instance on the hero follows it, R240's zero-damage report when Armor takes the
-    /// whole hit. A draw #75 Infinite Reserves replaces emits none. Public: it names no card.
+    /// The `damage` instance on the hero follows it, or, when Armor takes the whole hit, the
+    /// `damageAbsorbed` that reports it (R240, R1362). A draw #75 Infinite Reserves replaces emits
+    /// none. Public: it names no card.
     Fatigue {
         player: PlayerId,
         count: i32,
@@ -418,7 +435,9 @@ pub enum GameEvent {
         position: Position,
     },
     /// `formerId` (R227): set when the move put the card face-down with a fresh id (C+ #35's restore,
-    /// R419), as on `summoned`; a view that hides the card hides this too (R97).
+    /// R419), as on `summoned`; a view that hides the card hides this too (R97). `how` (R1366): a steal
+    /// or a give, which a board move is neither of; the client's report, which no rule reads
+    /// (`as_rules_read`). Public: it says which way the move went, never which card moved.
     ControlChanged {
         instance_id: String,
         controller: PlayerId,
@@ -427,6 +446,9 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         former_id: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        how: Option<ControlHow>,
     },
     Rotated {
         direction: RotationDirection,
@@ -705,6 +727,26 @@ pub enum GameEvent {
     Translated {
         instance_id: String,
     },
+    // -------------------------------------------------------------------------------------------
+    // Patch v0.3.X (docs/meditative-set.md M8, MN05). Its BUILD M5-T4 row, `ANIMATIONS` and
+    // `SOUND_CUES` rows came with it, and `viewFor` redacts it as it does `damage`.
+    // -------------------------------------------------------------------------------------------
+    /// R1361: a hit the target's Armor took whole at §4.4 step 2 — `absorbed` is the whole hit, after
+    /// Spell Damage. It is a report and no damage instance (R63's zero rule): nothing answers it, no
+    /// trap, trigger or quest, and no Lifesteal, Poisonous or Trample comes of it. The fields are
+    /// `damage`'s, redacted as `damage`'s are (R97). R1362: an absorbed fatigue draw is one, from no
+    /// source.
+    DamageAbsorbed {
+        source_id: Option<String>,
+        target_id: String,
+        absorbed: i32,
+        combat: bool,
+    },
+}
+
+/// serde's `skip_serializing_if` for a number left off the wire at 0 (D14: `damage.absorbed`).
+fn is_zero(value: &i32) -> bool {
+    *value == 0
 }
 
 /// B3.4, R386: what one Degrade or Upgrade application changed. `cost` is a `costMod` step; `stats`
@@ -798,6 +840,7 @@ string_union! {
         Marked = "marked",
         Glitched = "glitched",
         Translated = "translated",
+        DamageAbsorbed = "damageAbsorbed",
     }
 }
 
@@ -806,6 +849,60 @@ string_union! {
 pub const GAME_EVENT_TYPES: &[GameEventType] = GameEventType::ALL;
 
 impl GameEvent {
+    /// The event as the rules read it, which is how the trigger loop holds it in `state.dispatch` and
+    /// hands it to the traps, the triggers and the quests. R1360: a `damage` without its `absorbed`,
+    /// which reports what Armor took to the client (§10.10, §10.11) and which no rule reads. R1361: a
+    /// `damageAbsorbed` as the hit of 0 it is to the rules (R63), which nothing answers — R240's report
+    /// of an absorbed fatigue draw, the one that reaches the loop (R1362). R1366: a `controlChanged`
+    /// without its `how`, likewise the client's. So the state a game passes through, a frontier paused
+    /// on a prompt or left by a game's end included, hashes as it did before any of them existed (D14),
+    /// and a recorded game's replay keeps its final hash (R768). Every other event is itself.
+    pub fn as_rules_read(&self) -> GameEvent {
+        match self {
+            GameEvent::Damage {
+                source_id,
+                target_id,
+                amount,
+                combat,
+                absorbed: _,
+            } => GameEvent::Damage {
+                source_id: source_id.clone(),
+                target_id: target_id.clone(),
+                amount: *amount,
+                combat: *combat,
+                absorbed: 0,
+            },
+            GameEvent::DamageAbsorbed {
+                source_id,
+                target_id,
+                combat,
+                absorbed: _,
+            } => GameEvent::Damage {
+                source_id: source_id.clone(),
+                target_id: target_id.clone(),
+                amount: 0,
+                combat: *combat,
+                absorbed: 0,
+            },
+            GameEvent::ControlChanged {
+                instance_id,
+                controller,
+                row,
+                lane,
+                former_id,
+                how: _,
+            } => GameEvent::ControlChanged {
+                instance_id: instance_id.clone(),
+                controller: *controller,
+                row: *row,
+                lane: *lane,
+                former_id: former_id.clone(),
+                how: None,
+            },
+            other => other.clone(),
+        }
+    }
+
     /// `event.type`.
     pub fn event_type(&self) -> GameEventType {
         match self {
@@ -875,6 +972,7 @@ impl GameEvent {
             GameEvent::Glitched { .. } => GameEventType::Glitched,
             GameEvent::Marked { .. } => GameEventType::Marked,
             GameEvent::Translated { .. } => GameEventType::Translated,
+            GameEvent::DamageAbsorbed { .. } => GameEventType::DamageAbsorbed,
         }
     }
 }
@@ -914,6 +1012,7 @@ mod tests {
             target_id: "hero-p2".into(),
             amount: 3,
             combat: false,
+            absorbed: 0,
         };
         let json = serde_json::to_string(&event).unwrap();
         assert_eq!(
@@ -930,6 +1029,49 @@ mod tests {
             r#"{"type":"gameOver","winner":"draw","reason":"turn-cap"}"#
         );
         assert_eq!(over.event_type().as_str(), "gameOver");
-        assert_eq!(GAME_EVENT_TYPES.len(), 66);
+        assert_eq!(GAME_EVENT_TYPES.len(), 67);
+    }
+
+    /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no
+    /// part in reads exactly as before (the test above), and a line without it reads back as 0.
+    #[test]
+    fn r1360_absorbed_rides_the_damage_event_only_when_armor_took_part() {
+        let event = GameEvent::Damage {
+            source_id: Some("c4".into()),
+            target_id: "c9".into(),
+            amount: 1,
+            combat: true,
+            absorbed: 2,
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert_eq!(
+            json,
+            r#"{"type":"damage","sourceId":"c4","targetId":"c9","amount":1,"combat":true,"absorbed":2}"#
+        );
+        assert_eq!(serde_json::from_str::<GameEvent>(&json).unwrap(), event);
+        let old = r#"{"type":"damage","sourceId":null,"targetId":"hero-p1","amount":4,"combat":false}"#;
+        assert!(matches!(
+            serde_json::from_str::<GameEvent>(old).unwrap(),
+            GameEvent::Damage { absorbed: 0, .. }
+        ));
+    }
+
+    /// R1361: the report of a hit Armor took whole has `damage`'s fields, `absorbed` for `amount`.
+    #[test]
+    fn r1361_damage_absorbed_serialises_with_damages_fields() {
+        let event = GameEvent::DamageAbsorbed {
+            source_id: None,
+            target_id: "hero-p2".into(),
+            absorbed: 3,
+            combat: false,
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert_eq!(
+            json,
+            r#"{"type":"damageAbsorbed","sourceId":null,"targetId":"hero-p2","absorbed":3,"combat":false}"#
+        );
+        assert_eq!(serde_json::from_str::<GameEvent>(&json).unwrap(), event);
+        assert_eq!(event.event_type().as_str(), "damageAbsorbed");
+        assert_eq!(GAME_EVENT_TYPES.last(), Some(&GameEventType::DamageAbsorbed));
     }
 }

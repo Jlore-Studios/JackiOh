@@ -106,7 +106,11 @@ mod r1300_the_flag_and_its_verb {
         let unit = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
         let mut reached = in_hand(&mut state, &plain.id, P1, 2);
         reached.extend(in_hand(&mut state, &body.id, P2, 1));
-        reached.extend(set_library(&mut state, P1, &[plain.id.as_str(), body.id.as_str()]));
+        reached.extend(set_library(
+            &mut state,
+            P1,
+            &[plain.id.as_str(), body.id.as_str()],
+        ));
         reached.extend(set_library(&mut state, P2, &[plain.id.as_str()]));
         let events = run(
             &mut state,
@@ -186,7 +190,9 @@ mod r1300_the_flag_and_its_verb {
         held.zone = Zone::Gone { player: P1 };
         let events = run(
             &mut state,
-            translate(json_as(json!({ "target": { "of": "instance", "instanceId": held.id } }))),
+            translate(json_as(
+                json!({ "target": { "of": "instance", "instanceId": held.id } }),
+            )),
         );
         assert_eq!(events, Vec::<GameEvent>::new());
         assert!(find_instance(&state, &held.id).is_none());
@@ -247,7 +253,9 @@ mod r1300_copies_transforms_and_fuses_md_b11 {
                 json!({ "of": { "of": "instance", "instanceId": source.id } }),
             )),
         );
-        let copy = card_at(&state, slot(P1, Row::Units, 1)).cloned().expect("the copy");
+        let copy = card_at(&state, slot(P1, Row::Units, 1))
+            .cloned()
+            .expect("the copy");
         assert_ne!(copy.id, source.id);
         assert_eq!(copy.chinese, Some(true));
 
@@ -255,7 +263,9 @@ mod r1300_copies_transforms_and_fuses_md_b11 {
             &mut state,
             transform(json_as(json!({ "instanceId": source.id, "defId": body.id }))),
         );
-        let new_card = card_at(&state, slot(P1, Row::Units, 2)).cloned().expect("the new card");
+        let new_card = card_at(&state, slot(P1, Row::Units, 2))
+            .cloned()
+            .expect("the new card");
         assert_eq!(new_card.def_id, body.id);
         assert_ne!(new_card.id, source.id);
         assert_eq!(new_card.chinese, None);
@@ -427,7 +437,12 @@ mod r1301_who_sees_it {
         );
         // Bounced since, the card is in its owner's hand, which only its owner reads (R97).
         let mut moving = live(&state, &unit.id);
-        move_to_zone(&mut state, &mut moving, OffFieldZone::Hand, MoveToZoneOptions::default());
+        move_to_zone(
+            &mut state,
+            &mut moving,
+            OffFieldZone::Hand,
+            MoveToZoneOptions::default(),
+        );
         assert_eq!(
             sent(&mut state, events.clone(), P1),
             json!([{ "type": "translated", "instanceId": unit.id }])

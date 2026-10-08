@@ -38,6 +38,7 @@ fn damage(id: &str) -> GameEvent {
         target_id: id.into(),
         amount: 1,
         combat: false,
+        absorbed: 0,
     }
 }
 
@@ -48,6 +49,7 @@ fn stolen(id: &str, controller: PlayerId) -> GameEvent {
         row: Row::Units,
         lane: 1,
         former_id: None,
+        how: Some(ControlHow::Steal),
     }
 }
 

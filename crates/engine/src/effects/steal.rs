@@ -15,7 +15,7 @@ use crate::damage::DamageTarget;
 use crate::effects::targets::{TargetSpec, instance_on_its_stay, resolve_target};
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, find_instance};
-use crate::wire::{GameEvent, PlayerId, Row, opponent_of};
+use crate::wire::{ControlHow, GameEvent, PlayerId, Row, opponent_of};
 use crate::zones::{
     PlaceOnFieldOptions, ZoneSlot, card_at, first_entry_zone, is_open, place_on_field, remove_from_field,
     slot_of, slots_of,
@@ -63,13 +63,18 @@ fn destination_for(ctx: &EffectContext<'_>, thief: PlayerId, from: &ZoneSlot) ->
 /// free zone: then it stays with its owner (R15).
 fn take_control(ctx: &mut EffectContext<'_>, card: &CardInstance) -> bool {
     let receiver = ctx.controller;
-    move_control(ctx, card, receiver)
+    move_control(ctx, card, receiver, ControlHow::Steal)
 }
 
 /// One card to `receiver`'s side, as `take_control` moves it: R15's zone, R171's entry, the
-/// `controlChanged` event, and nothing at all when the card is off the field, dormant (R13), already
-/// `receiver`'s (R76), or finds no free zone (R15).
-fn move_control(ctx: &mut EffectContext<'_>, card: &CardInstance, receiver: PlayerId) -> bool {
+/// `controlChanged` event (`how`, R1366: a steal or a give), and nothing at all when the card is off
+/// the field, dormant (R13), already `receiver`'s (R76), or finds no free zone (R15).
+fn move_control(
+    ctx: &mut EffectContext<'_>,
+    card: &CardInstance,
+    receiver: PlayerId,
+    how: ControlHow,
+) -> bool {
     let Some(from) = slot_of(ctx.state, card) else {
         return false;
     };
@@ -113,6 +118,7 @@ fn move_control(ctx: &mut EffectContext<'_>, card: &CardInstance, receiver: Play
         row: to.row,
         lane: to.lane,
         former_id: None,
+        how: Some(how),
     });
     true
 }
@@ -138,7 +144,7 @@ pub fn give_control(args: StealTarget) -> Effect {
             return;
         };
         let receiver = opponent_of(card.controller);
-        move_control(ctx, &card, receiver);
+        move_control(ctx, &card, receiver, ControlHow::Give);
     })
 }
 

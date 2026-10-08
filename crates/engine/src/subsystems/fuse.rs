@@ -1776,7 +1776,10 @@ fn craft_in_hand(
     carry_instance_data(&mut card, ingredients);
     // ME-CN, R1300: a newly made fused card is Chinese when any ingredient was (a kept instance keeps
     // its own flag, as it keeps its id).
-    if ingredients.iter().any(|ingredient| ingredient.chinese == Some(true)) {
+    if ingredients
+        .iter()
+        .any(|ingredient| ingredient.chinese == Some(true))
+    {
         card.chinese = Some(true);
     }
     for ingredient in ingredients {
