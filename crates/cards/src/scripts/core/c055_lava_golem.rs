@@ -1,8 +1,8 @@
 //! #55 Lava Golem (SPEC §8.3, §6.3 Tribute/Sacrifice, §3.2; R4, R11, R65, R81, R90, R101, R360).
 //! Unit 10/5 → 20/10, cost 3, Rare.
-//!   Base:    "Taunt, Tribute 3. Can use opposing Units as Tributes. If opposing Units are used,
-//!            summon for your opponent."
-//!   Radiant: "Taunt, Tribute 3. Can use opposing Units as Tributes."
+//!   Base:    "Taunt, Tribute 3. Can use enemy Units as Tributes. If any are used, summon this for your
+//!            opponent."
+//!   Radiant: "Taunt, Tribute 3. Can use enemy Units as Tributes."
 //! Patch v0.1.1 took Armor 3 off both faces and Indestructible off the Radiant one, and gave the
 //! base face its price: a Tribute that takes any opposing unit summons the Golem for the opponent.
 //!
@@ -15,9 +15,9 @@
 //!   * `tribute` — `tribute_cost_of(card)`: Tribute 3, with the Sheep Token worth 2 (`tribute_value_of`,
 //!     §3.2), and `refuse_tributes` refusing a board that cannot pay; the units are sacrificed at §10.5
 //!     step 2, which bypasses Indestructible and counts as a death (§6.3).
-//!   * `tribute_enemies` — "Can use opposing Units as Tributes" (R101): `legal_tribute_units` offers both
+//!   * `tribute_enemies` — "Can use enemy Units as Tributes" (R101): `legal_tribute_units` offers both
 //!     sides' units only to a card that says so.
-//!   * `enemy_tribute_hands_over` — the base face's "If opposing Units are used, summon for your
+//!   * `enemy_tribute_hands_over` — the base face's "If any are used, summon this for your
 //!     opponent" (R360): step 2 records whether the Tribute it paid took an opposing unit, and step 4
 //!     then puts the Golem in the opponent's zone in the lane the player named, else their leftmost
 //!     open one (R15), under their control; it stays the player's card and the player's play.

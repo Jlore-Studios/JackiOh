@@ -1,7 +1,8 @@
 //! C #48 Hired Shrimp (SPEC §8.6 row 48; §5 `loc`, §10.8; R46, R70, R81, R90, R177, R397). Unit 4/3 →
 //! 8/6, cost 2, Common.
-//!   Base:    "Cry: Destroy a permanent whose card takes more lines of code to implement than this one."
-//!   Radiant: "… Valid targets are highlighted."
+//!   Base:    "Cry: Choose a permanent. If its card takes more lines of code to implement than this one,
+//!            destroy it."
+//!   Radiant: "Cry: Destroy a permanent whose card takes more lines of code to implement than this one."
 //!   Engine:  the Cry's declared target (R81) may be any permanent on either side; at resolution it is
 //!            destroyed only if its `loc` is greater than Hired Shrimp's, else the Cry fizzles (R397).
 //!            Radiant: only permanents whose `loc` is greater are offered, except a face-down card the

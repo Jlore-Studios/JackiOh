@@ -1,6 +1,6 @@
 //! C #21 Turtinator (SPEC §8.6 row 21). Unit 5/4 → 10/8, cost 2, Common.
-//!   Both faces: "Activate ♾️: Tribute a Unit. Deal damage equal to {multiplier}× its Attack to any
-//!   target." — the multiplier is 1 on the base face and 2 on the Radiant face (a declared number).
+//!   Both faces: "Activate ♾️: Tribute another Unit. Deal damage equal to {multiplier}× its Attack."
+//!   — the multiplier is 1 on the base face and 2 on the Radiant face (a declared number).
 //!
 //! Activate ♾️ (R384): any number of uses a turn, bounded by `ACTIVATE_UNLIMITED_CAP` and, in
 //! practice, by the units there are to Tribute. The cost is "sacrifice one of your units", a pick
@@ -24,7 +24,7 @@ pub const ID: &str = "classic-021";
 fn eat() -> ActivationDecl {
     ActivationDecl {
         id: "eat".to_string(),
-        label: "Tribute a Unit. Deal damage equal to its Attack times the multiplier to any target".to_string(),
+        label: "Tribute another Unit. Deal damage equal to {multiplier}× its Attack".to_string(),
         uses: ActivationUses::Unlimited,
         cost: Some(ActivationCost {
             tribute: Some(1),
