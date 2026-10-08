@@ -1,0 +1,8757 @@
+{
+  "filter": {
+    "source": "all",
+    "mode": null,
+    "patch": null,
+    "pilot": "unified"
+  },
+  "games": 40,
+  "decks": 80,
+  "cards": [
+    {
+      "card": "classic-001",
+      "inDeck": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-002",
+      "inDeck": {
+        "games": 10,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 8,
+        "wins": 5,
+        "draws": 0
+      },
+      "played": {
+        "games": 6,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-003",
+      "inDeck": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-004",
+      "inDeck": {
+        "games": 9,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 6,
+        "wins": 5,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-005",
+      "inDeck": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-006",
+      "inDeck": {
+        "games": 7,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-007",
+      "inDeck": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-008",
+      "inDeck": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-009",
+      "inDeck": {
+        "games": 6,
+        "wins": 6,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-010",
+      "inDeck": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-011",
+      "inDeck": {
+        "games": 8,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 7,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-012",
+      "inDeck": {
+        "games": 5,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-013",
+      "inDeck": {
+        "games": 11,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 8,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-014",
+      "inDeck": {
+        "games": 8,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-015",
+      "inDeck": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-016",
+      "inDeck": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-017",
+      "inDeck": {
+        "games": 10,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-018",
+      "inDeck": {
+        "games": 6,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 4,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-019",
+      "inDeck": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-020",
+      "inDeck": {
+        "games": 6,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-021",
+      "inDeck": {
+        "games": 10,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-022",
+      "inDeck": {
+        "games": 8,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 6,
+        "wins": 4,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-023",
+      "inDeck": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-024",
+      "inDeck": {
+        "games": 5,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-025",
+      "inDeck": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-026",
+      "inDeck": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-027",
+      "inDeck": {
+        "games": 9,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 6,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 5,
+        "wins": 4,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-028",
+      "inDeck": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-029",
+      "inDeck": {
+        "games": 7,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 5,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-030",
+      "inDeck": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-031",
+      "inDeck": {
+        "games": 10,
+        "wins": 6,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 6,
+        "wins": 5,
+        "draws": 0
+      },
+      "played": {
+        "games": 7,
+        "wins": 4,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-032",
+      "inDeck": {
+        "games": 4,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-033",
+      "inDeck": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-034",
+      "inDeck": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-035",
+      "inDeck": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-036",
+      "inDeck": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-037",
+      "inDeck": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-038",
+      "inDeck": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-039",
+      "inDeck": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-040",
+      "inDeck": {
+        "games": 12,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 7,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 7,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-041",
+      "inDeck": {
+        "games": 8,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-042",
+      "inDeck": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-043",
+      "inDeck": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-044",
+      "inDeck": {
+        "games": 7,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-045",
+      "inDeck": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-046",
+      "inDeck": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-047",
+      "inDeck": {
+        "games": 7,
+        "wins": 6,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-048",
+      "inDeck": {
+        "games": 12,
+        "wins": 6,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 6,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 6,
+        "wins": 5,
+        "draws": 0
+      },
+      "played": {
+        "games": 8,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-049",
+      "inDeck": {
+        "games": 7,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-050",
+      "inDeck": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-051",
+      "inDeck": {
+        "games": 7,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-052",
+      "inDeck": {
+        "games": 6,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 4,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-053",
+      "inDeck": {
+        "games": 9,
+        "wins": 6,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-054",
+      "inDeck": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-055",
+      "inDeck": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-056",
+      "inDeck": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-057",
+      "inDeck": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-058",
+      "inDeck": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-059",
+      "inDeck": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-060",
+      "inDeck": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-061",
+      "inDeck": {
+        "games": 15,
+        "wins": 8,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 8,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 7,
+        "wins": 5,
+        "draws": 0
+      },
+      "played": {
+        "games": 5,
+        "wins": 4,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 4,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-062",
+      "inDeck": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-063",
+      "inDeck": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-064",
+      "inDeck": {
+        "games": 6,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-065",
+      "inDeck": {
+        "games": 6,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-066",
+      "inDeck": {
+        "games": 14,
+        "wins": 8,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 6,
+        "wins": 4,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 8,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 7,
+        "wins": 4,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-067",
+      "inDeck": {
+        "games": 7,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-068",
+      "inDeck": {
+        "games": 9,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 6,
+        "wins": 4,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 4,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-069",
+      "inDeck": {
+        "games": 7,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 6,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-070",
+      "inDeck": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-071",
+      "inDeck": {
+        "games": 10,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 7,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-072",
+      "inDeck": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-073",
+      "inDeck": {
+        "games": 7,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-074",
+      "inDeck": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-075",
+      "inDeck": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-076",
+      "inDeck": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-077",
+      "inDeck": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-078",
+      "inDeck": {
+        "games": 6,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-079",
+      "inDeck": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-080",
+      "inDeck": {
+        "games": 7,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-081",
+      "inDeck": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-082",
+      "inDeck": {
+        "games": 10,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-083",
+      "inDeck": {
+        "games": 8,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-084",
+      "inDeck": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-085",
+      "inDeck": {
+        "games": 8,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-086",
+      "inDeck": {
+        "games": 10,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 7,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-087",
+      "inDeck": {
+        "games": 8,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-088",
+      "inDeck": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-089",
+      "inDeck": {
+        "games": 7,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classic-090",
+      "inDeck": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-001",
+      "inDeck": {
+        "games": 7,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-002",
+      "inDeck": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-003",
+      "inDeck": {
+        "games": 7,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-004",
+      "inDeck": {
+        "games": 22,
+        "wins": 15,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 7,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 15,
+        "wins": 13,
+        "draws": 0
+      },
+      "played": {
+        "games": 9,
+        "wins": 7,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-005",
+      "inDeck": {
+        "games": 14,
+        "wins": 10,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 7,
+        "wins": 4,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 7,
+        "wins": 6,
+        "draws": 0
+      },
+      "played": {
+        "games": 7,
+        "wins": 5,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-006",
+      "inDeck": {
+        "games": 7,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-007",
+      "inDeck": {
+        "games": 7,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-008",
+      "inDeck": {
+        "games": 8,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-009",
+      "inDeck": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-010",
+      "inDeck": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-011",
+      "inDeck": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-012",
+      "inDeck": {
+        "games": 11,
+        "wins": 7,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 6,
+        "wins": 6,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-013",
+      "inDeck": {
+        "games": 10,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-014",
+      "inDeck": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-015",
+      "inDeck": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-016",
+      "inDeck": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-017",
+      "inDeck": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-018",
+      "inDeck": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-019",
+      "inDeck": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-020",
+      "inDeck": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-021",
+      "inDeck": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-022",
+      "inDeck": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-023",
+      "inDeck": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-024",
+      "inDeck": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-025",
+      "inDeck": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-026",
+      "inDeck": {
+        "games": 12,
+        "wins": 6,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 8,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-027",
+      "inDeck": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-028",
+      "inDeck": {
+        "games": 6,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-029",
+      "inDeck": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-030",
+      "inDeck": {
+        "games": 11,
+        "wins": 7,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-031",
+      "inDeck": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-032",
+      "inDeck": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-033",
+      "inDeck": {
+        "games": 7,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 6,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-034",
+      "inDeck": {
+        "games": 8,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-035",
+      "inDeck": {
+        "games": 7,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-036",
+      "inDeck": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-037",
+      "inDeck": {
+        "games": 13,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 8,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 4,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-038",
+      "inDeck": {
+        "games": 9,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 7,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-039",
+      "inDeck": {
+        "games": 7,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-040",
+      "inDeck": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-041",
+      "inDeck": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-042",
+      "inDeck": {
+        "games": 8,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-043",
+      "inDeck": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-044",
+      "inDeck": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-045",
+      "inDeck": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-046",
+      "inDeck": {
+        "games": 15,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 11,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 10,
+        "wins": 4,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-047",
+      "inDeck": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-048",
+      "inDeck": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-049",
+      "inDeck": {
+        "games": 10,
+        "wins": 6,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 8,
+        "wins": 5,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-050",
+      "inDeck": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-051",
+      "inDeck": {
+        "games": 11,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-052",
+      "inDeck": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-053",
+      "inDeck": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-054",
+      "inDeck": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-055",
+      "inDeck": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-056",
+      "inDeck": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-057",
+      "inDeck": {
+        "games": 8,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 6,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-058",
+      "inDeck": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-059",
+      "inDeck": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-060",
+      "inDeck": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-061",
+      "inDeck": {
+        "games": 7,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-062",
+      "inDeck": {
+        "games": 9,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-063",
+      "inDeck": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-065",
+      "inDeck": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-066",
+      "inDeck": {
+        "games": 7,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-067",
+      "inDeck": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-068",
+      "inDeck": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-069",
+      "inDeck": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-070",
+      "inDeck": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-071",
+      "inDeck": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-072",
+      "inDeck": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-073",
+      "inDeck": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-074",
+      "inDeck": {
+        "games": 7,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-075",
+      "inDeck": {
+        "games": 15,
+        "wins": 8,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 9,
+        "wins": 6,
+        "draws": 0
+      },
+      "played": {
+        "games": 8,
+        "wins": 5,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-076",
+      "inDeck": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-077",
+      "inDeck": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "classicplus-078",
+      "inDeck": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-001",
+      "inDeck": {
+        "games": 15,
+        "wins": 8,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 8,
+        "wins": 4,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 7,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-002",
+      "inDeck": {
+        "games": 10,
+        "wins": 9,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 8,
+        "wins": 7,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-003",
+      "inDeck": {
+        "games": 6,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-004",
+      "inDeck": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-005",
+      "inDeck": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-006",
+      "inDeck": {
+        "games": 13,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 7,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 6,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-007",
+      "inDeck": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-008",
+      "inDeck": {
+        "games": 6,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 5,
+        "wins": 5,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-009",
+      "inDeck": {
+        "games": 12,
+        "wins": 6,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 7,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-010",
+      "inDeck": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-011",
+      "inDeck": {
+        "games": 6,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-012",
+      "inDeck": {
+        "games": 11,
+        "wins": 7,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 7,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-013",
+      "inDeck": {
+        "games": 13,
+        "wins": 11,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 4,
+        "wins": 4,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 4,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 8,
+        "wins": 7,
+        "draws": 0
+      },
+      "played": {
+        "games": 7,
+        "wins": 7,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-014",
+      "inDeck": {
+        "games": 5,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-015",
+      "inDeck": {
+        "games": 9,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-016",
+      "inDeck": {
+        "games": 7,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-017",
+      "inDeck": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-018",
+      "inDeck": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-019",
+      "inDeck": {
+        "games": 17,
+        "wins": 10,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 6,
+        "wins": 5,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 7,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 10,
+        "wins": 7,
+        "draws": 0
+      },
+      "played": {
+        "games": 13,
+        "wins": 9,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-020",
+      "inDeck": {
+        "games": 11,
+        "wins": 6,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 7,
+        "wins": 4,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-021",
+      "inDeck": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-022",
+      "inDeck": {
+        "games": 15,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 7,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 8,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-023",
+      "inDeck": {
+        "games": 7,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-024",
+      "inDeck": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-025",
+      "inDeck": {
+        "games": 8,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-026",
+      "inDeck": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-027",
+      "inDeck": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-028",
+      "inDeck": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-030",
+      "inDeck": {
+        "games": 7,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-031",
+      "inDeck": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-032",
+      "inDeck": {
+        "games": 12,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 8,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 8,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-033",
+      "inDeck": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-034",
+      "inDeck": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-035",
+      "inDeck": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-036",
+      "inDeck": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-037",
+      "inDeck": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-038",
+      "inDeck": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-039",
+      "inDeck": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-040",
+      "inDeck": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-041",
+      "inDeck": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-042",
+      "inDeck": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-043",
+      "inDeck": {
+        "games": 12,
+        "wins": 8,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 6,
+        "wins": 5,
+        "draws": 0
+      },
+      "played": {
+        "games": 6,
+        "wins": 4,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-044",
+      "inDeck": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-045",
+      "inDeck": {
+        "games": 8,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-046",
+      "inDeck": {
+        "games": 8,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-047",
+      "inDeck": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-048",
+      "inDeck": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-049",
+      "inDeck": {
+        "games": 6,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-050",
+      "inDeck": {
+        "games": 10,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 7,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 9,
+        "wins": 4,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-051",
+      "inDeck": {
+        "games": 6,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-052",
+      "inDeck": {
+        "games": 12,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 7,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-053",
+      "inDeck": {
+        "games": 12,
+        "wins": 7,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 7,
+        "wins": 5,
+        "draws": 0
+      },
+      "played": {
+        "games": 9,
+        "wins": 4,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-054",
+      "inDeck": {
+        "games": 8,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 4,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-055",
+      "inDeck": {
+        "games": 13,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 8,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-056",
+      "inDeck": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-057",
+      "inDeck": {
+        "games": 14,
+        "wins": 6,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 6,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 7,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 7,
+        "wins": 5,
+        "draws": 0
+      },
+      "played": {
+        "games": 8,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-058",
+      "inDeck": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-059",
+      "inDeck": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-060",
+      "inDeck": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-061",
+      "inDeck": {
+        "games": 9,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-062",
+      "inDeck": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-063",
+      "inDeck": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-064",
+      "inDeck": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-065",
+      "inDeck": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-066",
+      "inDeck": {
+        "games": 11,
+        "wins": 4,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 7,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-067",
+      "inDeck": {
+        "games": 8,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-068",
+      "inDeck": {
+        "games": 8,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 6,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-069",
+      "inDeck": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-070",
+      "inDeck": {
+        "games": 8,
+        "wins": 6,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-071",
+      "inDeck": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-072",
+      "inDeck": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-073",
+      "inDeck": {
+        "games": 7,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-074",
+      "inDeck": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-075",
+      "inDeck": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-076",
+      "inDeck": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-077",
+      "inDeck": {
+        "games": 8,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-078",
+      "inDeck": {
+        "games": 9,
+        "wins": 8,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 6,
+        "wins": 6,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-079",
+      "inDeck": {
+        "games": 7,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-080",
+      "inDeck": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-081",
+      "inDeck": {
+        "games": 11,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 6,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 8,
+        "wins": 5,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-082",
+      "inDeck": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-083",
+      "inDeck": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-084",
+      "inDeck": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-085",
+      "inDeck": {
+        "games": 5,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 5,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 4,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-086",
+      "inDeck": {
+        "games": 11,
+        "wins": 5,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 5,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-087",
+      "inDeck": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-088",
+      "inDeck": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-089",
+      "inDeck": {
+        "games": 11,
+        "wins": 6,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 5,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 6,
+        "wins": 4,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-090",
+      "inDeck": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 3,
+        "wins": 2,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-091",
+      "inDeck": {
+        "games": 10,
+        "wins": 6,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 4,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-092",
+      "inDeck": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 6,
+        "wins": 3,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-093",
+      "inDeck": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-094",
+      "inDeck": {
+        "games": 4,
+        "wins": 0,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 4,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-095",
+      "inDeck": {
+        "games": 7,
+        "wins": 3,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 5,
+        "wins": 3,
+        "draws": 0
+      },
+      "played": {
+        "games": 4,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-096",
+      "inDeck": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-097",
+      "inDeck": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 2,
+        "wins": 2,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-098",
+      "inDeck": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 1,
+        "wins": 1,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 2,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 3,
+        "wins": 1,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      }
+    },
+    {
+      "card": "core-099",
+      "inDeck": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "openingHand": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingFirst": {
+        "games": 3,
+        "wins": 0,
+        "draws": 0
+      },
+      "goingSecond": {
+        "games": 0,
+        "wins": 0,
+        "draws": 0
+      },
+      "played": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      },
+      "drawnNotPlayed": {
+        "games": 1,
+        "wins": 0,
+        "draws": 0
+      }
+    }
+  ]
+}

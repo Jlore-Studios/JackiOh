@@ -1,0 +1,21 @@
+[project]
+name = "jackioh-analysis"
+version = "0.0.0"
+description = "Notebooks and a loader over JackiOh's game records (SPEC §9.11, R376-R378)"
+requires-python = "==3.13.*"
+dependencies = [
+    "pandas==3.0.6",
+    "matplotlib==3.11.2",
+    "jupyter==1.1.1",
+    "nbconvert==7.17.1",
+    "ipykernel==7.4.0",
+    "pytest==9.1.1",
+]
+
+[tool.uv]
+# A set of scripts and notebooks, not a package: uv installs the dependencies and nothing else.
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
