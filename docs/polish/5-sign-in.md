@@ -555,7 +555,7 @@ The data attributes:
   - the address (`reset-email`);
   - the new password and `reset-confirm`, each with show and hide;
   - submit.
-  - On success: `updatePassword`, `writeSession`, `releaseRecoverySession`, `navigate(signInDestination())`: the main menu, or the gated screen that sent the player to sign in (issue #479; it was `paths.decks`).
+  - On success: `updatePassword`, `writeSession`, `releaseRecoverySession`, `navigate(paths.landing)`, the main menu, where every sign-in lands (issue #479; it was `paths.decks`).
   - Without a recovery session: `reset-no-link` with `reset-request-new`, which calls `navigate(loginPath({ mode: "forgot" }))`, and `reset-back-to-sign-in`, which goes to `/login`.
 - **`apps/web/src/routes/account.tsx`**: `signOut(): void` keeps its signature. It reads the session, calls `clearSession()`, fires `void revokeSession(accessToken)` without awaiting it, then calls `window.location.assign(paths.landing)`.
 - **`apps/web/src/routes/landing.tsx`** (new), default `LandingRoute(): ReactElement`, with `apps/web/src/routes/landing.css` (new). Every token and rule is scoped under `.landing`; nothing is added to `:root` or `index.css`.
@@ -622,7 +622,7 @@ No `GameEvent`, no engine or view change, no settings module, and no new runtime
 32. **B32** A session within `AUTH_SESSION_REFRESH_MARGIN_SECONDS` of `expiresAt`, or one that `/api/auth/me` answers 401, is renewed once through `grant_type=refresh_token`, and `/api/auth/me` is retried with the new token. Concurrent renewals send one request.
 33. **B33** When the provider refuses a refresh, the session is cleared and the gate sends the browser to `/login?reason=expired`, which shows `login-session-expired`. A session with no refresh token behaves as before: a 401 goes to plain `/login`.
 34. **B34** Sign-out posts `/auth/v1/logout?scope=local` with the access token and `keepalive`, never awaited, then clears both storage keys and loads `/`.
-35. **B35** No destination is ever read from a URL. Every post-auth navigation goes to a `paths` value, and `/login?next=https://evil.example` followed by a sign-in lands on the main menu, `/`. A sign-in lands there unless a gated screen sent the player to sign in (`net/return-to.ts`, one of a fixed list of gated `paths`, forgotten once the player is back on the main menu), and then it goes back to that screen; a sign-in that fails stays on `/login` (issue #479; before it, the default was `/decks`).
+35. **B35** No destination is ever read from a URL. Every post-auth navigation goes to a `paths` value, and `/login?next=https://evil.example` followed by a sign-in lands on the main menu, `/`. Every successful sign-in lands there, a sign-in a protected screen sent the player to included, and one that fails stays on `/login` (issue #479; before it, a sign-in went back to the gated screen that sent the player, else to `/decks`).
 36. **B36** No source file under `apps/web/src` uses `dangerouslySetInnerHTML` or assigns `innerHTML`. Test files are not scanned: they are never bundled (the integration branch narrowed this when the effects layer's tests built fixture DOM that way).
 37. **B37** `/` renders `LandingRoute` with CTAs to `/practice` (Play vs AI), `/play` (Play online) and `/decks` (Build decks). The corner slot holds `landing-sign-in` when anonymous, `landing-account` when signed in, and nothing while loading, for at most `GATE_SLOW_NOTICE_SECONDS`, after which it offers what this device's storage suggests.
 38. **B38** The hero shows the `JackiOh` wordmark and an `aria-hidden` fan of five cards (`landing-fan-card-0..4`). `data-motion` is `reduced` under `prefers-reduced-motion`.
@@ -968,8 +968,9 @@ Client:
   code could hold that word (`couldBelongToCode`), and a message with more letters and digits than a
   code keeps the field's old value and quotes the paste instead of keeping a word of it.
 - **The code field draws a selection** (`data-selected`) and hides its caret while one stands.
-- **Where a player was going**: a sign-in returns to the gated screen that sent the player to it
+- **Where a player was going**: a sign-in returned to the gated screen that sent the player to it
   (`net/return-to.ts`: a fixed allow-list of `paths` values in `sessionStorage`, never a URL, B35).
+  Issue #479 replaced it: every sign-in now lands on the main menu, and `net/return-to.ts` is gone.
 - **A pending account's account screen** shows its address and status from the gate's read and links
   to the code screen, instead of `/api/profile`'s 403.
 - **The landing's corner** offers its link after `GATE_SLOW_NOTICE_SECONDS` while a sleeping server

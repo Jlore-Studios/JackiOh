@@ -56,7 +56,6 @@ import { useAccount, type Account } from "./net/gate.ts";
 import { useSettingsAccountSync } from "./settings/accountSync.ts";
 import {
   SITE_ORIGIN,
-  currentPath,
   loginPath,
   matchIdOf,
   navigate,
@@ -64,7 +63,6 @@ import {
   seriesIdOf,
   usePathname,
 } from "./net/navigate.ts";
-import { rememberReturnTo } from "./net/return-to.ts";
 import { readSession } from "./net/session.ts";
 import type { MeResponse } from "./net/api.ts";
 // Static, not lazy: the gate's own panels offer "Sign out", which must work synchronously from a
@@ -347,10 +345,8 @@ export function Gated({ allowPending = false, children }: GatedProps): ReactElem
   // during render.
   useEffect(() => {
     if (target === null) return;
-    // Sent to sign in: the sign-in comes back to this screen (a fixed `paths` value, never a URL).
-    if (account.kind === "anonymous") rememberReturnTo(currentPath());
     navigate(target, { replace: true });
-  }, [target, account.kind]);
+  }, [target]);
 
   if (account.kind === "loading") return <Loading what="Checking your account…" slow />;
   if (account.kind === "anonymous") return <Loading what="Sign in to continue." />;

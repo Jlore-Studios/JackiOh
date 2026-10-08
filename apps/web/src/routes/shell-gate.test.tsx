@@ -22,7 +22,6 @@ import { clearConsumedAuthRedirect } from "../auth/redirect.ts";
 import { inviteTestid, landingTestid, loginTestid, shellTestid } from "../auth/testids.ts";
 import { API_UNREACHABLE_MESSAGE } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
-import { RETURN_TO_STORAGE_KEY, rememberReturnTo, takeReturnTo } from "../net/return-to.ts";
 import { E2E_SESSION_STORAGE_KEY, SESSION_STORAGE_KEY } from "../net/session.ts";
 import { accountTestid } from "./account.tsx";
 
@@ -371,13 +370,16 @@ describe("R193 an emailed link that lands anywhere but /login", () => {
   });
 });
 
-describe("B35 a sign-in goes back to the gated screen that sent the player to it", () => {
+describe("B35 #479 a sign-in lands on the main menu, whichever screen sent the player to it", () => {
   const SIGNED_IN = {
     access_token: "a",
     refresh_token: "r",
     expires_at: 2_000_000_000,
     user: { email_confirmed_at: "2026-09-20T00:00:00Z" },
   };
+
+  /** Where an older build remembered the gated screen that sent the player to sign in. */
+  const OLD_RETURN_TO_KEY = "jackioh.auth.returnTo";
 
   beforeEach(() => {
     vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
@@ -390,7 +392,13 @@ describe("B35 a sign-in goes back to the gated screen that sent the player to it
     window.sessionStorage.clear();
   });
 
-  it("B35 'Play online' while signed out: /play, sign in, and back on /play", async () => {
+  function signIn(): void {
+    fireEvent.change(screen.getByTestId(loginTestid.email), { target: { value: "player@example.test" } });
+    fireEvent.change(screen.getByTestId(loginTestid.password), { target: { value: "secret-1" } });
+    fireEvent.submit(screen.getByTestId(loginTestid.form));
+  }
+
+  it("#479 'Play online' while signed out: /play, sign in, and the main menu", async () => {
     stubFetch((url) => {
       if (url.includes("/auth/v1/token")) return json(200, SIGNED_IN);
       if (url === `${API}/api/auth/me`) return json(200, me("active"));
@@ -401,45 +409,44 @@ describe("B35 a sign-in goes back to the gated screen that sent the player to it
     await screen.findByTestId(loginTestid.form, undefined, SLOW);
     expect(window.location.pathname).toBe(paths.login);
 
-    fireEvent.change(screen.getByTestId(loginTestid.email), { target: { value: "player@example.test" } });
-    fireEvent.change(screen.getByTestId(loginTestid.password), { target: { value: "secret-1" } });
-    fireEvent.submit(screen.getByTestId(loginTestid.form));
+    signIn();
     await waitFor(() => {
-      expect(window.location.pathname).toBe(paths.play);
+      expect(window.location.pathname).toBe(paths.landing);
     }, SLOW);
-    // Read once: a later sign-in in this tab starts from the default again.
-    expect(window.sessionStorage.getItem(RETURN_TO_STORAGE_KEY)).toBeNull();
+  });
+
+  it("B35 the gate remembers no destination: a signed-out visit to a gated screen stores none", async () => {
+    stubFetch(() => "hang");
+    at(paths.play);
+    render(<App />);
+    await screen.findByTestId(loginTestid.form, undefined, SLOW);
+    for (const storage of [window.sessionStorage, window.localStorage]) {
+      for (let index = 0; index < storage.length; index += 1) {
+        expect(storage.getItem(storage.key(index) ?? "") ?? "").not.toContain(paths.play);
+      }
+    }
   });
 
   it.each([
     ["a URL", "https://evil.example/play"],
     ["a match route, whose id is data", "/match/some-id"],
     ["a path that is not gated", "/reset-password"],
-  ] as const)("B35 a destination planted in storage (%s) is never followed: the sign-in lands on the main menu", async (_name, planted) => {
+    ["a gated screen", "/play"],
+  ] as const)("B35 a destination an older build left in storage (%s) is never followed: the sign-in lands on the main menu", async (_name, planted) => {
     stubFetch((url) => {
       if (url.includes("/auth/v1/token")) return json(200, SIGNED_IN);
       if (url === `${API}/api/auth/me`) return json(200, me("active"));
       return "hang";
     });
-    window.sessionStorage.setItem(RETURN_TO_STORAGE_KEY, planted);
+    window.sessionStorage.setItem(OLD_RETURN_TO_KEY, planted);
     at(paths.login);
     render(<App />);
     await screen.findByTestId(loginTestid.form, undefined, SLOW);
-    fireEvent.change(screen.getByTestId(loginTestid.email), { target: { value: "player@example.test" } });
-    fireEvent.change(screen.getByTestId(loginTestid.password), { target: { value: "secret-1" } });
-    fireEvent.submit(screen.getByTestId(loginTestid.form));
+    signIn();
     await waitFor(() => {
       expect(window.location.pathname).not.toBe(paths.login);
     }, SLOW);
     expect(window.location.pathname).toBe(paths.landing);
-  });
-
-  it("B35 only fixed gated paths are remembered at all", () => {
-    rememberReturnTo("https://evil.example");
-    expect(takeReturnTo()).toBeNull();
-    rememberReturnTo(paths.invite);
-    expect(takeReturnTo()).toBe(paths.invite);
-    expect(takeReturnTo()).toBeNull();
   });
 });
 

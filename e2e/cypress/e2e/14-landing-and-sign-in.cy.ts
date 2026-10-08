@@ -493,14 +493,8 @@ describe("B23 the invite screen's way out", () => {
 //
 // This bundle names no auth provider, so every sign-in submitted here fails before any request is
 // made, and the screen treats it as it treats one the provider refused: it stays, says why and keeps
-// the form. Where a successful sign-in lands (the main menu, or back to the gated screen that sent
-// the player) is the web client's unit tests' (`routes/sign-in-landing.test.tsx`) and spec 99's.
-
-/**
- * `RETURN_TO_STORAGE_KEY` in `apps/web/src/net/return-to.ts`: the gated screen that sent the player
- * to sign in. Spelled here because return-to.ts imports navigate.ts, a React module.
- */
-const RETURN_TO_KEY = "jackioh.auth.returnTo";
+// the form. That a successful sign-in lands on the main menu, wherever it started, is the web
+// client's unit tests' (`routes/sign-in-landing.test.tsx`) and spec 99's.
 
 const PASSWORD = "e2e-spec14-password";
 
@@ -524,8 +518,15 @@ function expectStillSigningIn(): void {
   });
 }
 
-function returnTo(): Cypress.Chainable<string | null> {
-  return cy.window().its("sessionStorage").invoke("getItem", RETURN_TO_KEY);
+/** Every value this origin keeps in the tab's and the browser's storage. */
+function storedValues(win: Window): string[] {
+  const values: string[] = [];
+  for (const storage of [win.sessionStorage, win.localStorage]) {
+    for (let index = 0; index < storage.length; index += 1) {
+      values.push(storage.getItem(storage.key(index) ?? "") ?? "");
+    }
+  }
+  return values;
 }
 
 describe("#479 a failed sign-in stays on the sign-in screen", () => {
@@ -540,22 +541,23 @@ describe("#479 a failed sign-in stays on the sign-in screen", () => {
     expectStillSigningIn();
   });
 
-  it("#479 sent by a gated screen: a failure keeps the way back to it, and the main menu forgets it", () => {
+  it("#479 sent by a protected screen: a failure stays on the sign-in screen, which keeps no way back to that screen", () => {
     stubApi();
     forbidProvider();
     cy.visit(routes.play());
     cy.location("pathname").should("eq", routes.login());
-    returnTo().should("eq", routes.play());
 
     submitSignIn();
     expectStillSigningIn();
-    returnTo().should("eq", routes.play());
+    // A sign-in lands on the main menu whichever screen sent the player, so none is remembered.
+    cy.window().then((win) => {
+      for (const value of storedValues(win)) expect(value).not.to.contain(routes.play());
+    });
 
-    // Back to the main menu instead: a sign-in started from there lands there.
+    // The main menu is one press away, as from every sign-in.
     cy.get(byTestid(NAV_BACK)).click();
     cy.location("pathname").should("eq", LANDING);
     cy.get(byTestid(landingTestid.root)).should("be.visible");
-    returnTo().should("eq", null);
   });
 });
 

@@ -1,7 +1,6 @@
 // Issue #479: a successful sign-in lands on the main menu (the landing page), and a failed one keeps
-// the player on the sign-in screen, its sentence shown and the form as they left it. A sign-in that
-// a gated screen sent the player to goes back to that screen instead (`net/return-to.ts`), and a
-// failure on the way keeps that for the next try.
+// the player on the sign-in screen, its sentence shown and the form as they left it. That holds for a
+// sign-in a protected screen sent the player to as well: it lands on the main menu, not back there.
 //
 // Asserted through the real `App` from `main.tsx` (loaded with `await import`, because main.tsx
 // mounts itself outside vitest), with the auth provider and the API answered by a stubbed `fetch`.
@@ -12,9 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { landingTestid, loginTestid } from "../auth/testids.ts";
 import { SIGN_IN_FAILED_MESSAGE } from "../net/auth.ts";
 import { paths } from "../net/navigate.ts";
-import { RETURN_TO_STORAGE_KEY } from "../net/return-to.ts";
 import { readSession } from "../net/session.ts";
-import { navTestid } from "./nav.tsx";
 
 const { App } = await import("../main.tsx");
 
@@ -200,40 +197,27 @@ describe("issue #479 a failed sign-in stays on the sign-in screen", () => {
   });
 });
 
-describe("issue #479 a sign-in a gated screen sent the player to", () => {
-  it("goes back to that screen, and a failure on the way stays on the sign-in screen and keeps it", async () => {
-    stubFetch();
-    at(paths.play);
-    render(<App />);
-    await screen.findByTestId(loginTestid.form, undefined, SLOW);
-    expect(window.location.pathname).toBe(paths.login);
+describe("issue #479 a sign-in a protected screen sent the player to", () => {
+  it.each([paths.decks, paths.play, paths.invite, paths.account, paths.leaderboard, paths.match("some-match")])(
+    "from %s: a failure stays on the sign-in screen, and the sign-in lands on the main menu, not back there",
+    async (protectedPath) => {
+      stubFetch();
+      at(protectedPath);
+      render(<App />);
+      await screen.findByTestId(loginTestid.form, undefined, SLOW);
+      expect(window.location.pathname).toBe(paths.login);
 
-    signIn(WRONG_PASSWORD);
-    await expectStillSigningIn(WRONG_PASSWORD);
-    expect(window.sessionStorage.getItem(RETURN_TO_STORAGE_KEY)).toBe(paths.play);
+      signIn(WRONG_PASSWORD);
+      await expectStillSigningIn(WRONG_PASSWORD);
 
-    signIn(PASSWORD);
-    await waitFor(() => {
-      expect(window.location.pathname).toBe(paths.play);
-    }, SLOW);
-    expect(window.sessionStorage.getItem(RETURN_TO_STORAGE_KEY)).toBeNull();
-  });
-
-  it("a player who went back to the main menu instead, then signed in from there, lands on the main menu", async () => {
-    stubFetch();
-    at(paths.decks);
-    render(<App />);
-    await screen.findByTestId(loginTestid.form, undefined, SLOW);
-    expect(window.sessionStorage.getItem(RETURN_TO_STORAGE_KEY)).toBe(paths.decks);
-
-    fireEvent.click(screen.getByTestId(navTestid.back));
-    await screen.findByTestId(landingTestid.root, undefined, SLOW);
-    expect(window.location.pathname).toBe(paths.landing);
-    await pressSignInOnTheMainMenu();
-
-    signIn(PASSWORD);
-    await waitFor(() => {
+      signIn(PASSWORD);
+      await waitFor(() => {
+        expect(window.location.pathname).toBe(paths.landing);
+      }, SLOW);
+      expect(await screen.findByTestId(landingTestid.root, undefined, SLOW)).toBeInTheDocument();
+      // And it stays there: nothing sends the player on to the screen that asked.
+      await new Promise((resolve) => setTimeout(resolve, 200));
       expect(window.location.pathname).toBe(paths.landing);
-    }, SLOW);
-  });
+    },
+  );
 });

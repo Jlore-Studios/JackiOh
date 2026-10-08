@@ -26,7 +26,6 @@ import { faceModel } from "../cards/model.ts";
 import { useAccount, type Account } from "../net/gate.ts";
 import { useSettingsAccountSync } from "../settings/accountSync.ts";
 import { paths } from "../net/navigate.ts";
-import { forgetReturnTo } from "../net/return-to.ts";
 import { readSession } from "../net/session.ts";
 import { SettingsButton } from "../settings/index.ts";
 import { useSetting } from "../settings/store.ts";
@@ -409,11 +408,6 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
   const account = useAccount();
   // R634: the first screen most visits see keeps an active account's settings level with this device's.
   useSettingsAccountSync(account);
-  // Issue #479: this is the main menu. A player back here has left whatever gated screen sent them
-  // to sign in, so a sign-in started from here lands here again, not on that screen.
-  useEffect(() => {
-    forgetReturnTo();
-  }, []);
   const motion = useMotion();
   // R374: one deal per visit — per mount of the page. R639: a device that has logged enough games
   // deals from every shipped set instead of Core alone, favouring cards that print at full size.
