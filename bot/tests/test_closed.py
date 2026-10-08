@@ -36,7 +36,8 @@ class ClosedWhileWorkingTests(unittest.TestCase):
         self.assertEqual(planned["action"], "none")
         self.assertIn("`gpt` is busy", planned["reason"])  # its lane is still the closed #5's
         text = report(ctx)
-        self.assertIn("4 of 10 lanes, 6 free; 4 of "
+        # Its four runs are on the machine, whose slots are apart from GitHub's lanes.
+        self.assertIn("0 of 11 lanes on GitHub's runners, 11 free; 4 of "
                       f"{ctx.cfg.pool.machine_parallel} on the night box", text)
         self.assertIn("`gpt` (codex", text)
 

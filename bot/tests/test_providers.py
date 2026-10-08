@@ -44,7 +44,7 @@ class ParseTests(unittest.TestCase):
         self.assertEqual(pool.priority, ("claude-3", "claude-7", "claude-1", "claude-4",
                                          "claude-6", "claude-5", "muse", "agy", "gpt",
                                          "claude-2", "devin"))
-        self.assertEqual((pool.max_parallel, pool.machine_parallel), (10, 6))
+        self.assertEqual((pool.max_parallel, pool.machine_parallel), (11, 6))
         self.assertEqual({p.cli for p in pool.ordered()}, set(providers.CLIS))
         self.assertEqual(len([p for p in pool.ordered() if p.cli == "claude"]), 7)
         first = pool.get("claude-1")
@@ -151,7 +151,10 @@ class ParseTests(unittest.TestCase):
                "share the runner")
         broken(lambda r: r["providers"]["devin"].update(lanes=0), "at least 1")
         broken(lambda r: r["providers"]["devin"].update(lanes="two"), "not a number")
-        broken(lambda r: r.update(machine_parallel=11), "machine_parallel")
+        broken(lambda r: r.update(machine_parallel=-1), "machine_parallel")
+        # The machine's slots are its own, apart from `max_parallel`: it may have more.
+        self.assertEqual(providers.parse({**raw_providers(), "max_parallel": 2}).machine_parallel,
+                         6)
         # A secret login may still run on GitHub's runners, and those are shared by design.
         raw = raw_providers()
         for name in ("claude-1", "claude-2"):
@@ -524,6 +527,13 @@ class MatchingTests(unittest.TestCase):
                          (11, "claude-7", "build"))
         gh.runs["11"] = {"status": "in_progress"}
         ctx.store.update(lambda s: state_item(s, 11).update(run_id="11"))
+        gh.add_issue(12, labels=(LABEL_BUILD,))
+        planned = plan_mod.make(ctx)
+        # claude-7's second lane takes the next one too.
+        self.assertEqual((planned["number"], planned["provider"], planned["action"]),
+                         (12, "claude-7", "build"))
+        gh.runs["12"] = {"status": "in_progress"}
+        ctx.store.update(lambda s: state_item(s, 12).update(run_id="12"))
         gh.add_issue(5, labels=(LABEL_BUILD,))
         planned = plan_mod.make(ctx)
         # claude-1 works by day too, and plans its own build.

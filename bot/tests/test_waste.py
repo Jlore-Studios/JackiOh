@@ -24,7 +24,7 @@ from tests.fakes import FakeGitHub, make_origin
 from tests.support import DAY, MACHINE, make_config, make_ctx
 from tests.test_cross import ALL
 from tests.test_flow import Harness
-from tests.test_work import APPROVE, GATES, builder, reviewer
+from tests.test_work import APPROVE, DONE, GATES, builder, reviewer
 
 AT = DAY
 
@@ -258,6 +258,22 @@ class HonestReportTests(unittest.TestCase):
                             "review": reviewer(APPROVE)}))
         pr = int(h.gh.list_pulls(head="bot/issue-12")[0]["number"])
         self.assertEqual(h.gh.merge_titles[f"PR_{pr}"], f"Make the rules v2 (#{pr})")
+
+    def test_a_title_that_breaks_the_convention_gives_way_to_the_issues(self):
+        """#187: the title check holds a pull request's title to docs/issues-and-patches.md, so a
+        builder's plain sentence gives way to its issue's conventional title, and a builder's
+        conventional title (its version numbered, say) stands."""
+        issue = "Patch v0.3.X: the rules, version two"
+        for text, want in ((DONE, issue),
+                           (DONE.replace("Make the rules v2", "Patch v0.3.2: the rules, version two"),
+                            "Patch v0.3.2: the rules, version two")):
+            h = Harness(self, env=ALL, machine=MACHINE)
+            h.gh.add_issue(12, title=issue, labels=(LABEL_BUILD,))
+            h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}, text),
+                                "review": reviewer(APPROVE)}))
+            pull = h.gh.list_pulls(head="bot/issue-12")[0]
+            self.assertEqual(pull["title"], want)
+            self.assertEqual(h.gh.merge_titles[f"PR_{pull['number']}"], f"{want} (#{pull['number']})")
 
 
 def picks(ctx, gh) -> tuple[list[int], list[str]]:

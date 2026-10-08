@@ -134,8 +134,29 @@ _SHARED: dict[str, tuple[str, str]] = {
     "method:manual": ("f9d0c4", "People do it: after two minutes, triage labels it human, fixes its title and assigns both people"),
     "method:use-bot": ("c2e0c6", "The bot does it: after two minutes, triage labels, retitles and queues it, and assigns the bot"),
 }
+#: The type labels (`docs/issues-and-patches.md`, Labels): every issue carries at least one, and
+#: they are the only labels triage gives a pull request (`triage.TYPE_LABELS`). Made by hand until
+#: #187; the colours are the ones they were made with.
+_TYPES: dict[str, tuple[str, str]] = {
+    "patch": ("fbca04", "A numbered release of the game: cards, rules, the client, the server's features"),
+    "large patch": ("006b75", "A big patch, with patch: a new expansion or set, or a change to many cards at once"),
+    "major version": ("0052cc", "A vX.Y.0 release that changes the game or the codebase broadly, and each of its parts"),
+    "architecture": ("0e8a16", "The repository, tooling, CI, deploys and agent setup"),
+    "night bot": ("5319e7", "The night bot and Squishy themselves: bot/, .harness/, .squishy/ and their workflows"),
+}
+TYPE_LABELS: tuple[str, ...] = tuple(_TYPES)
+#: Labels a workflow puts on, written here exactly as it writes them (it creates its own with
+#: `--force`, which would undo any other colour or description): `production merge` is
+#: scripts/promote-production.sh's `RELEASE_LABEL`.
+_WORKFLOW_LABELS: dict[str, tuple[str, str]] = {
+    "production merge": ("5319e7", "The merge of main into production (promote-production.yml)"),
+}
 #: A bot without suggestions (Squishy) has no labels for them.
 _NO_SUGGESTIONS = ("suggestion", "approved")
+#: Every label the repository uses, with its colour and description: the one list (#187). The
+#: sweep creates any the repository lacks; `python3 -m harness setup` creates them and brings each
+#: one's colour and description back to this list. The bot's own labels are the running bot's:
+#: `bot:*` in the night bot's process, `squishy:*` in Squishy's (`HARNESS_HOME=.squishy`).
 LABELS: dict[str, tuple[str, str]] = {
     # name: (color, description)
     **{f"{LABEL_PREFIX}{name}": (color, said(text)) for name, (color, text) in _OWN.items()
@@ -143,6 +164,8 @@ LABELS: dict[str, tuple[str, str]] = {
     **{f"{LABEL_PREFIX}{name}": entry for name, entry in _MODE_LABELS.items()
        if name == "tree" and MODES or name in MODES},
     **_SHARED,
+    **_TYPES,
+    **_WORKFLOW_LABELS,
 }
 
 LABEL_BUILD = f"{LABEL_PREFIX}build"

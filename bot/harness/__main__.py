@@ -498,7 +498,8 @@ def cmd_providers(cfg: Config, args: argparse.Namespace) -> int:
         print(f"{provider.id:10} {provider.cli:7} {seats:36} "
               f"hours: {provider.hours(cfg.timezone):34} limits: {caps:28} "
               f"{'ready' if reason is None else reason}")
-    print(f"at most {cfg.pool.max_parallel} at once; priority {', '.join(cfg.pool.priority)}")
+    print(f"at most {cfg.pool.max_parallel} at once on GitHub's runners and "
+          f"{cfg.pool.machine_parallel} on the machine; priority {', '.join(cfg.pool.priority)}")
     # A tier's entries name models; whether one checks itself is its subscription's seat's.
     checking = {seat.model for provider in cfg.pool.ordered() for seat in cfg.pool.seats(provider)
                 if seat.self_check}
@@ -598,9 +599,12 @@ def cmd_doctor(cfg: Config, args: argparse.Namespace) -> int:
 
 def cmd_setup(cfg: Config, args: argparse.Namespace) -> int:
     ctx = _ctx(cfg)
+    # `LABELS` is the one list (#187): a missing label is created, and one whose colour or
+    # description someone changed by hand is brought back to it.
     for name, (color, description) in LABELS.items():
-        if ctx.gh.ensure_label(name, color, description):
-            print(f"created label {name}")
+        done = ctx.gh.sync_label(name, color, description)
+        if done:
+            print(f"{done} label {name}")
     if ctx.store.ensure():
         print(f"created branch {config_mod.STATE_BRANCH}")
     if args.repo_settings:
@@ -789,7 +793,7 @@ def parser() -> argparse.ArgumentParser:
     p = sub.add_parser("doctor", help="check the configuration and the repository")
     p.add_argument("--work", action="store_true", help="also check the model job's CLI and secret")
     p.add_argument("--plan", default="", help="the plan file, for the provider to check")
-    p = sub.add_parser("setup", help="create labels and the state branch")
+    p = sub.add_parser("setup", help="create or update the labels, and create the state branch")
     p.add_argument("--repo-settings", action="store_true",
                    help="also allow auto-merge and protect the default branch (needs admin)")
     p = sub.add_parser("triage", help="label, assign, title and link a new issue or pull "

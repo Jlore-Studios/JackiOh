@@ -1,0 +1,71 @@
+name: Architecture or CI
+description: The repository, tooling, CI, deploys and agent setup.
+title: "Architecture: "
+labels: ["architecture"]
+type: Task
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Titles and labels follow [docs/issues-and-patches.md](https://github.com/Jlore-Studios/JackiOh/blob/main/docs/issues-and-patches.md).
+
+        - **Title:** `Architecture: <…>`, or `CI: <…>` for CI's jobs and checks. Keep the alerts' own titles (`ci-duration.yml` finds its issue by its exact title).
+        - **Who does it:** a change to `.github/`, `bot/`, `.harness/` or `.squishy/` is people's work (`human`): the night bot may not change those paths. Otherwise label it `method:manual` or `method:use-bot` when it is ready.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      description: "For CI, retitle it `CI: …`."
+      options:
+        - Architecture
+        - CI
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: What is wrong or missing today, with links to runs, issues or files.
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What to change
+      description: The files, workflows, scripts or settings, and what each should do.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance
+      description: What a test, a check or a run shows once it is done.
+    validations:
+      required: true
+  - type: input
+    id: links
+    attributes:
+      label: Blocked by, part of
+      description: "`Blocked by #125`, `Part of #80`, if any."
+  - type: dropdown
+    id: difficulty
+    attributes:
+      label: Difficulty (a guess)
+      description: Set the matching `difficulty:*` label to make it binding; with none, the bot's planner rates it.
+      options:
+        - Not sure (the planner rates it)
+        - easy
+        - medium
+        - hard
+      default: 0
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: The night bot's pickup order. Set the matching `priority:*` label too.
+      options:
+        - No priority
+        - high
+        - medium
+        - low
+      default: 0

@@ -1,0 +1,63 @@
+name: Bug
+description: Something that behaves wrongly. A rule, a card, a crash, a failing job.
+title: "Patch v0.3.Y: "
+labels: ["patch"]
+type: Bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Titles and labels follow [docs/issues-and-patches.md](https://github.com/Jlore-Studios/JackiOh/blob/main/docs/issues-and-patches.md).
+
+        - **Title:** a fix to the game is usually a micro patch, `Patch v0.3.Y: <what the fix does>`. For a failing job or tool, retitle it `CI: …` and swap `patch` for `architecture`. A bug in the night bot or Squishy goes through the Night bot form.
+        - **Who does it:** when it is ready, label it `method:manual` (people) or `method:use-bot` (the night bot). Triage reads it two minutes later.
+  - type: textarea
+    id: happens
+    attributes:
+      label: What happens
+      description: What you saw. Paste errors and logs as text.
+    validations:
+      required: true
+  - type: textarea
+    id: should
+    attributes:
+      label: What should happen
+      description: What SPEC (a section or an R-number), the card's text or the docs say should happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: "Steps from a fresh start. For the engine, a seed (`cargo jackioh fuzz --from <seed> --seeds 1` replays a fuzz seed) or a replay (the game's seed and action log). For a job, a link to the failing run."
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options:
+        - The rules engine or a card
+        - The AI
+        - The client (hotseat, practice, online, menus)
+        - The server or the database
+        - CI, deploys or tooling
+        - Somewhere else
+    validations:
+      required: true
+  - type: input
+    id: build
+    attributes:
+      label: Version or commit
+      description: The catalog version, the commit, or the page and date you saw it on.
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: The night bot's pickup order. Set the matching `priority:*` label too.
+      options:
+        - No priority
+        - high
+        - medium
+        - low
+      default: 0

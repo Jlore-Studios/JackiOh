@@ -360,20 +360,28 @@
   gap: 4px;
 }
 
-.prompt-toggle {
-  display: flex;
-  gap: 0;
+/* #492: what a card option picks, under its face: "Normal" / "Embiggened" with what it pays, or
+   "X = 2". The embiggened price wears the Radiant gold of a card's bigger form. */
+.prompt-card-caption {
+  display: grid;
+  gap: 1px;
+  padding: 2px 2px 0;
+  text-align: center;
 }
 
-.prompt-toggle button:first-child {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
+.prompt-card-caption-label {
+  font-weight: 750;
+  line-height: 1.2;
 }
 
-.prompt-toggle button:last-child {
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-  border-left-width: 0;
+.prompt-card-caption-detail {
+  color: var(--text-dim);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.prompt-card[data-price="embiggen"] .prompt-card-caption-label {
+  color: #ffd24a;
 }
 
 /* --- B5 E18: number, answer, reward and pick ------------------------------------------------- */
@@ -649,7 +657,9 @@
    a desktop, low on a tablet, as the usual short sheet on a phone held upright, and down the right
    edge of a phone on its side. The scrim does not dim the board for them, because the board is the
    thing to look at. The card pickers (mulligan, discover, a card from your hand) need the room and
-   keep the centred modal and the sheet above. Selected by `data-prompt-kind`, the M5-T4 contract,
+   keep the centred modal and the sheet above, and so does a play's price and an X of a few values
+   (#492): docked as two small buttons, the embiggen choice went unseen, so both are cards in the
+   middle (`data-prompt-layout="cards"`). Selected by `data-prompt-kind`, the M5-T4 contract,
    because `.prompt-direction` is also the name of the direction picker's own row of arrows. */
 .prompt-scrim:has(
     > [data-prompt-kind="zone"],
@@ -657,8 +667,7 @@
     > [data-prompt-kind="tribute"],
     > [data-prompt-kind="direction"],
     > [data-prompt-kind="mode"],
-    > [data-prompt-kind="x"],
-    > [data-prompt-kind="embiggen"],
+    > [data-prompt-kind="x"]:not([data-prompt-layout="cards"]),
     > [data-prompt-kind="number"],
     > [data-prompt-kind="cell"]
   ) {
@@ -683,8 +692,7 @@
       > [data-prompt-kind="tribute"],
       > [data-prompt-kind="direction"],
       > [data-prompt-kind="mode"],
-      > [data-prompt-kind="x"],
-      > [data-prompt-kind="embiggen"],
+      > [data-prompt-kind="x"]:not([data-prompt-layout="cards"]),
       > [data-prompt-kind="number"],
       > [data-prompt-kind="cell"]
     ) {
@@ -707,8 +715,7 @@
   .prompt[data-prompt-kind="tribute"],
   .prompt[data-prompt-kind="direction"],
   .prompt[data-prompt-kind="mode"],
-  .prompt[data-prompt-kind="x"],
-  .prompt[data-prompt-kind="embiggen"] {
+  .prompt[data-prompt-kind="x"]:not([data-prompt-layout="cards"]) {
     width: min(262px, 100%);
   }
 
@@ -725,8 +732,7 @@
       > [data-prompt-kind="tribute"],
       > [data-prompt-kind="direction"],
       > [data-prompt-kind="mode"],
-      > [data-prompt-kind="x"],
-      > [data-prompt-kind="embiggen"],
+      > [data-prompt-kind="x"]:not([data-prompt-layout="cards"]),
       > [data-prompt-kind="number"],
       > [data-prompt-kind="cell"]
     ) {
@@ -856,8 +862,7 @@
       > [data-prompt-kind="tribute"],
       > [data-prompt-kind="direction"],
       > [data-prompt-kind="mode"],
-      > [data-prompt-kind="x"],
-      > [data-prompt-kind="embiggen"]
+      > [data-prompt-kind="x"]:not([data-prompt-layout="cards"])
     ) {
     place-items: stretch end;
   }
@@ -867,8 +872,7 @@
   .prompt[data-prompt-kind="tribute"],
   .prompt[data-prompt-kind="direction"],
   .prompt[data-prompt-kind="mode"],
-  .prompt[data-prompt-kind="x"],
-  .prompt[data-prompt-kind="embiggen"] {
+  .prompt[data-prompt-kind="x"]:not([data-prompt-layout="cards"]) {
     /* No wider than the board's right-hand column, so lane 5 stays uncovered. */
     width: min(186px, 40vw);
     max-height: 100%;

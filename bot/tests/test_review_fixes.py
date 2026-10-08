@@ -169,16 +169,38 @@ class InfraTests(unittest.TestCase):
     def test_a_run_request_is_kept_when_every_lane_is_busy(self):
         gh = FakeGitHub()
         gh.add_issue(4, labels=(LABEL_BUILD,))
-        for n in (5, 6, 7):
+        # The machine's three slots and GitHub's three lanes, each held apart from the other.
+        held = ((5, "gpt"), (6, "agy"), (7, "muse"), (8, "claude-4"), (9, "claude-5"),
+                (10, "claude-6"))
+        for n, _ in held:
             gh.add_issue(n, labels=(LABEL_WORKING,))
             gh.runs[str(n)] = {"status": "in_progress"}
         ctx = make_ctx(gh, at=DAY, cfg=with_lanes(make_config(env=ALL, machine=MACHINE), 3))
         ctx.store.update(lambda s: (s.update(run_requested={"at": "2026-09-29T16:59:00Z",
                                                             "item": None}),
                                     *[state_item(s, n).update(run_id=str(n), provider=p)
-                                      for n, p in ((5, "gpt"), (6, "agy"), (7, "muse"))]))
+                                      for n, p in held]))
         self.assertIn("every lane is busy", plan_mod.make(ctx)["reason"])
         self.assertIsNotNone(ctx.store.load()["run_requested"])
+
+    def test_github_s_runners_and_the_machine_have_lanes_of_their_own(self):
+        """A full machine leaves GitHub's lanes to the Claude accounts, and Claude runs filling
+        GitHub's lanes leave the machine's slots to its subscriptions."""
+        for held, on_machine in ((((5, "gpt"), (6, "agy"), (7, "muse")), False),
+                                 (((5, "claude-4"), (6, "claude-5"), (7, "claude-6")), True)):
+            with self.subTest(held=[p for _, p in held]):
+                gh = FakeGitHub()
+                gh.add_issue(4, labels=(LABEL_BUILD,))
+                for n, _ in held:
+                    gh.add_issue(n, labels=(LABEL_WORKING,))
+                    gh.runs[str(n)] = {"status": "in_progress"}
+                ctx = make_ctx(gh, at=NIGHT,
+                               cfg=with_lanes(make_config(env=ALL, machine=MACHINE), 3))
+                ctx.store.update(lambda s: [state_item(s, n).update(run_id=str(n), provider=p)
+                                            for n, p in held])
+                planned = plan_mod.make(ctx)
+                self.assertEqual((planned["action"], planned["number"]), ("build", 4))
+                self.assertEqual(ctx.cfg.pool.on_machine(planned["provider"]), on_machine)
 
 
 class VaultAndLoginTests(unittest.TestCase):

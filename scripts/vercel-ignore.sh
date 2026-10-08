@@ -52,7 +52,7 @@ for file in $files; do
     crates/server/* | crates/tools/* | render.yaml) ;;
     crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/wasm/tests/*) ;;
     apps/web/*.test.ts | apps/web/*.test.tsx | apps/web/src/test/* | apps/web/scripts/* | apps/web/README.md) ;;
-    CLAUDE.md | AGENTS.md | GEMINI.md | README.md | SPEC.md | BUILD.md | REVIEW.md) ;;
+    CLAUDE.md | AGENTS.md | GEMINI.md | CONTRIBUTING.md | README.md | SPEC.md | BUILD.md | REVIEW.md) ;;
     ARCHITECTURE-CCG.md | JackiOh_Mechanics.md | JackiOh_Core_Cards.md | JackiOh_Classic_Cards.md | JackiOh_Tokens.md) ;;
     *) exit 1 ;;
   esac
