@@ -7,10 +7,11 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import type { PlayerView } from "@jackioh/shared";
+import type { ActionBody, PlayerView } from "@jackioh/shared";
 
 import { CARD_SETTINGS_DEFAULTS, INSPECT_HOVER, closeInspect, writeCardSettings } from "../cards/index.ts";
 import { HOVER_DELAY_MS } from "../cards/inspect/constants.ts";
+import type { Interaction } from "./actions.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import Prompt from "./Prompt.tsx";
 import { baseView, card, emptySide, pendingFor } from "../test/fixtures.ts";
@@ -245,6 +246,124 @@ describe("R247: #82 KY's Trial's Discover offers numbers", () => {
       const option = screen.getByTestId(`prompt-option-mode:${defId}`);
       expect(option).not.toHaveAttribute("data-number");
       expect(option.querySelector(".cf .card-name")?.textContent).toBe(nameOf(defId));
+    }
+  });
+});
+
+describe("#492 one card picker, front and centre, for every short choice", () => {
+  const AURA = "core-046"; // Suppressive Aura, "2 embiggen 4"
+  const APPROPRIATIONS = "classicplus-040"; // an X Spell with a "Choose one" of four
+
+  function handView(defId: string, over: { cost?: number; radiant?: boolean } = {}): PlayerView {
+    return baseView({
+      you: emptySide("p1", { hand: [card({ instanceId: "h1", defId, ...over })] }),
+      opponent: emptySide("p2", { hand: { count: 3 } }),
+    });
+  }
+
+  function renderPlay(view: PlayerView, candidates: ActionBody[], onAction = vi.fn()): void {
+    const interaction: Interaction = { stage: "playing", instanceId: "h1", candidates, picked: {} };
+    render(
+      <CatalogContext.Provider value={lookup}>
+        <Prompt view={view} interaction={interaction} legal={candidates} onAction={onAction} />
+      </CatalogContext.Provider>,
+    );
+  }
+
+  const PRICES: ActionBody[] = [
+    { type: "play", instanceId: "h1", zone: { row: "backrow", lane: 1 }, embiggen: false },
+    { type: "play", instanceId: "h1", zone: { row: "backrow", lane: 1 }, embiggen: true },
+  ];
+
+  /** What a face's gem says, and the smaller price beside it, if any. */
+  function gem(option: HTMLElement): { text: string; alt: string | null } {
+    const copy = option.querySelector(".cost-gem")?.cloneNode(true) as Element | undefined;
+    const alt = copy?.querySelector(".cf-cost-alt")?.textContent ?? null;
+    copy?.querySelector(".cf-cost-alt")?.remove();
+    return { text: (copy?.textContent ?? "").trim(), alt };
+  }
+
+  it("#492 the embiggen price is the card itself twice: at the price it shows in hand, and at its embiggen price", () => {
+    const onAction = vi.fn();
+    renderPlay(handView(AURA, { cost: 2 }), PRICES, onAction);
+
+    const modal = screen.getByTestId("prompt-modal");
+    expect(modal).toHaveAttribute("data-prompt-kind", "embiggen");
+    expect(modal).toHaveAttribute("data-prompt-layout", "cards");
+    expect(modal.querySelector(".prompt-title-source")?.textContent).toBe(nameOf(AURA));
+
+    const normal = screen.getByTestId("prompt-option-false");
+    const bigger = screen.getByTestId("prompt-option-true");
+    for (const option of [normal, bigger]) {
+      expect(option.querySelector(".cf-option > .cf .card-name")?.textContent).toBe(nameOf(AURA));
+      expect(option.querySelector(".card-text")?.textContent).toBe(CATALOG[AURA]?.base.text);
+    }
+    expect(gem(normal)).toEqual({ text: "2", alt: null });
+    expect(normal.querySelector(".prompt-card-caption")?.textContent).toBe("NormalPay (2)");
+    expect(normal.getAttribute("aria-label")).toBe(`Normal: ${nameOf(AURA)}, costs (2)`);
+    expect(gem(bigger)).toEqual({ text: "4", alt: null });
+    expect(bigger.querySelector(".prompt-card-caption")?.textContent).toBe("EmbiggenedPay (4)");
+    expect(bigger.getAttribute("aria-label")).toBe(`Embiggened: ${nameOf(AURA)}, costs (4)`);
+
+    fireEvent.click(bigger);
+    expect(onAction).toHaveBeenCalledWith(PRICES[1]);
+  });
+
+  it("#492 a Radiant card offers its Radiant face at both prices", () => {
+    renderPlay(handView(AURA, { cost: 2, radiant: true }), PRICES);
+    for (const key of ["false", "true"]) {
+      const option = screen.getByTestId(`prompt-option-${key}`);
+      expect(option.querySelector(".card-text")?.textContent).toBe(CATALOG[AURA]?.radiant.text);
+    }
+  });
+
+  it("#492 once a cost change moved the card off its printed price, the normal card shows the view's price and the embiggened one claims none", () => {
+    renderPlay(handView(AURA, { cost: 1 }), PRICES);
+    const normal = screen.getByTestId("prompt-option-false");
+    const bigger = screen.getByTestId("prompt-option-true");
+    expect(gem(normal)).toEqual({ text: "1", alt: null });
+    expect(normal.querySelector(".prompt-card-caption-detail")?.textContent).toBe("Pay (1)");
+    // CLAUDE.md rule 7: the client never works out a discounted embiggen price.
+    expect(gem(bigger)).toEqual({ text: "?", alt: null });
+    expect(bigger.querySelector(".prompt-card-caption-detail")?.textContent).toBe("Pay the embiggen price");
+  });
+
+  it("#492 a few X values are the card once per X, each captioned with its X", () => {
+    const onAction = vi.fn();
+    const candidates: ActionBody[] = [1, 2, 3].map((x) => ({ type: "play", instanceId: "h1", x }));
+    renderPlay(handView(APPROPRIATIONS, { cost: 0 }), candidates, onAction);
+
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-prompt-kind", "x");
+    for (const x of [1, 2, 3]) {
+      const option = screen.getByTestId(`prompt-option-${String(x)}`);
+      expect(option.querySelector(".cf .card-name")?.textContent).toBe(nameOf(APPROPRIATIONS));
+      expect(option.querySelector(".prompt-card-caption")?.textContent).toBe(`X = ${String(x)}`);
+      expect(option).not.toHaveAttribute("data-price");
+    }
+    fireEvent.click(screen.getByTestId("prompt-option-3"));
+    expect(onAction).toHaveBeenCalledWith({ type: "play", instanceId: "h1", x: 3 });
+  });
+
+  it("#492 a short Choose one, an embiggen price and a short X are the one card layout: cards in a row in the middle", () => {
+    const modes = ["Military", "Education", "Culture", "Healthcare"];
+    const pickers: [PlayerView, ActionBody[]][] = [
+      [handView(APPROPRIATIONS), modes.map((mode): ActionBody => ({ type: "play", instanceId: "h1", x: 1, modes: [mode] }))],
+      [handView(AURA, { cost: 2 }), PRICES],
+      [handView(APPROPRIATIONS), [1, 2].map((x): ActionBody => ({ type: "play", instanceId: "h1", x }))],
+    ];
+    for (const [view, candidates] of pickers) {
+      renderPlay(view, candidates);
+      const modal = screen.getByTestId("prompt-modal");
+      expect(modal).toHaveAttribute("data-prompt-layout", "cards");
+      const row = screen.getByTestId("prompt-cards");
+      expect(row.parentElement).toBe(modal);
+      const options = screen.getAllByTestId(/^prompt-option-/);
+      expect(options).toHaveLength(candidates.length);
+      for (const option of options) {
+        expect(option.parentElement).toBe(row);
+        expect(option).toHaveClass("prompt-card");
+      }
+      cleanup();
     }
   });
 });

@@ -24,6 +24,13 @@
 // the game shows it. An option that names no card is its label; a Discover of numbers (#82 KY's
 // Trial, R247) offers exactly that, and each number is drawn on a card back, with no face to read.
 //
+// #492: one card picker (`CardChoice`) holds every picker whose options are cards, in the middle of
+// the screen: the mulligan, a Discover, a hand pick, a pick, a short "Choose one" (Appropriations'),
+// and two play choices that used to be small controls docked beside the board, an embiggen price
+// (the card at its normal price and at its embiggen price) and an X of X_CARD_LIMIT values or fewer
+// (the card once per X). Those two keep their `data-prompt-kind`; `data-prompt-layout="cards"` says
+// which layout a picker has.
+//
 // `data-prompt-source` says which route opened the modal ("engine" or "play"), for layout only:
 // prompt.css turns a play's board picks into a slim bar on a phone while drag to play is on
 // (polish task 7), because their answers already glow on the board.
@@ -80,10 +87,10 @@ import {
   type PlayBuild,
   type PlayNeed,
 } from "./actions.ts";
-import { CardBack, CardFace, faceModel, useInspectTrigger } from "../cards/index.ts";
+import { CardBack, CardFace, faceModel, useInspectTrigger, type FaceModel } from "../cards/index.ts";
 import { MatchCardsProvider, useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
-import { DISCOVER_OPTION_LIMIT, sideOf, testid } from "./contract.ts";
+import { DISCOVER_OPTION_LIMIT, X_CARD_LIMIT, sideOf, testid } from "./contract.ts";
 import { modeText } from "./modeText.ts";
 import "./prompt.css";
 
@@ -146,7 +153,13 @@ type PickerItem = {
   arrow?: "left" | "right";
   /** A "Choose one" option's line of detail under its label (modeText.ts). */
   detail?: string;
+  /** #492: what picking a card option chooses, under its face ("Embiggened", "X = 2"). */
+  caption?: string;
+  /** #492: an embiggen option, whose face shows the price that form is played for (`pricedFace`). */
+  price?: EmbiggenPrice;
 };
+
+type EmbiggenPrice = "normal" | "embiggen";
 
 type Submitted = { action?: ActionBody; interaction?: Interaction };
 
@@ -158,6 +171,11 @@ type Picker = {
    * graveyard play (Classic #74), a `number` prompt to the DOM and a row of chips to the eye.
    */
   variant?: "plague";
+  /**
+   * #492: drawn as the card picker (`isCardLayout`) whatever its chrome: an embiggen price, or an X
+   * from X_CARD_LIMIT values or fewer. The chrome stays the `data-prompt-kind`.
+   */
+  cards?: boolean;
   title: string;
   /** The card asking, when the picker knows it: its name heads the title ("Pocket Chaos: choose one"). */
   sourceDefId?: string;
@@ -174,6 +192,20 @@ type Picker = {
   /** R514: the board zones that answer a `cell` prompt, by testid, to the option each answers with. */
   boardKeys?: ReadonlyMap<string, string>;
 };
+
+/** The pickers whose options are cards by nature. */
+const CARD_CHROMES: ReadonlySet<PromptKind> = new Set(["discover", "hand", "mulligan", "pick"]);
+
+/**
+ * #492: the card picker, front and centre: every option a card in the middle of the screen, the way
+ * a Discover and Appropriations' "Choose one" are laid out (`CardChoice`). A short "Choose one" is
+ * one (its chrome is `discover`), and so are a play's embiggen price and an X from X_CARD_LIMIT
+ * values or fewer, which keep their own chrome. It is `data-prompt-layout="cards"`, which prompt.css
+ * reads to keep it out of the small pickers' dock beside the board.
+ */
+function isCardLayout(picker: Picker): boolean {
+  return picker.cards === true || CARD_CHROMES.has(picker.chrome);
+}
 
 // ---------------------------------------------------------------------------------------------
 // Labels. Read out of the view, never computed.
@@ -297,8 +329,11 @@ function pickerForPending(
 
   // A short "Choose one" menu is a Discover pop-up; more options keep the plain mode list.
   const chrome = pending.kind === "mode" && pending.options.length <= DISCOVER_OPTION_LIMIT ? "discover" : pending.kind;
+  // #492: an embiggen price and a short X are cards here too, as on a play (`pickerForNeed`).
+  const cards = pending.kind === "embiggen" || (pending.kind === "x" && pending.options.length <= X_CARD_LIMIT);
   const picker: Picker = {
     chrome,
+    ...(cards ? { cards } : {}),
     title: pending.kind === "reward" ? pending.prompt.replace(QUEST_COMPLETE_PREFIX, "") : pending.prompt,
     items,
     min: pending.min,
@@ -364,6 +399,16 @@ function plagueLabel(view: PlayerView, option: PlagueChoice, nameSource: boolean
   return where === null ? tokens : `${tokens} (${where})`;
 }
 
+/** The card the play (or activation) in flight is building, as the view lists it. */
+function playedRef(interaction: Interaction, view: PlayerView): CardRef | null {
+  return isBuilding(interaction) ? cardRefFor(view, interaction.instanceId) : null;
+}
+
+/** #492: a card option drawn as the card being played, as the view lists it. */
+function playedFace(played: CardRef): Pick<PickerItem, "defId" | "radiant" | "cost" | "card"> {
+  return { defId: played.defId, radiant: played.radiant, cost: played.cost, card: played.card };
+}
+
 function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerView): Picker {
   const play = (patch: Partial<PlayBuild>): Submitted => {
     const result = pickInPlay(interaction, patch);
@@ -389,22 +434,42 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
           return zone === null ? {} : play({ zone });
         },
       };
-    case "x":
+    case "x": {
+      // #492: a few values are cards, the card being played once per X; more keep the stepper.
+      const cards = need.values.length <= X_CARD_LIMIT;
+      const played = cards ? playedRef(interaction, view) : null;
       return {
         ...common,
         chrome: "x",
+        ...(cards ? { cards } : {}),
+        ...(played === null ? {} : { sourceDefId: played.defId }),
         title: "Choose X",
-        items: need.values.map((value) => ({ key: String(value), label: String(value) })),
+        items: need.values.map((value) => {
+          const item: PickerItem = { key: String(value), label: String(value) };
+          return played === null ? item : { ...item, ...playedFace(played), caption: `X = ${String(value)}` };
+        }),
         submit: (keys) => (keys[0] === undefined ? {} : play({ x: Number(keys[0]) })),
       };
-    case "embiggen":
+    }
+    case "embiggen": {
+      // #492: the two prices are two cards, front and centre: the card being played at the price it
+      // shows in hand, and the same card at its embiggen price, each named for the form it plays.
+      const played = playedRef(interaction, view);
       return {
         ...common,
         chrome: "embiggen",
+        cards: true,
+        ...(played === null ? {} : { sourceDefId: played.defId }),
         title: "Pay the embiggen price?",
-        items: need.values.map((value) => ({ key: String(value), label: value ? "Embiggened" : "Normal" })),
+        items: need.values.map((value) => {
+          const label = value ? "Embiggened" : "Normal";
+          const item: PickerItem = { key: String(value), label };
+          const price: EmbiggenPrice = value ? "embiggen" : "normal";
+          return played === null ? item : { ...item, ...playedFace(played), caption: label, price };
+        }),
         submit: (keys) => (keys[0] === undefined ? {} : play({ embiggen: keys[0] === "true" })),
       };
+    }
     case "tribute":
       return {
         ...common,
@@ -503,6 +568,28 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
 /** R247: a Discover option that is a number rather than a card (#82 KY's Trial). */
 const NUMBER_OPTION = /^\d+$/;
 
+/** #492: the gem of an embiggened option whose price the face cannot vouch for (`pricedFace`). */
+const UNKNOWN_PRICE = "?";
+
+/**
+ * #492: an embiggen option's face at the price its form is played for. The normal form is the card
+ * as the view shows it, at the price it costs now, without the embiggen price beside the gem. The
+ * embiggened form is the same face at the embiggen price the gem shows beside it (`FaceCost.alt`,
+ * cards/model.ts), the price the card's own text names ("Paid (4)"). Once a cost change has moved
+ * the card off its printed price the face drops that price, and the gem says "?": the client never
+ * works out an embiggen price itself (CLAUDE.md rule 7), and the engine charges the price it rules.
+ */
+function pricedFace(face: FaceModel, price: EmbiggenPrice): FaceModel {
+  if (price === "normal") return { ...face, cost: { ...face.cost, alt: null } };
+  const text = face.cost.alt ?? UNKNOWN_PRICE;
+  return { ...face, cost: { text, value: text, tone: "base", alt: null } };
+}
+
+/** What an embiggen option pays, in R432's words: "Pay (4)". */
+function priceLine(face: FaceModel): string {
+  return face.cost.text === UNKNOWN_PRICE ? "Pay the embiggen price" : `Pay (${face.cost.text})`;
+}
+
 // Polish 6 (a minimal edit to task 7's file, flagged in the PR): a card option draws the card's face,
 // the one the hand and the deck builder draw, with the same hover preview and long-press sheet, in
 // whatever box prompt.css gives it. An option that names no card keeps its name and text.
@@ -522,7 +609,7 @@ function CardOption(props: {
   const radiant = props.item.radiant === true;
   const cost = props.item.cost;
   // The card in play: as the view lists it when it does, else a definition as the game shows it.
-  const face =
+  const drawn =
     props.item.defId === undefined
       ? null
       : props.item.card !== undefined
@@ -538,6 +625,10 @@ function CardOption(props: {
             ...(cost === undefined ? {} : { liveCost: cost }),
             inPlay: {},
           });
+  const face = drawn === null || props.item.price === undefined ? drawn : pricedFace(drawn, props.item.price);
+  // #492: what this card picks, under its face; an embiggen option also says what it pays.
+  const caption = face === null ? undefined : props.item.caption;
+  const pays = face === null || props.item.price === undefined ? undefined : priceLine(face);
   // R247: a number names no card here, so it is drawn on a card back and nothing opens it.
   const number = face === null && NUMBER_OPTION.test(props.item.label) ? props.item.label : null;
   const testId = `prompt-option-${props.item.key}`;
@@ -546,7 +637,9 @@ function CardOption(props: {
   const verdict = props.verdicts === true ? (props.pressed ? "keep" : "redraw") : undefined;
   // The name, then the cost the gem shows, so a screen reader hears what a sighted player reads, in
   // R432's words ("costs (3)").
-  const named = face === null ? (number === null ? undefined : `Number ${number}`) : `${name}, costs (${face.cost.text})`;
+  const faceLabel = `${name}, costs (${face?.cost.text ?? ""})`;
+  const named =
+    face === null ? (number === null ? undefined : `Number ${number}`) : caption === undefined ? faceLabel : `${caption}: ${faceLabel}`;
   const label = props.over === true && named !== undefined ? `${named}, ${OVER_BUDGET.toLowerCase()}` : named;
   return (
     <>
@@ -556,6 +649,7 @@ function CardOption(props: {
         data-testid={testId}
         data-verdict={verdict}
         data-number={number ?? undefined}
+        data-price={face === null ? undefined : props.item.price}
         data-over-budget={props.over === true ? "true" : undefined}
         aria-pressed={props.pressed}
         aria-disabled={props.over === true ? "true" : undefined}
@@ -584,6 +678,12 @@ function CardOption(props: {
         ) : (
           <span className="cf-option">
             <CardFace face={face} layout="full" />
+          </span>
+        )}
+        {caption === undefined ? null : (
+          <span className="prompt-card-caption">
+            <span className="prompt-card-caption-label">{caption}</span>
+            {pays === undefined ? null : <span className="prompt-card-caption-detail">{pays}</span>}
           </span>
         )}
         {verdict === undefined ? null : (
@@ -676,6 +776,45 @@ const BOARD_HINTS: Partial<Record<PromptKind, string>> = {
 function BoardHint(props: { chrome: PromptKind }) {
   const hint = BOARD_HINTS[props.chrome];
   return hint === undefined ? null : <p className="prompt-board-hint">{hint}</p>;
+}
+
+/**
+ * #492: the card picker (`isCardLayout`): a mulligan, a Discover, a card from hand, a pick, a short
+ * "Choose one" (Appropriations'), an embiggen price and a short X, each option a card in a row in
+ * the middle of the picker. `data-choice` names the picker's chrome.
+ */
+function CardChoice(props: {
+  picker: Picker;
+  /** R515: what the picks so far cost together. */
+  spent: number;
+  pressed: (key: string) => boolean;
+  /** R515: whether adding this option keeps the picks within the budget. */
+  fits: (key: string) => boolean;
+  pick: (key: string) => void;
+}) {
+  const { picker } = props;
+  const budget = picker.budget;
+  return (
+    <>
+      {budget === undefined ? null : (
+        <p className="prompt-budget" data-testid="prompt-budget" role="status">
+          ({props.spent}) of ({budget.limit}) spent
+        </p>
+      )}
+      <div className="prompt-cards" data-testid="prompt-cards" data-choice={picker.chrome}>
+        {picker.items.map((item) => (
+          <CardOption
+            key={item.key}
+            item={item}
+            pressed={props.pressed(item.key)}
+            verdicts={picker.chrome === "mulligan"}
+            over={!props.pressed(item.key) && !props.fits(item.key)}
+            onPick={() => props.pick(item.key)}
+          />
+        ))}
+      </div>
+    </>
+  );
 }
 
 function PromptModal(props: {
@@ -781,6 +920,18 @@ function PromptModal(props: {
       );
     }
 
+    if (isCardLayout(picker)) {
+      return (
+        <CardChoice
+          picker={picker}
+          spent={spent(selected)}
+          pressed={pressed}
+          fits={(key) => fits([...selected, key])}
+          pick={pick}
+        />
+      );
+    }
+
     if (picker.chrome === "direction") {
       return (
         <div className="prompt-direction">
@@ -857,16 +1008,6 @@ function PromptModal(props: {
       );
     }
 
-    if (picker.chrome === "embiggen") {
-      return (
-        <div className="prompt-toggle" data-testid="embiggen-toggle" role="group" aria-label="Embiggen">
-          {items.map((item) => (
-            <PlainOption key={item.key} item={item} pressed={pressed(item.key)} onPick={() => pick(item.key)} />
-          ))}
-        </div>
-      );
-    }
-
     if (picker.chrome === "zone" || picker.chrome === "cell") {
       const groups = [...new Set(items.map((item) => item.group ?? ""))];
       return (
@@ -938,31 +1079,6 @@ function PromptModal(props: {
       );
     }
 
-    if (picker.chrome === "discover" || picker.chrome === "hand" || picker.chrome === "mulligan" || picker.chrome === "pick") {
-      const budget = picker.budget;
-      return (
-        <>
-          {budget === undefined ? null : (
-            <p className="prompt-budget" data-testid="prompt-budget" role="status">
-              ({spent(selected)}) of ({budget.limit}) spent
-            </p>
-          )}
-          <div className="prompt-cards">
-            {items.map((item) => (
-              <CardOption
-                key={item.key}
-                item={item}
-                pressed={pressed(item.key)}
-                verdicts={picker.chrome === "mulligan"}
-                over={!pressed(item.key) && !fits([...selected, item.key])}
-                onPick={() => pick(item.key)}
-              />
-            ))}
-          </div>
-        </>
-      );
-    }
-
     if (picker.chrome === "target" || picker.chrome === "tribute") {
       return (
         <ul className="prompt-list">
@@ -991,6 +1107,7 @@ function PromptModal(props: {
         className={`prompt prompt-${picker.chrome}`}
         data-testid="prompt-modal"
         data-prompt-kind={picker.chrome}
+        data-prompt-layout={isCardLayout(picker) ? "cards" : undefined}
         data-prompt-source={props.source}
         data-animating={props.animating}
         /* The board cells this prompt has blessed, so a `target` pick can be made on the board
