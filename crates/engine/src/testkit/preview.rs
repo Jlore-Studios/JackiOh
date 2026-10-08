@@ -1,4 +1,4 @@
-//! R768's preview seam: under the `testkit` feature, a thread may treat sets that do not ship yet as
+//! R1420's preview seam: under the `testkit` feature, a thread may treat sets that do not ship yet as
 //! if they did, so a test, the fuzz tool or a development run can deal and generate the cards of a
 //! set while it is being built. It is a thread-local the engine's catalog consults only under this
 //! feature, in the spirit of `seams.rs` and SURFACE §8's registry override: each `#[test]` is its own
@@ -17,7 +17,7 @@ thread_local! {
     static PREVIEWED: Cell<Vec<SetName>> = const { Cell::new(Vec::new()) };
 }
 
-/// Whether this thread previews `set` (R768).
+/// Whether this thread previews `set` (R1420).
 pub fn previewed(set: SetName) -> bool {
     previewed_sets().contains(&set)
 }
@@ -48,7 +48,7 @@ pub fn preview_sets(sets: &[SetName]) -> PreviewGuard {
 }
 
 /// Previews every set the catalog orders (`CATALOG_SETS`) on this thread until the guard drops: the
-/// fuzz tool's default, so random games reach every card in the catalog (R768).
+/// fuzz tool's default, so random games reach every card in the catalog (R1420).
 #[must_use = "the preview ends when the guard drops"]
 pub fn preview_every_set() -> PreviewGuard {
     preview_sets(&CATALOG_SETS)

@@ -187,6 +187,15 @@ again for its index row. The clash shows as a conflict on the note and on `spec/
 or a citation with no note, a link to nothing. Numbers on `main` are never reused or renumbered
 (`spec/README.md`).
 
+A tracker whose parts build side by side may hold a block of numbers for each part, so its parts
+never clash with each other. Its foundation takes the top block, so once the foundation is on `main`
+the next free number is above every block. A held number counts as in use: other work never takes
+one, and a part that needs more than its block takes the next free number. Held now:
+
+| Tracker | Numbers | Blocks |
+| --- | --- | --- |
+| #496, the Meditative set | R780–R1429 | `docs/meditative-set.md` M10 |
+
 ## How v0.2.0 was split
 
 These rules come from v0.2.0 (#40), which came before them.

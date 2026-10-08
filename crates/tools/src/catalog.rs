@@ -87,7 +87,7 @@ struct SetExpectation {
 }
 
 impl SetExpectation {
-    /// R768: whether the set ships. A set that does not is checked for its shape alone: every entry
+    /// R1420: whether the set ships. A set that does not is checked for its shape alone: every entry
     /// it holds must be one of its listed indices, once, and no rarity may pass its count, but none
     /// need be there yet, and none counts toward the totals or the tag census, which are the
     /// shipped catalog's.
@@ -169,7 +169,7 @@ fn sets() -> Vec<SetExpectation> {
                 ("Mythic", 3),
             ],
         },
-        // R768: the Meditative set (issue #496, docs/meditative-set.md M2): 99 cards and the 30 tokens they
+        // R1420: the Meditative set (issue #496, docs/meditative-set.md M2): 99 cards and the 30 tokens they
         // define, the designer's rarities with five filled in by §8's rubric. It does not ship yet, so its
         // entries are checked for their shape alone until the patch that lists it in SHIPPED_SETS.
         SetExpectation {
@@ -220,7 +220,7 @@ fn expected_tag_count(tag: Tag) -> usize {
         Tag::Catalyst => 2,
         Tag::Prime => 2,
         Tag::Acclaimed => 2,
-        // The Meditative set's (R768): counted once it ships.
+        // The Meditative set's (R1420): counted once it ships.
         Tag::Wincon => 0,
         Tag::Token => 50,
     }
@@ -767,14 +767,14 @@ pub struct CatalogReport {
     pub refs_count: usize,
     pub param_count: usize,
     pub loc_count: usize,
-    /// R768: the entries of sets that do not ship yet, which no total counts.
+    /// R1420: the entries of sets that do not ship yet, which no total counts.
     pub unshipped_count: usize,
 }
 
 /// `validate-catalog.ts`'s top level over a parsed catalog (an object keyed by card id).
 pub fn check_catalog(catalog: &Object) -> CatalogReport {
     let sets = sets();
-    // R768: the totals are the shipped catalog's.
+    // R1420: the totals are the shipped catalog's.
     let expected_non_token: usize = sets.iter().filter(|set| set.ships()).map(|set| set.cards).sum();
     let expected_token: usize = sets
         .iter()
@@ -787,7 +787,7 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
     let mut failures: Vec<String> = Vec::new();
     let entries = catalog.len();
 
-    // 1. 111 entries, R768's unshipped sets aside. (TS checks the total here and again after the
+    // 1. 111 entries, R1420's unshipped sets aside. (TS checks the total here and again after the
     // loop, so a wrong total fails twice; kept.)
     let unshipped_entries = catalog
         .values()
@@ -821,7 +821,7 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
     let mut seen_indices: IndexMap<&str, IndexMap<String, Vec<String>>> = IndexMap::new();
     let mut loc_count = 0;
     let mut param_count = 0;
-    // R768: the entries of sets that do not ship yet, counted apart from the totals.
+    // R1420: the entries of sets that do not ship yet, counted apart from the totals.
     let mut unshipped_count = 0;
 
     for (key, value) in catalog {
@@ -856,7 +856,7 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
         let set_of = sets
             .iter()
             .find(|expectation| set_value.and_then(Json::as_str) == Some(expectation.set));
-        // R768: an entry of a set that does not ship counts toward no total and no tag.
+        // R1420: an entry of a set that does not ship counts toward no total and no tag.
         let counted = set_of.is_none_or(SetExpectation::ships);
         if !counted {
             unshipped_count += 1;
@@ -1203,7 +1203,7 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
         let seen = seen_indices.get(expectation.set).unwrap_or(&empty);
         for index in &indices {
             match seen.get(index) {
-                // R768: a set that has not shipped need not hold every card yet.
+                // R1420: a set that has not shipped need not hold every card yet.
                 None if !expectation.ships() => {}
                 None => fail(
                     &mut failures,
@@ -1237,7 +1237,7 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
         let counted = rarity_counts.get(expectation.set).unwrap_or(&no_counts);
         for (rarity, expected) in expectation.rarities {
             let found = counted.get(*rarity).copied().unwrap_or(0);
-            // R768: a set that has not shipped may hold fewer, never more.
+            // R1420: a set that has not shipped may hold fewer, never more.
             let wrong = if expectation.ships() {
                 found != *expected
             } else {
@@ -1608,7 +1608,7 @@ fn run_check() -> anyhow::Result<()> {
             .iter()
             .map(|(r, n)| format!("{n} {r}"))
             .collect();
-        let shipped = if expectation.ships() { "" } else { " (not shipped yet, R768)" };
+        let shipped = if expectation.ships() { "" } else { " (not shipped yet, R1420)" };
         println!(
             "  {}{shipped}: {} cards + {tokens} tokens; rarities {}",
             expectation.set,
@@ -1618,7 +1618,7 @@ fn run_check() -> anyhow::Result<()> {
     }
     if report.unshipped_count > 0 {
         println!(
-            "  {} entries of sets that have not shipped, outside the totals (R768)",
+            "  {} entries of sets that have not shipped, outside the totals (R1420)",
             report.unshipped_count
         );
     }
@@ -1689,7 +1689,7 @@ mod tests {
     }
 
     #[test]
-    fn r768_holds_a_set_being_built_to_its_shape_alone_outside_the_totals() {
+    fn r1420_holds_a_set_being_built_to_its_shape_alone_outside_the_totals() {
         let mut catalog = shipped_catalog();
         catalog.insert("meditative-002".to_string(), meditative_entry("2", "meditative-002"));
         let report = check_catalog(&catalog);

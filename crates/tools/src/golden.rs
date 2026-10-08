@@ -518,7 +518,7 @@ struct GameSpec {
 }
 
 /// §13.1: seed k's game, dealt and seeded as the fuzz file that owns k deals it, from the shipped
-/// sets alone (R768), so a set still being built never moves a recorded game.
+/// sets alone (R1420), so a set still being built never moves a recorded game.
 fn spec_for_seed(k: u32) -> Result<GameSpec> {
     if (HANDICAP_FIRST..=HANDICAP_LAST).contains(&k) {
         let SeedHandicap { seat, handicap, .. } = handicap_for_seed(k);

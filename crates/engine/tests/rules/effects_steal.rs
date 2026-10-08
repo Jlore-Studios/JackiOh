@@ -465,9 +465,9 @@ mod r15_steal_s6_3_m3_t1 {
     }
 }
 
-/// R771: `give_control`, the mirror of a steal: a card on the field goes to the other side, placed
+/// R1423: `give_control`, the mirror of a steal: a card on the field goes to the other side, placed
 /// per R15 and entering it per R171, its owner unchanged (R12).
-mod r771_give_control_hands_a_card_to_the_other_player {
+mod r1423_give_control_hands_a_card_to_the_other_player {
     use super::*;
 
     fn gives(state: &mut GameState, card: &CardInstance) -> Vec<GameEvent> {
@@ -475,7 +475,7 @@ mod r771_give_control_hands_a_card_to_the_other_player {
     }
 
     #[test]
-    fn r771_gives_your_unit_to_the_enemy_in_its_own_lane_owner_unchanged_and_summoning_sick() {
+    fn r1423_gives_your_unit_to_the_enemy_in_its_own_lane_owner_unchanged_and_summoning_sick() {
         let mut state = game();
         state.turn = 4;
         let mine = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
@@ -491,7 +491,7 @@ mod r771_give_control_hands_a_card_to_the_other_player {
     }
 
     #[test]
-    fn r771_takes_the_receivers_first_free_zone_when_its_lane_is_taken_and_does_nothing_with_no_room() {
+    fn r1423_takes_the_receivers_first_free_zone_when_its_lane_is_taken_and_does_nothing_with_no_room() {
         let mut state = game();
         let mine = put(&mut state, &plain.id, slot(PlayerId::P1, Row::Units, 1), json!({}));
         put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 1), json!({}));
@@ -509,7 +509,7 @@ mod r771_give_control_hands_a_card_to_the_other_player {
     }
 
     #[test]
-    fn r771_gives_an_enemy_card_back_to_its_controllers_opponent_and_ignores_a_card_off_the_field() {
+    fn r1423_gives_an_enemy_card_back_to_its_controllers_opponent_and_ignores_a_card_off_the_field() {
         let mut state = game();
         let theirs = put(&mut state, &plain.id, slot(PlayerId::P2, Row::Units, 4), json!({}));
         // "The other player" is the card's controller's opponent, whoever runs the effect.

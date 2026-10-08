@@ -127,7 +127,7 @@ pub fn steal(args: StealTarget) -> Effect {
     })
 }
 
-/// R771: give a card on the field to the other player, the mirror of `steal`: the player who
+/// R1423: give a card on the field to the other player, the mirror of `steal`: the player who
 /// controls it now loses it to their opponent, placed per R15 and entering that side per R171
 /// (Meditative #6 Me no Likey gives one of your Units to the enemy, #30 Fickle E-Kitten gives
 /// itself away). The same no-ops as a steal: a card off the field or dormant under a Stack (R13),

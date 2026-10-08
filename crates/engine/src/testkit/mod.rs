@@ -11,7 +11,7 @@
 //!
 //! `seams.rs` (part 32) holds the two test seams TS's tests made from outside the engine: a test-made
 //! work handler (`registerWorkHandler`) and stand-ins for three turn stages (`vi.mock`). `preview.rs`
-//! is R768's preview of a set that does not ship yet.
+//! is R1420's preview of a set that does not ship yet.
 //!
 //! The effects library is not globbed in (its `draw`, `add_to_hand`, `gain_mana`, … share names with
 //! engine functions): a test names `effects::<verb>` or imports the verbs it uses.

@@ -341,7 +341,7 @@ fn check(
             } else if let Some(def) = def
                 && !set_is_open(def.set)
             {
-                // L3 (R768): a card of a set that has not shipped is in the catalog and in no deck.
+                // L3 (R1420): a card of a set that has not shipped is in the catalog and in no deck.
                 errors.push(LoadoutError {
                     rule: LoadoutRule::L3,
                     message: format!(

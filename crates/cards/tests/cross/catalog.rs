@@ -3135,7 +3135,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
 ];
 
 /// Each set's fixture, in catalog order (B2.2).
-/// R768: the Meditative set's rows, transcribed from docs/meditative-set.md's card headers (M6), in
+/// R1420: the Meditative set's rows, transcribed from docs/meditative-set.md's card headers (M6), in
 /// number order with each token after its card. The set does not ship yet: an entry it holds must
 /// equal its row, and a row with no entry is a card still being built, until it ships.
 const MEDITATIVE: &[SpecRow] = &[
@@ -4492,7 +4492,7 @@ const RARITY_COUNTS: &[(&str, &[(&str, usize)])] = &[
             ("Mythic", 3),
         ],
     ),
-    // R768: docs/meditative-set.md M2's distribution, a ceiling until the set ships.
+    // R1420: docs/meditative-set.md M2's distribution, a ceiling until the set ships.
     (
         "Meditative",
         &[
@@ -4528,7 +4528,7 @@ const SET_SIZES: &[SetSize] = &[
         cards: 78,
         tokens: 38,
     },
-    // R768: docs/meditative-set.md M2, a ceiling until the set ships.
+    // R1420: docs/meditative-set.md M2, a ceiling until the set ships.
     SetSize {
         set: "Meditative",
         cards: 99,
@@ -4536,7 +4536,7 @@ const SET_SIZES: &[SetSize] = &[
     },
 ];
 
-/// R768: whether a set ships. A set that does not may hold fewer entries than its fixture and its
+/// R1420: whether a set ships. A set that does not may hold fewer entries than its fixture and its
 /// counts, never more, and none of them counts toward the catalog's totals.
 fn ships(set: &str) -> bool {
     SetName::ALL
@@ -4555,7 +4555,7 @@ fn total_tokens() -> usize {
     SET_SIZES.iter().filter(|size| ships(size.set)).map(|size| size.tokens).sum()
 }
 
-/// The entries of the sets that ship (R768).
+/// The entries of the sets that ship (R1420).
 fn shipped_entries() -> Vec<&'static CardDef> {
     entries().into_iter().filter(|entry| set_ships(entry.set)).collect()
 }
@@ -4700,7 +4700,7 @@ fn fixture_report(set: SetName) -> String {
         .map(|(_, rows)| *rows)
         .unwrap_or_default();
     rows.iter()
-        // R768: a row of a set that has not shipped, with no entry yet, is a card still being built.
+        // R1420: a row of a set that has not shipped, with no entry yet, is a card still being built.
         .filter(|row| set_ships(set) || by_key.contains_key(&key_of(set.as_str(), row.index)))
         .filter_map(|row| {
             let problems = row_problems(set, row, &by_key);
@@ -4747,7 +4747,7 @@ mod catalog_membership_build_m4_t1_b2_1 {
                 assert_eq!(cards, size.cards, "{} cards", size.set);
                 assert_eq!(tokens, size.tokens, "{} tokens", size.set);
             } else {
-                // R768: a set being built holds no more than its brief lists.
+                // R1420: a set being built holds no more than its brief lists.
                 assert!(cards <= size.cards, "{} cards: {cards} of at most {}", size.set, size.cards);
                 assert!(tokens <= size.tokens, "{} tokens: {tokens} of at most {}", size.set, size.tokens);
             }
@@ -4761,7 +4761,7 @@ mod catalog_membership_build_m4_t1_b2_1 {
         for size in SET_SIZES {
             for n in 1..=size.cards {
                 match by_key.get(&key_of(size.set, &n.to_string())) {
-                    // R768: a set that has not shipped need not hold every card yet.
+                    // R1420: a set that has not shipped need not hold every card yet.
                     None if !ships(size.set) => {}
                     None => missing.push(format!("{} #{n} missing", size.set)),
                     Some(entry) if entry.token => {
@@ -4898,11 +4898,11 @@ mod every_classic_plus_entry_equals_its_fixture_row_build_m4_t1_m9_t1 {
     }
 }
 
-mod r768_every_meditative_entry_equals_its_fixture_row_while_the_set_is_built {
+mod r1420_every_meditative_entry_equals_its_fixture_row_while_the_set_is_built {
     use super::*;
 
     #[test]
-    fn r768_every_meditative_entry_equals_its_fixture_row_and_none_is_missing_once_it_ships() {
+    fn r1420_every_meditative_entry_equals_its_fixture_row_and_none_is_missing_once_it_ships() {
         assert_eq!(fixture_report(SetName::Meditative), "");
         if set_ships(SetName::Meditative) {
             let by_key = by_key();
@@ -4937,7 +4937,7 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             if ships(set) {
                 assert_eq!(counted, expected, "{set} rarity counts over its non-token cards");
             } else {
-                // R768: a set being built holds no more of a rarity than its brief lists.
+                // R1420: a set being built holds no more of a rarity than its brief lists.
                 for (rarity, n) in &counted {
                     let most = expected.get(rarity).copied().unwrap_or(0);
                     assert!(*n <= most, "{set}: {n} {rarity} non-token cards, at most {most}");

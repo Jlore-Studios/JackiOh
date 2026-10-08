@@ -1803,7 +1803,7 @@ pub fn patch_paths(repo_root: &Path) -> PatchPaths {
     }
 }
 
-/// `catalog.json` as a patch sees it: its shipped view (R768).
+/// `catalog.json` as a patch sees it: its shipped view (R1420).
 fn read_catalog(path: &Path) -> anyhow::Result<Catalog> {
     let text = fs::read_to_string(path).with_context(|| format!("{} cannot be read", path.display()))?;
     let catalog: Catalog =
@@ -1811,7 +1811,7 @@ fn read_catalog(path: &Path) -> anyhow::Result<Catalog> {
     Ok(shipped_view(catalog))
 }
 
-/// R768: whether a catalog entry's set ships (`SHIPPED_SETS`). An entry whose `set` is no set the
+/// R1420: whether a catalog entry's set ships (`SHIPPED_SETS`). An entry whose `set` is no set the
 /// engine knows is kept, for `catalog check` to name.
 fn entry_ships(entry: &js::Object) -> bool {
     let Some(set) = entry.get("set").and_then(js::Json::as_str) else {
@@ -1823,14 +1823,14 @@ fn entry_ships(entry: &js::Object) -> bool {
     }
 }
 
-/// R768: the catalog a patch ships, every entry of a set that ships, in the file's order. A set the
+/// R1420: the catalog a patch ships, every entry of a set that ships, in the file's order. A set the
 /// catalog holds before it ships is in no snapshot and no fragment claims its cards; the patch that
 /// adds it to `SHIPPED_SETS` claims every one of them at once.
 pub fn shipped_view(catalog: Catalog) -> Catalog {
     catalog.into_iter().filter(|(_, entry)| entry_ships(entry)).collect()
 }
 
-/// R768: `catalog.json`'s text as a snapshot holds it. The text itself when every entry ships, so a
+/// R1420: `catalog.json`'s text as a snapshot holds it. The text itself when every entry ships, so a
 /// history of shipped sets alone is the file byte for byte; otherwise the shipped view written as
 /// the catalog is (two-space JSON and the file's closing newline).
 pub fn shipped_text(raw: &str) -> anyhow::Result<String> {
@@ -2891,11 +2891,11 @@ mod tests {
                 card
             }
 
-            // R768: a set the catalog holds before it ships is no patch's: no fragment claims its
+            // R1420: a set the catalog holds before it ships is no patch's: no fragment claims its
             // cards, `patches check` passes with them unclaimed, and a promotion snapshots the catalog
             // without them, while catalog.json keeps them.
             #[test]
-            fn r768_ships_the_catalog_without_the_cards_of_a_set_that_has_not_shipped() {
+            fn r1420_ships_the_catalog_without_the_cards_of_a_set_that_has_not_shipped() {
                 let temp = TempDir::new("jackioh-ship-unshipped-");
                 let root = temp.path();
                 let dir = root.join("crates/cards/patches");
@@ -2954,7 +2954,7 @@ mod tests {
             }
 
             #[test]
-            fn r768_the_shipped_text_is_the_file_itself_when_every_entry_ships() {
+            fn r1420_the_shipped_text_is_the_file_itself_when_every_entry_ships() {
                 let shipped = json(&catalog_of(vec![in_set(card("aaa", 1), "Core"), card("bbb", 2)]));
                 assert_eq!(crate::patches::shipped_text(&shipped).unwrap(), shipped);
                 let mixed = json(&catalog_of(vec![
@@ -3584,7 +3584,7 @@ mod tests {
         }
 
         /// TS `CATALOG`: the catalog the cards crate compiles in, each entry's fields in order, as a
-        /// patch sees it: its shipped view (R768).
+        /// patch sees it: its shipped view (R1420).
         fn catalog() -> Catalog {
             super::super::shipped_view(
                 serde_json::from_str(jackioh_cards::catalog_json()).expect("crates/cards/catalog.json"),

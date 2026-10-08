@@ -62,7 +62,7 @@ fn is_entry(value: &Value) -> bool {
         && row.contains_key("cost")
 }
 
-/// R768: whether a row's set ships. A row whose `set` names no set the engine knows is left to the
+/// R1420: whether a row's set ships. A row whose `set` names no set the engine knows is left to the
 /// schema checks, so it is kept here.
 fn ships(row: &Value) -> bool {
     match row.get("set").cloned().map(serde_json::from_value::<SetName>) {
@@ -165,7 +165,7 @@ pub fn parse_catalog(text: &str, path: &str) -> Result<Vec<CatalogEntry>> {
         if !is_entry(row) {
             return Err(anyhow!("{path}: entry {i} does not match the M4-T1 card schema"));
         }
-        // R768: a card of a set that has not shipped is not seeded, so no account is granted it
+        // R1420: a card of a set that has not shipped is not seeded, so no account is granted it
         // (0016's grant trigger) until the patch that ships its set.
         if !ships(row) {
             continue;

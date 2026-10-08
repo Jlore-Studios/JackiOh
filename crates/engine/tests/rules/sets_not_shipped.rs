@@ -1,8 +1,8 @@
-//! R768: a set the catalog holds before it ships (`SHIPPED_SETS`), the Meditative set while issue
+//! R1420: a set the catalog holds before it ships (`SHIPPED_SETS`), the Meditative set while issue
 //! #496 builds it. Its cards are in no pool that names no set, in no deck, and in no random deck,
 //! until the patch that lists the set; a pool that names the set, or names its cards, reaches them;
-//! and the testkit's preview opens the set on one thread, as the fuzz tool does. Also R769 (a Prime
-//! pool holds the Prime tokens) and R770 (`anyTags`), the pool pieces the set's cards share.
+//! and the testkit's preview opens the set on one thread, as the fuzz tool does. Also R1421 (a Prime
+//! pool holds the Prime tokens) and R1422 (`anyTags`), the pool pieces the set's cards share.
 //! Fixture definitions only (CLAUDE.md: the engine does not depend on crates/cards).
 
 use jackioh_engine::catalog::{deckable, set_is_open};
@@ -63,18 +63,18 @@ fn meditative(ids: &[String]) -> Vec<String> {
     ids.iter().filter(|id| id.starts_with("meditative-")).cloned().collect()
 }
 
-mod r768_a_set_the_catalog_holds_before_it_ships {
+mod r1420_a_set_the_catalog_holds_before_it_ships {
     use super::*;
 
     #[test]
-    fn r768_the_meditative_set_is_in_the_catalog_and_does_not_ship_yet() {
+    fn r1420_the_meditative_set_is_in_the_catalog_and_does_not_ship_yet() {
         assert!(!set_ships(SetName::Meditative));
         assert!(SHIPPED_SETS.iter().all(|set| CATALOG_SETS.contains(set)));
         assert!(CATALOG_SETS.contains(&SetName::Meditative));
     }
 
     #[test]
-    fn r768_a_pool_that_names_no_set_never_draws_a_card_of_a_set_that_has_not_shipped() {
+    fn r1420_a_pool_that_names_no_set_never_draws_a_card_of_a_set_that_has_not_shipped() {
         setup();
         assert_eq!(meditative(&pool(json!({}))), Vec::<String>::new());
         assert_eq!(meditative(&pool(json!({ "tags": ["CN"] }))), Vec::<String>::new());
@@ -83,7 +83,7 @@ mod r768_a_set_the_catalog_holds_before_it_ships {
     }
 
     #[test]
-    fn r768_a_pool_that_names_the_set_or_its_cards_reaches_them() {
+    fn r1420_a_pool_that_names_the_set_or_its_cards_reaches_them() {
         setup();
         assert_eq!(
             pool(json!({ "set": "Meditative" })),
@@ -96,7 +96,7 @@ mod r768_a_set_the_catalog_holds_before_it_ships {
     }
 
     #[test]
-    fn r768_the_preview_opens_the_set_on_this_thread_until_its_guard_drops() {
+    fn r1420_the_preview_opens_the_set_on_this_thread_until_its_guard_drops() {
         setup();
         {
             let _preview = preview_sets(&[SetName::Meditative]);
@@ -122,7 +122,7 @@ mod r768_a_set_the_catalog_holds_before_it_ships {
     }
 
     #[test]
-    fn r768_no_deck_holds_a_card_of_a_set_that_has_not_shipped_unless_it_is_previewed() {
+    fn r1420_no_deck_holds_a_card_of_a_set_that_has_not_shipped_unless_it_is_previewed() {
         setup();
         let catalog = defs();
         assert!(!deckable(&catalog["meditative-033"]));
@@ -140,7 +140,7 @@ mod r768_a_set_the_catalog_holds_before_it_ships {
     }
 
     #[test]
-    fn r768_the_validator_refuses_a_queued_deck_that_holds_one_under_l3() {
+    fn r1420_the_validator_refuses_a_queued_deck_that_holds_one_under_l3() {
         setup();
         let catalog = defs();
         let mut cards: Vec<String> = (1..=19).map(|n| format!("core-{n:03}")).collect();
@@ -169,11 +169,11 @@ mod r768_a_set_the_catalog_holds_before_it_ships {
     }
 }
 
-mod r769_a_prime_or_ai_pool_holds_its_tokens {
+mod r1421_a_prime_or_ai_pool_holds_its_tokens {
     use super::*;
 
     #[test]
-    fn r769_a_prime_pool_is_the_prime_tokens_of_the_sets_that_ship() {
+    fn r1421_a_prime_pool_is_the_prime_tokens_of_the_sets_that_ship() {
         setup();
         assert_eq!(
             pool(json!({ "tags": ["Prime"] })),
@@ -195,11 +195,11 @@ mod r769_a_prime_or_ai_pool_holds_its_tokens {
     }
 }
 
-mod r770_any_tags_asks_for_at_least_one_of_its_tags {
+mod r1422_any_tags_asks_for_at_least_one_of_its_tags {
     use super::*;
 
     #[test]
-    fn r770_any_tags_is_the_union_where_tags_is_the_intersection() {
+    fn r1422_any_tags_is_the_union_where_tags_is_the_intersection() {
         setup();
         assert_eq!(
             pool(json!({ "anyTags": ["KY", "Book"] })),
@@ -211,7 +211,7 @@ mod r770_any_tags_asks_for_at_least_one_of_its_tags {
             pool(json!({ "anyTags": ["KY", "CN"] })),
             vec!["core-031", "meditative-033", "meditative-034"]
         );
-        // A Prime tag among them takes its tokens, as `tags` does (R769).
+        // A Prime tag among them takes its tokens, as `tags` does (R1421).
         assert_eq!(
             pool(json!({ "anyTags": ["Prime", "Book"] })),
             vec!["classic-003", "classicplus-038-1", "classicplus-046-1", "meditative-045-1"]
@@ -219,11 +219,11 @@ mod r770_any_tags_asks_for_at_least_one_of_its_tags {
     }
 }
 
-mod r772_the_tribal_tags_name_peoples_and_factions {
+mod r1424_the_tribal_tags_name_peoples_and_factions {
     use super::*;
 
     #[test]
-    fn r772_the_tribes_are_human_felinor_ky_cn_and_jlockeed_and_no_family_or_mechanic_tag() {
+    fn r1424_the_tribes_are_human_felinor_ky_cn_and_jlockeed_and_no_family_or_mechanic_tag() {
         assert_eq!(TRIBAL_TAGS, &[Tag::Human, Tag::Felinor, Tag::Ky, Tag::Cn, Tag::Jlockeed]);
         for tag in [Tag::Book, Tag::Fruit, Tag::Pancake, Tag::Ai, Tag::Prime, Tag::Wincon, Tag::Token] {
             assert!(!TRIBAL_TAGS.contains(&tag), "{tag} is no tribe");

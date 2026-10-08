@@ -49,18 +49,18 @@ export type PrintedRarity = Exclude<Rarity, "Token">;
 
 /**
  * §5: Core, Classic and Classic+ ship (R380); Meditative is in the catalog and ships with the last
- * part of its patch (R768); Boss and Boss-X are reserved.
+ * part of its patch (R1420); Boss and Boss-X are reserved.
  */
 export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Boss" | "Boss-X";
 
 /**
  * The sets that ship, in catalog order. A pool that names no set draws from all of them (R380), and
  * a set the catalog holds that is not listed here is in no pool, no deck and no list a player reads
- * until it is (R768).
+ * until it is (R1420).
  */
 export const SHIPPED_SETS = ["Core", "Classic", "Classic+"] as const satisfies readonly SetName[];
 
-/** R768: whether a set ships (`SHIPPED_SETS` lists it). The engine's `set_ships`, mirrored. */
+/** R1420: whether a set ships (`SHIPPED_SETS` lists it). The engine's `set_ships`, mirrored. */
 export function setShips(set: SetName): boolean {
   return (SHIPPED_SETS as readonly SetName[]).includes(set);
 }

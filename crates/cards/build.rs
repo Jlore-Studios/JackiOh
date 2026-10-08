@@ -31,7 +31,7 @@ use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
 /// The set directories under `src/scripts/`, in SPEC §5 order (SURFACE §4.1). A set that has not
-/// shipped yet (R768) has its folder too: its cards are built, tested and registered like any other.
+/// shipped yet (R1420) has its folder too: its cards are built, tested and registered like any other.
 const SETS: [&str; 4] = ["core", "classic", "classic_plus", "meditative"];
 
 /// One card file: its set, its module name, its absolute path and its `ID`.

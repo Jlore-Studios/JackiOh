@@ -209,7 +209,7 @@ static EXCLUDED_IDS: LazyLock<IndexSet<&'static str>> =
     LazyLock::new(|| POOL_EXCLUSIONS.iter().map(|entry| entry.id).collect());
 
 /// Every deck-legal card: the whole catalog minus tokens (§2.6 L3, which `validate_deck` enforces)
-/// minus `POOL_EXCLUSIONS`, of every set, shipped or not: each seed previews every set (R768), so a
+/// minus `POOL_EXCLUSIONS`, of every set, shipped or not: each seed previews every set (R1420), so a
 /// set's cards are fuzzed from the day they land. Sorted by catalog id so the pool a seed shuffles is identical on every
 /// machine and in every process, whatever order the registry handed the defs over.
 pub static FUZZ_POOL: LazyLock<Vec<String>> = LazyLock::new(|| {
@@ -223,12 +223,12 @@ pub static FUZZ_POOL: LazyLock<Vec<String>> = LazyLock::new(|| {
     pool
 });
 
-/// R768: `FUZZ_POOL` with the sets that have not shipped left out, in the same order. The golden
+/// R1420: `FUZZ_POOL` with the sets that have not shipped left out, in the same order. The golden
 /// traces deal from it (`golden.rs`), so a set being built never changes a recorded game's decks:
 /// while every set ships it is `FUZZ_POOL` itself, and the decks are §13.1's.
 pub static SHIPPED_FUZZ_POOL: LazyLock<Vec<String>> = LazyLock::new(|| shipped_only(&FUZZ_POOL));
 
-/// `pool` minus every card of a set that has not shipped (R768).
+/// `pool` minus every card of a set that has not shipped (R1420).
 fn shipped_only(pool: &[String]) -> Vec<String> {
     pool.iter()
         .filter(|id| CATALOG.get(id.as_str()).is_some_and(|def| set_ships(def.set)))
@@ -924,7 +924,7 @@ struct Passed {
 /// One seed through the four assertions: never panic, always terminate by hero death or the R2 cap,
 /// and fold `(seed, log)` to the same hash; a failure names every card in this seed's decks.
 fn fuzz_seed(seed: u32) -> Result<Passed, Failure> {
-    // R768: the fuzz pool is the whole catalog, every set shipped or not, so this worker thread
+    // R1420: the fuzz pool is the whole catalog, every set shipped or not, so this worker thread
     // previews every set for the game, its checks and its replay.
     let _preview = preview_every_set();
     let mut reached: Option<At> = None;
@@ -1084,7 +1084,7 @@ impl Wave {
 // ---------------------------------------------------------------------------------------------
 
 /// Every deck-legal card, sorted, as the gate's FUZZ_POOL (its exclusion list is empty): every set,
-/// shipped or not (R768).
+/// shipped or not (R1420).
 static HANDICAP_POOL: LazyLock<Vec<String>> = LazyLock::new(|| {
     let mut pool: Vec<String> = CATALOG
         .iter()
@@ -1095,7 +1095,7 @@ static HANDICAP_POOL: LazyLock<Vec<String>> = LazyLock::new(|| {
     pool
 });
 
-/// R768: `HANDICAP_POOL` with the sets that have not shipped left out, for the golden traces.
+/// R1420: `HANDICAP_POOL` with the sets that have not shipped left out, for the golden traces.
 pub static SHIPPED_HANDICAP_POOL: LazyLock<Vec<String>> = LazyLock::new(|| shipped_only(&HANDICAP_POOL));
 
 /// Which seat is handicapped, and how.
@@ -1163,7 +1163,7 @@ struct Outcome {
 }
 
 fn play_seed(seed: u32) -> Outcome {
-    // R768: as `fuzz_seed`, every set is previewed for the game on this worker thread.
+    // R1420: as `fuzz_seed`, every set is previewed for the game on this worker thread.
     let _preview = preview_every_set();
     let SeedHandicap { seat, tier, handicap } = handicap_for_seed(seed);
     let game_seed = format!("jackioh-fuzz-handicap-{seed}");
