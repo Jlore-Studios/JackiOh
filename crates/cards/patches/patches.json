@@ -7123,5 +7123,658 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.3.2",
+    "date": "2026-10-08",
+    "title": "Patch v0.3.2: more numbers for Upgrade and Degrade to move",
+    "source": "issue #493",
+    "notes": "111 more declared numbers on 80 cards (B3.4 rule 5, R386): damage, healing, draws, tokens, copies, buffs, Armor and mana given, discounts, set costs, thresholds and Heroic Power's powers, each printed as before, so a Degrade, an Upgrade or KY's Constant now has more to move.",
+    "commits": [
+      "d04709a05db17222b01f8c8ca41ba034861019c7"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-001",
+        "name": "Big D-fender",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-004",
+        "name": "Gary the Gambler",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-005",
+        "name": "Stockpile",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-006",
+        "name": "Mana Well",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-007",
+        "name": "Jewelosco Scarab",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-010",
+        "name": "Rapid Replenish",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-013",
+        "name": "Jlockeed Shredder-10",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-014",
+        "name": "Jlockeed's Weapons",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-015",
+        "name": "Me and Mr Token",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-017",
+        "name": "Flood",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-018",
+        "name": "Bread and Butter",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-021",
+        "name": "Hinder",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-022",
+        "name": "Carnivorous Cube",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-024",
+        "name": "Efficiency Dividend",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-027",
+        "name": "Blood Ridden Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-028",
+        "name": "Knockoff Temu Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-032",
+        "name": "Prem Panther",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-033",
+        "name": "Unstable Clone Machine",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-035",
+        "name": "Lunar Eclipse",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-037",
+        "name": "Gravedigger",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-039",
+        "name": "Recycling Initiative",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-041",
+        "name": "Sheepish",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-044",
+        "name": "True Strike",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-046",
+        "name": "Suppressive Aura",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-047",
+        "name": "Fig of Life",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-051-1",
+        "name": "KY's Empty Notebook",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-053",
+        "name": "Reno",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-054",
+        "name": "Straaza",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-057",
+        "name": "Conjure KY",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-058",
+        "name": "Rush Token Farm",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-059",
+        "name": "Unbiased Immigration",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-060",
+        "name": "Bear Honeypot",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-062",
+        "name": "Friend of Felinors",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-063",
+        "name": "Plastic Surgery",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-064",
+        "name": "Gifted Program",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-065",
+        "name": "Masochism Mask",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-065-1",
+        "name": "Spikey Pillow",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-068",
+        "name": "Twisted Sorcerer",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-069",
+        "name": "Call to Arms",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-070",
+        "name": "Spiteful Stab",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-071",
+        "name": "Intern Stimmy",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-072",
+        "name": "Reminisce",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-073",
+        "name": "Anti-oneshot Armor",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-074",
+        "name": "Adaptive UI",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-075",
+        "name": "Infinite Reserves",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-077",
+        "name": "Professor Curvature",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-078",
+        "name": "/fullsend",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-079",
+        "name": "Twinspell",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-080",
+        "name": "Zao Gao",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-082",
+        "name": "KY's Trial",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-084",
+        "name": "Going Long",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-090-1",
+        "name": "CN-Virus",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-091",
+        "name": "Fed Fauci",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-093-1",
+        "name": "Combo-Fodder",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-094",
+        "name": "Genn's Greed",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-098",
+        "name": "Heroic Power",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-100",
+        "name": "Ceaseless Void",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-t-sheep",
+        "name": "Sheep Token",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-t-coin",
+        "name": "The Coin",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-002",
+        "name": "The Trickster",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-079",
+        "name": "Risky Die",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-012-3",
+        "name": "Fluffy Grip",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-015",
+        "name": "Conjure Rush Token",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-016",
+        "name": "Conjure Rush Token+",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-017",
+        "name": "Conjure Rush Token++",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-019-3",
+        "name": "Mid Loser",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-023",
+        "name": "Dropshipping",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-029",
+        "name": "Portal to the Past",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-032-3",
+        "name": "Blade Storm",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-042-1",
+        "name": "KY's Gift",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-048",
+        "name": "Jlockheed's Lobbyist",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-054",
+        "name": "Book of Books",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-061",
+        "name": "Bauble Bubble",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-063",
+        "name": "Fruit Tree",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-065-1",
+        "name": "Rotten Grape",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-065-2",
+        "name": "Normal Grape",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-065-3",
+        "name": "Large Grape",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-065-5",
+        "name": "Mythic Grape",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-068",
+        "name": "Organic Produce",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-075-1",
+        "name": "J-lease J-Jungle EX-plorer Pack",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      }
+    ]
   }
 ]

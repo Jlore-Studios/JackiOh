@@ -1,8 +1,7 @@
 name: Night bot
 description: The night bot and Squishy themselves. bot/, .harness/, .squishy/ and their workflows.
 title: "Night bot: "
-labels: ["night bot", "human"]
-type: Task
+labels: ["night bot"]
 body:
   - type: markdown
     attributes:
@@ -10,7 +9,7 @@ body:
         Titles and labels follow [docs/issues-and-patches.md](https://github.com/Jlore-Studios/JackiOh/blob/main/docs/issues-and-patches.md); how the bots work is [bot/README.md](https://github.com/Jlore-Studios/JackiOh/blob/main/bot/README.md).
 
         - **Title:** `Night bot: <…>`, for Squishy's work too.
-        - **Who does it:** people. The bots may not change `bot/`, `.harness/`, `.squishy/` or `.github/`, so this form labels the issue `human` and neither bot queues, plans or builds it.
+        - **Who does it:** the bots may not change `bot/`, `.harness/`, `.squishy/` or `.github/`, so choose People for a change there (triage labels it `human`). The night bot can take the rest, such as an investigation or a change elsewhere. Choose below, or later label it `method:manual` (people) or `method:use-bot` (the night bot). Either way triage classifies it: its type (Task, Bug or Feature), labels, title and assignees. The difficulty and priority you choose here become labels too; with no difficulty, the bot's planner rates it.
   - type: textarea
     id: what
     attributes:
@@ -44,4 +43,14 @@ body:
         - high
         - medium
         - low
+      default: 0
+  - type: dropdown
+    id: method
+    attributes:
+      label: Who does it
+      description: "A choice here is a method label: triage then labels, titles, types and assigns the issue, and the night bot queues a `method:use-bot` one. Or decide later and add `method:manual` or `method:use-bot` yourself."
+      options:
+        - Decide later
+        - People (method:manual)
+        - The night bot (method:use-bot)
       default: 0

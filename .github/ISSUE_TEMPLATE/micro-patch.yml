@@ -2,7 +2,6 @@ name: Micro patch
 description: One fix or tweak to the game, named when it ships (Patch v0.3.Y).
 title: "Patch v0.3.Y: "
 labels: ["patch"]
-type: Task
 body:
   - type: markdown
     attributes:
@@ -10,7 +9,7 @@ body:
         **What makes a patch micro** ([docs/issues-and-patches.md](https://github.com/Jlore-Studios/JackiOh/blob/main/docs/issues-and-patches.md), Version numbers; R650): it is small. One fix, one card's numbers or text, or one cosmetic or client tweak, with no new mechanic, keyword, ruling set or feature. Anything larger is a normal patch (the Patch form). If this one grows past that, retitle it `Patch v0.3.X: …`.
 
         - **Title:** `Patch v0.3.Y: <what it does>`. Keep the `Y`: `patches ship` names it when it ships (the newest version plus the next letter, such as v0.3.1b). A micro patch that changes no card data ships no version and keeps its `Y`.
-        - **Who does it:** when it is ready, label it `method:manual` (people) or `method:use-bot` (the night bot). Triage reads it two minutes later.
+        - **Who does it:** choose below, or later label it `method:manual` (people) or `method:use-bot` (the night bot). Either way triage classifies it: its type (Task, Bug or Feature), labels, title and assignees. The difficulty and priority you choose here become labels too; with no difficulty, the bot's planner rates it.
   - type: textarea
     id: change
     attributes:
@@ -34,10 +33,20 @@ body:
     id: priority
     attributes:
       label: Priority
-      description: The night bot's pickup order. Set the matching `priority:*` label too.
+      description: The night bot's pickup order; a choice here becomes its `priority:*` label.
       options:
         - No priority
         - high
         - medium
         - low
+      default: 0
+  - type: dropdown
+    id: method
+    attributes:
+      label: Who does it
+      description: "A choice here is a method label: triage then labels, titles, types and assigns the issue, and the night bot queues a `method:use-bot` one. Or decide later and add `method:manual` or `method:use-bot` yourself."
+      options:
+        - Decide later
+        - People (method:manual)
+        - The night bot (method:use-bot)
       default: 0
