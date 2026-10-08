@@ -6314,6 +6314,11 @@
       }
     },
     "muse": {
+      "infra": {
+        "at": "2026-10-08T22:59:03Z",
+        "reason": "dependency install failed on untouched main (exit 127): \nbash: line 1: rustup: command not found\n",
+        "streak": 1
+      },
       "spent": [
         {
           "at": "2026-10-03T02:14:16Z",
