@@ -3024,6 +3024,13 @@
     "506": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-08T08:17:41Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "Easy-rule line 7 wants a unit test the plan names, and an empty change has nothing to test. Since I can't tell that line holds, it stays at the medium the item already carries."
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-4",
