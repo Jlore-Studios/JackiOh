@@ -4205,11 +4205,11 @@
     "what": "build #518 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-08T18:03:50Z",
+    "at": "2026-10-08T18:14:30Z",
     "notes": [
       "answered a comment on #436 that was never answered",
       "answered a comment on #430 that was never answered",
-      "started a night run, as a lane was free: #529 (hard) is queued to build, for `claude-3`: plan on `claude-3` (claude, `opus`, strong)"
+      "started a night run, as a lane was free: #531 (hard) is queued to build, for `claude-4`: plan on `claude-4` (claude, `opus`, strong)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
