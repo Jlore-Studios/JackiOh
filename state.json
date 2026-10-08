@@ -4006,6 +4006,13 @@
     "562": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-08T15:08:59Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "easy-rule line 1 (small: at most 10 files, 400 lines) is the closest call \u2014 the failing seeds and stages sit in unreachable job logs, so the fix size is unknowable (one card script vs. engine query semantics), and 'cannot tell' forces medium"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
