@@ -161,7 +161,10 @@ pub fn printed_echo(card: &CardInstance, state: &GameState) -> i32 {
                 radiant: card.radiant,
             })
         });
-    let printed = crate::scripts::flags_of(state, card).echo.unwrap_or(0).max(computed);
+    let printed = crate::scripts::flags_of(state, card)
+        .echo
+        .unwrap_or(0)
+        .max(computed);
     // B3.4: Echo X is a numbered keyword Degrade and Upgrade move, read through the card's tuning.
     let own = 0.max(tuned_echo(card, printed));
     own + copied_echo(state, card)

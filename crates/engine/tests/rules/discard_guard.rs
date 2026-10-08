@@ -87,7 +87,12 @@ fn on_sink(state: &mut GameState, call: impl FnOnce(&mut EngineSink<'_>)) -> Vec
 }
 
 fn guarded_backrow(state: &mut GameState, player: PlayerId, lane: i32) -> CardInstance {
-    put(state, &guard().id, slot(player, Row::Backrow, lane), Default::default())
+    put(
+        state,
+        &guard().id,
+        slot(player, Row::Backrow, lane),
+        Default::default(),
+    )
 }
 
 /// How many cards the events say were discarded, and whether a guard reported anything.

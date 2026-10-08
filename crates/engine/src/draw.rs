@@ -817,7 +817,7 @@ pub fn draw_one(sink: &mut EngineSink, player: PlayerId, link: Option<ChainLinkO
         }
         // No card is drawn, so no `drawn` event: the damage instance is what happened (§2.4, R3).
         // R315: `fatigue` announces it first, so the board shows the empty library before the hit
-        // lands; it is a report and answers nothing, like R240's zero-damage one below.
+        // lands; it is a report and answers nothing, like the `damageAbsorbed` below (R1362).
         sink.state.players[player].fatigue_count += 1;
         let fatigue_count = sink.state.players[player].fatigue_count;
         // R457: a draw from an empty library is a draw that happened, and counts toward a limit.
@@ -828,6 +828,12 @@ pub fn draw_one(sink: &mut EngineSink, player: PlayerId, link: Option<ChainLinkO
             count: fatigue_count,
             amount,
         });
+        // R240, R1362: a fatigue draw whose hit the hero's Armor takes whole (§4.4 step 2; step 3's cap
+        // only clamps) still happened — the public count moved and the next one deals more (§10.3) —
+        // and the pipeline reports it itself, by `damageAbsorbed` from no source (R1361), which is a
+        // report and no damage instance: nothing answers it (R63, `triggers::dispatch_event`). It keeps
+        // the place in R68's order that R240's `damage` of 0 had, so such a game folds as it did.
+        let before = sink.events.len();
         let dealt = crate::damage::deal_damage(
             sink,
             crate::damage::DamageArgs {
@@ -837,17 +843,14 @@ pub fn draw_one(sink: &mut EngineSink, player: PlayerId, link: Option<ChainLinkO
                 flags: None,
             },
         );
-        // R240: a fatigue draw whose hit the hero's Armor takes whole (§4.4 step 2; step 3's cap only
-        // clamps) still happened — the public count moved and the next one deals more (§10.3) — so it is
-        // reported by a hit of 0 from no source, which is a report and no damage instance: nothing
-        // answers it (R63, `triggers::dispatch_event`).
-        if dealt <= 0 && sink.state.result.is_none() {
-            sink.events.push(GameEvent::Damage {
-                source_id: None,
-                target_id: format!("hero-{player}"),
-                amount: 0,
-                combat: false,
-            });
+        // The pipeline's report is the last thing the hit emitted (`damage::land_hit`).
+        let at = sink.events.len().saturating_sub(1);
+        if dealt <= 0
+            && sink.state.result.is_none()
+            && at >= before
+            && matches!(sink.events.get(at), Some(GameEvent::DamageAbsorbed { .. }))
+        {
+            crate::triggers::order_report(sink, at);
         }
         return DrawOutcome::Fatigue;
     }

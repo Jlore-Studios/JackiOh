@@ -196,6 +196,7 @@ fn swap_board_now(ctx: &mut EffectContext<'_>) {
                 row: entry.to.row,
                 lane: entry.to.lane,
                 former_id: None,
+                how: None,
             });
         }
     }

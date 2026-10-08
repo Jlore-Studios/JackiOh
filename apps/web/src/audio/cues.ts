@@ -41,6 +41,16 @@
 // Never a Trap (R203), never the sentinel, and never a card cast as it is drawn, whose own sting
 // stands in. And every effect about a unit on the field comes from that unit's lane: `cuesFor`
 // pans it left or right by where the unit stands, which the screen shows both seats alike.
+//
+// MN05 (docs/meditative-set.md M8): Armor and the niche moments, each keyed on what its event
+// already says. R1363: a hit Armor took half or more of (`damage.absorbed * 2 >= absorbed + amount`)
+// clanks dully under its impact, and one Armor took whole (`damageAbsorbed`) rings bright; both come
+// from the unit's lane. R1364: a hit that does far more than the health the view shows the target
+// with is overkill, a crunch on top. R1365: a Brittle crumble, an unlock, a Counter, a fuse, a Nerf
+// and a Buff each have a sound of their own, and a card transformed into a Sheep bleats. R1366: a
+// card taken is a steal and a card handed over a give, as `controlChanged.how` says. None of
+// them varies with a card the viewer cannot read (R203), and a Nerf or a Buff sounds the same
+// whatever it changed (R440).
 
 import type {
   CardType,
@@ -55,9 +65,10 @@ import type {
 } from "@jackioh/shared";
 
 import { themeFor } from "../cards/art/themes.ts";
-import { damageTier, UNIT_SLAM } from "../game/damageFeel.ts";
+import { armorTookHalf, damageTier, UNIT_SLAM } from "../game/damageFeel.ts";
 import { slamStatsOf, slamTier } from "../game/unitSlam.ts";
 import {
+  BLEAT_DELAY_MS,
   BLOOD_BEAN_DEF_ID,
   CARD_EFFECT_DELAY_MS,
   CHAOS_REVEAL_MAX,
@@ -67,6 +78,9 @@ import {
   HINDER_DEF_ID,
   LANE_PAN_MAX,
   NEXT_REFRESH_MODIFIER_ID,
+  OVERKILL_DELAY_MS,
+  OVERKILL_MIN_EXCESS,
+  SHEEP_DEF_IDS,
   STING_DELAY_MS,
   VOICE_DELAY_MS,
   VOICE_PRIORITY,
@@ -189,8 +203,6 @@ function readable(ctx: CueContext, defId: string): CueCard | undefined {
 
 /** A spell's shimmer lands just after the card whoosh, under its cast line (the cast beat). */
 const SPELL_SHIMMER_DELAY_MS = 60;
-/** A crumbling card falls this long after it shatters (B3.3). */
-const CRUMBLE_FALL_DELAY_MS = 70;
 /** A Radiant unit's golden glint lands on top of its summon thud. */
 const RADIANT_GLINT_DELAY_MS = 90;
 
@@ -341,6 +353,57 @@ function impactVariation(_event: Extract<GameEvent, { type: "damage" }>): number
   return Math.random();
 }
 
+/**
+ * R1364: the health a hit's target had before it, as the view the entry was planned against shows it
+ * (a hero's or a unit's on the field: public on both seats), or null when the view shows neither.
+ */
+export function healthBefore(view: PlayerView, targetId: string): number | null {
+  for (const side of [view.you, view.opponent]) {
+    if (targetId === `hero-${side.player}`) return side.hero.health;
+    const unit = side.units.find((u) => u !== null && u.instanceId === targetId);
+    if (unit !== undefined && unit !== null) return unit.health;
+  }
+  return null;
+}
+
+/**
+ * R1364: overkill, a hit that does far more than the health left: what it does beyond that health is
+ * at least OVERKILL_MIN_EXCESS and at least the health itself (a 2-health unit taking 5, a 5 taking 10).
+ */
+export function isOverkill(amount: number, health: number | null): boolean {
+  if (health === null || health <= 0) return false;
+  const beyond = amount - health;
+  return beyond >= Math.max(OVERKILL_MIN_EXCESS, health);
+}
+
+/** The hit's impact, with R1363's clank when Armor took half or more and R1364's crunch when it overkills. */
+function damageCues(event: Extract<GameEvent, { type: "damage" }>, ctx: CueContext): readonly SoundCue[] {
+  if (event.amount <= 0) return NONE;
+  const cues: SoundCue[] = [
+    sfx("impact", { amount: event.amount, impactTier: damageTier(event.amount), variation: impactVariation(event) }),
+  ];
+  if (armorTookHalf(event.absorbed, event.amount)) cues.push(sfx("armorClank"));
+  if (isOverkill(event.amount, healthBefore(ctx.view, event.targetId))) cues.push(sfx("overkill", undefined, OVERKILL_DELAY_MS));
+  return cues;
+}
+
+/**
+ * R1366: the verb the event names (`how`): a card taken is a steal and one handed over a give
+ * (R1423); a card a board move carried across (a swap, a rotation, a rollback) is the plain whoosh.
+ * The field says which way the move went, never which card moved (R203).
+ */
+function controlCues(event: Extract<GameEvent, { type: "controlChanged" }>): readonly SoundCue[] {
+  if (event.how === "steal") return [sfx("steal")];
+  if (event.how === "give") return [sfx("give")];
+  return [sfx("whoosh")];
+}
+
+/** R1365: a transform puffs; into a Sheep the viewer can read, the Sheep bleats as it comes out (R203). */
+function transformCues(event: Extract<GameEvent, { type: "transformed" }>): readonly SoundCue[] {
+  if (event.toDefId === HIDDEN_DEF_ID || !SHEEP_DEF_IDS.includes(event.toDefId)) return [sfx("poof")];
+  return [sfx("poof"), sfx("bleat", undefined, BLEAT_DELAY_MS)];
+}
+
 export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // R204: a unit's play line and a spell's cast line ride its `cardPlayed`, casts included. R203:
   // the viewer's own trap set makes the set sound and says nothing; a hidden card is a plain whoosh.
@@ -369,13 +432,8 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   cardResolved: silent("the effects a card resolves into carry their own events"),
   // R204: a unit an effect puts onto the field without playing it speaks its play line here.
   summoned: { sfx: "summon", cues: summonCues },
-  damage: {
-    sfx: "impact",
-    cues: (event) =>
-      event.amount > 0
-        ? [sfx("impact", { amount: event.amount, impactTier: damageTier(event.amount), variation: impactVariation(event) })]
-        : NONE,
-  },
+  // R1363, R1364: the hit's impact, clanking when Armor took half or more and crunching on overkill.
+  damage: { sfx: "impact", cues: damageCues },
   healthLost: {
     sfx: "drain",
     cues: (event) => (event.amount > 0 ? [sfx("drain", { amount: event.amount })] : NONE),
@@ -432,10 +490,12 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
         ? [sfx("bloodDrain"), sfx("goldBurst", undefined, GOLD_BURST_DELAY_MS)]
         : [sfx("radiant")],
   },
-  transformed: { sfx: "poof", cues: () => [sfx("poof")] },
-  fused: { sfx: "poof", cues: () => [sfx("poof")] },
+  // R1365: a Sheep bleats as it comes out of the puff.
+  transformed: { sfx: "poof", cues: transformCues },
+  fused: { sfx: "fuse", cues: () => [sfx("fuse")] },
   positionSwitched: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
-  controlChanged: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
+  // R1366: a steal or a give says so; a board move carries a card across with a whoosh.
+  controlChanged: { sfx: "whoosh", cues: controlCues },
   rotated: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
   swapped: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
   locked: { sfx: "lock", cues: () => [sfx("lock")] },
@@ -493,11 +553,12 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
   // B5 E1: the announce is the play's own moment; its `cardPlayed` sounds and speaks once it lands.
   cardAnnounced: silent("the play it announces sounds on its cardPlayed; a countered one sounds on countered"),
-  // B5 E1: a Counter snuffs the card out like a called-off attack.
-  countered: { sfx: "cancel", cues: () => [sfx("cancel"), sfx("poof", undefined, SPELL_SHIMMER_DELAY_MS)] },
-  // B5 E2, E16: the card is whisked across the table.
-  stolen: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
-  unlocked: { sfx: "lock", cues: () => [sfx("lock")] },
+  // B5 E1, R1365: a Counter slams the play shut and it fizzles out.
+  countered: { sfx: "counterspell", cues: () => [sfx("counterspell")] },
+  // B5 E2, E16, R1366: the card is snatched across the table.
+  stolen: { sfx: "steal", cues: () => [sfx("steal")] },
+  // R1365: the latch springs open, where `locked` clanked shut.
+  unlocked: { sfx: "unlock", cues: () => [sfx("unlock")] },
   // B3.2: an ability is a small cast; the effects it resolves into carry their own sounds.
   activated: {
     sfx: "spell",
@@ -518,10 +579,11 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
     },
   },
   deanimated: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
-  // B3.3: a crumbling card shatters like glass, then falls: no death line, since nothing killed it.
-  crumbled: { sfx: "death", cues: () => [sfx("shieldShatter"), sfx("death", undefined, CRUMBLE_FALL_DELAY_MS)] },
-  degraded: { sfx: "debuff", cues: () => [sfx("debuff")] },
-  upgraded: { sfx: "buff", cues: () => [sfx("buff")] },
+  // B3.3, R1365: a crumbling card cracks dry and falls apart: no death line, since nothing killed it.
+  crumbled: { sfx: "crumble", cues: () => [sfx("crumble")] },
+  // R1365, R440: a Nerf goes out of tune and a Buff tunes up, whatever the one change was.
+  degraded: { sfx: "degrade", cues: () => [sfx("degrade")] },
+  upgraded: { sfx: "upgrade", cues: () => [sfx("upgrade")] },
   numberChanged: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
   redirected: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
   // B5 E7: a hero's health set outright sounds the way it went, a heal or a drain of the difference.
@@ -539,6 +601,13 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   marked: { sfx: "brand", cues: markCues },
   // R676: a Glitch tears the match: the rollback's rush with a shattering glass over it.
   glitched: { sfx: "whoosh", cues: () => [sfx("whoosh"), sfx("shieldShatter")] },
+
+  // R800: a discard a discard guard stopped: nothing moved, so a soft cancel.
+  discardPrevented: { sfx: "cancel", cues: () => [sfx("cancel")] },
+
+  // ---- Patch v0.3.X (docs/meditative-set.md M8, MN05) ----
+  // R1363: the Armor took the whole hit: a bright ring from the unit's lane (a hero's is centred).
+  damageAbsorbed: { sfx: "armorRing", cues: () => [sfx("armorRing")] },
 };
 
 /**
@@ -550,8 +619,11 @@ function unitOf(event: GameEvent): string | null {
     case "summoned":
       return event.row === "units" ? event.instanceId : null;
     case "damage":
+    case "damageAbsorbed":
     case "healed":
       return event.targetId;
+    case "fused":
+      return event.resultInstanceId;
     case "attackDeclared":
       return event.attackerId;
     case "divineShieldLost":
@@ -564,6 +636,7 @@ function unitOf(event: GameEvent): string | null {
     case "crumbled":
     case "degraded":
     case "upgraded":
+    case "controlChanged":
       return event.instanceId;
     default:
       return null;

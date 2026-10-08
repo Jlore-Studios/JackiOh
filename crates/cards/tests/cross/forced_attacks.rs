@@ -113,6 +113,7 @@ mod r173_a_forced_attack_is_made_on_an_enemy {
             row: Row::Units,
             lane: 5,
             former_id: None,
+            how: None,
         }));
 
         // p2's trap answers p1's play (radiant: any card) and fills p2's board with Rush Tokens. "If it

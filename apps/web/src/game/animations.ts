@@ -725,6 +725,26 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "banner" },
     target: () => testid.banner,
   },
+  // R800: a discard a discard guard stopped — the hand shakes once; nothing leaves it.
+  discardPrevented: {
+    animation: "jk-fatigue",
+    durationMs: 300,
+    testid: "hand-<side>",
+    fx: { recipe: "fizzle" },
+    target: (e, view) => animTestid.hand(sideOf(view, e.player)),
+  },
+  // R1361, R1363 (MN05): the Armor took the whole hit. The target braces with a steel glint and no
+  // number, since nothing was dealt, and the effects layer blooms a shield over it (fx/shield.ts).
+  damageAbsorbed: {
+    animation: "jk-armor-absorb",
+    durationMs: 300,
+    testid: "card-<targetId> | hero-<side>",
+    fx: { recipe: "armor" },
+    target: (e, view) => {
+      const side = heroSide(view, e.targetId);
+      return side !== null ? testid.hero(side) : locateInstance(view, e.targetId);
+    },
+  },
 };
 
 /* ------------------------------------------------------------------------------------------- *

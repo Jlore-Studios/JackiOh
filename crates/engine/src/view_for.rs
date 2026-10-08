@@ -1612,7 +1612,8 @@ fn redact_event(
             rebuild(shown)
         }
 
-        GameEventType::Damage => {
+        // R1361: the report of a hit Armor took whole names what `damage` names, and hides it alike.
+        GameEventType::Damage | GameEventType::DamageAbsorbed => {
             if nullable_at(&shown, "sourceId").is_some_and(|source| hidden(&source)) {
                 hide(&mut shown, &["sourceId"]);
             }

@@ -222,9 +222,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
             echo_x: max_mana_echo(),
             cry: Some(hook(|_ctx| {
                 vec![
-                    damage(json_as(
-                        json!({ "to": { "of": "enemyHero" }, "amount": 2 }),
-                    )),
+                    damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 2 }))),
                     grow_max_mana(),
                 ]
             })),

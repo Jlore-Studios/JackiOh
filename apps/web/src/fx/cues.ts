@@ -29,11 +29,12 @@ import { hasKeyword, type GameEvent, type PlayerView } from "@jackioh/shared";
 import { GLITCH_WORDS } from "../cards/glitch.ts";
 import { ANIMATIONS, animTestid, locateInstance, pileTestid, targetFor, type AnimationEntry, type EntrySlam } from "../game/animations.ts";
 import { sideOf, testid, type Side } from "../game/contract.ts";
-import { damageFeel, damageTier, UNIT_SLAM } from "../game/damageFeel.ts";
+import { armorTookHalf, damageFeel, damageTier, UNIT_SLAM } from "../game/damageFeel.ts";
 import { brandCues } from "./brand.ts";
 import { castOnDrawCues, planCardFx } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
 import { lookOf, TONE_LOOKS, ZONE_DEFAULT, ZONE_LOOKS, type ZoneLook } from "./looks.ts";
+import { shieldCues } from "./shield.ts";
 import {
   FX_ARROWS_TAIL_MS,
   FX_BANNER_TAIL_MS,
@@ -517,9 +518,17 @@ const impact: Recipe = (event, p) => {
     cues.push(burst(particleIntensity, "dust", anchor(p.tgt, FOOT), "area", hit, "impactDust"));
   }
   if (tier === "giga") cues.push(ring(p.D, "dust", viewportCenter(), hit));
+  // R1363: the Armor took half or more of the hit, and a small shield glances up as it lands.
+  if (armorTookHalf(event.absorbed, event.amount)) cues.push(...shieldCues("small", at, p.D, hit, i));
   // B35: the board shakes here, by the tier's shakePx (#57's DAMAGE_FEEL); a Normal hit stays still.
   pushShake(cues, i, traumaForShakePx(feel.shakePx), hit);
   return cues;
+};
+
+/** R1363: the Armor took the whole hit (`damageAbsorbed`), and a full shield blooms over the target. */
+const armor: Recipe = (event, p) => {
+  if (event.type !== "damageAbsorbed") return [];
+  return shieldCues("full", anchor(p.tgt), p.D, 0, p.env.intensity);
 };
 
 const drain: Recipe = (event, p) => {
@@ -782,8 +791,9 @@ const lunge: Recipe = (event, p) => {
 };
 
 const fizzle: Recipe = (event, p) => {
-  // B5 E1: a countered card goes up in smoke; B5 E3: a draw the limit stopped puffs from the deck.
-  if (event.type !== "attackCancelled" && event.type !== "countered" && event.type !== "drawLimited") return [];
+  // B5 E1: a countered card goes up in smoke; B5 E3: a draw the limit stopped puffs from the deck;
+  // R800: a discard a discard guard stopped fizzles over the hand.
+  if (event.type !== "attackCancelled" && event.type !== "countered" && event.type !== "drawLimited" && event.type !== "discardPrevented") return [];
   if (event.type === "countered") return counteredCues(p);
   return [burst(p.env.intensity, "smoke", anchor(p.tgt), "point", 0, "fizzleSmoke")];
 };
@@ -1047,7 +1057,7 @@ function sweepOrder(entry: AnimationEntry, view: PlayerView, side: Side): string
   const sv = side === "you" ? view.you : view.opponent;
   const reached = new Set<string>();
   for (const event of entry.events) {
-    if (event.type === "damage" || event.type === "healed") reached.add(event.targetId);
+    if (event.type === "damage" || event.type === "healed" || event.type === "damageAbsorbed") reached.add(event.targetId);
     else if (event.type === "divineShieldLost") reached.add(event.instanceId);
   }
   const ids: string[] = [];
@@ -1091,16 +1101,22 @@ function sweepCues(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxC
     order.forEach((id, k) => fraction.set(id, order.length > 1 ? k / (order.length - 1) : 0.5));
   }
   for (const event of entry.events) {
-    if (event.type !== "damage" && event.type !== "healed" && event.type !== "divineShieldLost") continue;
+    if (event.type !== "damage" && event.type !== "healed" && event.type !== "divineShieldLost" && event.type !== "damageAbsorbed") {
+      continue;
+    }
     const target = event.type === "divineShieldLost" ? event.instanceId : event.targetId;
     const at = idAnchor(view, target);
     if (at === null) continue;
     const hit = Math.round(D * (FX_FOG_HIT_FROM + (FX_FOG_HIT_TO - FX_FOG_HIT_FROM) * (fraction.get(target) ?? 0.5)));
     if (event.type === "divineShieldLost") {
       cues.push(ring(D, "gold", at, hit), burst(i, "shard", at, "ring", hit, "shieldShard"));
+    } else if (event.type === "damageAbsorbed") {
+      // R1363: the fog reaches a unit whose Armor takes its hit whole, and the shield blooms there.
+      cues.push(...shieldCues("full", at, D, hit, i));
     } else {
       cues.push(burst(i, look.preset, at, "area", hit, "fogHit"));
       if (event.amount > 0) cues.push(splat(D, event.type === "damage" ? "damage" : "heal", event.amount, at, hit));
+      if (event.type === "damage" && armorTookHalf(event.absorbed, event.amount)) cues.push(...shieldCues("small", at, D, hit, i));
     }
   }
   return cues;
@@ -1142,6 +1158,8 @@ const RECIPES: { readonly [R in FxRecipe]: Recipe } = {
   // R437: a mark branded onto its card in the mark's colours (brand.ts).
   brand: (event, p) => brandCues(event, anchor(p.tgt), p.D, p.env.intensity),
   rewind,
+  // R1363: a hit the Armor took whole, a full shield over the target (shield.ts).
+  armor,
 };
 
 /* ------------------------------------------------------------------------------------------- *

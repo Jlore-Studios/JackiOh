@@ -10846,7 +10846,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 0,
+    "loc": 21,
     "base": {
       "keywords": [],
       "text": "Aura: You can't be forced to discard cards during your opponent's turn."
@@ -10877,7 +10877,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 0,
+    "loc": 69,
     "base": {
       "keywords": [],
       "text": "Draw a (0), (1), (2), (3), (4) and (5) Cost Meditative card."
@@ -10915,7 +10915,7 @@
         "min": 1
       }
     ],
-    "loc": 0,
+    "loc": 21,
     "base": {
       "keywords": [],
       "text": "Echo X\nDeal {damage} damage to a Unit. X is {echo|time|times} your max mana."
@@ -10950,7 +10950,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 0,
+    "loc": 39,
     "base": {
       "keywords": [],
       "text": "Give one of your Units to your opponent. If you do, gain mana equal to its cost."
@@ -11004,7 +11004,7 @@
         "min": 1
       }
     ],
-    "loc": 0,
+    "loc": 49,
     "base": {
       "keywords": [],
       "text": "End of turn: Heal your hero and each of your Units {heal}. Draw {draw|card|cards}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
@@ -11035,7 +11035,7 @@
         "tunedOn": "base"
       }
     ],
-    "loc": 0,
+    "loc": 52,
     "base": {
       "keywords": [],
       "text": "Draw {draws|card|cards} with a prime index from your deck."
@@ -11081,7 +11081,7 @@
         "max": 100
       }
     ],
-    "loc": 0,
+    "loc": 37,
     "base": {
       "keywords": [],
       "text": "{chance}% chance: Steal your opponent's hand.\nPaid (1): {paidChance}% instead.\nEnd of turn: Add an API Key Fishing to your hand."

@@ -67,6 +67,7 @@ fn hits(events: &[GameEvent]) -> Vec<(Option<String>, String, i32, bool)> {
                 target_id,
                 amount,
                 combat,
+                ..
             } => Some((source_id.clone(), target_id.clone(), *amount, *combat)),
             _ => None,
         })
