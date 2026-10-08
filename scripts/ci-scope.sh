@@ -5,12 +5,13 @@
 # `full=false` means every file the pull request changes sits on the SKIP list below, which holds
 # only paths that no CI job other than `bot selftest` ever reads (that check has its own workflow and
 # always runs): the night bot's code and its switches, the workflows that run the bot or watch the
-# repo, the agent instruction files (CLAUDE.md, AGENTS.md, GEMINI.md: code cites them in comments
-# and nothing opens them), and the training lanes' prompts and loop (training/*.md, training/loop.sh:
-# Devin and the training box read them, no job does). Nothing a test, a build or a check reads is on
-# the list. The other docs are not: `spec check` reads spec/, the radiant-standard test reads
-# docs/radiant-audit.md, web tests read docs/ and SPEC.md, and the `training gate` job reads
-# training/history/.
+# repo (the pull request title check among them), the agent instruction files (CLAUDE.md, AGENTS.md,
+# GEMINI.md, CONTRIBUTING.md: code cites them in comments and nothing opens them), the repository's
+# meta that only GitHub reads (the issue forms, the pull request template, CODEOWNERS), and the
+# training lanes' prompts and loop (training/*.md, training/loop.sh: Devin and the training box read
+# them, no job does). Nothing a test, a build or a check reads is on the list. The other docs are
+# not: `spec check` reads spec/, the radiant-standard test reads docs/radiant-audit.md, web tests
+# read docs/ and SPEC.md, and the `training gate` job reads training/history/.
 #
 # `db=true` means the pull request also touches what the `db` job tests against a real Postgres
 # (docs/v0.3.0/README.md §7): the migrations, the store, the Dockerfile and render.yaml, plus that
@@ -49,11 +50,13 @@ full=false
 for file in $files; do
   case "$file" in
     bot/* | .harness/* | .squishy/*) ;;
-    CLAUDE.md | AGENTS.md | GEMINI.md) ;;
+    CLAUDE.md | AGENTS.md | GEMINI.md | CONTRIBUTING.md) ;;
+    .github/ISSUE_TEMPLATE/* | .github/pull_request_template.md | .github/CODEOWNERS) ;;
     training/*.md | training/loop.sh) ;;
     .github/workflows/bot-commands.yml | .github/workflows/bot-night.yml | .github/workflows/bot-selftest.yml) ;;
     .github/workflows/squishy-run.yml | .github/workflows/squishy-commands.yml) ;;
     .github/workflows/triage.yml | .github/workflows/deploy-watch.yml | .github/workflows/ci-duration.yml) ;;
+    .github/workflows/pr-title.yml) ;;
     *)
       echo "ci-scope: $file is not on the skip list, running everything" >&2
       full=true

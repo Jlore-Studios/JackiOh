@@ -69,7 +69,7 @@ from harness.trust import TRUSTED_ASSOCIATIONS, Trust
 #: The people a human task goes to.
 HUMANS: tuple[str, ...] = ("MaxGoetzmann", "jgoetzmann")
 #: The type labels (`docs/issues-and-patches.md`): the only ones a pull request gets.
-TYPE_LABELS: tuple[str, ...] = ("patch", "major version", "architecture", "night bot")
+TYPE_LABELS: tuple[str, ...] = config_mod.TYPE_LABELS
 #: Labels only the night bot puts on, besides its `bot:` ones.
 BOT_ONLY: frozenset[str] = frozenset({config_mod.LABEL_READY})
 #: The prefixes of the bots' own labels: this bot's and every other bot's in the repository
@@ -113,6 +113,17 @@ CONVENTION = re.compile(
     r"|v\d+\.\d+\.0(?: \(part \d+ of \d+\))?"
     r"|Night bot|CI|Architecture): \S")
 VERSION = re.compile(r"\bv\d+\.\d+(?:\.(?:\d+|X|Y))?[a-z]?\b")
+#: The titles tools give the pull requests they open, which the title check passes as they are
+#: (`pull_title_ok`): `patches ship: v0.3.1` (patches-ship.yml; several versions joined by ", "),
+#: `Promote main to production: 28 commit(s) up to 6d44be2` (scripts/promote-production.sh, into
+#: `production`) and a training lane's promotion, `AI gen 8 (improve): …` (training/improve.md and
+#: unban.md). The bots' own pull requests take a title that follows the convention (`pull_title`).
+AUTOMATED_PULL = re.compile(
+    r"^(?:patches ship: v\d+\.\d+\.\d+[a-z]?(?:, v\d+\.\d+\.\d+[a-z]?)*$"
+    r"|Promote main to production: \d+ commit\(s\) up to [0-9a-f]{7,40}$"
+    r"|AI gen \d+ \((?:improve|unban)\): \S)")
+#: GitHub's Revert button titles its pull request `Revert "<the reverted pull request's title>"`.
+REVERT = re.compile(r'^Revert "(.+)"$')
 CONVENTIONS_DOC = Path("docs") / "issues-and-patches.md"
 #: How much of the conventions the prompt carries: its Labels, Titles and Version numbers sections.
 CONVENTIONS_CHARS = 8000
@@ -168,6 +179,27 @@ def thread_of(payload: Mapping[str, Any]) -> tuple[dict[str, Any], bool]:
 
 def follows_convention(title: str) -> bool:
     return bool(CONVENTION.match(title.strip()))
+
+
+def pull_title_ok(title: str) -> bool:
+    """Whether a pull request's title may become the squash commit's subject (the title check,
+    `.github/workflows/pr-title.yml`, #187): it follows the convention, it is one a tool gives its
+    own pull requests (`AUTOMATED_PULL`), or it reverts a pull request whose title passes."""
+    text = title.strip()
+    revert = REVERT.match(text)
+    if revert:
+        return pull_title_ok(revert.group(1))
+    return bool(CONVENTION.match(text) or AUTOMATED_PULL.match(text))
+
+
+def pull_title(chosen: str, issue: str) -> str:
+    """The title of the pull request a bot opens for an issue: its builder's when that passes the
+    title check, else the issue's when that does (triage gives a handed-on issue one), else the
+    builder's as it is, which the check then flags for a person to retitle."""
+    for title in (chosen, issue):
+        if title.strip() and pull_title_ok(title):
+            return " ".join(title.split())
+    return chosen.strip() or issue.strip()
 
 
 def methods_on(names: Iterable[str]) -> list[str]:

@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: How issues are titled, labelled and numbered
+    url: https://github.com/Jlore-Studios/JackiOh/blob/main/docs/issues-and-patches.md
+    about: The conventions every issue and pull request follows, for people and agents alike. Read them before you pick a form.

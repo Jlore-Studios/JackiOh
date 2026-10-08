@@ -1,0 +1,76 @@
+# The pull request title check (#187): a pull request's title becomes its squash commit's subject,
+# so it must follow docs/issues-and-patches.md (Titles): `Patch v0.3.X: …`, `Patch v0.3.Y: …`,
+# `vX.Y.0: …`, `Night bot: …`, `CI: …` or `Architecture: …`. The pattern is triage's
+# (`bot/harness/triage.py`'s `CONVENTION`), with the titles tools give their own pull requests
+# (`AUTOMATED_PULL`: `patches ship: v0.3.1`, `Promote main to production: N commit(s) up to abc1234`,
+# a training lane's `AI gen N (lane): …`) and GitHub's `Revert "…"` of a title that passes. The
+# bots title theirs from their issue when the builder's title breaks it (`triage.pull_title`).
+#
+# _target: this repository's workflow and its default branch's Python run, never code from the pull
+# request, and the job reads nothing but the title, from the event, through the environment. It
+# runs again on every edit and push, so the result always belongs to the newest title and head.
+#
+# Not a required check: making it one is branch protection's setting, the owner's call.
+name: pr title
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUTF8: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+
+jobs:
+  title:
+    name: pr title
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout the default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+          sparse-checkout: |
+            bot
+            .harness
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: The title follows docs/issues-and-patches.md
+        working-directory: bot
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import sys
+
+          from harness.triage import pull_title_ok
+
+          title = os.environ["TITLE"]
+          if pull_title_ok(title):
+              print(f"The title follows the convention: {title}")
+              sys.exit(0)
+          print(f"::error title=Pull request title::{title!r} breaks docs/issues-and-patches.md (Titles). "
+                "Retitle it, usually as its issue is: Patch v0.3.X: <what it does> (Y for a micro patch), "
+                "vX.Y.0: <...>, Night bot: <...>, CI: <...> or Architecture: <...>.")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write(f"### The title breaks the convention\n\n`{title}`\n\n"
+                            f"Titles follow [docs/issues-and-patches.md]({os.environ['GITHUB_SERVER_URL']}/"
+                            f"{os.environ['GITHUB_REPOSITORY']}/blob/HEAD/docs/issues-and-patches.md#titles): "
+                            "`Patch v0.3.X: …`, `Patch v0.3.Y: …`, `Patch vX.Y.Z (part n of m): …`, `vX.Y.0: …`, "
+                            "`Night bot: …`, `CI: …` or `Architecture: …`. Edit the title and this check runs again.\n")
+          sys.exit(1)
+          PY

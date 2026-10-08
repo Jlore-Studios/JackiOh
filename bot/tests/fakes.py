@@ -252,6 +252,17 @@ class FakeGitHub:
         self.labels[name] = {"name": name, "color": color, "description": description}
         return True
 
+    def sync_label(self, name: str, color: str, description: str) -> str:
+        found = self.labels.get(name)
+        if found is None:
+            self.labels[name] = {"name": name, "color": color, "description": description}
+            return "created"
+        if (str(found.get("color") or "").lower() == color.lower()
+                and str(found.get("description") or "") == description):
+            return ""
+        found.update(color=color, description=description)
+        return "updated"
+
     # ------------------------------------------------------------------ pull requests
 
     def get_pull(self, number: int) -> dict[str, Any]:

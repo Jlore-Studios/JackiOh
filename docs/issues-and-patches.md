@@ -6,6 +6,12 @@ in [`bot/README.md`](../bot/README.md#labels), and Squishy's `squishy:*` ones (t
 modes `squishy:oneshot`, `squishy:split`, `squishy:split-bot` and a split's parent, `squishy:tree`)
 in [its section](../bot/README.md#squishy).
 
+Open an issue through one of the forms **New issue** lists (`.github/ISSUE_TEMPLATE/`: Patch, Micro
+patch, Bug, Architecture or CI, Night bot): each starts the title, puts on the type labels and sets
+the issue type, and asks for what a builder needs. A pull request starts from
+`.github/pull_request_template.md` ([Pull requests](#pull-requests)). `CONTRIBUTING.md` is the short
+version of this page for people and agents.
+
 ## Labels
 
 Every issue carries at least one type label:
@@ -26,6 +32,9 @@ is Claude Opus's alone), `human` (people do it, such as a decision or any change
 `.harness/` or `.github/`; the bot never queues, plans, builds or labels it), the `priority:*`
 labels (the bot's pickup order), the `method:*` labels and the `bot:*` labels are separate. Never
 add `bot:build` while retitling or relabelling, because it queues a build.
+
+Every label, with its colour and description, is listed once, in `bot/harness/config.py`'s
+`LABELS`: the sweep creates one the repository lacks, and `harness setup` also restores a changed one.
 
 **Who does an issue: the method labels.** An issue is triaged only once a person labels it
 `method:manual` or `method:use-bot` (#307). Two minutes after the label goes on, so a person can
@@ -65,8 +74,8 @@ A pull request has no type.
 | Kind | Title |
 |---|---|
 | Patch | `Patch vX.Y.Z: <what it does>` |
-| Normal patch not shipped yet | `Patch v0.2.X: <what it does>`, the X replaced by the next number once its fragment is made (see Version numbers) |
-| Micro patch | `Patch v0.2.Y: <what it does>`, named when it ships (see Version numbers) |
+| Normal patch not shipped yet | `Patch v0.3.X: <what it does>`, the X replaced by the next number once its fragment is made (see Version numbers) |
+| Micro patch | `Patch v0.3.Y: <what it does>`, named when it ships (see Version numbers) |
 | Revision of a shipped patch | `Patch vX.Y.Zb: <what it does>` |
 | Major version | `vX.Y.0: <what it does>` |
 | Part of a multi-part patch | `Patch vX.Y.Z (part n of m): <what it does>`, or `vX.Y.0 (part n of m): …` |
@@ -74,6 +83,7 @@ A pull request has no type.
 | Tooling | `CI: <…>` or `Architecture: <…>` |
 
 "What it does" is a short phrase, such as `Patch v0.2.4: aimed random casts and the Deft keyword`.
+A pull request takes the same titles ([Pull requests](#pull-requests)).
 Keep a version number as it was given; #290's renames (R743) were not carried into older titles.
 `ci-duration.yml` finds its open issue by its exact title, so leave that title alone. Night bot
 suggestions (`bot:suggestion`) arrive with plain titles, so retitle one when you accept it.
@@ -95,9 +105,9 @@ suggestions (`bot:suggestion`) arrive with plain titles, so retitle one when you
 - **A shipped version never reopens.** A follow-up to it takes the same number plus a letter:
   `vX.Y.Zb`, then `c`, then `d`. This replaces the old `-rN` suffix: #85 renamed the patch history's
   v0.1.0-r1, -r2 and -r3 to v0.1.0b, v0.1.0c and v0.1.0d.
-- **Micro or normal.** A patch is a micro patch, `Patch v0.2.Y: …`, when it is small: one fix, one
+- **Micro or normal.** A patch is a micro patch, `Patch v0.3.Y: …`, when it is small: one fix, one
   card's numbers or text, one cosmetic or client tweak, with no new mechanic, keyword, ruling set or
-  feature. Anything larger is a normal patch, `Patch v0.2.X: …`, which takes the next number (above).
+  feature. Anything larger is a normal patch, `Patch v0.3.X: …`, which takes the next number (above).
   When a micro patch grows past that, retitle it `X`; when a normal one shrinks to one tweak,
   retitle it `Y`.
 - **A micro patch is named when it ships (R650).** `Y` becomes the newest version in `patches.json`
@@ -141,6 +151,40 @@ suggestions (`bot:suggestion`) arrive with plain titles, so retitle one when you
   nothing for players. A change for players after that is a revision (`vX.Y.Zb`).
 - **Moving a part.** A part deferred to another version moves under that version's tracker. Unlink
   it and link it to the new tracker, retitle it, and leave a comment saying why.
+
+## Pull requests
+
+- **Title.** A pull request's title becomes the subject of the squash commit it lands as, so it
+  follows [Titles](#titles), usually as its issue's does. The `pr title` check
+  (`.github/workflows/pr-title.yml`) fails one that doesn't and runs again when it is edited. Its
+  pattern is triage's (`bot/harness/triage.py`, `CONVENTION`), plus the titles tools give their own
+  pull requests (`AUTOMATED_PULL`): `patches ship: v0.3.1` (`patches-ship.yml`),
+  `Promote main to production: N commit(s) up to abc1234` (`scripts/promote-production.sh`), a
+  training lane's `AI gen N (improve): …` or `AI gen N (unban): …`, and GitHub's `Revert "…"` of
+  a title that passes. The bots title theirs from the builder's answer when it follows the
+  convention, else from the issue (`triage.pull_title`), and merge by squash, so their branch
+  commits' subjects (`bot: build pass 1 for #85`) never become one on `main`.
+- **Body.** The template asks for `Closes #n` (a part says `Closes #<part>` and
+  `Part of #<tracker>`), what changed, the tests run, the risks, the rulings added or changed and
+  the patch version, and the gates (CLAUDE.md, Commands).
+- **Review.** `.github/CODEOWNERS` asks MaxGoetzmann and jgoetzmann to review any change to
+  `.github/`, `bot/`, `.harness/` or `.squishy/`, the paths the bots may not change.
+
+## Ruling numbers
+
+A ruling the spec does not make yet takes the next free number (CLAUDE.md rule 3): the last row of
+`spec/INDEX.md` on `main` plus one, as `spec/rulings/R<nnnn>.md`. A number is taken once it is on
+`main`; until then a branch only holds it, and its pull request names it (the template's rulings
+line), so a second branch can see it is in use and take the one after.
+
+When two open pull requests take the same number anyway (#357 and #360 both took R744), the one that
+merges second renumbers before it merges, as #360 did to R745: it merges `main` in, moves its note to
+the next free number (the file name and its `id`), renames its proving tests (`fn r<n>_…`,
+`it("R<n> …")`) and every `R<n>` and `[[R<n>]]` its change cites, and runs `cargo jackioh spec index`
+again for its index row. The clash shows as a conflict on the note and on `spec/INDEX.md`, and
+`cargo jackioh spec check` fails on whatever the renumbering missed: two notes with one `id`, a test
+or a citation with no note, a link to nothing. Numbers on `main` are never reused or renumbered
+(`spec/README.md`).
 
 ## How v0.2.0 was split
 

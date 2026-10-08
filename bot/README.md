@@ -252,6 +252,14 @@ needs level 3.
 
 ## Labels
 
+`harness/config.py`'s `LABELS` is the one list of the repository's labels, each with its colour and
+description (#187): the bot's own below, the type labels (`patch`, `major version`, `architecture`,
+`night bot`, [docs/issues-and-patches.md](../docs/issues-and-patches.md#labels)), `production merge`
+(written as `scripts/promote-production.sh` writes it) and the rest of this table. The sweep creates
+any the repository lacks; `python3 -m harness setup` creates them too and brings a colour or a
+description someone changed by hand back to the list. Squishy's process holds its `squishy:*` labels
+in place of the `bot:*` ones.
+
 | Label | Meaning |
 |---|---|
 | `bot:build` | an issue waiting for a free subscription |
@@ -320,7 +328,10 @@ too (its labels, type, title and links), without queueing or assigning it.
     choose them.
   - **Title:** an issue's title follows `docs/issues-and-patches.md`, but only when its old title
     doesn't already, and only if every version number survives. A pull request keeps its title,
-    which becomes the squash commit's subject, and is never assigned to the bot.
+    which becomes the squash commit's subject, and is never assigned to the bot. The `pr title`
+    check (`pr-title.yml`, #187) holds a pull request's title to the same pattern, `CONVENTION`,
+    plus the titles tools give their own (`AUTOMATED_PULL`, `pull_title_ok`); the bots' pull
+    requests take their builder's title when it passes, else their issue's (`pull_title`).
   - **Type:** an issue gets one of the organisation's issue types (Task, Bug or Feature; read from
     the org, or those three when the token can't read them) if it has none. A pull request has no
     type. GitHub drops a type it won't take without an error, so `apply` reads it back and says so.
@@ -950,7 +961,7 @@ days.
 
    ```sh
    cd bot
-   python3 -m harness setup --repo-settings   # labels, bot-state branch, auto-merge, branch protection
+   python3 -m harness setup --repo-settings   # labels (created, or brought back to config.LABELS), bot-state branch, auto-merge, branch protection
    python3 -m harness doctor                  # says what is still missing
    ```
 
@@ -1078,7 +1089,7 @@ started as Squishy (`tests/squishy_cases.py`, from `tests/test_squishy.py`).
 | `logins.py`, `vault.py` | a subscription's secret written as its CLI's login, or its login on the machine left where it is; a refreshed login kept encrypted |
 | `machine/` | the machine: its setup, its runners, and the starter that wakes it (not part of the `harness` package) |
 | `git.py`, `gates.py` | worktrees, commits, bundles, pushes; the repository's checks |
-| `triage.py` | labels, assigns, titles, types and links (blocked by, blocks, parent) an issue with a method label, a new pull request, or one a person calls it on, from a Muse call (`triage.yml`) |
+| `triage.py` | labels, assigns, titles, types and links (blocked by, blocks, parent) an issue with a method label, a new pull request, or one a person calls it on, from a Muse call (`triage.yml`); the title rule the `pr title` check runs (`pull_title_ok`, `pr-title.yml`) |
 | `easy.py`, `stepup.py` | the easy rule and its checks on a plan and a change; strikes, the step up and the rebuild (#317) |
 | `memory.py` | the machine's memory as its jobs read it, kept for the status issue's line on it (#312) |
 | `threads.py`, `prompts.py`, `verdicts.py` | what the model is told, and reading what it answers |
