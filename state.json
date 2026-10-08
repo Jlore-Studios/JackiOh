@@ -4004,14 +4004,20 @@
       "taken_asks": []
     },
     "562": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-10-08T14:54:44Z",
       "requested_by": "squishy-squooby",
-      "stop_requested": false
+      "run_id": "37797809499",
+      "started_at": "2026-10-08T15:05:58Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "57": {
       "died": 0,
@@ -4174,9 +4180,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-08T14:44:40Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37794855544",
-    "what": "build #560 on muse"
+    "at": "2026-10-08T15:05:58Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37797809499",
+    "what": "plan #562 on muse"
   },
   "last_sweep": {
     "at": "2026-10-08T15:04:49Z",
