@@ -12,6 +12,7 @@ import { AI_GATE_BUDGET, aiToAct } from "@jackioh/ai";
 import type { ActionBody, PlayerId } from "@jackioh/shared";
 
 import { createPracticeCore } from "./core.ts";
+import { memorySaveStore, type PracticeSaveStore } from "./saveStore.ts";
 import type { PracticeDebug, PracticeRequest, PracticeRequestBody, PracticeResponse, PracticeSnapshot } from "./protocol.ts";
 
 const hook = vi.hoisted(() => ({ next: null as ((state: GameState) => void) | null }));
@@ -36,8 +37,8 @@ const AI: PlayerId = "p1";
 
 type Driver = { send(body: PracticeRequestBody): PracticeResponse };
 
-function driver(): Driver {
-  const core = createPracticeCore({ now: () => 0, dev: true, budget: AI_GATE_BUDGET });
+function driver(saves?: PracticeSaveStore): Driver {
+  const core = createPracticeCore({ now: () => 0, dev: true, budget: AI_GATE_BUDGET, ...(saves === undefined ? {} : { saves }) });
   let id = 0;
   return {
     send(body) {
@@ -134,5 +135,30 @@ describe("R679 a voided practice game", () => {
     const done = snapshotOf(conceded.send({ type: "act", action: { type: "concede" } }));
     expect(done.view.result?.reason).toBe("concede");
     expect(done.lastBoard).toBeDefined();
+  });
+});
+
+describe("R768 a voided practice game", () => {
+  it("R768 a voided game leaves nothing to replay, where a conceded one is kept (R679)", { timeout: 60_000 }, () => {
+    const voidedSaves = memorySaveStore();
+    const voided = driver(voidedSaves);
+    const first = opened(voided, "glitch-void");
+    hook.next = (state) => {
+      state.result = { winner: "draw", reason: "voided" };
+    };
+    const over = snapshotOf(voided.send({ type: "act", action: keepAll(first) }));
+    expect(over.view.result?.reason).toBe("voided");
+    expect(voided.send({ type: "replays" })).toMatchObject({ type: "replays", replays: [] });
+    expect(voidedSaves.readReplays()).toEqual([]);
+
+    const concededSaves = memorySaveStore();
+    const conceded = driver(concededSaves);
+    opened(conceded, "glitch-void");
+    conceded.send({ type: "act", action: { type: "concede" } });
+    const listed = conceded.send({ type: "replays" });
+    if (listed.type !== "replays") throw new Error(`expected replays, got ${JSON.stringify(listed).slice(0, 400)}`);
+    expect(listed.replays).toHaveLength(1);
+    expect(listed.replays[0]).toMatchObject({ game: 1, result: "loss" });
+    expect(listed.replays[0]?.unavailable).toBeUndefined();
   });
 });

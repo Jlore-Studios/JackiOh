@@ -24,6 +24,15 @@
 // After a reload the page sends `resume` with the setup it remembers, and the log is folded again
 // through `apply`, action by action, under the same nonces, to the same hash; the AI picks its
 // stream up at the saved cursor.
+//
+// Replays (R768). A free game that has just ended (not a tutorial lesson, and not one Glitch voided,
+// R679) is kept in the same store, the newest PRACTICE_REPLAYS_KEPT of them: its config, its log,
+// the catalog version, the final state's hash, the seat the human ended in and a summary for a list.
+// `replays` answers the summaries, newest first, each marked unavailable with part 1's reason when it
+// was played on another catalog or no longer folds to its hash; `replay` answers a page of the human's
+// steps, `viewFor` of the seat the human played at each step (R677), and the total. Both are refused
+// while a game is in progress. Like the save, a kept game never crosses to the page: a response holds
+// summaries and views, never the log, the seed, the decks or a state.
 
 import { CATALOG_VERSION } from "@jackioh/cards";
 import {
@@ -35,23 +44,29 @@ import {
   legalActions,
   reduce,
   registeredCatalog,
+  replayOpen,
+  replayPage,
   seatPlayedBy,
   viewFor,
+  type FoldInput,
   type GameState,
+  type ReplayOpen,
+  type ReplayRefusal,
   type Rng,
 } from "@jackioh/engine";
 import { AI_DIFFICULTY, AI_TUTORIAL, DECK_SIZE, type Handicap } from "@jackioh/engine/config";
 import { AI_BUDGET, aiToAct, buildAiDeck, decide, type SearchBudget } from "@jackioh/ai";
-import { opponentOf, type Action, type ActionBody, type PlayerId } from "@jackioh/shared";
+import { DEFAULT_PORTRAIT, opponentOf, type Action, type ActionBody, type PlayerId } from "@jackioh/shared";
 
-import { PRACTICE_AI_CLOCK_MS } from "./config.ts";
+import { PRACTICE_AI_CLOCK_MS, PRACTICE_REPLAYS_KEPT } from "./config.ts";
 import { lessonById } from "../tutorial/lessons.ts";
 import { presetById } from "./decks.ts";
-import type { PracticeSave, PracticeSaveStore } from "./saveStore.ts";
+import type { PracticeReplay, PracticeSave, PracticeSaveStore } from "./saveStore.ts";
 import type {
   LastBoardCard,
   PracticeDebug,
   PracticeDeckChoice,
+  PracticeReplayListing,
   PracticeRequest,
   PracticeResponse,
   PracticeSnapshot,
@@ -62,14 +77,15 @@ export type PracticeCoreEnv = {
   /**
    * The wall clock the AI's cap is measured on, in `Date.now()` terms (worker: `Date.now`), because
    * that is the clock the WebAssembly side reads against the deadline. A clock that reads 0 is no
-   * clock: the tests' frozen `() => 0` never stops a search, so a decision is its budget's alone.
+   * clock: the tests' frozen `() => 0` never stops a search, so a decision is its budget's alone. It
+   * is also the time a finished game is kept at (R768).
    */
   now: () => number;
   /** answer `debug` only when true */
   dev: boolean;
   /** default AI_BUDGET */
   budget?: SearchBudget;
-  /** R668: where a free game in progress is kept; absent, nothing is kept and no resume folds. */
+  /** R668, R768: where a free game in progress and the finished ones kept for replay live; absent, nothing is kept, no resume folds and nothing is replayed. */
   saves?: PracticeSaveStore;
 };
 
@@ -94,6 +110,8 @@ type PracticeGame = {
   aiCount: number;
   /** The engine's refusal of the human's last action, until the board moves on. */
   error: string | null;
+  /** R768: its end has been kept (or passed over), so it is kept once. */
+  kept: boolean;
 };
 
 /** R188: the action types the AI never takes on its own, even as a fallback. */
@@ -189,6 +207,7 @@ function startGame(config: PracticeStartConfig): PracticeGame {
     humanCount: 0,
     aiCount: 0,
     error: null,
+    kept: false,
   };
 }
 
@@ -200,6 +219,24 @@ function humanSeatNow(game: PracticeGame): PlayerId {
 /** R677: the seat the AI plays now. */
 function aiSeatNow(game: PracticeGame): PlayerId {
   return seatPlayedBy(game.state, game.aiSeat);
+}
+
+/**
+ * R677, R768: the seat the human played at step `from` of a kept game, and how many steps from
+ * there, up to `count`, it went on playing it. Every logged action was sent as its player's seat
+ * at the step it was taken from (`h…` the human's, `a…` the AI's), and the last step's seat is the
+ * one the game ended in, so a page stops where a Glitch swap moved the human.
+ */
+export function replaySeatRun(log: readonly Action[], endSeat: PlayerId, from: number, count: number): { seat: PlayerId; count: number } {
+  const seatAt = (step: number): PlayerId => {
+    const action = log[step];
+    if (action === undefined) return endSeat;
+    return action.nonce.startsWith("h") ? action.playerId : opponentOf(action.playerId);
+  };
+  const seat = seatAt(from);
+  let run = 1;
+  while (run < count && from + run <= log.length && seatAt(from + run) === seat) run += 1;
+  return { seat, count: run };
 }
 
 /**
@@ -285,6 +322,19 @@ function resumeGame(save: PracticeSave | null, asked: PracticeStartConfig): Prac
   return game;
 }
 
+/** R768: the setup `startGame` deals from the kept config, as a resume does, and the log. */
+function foldInputOf(replay: PracticeReplay): FoldInput {
+  const dealt = startGame(replay.config);
+  return {
+    seed: replay.config.seed,
+    decks: dealt.decks,
+    handicaps: dealt.handicaps,
+    ...(dealt.lastBoards === undefined ? {} : { lastBoards: dealt.lastBoards }),
+    ...(dealt.dealt === undefined ? {} : { dealt: dealt.dealt }),
+    log: replay.log,
+  };
+}
+
 /**
  * The AI's fallback when `decide` gave nothing usable: `endTurn` when legal, else the first legal
  * action the engine accepts, never one R188 forbids.
@@ -299,6 +349,10 @@ function fallbackActions(game: PracticeGame): ActionBody[] {
 export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
   const budget = env.budget ?? AI_BUDGET;
   let game: PracticeGame | null = null;
+  /** R768: each kept game's verdict by number: null when it folds, else part 1's refusal. */
+  const verdicts = new Map<number, ReplayRefusal | null>();
+  /** The kept game opened last, so paging through it folds it once. */
+  let opened: { game: number; open: ReplayOpen } | null = null;
 
   function current(): PracticeGame {
     if (game === null) throw new Error("no practice game is running: send start first");
@@ -341,6 +395,89 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
     throw new Error(`the AI owes an action and the engine accepts none of its legal ones (${lastRefusal})`);
   }
 
+  /**
+   * R768: a free game that has just ended is kept, the newest of the last PRACTICE_REPLAYS_KEPT; a
+   * lesson, or a game Glitch voided (R679: no record is kept of it), is not.
+   */
+  function keepFinished(active: PracticeGame): void {
+    const result = active.state.result;
+    if (active.kept || result === null) return;
+    active.kept = true;
+    const saves = env.saves;
+    if (saves === undefined || active.config.lesson !== undefined || result.reason === "voided") return;
+    const kept = saves.readReplays();
+    const endSeat = humanSeatNow(active);
+    const replay: PracticeReplay = {
+      catalog: CATALOG_VERSION,
+      config: JSON.parse(JSON.stringify(active.config)) as PracticeStartConfig,
+      log: JSON.parse(JSON.stringify(active.log)) as Action[],
+      hash: hashState(active.state),
+      endSeat,
+      summary: {
+        game: Math.max(0, ...kept.map((old) => old.summary.game)) + 1,
+        endedAt: env.now(),
+        result: result.winner === "draw" ? "draw" : result.winner === endSeat ? "win" : "loss",
+        turns: active.state.turn,
+        steps: active.log.length + 1,
+        portraits: { ...(active.config.portraits ?? { p1: DEFAULT_PORTRAIT, p2: DEFAULT_PORTRAIT }) },
+      },
+    };
+    saves.writeReplays([...kept, replay].slice(-PRACTICE_REPLAYS_KEPT));
+  }
+
+  /** R768: a kept game folded once and checked against its catalog and hash; cached by its number. */
+  function openReplay(replay: PracticeReplay): ReplayOpen {
+    const gameId = replay.summary.game;
+    if (opened?.game === gameId) return opened.open;
+    let open: ReplayOpen;
+    if (replay.catalog !== CATALOG_VERSION) {
+      // Refused before any deck is dealt: another catalog may lack a preset the config names.
+      open = { kind: "refused", reason: "earlier_patch" };
+    } else {
+      try {
+        open = replayOpen(foldInputOf(replay), { catalogVersion: replay.catalog, finalHash: replay.hash });
+      } catch {
+        // A setup that no longer deals no longer folds.
+        open = { kind: "refused", reason: "rules_changed" };
+      }
+    }
+    verdicts.set(gameId, open.kind === "ready" ? null : open.reason);
+    opened = { game: gameId, open };
+    return open;
+  }
+
+  function refuseWhilePlaying(): void {
+    if (game !== null && game.state.result === null) throw new Error("replays are not available while a practice game is in progress");
+  }
+
+  function listReplays(): PracticeReplayListing[] {
+    return [...(env.saves?.readReplays() ?? [])].reverse().map((replay) => {
+      let verdict = verdicts.get(replay.summary.game);
+      if (verdict === undefined) {
+        const open = openReplay(replay);
+        verdict = open.kind === "ready" ? null : open.reason;
+      }
+      return {
+        ...replay.summary,
+        portraits: { ...replay.summary.portraits },
+        ...(verdict === null ? {} : { unavailable: verdict }),
+      };
+    });
+  }
+
+  function replayAnswer(id: number, gameId: number, from: number, count: number): PracticeResponse {
+    const replay = env.saves?.readReplays().find((kept) => kept.summary.game === gameId);
+    if (replay === undefined) throw new Error(`no finished practice game ${String(gameId)} is kept on this device`);
+    const open = openReplay(replay);
+    if (open.kind === "refused") throw new Error(`practice game ${String(gameId)} cannot be replayed: ${open.reason}`);
+    if (!Number.isInteger(from) || from < 0 || from >= open.steps || !Number.isInteger(count) || count < 1) {
+      throw new Error(`no step ${String(from)} (${String(count)} asked) in a replay of ${String(open.steps)} steps`);
+    }
+    const run = replaySeatRun(replay.log, replay.endSeat, from, count);
+    const page = replayPage(open.checkpoints, run.seat, from, run.count);
+    return { id, type: "replay", game: gameId, from: page.from, steps: page.steps, total: open.steps };
+  }
+
   function debugOf(active: PracticeGame): PracticeDebug {
     // JSON copies: the in-thread host hands these to the caller by reference, and the live state
     // and log must not be reachable from the page.
@@ -366,6 +503,7 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
 
   function snapshotResponse(id: number, active: PracticeGame): PracticeResponse {
     env.saves?.write(saveOf(active));
+    keepFinished(active);
     return { id, type: "snapshot", snapshot: snapshotOf(active) };
   }
 
@@ -401,6 +539,12 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
         // The card data the setup screen previews decks with, before any game exists (§5.1: the
         // catalog is public). The same map `started` carries.
         return { id: request.id, type: "catalog", defs: registeredCatalog() };
+      case "replays":
+        refuseWhilePlaying();
+        return { id: request.id, type: "replays", replays: listReplays() };
+      case "replay":
+        refuseWhilePlaying();
+        return replayAnswer(request.id, request.game, request.from, request.count);
       case "debug": {
         if (!env.dev) return { id: request.id, type: "failed", message: "debug is available only in a development build" };
         return { id: request.id, type: "debug", debug: debugOf(current()) };

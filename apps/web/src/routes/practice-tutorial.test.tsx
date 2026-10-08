@@ -119,6 +119,11 @@ function routeHost(options: HostOptions = {}): RouteHost {
         case "catalog":
           response = { id: mine, type: "catalog", defs: {} };
           break;
+        case "replays":
+        case "replay":
+          // R768: nothing on screen asks yet.
+          response = { id: mine, type: "failed", message: "this route keeps no replays" };
+          break;
         case "debug":
           response = {
             id: mine,
