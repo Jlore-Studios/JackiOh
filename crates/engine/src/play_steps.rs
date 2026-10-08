@@ -2364,16 +2364,17 @@ fn resolve_repeat(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
 /// three conditions; it runs after the landing because "reached the graveyard" is one of them, and it
 /// is a no-op for everything else the step lands — a permanent, and a Spell that exiled itself (#39).
 ///
-/// R429, R766: and beside the flag, for a Spell whose return keeps its price (#31), the `costMod` it
-/// was played at, which the landing has just taken off it (`resolve::note_return_price`).
+/// R429, R766: and beside the flag, for a Spell whose return keeps its price (#31), the climb its own
+/// returns gave it, which the landing has just wiped with its memory (`resolve::note_return_price`).
 fn finish_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
     // E39, R410, R455 (Classic+ #14 Forever&): a Spell with the return comes back once it has landed.
     let resolving = find_instance(sink.state, &run.instance_id)
         .filter(|card| matches!(card.zone, Zone::Resolving { .. }));
     let landing = resolving.is_some();
-    // R429, R766: the price the card was played at, read before the landing takes it off (R766), for a
-    // return that keeps it (`note_return_price` below).
-    let played_at = resolving.map_or(0, |card| card.cost_mod);
+    // R429, R766 (issue #572): the climb the card carried into its play, read before the landing wipes
+    // it (R78), for a return that keeps it (`note_return_price` below). Only its own returns' price: a
+    // discount or a surcharge it was played at stays behind with the rest of its `costMod` (R766).
+    let played_at = resolving.map_or(0, crate::query::return_price_of);
     let arrived = arrived_during(sink.state, run);
     land_after_resolution(
         sink,
