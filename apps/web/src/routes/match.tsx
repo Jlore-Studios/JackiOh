@@ -237,9 +237,17 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   // R643–R644: the match's emote session. The local seat's sends emit through the socket
   // (`sendEmote`); the opponent's relays land through `match.emote`, whose `seq` bumps on every
   // frame so the same emote twice still notifies. The device setting mutes the opponent live.
+  // R1342: the portraits frame dealt this account its own hand, which follows the seat it plays.
   const globalMuteEmotes = useSetting("muteOpponentEmotes");
+  const ownHand = match.emoteHand;
+  const seatNow = view?.viewer;
+  const hands = useMemo(
+    () => (ownHand === null || seatNow === undefined ? null : { [seatNow]: ownHand }),
+    [ownHand, seatNow],
+  );
   const emotes = useEmotes({
     portraits: match.portraits,
+    hands,
     emit: match.sendEmote,
     engine: getAudioEngine(),
     globalMute: globalMuteEmotes,

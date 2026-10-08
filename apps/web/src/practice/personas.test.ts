@@ -12,8 +12,10 @@
 //     every persona × every EMOTE_REPLY_KEYS row, a dash rolls nothing (and never even draws),
 //     a hit sends a pool member inside AI_EMOTE's 0.8–2.5 s window, and a draw at exactly the
 //     row's chance misses. Silent has no rows anywhere.
-//   - replyKeyOf's grouping of the ten emotes onto the four reply rows (a yawn earns none), and
+//   - replyKeyOf's grouping of the pool's emotes onto the four reply rows (a yawn earns none), and
 //     the issue's extra demand on Polite: none of its pools may hold a taunt emote.
+//   - R1344: each pool is §6's own first, widened by MN03's emoji, and every roll draws only from
+//     what the AI seat's dealt hand holds — a row the hand holds none of sends nothing.
 //   - The session machine: trigger detection across view/event deltas (mulligan end, a turn
 //     started ahead, big hits both ways, top-unit kills both ways, the big play, game over),
 //     the per-turn and per-match caps with the greeting and end emotes exempt, replies firing
@@ -48,6 +50,7 @@ import {
   type AiEmote,
   type EmotePersona,
   type EmoteReplyKey,
+  type EmoteTrigger,
   type PersonaName,
 } from "./personas.ts";
 
@@ -180,7 +183,7 @@ const asIntents = (out: readonly AiEmote[]): { emote: EmoteId; delayMs: number }
 
 const PERSONAS = ["balanced", "polite", "bm", "silent"] as const satisfies readonly PersonaName[];
 
-/** One emote per reply row, for the persona × key table; replyKeyOf itself is pinned on all ten. */
+/** One emote per reply row, for the persona × key table; replyKeyOf itself is pinned on the whole pool. */
 const EMOTE_FOR_KEY: Record<EmoteReplyKey, EmoteId> = {
   greetings: "greetings",
   compliment: "wellPlayed",
@@ -279,7 +282,7 @@ describe("R645 the trigger table", () => {
 // ---------------------------------------------------------------------------------------------
 
 describe("R645 the reply table", () => {
-  it("R645 each of the ten emotes lands on its reply row — a yawn on none", () => {
+  it("R645 R1344 each emote of the pool lands on its reply row — a yawn, a shrug, a thinking face and a gasp on none", () => {
     const expected: Record<EmoteId, EmoteReplyKey | null> = {
       greetings: "greetings",
       wellPlayed: "compliment",
@@ -291,8 +294,22 @@ describe("R645 the reply table", () => {
       oops: "apology",
       sob: "apology",
       yawn: null,
+      wave: "greetings",
+      clap: "compliment",
+      thumbsUp: "compliment",
+      heart: "compliment",
+      salute: "compliment",
+      fire: "taunt",
+      skull: "taunt",
+      cool: "taunt",
+      party: "taunt",
+      facepalm: "apology",
+      sweat: "apology",
+      shrug: null,
+      thinking: null,
+      gasp: null,
     };
-    expect(EMOTE_IDS).toHaveLength(10);
+    expect(EMOTE_IDS).toHaveLength(24);
     for (const emote of EMOTE_IDS) {
       expect(replyKeyOf(emote), emote).toBe(expected[emote]);
     }
@@ -342,8 +359,8 @@ describe("R645 the reply table", () => {
 // ---------------------------------------------------------------------------------------------
 
 describe("R645 polite's pools", () => {
-  it("R645 polite never picks a taunt emote — no threaten, laugh, wahWah, yawn or angry anywhere it may draw", () => {
-    const offLimits: readonly EmoteId[] = ["threaten", "laugh", "wahWah", "yawn", "angry"];
+  it("R645 R1344 polite never picks a taunt emote — no threaten, laugh, wahWah, yawn, angry, fire, skull, cool or party anywhere it may draw", () => {
+    const offLimits: readonly EmoteId[] = ["threaten", "laugh", "wahWah", "yawn", "angry", "fire", "skull", "cool", "party"];
     const pools = [...Object.values(AI_PERSONAS.polite.triggers), ...Object.values(AI_PERSONAS.polite.replies)].map(
       (row) => row.pool,
     );
@@ -733,5 +750,131 @@ describe("R645 caps and the shared gate", () => {
     expect(out).toHaveLength(2);
     expect(out[1]?.emote).toBe("laugh");
     expect(out[1]?.delayMs).toBeGreaterThanOrEqual(AI_EMOTE.delayMinMs + EMOTE_COOLDOWN_MS);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R1344: the persona chooses within the AI seat's dealt hand
+// ---------------------------------------------------------------------------------------------
+
+/** §6's pools as the issue's table gave them, before MN03 widened each with its emoji (R1344). */
+const SECTION_6_POOLS: Record<Exclude<PersonaName, "silent">, Partial<Record<EmoteTrigger | EmoteReplyKey, readonly EmoteId[]>>> = {
+  balanced: {
+    mulliganEnd: ["greetings"],
+    turnStartAhead: ["threaten", "laugh", "yawn"],
+    dealtBigHit: ["laugh", "threaten", "wahWah"],
+    killedTopUnit: ["laugh", "wahWah"],
+    tookBigHit: ["oops", "sob", "angry"],
+    lostTopUnit: ["sob", "angry", "oops"],
+    playerTurnLong: ["yawn"],
+    matchWon: ["wahWah", "laugh", "wellPlayed"],
+    matchLost: ["wellPlayed"],
+    greetings: ["greetings"],
+    compliment: ["thanks"],
+    taunt: ["laugh", "wahWah", "yawn", "threaten"],
+  },
+  polite: {
+    mulliganEnd: ["greetings"],
+    dealtBigHit: ["oops"],
+    tookBigHit: ["wellPlayed", "oops"],
+    lostTopUnit: ["wellPlayed"],
+    playerBigPlay: ["wellPlayed"],
+    matchWon: ["wellPlayed"],
+    matchLost: ["wellPlayed"],
+    greetings: ["greetings"],
+    compliment: ["thanks"],
+    taunt: ["oops", "greetings"],
+    apology: ["thanks"],
+  },
+  bm: {
+    mulliganEnd: ["threaten", "laugh"],
+    turnStartAhead: ["threaten", "laugh", "yawn", "wahWah"],
+    dealtBigHit: ["laugh", "wahWah", "threaten"],
+    killedTopUnit: ["laugh", "wahWah", "yawn"],
+    tookBigHit: ["angry", "threaten"],
+    lostTopUnit: ["angry"],
+    playerTurnLong: ["yawn"],
+    matchWon: ["wahWah", "laugh"],
+    matchLost: ["sob", "angry"],
+    greetings: ["threaten", "laugh"],
+    compliment: ["yawn"],
+    taunt: ["laugh", "wahWah", "yawn", "threaten"],
+    apology: ["laugh", "wahWah"],
+  },
+};
+
+describe("R1344 the persona chooses within its seat's dealt hand", () => {
+  it("R1344 every pool is §6's own emotes first, verbatim, then emoji of the pool alone, none twice", () => {
+    for (const [persona, rows] of Object.entries(SECTION_6_POOLS) as [Exclude<PersonaName, "silent">, (typeof SECTION_6_POOLS)["bm"]][]) {
+      const spec = AI_PERSONAS[persona];
+      const widened: Record<string, readonly EmoteId[]> = {
+        ...Object.fromEntries(Object.entries(spec.triggers).map(([key, row]) => [key, row.pool])),
+        ...Object.fromEntries(Object.entries(spec.replies).map(([key, row]) => [key, row.pool])),
+      };
+      expect(Object.keys(widened).sort(), persona).toEqual(Object.keys(rows).sort());
+      for (const [key, original] of Object.entries(rows)) {
+        const pool = widened[key] ?? [];
+        expect(pool.slice(0, original.length), `${persona}.${key}`).toEqual(original);
+        expect(new Set(pool).size, `${persona}.${key} repeats an emote`).toBe(pool.length);
+        expect(pool.every((emote) => (EMOTE_IDS as readonly string[]).includes(emote)), `${persona}.${key}`).toBe(true);
+      }
+    }
+  });
+
+  it("R1344 a trigger roll picks only from what the hand holds, in the pool's order", () => {
+    // balanced's mulliganEnd is greetings, wave, salute: a hand without greetings greets with a wave.
+    const noGreeting: readonly EmoteId[] = ["oops", "thanks", "threaten", "sob", "wave", "heart", "salute", "party"];
+    expect(rollForTrigger("balanced", "mulliganEnd", low, noGreeting)).toEqual({ emote: "wave", delayMs: AI_EMOTE.delayMinMs });
+    // The far end of the in-hand part: salute.
+    expect(rollForTrigger("balanced", "mulliganEnd", seq(0, 0.999, 0), noGreeting)?.emote).toBe("salute");
+  });
+
+  it("R1344 a hit on a row the hand holds none of sends nothing", () => {
+    const quiet: readonly EmoteId[] = ["wellPlayed", "oops", "thanks", "sob", "yawn", "laugh", "angry", "wahWah"];
+    expect(rollForTrigger("balanced", "mulliganEnd", low, quiet)).toBeNull();
+    // …and the reply table the same: polite's greeting answer is greetings or wave.
+    expect(rollForReply("polite", "greetings", low, quiet)).toBeNull();
+    expect(rollForReply("polite", "greetings", low, ["wave", ...quiet.slice(1)])).toMatchObject({ emote: "wave", key: "greetings" });
+  });
+
+  it("R1344 a session made with a hand sends from that hand alone, greeting and replies included", () => {
+    const hand: readonly EmoteId[] = ["wellPlayed", "oops", "thanks", "sob", "clap", "skull", "salute", "gasp"];
+    const s = createEmotePersona({ persona: "balanced", seat: SEAT, rng: low, hand });
+    const mulligan = view({ phase: "mulligan", mulligan: { youReady: true, opponentReady: true } });
+    expect(asIntents(s.onEvents([], mulligan, view({ active: FOE, turn: 1 }), 1_000))).toEqual([
+      { emote: "salute", delayMs: AI_EMOTE.delayMinMs },
+    ]);
+    // A compliment earns balanced's thanks, which the hand holds (a fresh session, so the greeting's
+    // turn cap does not stand in the way).
+    const replies = createEmotePersona({ persona: "balanced", seat: SEAT, rng: low, hand });
+    expect(replies.onPlayerEmote("wellPlayed", 60_000).map((intent) => intent.emote)).toEqual(["thanks"]);
+    // …and a taunt earns nothing: none of balanced's taunt answers is in this hand.
+    expect(replies.onPlayerEmote("laugh", 90_000)).toEqual([]);
+  });
+
+  it("R1344 over dealt hands, nothing any persona rolls is outside its hand", () => {
+    const hands: readonly (readonly EmoteId[])[] = [
+      ["greetings", "thanks", "threaten", "laugh", "wahWah", "wave", "thumbsUp", "party"],
+      ["wellPlayed", "oops", "thanks", "sob", "clap", "skull", "cool", "gasp"],
+      ["greetings", "oops", "threaten", "yawn", "facepalm", "shrug", "fire", "sweat"],
+      ["wellPlayed", "thanks", "threaten", "angry", "thinking", "heart", "salute", "party"],
+    ];
+    const draws = [0, 0.13, 0.27, 0.41, 0.58, 0.72, 0.86, 0.99];
+    for (const hand of hands) {
+      for (const persona of PERSONAS) {
+        for (const trigger of EMOTE_TRIGGERS) {
+          for (const draw of draws) {
+            const roll = rollForTrigger(persona, trigger, seq(0, draw, 0), hand);
+            if (roll !== null) expect(hand, `${persona} ${trigger}`).toContain(roll.emote);
+          }
+        }
+        for (const emote of EMOTE_IDS) {
+          for (const draw of draws) {
+            const roll = rollForReply(persona, emote, seq(0, draw, 0), hand);
+            if (roll !== null) expect(hand, `${persona} reply to ${emote}`).toContain(roll.emote);
+          }
+        }
+      }
+    }
   });
 });

@@ -142,6 +142,8 @@ export type GameAim = { emit: (aim: Aim | null) => void; opponent: Aim | null };
  */
 export type GameEmotes = {
   portraitOf: (player: PlayerId) => PortraitId;
+  /** R1341, R1343: the seat's dealt emote hand, which its menu shows. */
+  handOf: (player: PlayerId) => readonly EmoteId[];
   visible: (player: PlayerId) => EmoteShow | null;
   send: (player: PlayerId, emote: EmoteId) => boolean;
   gate: (player: PlayerId) => EmoteGate;
@@ -517,6 +519,8 @@ export default function Game({
       const player = sideView(shown, side).player;
       return {
         portrait: emotes.portraitOf(player),
+        // R1343: the menu offers the viewer's own hand, the eight the session will send.
+        hand: emotes.handOf(shown.viewer),
         show: emotes.visible(player),
         menu: emoteMenu?.side === side ? (side === "you" ? "emotes" : "mute") : null,
         muted: emotes.muted(player),

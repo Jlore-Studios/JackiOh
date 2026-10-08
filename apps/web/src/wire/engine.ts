@@ -31,6 +31,7 @@ export { createRng, type Rng } from "./rng.ts";
 export {
   beginGame,
   createGame,
+  dealEmoteHand,
   findInstance,
   fold,
   hashState,

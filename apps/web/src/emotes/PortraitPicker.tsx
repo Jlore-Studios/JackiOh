@@ -1,5 +1,6 @@
 // The deck builder's portrait picker (issue §8, R641): the deck's current portrait, and on tap a
-// grid of all six. Each tile has a Preview button that lists that portrait's ten emotes, and a
+// grid of all six. Each tile has a Preview button that lists the whole pool in that portrait's
+// voice — its five voice lines and the nineteen emoji, any of which a game may deal (R1343) — and a
 // press on one plays it exactly as in a match — the voice channel's line plus the speech bubble
 // for a voice emote, the effects channel's synth plus the sticker for an emoji. Picking a tile
 // reports the id; the caller saves it through the deck store's usual upsert (D5).
@@ -19,15 +20,7 @@ import { EmojiArt, EMOJI_LABEL } from "./EmojiArt.tsx";
 import { emoteShowInfo, playEmote } from "./play.ts";
 import { PORTRAIT_DEFS } from "./portraits.ts";
 import type { EmoteShow as EmoteShowState } from "./session.ts";
-import { EmoteShow } from "./ui.tsx";
-
-const VOICE_LABEL: Record<(typeof VOICE_EMOTE_IDS)[number], string> = {
-  greetings: "Greetings",
-  wellPlayed: "Well Played",
-  oops: "Oops",
-  thanks: "Thanks",
-  threaten: "Threaten",
-};
+import { EmoteShow, VOICE_LABEL } from "./ui.tsx";
 
 /** One portrait's tile: its oval art, name and flavour, and the pick/preview controls. */
 function PortraitTile({

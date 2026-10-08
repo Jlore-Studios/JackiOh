@@ -18,7 +18,10 @@ export type SfxId =
   | "sting"
   // Patch v0.3.X (MN05): Armor's clank and ring (R1363), and the niche moments (R1364–R1366).
   | "armorClank" | "armorRing" | "overkill" | "crumble" | "unlock" | "steal" | "give" | "counterspell" | "bleat" | "fuse"
-  | "degrade" | "upgrade";
+  | "degrade" | "upgrade"
+  // Patch v0.3.X (MN03, #545, R1345): the fourteen new emoji emotes, synthesized like the five.
+  | "emoteWave" | "emoteClap" | "emoteThumbsUp" | "emoteFacepalm" | "emoteShrug" | "emoteThinking" | "emoteHeart"
+  | "emoteFire" | "emoteSkull" | "emoteSweat" | "emoteCool" | "emoteGasp" | "emoteSalute" | "emoteParty";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`, which follows the

@@ -330,6 +330,13 @@ pub fn find_instance(state_json: &str, instance_id: &str) -> Result<String, JsEr
     to_json(&engine::find_instance(&state, instance_id))
 }
 
+/// `EmoteId[]`: the emote hand `seat` is dealt in the game seeded `seed` (R1341), so hotseat and
+/// practice deal both seats exactly as the server's match actor does (R1342).
+#[wasm_bindgen]
+pub fn deal_emote_hand(seed: &str, seat: &str) -> Result<String, JsError> {
+    to_json(&engine::deal_emote_hand(seed, player(seat)?))
+}
+
 // ---------------------------------------------------------------------------------------------
 // The AI (SURFACE §9)
 // ---------------------------------------------------------------------------------------------
