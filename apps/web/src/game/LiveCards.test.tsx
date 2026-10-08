@@ -7,7 +7,7 @@
 // the catalog alone.
 
 import { CATALOG } from "@jackioh/cards";
-import type { BackrowView, CardDef, GameEvent, HeroPowerView, PlayerView } from "@jackioh/shared";
+import { fillParams, type BackrowView, type CardDef, type GameEvent, type HeroPowerView, type PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -283,7 +283,7 @@ describe("R243 a Vanilla unit is marked, and its preview says its text is gone",
     expect(text(root, ".cf-vanilla-word")).toBe("Vanilla");
     const preview = hover(root);
     expect(text(preview, ".card-text")).toBe(VANILLA_TEXT);
-    expect(text(preview, `[data-testid="${INSPECT_PRINTED}"]`)).toContain(def("core-091").base.text);
+    expect(text(preview, `[data-testid="${INSPECT_PRINTED}"]`)).toContain(fillParams(def("core-091"), "base"));
   });
 
   it("a Vanilla backrow card's face is marked, and its preview says its text is gone", () => {
