@@ -4888,14 +4888,18 @@
         {
           "at": "2026-10-08T22:42:47Z",
           "minutes": 6.8
+        },
+        {
+          "at": "2026-10-08T22:49:43Z",
+          "minutes": 12.0
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-09T03:30:00Z",
-          "utilization": 0.4
+          "utilization": 0.41
         },
-        "observed_at": "2026-10-08T22:42:47Z",
+        "observed_at": "2026-10-08T22:49:43Z",
         "status": "allowed"
       }
     },
