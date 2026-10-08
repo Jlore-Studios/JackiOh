@@ -3130,6 +3130,8 @@
       "run_id": "37750523996",
       "started_at": "2026-10-08T08:33:21Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": []
     },
     "509": {
