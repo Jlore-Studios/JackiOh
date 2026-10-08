@@ -67,7 +67,7 @@ use std::time::Instant;
 use anyhow::bail;
 use indexmap::{IndexMap, IndexSet};
 use jackioh_cards::{CATALOG, register_all};
-use jackioh_engine::testkit::{I6_GATE_STRIDE, create_invariant_monitor};
+use jackioh_engine::testkit::{I6_GATE_STRIDE, create_invariant_monitor, preview_every_set, set_ships};
 use jackioh_engine::{
     AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, CreateGameOptions, DECK_SIZE, Difficulty,
     FoldArgs, GameState, Handicap, PerPlayerOpt, Phase, PlayerId, Rng, TURN_CAP_PLAYER_TURNS, Tag,
@@ -209,7 +209,8 @@ static EXCLUDED_IDS: LazyLock<IndexSet<&'static str>> =
     LazyLock::new(|| POOL_EXCLUSIONS.iter().map(|entry| entry.id).collect());
 
 /// Every deck-legal card: the whole catalog minus tokens (§2.6 L3, which `validate_deck` enforces)
-/// minus `POOL_EXCLUSIONS`. Sorted by catalog id so the pool a seed shuffles is identical on every
+/// minus `POOL_EXCLUSIONS`, of every set, shipped or not: each seed previews every set (R1420), so a
+/// set's cards are fuzzed from the day they land. Sorted by catalog id so the pool a seed shuffles is identical on every
 /// machine and in every process, whatever order the registry handed the defs over.
 pub static FUZZ_POOL: LazyLock<Vec<String>> = LazyLock::new(|| {
     let mut pool: Vec<String> = CATALOG
@@ -221,6 +222,19 @@ pub static FUZZ_POOL: LazyLock<Vec<String>> = LazyLock::new(|| {
     pool.sort();
     pool
 });
+
+/// R1420: `FUZZ_POOL` with the sets that have not shipped left out, in the same order. The golden
+/// traces deal from it (`golden.rs`), so a set being built never changes a recorded game's decks:
+/// while every set ships it is `FUZZ_POOL` itself, and the decks are §13.1's.
+pub static SHIPPED_FUZZ_POOL: LazyLock<Vec<String>> = LazyLock::new(|| shipped_only(&FUZZ_POOL));
+
+/// `pool` minus every card of a set that has not shipped (R1420).
+fn shipped_only(pool: &[String]) -> Vec<String> {
+    pool.iter()
+        .filter(|id| CATALOG.get(id.as_str()).is_some_and(|def| set_ships(def.set)))
+        .cloned()
+        .collect()
+}
 
 static CARD_NAMES: LazyLock<IndexMap<String, String>> = LazyLock::new(|| {
     CATALOG
@@ -241,8 +255,13 @@ fn describe_card(id: &str) -> String {
 /// `validate_deck`'s "no duplicate card ids" (§2.6 L3) holds by construction for both decks, and a
 /// reported seed rebuilds its exact deck pair with no other input.
 pub fn decks_for_seed(seed: u32) -> (Vec<String>, Vec<String>) {
+    decks_for_seed_from(seed, &FUZZ_POOL)
+}
+
+/// `decks_for_seed` over another pool: the golden traces deal seed k from `SHIPPED_FUZZ_POOL`.
+pub fn decks_for_seed_from(seed: u32, pool: &[String]) -> (Vec<String>, Vec<String>) {
     let mut rng = Rng::new(&format!("jackioh-fuzz-decks-{seed}"), 0);
-    let shuffled = rng.shuffle(FUZZ_POOL.as_slice());
+    let shuffled = rng.shuffle(pool);
     let size = usize::try_from(DECK_SIZE).unwrap_or(0);
     (shuffled[..size].to_vec(), shuffled[size..size * 2].to_vec())
 }
@@ -905,6 +924,9 @@ struct Passed {
 /// One seed through the four assertions: never panic, always terminate by hero death or the R2 cap,
 /// and fold `(seed, log)` to the same hash; a failure names every card in this seed's decks.
 fn fuzz_seed(seed: u32) -> Result<Passed, Failure> {
+    // R1420: the fuzz pool is the whole catalog, every set shipped or not, so this worker thread
+    // previews every set for the game, its checks and its replay.
+    let _preview = preview_every_set();
     let mut reached: Option<At> = None;
     let caught = panic::catch_unwind(AssertUnwindSafe(|| -> Result<Passed, FuzzFailure> {
         // 1. never panic
@@ -1061,7 +1083,8 @@ impl Wave {
 // The handicapped wave (fuzz-handicap.test.ts)
 // ---------------------------------------------------------------------------------------------
 
-/// Every deck-legal card, sorted, as the gate's FUZZ_POOL (its exclusion list is empty).
+/// Every deck-legal card, sorted, as the gate's FUZZ_POOL (its exclusion list is empty): every set,
+/// shipped or not (R1420).
 static HANDICAP_POOL: LazyLock<Vec<String>> = LazyLock::new(|| {
     let mut pool: Vec<String> = CATALOG
         .iter()
@@ -1071,6 +1094,9 @@ static HANDICAP_POOL: LazyLock<Vec<String>> = LazyLock::new(|| {
     pool.sort();
     pool
 });
+
+/// R1420: `HANDICAP_POOL` with the sets that have not shipped left out, for the golden traces.
+pub static SHIPPED_HANDICAP_POOL: LazyLock<Vec<String>> = LazyLock::new(|| shipped_only(&HANDICAP_POOL));
 
 /// Which seat is handicapped, and how.
 #[derive(Clone, Copy, Debug)]
@@ -1106,8 +1132,17 @@ pub(crate) fn handicap_decks_for_seed(
     seat: PlayerId,
     handicap: &Handicap,
 ) -> (Vec<String>, Vec<String>) {
-    let shuffled =
-        Rng::new(&format!("jackioh-fuzz-handicap-decks-{seed}"), 0).shuffle(HANDICAP_POOL.as_slice());
+    handicap_decks_for_seed_from(seed, seat, handicap, &HANDICAP_POOL)
+}
+
+/// `handicap_decks_for_seed` over another pool: the golden traces deal from `SHIPPED_HANDICAP_POOL`.
+pub(crate) fn handicap_decks_for_seed_from(
+    seed: u32,
+    seat: PlayerId,
+    handicap: &Handicap,
+    pool: &[String],
+) -> (Vec<String>, Vec<String>) {
+    let shuffled = Rng::new(&format!("jackioh-fuzz-handicap-decks-{seed}"), 0).shuffle(pool);
     let big_size = usize::try_from(handicap.deck_size).unwrap_or(0);
     let small_size = usize::try_from(DECK_SIZE).unwrap_or(0);
     let big = shuffled[..big_size].to_vec();
@@ -1128,6 +1163,8 @@ struct Outcome {
 }
 
 fn play_seed(seed: u32) -> Outcome {
+    // R1420: as `fuzz_seed`, every set is previewed for the game on this worker thread.
+    let _preview = preview_every_set();
     let SeedHandicap { seat, tier, handicap } = handicap_for_seed(seed);
     let game_seed = format!("jackioh-fuzz-handicap-{seed}");
     let decks = handicap_decks_for_seed(seed, seat, &handicap);

@@ -38,6 +38,7 @@ export type Tag =
   | "Catalyst"
   | "Prime"
   | "Acclaimed"
+  | "Wincon"
   | "Token";
 
 /** §8: Core's by mechanical complexity, Classic's and Classic+'s the designer's; every token carries "Token". */
@@ -46,11 +47,36 @@ export type Rarity = "Common" | "Rare" | "Epic" | "Legendary" | "Mythic" | "Toke
 /** A rarity a card prints: every rarity but Token. A token's printed one is display only (B2.5). */
 export type PrintedRarity = Exclude<Rarity, "Token">;
 
-/** §5: Core, Classic and Classic+ ship (R380); Boss and Boss-X are reserved. */
-export type SetName = "Core" | "Classic" | "Classic+" | "Boss" | "Boss-X";
+/**
+ * §5: Core, Classic and Classic+ ship (R380); Meditative is in the catalog and ships with the last
+ * part of its patch (R1420); Boss and Boss-X are reserved.
+ */
+export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Boss" | "Boss-X";
 
-/** The sets that ship, in catalog order. A pool that names no set draws from all of them (R380). */
+/**
+ * The sets that ship, in catalog order. A pool that names no set draws from all of them (R380), and
+ * a set the catalog holds that is not listed here is in no pool, no deck and no list a player reads
+ * until it is (R1420).
+ */
 export const SHIPPED_SETS = ["Core", "Classic", "Classic+"] as const satisfies readonly SetName[];
+
+/** R1420: whether a set ships (`SHIPPED_SETS` lists it). The engine's `set_ships`, mirrored. */
+export function setShips(set: SetName): boolean {
+  return (SHIPPED_SETS as readonly SetName[]).includes(set);
+}
+
+/**
+ * R1371: the newest set that ships, the last entry of `SHIPPED_SETS`: Classic+ until the Meditative
+ * set ships. The engine's `newest_shipped_set`, mirrored, so "More cards from the newest set" names
+ * the set it leans on (R1372, R1373) without ever writing one down. Which set a deck leans on is
+ * still the dealer's to resolve: the server's for All Random, the practice worker's for its random
+ * deck.
+ */
+export function newestShippedSet(): SetName {
+  const newest = SHIPPED_SETS[SHIPPED_SETS.length - 1];
+  if (newest === undefined) throw new Error("SHIPPED_SETS lists no set");
+  return newest;
+}
 
 /** §5: 0 to 6, 100 (Ceaseless Void), X, or "A embiggen B". */
 export type CardCost = number | "X" | { base: number; embiggen: number };

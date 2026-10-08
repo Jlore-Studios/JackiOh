@@ -10,6 +10,11 @@
 # `gh workflow run triage.yml -f number=<n>`: an issue with no method label (one triage already
 # answered) is classified again without one.
 #
+# An issue a trusted person opens through an issue form (.github/ISSUE_TEMPLATE/) gets its
+# Difficulty, Priority and Who does it answers as labels (`form`), the method label last, and then
+# a dispatch of this workflow on it: labels put on with this workflow's own token start no
+# workflow, so the dispatch stands in for the `labeled` event a person's method label sends.
+#
 # gate -> classify -> apply. Only classify runs a model, on Muse's runner on the bot's machine
 # (night-vm-muse; it ran on Devin's until #317), and it holds no write token: it reads the thread's
 # title and body through the API and writes the answer as an artifact. apply, on GitHub's runner,
@@ -22,7 +27,7 @@ name: triage
 on:
   # A label set while the issue is being opened sends `labeled` too.
   issues:
-    types: [labeled]
+    types: [labeled, opened]
   # _target: this repository's workflow runs, never code from the pull request.
   pull_request_target:
     types: [opened]
@@ -161,3 +166,54 @@ jobs:
           if [ "${FROM_DISPATCH}" = "true" ]; then flag="--asked"; fi
           python3 -m harness triage apply --number "${NUMBER}" \
             --verdict "$RUNNER_TEMP/triage/verdict.json" ${flag}
+
+  # An issue form's dropdowns as labels (`triage.form_labels`), then triage on it when one of them
+  # is a method. Only for an author the gate would trust by association; the body reaches Python
+  # through the environment, never the script.
+  form:
+    name: form
+    if: >-
+      github.event_name == 'issues' && github.event.action == 'opened' &&
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.issue.author_association)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write          # the form's labels
+      actions: write         # the dispatch of this workflow
+    steps:
+      - name: Checkout the default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Label the form's answers and hand it to triage
+        working-directory: bot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
+          BODY: ${{ github.event.issue.body }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          mapfile -t labels < <(python3 -c 'import os; from harness.triage import form_labels; print("\n".join(form_labels(os.environ.get("BODY", ""))))')
+          method=""
+          for label in "${labels[@]}"; do
+            [ -n "$label" ] || continue
+            case "$label" in method:*) method="$label"; continue ;; esac
+            gh issue edit "$NUMBER" -R "$REPO" --add-label "$label"
+            echo "form: #$NUMBER labelled $label"
+          done
+          if [ -z "$method" ]; then
+            echo "form: #$NUMBER chose no method; a person's method label starts triage"
+            exit 0
+          fi
+          gh issue edit "$NUMBER" -R "$REPO" --add-label "$method"
+          gh workflow run triage.yml -R "$REPO" --ref "$DEFAULT_BRANCH" -f number="$NUMBER"
+          echo "form: #$NUMBER labelled $method and handed to triage"

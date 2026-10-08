@@ -189,8 +189,10 @@ export {
   fillParams,
   hasKeyword,
   keywordKey,
+  newestShippedSet,
   opponentOf,
   paramPlaceholders,
+  setShips,
 } from "./catalog.ts";
 
 export * from "./codes.ts";

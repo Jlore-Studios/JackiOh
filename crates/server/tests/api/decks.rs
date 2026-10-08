@@ -1388,6 +1388,17 @@ mod read_mode_choice_r257 {
             read(json!({ "mode": "random", "deckId": "whatever" })).ok(),
             Some(json!({ "mode": "random" }))
         );
+        // R1372: All Random's own field, the player's lean; absent, null or false is off.
+        assert_eq!(
+            read(json!({ "mode": "random", "leanNewest": true })).ok(),
+            Some(json!({ "mode": "random", "leanNewest": true }))
+        );
+        for off in [json!(false), Value::Null] {
+            assert_eq!(
+                read(json!({ "mode": "random", "leanNewest": off })).ok(),
+                Some(json!({ "mode": "random" }))
+            );
+        }
     }
 
     #[test]
@@ -1710,6 +1721,13 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
                 .await
                 .expect("frozen"),
             json!({ "mode": "random" })
+        );
+        // R1372: nothing but the player's lean, which waits for the deal.
+        assert_eq!(
+            freeze(&ctx.app, PROFILE, json!({ "mode": "random", "leanNewest": true }))
+                .await
+                .expect("frozen"),
+            json!({ "mode": "random", "leanNewest": true })
         );
     }
 }

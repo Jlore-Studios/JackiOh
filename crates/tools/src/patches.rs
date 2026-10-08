@@ -63,6 +63,7 @@ use self::patches_io::{
     read_shipped, read_snapshot, rebuild_derived, remove_file, snapshot_path, write_json,
 };
 use self::versions::resolve_version;
+use jackioh_engine::wire::{SetName, set_ships};
 
 /// The repository root, from this crate's own manifest directory (`crates/tools`), resolved at
 /// compile time: TS's `REPO_ROOT` (`new URL("../../../", import.meta.url)`).
@@ -1802,9 +1803,49 @@ pub fn patch_paths(repo_root: &Path) -> PatchPaths {
     }
 }
 
+/// `catalog.json` as a patch sees it: its shipped view (R1420).
 fn read_catalog(path: &Path) -> anyhow::Result<Catalog> {
     let text = fs::read_to_string(path).with_context(|| format!("{} cannot be read", path.display()))?;
-    serde_json::from_str(&text).with_context(|| format!("{} is not a catalog", path.display()))
+    let catalog: Catalog =
+        serde_json::from_str(&text).with_context(|| format!("{} is not a catalog", path.display()))?;
+    Ok(shipped_view(catalog))
+}
+
+/// R1420: whether a catalog entry's set ships (`SHIPPED_SETS`). An entry whose `set` is no set the
+/// engine knows is kept, for `catalog check` to name.
+fn entry_ships(entry: &js::Object) -> bool {
+    let Some(set) = entry.get("set").and_then(js::Json::as_str) else {
+        return true;
+    };
+    match SetName::ALL.iter().find(|known| known.as_str() == set) {
+        Some(known) => set_ships(*known),
+        None => true,
+    }
+}
+
+/// R1420: the catalog a patch ships, every entry of a set that ships, in the file's order. A set the
+/// catalog holds before it ships is in no snapshot and no fragment claims its cards; the patch that
+/// adds it to `SHIPPED_SETS` claims every one of them at once.
+pub fn shipped_view(catalog: Catalog) -> Catalog {
+    catalog
+        .into_iter()
+        .filter(|(_, entry)| entry_ships(entry))
+        .collect()
+}
+
+/// R1420: `catalog.json`'s text as a snapshot holds it. The text itself when every entry ships, so a
+/// history of shipped sets alone is the file byte for byte; otherwise the shipped view written as
+/// the catalog is (two-space JSON and the file's closing newline).
+pub fn shipped_text(raw: &str) -> anyhow::Result<String> {
+    let catalog: Catalog = serde_json::from_str(raw).context("the catalog is not a catalog")?;
+    if catalog.values().all(entry_ships) {
+        return Ok(raw.to_string());
+    }
+    let mut text = js::stringify_pretty(&shipped_view(catalog));
+    if raw.ends_with('\n') {
+        text.push('\n');
+    }
+    Ok(text)
 }
 
 /// `writeFragment`'s argument.
@@ -2060,11 +2101,13 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
     let mut previous = read_snapshot(&newest.version, &paths.dir)?;
     let mut proved = Vec::with_capacity(planned.len());
     for plan in planned {
-        let raw = git(
+        let full = git(
             repo_root,
             &["show", &format!("{}:{CATALOG_REL}", plan.commit)],
             &[],
         )?;
+        let raw = shipped_text(&full)
+            .with_context(|| format!("{CATALOG_REL} at {} is not a catalog", plan.commit))?;
         let snapshot: Catalog = serde_json::from_str(&raw)
             .with_context(|| format!("{CATALOG_REL} at {} is not a catalog", plan.commit))?;
         let changed = differing_ids(&previous, &snapshot);
@@ -2086,6 +2129,8 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
     };
     let current = fs::read_to_string(&paths.catalog)
         .with_context(|| format!("{} cannot be read", paths.catalog.display()))?;
+    let current =
+        shipped_text(&current).with_context(|| format!("{} is not a catalog", paths.catalog.display()))?;
     if last.raw != current {
         bail!(
             "catalog.json changed after {} added pending/{}, so the newest snapshot would not be catalog.json; nothing was shipped",
@@ -2844,6 +2889,110 @@ mod tests {
                 }
             }
 
+            fn in_set(mut card: Object, set: &str) -> Object {
+                card.insert("set".to_string(), Json::from(set));
+                card
+            }
+
+            // R1420: a set the catalog holds before it ships is no patch's: no fragment claims its
+            // cards, `patches check` passes with them unclaimed, and a promotion snapshots the catalog
+            // without them, while catalog.json keeps them.
+            #[test]
+            fn r1420_ships_the_catalog_without_the_cards_of_a_set_that_has_not_shipped() {
+                let temp = TempDir::new("jackioh-ship-unshipped-");
+                let root = temp.path();
+                let dir = root.join("crates/cards/patches");
+                let base = catalog_of(vec![
+                    in_set(card("aaa", 1), "Core"),
+                    in_set(card("bbb", 1), "Core"),
+                ]);
+                git(root, &["init", "-q", "-b", "main"], None);
+                let mut files = vec![
+                    ("crates/cards/catalog.json", json(&base)),
+                    (
+                        "crates/cards/patches/patches.json",
+                        json(&[base_patch(
+                            "base notes",
+                            vec![
+                                PatchChange::added("aaa", "Card aaa"),
+                                PatchChange::added("bbb", "Card bbb"),
+                            ],
+                        )]),
+                    ),
+                    ("crates/cards/patches/v0.1.1.json", json(&base)),
+                    (
+                        "crates/cards/patches/index.json",
+                        json(&index_of(vec![("aaa", vec!["v0.1.1"]), ("bbb", vec!["v0.1.1"])])),
+                    ),
+                    ("crates/cards/patches/shipped.json", json(&unshipped("v0.1.1"))),
+                ];
+                files.extend(version_sites("v0.1.1"));
+                write_files(root, &files);
+                git(root, &["add", "-A"], None);
+                git(
+                    root,
+                    &["commit", "-q", "-m", "base"],
+                    Some("2026-10-08T12:00:00+00:00"),
+                );
+
+                // A batch adds a Meditative card: nothing to claim, and the check passes.
+                let mut with_card = base.clone();
+                with_card.insert("med".to_string(), in_set(card("med", 2), "Meditative"));
+                write_files(root, &[("crates/cards/catalog.json", json(&with_card))]);
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+                git(root, &["add", "-A"], None);
+                git(
+                    root,
+                    &["commit", "-q", "-m", "a card of a set being built"],
+                    Some("2026-10-08T13:00:00+00:00"),
+                );
+
+                // A shipped card changes beside it: the fragment claims that card alone.
+                let mut changed = with_card.clone();
+                changed.insert("aaa".to_string(), in_set(card("aaa", 3), "Core"));
+                write_files(root, &[("crates/cards/catalog.json", json(&changed))]);
+                let written = write_fragment(
+                    root,
+                    &fragment_args("v0.2.0", "Patch v0.2.0", "issue #496", "aaa", None),
+                )
+                .unwrap();
+                assert_eq!(written.cards, strings(&["aaa"]));
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+                git(root, &["add", "-A"], None);
+                git(
+                    root,
+                    &["commit", "-q", "-m", "v0.2.0"],
+                    Some("2026-10-08T14:00:00+00:00"),
+                );
+
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.2.0"]));
+                let snapshot: Catalog = serde_json::from_str(&read(&dir.join("v0.2.0.json"))).unwrap();
+                assert_eq!(snapshot.keys().collect::<Vec<_>>(), vec!["aaa", "bbb"]);
+                assert_eq!(cost_of(&snapshot, "aaa"), Some(3.0));
+                let catalog: Catalog =
+                    serde_json::from_str(&read(&root.join("crates/cards/catalog.json"))).unwrap();
+                assert!(
+                    catalog.contains_key("med"),
+                    "catalog.json keeps the card being built"
+                );
+            }
+
+            #[test]
+            fn r1420_the_shipped_text_is_the_file_itself_when_every_entry_ships() {
+                let shipped = json(&catalog_of(vec![in_set(card("aaa", 1), "Core"), card("bbb", 2)]));
+                assert_eq!(crate::patches::shipped_text(&shipped).unwrap(), shipped);
+                let mixed = json(&catalog_of(vec![
+                    in_set(card("aaa", 1), "Core"),
+                    in_set(card("med", 1), "Meditative"),
+                    card("bbb", 2),
+                ]));
+                let view = crate::patches::shipped_text(&mixed).unwrap();
+                assert_eq!(
+                    view,
+                    json(&catalog_of(vec![in_set(card("aaa", 1), "Core"), card("bbb", 2)]))
+                );
+            }
+
             // The issue's acceptance scenario on a three-card catalog: branch A adds fragment v0.2.5
             // changing card aaa, branch B adds fragment v0.2.0 changing card bbb. A merges, then B
             // merges with no conflict under pending/, and promotion ships v0.2.5 before v0.2.0
@@ -3461,9 +3610,12 @@ mod tests {
                 .collect()
         }
 
-        /// TS `CATALOG`: the catalog the cards crate compiles in, each entry's fields in order.
+        /// TS `CATALOG`: the catalog the cards crate compiles in, each entry's fields in order, as a
+        /// patch sees it: its shipped view (R1420).
         fn catalog() -> Catalog {
-            serde_json::from_str(jackioh_cards::catalog_json()).expect("crates/cards/catalog.json")
+            super::super::shipped_view(
+                serde_json::from_str(jackioh_cards::catalog_json()).expect("crates/cards/catalog.json"),
+            )
         }
 
         fn snapshot(version: &str) -> Catalog {

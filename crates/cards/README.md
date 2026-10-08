@@ -1,7 +1,10 @@
 # `jackioh-cards`
 
-318 catalog entries in three sets, Core (100 cards and 11 tokens), Classic (90 cards and Glitch, a
-hidden token) and Classic+ (78 cards and 38 tokens), 268 cards and 50 tokens in all; one script file
+318 catalog entries in the three shipped sets, Core (100 cards and 11 tokens), Classic (90 cards and
+Glitch, a hidden token) and Classic+ (78 cards and 38 tokens), 268 cards and 50 tokens in all, and the
+Meditative set (99 cards and 30 tokens, spec §8.8) joining the catalog part by part before it ships
+(R1420: no pool that names no set, no deck and no random deck holds its cards until the release, and a
+test opens it with the testkit's `preview_sets`); one script file
 per entry with its tests inside it; the catalog query every random pool goes through; and the
 catalog's patch history. This file is the contract between the card files. The spec (`spec/08-catalog.md`
 for every card, `spec/07-tokens.md` for the tokens) is the only source of card text; when it and this
@@ -22,7 +25,8 @@ crates/cards
 ├── src/scripts/
 │   ├── core/           one Core card or token per file
 │   ├── classic/        one Classic card per file
-│   └── classic_plus/   one Classic+ card or token per file
+│   ├── classic_plus/   one Classic+ card or token per file
+│   └── meditative/     one Meditative card or token per file (the set ships with #496's release, R1420)
 └── tests/cards.rs      the cross-card tests: tests/cross/<x>.rs (catalog, query, references, radiant
                         standard, flavour, condition_active, preview, invariants, …)
 ```

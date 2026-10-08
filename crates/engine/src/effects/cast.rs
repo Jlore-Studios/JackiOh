@@ -275,18 +275,19 @@ fn cast_one_random(asked: CatalogQueryArgs, radiant: bool, how: CastHow) -> Effe
 }
 
 /// `castRandom`'s `query`: a fixed query, or one read off the context as the part is built (set in
-/// Rust; a `json!` literal reads as `Fixed`).
+/// Rust; a `json!` literal reads as `Fixed`). The fixed query is boxed: it is far larger than the
+/// reader beside it.
 #[derive(Clone, Deserialize)]
 #[serde(untagged)]
 pub enum CastRandomQuery {
-    Fixed(CatalogQueryArgs),
+    Fixed(Box<CatalogQueryArgs>),
     #[serde(skip)]
     Read(Arc<dyn Fn(&mut EffectContext<'_>) -> CatalogQueryArgs + Send + Sync>),
 }
 
 impl From<CatalogQueryArgs> for CastRandomQuery {
     fn from(query: CatalogQueryArgs) -> CastRandomQuery {
-        CastRandomQuery::Fixed(query)
+        CastRandomQuery::Fixed(Box::new(query))
     }
 }
 
@@ -342,7 +343,7 @@ pub fn cast_random(args: CastRandomArgs) -> Effect {
         };
         let asked = match &args.query {
             CastRandomQuery::Read(read) => read(ctx),
-            CastRandomQuery::Fixed(query) => query.clone(),
+            CastRandomQuery::Fixed(query) => (**query).clone(),
         };
         let how = CastHow {
             random: None,

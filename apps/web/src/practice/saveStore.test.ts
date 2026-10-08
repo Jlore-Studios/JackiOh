@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { PRACTICE_SAVE_DB, indexedDbSaveStore, memorySaveStore, type PracticeSave } from "./saveStore.ts";
+import { PRACTICE_SAVE_DB, indexedDbSaveStore, memorySaveStore, type PracticeReplay, type PracticeSave } from "./saveStore.ts";
 
 const SAVE: PracticeSave = {
   catalog: "v-test",
@@ -11,6 +11,15 @@ const SAVE: PracticeSave = {
   log: [{ type: "endTurn", playerId: "p1", nonce: "h0" }],
   aiCursor: 7,
   hash: "0badc0de",
+};
+
+const REPLAY: PracticeReplay = {
+  catalog: SAVE.catalog,
+  config: SAVE.config,
+  log: SAVE.log,
+  hash: "0badc0de",
+  endSeat: "p1",
+  summary: { game: 1, endedAt: 1234, result: "win", turns: 3, steps: 2, portraits: { p1: "vanilla", p2: "gary" } },
 };
 
 type FakeRequest = { result: unknown; error: Error | null; onsuccess: (() => void) | null; onerror: (() => void) | null };
@@ -118,5 +127,52 @@ describe("R668 the practice worker's save store", () => {
     expect(blocked.read()).toBeNull();
     blocked.write(SAVE);
     expect(blocked.read()).toEqual(SAVE);
+  });
+});
+
+describe("R768 the finished games beside the save", () => {
+  it("R768 memory keeps the finished games it is given and written, apart from the save", async () => {
+    const store = memorySaveStore(SAVE, [REPLAY]);
+    await store.ready;
+    expect(store.readReplays()).toEqual([REPLAY]);
+    store.write(null);
+    expect(store.readReplays(), "clearing the save leaves the games").toEqual([REPLAY]);
+    store.write(SAVE);
+    store.writeReplays([REPLAY, { ...REPLAY, summary: { ...REPLAY.summary, game: 2 } }]);
+    expect(store.readReplays().map((replay) => replay.summary.game)).toEqual([1, 2]);
+    expect(store.read(), "writing the games leaves the save").toEqual(SAVE);
+    store.writeReplays([]);
+    expect(store.readReplays()).toEqual([]);
+  });
+
+  it("R768 IndexedDB: the finished games outlive the store beside the save, and a malformed row is none", async () => {
+    const idb = fakeIndexedDb();
+    const first = indexedDbSaveStore(idb.factory);
+    await first.ready;
+    expect(first.readReplays()).toEqual([]);
+    first.write(SAVE);
+    first.writeReplays([REPLAY]);
+    expect(first.readReplays(), "read is synchronous").toEqual([REPLAY]);
+    await macrotasks();
+
+    const second = indexedDbSaveStore(idb.factory);
+    await second.ready;
+    expect(second.read()).toEqual(SAVE);
+    expect(second.readReplays()).toEqual([REPLAY]);
+
+    idb.rows.set("replays", [REPLAY, { catalog: 3 }]);
+    const mixed = indexedDbSaveStore(idb.factory);
+    await mixed.ready;
+    expect(mixed.readReplays(), "a malformed game is dropped, the rest kept").toEqual([REPLAY]);
+
+    idb.rows.set("replays", "no");
+    const wrong = indexedDbSaveStore(idb.factory);
+    await wrong.ready;
+    expect(wrong.readReplays()).toEqual([]);
+
+    const blocked = indexedDbSaveStore(fakeIndexedDb({ failOpen: true }).factory);
+    await blocked.ready;
+    blocked.writeReplays([REPLAY]);
+    expect(blocked.readReplays(), "a database that will not open is memory only").toEqual([REPLAY]);
   });
 });

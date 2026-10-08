@@ -5,7 +5,7 @@
 // The AI is Rust (`crates/ai`), compiled into the WebAssembly module with the engine; `decide`,
 // `aiToAct` and `buildAiDeck` below call it through `../wasm`. Its budgets and its shadow ban are the
 // Rust AI's own values, read from the module once it is loaded (so the client never restates them,
-// CLAUDE.md rule 9). The emote personas (R645) are presentation, not play, and stay TypeScript:
+// CLAUDE.md rule 9), and so are its deck builder's numbers (`AI_DECK`). The emote personas (R645) are presentation, not play, and stay TypeScript:
 // `../practice/personas.ts`, re-exported here so `practice/emotes.ts` reads them as it did.
 //
 // STREAMS. TypeScript's AI drew from an `Rng` object the caller held. The Rust AI draws from the
@@ -27,8 +27,9 @@ import {
 } from "../wasm/index.ts";
 import { advanceTo, type Rng } from "./rng.ts";
 
+import type { AiDeckConstants } from "../wasm/index.ts";
 import type { GameState } from "./generated/GameState.ts";
-import type { ActionBody, PlayerId } from "./index.ts";
+import type { ActionBody, PlayerId, SetName } from "./index.ts";
 
 export {
   AI_EMOTE,
@@ -114,7 +115,15 @@ export type AiDeckOptions = {
   manaCap?: number;
   /** R390: these ids' weights are multiplied by `by` (the sweep's pass 2, as `themeBoost` leans a theme). */
   boost?: { ids: readonly string[]; by: number };
+  /**
+   * R1370: a set at least AI_DECK.leanMinShare of the deck comes from (a hard floor); absent, none,
+   * and the deck is the one the seed always dealt. "More cards from the newest set" passes
+   * `newestShippedSet()` (R1371, R1373).
+   */
+  leanSet?: SetName;
 };
+
+export type { AiDeckConstants };
 
 // ---------------------------------------------------------------------------------------------
 // the Rust AI's own numbers, once the module is loaded
@@ -133,11 +142,15 @@ export let AI_GATE_BUDGET: SearchBudget;
 /** R186: the ids the AI never deals itself, sorted. */
 export let SHADOW_BAN_IDS: readonly string[];
 
+/** SPEC §9.9, R1370: the deck builder's numbers, `leanMinShare` among them (CLAUDE.md rule 9). */
+export let AI_DECK: AiDeckConstants;
+
 whenWasmLoaded(() => {
   const constants = aiConstants();
   AI_BUDGET = constants.AI_BUDGET;
   AI_GATE_BUDGET = constants.AI_GATE_BUDGET;
   SHADOW_BAN_IDS = constants.SHADOW_BAN_IDS;
+  AI_DECK = constants.AI_DECK;
 });
 
 // ---------------------------------------------------------------------------------------------

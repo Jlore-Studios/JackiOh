@@ -186,7 +186,8 @@ function pacingFor(params: PracticeParams): PracticePacing {
   return reducedMotionNow() ? PRACTICE_PACING_REDUCED : PRACTICE_PACING;
 }
 
-type StoredSetup = { difficulty?: Difficulty; deck?: string };
+/** The setup this device chose last; `leanNewest` is R1373's switch, kept whichever deck was picked. */
+type StoredSetup = { difficulty?: Difficulty; deck?: string; leanNewest?: boolean };
 
 function readStoredSetup(): StoredSetup {
   try {
@@ -194,10 +195,11 @@ function readStoredSetup(): StoredSetup {
     if (raw === null) return {};
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return {};
-    const { difficulty, deck } = parsed as { difficulty?: unknown; deck?: unknown };
+    const { difficulty, deck, leanNewest } = parsed as { difficulty?: unknown; deck?: unknown; leanNewest?: unknown };
     return {
       ...(isDifficulty(difficulty) ? { difficulty } : {}),
       ...(typeof deck === "string" && isDeckValue(deck) ? { deck } : {}),
+      ...(typeof leanNewest === "boolean" ? { leanNewest } : {}),
     };
   } catch {
     // A private window, blocked site data or malformed JSON: nothing is remembered.
@@ -205,9 +207,13 @@ function readStoredSetup(): StoredSetup {
   }
 }
 
-function writeStoredSetup(difficulty: Difficulty, deck: PracticeDeckChoice): void {
+function writeStoredSetup(difficulty: Difficulty, deck: PracticeDeckChoice, leanNewest: boolean): void {
   try {
-    window.localStorage.setItem(PRACTICE_SETUP_KEY, JSON.stringify({ difficulty, deck: deckChoiceValue(deck) }));
+    window.localStorage.setItem(
+      PRACTICE_SETUP_KEY,
+      // R1373: the switch only when it is on; a setup without it reads as off.
+      JSON.stringify({ difficulty, deck: deckChoiceValue(deck), ...(leanNewest ? { leanNewest: true } : {}) }),
+    );
   } catch {
     // Remembering the setup is a convenience; a refusal costs nothing.
   }
@@ -493,6 +499,7 @@ function PracticeScreen({
     return {
       difficulty: params.difficulty ?? stored.difficulty ?? PRACTICE_DEFAULT_DIFFICULTY,
       deck: params.deck ?? stored.deck ?? "random",
+      leanNewest: stored.leanNewest ?? false,
     };
   }, [params]);
 
@@ -616,7 +623,7 @@ function PracticeScreen({
 
   const onStart = useCallback(
     (choice: PracticeSetupChoice) => {
-      writeStoredSetup(choice.difficulty, choice.deck);
+      writeStoredSetup(choice.difficulty, choice.deck, choice.leanNewest ?? false);
       dropSavedGame();
       setGame(configFor(choice, params));
     },

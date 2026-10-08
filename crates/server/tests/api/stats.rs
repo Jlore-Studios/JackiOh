@@ -206,8 +206,14 @@ fn deckable() -> Map<String, Value> {
         serde_json::from_str(jackioh_cards::catalog_json()).expect("catalog.json");
     catalog
         .into_iter()
-        .filter(|(_, def)| def["token"] != json!(true))
+        .filter(|(_, def)| def["token"] != json!(true) && ships(def))
         .collect()
+}
+
+/// R1420: whether an entry's set ships: the server serves, seeds and counts only those.
+fn ships(def: &Value) -> bool {
+    serde_json::from_value::<jackioh_engine::SetName>(def["set"].clone())
+        .map_or(true, jackioh_engine::set_ships)
 }
 
 /// The deckable ids `keep` accepts, sorted.

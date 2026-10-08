@@ -34,7 +34,7 @@ use std::str::FromStr;
 
 use jackioh_engine::{
     self as engine, Action, CardDefs, CreateGameArgs, DECK_SIZE, FoldArgs, GameState, PLAYER_IDS,
-    PerPlayerOpt, PlayerId, ReduceResult, Rng,
+    PerPlayerOpt, PlayerId, ReduceResult, ReplayCheckpoints, ReplayRecord, Rng,
 };
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -283,6 +283,32 @@ pub fn fold(args_json: &str) -> Result<String, JsError> {
     to_json(&engine::fold(&args))
 }
 
+/// R768: `ReplayOpen`. The setup is checked as `fold` checks it, but only on this build's catalog
+/// version: a game of another is refused as `earlier_patch` before its decks are read.
+#[wasm_bindgen]
+pub fn replay_open(args_json: &str, record_json: &str) -> Result<String, JsError> {
+    let record: ReplayRecord = parse("replayOpen: the record", record_json)?;
+    let build = jackioh_cards::catalog_version();
+    if record.catalog_version == build {
+        let setup: CreateGameArgs = parse("replayOpen", args_json)?;
+        check_setup(&setup)?;
+    }
+    let args: FoldArgs = parse("replayOpen", args_json)?;
+    to_json(&engine::replay_open(&args, &record, build))
+}
+
+/// R768: `ReplayPage`, `{ from, steps: [{ step, turn, view }], reduces }`.
+#[wasm_bindgen]
+pub fn replay_page(checkpoints_json: &str, seat: &str, from: u32, count: u32) -> Result<String, JsError> {
+    let checkpoints: ReplayCheckpoints = parse("replayPage: the checkpoints", checkpoints_json)?;
+    to_json(&engine::replay_page(
+        &checkpoints,
+        player(seat)?,
+        from as usize,
+        count as usize,
+    ))
+}
+
 /// `LastBoardEntry[]`: the board `seat` takes away (R417, R508).
 #[wasm_bindgen]
 pub fn last_board_for(state_json: &str, seat: &str) -> Result<String, JsError> {
@@ -357,7 +383,8 @@ pub fn ai_decide(
 
 /// `{ deck, rngCursor }` (TS `buildAiDeck(createRng(rngSeed, rngCursor), size, options)`). Every key
 /// but `rngSeed`, `rngCursor` and `size` is `AiDeckOptions`' own, read by its own serde, so an absent
-/// `banned` (the shadow ban), an absent `theme` (roll one) and a `null` one (none) keep their meanings.
+/// `banned` (the shadow ban), an absent `theme` (roll one) and a `null` one (none) keep their meanings,
+/// and so does an absent `leanSet` (no lean, R1370).
 #[wasm_bindgen]
 pub fn build_ai_deck(options_json: &str) -> Result<String, JsError> {
     let mut request: serde_json::Map<String, Value> = parse("buildAiDeck", options_json)?;
@@ -405,7 +432,8 @@ pub fn choose_action(
     to_json(&json!({ "action": action, "rngCursor": rng.cursor() }))
 }
 
-/// `{ AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS }` for practice, the tutorial harness and their tests.
+/// `{ AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, AI_DECK }` for practice, the tutorial harness, the
+/// "More cards from the newest set" toggle (`AI_DECK.leanMinShare`, R1370) and their tests.
 /// `SHADOW_BAN_IDS` is TypeScript's `Object.keys(SHADOW_BAN).sort()` (`jackioh_ai::SHADOW_BAN_IDS`).
 #[wasm_bindgen]
 pub fn constants() -> Result<String, JsError> {
@@ -413,6 +441,7 @@ pub fn constants() -> Result<String, JsError> {
         "AI_BUDGET": jackioh_ai::AI_BUDGET,
         "AI_GATE_BUDGET": jackioh_ai::AI_GATE_BUDGET,
         "SHADOW_BAN_IDS": jackioh_ai::SHADOW_BAN_IDS,
+        "AI_DECK": jackioh_ai::AI_DECK,
     }))
 }
 

@@ -733,27 +733,58 @@ pub async fn delete_trio(app: &Arc<App>, req: Req) -> ApiResult {
 #[derive(serde::Serialize, Clone, Debug, PartialEq, Eq)]
 #[serde(tag = "mode", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ModeChoiceInput {
-    Bo1 { deck_id: String },
-    Bo3 { trio_id: String },
-    Random,
+    Bo1 {
+        deck_id: String,
+    },
+    Bo3 {
+        trio_id: String,
+    },
+    /// R1372: `lean_newest` is the player's "More cards from the newest set" for their own seat,
+    /// written only when it is on, as the client sends it.
+    Random {
+        #[serde(skip_serializing_if = "std::ops::Not::not")]
+        lean_newest: bool,
+    },
 }
 
 /// What a ticket or a room freezes (§9.4: "Decks are frozen into the queue ticket").
 #[derive(serde::Serialize, Clone)]
 #[serde(tag = "mode", rename_all = "camelCase")]
 pub enum FrozenChoice {
-    Bo1 { deck: FrozenDeck },
-    Bo3 { trio: FrozenTrio },
-    Random,
+    Bo1 {
+        deck: FrozenDeck,
+    },
+    Bo3 {
+        trio: FrozenTrio,
+    },
+    /// R258: nothing to freeze but the player's R1372 lean, which waits for the deal (written only
+    /// when it is on).
+    Random {
+        #[serde(rename = "leanNewest", skip_serializing_if = "std::ops::Not::not")]
+        lean_newest: bool,
+    },
 }
 
-/// R257: `{ mode: "bo1", deckId } | { mode: "bo3", trioId } | { mode: "random" }`. Only the fields
-/// the mode needs are read; anything malformed among them is a 400. A body with no `mode` (and
-/// R257's legacy `deckIndex`) is refused like any other malformed mode (SURFACE §11.3).
+/// R1372: a body's `leanNewest`, the player's "More cards from the newest set" for their own seat's
+/// dealt deck. Absent or `null` is off, so a client from before it keeps working; anything but a
+/// boolean is a 400. The set is the server's to resolve when it deals (R1371), never the client's.
+pub fn lean_newest_of(body: &Value) -> Result<bool, ApiError> {
+    match body.get("leanNewest") {
+        None | Some(Value::Null) => Ok(false),
+        Some(Value::Bool(lean)) => Ok(*lean),
+        Some(_) => Err(bad_request("\"leanNewest\" must be true or false")),
+    }
+}
+
+/// R257: `{ mode: "bo1", deckId } | { mode: "bo3", trioId } | { mode: "random", leanNewest? }`. Only
+/// the fields the mode needs are read; anything malformed among them is a 400. A body with no `mode`
+/// (and R257's legacy `deckIndex`) is refused like any other malformed mode (SURFACE §11.3).
 pub fn read_mode_choice(body: &Value) -> Result<ModeChoiceInput, ApiError> {
     let mode = body.get("mode").and_then(Value::as_str);
     match mode {
-        Some("random") => Ok(ModeChoiceInput::Random),
+        Some("random") => Ok(ModeChoiceInput::Random {
+            lean_newest: lean_newest_of(body)?,
+        }),
         Some("bo3") => match saved_id_of(body.get("trioId")) {
             Some(trio_id) => Ok(ModeChoiceInput::Bo3 { trio_id }),
             None => Err(bad_request(
@@ -909,14 +940,19 @@ fn freeze(deck: &SavedDeck) -> FrozenDeck {
 /// a room waits) cannot change the game it becomes (§9.8: "Deck swapped after matchmaking").
 ///
 /// An empty trio slot is not skipped: the filled decks go to the validator as they are, so a trio
-/// with two decks fails L1 in the shared module's own words. All Random freezes nothing (R258).
+/// with two decks fails L1 in the shared module's own words. All Random freezes nothing but the
+/// player's lean (R258, R1372).
 pub async fn freeze_choice(
     app: &App,
     profile_id: &str,
     choice: &ModeChoiceInput,
 ) -> Result<FrozenChoice, ApiError> {
     let (deck_id, trio_id) = match choice {
-        ModeChoiceInput::Random => return Ok(FrozenChoice::Random),
+        ModeChoiceInput::Random { lean_newest } => {
+            return Ok(FrozenChoice::Random {
+                lean_newest: *lean_newest,
+            });
+        }
         ModeChoiceInput::Bo1 { deck_id } => (Some(deck_id), None),
         ModeChoiceInput::Bo3 { trio_id } => (None, Some(trio_id)),
     };

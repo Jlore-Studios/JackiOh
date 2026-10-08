@@ -153,8 +153,9 @@ mod tests {
         fn r380_s5_1_the_pool_is_every_set_s_non_token_cards_without_n59() {
             crate::register_all();
             let pool = card_pool();
-            // Every non-token card of every set, less #59 itself.
-            assert_eq!(pool.len(), crate::CATALOG.values().filter(|def| !def.token).count() - 1);
+            // Every non-token card of every set that ships (R1420), less #59 itself.
+            let open = |def: &&CardDef| !def.token && jackioh_engine::catalog::set_is_open(def.set);
+            assert_eq!(pool.len(), crate::CATALOG.values().filter(open).count() - 1);
             let has = |id: &str| pool.iter().any(|entry| entry == id);
             assert!(!has("core-059"));
             assert!(!has("core-t-rush"));

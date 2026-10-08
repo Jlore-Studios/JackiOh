@@ -34,6 +34,7 @@
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
+use crate::catalog::set_is_open;
 use crate::config::{DECK_SIZE, MAX_COPIES};
 use crate::wire::{CardDef, CardDefs, Tag, is_js_space, string_union};
 
@@ -333,6 +334,21 @@ fn check(
                         "{} cannot contain {}: Token cards are never deckable.",
                         label_at(index),
                         label(card_id)
+                    ),
+                    deck: Some(deck_number),
+                    card_id: Some(card_id.clone()),
+                });
+            } else if let Some(def) = def
+                && !set_is_open(def.set)
+            {
+                // L3 (R1420): a card of a set that has not shipped is in the catalog and in no deck.
+                errors.push(LoadoutError {
+                    rule: LoadoutRule::L3,
+                    message: format!(
+                        "{} cannot contain {}: the {} set has not shipped yet.",
+                        label_at(index),
+                        label(card_id),
+                        def.set.as_str()
                     ),
                     deck: Some(deck_number),
                     card_id: Some(card_id.clone()),

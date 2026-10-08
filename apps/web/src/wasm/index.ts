@@ -43,15 +43,21 @@ import initWasm, {
   last_board_for,
   legal_actions,
   reduce as reduce_action,
+  replay_open,
+  replay_page,
   seat_played_by,
   seat_to_act,
   validator as validator_call,
   view_for,
 } from "./pkg/jackioh_wasm.js";
 
-import type { Action, ActionBody, CardDefs, GameEvent, PlayerId, PlayerView } from "../wire/index.ts";
+import type { Action, ActionBody, CardDefs, GameEvent, PlayerId, PlayerView, SetName } from "../wire/index.ts";
 import type { CardInstance } from "../wire/generated/CardInstance.ts";
 import type { GameState } from "../wire/generated/GameState.ts";
+import type { ReplayCheckpoints } from "../wire/generated/ReplayCheckpoints.ts";
+import type { ReplayOpen } from "../wire/generated/ReplayOpen.ts";
+import type { ReplayPage } from "../wire/generated/ReplayPage.ts";
+import type { ReplayRecord } from "../wire/generated/ReplayRecord.ts";
 import type { Handicap } from "../wire/engineConfig.ts";
 import type { Decision, SearchBudget } from "../wire/ai.ts";
 
@@ -234,6 +240,16 @@ export function fold(input: FoldInput): FoldResult {
   return call("fold", () => parsed<FoldResult>(fold_log(json(input))));
 }
 
+/** R768: a finished game's replay, its log checked against its catalog version and final hash. */
+export function replayOpen(input: FoldInput, record: ReplayRecord): ReplayOpen {
+  return call("replayOpen", () => parsed<ReplayOpen>(replay_open(json(input), json(record))));
+}
+
+/** R768: steps [from, from + count) as `seat` saw them; continue at `from + steps.length`. */
+export function replayPage(checkpoints: ReplayCheckpoints, seat: PlayerId, from: number, count: number): ReplayPage {
+  return call("replayPage", () => parsed<ReplayPage>(replay_page(json(checkpoints), seat, from, count)));
+}
+
 /** R417, R508: the board `seat` takes away. */
 export function lastBoardFor(state: GameState, seat: PlayerId): LastBoardCard[] {
   return call("lastBoardFor", () => parsed<LastBoardCard[]>(last_board_for(stateJson(state), seat)));
@@ -302,6 +318,8 @@ export type AiDeckRequest = StreamAt & {
   include?: readonly string[];
   /** R390: these ids' weights multiplied by `by`. */
   boost?: { ids: readonly string[]; by: number };
+  /** R1370: a set at least `AI_DECK.leanMinShare` of the deck comes from; absent, none. */
+  leanSet?: SetName;
 };
 
 export function buildAiDeck(request: AiDeckRequest): { deck: string[]; rngCursor: number } {
@@ -315,15 +333,38 @@ export function chooseAction(state: GameState, seat: PlayerId, stream: StreamAt)
   );
 }
 
+/** The deck builder's numbers (`crates/ai/src/deck.rs`'s `AI_DECK`, SPEC §9.9, R1370), as it states them. */
+export type AiDeckConstants = {
+  curve: Record<"0-1" | "2" | "3" | "4+", number>;
+  curveShiftPerMana: number;
+  curveTolerance: number;
+  minUnitShare: number;
+  themeChance: number;
+  minThemeSize: number;
+  themeBoost: number;
+  themeMinShare: number;
+  curveBoost: number;
+  curveOverflow: number;
+  unitBoost: number;
+  uncastable: number;
+  costSlack: number;
+  minPool: number;
+  /** R1370: a deck that leans on a set holds at least ceil(size × leanMinShare) of its cards. */
+  leanMinShare: number;
+  /** R1370: weight for a card of the leaned set while the deck is short of it. */
+  leanBoost: number;
+};
+
 export type AiConstants = {
   AI_BUDGET: SearchBudget;
   AI_GATE_BUDGET: SearchBudget;
   SHADOW_BAN_IDS: readonly string[];
+  AI_DECK: AiDeckConstants;
 };
 
 let constantsCache: AiConstants | null = null;
 
-/** The AI's budgets and its shadow-ban ids, as the Rust AI states them. */
+/** The AI's budgets, its shadow-ban ids and its deck builder's numbers, as the Rust AI states them. */
 export function aiConstants(): AiConstants {
   return call("constants", () => {
     constantsCache ??= parsed<AiConstants>(constants());

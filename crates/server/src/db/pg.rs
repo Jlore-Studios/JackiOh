@@ -707,6 +707,7 @@ struct TicketRow {
     frozen_deck: Value,
     portrait: Option<String>,
     frozen_trio: Option<Value>,
+    lean_newest: bool,
     catalog_version: String,
     status: String,
     enqueued_at: OffsetDateTime,
@@ -723,6 +724,7 @@ impl TicketRow {
             frozen_deck: get(row, "frozen_deck")?,
             portrait: get(row, "portrait")?,
             frozen_trio: get(row, "frozen_trio")?,
+            lean_newest: get(row, "lean_newest")?,
             catalog_version: get(row, "catalog_version")?,
             status: get(row, "status")?,
             enqueued_at: get(row, "enqueued_at")?,
@@ -734,8 +736,8 @@ impl TicketRow {
 /// TS's `TICKET_COLUMNS`.
 macro_rules! ticket_columns {
     () => {
-        "id, profile_id, rating, mode, frozen_deck, portrait, frozen_trio, catalog_version, status,
-  enqueued_at, match_id"
+        "id, profile_id, rating, mode, frozen_deck, portrait, frozen_trio, lean_newest, catalog_version,
+  status, enqueued_at, match_id"
     };
 }
 
@@ -760,6 +762,8 @@ fn to_ticket(row: TicketRow) -> Result<Ticket, StoreError> {
         deck: card_list_of(&row.frozen_deck)?,
         portrait: Some(row.portrait),
         trio: trio_or_null(row.frozen_trio.as_ref())?,
+        // R1372: migration 0027's column, false on every ticket written before it.
+        lean_newest: row.lean_newest,
         catalog_version: row.catalog_version,
         enqueued_at: ms_of(row.enqueued_at),
         status: to_ticket_status(&row.status)?,
@@ -827,6 +831,7 @@ struct RoomRow {
     p2_profile_id: Option<String>,
     p1_deck: Value,
     p1_portrait: Option<String>,
+    room_lean_newest: bool,
     catalog_version: String,
     created_at: OffsetDateTime,
     ceiling_at: OffsetDateTime,
@@ -843,6 +848,7 @@ impl RoomRow {
             p2_profile_id: uuid_text_or_null(row, "p2_profile_id")?,
             p1_deck: get(row, "p1_deck")?,
             p1_portrait: get(row, "p1_portrait")?,
+            room_lean_newest: get(row, "room_lean_newest")?,
             catalog_version: get(row, "catalog_version")?,
             created_at: get(row, "created_at")?,
             ceiling_at: get(row, "ceiling_at")?,
@@ -854,7 +860,7 @@ impl RoomRow {
 macro_rules! room_columns {
     () => {
         "id, room_code, room_mode, room_trio, p1_profile_id, p2_profile_id, p1_deck,
-  p1_portrait, catalog_version, created_at, ceiling_at"
+  p1_portrait, room_lean_newest, catalog_version, created_at, ceiling_at"
     };
 }
 
@@ -878,6 +884,8 @@ fn to_room(row: RoomRow) -> Result<Room, StoreError> {
         // R642: the host's portrait waits in the open row beside the host's deck (migration 0019).
         host_portrait: Some(row.p1_portrait),
         host_trio: trio_or_null(row.room_trio.as_ref())?,
+        // R1372: the host's lean waits in the open row too (migration 0027).
+        host_lean_newest: row.room_lean_newest,
         catalog_version: row.catalog_version,
         created_at: ms_of(row.created_at),
         // See KNOWN DIVERGENCES (rooms): an unclaimed room keeps its joinable-until instant in
@@ -2871,13 +2879,13 @@ pub async fn rooms_create(t: &mut PgTx<'_>, room: &Room) -> Result<bool, StoreEr
     let done = sqlx::query(concat!(
         "insert into public.matches (
            room_code, room_mode, room_trio, status, seed, p1_profile_id, p1_deck, p1_portrait,
-           catalog_version, ceiling_at, created_at)
+           catalog_version, ceiling_at, created_at, room_lean_newest)
          values ($1::text, $2::text, $3::jsonb, 'open', '', $4::uuid, $5::jsonb, $6::text,
                  $7::text, ",
         ts!("$8"),
         ", ",
         ts!("$9"),
-        ")
+        ", $10::boolean)
          on conflict (room_code) where room_code is not null and status <> 'over' do nothing"
     ))
     .bind(room.code.as_str())
@@ -2889,6 +2897,7 @@ pub async fn rooms_create(t: &mut PgTx<'_>, room: &Room) -> Result<bool, StoreEr
     .bind(room.catalog_version.as_str())
     .bind(room.expires_at)
     .bind(room.created_at)
+    .bind(room.host_lean_newest)
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
@@ -2968,11 +2977,11 @@ pub async fn tickets_insert(t: &mut PgTx<'_>, ticket: &Ticket) -> Result<(), Sto
     sqlx::query(concat!(
         "insert into public.tickets
            (id, profile_id, rating, mode, frozen_deck, portrait, frozen_trio, catalog_version, status,
-            enqueued_at, match_id)
+            enqueued_at, match_id, lean_newest)
          values ($1::uuid, $2::uuid, $3::double precision, $4::text, $5::jsonb, $6::text, $7::jsonb, $8::text,
                  $9::text, ",
         ts!("$10"),
-        ", $11::uuid)"
+        ", $11::uuid, $12::boolean)"
     ))
     .bind(ticket.id.as_str())
     .bind(ticket.profile_id.as_str())
@@ -2985,6 +2994,7 @@ pub async fn tickets_insert(t: &mut PgTx<'_>, ticket: &Ticket) -> Result<(), Sto
     .bind(from_ticket_status(&ticket.status)?)
     .bind(ticket.enqueued_at)
     .bind(ticket.match_id.as_deref())
+    .bind(ticket.lean_newest)
     .execute(&mut **t)
     .await
     .map_err(db_error)?;

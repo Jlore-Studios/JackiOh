@@ -164,7 +164,9 @@ string_union! {
     /// tokens) and AI (the ten AI generated cards); the v0.2.x mechanics patch adds Plague (every card
     /// that uses Plague Counters); patch v0.2.Y adds Catalyst (Classic+ #38 Solarius and #46 Felinor
     /// Flagbearer), Prime (their Prime tokens, Classic+ #38.1 Solarius Prime and #46.1 Felinor
-    /// Flagbearer Prime) and Acclaimed (Classic #80 BOOM! Big Max and Classic+ #37 Wardrum).
+    /// Flagbearer Prime) and Acclaimed (Classic #80 BOOM! Big Max and Classic+ #37 Wardrum); the
+    /// Meditative set adds Wincon (its #8 Reach the Summit and #20 Aestheticize the Game, which win the
+    /// game another way, R1420's set).
     pub enum Tag {
         Human = "Human",
         Felinor = "Felinor",
@@ -181,6 +183,7 @@ string_union! {
         Catalyst = "Catalyst",
         Prime = "Prime",
         Acclaimed = "Acclaimed",
+        Wincon = "Wincon",
         Token = "Token",
     }
 }
@@ -210,18 +213,45 @@ string_union! {
 }
 
 string_union! {
-    /// §5: Core, Classic and Classic+ ship (R380); Boss and Boss-X are reserved.
+    /// §5: Core, Classic and Classic+ ship (R380); Meditative is in the catalog and ships with the
+    /// last part of its patch (R1420); Boss and Boss-X are reserved.
     pub enum SetName {
         Core = "Core",
         Classic = "Classic",
         ClassicPlus = "Classic+",
+        Meditative = "Meditative",
         Boss = "Boss",
         BossX = "Boss-X",
     }
 }
 
-/// The sets that ship, in catalog order. A pool that names no set draws from all of them (R380).
+/// The sets that ship, in catalog order. A pool that names no set draws from all of them (R380),
+/// and only from them: a set the catalog holds that is not listed here is in no such pool, in no
+/// deck and on no list a player reads until it is (R1420).
 pub const SHIPPED_SETS: [SetName; 3] = [SetName::Core, SetName::Classic, SetName::ClassicPlus];
+
+/// Every set the catalog orders, shipped or not, in catalog order (B2.2): a set keeps its place
+/// when it ships, so a seeded pick over a pool replays the same before and after (R1420).
+pub const CATALOG_SETS: [SetName; 4] = [
+    SetName::Core,
+    SetName::Classic,
+    SetName::ClassicPlus,
+    SetName::Meditative,
+];
+
+/// R1420: whether a set ships, i.e. whether `SHIPPED_SETS` lists it.
+pub fn set_ships(set: SetName) -> bool {
+    SHIPPED_SETS.contains(&set)
+}
+
+/// R1371: the newest set that ships, the last entry of `SHIPPED_SETS` (catalog order): Classic+
+/// until the Meditative set ships, then whichever set ships after it. "More cards from the newest
+/// set" (R1372, R1373) leans a random deck on it, and every caller asks this function at deal time
+/// rather than naming a set. A set previewed under the testkit (R1420) is not shipped, so it is
+/// never the newest: a test that leans on one names it.
+pub fn newest_shipped_set() -> SetName {
+    SHIPPED_SETS[SHIPPED_SETS.len() - 1]
+}
 
 /// §5: 0 to 6, 100 (Ceaseless Void), X, or "A embiggen B".
 ///
@@ -905,10 +935,16 @@ pub struct CatalogQuery {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub not_tags: Option<Vec<Tag>>,
+    /// R1422: has at least one of these tags ("a random Human, Book, CN, or AI-Generated card"), where
+    /// `tags` asks for every one of its tags. A Fruit or Prime tag here takes its tokens as `tags`
+    /// does (R382, R1421).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub any_tags: Option<Vec<Tag>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub rarity: Option<OneOrMany<Rarity>>,
-    /// A set, or several ("Classic or Classic+"). Absent is every set (R380).
+    /// A set, or several ("Classic or Classic+"). Absent is every set that ships (R380, R1420).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub set: Option<OneOrMany<SetName>>,

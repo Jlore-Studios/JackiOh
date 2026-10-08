@@ -1,0 +1,8 @@
+{"defId":"core-002","games":8,"drawnGames":4,"affordableTurns":5,"plays":4,"errors":0,"timeouts":0,"evalDeltaSum":65.59576240750525,"evalDeltaCount":4,"tier":"easy","flags":[],"unswept":false}
+{"defId":"core-002","games":8,"drawnGames":4,"affordableTurns":6,"plays":3,"errors":0,"timeouts":0,"evalDeltaSum":40.49999999999999,"evalDeltaCount":3,"tier":"hard","flags":[],"unswept":false}
+{"defId":"core-011","games":8,"drawnGames":5,"affordableTurns":7,"plays":4,"errors":0,"timeouts":0,"evalDeltaSum":30.400000000000006,"evalDeltaCount":4,"tier":"easy","flags":[],"unswept":false}
+{"defId":"core-011","games":8,"drawnGames":3,"affordableTurns":5,"plays":4,"errors":0,"timeouts":0,"evalDeltaSum":32.39999999999999,"evalDeltaCount":4,"tier":"hard","flags":[],"unswept":false}
+{"defId":"classic-020","games":8,"drawnGames":1,"affordableTurns":1,"plays":1,"errors":0,"timeouts":0,"evalDeltaSum":1.5,"evalDeltaCount":1,"tier":"easy","flags":[],"unswept":false}
+{"defId":"classic-020","games":8,"drawnGames":7,"affordableTurns":20,"plays":5,"errors":0,"timeouts":0,"evalDeltaSum":7.5,"evalDeltaCount":5,"tier":"hard","flags":[],"unswept":false}
+{"defId":"classicplus-005","games":8,"drawnGames":6,"affordableTurns":9,"plays":7,"errors":0,"timeouts":0,"evalDeltaSum":121.7,"evalDeltaCount":7,"tier":"easy","flags":[],"unswept":false}
+{"defId":"classicplus-005","games":8,"drawnGames":2,"affordableTurns":2,"plays":2,"errors":0,"timeouts":0,"evalDeltaSum":33.2,"evalDeltaCount":2,"tier":"hard","flags":[],"unswept":false}

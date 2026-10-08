@@ -7,8 +7,12 @@ modes `squishy:oneshot`, `squishy:split`, `squishy:split-bot` and a split's pare
 in [its section](../bot/README.md#squishy).
 
 Open an issue through one of the forms **New issue** lists (`.github/ISSUE_TEMPLATE/`: Patch, Micro
-patch, Bug, Architecture or CI, Night bot): each starts the title, puts on the type labels and sets
-the issue type, and asks for what a builder needs. A pull request starts from
+patch, Bug, Architecture or CI, Night bot): each starts the title, puts on the type labels and asks
+for what a builder needs. Its Difficulty, Priority and Who does it dropdowns become the
+`difficulty:*`, `priority:*` and `method:*` labels a person would set by hand (`triage.yml`'s `form`
+job), and a method starts triage at once, which gives the issue its type (Task, Bug or Feature), its
+labels, title and assignees, and queues a `method:use-bot` one for the night bot. "Decide later"
+leaves the method label to you, as before. A pull request starts from
 `.github/pull_request_template.md` ([Pull requests](#pull-requests)). `CONTRIBUTING.md` is the short
 version of this page for people and agents.
 
@@ -146,7 +150,12 @@ suggestions (`bot:suggestion`) arrive with plain titles, so retitle one when you
 - **Until then, players see nothing new.** Every earlier part leaves main playable and unchanged
   for players. Code nothing reaches yet is fine. A changed card, rule or screen waits for the last
   part. The alternative is the one v0.2.0 used: build on an integration branch named after the
-  version, keep a draft PR to main open, and land the whole thing as the last part.
+  version, keep a draft PR to main open, and land the whole thing as the last part. A new set may
+  instead be built on main behind the release gate (R1420), as the Meditative set is (#496,
+  `docs/meditative-set.md` M3). Its cards are in the catalog but in no pool, deck, list or patch
+  until its last part adds the set to `SHIPPED_SETS`, so its parts need no fragment, move no golden
+  trace and can merge in any order. Work under the same tracker that players should see as soon as
+  it lands is a patch of its own, titled without `(part n of m)`, and goes live when it merges.
 - **After it.** Work that shouldn't hold the patch back, such as an e2e spec, an audit or a deploy
   check, can be split off as a part that merges after the version is live, provided it changes
   nothing for players. A change for players after that is a revision (`vX.Y.Zb`).
@@ -186,6 +195,15 @@ again for its index row. The clash shows as a conflict on the note and on `spec/
 `cargo jackioh spec check` fails on whatever the renumbering missed: two notes with one `id`, a test
 or a citation with no note, a link to nothing. Numbers on `main` are never reused or renumbered
 (`spec/README.md`).
+
+A tracker whose parts build side by side may hold a block of numbers for each part, so its parts
+never clash with each other. Its foundation takes the top block, so once the foundation is on `main`
+the next free number is above every block. A held number counts as in use: other work never takes
+one, and a part that needs more than its block takes the next free number. Held now:
+
+| Tracker | Numbers | Blocks |
+| --- | --- | --- |
+| #496, the Meditative set | R780–R1429 | `docs/meditative-set.md` M10 |
 
 ## How v0.2.0 was split
 
