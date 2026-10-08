@@ -2862,6 +2862,13 @@
     "432": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-08T02:52:55Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "fails easy lines 2, 3 and 7: a new ruling (R767) in spec/, a change in crates/server's export_config test as well as apps/web, and an e2e spec; it touches no crates/engine or AI code, so it is not hard"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-3",
