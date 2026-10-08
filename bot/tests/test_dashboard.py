@@ -121,7 +121,8 @@ class DashboardTests(unittest.TestCase):
         self.assertIn(" ~~~ ".join(f"m{i}" for i in range(slots)), body)
         # The AI's training lanes run outside the harness: no box of theirs here.
         self.assertNotIn("training", body)
-        self.assertIn("Lanes: 2 of 10 in use", body)
+        # GitHub's lanes count claude-1's run; Muse's is in the night box's slots.
+        self.assertIn("Lanes on GitHub's runners: 1 of 11 in use", body)
         self.assertNotIn("pie", body)
         # Each subscription, with its usage as a bar.
         self.assertIn("| `claude-1` |", body)
@@ -140,7 +141,7 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("Nothing is running right now.", body)
         slots = self.ctx.cfg.pool.machine_parallel
         self.assertIn(f"The night box: 0 of {slots} slots in use", body)
-        self.assertIn("Lanes: 0 of 10 in use", body)
+        self.assertIn("Lanes on GitHub's runners: 0 of 11 in use", body)
         self.assertIn("Nothing is queued.", body)
 
     def test_the_loop_rewrites_it_every_ten_minutes_and_outlives_a_bad_tick(self):
