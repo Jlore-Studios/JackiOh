@@ -88,24 +88,25 @@ Each one's first cell reads its inputs from the environment and defaults to the 
 | `JACKIOH_CATALOG` | all | the catalog | `crates/cards/catalog.json` |
 | `JACKIOH_SWEEP` | 03 | pass-1 sweep lines, comma-separated files | `fixtures/sweep-small.jsonl` |
 | `JACKIOH_REPO` | 03 | a repository root, for `crates/ai/generation.json` and `training/history/` | `fixtures/repo` |
-| `JACKIOH_PATCH` | 01, 02 | the patch to read | the newest patch in the records |
+| `JACKIOH_SOURCE` | 01, 02 | `live`, `dev` or `all`: the games the figures read (R378: live unless asked) | `live` |
+| `JACKIOH_PATCH` | 01, 02 | the patch to read | the newest patch among the games read |
 | `JACKIOH_MIN_SAMPLE` | 01, 02 | the games a card needs to be ranked | `CARD_STATS_MIN_SAMPLE`, read off `crates/server/src/config.rs` |
 
-Set them where Jupyter starts, so the kernel inherits them. A card with fewer games than the minimum is shown,
+Set them where Jupyter starts, so the kernel inherits them. A relative path is read from the repository root, wherever the notebook is opened (run the commands below from there). A card with fewer games than the minimum is shown,
 marked `*`, and never ranked, as on the statistics page (R654); the fixtures are 80 games, so little of what they
 draw reaches the minimum of 20 (`test_notebooks.py` also runs 01 and 02 with `JACKIOH_MIN_SAMPLE=3`).
 
 ```
-# Live games off the database and a development run: files of both sources may be named together (R378), and the notebooks read them apart
+# Live games off the database and a development run: files of both sources may be named together (R378), and the notebooks read live games unless JACKIOH_SOURCE says dev or all, and the live-against-development section reads them apart
 jackioh-server stats-export --out=analysis/data/live.jsonl
 cargo jackioh stats --games 200 --out analysis/data/dev.jsonl
 JACKIOH_RECORDS=analysis/data/live.jsonl,analysis/data/dev.jsonl uv run --project analysis jupyter lab
 
 # A development run of this checkout alone
-JACKIOH_RECORDS=analysis/data/dev.jsonl uv run --project analysis jupyter lab
+JACKIOH_SOURCE=dev JACKIOH_RECORDS=analysis/data/dev.jsonl uv run --project analysis jupyter lab
 
 # The training lanes' games, copied off the training box (training/README.md), and its checkout's history
-JACKIOH_RECORDS="$(ls analysis/data/training/*.jsonl | paste -sd, -)" uv run --project analysis jupyter lab
+JACKIOH_SOURCE=dev JACKIOH_RECORDS="$(ls analysis/data/training/*.jsonl | paste -sd, -)" uv run --project analysis jupyter lab
 JACKIOH_REPO=/path/to/the/training/checkout JACKIOH_SWEEP=sweep-1.jsonl,sweep-2.jsonl uv run --project analysis jupyter lab
 ```
 
