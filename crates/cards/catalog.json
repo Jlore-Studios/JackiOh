@@ -10815,5 +10815,280 @@
       "keywords": [],
       "text": "End of turn: Upgrade 2 random cards in your hand."
     }
+  },
+  "meditative-001": {
+    "id": "meditative-001",
+    "index": "1",
+    "name": "Disruptive Disruptor",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      },
+      {
+        "key": "mana",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 0,
+    "base": {
+      "keywords": [],
+      "text": "Aura: You can't be forced to discard cards during your opponent's turn."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Aura: You can't be forced to discard cards during your opponent's turn.\nCry: Draw {draw|card|cards} and gain {mana} mana."
+    }
+  },
+  "meditative-004": {
+    "id": "meditative-004",
+    "index": "4",
+    "name": "Juicy Kumquat Melon",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "discount",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 0,
+    "base": {
+      "keywords": [],
+      "text": "Draw a (0), (1), (2), (3), (4) and (5) Cost Meditative card."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Draw a (0), (1), (2), (3), (4) and (5) Cost Meditative card. They cost ({discount}) less."
+    }
+  },
+  "meditative-005": {
+    "id": "meditative-005",
+    "index": "5",
+    "name": "Death by 1000 cuts",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "echo",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 0,
+    "base": {
+      "keywords": [],
+      "text": "Echo X\nDeal {damage} damage to a Unit. X is {echo|time|times} your max mana."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Lifesteal"
+        }
+      ],
+      "text": "Echo X, Lifesteal\nDeal {damage} damage to a Unit. X is {echo|time|times} your max mana."
+    }
+  },
+  "meditative-006": {
+    "id": "meditative-006",
+    "index": "6",
+    "name": "Me no Likey",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 0,
+    "params": [
+      {
+        "key": "multiple",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 0,
+    "base": {
+      "keywords": [],
+      "text": "Give one of your Units to your opponent. If you do, gain mana equal to its cost."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Give one of your Units to your opponent. If you do, gain mana equal to {multiple|time|times} its cost."
+    }
+  },
+  "meditative-007": {
+    "id": "meditative-007",
+    "index": "7",
+    "name": "Introspection",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Legendary",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "heal",
+        "base": 3,
+        "radiant": 8,
+        "better": "up",
+        "step": 2,
+        "min": 1
+      },
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 0,
+    "base": {
+      "keywords": [],
+      "text": "End of turn: Heal your hero and each of your Units {heal}. Draw {draw|card|cards}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "End of turn: Heal your hero and each of your Units {heal}. Draw {draw|card|cards}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
+    }
+  },
+  "meditative-014": {
+    "id": "meditative-014",
+    "index": "14",
+    "name": "Prime Time",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "draws",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "base"
+      }
+    ],
+    "loc": 0,
+    "base": {
+      "keywords": [],
+      "text": "Draw {draws|card|cards} with a prime index from your deck."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Draw every card with a prime index from your deck."
+    }
+  },
+  "meditative-021": {
+    "id": "meditative-021",
+    "index": "21",
+    "name": "API Key Fishing",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": {
+      "base": 0,
+      "embiggen": 1
+    },
+    "refs": [
+      "meditative-021"
+    ],
+    "params": [
+      {
+        "key": "chance",
+        "base": 2,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "max": 100
+      },
+      {
+        "key": "paidChance",
+        "base": 5,
+        "radiant": 12,
+        "better": "up",
+        "step": 2,
+        "min": 1,
+        "max": 100
+      }
+    ],
+    "loc": 0,
+    "base": {
+      "keywords": [],
+      "text": "{chance}% chance: Steal your opponent's hand.\nPaid (1): {paidChance}% instead.\nEnd of turn: Add an API Key Fishing to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "{chance}% chance: Steal your opponent's hand.\nPaid (1): {paidChance}% instead.\nEnd of turn: Add an API Key Fishing to your hand."
+    }
   }
 }

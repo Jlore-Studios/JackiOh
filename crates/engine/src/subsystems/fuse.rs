@@ -54,7 +54,7 @@ use serde_json::{Value, json};
 use crate::config::{CRAFTED_CARD_COST, FUSE_COST_CAP, FUSE_MIN_INGREDIENTS, FUSED_ID_CAP};
 use crate::script::{
     ActivationDecl, AuraEntry, AuraHook, CardScripts, ConditionContext, ConditionHook, Effect, EffectApply,
-    EffectContext, EffectPart, EngineSink, FlagOrCount, Hook, HookArgs, PlagueMultiplierHook, QuestBook,
+    EchoXHook, EffectContext, EffectPart, EngineSink, FlagOrCount, Hook, HookArgs, PlagueMultiplierHook, QuestBook,
     Script, SetStat, SetStatHook, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef, TriggerRun,
     WouldCounterHook, aura_hook, condition_hook, hook, read_hook, target_check, would_counter_hook,
 };
@@ -1103,11 +1103,13 @@ fn combine_objects(records: &[Script]) -> Script {
         targeting_discards: None,
         records_play_as: None,
         draw_limit: eager_read(records.iter().map(|s| s.draw_limit.clone()).collect()),
+        discard_guard: eager_read(records.iter().map(|s| s.discard_guard.clone()).collect()),
         replacements: concat(records.iter().map(|s| s.replacements.clone())),
         hero_guard: eager_read(records.iter().map(|s| s.hero_guard.clone()).collect()),
         conditional_keywords: eager_read(records.iter().map(|s| s.conditional_keywords.clone()).collect()),
         after_attack: hooks(|s| s.after_attack.clone(), "afterAttack"),
         plague_multiplier: None,
+        echo_x: None,
         deck_triggers: lists_of_triggers(|s| s.deck_triggers.clone()),
         graveyard_triggers: lists_of_triggers(|s| s.graveyard_triggers.clone()),
         quests: combine_quests(records),
@@ -1122,7 +1124,7 @@ fn combine_objects(records: &[Script]) -> Script {
 /// members that return no list (`setStat`, summed like every other stat R77 sums; `conditionMet`,
 /// R195's yellow glow, which answers a boolean, so the ingredients' hooks are or-ed (R196);
 /// `tributeWhen` and `wouldCounter` (R403, R667), or-ed the same way; `plagueMultiplier` (R471), which
-/// multiplies), each combined on its own; and with its trigger ids namespaced, so two ingredients that
+/// multiplies; `echoX` (R802), the larger), each combined on its own; and with its trigger ids namespaced, so two ingredients that
 /// both call a trigger "turn-end" stay two distinct conditions on the fused card — each running in its
 /// ingredient's place (R102), so a question it asks comes back to its own step — and its Activate
 /// abilities run in its place (R102, R384).
@@ -1142,6 +1144,7 @@ fn script_record(script: &Script, def_id: &str, index: usize) -> Script {
         condition_met: None,
         tribute_when: None,
         plague_multiplier: None,
+        echo_x: None,
         would_counter: None,
         triggers: namespaced(&script.triggers),
         hand_triggers: namespaced(&script.hand_triggers),
@@ -1254,6 +1257,32 @@ fn fused_set_stat(scripts: &[&Script]) -> Option<SetStatHook> {
             SetStat { attack, max_health }
         })),
     }
+}
+
+/// R802: a computed Echo X on a fused card. A number in `staticFlags` takes the larger of the
+/// ingredients' (`combine_static_flags`), so the computed one does too, each hook asked about the fused
+/// card at its own ingredient's price (`as_ingredient`, R102).
+fn fused_echo_x(scripts: &[&Script]) -> Option<EchoXHook> {
+    let hooks: Vec<Option<EchoXHook>> = scripts.iter().map(|script| script.echo_x.clone()).collect();
+    if hooks.iter().all(Option::is_none) {
+        return None;
+    }
+    Some(read_hook(move |args| {
+        hooks
+            .iter()
+            .enumerate()
+            .fold(0, |largest, (index, echo_x)| match echo_x {
+                None => largest,
+                Some(echo_x) => {
+                    let card = crate::scripts::as_ingredient(args.self_, index);
+                    largest.max(echo_x(HookArgs {
+                        state: args.state,
+                        self_: &card,
+                        radiant: args.radiant,
+                    }))
+                }
+            })
+    }))
 }
 
 /// R471: "Plague Counters placed on this are doubled" (Classic #27). Each ingredient's text multiplies
@@ -1492,6 +1521,7 @@ fn fused_script(
     combined.aura = fused_aura(&faces);
     combined.cry = fused_cry(&faces);
     combined.plague_multiplier = fused_plague_multiplier(&scripts);
+    combined.echo_x = fused_echo_x(&scripts);
     combined
 }
 

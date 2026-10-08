@@ -350,7 +350,8 @@ impl std::fmt::Debug for TriggerDef {
 
 /// `{ state; self; radiant }`: the argument of every pure-read hook TS gave that object (`aura`,
 /// `setStat`, `costAura`, `graveyardPlay`, `targetingDiscards`, `recordsPlayAs`, `drawLimit`,
-/// `heroGuard`, `conditionalKeywords`, `plagueMultiplier`, `tributeWhen`, `ActivationDecl.has`).
+/// `heroGuard`, `conditionalKeywords`, `plagueMultiplier`, `tributeWhen`, `ActivationDecl.has`), and of
+/// the two the Meditative set adds, `discardGuard` (R800) and `echoX` (R802).
 #[derive(Clone, Copy)]
 pub struct HookArgs<'a> {
     pub state: &'a GameState,
@@ -692,6 +693,9 @@ pub type ConditionalKeywordsHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> Vec<Keywo
 /// B5 E19, R471: what each Plague Counter placement onto this card is multiplied by.
 pub type PlagueMultiplierHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
 
+/// R802: a computed Echo X, the repeats the card's Echo makes as it is played.
+pub type EchoXHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
+
 /// Classic #88 Siphon Squad, R403: "When …, Tribute this".
 pub type TributeWhenHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> bool + Send + Sync>;
 
@@ -778,6 +782,11 @@ pub struct Script {
     /// more than 1 card each turn": Classic #4, #49). A pure read like an aura, so a card computes its
     /// number (a declared, tunable one included) from its own instance. The lowest limit on a player holds.
     pub draw_limit: Option<DrawLimitHook>,
+    /// R800: the players this card guards from an effect's discard while it acts on the field ("You
+    /// can't be forced to discard cards during your opponent's turn": Meditative #1), relative to its
+    /// controller, as a draw limit's are. A pure read like `draw_limit`; a guarded player's hand loses
+    /// no card to an effect's discard while it is not their turn (`draw::discard_guarded`).
+    pub discard_guard: Option<DiscardGuardHook>,
     // ---- v0.2.0 script hooks, by workstream: damage and combat (E5, E6, E8, E9, E35) ----
     /// B5 E5, R460: the events this card changes before they happen — a lethal hit on its hero, a heal
     /// on an enemy, its units' deaths, a card's way to a graveyard, a friendly unit targeted by the
@@ -808,6 +817,11 @@ pub struct Script {
     /// receives the placement — a pure read (a card reads its declared number here, B3.4), floored at 1.
     /// A fused card's multipliers multiply (`subsystems::fuse`).
     pub plague_multiplier: Option<PlagueMultiplierHook>,
+    /// R802: a computed Echo X ("Echo X … X is 2 times your max mana": Meditative #5), read once as the
+    /// card is played, when its Echo repeats are queued (§10.5 step 4), so X stays fixed while it
+    /// resolves. A pure read; the larger of it and `staticFlags.echo` is the card's printed Echo, which
+    /// its "Echo" tuning step and a Twinspell grant then add to (`echo::printed_echo`).
+    pub echo_x: Option<EchoXHook>,
     /// B5 E26, R464: triggers this card answers while it lies in its owner's library ("While this is in
     /// your deck: …", Classic+ #37 Wardrum). A library card is hidden (§9.1), so its queue entries take
     /// no number (R177), and within a side they come after the hand's and before the graveyard's, in the
@@ -991,6 +1005,9 @@ pub struct DrawLimit {
 }
 
 pub type DrawLimitHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> Vec<DrawLimit> + Send + Sync>;
+
+/// R800: the players a card guards from an effect's discard, each relative to its controller.
+pub type DiscardGuardHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> Vec<DrawLimitPlayer> + Send + Sync>;
 
 /// §10.6: a card-specific target predicate's argument (`TargetFilter.check`). `candidate` is the card a
 /// declaration would offer (`None` for a hero or a zone), `self_` the card declaring it, `player` the

@@ -72,11 +72,13 @@ mod tests {
             targeting_discards,
             records_play_as,
             draw_limit,
+            discard_guard,
             replacements,
             hero_guard,
             conditional_keywords,
             after_attack,
             plague_multiplier,
+            echo_x,
             deck_triggers,
             graveyard_triggers,
             quests,
@@ -109,11 +111,13 @@ mod tests {
             && targeting_discards.is_none()
             && records_play_as.is_none()
             && draw_limit.is_none()
+            && discard_guard.is_none()
             && replacements.is_empty()
             && hero_guard.is_none()
             && conditional_keywords.is_none()
             && after_attack.is_none()
             && plague_multiplier.is_none()
+            && echo_x.is_none()
             && deck_triggers.is_empty()
             && graveyard_triggers.is_empty()
             && quests.is_none()

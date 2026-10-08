@@ -700,6 +700,12 @@ pub enum GameEvent {
         color: String,
         added: bool,
     },
+    /// R800: an effect's discard from `player`'s hand that a discard guard stopped — no card moved and no
+    /// random number was drawn. `count` is how many cards it would have taken. Public: it names no card.
+    DiscardPrevented {
+        player: PlayerId,
+        count: i32,
+    },
 }
 
 /// B3.4, R386: what one Degrade or Upgrade application changed. `cost` is a `costMod` step; `stats`
@@ -792,6 +798,7 @@ string_union! {
         TurnCutShort = "turnCutShort",
         Marked = "marked",
         Glitched = "glitched",
+        DiscardPrevented = "discardPrevented",
     }
 }
 
@@ -868,6 +875,7 @@ impl GameEvent {
             GameEvent::TurnCutShort { .. } => GameEventType::TurnCutShort,
             GameEvent::Glitched { .. } => GameEventType::Glitched,
             GameEvent::Marked { .. } => GameEventType::Marked,
+            GameEvent::DiscardPrevented { .. } => GameEventType::DiscardPrevented,
         }
     }
 }
@@ -923,6 +931,6 @@ mod tests {
             r#"{"type":"gameOver","winner":"draw","reason":"turn-cap"}"#
         );
         assert_eq!(over.event_type().as_str(), "gameOver");
-        assert_eq!(GAME_EVENT_TYPES.len(), 65);
+        assert_eq!(GAME_EVENT_TYPES.len(), 66);
     }
 }

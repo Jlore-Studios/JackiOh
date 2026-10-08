@@ -1252,6 +1252,27 @@
     "classicplus-t-ai-10": { // Fine-Tuning
       cast: { voice: "sapi-synth-deep", text: "Adjusting weights. Improving slightly." },
     },
+    "meditative-001": { // Disruptive Disruptor
+      cast: { voice: "sapi-bureaucrat", text: "Objection. Nobody touches that hand." },
+    },
+    "meditative-004": { // Juicy Kumquat Melon
+      cast: { voice: "sapi-fruit", text: "Sweet, sour, and sorted by price." },
+    },
+    "meditative-005": { // Death by 1000 cuts
+      cast: { voice: "whisper", text: "One little cut. Then another." },
+    },
+    "meditative-006": { // Me no Likey
+      cast: { voice: "kid", text: "Me no likey. You keep it." },
+    },
+    "meditative-007": { // Introspection
+      cast: { voice: "sapi-mystic", text: "Breathe in. Look within. Strike out." },
+    },
+    "meditative-014": { // Prime Time
+      cast: { voice: "prof", text: "Two, three, five, seven. Indivisible." },
+    },
+    "meditative-021": { // API Key Fishing
+      cast: { voice: "hustler", text: "Just click the link, friend." },
+    },
   },
   emotes: {
     vanilla: {
