@@ -191,10 +191,11 @@ pub fn was_played_this_turn<'a>(state: &GameState, player: PlayerId, card: impl 
         .any(|played| played == id)
 }
 
-/// R429, R766 (issue #557): the price a Spell whose return keeps it (`StaticFlags.returnKeepsPrice`, #31
-/// KY's Math Equation) was played at — the `costMod` it had as §10.5 step 7 landed it, which R766 took
-/// off it there — while it lies in its graveyard flagged for its end-of-turn return (R155). 0 for any
-/// other card, and for one whose price was 0 (`resolve::note_return_price`).
+/// R429, R766 (issues #557, #572): the price a Spell whose return keeps it (`StaticFlags.returnKeepsPrice`,
+/// #31 KY's Math Equation) has had from its own returns — its climb, and no other change to its price —
+/// as it carries it in a hand and into its play, and as §10.5 step 7 notes it again while it lies in its
+/// graveyard flagged for its end-of-turn return (R155). 0 for any other card, and for one that has not
+/// climbed (`resolve::RETURN_PRICE_KEY`).
 pub fn return_price_of(card: &CardInstance) -> i32 {
     card.memory
         .get(crate::resolve::RETURN_PRICE_KEY)
