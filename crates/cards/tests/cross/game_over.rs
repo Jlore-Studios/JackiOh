@@ -154,8 +154,8 @@ mod r216_nothing_happens_after_the_game_is_over {
 
     #[test]
     fn r216_r437_a_marked_unit_that_dies_with_its_hero_says_nothing_of_its_mark_after_game_over_2_5() {
-        // Fuzz seed 329 (#562), cut down: p1's The Power to Punish marks p2's Pointmaster for a destroy at the
-        // start of p1's next turn (R437's red mark). Shredder's end-of-turn 2 damage kills the
+        // Fuzz seed 329 (#562), cut down: p1's The Power to Punish marks p2's Pointmaster for a destroy at
+        // the start of p1's next turn (R437's red mark). Shredder's end-of-turn 2 damage kills the
         // Pointmaster and p2's hero in one state check, which ends the game (§2.5). The destroy went
         // with its Unit, but the mark's `marked` (added: false) may not follow `gameOver`.
         let mut s = scenario(json!({
