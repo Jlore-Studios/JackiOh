@@ -66,16 +66,16 @@ pub const GHOUL_TOKEN_INDEX: &str = "T-ghoul";
 const TOKEN_SET: SetName = SetName::Core;
 
 /// R754: Steady Shot's declared number ("{shot}"); how far its Radiant face raises it per use is
-/// `STEADY_SHOT_RAISE` (`crate::config`). It is the Steady Shot power's own (`power: "burn"`, R1425).
+/// `STEADY_SHOT_RAISE` (`crate::config`). It is the Steady Shot power's own (`power: "burn"`, R1430).
 pub const STEADY_SHOT_PARAM: &str = "shot";
 
 /// B3.4 rule 5 (#493): the other numbers #98 declares, one per power's number. Each is printed in
 /// `crate::config` and moved by the card's tuning (`power_number`), so a Degrade, an Upgrade or KY's
-/// Constant changes the power the card has as its text says. R1425: the catalog names each number's
+/// Constant changes the power the card has as its text says. R1430: the catalog names each number's
 /// power (`Param.power`, the power's stored name), so a Degrade, an Upgrade or KY's Constant reaches
 /// only the numbers of the power the card has now, and a number of another power keeps its tuning for
 /// when a reroll (Tank Up, R757) brings that power back. Life Tap's damage is the base face's alone
-/// (`tunedOn: "base"`, R1426).
+/// (`tunedOn: "base"`, R1431).
 pub const LIFE_TAP_DRAW_PARAM: &str = "tapDraw";
 pub const LIFE_TAP_DAMAGE_PARAM: &str = "tapDamage";
 pub const PING_PARAM: &str = "ping";

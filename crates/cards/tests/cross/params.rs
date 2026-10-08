@@ -305,9 +305,9 @@ mod b3_4_params_the_numbers_a_card_declares {
 }
 
 /// Which declared numbers a Degrade, an Upgrade or KY's Constant reaches (`param_in_reach`): a number
-/// only one face prints is tuned on that face alone (R749, R1426), and a number that belongs to a power
-/// is tuned only while the card has that power (R1425).
-mod r1425_r1426_the_numbers_a_change_reaches {
+/// only one face prints is tuned on that face alone (R749, R1431), and a number that belongs to a power
+/// is tuned only while the card has that power (R1430).
+mod r1430_r1431_the_numbers_a_change_reaches {
     use super::*;
     use jackioh_engine::effects::TuneDirection;
     use jackioh_engine::testkit::{numbers_on, param_value, step_param, steppable_params};
@@ -320,7 +320,7 @@ mod r1425_r1426_the_numbers_a_change_reaches {
     }
 
     #[test]
-    fn r1426_every_number_only_the_base_face_prints_is_tuned_there_alone_and_reads_printed_on_the_radiant_face()
+    fn r1431_every_number_only_the_base_face_prints_is_tuned_there_alone_and_reads_printed_on_the_radiant_face()
      {
         let mut base_only: Vec<String> = Vec::new();
         for card in entries() {
@@ -337,7 +337,7 @@ mod r1425_r1426_the_numbers_a_change_reaches {
                     continue;
                 }
                 base_only.push(format!("{} {}", card.id, param.key));
-                // #98's Life Tap damage is Life Tap's (R1425): its own test rolls the power first.
+                // #98's Life Tap damage is Life Tap's (R1430): its own test rolls the power first.
                 if param.power.is_some() {
                     continue;
                 }
@@ -381,7 +381,7 @@ mod r1425_r1426_the_numbers_a_change_reaches {
     }
 
     #[test]
-    fn r1425_every_number_that_belongs_to_a_power_names_an_activate_ability_its_card_declares_on_both_faces()
+    fn r1430_every_number_that_belongs_to_a_power_names_an_activate_ability_its_card_declares_on_both_faces()
     {
         jackioh_cards::register_all();
         let scripts = jackioh_cards::scripts_of();

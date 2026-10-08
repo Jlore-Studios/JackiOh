@@ -1014,13 +1014,13 @@ mod tests {
     }
 
     // -------------------------------------------------------------------------------------------
-    // R1425: each number is its power's (`Param.power`), so a Degrade, an Upgrade or KY's Constant
+    // R1430: each number is its power's (`Param.power`), so a Degrade, an Upgrade or KY's Constant
     // reaches only the numbers of the power the card has now, and a number of another power keeps its
-    // tuning for when a reroll brings that power back. R1426: Life Tap's damage is printed on the base
+    // tuning for when a reroll brings that power back. R1431: Life Tap's damage is printed on the base
     // face alone, so it is tuned there alone.
     // -------------------------------------------------------------------------------------------
 
-    mod n98_heroic_power_each_number_is_its_power_s_r1425_r1426 {
+    mod n98_heroic_power_each_number_is_its_power_s_r1430_r1431 {
         use super::*;
 
         /// C+ #71 Book of Buff: "Upgrade a card 5 times." C+ #72 Book of Nerf: "Degrade a permanent 5
@@ -1083,7 +1083,7 @@ mod tests {
         }
 
         #[test]
-        fn r1425_each_number_belongs_to_the_power_whose_words_write_it_and_every_power_s_number_is_its_own() {
+        fn r1430_each_number_belongs_to_the_power_whose_words_write_it_and_every_power_s_number_is_its_own() {
             crate::register_all();
             let params = crate::card_def(HEROIC).params.unwrap_or_default();
             for param in &params {
@@ -1105,7 +1105,7 @@ mod tests {
         }
 
         #[test]
-        fn r1425_under_each_power_on_either_face_an_upgrade_or_a_degrade_draws_only_that_power_s_numbers() {
+        fn r1430_under_each_power_on_either_face_an_upgrade_or_a_degrade_draws_only_that_power_s_numbers() {
             crate::register_all();
             let mut drawn = 0;
             for power in subsystems::HERO_POWERS {
@@ -1145,7 +1145,7 @@ mod tests {
         }
 
         #[test]
-        fn r1425_kys_constant_lists_only_the_numbers_of_the_power_the_card_has() {
+        fn r1430_kys_constant_lists_only_the_numbers_of_the_power_the_card_has() {
             crate::register_all();
             // The cost, the power's Activate count (B3.2 rule 9) and the power's own numbers.
             for (power, radiant_face, listed) in [
@@ -1162,7 +1162,7 @@ mod tests {
             // Constant sets its cost or its Activate count to 3, where every power's numbers once stood
             // beside them.
             let mut s = scenario(json!({
-                "seed": "hp-r1425-constant",
+                "seed": "hp-r1430-constant",
                 "p1": { "hand": [KYS_CONSTANT, HEROIC, SPARE], "mana": 8 },
                 "p2": { "hand": [FREE] },
             }));
@@ -1176,7 +1176,7 @@ mod tests {
         }
 
         #[test]
-        fn r1425_a_number_tuned_under_tank_up_keeps_its_tuning_through_the_reroll_and_counts_again_when_tank_up_is_back() {
+        fn r1430_a_number_tuned_under_tank_up_keeps_its_tuning_through_the_reroll_and_counts_again_when_tank_up_is_back() {
             crate::register_all();
             let (mut s, card) = on_field("armor", OnField { radiant_face: true, ..turns() });
             assert_eq!(crate::upgrade_number(&mut s, HEROIC, "armor"), 5);
@@ -1201,7 +1201,7 @@ mod tests {
         }
 
         #[test]
-        fn r1425_a_number_tuned_under_ping_is_left_alone_by_upgrades_under_die_insect_and_pings_for_it_again() {
+        fn r1430_a_number_tuned_under_ping_is_left_alone_by_upgrades_under_die_insect_and_pings_for_it_again() {
             crate::register_all();
             let (mut s, card) = on_field(
                 "ping",
@@ -1224,7 +1224,7 @@ mod tests {
         }
 
         #[test]
-        fn r1426_life_tap_s_damage_is_tuned_on_the_base_face_alone_and_reads_2_on_the_radiant_face() {
+        fn r1431_life_tap_s_damage_is_tuned_on_the_base_face_alone_and_reads_2_on_the_radiant_face() {
             crate::register_all();
             let (s, card) = on_field("draw", OnField::default());
             assert_eq!(steppable_keys(&s, &card, TuneDirection::Upgrade), vec!["tapDraw", "tapDamage"]);

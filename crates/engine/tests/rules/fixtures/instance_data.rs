@@ -379,7 +379,7 @@ pub static radiant_number: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
-/// R1426: the mirror, Classic #11 Mind Melt's shape: a number only the base face prints (`cards` 2,
+/// R1431: the mirror, Classic #11 Mind Melt's shape: a number only the base face prints (`cards` 2,
 /// more is better), tuned on that face only.
 pub static base_number: LazyLock<CardDef> = LazyLock::new(|| {
     def(

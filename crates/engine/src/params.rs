@@ -12,8 +12,8 @@
 //!
 //! Which numbers a Degrade, an Upgrade or KY's Constant may reach is `param_in_reach`: a number only
 //! one face prints is tuned on that face alone and reads its printed value on the other (`tunedOn`,
-//! R749 for the Radiant face, R1426 for the base face), and a number that belongs to a power
-//! (`Param.power`, #98 Heroic Power's) only while the card has that power (R1425), keeping its
+//! R749 for the Radiant face, R1431 for the base face), and a number that belongs to a power
+//! (`Param.power`, #98 Heroic Power's) only while the card has that power (R1430), keeping its
 //! tuning while it has another.
 //!
 //! A fused card (R77, R102) runs each ingredient's text, and each text reads its own declaration: the
@@ -101,7 +101,7 @@ fn param_max(param: &Param) -> Option<i32> {
     param.max
 }
 
-/// R749, R1426: whether a number may be tuned on the face `radiant` names — either face, unless its
+/// R749, R1431: whether a number may be tuned on the face `radiant` names — either face, unless its
 /// `tunedOn` names the one face that prints it.
 fn tuned_on_face(param: &Param, radiant: bool) -> bool {
     match param.tuned_on {
@@ -111,7 +111,7 @@ fn tuned_on_face(param: &Param, radiant: bool) -> bool {
     }
 }
 
-/// R1425: whether the card has the power `power` names now — one of the Activate abilities it has
+/// R1430: whether the card has the power `power` names now — one of the Activate abilities it has
 /// (`abilities_of`, which leaves out an ability `ActivationDecl.has` says it lacks), its id that name,
 /// or `<name>#n` on a fused card (R102).
 fn has_power(state: &GameState, card: &CardInstance, power: &str) -> bool {
@@ -122,8 +122,8 @@ fn has_power(state: &GameState, card: &CardInstance, power: &str) -> bool {
 
 /// B3.4 rule 3's Number row and KY's Constant: whether a Degrade, an Upgrade or KY's Constant may reach
 /// the declared number `param` on `card` now. A number tuned on one face only (`tunedOn`) is out of
-/// reach on the other, where it reads its printed value whatever its tuning (R749, R1426). A number
-/// that belongs to a power (`Param.power`) is in reach only while the card has that power (R1425):
+/// reach on the other, where it reads its printed value whatever its tuning (R749, R1431). A number
+/// that belongs to a power (`Param.power`) is in reach only while the card has that power (R1430):
 /// another power's number keeps the tuning it has, which counts again once the card has that power
 /// back, but nothing draws it meanwhile. Every other declared number is in reach.
 pub fn param_in_reach(state: &GameState, card: &CardInstance, param: &Param) -> bool {
@@ -137,9 +137,9 @@ pub fn param_in_reach(state: &GameState, card: &CardInstance, param: &Param) -> 
 }
 
 /// A declared number's value on a face, as `tuning` moves it: the one formula every reader shares.
-/// R749, R1426: a number tuned on one face only reads its printed value on the other face, whatever
+/// R749, R1431: a number tuned on one face only reads its printed value on the other face, whatever
 /// its tuning, so `steppable_params` finds no step there. A number of a power the card does not have
-/// now still reads its tuning (R1425): `param_in_reach` is what keeps the draws off it.
+/// now still reads its tuning (R1430): `param_in_reach` is what keeps the draws off it.
 fn value_with(param: &Param, radiant: bool, tuning: Option<&Tuning>, steps: Option<i32>) -> i32 {
     let printed = if radiant { param.radiant } else { param.base };
     if !tuned_on_face(param, radiant) {
@@ -405,7 +405,7 @@ pub struct SteppableParam {
 }
 
 /// B3.4 rule 3's "Number" row: the declared numbers in reach (`param_in_reach`: on their face, R749,
-/// R1426, and of the card's power now, R1425) that one step in `direction` would change — up moves a
+/// R1431, and of the card's power now, R1430) that one step in `direction` would change — up moves a
 /// number the way its `better` says for an Upgrade, the other way for a Degrade — with how far each
 /// would move, in declaration order. A number already at the bound it would move past is not one.
 pub fn steppable_params(

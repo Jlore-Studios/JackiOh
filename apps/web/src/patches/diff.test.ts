@@ -141,7 +141,7 @@ describe("R388 a card's changes, from two snapshots", () => {
     expect(delta !== null && dataOnly(delta)).toBe(true);
   });
 
-  it("R388 R1426 R1425 a number newly tuned on the base face only, or newly its power's, is a params change", () => {
+  it("R388 R1431 R1430 a number newly tuned on the base face only, or newly its power's, is a params change", () => {
     const bolt = fixtureDef(V3, "core-002");
     const baseOnly = { ...bolt, params: (bolt.params ?? []).map((param) => ({ ...param, tunedOn: "base" as const })) };
     expect(changed(diffCard(bolt, baseOnly))).toEqual([

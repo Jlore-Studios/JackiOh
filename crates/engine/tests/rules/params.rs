@@ -1,7 +1,7 @@
 //! Declared numbers (docs/classic-sets.md B3.4 rule 5, R386): `param(ctx, key)` in a card script, the
 //! pure `paramValue` the view and a `preview` hook read, the default steps and the bounds, a number
 //! KY's Constant set and the steps after it, a fused card's ingredients each reading their own
-//! declaration (R102), a number tuned on the Radiant face only (R749) or the base face only (R1426),
+//! declaration (R102), a number tuned on the Radiant face only (R749) or the base face only (R1431),
 //! and a card resolving with the number as it stands.
 //!
 //! Port of `packages/engine/test/params.test.ts`. TS handed `param` plain objects shaped like a
@@ -158,7 +158,7 @@ mod r386_b3_4_rule_5_declared_numbers {
     }
 
     #[test]
-    fn r1426_a_number_tuned_on_base_reads_its_printed_value_on_the_radiant_face_whatever_its_steps_and_steps_on_the_base_face()
+    fn r1431_a_number_tuned_on_base_reads_its_printed_value_on_the_radiant_face_whatever_its_steps_and_steps_on_the_base_face()
      {
         let mut state = game();
         // The Radiant face prints no number: no change finds one to move, KY's Constant lists none, and a

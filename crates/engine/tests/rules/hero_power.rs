@@ -67,7 +67,7 @@ fn def(name: &str, type_: &str, index: u32, extra: Value) -> CardDef {
 }
 
 /// §8 #98's shape since R752: a Quickdraw Field Spell that costs (0) and declares Steady Shot's number,
-/// which belongs to the Steady Shot power (R1425).
+/// which belongs to the Steady Shot power (R1430).
 fn heroic() -> CardDef {
     def(
         "heroic",
@@ -554,9 +554,9 @@ mod heroic_power_the_powers_r753_r758 {
     }
 
     #[test]
-    fn r1425_steady_shot_s_number_is_in_reach_only_while_the_card_has_steady_shot_and_keeps_its_tuning_meanwhile()
+    fn r1430_steady_shot_s_number_is_in_reach_only_while_the_card_has_steady_shot_and_keeps_its_tuning_meanwhile()
      {
-        let mut state = game("r1425-shot");
+        let mut state = game("r1430-shot");
         let card = powered(&mut state, "burn", false, 1);
         keep_turn(&mut state);
         let decl = param_decl_of(&state, &card.def_id, STEADY_SHOT_PARAM).expect("shot is declared");

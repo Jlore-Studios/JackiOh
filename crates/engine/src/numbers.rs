@@ -285,7 +285,7 @@ pub fn number_key(ref_: &NumberRef) -> String {
 
 /// B3.4, Classic+ #41 KY's Constant: every number on the card now, in a fixed order — cost, attack,
 /// health, the numbered keywords, the declared numbers in reach (`params::param_in_reach`: the ones its
-/// face prints, R749, R1426, and its power's now, R1425). An Immutable card has none a change may reach
+/// face prints, R749, R1431, and its power's now, R1430). An Immutable card has none a change may reach
 /// (B3.4 rule 2), so it lists none.
 pub fn numbers_on(state: &GameState, card: &CardInstance) -> Vec<NumberOnCard> {
     let keywords = if in_unit_row(card) {
@@ -321,7 +321,7 @@ pub fn numbers_on(state: &GameState, card: &CardInstance) -> Vec<NumberOnCard> {
         );
     }
     for param in crate::params::params_of(state, &card.def_id).iter() {
-        // R749, R1426: a number the face does not print is not on it; R1425: nor is the number of a
+        // R749, R1431: a number the face does not print is not on it; R1430: nor is the number of a
         // power the card does not have now.
         if !crate::params::param_in_reach(state, card, param) {
             continue;

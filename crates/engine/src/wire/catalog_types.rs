@@ -557,7 +557,7 @@ string_union! {
 
 string_union! {
     /// `Param.tunedOn`, the one face a tuning may move a number on: the Radiant face for a number
-    /// only it prints (R749), the base face for a number only it prints (R1426).
+    /// only it prints (R749), the base face for a number only it prints (R1431).
     pub enum ParamTunedOn {
         Radiant = "radiant",
         Base = "base",
@@ -603,12 +603,12 @@ pub struct Param {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub max: Option<i32>,
-    /// R749, R1426: the one face a Degrade, an Upgrade or KY's Constant may move it on, for a number only
+    /// R749, R1431: the one face a Degrade, an Upgrade or KY's Constant may move it on, for a number only
     /// that face prints; on the other face it always reads its printed value. Absent, both faces.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub tuned_on: Option<ParamTunedOn>,
-    /// R1425: the power the number belongs to, named by the id of the card's Activate ability that is
+    /// R1430: the power the number belongs to, named by the id of the card's Activate ability that is
     /// that power (#98's stored power name, R103, R752). A Degrade, an Upgrade or KY's Constant reaches
     /// it only while the card has that ability (`ActivationDecl.has`); while it has another, the number
     /// keeps whatever tuning it has, so the power brings it back. Absent, the card's number whatever

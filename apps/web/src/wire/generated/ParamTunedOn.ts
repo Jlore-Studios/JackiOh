@@ -2,6 +2,6 @@
 
 /**
  * `Param.tunedOn`, the one face a tuning may move a number on: the Radiant face for a number
- * only it prints (R749), the base face for a number only it prints (R1426).
+ * only it prints (R749), the base face for a number only it prints (R1431).
  */
 export type ParamTunedOn = "radiant" | "base";

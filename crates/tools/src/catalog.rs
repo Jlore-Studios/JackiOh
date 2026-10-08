@@ -532,8 +532,8 @@ fn validate_face(
 /// B3.4 rule 5: `params` — distinct camelCase keys, integer values within [min, max], a direction,
 /// a positive step — each written `{key}` in at least one face's text, and every `{key}` a text
 /// writes declared. A number one face alone writes may be tuned on that face only (`tunedOn`, R749),
-/// and one only the base face writes must be (R1426); a number that belongs to a power names it by
-/// its Activate ability's id (`power`, R1425).
+/// and one only the base face writes must be (R1431); a number that belongs to a power names it by
+/// its Activate ability's id (`power`, R1430).
 fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
     let params = value.get("params");
     let texts: Vec<String> = ["base", "radiant"]
@@ -640,7 +640,7 @@ fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
                     fail(failures, &p_at, &format!("{key}: {n} is above its max {max}"));
                 }
             }
-            // R749, R1426: a number tuned on one face only is one the other face does not print.
+            // R749, R1431: a number tuned on one face only is one the other face does not print.
             let tuned_face = tuned_on.and_then(Json::as_str);
             if tuned_on.is_some() && !matches!(tuned_face, Some("radiant" | "base")) {
                 fail(
@@ -670,7 +670,7 @@ fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
                     ),
                 );
             }
-            // R1426: a number only the base face prints is tuned on the base face only.
+            // R1431: a number only the base face prints is tuned on the base face only.
             if tuned_face != Some("base") && writes(&texts[0], key) && !writes(&texts[1], key) {
                 fail(
                     failures,
@@ -680,7 +680,7 @@ fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
                     ),
                 );
             }
-            // R1425: the power a number belongs to, named by its Activate ability's id.
+            // R1430: the power a number belongs to, named by its Activate ability's id.
             let power = param.get("power");
             if power.is_some() && !power.and_then(Json::as_str).is_some_and(is_camel_word) {
                 fail(
@@ -1835,7 +1835,7 @@ mod tests {
     }
 
     #[test]
-    fn r1426_a_number_only_the_base_face_writes_is_tuned_there_alone_and_one_the_radiant_face_writes_is_not()
+    fn r1431_a_number_only_the_base_face_writes_is_tuned_there_alone_and_one_the_radiant_face_writes_is_not()
     {
         let marked = r#"[{"key":"cards","base":1,"radiant":1,"better":"up","tunedOn":"base"}]"#;
         let unmarked = r#"[{"key":"cards","base":1,"radiant":1,"better":"up"}]"#;
@@ -1871,7 +1871,7 @@ mod tests {
     }
 
     #[test]
-    fn r1425_a_number_names_the_power_it_belongs_to_by_its_activate_ability_s_id() {
+    fn r1430_a_number_names_the_power_it_belongs_to_by_its_activate_ability_s_id() {
         let with_power = |power: &str| {
             params_failures(
                 &format!(r#"[{{"key":"shot","base":2,"radiant":4,"better":"up","power":{power}}}]"#),
