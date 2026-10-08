@@ -12,7 +12,8 @@ from pathlib import Path
 
 from harness.config import PROMPTS_DIR
 
-NAMES = ("system", "plan", "build", "fix", "revise", "review", "suggest", "oneshot", "split")
+NAMES = ("system", "plan", "build", "fix", "revise", "review", "suggest", "oneshot", "split",
+         "reconcile")
 
 
 def load(name: str, directory: Path = PROMPTS_DIR) -> string.Template:

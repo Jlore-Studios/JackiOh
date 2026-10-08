@@ -50,7 +50,7 @@ class IdentityTests(unittest.TestCase):
         self.assertEqual(config.HOME, ".harness")
         self.assertEqual((config.LABEL_BUILD, config.SLASH, config.STATE_BRANCH, config.MARKER),
                          ("bot:build", "/harness", "bot-state", "<!-- jackioh-bot -->"))
-        self.assertEqual(config.MODES, ())
+        self.assertEqual(config.MODES, ("fullsend",))
         self.assertEqual([o.login for o in config.OTHERS], ["squishy-squooby"])
         self.assertEqual(queue_mod.branch_for_issue(7), "bot/issue-7")
 
@@ -60,7 +60,7 @@ class IdentityTests(unittest.TestCase):
                          ("Squishy", "squishy", "squishy:", "squishy/"))
         self.assertEqual((found.state_branch, found.journal_branch, found.workflow),
                          ("squishy-state", "squishy-journal", "squishy-run.yml"))
-        self.assertEqual(found.modes, ("oneshot", "split", "split-bot"))
+        self.assertEqual(found.modes, ("oneshot", "split", "split-bot", "fullsend"))
         self.assertFalse(found.suggestions)
         self.assertEqual([o.login for o in found.others], ["jgoetzmann-bot"])
         self.assertNotEqual(found.marker, config.MARKER)

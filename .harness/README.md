@@ -12,6 +12,8 @@ forbidden paths, so a change it makes here is reverted before review and refused
 
 `config.json`'s `identity` names the other bot in the repository, Squishy (#60), whose issues the
 night bot leaves alone and whose section the status loop draws; Squishy's own switches are in
-[`.squishy/`](../.squishy/README.md).
+[`.squishy/`](../.squishy/README.md). Its `modes` give the night bot `fullsend` (#505): the
+`bot:fullsend` label or `/harness fullsend` splits an issue into parts that land on one branch of
+its own, which a last run reconciles into one pull request ([Fullsend](../bot/README.md#fullsend)).
 
 See [`bot/README.md`](../bot/README.md) for how the bot works.

@@ -36,7 +36,15 @@ min?: number,
  */
 max?: number, 
 /**
- * R749: the one face a Degrade, an Upgrade or KY's Constant may move it on, for a number only that
- * face prints; on the other face it always reads its printed value. Absent, both faces.
+ * R749, R1431: the one face a Degrade, an Upgrade or KY's Constant may move it on, for a number only
+ * that face prints; on the other face it always reads its printed value. Absent, both faces.
  */
-tunedOn?: ParamTunedOn, };
+tunedOn?: ParamTunedOn, 
+/**
+ * R1430: the power the number belongs to, named by the id of the card's Activate ability that is
+ * that power (#98's stored power name, R103, R752). A Degrade, an Upgrade or KY's Constant reaches
+ * it only while the card has that ability (`ActivationDecl.has`); while it has another, the number
+ * keeps whatever tuning it has, so the power brings it back. Absent, the card's number whatever
+ * power it has.
+ */
+power?: string, };
