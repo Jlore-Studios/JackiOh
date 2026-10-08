@@ -169,7 +169,7 @@ mod tests {
         assert_eq!(js(&def().type_), json!("Field Trap"));
         assert_eq!(
             js(&def().params),
-            json!([{ "key": "multiplier", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1 }])
+            json!([{ "key": "multiplier", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1, "tunedOn": "base" }])
         );
         let scripts = script();
         for face in [&scripts.base, &scripts.radiant] {

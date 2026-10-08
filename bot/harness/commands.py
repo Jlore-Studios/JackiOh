@@ -1,7 +1,7 @@
 """Comment commands: `/harness <verb> [args]`, `/harness-<verb>` and `@<bot> <verb or request>`.
 
 The slash is the running bot's (`config.SLASH`): `/harness` for the night bot, `/squishy` for
-Squishy (#60), whose modes add `oneshot` and `split`.
+Squishy (#60), whose modes add `oneshot` and `split`. Both have `fullsend` (#505).
 
 A command is a line of its own. Lines inside fenced code blocks and quoted lines (`> ...`) are
 never commands, so quoting the bot back at it cannot re-run anything. At most `MAX_COMMANDS` are
@@ -24,7 +24,7 @@ from harness.config import IDENTITY, MODES, SLASH
 from harness.trust import LEVEL_NAMES
 
 VERBS: tuple[str, ...] = ("build", "revise", "review", "rebuild", "stop", "status", "help", "halt",
-                          "start", "suggest", "run", "suspend", "oneshot", "split")
+                          "start", "suggest", "run", "suspend", "oneshot", "split", "fullsend")
 
 ALIASES: dict[str, str] = {
     "work": "build",
@@ -45,6 +45,7 @@ LEVELS: dict[str, int] = {
     "build": 2,
     "oneshot": 2,
     "split": 2,
+    "fullsend": 2,
     "revise": 2,
     "review": 2,
     "rebuild": 2,
@@ -162,6 +163,7 @@ _MENTION_ARGS: dict[str, re.Pattern[str]] = {
     "suspend": re.compile(r"^\S*$"),
     "oneshot": re.compile(r"^$"),
     "split": re.compile(r"^(?i:bot)?$"),
+    "fullsend": re.compile(r"^$"),
 }
 _LIST_MARK = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+")
 _WRAP = "`*_~"
@@ -232,12 +234,14 @@ def names_the_bot(body: str, bot_login: str) -> bool:
     return any(handle.search(line) or slash.search(line) for line in command_lines(body))
 
 
-#: The help table's rows, by verb. `oneshot` and `split` show only for a bot with those modes
-#: (Squishy), `suggest` only for one that makes suggestions (the night bot).
+#: The help table's rows, by verb. `oneshot`, `split` and `fullsend` show only for a bot with
+#: those modes (Squishy's three, both bots' `fullsend`), `suggest` only for one that makes
+#: suggestions (the night bot).
 HELP_ROWS: tuple[tuple[str, str], ...] = (
     ("build", "| `build [notes]` | queue this issue for the bot | issue | 2 |"),
     ("oneshot", "| `oneshot [notes]` | build this issue in one run, many agents at once (fullsend) | issue | 2 |"),
     ("split", "| `split [bot] [notes]` | break this issue into sub-issues I build, or with `bot` that the night bot builds | issue | 2 |"),
+    ("fullsend", "| `fullsend [notes]` | split this issue into parts that land on one branch, then reconcile them into one pull request | issue | 2 |"),
     ("revise", "| `revise <notes>` | queue a revision of this PR with your notes | pull request | 2 |"),
     ("review", "| `review [strong\\|medium] [notes]` | queue a review run of this PR's head, by that tier or stronger; no revision | pull request | 2 |"),
     ("rebuild", "| `rebuild` | close my PR and build its issue again from `main`, its branch kept | issue or PR | 2 |"),
@@ -259,14 +263,17 @@ def offered(verb: str) -> bool:
         return "oneshot" in MODES
     if verb == "split":
         return any(mode.startswith("split") for mode in MODES)
+    if verb == "fullsend":
+        return "fullsend" in MODES
     if verb == "suggest":
         return IDENTITY.suggestions
     return True
 
 
-#: The verbs `--force` starts at once, as the help names them.
-FORCED = ("`build`, `revise` or `suggest`" if IDENTITY.suggestions
-          else "`build`, `oneshot`, `split` or `revise`" if MODES else "`build` or `revise`")
+#: The verbs `--force` starts at once, as the help names them: those of this bot's.
+_FORCED = [f"`{verb}`" for verb in ("build", "oneshot", "split", "fullsend", "revise", "suggest")
+           if offered(verb)]
+FORCED = f"{', '.join(_FORCED[:-1])} or {_FORCED[-1]}"
 
 HELP = ("""**Commands.** Write one per line, starting with `{slash}` or `@{bot}`; the two work the same way.
 
@@ -295,6 +302,11 @@ VERB_HELP: dict[str, tuple[str, str, str]] = {
               "They are queued at once, in order; `stop` here stops them all. When the last one "
               "closes, I check this issue's end state and close it or add what is missing.",
               "{slash} split bot"),
+    "fullsend": ("fullsend [notes]", "Split this issue into parts, sub-issues that each own their "
+                 "files, and build each onto one branch of this issue's own, not `main`, with no "
+                 "pull request, checks or review of its own. When the last part closes, one run "
+                 "reconciles the branch with fullsend, makes every check green and opens one pull "
+                 "request into `main`, reviewed like any build.", "{slash} fullsend"),
     "revise": ("revise <notes>", "Queue a revision of this pull request with your notes. "
                "Auto-merge stays off until the revision lands.", "@{bot} revise rename the helper"),
     "review": ("review [strong|medium] [notes]", "Queue a review run of the head of one of my pull "
