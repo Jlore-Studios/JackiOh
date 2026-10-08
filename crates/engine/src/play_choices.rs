@@ -321,6 +321,14 @@ fn cost_with(state: &GameState, card: &CardInstance, x: Option<i32>, embiggen: O
     crate::mana::play_cost(state, &probe)
 }
 
+/// #492, R81: what a play of this card at its embiggen price costs now, or None for a card with no
+/// embiggen price. It is `cost_with`, the price §10.5 step 1 reads for a play with `embiggen: true`,
+/// and so `mana::play_cost` on the card stamped embiggened, as the pay step charges it: the view's
+/// `embiggenCost` (§10.8) is this number, so the client never prices a play itself (CLAUDE.md rule 7).
+pub fn embiggen_play_cost(state: &GameState, card: &CardInstance) -> Option<i32> {
+    has_embiggen_price(state, card).then(|| cost_with(state, card, None, Some(true)))
+}
+
 // ---------------------------------------------------------------------------
 // Zone, X and embiggen
 // ---------------------------------------------------------------------------
