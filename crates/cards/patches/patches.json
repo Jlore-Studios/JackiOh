@@ -7776,5 +7776,122 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.3.3",
+    "date": "2026-10-08",
+    "title": "Patch v0.3.3: Heroic Power tunes only its current power, and a base-only number is tuned on the base face only",
+    "source": "issue #556",
+    "notes": "Heroic Power's numbers each belong to their power: Degrade, Upgrade and KY's Constant reach only the numbers of the power the card has now, and a number of another power keeps its tuning until a reroll brings that power back (R1430). Thirteen numbers only the base face prints, Life Tap's damage among them, are tuned on the base face only (R1431).",
+    "commits": [
+      "764bd0ad79ce2eff8768e7e1bc53d72169f2399f"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-022",
+        "name": "Carnivorous Cube",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-060",
+        "name": "Bear Honeypot",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-072",
+        "name": "Reminisce",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-098",
+        "name": "Heroic Power",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-002",
+        "name": "The Trickster",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-011",
+        "name": "Mind Melt",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-013",
+        "name": "Boots on the Ground",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-044",
+        "name": "Back from the GY",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-052",
+        "name": "Final Gambit",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-056",
+        "name": "Spell Tyrant",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-068",
+        "name": "Small Card Lobbyist",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-088",
+        "name": "Siphon Squad",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-008",
+        "name": "Withering Storm",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      }
+    ]
   }
 ]
