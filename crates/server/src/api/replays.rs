@@ -417,7 +417,8 @@ pub async fn list_replays(app: &Arc<App>, req: Req) -> ApiResult {
     }
     ok_of(&ReplayList {
         replays,
-        next_offset: more.then_some(offset + page),
+        // Saturating: an offset past every row lists nothing and must not overflow on the way.
+        next_offset: more.then_some(offset.saturating_add(page)),
     })
 }
 

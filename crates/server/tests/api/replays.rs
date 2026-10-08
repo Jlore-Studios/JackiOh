@@ -748,6 +748,9 @@ mod r768_the_list {
             Some(vec![json!(format!("m-page-{REPLAY_LIST_PAGE:02}"))])
         );
         assert!(second["nextOffset"].is_null());
+        let (status, past) = get(&app, &format!("/api/replays?offset={}", i64::MAX), &tokens.a).await;
+        assert_eq!(status, 200, "{past}");
+        assert_eq!(past, json!({ "replays": [], "nextOffset": null }));
         assert_eq!(get(&app, "/api/replays?offset=x", &tokens.a).await.0, 400);
     }
 }
