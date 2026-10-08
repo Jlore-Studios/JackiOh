@@ -7893,5 +7893,89 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.3.4",
+    "date": "2026-10-08",
+    "title": "Patch v0.3.4: Degrade is Nerf and Upgrade is Buff",
+    "source": "issue #543",
+    "notes": "Degrade is renamed Nerf and Upgrade is renamed Buff on every card that printed them, both faces, with their numbers kept: Withering Storm, Buff Billy, Chaos Machine, Book of Buff, Book of Nerf, Call to Chaos (Classic+ Edition), Fine-Tuning and Heroic Power's Radiant Steady Shot. Only the words change; the cards play as before (R1320).",
+    "commits": [
+      "858fcc5a33a33b9155f47031d05d620538c67858"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-098",
+        "name": "Heroic Power",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-008",
+        "name": "Withering Storm",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-069",
+        "name": "Buff Billy",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-070",
+        "name": "Chaos Machine",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-071",
+        "name": "Book of Buff",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-072",
+        "name": "Book of Nerf",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-073",
+        "name": "Call to Chaos (Classic+ Edition)",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-t-ai-10",
+        "name": "Fine-Tuning",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]
