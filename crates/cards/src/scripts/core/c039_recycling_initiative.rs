@@ -414,6 +414,26 @@ mod tests {
         }
 
         #[test]
+        fn r1300_a_copy_of_a_chinese_card_is_chinese() {
+            for chinese in [true, false] {
+                let mut s = scn(json!({
+                    "p1": { "hand": [TIMMY, RECYCLING, STOCKPILE], "library": [MENACE, POSTDOC] },
+                    "p2": spare(),
+                }));
+                let played = s.card(TIMMY).id.clone();
+                if chinese && let Some(card) = find_instance_mut(s.state_mut(), &played) {
+                    card.chinese = Some(true);
+                }
+
+                s.play(TIMMY, json!({ "zone": 1 }));
+                s.play(RECYCLING, json!({}));
+                s.end_turn();
+
+                assert_eq!(copy_in_hand(&s, TIMMY).chinese, chinese.then_some(true));
+            }
+        }
+
+        #[test]
         fn the_base_face_gives_no_discount_the_copy_costs_the_printed_price() {
             let mut s = scn(json!({
                 "p1": { "hand": [BIG_D, RECYCLING, STOCKPILE], "library": [MENACE, POSTDOC] },

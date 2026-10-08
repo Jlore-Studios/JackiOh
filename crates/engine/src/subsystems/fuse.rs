@@ -1017,6 +1017,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 anti_oneshot: flags(|f| f.anti_oneshot),
                 hero_armor: summed_count(defined.iter().map(|f| f.hero_armor)),
                 counts_plays: flags(|f| f.counts_plays),
+                return_keeps_price: flags(|f| f.return_keeps_price),
                 carrier: flags(|f| f.carrier),
                 fuses_carried: flags(|f| f.fuses_carried),
                 radiant_plays_tagged: match tagged.len() {

@@ -298,7 +298,7 @@ mod tests {
             }
             assert_eq!(
                 def["params"][0],
-                json!({ "key": "shot", "base": 2, "radiant": 4, "better": "up", "step": 2, "min": 1 }),
+                json!({ "key": "shot", "base": 2, "radiant": 4, "better": "up", "step": 2, "min": 1, "power": "burn" }),
             );
             // #493: the other powers' numbers, each one a power's (`n98_heroic_power_the_numbers_r386`).
             let keys: Vec<Value> = def["params"]
@@ -1010,6 +1010,233 @@ mod tests {
             let fruit = must(s.hand(P1).last().cloned(), "the Fruit");
             assert!(tags_of(&fruit.def_id).contains(&json!("Fruit")));
             assert_eq!(effective(&s, &fruit), 1);
+        }
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // R1430: each number is its power's (`Param.power`), so a Degrade, an Upgrade or KY's Constant
+    // reaches only the numbers of the power the card has now, and a number of another power keeps its
+    // tuning for when a reroll brings that power back. R1431: Life Tap's damage is printed on the base
+    // face alone, so it is tuned there alone.
+    // -------------------------------------------------------------------------------------------
+
+    mod n98_heroic_power_each_number_is_its_power_s_r1430_r1431 {
+        use super::*;
+
+        /// C+ #71 Book of Buff: "Upgrade a card 5 times." C+ #72 Book of Nerf: "Degrade a permanent 5
+        /// times." C+ #41 KY's Constant: "Change a random number on a card in your hand to 3."
+        const BOOK_OF_BUFF: &str = "classicplus-071";
+        const BOOK_OF_NERF: &str = "classicplus-072";
+        const KYS_CONSTANT: &str = "classicplus-041";
+
+        /// The keys of the numbers the catalog gives the power `name` (`Param.power`).
+        fn power_keys(name: &str) -> Vec<String> {
+            crate::card_def(HEROIC)
+                .params
+                .unwrap_or_default()
+                .into_iter()
+                .filter(|param| param.power.as_deref() == Some(name))
+                .map(|param| param.key)
+                .collect()
+        }
+
+        /// The `{key}`s a text writes.
+        fn written(text: &str) -> Vec<String> {
+            param_placeholders(text).into_iter().map(|placeholder| placeholder.key).collect()
+        }
+
+        fn steppable_keys(s: &Scenario, card: &CardInstance, direction: TuneDirection) -> Vec<String> {
+            let live = s.card(card.id.as_str()).clone();
+            steppable_params(s.state(), &live, direction)
+                .into_iter()
+                .map(|entry| entry.param.key)
+                .collect()
+        }
+
+        fn listed_numbers(s: &Scenario, card: &CardInstance) -> Vec<String> {
+            numbers_on(s.state(), s.card(card.id.as_str()))
+                .into_iter()
+                .map(|entry| entry.id)
+                .collect()
+        }
+
+        /// The declared numbers the last action's Upgrades and Degrades drew (B3.4 rule 3's Number row).
+        fn drawn_numbers(s: &Scenario) -> Vec<String> {
+            s.last_events()
+                .iter()
+                .filter_map(|event| match event {
+                    GameEvent::Upgraded { change: TuningChange::Number { key, .. }, .. }
+                    | GameEvent::Degraded { change: TuningChange::Number { key, .. }, .. } => Some(key.clone()),
+                    _ => None,
+                })
+                .collect()
+        }
+
+        /// The declared numbers the card's tuning has stepped or set.
+        fn tuned_keys(s: &Scenario, card: &CardInstance) -> Vec<String> {
+            let Some(tuning) = s.card(card.id.as_str()).tuning.clone() else {
+                return Vec::new();
+            };
+            let mut keys: Vec<String> = tuning.numbers.unwrap_or_default().into_keys().collect();
+            keys.extend(tuning.set.unwrap_or_default().into_keys());
+            keys
+        }
+
+        #[test]
+        fn r1430_each_number_belongs_to_the_power_whose_words_write_it_and_every_power_s_number_is_its_own() {
+            crate::register_all();
+            let params = crate::card_def(HEROIC).params.unwrap_or_default();
+            for param in &params {
+                let power = must(param.power.as_deref(), "each number names its power");
+                let owner = must(subsystems::power_by_name(power), "the power the number names");
+                let words = [owner.label, owner.radiant_label].map(written).concat();
+                assert!(words.contains(&param.key), "{} is {power}'s", param.key);
+            }
+            for power in subsystems::HERO_POWERS {
+                let mut words = [power.label, power.radiant_label].map(written).concat();
+                words.sort();
+                words.dedup();
+                let mut declared = power_keys(power.name.as_str());
+                declared.sort();
+                assert_eq!(words, declared, "{}", power.name);
+            }
+            // R754: Steady Shot's `shot` is the Steady Shot power's number.
+            assert_eq!(power_keys("burn"), vec![subsystems::STEADY_SHOT_PARAM.to_string()]);
+        }
+
+        #[test]
+        fn r1430_under_each_power_on_either_face_an_upgrade_or_a_degrade_draws_only_that_power_s_numbers() {
+            crate::register_all();
+            let mut drawn = 0;
+            for power in subsystems::HERO_POWERS {
+                let name = power.name.as_str();
+                let own = power_keys(name);
+                for radiant_face in [false, true] {
+                    let (s, card) = on_field(name, OnField { radiant_face, ..OnField::default() });
+                    for direction in [TuneDirection::Upgrade, TuneDirection::Degrade] {
+                        for key in steppable_keys(&s, &card, direction) {
+                            assert!(own.contains(&key), "{name} radiant {radiant_face}: {key}");
+                        }
+                    }
+                    // Played for real: five Upgrades, or five Degrades, of the card on the field. Its cost,
+                    // its keyword and its Activate count are rows of their own; every declared number they
+                    // draw, and every number its tuning holds after, is the power's.
+                    for book in [BOOK_OF_BUFF, BOOK_OF_NERF] {
+                        let (mut s, card) = on_field(
+                            name,
+                            OnField {
+                                radiant_face,
+                                p1: Some(json!({ "hand": [SPARE, book], "mana": 8 })),
+                                ..OnField::default()
+                            },
+                        );
+                        s.play(book, json!({ "targets": unit_pick(&card) }));
+                        for key in drawn_numbers(&s) {
+                            assert!(own.contains(&key), "{name} radiant {radiant_face} {book}: drew {key}");
+                            drawn += 1;
+                        }
+                        for key in tuned_keys(&s, &card) {
+                            assert!(own.contains(&key), "{name} radiant {radiant_face} {book}: holds {key}");
+                        }
+                    }
+                }
+            }
+            assert!(drawn > 0, "the Books drew some power's numbers");
+        }
+
+        #[test]
+        fn r1430_kys_constant_lists_only_the_numbers_of_the_power_the_card_has() {
+            crate::register_all();
+            // The cost, the power's Activate count (B3.2 rule 9) and the power's own numbers.
+            for (power, radiant_face, listed) in [
+                ("insect", false, vec!["cost", "keyword:Activate", "param:insect"]),
+                ("burn", true, vec!["cost", "keyword:Activate", "param:shot"]),
+                ("draw", false, vec!["cost", "keyword:Activate", "param:tapDraw", "param:tapDamage"]),
+                ("draw", true, vec!["cost", "keyword:Activate", "param:tapDraw"]),
+                ("recruit", false, vec!["cost", "keyword:Activate"]),
+            ] {
+                let (s, card) = on_field(power, OnField { radiant_face, ..OnField::default() });
+                assert_eq!(listed_numbers(&s, &card), listed, "{power} radiant {radiant_face}");
+            }
+            // In a hand, a Heroic Power with Expedition Map has no declared number to change: KY's
+            // Constant sets its cost or its Activate count to 3, where every power's numbers once stood
+            // beside them.
+            let mut s = scenario(json!({
+                "seed": "hp-r1430-constant",
+                "p1": { "hand": [KYS_CONSTANT, HEROIC, SPARE], "mana": 8 },
+                "p2": { "hand": [FREE] },
+            }));
+            let held = s.card(HEROIC).clone();
+            let held = set_power(&mut s, &held, "recruit");
+            assert_eq!(listed_numbers(&s, &held), vec!["cost", "keyword:Activate"]);
+            s.play(KYS_CONSTANT, json!({ "targets": unit_pick(&held) }));
+            assert!(tuned_keys(&s, &held).iter().all(|key| key == "Activate"), "{:?}", tuned_keys(&s, &held));
+            let cost_set = effective(&s, s.card(HEROIC)) == 3;
+            assert!(cost_set != tuned_keys(&s, &held).contains(&"Activate".to_string()));
+        }
+
+        #[test]
+        fn r1430_a_number_tuned_under_tank_up_keeps_its_tuning_through_the_reroll_and_counts_again_when_tank_up_is_back() {
+            crate::register_all();
+            let (mut s, card) = on_field("armor", OnField { radiant_face: true, ..turns() });
+            assert_eq!(crate::upgrade_number(&mut s, HEROIC, "armor"), 5);
+            s.activate(&card, json!({}));
+            assert_eq!(s.state().players.p1.hero.armor, 5);
+
+            // Rerolled away (R757): the number keeps its step, and nothing reaches or lists it.
+            let now = must(s.backrow(P1, 1), "the Heroic Power");
+            let next = must(subsystems::power_of(&now), "the new power");
+            assert_ne!(next.name.as_str(), "armor");
+            for direction in [TuneDirection::Upgrade, TuneDirection::Degrade] {
+                assert!(!steppable_keys(&s, &now, direction).contains(&"armor".to_string()));
+            }
+            assert!(!listed_numbers(&s, &now).contains(&"param:armor".to_string()));
+            assert_eq!(param_value(s.state(), Some(&now), "armor", Default::default()), 5);
+
+            // Rolled back into Tank Up: its 5 counts again. The refresh gave back the use (R757).
+            let back = set_power(&mut s, &now, "armor");
+            assert!(listed_numbers(&s, &back).contains(&"param:armor".to_string()));
+            s.activate(&back, json!({}));
+            assert_eq!(s.state().players.p1.hero.armor, 10);
+        }
+
+        #[test]
+        fn r1430_a_number_tuned_under_ping_is_left_alone_by_upgrades_under_die_insect_and_pings_for_it_again() {
+            crate::register_all();
+            let (mut s, card) = on_field(
+                "ping",
+                OnField { p1: Some(json!({ "hand": [SPARE, BOOK_OF_BUFF], "mana": 8 })), ..OnField::default() },
+            );
+            assert_eq!(crate::upgrade_number(&mut s, HEROIC, "ping"), 2);
+            let insect = set_power(&mut s, &card, "insect");
+            s.play(BOOK_OF_BUFF, json!({ "targets": unit_pick(&insect) }));
+            let drawn = drawn_numbers(&s);
+            let live = s.card(card.id.as_str()).clone();
+            // Of the five Upgrades, those the Number row drew are each a step of Die Insect's 8 (step 2);
+            // the others raised its Activate count (B3.2 rule 9). Ping's 2 is untouched.
+            assert!(!drawn.is_empty() && drawn.iter().all(|key| key == "insect"), "{drawn:?}");
+            let insect_now = 8 + 2 * drawn.len() as i32;
+            assert_eq!(param_value(s.state(), Some(&live), "insect", Default::default()), insect_now);
+            assert_eq!(param_value(s.state(), Some(&live), "ping", Default::default()), 2);
+            let pinged = set_power(&mut s, &live, "ping");
+            s.activate(&pinged, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
+            s.expect_health(P2, 28);
+        }
+
+        #[test]
+        fn r1431_life_tap_s_damage_is_tuned_on_the_base_face_alone_and_reads_2_on_the_radiant_face() {
+            crate::register_all();
+            let (s, card) = on_field("draw", OnField::default());
+            assert_eq!(steppable_keys(&s, &card, TuneDirection::Upgrade), vec!["tapDraw", "tapDamage"]);
+            assert_eq!(steppable_keys(&s, &card, TuneDirection::Degrade), vec!["tapDamage"]);
+
+            let (mut s, card) = on_field("draw", OnField { radiant_face: true, ..OnField::default() });
+            assert_eq!(steppable_keys(&s, &card, TuneDirection::Upgrade), vec!["tapDraw"]);
+            assert!(steppable_keys(&s, &card, TuneDirection::Degrade).is_empty());
+            assert!(!crate::can_degrade_number(&s, HEROIC, "tapDamage"));
+            assert!(!crate::can_upgrade_number(&s, HEROIC, "tapDamage"));
+            step_param(s.card_mut(HEROIC), "tapDamage", -1);
+            assert_eq!(param_value(s.state(), Some(s.card(HEROIC)), "tapDamage", Default::default()), 2);
         }
     }
 }

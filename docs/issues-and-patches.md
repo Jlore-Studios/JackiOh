@@ -2,9 +2,10 @@
 
 How an issue is titled and labelled, how a patch is numbered, and how a patch that takes several
 pull requests is split up. It binds people and agents alike. The night bot's own `bot:*` labels are
-in [`bot/README.md`](../bot/README.md#labels), and Squishy's `squishy:*` ones (the same, plus its
-modes `squishy:oneshot`, `squishy:split`, `squishy:split-bot` and a split's parent, `squishy:tree`)
-in [its section](../bot/README.md#squishy).
+in [`bot/README.md`](../bot/README.md#labels), its fullsend mode `bot:fullsend` and a fullsend
+parent, `bot:tree`, among them ([Fullsend](../bot/README.md#fullsend)), and Squishy's `squishy:*`
+ones (the same, plus its modes `squishy:oneshot`, `squishy:split`, `squishy:split-bot` and
+`squishy:fullsend`, and a split's parent, `squishy:tree`) in [its section](../bot/README.md#squishy).
 
 Open an issue through one of the forms **New issue** lists (`.github/ISSUE_TEMPLATE/`: Patch, Micro
 patch, Bug, Architecture or CI, Night bot): each starts the title, puts on the type labels and asks

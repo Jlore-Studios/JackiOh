@@ -23,9 +23,12 @@ const PLURAL = "s";
 /** The word before a name that makes it point at the Radiant face. */
 const RADIANT_WORD = "Radiant ";
 
-/** The names a text may call a card by: its name, and its name before a parenthesis. */
+/**
+ * The names a text may call a card by: its name, and its name before a parenthesis (a Chinese name's
+ * full-width one too, "混沌召唤（核心版）", R1301).
+ */
 export function namesOf(def: Pick<CardDef, "name">): string[] {
-  const bare = def.name.replace(/\s*\(.*\)\s*$/, "");
+  const bare = def.name.replace(/\s*[(（].*[)）]\s*$/, "");
   return bare === def.name ? [def.name] : [def.name, bare];
 }
 
@@ -50,14 +53,15 @@ function occurrences(text: string, name: string): { start: number; end: number }
 /**
  * The names in `text` that point at one of `refs`, in text order and never overlapping: where two
  * names start at the same place the longer wins, and a name inside another name's stretch is not
- * a name of its own.
+ * a name of its own. `radiantWord` is the word before a name that points it at the Radiant face: a
+ * Chinese text (R1301) writes "光辉" right before the name, with no space.
  */
-export function findRefs(text: string, refs: readonly CardDef[]): RefMatch[] {
+export function findRefs(text: string, refs: readonly CardDef[], radiantWord: string = RADIANT_WORD): RefMatch[] {
   const candidates: RefMatch[] = [];
   for (const def of refs) {
     for (const name of namesOf(def)) {
       for (const hit of occurrences(text, name)) {
-        const radiant = text.slice(Math.max(0, hit.start - RADIANT_WORD.length), hit.start) === RADIANT_WORD;
+        const radiant = text.slice(Math.max(0, hit.start - radiantWord.length), hit.start) === radiantWord;
         candidates.push({ start: hit.start, end: hit.end, id: def.id, radiant });
       }
     }

@@ -209,13 +209,20 @@ async fn enqueue_ticket(
     // current catalog; All Random needs no deck at all (R258).
     let frozen = freeze_choice(app, &profile.id, choice).await?;
 
-    let (mode, deck, portrait, trio) = match frozen {
+    let (mode, deck, portrait, trio, lean_newest) = match frozen {
         // §9.4, §9.5: frozen. `freeze_choice` already copied the deck or the trio; this is the copy
         // that lands in the ticket and, later, in the match or the series — the saved deck is never
         // read again. R642: the deck's portrait freezes with it.
-        FrozenChoice::Bo1 { deck } => (QueueMode::Bo1, deck.cards.clone(), deck.portrait.clone(), None),
-        FrozenChoice::Bo3 { trio } => (QueueMode::Bo3, Vec::new(), None, Some(trio)),
-        FrozenChoice::Random => (QueueMode::Random, Vec::new(), None, None),
+        FrozenChoice::Bo1 { deck } => (
+            QueueMode::Bo1,
+            deck.cards.clone(),
+            deck.portrait.clone(),
+            None,
+            false,
+        ),
+        FrozenChoice::Bo3 { trio } => (QueueMode::Bo3, Vec::new(), None, Some(trio), false),
+        // R1372: the player's lean waits in the ticket for the deal, as a deck would.
+        FrozenChoice::Random { lean_newest } => (QueueMode::Random, Vec::new(), None, None, lean_newest),
     };
     let ticket = Ticket {
         id: new_uuid(),
@@ -225,6 +232,7 @@ async fn enqueue_ticket(
         deck,
         portrait,
         trio,
+        lean_newest,
         catalog_version: app.catalog.version.clone(),
         enqueued_at: now_ms(),
         status: TicketStatus::Open,
@@ -397,9 +405,13 @@ async fn start_paired_series(app: &App, a: &Ticket, b: &Ticket, match_id: &str) 
     Ok(())
 }
 
-/// The All Random deck R258 deals one seat from the match seed (`{seed}:p1-deck`, `{seed}:p2-deck`).
-fn dealt_deck(seed: &str, seat: &str) -> Vec<String> {
-    crate::actor::engine::deal_random_deck(&format!("{seed}:{seat}-deck"))
+/// The All Random deck R258 deals one seat from the match seed (`{seed}:p1-deck`, `{seed}:p2-deck`),
+/// leaning on the newest set when that seat's ticket asked (R1372).
+fn dealt_deck(seed: &str, seat: &str, lean_newest: bool) -> Vec<String> {
+    crate::actor::engine::deal_random_deck(
+        &format!("{seed}:{seat}-deck"),
+        crate::actor::engine::lean_of(lean_newest),
+    )
 }
 
 /// All Random's portrait for one seat (R642), dealt from the seed like its deck.
@@ -412,9 +424,11 @@ fn dealt_portrait(seed: &str, seat: &str) -> Option<String> {
 /// exclusion.
 ///
 /// Best of 1 plays the two decks the tickets froze. All Random (R258) deals both from the match
-/// seed and the seat, `{seed}:p1-deck` and `{seed}:p2-deck`, and the dealt decks go into the match
-/// row like any frozen deck, so `(seed, decks, log)` replays it as ever. Portraits ride the same
-/// way (R642): the ticket's own for Best of 1, a uniform pick dealt from the seed for All Random.
+/// seed and the seat, `{seed}:p1-deck` and `{seed}:p2-deck`, each leaning on the newest set exactly
+/// when its own ticket asked (R1372: a ticket that leans pairs with one that does not), and the dealt
+/// decks go into the match row like any frozen deck, so `(seed, decks, log)` replays it as ever.
+/// Portraits ride the same way (R642): the ticket's own for Best of 1, a uniform pick dealt from the
+/// seed for All Random.
 async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &str) -> Result<(), ApiError> {
     if a.mode == QueueMode::Bo3 {
         return start_paired_series(app, a, b, match_id).await;
@@ -427,7 +441,7 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
             profile_id: a.profile_id.clone(),
             player: jackioh_engine::PlayerId::P1,
             deck: if random {
-                dealt_deck(&seed, "p1")
+                dealt_deck(&seed, "p1", a.lean_newest)
             } else {
                 a.deck.clone()
             },
@@ -441,7 +455,7 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
             profile_id: b.profile_id.clone(),
             player: jackioh_engine::PlayerId::P2,
             deck: if random {
-                dealt_deck(&seed, "p2")
+                dealt_deck(&seed, "p2", b.lean_newest)
             } else {
                 b.deck.clone()
             },

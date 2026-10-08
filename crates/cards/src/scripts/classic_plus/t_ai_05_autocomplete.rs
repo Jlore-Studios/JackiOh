@@ -290,6 +290,28 @@ mod tests {
             }
 
             #[test]
+            fn r1300_a_copy_of_a_chinese_card_is_chinese() {
+                for chinese in [true, false] {
+                    crate::register_all();
+                    let mut s = scenario(json!({
+                        "active": "p2",
+                        "p1": { "hand": [AUTOCOMPLETE, VANILLA], "library": [TIMMY, TIMMY, TIMMY] },
+                        "p2": { "hand": [MENACE, VANILLA], "library": [VANILLA, VANILLA, VANILLA], "mana": 9 },
+                    }));
+                    let played = s.card(MENACE).id.clone();
+                    if chinese && let Some(card) = find_instance_mut(s.state_mut(), &played) {
+                        card.chinese = Some(true);
+                    }
+                    s.play(MENACE, json!({ "zone": 1 }));
+                    s.end_turn();
+
+                    s.play(AUTOCOMPLETE, json!({}));
+
+                    assert_eq!(copy_of(&s, MENACE).and_then(|card| card.chinese), chinese.then_some(true));
+                }
+            }
+
+            #[test]
             fn r97_the_copy_reaches_your_hand_under_the_sentinel_for_the_opponent() {
                 let mut s = after_their_turn(&[(MENACE, Some(1))], json!({}), json!({}), false);
                 s.play(AUTOCOMPLETE, json!({}));

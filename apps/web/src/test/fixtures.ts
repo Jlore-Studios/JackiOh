@@ -330,6 +330,8 @@ export function fusedDef(ingredients: readonly CardDef[], n = 1): CardDef {
     rarity,
     token: ingredients.every((def) => def.token),
     cost,
+    // R179, R468: the list the id names, which a Chinese face reads its ingredients' words by (R1301).
+    ingredients: ingredients.map((def) => ({ defId: def.id })),
     base: fusedFaceOf(ingredients.map((def) => def.base)),
     radiant: fusedFaceOf(ingredients.map((def) => def.radiant)),
   };

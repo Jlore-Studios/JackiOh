@@ -38,6 +38,9 @@
 // cue only where it means something, a unit of the player acting now with no action left
 // (game/spent.ts, #258). Whether a unit can attack is `legalActions`', drawn by the board's
 // highlight (task 7's green), never read off the view here (CLAUDE.md rule 7).
+//
+// ME-CN, R1301: a Chinese unit's name plate is the model's Chinese name and its keyword titles are
+// the table's words (chinese.ts); its chips keep their marks, and its art the English name's motif.
 
 import { useRef, type ReactElement } from "react";
 
@@ -47,6 +50,7 @@ import { CardArt } from "./art/index.ts";
 import type { StateBadgeKind } from "./cardState.ts";
 import { CardStates } from "./CardStates.tsx";
 import { costDigits, hasCrest } from "./CardFace.tsx";
+import { CHINESE_COMMA, chineseKeyword } from "./chinese.ts";
 import { useFitText } from "./fit.ts";
 import { KEYWORD_MARK } from "./glossary.ts";
 import { Icon } from "./icons.tsx";
@@ -79,9 +83,11 @@ export function keywordChips(keywords: readonly Keyword[], armor: number): { sho
   return { shown: chips.slice(0, room), folded: chips.slice(room) };
 }
 
-function KeywordIcons({ keywords, armor }: { keywords: readonly Keyword[]; armor: number }): ReactElement | null {
+function KeywordIcons({ keywords, armor, chinese }: { keywords: readonly Keyword[]; armor: number; chinese: boolean }): ReactElement | null {
   if (keywords.length === 0) return null;
   const { shown, folded } = keywordChips(keywords, armor);
+  // R1301: a Chinese unit's keywords are named in the table's words.
+  const words = chinese ? chineseKeyword : keywordKey;
   return (
     <span className="keywords">
       {keywords.map((keyword, index) => (
@@ -91,14 +97,14 @@ function KeywordIcons({ keywords, armor }: { keywords: readonly Keyword[]; armor
           data-keyword={keyword.kind}
           data-n={"n" in keyword ? keyword.n : undefined}
           data-chip={shown.includes(keyword) ? undefined : "hidden"}
-          title={keywordKey(keyword)}
+          title={words(keyword)}
         >
           {KEYWORD_MARK[keyword.kind]}
           {"n" in keyword ? ` ${keyword.n}` : ""}
         </span>
       ))}
       {folded.length > 0 && (
-        <span className="cf-kw-more" title={folded.map(keywordKey).join(", ")}>
+        <span className="cf-kw-more" title={folded.map(words).join(chinese ? CHINESE_COMMA : ", ")}>
           +{folded.length}
         </span>
       )}
@@ -135,7 +141,7 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
     >
       <span className="cf-scale">
         <span className="cf-portrait">
-          <CardArt defId={face.defId} name={face.name} radiant={face.radiant} tags={face.tags} type={face.type} shape="oval" />
+          <CardArt defId={face.defId} name={face.englishName ?? face.name} radiant={face.radiant} tags={face.tags} type={face.type} shape="oval" />
         </span>
 
         <KeywordFx plan={plan} />
@@ -184,7 +190,7 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
           )}
         </span>
 
-        <KeywordIcons keywords={unit.keywords} armor={unit.armor} />
+        <KeywordIcons keywords={unit.keywords} armor={unit.armor} chinese={face.chinese === true} />
 
         <CardStates face={face} omit={DRAWN_BY_TREATMENTS} />
 

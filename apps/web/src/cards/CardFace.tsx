@@ -30,13 +30,18 @@
 // R503: every face with a set shows it as a small mark on the frame (`.cf-set[data-set]`, setMark.ts),
 // and a token that prints a rarity (B2.5's `printedRarity`) wears that rarity's frame, gem, crest and
 // foil rather than Token's, for display only. The art gets the card's name, which picks its motif.
+//
+// ME-CN, R1301: a Chinese face (`face.chinese`) prints its name and text as the model gives them (the
+// Chinese table's) and its type line, tags and keywords in the table's words (chinese.ts); its art
+// keeps the English name's motif, so the picture is the same card's.
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
-import { keywordKey, type CardType, type Rarity } from "@jackioh/shared";
+import { keywordKey, type CardType, type Keyword, type KeywordKind, type Rarity } from "@jackioh/shared";
 
 import { CardArt, type ArtShape } from "./art/index.ts";
 import { CardStates } from "./CardStates.tsx";
+import { CHINESE_COMMA, CHINESE_TERMS, chineseKeyword } from "./chinese.ts";
 import { FIT_FLOOR_PX, TIER_SCALE } from "./constants.ts";
 import { nameTier, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
@@ -72,16 +77,29 @@ function join(...parts: (string | false | undefined)[]): string {
   return parts.filter((part): part is string => typeof part === "string" && part.length > 0).join(" ");
 }
 
+/** A keyword in the face's words: "Armor 2", or on a Chinese face "护甲2" (R1301). */
+function keywordWords(face: FaceModel, keyword: Keyword): string {
+  return face.chinese === true ? chineseKeyword(keyword) : keywordKey(keyword);
+}
+
+/** A keyword kind in the face's words (a Degrade's removed one, R386), Chinese on a Chinese face. */
+function kindWords(face: FaceModel, kind: KeywordKind): string {
+  return face.chinese === true ? CHINESE_TERMS.keywords[kind] : kind;
+}
+
 /** The keywords a face in play has gained, as the rules box prints them. Empty when none. */
 export function gainedLine(face: FaceModel): string {
-  return face.gained.map(keywordKey).join(", ");
+  return face.gained.map((keyword) => keywordWords(face, keyword)).join(face.chinese === true ? CHINESE_COMMA : ", ");
 }
 
 /** R386: the keyword chips a tuned face prints, as words: "+Rush −Taunt". Empty when none. */
 export function tuningLine(face: FaceModel): string {
   const tuning = face.tuning;
   if (tuning === undefined || tuning === null) return "";
-  return [...tuning.added.map((keyword) => `+${keywordKey(keyword)}`), ...tuning.removed.map((kind) => `${MINUS}${kind}`)].join(" ");
+  return [
+    ...tuning.added.map((keyword) => `+${keywordWords(face, keyword)}`),
+    ...tuning.removed.map((kind) => `${MINUS}${kindWords(face, kind)}`),
+  ].join(" ");
 }
 
 /** Everything the rules box prints, as one string: what `textTier` and `useFitText` measure. */
@@ -97,19 +115,19 @@ function TuningKeywords({ face }: { face: FaceModel }): ReactElement | null {
   return (
     <span className="cf-text-tuning">
       {tuning.added.map((keyword) => (
-        <span key={`+${keywordKey(keyword)}`} className="cf-kw-chip" data-tuned="added" title={`Gained ${keywordKey(keyword)}`}>
+        <span key={`+${keywordKey(keyword)}`} className="cf-kw-chip" data-tuned="added" title={`Gained ${keywordWords(face, keyword)}`}>
           <span className="cf-kw-sign" aria-hidden="true">
             +
           </span>
-          {keywordKey(keyword)}
+          {keywordWords(face, keyword)}
         </span>
       ))}
       {tuning.removed.map((kind) => (
-        <span key={`-${kind}`} className="cf-kw-chip" data-tuned="removed" title={`Lost ${kind}`}>
+        <span key={`-${kind}`} className="cf-kw-chip" data-tuned="removed" title={`Lost ${kindWords(face, kind)}`}>
           <span className="cf-kw-sign" aria-hidden="true">
             {MINUS}
           </span>
-          {kind}
+          {kindWords(face, kind)}
         </span>
       ))}
     </span>
@@ -210,7 +228,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false }: 
               radiant={face.radiant}
               tags={face.tags}
               type={face.type}
-              name={face.name}
+              name={face.englishName ?? face.name}
               shape={ART_SHAPE[face.type]}
               lazy={lazyArt}
             />
@@ -231,7 +249,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false }: 
 
         <CardStates face={face} />
 
-        <span className="card-type">{glitch ? GLITCH_WORDS.type : face.type}</span>
+        <span className="card-type">{glitch ? GLITCH_WORDS.type : face.chinese === true ? CHINESE_TERMS.types[face.type] : face.type}</span>
 
         {full && (
           <span className="card-text" ref={textRef}>
@@ -242,6 +260,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false }: 
                 refs={face.refs}
                 values={face.values}
                 {...(face.text.tuned === undefined ? {} : { tuned: face.text.tuned })}
+                chinese={face.chinese === true}
               />
             </span>
             {face.gained.length > 0 && (
@@ -257,7 +276,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false }: 
           <span className="cf-tags">
             {face.tags.map((tag) => (
               <span key={tag} className="cf-tag" data-tag={tag}>
-                {tag}
+                {face.chinese === true ? CHINESE_TERMS.tags[tag] : tag}
               </span>
             ))}
           </span>

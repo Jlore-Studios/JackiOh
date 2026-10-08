@@ -38,7 +38,10 @@ src/
                         The inspect overlays in play show the printed text beside a face wherever the two
                         differ (inspect/Printed.tsx), and a card's flavour line and artist credit from
                         `@jackioh/cards/flavour.json` under the glossary (flavour.ts, inspect/Flavour.tsx,
-                        R660). Real art follows art/ART.md, which art/convention.test.ts holds
+                        R660). A card the view marks Chinese (`CardView.chinese`, ME-CN) draws its name, text,
+                        type line, tags, keywords and glossary in a match from `@jackioh/cards/chinese.json` and
+                        `chinese-terms.json` (chinese.ts, R1301, R1303); its Radiant marks are compared character
+                        by character (R1302). Real art follows art/ART.md, which art/convention.test.ts holds
                         public/art/ and art/manifest.ts to. RulesText draws every face's text with its marks: a
                         Radiant face's changes in gold (radiantDiff.ts, R277), the cards its `refs` name as
                         references (refs.ts, CardRef.tsx, refContext.tsx, R279; the hover preview's
@@ -559,7 +562,8 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   and `@jackioh/ai` are typed functions over the module, `@jackioh/engine/config` and
   `@jackioh/server-config` are the generated Rust constants, `@jackioh/validator` the validator,
   `@jackioh/cards` the catalog and its version (read from `crates/cards/patches/patches.json`), and
-  `@jackioh/cards/catalog.json` and `flavour.json` the files in `crates/cards`.
+  `@jackioh/cards/catalog.json`, `flavour.json`, `chinese.json` and `chinese-terms.json` the files in
+  `crates/cards`.
 - The generated files (`src/wire/generated/`, `engineConfig.ts`, `serverConfig.ts`) are written by
   `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`; CI fails when they
   differ from what is committed, so a Rust change that moves the wire commits them in the same change.

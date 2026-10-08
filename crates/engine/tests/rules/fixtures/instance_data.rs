@@ -379,12 +379,27 @@ pub static radiant_number: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
+/// R1431: the mirror, Classic #11 Mind Melt's shape: a number only the base face prints (`cards` 2,
+/// more is better), tuned on that face only.
+pub static base_number: LazyLock<CardDef> = LazyLock::new(|| {
+    def(
+        "base-number",
+        4426,
+        json!({
+            "type": "Spell",
+            "params": [{ "key": "cards", "base": 2, "radiant": 2, "better": "up", "tunedOn": "base" }],
+            "base": { "keywords": [], "text": "Exile {cards|card|cards}." },
+            "radiant": { "keywords": [], "text": "Exile them all." },
+        }),
+    )
+});
+
 /// ME-CN, R1300: Meditative #32's "Get ready to learn Chinese": every card in both hands and both decks
 /// is shown in Chinese from now on.
 pub static translator: LazyLock<CardDef> = LazyLock::new(|| {
     def(
         "translator",
-        4426,
+        4427,
         json!({
             "type": "Spell",
             "base": { "keywords": [], "text": "Translate" },
@@ -420,6 +435,7 @@ pub static INSTANCE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         military.clone(),
         educator.clone(),
         radiant_number.clone(),
+        base_number.clone(),
         translator.clone(),
     ]
 });

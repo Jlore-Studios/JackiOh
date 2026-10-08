@@ -69,6 +69,11 @@ pub struct SetCostModArgs {
     pub amount: i32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub in_hand_only: Option<bool>,
+    /// R429, R766: this is the price the card's own end-of-turn return gives it (#31 KY's Math
+    /// Equation's climb), noted on it beside its `costMod` (`resolve::RETURN_PRICE_KEY`), so its next
+    /// return gives back this much and no other change to its price.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub return_price: Option<bool>,
 }
 
 /// Add to this instance's `costMod` (#7 Jewelosco Scarab's −1, #31 KY's Math Equation's +1 per
@@ -87,7 +92,12 @@ pub fn set_cost_mod(args: SetCostModArgs) -> Effect {
             return;
         }
         match find_instance_mut(ctx.sink.state, &card.id) {
-            Some(live) => live.cost_mod += amount,
+            Some(live) => {
+                live.cost_mod += amount;
+                if args.return_price == Some(true) {
+                    crate::resolve::add_return_price(live, amount);
+                }
+            }
             None => card.cost_mod += amount,
         }
         let card = as_it_stands(ctx, card);

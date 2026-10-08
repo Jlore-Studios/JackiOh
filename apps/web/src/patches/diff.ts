@@ -20,6 +20,7 @@
 
 import { fillParams, keywordKey, type CardCost, type CardDef, type CardDefs, type CardFace, type Param } from "@jackioh/shared";
 
+import { powerTitle } from "../cards/inPlay.ts";
 import { wordDiff, type TextRange } from "../cards/radiantDiff.ts";
 
 /** A card's two faces, as the catalog keys them. */
@@ -146,6 +147,8 @@ function paramText(param: Param): string {
   if (param.min !== undefined) parts.push(`at least ${String(param.min)}`);
   if (param.max !== undefined) parts.push(`at most ${String(param.max)}`);
   if (param.tunedOn === "radiant") parts.push("tuned on the Radiant face only");
+  if (param.tunedOn === "base") parts.push("tuned on the base face only");
+  if (param.power !== undefined) parts.push(`tuned only while the card has ${powerTitle({ name: param.power }, false)}`);
   parts.push(param.better === "up" ? "more is better" : "less is better");
   return parts.join(", ");
 }

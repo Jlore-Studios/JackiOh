@@ -38,8 +38,10 @@ place. With one user per subscription, a session can read only its own login and
 only in its own home, and its runner, labelled with its id alone, takes only its jobs. A Claude
 account's token comes from its GitHub secret, handed to that job alone, and is never written to
 the home. At most `machine_parallel` (6) jobs run here at once, each as its own user; Devin has
-`"lanes": 6` on the six runners here, and Muse has two (`night-vm-muse` and `night-vm-muse-2`,
-both under `agent-muse` and its one login).
+`"lanes": 6` on the six runners here, and Muse has four (`night-vm-muse` and `night-vm-muse-2`
+to `night-vm-muse-4`, all under `agent-muse` and its one login). A lane the harness counts but no
+runner serves only queues its job until another runner of that label is free, so after raising a
+subscription's `lanes`, run `register-runners.sh` (Building it, step 4) to add the new runners.
 
 Every repository workflow could ask for these labels, so the repository makes outside
 contributors' pull requests wait for approval before any workflow runs (Settings → Actions →

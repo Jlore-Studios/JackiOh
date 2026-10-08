@@ -17,6 +17,11 @@
 // last of a stretch, over the spaces and separators between them, but never starts or ends on a
 // separator, so the underline reads as one phrase ("and the units adjacent to it on its side").
 //
+// A face printed in Chinese (ME-CN, R1302, MD-B13) is compared character by character: Chinese puts
+// no space between words, so each CJK character is a token of its own, and Chinese punctuation
+// `，；：。（）、` is a separator like its English counterpart. "抽两张牌。" against "抽三张牌。" marks
+// the 三 alone. English text tokenizes exactly as it always has.
+//
 // A fused definition's texts are its ingredients' texts one per line (R102); when both faces have
 // the same number of lines, each Radiant line is diffed against the base line of the same
 // ingredient, as each ingredient's own face is.
@@ -37,9 +42,17 @@ export type WordDiff = { readonly added: TextRange[]; readonly removed: TextRang
 
 type Token = { text: string; start: number; end: number; word: boolean };
 
-const SEPARATORS = ",;:.()";
-/** A separator alone, or a run of anything that is neither a space nor a separator. */
-const TOKEN = /[,;:.()]|[^\s,;:.()]+/g;
+const SEPARATORS = ",;:.()，；：。（）、";
+/**
+ * R1302: the CJK ranges whose every character is a token of its own: CJK punctuation, Extension A,
+ * the Unified Ideographs, and the full-width forms.
+ */
+const CJK = "\\u3000-\\u303F\\u3400-\\u4DBF\\u4E00-\\u9FFF\\uFF00-\\uFFEF";
+/**
+ * A separator alone, a CJK character alone, or a run of anything that is neither a space, a
+ * separator nor a CJK character.
+ */
+const TOKEN = new RegExp(`[${SEPARATORS}]|[${CJK}]|[^\\s${SEPARATORS}${CJK}]+`, "g");
 /** R102: a fused definition's text is its ingredients' texts, one per line. */
 const LINE_BREAK = "\n";
 

@@ -725,6 +725,14 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "banner" },
     target: () => testid.banner,
   },
+  // ME-CN, R1301: the card pulses as its words turn Chinese; the view after it draws them so. Only
+  // the language changed, so no effect decorates it.
+  translated: {
+    animation: "jk-radiant-pulse",
+    durationMs: 400,
+    testid: "card-<instanceId>",
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
 };
 
 /* ------------------------------------------------------------------------------------------- *

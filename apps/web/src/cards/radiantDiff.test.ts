@@ -88,6 +88,17 @@ describe("R277 the word diff", () => {
     expect(marks(base, radiant)).toEqual(["Charge", "all", "units"]);
   });
 
+  it("R1302 a face printed in Chinese is marked character by character", () => {
+    // MD-B13: Chinese puts no space between words, so each character is a word of its own.
+    expect(radiantMarks("抽两张牌。", "抽三张牌。")).toEqual([{ start: 1, end: 2 }]);
+    expect(marks("抽两张牌。", "抽三张牌。")).toEqual(["三"]);
+    // Chinese punctuation separates as English does: a mark never starts or ends on it, and a run
+    // of changed characters across one is one stretch.
+    expect(marks("战吼：消灭一个敌方单位。", "战吼：消灭所有敌方单位，抽一张牌。")).toEqual(["所有", "抽一张牌"]);
+    // A number in Chinese text is one token, as in English.
+    expect(marks("造成2点伤害。", "造成12点伤害。")).toEqual(["12"]);
+  });
+
   it("R277 a pure deletion marks nothing, so only the Radiant texts written as one mark nothing", () => {
     expect(marks("Cry: choose a Human unit", "Cry: choose a unit")).toEqual([]);
     const silent = DEFS.filter((card) => {

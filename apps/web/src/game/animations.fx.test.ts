@@ -163,6 +163,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   turnCutShort: { type: "turnCutShort", player: "p2", byInstanceId: "b5" },
   marked: { type: "marked", instanceId: "u6", mark: "steal", color: "purple", added: true },
   glitched: { type: "glitched", player: "p1", outcome: "swap" },
+  translated: { type: "translated", instanceId: "u6" },
 };
 
 function longStream(rounds: number): GameEvent[] {
@@ -271,6 +272,8 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   turnCutShort: "banner",
   marked: "brand",
   glitched: "banner",
+  // R1301: a translation pulses its card and nothing decorates it.
+  translated: null,
 };
 
 /** Every member of S1's `FxRecipe`. */
@@ -379,10 +382,11 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   turnCutShort: ["jk-banner", 600, "turn-banner"],
   marked: ["jk-radiant-pulse", 400, "card-<instanceId>"],
   glitched: ["jk-banner", 600, "turn-banner"],
+  translated: ["jk-radiant-pulse", 400, "card-<instanceId>"],
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 54 rows of S4, patch v0.2.0 and Glitch (R676) carry fx with the listed recipe and the other 11 carry none", () => {
+  it("B1 exactly the 54 rows of S4, patch v0.2.0 and Glitch (R676) carry fx with the listed recipe and the other 12 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
     expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(54);
@@ -397,9 +401,9 @@ describe("B1 the fx column of ANIMATIONS", () => {
     }
   });
 
-  it("B1 the 11 rows without an effect have no fx value at all", () => {
+  it("B1 the 12 rows without an effect have no fx value at all", () => {
     const bare = GAME_EVENT_TYPES.filter((t) => S4_RECIPES[t] === null);
-    expect(bare).toHaveLength(11);
+    expect(bare).toHaveLength(12);
     for (const type of bare) expect(ANIMATIONS[type].fx, type).toBeUndefined();
   });
 

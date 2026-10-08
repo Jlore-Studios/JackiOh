@@ -14,7 +14,8 @@ import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import { LOG_HISTORY_LIMIT } from "./config.ts";
 import { testid } from "./contract.ts";
 import { EMPTY_LOG_HISTORY, LOG_GAP_TEXT, advanceLogHistory } from "./useLogHistory.ts";
-import { baseView, emptySide, fullBoardView, withEvents } from "../test/fixtures.ts";
+import { CHINESE } from "../cards/chinese.ts";
+import { baseView, emptySide, fullBoardView, unit, withEvents } from "../test/fixtures.ts";
 
 afterEach(() => {
   cleanup();
@@ -253,6 +254,30 @@ describe("Log: a line about a card opens that card", () => {
     });
     expect(screen.getByTestId(INSPECT_HOVER)).toHaveTextContent(nameOf("core-005"));
     expect(screen.getByTestId(INSPECT_HOVER).querySelector(".cf")).toHaveAttribute("data-radiant-face", "true");
+  });
+
+  it("R1301 the log names a Chinese unit by its Chinese name", () => {
+    const chinese = CHINESE["core-002"]?.name ?? "";
+    const view = baseView({
+      opponent: emptySide("p2", {
+        units: [unit("p2", { instanceId: "u9", defId: "core-002", chinese: true }), unit("p2", { instanceId: "u8", defId: "core-002" }), null, null, null],
+      }),
+    });
+    renderLog(
+      withEvents(view, [
+        // A translation gets no line of its own: the card's face says it.
+        { type: "translated", instanceId: "u9" },
+        { type: "damage", sourceId: null, targetId: "u9", amount: 2, combat: false },
+        { type: "damage", sourceId: null, targetId: "u8", amount: 1, combat: false },
+      ]),
+    );
+    const lines = cardLines();
+    expect(lines.map((line) => line.textContent)).toEqual([`${chinese} took 2 damage`, `${nameOf("core-002")} took 1 damage`]);
+    expect(chinese).not.toBe("");
+    // The line opens the card as the board draws it: in Chinese.
+    fireEvent.click(lines[0] ?? document.body);
+    expect(screen.getByTestId(INSPECT_SHEET)).toHaveTextContent(chinese);
+    expect(screen.getByTestId(INSPECT_SHEET)).not.toHaveTextContent(nameOf("core-002"));
   });
 });
 

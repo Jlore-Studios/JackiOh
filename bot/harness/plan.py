@@ -1002,18 +1002,44 @@ def claim(ctx: Context, candidate: Candidate,
                              "by": str(by.get("provider") or "")}
         if candidate.mode:
             planned["mode"] = candidate.mode
-            if candidate.mode.startswith("split"):
+            if candidate.mode.startswith("split") or candidate.mode == "fullsend":
                 planned["children"] = tree_text(ctx, number)
                 planned["builders"] = split_builders(candidate.mode)
+            if candidate.mode == "fullsend":
+                # The parts its reconcile merges first: those that could not land (#505).
+                planned["parked"] = [str(b) for b in record.get("parked") or []]
+        if record.get("onto"):
+            # A fullsend part (#505): it lands on its tree's branch, not `main`.
+            planned["onto"] = str(record["onto"])
+            planned["part_of"] = int(record.get("part_of") or 0)
         if record.get("previous_pr"):
             planned["previous_pr"] = record["previous_pr"]
             planned["previous_branch"] = str(record.get("previous_branch") or "")
             planned["previous_why"] = str(record.get("previous_why") or "")
-        if candidate.mode.startswith("split"):
+        if candidate.mode == "fullsend" and planned.get("children"):
+            message = (f"Starting work on this now{run_link(cfg)}: the reconcile of this fullsend "
+                       f"tree. Every part has closed, so this run merges them on "
+                       f"`{planned['branch']}`, follows fullsend's reconcile and makes every check "
+                       "green, for one pull request into `main`. "
+                       f"{_start_message(assignment, cfg)}")
+        elif candidate.mode == "fullsend":
+            message = (f"Splitting this now for fullsend{run_link(cfg)}, on "
+                       f"{assignment.build.describe()}: one session reads it and the code and "
+                       "answers with parts that each own their files. When the run ends I open "
+                       f"them, and each lands on `{planned['branch']}`, not `main`, with no pull "
+                       "request of its own; once they have all closed, one run reconciles them "
+                       "into one pull request.")
+        elif candidate.mode.startswith("split"):
             message = (f"Splitting this now{run_link(cfg)}, on {assignment.build.describe()}: "
                        "one session reads it and the code and answers with sub-issues, each small "
                        f"enough for one run. When the run ends I open them, queued for "
                        f"{split_builders(candidate.mode)} in the order they depend on each other.")
+        elif planned.get("onto") and assignment.action == "build":
+            message = (f"Starting work on this now{run_link(cfg)}: a fullsend part, "
+                       f"difficulty:{candidate.difficulty}, built on "
+                       f"{assignment.build.describe()}. It lands on `{planned['onto']}`, the "
+                       f"branch of #{planned['part_of']}, with no checks, review or pull request "
+                       "of its own: the tree's reconcile checks and reviews every part at once.")
         elif candidate.mode == "oneshot":
             message = (f"Starting a one-shot build of this now{run_link(cfg)}, on "
                        f"{assignment.build.describe()}, with fullsend: a spec first, then many "
@@ -1137,7 +1163,8 @@ def claim(ctx: Context, candidate: Candidate,
 
 
 def split_builders(mode: str) -> str:
-    """Who builds a split's sub-issues (#60): this bot for `split`, the other bot for `split-bot`."""
+    """Who builds a split's sub-issues (#60): this bot for `split` and `fullsend`, the other bot
+    for `split-bot`."""
     if mode == "split-bot" and OTHERS:
         return f"{OTHERS[0].name} (@{OTHERS[0].login})"
     return "me"

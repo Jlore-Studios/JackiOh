@@ -198,6 +198,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   turnCutShort: { type: "turnCutShort", player: "p2", byInstanceId: "b5" },
   marked: { type: "marked", instanceId: "u6", mark: "steal", color: "purple", added: true },
   glitched: { type: "glitched", player: "p1", outcome: "swap" },
+  translated: { type: "translated", instanceId: "u6" },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -268,6 +269,7 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   turnCutShort: "notify",
   marked: "brand",
   glitched: "whoosh",
+  translated: null,
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */

@@ -363,6 +363,21 @@ mod tests {
         }
 
         #[test]
+        fn r1300_a_copy_of_a_chinese_card_is_chinese() {
+            for chinese in [true, false] {
+                let mut s = setup(json!({}), json!({}), true);
+                let spell = s.card(STOCKPILE).id.clone();
+                if chinese && let Some(card) = find_instance_mut(s.state_mut(), &spell) {
+                    card.chinese = Some(true);
+                }
+
+                s.play(STOCKPILE, json!({}));
+
+                assert_eq!(copy_in_hand(&s, P1).and_then(|card| card.chinese), chinese.then_some(true));
+            }
+        }
+
+        #[test]
         fn r317_a_full_hand_burns_the_copy_into_your_graveyard() {
             let ten = vec![VANILLA; 10];
             let mut s = setup(json!({ "hand": ten }), json!({}), true);

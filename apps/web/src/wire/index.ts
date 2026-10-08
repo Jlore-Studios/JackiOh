@@ -163,6 +163,7 @@ export const GAME_EVENT_TYPES = [
   "turnCutShort",
   "marked",
   "glitched",
+  "translated",
 ] as const satisfies readonly GameEventType[];
 
 /**
@@ -189,6 +190,7 @@ export {
   fillParams,
   hasKeyword,
   keywordKey,
+  newestShippedSet,
   opponentOf,
   paramPlaceholders,
   setShips,

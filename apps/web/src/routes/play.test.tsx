@@ -12,7 +12,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DECK_SIZE } from "@jackioh/engine/config";
-import type { CardDef, CardDefs } from "@jackioh/shared";
+import { newestShippedSet, type CardDef, type CardDefs } from "@jackioh/shared";
 import { validateDeck, validateTrio, type LoadoutResult } from "@jackioh/validator";
 
 import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
@@ -38,6 +38,7 @@ import {
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { ROOM_LINK_SHARE_TITLE, ROOM_LINK_STORAGE_KEY } from "../net/roomLink.ts";
+import { PLAY_LEAN_NEWEST_KEY, leanNewestLabel } from "../game/LeanNewest.tsx";
 import PlayRoute, {
   MATCH_FOUND_STATUS,
   MODE_LABEL,
@@ -604,6 +605,94 @@ describe("the lobby's answers", () => {
     const roomMode = screen.getByTestId(playTestid.roomMode);
     expect(roomMode).toHaveAttribute("data-mode", "random");
     expect(roomMode).toHaveTextContent("All Random");
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R1372: All Random's "More cards from the newest set"
+// ---------------------------------------------------------------------------------------------
+
+describe("R1372 All Random's more cards from the newest set", () => {
+  it("R1372 the switch is All Random's alone, names the newest set and starts off", async () => {
+    await renderLobby();
+    expect(screen.queryByTestId(playTestid.leanNewest)).toBeNull();
+    pickMode("random");
+    const toggle = screen.getByTestId(playTestid.leanNewest);
+    expect(toggle).not.toBeChecked();
+    expect(toggle.closest("label")).toHaveTextContent(leanNewestLabel());
+    expect(leanNewestLabel()).toBe(`More cards from the newest set (${newestShippedSet()})`);
+    pickMode("bo3");
+    expect(screen.queryByTestId(playTestid.leanNewest)).toBeNull();
+  });
+
+  /** The lobby in All Random, whichever mode this device remembered, once the switch is on screen. */
+  async function renderRandomLobby(): Promise<HTMLInputElement> {
+    render(<PlayRoute token={TOKEN} />);
+    await waitFor(() => {
+      expect(vi.mocked(getDecks)).toHaveBeenCalled();
+    });
+    const random = screen.getByTestId(playModeTestid("random")) as HTMLInputElement;
+    if (!random.checked) pickMode("random");
+    return (await screen.findByTestId(playTestid.leanNewest)) as HTMLInputElement;
+  }
+
+  it("R1372 on, Find a match, Create a room and Join send leanNewest; off, they send none", async () => {
+    vi.mocked(enqueue).mockImplementation((_token, choice) => Promise.resolve(openTicket(choice.mode)));
+    vi.mocked(createRoom).mockResolvedValue({ code: "QRST", expiresAt: 0, mode: "random" });
+    vi.mocked(joinRoom).mockResolvedValue({ matchId: "match-9", seriesId: null, code: "ABCD", seat: "p2", mode: "random" });
+    fireEvent.click(await renderRandomLobby());
+    expect(screen.getByTestId(playTestid.leanNewest)).toBeChecked();
+
+    fireEvent.click(screen.getByTestId(playTestid.queue));
+    await waitFor(() => {
+      expect(vi.mocked(enqueue)).toHaveBeenLastCalledWith(TOKEN, { mode: "random", leanNewest: true });
+    });
+    // Locked while queued, like the rest of the setup.
+    expect(screen.getByTestId(playTestid.leanNewest)).toBeDisabled();
+    fireEvent.click(screen.getByTestId(playTestid.leaveQueue));
+    await waitFor(() => {
+      expect(screen.getByTestId(playTestid.queue)).not.toBeDisabled();
+    });
+
+    // Off, a room is made with no lean at all.
+    fireEvent.click(screen.getByTestId(playTestid.leanNewest));
+    fireEvent.click(screen.getByTestId(playTestid.createRoom));
+    await screen.findByTestId(playTestid.roomCode);
+    expect(vi.mocked(createRoom)).toHaveBeenLastCalledWith(TOKEN, { mode: "random" });
+    cleanup();
+
+    // On again, a join carries it.
+    fireEvent.click(await renderRandomLobby());
+    fireEvent.change(screen.getByTestId(playTestid.joinInput), { target: { value: "abcd" } });
+    fireEvent.submit(screen.getByTestId(playTestid.joinForm));
+    await waitFor(() => {
+      expect(vi.mocked(joinRoom)).toHaveBeenLastCalledWith(TOKEN, "ABCD", { mode: "random", leanNewest: true });
+    });
+  });
+
+  it("R1372 the pick is kept on this device and a refused storage only starts it off", async () => {
+    fireEvent.click(await renderRandomLobby());
+    expect(window.localStorage.getItem(PLAY_LEAN_NEWEST_KEY)).toBe("true");
+    cleanup();
+
+    expect(await renderRandomLobby()).toBeChecked();
+    cleanup();
+
+    const getItem = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    try {
+      const toggle = await renderRandomLobby();
+      expect(toggle).not.toBeChecked();
+      fireEvent.click(toggle);
+      expect(screen.getByTestId(playTestid.leanNewest)).toBeChecked();
+    } finally {
+      getItem.mockRestore();
+      setItem.mockRestore();
+    }
   });
 });
 

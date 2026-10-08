@@ -79,6 +79,8 @@ describe("scripts/vercel-ignore.sh", () => {
       "crates/engine/Cargo.toml",
       "crates/cards/catalog.json",
       "crates/cards/flavour.json",
+      "crates/cards/chinese.json",
+      "crates/cards/chinese-terms.json",
       "crates/cards/build.rs",
       "crates/cards/patches/patches.json",
       "crates/ai/src/decide.rs",

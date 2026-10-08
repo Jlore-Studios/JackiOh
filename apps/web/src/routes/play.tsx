@@ -29,6 +29,11 @@
 // waiting for its mode. The Find a match box says what this screen is doing (queued, looking for
 // an opponent, the room code) and repeats no count, and neither does the queued notice.
 //
+// MORE CARDS FROM THE NEWEST SET (R1372). All Random's setup carries one switch: the player's own
+// dealt deck leans on the newest set that ships (`game/LeanNewest.tsx`). It is intent on the queue
+// and room requests (`leanNewest`), for this player's seat only; the server resolves the set and
+// deals the deck. The pick is kept on this device for the next visit and for the rematch.
+//
 // THE RANK (R661) has a panel of its own beside the queue: the player's own visible rank from
 // `GET /api/ranked`, in `rank/rank.ts`'s words (placements, a Grape tier with its division and pips,
 // or a Jlorious position; never the hidden rating, R612), and the way to the leaderboard. It is
@@ -67,6 +72,7 @@ import {
   type SavedDeck,
   type SavedTrio,
 } from "../net/api.ts";
+import { LeanNewestToggle, readPlayLeanNewest, writePlayLeanNewest } from "../game/LeanNewest.tsx";
 import { MATCH_FOUND_STATUS, forgetQueued, liveGameOf, readQueued, rememberQueued } from "../net/liveGame.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { forgetRoomLink, readRoomLink, roomLinkUrl, sendRoomLink } from "../net/roomLink.ts";
@@ -118,6 +124,8 @@ export const playTestid = {
   rank: "play-rank",
   /** R661: the way to `/leaderboard`. */
   leaderboard: "play-leaderboard",
+  /** R1372: All Random's "More cards from the newest set" checkbox. */
+  leanNewest: "play-lean-newest",
 } as const;
 
 export const QUEUE_MODES: readonly QueueMode[] = ["bo1", "bo3", "random"];
@@ -263,11 +271,19 @@ export function defaultTrio(trios: readonly SavedTrio[], remembered: string | nu
   );
 }
 
-/** The choice as the queue and the room routes take it; null when the mode needs a pick there isn't. */
-export function choiceFor(mode: QueueMode, deck: SavedDeck | null, trio: SavedTrio | null): ModeChoice | null {
+/**
+ * The choice as the queue and the room routes take it; null when the mode needs a pick there isn't.
+ * All Random carries the player's R1372 lean, sent only when it is on.
+ */
+export function choiceFor(
+  mode: QueueMode,
+  deck: SavedDeck | null,
+  trio: SavedTrio | null,
+  leanNewest = false,
+): ModeChoice | null {
   switch (mode) {
     case "random":
-      return { mode: "random" };
+      return leanNewest ? { mode: "random", leanNewest: true } : { mode: "random" };
     case "bo1":
       return deck === null ? null : { mode: "bo1", deckId: deck.id };
     case "bo3":
@@ -640,12 +656,14 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
 
   const [deckId, setDeckId] = useState<string | null>(stored.deckId ?? null);
   const [trioId, setTrioId] = useState<string | null>(stored.trioId ?? null);
+  /** R1372: All Random's "More cards from the newest set", as this device left it. */
+  const [leanNewest, setLeanNewest] = useState(readPlayLeanNewest);
 
   const lobby = useLobbyData(token);
   const data = lobby.kind === "ready" ? lobby.data : null;
   const deck = data === null ? null : defaultDeck(data.decks, deckId);
   const trio = data === null ? null : defaultTrio(data.trios, trioId);
-  const choice = choiceFor(mode, deck, trio);
+  const choice = choiceFor(mode, deck, trio, leanNewest);
   const verdict = data === null ? null : verdictFor(mode, deck, trio, data);
 
   // A failed read keeps the last count (or none): it is information, never a blocker.
@@ -997,7 +1015,18 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
           ) : null}
 
           {mode === "random" ? (
-            <p className="lobby-note">No deck needed: the server deals both of you one when the game starts.</p>
+            <>
+              <p className="lobby-note">No deck needed: the server deals both of you one when the game starts.</p>
+              <LeanNewestToggle
+                checked={leanNewest}
+                disabled={locked}
+                testid={playTestid.leanNewest}
+                onChange={(on) => {
+                  setLeanNewest(on);
+                  writePlayLeanNewest(on);
+                }}
+              />
+            </>
           ) : null}
 
           <Verdict result={verdict} />

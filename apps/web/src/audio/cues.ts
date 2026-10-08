@@ -539,6 +539,7 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   marked: { sfx: "brand", cues: markCues },
   // R676: a Glitch tears the match: the rollback's rush with a shattering glass over it.
   glitched: { sfx: "whoosh", cues: () => [sfx("whoosh"), sfx("shieldShatter")] },
+  translated: silent("a translation changes only the language a card is shown in (R1301)"),
 };
 
 /**
