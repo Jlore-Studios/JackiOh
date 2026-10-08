@@ -6,9 +6,9 @@
 // DRAFTED FROM THE CODE, NOT FROM A TEMPLATE. Every statement below is something this repository
 // does: what the sign-up form sends (net/auth.ts), what the server stores (crates/server/src/db/
 // migrations/), what this browser keeps (net/session.ts, auth/pkce.ts, settings/store.ts,
-// tutorial/progress.ts, net/return-to.ts, auth/redirect.ts), where it runs (render.yaml,
-// vercel.json), how long it is kept (the retention constants in crates/server/src/config.rs, purged
-// by migration 0013), what deleting an account removes (migration 0012) and the summary each finished
+// tutorial/progress.ts, auth/redirect.ts), where it runs (render.yaml, vercel.json), how long it
+// is kept (the retention constants in crates/server/src/config.rs, purged by migration 0013), what
+// deleting an account removes (migration 0012) and the summary each finished
 // match leaves for the card statistics (migration 0014, SPEC §9.11). The two things the code
 // cannot say, a minimum age and a private contact address, are marked for the owner. Change the
 // date on the page whenever the text changes.
@@ -29,7 +29,7 @@ export const privacyTestid = {
 } as const;
 
 /** The date the text below last changed, as the page shows it. */
-export const PRIVACY_LAST_UPDATED = "2026-10-03";
+export const PRIVACY_LAST_UPDATED = "2026-10-08";
 
 export default function PrivacyRoute(): ReactElement {
   return (
@@ -142,8 +142,8 @@ export default function PrivacyRoute(): ReactElement {
             <li>Your settings, such as sound and reduced motion.</li>
             <li>Your tutorial progress.</li>
             <li>
-              For the open tab only, and gone when you close it: your sign-in session, the page to return to
-              after you sign in, and a password-reset link you opened.
+              For the open tab only, and gone when you close it: your sign-in session and a password-reset
+              link you opened.
             </li>
           </ul>
           <p>
