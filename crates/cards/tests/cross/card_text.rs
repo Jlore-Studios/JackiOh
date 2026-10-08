@@ -1552,8 +1552,17 @@ mod r1320_players_read_nerf_and_buff_issue_543 {
         ("classicplus-073", FaceKind::Radiant, &["Buff", "Nerf"]),
         ("classicplus-t-ai-10", FaceKind::Base, &["Buff"]),
         ("classicplus-t-ai-10", FaceKind::Radiant, &["Buff"]),
-        ("core-098", FaceKind::Radiant, &["Buff"]),
     ];
+
+    /// Core #98's Steady Shot raises its own damage (R754), which is no Buff: its Radiant face says so
+    /// in words that are no keyword's (R1320).
+    #[test]
+    fn r1320_steady_shot_says_its_raise_in_plain_words() {
+        let card = CATALOG.get("core-098").expect("the catalog has Heroic Power");
+        let text = fill_params(card, FaceKind::Radiant, None);
+        assert!(text.contains("This permanently deals 2 more damage."), "{text}");
+        assert!(!has_words(&text, "Buff", false), "{text}");
+    }
 
     #[test]
     fn r1320_no_face_and_no_name_of_any_entry_says_degrade_or_upgrade() {

@@ -620,7 +620,7 @@ pub const HERO_POWERS: &[HeroPower] = &[
         radiant_title: "Steady Shot",
         x: 1,
         label: "Deal {shot} damage to the enemy hero.",
-        radiant_label: "Deal {shot} damage to the enemy hero. Buff this permanently by +2 damage.",
+        radiant_label: "Deal {shot} damage to the enemy hero. This permanently deals 2 more damage.",
         targets: None,
         build: steady_shot,
     },
