@@ -4415,9 +4415,9 @@
     "what": "build #539 on claude-2"
   },
   "last_sweep": {
-    "at": "2026-10-09T13:24:38Z",
+    "at": "2026-10-09T13:28:12Z",
     "notes": [
-      "#599 needs a plan"
+      "#599 left the Needs plan stage"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
