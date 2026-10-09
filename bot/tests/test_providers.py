@@ -207,7 +207,7 @@ class AvailabilityTests(unittest.TestCase):
         self.assertIn("7-day usage is 95%", self.why("claude-2", state))
         # --force lifts a subscription's hours, never its caps.
         self.assertIn("7-day usage is 95%", self.why("claude-2", state, at=DAY, forced=True))
-        # claude-2 stops at 90% of its 5-hour session too; claude-1 goes on to 98%.
+        # claude-2 stops at 90% of its 5-hour session too; claude-1 goes on to 100%.
         session = {"five_hour": {"utilization": 0.92, "resets_at": later}}
         self.assertIn("5-hour usage is 92%",
                       self.why("claude-2", {"providers": {"claude-2": {"usage": session}}}))
@@ -231,9 +231,9 @@ class AvailabilityTests(unittest.TestCase):
 
     def test_the_old_top_level_readings_belong_to_the_first_claude_account(self):
         later = clock.iso(NIGHT + timedelta(hours=2))
-        state = {"usage": {"five_hour": {"utilization": 0.99, "resets_at": later}},
+        state = {"usage": {"five_hour": {"utilization": 1.0, "resets_at": later}},
                  "providers": {}}
-        self.assertIn("5-hour usage is 99%", self.why("claude-1", state))
+        self.assertIn("5-hour usage is 100%", self.why("claude-1", state))
         self.assertIsNone(self.why("claude-2", state))
         providers.note_usage(state, "claude-1", {"five_hour": {"utilization": 0.1,
                                                                "resets_at": later}}, None, NIGHT)
@@ -334,7 +334,7 @@ class MatchingTests(unittest.TestCase):
             providers.parse(raw)
 
     def test_claude_1_works_outside_its_hours_up_to_40_percent(self):
-        """claude-1's window is 21:00–07:00 under a 98% cap on its 5-hour session with no
+        """claude-1's window is 21:00–07:00 under a 100% cap on its 5-hour session with no
         weekly cap; outside it, it still works while its 5-hour usage is under 40%
         (`off_hours`), and a run there stops past 40%."""
         claude_1 = providers.load(ROOT).get("claude-1")
@@ -353,7 +353,8 @@ class MatchingTests(unittest.TestCase):
         self.assertIn("5-hour usage is 45%, at or over its 40% cap outside its hours",
                       why(DAY, 0.45))
         self.assertIsNone(why(night, 0.45))
-        self.assertIn("at or over its 98% cap; ", why(night, 0.99))
+        self.assertIsNone(why(night, 0.99))  # it may spend its whole session in its hours
+        self.assertIn("at or over its 100% cap; ", why(night, 1.0))
         # The mid-run stop holds the same caps.
         entry = {"usage": {"five_hour": {"utilization": 0.41, "resets_at": later}}}
         self.assertIsNotNone(providers.refusal(claude_1, entry, DAY, "America/Chicago"))
@@ -491,7 +492,7 @@ class MatchingTests(unittest.TestCase):
 
     def test_claude_2_and_3_work_any_hour(self):
         """The committed hours: claude-1, claude-2, claude-3 and claude-7 run all day, claude-1
-        under its 98% cap with no weekly cap, claude-2 under 90% and claude-3 and claude-7 with
+        under its 100% cap with no weekly cap, claude-2 under 90% and claude-3 and claude-7 with
         none; claude-4 and
         claude-6 run all day too, up to 70% of their 5-hour session from 03:00 to 15:00 and
         under 50% otherwise, with no weekly cap, and claude-5 under 40%/60% (their own tests
@@ -745,6 +746,75 @@ class PeekTests(unittest.TestCase):
         self.assertEqual((look.work, look.provider, look.quiet_provider), (True, "claude-3", ""))
         look = plan_mod.peek(ctx_for(gh, env=secrets("CLAUDE_CODE_OAUTH_TOKEN"), machine=()))
         self.assertEqual((look.work, look.provider, look.quiet_provider), (True, "claude-1", ""))
+
+
+#: 2026-10-09 06:00 UTC is 01:00 CDT: outside claude-4's and claude-6's 03:00–15:00 window.
+EARLY = datetime(2026, 10, 9, 6, 0, tzinfo=timezone.utc)
+
+
+def too_close_to_start() -> dict:
+    """The night claude-4 and claude-6 sat idle with work queued: outside their hours, under
+    their 50% cap there, but not 5 points under it (`start_headroom`); every other subscription
+    refused until later."""
+    later = clock.iso(EARLY + timedelta(hours=6))
+    state: dict = {"providers": {pid: {"refused_until": later}
+                                 for pid in raw_providers()["providers"]}}
+    state["providers"]["claude-4"] = {"usage": {
+        "five_hour": {"utilization": 0.49, "resets_at": "2026-10-09T09:10:00Z"},
+        "observed_at": "2026-10-09T04:37:07Z"}}
+    state["providers"]["claude-6"] = {"usage": {
+        "five_hour": {"utilization": 0.45, "resets_at": "2026-10-09T07:50:00Z"},
+        "observed_at": "2026-10-09T03:34:44Z"}}
+    return state
+
+
+class StartTests(unittest.TestCase):
+    """A subscription under its cap but too close to it to start a build, a revision or a plan
+    says so, says it still takes reviews, and says when it can start one again."""
+
+    def setUp(self):
+        self.pool = providers.load(ROOT)
+        self.state = too_close_to_start()
+        self.everyone = Secrets.of(secrets(*providers.SECRETS))
+
+    def test_too_close_to_start_says_reviews_only_and_when_it_can(self):
+        for pid, frees, wait in (("claude-4", "2026-10-09T08:00:00Z", "2h 00m"),
+                                 ("claude-6", "2026-10-09T07:50:00Z", "1h 50m")):
+            provider = self.pool.get(pid)
+            # A review goes up to the cap, so it may start one.
+            self.assertIsNone(providers.availability(provider, self.state, EARLY,
+                                                     "America/Chicago", self.everyone))
+            why = providers.start_reason(provider, self.state, EARLY, "America/Chicago",
+                                         self.everyone)
+            self.assertIn("too close to its 50% cap outside its hours to start a long run "
+                          "(it starts under 45%)", why)
+            self.assertIn(f"; it takes reviews only; it can start a build or a plan again in "
+                          f"{wait}", why)
+            entry = providers.peek_record(self.state, pid)
+            # claude-4 frees when its window opens (70% cap, starts under 65%), before its reset;
+            # claude-6 when its session resets, before its window opens.
+            self.assertEqual(clock.iso(providers.frees_at(provider, entry, EARLY,
+                                                          "America/Chicago")), frees)
+        # Something no reset lifts gets no time.
+        held = {"providers": {"claude-4": {"infra": {"at": clock.iso(EARLY), "reason": "401"}}}}
+        why = providers.start_reason(self.pool.get("claude-4"), held, EARLY, "America/Chicago",
+                                     self.everyone)
+        self.assertIn("could not work", why)
+        self.assertNotIn("again in", why)
+
+    def test_a_queued_item_and_the_planner_say_the_same(self):
+        text = providers.when_free(test_pool(committed_hours=True), self.state, EARLY,
+                                   "America/Chicago", self.everyone)
+        self.assertEqual(text, "when `claude-6` has room under its caps again (in 1h 50m)")
+        gh = FakeGitHub()
+        gh.add_issue(3, labels=(LABEL_BUILD,))
+        ctx = ctx_for(gh, at=EARLY, machine=(), committed_hours=True)
+        ctx.store.update(lambda s: s["providers"].update(self.state["providers"]), "seed")
+        planned = plan_mod.make(ctx)
+        self.assertEqual(planned["action"], "none")
+        self.assertIn("`claude-4` 5-hour usage is 49%, too close to its 50% cap", planned["reason"])
+        self.assertIn("it can start a build or a plan again in 2h 00m", planned["reason"])
+        self.assertNotIn("is free", planned["reason"])
 
 
 class WhenTests(unittest.TestCase):
