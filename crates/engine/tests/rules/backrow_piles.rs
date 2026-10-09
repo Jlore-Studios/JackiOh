@@ -4,9 +4,6 @@
 //! top of it — a Unit for every rule that can neither attack nor be attacked, stepping down into a unit
 //! zone when its zone stops carrying it; a carrier that fuses its Unit (Classic+ #33 Ivory Tower, R653)
 //! takes one a stay. Pauses, a round trip, a replay and each seat's view included.
-//! Fixtures: `fixtures/field.ts`.
-//!
-//! Port of `packages/engine/test/backrow-piles.test.ts`.
 
 use serde::Serialize;
 
@@ -26,12 +23,11 @@ use crate::rules::fixtures::field::{
 use crate::rules::fixtures::harness::{events_of_type, in_hand, put, sink_for, slot};
 use crate::rules::fixtures::scripts::heroic_power;
 
-/// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
+/// An `ActionInput` from a `json!` object literal (SURFACE §8).
 fn input(body: Value) -> ActionInput {
     json_as(body)
 }
 
-/// TS `makeContext(sink, null, { controller })`'s options.
 fn by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),
@@ -69,7 +65,6 @@ fn expect_match(actual: impl Serialize, expected: Value) {
     );
 }
 
-/// `events.map((event) => event.instanceId)`, read off the events' JSON.
 fn instance_ids(events: impl Serialize) -> Vec<String> {
     json_of(events)
         .as_array()
@@ -81,7 +76,6 @@ fn instance_ids(events: impl Serialize) -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// The refusal a `why…` check gives, or `None` when it allows (TS `string | null`).
 fn refusal(check: Result<(), EngineError>) -> Option<String> {
     check.err().map(|error| error.message)
 }
@@ -110,7 +104,6 @@ fn zone(row: Row, lane: i32) -> ZoneChoice {
     ZoneChoice { row, lane }
 }
 
-/// The first `cardPlayed` event's instance id, or "".
 fn first_played(events: &[GameEvent]) -> String {
     instance_ids(events_of_type(events, GameEventType::CardPlayed))
         .into_iter()
@@ -118,7 +111,6 @@ fn first_played(events: &[GameEvent]) -> String {
         .unwrap_or_default()
 }
 
-/// TS `JSON.parse(JSON.stringify(state))`.
 fn json_round_trip(state: &GameState) -> GameState {
     serde_json::from_value(json_of(state)).expect("a state survives JSON")
 }
@@ -131,7 +123,6 @@ fn by_id_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
 
-/// The card as it stands in `state` now, owned (TS held the live object).
 fn live(state: &GameState, id: &str) -> CardInstance {
     by_id(state, id).clone()
 }
@@ -461,8 +452,8 @@ mod r447_b5_e21_backrow_piles {
 mod r446_b5_e21_a_carrier_and_the_unit_it_holds {
     use super::*;
 
-    /// What `towerGame` hands back: the state after p1 played a plain body onto a Tower in backrow lane
-    /// 2, the Tower, and the carried Unit's id.
+    /// The state after p1 played a plain body onto a Tower in backrow lane 2, the Tower, and the
+    /// carried Unit's id.
     struct TowerGame {
         state: GameState,
         tower: CardInstance,

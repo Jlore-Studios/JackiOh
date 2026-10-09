@@ -2,8 +2,6 @@
 //! placements all on the one permanent a single prompt names, "Place N on X" as one placement,
 //! placement multipliers, the "placed on this" trigger, stats per token through the layers, removal,
 //! and what each player sees.
-//!
-//! Port of `packages/engine/test/effects-plague.test.ts`.
 
 use std::collections::BTreeSet;
 
@@ -34,14 +32,13 @@ use super::fixtures::generation::{
 };
 use super::fixtures::harness::{put, slot};
 
-/// `generation.ts`'s `pick`: the instance selection for a card.
 fn pick(card: &CardInstance) -> Selection {
     Selection::Instance {
         instance_id: card.id.clone(),
     }
 }
 
-/// `run(sink, effect, self, targets)`: the effect applied as p1's, the targets picked by instance.
+/// The effect applied as p1's, the targets picked by instance.
 fn run(sink: &mut EngineSink, effect: Effect, self_: Option<&CardInstance>, targets: &[&CardInstance]) {
     let mut ctx = make_context(
         sink,
@@ -55,7 +52,7 @@ fn run(sink: &mut EngineSink, effect: Effect, self_: Option<&CardInstance>, targ
     (effect.apply)(&mut ctx);
 }
 
-/// The Plague Counter changes in `events`: `{ id, value, placed? }`, as TS mapped them.
+/// The Plague Counter changes in `events`: `{ id, value, placed? }`.
 fn placements(events: &[GameEvent]) -> Vec<Value> {
     events
         .iter()
@@ -118,7 +115,7 @@ fn hero_health(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].hero.health
 }
 
-/// The events of the last `n` applied actions, in order (TS `applied.slice(-n).flatMap(…)`).
+/// The events of the last `n` applied actions, in order.
 fn last_events(state: &GameState, n: usize) -> Vec<GameEvent> {
     let from = state.applied.len().saturating_sub(n);
     state.applied[from..]
@@ -127,14 +124,12 @@ fn last_events(state: &GameState, n: usize) -> Vec<GameEvent> {
         .collect()
 }
 
-/// The top card of `player`'s unit lane `lane` (TS `units[lane - 1]?.[0]`).
 fn top_of(state: &GameState, player: PlayerId, lane: usize) -> Option<&CardInstance> {
     state.players[player].units[lane - 1]
         .as_ref()
         .and_then(|pile| pile.first())
 }
 
-/// The card under `id` as it stands in the state now (TS read the live object).
 fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).expect("the card is in the state")
 }
@@ -147,8 +142,7 @@ fn play_on(card: &CardInstance, target: &CardInstance) -> Value {
     json!({ "type": "play", "instanceId": card.id, "targets": [pick(target)], "playerId": "p1" })
 }
 
-/// `toMatchObject`: every key `expected` names holds the same value in `actual` (objects and arrays
-/// recursively, as vitest reads them).
+/// Every key `expected` names holds the same value in `actual` (objects and arrays recursively).
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (Value::Object(have), Value::Object(want)) => want
@@ -181,8 +175,7 @@ fn thaw(state: &GameState) -> GameState {
     serde_json::from_value(serde_json::to_value(state).expect("a state serialises")).expect("a state parses")
 }
 
-/// A sink over `state` (`sinkFor`: the rng at the state's cursor); TS never wrote the cursor back in
-/// this file, and neither does this.
+/// A sink over `state`, the rng at the state's cursor; the cursor is never written back.
 macro_rules! sink_for {
     ($sink:ident, $state:expr) => {
         let mut rng = Rng::new(&$state.seed, $state.rng_cursor);
@@ -308,7 +301,6 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
         run = act(&run, play(&book));
         let pending = run.state.pending.clone().expect("expected a prompt");
         let refused = run.state.clone();
-        // TS: `act` throws `${type} refused: ${error}`; `refusal` is the same reduce's error.
         let named = refusal(
             &run,
             json!({ "type": "answer", "choiceId": pending.id, "selection": [pick(&in_hand)], "playerId": "p1" }),
@@ -429,7 +421,6 @@ mod e19_a_placement_prompt_held_by_the_player_who_is_not_taking_the_turn {
         );
         let mut run1 = frozen(&start);
         let pending = run1.state.pending.clone().expect("a prompt");
-        // TS: `answer(run1, pick(theirs), "p1")` throws the refusal; `refusal` is that reduce's error.
         let refused = refusal(
             &run1,
             json!({ "type": "answer", "choiceId": pending.id, "selection": [pick(&theirs)], "playerId": "p1" }),

@@ -1,7 +1,7 @@
-//! `cargo jackioh patches` (SURFACE §12): the card patch history (B4.2, R388, R646, R650), with
-//! several patches in flight at once: pending fragments, the check that proves them, and the
-//! promotion that ships them, in ship order. The same files and formats as the TypeScript tooling it
-//! replaces, which now live under `crates/cards/patches/` beside `crates/cards/catalog.json`:
+//! `cargo jackioh patches`: the card patch history (B4.2, R388, R646, R650), with several patches in
+//! flight at once: pending fragments, the check that proves them, and the promotion that ships them,
+//! in ship order. The files live under `crates/cards/patches/` beside `crates/cards/catalog.json`.
+//! Surface contract: docs/v0.3.0/SURFACE.md §12.
 //!
 //! ```text
 //! cargo jackioh patches <version> [date] "<title>" \
@@ -11,41 +11,31 @@
 //! ```
 //!
 //! - A branch changes `catalog.json` and adds one fragment, `pending/<version>.json`: `{ version,
-//!   title, sources, notes, cards }`, where `cards` lists the catalog ids the patch creates,
-//!   changes or removes (`--cards` says them; otherwise they are diffed from the working catalog
-//!   against the newest shipped snapshot) and `version` is a bare patch number or a micro `vA.B.Y`
-//!   (R650). Branches never edit `patches.json`, the snapshots, `index.json` or `shipped.json`.
-//!   The optional `date` is checked and not stored: promotion dates the patch by the UTC date of
-//!   the commit that added the fragment.
+//!   title, sources, notes, cards }`. `cards` lists the catalog ids the patch creates, changes or
+//!   removes (`--cards` says them; otherwise they are diffed from the working catalog against the
+//!   newest shipped snapshot); `version` is a bare patch number or a micro `vA.B.Y` (R650). Branches
+//!   never edit `patches.json`, the snapshots, `index.json` or `shipped.json`. The optional `date`
+//!   is checked and not stored: promotion dates the patch by the UTC date of the commit that added
+//!   the fragment.
 //! - `check` fails naming the card when a catalog entry differs from the newest shipped snapshot
-//!   without exactly one fragment claiming it, when a claimed card does not differ, when a
-//!   fragment's version is neither a bare patch number (`^v\d+\.\d+\.\d+$`) nor a micro `vA.B.Y`,
-//!   when a micro cannot be named after the newest patch, when a fragment claims no card, or when a
-//!   fragment's title, sources or notes is empty — they become the shipped patch's (R388). CI runs
-//!   it beside `catalog check`.
+//!   without exactly one fragment claiming it, when a claimed card does not differ, when a fragment's
+//!   version is neither a bare patch number nor a micro `vA.B.Y`, when a micro cannot be named after
+//!   the newest patch, when a fragment claims no card, or when its title, sources or notes is empty
+//!   (they become the shipped patch's, R388). CI runs it beside `catalog check`.
 //! - `ship` promotes every fragment on main, oldest first-parent commit that added one first: it
-//!   appends the patch (its version — a micro `vA.B.Y` first named after the then-newest patch,
-//!   R650 — or `<version>b`, then `c`, …, when that name already shipped; a shipped version never
-//!   reopens), snapshots `catalog.json` as that commit left it, records `{ version, commit, blob }`
-//!   in `shipped.json`, deletes the fragment, regenerates the derived files and bumps
-//!   `CATALOG_VERSION` to the newest patch. With no fragments it changes nothing, so running it
-//!   twice is running it once. It needs full history (`fetch-depth: 0`). It writes nothing unless
-//!   each adding commit's catalog changed exactly the cards its fragment claims and the last one is
-//!   `catalog.json` as it stands. `.github/workflows/patches-ship.yml` runs it after every merge
-//!   that touches `pending/` and opens the promotion's pull request.
+//!   appends the patch (its version, a micro named after the then-newest patch (R650), or
+//!   `<version>b`, `c`, … when that name already shipped), snapshots `catalog.json` as that commit
+//!   left it, records `{ version, commit, blob }` in `shipped.json`, deletes the fragment,
+//!   regenerates the derived files and bumps `CATALOG_VERSION`. Running it twice is running it once.
+//!   It needs full history (`fetch-depth: 0`) and writes nothing unless each adding commit's catalog
+//!   changed exactly the cards its fragment claims and the last one is `catalog.json` as it stands.
+//!   `.github/workflows/patches-ship.yml` runs it after every merge that touches `pending/`.
 //!
-//! There is no clock here (CLAUDE.md rule 4 held the TS package to it, and the history is data):
-//! dates come from the git history, and the UTC conversion below is arithmetic, never the clock.
-//!
-//! One file holds the five TypeScript modules it ports, each under its TS name (SURFACE §4.2: a
-//! function keeps its module): `naming` (`packages/cards/scripts/naming.ts`), `patch` (`patch.ts`,
-//! the version sites), `patches_io` (`patches-io.ts`, the history on disk) and `versions`
-//! (`versions.ts`, R650's micro versions); `patches.ts`, the command itself, is this module's own
-//! body. Their tests (`test/patches-ship.test.ts`, `test/patches.test.ts`, `test/versions.test.ts`)
-//! are at the bottom. `js` comes first: what the TypeScript took from the JavaScript runtime.
-//!
-//! Some functions here have no caller in the binary, only in the tests at the bottom (`naming`'s
-//! convention, `versions_at_sites` and the paths `patches_io` names).
+//! There is no clock here (CLAUDE.md rule 4): dates come from the git history, and the UTC
+//! conversion below is arithmetic. One file holds the modules `naming`, `patch`, `patches_io` and
+//! `versions` (R650's micro versions) and the command itself, each keeping its module (SURFACE §4.2),
+//! with their tests at the bottom; `js` comes first. Some functions have no caller in the binary,
+//! only in the tests (`naming`'s convention, `versions_at_sites` and the paths `patches_io` names).
 #![allow(dead_code)]
 
 use std::fmt;
@@ -65,18 +55,16 @@ use self::patches_io::{
 use self::versions::resolve_version;
 use jackioh_engine::wire::{SetName, set_ships};
 
-/// The repository root, from this crate's own manifest directory (`crates/tools`), resolved at
-/// compile time: TS's `REPO_ROOT` (`new URL("../../../", import.meta.url)`).
+/// The repository root, from this crate's own manifest directory (`crates/tools`), resolved at compile time.
 pub(crate) fn repo_root() -> PathBuf {
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
     manifest.ancestors().nth(2).unwrap_or(manifest).to_path_buf()
 }
 
-/* ------------------------------------------------------------------------------------------ js */
+/* js */
 
-/// What the TypeScript tooling took from the JavaScript runtime and `@jackioh/shared`, spelled out
-/// for Rust: an object that keeps its key order, `JSON.parse`/`JSON.stringify`, `String(x)`, and
-/// the few regular-expression classes the TS matched with (the tools take no regex crate, SURFACE §2).
+/// JSON and string helpers: an object that keeps its key order, a JSON parser and printer, number
+/// formatting and the few regular-expression classes the tools match with (no regex crate, SURFACE §2).
 pub(crate) mod js {
     use std::fmt;
 
@@ -84,20 +72,17 @@ pub(crate) mod js {
     use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
     use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 
-    /// `Number.MAX_SAFE_INTEGER`: up to here a double is an exact integer, which `JSON.stringify` and
-    /// `String(n)` write without a fraction.
+    /// Up to here a double is an exact integer and prints without a fraction.
     const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
 
-    /// A JSON object as `JSON.parse` builds it: keys in the order the text wrote them.
+    /// A JSON object, keys in the order the text wrote them.
     pub type Object = IndexMap<String, Json>;
 
-    /// A JSON value as `JSON.parse` reads it. serde_json's own `Value` sorts object keys (the
-    /// workspace has no `preserve_order`, SURFACE §2), but the patch history compares catalog
-    /// entries byte for byte, key order included (`differingIds`, `sameCatalog`), and reports fields
-    /// in key order (`changedFields`), so objects here keep insertion order the way a JS object does.
-    /// A repeated key keeps its first place and its last value, as `JSON.parse` does. Numbers are
-    /// doubles, as in JS. `==` is `toEqual`'s (key order ignored); `JSON.stringify` equality is
-    /// `stringify(a) == stringify(b)`.
+    /// A JSON value. serde_json's own `Value` sorts object keys (the workspace has no `preserve_order`,
+    /// SURFACE §2), but the patch history compares catalog entries byte for byte, key order included
+    /// (`differingIds`, `sameCatalog`), so objects here keep insertion order; a repeated key keeps its
+    /// first place and last value. Numbers are doubles. `==` ignores key order; `stringify` equality
+    /// does not.
     #[derive(Clone, Debug, PartialEq)]
     pub enum Json {
         Null,
@@ -137,7 +122,6 @@ pub(crate) mod js {
             }
         }
 
-        /// `Number.isInteger(value)`: a number with no fraction.
         pub fn is_integer(&self) -> bool {
             matches!(self, Json::Number(n) if n.is_finite() && n.fract() == 0.0)
         }
@@ -277,25 +261,22 @@ pub(crate) mod js {
         }
     }
 
-    /// `JSON.parse(text)`.
     pub fn parse(text: &str) -> serde_json::Result<Json> {
         serde_json::from_str(text)
     }
 
-    /// `JSON.stringify(value)`, for anything serde writes in field order: a `Json`, an `Object`, a
-    /// typed struct (whose fields serialise in declaration order, as a TS object literal's do).
+    /// Compact JSON for anything serde writes in field order (fields serialise in declaration order).
     pub fn stringify<T: serde::Serialize + ?Sized>(value: &T) -> String {
         serde_json::to_string(value).unwrap_or_else(|error| panic!("JSON.stringify: {error}"))
     }
 
-    /// `JSON.stringify(value, null, 2)`: serde_json's pretty printer writes the same two-space form.
+    /// Pretty JSON in the two-space form.
     pub fn stringify_pretty<T: serde::Serialize + ?Sized>(value: &T) -> String {
         serde_json::to_string_pretty(value).unwrap_or_else(|error| panic!("JSON.stringify: {error}"))
     }
 
-    /// `String(n)` for a number, which a template literal also writes. Integers print as integers;
-    /// a fraction prints as Rust's shortest round-trip form, which equals JS's for every number the
-    /// catalog holds (JS switches to exponents below 1e-6 and from 1e21, Rust never does).
+    /// Integers print as integers; a fraction as Rust's shortest round-trip form, which equals JS's for
+    /// every number the catalog holds (JS uses exponents below 1e-6 and from 1e21, Rust never does).
     pub fn number_string(n: f64) -> String {
         if n.is_nan() {
             return "NaN".to_string();
@@ -309,7 +290,6 @@ pub(crate) mod js {
         format!("{n}")
     }
 
-    /// `String(value)`, `undefined` (a missing value) included.
     pub fn to_js_string(value: Option<&Json>) -> String {
         match value {
             None => "undefined".to_string(),
@@ -322,7 +302,7 @@ pub(crate) mod js {
         }
     }
 
-    /// `Array.prototype.join(separator)`: each item as `String(item)`, `null` as the empty string.
+    /// Each item as `String(item)`, `null` as the empty string.
     pub fn join(items: &[Json], separator: &str) -> String {
         items
             .iter()
@@ -425,16 +405,12 @@ pub(crate) mod js {
     }
 }
 
-/* -------------------------------------------------------------------------------------- naming */
+/* naming */
 
-/// The catalog-id <-> filename convention for card scripts and card tests
-/// (BUILD M4-T2 `cards/src/scripts/NNN-slug.ts`, M4-T3 `cards/test/NNN-slug.test.ts`, SPEC §10.9,
-/// and patch v0.2.0's set folders, B2.2). Port of `packages/cards/scripts/naming.ts`.
-///
-/// Pure string functions, no I/O and no catalog import, so `gen-registry.ts`, `missing-tests.ts`,
-/// `gen-loc.ts` and `test/registry.test.ts` all read one copy of the rules. These are the TS file
-/// names' rules, kept as the TS wrote them; the Rust card files follow SURFACE §4.1's own
-/// (`c001_big_d_fender.rs`), which `crates/cards/build.rs` reads by each file's `ID`.
+/// The catalog-id <-> filename convention for card scripts and card tests (SPEC §10.9; set folders,
+/// B2.2). Pure string functions, no I/O and no catalog import. The Rust card files follow SURFACE
+/// §4.1's own convention (`c001_big_d_fender.rs`), which `crates/cards/build.rs` reads by each file's
+/// `ID`; these are the rules of the older file names.
 ///
 /// The convention, by example (the catalog id is the key of `catalog.json`, SPEC §5):
 ///
@@ -450,9 +426,8 @@ pub(crate) mod js {
 /// and the same path under `test/` with `.test.ts`. So a file's path is its set's folder (none for
 /// Core) and a basename `<prefix>-<slug>`, where the prefix is the id minus its set segment, except
 /// for Core's named tokens of SPEC §7 — the four shared ones, The Coin and the Ghoul Token — which
-/// are filed under the bare prefix (`t-rush`, `t-coin`). An index repeats across sets ("43" is a
-/// Core, a Classic and a Classic+ card), so the folder, never the basename alone, says which set a
-/// file belongs to.
+/// are filed under the bare prefix (`t-rush`, `t-coin`). An index repeats across sets, so the folder,
+/// never the basename alone, says which set a file belongs to.
 pub mod naming {
     use std::cmp::Ordering;
 
@@ -461,7 +436,7 @@ pub mod naming {
     /// Every shipped id is `<set>-<prefix>`, the set segment holding no hyphen (`classicplus`, B2.2).
     const SET_SEGMENT_SEPARATOR: char = '-';
 
-    /// TS `SetSegment = keyof typeof SET_FOLDERS`: a shipped set's id segment.
+    /// A shipped set's id segment.
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
     pub enum SetSegment {
         Core,
@@ -480,19 +455,15 @@ pub mod naming {
         }
     }
 
-    /// The shipped sets' id segments and the folder each one's scripts and tests live in, in
-    /// catalog order: Core at the top of `src/scripts/` and `test/`, the others in a folder of their
-    /// own.
+    /// The shipped sets' id segments and the folder each one's scripts and tests live in, in catalog order.
     pub const SET_FOLDERS: &[(SetSegment, &str)] = &[
         (SetSegment::Core, ""),
         (SetSegment::Classic, "classic"),
         (SetSegment::Classicplus, "classic-plus"),
     ];
 
-    /// `Object.keys(SET_FOLDERS)`: the segments in catalog order.
     const SET_SEGMENTS: &[SetSegment] = &[SetSegment::Core, SetSegment::Classic, SetSegment::Classicplus];
 
-    /// `SET_FOLDERS[segment]`.
     fn folder_for(segment: SetSegment) -> &'static str {
         SET_FOLDERS
             .iter()
@@ -500,9 +471,7 @@ pub mod naming {
             .map_or("", |(_, folder)| *folder)
     }
 
-    /// The set folders that are not the package root, for a tool that walks them: `SET_FOLDERS`'
-    /// folders minus Core's `""` (TS derived it with a filter; `set_subfolders_are_the_folders_
-    /// that_are_not_the_root` holds the two equal).
+    /// The set folders that are not the package root, for a tool that walks them.
     pub const SET_SUBFOLDERS: &[&str] = &["classic", "classic-plus"];
 
     /// `classic-043` -> `classic`; `None` for an id whose set segment names no shipped set.
@@ -539,10 +508,8 @@ pub mod naming {
         }
     }
 
-    /// The filename prefix of a catalog id: the id minus its leading set segment.
-    /// `core-001` -> `001`, `core-051-1` -> `051-1`, `core-t-rush` -> `t-rush`,
-    /// `classicplus-t-ai-01` -> `t-ai-01`. Panics with TS's message on a string that is no catalog
-    /// id (TS threw; every caller hands it catalog ids).
+    /// The filename prefix of a catalog id: the id minus its leading set segment (`core-051-1` ->
+    /// `051-1`). Panics on a string that is no catalog id; every caller hands it catalog ids.
     pub fn slug_prefix_of(id: &str) -> &str {
         match id.find(SET_SEGMENT_SEPARATOR) {
             Some(cut) if cut > 0 && cut != id.len() - 1 => &id[cut + 1..],
@@ -552,28 +519,22 @@ pub mod naming {
 
     /// `051-1` and `t-rush` are token prefixes; `051` is a card prefix. Nothing nests deeper.
     pub fn is_token_prefix(prefix: &str) -> bool {
-        // /^t-/ or /^\d+-\d+$/
         prefix.starts_with("t-")
             || prefix
                 .split_once('-')
                 .is_some_and(|(main, sub)| is_digits(main) && is_digits(sub))
     }
 
-    /// A shared token's prefix (`t-rush`, `t-ai-01`): a token no one card defines. Core's (SPEC §7's
-    /// four shared ones, The Coin and the Ghoul Token) are filed under the bare prefix (`t-rush.ts`);
-    /// Classic+'s AI generated cards carry their slug like any card (`t-ai-01-helpful-assistant.ts`).
+    /// A shared token's prefix (`t-rush`, `t-ai-01`): a token no one card defines. Core's (SPEC §7's four
+    /// shared ones, The Coin and the Ghoul Token) are filed under the bare prefix; Classic+'s AI
+    /// generated cards carry their slug like any card.
     pub fn is_shared_token_prefix(prefix: &str) -> bool {
         prefix.starts_with("t-")
     }
 
     /// A card name as a filename slug: lowercase, apostrophes dropped, every other run of
-    /// non-alphanumerics collapsed to one `-`.
-    ///
-    /// Checked against every name, so: "Big D-fender" -> `big-d-fender`, "KY's Empty Notebook" ->
-    /// `kys-empty-notebook` (the apostrophe vanishes rather than becoming a dash), "CN-Virus" ->
-    /// `cn-virus`, "/fullsend" -> `fullsend`, "Call to Chaos (Core Edition)" ->
-    /// `call-to-chaos-core-edition`, `"Miss" Mrow` -> `miss-mrow`, "4-mana 7/7" -> `4-mana-7-7`,
-    /// "Forever&" -> `forever`, "BOOM! Big Max" -> `boom-big-max`.
+    /// non-alphanumerics collapsed to one `-`: "KY's Empty Notebook" -> `kys-empty-notebook` (the
+    /// apostrophe vanishes rather than becoming a dash), "4-mana 7/7" -> `4-mana-7-7`.
     pub fn slugify(name: &str) -> String {
         let lowered: String = name
             .to_lowercase()
@@ -594,8 +555,7 @@ pub mod naming {
         out.trim_matches('-').to_string()
     }
 
-    /// The canonical basename (no extension, no folder) for a catalog entry: what `gen-registry.ts`
-    /// expects to import and what `missing-tests.ts` prints as the file a card still needs.
+    /// The canonical basename (no extension, no folder) for a catalog entry.
     pub fn expected_basename(id: &str, name: &str) -> String {
         let prefix = slug_prefix_of(id);
         // Core's SPEC §7 shared tokens are one word already ("Rush Token" under `t-rush`), so the
@@ -625,18 +585,14 @@ pub mod naming {
 
     /// Whether `basename` (no extension) is the file of catalog id `id`, in that id's own set folder.
     ///
-    /// The slug itself is not checked: the prefix decides which card a file belongs to, so a
-    /// misspelled slug still lands on the right card (and `expected_basename` is what reports the
-    /// misspelling). The one hard case is the prefix boundary: `051-1-kys-empty-notebook` belongs to
-    /// `core-051-1` (KY's Empty Notebook) and must NOT be read as a slug of `core-051` (KY's Private
-    /// Tutor).
+    /// The slug is not checked: the prefix decides which card a file belongs to (`expected_basename`
+    /// reports a misspelt slug). The hard case is the prefix boundary: `051-1-kys-empty-notebook` belongs
+    /// to `core-051-1` and must NOT be read as a slug of `core-051`.
     ///
-    /// With `all_ids` (every catalog id) the answer is exact: the longest id prefix of that set the
-    /// basename carries wins, which is what `gen-registry.ts` and `missing-tests.ts` do. Without it
-    /// the rule is the documented heuristic "a lone digit segment right after a card prefix is a
-    /// token sub-index", which is right for every shipped id except #25 "4-mana 7/7", whose slug
-    /// itself opens with a digit segment (`025-4-mana-7-7`) — pass `all_ids` when the exact answer
-    /// matters.
+    /// With `all_ids` (every catalog id) the longest id prefix of that set the basename carries wins.
+    /// Without it the rule is the heuristic "a lone digit segment right after a card prefix is a token
+    /// sub-index", right for every shipped id except #25 "4-mana 7/7" (slug `025-4-mana-7-7`); pass
+    /// `all_ids` when the exact answer matters.
     pub fn matches_card(basename: &str, id: &str, all_ids: Option<&[String]>) -> bool {
         if let Some(all_ids) = all_ids {
             return resolve_basename(basename, all_ids, folder_of(id)).as_deref() == Some(id);
@@ -658,17 +614,15 @@ pub mod naming {
         if is_token_prefix(prefix) {
             return true; // a token id has no sub-token, so the rest is a slug
         }
-        // !/^\d(-|$)/.test(rest)
         let mut chars = rest.chars();
         let lone_digit =
             chars.next().is_some_and(|c| c.is_ascii_digit()) && matches!(chars.next(), None | Some('-'));
         !lone_digit
     }
 
-    /// Which catalog id a basename in `folder` (`""`, Core's, by default in TS) belongs to, by
-    /// longest prefix among that folder's set: `051-1-kys-empty-notebook` matches the prefixes `051`
-    /// and `051-1`, and the longer one is the card that owns the file. `None` means the filename
-    /// names no card of that set (a typo'd or unpadded prefix), or the folder holds no set.
+    /// Which catalog id a basename in `folder` (`""` is Core's) belongs to, by longest prefix among that
+    /// folder's set: `051-1-kys-empty-notebook` matches `051` and `051-1`, and the longer one owns the
+    /// file. `None` means the filename names no card of that set, or the folder holds no set.
     pub fn resolve_basename(basename: &str, all_ids: &[String], folder: &str) -> Option<String> {
         let segment = segment_of_folder(folder)?;
         let mut best: Option<&String> = None;
@@ -689,7 +643,7 @@ pub mod naming {
         best.cloned()
     }
 
-    /// A path's folder and basename (TS `{ folder, basename }`).
+    /// A path's folder and basename.
     #[derive(Clone, Debug, PartialEq, Eq)]
     pub struct RelPath<'a> {
         pub folder: &'a str,
@@ -716,12 +670,10 @@ pub mod naming {
         resolve_basename(basename, all_ids, folder)
     }
 
-    /// A filename prefix as a sortable number, mirroring the engine's index ranking
-    /// (`engine/src/catalog.ts` `indexRank`): `001` -> 1, `051-1` -> 51.1 (so a card-defined token
-    /// sorts straight after its card), `t-rush` -> +Infinity (shared tokens sort last within their
-    /// set).
+    /// A filename prefix as a sortable number, mirroring the engine's index ranking: `001` -> 1,
+    /// `051-1` -> 51.1 (so a card-defined token sorts straight after its card), `t-rush` -> +Infinity
+    /// (shared tokens sort last within their set).
     pub fn prefix_rank(prefix: &str) -> f64 {
-        // /^(\d+)(?:-(\d+))?$/
         let (main, sub) = match prefix.split_once('-') {
             None => (prefix, None),
             Some((main, sub)) => (main, Some(sub)),
@@ -796,24 +748,20 @@ pub mod naming {
     }
 }
 
-/* --------------------------------------------------------------------------------------- patch */
+/* patch */
 
 /// Every file that carries the catalog version (B4.2, R388, R646), and how to rewrite it there.
-/// Port of `packages/cards/scripts/patch.ts`. `patches ship`'s promotion bumps them to the newest
-/// shipped patch; the patch tests hold all of them to it. A deployment then reseeds: the server's
-/// `release` stamps every `cards` row and `app.settings.catalog_version` with the new version.
+/// `patches ship`'s promotion bumps them to the newest shipped patch; the patch tests hold all of them
+/// to it. A deployment then reseeds: the server's `release` stamps every `cards` row and
+/// `app.settings.catalog_version` with the new version.
 ///
-/// Patches used to be made by this module (`pnpm --filter @jackioh/cards patch …`), which
-/// snapshotted the catalog and appended to `patches.json` directly. Several patches are now built at
-/// once, so branches add a fragment under `patches/pending/` instead (`patches ship`, R646) and
-/// nothing here writes the history anymore. A micro `vA.B.Y` (R650) keeps its `Y` in the fragment
-/// until that promotion names it (`versions`).
+/// A micro `vA.B.Y` (R650) keeps its `Y` in the fragment until promotion names it (`versions`).
+/// Branches add a fragment under `patches/pending/` rather than writing the history (R646).
 ///
-/// After the rewrite every binary compiles the catalog version in from
-/// `crates/cards/patches/patches.json` (SURFACE §11.3), so TS's `catalog-data.ts` and its server's
-/// end-to-end default are no longer sites. What still carries the string is the server's
-/// `.env.example`, `render.yaml` (whose value the server checks against its own at boot) and, when
-/// the web build names it, `apps/web/.env.production`'s `VITE_CATALOG_VERSION`.
+/// Every binary compiles the catalog version in from `crates/cards/patches/patches.json` (SURFACE
+/// §11.3). What still carries the string is the server's `.env.example`, `render.yaml` (whose value
+/// the server checks against its own at boot) and, when the web build names it,
+/// `apps/web/.env.production`'s `VITE_CATALOG_VERSION`.
 pub mod patch {
     use std::fs;
     use std::path::Path;
@@ -823,14 +771,12 @@ pub mod patch {
     use super::js::is_line_terminator;
     use jackioh_engine::wire::is_js_space;
 
-    /// How a site's pattern finds the version, as TS's regular expressions did.
+    /// How a site's pattern finds the version.
     #[derive(Clone, Copy, Debug)]
     pub enum SitePattern {
-        /// `/^<KEY>.*$/m`: the first line that starts with the key (`CATALOG_VERSION=`); TS rendered
-        /// the whole line again as the key and the version.
+        /// The first line that starts with the key (`CATALOG_VERSION=`); the key is kept.
         Line(&'static str),
-        /// `/(- key: CATALOG_VERSION\n\s+value: )\S+/`: render.yaml's env entry; TS rendered
-        /// `$1<version>`.
+        /// render.yaml's env entry: `- key: CATALOG_VERSION`, then `value: <version>`.
         RenderValue,
     }
 
@@ -844,7 +790,6 @@ pub mod patch {
         pub optional: bool,
     }
 
-    /// Every file that carries the catalog version, and how to rewrite it there.
     pub const VERSION_SITES: &[VersionSite] = &[
         VersionSite {
             file: "crates/server/.env.example",
@@ -863,8 +808,7 @@ pub mod patch {
         },
     ];
 
-    /// One match of a site's pattern: its byte span, and where the version starts inside it
-    /// (everything before is kept, TS's `$1`, or the key the line render wrote again).
+    /// One match of a site's pattern: its byte span, and where the version starts inside it (everything before is kept).
     struct SiteMatch {
         start: usize,
         value_start: usize,
@@ -875,7 +819,6 @@ pub mod patch {
     const RENDER_VALUE: &str = "value: ";
 
     impl SitePattern {
-        /// The first match of the pattern in `text` (TS's `replace` without the `g` flag).
         fn locate(self, text: &str) -> Option<SiteMatch> {
             match self {
                 SitePattern::Line(key) => locate_line(text, key),
@@ -884,8 +827,7 @@ pub mod patch {
         }
     }
 
-    /// `/^KEY.*$/m`: a line start (the text's start or just after a line terminator) holding the
-    /// key, and the line up to its terminator.
+    /// The first line holding `key` at its start (the text's start or just after a line terminator), up to its terminator.
     fn locate_line(text: &str, key: &str) -> Option<SiteMatch> {
         let mut starts = vec![0];
         for (at, c) in text.char_indices() {
@@ -943,15 +885,13 @@ pub mod patch {
         None
     }
 
-    /// The length of the `\S+` run at the start of `text` (0 when there is none).
     fn non_space_length(text: &str) -> usize {
         text.char_indices()
             .find(|(_, c)| is_js_space(*c))
             .map_or(text.len(), |(at, _)| at)
     }
 
-    /// TS's `/"([^"]+)"|=(\S+)|value: (\S+)/.exec(match)`: the version a site's match carries, the
-    /// first alternative that matches at the leftmost position.
+    /// The version a site's match carries: the first alternative (`"v"`, `=v` or `value: v`) matching at the leftmost position.
     fn version_in(matched: &str) -> Option<String> {
         for (at, _) in matched.char_indices() {
             let rest = &matched[at..];
@@ -975,7 +915,6 @@ pub mod patch {
         None
     }
 
-    /// One site and the version it carries (TS `{ file, version }`).
     #[derive(Clone, Debug, PartialEq, Eq)]
     pub struct SiteVersion {
         pub file: &'static str,
@@ -1037,10 +976,9 @@ pub mod patch {
     }
 }
 
-/* ---------------------------------------------------------------------------------- patches_io */
+/* patches_io */
 
-/// The card patch history on disk (B4.2, R388, R646): `crates/cards/patches/`. Port of
-/// `packages/cards/scripts/patches-io.ts`.
+/// The card patch history on disk (B4.2, R388, R646): `crates/cards/patches/`.
 ///
 /// ```text
 ///   patches.json       every shipped patch in ship order: { version, date, title, source, notes, changes }
@@ -1053,12 +991,9 @@ pub mod patch {
 ///
 /// The order of patches is `patches.json`'s order and nothing else: a version is an opaque string,
 /// compared for equality only and never parsed or sorted (R105, R388). `changes` and `index.json`
-/// are derived from the snapshots by `rebuild_derived()`, so they can never disagree with them.
-/// Shipped snapshots are never amended: branches add a fragment under `pending/` and `patches ship`
-/// promotes it after it merges (R646).
-///
-/// Tooling (I/O lives in the tools, CLAUDE.md rule 4), shared by `patches` and the old `gen-loc.ts`;
-/// the patch tests read the same files through these functions.
+/// are derived from the snapshots by `rebuild_derived()`. Shipped snapshots are never amended:
+/// branches add a fragment under `pending/` and `patches ship` promotes it after it merges (R646).
+/// I/O lives in the tools (CLAUDE.md rule 4); the patch tests read the same files through these.
 pub mod patches_io {
     use std::fs;
     use std::path::{Path, PathBuf};
@@ -1069,29 +1004,25 @@ pub mod patches_io {
 
     use super::js::{self, Json, Object};
 
-    /// TS `PATCHES_DIR`: `crates/cards/patches/`.
+    /// `crates/cards/patches/`.
     pub fn patches_dir() -> PathBuf {
         super::repo_root().join("crates/cards/patches")
     }
 
-    /// TS `PATCHES_JSON`.
     pub fn patches_json() -> PathBuf {
         patches_dir().join("patches.json")
     }
 
-    /// TS `INDEX_JSON`.
     pub fn index_json() -> PathBuf {
         patches_dir().join("index.json")
     }
 
-    /// TS `PENDING_DIR`. Pending fragments: one file per patch being built, never edited after it
-    /// ships (R646).
+    /// Pending fragments: one file per patch being built, never edited after it ships (R646).
     pub fn pending_dir() -> PathBuf {
         patches_dir().join("pending")
     }
 
-    /// TS `SHIPPED_JSON`. Every shipped patch's provenance: the commit that shipped it and its
-    /// snapshot's blob (R646).
+    /// Every shipped patch's provenance: the commit that shipped it and its snapshot's blob (R646).
     pub fn shipped_json() -> PathBuf {
         patches_dir().join("shipped.json")
     }
@@ -1099,7 +1030,6 @@ pub mod patches_io {
     /// A catalog as a snapshot holds it: entries by id, each entry's fields in the file's order.
     pub type Catalog = IndexMap<String, Object>;
 
-    /// TS `PatchChange["kind"]`.
     #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
     #[serde(rename_all = "camelCase")]
     pub enum ChangeKind {
@@ -1186,7 +1116,6 @@ pub mod patches_io {
             && bytes.all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-'))
     }
 
-    /// A snapshot's path.
     pub fn snapshot_path(version: &str, dir: &Path) -> anyhow::Result<PathBuf> {
         if !is_snapshot_name(version) {
             bail!("\"{version}\" is not a patch version (letters, digits, \".\", \"_\" and \"-\")");
@@ -1205,8 +1134,7 @@ pub mod patches_io {
         serde_json::from_str(&text).with_context(|| format!("{} is not a catalog", path.display()))
     }
 
-    /// Writes `JSON.stringify(value, null, 2)` and a newline through a temporary file, so a reader
-    /// never sees half a file.
+    /// Writes pretty JSON and a newline through a temporary file, so a reader never sees half a file.
     pub fn write_json<T: Serialize + ?Sized>(path: &Path, value: &T) -> anyhow::Result<()> {
         let mut temp = path.as_os_str().to_owned();
         temp.push(format!(".{}.tmp", std::process::id()));
@@ -1216,16 +1144,15 @@ pub mod patches_io {
         fs::rename(&temp, path).with_context(|| format!("{} cannot be written", path.display()))
     }
 
-    /// `JSON.stringify(a) === JSON.stringify(b)`, a missing value (`undefined`) equal only to another.
+    /// Whether two values stringify equal, a missing value being equal only to another.
     fn same(a: Option<&Json>, b: Option<&Json>) -> bool {
         a.map(js::stringify) == b.map(js::stringify)
     }
 
-    /// `@jackioh/shared`'s `fillParams(def, face)` over a raw entry: the face's text with its
-    /// placeholders filled from the entry's printed values; `{key|singular|plural}` takes the
-    /// singular wording at 1 and the plural at any other value; unknown keys are left as written.
-    /// A private copy (the engine's `fill_params` takes a typed `CardDef`, which a snapshot entry, or
-    /// a test's partial one, need not deserialise into).
+    /// Fills a raw entry's face text from the entry's printed values: `{key|singular|plural}` takes the
+    /// singular wording at 1 and the plural at any other value; unknown keys are left as written. A
+    /// private copy (the engine's `fill_params` takes a typed `CardDef`, which a snapshot entry, or a
+    /// test's partial one, need not deserialise into).
     fn fill_params(def: &Object, face: &str) -> String {
         let text = def
             .get(face)
@@ -1272,7 +1199,7 @@ pub mod patches_io {
     /// The fields of one entry that differ, one level into its faces ("base.text", "cost"). A face's
     /// text is compared as it prints, its `{key}` numbers filled in (`fillParams`, as the
     /// patch-notes diff does): a patch that moves only a param's value still rewords the faces that
-    /// print it (v0.2.2's Exile threshold), so the face counts as changed.
+    /// print it, so the face counts as changed.
     pub fn changed_fields(before: &Object, after: &Object) -> Vec<String> {
         let mut fields = Vec::new();
         let keys: IndexSet<&String> = before.keys().chain(after.keys()).collect();
@@ -1366,11 +1293,10 @@ pub mod patches_io {
         Ok(next)
     }
 
-    // Pending fragments and the shipped list (R646): several card patches are built on separate
-    // branches at once, so branches never edit `patches.json`, the snapshots or the shipped list.
-    // A branch changes `catalog.json` and adds one fragment, `pending/<version>.json`, claiming the
-    // catalog ids its patch touches; `patches check` proves the claims against the newest shipped
-    // snapshot, and `patches ship` promotes each fragment to a patch in ship order after it merges.
+    // Pending fragments and the shipped list (R646): several card patches are built on separate branches
+    // at once, so branches never edit `patches.json`, the snapshots or the shipped list. A branch adds one
+    // fragment claiming the catalog ids its patch touches; `patches check` proves the claims and `patches
+    // ship` promotes each fragment in ship order after it merges.
 
     /// A patch not yet shipped: the designer's label, what it does, and the catalog ids it touches.
     #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -1402,12 +1328,11 @@ pub mod patches_io {
 
     /// A fragment's version is a bare patch number or a micro `vA.B.Y` (R646, R650): "v0.2.5" or
     /// "v0.2.Y", never a revision ("v0.2.0b") or a placeholder ("v0.2.X": the designer picks the X
-    /// before the patch is made). TS's `/^v\d+\.\d+\.(\d+|Y)$/`.
+    /// before the patch is made).
     pub fn is_fragment_version(version: &str) -> bool {
         super::versions::split_version(version).is_some_and(|(_, _, tail)| tail == "Y" || js::is_digits(tail))
     }
 
-    /// A pending fragment's path.
     pub fn pending_path(version: &str, dir: &Path) -> anyhow::Result<PathBuf> {
         if !is_fragment_version(version) {
             bail!(
@@ -1429,7 +1354,7 @@ pub mod patches_io {
             && matches!(fragment.get("cards"), Some(Json::Array(cards)) if cards.iter().all(|id| matches!(id, Json::String(_))))
     }
 
-    /// One fragment file: its name under `pending/` and what it holds (TS `{ name, fragment }`).
+    /// One fragment file: its name under `pending/` and what it holds.
     #[derive(Clone, Debug, PartialEq)]
     pub struct NamedFragment {
         pub name: String,
@@ -1472,7 +1397,6 @@ pub mod patches_io {
         string("version") && string("commit") && string("blob")
     }
 
-    /// The shipped list, oldest first, in `patches.json`'s order.
     pub fn read_shipped(path: &Path) -> anyhow::Result<Vec<ShippedEntry>> {
         let text = fs::read_to_string(path).with_context(|| format!("{} cannot be read", path.display()))?;
         let entries = js::parse(&text).with_context(|| format!("{} is not JSON", path.display()))?;
@@ -1490,8 +1414,7 @@ pub mod patches_io {
         let _ = fs::remove_file(path);
     }
 
-    /// SHA-1 (FIPS 180-4), as `node:crypto`'s `createHash("sha1")` digests it, in lower-case hex:
-    /// the tools take no hash crate (SURFACE §2), and git names a blob by this digest.
+    /// SHA-1 (FIPS 180-4) in lower-case hex: the tools take no hash crate (SURFACE §2), and git names a blob by this digest.
     fn sha1_hex(data: &[u8]) -> String {
         let mut state: [u32; 5] = [0x6745_2301, 0xEFCD_AB89, 0x98BA_DCFE, 0x1032_5476, 0xC3D2_E1F0];
         let bit_length = (data.len() as u64).wrapping_mul(8);
@@ -1560,11 +1483,10 @@ pub mod patches_io {
         bail!("no free revision letter for \"{version}\" (b through z are all shipped)")
     }
 
-    /// The ids whose entry is not the same bytes in both catalogs (added, removed, or any field
-    /// moved, key order and a reworded `{key}` included), in `after`'s order, removals last. This is
-    /// what a fragment claims: `diff_catalogs` reports a patch's changes the way players read them,
-    /// but every entry that would make the next snapshot differ has to belong to a patch, and
-    /// `same_catalog` agrees with this one.
+    /// The ids whose entry is not the same bytes in both catalogs (added, removed, or any field moved,
+    /// key order and a reworded `{key}` included), in `after`'s order, removals last. This is what a
+    /// fragment claims: `diff_catalogs` reports changes the way players read them, but every entry that
+    /// would make the next snapshot differ must belong to a patch. `same_catalog` agrees with this one.
     pub fn differing_ids(before: &Catalog, after: &Catalog) -> Vec<String> {
         let mut out: Vec<String> = after
             .iter()
@@ -1608,21 +1530,16 @@ pub mod patches_io {
         out
     }
 
-    /// `checkFragments`'s argument: the fragment files, the working catalog and the newest shipped
-    /// snapshot.
+    /// The input of `check_fragments`: the fragment files, the working catalog and the newest shipped snapshot.
     pub struct CheckFragmentsArgs<'a> {
         pub files: &'a [NamedFragment],
         pub catalog: &'a Catalog,
         pub newest: &'a Catalog,
     }
 
-    /// Every way the pending fragments disagree with the newest shipped snapshot, each naming the
-    /// card (and the fragment) at fault, or [] when the tree is shippable: every catalog entry that
-    /// differs from the newest snapshot is claimed by exactly one fragment, every claimed card
-    /// differs, every fragment names a bare patch number or a micro `vA.B.Y`, every fragment file
-    /// holds the version its name says, every fragment claims at least one card, and every fragment
-    /// carries a title, sources and notes — they become the shipped patch's. Pure: `patches check`
-    /// reads the files and prints what this returns.
+    /// Every way the pending fragments disagree with the newest shipped snapshot, each naming the card
+    /// (and the fragment) at fault, or [] when the tree is shippable; the rules are `patches check`'s
+    /// (module header). Pure: `patches check` reads the files and prints what this returns.
     pub fn check_fragments(args: &CheckFragmentsArgs<'_>) -> Vec<String> {
         let mut problems = Vec::new();
         for NamedFragment { name, fragment } in args.files {
@@ -1697,10 +1614,9 @@ pub mod patches_io {
     }
 }
 
-/* ------------------------------------------------------------------------------------ versions */
+/* versions */
 
-/// A patch's version from the name an issue gave it (docs/issues-and-patches.md, Version numbers;
-/// R650). Port of `packages/cards/scripts/versions.ts`.
+/// A patch's version from the name an issue gave it (docs/issues-and-patches.md, Version numbers; R650).
 ///
 /// - `vA.B.Y` is a **micro patch**: it ships as the newest version in `patches.json` (the last
 ///   entry, R388's order) with the next letter after it, so a micro patch made after v0.2.5 is
@@ -1776,7 +1692,7 @@ pub mod versions {
     }
 }
 
-/* ---------------------------------------------------------------------- patches (the command) */
+/* patches (the command) */
 
 const CATALOG_REL: &str = "crates/cards/catalog.json";
 const PATCHES_REL: &str = "crates/cards/patches";
@@ -1848,7 +1764,7 @@ pub fn shipped_text(raw: &str) -> anyhow::Result<String> {
     Ok(text)
 }
 
-/// `writeFragment`'s argument.
+/// The arguments of `write_fragment`.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct FragmentArgs {
     pub version: String,
@@ -1920,8 +1836,7 @@ pub fn check_patches(repo_root: &Path) -> anyhow::Result<Vec<String>> {
     Ok(problems)
 }
 
-/// `git <args>` in `repo_root`, its stdout as text; a failing git is an error carrying its stderr
-/// (TS's `execFileSync` threw).
+/// `git <args>` in `repo_root`, its stdout as text; a failing git is an error carrying its stderr.
 pub(crate) fn git(repo_root: &Path, args: &[&str], extra_env: &[(&str, &str)]) -> anyhow::Result<String> {
     let output = Command::new("git")
         .args(args)
@@ -2007,16 +1922,15 @@ struct Proved {
     raw: String,
 }
 
-/// Promotes every pending fragment to a shipped patch, in the order of the first-parent commit
-/// that added it (ship order, R646). The snapshot is `catalog.json` as that commit left it: the
-/// squash commit, or the merge commit, a pull request lands on main as. Idempotent: with no
-/// fragments it changes nothing.
+/// Promotes every pending fragment to a shipped patch, in the order of the first-parent commit that
+/// added it (ship order, R646). The snapshot is `catalog.json` as that commit left it: the squash
+/// commit, or the merge commit, a pull request lands on main as. Idempotent: with no fragments it
+/// changes nothing.
 ///
-/// Nothing is written until every fragment has been named and proved: each adding commit's
-/// catalog must differ from the patch before it on exactly the cards its fragment claims, and the
-/// last one must be the catalog as it stands. A claimed card changed again after its fragment
-/// merged, or a fragment edited to claim more, fails here with the files untouched, instead of
-/// shipping a history whose newest snapshot is not `catalog.json`.
+/// Nothing is written until every fragment has been named and proved: each adding commit's catalog
+/// must differ from the patch before it on exactly the cards its fragment claims, and the last one
+/// must be the catalog as it stands. A claimed card changed again after its fragment merged, or a
+/// fragment edited to claim more, fails here with the files untouched.
 pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
     let paths = patch_paths(repo_root);
     let files = read_fragments(&paths.pending_dir)?;
@@ -2227,8 +2141,7 @@ fn parse_fragment_args(argv: &[String]) -> anyhow::Result<FragmentArgs> {
             "\"{version}\" is not a fragment version (a bare patch number ^v\\d+\\.\\d+\\.\\d+$ or a micro vA.B.Y)"
         );
     }
-    // The old calling shape kept the date between the version and the title; promotion dates the
-    // patch by its merge commit instead, so a given date is validated and not stored.
+    // Promotion dates the patch by its merge commit, so a given date is validated and not stored.
     let (title, date) = match positional.get(2) {
         None => (second, flags.get("date").copied()),
         Some(&third) => (third, Some(second)),
@@ -2255,8 +2168,7 @@ fn parse_fragment_args(argv: &[String]) -> anyhow::Result<FragmentArgs> {
     })
 }
 
-/// `patches check`'s failure: TS printed each problem on its own line and exited 1, outside the
-/// `patches:` prefix every other error carries.
+/// `patches check`'s failure: each problem on its own line, outside the `patches:` prefix every other error carries.
 #[derive(Debug)]
 struct CheckFailed(Vec<String>);
 
@@ -2333,7 +2245,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     })
 }
 
-/* --------------------------------------------------------------------------------------- tests */
+/* tests */
 
 #[cfg(test)]
 mod tests {
@@ -2343,8 +2255,7 @@ mod tests {
 
     use super::js::{Json, Object};
 
-    /// A directory under the system temp dir, removed when dropped: TS's `mkdtempSync` and its
-    /// `finally { rmSync(root, { recursive: true, force: true }) }`.
+    /// A directory under the system temp dir, removed when dropped.
     pub(super) struct TempDir(PathBuf);
 
     impl TempDir {
@@ -2380,8 +2291,6 @@ mod tests {
         items.iter().map(|item| (*item).to_string()).collect()
     }
 
-    // naming.ts's rules, by the examples its comments give (its TS tests lived in registry.test.ts,
-    // which reads the TS file names).
     mod naming_test {
         use super::strings;
         use crate::patches::naming::*;
@@ -2532,10 +2441,9 @@ mod tests {
     }
 
     // R646: several card patches are built at once, so branches add a pending fragment under
-    // `patches/pending/` instead of editing the history; `patches check` proves every catalog change
-    // against the newest shipped snapshot, and `patches ship` promotes each fragment in ship order.
-    // The pure rules are proved here on fixtures; the promotion is proved below on a throwaway git
-    // repo that replays the issue's acceptance scenario (v0.2.5 landing before v0.2.0).
+    // `patches/pending/` instead of editing the history. The pure rules are proved here on fixtures;
+    // the promotion is proved below on a throwaway git repo that replays the acceptance scenario
+    // (v0.2.5 landing before v0.2.0).
     mod patches_ship_test {
         use indexmap::IndexSet;
 
@@ -2599,26 +2507,22 @@ mod tests {
             fn r646_claims_every_catalog_change_exactly_once_and_only_changes() {
                 let newest = catalog_of(vec![card("aaa", 1), card("bbb", 1)]);
                 let files = vec![named("v0.2.5.json", "v0.2.5", "t", "s", "n", &["aaa"])];
-                // Changed and claimed: clean.
                 assert_eq!(
                     check(&files, &catalog_of(vec![card("aaa", 2), card("bbb", 1)]), &newest),
                     Vec::<String>::new()
                 );
-                // Changed and unclaimed: names the card.
                 assert_eq!(
                     check(&[], &catalog_of(vec![card("aaa", 2), card("bbb", 1)]), &newest),
                     strings(&[
                         "\"aaa\" differs from the newest shipped snapshot but no pending fragment claims it"
                     ])
                 );
-                // Removed and unclaimed: names the card too.
                 assert_eq!(
                     check(&[], &catalog_of(vec![card("aaa", 1)]), &newest),
                     strings(&[
                         "\"bbb\" differs from the newest shipped snapshot but no pending fragment claims it"
                     ])
                 );
-                // Claimed twice: names the card and both fragments.
                 let mut twice = files.clone();
                 twice.push(named("v0.2.0.json", "v0.2.0", "t", "s", "n", &["aaa"]));
                 assert_eq!(
@@ -2627,7 +2531,6 @@ mod tests {
                         "\"aaa\" is claimed by \"v0.2.5\" and \"v0.2.0\", but one card ships in one patch"
                     ])
                 );
-                // Claimed but unchanged: names the card.
                 assert_eq!(
                     check(&files, &catalog_of(vec![card("aaa", 1), card("bbb", 1)]), &newest),
                     strings(&[
@@ -2719,7 +2622,6 @@ mod tests {
             #[test]
             fn r646_reverts_the_catalog_to_the_newest_snapshot_on_exactly_the_claimed_cards() {
                 let newest = catalog_of(vec![card("aaa", 1), card("bbb", 1)]);
-                // Changed, added and removed entries all come back; unclaimed entries are untouched.
                 let catalog = catalog_of(vec![card("aaa", 2), card("ccc", 1)]);
                 let reverted = revert_pending(&catalog, &newest, &set(&["aaa", "bbb", "ccc"]));
                 assert!(same_catalog(&reverted, &newest));
@@ -3055,7 +2957,6 @@ mod tests {
                     )],
                 );
 
-                // Branch A merges: card aaa changes, fragment v0.2.5 claims it (cards diffed, not listed).
                 let mut after_a = base.clone();
                 after_a.insert("aaa".to_string(), card("aaa", 2));
                 write_files(root, &[("crates/cards/catalog.json", json(&after_a))]);
@@ -3073,7 +2974,6 @@ mod tests {
                 );
                 let c1 = git(root, &["rev-parse", "HEAD"], None).trim().to_string();
 
-                // Branch B merges: card bbb changes, fragment v0.2.0 claims it (cards listed).
                 let mut after_b = after_a.clone();
                 after_b.insert("bbb".to_string(), card("bbb", 3));
                 write_files(root, &[("crates/cards/catalog.json", json(&after_b))]);
@@ -3138,7 +3038,6 @@ mod tests {
                         ("ccc", vec!["v0.1.1"]),
                     ])
                 );
-                // The fragments are gone, the provenance is recorded, the version sites moved together.
                 assert_eq!(
                     read_fragments(&dir.join("pending")).unwrap(),
                     Vec::<NamedFragment>::new()
@@ -3159,13 +3058,11 @@ mod tests {
                 assert!(read(&root.join("crates/server/.env.example")).contains("CATALOG_VERSION=v0.2.0"));
                 assert!(read(&root.join("render.yaml")).contains("value: v0.2.0"));
                 assert!(read(&root.join("apps/web/.env.production")).contains("VITE_CATALOG_VERSION=v0.2.0"));
-                // Promotion leaves the working catalog alone, and the tree is shippable again.
                 let working: Catalog =
                     serde_json::from_str(&read(&root.join("crates/cards/catalog.json"))).unwrap();
                 assert_eq!(working, after_b);
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
 
-                // Running ship twice changes nothing.
                 let patches_bytes = read(&dir.join("patches.json"));
                 assert_eq!(ship_patches(root).unwrap(), shipped_of(&[]));
                 assert_eq!(read(&dir.join("patches.json")), patches_bytes);
@@ -3214,7 +3111,6 @@ mod tests {
                     Some("2026-10-03T12:00:00+00:00"),
                 );
 
-                // …and the one after that is v0.2.0c.
                 let mut after_d = after_c.clone();
                 after_d.insert("ccc".to_string(), card("ccc", 6));
                 write_files(root, &[("crates/cards/catalog.json", json(&after_d))]);
@@ -3320,7 +3216,6 @@ mod tests {
                     Some("2026-10-05T12:00:00+00:00"),
                 );
 
-                // The next micro follows the new newest, not the old one.
                 let mut again = micro.clone();
                 again.insert("bbb".to_string(), card("bbb", 4));
                 write_files(root, &[("crates/cards/catalog.json", json(&again))]);
@@ -3430,7 +3325,6 @@ mod tests {
                     .iter()
                     .find(|patch| patch.version == "v0.2.5")
                     .expect("v0.2.5");
-                // The merge commit is on main's first-parent line; the branch's own commit is not.
                 assert_eq!(
                     (v25.date.as_str(), v25.commits.clone()),
                     ("2026-10-02", Some(vec![merge]))
@@ -3568,17 +3462,14 @@ mod tests {
     // R388 (B4.2): card patches are data. `crates/cards/patches/patches.json` lists every shipped
     // patch in ship order, each `<version>.json` is the whole catalog as that patch left it,
     // `index.json` says in which versions each card changed, and `shipped.json` carries each patch's
-    // shipping commit and snapshot blob. The catalog version is the patch: `CATALOG_VERSION` is the
-    // newest patch's version, everywhere the string lives. A version is opaque (R105): its order is
-    // patches.json's, never a comparison of strings.
+    // shipping commit and snapshot blob. `CATALOG_VERSION` is the newest patch's version, everywhere
+    // the string lives. A version is opaque (R105): its order is patches.json's, never a comparison
+    // of strings.
     //
-    // Several patches are built at once (R646), so branches change `catalog.json` and add one
-    // fragment under `patches/pending/` instead of editing the history: while a fragment is pending,
-    // the catalog differs from the newest snapshot on exactly the claimed cards, and `patches ship`
-    // promotes each fragment after it merges.
-    //
-    // The history before v0.2.0 was rebuilt from `git log --follow packages/cards/catalog.json`; the
-    // table the brief checked on 2026-09-30 is asserted below, card by card where it names cards.
+    // Several patches are built at once (R646): while a fragment is pending, the catalog differs from
+    // the newest snapshot on exactly the claimed cards, and `patches ship` promotes each fragment
+    // after it merges. The table the brief checked on 2026-09-30 for the history before v0.2.0 is
+    // asserted below, card by card where it names cards.
     mod patches_test {
         use indexmap::{IndexMap, IndexSet};
 
@@ -3610,8 +3501,7 @@ mod tests {
                 .collect()
         }
 
-        /// TS `CATALOG`: the catalog the cards crate compiles in, each entry's fields in order, as a
-        /// patch sees it: its shipped view (R1420).
+        /// The catalog the cards crate compiles in, each entry's fields in order, as a patch sees it: its shipped view (R1420).
         fn catalog() -> Catalog {
             super::super::shipped_view(
                 serde_json::from_str(jackioh_cards::catalog_json()).expect("crates/cards/catalog.json"),
@@ -3689,8 +3579,7 @@ mod tests {
                 assert_eq!(Some(&jackioh_cards::CATALOG_VERSION.to_string()), versions.last());
                 let snapshot = snapshot(jackioh_cards::CATALOG_VERSION);
                 // Pending fragments hold the catalog ahead of the newest snapshot on exactly their
-                // claimed cards (R646): reverted to the snapshot, the catalog is the snapshot. With no
-                // fragments pending this is the old equality, entry for entry.
+                // claimed cards (R646): reverted to the snapshot, the catalog is the snapshot.
                 let claimed: IndexSet<String> = fragments()
                     .into_iter()
                     .flat_map(|named| named.fragment.cards)
@@ -3730,8 +3619,7 @@ mod tests {
                 }
             }
 
-            // TS also held `catalog-data.ts` and its server's end-to-end default; the Rust binaries
-            // compile the version in from patches.json (SURFACE §11.3), so those sites are gone.
+            // The Rust binaries compile the version in from patches.json (SURFACE §11.3), so no source site carries it.
             #[test]
             fn r388_bumps_the_version_everywhere_the_string_lives_the_servers_env_example_and_render_yaml() {
                 let sites = versions_at_sites(&repo_root()).unwrap();
@@ -3747,10 +3635,9 @@ mod tests {
                 }
             }
 
-            // TS's Render start command ran `scripts/catalog-version.mjs` before `release`. The Docker
-            // image needs no start command: the server compiles the version in from patches.json and
-            // serves it whatever `CATALOG_VERSION` says (SURFACE §11.3), and `cargo jackioh
-            // catalog-version` prints the same newest patch for the workflows that read it.
+            // The Docker image needs no start command: the server compiles the version in from
+            // patches.json and serves it whatever `CATALOG_VERSION` says (SURFACE §11.3), and `cargo
+            // jackioh catalog-version` prints the same newest patch for the workflows that read it.
             #[test]
             fn r388_serves_the_catalog_version_from_the_patch_list_so_a_stale_dashboard_value_is_never_served()
              {
@@ -4023,13 +3910,10 @@ mod tests {
 
             #[test]
             fn r388_records_patch_v0_2_10_classic_and_classic_balance_patch_1_issue_88() {
-                // Made as v0.2.15 while main shipped v0.2.16, v0.2.16b and v0.2.17 (now v0.2.8,
-                // v0.2.8b and v0.2.9), then numbered v0.2.10, the next number (R743). Pending, the
-                // fragment claims the balance cards and the catalog differs from the newest shipped
-                // snapshot on exactly those; shipped, `patches ship` has recorded the same cards
-                // against the patch before it. The test holds on both sides of the promotion, which
-                // cannot edit it. A revision of v0.2.10 (#355's) is pending under the same version
-                // until it ships with a letter, so the fragment is #88's own.
+                // Numbered v0.2.10, the next number (R743). Pending, the fragment claims the balance
+                // cards and the catalog differs from the newest shipped snapshot on exactly those;
+                // shipped, `patches ship` has recorded the same cards against the patch before it. The
+                // test holds on both sides of the promotion, which cannot edit it.
                 let patches = patches();
                 let versions = versions(&patches);
                 let fragment = fragments()
@@ -4096,7 +3980,6 @@ mod tests {
                     "classicplus-070",
                     "classicplus-078",
                 ]);
-                // The undo is in the catalog either way: no stats and no Animated on either face.
                 let catalog = catalog();
                 let face = catalog
                     .get("core-073")
@@ -4150,7 +4033,6 @@ mod tests {
                 assert_eq!(ids_of(&patches, "v0.2.2", ChangeKind::Removed).len(), 0);
                 assert_eq!(ids_of(&patches, "v0.2.2", ChangeKind::Changed).len(), 22);
                 let changes = changes_of(&patches, "v0.2.2");
-                // Seventeen cards gain the Plague tag and nothing else.
                 let plague: Vec<String> = ids_of(&patches, "v0.2.2", ChangeKind::Changed)
                     .into_iter()
                     .filter(|id| fields_of(&changes, id).iter().any(|field| field == "tags"))
@@ -4187,7 +4069,6 @@ mod tests {
                 );
                 let before = snapshot("v0.2.1");
                 let after = snapshot("v0.2.2");
-                // `toMatchObject({ base, radiant })`: the param's two printed values.
                 let param = |snapshot: &Catalog, id: &str, key: &str| -> Option<(Option<f64>, Option<f64>)> {
                     snapshot
                         .get(id)
@@ -4254,17 +4135,14 @@ mod tests {
                         ),
                     ])
                 };
-                // Only the value moved: the template is untouched, but the printed base face is reworded.
                 assert_eq!(
                     changed_fields(&face(1, ""), &face(2, "")),
                     strings(&["params", "base.text"])
                 );
-                // The template moved: the raw and the printed faces differ together.
                 assert_eq!(
                     changed_fields(&face(1, "Draw 1."), &face(1, "Draw 2.")),
                     strings(&["base.text"])
                 );
-                // Nothing moved: no fields.
                 assert_eq!(changed_fields(&face(1, ""), &face(1, "")), Vec::<String>::new());
             }
 
@@ -4300,15 +4178,13 @@ mod tests {
             }
         }
 
-        // R743 (issue #290): the card patches are numbered in order, a normal patch taking the next
-        // number and a micro patch the next letter. #290 renamed every card patch after v0.2.0 that
-        // way, its snapshot, its shipping commit and blob and its title moving with it; commit
-        // messages keep the names they were written with, which the shipping commits below tie to
-        // the new ones.
+        // R743: the card patches are numbered in order, a normal patch taking the next number and a
+        // micro patch the next letter. Commit messages keep the names they were written with, which the
+        // shipping commits below tie to the new ones.
         mod r743_the_card_patches_numbered_in_order_issue_290 {
             use super::*;
 
-            /// Each renamed patch: its name before #290, its shipping commit and its source.
+            /// Each renamed patch: its former name, its shipping commit and its source.
             const RENAMED: &[(&str, &str, &str, &str)] = &[
                 (
                     "v0.2.1",
@@ -4378,7 +4254,7 @@ mod tests {
                 ),
             ];
 
-            /// TS's `/\bv0\.2\.(1[0-4]b?|16b?|17)\b/u`: a number #290 retired, as a word.
+            /// A number the renumbering retired, as a word: `/\bv0\.2\.(1[0-4]b?|16b?|17)\b/u`.
             fn names_a_retired_number(text: &str) -> bool {
                 const TAILS: &[&str] = &[
                     "10b", "10", "11b", "11", "12b", "12", "13b", "13", "14b", "14", "16b", "16", "17",
@@ -4437,7 +4313,6 @@ mod tests {
                         Some(*source),
                         "{version}"
                     );
-                    // A promoted patch names its commit too, and the rename moved none of them.
                     if let Some(commits) = patch(&patches, version).and_then(|patch| patch.commits.clone()) {
                         assert_eq!(commits, strings(&[*commit]), "{version}");
                     }
@@ -4450,7 +4325,7 @@ mod tests {
                         );
                     }
                 }
-                // Their titles and notes name no number #290 retired (v0.2.12's title named v0.2.10).
+                // Their titles and notes name no number the renumbering retired.
                 for (version, ..) in RENAMED {
                     let patch = patch(&patches, version);
                     let text = format!(
@@ -4514,9 +4389,8 @@ mod tests {
             }
         }
 
-        // R375: issue #39's first build of the history was replaced by R388's when the two met on
-        // main, and what both agreed on is held here: the versions before v0.2.0, their order, and
-        // the cards they hold.
+        // R375: what the two builds of the history agreed on is held here: the versions before v0.2.0,
+        // their order, and the cards they hold.
         mod r375_issue_39s_versions_of_the_patch_history {
             use super::*;
 

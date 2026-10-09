@@ -2,8 +2,6 @@
 //! arrives in M4; these tests pin the machinery it will call — each of the ten effects, the base and
 //! radiant rolls, the chain cap, and what the ten do against a full board, a full hand and an empty
 //! library.
-//!
-//! Port of `packages/engine/test/callToChaos.test.ts`.
 
 use jackioh_engine::subsystems::call_to_chaos::{
     CHAOS_CHAIN_KEY, CHAOS_EFFECTS, CHAOS_RECURSION, CallToChaosArgs, ChaosEffectDef,
@@ -17,7 +15,6 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
 
-/// TS's `def(name, type, extra)`, its running index written out (TS counted from 900 in file order).
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     let mut out = json!({
         "id": format!("cc-{name}"),
@@ -215,7 +212,7 @@ fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value
         .collect()
 }
 
-/// TS `Array.prototype.indexOf`: -1 when absent.
+/// -1 when absent.
 fn index_of(types: &[GameEventType], kind: GameEventType) -> i64 {
     types
         .iter()
@@ -378,8 +375,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
             assert!(token.is_some());
             let Some(token) = token else { continue };
             assert_eq!(def_of(Some(&state), &token.def_id).index, "T-rush");
-            // No `statsOverride`: #95 was the only card that invented a Rush Token size, and it now
-            // summons the token's own Radiant face instead, so the 6/6 is the catalog's.
+            // No `statsOverride`: #95 summons the token's own Radiant face, so the 6/6 is the catalog's.
             assert!(token.radiant);
             assert_eq!(token.stats_override, None);
             let view = unit_view(&state, token);
@@ -581,8 +577,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
                 with_recursion += 1;
             }
         }
-        // Every entry can be rolled, the recursion included — and it is no longer guaranteed (R423
-        // rewrites R28's radiant pair): about three rolls in ten hold it.
+        // Every entry can be rolled, the recursion included: about three rolls in ten hold it (R423, R28).
         assert_eq!(reached.len(), CHAOS_EFFECTS.len());
         assert!(with_recursion > 0);
         assert!(with_recursion < 300);
@@ -740,7 +735,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
     fn r28_caps_the_recursion_at_call_to_chaos_chain_cap_casts() {
         // Every cast copy recurses again, which is the worst case the cap has to stop.
         // Each cast reports the link it is as its own script runs; a test builder, not a card file.
-        // (TS pushed into a captured array; a hook is `Fn + Send + Sync`, so it reports down a channel.)
+        // A hook is `Fn + Send + Sync`, so it reports down a channel.
         let (sender, receiver) = std::sync::mpsc::channel::<i32>();
         let mut state = game(
             "chaos-chain",

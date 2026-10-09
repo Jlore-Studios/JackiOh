@@ -1,5 +1,3 @@
-//! Port of `packages/engine/test/overflow-events.test.ts`.
-//!
 //! The three overflows of SPEC §2.4 as the event stream reports them, and what each seat reads of
 //! them (§10.3, §10.8): a draw from an empty library (`fatigue`, R315), a card a full library turns
 //! away (`libraryOverflow`, R316), and a card a full hand burns (`burned`, R317). The client animates
@@ -15,10 +13,10 @@ use crate::rules::fixtures::scripts::{cn_virus, infinite_reserves};
 
 const TOKEN: &str = "fx-token-rush";
 
-/// TS's module `let nonce`: unique across the tests, which run on parallel threads.
+/// Unique across the tests, which run on parallel threads.
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
-/// TS `step`: one action (`body` carries its `playerId`), refused loudly.
+/// One action (`body` carries its `playerId`), refused loudly.
 fn step(state: &GameState, body: Value) -> (GameState, Vec<GameEvent>) {
     let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
     let mut body = body;
@@ -57,8 +55,7 @@ fn started(seed: &str) -> GameState {
     state
 }
 
-/// Events as JSON, so TS's `toEqual` literals port key for key (an absent optional is TS's
-/// `undefined`).
+/// Events as JSON, so literals compare key for key.
 fn values(events: &[GameEvent]) -> Vec<Value> {
     events
         .iter()
@@ -66,7 +63,7 @@ fn values(events: &[GameEvent]) -> Vec<Value> {
         .collect()
 }
 
-/// TS `eventsOfType`, over JSON.
+/// The events of one type, as JSON.
 fn of_type(events: &[Value], kind: &str) -> Vec<Value> {
     events
         .iter()
@@ -95,9 +92,8 @@ fn seen(state: &mut GameState, events: &[GameEvent]) -> PerPlayer<Vec<Value>> {
     }
 }
 
-/// TS `sinkFor(state)`: a sink whose rng starts at the state's cursor, as reduce does. It owns the
-/// event list and the rng and lends itself, with the state, to one engine call at a time, so a test
-/// reads the state between calls as TS did. Nothing writes the cursor back, as TS did not.
+/// A sink whose rng starts at the state's cursor, as reduce does. It owns the event list and the rng
+/// and lends itself, with the state, to one engine call at a time; nothing writes the cursor back.
 struct Sink {
     events: Vec<GameEvent>,
     rng: Rng,
@@ -198,7 +194,7 @@ mod r315_fatigue {
     }
 
     /// "R315 still reports a fatigue draw whose whole hit Armor absorbs, ahead of R240's report", which
-    /// since patch v0.3.X is the pipeline's `damageAbsorbed` (R1362).
+    /// is the pipeline's `damageAbsorbed` (R1362).
     #[test]
     fn r315_r240_r1362_still_reports_a_fatigue_draw_whose_whole_hit_armor_absorbs_ahead_of_the_report() {
         let mut state = new_game("r315-armor", None);
@@ -328,7 +324,6 @@ mod r316_library_overflow {
                 json!({ "type": "libraryOverflow", "player": "p1", "instanceId": token.id, "defId": TOKEN, "outcome": "ceased" })
             ]
         );
-        // TS read the live object; here the copy the call was handed, which it leaves as it landed.
         assert_eq!(token.zone.z(), ZoneName::Gone);
         let theirs = seen(&mut state, &sink.events).p2;
         assert_eq!(

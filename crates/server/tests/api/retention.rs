@@ -2,9 +2,9 @@
 //! What the store then deletes is asserted against both stores in `tests/store/contract.rs`, and in
 //! Postgres by `tests/sql/07_retention_purge.sql`.
 //!
-//! Ported from `apps/server/test/api/retention.test.ts` (part 18). The TS suite ran on
-//! `createTestDeps()`; this one runs on `support::deps::test_app()` (the fake store), with
-//! `tokio::time::pause()` standing in for the manual clock (SURFACE §11.2).
+//! Runs on `support::deps::test_app()` (the fake store), with `tokio::time::pause()` standing in
+//! for the manual clock.
+//! Surface contract: docs/v0.3.0/SURFACE.md §11.2.
 
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -20,11 +20,9 @@ use crate::support::deps::test_app;
 
 const DAY_MS: i64 = 86_400_000;
 
-// ---------------------------------------------------------------------------
-// Harness (a private copy per file, SURFACE rule 5)
-// ---------------------------------------------------------------------------
+// Harness (a private copy per file)
 
-/// A port value built from TS's own object literal, so the test depends on the JSON shape only.
+/// Builds a value from a JSON literal, so the test depends on the JSON shape only.
 fn from<T: DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
 }
@@ -33,7 +31,7 @@ fn json_of<T: Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("serialises")
 }
 
-/// The fake store's tables behind the test app (TS `deps.store.tables`).
+/// The fake store's tables behind the test app.
 async fn fake(app: &App) -> tokio::sync::MutexGuard<'_, FakeData> {
     match &app.db {
         Db::Fake(data) => data.lock().await,
@@ -62,7 +60,7 @@ fn action_row(match_id: &str) -> MatchActionRow {
     )
 }
 
-/// TS `deps.store.codes.logAttempt(...)`, in a transaction of its own.
+/// Logs one code attempt in a transaction of its own.
 async fn log_attempt(app: &App, ip_hash: &str, at: i64) {
     let attempt: CodeAttempt = from(
         json!({ "profileId": null, "ipHash": ip_hash, "result": "rejected", "reason": "missing", "at": at }),
@@ -72,19 +70,15 @@ async fn log_attempt(app: &App, ip_hash: &str, at: i64) {
     t.commit().await.expect("commit");
 }
 
-// ---------------------------------------------------------------------------
 // The retention purge
-// ---------------------------------------------------------------------------
 
 mod the_retention_purge {
     use super::*;
 
     #[tokio::test(start_paused = true)]
     async fn asks_the_store_for_the_cutoffs_config_ts_names_counted_back_from_now() {
-        // TS swapped `store.purgeExpired` for a spy and compared the input it was handed. The Rust
-        // store is an enum with no such seam, so the same two numbers are pinned from outside: a row
-        // exactly at each cutoff is kept and a row one millisecond older is purged, which holds for
-        // those two cutoffs and for no others.
+        // The store is an enum with no spy seam, so the cutoffs are pinned from outside: a row exactly
+        // at each is kept and one a millisecond older is purged.
         let app = test_app().await;
         let now = now_ms();
         let code_attempts_before = now - CODE_ATTEMPT_RETENTION_DAYS * DAY_MS;
