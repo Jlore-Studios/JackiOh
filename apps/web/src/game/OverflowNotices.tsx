@@ -1,19 +1,15 @@
 // The board's own notices for §2.4's three overflows (SPEC §10.10, R318): "Fatigue N" and "Library
 // full" on a library pile, "Hand full" over a hand.
 //
-// They are read off the animation runner's entries and nothing else, exactly as the number pops are
-// (Board.tsx `popsFrom`): `animated` is every entry the runner has started since the board last
-// caught up, each one the elements it marks and the events it plays. A notice therefore mounts when
-// the runner starts its event's entry and stays until the board shows the next view, so "Fatigue 3"
-// is still on the pile while the `damage` after it lands on the hero. When one burst has several
-// for one pile or one hand, the newest started wins. `data-playing="true"` is on a notice only while
-// its own entry is in flight, and the motion in animations.css keys off it; the rest of the time the
-// notice rests with its tag up. Under reduced motion the runner starts no entry, so nothing mounts.
+// They are read off the animation runner's entries and nothing else, as the number pops are
+// (Board.tsx `popsFrom`): `animated` is every entry started since the board last caught up. A notice
+// mounts when the runner starts its event's entry and stays until the board shows the next view; the
+// newest started wins per pile or hand. `data-playing="true"` is on it only while its own entry is in
+// flight (animations.css keys off it). Under reduced motion the runner starts no entry, so nothing mounts.
 //
 // No rule lives here (CLAUDE.md rule 7), and nothing is read past the redacted event (R97, R202): the
-// refused or burned card is drawn from the event's own `defId`, face up where the viewer reads it
-// and a back where the event carries the sentinel. The notices take no pointer event and carry no
-// `data-animating` of their own; the pile they sit in carries the runner's, as it always has.
+// card is drawn from the event's own `defId`, a back where it carries the sentinel. The notices take no
+// pointer event and carry no `data-animating` of their own; the pile they sit in carries the runner's.
 
 import { useContext, type ReactElement } from "react";
 
@@ -37,8 +33,7 @@ export type NoticeCard = { instanceId: string; defId: string; radiant?: boolean 
 
 /**
  * `entry` is the notice's place in the burst, which the board keys it by: two refusals in a row (#33
- * turns three copies away at once) are two entries, and a notice kept across them would keep its
- * `data-playing` and play its motion once, leaving the second and third cards on their end frame.
+ * turns three copies away at once) are two entries, and a kept notice would play its motion only once.
  */
 export type PileNoticeModel =
   | { kind: "fatigue"; count: number; playing: boolean; entry: number }
@@ -78,12 +73,9 @@ function regionOf(view: PlayerView, event: GameEvent): { side: Side; region: str
 
 /**
  * The notices to draw, from the entries the runner has started this burst (see the header). An
- * event raises its notice only when its entry actually marked that element, which is also what
- * keeps a board rendered straight from a fixture honest: with no burst, "whatever is animating,
- * against the shown view", as the number pops fall back to.
- *
- * An entry is playing while it is the one in flight: the runner's `animating()` is that entry's own
- * frames, and Game keeps it last in the burst.
+ * event raises its notice only when its entry marked that element; with no burst, it falls back to
+ * "whatever is animating, against the shown view", as the number pops do. An entry is playing while
+ * it is the one in flight: `animating()` is its own frames, and Game keeps it last in the burst.
  */
 export function noticesFrom(
   view: PlayerView,

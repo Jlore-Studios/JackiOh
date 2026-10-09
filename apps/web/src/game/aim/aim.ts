@@ -1,18 +1,14 @@
 // The aim this seat shows the opponent (SPEC §9.5, R738), as data.
 //
-// While a play, an Activate or an attack is being aimed — by drag or by click-select, both of which
-// are the board's `interaction` — the opponent's board draws an arrow from its source to the
-// target under the pointer. This module turns that interaction and the hovered spot into the wire's
-// `Aim`, whose ends are public handles only (`@jackioh/shared` `aim.ts`): a hero by its seat, a
-// field card by its zone (never its instance id, so a face-down card is only ever a zone), and a
-// hand card by its position, which the opponent sees as the card back there.
+// While a play, an Activate or an attack is being aimed (by drag or click-select, both the board's
+// `interaction`), the opponent's board draws an arrow from its source to the target under the
+// pointer. This module turns that interaction and the hovered spot into the wire's `Aim`, whose
+// ends are public handles only (`@jackioh/shared` `aim.ts`): a hero by its seat, a field card by its
+// zone (never its instance id, so a face-down card is only ever a zone), a hand card by its position.
 //
-// Only an aim at a declared target is shown — never a zone a card is being placed in, a Tribute or
-// a discard — so the arrow says no more about a hand card than Hearthstone's does: that it is being
-// aimed, and at what. Nothing here is a rule (CLAUDE.md rule 7): the targets are the glow the board
-// already lights from `legal`.
-//
-// No React; only `aimEndElement` reads the DOM.
+// Only an aim at a declared target is shown, never a zone a card is placed in, a Tribute or a
+// discard. Nothing here is a rule (CLAUDE.md rule 7): the targets are the glow the board lights
+// from `legal`. No React; only `aimEndElement` reads the DOM.
 
 import type { ActionBody, Aim, AimEnd, PlayerView, Row } from "@jackioh/shared";
 

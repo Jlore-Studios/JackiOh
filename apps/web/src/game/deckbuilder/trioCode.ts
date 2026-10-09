@@ -1,32 +1,25 @@
 // Trio codes (SPEC §9.4, R339): a trio and its three decks as one line of text, the way a deck code
 // (R255, `deckCode.ts`) carries one deck.
 //
-// CLIENT-SIDE LIKE A DECK CODE. The code is read here and nowhere else; what an import sends the
-// server is the decks and the trio it holds (`POST /api/trios/import`, R341), which the server
-// checks like any save. So this module decides nothing about legality. It reads what the code
-// says, and each deck in it is resolved exactly as a deck code's deck is (`resolveDeck`): what no
-// deck could hold is dropped and listed, and cards the player does not own are kept and flagged.
+// Client-side like a deck code: the code is read here and nowhere else, and an import sends the
+// server the decks and the trio (`POST /api/trios/import`, R341), which checks them like any save.
+// Each deck is resolved as a deck code's is (`resolveDeck`): what no deck could hold is dropped and
+// listed, and cards the player does not own are kept and flagged.
 //
 // THE FORMAT. `JKT<version>.` then base64url (no padding) of:
 //
 //   [trio name length: 1 byte] [trio name: UTF-8] [slots: 1 byte] [deck body]… [checksum: 2 bytes]
 //
-// - The slots byte says which of the trio's three slots hold a deck: bit n for slot n. A trio is a
-//   draft and may have an empty slot (R252); an empty slot stays empty on import. Any other bit is
-//   a damaged code.
-// - A deck body is a deck code's payload without its checksum (`writeDeckBody`): the deck's name,
-//   its card count and each card's catalog number. One per set bit, in slot order.
-// - The trio's name is written as a deck's is: stored form, cut to `DECK_NAME_MAX_LENGTH`, and
-//   "Imported trio" when T1 would refuse it.
-// - One checksum over everything, FNV-1a folded to 16 bits, as a deck code's: it catches a paste
-//   that lost or mangled characters.
-// - The version is `TRIO_CODE_VERSION` (2: each deck's numbers carry their set, as a version 2 deck
-//   code's do, B2.2); a newer or older one is refused with a sentence, except
-//   `TRIO_CODE_CORE_ONLY_VERSION` (1), whose decks are read as Core numbers (R339).
+// - slots byte: bit n is set when slot n holds a deck. A trio is a draft and may have an empty slot
+//   (R252), which stays empty on import. Any other bit is a damaged code.
+// - deck body: a deck code's payload without its checksum (`writeDeckBody`), one per set bit.
+// - name: stored form, cut to `DECK_NAME_MAX_LENGTH`, "Imported trio" when T1 would refuse it.
+// - checksum: FNV-1a folded to 16 bits over everything, as a deck code's.
+// - version `TRIO_CODE_VERSION` (2: each deck's numbers carry their set, B2.2); another is refused
+//   with a sentence, except `TRIO_CODE_CORE_ONLY_VERSION` (1), whose decks are read as Core (R339).
 //
-// DECODING IS TOTAL. It never throws, whatever it is handed: input longer than
-// `TRIO_CODE_MAX_INPUT_LENGTH` is refused unread, a deck code is sent to the deck import, and every
-// other failure is a sentence for the player (`TRIO_CODE_MESSAGES`).
+// Decoding never throws: oversize input is refused unread, a deck code is sent to the deck import,
+// and every other failure is a sentence for the player (`TRIO_CODE_MESSAGES`).
 
 import { checkTrioDraft, normalizeName, type CatalogSnapshot, type Collection } from "@jackioh/validator";
 
@@ -112,7 +105,7 @@ function trioNameForCode(raw: string): string {
   return passesT1(cut) ? cut : IMPORTED_TRIO_NAME;
 }
 
-// --- encode ---------------------------------------------------------------------------------------
+// Encode
 
 /**
  * The code for a trio: its name and its three slots, each a deck's name and cards or empty. Each
@@ -134,7 +127,7 @@ export function encodeTrioCode(name: string, slots: readonly TrioCodeSlot[], cat
   return `${TRIO_CODE_PREFIX}${String(TRIO_CODE_VERSION)}.${toBase64Url(payload)}`;
 }
 
-// --- decode ---------------------------------------------------------------------------------------
+// Decode
 
 type Parsed =
   | { ok: true; nameBytes: Uint8Array; bodies: (DeckBody | null)[] }

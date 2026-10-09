@@ -1,22 +1,17 @@
 // The deck editor: one saved deck, the card pool beside it, and what the player can do with it
 // (SPEC §9.4, R250–R255; docs/polish/6-cards.md, Surface D for the pool and the tiles).
 //
-// THE MESSAGES ARE NOT WRITTEN HERE. The verdict under the deck ("Before you can queue this
-// deck") is `validateDeck`'s list, rendered as `{issue.message}` and nothing else, with the rule in
-// `data-rule`; the deck is handed to the validator under the name it is saved with, so the
-// sentences name it. A second copy of a sentence would be a second source of truth
-// (messages.test.ts).
+// The messages are not written here: the verdict under the deck is `validateDeck`'s list, rendered as
+// `{issue.message}` with the rule in `data-rule`, and the deck goes in under its saved name so the
+// sentences name it. A second copy would be a second source of truth (messages.test.ts).
 //
-// THE REFUSALS the editor does make are UX (workshop.ts `addCard`): a second copy, a card past
-// `DECK_SIZE` (a save would be refused at D2 and D4), and a card a compared deck holds — R251's
-// "unavailable, used in <deck>", which is what lets a player build three decks for a trio without
-// a clash. Each refusal says so on the polite status line. A clash that already exists is shown on
-// the tile and never removed for the player.
+// The refusals the editor does make are UX (workshop.ts `addCard`): a second copy, a card past
+// `DECK_SIZE` (a save would be refused at D2 and D4), and a card a compared deck holds (R251's
+// "unavailable, used in <deck>"). Each says so on the polite status line. A clash that already
+// exists is shown on the tile and never removed for the player.
 //
-// Nothing is saved from here: every edit goes to the store (sync.ts), which mirrors it at once
-// and saves it after `DECK_AUTOSAVE_DEBOUNCE_MS` (R256). The one exception is the twentieth card:
-// completing a deck saves at once, and the status line says "Deck complete — saved" when the
-// server has it.
+// Every edit goes to the store (sync.ts), which saves it after `DECK_AUTOSAVE_DEBOUNCE_MS` (R256);
+// the twentieth card saves at once, and the status line says "Deck complete — saved" when the server has it.
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type DragEvent, type ReactElement } from "react";
 

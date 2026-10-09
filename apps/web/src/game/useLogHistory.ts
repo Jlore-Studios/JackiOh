@@ -1,17 +1,15 @@
 // The game log's history (SPEC §10.10, R745).
 //
-// `view.events` is a window sized for animation (§10.8, R168): after a busy turn the player's own
-// last play has left it. So the log joins each view's window to the last window the same viewer
-// was shown, with the animation runner's own diff (`newEventsSince`), and keeps every line that
-// leaves the window.
+// `view.events` is a window sized for animation (§10.8, R168), so the log joins each view's window
+// to the last one the same viewer was shown, with the runner's diff (`newEventsSince`), and keeps
+// every line that leaves it.
 //
 // A line is kept as it read when its event arrived: its words and the face of the definition it
-// names, never an instance id, so the history holds only what a view once said and follows no card
-// into a hidden zone (R97, R223). There is one history per viewer, because the seats read
-// differently redacted windows and hotseat's two seats must never share one. A view that shares no
-// event with the last one (a reconnect after a long drop, §9.5, or a board that caught up past a
-// whole window) cannot be joined: the history keeps what it had and adds one line saying so. A
-// view with no result after one with a result starts a new game, and its history empty.
+// names, never an instance id, so no card is followed into a hidden zone (R97, R223). There is one
+// history per viewer: the seats read differently redacted windows. A view that shares no event with
+// the last one (a reconnect, §9.5, or a board that caught up past a whole window) cannot be joined:
+// the history keeps what it had and adds one line saying so. A view with no result after one with a
+// result starts a new game, its history empty.
 //
 // Presentation only: nothing here reaches the engine, the view or the wire (CLAUDE.md rule 7).
 

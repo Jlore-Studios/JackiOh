@@ -1,25 +1,17 @@
 // The deck workshop's `data-testid` vocabulary, in one file (SPEC §9.4, R250–R256).
 //
 // BUILD M5-T1 fixes the board's testids and `e2e/support/testids.ts` mirrors them; this file is the
-// builder's half of that contract, so the agent who owns `e2e/support/testids.ts` has exactly one
-// file to copy from. The workshop replaced the three-deck loadout editor, and with it the per-deck
-// names (`deck-tab-<n>`, `deck-drop-<n>`, `deck-list-<n>`, `deck-card-<n>-<id>`,
-// `deck-<n>-card-<id>`, `deck-count-<n>`, `deck-curve-<n>`, `deck-fold-<n>`, `db-deck-status`,
-// `loadout-save`, `loadout-saved`, `loadout-save-error`, `deckbuilder`): one deck is open at a time
-// now, so its elements carry no number.
+// builder's half of that contract. One deck is open at a time, so its elements carry no number.
 //
-// `data-legal="false"` is deliberately NOT a new word: `e2e/support/testids.ts` already exports it
-// as `ILLEGAL` for the board's M5-T2 highlighting, and a pool card the open deck will not take is
-// the same statement about the same vocabulary.
+// `data-legal="false"` is not a new word: `e2e/support/testids.ts` exports it as `ILLEGAL` for the
+// board's M5-T2 highlighting, and a pool card the open deck will not take is the same statement.
 
 import type { CardType, Rarity, Tag } from "@jackioh/shared";
 import type { LoadoutRule } from "@jackioh/validator";
 
 import type { CostBucket } from "./filters.ts";
 
-// ---------------------------------------------------------------------------------------------
 // The workshop: the screen, the save status, the rail of decks and trios
-// ---------------------------------------------------------------------------------------------
 
 /** The workshop's root: the whole screen, whether a deck, a trio, the import or nothing is open.
  *  `data-view="list|editor"` says which half a phone shows. */
@@ -62,9 +54,7 @@ export function trioRowId(trioId: string): string {
   return `trio-row-${trioId}`;
 }
 
-// ---------------------------------------------------------------------------------------------
 // The deck editor
-// ---------------------------------------------------------------------------------------------
 
 /** The open deck's editor: `data-deck` is its id. */
 export const DECK_EDITOR = "deck-editor";
@@ -78,7 +68,6 @@ export const DECK_COUNT = "deck-count";
 /** The open deck's drop region: a card dragged from the pool lands here. */
 export const DECK_DROP = "deck-drop";
 
-/** The open deck's list of tiles. */
 export const DECK_CARDS = "deck-cards";
 
 /**
@@ -153,9 +142,7 @@ export const DECKBUILDER_ERROR = "deckbuilder-error";
  */
 export const DECK_DRAG_MIME = "application/x-jackioh-card";
 
-// ---------------------------------------------------------------------------------------------
 // The trio editor
-// ---------------------------------------------------------------------------------------------
 
 /** The open trio's editor: `data-trio` is its id. */
 export const TRIO_EDITOR = "trio-editor";
@@ -195,14 +182,11 @@ export const TRIO_DELETE_CANCEL = "trio-delete-cancel";
 export const TRIO_COPY_CODE = "trio-copy-code";
 export const TRIO_CODE_OUTPUT = "trio-code-output";
 
-// ---------------------------------------------------------------------------------------------
 // Import (R255)
-// ---------------------------------------------------------------------------------------------
 
 /** Opens the import panel from the rail. */
 export const DECK_IMPORT_OPEN = "deck-import-open";
 
-/** The import panel itself. */
 export const DECK_IMPORT = "deck-import";
 
 /** Where the code is pasted. */
@@ -220,14 +204,11 @@ export const DECK_IMPORT_SUBMIT = "deck-import-submit";
 export const DECK_IMPORT_CAP_REASON = "deck-import-cap-reason";
 export const DECK_IMPORT_CANCEL = "deck-import-cancel";
 
-// ---------------------------------------------------------------------------------------------
 // Import a trio (R339–R341)
-// ---------------------------------------------------------------------------------------------
 
 /** Opens the trio import panel from the rail's Trios group. */
 export const TRIO_IMPORT_OPEN = "trio-import-open";
 
-/** The trio import panel itself. */
 export const TRIO_IMPORT = "trio-import";
 
 /** Where the trio code is pasted. */
@@ -260,13 +241,11 @@ export const TRIO_IMPORT_CANCEL = "trio-import-cancel";
 /** The server's refusal of an import, in its own words: nothing was made. */
 export const TRIO_IMPORT_ERROR = "trio-import-error";
 
-// ---------------------------------------------------------------------------------------------
 // Browse: filters, sort, the pool grid and its inspect control (docs/polish/6-cards.md, Surface D).
 // `e2e/support/testids.ts` block A14 mirrors these name for name.
 //
 // No new name starts with `card-` or `hand-card-`: `cy.fieldCardByName` and `cy.handCardByName`
 // select on those prefixes, and a new id carrying one would hijack them.
-// ---------------------------------------------------------------------------------------------
 
 /** Lower-case, every run of characters outside `[a-z0-9]` becomes one "-", trimmed of "-". */
 export function slugOf(value: string): string {
@@ -310,7 +289,6 @@ export function filterRarityId(rarity: Rarity): string {
 /** The "owned only" checkbox. Checked by default; disabled when the collection could not be read. */
 export const DB_FILTER_OWNED = "db-filter-owned";
 
-/** Restores the default filter. */
 export const DB_FILTER_CLEAR = "db-filter-clear";
 /** The phone-width toggle that folds the chip rows away (its `aria-expanded` says which). */
 export const DB_FILTER_TOGGLE = "db-filter-toggle";

@@ -1,8 +1,8 @@
 // Reading a drag's source and landing spot off the DOM (docs/polish/7-mobile-ux.md S9).
 //
-// The board already names every clickable thing with a `data-testid` (contract.ts `testid`), and
-// each zone carries its side, row and lane as `data-*`. This file only reads those back into the
-// `ClickTarget` the board's own click handlers would have reported. No React, no rules.
+// Every clickable thing on the board has a `data-testid` (contract.ts `testid`) and each zone its
+// side, row and lane as `data-*`; this file reads those back into the `ClickTarget` the board's
+// click handlers would have reported. No React, no rules.
 
 import type { Row } from "@jackioh/shared";
 
@@ -68,15 +68,15 @@ function isControl(element: Element): boolean {
 /**
  * The ClickTarget an element reports, from the nearest ancestor-or-self whose testid matches:
  *   hand-card-<id>                   -> { on: "hand", instanceId }
- *   card-<id> inside a zone-*        -> { on: "unit" | "backrow", instanceId, side, lane } (from the zone's data-row/data-side/data-lane)
+ *   card-<id> inside a zone-*        -> { on: "unit" | "backrow", instanceId, side, lane }
  *   card-<id> outside any zone       -> null (e.g. the resolving strip)
  *   hero-you | hero-opponent         -> { on: "hero", side }
  *   zone-<side>-<row>-<lane>         -> { on: "zone", side, row, lane }
  *   an Activate control, `power`,
- *   `power-<id>`                     -> { on: "activate", instanceId, ability? } (R384: a press on one is
- *                                       the activation's own, ahead of the card or hero it sits on)
- * A press on any other <button>, <input> or [role=button] inside a card or a zone (the switch button) is NOT a
- * drag source, and maps to nothing.
+ *   `power-<id>`                     -> { on: "activate", instanceId, ability? } (R384: ahead of the
+ *                                       card or hero it sits on)
+ * A press on any other <button>, <input> or [role=button] inside a card or a zone is NOT a drag
+ * source, and maps to nothing.
  */
 export function targetFromElement(element: Element): { target: ClickTarget; testid: string } | null {
   let throughControl = false;
@@ -113,7 +113,7 @@ export function targetFromElement(element: Element): { target: ClickTarget; test
       }
 
       if (ZONE.test(id)) {
-        // #258: the switch sits in the zone, beside its card; a press on it is the switch's.
+        // The switch sits in the zone, beside its card; a press on it is the switch's.
         if (throughControl) return null;
         const place = placeOf(at);
         if (place === null) return null;
@@ -139,11 +139,10 @@ export function pickDropSpot(stack: readonly Element[], allowed: ReadonlySet<str
 }
 
 /**
- * #37: the Locked zone a play was dropped on, when the card could have gone into a zone of that row
- * had this one been open. The first zone under the pointer is the one dropped on, a card standing
- * in it included. A drop on any other zone, on an unlocked one that is merely not offered (it
- * holds a unit, say), on the opponent's side, or by a play that places nothing in a zone, is not
- * refused for a lock and answers null. `data-locked` is what Zone.tsx writes off the view's
+ * The Locked zone a play was dropped on, when the card could have gone into a zone of that row had
+ * this one been open. The first zone under the pointer is the one dropped on, a card standing in it
+ * included. Any other drop (an unlocked zone merely not offered, the opponent's side, a play that
+ * places nothing in a zone) answers null. `data-locked` is what Zone.tsx writes off the view's
  * `locks`; nothing here reads a rule.
  */
 export function lockedZoneAt(

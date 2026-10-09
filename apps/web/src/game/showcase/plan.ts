@@ -1,30 +1,23 @@
 // What the showcase holds up, decided from the redacted event stream alone (CLAUDE.md rule 7,
-// R97, R202). Pure: it reads its arguments and returns data, so every rule about what may be shown
-// is tested here without a DOM.
+// R97, R202). Pure: it reads its arguments and returns data, so it is tested without a DOM.
 //
-// The trigger is the opponent's `cardPlayed`: Hearthstone shows the card the other player has just
-// played, big, for a moment, so it can be read before the game moves on. The viewer's own plays
-// are never shown (they chose them), and neither is anything the view does not name: a `cardPlayed`
-// the view redacts — a Trap or Field Trap set face down (R227), or any card that has since gone
-// somewhere this viewer may not read — carries the sentinel for its definition and becomes a card
-// back with a caption, never a face.
+// The trigger is the opponent's `cardPlayed`. The viewer's own plays are never shown (they chose
+// them), nor is anything the view does not name: a `cardPlayed` the view redacts (a Trap or Field
+// Trap set face down, R227, or a card gone somewhere this viewer may not read) carries the sentinel
+// and becomes a card back with a caption, never a face.
 //
-// R502: a card cast the moment it was drawn is held up on BOTH seats, the drawer's own too: nobody
-// chose it, and it never passed through a hand where it could have been read. It is read off the order
-// of the redacted events (`castOnDraw.ts`), so a hidden one is a back that says a card was cast as it
-// was drawn, never which.
+// R502: a card cast the moment it was drawn is held up on BOTH seats: nobody chose it, and it never
+// passed through a hand. It is read off the order of the redacted events (`castOnDraw.ts`), so a
+// hidden one is a back that says a card was cast as it was drawn, never which.
 //
-// Issue #124: so is every card another card casts (C+ #47 Jogg's Box's ten, Solarius Prime's five, a
-// Cry that casts a card), on both seats, with the card that cast it and which of its casts it is: a
-// play the stream begins while another is still resolving (`runs.ts`). Nobody chose those either, and
-// ten of them in one action cannot be followed unless each is shown.
+// So is every card another card casts (C+ #47 Jogg's Box's ten, Solarius Prime's five, a Cry that
+// casts a card), on both seats, with the card that cast it and which of its casts it is: a play the
+// stream begins while another is still resolving (`runs.ts`).
 //
 // Which events are new. `view.events` is §10.8's sliding window, and R97 re-judges its redaction on
-// every view by where each card sits NOW: the opponent's `drawn` reads as the sentinel while the card
-// is in their hand and names the card once it has been played. So two windows that share their
-// events do not share their JSON, and a plain comparison finds no overlap and calls the whole window
-// new, which would hold up every card the opponent played in the last thirty-odd events again. The
-// overlap here is found with `sameOccurrence`, which lets a redacted field match a revealed one.
+// every view by where each card sits NOW, so two windows that share their events do not share their
+// JSON, and a plain comparison would call the whole window new. `sameOccurrence` lets a redacted
+// field match a revealed one.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
@@ -56,10 +49,7 @@ export type ShowcasePlay = {
   cost?: number;
   /** R502: the card was cast the moment it was drawn (castOnDraw.ts). Absent for every other play. */
   castOnDraw?: true;
-  /**
-   * Issue #124: another card cast it: that card's definition (null when the view hides it) and which
-   * of its casts this is, 1 on. Absent for every other play.
-   */
+  /** Another card cast it: that card's definition (null when the view hides it) and which of its casts this is, 1 on. */
   castBy?: { defId: string | null; ordinal: number };
 };
 
@@ -190,7 +180,7 @@ function tailOffset(fresh: readonly GameEvent[], window: readonly GameEvent[]): 
  * view's whole window, so a `drawn` that came in an earlier view still counts; a hidden one is a back
  * (R97, R202).
  *
- * Issue #124: and every card another card cast, on either seat, with `castBy`. `plays` is the tracker
+ * And every card another card cast, on either seat, with `castBy`. `plays` is the tracker
  * of the plays still resolving, which must read every event of the viewer's stream in order (the
  * showcase keeps one per viewer); without one, only the casts inside `fresh` itself are found.
  */
@@ -226,10 +216,7 @@ export function chaosRollsIn(fresh: readonly GameEvent[]): { roll: ChaosRoll; ev
   });
 }
 
-/**
- * Keeps the queue to the newest `max` plays. A hotseat hand-over can bring a whole turn's plays at
- * once; the ones that fall off are in the log.
- */
+/** Keeps the queue to the newest `max` plays; the ones that fall off are in the log. */
 export function capQueue<T>(queue: readonly T[], max: number): T[] {
   return queue.length <= max ? [...queue] : queue.slice(queue.length - max);
 }

@@ -1,19 +1,13 @@
 // Card names and rules text for the board.
 //
-// FINDING against SPEC §10.8: `CardView` carries `instanceId`, `defId`, `radiant` and `cost` and
-// nothing else, so a `PlayerView` alone cannot render a card's name, type, tribe tags or rules
-// text — all of which BUILD M5-T1 requires on the face of a card. The catalog is public
-// information (§5.1, §9.4 checks a `catalogVersion` on both sides), so the client may hold it;
-// but it has to come from somewhere other than the view. Until `crates/cards`' definitions reach a
-// component and the server sends a catalog with the view, every component falls back to showing
-// the `defId`, which keeps the tests honest about what the view does and does not contain.
+// `CardView` carries no name, type, tags or rules text (SPEC §10.8), which BUILD M5-T1 requires on a
+// card's face. The catalog is public (§5.1; §9.4 checks `catalogVersion` on both sides), so the client
+// holds it; with none loaded every component shows the `defId`.
 //
-// A match makes cards no catalog holds — a Fuse's, a crafted card's (R77, R102, R179) — and the view
-// carries their definitions beside the cards it names (`PlayerView.defs`, R243). `MatchCardsContext`
-// is where a component that takes a `PlayerView` (Board, Prompt, DragLayer) puts them for the cards
-// it draws, together with the power each Heroic Power on the field rolled (`HeroView.powers`), so a
-// `Card` that holds only its `CardView` can still read what it is: `useCardInfo` looks in the
-// catalog first and in the match's definitions next.
+// A match makes cards no catalog holds (R77, R102, R179), and the view carries their definitions
+// (`PlayerView.defs`, R243). `MatchCardsContext` holds them, with the power each Heroic Power on the
+// field rolled (`HeroView.powers`), so a `Card` that holds only its `CardView` can still read what it
+// is: `useCardInfo` looks in the catalog first and in the match's definitions next.
 
 import { createContext, createElement, useContext, useMemo, type ReactElement, type ReactNode } from "react";
 

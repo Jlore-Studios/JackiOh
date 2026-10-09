@@ -1,19 +1,16 @@
 // DOM effects: the CSS half of the effects layer (docs/polish/1-animations.md S10, B39).
 //
 // The director hands every DOM cue (splat, rays, sheen, ghost, arrows, banner, result, R502's
-// fracture, Crushing Walls' walls, R437's brand, R436's chaos reveal, issue #124's fog and zone
-// wave, and R1363's shield flash) to
-// `mountDomEffect` at the moment the cue fires, with the anchor boxes it measured then. This module
-// appends exactly one element per cue and writes only data: its kind, its tone, its text as an
-// attribute, and its geometry and timing as `--fx-*` custom properties. Everything visual lives in
-// fx.css, keyed off `data-fx`.
+// fracture, Crushing Walls' walls, R437's brand, R436's chaos reveal, the fog and zone wave, and
+// R1363's shield flash) to `mountDomEffect` as the cue fires, with the anchor boxes it measured then.
+// One element per cue, written as data only (kind, tone, text attribute, `--fx-*` geometry and
+// timing); everything visual lives in fx.css, keyed off `data-fx`.
 //
-// Three invariants the rest of the build leans on:
-// - No text node is ever created. Numbers and words ride in `data-amount` / `data-text` and reach the
-//   screen through CSS `content: attr(…)`, so no Cypress `contains` can ever match an effect and no
-//   screen reader reads one (the element is `aria-hidden` as well).
-// - A cue whose kind needs a box that is missing mounts nothing and returns null, so an anchor that
-//   left the board between planning and firing simply skips its flourish.
+// Three invariants:
+// - No text node is ever created. Words ride in `data-amount` / `data-text` and reach the screen
+//   through CSS `content: attr(…)`, so no Cypress `contains` matches an effect and no screen reader
+//   reads one (the element is `aria-hidden` as well).
+// - A cue whose kind needs a missing box mounts nothing and returns null.
 // - No timers. The director removes each element when `firedAt + durationMs ≤ now` (S8 step 5), and
 //   `remove()` is idempotent so a clear() racing an expiry is harmless.
 //
@@ -25,7 +22,7 @@ import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxTint } from "./t
 export type DomEffectBoxes = { at?: FxBox | null; from?: FxBox | null; to?: FxBox | null };
 export type DomEffect = { readonly el: HTMLElement; remove(): void };
 
-/** A length in CSS pixels, written as `<n>px` (S10). */
+/** A length in CSS pixels (S10). */
 function px(value: number): string {
   return `${value}px`;
 }
@@ -34,7 +31,7 @@ function centreOf(box: FxBox): { x: number; y: number } {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
-/** `--fx-x/--fx-y` at the box centre and `--fx-w/--fx-h` at its size (splat, rays). */
+/** `--fx-x/--fx-y` at the box centre, `--fx-w/--fx-h` at its size (splat, rays). */
 function placeAtCentre(el: HTMLElement, box: FxBox): void {
   const centre = centreOf(box);
   el.style.setProperty("--fx-x", px(centre.x));
@@ -43,7 +40,7 @@ function placeAtCentre(el: HTMLElement, box: FxBox): void {
   el.style.setProperty("--fx-h", px(box.height));
 }
 
-/** `--fx-x/--fx-y` at the box's top-left and `--fx-w/--fx-h` at its size (sheen, arrows). */
+/** The same at the box's top-left (sheen, arrows). */
 function cover(el: HTMLElement, box: FxBox): void {
   el.style.setProperty("--fx-x", px(box.x));
   el.style.setProperty("--fx-y", px(box.y));
@@ -58,7 +55,7 @@ function tint(el: HTMLElement, colours: FxTint): void {
   el.style.setProperty("--fx-mark-glow", colours.glow);
 }
 
-/** Issue #124: a fog's or a zone wave's colours, as `--fx-tint-*` custom properties fx.css paints with. */
+/** A fog's or a zone wave's colours, as `--fx-tint-*` custom properties fx.css paints with. */
 function tintVars(el: HTMLElement, colours: FxTint): void {
   el.style.setProperty("--fx-tint-rim", colours.rim);
   el.style.setProperty("--fx-tint-core", colours.core);
@@ -77,10 +74,7 @@ function spanOf(a: FxBox, b: FxBox, pad: number): FxBox {
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
-/**
- * Issue #124: the fog's body. Puffs of cloud, each its own `--fx-puff` in the roll, and small icons
- * drifting through them, each its own `--fx-icon`: an emblem's path, never a word (no text node).
- */
+/** The fog's body: cloud puffs, each its own `--fx-puff`, and drifting icons (an emblem's path, never a word). */
 function fogParts(doc: Document, el: HTMLElement, icon: FxIcon | null): void {
   el.style.setProperty("--fx-puffs", String(FX_FOG_PUFFS));
   for (let i = 0; i < FX_FOG_PUFFS; i += 1) {
@@ -106,9 +100,8 @@ function fogParts(doc: Document, el: HTMLElement, icon: FxIcon | null): void {
 }
 
 /**
- * R436: the reveal's lines. Each is a window one name tall over a reel of names that spins up to
- * the one rolled (the reel's last), landing at its own `--fx-land-ms`. Every name rides in
- * `data-text`, as every other effect's words do, so no text node is made.
+ * R436: the reveal's lines. Each is a window one name tall over a reel that spins up to the name
+ * rolled (the reel's last), landing at its own `--fx-land-ms`. Names ride in `data-text`.
  */
 function chaosLines(doc: Document, el: HTMLElement, lines: FxChaosCue["lines"]): void {
   el.style.setProperty("--fx-lines", String(lines.length));
@@ -133,7 +126,7 @@ function chaosLines(doc: Document, el: HTMLElement, lines: FxChaosCue["lines"]):
   });
 }
 
-/** The splat's signed amount: ASCII hyphen-minus for damage and loss, plus for heal (S10). */
+/** The splat's signed amount: ASCII hyphen-minus for damage and loss (S10). */
 function signedAmount(tone: "damage" | "heal" | "loss", amount: number): string {
   return tone === "heal" ? `+${amount}` : `-${amount}`;
 }
@@ -262,13 +255,12 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
   };
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * Stand-ins (B46): a copy of a card the board already renders, carried to the zone
- * the next view shows it in. The copy keeps the card's markup and classes, so it looks like the
- * card, and loses everything that would make it a second copy of the card to a test, a screen
- * reader or the keyboard: its testids, ids, roles, labels, legality marks and every text node
- * (the words move into `data-text` and come back through CSS, as the splats' do).
- * ------------------------------------------------------------------------------------------- */
+/*
+ * Stand-ins (B46): a copy of a card the board already renders, carried to the zone the next view
+ * shows it in. It keeps the card's markup and classes but loses everything that would make it a
+ * second card to a test, a screen reader or the keyboard: testids, ids, roles, labels, legality
+ * marks and every text node (the words move into `data-text`, as the splats' do).
+ */
 
 /** Attributes a stand-in must not carry: identity, interaction and state the board owns. */
 function strippable(name: string): boolean {
@@ -321,9 +313,9 @@ export function landingBox(zone: FxBox, source: FxBox | null): FxBox {
   return { x: zone.x + (zone.width - width) / 2, y: zone.y + (zone.height - height) / 2, width, height };
 }
 
-/** A card's width over its height where no source card says (board.css: --card-w = 0.74 × --card-h). */
+/** A card's width over its height (board.css: --card-w = 0.74 × --card-h). */
 const CARD_ASPECT = 0.74;
-/** How far a stand-in with nothing to fly from drops in from, and how large it starts. */
+/** Where a stand-in with nothing to fly from drops in from, and its start scale. */
 const DROP_PX = -14;
 const DROP_SCALE = 1.3;
 /** fx.css's `fx-hold-fly` swells the stand-in to this mid-flight, whatever it starts at. */
@@ -333,14 +325,12 @@ const HOLD_ORIGIN = { x: 0.5, y: 0.6 } as const;
 
 /**
  * Where a stand-in scales from, as fractions of its box, so that at `scale` it stays inside the
- * `view` (the viewport): the resting origin, moved toward any edge the box is too close to. A unit
- * summoned into lane 1 of a phone board otherwise swelled half off the screen's left edge.
+ * `view` (the viewport): the resting origin, moved toward any edge the box is too close to.
  */
 export function holdOrigin(land: FxBox, scale: number, view: { width: number; height: number }): { x: number; y: number } {
   const axis = (start: number, size: number, room: number, rest: number): number => {
     const grow = size * (scale - 1);
     if (!(grow > 0)) return rest;
-    // Scaling from fraction f moves the near edge out by f × grow and the far edge by (1 − f) × grow.
     const most = start / grow;
     const least = 1 - (room - start - size) / grow;
     return Math.min(1, Math.max(0, Math.min(Math.max(rest, least), most)));

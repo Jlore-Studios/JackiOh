@@ -2,14 +2,8 @@
 // decks side by side with every shared card marked (SPEC §9.4, R251–R253), and the trio's code
 // (R339).
 //
-// A trio is saved loose (R252): a slot may be empty and its decks may share cards, and neither
-// stops a save. Both stop it from queueing Conquest, and the verdict says so in `validateTrio`'s
-// own words, naming the decks as they are saved. The side-by-side view is the same fact from each
-// deck's side: `trioConflicts` finds the shared cards (R251: a card is its catalog id), and every
-// one is marked "Also in <deck>" where it sits, so the player can see what to swap and where.
-//
-// The one thing the slots refuse is T3's "the same deck twice": a deck already in another slot is
-// disabled in this slot's list, so the state is never built rather than refused after the fact.
+// A trio is saved loose (R252): an empty slot or a shared card (R251: a card is its catalog id)
+// stops it from queueing Conquest, not from saving. Slots refuse T3's "the same deck twice".
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactElement } from "react";
 

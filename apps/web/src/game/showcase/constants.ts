@@ -4,17 +4,10 @@ import { BURST_BUDGET_MS } from "../animations.ts";
 import { FX_SPEED_MIN } from "../../fx/constants.ts";
 import { normalizeSpeed } from "../../fx/settings.ts";
 
-/**
- * How long the opponent's played card stays up at the default effects speed: about a second, long
- * enough to read a name and a short text, short enough never to sit over the viewer's next move. It
- * is divided by the viewer's effects speed (R201), as every animation duration is.
- */
+/** How long the opponent's played card stays up at the default effects speed, divided by the effects speed (R201). */
 export const SHOWCASE_HOLD_MS = 1000;
 
-/**
- * The most plays waiting their turn. A hotseat hand-over brings a whole turn's plays at once; the
- * newest few are shown, one after another, and the rest are in the log.
- */
+/** The most plays waiting their turn: a hotseat hand-over brings a whole turn's at once; the rest are in the log. */
 export const SHOWCASE_QUEUE_MAX = 3;
 
 /** The fade in and the fade out, inside the hold (showcase.css); none under reduced motion. */
@@ -26,9 +19,8 @@ export function showcaseHoldMs(speed: number): number {
 }
 
 /**
- * R502: a card cast on draw stays up longer than a play (its effect plays out while it is up), divided
- * by the effects speed like every hold, and never past SHOWCASE_CAST_HOLD_CAP_MS: it holds practice's
- * AI while it is up (`data-showcase`), and that hold lets go at PRACTICE_SHOWCASE_HOLD_MAX_MS
+ * R502: a card cast on draw stays up longer than a play, divided by the effects speed, and never past
+ * SHOWCASE_CAST_HOLD_CAP_MS: it holds practice's AI (`data-showcase`) until PRACTICE_SHOWCASE_HOLD_MAX_MS
  * (practice/config.ts), which the cap stays under.
  */
 export const SHOWCASE_CAST_HOLD_MS = 1800;
@@ -39,10 +31,9 @@ export function showcaseCastHoldMs(speed: number): number {
 }
 
 /**
- * Issue #124: a card another card cast stays up until the runner reaches the next cast, and never
- * longer than this (divided by the effects speed like every hold, and capped as a cast on draw is,
- * for practice's hold on the AI). The runner gives each cast and what it does about two seconds
- * (`CAST_BUDGET_MS`), so the card is up for the whole of its beat.
+ * A card another card cast stays up until the runner reaches the next cast, and never longer than
+ * this (divided by the effects speed, capped like a cast on draw). `CAST_BUDGET_MS` gives each cast
+ * about two seconds, so the card is up for the whole of its beat.
  */
 export const SHOWCASE_MULTICAST_HOLD_MS = 2200;
 
@@ -50,20 +41,15 @@ export function showcaseMulticastHoldMs(speed: number): number {
   return Math.min(SHOWCASE_CAST_HOLD_CAP_MS, Math.max(2 * SHOWCASE_FADE_MS, Math.round(SHOWCASE_MULTICAST_HOLD_MS / normalizeSpeed(speed))));
 }
 
-/**
- * R502: how long the card takes to burst out of its drawer's Deck pile and grow to its hold, inside
- * the hold (showcase.css); none under reduced motion.
- */
+/** R502: how long the card takes to burst out of its drawer's Deck pile, inside the hold (showcase.css); none under reduced motion. */
 export const SHOWCASE_BURST_MS = 420;
 
 /**
- * R502, R436: a cast on draw and a Call to Chaos roll wait for the animation runner to reach their
- * event, so they appear as the board plays them. Issue #124: so does every card another card casts.
- * The longest they wait past the runner's last progress: a whole burst at the slowest effects speed,
- * and one hold more. Every entry the runner starts restarts the wait while anything is still gated,
- * so a burst longer than one budget (Jogg's Box's ten casts, each with its own CAST_BUDGET_MS) never
- * times out while the runner is still reaching it. The runner going idle, draining or resetting lets
- * them go at once.
+ * R502, R436: a cast on draw, a Call to Chaos roll and every card another card casts wait for the
+ * animation runner to reach their event. The longest they wait past the runner's last progress: a
+ * whole burst at the slowest effects speed, and one hold more. Every entry the runner starts restarts
+ * the wait while anything is gated, so a long burst (Jogg's Box's ten casts) never times out. The
+ * runner going idle, draining or resetting lets them go at once.
  */
 export const SHOWCASE_GATE_MAX_MS = Math.ceil(BURST_BUDGET_MS / FX_SPEED_MIN) + SHOWCASE_HOLD_MS;
 
@@ -76,7 +62,7 @@ export const CAST_ON_DRAW_TEXT = {
   said: "cast on draw",
 } as const;
 
-/** Issue #124: the words a card another card cast is held up with. */
+/** The words a card another card cast is held up with. */
 export const MULTICAST_TEXT = {
   /** "Cast by Jogg's Box" (the caster's name), or this when the view hides the caster. */
   by: "Cast by",
@@ -107,7 +93,7 @@ export const showcaseTestid = {
   live: "showcase-live",
   /** R502: the "Cast on draw!" ribbon across a card cast as it was drawn. */
   ribbon: "showcase-ribbon",
-  /** Issue #124: on a card another card cast, which of its casts it is; `data-ordinal` carries the number. */
+  /** On a card another card cast, which of its casts it is; `data-ordinal` carries the number. */
   ordinal: "showcase-ordinal",
   /**
    * R436: the still list of what a Call to Chaos rolled, drawn only while the effects layer draws
@@ -121,7 +107,6 @@ export const showcaseTestid = {
 
 /**
  * `data-showcase`: what is being held up. The practice route holds the AI's next step while it is set.
- * "cast" is a card cast as it was drawn, on either seat (R502); "multicast" a card another card cast,
- * on either seat (issue #124).
+ * "cast" is a card cast as it was drawn, on either seat (R502); "multicast" a card another card cast.
  */
 export type ShowcaseKind = "played" | "set" | "hidden" | "cast" | "multicast";

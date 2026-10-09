@@ -1,15 +1,12 @@
 // The hotseat session (BUILD M5-T3): one device, two seats, one engine.
 //
-// Framework-free and deterministic on purpose. No React, no timers, no `Math.random`, no `Date`:
-// the whole point of the M5-T3 acceptance — "the same seed and actions reproduce the same final
-// state hash in the browser and in vitest" — is that this object is a pure function of
-// (seed, decks, handicaps, the ordered list of dispatched bodies). A random or clock-derived nonce
-// would break that, because the nonce travels inside the recorded `Action` that `replay.fold` folds.
+// Framework-free and deterministic: no React, no timers, no `Math.random`, no `Date`. M5-T3's
+// acceptance ("the same seed and actions reproduce the same final state hash") needs this object to
+// be a pure function of (seed, decks, handicaps, dispatched bodies); a random or clock-derived nonce
+// would break it, because the nonce travels inside the recorded `Action` that `replay.fold` folds.
 //
-// It holds no rules. `legal()` is `legalActions`, `view()` is `viewFor`, and `dispatch` hands the
-// action straight to `reduce` without pre-validating it (CLAUDE.md rule 7). `EngineState` stays
-// opaque: this file never reads a field off it, so it cannot leak hidden information — every
-// question it asks about the game it asks through `view()`.
+// It holds no rules: `dispatch` hands the action straight to `reduce` (CLAUDE.md rule 7). `EngineState`
+// stays opaque, so every question about the game goes through `view()` and nothing hidden can leak.
 
 import { opponentOf } from "@jackioh/shared";
 import type { Action, ActionBody, CardDefs, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
@@ -103,23 +100,16 @@ export function createHotseat(options: HotseatOptions): HotseatSession {
   /**
    * "Prompts for the non-active player switch seats automatically" (BUILD M5-T3).
    *
-   * Only a question moves the device by itself. A change of ACTIVE player does not: BUILD gives the
-   * hotseat a manual seat-switch button precisely so that ending a turn hands the device over
-   * deliberately, with the board hidden in between. A question is different — the other player is
-   * being asked something and the game waits on the answer, so waiting for a button press as well
-   * would deadlock the loop. There are two kinds:
+   * Only a question moves the device by itself, never a change of ACTIVE player: ending a turn hands
+   * the device over by the manual seat-switch button, with the board hidden in between. Two kinds:
    *
-   *  - a prompt the other seat holds. The opening mulligans are both seats' at once (R265): each
-   *    seat still owing one sees its own prompt, and a seat that has answered sees the other's as
-   *    pending, so the device goes to whichever seat has not answered yet, in either order;
+   *  - a prompt the other seat holds. The opening mulligans are both seats' at once (R265), so the
+   *    device goes to whichever seat has not answered yet, in either order;
    *  - a draw offer the seat holding the device has just made (§2.5, R36): the other seat answers
    *    it, and its answer hands the device back to the player whose turn it is (`dispatch`). Only
-   *    the offer itself hands the device over: if the players pass it back unanswered with the seat
-   *    switch, the offerer's next moves keep it, and the offer lapses with the turn (R269).
+   *    the offer itself hands the device over; the offer lapses with the turn (R269).
    *
-   * Whose question it is comes from the VIEW, never from the state: `view().pending` is either
-   * `{ forYou: true, … }` or `{ forYou: false, pendingFor }` and `view().drawOffer` names the
-   * offerer (SPEC §10.8), and `EngineState` is opaque to this file.
+   * Whose question it is comes from the VIEW (`view().pending`, `view().drawOffer`, SPEC §10.8).
    */
   function followQuestion(offered = false): void {
     const view = engine.viewFor(state, seat);
@@ -161,12 +151,9 @@ export function createHotseat(options: HotseatOptions): HotseatSession {
       const result = engine.reduce(state, action);
 
       if (result.error !== undefined) {
-        // Rejected: the old state stands, the action is NOT logged, and the nonce is NOT consumed.
-        // The engine remembers a nonce only for an action it accepted (`reduce` records it after
-        // `applyAction` succeeds), so a rejected nonce was never spent and the next dispatch may
-        // reuse it. Keeping the counter in step with the log is what makes `log()` fold to the
-        // browser's own hash: `replay.fold` replays exactly the logged actions, and spec 01
-        // asserts that fold rejects none of them.
+        // Rejected: the old state stands, the action is NOT logged and the nonce is NOT consumed
+        // (the engine records a nonce only for an accepted action). Keeping the counter in step with
+        // the log is what makes `log()` fold to the browser's own hash; spec 01 asserts that.
         return { events: result.events, error: result.error };
       }
 

@@ -1,16 +1,13 @@
 // The one seam between the hotseat client and the engine (CLAUDE.md rule 7, SPEC §10.8).
 //
-// The client never holds rules. It holds an `EnginePort`: `createGame` / `beginGame` / `reduce`
-// to advance the game, `legalActions` to learn what it is allowed to offer, and `viewFor` to get
-// the only thing it is allowed to draw. `EngineState` is opaque on purpose — it carries both
-// hands and both libraries, so a client that could read a field could leak hidden information.
-// Everything the UI needs comes back through `viewFor`.
+// The client never holds rules. It holds an `EnginePort`: `createGame` / `beginGame` / `reduce` advance
+// the game, `legalActions` says what it may offer, `viewFor` gives the only thing it may draw.
+// `EngineState` is opaque on purpose: it carries both hands and libraries, so a readable field could
+// leak hidden information.
 //
-// The real port is the Rust engine compiled to WebAssembly (`../wasm`, docs/v0.3.0/SURFACE.md
-// §10.3): `enginePort()` maps its functions onto the port, synchronously once `loadWasm()` has
-// finished, and `loadEnginePort()` is that load and that mapping. The presentation layer, the
-// action builders and the animation table compile and test with no engine at all, and tests install
-// a scripted port with `setEnginePort`.
+// The real port is the Rust engine as WebAssembly (`../wasm`, §10.3): `enginePort()` maps it
+// synchronously once `loadWasm()` has finished, and `loadEnginePort()` is that load and mapping. Tests
+// install a scripted port with `setEnginePort`.
 
 import type { Action, ActionBody, CardDefs, EmoteId, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import type { Handicap } from "@jackioh/engine/config";
