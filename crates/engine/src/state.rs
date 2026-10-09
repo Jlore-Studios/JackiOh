@@ -615,7 +615,8 @@ pub struct PromptOption {
     pub key: String,
     pub label: String,
     pub selection: Selection,
-    /// B5 E18: what this option counts against a `pick` prompt's `budget` (R65's cost where it lies).
+    /// B5 E18: what this option counts against the prompt's `budget`: a `pick` option's R65 cost, a
+    /// `market` lot's price, a barter's yuan written negative (R1000, R1001).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub cost: Option<i32>,
@@ -642,8 +643,8 @@ pub struct PendingChoice {
     pub min: i32,
     pub max: i32,
     /// B5 E18: a `pick` prompt's budget — the most its picked options' `cost`s may add up to (Classic
-    /// #44's "a total cost of (5) or less"). Absent on every other prompt, so a state without one hashes
-    /// as it did before the field existed.
+    /// #44's "a total cost of (5) or less"), or a `market` prompt's yuan left (R1000). Absent on every
+    /// other prompt, so a state without one hashes as it did before the field existed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub budget: Option<i32>,

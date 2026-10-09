@@ -95,6 +95,7 @@ import { CardBack, CardFace, faceModel, useInspectTrigger, type FaceModel } from
 import { chineseName } from "../cards/chinese.ts";
 import { MatchCardsProvider, useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
 import { CraftEditor } from "./craft/CraftEditor.tsx";
+import MarketPrompt from "./MarketPrompt.tsx";
 import { liveFace } from "./faces.ts";
 import { DISCOVER_OPTION_LIMIT, X_CARD_LIMIT, sideOf, testid } from "./contract.ts";
 import { modeText } from "./modeText.ts";
@@ -1350,6 +1351,21 @@ export default function Prompt(props: PromptProps) {
       return (
         <MatchCardsProvider view={props.view}>
           <CraftEditor key={pending.choiceId} pending={pending} onAction={props.onAction} />
+        </MatchCardsProvider>
+      );
+    }
+    // ME-MARKET (Meditative #42, R1000): a night market opens its stall, not the picker.
+    if (pending.kind === "market") {
+      return (
+        <MatchCardsProvider view={props.view}>
+          <MarketPrompt
+            key={pending.choiceId}
+            view={props.view}
+            pending={pending}
+            legal={props.legal ?? []}
+            onAction={props.onAction}
+            {...(props.animating === undefined ? {} : { animating: props.animating })}
+          />
         </MatchCardsProvider>
       );
     }

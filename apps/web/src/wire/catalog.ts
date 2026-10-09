@@ -350,7 +350,8 @@ export type CatalogQuery = {
  * multiple-choice problem's options, Classic+ #42), `cell` (a board cell, Classic+ #62), `reward`
  * (a completed quest's reward, Classic #90) and `pick` (a budgeted pick of several cards from a pile,
  * Classic #44). A mode prompt the other player holds is a `mode` prompt with their id. `craft` is
- * ME-CRAFT's answer (Meditative #17, R880): a recipe the block editor sends.
+ * ME-CRAFT's answer (Meditative #17, R880): a recipe the block editor sends. `market` is ME-MARKET's
+ * (Meditative #42, R1000): a night market's deals, one per answer.
  */
 export type PromptKind =
   | "discover"
@@ -368,7 +369,8 @@ export type PromptKind =
   | "cell"
   | "reward"
   | "pick"
-  | "craft";
+  | "craft"
+  | "market";
 
 export type Row = "units" | "backrow";
 

@@ -1321,6 +1321,9 @@
       play: { voice: "hustler", text: "Nothing to declare. Wink." },
       death: { voice: "hustler", text: "You saw nothing." },
     },
+    "meditative-042": { // CN Flea Market
+      cast: { voice: "hustler", text: "Night market's open. Cash only, no refunds." },
+    },
     "meditative-043": { // CN Jade Market
       cast: { voice: "narrator", text: "Rocks for sale! Finest rocks!" },
     },

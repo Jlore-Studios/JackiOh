@@ -1088,6 +1088,7 @@ mod tests {
         );
         assert_eq!(serde_json::from_str::<GameEvent>(&json).unwrap(), event);
         assert_eq!(event.event_type().as_str(), "damageAbsorbed");
-        assert_eq!(GAME_EVENT_TYPES.last(), Some(&GameEventType::DamageAbsorbed));
+        // Appended to the list (later sets append after it: M #39's `jadeChanged`, R961).
+        assert!(GAME_EVENT_TYPES.contains(&GameEventType::DamageAbsorbed));
     }
 }

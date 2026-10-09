@@ -61,12 +61,12 @@ use crate::work::{
 /// card the hook did rather than the instance R78 has reset since.
 pub const SELF_KEY: &str = "__self";
 
-/// The sixteen kinds of §10.6. `x`, `embiggen`, `zone`, `tribute` and `direction` are play choices for
+/// The seventeen kinds of §10.6. `x`, `embiggen`, `zone`, `tribute` and `direction` are play choices for
 /// every Core card (R81) and stay here for later sets. B5 E18 adds five: `number` (a number from a
 /// fixed range), `answer` (one option of a multiple-choice problem, whose key never leaves the engine,
 /// R465), `cell` (a board cell, either side, either row), `reward` (a completed quest's reward) and
 /// `pick` (several cards from a pile under a budget). ME-CRAFT adds `craft` (a recipe the block
-/// editor answers with, R880). This module reads the kind for the mulligan,
+/// editor answers with, R880), and ME-MARKET `market` (a night market's deals, R1000). This module reads the kind for the mulligan,
 /// which §2.1 answers with its own action, and for `pick`, whose answers it enumerates its own way.
 pub const PROMPT_KINDS: &[PromptKind] = &[
     PromptKind::Discover,
@@ -85,6 +85,7 @@ pub const PROMPT_KINDS: &[PromptKind] = &[
     PromptKind::Reward,
     PromptKind::Pick,
     PromptKind::Craft,
+    PromptKind::Market,
 ];
 
 /// The `Script` key holding the step table a prompt answer re-enters (`resume: { picked: … }`).

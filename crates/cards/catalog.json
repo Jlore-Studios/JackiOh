@@ -11541,6 +11541,38 @@
       "text": "Start of turn: Add a Radiant Auspicious Rock and a random Radiant CN card to your hand."
     }
   },
+  "meditative-042": {
+    "id": "meditative-042",
+    "index": "42",
+    "name": "CN Flea Market",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "CN"
+    ],
+    "rarity": "Legendary",
+    "token": false,
+    "cost": 0,
+    "params": [
+      {
+        "key": "yuan",
+        "base": 50,
+        "radiant": 80,
+        "better": "up",
+        "step": 10,
+        "min": 10
+      }
+    ],
+    "loc": 29,
+    "base": {
+      "keywords": [],
+      "text": "Open a night market. You have {yuan} yuan to buy its cards."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Open a night market. You have {yuan} yuan to buy its cards, and you may barter cards from your hand."
+    }
+  },
   "meditative-043": {
     "id": "meditative-043",
     "index": "43",

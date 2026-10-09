@@ -9,7 +9,8 @@ export type PendingOption = {
  */
 key: string, label: string, instanceId?: string, defId?: string, player?: PlayerId, row?: Row, lane?: number, 
 /**
- * B5 E18: what this option counts against a `pick` prompt's `budget`.
+ * B5 E18: what this option counts against the prompt's `budget`: a `pick` option's cost, a
+ * `market` lot's price, a barter's yuan written negative (R1000, R1001).
  */
 cost?: number, 
 /**

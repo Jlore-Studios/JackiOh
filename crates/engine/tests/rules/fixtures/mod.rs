@@ -23,6 +23,7 @@ pub mod kill_credit;
 pub mod ky_test;
 pub mod last_boards;
 pub mod mb22;
+pub mod night_market;
 pub mod papaya;
 pub mod play_pipeline_a;
 pub mod play_pipeline_b;

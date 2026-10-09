@@ -1247,6 +1247,7 @@ mod prompts_s10_6_m3_t3 {
                 "discover",
                 "embiggen",
                 "hand",
+                "market",
                 "mode",
                 "mulligan",
                 "number",

@@ -126,6 +126,7 @@ pub mod mana_before_play;
 pub mod mb22;
 pub mod modifiers;
 pub mod mulligan_concurrent;
+pub mod night_market;
 pub mod overflow_events;
 pub mod own_library;
 pub mod papaya;

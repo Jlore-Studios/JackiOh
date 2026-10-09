@@ -545,3 +545,39 @@ mod e18_a_whole_game_with_the_new_prompts {
         assert!(opened.iter().any(|kind| kind == "pick"), "{}", opened.join(" "));
     }
 }
+
+/// ME-MARKET (Meditative #42, R1000): a night market's `market` prompt is answered like any other —
+/// the stall is fixed when the market opens, so every simulation sees the same lots.
+mod me_market_the_ai_answers_a_night_market {
+    use super::*;
+
+    #[test]
+    fn r1000_the_ai_answers_a_night_market_with_a_legal_deal() {
+        install();
+        let mut s = scenario(json!({
+            "seed": "ai-market",
+            "p1": { "hand": ["meditative-042", "core-005"], "library": ["core-053", "core-030"] },
+            "p2": { "hand": ["core-005"], "library": ["core-053", "core-030"] },
+        }));
+        s.play("meditative-042", json!({}));
+        let state = s.state().clone();
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Market)
+        );
+        let keys: Vec<String> = state
+            .pending
+            .as_ref()
+            .map(|pending| pending.options.iter().map(|option| option.key.clone()).collect())
+            .unwrap_or_default();
+        let picked = selection_of(&answered(&state, "ai-market"));
+        assert_eq!(picked.len(), 1);
+        let offered = state.pending.as_ref().is_some_and(|pending| {
+            pending
+                .options
+                .iter()
+                .any(|option| Some(&option.selection) == picked.first())
+        });
+        assert!(offered, "one of the market's own deals: {picked:?} of {keys:?}");
+    }
+}

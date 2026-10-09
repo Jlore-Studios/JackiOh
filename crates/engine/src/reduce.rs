@@ -390,13 +390,19 @@ fn timeout(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError
             }
             // R79: the AI policy answers, and it never concedes (R84), so the draw is over the prompt's
             // own answers — the concede R211 also offers is not one of them.
-            let answers: Vec<ActionBody> = legal_actions(sink.state, who)
-                .into_iter()
-                .filter(|body| body.action_type() != ActionType::Concede)
-                .collect();
-            let index = sink.rng.int(answers.len() as i32);
-            let Some(pick) = answers.get(index.max(0) as usize).cloned() else {
-                return Ok(());
+            // R1002: a timeout leaves a night market, drawing nothing.
+            let pick = if let Some(leave) = crate::subsystems::night_market::leave_answer(sink.state) {
+                leave
+            } else {
+                let answers: Vec<ActionBody> = legal_actions(sink.state, who)
+                    .into_iter()
+                    .filter(|body| body.action_type() != ActionType::Concede)
+                    .collect();
+                let index = sink.rng.int(answers.len() as i32);
+                let Some(pick) = answers.get(index.max(0) as usize).cloned() else {
+                    return Ok(());
+                };
+                pick
             };
             apply_action(sink, &Action::new(pick, who, action.nonce.clone()))?;
             if !turn_clock {

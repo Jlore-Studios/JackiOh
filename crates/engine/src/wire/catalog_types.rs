@@ -1000,6 +1000,8 @@ string_union! {
         Pick = "pick",
         /// ME-CRAFT (Meditative #17, R880): the block editor's answer, a `Selection::Craft`.
         Craft = "craft",
+        /// ME-MARKET (Meditative #42, R1000): a night market's deals, one buy, barter or Leave an answer.
+        Market = "market",
     }
 }
 

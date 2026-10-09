@@ -793,6 +793,24 @@ describe("answerAction: one case per PromptKind (§10.6)", () => {
     expect(selectionTestid(view, { pick: "craft", recipe: { ...recipe } })).toBeNull();
   });
 
+  it("market → a lot's mode, a barter's instance, Leave's none (R1000, R1001)", () => {
+    const pending = pendingFor(
+      "market",
+      [
+        { key: "mode:core-080", label: "Lot", defId: "core-080", cost: 30 },
+        { key: "instance:h1", label: "Traded", instanceId: "h1", defId: "core-005", cost: -15 },
+        { key: "none", label: "Leave" },
+      ],
+      { budget: 50 },
+    );
+    if (!pending.forYou) throw new Error("fixture");
+
+    const answer = (selection: Selection[]) => ({ type: "answer", choiceId: "ch1", selection });
+    expect(answerAction(pending, ["mode:core-080"], view)).toEqual(answer([{ pick: "mode", option: "core-080" }]));
+    expect(answerAction(pending, ["instance:h1"], view)).toEqual(answer([{ pick: "instance", instanceId: "h1" }]));
+    expect(answerAction(pending, ["none"], view)).toEqual(answer([{ pick: "none" }]));
+  });
+
   it("maps a no-op option to { pick: 'none' }", () => {
     expect(selectionForOption({ key: "none", label: "Nothing" })).toEqual({ pick: "none" });
     expect(selectionForOption({ key: "none:nothing", label: "Nothing" })).toEqual({ pick: "none" });

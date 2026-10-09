@@ -62,6 +62,7 @@ const PROMPT_WORDS: Readonly<Record<PromptKind, string>> = {
   reward: "a reward",
   pick: "cards to take",
   craft: "crafting a card",
+  market: "a deal at the night market",
 };
 
 /** A number's key in words: a declared number's camelCase split ("drawLimit" is "draw limit"). */

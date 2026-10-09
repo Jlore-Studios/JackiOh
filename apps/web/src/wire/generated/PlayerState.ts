@@ -68,4 +68,9 @@ draws?: DrawCount,
  * (`query::hand_cap_of`). Absent means `HAND_CAP`, so a game that never sets one hashes as it did
  * before this field existed (D14).
  */
-handCap?: number, };
+handCap?: number, 
+/**
+ * ME-JADE, R961: this player's Jade Counter, public, which only rises (`effects::jade`). Absent until
+ * it first rises, so a game without a Jade hashes as it did before this field existed (D14).
+ */
+jade?: number, };

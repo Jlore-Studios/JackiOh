@@ -56,4 +56,9 @@ handMarked?: number, locks: RowFlags,
  * Locked zone takes none, so a client that reads only `locks` would draw it open. B3.1 rule 6: the
  * backrow zone an animated "Animated on your turn" card will return to is held the same way.
  */
-reserved: RowFlags, fatigueCount: number, };
+reserved: RowFlags, fatigueCount: number, 
+/**
+ * ME-JADE, R961: this seat's Jade Counter, shown to both seats beside its hero. Absent until it
+ * first rises, so a game without a Jade sends the view it always did (D14).
+ */
+jade?: number, };

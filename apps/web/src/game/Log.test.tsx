@@ -132,6 +132,13 @@ describe("Log: a line never prints an id or the sentinel (integration QA)", () =
     expect(text[3]).toBe("Opponent lost an effect");
   });
 
+  it("R1000 a night market reads as a deal at the night market", () => {
+    render(<Log view={withEvents(baseView(), [{ type: "promptOpened", player: "p2", choiceId: "c1", kind: "market" }])} />);
+    const text = lines().join("\n");
+    expect(text).toContain("a deal at the night market");
+    expect(text).not.toContain("(market)");
+  });
+
   it("ends the game in words", () => {
     render(<Log view={withEvents(fullBoardView(), [{ type: "gameOver", winner: "p2", reason: "concede" }])} />);
     expect(lines()).toEqual(["Opponent won. You conceded."]);

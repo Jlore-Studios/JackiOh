@@ -890,6 +890,33 @@ pub const FUSE_MIN_INGREDIENTS: usize = 2;
 pub const CRAFTED_CARD_COST: i32 = 0;
 
 // ---------------------------------------------------------------------------------------------
+// Meditative #42's night market (ME-MARKET, `subsystems::night_market`).
+// ---------------------------------------------------------------------------------------------
+
+/// R1000: a lot's yuan per mana of its printed cost out of play (R65: X counts 0, an embiggen card
+/// its base price).
+pub const YUAN_PER_COST: i32 = 10;
+/// R1000: a lot's yuan per step of its rarity's rank (`YUAN_RARITY_RANKS`).
+pub const YUAN_PER_RARITY: i32 = 5;
+/// R1000, R1001: a Radiant card's price, bought or bartered, is this many times its plain one.
+pub const YUAN_RADIANT_MULTIPLIER: i32 = 2;
+/// R1000: each rarity's rank, Common 1 to Mythic 5. A token is ranked by its printed rarity, and one
+/// that prints none (the AI generated cards) as Common.
+pub const YUAN_RARITY_RANKS: &[(Rarity, i32)] = &[
+    (Rarity::Common, 1),
+    (Rarity::Rare, 2),
+    (Rarity::Epic, 3),
+    (Rarity::Legendary, 4),
+    (Rarity::Mythic, 5),
+];
+/// R1000: the stall's random CN cards, all different.
+pub const NIGHT_MARKET_CN_LOTS: i32 = 3;
+/// R1000: the stall's Auspicious Rocks (M #39.1).
+pub const NIGHT_MARKET_ROCK_LOTS: i32 = 2;
+/// R1000: the stall's random AI generated card.
+pub const NIGHT_MARKET_AI_LOTS: i32 = 1;
+
+// ---------------------------------------------------------------------------------------------
 // The AI training lanes (SURFACE §14.2; docs/v0.3.0/README.md §8).
 // ---------------------------------------------------------------------------------------------
 

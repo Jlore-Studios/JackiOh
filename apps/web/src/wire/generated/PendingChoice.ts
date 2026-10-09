@@ -7,7 +7,7 @@ import type { Resume } from "./Resume";
 export type PendingChoice = { id: string, playerId: PlayerId, kind: PromptKind, prompt: string, options: Array<PromptOption>, min: number, max: number, 
 /**
  * B5 E18: a `pick` prompt's budget — the most its picked options' `cost`s may add up to (Classic
- * #44's "a total cost of (5) or less"). Absent on every other prompt, so a state without one hashes
- * as it did before the field existed.
+ * #44's "a total cost of (5) or less"), or a `market` prompt's yuan left (R1000). Absent on every
+ * other prompt, so a state without one hashes as it did before the field existed.
  */
 budget?: number, resume: Resume, };

@@ -2,7 +2,8 @@
 //! large for the effects library — Fuse (R77), the rotation rings (R14), the Zephyrs scorer
 //! (§10.7), the random AI policy (R44), Heroic Power (R43), Combo-Index (R27), Call to Chaos (R28),
 //! the lethal projection (R44), Activate (B3.2, R384), last boards (R417), quests (B5 E33, R404),
-//! copied text (B5 E14, R399) and the Classic+ machinery (R416, R419, R420, R422, R423, R425).
+//! copied text (B5 E14, R399), the Classic+ machinery (R416, R419, R420, R422, R423, R425) and the
+//! Meditative set's (the craft, R880; the night market, R1000).
 //!
 //! One module per `packages/engine/src/subsystems/<x>.ts`, re-exported whole as TS's barrel
 //! (`subsystems/index.ts`) did, so `subsystems.chooseAction` is both
@@ -26,6 +27,7 @@ pub mod hero_power;
 pub mod ky_test;
 pub mod last_boards;
 pub mod lethal;
+pub mod night_market;
 pub mod papaya;
 pub mod perfect_hand;
 pub mod quests;
@@ -47,6 +49,7 @@ pub use hero_power::*;
 pub use ky_test::*;
 pub use last_boards::*;
 pub use lethal::*;
+pub use night_market::*;
 pub use papaya::*;
 pub use perfect_hand::*;
 pub use quests::*;
