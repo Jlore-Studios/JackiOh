@@ -1,19 +1,14 @@
 // Silly Silas's rotation (SPEC §3.1's rotation-topology ruling, R14, §8 #52; BUILD M3-T7).
 // The fixture cards these tests need are defined here and registered on top of the shared fixture
 // catalog, so no shared fixture has to grow for them (CLAUDE.md, BUILD §0).
-//
-// Port of `packages/engine/test/rotation.test.ts`.
 
 use jackioh_engine::subsystems::rotation::{RotationResult, rotate_rings};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
 
-// ---------------------------------------------------------------------------
 // Fixture cards.
-// ---------------------------------------------------------------------------
 
-/// TS's module `let nextIndex = 700`, written out: each def takes the index it had.
 fn unit_def_of(name: &str, index: u32, attack: i32, health: i32, keywords: Value) -> CardDef {
     json_as(json!({
         "id": format!("rot-{name}"),
@@ -84,7 +79,7 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// TS `rotate(state, direction, { perspective?, radiant? })`: one `rotateRings` over a fresh sink.
+/// One `rotate_rings` over a fresh sink.
 fn rotate(state: &mut GameState, direction: &str, options: Value) -> (Vec<GameEvent>, RotationResult) {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -108,7 +103,7 @@ fn where_is(state: &GameState, card: &CardInstance) -> String {
     }
 }
 
-/// The card as it stands in the state now (TS held the live object).
+/// The card as it stands in the state now.
 fn live<'a>(state: &'a GameState, card: &CardInstance) -> &'a CardInstance {
     find_instance(state, &card.id).expect("the card is still in the game")
 }
@@ -237,7 +232,6 @@ mod r14_rotation_m3_t7 {
 
         let (events, result) = rotate(&mut state, "right", json!({}));
 
-        // The unit ring turned one step and so did the backrow ring, each on its own zones.
         assert_eq!(where_is(&state, &unit), "p1 units 4");
         assert_eq!(where_is(&state, &back), "p2 backrow 5");
         assert_eq!(where_is(&state, &enemy_back), "p1 backrow 1");
@@ -367,7 +361,6 @@ mod r14_rotation_m3_t7 {
         assert_eq!(it.buffs, AttackHealth { attack: 0, health: 0 });
         assert!(it.cost_override.is_none());
 
-        // The rest of the ring still turned.
         assert_eq!(where_is(&state, &staying), "p1 units 2");
     }
 
@@ -496,7 +489,6 @@ mod r14_rotation_m3_t7 {
             assert_eq!(at, to, "{from}");
         }
 
-        // Ten cards in, ten cards out: nothing was overwritten and nothing was bounced.
         assert_eq!(result.moved.len(), 10);
         assert!(result.bounced.is_empty());
         assert_eq!(result.crossed.len(), 2);
@@ -557,7 +549,7 @@ mod r14_rotation_m3_t7 {
         assert_eq!(live(&state, &top).controller, PlayerId::P2);
         assert_eq!(live(&state, &under).controller, PlayerId::P2);
         assert_eq!(result.crossed, ids(&[&top, &under]));
-        // Nothing beneath the top resumed, so no Stack note is kept against it (R212, `withPile`).
+        // Nothing beneath the top resumed, so no Stack note is kept against it (R212).
         let note = state
             .field_exits
             .as_ref()

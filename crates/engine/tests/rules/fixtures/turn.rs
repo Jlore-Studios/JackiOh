@@ -1,16 +1,10 @@
-//! Port of `packages/engine/test/fixtures/turn.ts`.
-//!
-//! Test-only cards for the turn systems of patch v0.2.0 (docs/classic-sets.md B5): ending a turn from
-//! an effect (E10: Classic+ #26 Tommy Tempo, the AI card Rate Limit), draw limits and draw counts (E3,
-//! E4: Classic #4 Palantir, #49 Anti-Greed Machine, #9 Income Tax), the cast-on-draw enchantment (E39,
-//! Classic+ #40), the new delayed kinds (E27: Classic #20 The Power to Punish, #37 Last Hurrah) and the
-//! rest-of-game effect (E28: Classic+ #52), plus the start-of-turn and cleanup stages the turn loop runs
-//! for Brittle and Animated (B3.3, B3.1). Each reproduces one shape through the engine's own verbs; the
-//! engine never imports `packages/cards`.
+//! Test-only cards for the turn systems (docs/classic-sets.md B5): ending a turn from an effect (E10),
+//! draw limits and counts (E3, E4), cast on draw (E39), the delayed kinds (E27), the rest-of-game
+//! effect (E28), and the start-of-turn and cleanup stages the turn loop runs for Brittle and Animated
+//! (B3.3, B3.1). Each reproduces one shape through the engine's own verbs; the engine never imports
+//! `crates/cards`.
 //!
 //! Ids are prefixed `tn-` and indexed from 4300, so they cannot collide with another fixture file's.
-//! (TS numbered them from a module counter, one step per `def`; each index is written out here in the
-//! order TS made them.)
 
 use std::sync::LazyLock;
 
@@ -57,9 +51,7 @@ fn def(index: u32, name: &str, type_: &str, extra: Value) -> CardDef {
     json_as(card)
 }
 
-// ---------------------------------------------------------------------------
 // The note log: a Field Spell in p2's backrow lane 5 whose memory records what ran, in order.
-// ---------------------------------------------------------------------------
 
 pub fn log_card() -> CardDef {
     def(4301, "log", "Field Spell", json!({}))
@@ -157,9 +149,7 @@ fn faces_with(base: Script, radiant: Script) -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// ---------------------------------------------------------------------------
 // E10: ending the turn from an effect
-// ---------------------------------------------------------------------------
 
 /// "End your turn", then more of the same list: the rest resolves first (R456).
 pub fn cutter() -> CardDef {
@@ -205,9 +195,7 @@ pub fn questioner() -> CardDef {
     def(4309, "questioner", "Spell", json!({}))
 }
 
-// ---------------------------------------------------------------------------
 // E3, E4, E39: draws
-// ---------------------------------------------------------------------------
 
 /// Classic #4's aura: "Your opponent can't draw more than 1 card each turn."
 pub fn palantir() -> CardDef {
@@ -243,9 +231,7 @@ pub fn taxman() -> CardDef {
     def(4316, "taxman", "Field Spell", json!({}))
 }
 
-// ---------------------------------------------------------------------------
 // E27, E28: delayed kinds and the rest of the game
-// ---------------------------------------------------------------------------
 
 /// Classic #20's third mode: a chosen Unit is destroyed at the start of your next turn.
 pub fn doom() -> CardDef {
@@ -277,9 +263,7 @@ pub fn contract_ask() -> CardDef {
     def(4322, "contract-ask", "Spell", json!({ "tags": ["Quickdraw"] }))
 }
 
-// ---------------------------------------------------------------------------
 // The start-of-turn stages: a delayed effect and a start-of-turn hook to order them against.
-// ---------------------------------------------------------------------------
 
 /// A Spell that schedules a note for the start of its controller's next turn (R62's delayed stage).
 pub fn reminder() -> CardDef {
@@ -652,7 +636,7 @@ pub static TURN_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new
     table
 });
 
-/// `turnCatalog(base = {})`: `base` with every turn fixture over it.
+/// `base` with every turn fixture over it.
 pub fn turn_catalog(base: CardDefs) -> CardDefs {
     let mut defs = base;
     for entry in TURN_DEFS.iter() {
@@ -661,7 +645,7 @@ pub fn turn_catalog(base: CardDefs) -> CardDefs {
     defs
 }
 
-/// This file's scripts, by id (the brief's `scripts()`): `TURN_SCRIPTS`.
+/// This file's scripts, by id: `TURN_SCRIPTS`.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     TURN_SCRIPTS.clone()
 }

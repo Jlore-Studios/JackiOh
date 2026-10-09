@@ -1,13 +1,9 @@
-//! Port of `packages/engine/test/fixtures/playPipelineB.ts`.
-//!
 //! Test-only cards for play pipeline B (docs/classic-sets.md B5 E11, E12, E15, B4.5; R391, R396,
 //! R452–R455), each reproducing through the effects library the shape of a Classic or Classic+ card
-//! that the systems exist for. The engine never imports `packages/cards` (CLAUDE.md), so these are
+//! that the systems exist for. The engine never depends on `crates/cards` (CLAUDE.md), so these are
 //! the engine's proof; the real cards' tests prove the same cases again.
 //!
 //! Ids are prefixed `pb-` and indexed from 4520 up, clear of every other fixture file (BUILD §0).
-//! (TS numbered them from a module counter, one step per `def`; each index is written out here in the
-//! order TS made them.)
 
 use std::cell::Cell;
 use std::sync::{Arc, LazyLock};
@@ -18,7 +14,7 @@ use serde::Serialize;
 
 use super::harness::new_game;
 
-/// TS's `{ ...a, ...b }` on two object literals: `b`'s keys replace `a`'s.
+/// Merge two object literals: `extra`'s keys replace `base`'s.
 fn spread(mut base: Value, extra: Value) -> Value {
     if let (Some(into), Value::Object(from)) = (base.as_object_mut(), extra) {
         for (key, value) in from {
@@ -66,9 +62,7 @@ fn both(script: Script) -> CardScripts {
     }
 }
 
-// ---------------------------------------------------------------------------
 // E11: permissions to play from the graveyard (R454)
-// ---------------------------------------------------------------------------
 
 /// Classic #28 Second Wind's shape: every card from your graveyard; Radiant, only a price of (1)+.
 pub fn second_wind() -> CardDef {
@@ -107,9 +101,7 @@ pub fn grave_trap() -> CardDef {
     def(4527, "grave-trap", "Trap", json!({ "cost": 1 }))
 }
 
-// ---------------------------------------------------------------------------
 // E12: casts (R452, R453)
-// ---------------------------------------------------------------------------
 
 /// A Spell with one declared target, any unit or hero: 3 damage to it.
 pub fn target_spell() -> CardDef {
@@ -194,9 +186,7 @@ pub fn forever() -> CardDef {
     def(4542, "forever", "Spell", json!({ "cost": 1 }))
 }
 
-// ---------------------------------------------------------------------------
 // E15: price rules (R455)
-// ---------------------------------------------------------------------------
 
 /// Classic #6 Cloaked Toe Cracker's shape: "Aura: Your Traps cost (0)".
 pub fn toe_cracker() -> CardDef {
@@ -251,9 +241,7 @@ pub fn embiggen_field() -> CardDef {
     )
 }
 
-// ---------------------------------------------------------------------------
 // B4.5: Tribute zones (R391)
-// ---------------------------------------------------------------------------
 
 /// Classic #45 Nature Titan's shape: Tribute 1 on a big body.
 pub fn titan() -> CardDef {
@@ -339,7 +327,6 @@ pub static PB_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
 /// The discover pool: three vanilla fixture units every test catalog holds.
 pub const DISCOVER_POOL: &[&str] = &["fx-1", "fx-2", "fx-3"];
 
-/// `openPrompt(ctx, { player, kind, prompt, options, resume: resumeSelf(ctx, step) })`.
 fn ask(
     ctx: &mut EffectContext<'_>,
     player: PlayerId,
@@ -396,7 +383,7 @@ fn ask_the_opponent() -> Effect {
     })
 }
 
-/// `castNew({ def })`: a new card of that definition, cast by the running card's controller.
+/// A new card of that definition, cast by the running card's controller.
 fn cast_new_of(def_id: String) -> Effect {
     effects::cast_new(effects::CastNewArgs {
         def: effects::CastNewDef::from(def_id),
@@ -405,7 +392,6 @@ fn cast_new_of(def_id: String) -> Effect {
     })
 }
 
-/// `castRandom({ query: { defId: pool }, count, ...how })`.
 fn cast_random_of(pool: Vec<String>, count: i32, radiant: Option<bool>, how: Value) -> Effect {
     let how: effects::CastHow = json_as(how);
     effects::cast_random(effects::CastRandomArgs {
@@ -873,17 +859,15 @@ pub fn register_pipeline_b() {
     register_scripts(all_scripts);
 }
 
-// ---------------------------------------------------------------------------
 // Harness shared by the pipeline B tests
-// ---------------------------------------------------------------------------
 
 thread_local! {
-    /// TS's module `let nonce`: one counter per test thread, so every action a test sends is fresh.
+    /// One counter per test thread, so every action a test sends is fresh.
     static NONCE: Cell<u32> = const { Cell::new(0) };
 }
 
-/// Reduce one action with a fresh nonce, returning the whole result. `body` is TS's `ActionInput`
-/// (an `ActionInput` or its JSON literal).
+/// Reduce one action with a fresh nonce, returning the whole result. `body` is an `ActionInput` or
+/// its JSON literal.
 pub fn pb_reduce(state: &GameState, body: impl Serialize) -> ReduceResult {
     let nonce = NONCE.with(|n| {
         n.set(n.get() + 1);
@@ -896,7 +880,7 @@ pub fn pb_reduce(state: &GameState, body: impl Serialize) -> ReduceResult {
     reduce(state, &json_as::<Action>(fields))
 }
 
-/// Reduce one action with a fresh nonce; a refusal panics with its text (TS threw it).
+/// Reduce one action with a fresh nonce; a refusal panics with its text.
 pub fn pb_act(state: &GameState, body: impl Serialize) -> GameState {
     let result = pb_reduce(state, body);
     if let Some(error) = result.error {
@@ -928,7 +912,7 @@ pub fn pb_playing(seed: &str) -> GameState {
     state
 }
 
-/// A card of `defId` put straight into `player`'s graveyard. TS's default: `player = "p1"`.
+/// A card of `defId` put straight into `player`'s graveyard.
 pub fn in_graveyard(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
     let card = new_instance(state, def_id, player, Zone::Graveyard { player });
     state.players[player].graveyard.push(card.clone());
@@ -942,7 +926,7 @@ pub fn only<T: Clone>(items: &[T]) -> T {
     }
 }
 
-/// The `play` actions `legalActions` offers for one instance. TS's default: `player = "p1"`.
+/// The `play` actions `legal_actions` offers for one instance.
 pub fn plays_of(state: &GameState, instance_id: &str, player: PlayerId) -> Vec<ActionBody> {
     legal_actions(state, player)
         .into_iter()
@@ -950,7 +934,7 @@ pub fn plays_of(state: &GameState, instance_id: &str, player: PlayerId) -> Vec<A
         .collect()
 }
 
-/// `JSON.parse(JSON.stringify(state))`, the round trip a paused state must survive (§9.3).
+/// The JSON round trip a paused state must survive (§9.3).
 pub fn round_trip(state: &GameState) -> GameState {
     let text = serde_json::to_string(state).expect("a state serialises");
     serde_json::from_str(&text).expect("a state parses back")

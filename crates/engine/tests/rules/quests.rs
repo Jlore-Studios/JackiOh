@@ -1,13 +1,9 @@
-//! The quests subsystem (docs/classic-sets.md B5 E33; `src/subsystems/quests.ts`; SPEC §8.6 row 90,
-//! §10.1, §10.6, §10.8; R404), proved through the fixture cards of `fixtures/quests.ts` so the engine
-//! half of Classic #90 In Too Deep stands without `packages/cards`: each goal counted and not counted,
-//! counting from the moment a quest opens, completion at the state check on either player's turn, the
-//! base face's `reward` prompt and the Radiant face's every reward and every path, a quest reached by
-//! two paths, a reward two quests offer, an aura held while the card stands, a pause mid-reward through
-//! JSON, a replay from the log, both views, and the two random picks the rewards needed
-//! (`effects/randomPicks.ts`). The real card's own test file proves the same with its real tree.
-//!
-//! Port of `packages/engine/test/quests.test.ts`.
+//! The quests subsystem (docs/classic-sets.md B5 E33; SPEC §8.6 row 90, §10.1, §10.6, §10.8; R404),
+//! proved through the quest fixture cards so the engine half of Classic #90 In Too Deep stands without
+//! the cards crate: each goal counted and not counted, completion at the state check on either
+//! player's turn, the base face's `reward` prompt, the Radiant face's every reward and path, a pause
+//! mid-reward through JSON, a replay from the log, both views, and the two random picks the rewards
+//! need. The real card's own test file proves the same with its real tree.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -57,7 +53,6 @@ fn quest_board(seed: &str) -> GameState {
     state
 }
 
-/// One action's result: the state after it and the events it emitted.
 struct Step {
     state: GameState,
     events: Vec<GameEvent>,
@@ -81,7 +76,6 @@ fn act(state: &GameState, body: Value, log: Option<&mut Vec<Action>>) -> Step {
     }
 }
 
-/// Play a card from its owner's hand, with declared targets.
 fn play(state: &GameState, card: &CardInstance, targets: &[&str], log: Option<&mut Vec<Action>>) -> Step {
     let targets: Vec<Value> = targets
         .iter()
@@ -104,13 +98,11 @@ fn hand(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
         .expect(def_id)
 }
 
-/// TS `play(state, hand(state, defId, player), targets)`: a new copy of the card into the hand, played.
 fn play_new(state: &mut GameState, def_id: &str, player: PlayerId, targets: &[&str]) -> Step {
     let card = hand(state, def_id, player);
     play(state, &card, targets, None)
 }
 
-/// `playQuestCard`'s answer: the step, and the quest card as it stands after it.
 struct Played {
     state: GameState,
     events: Vec<GameEvent>,
@@ -135,8 +127,8 @@ fn json_of(value: impl Serialize) -> Value {
     serde_json::to_value(value).expect("serialisable")
 }
 
-/// vitest's `toMatchObject`: every key the expected object names matches, recursively; an array
-/// matches element for element and in length.
+/// Every key the expected object names matches, recursively; an array matches element for element
+/// and in length.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (Value::Object(actual), Value::Object(expected)) => expected
@@ -149,7 +141,7 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
     }
 }
 
-/// The card's quest line, as JSON (TS `QuestMemory`).
+/// The card's quest line, as JSON.
 fn memory_of(state: &GameState, card: &CardInstance) -> Value {
     let live = find_instance(state, &card.id).expect("the card");
     json_of(quest_memory_of(live).expect("a quest line"))
@@ -159,7 +151,7 @@ fn progress_of(state: &GameState, card: &CardInstance, quest: &str) -> i64 {
     memory_of(state, card)["progress"][quest].as_i64().unwrap_or(0)
 }
 
-/// A number a goal names (TS `GOALS.draws.count`, `GOALS.unspentManaAtTurnEnd.mana`, …).
+/// A number a goal names.
 fn goal_number(goal: impl Serialize, field: &str) -> i64 {
     json_of(goal)[field].as_i64().expect("a goal number")
 }
@@ -178,7 +170,6 @@ fn completed(events: &[GameEvent], card: &CardInstance) -> Vec<String> {
         .collect()
 }
 
-/// One field of every event of a type, as JSON.
 fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value> {
     events_of_type(events, kind)
         .into_iter()
@@ -829,7 +820,7 @@ mod e33_quests_the_tree_base_face_a_reward_prompt {
     }
 }
 
-/// TS `fuse(sinkFor(state), { ingredients, target })`: the sink's cursor is not written back, as in TS.
+/// Fuses `ingredients` onto `target`; the sink's cursor is not written back.
 fn fuse_onto(
     state: &mut GameState,
     ingredients: Vec<CardInstance>,

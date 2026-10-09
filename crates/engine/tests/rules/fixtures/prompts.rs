@@ -1,19 +1,12 @@
-//! Port of `packages/engine/test/fixtures/prompts.ts`.
-//!
-//! Test-only cards for the prompts-and-movement systems of patch v0.2.0 (docs/classic-sets.md B5 E13,
-//! E16, E17, E18, E26). Each reproduces the engine half of a Classic or Classic+ card through the
-//! effects library — the card itself arrives with its own script and test in the card waves — so the
-//! engine is proved without `packages/cards` (CLAUDE.md: the engine never imports it).
-//!
-//! TS numbered the definitions from a module counter (`nextIndex = 3100`, one step per `def`); each
-//! index is written out here in the order TS made them.
+//! Test-only cards for the prompts-and-movement systems (docs/classic-sets.md B5 E13, E16, E17, E18,
+//! E26). Each reproduces the engine half of a Classic or Classic+ card through the effects library,
+//! so the engine is proved without `jackioh-cards` (CLAUDE.md: the engine never imports it).
 
 use std::sync::LazyLock;
 
 use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
 
-/// TS's `{ ...a, ...b }` on two object literals: `b`'s keys replace `a`'s.
 fn spread(mut base: Value, extra: Value) -> Value {
     if let (Some(into), Value::Object(from)) = (base.as_object_mut(), extra) {
         for (key, value) in from {
@@ -57,7 +50,6 @@ fn both(script: Script) -> CardScripts {
     }
 }
 
-/// `list` followed by `more` (TS's `[...list, ...more]`).
 fn then(mut list: Vec<Effect>, more: Vec<Effect>) -> Vec<Effect> {
     list.extend(more);
     list
@@ -81,9 +73,7 @@ fn exile_chosen() -> Effect {
     effects::exile(json_as(json!({ "target": { "of": "chosen" } })))
 }
 
-// ---------------------------------------------------------------------------------------------
 // E18: the prompt kinds
-// ---------------------------------------------------------------------------------------------
 
 /// What every fixture hands out when its chain reached the end it should have.
 pub fn prize() -> CardDef {
@@ -206,7 +196,6 @@ pub fn quiz() -> CardDef {
     def(3105, "quiz", "Spell", json!({ "cost": 1 }))
 }
 
-/// TS's `QUIZ` literal.
 pub struct Quiz {
     pub statement: &'static str,
     pub options: &'static [&'static str],
@@ -322,7 +311,6 @@ pub fn quest() -> CardDef {
     def(3107, "quest", "Field Spell", json!({ "cost": 1 }))
 }
 
-/// One of `QUEST_REWARDS`: TS's `{ id, label }`.
 pub struct RewardOption {
     pub id: &'static str,
     pub label: &'static str,
@@ -448,9 +436,7 @@ fn back_script() -> Script {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // E17: the opponent's hand as the options
-// ---------------------------------------------------------------------------------------------
 
 /// Classic #11 Mind Melt's shape (SPEC §8.6): base, a `pick` of one card of their hand, exiled; Radiant,
 /// a `mode` prompt of the costs in their hand, and every card of the chosen cost exiled.
@@ -495,9 +481,7 @@ pub fn mind_melt_scripts() -> CardScripts {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // E16, E2: cards between the players' piles
-// ---------------------------------------------------------------------------------------------
 
 /// Classic #9 Income Tax's shape: when the opponent draws, they keep one card and give you the rest.
 pub fn income_tax() -> CardDef {
@@ -592,9 +576,7 @@ fn cast_on_draw_marker_script() -> Script {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // E13: trigger a Cry
-// ---------------------------------------------------------------------------------------------
 
 /// A Cry with no choices: 2 to the enemy hero, and +1/+1 on "this".
 pub fn crier() -> CardDef {
@@ -768,9 +750,7 @@ fn grave_rewind_script() -> Script {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // E26: deck and graveyard triggers, "summon this"
-// ---------------------------------------------------------------------------------------------
 
 /// The fields of a `cardResolved` the triggers below read.
 struct Played<'a> {
@@ -926,7 +906,6 @@ fn recurring_script(radiant: bool) -> Script {
             "recur",
             &[GameEventType::TrapFired],
             move |ctx, event| {
-                // TS read `event.controller` off any event: one that is not a `trapFired` has none.
                 if !matches!(event, GameEvent::TrapFired { controller, .. } if *controller == ctx.controller)
                 {
                     return vec![];
@@ -1044,9 +1023,7 @@ pub fn grunt() -> CardDef {
     unit(3132, "grunt", 2, 2, json!({ "cost": 0 }))
 }
 
-// ---------------------------------------------------------------------------------------------
 // Registration
-// ---------------------------------------------------------------------------------------------
 
 /// A Quickdraw copy of a fixture, so a replay test's opening hand holds it whatever the shuffle (§2.1, R225).
 pub fn quickdraw_of(card: &CardDef) -> CardDef {
@@ -1193,7 +1170,6 @@ pub static PROMPT_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::n
     table
 });
 
-/// This file's definitions, by id (the brief's `catalog()`).
 pub fn catalog() -> CardDefs {
     PROMPT_DEFS
         .iter()
@@ -1201,12 +1177,11 @@ pub fn catalog() -> CardDefs {
         .collect()
 }
 
-/// This file's scripts, by id (the brief's `scripts()`).
 pub fn scripts() -> IndexMap<String, CardScripts> {
     PROMPT_SCRIPTS.clone()
 }
 
-/// Add these fixtures to whatever the harness registered (`newGame` registers its own first).
+/// Add these fixtures to whatever the harness registered.
 pub fn register_prompt_fixtures() {
     let mut all_defs = registered_catalog().clone();
     all_defs.extend(catalog());

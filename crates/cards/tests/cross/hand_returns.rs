@@ -1,30 +1,15 @@
 //! A card's return to its hand: the price it returns with, and §5.1's end-of-turn return (SPEC §2.4,
-//! §5.1, §10.5 step 7, R4, R78, R153, R155). Found by the polish-4 edge-case hunt, round 3
-//! (docs/polish/4-edge-cases.md, lenses L2 and L8); every case here failed before its fix.
+//! §4.1, §5.1, §10.5 step 7, R4, R78, R153, R155). Polish-4 edge-case hunt: docs/polish/4-edge-cases.md.
 //!
-//!  - R4: a price a card is given as it returns to a hand — #31's "+1", #37r's "costs 1 less" — is
-//!    its price in that hand. A full hand burns the card instead (§2.4), and the burned card keeps
-//!    its cost, as radiant #52's "costing 0" already did (re-entry.test.ts).
-//!  - R155: the end-of-turn return belongs to the Spell its own play landed in the graveyard, so a
-//!    card that left the graveyard and came back some other way the same turn stays there (R153).
-//!  - R215 (round 4, lens L2): a hand card that reaches a graveyard is reset as a card leaving the
-//!    field is (R78), so it comes back as the printed card; and #99's crafted card, like every price
-//!    a card is given as it reaches a hand, takes its "costs 0" only in that hand.
-//!  - R215 (round 5, lenses "card by card" and "engine invariants"): a card landing from the resolving
-//!    zone is reset too, so a #95 an earlier Call to Chaos cast carries no link of that chain (R28)
-//!    into a play of its own once Reminisce has brought it back.
-//!  - R155 (round 7, lens L8): a return Spell cast on the other player's turn (a cast on draw, R70) is
-//!    flagged and cleared at that turn's cleanup — §6.2's "End of turn" is its controller's own — so it
-//!    does not come back at the end of a later turn it was not played on.
-//!  - R215 (round 8, lens "engine invariants"): radiant #52's "costing 0" is announced with a
-//!    `costChanged` once the card has landed, as #31's +1 and #72r's 0 are (§10.3).
-//!  - R766, R429 (issues #557, #572): a return Spell played at a price comes back at its printed cost
-//!    (#23), and so does #31, except for the climb its own returns gave it: that comes back, plus (1),
-//!    to (4).
-//!
-//! Port of `packages/cards/test/hand-returns.test.ts` (SURFACE §4.1, §8). TS's live card objects are
-//! owned copies here, read back from the state by id after every step and written through
-//! `find_instance_mut`.
+//!  - R4: a price a card is given as it returns to a hand (#31's "+1", #37r's "costs 1 less") is its
+//!    price in that hand. A full hand burns the card instead (§2.4), and the burned card keeps its cost.
+//!  - R155, R153: the end-of-turn return belongs to the Spell its own play landed in the graveyard. One
+//!    cast on the other player's turn (R70) is cleared at that turn's cleanup, §6.2's "End of turn".
+//!  - R215: a hand card reaching a graveyard, or a card landing from the resolving zone, is reset as one
+//!    leaving the field is (R78): it comes back printed, with no link of a chain (R28), "costs 0" only in hand.
+//!  - R215, §10.3: radiant #52's "costing 0" is announced with a `costChanged` once the card has landed.
+//!  - R766, R429: a return Spell played at a price comes back at its printed cost (#23), and so does
+//!    #31, except for the climb its own returns gave it, which comes back too.
 
 use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::effects::bounce;
@@ -62,7 +47,7 @@ fn chaos_cursor(seed: &str, effect: &str) -> u32 {
     panic!("no cursor below 500 rolls \"{effect}\" from seed \"{seed}\"");
 }
 
-/// TS `AT_P2`: the target list naming p2's hero.
+/// The target list naming p2's hero.
 fn at_p2() -> Value {
     json!([{ "pick": "hero", "player": "p2" }])
 }
@@ -249,12 +234,10 @@ mod r215_a_card_that_lands_from_the_resolving_zone_is_the_printed_card_again {
     #[test]
     fn r215_r28_r87_a_call_to_chaos_cast_at_the_end_of_a_chain_taken_back_from_the_graveyard_and_played_starts_a_chain_of_its_own()
      {
-        // The played #95 stands in for the 19th link of a chain, which is how 095's own tests pin R28's
-        // counter. Its roll casts the 20th link, which R87 sends to the graveyard as it resolves, and
-        // #72 Reminisce takes that card back. Played from hand, it is a new play, so a new chain from
-        // nothing — and its "cast a random Call to Chaos" casts one, where the old link at the cap cast
-        // nothing. Hearthstone likewise returns a card from the graveyard without what its last trip
-        // left on it.
+        // The played #95 stands in for the 19th link of a chain, as 095's own tests pin R28's counter. Its
+        // roll casts the 20th link, which R87 sends to the graveyard as it resolves, and #72 Reminisce takes
+        // it back. Played from hand it is a new play, a new chain from nothing, so its "cast a random Call
+        // to Chaos" casts one where the old link at the cap cast nothing.
         let seed = "inv-r5-chaos-chain";
         let mut s = scenario(
             json!({ "seed": seed, "p1": { "hand": [CHAOS, REMINISCE, MENACE], "mana": 20 }, "p2": { "hand": [MENACE] } }),
@@ -306,16 +289,13 @@ mod r215_a_card_that_lands_from_the_resolving_zone_is_the_printed_card_again {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Round 7 (lens L8): a return Spell cast on the other player's turn.
-// ---------------------------------------------------------------------------
 
 const MOTHS: &str = "core-009"; // 1/14; start of turn: every enemy Unit attacks this
 const PREM_PANTHER: &str = "core-032"; // 5/4 Rush; after it attacks and survives, draw 2 per Unit destroyed
 const RENO: &str = "core-053";
 
-/// A fixture card: a transient def in the match state and its script in the registry. TS
-/// `fixture(s, id, type, script, stats = { attack: 2, health: 2 })`.
+/// A fixture card: a transient def in the match state and its script in the registry.
 fn fixture(s: &mut Scenario, id: &str, type_: CardType, script: Script, stats: Option<AttackHealth>) {
     let stats = stats.unwrap_or(AttackHealth { attack: 2, health: 2 });
     let face = if type_ == CardType::Unit {
@@ -354,11 +334,10 @@ mod r155_5_1_an_end_of_turn_return_belongs_to_the_turn_the_spell_was_played_on {
     #[test]
     fn r155_r70_a_return_spell_cast_on_the_opponents_turn_does_not_come_back_at_the_end_of_its_casters_next_turn_5_1_6_2()
      {
-        // At p2's start of turn p2's #9 Moths to the Flame (worn to 4 health) makes p1's Prem Panther
-        // (5/4) attack it: the Panther kills it and survives, so p1 draws 2 on p2's turn (R426). The top
-        // card is a cast-on-draw Spell carrying #23 Reoccurring Dream's "End of turn: returns from the GY
-        // to your hand" (the flag R155 writes is what the return reads), so p1 casts it on p2's turn
-        // (§2.4, R70).
+        // At p2's start of turn p2's #9 Moths to the Flame (worn to 4 health) makes p1's Prem Panther (5/4)
+        // attack it; the Panther kills it and survives, so p1 draws 2 on p2's turn (R426). The top card is a
+        // cast-on-draw Spell with #23 Reoccurring Dream's "End of turn: returns from the GY to your hand"
+        // (the flag R155 writes), so p1 casts it on p2's turn (§2.4, R70).
         let mut s = scenario(json!({
             "p1": { "field": [PREM_PANTHER], "hand": [RENO], "library": [RENO, RENO, RENO, RENO] },
             "p2": { "field": [{ "def": MOTHS, "damage": 10 }], "hand": [RENO], "library": [RENO, RENO, RENO, RENO] },
@@ -504,8 +483,8 @@ mod r766_r429_only_kys_math_equations_own_return_gives_back_a_price_its_climb {
 
     #[test]
     fn r429_r766_a_kys_math_equation_played_at_3_by_a_price_not_its_own_returns_at_2_31() {
-        // The one exception (issues #557, #572) is #31's climb, which its own returns give it: a price
-        // put on it any other way stays in the graveyard, so it comes back at its printed (1) plus (1).
+        // The one exception is #31's climb, which its own returns give it: a price put on it any other
+        // way stays in the graveyard, so it comes back at its printed (1) plus (1).
         assert_eq!(
             returned_at_a_price_of_2(KY_MATH, json!({ "targets": at_p2() })),
             (1, 2)

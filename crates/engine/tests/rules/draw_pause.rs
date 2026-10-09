@@ -1,36 +1,16 @@
-//! Port of `packages/engine/test/draw-pause.test.ts`.
-//!
 //! A prompt opened by a cast-on-draw card, inside §2.4's two draw loops (SPEC §2.4, §9.3, §10.6;
 //! R3, R4, R58, R70, R113, R117, R122).
 //!
 //! §2.4's "Cast on draw" fires a whole play from inside a draw, and a play can ask: #7 Jewelosco
-//! Scarab's Discover off the top of the library, or anything Call to Chaos reaches. `castCard` stops
-//! when its Cry pauses, but the two loops around it did not — `completeDraw` drew the next card and
-//! could cast that one too, and `draw`'s "draw N" walked on to draw N+1 — all while the prompt sat
-//! unanswered. Cards drawn past the pause are drawn into a game state the player has not finished
-//! deciding, and R58's cap could be evaded by a chain that restarted at zero after the answer.
-//!
-//! What is pinned here, by observable behaviour and not by reading the implementation:
-//!
-//!   * §9.3, R113 and R117 — a cast that asks stops the chain where it stands, and the rest of the
-//!     chain is *owed* to `state.work` at the moment of the pause: nothing further is drawn, the
-//!     library keeps the cards the chain has not reached, and the answer draws exactly those, once
-//!     each. The same for the whole draws a "draw N" has not made.
-//!   * §9.3 and §10.1 — the paused game survives `JSON.parse(JSON.stringify(state))` and resumes
-//!     identically from the round-tripped copy.
-//!   * R58 — the owed chain carries its counter, so a resumed chain continues from the count it had.
-//!     A chain resumed at zero would cast past the cap, which is what the cap test here would show.
-//!   * R4 and R3 — the hand cap still burns the overflow and the empty library still deals fatigue on
-//!     the far side of a pause, and the draw the chain paused on is counted once, not twice.
-//!   * R70 and R122 — the paused cast itself still lands: §10.5 steps 6 and 7 run on the answer, in
-//!     R113's order, *before* the draw that was owed behind them.
-//!
-//! The control cases are the other half: with nothing asking, the same chain and the same "draw N"
-//! run to the end inside the one call and `state.work` never holds anything, so a green run here is
-//! not green by vacuity.
-//!
-//! Fixtures are this file's own: defs are prefixed `dr-` and indexed from 2700, so they cannot
-//! collide with another test file's catalog (BUILD §0).
+//! Scarab's Discover, or anything Call to Chaos reaches. Neither draw loop may draw on past the prompt.
+//!   * §9.3, R113, R117: a cast that asks stops the chain; the rest is owed to `state.work` and the
+//!     answer draws exactly those cards, once each (likewise the whole draws a "draw N" has not made).
+//!   * §9.3, §10.1: the paused game survives a JSON round trip and resumes identically.
+//!   * R58: the owed chain carries its counter, so resuming cannot evade the cap.
+//!   * R4, R3: hand-cap burn and fatigue still apply past a pause; the paused draw counts once.
+//!   * R70, R122: the paused cast lands on the answer (§10.5 steps 6, 7), before the draw owed behind it.
+//! Controls: with nothing asking, the chain and "draw N" run in one call and `state.work` stays empty.
+//! Fixtures: defs prefixed `dr-`, indexed from 2700, so they cannot collide with another file (BUILD §0).
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -44,12 +24,9 @@ use jackioh_engine::work::owed_work;
 
 use crate::rules::fixtures::harness::{events_of_type, new_game, put, set_library, slot};
 
-// ---------------------------------------------------------------------------
 // Fixtures.
-// ---------------------------------------------------------------------------
 
-/// TS `def(name, type)`, its module `nextIndex` (from 2700) written out per definition. None of this
-/// file's cards is a Unit, so each face is `{ keywords: [], text }`.
+/// None of this file's cards is a Unit, so each face is `{ keywords: [], text }`.
 fn def(name: &str, type_: &str, index: i32) -> CardDef {
     json_as(json!({
         "id": format!("dr-{name}"),
@@ -90,10 +67,7 @@ fn defs() -> Vec<CardDef> {
     vec![log_card(), ask_on_draw(), quiet_on_draw(), plain()]
 }
 
-// ---------------------------------------------------------------------------
 // The note log: what ran, in the order it ran.
-// ---------------------------------------------------------------------------
-
 const NOTE_LANE: usize = 5;
 
 fn log_of(state: &GameState) -> Option<&CardInstance> {
@@ -208,10 +182,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts
 }
 
-// ---------------------------------------------------------------------------
 // Harness.
-// ---------------------------------------------------------------------------
-
 fn game(seed: &str) -> GameState {
     let state = new_game(seed, None);
     let mut catalog = registered_catalog().clone();
@@ -326,8 +297,7 @@ fn strings(ids: &[String]) -> Vec<String> {
     ids.to_vec()
 }
 
-/// TS `sinkFor(state, events)`: a sink's events and rng (from the state's cursor), lent with the state
-/// to one engine call.
+/// A sink's events and rng (from the state's cursor), lent with the state to one engine call.
 struct Bench {
     events: Vec<GameEvent>,
     rng: Rng,
@@ -353,8 +323,6 @@ fn hooks_of(state: &GameState) -> Vec<String> {
 fn burned_count(events: &[GameEvent]) -> usize {
     events_of_type(events, GameEventType::Burned).len()
 }
-
-// ---------------------------------------------------------------------------
 
 mod r58_r113_r117_r122_a_prompt_inside_s2_4s_cast_on_draw_chain {
     use super::*;
@@ -384,8 +352,7 @@ mod r58_r113_r117_r122_a_prompt_inside_s2_4s_cast_on_draw_chain {
             Some(PlayerId::P1)
         );
 
-        // THE BUG: the chain used to draw on from here. Exactly two cards have left the library, the
-        // two the chain has already cast, and neither of the cards behind them has been drawn.
+        // Exactly two cards have left the library, the two already cast; the cards behind are undrawn.
         assert_eq!(state.counters.drawn, 2);
         assert_eq!(
             drawn_by(&events, PlayerId::P1),
@@ -480,8 +447,7 @@ mod r58_r113_r117_r122_a_prompt_inside_s2_4s_cast_on_draw_chain {
 
         let done = answer(&round_trip(&state)).state;
         // One more cast fits under the cap; the next cast-on-draw card is at the cap, so it goes to the
-        // hand uncast and ends the chain (R58). A chain resumed at 0 would have cast it and the `plain`
-        // behind it would be the card in hand instead.
+        // hand uncast and ends the chain (R58).
         assert_eq!(
             notes(&done),
             ["ask", "answered", "ask:tail", "quiet"]
@@ -585,8 +551,7 @@ mod r58_r113_r117_r122_a_prompt_inside_s2_4s_cast_on_draw_chain {
         assert_eq!(library_of(&state), Vec::<String>::new());
         assert_eq!(events_of_type(&events, GameEventType::CardPlayed).len(), 2);
         assert_eq!(state.pending, None);
-        // Nothing was parked: the machinery only engages at a pause (R117), so this is not the pause
-        // path passing by accident.
+        // Nothing was parked: the machinery only engages at a pause (R117).
         assert_eq!(state.work, Vec::<WorkItem>::new());
     }
 }

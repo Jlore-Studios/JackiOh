@@ -9,8 +9,6 @@
 //!    card, #83 over an Immutable board card, #67 into an occupied lane, #95's Units into a full row.
 //!  - §10.7: the Zephyrs scorer's "lethal available" needs a Charge unit that can reach the field and
 //!    then the hero.
-//!
-//! Port of `packages/cards/test/pools-and-randomness.test.ts`.
 
 use jackioh_cards::{card_def, register_all};
 use jackioh_engine::testkit::{Scenario, scenario};
@@ -31,7 +29,7 @@ const CALL_TO_CHAOS: &str = "core-095";
 const ZEPHYRS: &str = "core-097";
 const CRAFT: &str = "core-099";
 
-/// The def ids of the `addedToHand` events among `events` (TS `eventsOf(events, "addedToHand")`).
+/// The def ids of the `addedToHand` events among `events`.
 fn added_to_hand(events: &[GameEvent]) -> Vec<String> {
     events
         .iter()
@@ -42,7 +40,7 @@ fn added_to_hand(events: &[GameEvent]) -> Vec<String> {
         .collect()
 }
 
-/// The `(defId, row)` of the `summoned` events among `events` (TS `eventsOf(events, "summoned")`).
+/// The `(defId, row)` of the `summoned` events among `events`.
 fn summoned(events: &[GameEvent]) -> Vec<(String, Row)> {
     events
         .iter()

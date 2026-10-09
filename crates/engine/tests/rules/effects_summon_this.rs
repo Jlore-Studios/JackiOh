@@ -5,8 +5,6 @@
 //! in R68's order: after the hand's triggers and before the graveyard's, in the order the instances
 //! were created and never by library position, which is hidden (§9.1); and a library card's queue
 //! entry, like a hand card's, takes no number from the counter both seats read (R177).
-//!
-//! Port of `packages/engine/test/effects-summonThis.test.ts`.
 
 use jackioh_engine::testkit::*;
 use serde::Serialize;
@@ -45,7 +43,7 @@ fn grave_card(state: &mut GameState, player: PlayerId, def_id: &str) -> CardInst
     card
 }
 
-/// TS `sinkFor(state)`: a sink whose rng starts at the state's cursor, as reduce does.
+/// A sink whose rng starts at the state's cursor, as reduce does.
 fn with_sink<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R) -> R {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -53,12 +51,10 @@ fn with_sink<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R)
     f(&mut sink)
 }
 
-/// TS `{ type: "play", playerId, instanceId }`, as `act` takes it.
 fn play_body(player: PlayerId, instance_id: &str) -> Value {
     json!({ "type": "play", "playerId": player, "instanceId": instance_id })
 }
 
-/// `state.applied.at(-1)?.events ?? []`.
 fn last_applied_events(state: &GameState) -> Vec<GameEvent> {
     state
         .applied
@@ -67,7 +63,7 @@ fn last_applied_events(state: &GameState) -> Vec<GameEvent> {
         .unwrap_or_default()
 }
 
-/// The top card of a unit zone, by its index in the row (TS `state.players.p1.units[i]?.[0]`).
+/// The top card of a unit zone, by its index in the row.
 fn unit_top(state: &GameState, player: PlayerId, index: usize) -> Option<CardInstance> {
     state.players[player]
         .units
@@ -77,7 +73,6 @@ fn unit_top(state: &GameState, player: PlayerId, index: usize) -> Option<CardIns
         .cloned()
 }
 
-/// TS `list.indexOf(x)`: the first position, or -1.
 fn index_of(list: &[String], id: &str) -> i64 {
     list.iter()
         .position(|entry| entry == id)
@@ -176,7 +171,6 @@ mod e26_deck_and_graveyard_triggers_in_r68_order_r464 {
             ]
         );
 
-        // The queue follows it.
         let event = resolved(&state, PlayerId::P1, &prompts_fx::grunt().id);
         with_sink(&mut state, |sink| {
             dispatch_event(sink, &event);
@@ -217,7 +211,6 @@ mod e26_deck_and_graveyard_triggers_in_r68_order_r464 {
             deck_entry.as_ref().map(|entry| entry.id.starts_with('h')),
             Some(true)
         );
-        // The public graveyard card's entry is numbered; the hidden one's took none.
         assert_eq!(
             grave_entry.as_ref().map(|entry| entry.instance_id.clone()),
             Some(grave.id.clone())
@@ -262,7 +255,6 @@ mod e26_summon_this_from_your_hand_or_deck {
         assert_eq!(state.players.p1.library.len(), 1);
         let events = last_applied_events(&state);
         assert_eq!(summoned_ids(&events), vec![drum.id.clone()]);
-        // A summon, not a play: no cardPlayed of its own.
         assert_eq!(played_ids(&events), vec![card.id.clone()]);
         // The deck card is public once it is on the field, and not before.
         let seen = view_for(&state, PlayerId::P2).events;
@@ -279,7 +271,6 @@ mod e26_summon_this_from_your_hand_or_deck {
         let eu = in_hand(&mut state, &prompts_fx::striker().id, PlayerId::P1, 1).remove(0);
         let body = in_hand(&mut state, &prompts_fx::grunt().id, PlayerId::P1, 1).remove(0);
         let zap = in_hand(&mut state, &prompts_fx::spark().id, PlayerId::P1, 1).remove(0);
-        // A Spell sets nothing off.
         state = act(&state, play_body(PlayerId::P1, &zap.id), None);
         assert!(ids_of(&state.players.p1.hand).contains(&eu.id));
         state = act(
@@ -383,8 +374,8 @@ mod e26_summon_this_from_your_hand_or_deck {
 mod e26_graveyard_triggers_classic_47 {
     use super::*;
 
-    /// TS `trapFires`: p1's Trap fires on p2's play while `recurring` waits in p1's graveyard; the
-    /// card comes back as it stands afterwards (in the hand when it returned, else as it was).
+    /// p1's Trap fires on p2's play while `recurring` waits in p1's graveyard; the card comes back
+    /// as it stands afterwards (in the hand when it returned, else as it was).
     fn trap_fires(seed: &str, radiant: bool) -> (GameState, CardInstance) {
         let mut state = board(seed);
         let mut card = grave_card(&mut state, PlayerId::P1, &prompts_fx::recurring().id);
@@ -450,7 +441,6 @@ mod e26_graveyard_triggers_classic_47 {
         );
         assert!(ids_of(&state.players.p1.graveyard).contains(&card.id));
 
-        // In a hand the graveyard trigger is not registered.
         let mut held = board("recur-hand");
         let in_hand_card = in_hand(&mut held, &prompts_fx::recurring().id, PlayerId::P1, 1).remove(0);
         assert!(

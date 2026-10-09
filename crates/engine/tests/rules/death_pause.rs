@@ -1,37 +1,15 @@
 //! A prompt opened by a Death hook of §4.5 step 3, and by the Cry of a cast (SPEC §4.5, §9.3,
 //! §10.5, §10.6; R59, R64, R78, R83, R89, R113, R117, R122, R127).
 //!
-//! §4.5 step 3 runs one Death hook per collected card, in R68's order, and §10.5's cast runs a Cry.
-//! Both are effect lists, so both can open a prompt, and the governing rule of this engine is that a
-//! sequence spanning a prompt must be resumable out of `state.work` alone: never an effect list, a
-//! closure, or a remaining-units array held across the pause (§9.3, R113). Both used to go through
-//! the non-resumable `resolve.runHook`, so the effects after the one that asked were applied over the
-//! open prompt, nothing was parked, and a second dying card's prompt was discarded in silence —
-//! `openPrompt` refuses to overwrite one that is already open.
-//!
-//! What is pinned here, by observable behaviour and not by reading the implementation:
-//!
-//!   * R113 and R117 — a Death hook that asks stops the pass where it stands and what is left is
-//!     *owed*: the rest of that hook's list, the cards after it in R68's order, and steps 4 and 5.
-//!     Each tail runs exactly once, in R68's order, and `state.work` is empty again at the end.
-//!   * §9.3 and §10.1 — the paused game survives `JSON.parse(JSON.stringify(state))` and resumes
-//!     identically from the round-tripped copy, which is what makes a prompt the same thing in live
-//!     play, in a replay and in a test.
-//!   * R78 and R89 — the resumed half of a Death hook still reads the snapshot taken just before the
-//!     card left the field, which the board cannot supply any more: the instance in the graveyard has
-//!     been reset. The buff each fixture unit carries is the visible difference.
-//!   * R64 and R83 — a Reborn unit collected in a pass that paused still comes back, at 1 health,
-//!     without Reborn and summoning sick, once the answer finishes the pass.
-//!   * R70 and R122 — a cast whose Cry asks does not land until the answer: §10.5's step 6 and step 7
-//!     are owed rather than run over the open prompt, and `cardResolved` is emitted exactly once.
-//!
-//! The control cases are the other half: with nothing asking, the same hooks run in the same order in
-//! one call and `state.work` never holds anything, so a green run here is not green by vacuity.
-//!
-//! Fixtures are this file's own: defs are prefixed `dp-` and indexed from 2600, so they cannot
-//! collide with another test file's catalog (BUILD §0).
-//!
-//! Port of `packages/engine/test/death-pause.test.ts`.
+//! Both run effect lists, so both can open a prompt, and a sequence spanning a prompt must resume
+//! out of `state.work` alone: no effect list, closure or units array held across it (§9.3, R113).
+//!   * R113, R117: a Death hook that asks stops the pass; what is left runs once, in R68's order.
+//!   * §9.3, §10.1: the paused game survives a JSON round trip and resumes identically.
+//!   * R78, R89: the resumed half of a Death hook reads the snapshot taken before the card left.
+//!   * R64, R83: a Reborn unit in a pass that paused comes back at 1 health, summoning sick.
+//!   * R70, R122: a cast whose Cry asks lands only on the answer; `cardResolved` fires once.
+//! Controls: with nothing asking, the hooks run in one call and `state.work` stays empty.
+//! Fixtures: defs prefixed `dp-`, indexed from 2600, so they cannot collide with another file (BUILD §0).
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -47,11 +25,8 @@ use jackioh_engine::zones::card_at;
 
 use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
 
-// ---------------------------------------------------------------------------
 // Fixtures.
-// ---------------------------------------------------------------------------
 
-/// TS's `def`, its running `nextIndex` (from 2600) passed as `index`.
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     let face = if type_ == "Unit" {
         json!({ "attack": 1, "health": 1, "keywords": [], "text": name })
@@ -127,10 +102,7 @@ fn defs() -> Vec<CardDef> {
     ]
 }
 
-// ---------------------------------------------------------------------------
 // The note log: what ran, in the order it ran.
-// ---------------------------------------------------------------------------
-
 const NOTE_LANE: usize = 5;
 
 fn log_of(state: &GameState) -> Option<&CardInstance> {
@@ -174,10 +146,8 @@ fn note(entry: &str) -> Effect {
     Effect::new("dp:note", move |ctx| write(&mut *ctx.state, &entry))
 }
 
-/// R78 and R89: a note carrying what `ctx.self` says the card's attack buff is. On the field and in
-/// the snapshot a Death hook reads it is 3; the instance the board holds after the move has been
-/// reset to 0, so this is the one visible difference between reading the snapshot and re-deriving
-/// `ctx.self` from the board — which is exactly what a resumed continuation cannot do.
+/// R78 and R89: a note carrying `ctx.self`'s attack buff: 3 in the snapshot a Death hook reads, 0 on
+/// the reset instance the board holds after the move, so it tells the two apart.
 fn note_buff(label: &str) -> Effect {
     let label = label.to_string();
     Effect::new("dp:noteBuff", move |ctx| {
@@ -277,10 +247,7 @@ fn scripts() -> Vec<(String, CardScripts)> {
     ]
 }
 
-// ---------------------------------------------------------------------------
 // Harness.
-// ---------------------------------------------------------------------------
-
 fn game(seed: &str) -> GameState {
     let state = new_game(seed, None);
     let mut catalog = registered_catalog().clone();
@@ -294,7 +261,6 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// TS's module-level `let nonce = 0`: every action this file sends gets a fresh nonce.
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
 fn json_of<T: serde::Serialize>(value: T) -> Value {
@@ -343,8 +309,7 @@ fn playing(seed: &str) -> GameState {
     state
 }
 
-/// TS `only`: the first item, which the test expects to be there. Takes the owed work as `owed_work`
-/// hands it back, owned or borrowed.
+/// The first item, which the test expects to be there; takes `owed_work`'s result owned or borrowed.
 fn only_work<T: std::borrow::Borrow<WorkItem>>(items: Vec<T>) -> WorkItem {
     items
         .into_iter()
@@ -375,7 +340,7 @@ fn round_trip(state: &GameState) -> GameState {
     serde_json::from_value(json_of(state)).expect("a state survives JSON")
 }
 
-/// `expect(JSON.parse(JSON.stringify(value))).toEqual(value)`: plain data, nothing JSON would drop.
+/// Plain data: nothing JSON would drop.
 fn survives_json<T: serde::Serialize + serde::de::DeserializeOwned + PartialEq + std::fmt::Debug>(value: &T) {
     let back: T = serde_json::from_value(json_of(value)).expect("plain data survives JSON");
     assert_eq!(&back, value);
@@ -398,8 +363,7 @@ fn in_graveyard(state: &GameState, card: &CardInstance) -> bool {
         .any(|held| held.id == card.id)
 }
 
-/// TS `sinkFor(state, events)`: a sink whose rng starts at the state's cursor, as reduce does; the
-/// events it gathered come back.
+/// A sink whose rng starts at the state's cursor, as reduce does; the events it gathered come back.
 fn with_sink(state: &mut GameState, run: impl FnOnce(&mut EngineSink<'_>)) -> Vec<GameEvent> {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -414,12 +378,10 @@ fn instance_ids(events: &[GameEvent], ty: GameEventType) -> Vec<String> {
         .collect()
 }
 
-/// The ids a parked pass still owes (`owedDeathsOf(resume)?.owed.map((card) => card.id)`).
+/// The ids a parked pass still owes.
 fn owed_ids(resume: &Resume) -> Option<Vec<String>> {
     owed_deaths_of(resume).map(|pass| ids(&pass.owed))
 }
-
-// ---------------------------------------------------------------------------
 
 mod a_prompt_inside_4_5_step_3s_death_hooks_r89_r113_r117_r122 {
     use super::*;
@@ -444,8 +406,8 @@ mod a_prompt_inside_4_5_step_3s_death_hooks_r89_r113_r117_r122 {
         // Step 5 has not run either: nothing is reported as having entered a graveyard yet.
         assert!(events_of_type(&events, GameEventType::EnteredGraveyard).is_empty());
 
-        // R113 and R117: the pass parked what it still owes — the asking card (mid-list) and the two
-        // cards after it, in R68's order. This is the whole fix; without it they are lost.
+        // R113 and R117: the pass parked what it still owes: the asking card and the two after it, in
+        // R68's order.
         let parked = only_work(owed_work(&state, Some(DEATHS_WORK)));
         assert_eq!(
             owed_ids(&parked.resume),
@@ -524,8 +486,7 @@ mod a_prompt_inside_4_5_step_3s_death_hooks_r89_r113_r117_r122 {
                 .map(|card| card.buffs),
             Some(AttackHealth { attack: 0, health: 0 })
         );
-        // And the parked pass carries the snapshot instead, which is where the tail's `ctx.self` comes
-        // from: `findInstance` would hand back the reset card above (R89, R127).
+        // The parked pass carries the snapshot instead, where the tail's `ctx.self` comes from (R89, R127).
         let parked = only_work(owed_work(&state, Some(DEATHS_WORK)));
         let owed = owed_deaths_of(&parked.resume)
             .map(|pass| pass.owed)
@@ -597,8 +558,7 @@ mod a_prompt_inside_4_5_step_3s_death_hooks_r89_r113_r117_r122 {
             ]
         );
         assert!(state.pending.is_none());
-        // Nothing was parked: the machinery only engages at a pause (R117), so this is not the pause
-        // path passing by accident.
+        // Nothing was parked: the machinery only engages at a pause (R117).
         assert!(state.work.is_empty());
         assert_eq!(
             instance_ids(&events, GameEventType::EnteredGraveyard),
@@ -620,9 +580,8 @@ mod a_prompt_inside_a_casts_cry_10_5_r70_r113_r122 {
         // The Cry stopped at its question, and the effects after it have not run.
         assert_eq!(notes(&state), vec!["cast:ask"]);
         assert_eq!(state.pending.as_ref().map(|pending| pending.player_id), Some(P1));
-        // R70: it counted as a play immediately, but §10.5 step 7 has not happened — the card is still
-        // resolving and nothing has announced it resolved. Running the tail over the open prompt is the
-        // bug this pins: it used to land the Spell in the graveyard while the caster was still asked.
+        // R70: it counted as a play at once, but §10.5 step 7 has not happened: the card is still
+        // resolving and nothing has announced it resolved.
         assert_eq!(
             instance_ids(&events, GameEventType::CardPlayed),
             vec![card.id.clone()]
@@ -630,8 +589,8 @@ mod a_prompt_inside_a_casts_cry_10_5_r70_r113_r122 {
         assert!(events_of_type(&events, GameEventType::CardResolved).is_empty());
         assert!(!in_graveyard(&state, &card));
 
-        // R113: the tail is owed, as plain data, and survives a round trip (§9.3, §10.1). A cast is
-        // §10.5's pipeline (R70), so what it owes is the rest of that pipeline, marked as a cast.
+        // R113: the tail is owed as plain data and survives a round trip (§9.3, §10.1): the rest of
+        // §10.5's pipeline (R70), marked as a cast.
         let parked = only_work(owed_work(&state, Some(PLAY_WORK_KIND)));
         let run = json_of(run_of(&parked.resume));
         assert_eq!(run["instanceId"], json!(card.id));
@@ -716,8 +675,8 @@ mod a_state_check_that_begins_while_a_prompt_is_already_open_4_5_r113_r117_r156 
             vec![dying.id.clone()]
         );
 
-        // Step 3 fired nothing. Without R156 the hook runs into the open prompt and whatever it asks is
-        // discarded in silence, because `openPrompt` will not overwrite a question already standing.
+        // Step 3 fired nothing: without R156 the hook would run into the open prompt, and what it asks
+        // would be discarded because `openPrompt` will not overwrite a standing question.
         assert!(notes(&state).is_empty());
 
         // The whole of step 3 is owed instead, in R68's order, as plain data (§9.3).
