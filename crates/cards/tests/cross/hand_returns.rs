@@ -1,5 +1,6 @@
 //! A card's return to its hand: the price it returns with, and §5.1's end-of-turn return (SPEC §2.4,
-//! §4.1, §5.1, §10.5 step 7, R4, R78, R153, R155). Polish-4 edge-case hunt: docs/polish/4-edge-cases.md.
+//! §5.1, §10.5 step 7, R4, R78, R153, R155). Polish-4 edge-case hunt: docs/polish/4-edge-cases.md.
+//! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
 //!
 //!  - R4: a price a card is given as it returns to a hand (#31's "+1", #37r's "costs 1 less") is its
 //!    price in that hand. A full hand burns the card instead (§2.4), and the burned card keeps its cost.

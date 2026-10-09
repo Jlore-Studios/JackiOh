@@ -1,11 +1,9 @@
 //! Test-only cards for the turn systems (docs/classic-sets.md B5): ending a turn from an effect (E10),
 //! draw limits and counts (E3, E4), cast on draw (E39), the delayed kinds (E27), the rest-of-game
-//! effect (E28), and the start-of-turn and cleanup stages the turn loop runs for Brittle and Animated
-//! (B3.3, B3.1). Each reproduces one shape through the engine's own verbs; the engine never imports
-//! `crates/cards`.
+//! effect (E28), and the start-of-turn and cleanup stages for Brittle and Animated (B3.3, B3.1). Each
+//! reproduces one shape through the engine's own verbs; the engine never imports `crates/cards`.
 //!
 //! Ids are prefixed `tn-` and indexed from 4300, so they cannot collide with another fixture file's.
-
 use std::sync::LazyLock;
 
 use jackioh_engine::effects;
@@ -291,8 +289,8 @@ fn second_draw(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
     )
 }
 
-/// JS `String(value)` for a data bag entry: a string as itself, `undefined` for a missing key.
-fn js_string(value: Option<&Value>) -> String {
+/// A data bag entry as text: a string as itself, `undefined` for a missing key.
+/// A data bag entry as text: a string as itself, `undefined` for a missing key.
     match value {
         None => "undefined".to_string(),
         Some(Value::String(text)) => text.clone(),

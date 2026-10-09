@@ -1,20 +1,16 @@
-//! The Glitch Easter egg on the server (issue #170, SPEC §7, R676–R679): what the server does with
-//! the swap, boards and void outcomes the engine announces. The scripted cards of
-//! `support::engine` (`test/fakes/engine.ts`'s) reach each on demand — `test-glitch-swap` and
-//! `test-glitch-void` — under the real registry, actor and results writer, over the fake store.
-//! The reset outcome (R676) needs nothing of the server: the engine rebuilds its own state, and
-//! `(seed, log)` still folds to it.
+//! The Glitch Easter egg on the server (SPEC §7, R676–R679): what the server does with the swap,
+//! boards and void outcomes the engine announces. The scripted cards of `support::engine`
+//! (`test-glitch-swap`, `test-glitch-void`) reach each on demand, under the real registry, actor and
+//! results writer, over the fake store. The reset outcome (R676) needs nothing of the server: the
+//! engine rebuilds its own state, and `(seed, log)` still folds to it.
 //!
 //! The trust model these prove: only the engine's state moves an account to the other seat or voids
 //! a match. A client frame reaches either only as a legal `play` of the card.
 //!
-//! Port of `apps/server/test/match/glitch.test.ts`. What the Rust server changed underneath it
-//! (SURFACE §11.3): the engine is the real one with the test cards installed (no scripted port to
-//! wrap, so "the rebuild folds with the same boards" is read off the rebuilt state), it opens on
-//! both mulligans (answered keeping everything before the sockets attach, which is where TS's
-//! scripted game began), it shuffles (the seed is searched so the scripted cards are dealt into
-//! p1's opening hand, where `fakeDeck` put them), and its instance ids are its own (a card is
-//! named by its definition, as the TS comments name it, not by `p1-h0`).
+//! The engine is the real one with the test cards installed (docs/v0.3.0/SURFACE.md §11.3): it opens
+//! on both mulligans (answered keeping everything before the sockets attach), it shuffles (the seed
+//! is searched so the scripted cards are dealt into p1's opening hand), and a card is named by its
+//! definition, not by instance id.
 
 use std::any::Any;
 use std::sync::Arc;
@@ -45,7 +41,7 @@ const SEED_SEARCH: usize = 5_000;
 /// When the boards below were stored; nothing reads it back.
 const BOARD_AT: i64 = 1_700_000_000_000;
 
-/// One store call in its own transaction, as TS's `deps.store.<sub>.<method>(…)` was.
+/// One store call in its own transaction.
 macro_rules! store {
     ($app:expr, $t:ident => $call:expr) => {{
         let mut $t = $app
@@ -75,7 +71,7 @@ fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
     }
 }
 
-/// One table of the fake store, as TS's `deps.store.tables.<name>` read it: rows as JSON.
+/// One table of the fake store: rows as JSON.
 async fn table(app: &App, pick: impl Fn(&FakeData) -> Value) -> Vec<Value> {
     let data = fake(app);
     let data = data.lock().await;
@@ -85,9 +81,7 @@ async fn table(app: &App, pick: impl Fn(&FakeData) -> Value) -> Vec<Value> {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
-// The log recorder (TS `createRecordingLogger`)
-// ---------------------------------------------------------------------------------------------
+// The log recorder
 
 /// Every `tracing` line the server writes on this thread while the guard lives, as JSON. On the
 /// current-thread runtime `#[tokio::test]` builds, the actor's tasks run on this thread too.
@@ -136,7 +130,7 @@ impl Logs {
             .collect()
     }
 
-    /// The lines that name `event` (SURFACE §11.3 keeps TS's event names), whichever field the
+    /// The lines that name `event` (SURFACE §11.3 keeps the event names), whichever field the
     /// server wrote the name in.
     fn of(&self, event: &str) -> Vec<Value> {
         self.entries()
@@ -155,9 +149,7 @@ fn event_of(entry: &Value) -> Option<&str> {
     })
 }
 
-// ---------------------------------------------------------------------------------------------
 // The world
-// ---------------------------------------------------------------------------------------------
 
 /// A live, ranked match on the real registry: account `P1` began in p1 with `p1_deck`'s scripted
 /// cards dealt into its hand, `P2` in p2. `a` is P1's socket and `b` is P2's, attached the way
@@ -174,10 +166,10 @@ struct World {
 
 #[derive(Default)]
 struct WorldOptions {
-    /// The scripted cards `fakeDeck` puts in p1's opening hand; TS's default deck when `None`.
+    /// The scripted cards `fakeDeck` puts in p1's opening hand; the default deck when `None`.
     p1_deck: Option<Vec<&'static str>>,
     p2_deck: Option<Vec<&'static str>>,
-    /// TS's `before`: last boards stored ahead of the start, `(profile, kind, board)`.
+    /// Last boards stored ahead of the start, `(profile, kind, board)`.
     boards: Vec<(&'static str, &'static str, Vec<Value>)>,
 }
 
@@ -189,7 +181,7 @@ fn hand_holds(view: &Value, def_id: &str) -> bool {
 }
 
 /// The first seed `<prefix>-<k>` whose opening deal puts each `(seat, card)` in that seat's hand:
-/// TS's scripted engine drew `fakeDeck`'s first cards, the real one shuffles them (§2.1).
+/// the real engine shuffles (§2.1).
 fn seed_dealing(prefix: &str, decks: &(Vec<String>, Vec<String>), wanted: &[(PlayerId, &str)]) -> String {
     let (first, second) = decks;
     for k in 0..SEED_SEARCH {
@@ -207,7 +199,7 @@ fn seed_dealing(prefix: &str, decks: &(Vec<String>, Vec<String>), wanted: &[(Pla
 }
 
 /// Both mulligans answered keeping the whole hand, in seat order: the real engine opens on them
-/// (R265), TS's scripted one opened on turn 1. Answers how many rows they wrote.
+/// (R265). Answers how many rows they wrote.
 async fn open_turn_one(actor: &MatchActor) -> usize {
     let owed = actor.snapshot().mulligan_owed;
     for seat in &owed {
@@ -238,7 +230,7 @@ fn hand_ids(view: &Value) -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// The instance of `def_id` in the seat's own hand (TS's `p1-h<slot>`).
+/// The instance of `def_id` in the seat's own hand.
 fn hand_card(view: &Value, def_id: &str) -> String {
     view["you"]["hand"]
         .as_array()
@@ -504,7 +496,7 @@ mod glitchs_swap {
         frame(&w, &w.a, "n1", json!({ "type": "play", "instanceId": glitch })).await;
         w.app.matches.stop(MATCH_ID).await;
         let fresh = create_fake_socket();
-        // TS: the attach resolves with the seat P1 began in, "p1" (SURFACE §11.2 answers `()`).
+        // The attach resolves with the seat P1 began in, "p1" (SURFACE §11.2 answers `()`).
         w.app
             .matches
             .attach(&w.app, MATCH_ID, P1, fresh.socket())
@@ -561,8 +553,8 @@ mod glitchs_boards {
         }
         assert_ne!(frozen[0], frozen[1]);
 
-        // A rebuild folds with the same boards (§9.3): TS spied on the port's `fold`; the rebuilt
-        // state holds exactly the boards it was folded with, and folds to the same game.
+        // A rebuild folds with the same boards (§9.3): the rebuilt state holds exactly the boards it was
+        // folded with, and folds to the same game.
         let actor = w
             .app
             .matches
@@ -629,8 +621,7 @@ mod glitchs_void {
 
     #[tokio::test]
     async fn r679_writes_no_result_no_rating_no_game_record_and_no_last_board_and_the_match_is_gone() {
-        // TS also swapped in a `GameRecorder` whose summary is null; the Rust results writer
-        // summarises directly (SURFACE §11.3), and a void reaches no summary at all.
+        // The Rust results writer summarises directly (SURFACE §11.3), and a void reaches no summary.
         let w = world(void_decks()).await;
         play_the_void(&w).await;
 
@@ -730,8 +721,7 @@ mod glitchs_void {
                 true,
             ));
         }
-        // TS's trios held one-card decks that the scripted directory never built a game from; the
-        // real registry starts the game, so each deck is a legal one of real cards.
+        // The real registry starts the game, so each deck is a legal one of real cards.
         let pool = playable();
         let size = usize::try_from(jackioh_engine::config::DECK_SIZE).expect("a deck size");
         let trio = |owner: &str, offset: usize| -> Value {

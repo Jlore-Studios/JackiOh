@@ -15,18 +15,12 @@
 //!  - **R1372**: an All Random rematch leans the deck of each seat whose latest offer asked, and the
 //!    status names the mode the rematch plays.
 //!
-//! Port of `apps/server/test/api/rematch.test.ts`. Everything runs on tokio's paused clock through
-//! `test_app()`, with the real registry: the created rematch is asserted off the store and off
-//! `Registry::has`, where TS read the fake directory's `started` list. Where TS replaced a function
-//! to reach a situation (the directory's `presenceOf`, the store's `setInMatch`), the situation is
-//! reached for real (sockets attached to a live actor; the order of the store's calls). TS's
-//! "keeps a seat taken during the start in its game" needs a seat to change hands between the
-//! pre-check and the flagging, which only a replaced `matches.start` could arrange: it is not
-//! ported (notes, GAPS).
+//! Everything runs on tokio's paused clock through `test_app()`, with the real registry: the
+//! created rematch is asserted off the store and off `Registry::has`. Presence and call order are
+//! reached for real (sockets on a live actor; the order of the store's calls).
 //!
-//! The offers are module state shared by every test of this binary (`rematch.rs`'s map, as TS's
-//! module map), so each test names its own profiles and matches instead of clearing the map
-//! (TS's `clearRematchOffers()` in `beforeEach` would wipe a test running beside it).
+//! The offers are module state shared by every test of this binary, so each test names its own
+//! profiles and matches instead of clearing the map, which would wipe a test running beside it.
 
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
@@ -49,11 +43,9 @@ use jackioh_server::db::store::{Db, MatchSeat, StartMatchInput};
 
 use crate::support::deps::{add_user, call, test_app};
 
-// ---------------------------------------------------------------------------------------------
 // Plumbing (private copies: each test file of this binary keeps its own)
-// ---------------------------------------------------------------------------------------------
 
-/// A port value built from TS's own object literal, so the test depends on the JSON shape only.
+/// Builds a value from a JSON literal, so the test depends on the JSON shape only.
 fn from<T: DeserializeOwned>(value: Value) -> T {
     match serde_json::from_value(value.clone()) {
         Ok(parsed) => parsed,
@@ -65,7 +57,7 @@ fn to_json<T: Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("serialises")
 }
 
-/// One store call in its own transaction, as every TS `deps.store.<x>.<y>(…)` call was.
+/// One store call in its own transaction.
 macro_rules! q {
     ($app:expr, $method:ident($($arg:expr),* $(,)?)) => {{
         let mut tx = $app.db.begin(None).await.expect("begin");
@@ -82,7 +74,7 @@ async fn fake(app: &App) -> MutexGuard<'_, FakeData> {
     }
 }
 
-/// `{ status, body }` of one request (TS's `router(jsonRequest(…))` and `readJson`).
+/// `{ status, body }` of one request.
 async fn request(app: &Arc<App>, method: &str, path: &str, token: &str, body: Option<Value>) -> (u16, Value) {
     let (status, _headers, body) = call(app, method, path, Some(token), body.unwrap_or(Value::Null)).await;
     (status, body)
@@ -266,9 +258,7 @@ async fn start_live(app: &Arc<App>, match_id: &str, a: &str, b: &str) {
         .expect("the match starts");
 }
 
-// ---------------------------------------------------------------------------------------------
 // R672 — the rating move
-// ---------------------------------------------------------------------------------------------
 
 mod r672_double_or_nothing {
     use super::*;
@@ -409,15 +399,12 @@ mod r672_double_or_nothing {
         let (code, body) = offer(&app, &token_a, &finished, STAKE_DOUBLE).await;
         assert_eq!(code, 422);
         assert_eq!(body["error"]["code"], "double_requires_ranked");
-        // And nothing was offered on the way to the refusal.
         let (_, seen) = status(&app, &token_a, &finished).await;
         assert_eq!(seen["youOffered"], Value::Null);
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Offers and creation
-// ---------------------------------------------------------------------------------------------
 
 mod rematch_offers {
     use super::*;
@@ -474,13 +461,11 @@ mod rematch_offers {
             rematch["stake"]
         );
         assert_ne!(rematch["seed"], finished["seed"]);
-        // Both seats are in the new game.
         assert_eq!(in_match_of(&app, &a).await, json!(rematch_id));
         assert_eq!(in_match_of(&app, &b).await, json!(rematch_id));
         // The registry started it, so a reconnecting socket finds a live actor's match row.
         assert!(app.matches.has(&rematch_id));
 
-        // Offering again changes nothing: the same id comes back, no second game.
         let (_, again) = offer(&app, &token_a, &finished_id, STAKE_NORMAL).await;
         assert_eq!(again["matchId"], json!(rematch_id));
         assert_eq!(live_ids(&app).await, vec![json!(rematch_id)]);
@@ -751,9 +736,7 @@ mod rematch_creation_guards {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Refusals
-// ---------------------------------------------------------------------------------------------
 
 mod rematch_refusals {
     use super::*;
@@ -864,9 +847,7 @@ mod rematch_refusals {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Presence
-// ---------------------------------------------------------------------------------------------
 
 mod rematch_presence {
     use super::*;

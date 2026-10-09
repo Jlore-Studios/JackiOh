@@ -60,9 +60,7 @@ use jackioh_server::db::store::{Db, StoreError};
 
 use crate::support::deps::{add_user, call, test_app};
 
-// ---------------------------------------------------------------------------------------------
 // Plumbing (private copies: each test file of this binary keeps its own)
-// ---------------------------------------------------------------------------------------------
 
 /// A port value built from TS's own object literal, so the test depends on the JSON shape only.
 fn from<T: DeserializeOwned>(value: Value) -> T {
@@ -117,9 +115,7 @@ async fn cancel(app: &Arc<App>, token: &str) -> (u16, Value) {
     request(app, "DELETE", "/api/queue", token, None).await
 }
 
-// ---------------------------------------------------------------------------------------------
 // Fixtures
-// ---------------------------------------------------------------------------------------------
 
 /// The engine's deck size (BUILD §2: stated once, in `config.rs`).
 fn deck_size() -> usize {
@@ -428,9 +424,7 @@ fn record_calls(
     calls
 }
 
-// ---------------------------------------------------------------------------------------------
 // R165
-// ---------------------------------------------------------------------------------------------
 
 mod r165_queueing_with_no_saved_deck_at_all {
     use super::*;
@@ -478,9 +472,7 @@ mod r165_queueing_with_no_saved_deck_at_all {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R166
-// ---------------------------------------------------------------------------------------------
 
 mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
     use super::*;
@@ -645,9 +637,7 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R167
-// ---------------------------------------------------------------------------------------------
 
 mod r167_r108_r143_how_a_player_leaves_the_queue {
     use super::*;
@@ -763,9 +753,7 @@ mod r167_r108_r143_how_a_player_leaves_the_queue {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // §9.4's gate on the queue (BUILD M6-T1)
-// ---------------------------------------------------------------------------------------------
 
 /// BUILD M6-T1's last acceptance item: "a pending account cannot call collection, loadout or queue
 /// endpoints (403)". Collection and decks are checked against their own routes in `collection.rs`
@@ -828,9 +816,7 @@ mod section_94s_gate_on_the_queue {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // §9.4 / §9.5 / §9.8 — the deck is frozen into the ticket
-// ---------------------------------------------------------------------------------------------
 
 /// §9.8's abuse vector, by its own name: "Deck swapped after matchmaking → decks are frozen into the
 /// ticket". §9.4 states the rule ("Decks are frozen into the queue ticket") and `src/api/queue.rs`
@@ -923,9 +909,7 @@ mod section_98_decks_are_frozen_into_the_queue_ticket {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R257 — queue modes
-// ---------------------------------------------------------------------------------------------
 
 mod r257_queue_modes {
     use super::*;
@@ -1161,9 +1145,7 @@ mod r257_queue_modes {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R258 — All Random
-// ---------------------------------------------------------------------------------------------
 
 mod r258_all_random {
     use super::*;
@@ -1247,9 +1229,7 @@ mod r258_all_random {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1372 — All Random's "More cards from the newest set", per seat
-// ---------------------------------------------------------------------------------------------
 
 mod r1372_more_cards_from_the_newest_set {
     use super::*;
@@ -1330,9 +1310,7 @@ mod r1372_more_cards_from_the_newest_set {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // A start that fails
-// ---------------------------------------------------------------------------------------------
 
 mod a_paired_match_whose_start_fails {
     use super::*;
@@ -1424,9 +1402,7 @@ mod a_paired_match_whose_start_fails {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R642 — the portrait on the ticket and the seat
-// ---------------------------------------------------------------------------------------------
 
 /// R642, the queue half: a Best-of-1 ticket freezes its deck's portrait with the deck (§9.4, §9.8),
 /// an All Random match deals each seat's portrait from the match seed the way it deals the deck
@@ -1540,9 +1516,7 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R264 — a profile in a series
-// ---------------------------------------------------------------------------------------------
 
 mod r264_a_series_that_is_not_over_holds_its_players_out_of_the_queue {
     use super::*;
@@ -1614,9 +1588,7 @@ mod r264_a_series_that_is_not_over_holds_its_players_out_of_the_queue {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R253 — the real validator at enqueue
-// ---------------------------------------------------------------------------------------------
 
 /// The production wiring: the real §8 catalog, the real validator, R111's launch grant, and
 /// `POST /api/queue`. It does not re-test L1–L6 — `crates/engine/src/validator.rs` does — only that

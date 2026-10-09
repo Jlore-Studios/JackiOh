@@ -1,6 +1,5 @@
-// Silly Silas's rotation (SPEC §3.1's rotation-topology ruling, R14, §8 #52; BUILD M3-T7).
-// The fixture cards these tests need are defined here and registered on top of the shared fixture
-// catalog, so no shared fixture has to grow for them (CLAUDE.md, BUILD §0).
+// Silly Silas's rotation (SPEC §3.1's rotation-topology ruling, R14, §8 #52; BUILD M3-T7). Its fixture cards are
+// defined here, not in the shared catalog (CLAUDE.md, BUILD §0).
 
 use jackioh_engine::subsystems::rotation::{RotationResult, rotate_rings};
 use jackioh_engine::testkit::*;
@@ -25,7 +24,6 @@ fn unit_def_of(name: &str, index: u32, attack: i32, health: i32, keywords: Value
     }))
 }
 
-/// A plain body, the control case for every rotation test.
 fn plain() -> CardDef {
     unit_def_of("plain", 701, 2, 2, json!([]))
 }
@@ -156,7 +154,6 @@ mod r14_rotation_m3_t7 {
         assert!(card_at(&state, slot(PlayerId::P1, Row::Units, 1)).is_none());
         assert_eq!(result.moved, ids(&[&lane1, &lane5]));
 
-        // Control changes only for the card that crossed the centre line (§3.1).
         assert_eq!(live(&state, &lane1).controller, PlayerId::P1);
         assert_eq!(live(&state, &lane5).controller, PlayerId::P2);
         assert_eq!(result.crossed, ids(&[&lane5]));
@@ -203,7 +200,6 @@ mod r14_rotation_m3_t7 {
             vec![json!({ "type": "rotated", "direction": "left" })]
         );
 
-        // And one step back the other way puts the card that stayed home where it started.
         rotate(&mut state, "right", json!({}));
         assert_eq!(where_is(&state, &lane3), "p1 units 3");
     }
@@ -312,8 +308,7 @@ mod r14_rotation_m3_t7 {
         assert_eq!(view.max_health, 6);
         assert_eq!(view.health, 5);
         assert_eq!(view.position, Position::Def);
-        // R171: what does not travel across the centre line is readiness. The crossing is an entry on
-        // this turn, with a fresh exertion for the new controller.
+        // R171: only readiness does not travel across the centre line: the crossing is an entry this turn.
         assert_eq!(it.summoned_turn, Some(3));
         assert_eq!(
             serde_json::to_value(it.exertion).unwrap(),
@@ -389,8 +384,7 @@ mod r14_rotation_m3_t7 {
 
         let (events, result) = rotate(&mut state, "right", json!({ "radiant": true }));
 
-        // §8 #52 radiant: "cards that would move to the opponent are bounced to their owner's hand
-        // costing 0 instead". p1's lane-5 card would move to p2, so it goes home at 0 (R12).
+        // §8 #52 radiant: a card that would move to the opponent is bounced home at 0 (R12).
         assert_eq!(where_is(&state, &mine), "hand");
         assert!(state.players.p1.hand.iter().any(|c| c.id == mine.id));
         assert_eq!(live(&state, &mine).cost_override, Some(0));
@@ -400,8 +394,7 @@ mod r14_rotation_m3_t7 {
             vec![json!(mine.id)]
         );
 
-        // p2's lane-1 card moves to p1, not to the opponent: the base clause holds, so it crosses and
-        // changes control, entering p1's side this turn (R171) and keeping its owner (R12).
+        // p2's lane-1 card does not move to the opponent, so it crosses and changes control (R171, R12).
         assert_eq!(where_is(&state, &theirs), "p1 units 1");
         let crossed = live(&state, &theirs);
         assert_eq!(crossed.controller, PlayerId::P1);
@@ -469,7 +462,6 @@ mod r14_rotation_m3_t7 {
 
         let (_, result) = rotate(&mut state, "right", json!({}));
 
-        // The ring is p1 lanes 1-5 then p2 lanes 5-1, so every card is one step along it (§3.1).
         let expected = [
             ("p1 units 1", "p1 units 2"),
             ("p1 units 2", "p1 units 3"),

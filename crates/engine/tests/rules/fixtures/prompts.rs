@@ -699,8 +699,7 @@ fn tribute_crier_script() -> Script {
 }
 
 /// Classic #54 Rewind's shape. Base: a Unit of yours on the field, declared with the play. The graveyard
-/// form picks the Unit out of the graveyard at resolution, as a card with `TargetFilter.of: "graveyard"`
-/// will declare it once the play pipeline offers graveyard targets. Radiant: twice, each run its own.
+/// form picks the Unit at resolution instead. Radiant: twice, each run its own.
 pub fn rewind() -> CardDef {
     def(3120, "rewind", "Spell", json!({ "cost": 0 }))
 }

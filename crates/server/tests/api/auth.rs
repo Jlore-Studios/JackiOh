@@ -1,28 +1,23 @@
 //! SPEC §11 R159, R160, R194 and R665 — the rulings `src/auth.rs` and `src/api/auth.rs` make about
-//! §9.4's front door (← `apps/server/test/api/auth.test.ts`).
+//! §9.4's front door.
 //!
 //!  - **R159**: §9.4 step 1's "verified email" is read from the auth provider, and only the
 //!    *positive* answer may be remembered, briefly and per user id. A provider that cannot be
 //!    reached fails closed.
 //!  - **R160**: sign-up and sign-in answer identically for every outcome that depends on whether an
-//!    account exists, so neither endpoint becomes an account-enumeration oracle. v0.3.0 brokers no
-//!    sign-up at all (SURFACE §11.3) and keeps sign-in for the E2E fixtures only, so R160 is held
+//!    account exists, so neither endpoint becomes an account-enumeration oracle. No sign-up is
+//!    brokered at all (SURFACE §11.3) and sign-in is for the E2E fixtures only, so R160 is held
 //!    by those two doors.
 //!  - **R194**: a session the provider has ended is not honoured here either.
 //!  - **R665**: an account with an authenticator app is honoured only at `aal2`.
 //!
-//! Nothing here reaches the internet or the wall clock. TS injected four seams into
-//! `createSupabaseAuth` (`clientFactory`, `fetchImpl`, `keySet`, `now`); the Rust provider talks to
-//! GoTrue over HTTP, so the tests stand up [`GoTrue`], a scripted GoTrue on `127.0.0.1` that answers
-//! the four endpoints the provider calls (the JWKS, `/auth/v1/user`, the admin user lookup and the
-//! admin delete) and counts every call, and hand the provider its URL. The JWKS it publishes is
-//! empty, so tier 1 fails *locally*; the cache clock is [`Clock`], a manual one, through the
-//! provider's `now` seam.
+//! Nothing here reaches the internet or the wall clock. [`GoTrue`] is a scripted GoTrue on
+//! `127.0.0.1` answering the four endpoints the provider calls (the JWKS, `/auth/v1/user`, the admin
+//! user lookup and the admin delete) and counting every call. Its JWKS is empty, so tier 1 fails
+//! *locally*; the cache clock is [`Clock`], a manual one, through the provider's `now` seam.
 //!
-//! Tokens are signed here with `jsonwebtoken` against `SUPABASE_JWT_SECRET`, which is
-//! `verify`'s tier 2 — the shortest honest path to a verified identity. TS's tokens carried no
-//! `exp`; these carry one far in the future, so the verifier's expiry check passes whatever its
-//! settings, without the test reading a clock.
+//! Tokens are signed with `jsonwebtoken` against `SUPABASE_JWT_SECRET`, which is `verify`'s tier 2.
+//! They carry an `exp` far in the future, so the expiry check passes without the test reading a clock.
 
 use std::io;
 use std::sync::atomic::{AtomicI64, Ordering};
@@ -46,14 +41,11 @@ use jackioh_server::db::store::{Db, Profile};
 
 use crate::support::deps::{call, test_app};
 
-// ---------------------------------------------------------------------------
 // Fixtures
-// ---------------------------------------------------------------------------
 
 pub(crate) const JWT_SECRET: &str = "hs256-secret-used-only-by-this-test";
 
-/// GoTrue user ids are UUIDs, and the real admin client refuses anything else before it asks
-/// (supabase-js's `validateUUID`); TS's admin double took any string, so its ids were names.
+/// GoTrue user ids are UUIDs: the real admin client refuses anything else before it asks.
 const ALICE: &str = "a11ce000-0000-4000-8000-000000000001";
 const BOB: &str = "b0b00000-0000-4000-8000-000000000002";
 
@@ -112,15 +104,11 @@ fn counts(entries: &[(&str, u32)]) -> IndexMap<String, u32> {
         .collect()
 }
 
-// ---------------------------------------------------------------------------
 // A manual clock for the provider's caches
-// ---------------------------------------------------------------------------
 
-/// TS `createVirtualTimers()`: epoch ms that move only when a test says so.
-///
-/// The provider's caches read it through `SupabaseAuthInput.now` (TS `now: timers.now`). Tokio's
-/// clock is left alone: a test that paused it would see the provider's real requests to the scripted
-/// GoTrue time out, since a paused runtime jumps to the next timer whenever it waits on a socket.
+/// Epoch ms that move only when a test says so, read by the provider's caches through
+/// `SupabaseAuthInput.now`. Tokio's clock is left alone: a paused runtime jumps to the next timer
+/// whenever it waits on a socket, so the scripted GoTrue's requests would time out.
 #[derive(Clone)]
 pub(crate) struct Clock(Arc<AtomicI64>);
 
@@ -139,9 +127,7 @@ impl Clock {
     }
 }
 
-// ---------------------------------------------------------------------------
 // A scripted GoTrue
-// ---------------------------------------------------------------------------
 
 /// What the admin lookup of a user id answers.
 pub(crate) enum AdminReply {
@@ -159,7 +145,7 @@ pub(crate) enum UserReply {
     Live(Value),
     /// 403 `session_not_found`: GoTrue's answer once `/logout` has deleted the session.
     Ended,
-    /// 503: TS's `fetch failed`, as the provider sees it (neither live nor ended).
+    /// 503: neither live nor ended, as the provider sees it.
     Unreachable,
     /// Never answers.
     Hang,
@@ -283,7 +269,7 @@ async fn user_by_token(State(state): State<Arc<Mutex<GoTrueState>>>, headers: He
 
 impl GoTrue {
     /// Starts one. The admin lookup answers a confirmed user, deletes succeed, and `/auth/v1/user`
-    /// answers as unreachable (TS's `fetchImpl` that throws) until a test scripts it.
+    /// answers as unreachable until a test scripts it.
     pub(crate) async fn start() -> GoTrue {
         let state = Arc::new(Mutex::new(GoTrueState {
             admin: Arc::new(|user_id: &str| AdminReply::Ok(confirmed_user(user_id))),
@@ -534,9 +520,7 @@ impl Captured {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R159
-// ---------------------------------------------------------------------------
 
 /// R159 — how long a verified email stays verified (§9.2, §9.4).
 mod r159_how_long_a_verified_email_stays_verified {
@@ -667,9 +651,7 @@ mod r159_how_long_a_verified_email_stays_verified {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R194: a session the provider has ended is not honoured here either
-// ---------------------------------------------------------------------------
 
 /// TS `providerWithSessions`: the provider with `/auth/v1/user` scripted (R194's session check) and
 /// the admin lookup counted.
@@ -800,9 +782,7 @@ mod r194_an_ended_sessions_access_token_is_refused_here_too {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R160
-// ---------------------------------------------------------------------------
 
 /// R160 — the identical sign-up and sign-in error (§9.2, §9.4, §9.8; extends R145).
 ///
@@ -937,9 +917,7 @@ mod r160_r145_the_identical_sign_up_and_sign_in_error {
     }
 }
 
-// ---------------------------------------------------------------------------
 // `currentMatchId` on /api/auth/me (§9.5)
-// ---------------------------------------------------------------------------
 
 /// The read that makes a two-player game reachable.
 ///
@@ -1058,9 +1036,7 @@ mod api_auth_me_reports_the_callers_own_current_match {
     }
 }
 
-// ---------------------------------------------------------------------------
 // GET /api/profile (§9.5) — the account screen's read
-// ---------------------------------------------------------------------------
 
 /// `/api/profile` reports identity and the ladder record. The caller is the active fixture `e2e-p1`.
 mod api_profile_reports_identity_and_the_ladder_record {
@@ -1138,9 +1114,7 @@ mod api_profile_reports_identity_and_the_ladder_record {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R665: an account with an authenticator app is honoured only at `aal2`
-// ---------------------------------------------------------------------------
 
 /// R665 — two-step sign-in: an account with an authenticator app needs an aal2 token.
 mod r665_two_step_sign_in_an_account_with_an_authenticator_app_needs_an_aal2_token {

@@ -1,6 +1,7 @@
 //! #96 My Pawn after it has fired: the window it leaves behind, and where the trap ends up (SPEC §3.2,
-//! §4.1, §4.2 step 4, §5.1, §6.3 "Cancel an attack" and Exile, R44, R99, R152). Found by the polish-4
+//! §4.2 step 4, §5.1, §6.3 "Cancel an attack" and Exile, R44, R99, R152). Found by the polish-4
 //! edge-case hunt (docs/polish/4-edge-cases.md, lenses L5 and L7).
+//! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
 //!
 //!  - §4.2 step 4, §6.3, R99: a cancelled attack resolves no combat, so a second My Pawn stays armed.
 //!  - §3.2, §6.3 Exile: a My Pawn its own AI turn exiled stays in exile. R152, §3.2: its effect is the

@@ -842,7 +842,7 @@ pub static PB_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
     table
 });
 
-/// This file's scripts, by id (the brief's `scripts()`).
+/// This file's scripts, by id.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     PB_SCRIPTS.clone()
 }

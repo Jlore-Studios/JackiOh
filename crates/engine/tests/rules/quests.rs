@@ -1,9 +1,6 @@
 //! The quests subsystem (docs/classic-sets.md B5 E33; SPEC §8.6 row 90, §10.1, §10.6, §10.8; R404),
-//! proved through the quest fixture cards so the engine half of Classic #90 In Too Deep stands without
-//! the cards crate: each goal counted and not counted, completion at the state check on either
-//! player's turn, the base face's `reward` prompt, the Radiant face's every reward and path, a pause
-//! mid-reward through JSON, a replay from the log, both views, and the two random picks the rewards
-//! need. The real card's own test file proves the same with its real tree.
+//! through the quest fixture cards, so the engine half of Classic #90 In Too Deep stands without the
+//! cards crate: goals, completion at the state check, the reward prompt, Radiant paths, JSON pause, replay, views.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -141,7 +138,6 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
     }
 }
 
-/// The card's quest line, as JSON.
 fn memory_of(state: &GameState, card: &CardInstance) -> Value {
     let live = find_instance(state, &card.id).expect("the card");
     json_of(quest_memory_of(live).expect("a quest line"))
@@ -151,7 +147,6 @@ fn progress_of(state: &GameState, card: &CardInstance, quest: &str) -> i64 {
     memory_of(state, card)["progress"][quest].as_i64().unwrap_or(0)
 }
 
-/// A number a goal names.
 fn goal_number(goal: impl Serialize, field: &str) -> i64 {
     json_of(goal)[field].as_i64().expect("a goal number")
 }
@@ -232,7 +227,6 @@ mod r404_e33_quests_the_first_quest_opens_as_the_card_enters {
                 "goal": goal_number(&GOALS["draws"], "count"),
             }])
         );
-        // The play's own events came before the opening: the quest has counted nothing.
         assert_eq!(progress_of(&after, &card, ONLY_QUEST), 0);
     }
 
@@ -312,7 +306,6 @@ mod e33_quests_each_goal_counted_and_not_counted {
         );
         assert_eq!(completed(&step.events, &card), [ONLY_QUEST]);
 
-        // A burned draw: the hand is full.
         let mut state = quest_board("q-draws-burn");
         set_library(
             &mut state,
@@ -331,7 +324,6 @@ mod e33_quests_each_goal_counted_and_not_counted {
         assert_eq!(events_of_type(&full.events, GameEventType::Burned).len(), 1);
         assert_eq!(completed(&full.events, &card), [ONLY_QUEST]);
 
-        // The opponent's draws: p2's turn starts with a draw, which counts for nothing of p1's.
         let mut state = quest_board("q-draws-theirs");
         let Played {
             state: mut s1, card, ..
@@ -408,7 +400,6 @@ mod e33_quests_each_goal_counted_and_not_counted {
         let mut milled = play_new(&mut s1, &mill().id, P1, &[]);
         assert_eq!(milled.state.players.p1.library.len(), 0);
         assert_eq!(progress_of(&milled.state, &card, ONLY_QUEST), 0);
-        // ... and the fatigue draw after it takes no card either.
         let tired = play_new(&mut milled.state, &draw_one().id, P1, &[]);
         assert_eq!(memory_of(&tired.state, &card)["done"], json!([]));
 
@@ -475,7 +466,6 @@ mod e33_quests_each_goal_counted_and_not_counted {
         in_hand(&mut state, &plain_id, P1, 1);
         in_hand(&mut state, &plain_id, P2, 1);
         let Played { state: s1, card, .. } = goal(&mut state, "unspentManaAtTurnEnd", P1);
-        // 4 mana, 1 paid: 3 left.
         assert_eq!(
             i64::from(s1.players.p1.mana.current),
             goal_number(&GOALS["unspentManaAtTurnEnd"], "mana")
@@ -490,7 +480,6 @@ mod e33_quests_each_goal_counted_and_not_counted {
         let Played { state: s1, card, .. } = goal(&mut state, "unspentManaAtTurnEnd", P1);
         let mut short = end_turn(&s1);
         assert_eq!(progress_of(&short.state, &card, ONLY_QUEST), 0);
-        // p2's turn ends with 4 unspent: not p1's turn.
         assert_eq!(short.state.active, P2);
         short.state.players.p2.mana.current = 4;
         let theirs = end_turn(&short.state);
@@ -649,7 +638,6 @@ mod e33_quests_each_goal_counted_and_not_counted {
             state: mut s1, card, ..
         } = goal(&mut state, "unitsInGraveyard", P1);
         let mut first = play_new(&mut s1, &slay().id, P1, &[a.id.as_str()]);
-        // One Unit and a Slay (a Spell) lie there now.
         assert_eq!(first.state.players.p1.graveyard.len(), 2);
         assert_eq!(memory_of(&first.state, &card)["done"], json!([]));
         let b = put(&mut first.state, &plain.id, slot(P1, Row::Units, 2), json!({}));
@@ -691,7 +679,6 @@ mod e33_quests_the_tree_base_face_a_reward_prompt {
             &memory_of(&state, &card),
             &json!({ "active": [], "done": ["draws"] })
         ));
-        // The other seat sees that a prompt is open, never the options.
         assert_eq!(
             json_of(&view_for(&state, P2).pending),
             json!({ "forYou": false, "pendingFor": "p1" })
@@ -718,7 +705,6 @@ mod e33_quests_the_tree_base_face_a_reward_prompt {
                 .iter()
                 .any(|o| o.key == format!("instance:{}", foe.id))
         );
-        // Paused mid-reward: the quest it leads to is not open yet.
         assert_eq!(memory_of(&state, &card)["active"], json!([]));
 
         let mut copy = round_trip(&state);
@@ -791,7 +777,6 @@ mod e33_quests_the_tree_base_face_a_reward_prompt {
             json!({ "active": ["mana"], "progress": { "mana": 0 }, "done": ["draws", "kill"], "auras": [], "waiting": [] }),
         );
         let mut ended = end_turn(&state);
-        // The end of p1's turn with 4 unspent completes "mana": its one reward is still a prompt.
         open_as(&ended.state, PromptKind::Reward, P1);
         answer_keys(&mut ended.state, &["mode:aura"]);
         let mut s = ended.state;
@@ -800,7 +785,6 @@ mod e33_quests_the_tree_base_face_a_reward_prompt {
             &json!({ "active": [], "auras": ["aura"] })
         ));
         assert!(has_indestructible(&s, &unit));
-        // Both views show the quest line.
         for viewer in [P1, P2] {
             let shown = shown_to(&s, viewer, &card).map(json_of);
             assert!(shown.is_some_and(|shown| matches_object(
@@ -1069,7 +1053,6 @@ mod e33_quests_the_view_hidden_information_and_replay {
             Some(&mut log),
         )
         .state;
-        // p1's second turn drew a card: 1 of 2. Draw Two finishes it.
         assert_eq!(progress_of(&state, &tree_card, "draws"), 1);
         let twice = state
             .players

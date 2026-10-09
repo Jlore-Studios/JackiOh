@@ -1,5 +1,6 @@
 //! A Tribute's deaths and the targets they take with them (SPEC §6.3 Tribute, §10.5 steps 1, 2 and 5,
-//! R68, R90, R101, R174). Also cited: §4.1.
+//! R68, R90, R101, R174).
+//! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
 //!
 //!  - R68, R101: the tributed set dies together, its Death hooks in R68's order, so the order a play
 //!    lists it in means nothing: `legalActions` offers each set once, `reduce` accepts any listing.

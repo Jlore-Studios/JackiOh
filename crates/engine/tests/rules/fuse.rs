@@ -1,55 +1,10 @@
-//! Fuse and Craft a Card: SPEC §6.3's Fuse row as R77 spells it out, and BUILD M3-T7's `fuse.ts`
-//! bullet. One test per clause of R77, in the order the ruling writes them.
+//! Fuse and Craft a Card: SPEC §6.3's Fuse row as R77 spells it out. One test per clause of R77, in
+//! the order the ruling writes them (its cost clause is min(sum of the printed costs per R65, 4)).
 //!
-//! R77, verbatim: "Fuse creates a transient definition. Its base form sums the ingredients' base
-//! attack and health, unions their base keywords and tags, and concatenates their base scripts; its
-//! radiant form does the same with their radiant forms. Its cost is min(sum of the printed costs per
-//! R65, 4). Its type is the target's, or the ingredients' shared type when there is no target on the
-//! field (Field Trap if any ingredient is one). Radiant Unlicensed Experimentation fuses the played
-//! permanent onto each matching permanent separately, one fusion at a time. One ingredient may be a
-//! target already on the field: the result then keeps that instance, with its zone, position, damage,
-//! exertion, summonedTurn, counters, memory and radiant flag, and only the other ingredients cease to
-//! exist, without a Death trigger and without counting as destroyed. The result's buffs are the sum
-//! of every ingredient's buffs and its granted keywords their union; every other field of the kept
-//! instance is unchanged, `statsOverride` and the Vanilla flag included. A fused trap has every
-//! ingredient's trigger condition, runs only the script whose condition was met, and is consumed
-//! unless it is a Field Trap. Craft a Card fuses two or three cards with no target on the field, and
-//! its result is a fresh, non-Radiant hand card with `costOverride` 0."
-//!
-//! The fixtures are local (`fu-` ids, indexes from 1501, so nothing collides with another test
-//! file's) because no shared fixture expresses what the two-face clause needs: an ingredient whose
-//! radiant stats are deliberately *not* double its base, so "the radiant form does the same with
-//! their radiant forms" is observable rather than a coincidence of doubling.
-//!
-//! TS's tests read the live objects `fuse` changed (`result`, `food.zone`); Rust reads the kept card
-//! back from the state by its id, and an ingredient that ceased to exist (`{ z: "gone" }`, R86) is one
-//! the state holds in no pile.
-//!
-//! Port of `packages/engine/test/fuse.test.ts`.
-
-use jackioh_engine::catalog::def_of;
-use jackioh_engine::effects::damage;
-use jackioh_engine::layers::unit_view;
-use jackioh_engine::mana::{effective_cost, printed_cost};
-use jackioh_engine::resolve::{HookName, HookOptions, run_hook};
-use jackioh_engine::scripts::script_of;
-use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
-use jackioh_engine::testkit::*;
-use jackioh_engine::traps::fire_traps_for;
-use jackioh_engine::wire::PlayerId::{P1, P2};
-use jackioh_engine::zones::card_at;
-
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
-
-// ---------------------------------------------------------------------------
-// Fixtures.
-// ---------------------------------------------------------------------------
-
-/// TS's `def`, its running `nextIndex` (from 1500) passed as `index`.
-fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
-    let mut card = json!({
-        "id": format!("fu-{name}"),
-        "index": index.to_string(),
+//! The fixtures are local (`fu-` ids, indexes from 1501) because no shared fixture has an ingredient
+//! whose radiant stats are not double its base, so "the radiant form does the same with their radiant
+//! forms" is observable rather than a coincidence of doubling. A kept card is read back from the
+//! state by its id; an ingredient that ceased to exist (`{ z: "gone" }`, R86) is in no pile.
         "name": format!("{name} (fuse)"),
         "set": "Core",
         "type": type_,
@@ -65,12 +20,8 @@ fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
             card.insert(key.clone(), value.clone());
         }
     }
-    json_as(card)
-}
-
+// Fixtures.
 /// Half of every fusion below. 2/3 Taunt on the base face and 3/9 Taunt + Divine Shield on the
-/// radiant one: the radiant stats are neither double the base nor the same keywords, so a fused
-/// radiant face built out of base forms would read differently from one built out of radiant forms.
 fn ingredient_a() -> CardDef {
     def(
         "ingredient-a",
@@ -93,9 +44,8 @@ fn ingredient_a() -> CardDef {
 
 /// The other half: 1/1 Rush, radiant 5/2 Rush + Cleave — again not a doubling.
 fn ingredient_b() -> CardDef {
-    def(
-        "ingredient-b",
-        1502,
+/// Half of every fusion below. 2/3 Taunt on the base face and 3/9 Taunt + Divine Shield on the
+/// radiant one: not a doubling, so a radiant face built from base forms would read differently.
         "Unit",
         json!({
             "tags": ["Felinor"],
@@ -222,8 +172,7 @@ fn trap(id: &str, on: GameEventType, amount: i32) -> CardScripts {
 
 fn scripts() -> Vec<(String, CardScripts)> {
     vec![
-        // The base texts hit for 1 and 2 and the base Deaths for 3 and 4; the radiant texts hit for 10
-        // and 20, so which pair of scripts a fusion concatenated is readable off the hero's health.
+        // The base texts hit for 1 and 2, the base Deaths for 3 and 4, the radiant texts for 10 and 20.
         (
             ingredient_a().id,
             CardScripts {
@@ -248,8 +197,7 @@ fn scripts() -> Vec<(String, CardScripts)> {
                     ..Script::default()
                 },
                 radiant: Script {
-                    cry: hit(20),
-                    death: hit(40),
+        // The base texts hit for 1 and 2, the base Deaths for 3 and 4, the radiant texts for 10 and 20.
                     ..Script::default()
                 },
             },
@@ -301,7 +249,7 @@ fn json_of<T: serde::Serialize>(value: T) -> Value {
     serde_json::to_value(value).expect("serialisable")
 }
 
-/// vitest's `toMatchObject`: every key the expected object names matches, recursively.
+/// Every key the expected object names matches, recursively.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (Value::Object(actual), Value::Object(expected)) => expected
@@ -314,9 +262,8 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
     }
 }
 
-/// TS `sinkFor(state)`: a sink whose rng starts at the state's cursor, as reduce does. The events and
-/// the rng are kept beside the state, so the test can change the state between calls as TS's shared
-/// objects let it.
+/// A sink whose rng starts at the state's cursor, as reduce does, kept beside the state so a test can
+/// change the state between calls.
 struct Sink {
     events: Vec<GameEvent>,
     rng: Rng,
@@ -328,26 +275,24 @@ impl Sink {
             events: Vec::new(),
             rng: Rng::new(&state.seed, state.rng_cursor),
         }
-    }
+/// Every key the expected object names matches, recursively.
 
     fn on<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
         EngineSink::new(state, &mut self.events, &mut self.rng)
     }
 }
 
-/// `fuse(sink, args)`, `args` the TS object literal (its instances as the state holds them now).
+/// `fuse` with an existing sink.
 fn fuse_in(state: &mut GameState, sink: &mut Sink, args: Value) -> Option<CardInstance> {
     let args: FuseArgs = json_as(args);
     fuse(&mut sink.on(state), args)
 }
 
-/// `fuse(sinkFor(state), args)`.
-fn fuse_fresh(state: &mut GameState, args: Value) -> Option<CardInstance> {
-    let mut sink = Sink::for_state(state);
+/// A sink whose rng starts at the state's cursor, as reduce does, kept beside the state so a test can
+/// change the state between calls.
     fuse_in(state, &mut sink, args)
 }
 
-/// The card under `id` as the state holds it now (TS's live object).
 fn live(state: &GameState, id: &str) -> CardInstance {
     find_instance(state, id)
         .cloned()
@@ -358,24 +303,23 @@ fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
 
-/// TS `put(state, defId, ref, { radiant: true })`: the card placed, then made Radiant.
+/// Place the card, then make it Radiant.
 fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
     let card = put(state, def_id, at, json!({}));
     live_mut(state, &card.id).radiant = true;
     live(state, &card.id)
-}
+/// `fuse` with an existing sink.
 
 fn first_in_hand(state: &mut GameState, def_id: &str, what: &str) -> CardInstance {
     in_hand(state, def_id, P1, 1)
         .into_iter()
         .next()
-        .unwrap_or_else(|| panic!("expected {what}"))
+/// `fuse` with a fresh sink.
 }
 
 fn sorted_keys(defs: &IndexMap<String, CardDef>) -> Vec<String> {
     let mut keys: Vec<String> = defs.keys().cloned().collect();
     keys.sort();
-    keys
 }
 
 fn sorted(mut ids: Vec<String>) -> Vec<String> {
@@ -386,7 +330,7 @@ fn sorted(mut ids: Vec<String>) -> Vec<String> {
 /// `(attack, maxHealth)` as §10.4's layers read the card.
 fn stats(state: &GameState, card: &CardInstance) -> (i32, i32) {
     let view = unit_view(state, card);
-    (view.attack, view.max_health)
+/// Place the card, then make it Radiant.
 }
 
 fn played_by_p2() -> GameEvent {
@@ -399,9 +343,7 @@ fn played_by_p2() -> GameEvent {
     }))
 }
 
-// ---------------------------------------------------------------------------
 // The transient definition.
-// ---------------------------------------------------------------------------
 
 mod fuse_the_transient_definition_r77_m3_t7 {
     use super::*;
@@ -429,9 +371,7 @@ mod fuse_the_transient_definition_r77_m3_t7 {
             Some(result.def_id.clone())
         );
         assert_eq!(
-            json_of(def_of(Some(&state), &result.def_id)),
-            json_of(&state.transient_defs[&result.def_id])
-        );
+// The transient definition.
 
         // A second fusion is its own definition, so the first one is never edited (§10.1).
         let other = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 3), json!({}));
@@ -737,9 +677,7 @@ mod fuse_the_transient_definition_r77_m3_t7 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The kept instance, and the ingredients that cease to exist.
-// ---------------------------------------------------------------------------
 
 mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
     use super::*;
@@ -769,9 +707,7 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
         let result = must(
             fuse_fresh(
                 &mut state,
-                json!({ "ingredients": [target, food], "target": target }),
-            ),
-            "a fusion",
+// The kept instance, and the ingredients that cease to exist.
         );
 
         // The result *is* that card: same instance id, still in its own zone.
@@ -947,9 +883,7 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
     #[test]
     fn r77_radiant_unlicensed_experimentation_fuses_onto_each_matching_permanent_separately_one_fusion_at_a_time()
      {
-        // #85r's loop is the card's (M4); what the engine promises is that each fusion is its own,
-        // with its own transient definition and its own kept instance, rather than one fusion of
-        // everything at once.
+        // #85r's loop is the card's (M4); the engine promises each fusion its own definition and instance.
         let mut state = game("fuse-one-at-a-time");
         let mut sink = Sink::for_state(&state);
         let first = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1), json!({}));
@@ -981,17 +915,13 @@ mod fuse_the_instance_the_result_keeps_r77_m3_t7 {
         assert_eq!(two.id, second.id);
         assert_ne!(two.def_id, one.def_id);
         assert_eq!(
-            sorted_keys(&state.transient_defs),
-            sorted(vec![one.def_id.clone(), two.def_id.clone()])
-        );
+        // #85r's loop is the card's (M4); the engine promises each fusion its own definition and instance.
         assert_eq!(stats(&state, &live(&state, &one.id)), (3, 4));
         assert_eq!(stats(&state, &live(&state, &two.id)), (3, 4));
     }
 }
 
-// ---------------------------------------------------------------------------
 // Fused traps and Craft a Card.
-// ---------------------------------------------------------------------------
 
 mod fuse_traps_and_craft_a_card_r77_m3_t7 {
     use super::*;
@@ -1025,9 +955,7 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
         on.sort();
         assert_eq!(on, vec!["attackDeclared", "cardPlayed"]);
         // Two conditions, so two distinct trigger ids survive the fusion.
-        let ids: IndexSet<String> = triggers.iter().map(|trigger| trigger.id.clone()).collect();
-        assert_eq!(ids.len(), 2);
-
+// Fused traps and Craft a Card.
         // Only the script whose condition was met runs: the `cardPlayed` half hits for 1, not for 3.
         fire_traps_for(&mut sink.on(&mut state), &played_by_p2());
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 1);

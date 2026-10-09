@@ -1,15 +1,10 @@
 //! SPEC §11, rows R1 to R42 (R27 and R28 have their own subsystem test files): one test per row,
 //! named after the row, asserting what that row says against the engine. A "decide" row asserts the
-//! constant in `config.rs` and the behaviour it drives; a row whose behaviour belongs to a card that
-//! arrives in M4 asserts the engine machinery the card will use and names the card test.
+//! constant in `config.rs` and the behaviour it drives.
 //!
-//! Every fixture def and script here is this file's own, registered on top of the shared fixture
-//! catalog so nothing collides with another test file (BUILD §0, CLAUDE.md).
-//!
-//! Port of `packages/engine/test/rulings-a.test.ts` (SURFACE §4.1, §8). TS held live
-//! `CardInstance` objects and wrote through them; here a card handed back by a helper is a copy, so a
-//! write goes through `edit` (the card under that id in the state) and a read after a change re-reads
-//! it with `instance_in`.
+//! Every fixture def and script is this file's own (BUILD §0, CLAUDE.md). A card a helper hands back
+//! is a copy: write through `edit` and re-read with `instance_in`.
+//! Surface contract: docs/v0.3.0/SURFACE.md §4.1, §8.
 
 use std::borrow::Borrow;
 use std::collections::BTreeSet;
@@ -28,9 +23,7 @@ const P2: PlayerId = PlayerId::P2;
 const UNITS: Row = Row::Units;
 const BACKROW: Row = Row::Backrow;
 
-// ---------------------------------------------------------------------------
 // Fixture definitions. Every id is prefixed `ra-`; the §8 card each one stands in for is named.
-// ---------------------------------------------------------------------------
 
 /// A plain body: the control case for placement, combat and zone rows.
 const BODY: &str = "ra-body";
@@ -99,7 +92,6 @@ const ANTI_ONESHOT: &str = "ra-anti-oneshot";
 /// #79 Twinspell: the Field Spell that grants the next Spell an Echo (R30).
 const TWINSPELL: &str = "ra-twinspell";
 
-/// TS's object spread `{ ...def, ...extra }`: `extra`'s keys replace the definition's, shallowly.
 fn spread(def: &mut Value, extra: Value) {
     if let (Some(fields), Value::Object(extra)) = (def.as_object_mut(), extra) {
         for (key, value) in extra {
@@ -108,7 +100,7 @@ fn spread(def: &mut Value, extra: Value) {
     }
 }
 
-/// TS `raUnit`: a Core unit fixture whose index is the next of this file's (index 301 on).
+/// A Core unit fixture whose index is the next of this file's (index 301 on).
 fn ra_unit(next: &mut i32, name: &str, attack: i32, health: i32, keywords: Value, extra: Value) -> CardDef {
     *next += 1;
     let index = *next;
@@ -129,7 +121,7 @@ fn ra_unit(next: &mut i32, name: &str, attack: i32, health: i32, keywords: Value
     json_as(def)
 }
 
-/// TS `raCard`: a Core fixture of any type without stats.
+/// A Core fixture of any type without stats.
 fn ra_card(next: &mut i32, name: &str, card_type: &str, extra: Value) -> CardDef {
     *next += 1;
     let index = *next;
@@ -150,15 +142,13 @@ fn ra_card(next: &mut i32, name: &str, card_type: &str, extra: Value) -> CardDef
     json_as(def)
 }
 
-/// TS `TOKEN_FIELDS`, spread under `extra`.
 fn token_fields(extra: Value) -> Value {
     let mut fields = json!({ "token": true, "rarity": "Token", "tags": ["Token"] });
     spread(&mut fields, extra);
     fields
 }
 
-/// TS `DEFS`: built in the TS declaration order (so each index is the one TS gave it), listed in
-/// `DEFS`' order.
+/// The definitions, built in a fixed order so each index is stable.
 fn defs() -> Vec<CardDef> {
     let mut next = 300;
     let n = &mut next;
@@ -267,14 +257,11 @@ fn defs() -> Vec<CardDef> {
     ]
 }
 
-/// One of this file's definitions by id (TS named each def by its `const`).
 fn def(id: &str) -> CardDef {
     must(defs().into_iter().find(|def| def.id == id), id)
 }
 
-// ---------------------------------------------------------------------------
 // Fixture effects and scripts.
-// ---------------------------------------------------------------------------
 
 /// #4: flip `count` coins, +1 attack per heads and +1 max health per tails (R32).
 fn coin_stats(count: i32) -> Effect {
@@ -486,9 +473,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts
 }
 
-// ---------------------------------------------------------------------------
 // Harness.
-// ---------------------------------------------------------------------------
 
 /// A fresh game whose catalog and script registry also carry this file's fixtures.
 fn game(seed: &str) -> GameState {
@@ -533,7 +518,6 @@ fn instance_in(state: &GameState, id: &str) -> CardInstance {
     must(find_instance(state, id).cloned(), &format!("instance {id}"))
 }
 
-/// TS wrote through the live instance (`unit.damage = 2`): here, the card under that id in the state.
 fn edit(state: &mut GameState, card: &CardInstance, change: impl FnOnce(&mut CardInstance)) {
     change(must(
         find_instance_mut(state, &card.id),
@@ -541,7 +525,6 @@ fn edit(state: &mut GameState, card: &CardInstance, change: impl FnOnce(&mut Car
     ));
 }
 
-/// TS `RunOptions = HookOptions & { self?: CardInstance | null }`.
 #[derive(Default)]
 struct RunOptions {
     self_: Option<CardInstance>,
@@ -555,7 +538,6 @@ fn controlled(controller: PlayerId) -> HookOptions {
     }
 }
 
-/// `{ controller }`.
 fn by(controller: PlayerId) -> RunOptions {
     RunOptions {
         hook: controlled(controller),
@@ -563,7 +545,6 @@ fn by(controller: PlayerId) -> RunOptions {
     }
 }
 
-/// `{ controller, targets }`.
 fn targeting(controller: PlayerId, targets: Vec<Selection>) -> RunOptions {
     RunOptions {
         hook: HookOptions {
@@ -575,7 +556,6 @@ fn targeting(controller: PlayerId, targets: Vec<Selection>) -> RunOptions {
     }
 }
 
-/// `{ self }`.
 fn as_self(card: &CardInstance) -> RunOptions {
     RunOptions {
         self_: Some(card.clone()),
@@ -641,7 +621,6 @@ fn unit_target(card: &CardInstance) -> AttackTarget {
     }
 }
 
-/// `dealDamage`'s `{ source, target, amount }`.
 fn hit(source: Option<CardInstance>, target: DamageTarget, amount: i32) -> DamageArgs {
     DamageArgs {
         source,
@@ -651,7 +630,7 @@ fn hit(source: Option<CardInstance>, target: DamageTarget, amount: i32) -> Damag
     }
 }
 
-/// TS `why…` refusals are `string | null`; here `Result<(), EngineError>` (SURFACE §4.4.9).
+/// Surface contract: docs/v0.3.0/SURFACE.md §4.4.9.
 fn refusal<T>(result: Result<T, EngineError>) -> Option<String> {
     result.err().map(|error| error.message)
 }
@@ -679,18 +658,16 @@ fn to_json<T: serde::Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("serialisable")
 }
 
-/// `eventsOfType(events, type)` (fixtures/harness.ts), each event as its wire JSON so a field reads
-/// by its TS name.
+/// Each event as its wire JSON.
 fn of_type(events: &[GameEvent], event_type: GameEventType) -> Vec<Value> {
     events_of_type(events, event_type).iter().map(to_json).collect()
 }
 
-/// `events.map((e) => e[key])`.
 fn pluck(events: &[Value], key: &str) -> Vec<Value> {
     events.iter().map(|event| event[key].clone()).collect()
 }
 
-/// TS `events.findIndex((e, i) => …)`, -1 when none matches.
+/// Index of the first match, -1 when none.
 fn find_index(events: &[GameEvent], mut matches: impl FnMut(isize, &Value) -> bool) -> isize {
     for (index, event) in events.iter().enumerate() {
         let index = index as isize;
@@ -701,8 +678,7 @@ fn find_index(events: &[GameEvent], mut matches: impl FnMut(isize, &Value) -> bo
     -1
 }
 
-/// vitest's `toMatchObject`: every key the expected object names matches, recursively; arrays match
-/// element for element and in length; anything else is equal.
+/// Every key the expected object names matches, recursively; arrays match in length.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (_, Value::Object(wanted)) => wanted.iter().all(|(key, value)| {
@@ -725,9 +701,7 @@ fn assert_matches(actual: Value, expected: Value) {
     );
 }
 
-// ---------------------------------------------------------------------------
 // R1 to R42.
-// ---------------------------------------------------------------------------
 
 mod spec_11_rulings_r1_r42_m3_gate {
     use super::*;
@@ -1372,7 +1346,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
                 .iter()
                 .any(|c| c.id == armed_again.id)
         );
-        // M4: cards/test/41-sheepish.test.ts proves the card half.
     }
 
     #[test]
@@ -1659,7 +1632,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
             must(card_at(&costs, slot(P1, UNITS, 2)), "embiggen card").def_id,
             EMBIGGEN_UNIT
         );
-        // M4: cards/test/30-archivist.test.ts proves the card half.
     }
 
     #[test]
@@ -1672,7 +1644,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert_eq!(fib(4), 3);
         assert_eq!(fib(0), 0);
         assert_eq!(fib(-3), 0);
-        // M4: cards/test/31-kys-math-equation.test.ts proves the card half.
     }
 
     #[test]
@@ -1704,7 +1675,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
             vec![even.id.clone(), x_card.id.clone()]
         );
         assert_eq!(state.counters.exiled, 1);
-        // M4: cards/test/94-genns-greed.test.ts proves the card half.
     }
 
     #[test]
@@ -1735,7 +1705,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
                 .collect::<Vec<_>>(),
             ranked_ids.iter().take(3).cloned().collect::<Vec<_>>()
         );
-        // M4: cards/test/97-zephyrs.test.ts proves the card half.
     }
 
     #[test]
@@ -1790,7 +1759,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
                 .iter()
                 .any(|card| card.id == source.id)
         );
-        // M4: cards/test/79-twinspell.test.ts proves the card half.
     }
 
     #[test]
@@ -1820,7 +1788,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
             def_ids(&state.players.p1.hand),
             vec![REMINISCE, REMINISCE, REMINISCE]
         );
-        // M4: cards/test/76-field-of-dreams.test.ts proves the card half.
     }
 
     #[test]
@@ -1862,7 +1829,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
         // No extra rolls were taken for the Lucky unit either.
         assert_eq!(plain_cursor - start, 5);
         assert_eq!(lucky_cursor - start, 5);
-        // M4: cards/test/4-gary-the-gambler.test.ts proves the card half.
     }
 
     #[test]
@@ -1942,7 +1908,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
                 .count(),
             1
         );
-        // M4: cards/test/33-unstable-clone-machine.test.ts proves the card half.
     }
 
     #[test]
@@ -2000,7 +1965,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
             by(P1),
         );
         assert_eq!(def_ids(&state.players.p1.hand), vec![OTHER_BODY]);
-        // M4: cards/test/83-transmogulate.test.ts proves the card half.
     }
 
     #[test]
@@ -2064,7 +2028,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
                 .iter()
                 .any(|def| def.id == BREAD)
         );
-        // M4: cards/test/18-bread-and-butter.test.ts proves the card half.
     }
 
     #[test]
@@ -2099,7 +2062,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
         };
         assert!(of_type(&token_events, GameEventType::EnteredGraveyard).is_empty());
         assert_eq!(instance_in(&state, &hungry.id).buffs, fed);
-        // M4: cards/test/89-corpse-eater.test.ts proves the card half.
     }
 
     #[test]
@@ -2130,7 +2092,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let shrunk = put(&mut state, SHRINKER, slot(P1, UNITS, 4), json!({}));
         assert_eq!(unit_view(&state, &shrunk).attack, 3);
         assert_eq!(unit_view(&state, &shrunk).max_health, 3);
-        // M4: cards/test/92-felinor-fiender.test.ts proves the card half.
     }
 
     #[test]
@@ -2238,7 +2199,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let events = kill_and_check(&mut starved, &empty);
         assert!(of_type(&events, GameEventType::Summoned).is_empty());
         assert!(active_units_of(&starved, P1).is_empty());
-        // M4: cards/test/22-carnivorous-cube.test.ts proves the card half.
     }
 
     #[test]
@@ -2273,6 +2233,5 @@ mod spec_11_rulings_r1_r42_m3_gate {
             ),
         );
         assert_eq!(instance_in(sink.state, &bystander.id).last_damaged_by, None);
-        // M4: cards/test/32-prem-panther.test.ts proves the card half.
     }
 }

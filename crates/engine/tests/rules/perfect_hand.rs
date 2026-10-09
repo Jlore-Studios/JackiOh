@@ -1,14 +1,11 @@
-//! B5 E34, the perfect-hand scorer (`subsystems/perfectHand.ts`; SPEC §8.7 C+ #27, §10.7, R29, R364,
-//! R387, R416), through a fixture card of Classic+ #27's shape: "replace your hand with the perfect
-//! hand, then refresh your mana". The real card's test (packages/cards/test/classic-plus/
-//! 027-zephrys-zealotism.test.ts) covers the card again over the real catalog.
+//! B5 E34, the perfect-hand scorer (SPEC §8.7 C+ #27, §10.7, R29, R364, R387, R416), through a
+//! fixture card of Classic+ #27's shape: "replace your hand with the perfect hand, then refresh your
+//! mana".
 //!
 //! The pool is pinned: this file registers seven Classic and Classic+ cards on top of the (Core)
 //! fixture catalog and nothing else of those sets, so each ranking is a statement about a fixed state
 //! and pool, never about the scorer's weights. Core #97's scorer is reused unchanged. Defs are `ph-`,
 //! indexed from 4901.
-//!
-//! Port of `packages/engine/test/perfectHand.test.ts`.
 
 use std::cmp::Ordering;
 use std::sync::atomic::{AtomicU32, Ordering as AtomicOrdering};
@@ -23,7 +20,6 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::harness::{in_hand, new_game};
 
-/// TS `{ ...base, ...extra }`.
 fn spread(mut base: Value, extra: Value) -> Value {
     if let (Value::Object(base), Value::Object(extra)) = (&mut base, extra) {
         for (key, value) in extra {
@@ -33,12 +29,11 @@ fn spread(mut base: Value, extra: Value) -> Value {
     base
 }
 
-/// TS `face(text, extra)`.
 fn face(text: &str, extra: Value) -> Value {
     spread(json!({ "keywords": [], "text": text }), extra)
 }
 
-/// TS `def(name, type, set, extra)`; `index` is the value TS's running `nextIndex` (from 4900) gives it.
+/// `index` is the def's running index (from 4900).
 fn def(name: &str, type_: &str, set: &str, index: u32, extra: Value) -> CardDef {
     json_as(spread(
         json!({
@@ -58,7 +53,7 @@ fn def(name: &str, type_: &str, set: &str, index: u32, extra: Value) -> CardDef 
     ))
 }
 
-/// TS `unit(name, set, attack, health, extra)`: `extra.keywords` goes on both faces, the rest on the def.
+/// `extra.keywords` goes on both faces, the rest on the def.
 fn unit(
     name: &str,
     set: &str,
@@ -182,9 +177,8 @@ fn defs() -> Vec<CardDef> {
     all
 }
 
-/// TS `Number.POSITIVE_INFINITY`: as much mana as any refresh could give back. An `i32` holds no
-/// infinity, and the effect adds it to the current mana, so it is a half of `i32::MAX`, far past any
-/// mana pool and short of overflowing the sum.
+/// As much mana as any refresh could give back. An `i32` holds no infinity and the effect adds it to
+/// the current mana, so it is half of `i32::MAX`: past any pool, short of overflowing the sum.
 const ALL_MANA: i32 = i32::MAX / 2;
 
 fn zealot_scripts() -> CardScripts {
@@ -319,7 +313,6 @@ fn json_of<T: Serialize>(value: T) -> Value {
     serde_json::to_value(value).expect("serialises")
 }
 
-/// TS `JSON.parse(JSON.stringify(state))`.
 fn revive(state: &GameState) -> GameState {
     serde_json::from_value(json_of(state)).expect("a state revives from its JSON")
 }
@@ -329,19 +322,17 @@ fn sorted(mut ids: Vec<String>) -> Vec<String> {
     ids
 }
 
-/// TS `list.indexOf(id)`: -1 when absent.
 fn index_of(list: &[String], id: &str) -> i64 {
     list.iter()
         .position(|entry| entry == id)
         .map_or(-1, |at| at as i64)
 }
 
-/// `expect(list).toEqual(expect.arrayContaining(expected))`.
 fn contains_all(list: &[String], expected: &[String]) -> bool {
     expected.iter().all(|entry| list.contains(entry))
 }
 
-/// The `defId` of each event of this type (TS `"defId" in e ? e.defId : ""`).
+/// The `defId` of each event of this type.
 fn def_ids_of(events: &[GameEvent], kind: GameEventType) -> Vec<String> {
     events
         .iter()
@@ -579,7 +570,6 @@ mod e34_replace_hand_with_perfect_then_a_refresh_c_27s_shape {
             .map(json_of)
             .collect();
         assert!(added.len() >= 2);
-        // `/ph-(charger|big-body|tie|sleeper|quiet)/`, alternative by alternative.
         for event in &added {
             let text = serde_json::to_string(event).expect("an event serialises");
             for name in ["ph-charger", "ph-big-body", "ph-tie", "ph-sleeper", "ph-quiet"] {

@@ -1,6 +1,7 @@
-//! Echo's repeats, the state check between them, and a Spell that exiles itself (SPEC §4.1,
-//! §4.5, §6.2 Echo, §8, §10.5 steps 4 to 7, R30, R59, R178). Found by the polish-4 edge-case hunt
+//! Echo's repeats, the state check between them, and a Spell that exiles itself (SPEC §4.5,
+//! §6.2 Echo, §10.5 steps 4 to 7, R30, R59, R178). Found by the polish-4 edge-case hunt
 //! (docs/polish/4-edge-cases.md, lens L7).
+//! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
 //!
 //!  - §4.5: the state check runs after a Spell's first resolution, before its Echo repeat asks
 //!    anything, so a unit it killed is not offered again and a hero it killed ends the game.

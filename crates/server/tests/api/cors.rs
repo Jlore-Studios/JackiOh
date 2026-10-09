@@ -1,8 +1,6 @@
-//! Port of `apps/server/test/api/cors.test.ts`: SPEC §11 R162 — the CORS contract for the REST
-//! surface (`src/api/cors.rs`).
+//! SPEC §11 R162 — the CORS contract for the REST surface (`src/api/cors.rs`).
 //!
-//! R162 fixes four things, and every one of them is a *negative* that a broken layer would satisfy
-//! by accident:
+//! R162 fixes four things, each a *negative* that a broken layer would satisfy by accident:
 //!
 //!  - an allowed origin is echoed back **as itself**, never `*`;
 //!  - `Access-Control-Allow-Credentials` is never sent, because §9.1's client carries a bearer
@@ -10,19 +8,14 @@
 //!    player;
 //!  - `Vary: Origin`, because the answer depends on the request's origin;
 //!  - an unlisted origin gets **the ordinary response with no CORS headers**, not a 403 — CORS is
-//!    never load-bearing for a refusal, since §9.1 puts the rules in the server and a non-browser
-//!    caller (`cy.request`, the `wsPlayer` task) is not subject to CORS at all.
+//!    never load-bearing for a refusal, since §9.1 puts the rules in the server.
 //!
-//! The last one is the reason this file asserts the live case first, every time. "No CORS headers
-//! for an unlisted origin" is also what a middleware that never ran produces, and "not a 403" is
-//! what a handler that answered 500 produces — so each negative here is paired with the allowed
-//! request that proves the layer is awake, and with a count of how many times the wrapped handler
-//! was actually entered.
+//! "No CORS headers" is also what a middleware that never ran produces, and "not a 403" is what a
+//! handler that answered 500 produces. So each negative is paired with the allowed request that
+//! proves the layer is awake, and with a count of how many times the wrapped handler was entered.
 //!
-//! Deterministic by construction: `with_cors` wraps a router with no clock, no store and no network,
-//! so nothing here needs a timer. TS's `withCors(handler, { origins, log })` wrapped any
-//! `Request -> Response` function; here it wraps an `axum::Router` (the one `app::router` hands it,
-//! or the counting one below), and its `log` is `tracing`'s (SURFACE §11.3).
+//! `with_cors` wraps an `axum::Router` with no clock, no store and no network, so nothing here needs
+//! a timer; its `log` is `tracing`'s (SURFACE §11.3).
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -174,9 +167,7 @@ fn wrapped(origins: &[&str]) -> Wrapped {
     Wrapped { calls, service }
 }
 
-// ---------------------------------------------------------------------------
 // R162
-// ---------------------------------------------------------------------------
 
 mod r162_the_cors_contract_for_the_rest_surface_section_9_1_section_9_2_section_9_8 {
     use super::*;
@@ -380,12 +371,9 @@ mod r162_the_cors_contract_for_the_rest_surface_section_9_1_section_9_2_section_
         assert!(is_origin_allowed(&[format!("{OTHER}/")], Some(OTHER)));
     }
 
-    // R162's remaining clause, which was a real gap when this file was written and is now closed:
-    // "every response the layer touches carries `Vary: Origin`". The CORS headers go on only on the
-    // two ALLOWED paths (asserted above), so the refused preflight and the ordinary response to an
-    // unlisted or absent origin used to come back bare — and a shared cache could then store the
-    // no-CORS answer and hand it to an origin that would have been allowed, which is the exact
-    // failure the clause names.
+    // R162's remaining clause: "every response the layer touches carries `Vary: Origin`". The CORS
+    // headers go on only the two ALLOWED paths, so a refused preflight or an unlisted origin's
+    // answer must still vary, or a shared cache could hand the no-CORS answer to an allowed origin.
     #[tokio::test]
     async fn r162_carries_vary_origin_on_every_response_the_layer_touches_refusals_included() {
         let layer = wrapped(&ALLOWED);

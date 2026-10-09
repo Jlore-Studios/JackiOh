@@ -1,5 +1,5 @@
 //! Cards buried under a Stack pile, and what Reborn brings back (SPEC §3.2, §4.5, §7, R13, R175).
-//! Also cited: §4.1, §8.
+//! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
 //!
 //!  - §3.2, R13: a card dormant under a Stack is not on the field, so §4.5's check never collects it
 //!    there. The top shields it: an aura or a layer-2 Felinor that stops reaching it cannot kill it,

@@ -1,5 +1,5 @@
 //! An event is answered as the board stood when it happened (SPEC §10.3, §4.5, R174, R212).
-//! Also cited: §4.1, §8.
+//! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
 //!
 //! §10.3's loop hands an event to the triggers after whatever ran before it was dispatched: a state
 //! check (with its Death hooks and Reborn) after a combat, an Echo repeat or a whole Cry. So #91 Fed

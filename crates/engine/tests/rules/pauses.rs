@@ -4,11 +4,10 @@
 //!  1. a card's own effect list: the effects after the one that opened the prompt are parked as a
 //!     `WorkItem` naming the same continuation plus the index to continue from;
 //!  2. an engine sequence of named steps (the play pipeline of §10.5, the attack window of §4.2
-//!     step 4, the Death hooks of §4.5 step 3, the end of a turn of §2.2): when one of its steps
-//!     pauses, and only then, it owes the steps after that one.
+//!     step 4, the Death hooks of §4.5 step 3, the end of a turn of §2.2): only a step that pauses
+//!     owes the steps after it.
 //!
-//! Both go on `state.work`, which R113 orders with `state.workCursor`: one pause cascade lands
-//! innermost-first, and a pause during a resumption lands ahead of everything still owed.
+//! Both go on `state.work`, ordered by R113 with `state.workCursor`.
 //! Surface contract: docs/v0.3.0/SURFACE.md §17 on §8 (`testkit::register_work_handler`).
 
 use serde::Serialize;
@@ -100,10 +99,9 @@ fn sequence_step(sink: &mut EngineSink<'_>, at: usize, run: SequenceRun) {
     }
 }
 
-/// The §10.5 discipline of `play_steps.rs`: run the steps in order and owe the rest *only* when a
-/// step actually pauses (R113). While this loop is on the stack the steps are its own, so a nested
-/// drain must not find them owed; and the paused step's own tail has already parked at the cursor,
-/// so parking here lands behind it.
+/// The §10.5 discipline of `play_steps.rs`: owe the rest *only* when a step actually pauses (R113).
+/// A nested drain must not find the steps owed; the paused step's own tail has already parked at
+/// the cursor, so parking here lands behind it.
 fn drive_sequence(sink: &mut EngineSink<'_>, run: SequenceRun) {
     for at in run.at..SEQUENCE_STEPS {
         sequence_step(sink, at, run);
@@ -419,8 +417,7 @@ mod a_prompt_in_the_middle_of_an_effect_list_9_3_10_6 {
             &json!({ "defId": middle_asker().id, "hook": "cry", "instanceId": card.id })
         ));
         assert_eq!(owed.map(|item| item.owner), Some(P1));
-        // The continuation names where to pick up — the effect after the one that asked — and nothing
-        // else: the remaining effects themselves are closures and never enter the state (§9.3).
+        // The continuation names where to pick up (the effect after the one that asked); closures never enter the state (§9.3).
         assert_eq!(
             owed.and_then(|item| paused_of(&item.resume.data))
                 .map(|step| step.from),
@@ -448,8 +445,7 @@ mod a_prompt_in_the_middle_of_an_effect_list_9_3_10_6 {
         assert_eq!(owed_work(&state, None).len(), 1);
 
         // The answered step asks again mid-list, so two tails are owed. Its pause happened *during* a
-        // resumption, so R113 puts it in front of the Cry's tail: the cursor was reset when that tail
-        // was taken (`""` is the Cry hook's own step label).
+        // resumption, so R113 puts it ahead of the Cry's tail (`""` is the Cry hook's own step label).
         let first = answer(&mut state, "a");
         assert_eq!(amounts(&first), vec![3]);
         assert!(state.pending.is_some());
@@ -511,9 +507,8 @@ mod a_prompt_in_the_middle_of_an_engine_sequence_10_3_10_5 {
         });
         assert_eq!(state.work.len(), 1);
 
-        // A trigger fires inside the open prompt's answer (§10.3) and its own Cry asks mid-list, so its
-        // tail parks while the sequence's is still owed. Nothing is registered under the answered
-        // step, so closing the prompt is the whole answer (§10.6).
+        // A trigger fires inside the open prompt's answer (§10.3) and its Cry asks mid-list, so its tail
+        // parks while the sequence's is still owed. Closing the prompt is the whole answer (§10.6).
         let answered = act(&mut state, |sink| {
             close_prompt(sink);
             run_hook_resumable(sink, &unit, "cry", HookResumableOptions::default());
@@ -591,8 +586,7 @@ mod a_paused_state_is_plain_data_9_3_10_1 {
 
         assert_eq!(second.paused, first.paused);
         assert_eq!(second.done, first.done);
-        // Including the queue itself: the ids and `seq`s come from state (R68), not from a counter in
-        // the run, so a replay builds the queue the live game had.
+        // Including the queue itself: ids and `seq`s come from state (R68), so a replay builds the live queue.
         assert_eq!(second.owed, first.owed);
         assert_eq!(first.owed.len(), 2);
         // The queue is inside the hash, so a state with work owed is not the state that finished it.
@@ -770,8 +764,7 @@ mod the_work_queue_9_3_r68 {
             },
             None,
         );
-        // No handler registry (SURFACE §6.6): the default arm re-enters a card's own step only when its
-        // script has that step, and an item naming no card has none, so the item raises.
+        // No handler registry (SURFACE §6.6): the default arm re-enters a card's own step only when its script has it; an item naming no card raises.
         panics_with(
             || {
                 run_work_item(&mut sink, &item);

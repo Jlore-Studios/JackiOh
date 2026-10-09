@@ -1,6 +1,7 @@
-//! What `viewFor` hands each seat about cards it may not read (SPEC §4.1, §9.1, §10.8, R33, R35, R97,
+//! What `viewFor` hands each seat about cards it may not read (SPEC §9.1, §10.8, R33, R35, R97,
 //! R177, R222, R223), found by the polish-4 edge-case hunt (docs/polish/4-edge-cases.md, lens L10).
 //! Each test builds two games differing only in hidden cards and asserts the viewer cannot tell them apart.
+//! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
 //!
 //!  - R222, R177, R223: an offer, a discount's events and an instance id must not spell out a hidden
 //!    library's order, a face-down trap, or the order a deck was sorted in.

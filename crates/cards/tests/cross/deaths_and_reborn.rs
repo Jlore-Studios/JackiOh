@@ -1,5 +1,6 @@
-//! Deaths, their killers and Reborn bodies (SPEC §4.1, §4.5, §6.1, §6.3 Sacrifice, R42, R78, R83,
+//! Deaths, their killers and Reborn bodies (SPEC §4.5, §6.1, §6.3 Sacrifice, R42, R78, R83,
 //! R89, R174), from the polish-4 edge-case hunt (docs/polish/4-edge-cases.md, lenses L2, L3 and L8).
+//! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
 //!
 //!  - §4.5 step 1, R89: the units one check collects are read before any of them moves, so each dies
 //!    with the aura and the layer-2 stats it had, not with lane order deciding which it lost.
