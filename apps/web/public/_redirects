@@ -3,9 +3,12 @@
 # The target is `/`, not `/index.html`: Cloudflare answers /index.html with a 307 to `/`, which
 # would drop the path. apps/web/src/net/cloudflare-config.test.ts holds this list equal to
 # vercel.json's.
+#
+# A page the build writes (apps/web/static-pages.ts) is rewritten to its own folder, not to `/`: a
+# rule wins over a file, and a path with no rule gets a 307 to the slashed path. Its slashed path is
+# served by the file itself.
 
-/login / 200
-/login/ / 200
+/login /login/ 200
 /reset-password / 200
 /reset-password/ / 200
 /invite / 200
@@ -16,22 +19,15 @@
 /play/ / 200
 /account / 200
 /account/ / 200
-/practice / 200
-/practice/ / 200
-/privacy / 200
-/privacy/ / 200
-/terms / 200
-/terms/ / 200
-/accessibility / 200
-/accessibility/ / 200
-/patch-notes / 200
-/patch-notes/ / 200
-/almanac / 200
-/almanac/ / 200
+/practice /practice/ 200
+/privacy /privacy/ 200
+/terms /terms/ 200
+/accessibility /accessibility/ 200
+/patch-notes /patch-notes/ 200
+/almanac /almanac/ 200
 /leaderboard / 200
 /leaderboard/ / 200
-/stats / 200
-/stats/ / 200
+/stats /stats/ 200
 /match/:id / 200
 /match/:id/ / 200
 /series/:id / 200

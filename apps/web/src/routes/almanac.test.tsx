@@ -5,10 +5,6 @@
 // and the page itself asks no server anything (the R654 statistics block in the detail view reads
 // the public card aggregates). The pool's filter and sort semantics are filters.test.ts's.
 
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-
 import type { CardDef, Tag } from "@jackioh/shared";
 import { setShips } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
@@ -17,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 
+import { PUBLIC_PAGES, sitemapXml } from "../../static-pages.ts";
 import { INSPECT_CLOSE, INSPECT_DETAIL, closeInspect } from "../cards/index.ts";
 import { CARD_FLAVOUR } from "../cards/flavour.ts";
 import { INSPECT_FLAVOUR, INSPECT_STATS } from "../cards/inspect/testids.ts";
@@ -46,8 +43,6 @@ import LoginRoute from "./login.tsx";
 import { siteFooterTestid } from "./SiteFooter.tsx";
 
 const { App, canonicalUrlFor, documentTitleFor } = await import("../main.tsx");
-
-const HERE = dirname(fileURLToPath(import.meta.url));
 
 /** A lazily-imported route chunk, and a pool of every card, can outrun the 1 s default. */
 const SLOW = { timeout: 10_000 } as const;
@@ -110,7 +105,7 @@ describe("R630 the /almanac route", () => {
   });
 
   it("R630 is in the sitemap", () => {
-    const sitemap = readFileSync(join(HERE, "../../public/sitemap.xml"), "utf8");
+    const sitemap = sitemapXml(PUBLIC_PAGES);
     expect(sitemap).toContain(`<loc>${SITE_ORIGIN}/almanac</loc>`);
   });
 

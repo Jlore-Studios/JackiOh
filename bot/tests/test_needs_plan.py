@@ -91,8 +91,8 @@ class StageTests(unittest.TestCase):
 class PlanningLaneTests(unittest.TestCase):
     def test_planning_comes_first_easy_first_and_takes_no_build_lane(self):
         """claude-3 plans while it builds; claude-1, capped like the rest, plans only
-        when it holds nothing else; Devin builds once a strong model planned it. claude-7,
-        uncapped like claude-3, would plan too, so it has no secret here."""
+        when it holds nothing else; Devin builds once a strong model planned it. claude-7, idle
+        and ahead of claude-1 in the usage order, would plan first, so it has no secret here."""
         gh = FakeGitHub()
         ctx = lane_ctx(gh, env=secrets(*(s for s in providers.SECRETS
                                          if s != "CLAUDE_CODE_OAUTH_TOKEN_7")))

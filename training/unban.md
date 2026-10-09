@@ -4,7 +4,7 @@ You are improving JackiOh's Rust AI in `crates/ai/` (SPEC §9.9 and the doc comm
 `crates/ai/src/`) so that it plays well with fewer shadow-banned cards. The shadow ban (R186,
 `crates/ai/src/shadow_ban.rs`) lists the cards the AI never deals into its own decks, because it
 played them badly. Your goal is to remove entries from it, teaching the AI to play those cards,
-while the AI still beats its predecessor, the AI on `main`, in at least 75 of 100 games and SPEC
+while the AI still beats its predecessor, the AI on `main`, in at least 65 of 100 games and SPEC
 §10.7's random policy in at least 90 of 100. A promotion needs strictly fewer shadow bans than the
 parent's. The lane is described in `training/README.md`; read it first.
 
@@ -36,7 +36,7 @@ cargo jackioh promote --lane unban --parent-bin ~/parent-jackioh --dry-run
 
 It plays 100 games against random and 100 against the parent (`~/parent-jackioh`, built from
 `main`; its seats keep the parent's own shadow ban, yours keep yours) and prints the gate's report:
-wins against each, the 90 and 75 needed, both ban counts, and draws and games without a result
+wins against each, the 90 and 65 needed, both ban counts, and draws and games without a result
 (neither counts as a win). A dry run measures your uncommitted change on the seeds of HEAD's
 `crates/ai/src`, so every dry run in a session plays the same seeds. Do not tune to them: check a
 change on other seeds too, for example

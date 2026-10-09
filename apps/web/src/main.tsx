@@ -65,11 +65,11 @@ import { adoptAuthRedirect, sessionIdFromToken } from "./auth/redirect.ts";
 import { shellTestid } from "./auth/testids.ts";
 import UsernamePrompt from "./auth/UsernamePrompt.tsx";
 import { useAccount, type Account } from "./net/gate.ts";
+import { canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 import { useQueueFollow } from "./net/liveGame.ts";
 import { adoptRoomLink } from "./net/roomLink.ts";
 import { useSettingsAccountSync } from "./settings/accountSync.ts";
 import {
-  SITE_ORIGIN,
   loginPath,
   matchIdOf,
   navigate,
@@ -118,6 +118,9 @@ const StatsRoute = lazy(() => import("./routes/stats.tsx"));
  * working.
  */
 export { shellTestid };
+
+/** The tab title and canonical link live in `net/head.ts`, so the build can name pages as the app does. */
+export { SITE_NAME, canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 
 /**
  * The frame every panel this file draws sits in: the wordmark on the tavern board. Exported for
@@ -431,65 +434,6 @@ export function Gated({ allowPending = false, children }: GatedProps): ReactElem
 // ---------------------------------------------------------------------------------------------
 // The tab title and the canonical link
 // ---------------------------------------------------------------------------------------------
-
-/** The name every tab title ends with. */
-export const SITE_NAME = "JackiOh";
-
-/** The screen's name, for its tab title; null for a path the client serves nothing at. */
-function screenNameFor(path: string): string | null {
-  switch (path) {
-    case paths.landing:
-      return "";
-    case paths.login:
-      return "Sign in";
-    case paths.resetPassword:
-      return "Reset password";
-    case paths.invite:
-      return "Invite code";
-    case paths.decks:
-      return "Decks";
-    case paths.play:
-      return "Play online";
-    case paths.account:
-      return "Account";
-    case paths.practice:
-      return "Practice";
-    case paths.privacy:
-      return "Privacy";
-    case paths.terms:
-      return "Terms";
-    case paths.accessibility:
-      return "Accessibility";
-    case paths.patchNotes:
-      return "Patch notes";
-    case paths.almanac:
-      return "Almanac";
-    case paths.leaderboard:
-      return "Leaderboard";
-    case paths.stats:
-      return "Statistics";
-    case paths.hotseat:
-      return DEV_ONLY ? "Hotseat" : null;
-  }
-  if (matchIdOf(path) !== null) return "Match";
-  if (seriesIdOf(path) !== null) return "Conquest";
-  return null;
-}
-
-/**
- * The tab title for a path: "Sign in · JackiOh", and plain "JackiOh" on the landing page. The
- * match screen replaces it with "Your turn · JackiOh" while it is the player's turn (match.tsx).
- */
-export function documentTitleFor(path: string): string {
-  const name = screenNameFor(path);
-  if (name === null) return `Page not found · ${SITE_NAME}`;
-  return name === "" ? SITE_NAME : `${name} · ${SITE_NAME}`;
-}
-
-/** The canonical address of a path the client serves, or null for one it does not (a 404). */
-export function canonicalUrlFor(path: string): string | null {
-  return screenNameFor(path) === null ? null : `${SITE_ORIGIN}${path}`;
-}
 
 /**
  * Every route is served from one index.html, so a static canonical link would point every route at

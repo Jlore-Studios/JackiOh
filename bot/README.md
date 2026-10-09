@@ -454,7 +454,7 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `claude-4` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `claude-5` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_5` | any time | 40% of 5 hours, 60% of the week |
 | `claude-6` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_6` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
-| `claude-7` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_7` | any time | none: until it refuses (the same rules as claude-3) |
+| `claude-7` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_7` | any time: 01:00–10:00 up to its cap, and outside it (10:00–01:00) while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh` | on the machine, as `agent-gpt` | any time | 100% of the week (Codex reports it) |
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | 95% of 5 hours, all of the week (its own `agy -p /usage`, the Gemini pool's row) |
 | `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2, free on the CLI until 2026-10-16); off from 2026-10-05 to 2026-10-06 (#311: every call failed in seconds), on again since a `devin -p` call answered on the machine (#318) | on the machine, as `agent-devin` | any time until 2026-10-15 (`off_from`) | none: until it refuses |
@@ -592,8 +592,9 @@ may build it, and the weakest whose plan it builds from (`config.PLAN_FLOOR`, #3
 | hard | strong only | strong only | the same as medium |
 | (unrated) | medium or strong, who rates it | as medium | as medium |
 
-**The usage order** (`priority`) is the owner's: spend claude-3, claude-7 (the same rules as
-claude-3: any hour, no caps) and claude-1 first, up to their caps; then claude-4, claude-6 and
+**The usage order** (`priority`) is the owner's: spend claude-3 (any hour, no caps), claude-7
+(held to half its 5-hour session from 10:00 to 01:00 and to 70% of it from 01:00 to 10:00, with
+no weekly cap) and claude-1 first, up to their caps; then claude-4, claude-6 and
 then claude-5, last of the Claude accounts (claude-4 and claude-6 held to half their 5-hour session outside 03:00–15:00 and to 70% of it inside it, with
 no weekly cap, claude-5 to 40% of its 5-hour session and 60% of its week); then the medium models,
 Muse first (the most reliable builder, #305), then agy and Codex; then claude-2, kept back mostly

@@ -2,14 +2,11 @@
 // linked from the site footer, served by vercel.json (net/deploy-routes.test.ts reads `paths`) and
 // listed in the sitemap.
 
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { PUBLIC_PAGES, sitemapXml } from "../../static-pages.ts";
 import { SITE_ORIGIN, paths } from "../net/navigate.ts";
 import { PatchSourceProvider } from "../patches/context.tsx";
 import { fixtureSource } from "../patches/fixtures.ts";
@@ -21,8 +18,6 @@ import PatchNotesRoute from "./patch-notes.tsx";
 import { siteFooterTestid } from "./SiteFooter.tsx";
 
 const { App, canonicalUrlFor, documentTitleFor } = await import("../main.tsx");
-
-const HERE = dirname(fileURLToPath(import.meta.url));
 
 /** A lazily-imported route chunk and the real history's first read can outrun the 1 s default. */
 const SLOW = { timeout: 10_000 } as const;
@@ -90,7 +85,7 @@ describe("R388 the /patch-notes route", () => {
   });
 
   it("R388 is in the sitemap", () => {
-    const sitemap = readFileSync(join(HERE, "../../public/sitemap.xml"), "utf8");
+    const sitemap = sitemapXml(PUBLIC_PAGES);
     expect(sitemap).toContain(`<loc>${SITE_ORIGIN}/patch-notes</loc>`);
   });
 });
