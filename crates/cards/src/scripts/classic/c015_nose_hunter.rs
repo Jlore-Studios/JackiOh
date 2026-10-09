@@ -2,20 +2,14 @@
 //!   Base:    "Activate ♾️: Discard a random card. Exile the bottom {exile|card|cards} of your opponent's deck."
 //!   Radiant: "… Exile the bottom {exile|card|cards} of your opponent's deck and a random card from their hand."
 //!
-//! R392: the designer's "Discard a random card: Exile …" is an Activate ♾️ ability (balance patch 1;
-//! R384) — "cost: effect" is how a card is clicked to do an effect — so the random discard is the
-//! ability's cost, paid as it is activated (`cost.discardRandom`), and with an empty hand it cannot be
-//! activated at all (`subsystems/activate.ts` refuses it, and so `legalActions` never lists it). The
-//! discard is an ordinary discard (§6.3), so C #64 Malzahar's Recycler sees it. "Each opponent" in the
-//! designer's text is the multiplayer phrasing Heroic Power uses (R45): with two players, the opponent.
-//!
-//! Activating is not attacking, so it is usable the turn Nose Hunter arrives and never spends an
-//! exertion; nor is it a play, so nothing that counts plays sees it (R384).
-//!
-//! The exile reads the bottom of the deck as `exileBottomOfLibrary` does (the last element; an empty
-//! deck exiles nothing and deals no fatigue, since this is not a draw). The Radiant face's "a random
-//! card from their hand" is `exileRandomFromHand` (R60; an empty hand: nothing). No event names a deck
-//! position; the exiled cards are public once in exile (§3.2).
+//! R392: the designer's "Discard a random card: Exile …" is an Activate ♾️ ability (R384), so the random
+//! discard is its cost, paid as it is activated (`cost.discardRandom`): with an empty hand it cannot be
+//! activated and `legalActions` never lists it. An ordinary discard (§6.3), so C #64 Malzahar's Recycler
+//! sees it. "Each opponent" is Heroic Power's multiplayer phrasing (R45): with two players, the opponent.
+//! Activating is neither an attack nor a play: usable the turn it arrives, no exertion (R384).
+//! The exile takes the deck's bottom (last) card; an empty deck exiles nothing and deals no fatigue, as it
+//! is no draw. Radiant's hand card is `exileRandomFromHand` (R60; empty hand: nothing). Exiled cards are
+//! public (§3.2); no event names a deck position.
 
 use jackioh_engine::prelude::*;
 
@@ -56,14 +50,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #15 Nose Hunter — SPEC §8.6 row 15, BUILD M9 Classic row C 15: "Activate Infinity (R392,
-// R384): its cost, discarding a random card of yours, is paid as it activates, so with an empty hand
-// it can't activate and `legalActions` doesn't list it; then exile the bottom card of the opponent's
-// deck (an empty deck: nothing); usable the turn it is played (no sickness, no exertion), only in your
-// main phase; as many activations a turn as its cost can be paid; not a play (R384); the discard is a
-// discard (C #64 sees it); no event carries a deck position; radiant 6/2: also exile a random card from
-// their hand (empty: nothing), public once in exile; its tuned number (exiled) reads through `param()`
-// (R386)".
+// C #15 Nose Hunter — SPEC §8.6 row 15, BUILD M9 Classic row C 15: Activate Infinity (R392, R384): its cost,
+// a random discard, is paid as it activates, so an empty hand can't activate it; then exile the bottom card of
+// the opponent's deck (empty: nothing); usable the turn it is played, not a play (R384); radiant 6/2 also exiles
+// a random card from their hand; its tuned number (exiled) reads through `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -86,7 +76,6 @@ mod tests {
 
     use crate::merged;
 
-    /// TS `setup(p1, p2 = {})`.
     fn setup(p1: Value, p2: Value) -> Scenario {
         scenario(json!({
             "p1": merged(json!({ "library": [FILLER, FILLER] }), p1),

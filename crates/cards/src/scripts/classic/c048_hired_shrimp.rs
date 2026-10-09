@@ -22,7 +22,7 @@ fn longer(state: &GameState, card: &CardInstance, shrimp_def_id: &str) -> bool {
     loc_of(state, &card.def_id) > loc_of(state, shrimp_def_id)
 }
 
-/// TS `check?: "longer"`: the Radiant face names its target check in the declaration's filter.
+/// The Radiant face names its target check in the declaration's filter.
 fn shrimp(check: Option<&'static str>) -> Script {
     let mut filter = json!({ "side": "any", "of": ["unit", "backrow"] });
     if let Some(check) = check {
@@ -64,22 +64,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #48 Hired Shrimp — SPEC §8.6 row 48, BUILD M9 Classic row C 48: "Reads `loc` (§5), public in both
-// views; base: the Cry's target is any permanent, either side, face-down cards included, unfiltered,
-// never Hired Shrimp itself, which is still in hand when the Cry's target is chosen (R397, R70, R90); at
-// resolution the target is destroyed only if its `loc` is greater than Hired Shrimp's own, else the Cry
-// fizzles; an Indestructible target survives (R46); no permanent → it enters anyway; a face-down option
-// carries only its id (R177); a fused card's `loc` is its ingredients' sum; the test reads both values
-// from the catalog, never literals; radiant 8/6: only permanents whose `loc` is greater are offered
-// (the highlight) and the target is destroyed, except a face-down card the chooser may not read, which
-// is always offered and judged at resolution as on the base face, so the option list never reveals its
-// `loc` (R397, R177); none qualifies and no such face-down card → no target; no tuned numbers".
-//
-// Every `loc` is read off the catalog (`cardDef(id).loc`) and each case first states the comparison it
-// relies on. The permanents are Core cards with their own tests — Carnivorous Cube, Mr. Vanilla, Mana
-// Well, Bear Honeypot, The Rock — and this set's C #52 Final Gambit, a Trap with fewer lines. Fused
-// cards come from Unlicensed Experimentation, which fuses the opponent's played permanent onto one of
-// its controller's of that type (R77, R102).
+// BUILD M9 Classic row C 48 (SPEC §8.6 row 48): the base Cry targets any permanent, never itself (R397,
+// R70, R90), destroying only a longer `loc`; Indestructible survives (R46); a face-down option carries
+// its id alone (R177). Every `loc` is read off the catalog, never a literal. Fused cards come from
+// Unlicensed Experimentation, which fuses the opponent's played permanent onto one of yours (R77, R102).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -110,7 +98,7 @@ mod tests {
         }
     }
 
-    /// TS's module constant `SHRIMP_LOC`, read when a test asks (the catalog is registered per test).
+    /// Read when a test asks: the catalog is registered per test.
     fn shrimp_loc() -> i32 {
         loc(SHRIMP)
     }
@@ -119,8 +107,7 @@ mod tests {
         json!([{ "pick": "instance", "instanceId": id }])
     }
 
-    /// The target ids `legal_actions` offers Hired Shrimp's play, any zone. The TS default for `player`
-    /// is "p1"; every caller passes it.
+    /// The target ids `legal_actions` offers Hired Shrimp's play, any zone.
     fn offered(s: &Scenario, player: PlayerId) -> IndexSet<String> {
         let Some(shrimp) = s.hand(player).into_iter().find(|card| card.def_id == SHRIMP) else {
             panic!("Hired Shrimp should be in hand");
@@ -154,7 +141,7 @@ mod tests {
 
     /// p1 controls `mine` (a Unit) and Unlicensed Experimentation; p2 plays `theirs` (a Unit), which is
     /// fused onto `mine`; then p2's turn ends and p1 holds Hired Shrimp. Returns the scenario and the
-    /// fused card. The TS default for `is_radiant` is `false`.
+    /// fused card.
     fn fused(mine: &str, theirs: &str, is_radiant: bool) -> (Scenario, String) {
         let mut s = scenario(json!({
             "p1": {

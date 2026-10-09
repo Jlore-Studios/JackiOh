@@ -1,39 +1,27 @@
 //! C #10 Exile (SPEC §8.6 row 10). Trap, cost 2, Common.
-//!   Base:    "Activates when your opponent plays a card that costs ({threshold}) or less: Counter and
-//!             exile it."
-//!   Radiant: "Activates when your opponent plays a card that costs ({threshold}) or less: Counter and
-//!             exile it. Then exile random enemy permanents that together cost up to ({threshold})
-//!             minus its cost."
 //!
 //! Counter (§6.3, B5 E1, R448), in §10.5's announce window (`cardAnnounced`), before the card moves:
-//! the countered card never resolves or enters the field and goes to exile, not the graveyard. It is
-//! treated as never played. "Costs" is the cost paid (the announce's `costPaid`), as #60 Bear Honeypot
-//! reads it (R56), so a card cast for free (R70) always qualifies. A card set face-down is announced to
-//! the opponent by its zone and cost only (§10.5 step 3a), so this trap reads nothing it may not; the
-//! exile then shows the card (exile is public). The condition lives in `when` (R99, R61), so a play
-//! that costs more, or its controller's own play, leaves it set. A Trap is consumed when it fires.
+//! the countered card never resolves or enters the field and goes to exile, not the graveyard. "Costs"
+//! is the cost paid (`costPaid`), as #60 Bear Honeypot reads it (R56), so a free cast (R70) always
+//! qualifies. The condition lives in `when` (R99, R61), so a dearer play or its own leaves it set.
 //!
-//! Radiant: a budget of the threshold ((3) on the Radiant face, tuned with it) minus the countered
-//! card's cost paid, as the designer's "until the difference in cost is made up (but never exceeded)"
-//! reads. Then, one at a time: pick a random enemy permanent (the top of a unit pile or a backrow card,
-//! face-down ones included) whose cost now is no more than the budget left — R396: R65's cost where it
-//! stands, an X card at the X it was played for (0 with none chosen), read by `costNow` — exile it and
-//! take its cost off the budget; stop when the budget is 0 or nothing fits. A (0) Cost permanent always
-//! fits while the budget is above 0. The picks are drawn from the match rng as the clause resolves and
-//! kept (`forEachCard`), so a pause could never re-roll them (R113). The name is also a rules word,
-//! which the reference proof never reads as this card unless `refs` lists it (R381).
+//! Radiant: budget = threshold minus the countered card's cost paid. One at a time, pick a random
+//! enemy permanent (unit-pile top or backrow, face-down included) whose cost now fits the budget left
+//! (R396: R65's cost, an X card at its X, 0 with none; `costNow`), exile it and take its cost off; stop
+//! at 0 or when nothing fits. The picks are drawn as the clause resolves and kept (`forEachCard`), so a
+//! pause never re-rolls them (R113). The name is a rules word, so no text refers to it unless `refs`
+//! lists it (R381).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-010";
 
 /// The enemy permanents on the field: the top of each unit pile, then each backrow card (§3.2, R13).
-/// (TS `const ENEMY_PERMANENTS: BoardScope`; built on use, since a `BoardScope` is not a `const`.)
 fn enemy_permanents() -> BoardScope {
     json_as(json!({ "side": "enemy", "rows": ["units", "backrow"] }))
 }
 
-/// TS `Extract<GameEvent, { type: "cardAnnounced" }>`: the fields of the announce this card reads.
+/// The fields of the announce this card reads.
 struct Announced {
     instance_id: String,
     cost_paid: i32,
@@ -89,7 +77,7 @@ fn exile_trap(radiant_face: bool) -> TriggerDef {
         vec![
             countered,
             for_each_card(ForEachCardArgs {
-                // `forEachCard`'s `cards` answers ids (part 6's port of TS's `CardInstance | string`).
+                // `forEachCard`'s `cards` answers ids.
                 cards: Arc::new(move |at: &mut EffectContext<'_>| {
                     budget_picks(at, budget).into_iter().map(|card| card.id).collect()
                 }),
@@ -109,18 +97,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #10 Exile — SPEC §8.6 row 10, BUILD M9 Classic row C 10: "Face-down (R33); fires on the opponent's
-// play of a card whose cost paid is (2) or less (R56), so a free cast always qualifies (R70), in the
-// announce window before the card moves (§10.5); counters it: it never resolves or enters the field,
-// no Cry, not counted as played by the turn's or the game's counts, Combo, Quickstriker or Ceaseless
-// Void, its mana and Tributes stay spent, and it goes to exile, not the graveyard; a (3)+ Cost play
-// and your own plays leave it set; a face-down set is announced to the opponent by its zone and cost
-// only (§10.5 step 3a), so their `cardAnnounced` names no card and the exile then shows the card;
-// radiant: (3) or less, then exile random enemy permanents one at a time, each with a cost (R65 on the
-// field; an X card its X, 0 with none chosen, R396) no more than the budget left, budget = 3 minus the
-// countered card's cost paid, until the budget is 0 or nothing fits, a (0) Cost permanent always
-// fitting while the budget is above 0; its name is a rules word, so "exile" in other texts is no
-// reference to it (R381); its tuned number (threshold) reads through `param()` (R386)".
+// C #10 Exile — SPEC §8.6 row 10, BUILD M9 Classic row C 10: face-down (R33); a face-down set is
+// announced to the opponent by zone and cost only (§10.5 step 3a), so their `cardAnnounced` names no
+// card and the exile then shows it; radiant: (3) or less, budget 3 minus the cost paid (R65, R396);
+// its tuned number (threshold) reads through `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::*;

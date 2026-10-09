@@ -3,30 +3,14 @@
 //!   Base:    "Activates when the cards your opponent has drawn in a turn reach {draws}: They keep one
 //!            card of their choice and give you the rest of their hand."
 //!   Radiant: the same, then "The cards you get cost ({discount}) less."
-//!   Engine:  "The per-turn / per-game counts (§10.1): draws per player per turn, counted on both
-//!            players' turns, the start-of-turn draw included, so on their own turn any extra draw sets
-//!            it off. The trap fires once that draw is complete (a cast-on-draw card is cast first,
-//!            R58). The opponent picks the one hand card to keep (their prompt); the rest move to your
-//!            hand and become yours (cards between players' piles, §6.3 Steal, §3.2; the owner changes,
-//!            R12); your hand cap burns the overflow into your graveyard. A hand of one card or none
-//!            gives nothing and asks nothing. Radiant: `costMod` −1 on each card you get. Tunes:
-//!            trigger draw 2 ↓ (never below 2); Radiant discount 1 ↑."
 //!
-//! THE CONDITION (R99: a trap's `when`, so a draw that is not the one leaves it set) is the draw count
-//! B5 E4 keeps per player per turn, whoever's turn it is, which rides each `drawn` event as
-//! `turnDraw`: it fires on the opponent's draw that makes their count this turn the card's number
-//! (`param(ctx, "draws")`, 2). The count is the engine's (B5 E4, R521): the start-of-turn draw counts, a
-//! burned or cast-on-draw card counts (it left the deck by a draw), a draw a limit stops never happened,
-//! so under a limit of 1 the second never comes, and a draw from an empty deck draws no card, so it
-//! makes no `drawn` and fires nothing. A card cast on that draw is cast first (R58).
-//!
-//! FIRING, it asks the opponent to keep one card of their hand (`chooseFromHand` over their own hand,
-//! held by them): the options are theirs to read alone (R177). The answer hands every other card to
-//! you (`giveFromHand({ cards: "unchosen" })`, B5 E16): each becomes yours (R12), so your hand cap burns
-//! what does not fit into your graveyard (R317), and once in your hand the opponent reads none of them
-//! (R97). A hand of one card or none gives nothing, so the firing asks nothing (R61: it fired, and did
-//! nothing). The Radiant face's discount (`costMod`, which R78 keeps in every zone) is read as the trap
-//! fires and carried to the answer, since the trap is in its owner's graveyard by then.
+//! The condition (R99, a trap's `when`) is the engine's draw count per player per turn (§10.1, B5 E4),
+//! on either turn, riding each `drawn` event as `turnDraw`: it counts the start-of-turn draw and a burned
+//! or cast-on-draw card, not a draw a limit stops or an empty deck (R521). A card cast on it goes first
+//! (R58). The opponent keeps one hand card (R177); `giveFromHand` (B5 E16) gives you the rest as yours
+//! (R12, §3.2), your hand cap burning the overflow (R317), unread by them (R97); one card or none asks
+//! nothing (R61). The Radiant `costMod` (R78) is read at firing and carried to the answer: the trap is
+//! in the graveyard by then.
 
 use jackioh_engine::prelude::*;
 
@@ -65,7 +49,7 @@ fn tax(radiant: bool) -> TriggerDef {
 }
 
 fn discount_of(ctx: &EffectContext<'_>) -> i32 {
-    // TS: `typeof value === "number" && Number.isInteger(value) ? value : 0` (SURFACE §4.4.10).
+    // Only an integer counts, else 0 (§4.4.10).
     match ctx.data.get(DISCOUNT) {
         Some(Value::Number(n)) => n
             .as_i64()
@@ -103,18 +87,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #9 Income Tax — SPEC §8.6 row 9, BUILD M9 Classic row C 9: "Face-down (R33); fires when the
-// opponent's second draw of a turn is complete, on either player's turn (on theirs the start-of-turn
-// draw is the first), after any cast-on-draw card that draw found is cast (R58); a draw a draw limit
-// stops does not happen and does not count (§2.4), so under a limit of 1 it never fires; the opponent
-// keeps one hand card of their choice (their prompt, its options their own hand, none named in your
-// view) and every other card moves to your hand as yours (its owner changes, R12); your hand cap burns
-// the overflow into your graveyard, both players seeing which (R317); an opponent holding one card
-// keeps it and you get nothing; the moved cards follow R97 once in your hand; radiant: the cards you get
-// cost (1) less (`costMod`, kept in every zone, R78); its tuned numbers (trigger draw, never below 2;
-// radiant discount) read through `param()` (R386)".
-//
-// Here p2 sets the trap and p1, the active player, is "the opponent" who draws.
+// C #9 Income Tax — SPEC §8.6 row 9, BUILD M9 Classic row C 9: fires on the opponent's second draw of a
+// turn, on either turn, after a cast-on-draw card is cast (R58); a draw a limit stops does not count
+// (§2.4); the rest of their hand becomes yours (R12), overflow burned (R317); radiant: (1) less, kept in
+// every zone (R78); tuned numbers read through `param()` (R386). Here p2 sets the trap, p1 draws.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -148,8 +124,6 @@ mod tests {
 
     use crate::js;
 
-    /// TS `taxBoard(opts)`: the options object's keys as TS named them (`radiantFace`, `p1Hand`,
-    /// `p1Library`, `p2Hand`, `p2Backrow`), each defaulting as TS did.
     fn tax_board(opts: Value) -> Scenario {
         let radiant_face = opts.get("radiantFace").and_then(Value::as_bool) == Some(true);
         let mut backrow = vec![json!({ "def": TAX, "faceUp": false, "radiant": radiant_face })];

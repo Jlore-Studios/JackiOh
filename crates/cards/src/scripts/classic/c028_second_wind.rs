@@ -2,34 +2,14 @@
 //! Field Spell, cost 0, Legendary.
 //!   Base:    "Cry: Exile your deck. Discard your hand.\nAura: You may play cards from your graveyard
 //!            that cost ({minCost}) or more. Cards that would go to your graveyard are exiled instead."
-//!            (balance patch 1: the base face's permission needs the same minimum price)
 //!   Radiant: "Cry: Exile your deck. Discard your hand.\nAura: You may play cards from your graveyard
 //!            that cost ({minCost}) or more."
 //!   Engine:  "Play from the graveyard (§6.3 Play) for every card type while this is on the field: such
 //!            a play costs, chooses and counts as one from hand, fires its Cry (R1) and takes R65's
-//!            player discounts. The base face adds a replacement (§6.2 Replacement) at the "would go to
-//!            a graveyard" point for cards you own: they are exiled instead. Both faces' play from the
-//!            graveyard needs a price of at least (1) as it would be paid, which stops a loop of free
-//!            plays. The Cry's own discard lands in the graveyard before the Aura starts exiling, so the
-//!            discarded hand is playable (R393), the reading that gives the card its name. With no deck
+//!            player discounts, at a price of at least (1) as paid (no free loop). The base face adds a
+//!            replacement (§6.2) for cards you own that would go to a graveyard: they are exiled instead.
+//!            The Cry's own discard lands first, so the discarded hand is playable (R393). With no deck
 //!            left, every draw is fatigue (§2.4). Tunes: minimum price 1 ↓."
-//!
-//! THE CRY exiles your whole deck, top to bottom (`exileMatching` over the library with no cost
-//! filter: each card its own exile, R135), then discards your hand (`discardHand`, a discard of each
-//! card, R16's "whole hand" needing no choice).
-//!
-//! THE PERMISSION is `Script.graveyardPlay` (B5 E11): while the card acts on the field its controller
-//! may play any card of their own graveyard, which `legalActions` offers and §10.5 takes from there as
-//! from a hand — its cost, its choices, R65's player discounts, its Cry, its count as a play. The
-//! Radiant face's permission carries a minimum price as it would be paid (`param(ctx, "minCost")`), so
-//! a card that would cost less is not offered. It ends when the card leaves the field.
-//!
-//! THE BASE REPLACEMENT is `Script.replacements` (B5 E5): at the "would go to a graveyard" point, a
-//! card its controller owns goes to exile instead — a Spell played from the graveyard is exiled after it
-//! resolves, a destroyed Unit is exiled. R393 has the Cry's own discard land in the graveyard before
-//! the Aura starts: the card is on the field while its Cry runs, so the Cry marks itself as running
-//! (`remember`) around the discard and the replacement declines while the mark is on. A Second Wind
-//! that arrives without its Cry (a Recruit, a summon) has no mark, so its Aura is on from the start.
 
 use jackioh_engine::prelude::*;
 
@@ -38,15 +18,15 @@ pub const ID: &str = "classic-028";
 /// The instance-memory mark the Cry holds while its own discard lands (R393).
 const CRY_RUNNING: &str = "secondWindCry";
 
-/// TS `recalled({ self: ctx.self, data: {} }, key)` (engine/src/query.ts), for the replacement's
-/// `when`, which is a pure read with no `EffectContext` to hand `query::recalled`. With an empty data
-/// bag there is no fused part path, so `work.partMemoryKey` answers the key itself and the read is the
-/// card's own memory under it.
+/// The card's own memory under `key`, for the replacement's `when`: a pure read with no `EffectContext`
+/// to hand `query::recalled`.
 fn recalled_on<'a>(card: &'a CardInstance, key: &str) -> Option<&'a Value> {
     card.memory.get(key)
 }
 
-/// Both faces' Cry: exile the deck, then discard the hand with the R393 mark held around it.
+/// Both faces' Cry: exile the deck, each card its own exile (R135), then discard the hand (R16: a whole
+/// hand needs no choice). Its discard must land in the graveyard before the Aura starts exiling (R393),
+/// so the Cry marks itself as running (`remember`) around it.
 fn cry() -> Hook {
     hook(|_ctx| {
         vec![
@@ -58,7 +38,8 @@ fn cry() -> Hook {
     })
 }
 
-/// Both faces' Aura: play from the graveyard at a price of at least the declared `minCost`.
+/// Both faces' Aura (`Script.graveyardPlay`, B5 E11): while this is on the field, any card of your own
+/// graveyard is played as from a hand (§10.5), at a price of at least the declared `minCost` as paid.
 fn graveyard_play() -> GraveyardPlayHook {
     Arc::new(|args| {
         vec![GraveyardPlayPermission {
@@ -72,6 +53,8 @@ pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(cry()),
         graveyard_play: Some(graveyard_play()),
+        // B5 E5: your cards that would go to a graveyard are exiled, but not while the Cry's mark is on
+        // (R393); a Second Wind that arrives without its Cry (a Recruit, a summon) has no mark.
         replacements: vec![ReplacementDef {
             id: "second-wind-exile".into(),
             on: ReplacementMoment::ToGraveyard,
@@ -99,16 +82,11 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #28 Second Wind — SPEC §8.6 row 28, BUILD M9 Classic row C 28: "Cry: exile your deck, then
-// discard your hand (a discard; C #64 sees it); the discards land in your graveyard before the Aura
-// starts, so they are playable (R393); Aura: `legalActions` offers `play` for every card in your
-// graveyard, any type, at its cost with its choices and R65's player discounts, its Cry firing and the
-// play counting as one from hand; base: cards you own that would go to your graveyard are exiled
-// instead (a replacement: a Spell played from there is exiled after it resolves); with no deck every
-// draw is fatigue (§2.4); both end when it leaves the field; no event carries a deck position;
-// radiant: no exile replacement, and only cards whose price as it would be paid is (1) or more are
-// offered, so a (0) Cost card never loops; its tuned number (radiant minimum price) reads through
-// `param()` (R386)".
+// C #28 Second Wind — SPEC §8.6 row 28, BUILD M9 Classic row C 28: "Cry: exile your deck, then discard
+// your hand (C #64 sees it), landing before the Aura starts (R393); Aura: any card in your graveyard is
+// playable as from hand (R65's discounts); base: your cards are exiled instead of going to your
+// graveyard; no deck → fatigue (§2.4); radiant: no replacement, only cards priced (1)+ as paid; tuned
+// minimum price via `param()` (R386)".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -161,8 +139,6 @@ mod tests {
 
     /// A play of a graveyard card (B5 E11), sent to `reduce` as `legalActions` offers it: the harness's
     /// `play` takes a card from a hand, so a graveyard play is reduced here and read back off its result.
-    ///
-    /// `extra` is TS's `Partial<Play>`, spread over the action's literal.
     fn play_from_graveyard(s: &Scenario, card: &CardInstance, extra: Value) -> Played {
         let mut action = json!({ "type": "play", "playerId": "p1", "instanceId": card.id });
         if let (Some(into), Some(more)) = (action.as_object_mut(), extra.as_object()) {
@@ -190,11 +166,8 @@ mod tests {
     }
 
     /// Second Wind standing, with a graveyard to play from. The Radiant face is set up standing (its Cry
-    /// not run). The base face's "would go to your graveyard" replacement would exile any card a setup put
-    /// in the graveyard once it stands, so there the graveyard comes the way the card makes it: Second Wind
-    /// is played and its Cry discards the hand, which lands before the Aura starts (R393).
-    ///
-    /// `extra` is TS's `{ hand?, field?, mana? }`.
+    /// not run). On the base face a setup's graveyard would be exiled once it stands, so the graveyard
+    /// comes the way the card makes it: Second Wind is played and its Cry discards the hand first (R393).
     fn standing(radiant_face: bool, graveyard: &[&str], extra: Value) -> Scenario {
         let p2 = json!({ "hand": [STOCKPILE, HIT_JOB, COLLATERAL], "field": [MENACE], "library": [STOCKPILE, STOCKPILE] });
         let field = extra.get("field").cloned().unwrap_or_else(|| json!([]));

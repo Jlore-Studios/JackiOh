@@ -1,27 +1,16 @@
-//! C #38 Jackiestan Auctioneer (SPEC §8.6 row 38). Field Trap, Human, cost 2, Rare, 4/4 → 8/8 (its unit
-//! face).
-//!   Both faces: "Animated
-//!                Reveals when the cards a player has played in a turn reach {plays}: Summon this as a
-//!                Unit.
-//!                Once this has revealed: Whenever a player plays a card, draw {draw} and deal {damage}
-//!                damage to the enemy hero." — plays 3 on the base face and 2 on the Radiant, damage 2 and 4.
+//! C #38 Jackiestan Auctioneer (SPEC §8.6 row 38). Field Trap, Human, cost 2, Rare, 4/4 → 8/8 (its unit face).
+//! Both faces: reveals when a player's plays in a turn reach {plays} (3, Radiant 2): Summon this as a Unit; once
+//! revealed, whenever a player plays a card, draw {draw} and deal {damage} damage (2, Radiant 4) to the enemy hero.
 //!
-//! R395: while it is face-down only the reveal condition is live. It answers the `cardPlayed` that
-//! takes any player's plays this turn to {plays} (the per-player per-turn count, which already counts
-//! the play under way; a cast counts, R70; a countered card was never played, R448, so it never
-//! reaches here), and then animates (Animated, B3.1, R383) in Attack Position into the unit zone in its
-//! own lane, else the leftmost open, unlocked, unreserved one (R64), summoning sick; with no open unit
-//! zone it stays face-up in its backrow zone. It remembers that it has revealed (`memory.activated`).
-//!
-//! From the next play on — never the play that set it off, as a permanent never answers its own arrival
-//! (R119) — every card either player plays makes its controller draw {draw} and deals one hit of
-//! {damage} from it to the enemy hero ("each enemy hero" is the multiplayer phrasing, R45), whether it is
-//! animated or stuck face-up in the backrow. A later firing, while it is still in the
-//! backrow and a unit zone has opened, animates it then — every firing of an Animated trap ends with
-//! its animating (B3.1 rule 4) — and one already a Unit stays put (R383).
-//!
-//! A Field Trap is never consumed. One trigger carries both texts, so one event can never be answered
-//! by both the reveal and the "whenever" (R395). The conditions live in `when` (R99).
+//! R395: face-down only the reveal condition is live. It answers the `cardPlayed` that takes any player's
+//! per-turn count (already counting the play under way; a cast counts, R70; a countered card was never played,
+//! R448) to {plays}, then animates (Animated, B3.1, R383) in Attack Position into its own lane, else the
+//! leftmost open, unlocked, unreserved zone (R64), summoning sick; with none it stays face-up in the backrow.
+//! From the next play on (a permanent never answers its own arrival, R119) every play draws {draw} and hits the
+//! enemy hero once for {damage} ("each enemy hero" is the multiplayer phrasing, R45), animated or not; a later
+//! firing animates it once a unit zone opens (B3.1 rule 4) and a Unit stays put (R383).
+//! One trigger carries both texts, so one event is never answered by both the reveal and the "whenever" (R395);
+//! the conditions live in `when` (R99). A Field Trap is never consumed.
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::effects::{animate, damage, draw, remember};
@@ -31,7 +20,6 @@ pub const ID: &str = "classic-038";
 /// What the Auctioneer keeps once it has revealed.
 const ACTIVATED: &str = "activated";
 
-/// TS's answer union `"activate" | "sale"` (`null` is `None`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Answer {
     Activate,
@@ -39,13 +27,11 @@ enum Answer {
 }
 
 fn has_activated(ctx: &EffectContext) -> bool {
-    // TS `recalled(ctx, ACTIVATED) === true`.
     recalled(ctx, ACTIVATED).and_then(|value| value.as_bool()) == Some(true)
 }
 
 /// The answer this play gets: "activate" (the {plays}th play of a turn), "sale" (once activated), or none.
 fn answer(ctx: &EffectContext, event: &GameEvent) -> Option<Answer> {
-    // TS `type Played = Extract<GameEvent, { type: "cardPlayed" }>`: the variant itself.
     let GameEvent::CardPlayed { player, .. } = event else {
         return None;
     };
@@ -76,7 +62,6 @@ fn run(ctx: &mut EffectContext, event: &GameEvent) -> Vec<Effect> {
     vec![]
 }
 
-/// TS `const auction: TrapTrigger` (a `TrapTrigger` is a `TriggerDef`).
 fn auction() -> TriggerDef {
     TriggerDef::new("auctioneer", &[GameEventType::CardPlayed], run).with_when(|ctx, event| answer(ctx, event).is_some())
 }
@@ -95,15 +80,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #38 Jackiestan Auctioneer — SPEC §8.6 row 38, BUILD M9 Classic row C 38: "Face-down, only its
-// reveal condition is live (R395): it fires when any player plays their 3rd card in a turn
-// (counted per player per turn; casts count, R70; a countered card was never played); then it animates
-// (R383) in Attack Position into its lane's unit zone, else the leftmost open one, summoning sick; with
-// no open zone it stays face-up in the backrow; from the next play on, never the play that set it off
-// (R395), whenever either player plays a card you draw 1 and deal one hit of 2 to the enemy hero,
-// animated or stuck in the backrow; animated it is a Unit for every rule and keeps that trigger; the
-// opponent's view never names it while face-down (R33); radiant 8/8: the 2nd card, 4 damage; its tuned
-// numbers (trigger play, never below 2; draw; damage) read through `param()` (R386)".
+// C #38 Jackiestan Auctioneer — SPEC §8.6 row 38, BUILD M9 Classic row C 38: face-down only its reveal
+// condition is live (R395); animated it is a Unit for every rule and keeps its trigger; the opponent's view
+// never names it while face-down (R33); radiant 8/8: the 2nd card, 4 damage; its tuned numbers (trigger
+// play, never below 2; draw; damage) read through `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::{script, ID};
@@ -126,7 +106,7 @@ mod tests {
 
     use crate::matches_object;
 
-    /// `{ ...base, ...over }`: the TS object spread, the override's keys winning.
+    /// The override's keys win over the base's.
     fn spread(mut base: Value, over: Value) -> Value {
         if let (Some(into), Some(from)) = (base.as_object_mut(), over.as_object()) {
             for (key, value) in from {
@@ -136,13 +116,12 @@ mod tests {
         base
     }
 
-    /// TS `setAuction(radiantFace = false, lane = 2)`.
     fn set_auction(radiant_face: bool, lane: i32) -> Value {
         json!({ "def": AUCTION, "radiant": radiant_face, "faceUp": false, "lane": lane })
     }
 
-    /// p1 sets the Auctioneer; p2 is active with four (0) Cost Spells to play. `p2`, `p1`: TS `SideSetup`
-    /// overrides (`json!({})` for none); `radiant_face` is TS's default `false` unless given.
+    /// p1 sets the Auctioneer; p2 is active with four (0) Cost Spells to play. `p2` and `p1` override each
+    /// side's setup (`json!({})` for none).
     fn setup(p2: Value, p1: Value, radiant_face: bool) -> Scenario {
         scenario(json!({
             "active": "p2",
@@ -157,12 +136,10 @@ mod tests {
         }))
     }
 
-    /// TS `fillers(s, player = "p2")`.
     fn fillers(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
         s.hand(player).into_iter().filter(|card| card.def_id == FILLER).collect()
     }
 
-    /// TS `playFillers(s, n, player = "p2")`.
     fn play_fillers(s: &mut Scenario, n: usize, player: PlayerId) {
         for _ in 0..n {
             let next = fillers(s, player).first().map(|card| card.id.clone()).expect("no filler left");
@@ -196,7 +173,6 @@ mod tests {
             assert_eq!(def.type_, CardType::FieldTrap);
             let kinds: Vec<Value> = def.base.keywords.iter().map(|keyword| js(keyword)["kind"].clone()).collect();
             assert_eq!(kinds, vec![json!("Animated")]);
-            // TS `expect(radiant).toBe(base)`: both faces carry the one trigger.
             let scripts = script();
             for face in [&scripts.base, &scripts.radiant] {
                 assert_eq!(face.triggers.len(), 1);

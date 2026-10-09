@@ -1,21 +1,14 @@
 //! C #6 Cloaked Toe Cracker (SPEC §8.6 row 6, §6.3 Cost, §6.3 Mana; R33, R65, R70). Unit, Human,
-//! cost 2, Common, 3/4 → 6/8.
-//!   Base:    "Aura: Your Traps cost (0)."
-//!   Radiant: "Aura: Your Traps cost (0).\nAfter you play a Trap, gain {mana} mana."
-//!   Engine:  "A cost aura (Cost, §6.3, R65) on its controller's Traps and Field Traps in hand.
-//!            Radiant: a trigger on your `cardPlayed` of a Trap or Field Trap, +1 temporary mana
-//!            (§6.3 Mana). Tunes: Radiant mana 1 ↑."
+//! cost 2, Common, 3/4 → 6/8. Base "Aura: Your Traps cost (0)."; Radiant adds "After you play a Trap,
+//! gain {mana} mana."
 //!
-//! THE AURA is a price rule the card lays while it acts on the field (B5 E15, `Script.costAura`):
-//! "costs (0)" (`setTo: 0`) on its controller's Traps and Field Traps ("Trap" names "Field Trap" too).
-//! A price is a play's, so it reaches the cards a play takes (the hand, R65) and lasts only while the
-//! card stands: once it leaves, the Traps are back at their own cost. The opponent's Traps and your
-//! Field Spells are not Traps of yours, so they are untouched.
+//! THE AURA is a price rule the card lays while it acts on the field (B5 E15, `Script.costAura`): "costs
+//! (0)" on its controller's Traps and Field Traps ("Trap" names "Field Trap" too). A price is a play's,
+//! so it reaches the cards a play takes (the hand, R65) and lasts only while the card stands.
 //!
 //! THE RADIANT TRIGGER answers every `cardPlayed` of a Trap or Field Trap by its controller, a cast
-//! included (R70: a cast counts as a play), and gains the card's declared mana (`param(ctx, "mana")`),
-//! temporary mana for this turn (§6.3 Mana). The `manaChanged` it makes names a player and numbers, so
-//! a trap played face-down stays unnamed to the opponent (R33, R97).
+//! included (R70), and gains the card's declared mana (`param(ctx, "mana")`) for this turn (§6.3 Mana).
+//! The `manaChanged` it makes names no card, so a face-down trap stays unnamed to the opponent (R33, R97).
 
 use jackioh_engine::effects::gain_mana;
 use jackioh_engine::prelude::*;
@@ -24,7 +17,7 @@ pub const ID: &str = "classic-006";
 
 const TRAP_TYPES: &[CardType] = &[CardType::Trap, CardType::FieldTrap];
 
-/// TS `const aura: Script["costAura"]`: your Traps and Field Traps cost (0).
+/// Your Traps and Field Traps cost (0).
 fn aura() -> CostAuraHook {
     read_hook(|_args| {
         vec![CostAura {
@@ -73,12 +66,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #6 Cloaked Toe Cracker — SPEC §8.6 row 6, BUILD M9 Classic row C 6: "Aura: your Traps and Field
-// Traps in hand cost (0) while it is on the field (R65) and return to their cost when it leaves; the
-// opponent's Traps and your Field Spells are untouched; the opponent's view of your changed hand costs
-// shows −1 (R177); radiant 6/8: also, after you play a Trap or Field Trap (a cast included, R70), gain
-// 1 mana this turn; the gain never names the face-down trap in the opponent's view (R33, R97); its
-// tuned number (radiant mana) reads through `param()` (R386)".
+// C #6 Cloaked Toe Cracker — SPEC §8.6 row 6, BUILD M9 Classic row C 6: your Traps and Field Traps in hand
+// cost (0) while it is on the field (R65) and return to their cost when it leaves; the opponent's hand costs
+// show −1 (R177); radiant 6/8: after you play a Trap (a cast included, R70) gain 1 mana this turn, never
+// naming the face-down trap (R33, R97); its tuned number (radiant mana) reads via `param()` (R386).
 //
 // The cast case uses Classic+ #37 Wardrum, whose end-of-turn copy is a cast Trap.
 #[cfg(test)]

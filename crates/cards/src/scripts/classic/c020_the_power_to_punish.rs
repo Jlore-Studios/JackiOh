@@ -4,21 +4,12 @@
 //!   Radiant: "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|card|cards};
 //!             or all enemy Units are destroyed at the start of your next turn."
 //!
-//! Activate (R384), once per turn: the mode and, for the modes that take one, the target are declared
-//! in the `activate` action (R81), each target bound to its mode (`forModes`, R90).
-//!   - "deal damage": one hit of {damage} from this card on a Unit or hero, either side.
-//!   - "opponent discards": the discard is random from their hand (R682: no "of your choice"), so no
-//!     prompt opens. With fewer cards than asked they discard all they have; an empty hand discards
-//!     nothing.
-//!   - the delayed destroy (a delayed effect, §10.1, `destroyAtNextTurnStart`): on the base face the
-//!     chosen Unit, on either side, keyed to that stay on the field — it fizzles if the Unit left the
-//!     field meanwhile, even if it came back (R174) — and on the Radiant face every enemy Unit on the
-//!     field when it resolves, not a list fixed at activation. It resolves with the start-of-turn
-//!     delayed effects (R62, R68) whether or not this card is still on the field (as R76), and it is a
-//!     destroy, so an Indestructible Unit survives it (R46). Either face's Units wear the red mark while
-//!     it waits (R437; on the Radiant face every enemy Unit, those played meanwhile too, R750).
-//!
-//! Activating is not a play (R384).
+//! Activate (R384): once per turn, and not a play. The mode and its targets travel in the `activate`
+//! action (R81), each target bound to its mode (`forModes`, R90). The discard is random (R682), so no
+//! prompt opens. The delayed destroy (§10.1, `destroyAtNextTurnStart`) is keyed to the Unit's stay: it
+//! fizzles if the Unit left, even if it came back (R174). Radiant takes every enemy Unit there when it
+//! resolves, with the start-of-turn effects (R62, R68), as R76 even if this card left; an Indestructible
+//! Unit survives (R46). Units wear the red mark while it waits (R437; Radiant, every enemy Unit, R750).
 
 use jackioh_engine::effects::{damage, destroy_at_next_turn_start, discard_random};
 use jackioh_engine::prelude::*;
@@ -113,16 +104,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #20 The Power to Punish — SPEC §8.6 row 20, BUILD M9 Classic row C 20: "Activate, once per turn
-// (R384), the mode and its target carried in the `activate` action: deal 2 damage to a target; the
-// opponent discards a card at random (R682; an empty hand: nothing), with no prompt; or a Unit, either
-// side, is destroyed at the start of your next turn, a delayed effect keyed to that stay on the field
-// that fizzles if the Unit has left it, even if it came back (R174), resolving with the start-of-turn
-// delayed effects (R62, R68) and still firing if The Power to Punish has left the field (as R76); an
-// Indestructible target survives (R46); activating is not a play; radiant: 4 damage; discards 2; or
-// every enemy Unit on the field at the start of your next turn is destroyed, the Units there then
-// rather than a list fixed at activation; its tuned numbers (damage, discards) read through `param()`
-// (R386)". Every enemy Unit the Radiant destroy will take wears its red mark while it waits (R750).
+// BUILD M9 Classic row C 20: 2 damage; the opponent discards 1 at random (an empty hand: nothing); or a
+// Unit, either side, is destroyed at the start of your next turn; radiant: 4 damage; discards 2; or every
+// enemy Unit there then. Tuned numbers (damage, discards) read through `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -151,7 +135,7 @@ mod tests {
         json!([{ "pick": "hero", "player": "p2" }])
     }
 
-    /// TS's `{ …defaults, ...side }`: the side's own keys over the defaults.
+    /// The side's own keys over the defaults.
     fn spread(mut defaults: Value, side: Value) -> Value {
         if let (Some(into), Some(from)) = (defaults.as_object_mut(), side.as_object()) {
             for (key, value) in from {
@@ -179,7 +163,7 @@ mod tests {
         json!([{ "pick": "instance", "instanceId": card.id }])
     }
 
-    /// TS `punish(s, mode, targets?)`: activate the card in that mode, with those targets.
+    /// Activate the card in that mode, with those targets.
     fn activate_punish<'a>(s: &'a mut Scenario, mode: &str, targets: Option<Value>) -> &'a mut Scenario {
         let mut options = json!({ "modes": [mode] });
         if let Some(targets) = targets {
@@ -209,8 +193,7 @@ mod tests {
         cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
-    /// The marks a seat's view shows on the unit with this id, anywhere on the board (TS
-    /// `card?.marks ?? []`, as JSON).
+    /// The marks a seat's view shows on the unit with this id, anywhere on the board, as JSON.
     fn marks_in(s: &Scenario, seat: PlayerId, id: &str) -> Value {
         let view = s.view(seat);
         let card = view

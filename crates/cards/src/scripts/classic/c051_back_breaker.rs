@@ -6,18 +6,10 @@
 //!            Indestructible cards stay (#98 Heroic Power, C #84 Lockdown, C #90 In Too Deep). An
 //!            animated card (Animated, §6.1, R383) is in the unit row and is not backrow. Tunes: none."
 //!
-//! Stack is the catalog keyword (§6.2, §3.2): it may be played onto an occupied unit zone, burying the
-//! card beneath (R13), which resumes when it leaves. The Death is §4.5 step 3's hook, so it fires on any
-//! death — a destroy, a Tribute (a Sacrifice counts as one, §6.3), a combat — and never on a bounce or an
-//! exile, which are no deaths. It is a board sweep (`destroyAll` over the backrow row): every card that
-//! acts in a backrow zone is marked — face-down ones too, since a backrow scope reaches them — and only
-//! the top of a backrow pile, since a dormant card is not on the field (R13); the next state check
-//! collects them together (R59), the one beneath a destroyed top resuming. Indestructible ones keep
-//! their zones (R46). An animated card stands in the unit row (R383) and a carried Unit is no backrow
-//! card (R446), so neither is reached. Radiant: `side: "enemy"`, relative to the controller it died
-//! under (the Death hook runs as the snapshot's controller, R89).
-//!
-//! Rulings: R13, R46, R59, R383, R89. Its proof: `test/classic/051-back-breaker.test.ts`.
+//! Stack (§6.2) buries the card beneath it. The Death is §4.5 step 3's hook: any death fires it (a
+//! destroy, a Tribute, §6.3, a combat), a bounce or an exile never. The next state check collects the
+//! marked cards together (R59); indestructible ones keep their zones (R46); a carried Unit is no backrow
+//! card (R446). Radiant's `enemy` is the opponent of the controller it died under (R89).
 
 use jackioh_engine::effects::destroy_all;
 use jackioh_engine::prelude::*;
@@ -38,8 +30,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #51 Back Breaker (SPEC §8.6 row 51; BUILD M9 row C 51). (1) Unit, Common, 3/2 → 6/4: Stack;
-// Death: destroy every backrow card (Radiant: every enemy backrow card).
+// C #51 Back Breaker (SPEC §8.6 row 51; BUILD M9 row C 51).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -66,17 +57,15 @@ mod tests {
 
     use crate::js;
 
-    /// TS `SPARE: SideSetup = { hand: [STOCKPILE], library: [VANILLA, VANILLA] }`.
     fn spare() -> Value {
         json!({ "hand": [STOCKPILE], "library": spare_library() })
     }
 
-    /// TS `SPARE.library`.
     fn spare_library() -> Value {
         json!([VANILLA, VANILLA])
     }
 
-    /// TS `{ ...side, ...SPARE }`: the side's keys with SPARE's laid over them.
+    /// The side's keys with `spare()`'s laid over them.
     fn with_spare(side: Value) -> Value {
         let mut out = side;
         if let (Some(fields), Some(over)) = (out.as_object_mut(), spare().as_object()) {
@@ -91,7 +80,6 @@ mod tests {
         [1, 2, 3, 4, 5].into_iter().map(|lane| s.backrow(player, lane).map(|card| card.def_id)).collect()
     }
 
-    /// TS `bothBackrows()`: p1's backrow and p2's.
     fn both_backrows() -> (Value, Value) {
         (
             json!([MANA_WELL, { "def": SHEEPISH, "faceUp": false }]),

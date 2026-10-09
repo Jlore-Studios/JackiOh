@@ -3,30 +3,13 @@
 //!            at least as many Plague Counters as its cost, steal it. Otherwise, draw a card for each
 //!            Plague Counter on it." — 1 token
 //!   Radiant: the same text — 2 tokens
-//!   Engine:  "One declared target (R81), either side, one placement of 1 (Radiant 2) (Plague Counters,
-//!            §6.3; a C #27 Pestilent Slime multiplies it). Its cost is R65's on the field: an X-cost
-//!            card on the field costs the X it was played for … (R396) … Steal per §6.3 and R15;
-//!            otherwise draw N (the hand cap applies). Tunes: tokens 1 ↑."
 //!
-//! The target is any permanent on either side — the top of a unit pile or a backrow card, face-down
-//! ones included — declared with the play (R81); a face-down card its chooser may not read is offered
-//! by its id alone and the placement on it never names it to them (R177).
-//!
-//! One placement of {tokens} on it (`placePlague`, B5 E19, R471), multiplied by its own multiplier.
-//! Then the two branches, read once the placement has landed:
-//!   * an enemy permanent (its controller is not the caster) whose Plague Counters are at least its cost
-//!     — R396's `costNow`: an X card on the field its X, 0 with none chosen; any other card R65's cost
-//!     where it stands — is stolen (§6.3, R15: the same lane if free, else the first free zone of its
-//!     row, an entry, R171); with no free zone it stays with them, and nothing is drawn, since the
-//!     text's "otherwise" is the condition's, not the steal's. A (0) Cost enemy permanent is always
-//!     stolen. A stolen face-down trap is read by its new controller from then on (R33).
-//!   * otherwise — your own permanent always — one draw per Plague Counter on it (§2.4: the hand cap
-//!     burns what does not fit).
-//!
-//! A target that has left the field by then takes nothing and draws nothing.
-//!
-//! Both branches are read after the placement, as the list reaches them (`forEachCard`), because the
-//! placement is what they count. The number is the declared `tokens` (R386), read through `param`.
+//! The target is any permanent on either side, face-down ones included, declared with the play (R81); a face-down
+//! card its chooser may not read is offered by id alone and the placement never names it to them (R177).
+//! One placement of {tokens} (`placePlague`, B5 E19, R471; `param`, R386; Pestilent Slime multiplies it), then, read
+//! after it lands: an enemy permanent with counters at least its cost (R396's `costNow`: an X card on the field its X,
+//! 0 with none chosen; any other R65's cost) is stolen (§6.3, R15, an entry, R171); with no free zone it stays with
+//! them and nothing is drawn. Otherwise draw one per counter (§2.4). A target gone from the field takes nothing.
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::effects::{ForEachCardArgs, draw, for_each_card, instance_of, place_plague, steal};
@@ -38,7 +21,6 @@ fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow"] }))]
 }
 
-/// TS `outcome`'s answer, `{ id, steals, tokens }`.
 struct Outcome {
     id: String,
     steals: bool,
@@ -101,7 +83,6 @@ pub fn script() -> CardScripts {
                     each: Arc::new(steal_it),
                 }),
                 for_each_card(ForEachCardArgs {
-                    // One entry per token, each a draw of 1: "draw a card for each Plague Counter on it".
                     cards: Arc::new(draws_owed),
                     each: Arc::new(draw_one),
                 }),

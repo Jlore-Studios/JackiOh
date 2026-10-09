@@ -1,26 +1,15 @@
 //! C #13 Boots on the Ground (SPEC §8.6 row 13). (1) Unit, Human, Common, 2/1 → 4/2.
 //!   Base:    "Charge\nAfter this attacks, draw {draw}." — draw 1
 //!   Radiant: "Charge\nAfter this attacks, Recruit {recruits|card|cards}." — recruits 1
-//!   Engine:  "A trigger after each combat it attacked in, forced attacks included, whether or not it
-//!            survived (it reads its last-known state, R78). Radiant: Recruit (§6.3), the first
-//!            permanent from the top of your deck. Tunes: draw 1 ↑; Radiant recruits 1 ↑."
 //!
 //! Charge is printed on both catalog faces, so §10.4 layer 1 grants it and nothing here does.
 //!
-//! "After this attacks", forced attacks included, whether or not it survived: the card's
-//! `afterAttack` hook, which the engine runs after the state check that closes each combat this card
-//! attacked in — declared by its controller or forced (R53, #9 Moths to the Flame) — on the attacker's
-//! last-known snapshot, as a Death hook runs on one (R78, R89): `ctx.self` is that snapshot, so its
-//! face and its tuned numbers are the ones it attacked with, and the controller is the attack's. An
-//! attack on this card is not one it attacked in, so defending does nothing.
-//!
-//! (A trigger on `attackDeclared` could not serve: an entry a card queued on the field is dropped when
-//! it leaves the field, R174, and a forced attack's event reaches no card that died in its combat, R212.)
-//!
-//! Radiant: §6.3 Recruit, one top-down scan per recruit for the first permanent, summoned into its
-//! row per R64 with no Cry (R1), a Trap face-down (R33); nothing when there is none or its row is full.
-//!
-//! The numbers are the declared `draw` and `recruits` (R386), read through `param`.
+//! "After this attacks" is the `afterAttack` hook: the engine runs it after the state check that closes
+//! each combat this card attacked in, declared or forced (R53, #9 Moths to the Flame), on its
+//! last-known snapshot as a Death hook runs (R78, R89). Defending is not attacking. A trigger on
+//! `attackDeclared` could not serve: a queued entry is dropped when its card leaves the field (R174),
+//! and a forced attack's event reaches no card that died in its combat (R212).
+//! Radiant: §6.3 Recruit, per R64 with no Cry (R1), a Trap face-down (R33). Numbers: `param` (R386).
 
 use jackioh_engine::prelude::*;
 
@@ -45,18 +34,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #13 Boots on the Ground — SPEC §8.6 row 13, BUILD M9 Classic row C 13: "Charge (it may hit the
-// hero the turn it enters); after each combat it attacked in, forced attacks included, draw 1, even
-// when it died in that combat (last-known state, R78); defending draws nothing; radiant 4/2 Charge:
-// after each attack Recruit the first permanent from the top of your deck instead of drawing; none,
-// or its row full, → nothing; a recruited trap lands face-down, never named in the opponent's view
-// (R33); its tuned numbers (draw, radiant recruits) read through `param()` (R386)".
-//
-// "After this attacks" is the card's `Script.afterAttack` hook, which the engine runs after the check
-// that closes each combat the card attacked in, on its last-known snapshot; see the script's header.
-//
-// Forced attacks come from #9 Moths to the Flame (1/14, "Start of turn: every enemy Unit attacks
-// this") on the opponent's side: ending p1's turn starts p2's, and p1's units attack it.
+// C #13 Boots on the Ground — SPEC §8.6 row 13, BUILD M9 Classic row C 13: draws 1 after each combat it
+// attacked in, forced ones included, even when it died (last-known state, R78); defending draws nothing.
+// Radiant 4/2: Recruits instead, a recruited trap landing face-down (R33); numbers via `param()` (R386).
+// Forced attacks come from #9 Moths to the Flame (start of turn: every enemy Unit attacks this).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -78,17 +59,15 @@ mod tests {
     const A: &str = "core-020";
     const B: &str = "core-001";
 
-    /// TS `handDefs(s, player = "p1")`.
     fn hand_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
         s.hand(player).into_iter().map(|card| card.def_id).collect()
     }
 
-    /// TS `unitDefs(s, player = "p1")`: lanes 1–5, `None` for an empty zone.
+    /// Lanes 1–5, `None` for an empty zone.
     fn unit_defs(s: &Scenario, player: PlayerId) -> Vec<Option<String>> {
         (1..=5).map(|lane| s.unit(player, lane).map(|card| card.def_id)).collect()
     }
 
-    /// The expected lanes, as TS wrote them (`[BOOTS, TEMPO, null, null, null]`).
     fn lanes(expected: [Option<&str>; 5]) -> Vec<Option<String>> {
         expected.iter().map(|lane| lane.map(str::to_string)).collect()
     }
@@ -264,7 +243,6 @@ mod tests {
                 "p2": { "hand": [ANCHOR], "field": [TEMPO] },
             }));
 
-            // TS `s.attack(s.unit("p2", 1) ?? TEMPO, BOOTS)`.
             match s.unit(P2, 1) {
                 Some(attacker) => s.attack(&attacker, BOOTS),
                 None => s.attack(TEMPO, BOOTS),

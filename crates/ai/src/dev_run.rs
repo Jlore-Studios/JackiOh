@@ -1,20 +1,15 @@
 //! SPEC §9.11, R378: an internal AI development run. AI-against-AI games played on a build before its
-//! patch ships, each filed as a game record (R376) of its own source, so the card win rates of a
-//! patch's pre-release run can be compared with those of the live games played on it once it ships.
+//! patch ships, each filed as a game record (R376) of source "dev", which no live figure counts unless
+//! it is asked for (R378), so a patch's pre-release card win rates compare with its live ones.
 //!
 //! A development game is an All Random game (R258) with two AI pilots: both decks are dealt by the
-//! game's weighted random deck-builder with nothing banned, from the game seed and the seat
-//! (`${seed}:p1-deck`, `${seed}:p2-deck`), exactly as the server deals a live one; both seats play on
-//! this spec's own resources, no handicap (R180), at the browser's budget. So a run files under All
-//! Random, and compares with that mode's live games like for like. Its source is "dev", which no live
-//! figure counts unless it is asked for (R378). A card the shadow ban keeps out of the AI's own decks
-//! (R186) is dealt here like any other — All Random bans nothing — and is one the AI is known to play
-//! badly, so its development figures say more about the AI than about the card.
+//! weighted random deck-builder with nothing banned, from the game seed and the seat, as the server
+//! deals a live one; both seats play with no handicap (R180), at the browser's budget. A card the
+//! shadow ban keeps out of the AI's own decks (R186) is dealt here like any other, and is one the AI
+//! plays badly, so its development figures say more about the AI than about the card.
 //!
 //! Pure and seeded like the rest of src/ (CLAUDE.md rule 4): `cargo jackioh stats` loops over the
 //! games and writes the file.
-//!
-//! Port of `packages/ai/src/devRun.ts`.
 
 use jackioh_engine::config::DECK_SIZE;
 use jackioh_engine::{
@@ -54,8 +49,7 @@ pub struct DevRunOptions {
     pub budget: Option<SearchBudget>,
 }
 
-/// Game n of a series: its seed, its two dealt decks, and two AI seats at this spec's resources. TS
-/// took `Pick<DevRunOptions, "series" | "budget">`; here the two fields are the arguments.
+/// Game n of a series: its seed, its two dealt decks, and two AI seats at this spec's resources.
 pub fn dev_game_config(n: i32, series: &str, budget: Option<SearchBudget>) -> MatchConfig {
     let seed = format!("{series}:{n}");
     let budget = budget.unwrap_or(AI_BUDGET);
