@@ -45,6 +45,9 @@
 //   the spec's row name and each alias the words cards print. Only capitalised spellings match, so
 //   "steal it" mid-sentence stays plain.
 // - §6.3's Degrade and Upgrade, one row and one entry each, since a card prints one word or the other.
+// - The Meditative set's words (R1384): §6.3's Exile, Hand size (matched in lower case, as #79 prints
+//   it) and Mark in a hand (printed "Mark"). Grant tag stays rules vocabulary: #35 says it in plain
+//   words, so no card prints the row's name.
 
 import type { KeywordKind } from "@jackioh/shared";
 
@@ -84,7 +87,10 @@ export type VerbTermId =
   | "Redirect"
   | "End the turn"
   | "Trigger a Cry"
-  | "Look at a hand";
+  | "Look at a hand"
+  | "Exile"
+  | "Hand size"
+  | "Mark in a hand";
 /** §6.1's unit statuses that are not keyword kinds (patch v0.2.0, B5 E35). */
 export type StatusTermId =
   | "Can't be in Defense Position"
@@ -240,6 +246,12 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   "Trigger a Cry": verb("Trigger a Cry", "Run a unit's Cry again"),
   "Look at a hand": verb("Look at a hand", "See the opponent's hand in a prompt", {
     aliases: ["Look at your opponent's hand"],
+  }),
+  // R1384: §6.3's words the Meditative cards print; "hand size" matches as #79 prints it.
+  Exile: verb("Exile", "Send to the exile pile, from anywhere; it triggers no Death"),
+  "Hand size": verb("Hand size", "How many cards a hand holds, set for the rest of the game", { aliases: ["hand size"] }),
+  "Mark in a hand": verb("Mark in a hand", "Mark cards in a hand; a later effect acts on the ones still there", {
+    aliases: ["Mark"],
   }),
 
   // §5.2 Radiant: §6.3's "Make Radiant" rule, then §5.2's sentence about a card in hand or deck.

@@ -129,6 +129,21 @@ describe("R1301 a Chinese card in a match", () => {
     expect(root.textContent).not.toContain(GLOSSARY.Taunt.rule);
   });
 
+  it("R1384 R1301 a Meditative card in Chinese: its words, its ensō and its new glossary rows", () => {
+    // Meditative #78 Occidentless Mandate: a CN Spell that Exiles.
+    const exile = inPlay(card({ defId: "meditative-078", cost: 4, chinese: true }));
+    const root = draw(exile);
+    expect(text(root, ".card-name")).toBe(zh("meditative-078").name);
+    expect([...root.querySelectorAll(".cf-tag")].map((tag) => tag.textContent)).toEqual([CHINESE_TERMS.tags.CN]);
+    expect(root.querySelector(".cf-set")).toHaveAttribute("data-set-mark", "meditative");
+    expect(glossaryFor(exile).find((entry) => entry.id === "Exile")).toMatchObject(CHINESE_TERMS.glossary.Exile);
+    // #79 Touched by KY sets the hand size; #76 Do or Die marks cards in a hand.
+    const size = glossaryFor(inPlay(card({ defId: "meditative-079", cost: 3, chinese: true })));
+    expect(size.find((entry) => entry.id === "Hand size")?.label).toBe(CHINESE_TERMS.glossary["Hand size"].label);
+    const mark = glossaryFor(inPlay(card({ defId: "meditative-076", cost: 1, chinese: true })));
+    expect(mark.find((entry) => entry.id === "Mark in a hand")?.label).toBe(CHINESE_TERMS.glossary["Mark in a hand"].label);
+  });
+
   it("R1301 its refs are marked by their Chinese names", () => {
     // Core #90 CN-Viral Injection names CN-Virus; its Radiant face names the Radiant one ("光辉CN病毒").
     for (const radiant of [false, true]) {

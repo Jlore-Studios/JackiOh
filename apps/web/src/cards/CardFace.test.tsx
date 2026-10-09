@@ -14,10 +14,11 @@ import { useRef, type ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import { GLITCH_DEF_ID } from "@jackioh/engine/config";
-import { fillParams, type CardDef, type CardType, type Rarity } from "@jackioh/shared";
+import { GLITCH_DEF_ID, TRIBAL_TAGS } from "@jackioh/engine/config";
+import { fillParams, type CardDef, type CardType, type Rarity, type Tag } from "@jackioh/shared";
 
 import { CardFace } from "./CardFace.tsx";
+import { CHINESE_TERMS } from "./chinese.ts";
 import { RulesText } from "./RulesText.tsx";
 import {
   FACE_ASPECT,
@@ -759,6 +760,7 @@ describe("R503: the set mark and a token's printed rarity", () => {
       ["classic-043", "Classic", "classic"],
       ["classicplus-043", "Classic+", "classic-plus"],
       ["classicplus-012-1", "Classic+", "classic-plus"],
+      ["meditative-027", "Meditative", "meditative"],
     ] as const) {
       const mark = setMark(catalogFace(id));
       expect(mark.getAttribute("data-set"), id).toBe(set);
@@ -775,9 +777,9 @@ describe("R503: the set mark and a token's printed rarity", () => {
     }
   });
 
-  it("R503 the four glyphs differ, and Classic+'s is Classic's temple with a plus", () => {
-    const sources = new Set(["Core", "Classic", "Classic+", "Boss"].map((set) => setMarkOf(set).src));
-    expect(sources.size).toBe(4);
+  it("R503 the five glyphs differ, and Classic+'s is Classic's temple with a plus", () => {
+    const sources = new Set(["Core", "Classic", "Classic+", "Meditative", "Boss"].map((set) => setMarkOf(set).src));
+    expect(sources.size).toBe(5);
     const classic = decodeURIComponent(setMarkOf("Classic").src);
     const plus = decodeURIComponent(setMarkOf("Classic+").src);
     const temple = /<path d='M12 1\.8L22 7\.2H2Z[^']*'/.exec(classic)?.[0];
@@ -788,6 +790,20 @@ describe("R503: the set mark and a token's printed rarity", () => {
       expect(svg).not.toContain("<text");
       expect(svg).not.toContain("<title");
     }
+  });
+
+  it("R503 the Meditative mark is the ensō with a red seal, not the diamond", () => {
+    const mark = setMarkOf("Meditative");
+    expect(mark.kind).toBe("meditative");
+    expect(mark.label).toBe("Meditative set");
+    expect(mark.src).not.toBe(setMarkOf("Boss").src);
+    const svg = decodeURIComponent(mark.src);
+    // The open ring is one arc that does not close (the ink's brush stroke), the seal a red square.
+    expect(svg).toContain("A7.8 7.8 0 1 0");
+    expect(svg).toContain("fill='#c8322b'");
+    expect(svg).not.toContain("<text");
+    expect(svg).not.toContain("<title");
+    expect(setMark(catalogFace("meditative-027")).querySelector("img")?.getAttribute("src")).toBe(mark.src);
   });
 
   it("R503 a set with no glyph of its own gets the fallback, still named; an unknown card shows no set", () => {
@@ -867,6 +883,37 @@ describe("R503: the set mark and a token's printed rarity", () => {
   it("R503 the face's art is drawn with the card's name, so it carries the name's motif", () => {
     const art = one(catalogFace("classic-036"), ".cf-art-frame > .cf-art");
     expect(art.getAttribute("data-art-motif")).toBe("flames");
+  });
+});
+
+/* ------------------------------------------------------------------------------------- R1382 */
+
+describe("R1382: a card with every tribal tag prints All Tribes", () => {
+  const withTags = (tags: readonly Tag[], chinese = false): HTMLElement => {
+    const card: CardDef = { ...def("core-002"), tags: [...tags] };
+    return renderFace({ defId: card.id, def: card, radiant: false, chinese });
+  };
+  const printed = (cf: HTMLElement): string[] => [...cf.querySelectorAll<HTMLElement>(".cf-tags > .cf-tag")].map((tag) => tag.textContent ?? "");
+
+  it("R1382 the five tribal tags print as All Tribes, other tags after, and the four of five as themselves", () => {
+    expect([...TRIBAL_TAGS]).toEqual(["Human", "Felinor", "KY", "CN", "Jlockeed"]);
+    const all = withTags([...TRIBAL_TAGS]);
+    expect(printed(all)).toEqual(["All Tribes"]);
+    expect(one(all, ".cf-tag").getAttribute("data-tag")).toBe("All Tribes");
+    cleanup();
+    expect(printed(withTags(["Wincon", ...TRIBAL_TAGS]))).toEqual(["All Tribes", "Wincon"]);
+    cleanup();
+    expect(printed(withTags(TRIBAL_TAGS.slice(1)))).toEqual(["Felinor", "KY", "CN", "Jlockeed"]);
+    cleanup();
+    expect(printed(withTags(["Human"]))).toEqual(["Human"]);
+  });
+
+  it("R1382 a Chinese face prints the Chinese word, and the card's tags are unchanged", () => {
+    expect(printed(withTags([...TRIBAL_TAGS], true))).toEqual([CHINESE_TERMS.allTribes]);
+    cleanup();
+    expect(printed(withTags(["Wincon", ...TRIBAL_TAGS], true))).toEqual([CHINESE_TERMS.allTribes, CHINESE_TERMS.tags.Wincon]);
+    const model = faceModel({ defId: "core-002", def: { ...def("core-002"), tags: [...TRIBAL_TAGS] }, radiant: false });
+    expect(model.tags).toEqual([...TRIBAL_TAGS]);
   });
 });
 

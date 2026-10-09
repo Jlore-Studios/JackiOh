@@ -11,13 +11,15 @@ import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 import { describe, expect, it } from "vitest";
 
 import { CATALOG as CORE_CATALOG } from "@jackioh/cards";
-import { setShips } from "@jackioh/shared";
+import { SHIPPED_SETS, setShips } from "@jackioh/shared";
 import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 
 import {
+  ALMANAC_CHIP_TAGS,
   ALMANAC_TAGS,
   COST_BUCKETS,
   CURVE_TOP,
+  DECK_CHIP_TAGS,
   DEFAULT_FILTER,
   DEFAULT_SORT,
   FILTER_RARITIES,
@@ -32,6 +34,7 @@ import {
   manaCurve,
   matchesFilter,
   searchMatches,
+  shippedTags,
   sortPool,
   visiblePool,
   type CostBucket,
@@ -202,6 +205,7 @@ describe("the filter vocabulary (B31, B34)", () => {
       "Plague",
       "Catalyst",
       "Acclaimed",
+      "Wincon",
     ]);
     // Only the ten AI tokens carry "AI" and the two Prime tokens "Prime", and the pool never offers a
     // Token.
@@ -732,10 +736,47 @@ describe("the almanac's pool (R630)", () => {
 
   it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI and Token", () => {
     expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Token"]);
-    // R1420: the tags the cards of the shipped sets carry; a set being built adds its tags when it ships.
-    const carried = new Set(SHIPPED.flatMap((d) => d.tags));
-    expect(new Set(ALMANAC_TAGS)).toEqual(carried);
+    // R1420, R1381: the chips are the tags the cards of the shipped sets carry; a set being built adds
+    // its tags when it ships.
+    const carried = new Set(SHIPPED.filter((d) => d.id !== GLITCH_DEF_ID).flatMap((d) => d.tags));
+    expect(new Set(ALMANAC_CHIP_TAGS)).toEqual(carried);
     expect(filterTagId("Token")).toBe("db-filter-tag-token");
     expect(filterTagId("AI")).toBe("db-filter-tag-ai");
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R1380, R1381: the chips follow what ships
+// ---------------------------------------------------------------------------------------------
+
+describe("the chips follow what ships (R1380, R1381)", () => {
+  const fixture = (id: string, set: SetName, tags: Tag[]): CardDef => ({ ...def({ id, index: "1", name: id, type: "Unit", rarity: "Common", cost: 1, tags }), set });
+
+  it("R1380 the set chips are the sets that ship, Meditative's only once it ships", () => {
+    expect([...FILTER_SETS]).toEqual([...SHIPPED_SETS]);
+    expect(FILTER_SETS.includes("Meditative")).toBe(setShips("Meditative"));
+    expect(filterSetId("Meditative")).toBe("db-filter-set-meditative");
+  });
+
+  it("R1381 a tag chip shows while a card that ships carries it", () => {
+    expect([...shippedTags(FILTER_TAGS, [fixture("c-1", "Core", ["Wincon", "Human"])])]).toEqual(["Human", "Wincon"]);
+    // A set that has not shipped lends no tag; once it ships its tag gets its chip.
+    expect([...shippedTags(FILTER_TAGS, [fixture("m-1", "Meditative", ["Wincon"])])]).toEqual(setShips("Meditative") ? ["Wincon"] : []);
+    // Glitch lends none (R674).
+    expect([...shippedTags(FILTER_TAGS, [{ ...fixture(GLITCH_DEF_ID, "Classic", ["Wincon"]) }])]).toEqual([]);
+    expect([...shippedTags(FILTER_TAGS, [])]).toEqual([]);
+  });
+
+  it("R1381 both lists of chips are their full list less the tags no shipped card carries", () => {
+    const carried = new Set(
+      Object.values(CORE_CATALOG)
+        .filter((d) => setShips(d.set) && d.id !== GLITCH_DEF_ID)
+        .flatMap((d) => d.tags),
+    );
+    expect([...DECK_CHIP_TAGS]).toEqual(FILTER_TAGS.filter((tag) => carried.has(tag)));
+    expect([...ALMANAC_CHIP_TAGS]).toEqual(ALMANAC_TAGS.filter((tag) => carried.has(tag)));
+    // Wincon is in the full list now and in the chips only once a shipped card carries it.
+    expect(FILTER_TAGS).toContain("Wincon");
+    expect(DECK_CHIP_TAGS.includes("Wincon")).toBe(carried.has("Wincon"));
   });
 });
