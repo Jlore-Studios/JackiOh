@@ -494,7 +494,7 @@ cycle() {
 The \`$lane\` training lane at work ([\`training/README.md\`](https://github.com/$slug/blob/main/training/README.md)). Devin runs on the training box one session after another, and this draft follows it:
 
 - each session gets a comment, rewritten every $((progress_every / 60)) minutes while it runs: how long it has run, the checkout's diff against \`main\`, and what \`~/training-out/$lane/attempts.md\` gained (each attempt, its dry run's numbers and whether it was kept);
-- the checkout is pushed here as one \`[skip ci]\` commit whenever it changes, so **Files changed** is the session's work in progress (CI does not run on it);
+- the checkout is pushed here as one commit whenever it changes, so **Files changed** is the session's work in progress (its message tells CI to skip it);
 - once a promotion passes its gate on the box, the loop lands it on \`main\`, retitles this pull request \`AI gen <N> ($lane): …\`, puts the gate's report here, marks it ready and turns on auto-merge. CI then runs every check, the training gate included;
 - a promotion that fails a check comes back to draft with a comment saying which, \`attempts.md\` notes it for the next session, and the next session starts from \`main\`.
 
