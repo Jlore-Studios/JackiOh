@@ -91,6 +91,16 @@ pub fn pool(own_id: &str, args: &CardQuery) -> Vec<&'static CardDef> {
     query(&with_own)
 }
 
+/// MD-G1, R1437: "a random Luck-based card" (Meditative #101 Gachaholic): every non-token card that
+/// prints Lucky on either face or flips a coin (`jackioh_engine::catalog::is_luck_based`), from the
+/// sets that ship (R1420).
+pub fn luck_based() -> CardQuery {
+    CardQuery {
+        luck_based: Some(true),
+        ..CardQuery::default()
+    }
+}
+
 /// Both trap types, for a pool or filter that says "Trap". SPEC says "Field Trap counts as Trap" for
 /// §8 #51 (KY's Private Tutor's type choice), #85/R61 (Unlicensed Experimentation's type match) and
 /// R35 (Transmogulate's same-type replacement), so a `type: "Trap"` query — which matches the

@@ -1,25 +1,27 @@
 //! Coin flips that buff a unit or grant it a keyword (SPEC §8.1 #4 Gary the Gambler, §10.4
-//! layer 4, §10.7, R32, R130).
+//! layer 4, §10.7, R32, R130, R1440).
 //!
 //! "Cry: flip 5 coins; +1 attack per heads, +1 max health per tails. Then flip a coin: heads
 //! gains Divine Shield, tails gains Rush", radiant "7 coins; +2 per heads, +2 per tails" plus the
-//! same rider verbatim. #4's Engine cell reads "5 or 7 seeded rolls; permanent buff layer; then
+//! same rider verbatim. #4's Engine cell read "5 or 7 seeded rolls; permanent buff layer; then
 //! one seeded coin granting Divine Shield on heads, Rush on tails; Lucky has no defined 'best'
-//! here so does not apply", and all four clauses are decisions this file keeps rather than
-//! re-makes:
+//! here so does not apply". The first three clauses are decisions this file keeps; R1440 has
+//! since given every coin flip a best, heads, which replaces the fourth:
 //!
-//!   * SEEDED ROLLS. Every flip is `ctx.rng.coin()`, the only source of randomness §10.7 allows.
-//!     OS randomness is out of reach of this crate (CLAUDE.md rule 4, SURFACE §3), and a card file
-//!     may not roll for itself, which is the whole reason these verbs exist.
+//!   * SEEDED ROLLS. Every flip is `ctx.rng.lucky_coin(lucky)`, the only source of randomness §10.7
+//!     allows. OS randomness is out of reach of this crate (CLAUDE.md rule 4, SURFACE §3), and a card
+//!     file may not roll for itself, which is the whole reason these verbs exist.
 //!   * PERMANENT BUFF LAYER. The totals are applied through `buff` from `super::buff`, and the rider
 //!     keyword through `grant_keyword` from the same module, so there is ONE implementation of
 //!     §10.4's layer 4: nothing here writes `card.buffs` or `card.granted_keywords`, and the unit's
 //!     totals stay something `unit_view` computes on every read rather than something stored.
-//!   * NO LUCKY. §6.1's Lucky X is "repeat a luck-based roll X extra times, keep the best", and a
-//!     flip that pays out on heads AND on tails has no better side, so R32/R130 leave Gary out of
-//!     it. There is deliberately no `lucky` option to wire in.
-//!   * ONE DRAW FOR THE RIDER. `flip_coin_keyword` takes exactly one seeded draw, and like
-//!     `flip_coins` it pays on both faces, so R32/R130 leave it without Lucky too.
+//!   * LUCKY KEEPS HEADS. §6.1's Lucky X is "repeat a luck-based roll X extra times, keep the best",
+//!     and R1440 makes a coin flip luck-based with heads its better side, though Gary pays on both
+//!     faces (revising R32/R130). Each coin is its own roll: with the flipping card's Lucky X
+//!     (`query::lucky_on`, printed plus given, R1438) it flips X more coins and lands heads if any
+//!     does. With no Lucky every flip is the one draw it always was, so no shipped game changes.
+//!   * ONE ROLL FOR THE RIDER. `flip_coin_keyword` is one coin, rolled the same way: one seeded draw
+//!     with no Lucky, 1 + X with Lucky X.
 //!
 //! THE FIZZLE IS TOTAL, AND THAT IS A DETERMINISM RULE, NOT TIDINESS. §10.7 stores `rngCursor` in
 //! state, so the cursor is part of the match: every later draw in the game depends on how many were
@@ -36,8 +38,15 @@ use serde_json::json;
 use super::buff::{BuffAmount, buff, grant_keyword};
 use super::targets::{TargetSpec, instance_of};
 use crate::prelude::json_as;
-use crate::script::Effect;
+use crate::script::{Effect, EffectContext};
 use crate::wire::Keyword;
+
+/// R1438, R1440: the Lucky of the card flipping (the card running the script), which every one of its
+/// flips takes; 0 when no card is running it.
+fn flipper_lucky(ctx: &EffectContext<'_>) -> i32 {
+    ctx.live_self()
+        .map_or(0, |card| crate::query::lucky_on(&*ctx.sink.state, card))
+}
 
 /// TS `key: "attack" | "health"`: which stat `total_for` sums.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -68,6 +77,7 @@ pub struct FlipCoinsArgs {
 }
 
 /// §8.1 #4: flip `coins` coins and buff the target by `perHeads` per heads and `perTails` per tails.
+/// Each coin is a `lucky_coin` at the flipping card's Lucky (R1440).
 ///
 /// The two totals are applied as ONE layer-4 buff, so heads + tails always accounts for every flip
 /// and there is a single `buffed` event carrying the whole result — which is what §10.10 animates
@@ -80,10 +90,11 @@ pub fn flip_coins(args: FlipCoinsArgs) -> Effect {
             return;
         };
 
+        let lucky = flipper_lucky(ctx);
         let coins = args.coins.max(0);
         let mut heads = 0;
         for _flip in 0..coins {
-            if ctx.rng.coin() {
+            if ctx.rng.lucky_coin(lucky) {
                 heads += 1;
             }
         }
@@ -116,9 +127,9 @@ pub struct FlipCoinKeywordArgs {
 /// `tailsKeyword` on tails (§10.4 granted keywords, §10.7, R32/R130).
 ///
 /// Gary the Gambler's rider after its stat flips: heads gains Divine Shield, tails gains Rush.
-/// Exactly one seeded `ctx.rng.coin()` draw, resolved against the target FIRST so a missing
-/// target takes zero draws, like `flip_coins`. It pays on both faces, so there is no Lucky to
-/// consult and no `lucky` option, per R32/R130.
+/// One `ctx.rng.lucky_coin` at the flipping card's Lucky (R1440: one seeded draw with none, 1 + X
+/// with Lucky X, heads kept), resolved against the target FIRST so a missing target takes zero
+/// draws, like `flip_coins`.
 pub fn flip_coin_keyword(args: FlipCoinKeywordArgs) -> Effect {
     Effect::new("flipCoinKeyword", move |ctx| {
         // Resolved before the single draw: see the determinism note above.
@@ -126,7 +137,8 @@ pub fn flip_coin_keyword(args: FlipCoinKeywordArgs) -> Effect {
             return;
         };
 
-        let heads = ctx.rng.coin();
+        let lucky = flipper_lucky(ctx);
+        let heads = ctx.rng.lucky_coin(lucky);
         let keyword = if heads {
             args.heads_keyword.clone()
         } else {

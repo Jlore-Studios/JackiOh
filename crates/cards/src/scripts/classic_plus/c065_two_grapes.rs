@@ -64,7 +64,10 @@ mod tests {
 
     /// TS `GRAPE_IDS.indexOf(id)`: −1 for an id that is no Grape.
     fn index_of(id: &str) -> i64 {
-        grape_ids().iter().position(|grape| *grape == id).map_or(-1, |at| at as i64)
+        grape_ids()
+            .iter()
+            .position(|grape| *grape == id)
+            .map_or(-1, |at| at as i64)
     }
 
     use crate::js;
@@ -79,7 +82,11 @@ mod tests {
         s.last_events()
             .iter()
             .filter_map(|event| match event {
-                GameEvent::AddedToHand { player: PlayerId::P1, instance_id, def_id } => Some(Added {
+                GameEvent::AddedToHand {
+                    player: PlayerId::P1,
+                    instance_id,
+                    def_id,
+                } => Some(Added {
                     instance_id: instance_id.clone(),
                     def_id: def_id.clone(),
                 }),
@@ -111,7 +118,8 @@ mod tests {
     }
 
     #[test]
-    fn is_a_1_fruit_spell_with_no_refs_grape_names_the_five_grapes_r480_and_both_faces_run_one_shape_of_hook() {
+    fn is_a_1_fruit_spell_with_no_refs_grape_names_the_five_grapes_r480_and_both_faces_run_one_shape_of_hook()
+    {
         crate::register_all();
         let def = crate::card_def(ID);
         assert_eq!(def.id, GRAPES);
@@ -139,7 +147,11 @@ mod tests {
 
             let grapes = added(&s);
             assert_eq!(grapes.len(), 2);
-            assert!(grapes.iter().all(|event| grape_ids().contains(&event.def_id.as_str())));
+            assert!(
+                grapes
+                    .iter()
+                    .all(|event| grape_ids().contains(&event.def_id.as_str()))
+            );
             assert!(grapes.iter().all(|event| !s.card(&event.instance_id).radiant));
             assert_eq!(s.card(GRAPES).zone.z(), ZoneName::Graveyard);
         }
@@ -195,7 +207,11 @@ mod tests {
             assert!(share(3) > 3.0);
             assert!(share(3) < 11.0);
             assert!(share(4) < 4.0);
-            assert!(ids[..4].iter().all(|id| counts.get(*id).copied().unwrap_or(0) > 0));
+            assert!(
+                ids[..4]
+                    .iter()
+                    .all(|id| counts.get(*id).copied().unwrap_or(0) > 0)
+            );
         }
 
         #[test]
@@ -204,7 +220,11 @@ mod tests {
             let mut s = played(false, None, Some(9));
             s.play(GRAPES, json!({}));
             assert_eq!(s.hand(P1).len(), 10);
-            let burned = s.last_events().iter().filter(|event| event.event_type().as_str() == "burned").count();
+            let burned = s
+                .last_events()
+                .iter()
+                .filter(|event| event.event_type().as_str() == "burned")
+                .count();
             assert_eq!(burned, 1);
             assert_eq!(added(&s).len(), 1);
         }
@@ -218,11 +238,22 @@ mod tests {
                 .view(P2)
                 .events
                 .into_iter()
-                .filter(|event| matches!(event, GameEvent::AddedToHand { player: PlayerId::P1, .. }))
+                .filter(|event| {
+                    matches!(
+                        event,
+                        GameEvent::AddedToHand {
+                            player: PlayerId::P1,
+                            ..
+                        }
+                    )
+                })
                 .collect();
             assert_eq!(theirs.len(), 2);
             for event in &theirs {
-                let GameEvent::AddedToHand { instance_id, def_id, .. } = event else {
+                let GameEvent::AddedToHand {
+                    instance_id, def_id, ..
+                } = event
+                else {
                     continue;
                 };
                 assert_eq!(def_id, "hidden");
@@ -250,6 +281,38 @@ mod tests {
             floor.play(GRAPES, json!({}));
             assert_eq!(added(&floor).len(), 1);
         }
+    }
+
+    /// R1438: given Lucky 1, the base face rolls each of its two Grapes twice and keeps the better:
+    /// four draws of the rng, and the Grapes the same cursor's pairs predict, none of them Radiant.
+    #[test]
+    fn r1438_given_lucky_1_the_base_face_rolls_twice_and_keeps_the_better() {
+        crate::register_all();
+        let mut s = played(false, Some("lucky"), None);
+        crate::give_lucky(&mut s, GRAPES, 1);
+        let cursor = s.state().rng_cursor;
+        s.play(GRAPES, json!({}));
+        assert_eq!(s.state().rng_cursor - cursor, 4);
+
+        let mut rng = Rng::new("lucky", cursor);
+        let ids = grape_ids();
+        let expected: Vec<String> = [0, 1]
+            .iter()
+            .map(|_| {
+                let first = index_of(&jackioh_engine::catalog::roll_grape(&mut rng, 0));
+                let second = index_of(&jackioh_engine::catalog::roll_grape(&mut rng, 0));
+                ids[first.max(second) as usize].to_string()
+            })
+            .collect();
+        let grapes = added(&s);
+        assert_eq!(
+            grapes
+                .iter()
+                .map(|event| event.def_id.clone())
+                .collect::<Vec<String>>(),
+            expected
+        );
+        assert!(grapes.iter().all(|event| !s.card(&event.instance_id).radiant));
     }
 
     mod radiant {
@@ -320,7 +383,9 @@ mod tests {
                 numbers_on(s.state(), s.card(GRAPES))
                     .iter()
                     .map(js)
-                    .find(|number| number["ref"]["kind"] == json!("keyword") && number["ref"]["key"] == json!("Lucky"))
+                    .find(|number| {
+                        number["ref"]["kind"] == json!("keyword") && number["ref"]["key"] == json!("Lucky")
+                    })
                     .and_then(|number| number["value"].as_i64())
             };
             assert_eq!(lucky_now(&s), Some(1));

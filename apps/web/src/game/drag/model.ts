@@ -99,11 +99,12 @@ function planPlay(
   const dropTestids = dropSetFor(view, legal, lifted);
   const freeDrop = dropTestids.size === 0 || outstandingNeed(lifted) === null;
 
-  // Nothing is picked yet, so every candidate is a remaining one.
+  // Nothing is picked yet, so every candidate is a remaining one. ME-ALTPLAY: a free drop casts
+  // face-up, so the set plays never make a drop free nor draw its arrow.
   let anyZone = false;
   let anyTargets = false;
   for (const candidate of candidates) {
-    if (candidate.type !== "play") continue;
+    if (candidate.type !== "play" || candidate.faceDown !== undefined) continue;
     if (candidate.zone !== undefined) anyZone = true;
     if (candidate.targets !== undefined && candidate.targets.length > 0) anyTargets = true;
   }
@@ -298,6 +299,8 @@ export function resolveDrop(
     if (result.action !== undefined || result.interaction !== plan.lifted) return result;
     return { interaction: plan.missed ?? IDLE };
   }
-  if (spot.at === "board" && plan.freeDrop) return pickInPlay(plan.lifted, {});
+  // ME-ALTPLAY: a free drop casts face-up; setting asks its timing through the picker.
+  if (spot.at === "board" && plan.freeDrop)
+    return pickInPlay(plan.lifted, plan.kind === "play" ? { faceDown: "up" } : {});
   return { interaction: plan.missed ?? IDLE };
 }

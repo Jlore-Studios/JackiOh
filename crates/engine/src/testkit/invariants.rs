@@ -942,8 +942,16 @@ impl InvariantMonitor {
                 } => {
                     // R383: moving into the unit row is entering it on that turn; a carried Unit stepping
                     // down off its carrier (C+ #33, carriers.rs) was a Unit on the field all along and enters nothing.
+                    // ME-ALTPLAY, R1041: a set Unit keeps its set turn as `summonedTurn`, so its reveal
+                    // animation enters nothing either.
                     if *carried != Some(true) {
-                        self.enter(instance_id);
+                        let is_unit_def = find_instance(state, instance_id).is_some_and(|card| {
+                            crate::catalog::def_of(Some(state), &card.def_id).type_
+                                == crate::wire::CardType::Unit
+                        });
+                        if !is_unit_def {
+                            self.enter(instance_id);
+                        }
                     }
                 }
                 GameEvent::Transformed {

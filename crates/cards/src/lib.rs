@@ -173,6 +173,15 @@ pub(crate) fn upgrade_number(s: &mut jackioh_engine::testkit::Scenario, card: &s
     tune_number(s, card, key, jackioh_engine::effects::TuneDirection::Upgrade)
 }
 
+/// R1438: give `card` Lucky `n`, as a `lucky` rider does once a card is in a hand: a granted keyword
+/// that adds to the Lucky the card prints.
+#[cfg(test)]
+pub(crate) fn give_lucky(s: &mut jackioh_engine::testkit::Scenario, card: &str, n: i32) {
+    s.card_mut(card)
+        .granted_keywords
+        .push(jackioh_engine::Keyword::Lucky { n });
+}
+
 /// R386: whether a step `direction` would move `card`'s declared number `key` at all — false for a
 /// number already at the bound it would cross (an amount at 1, a cost set at (0)).
 #[cfg(test)]

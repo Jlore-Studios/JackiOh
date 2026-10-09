@@ -12,6 +12,10 @@
 //! heads on the instance under the turn's number, and on the Radiant's tails recruits there and then —
 //! no `trapFired`, so the trap stays face-down. The window's check (R99) only reads that memory, so no
 //! predicate draws from the rng, and a memory from another turn or another stay (R78) arms nothing.
+//!
+//! The coin is a luck-based roll whose better side is heads on both faces (R1440): the trap's own
+//! Lucky (`lucky_on`: printed plus given, R1438) flips that many more coins, heads kept. It prints
+//! none, so with nothing given the flip is the one draw it always was.
 
 use jackioh_engine::effects::{recruit, remember, reveal};
 use jackioh_engine::prelude::*;
@@ -33,10 +37,17 @@ fn fire() -> TriggerDef {
 
 fn flip(on_tails: bool) -> Hook {
     hook(move |ctx| {
-        if ctx.rng.coin() {
-            return vec![remember(json_as(json!({ "key": HEADS, "value": ctx.state.turn })))];
+        let lucky = ctx.live_self().map_or(0, |me| lucky_on(&*ctx.state, me));
+        if ctx.rng.lucky_coin(lucky) {
+            return vec![remember(json_as(
+                json!({ "key": HEADS, "value": ctx.state.turn }),
+            ))];
         }
-        if on_tails { vec![recruit(json_as(json!({})))] } else { vec![] }
+        if on_tails {
+            vec![recruit(json_as(json!({})))]
+        } else {
+            vec![]
+        }
     })
 }
 
@@ -113,7 +124,11 @@ mod tests {
 
     /// The coin the match rng gives next: the one the trap flips as the active player's turn ends.
     fn next_coin(state: &GameState) -> Coin {
-        if Rng::new(&state.seed, state.rng_cursor).coin() { Coin::Heads } else { Coin::Tails }
+        if Rng::new(&state.seed, state.rng_cursor).coin() {
+            Coin::Heads
+        } else {
+            Coin::Tails
+        }
     }
 
     /// A board with an Ace in the Hole set in p1's backrow, on the first seed whose next coin is `coin`.
@@ -151,12 +166,18 @@ mod tests {
     }
 
     fn fired(s: &Scenario) -> usize {
-        s.events().iter().map(js).filter(|event| event["type"] == "trapFired").count()
+        s.events()
+            .iter()
+            .map(js)
+            .filter(|event| event["type"] == "trapFired")
+            .count()
     }
 
     /// p1's unit row, lanes 1–5: each lane's def id, or null.
     fn units(s: &Scenario) -> Vec<Option<String>> {
-        (1..=5).map(|lane| s.unit(P1, lane).map(|unit| unit.def_id.clone())).collect()
+        (1..=5)
+            .map(|lane| s.unit(P1, lane).map(|unit| unit.def_id.clone()))
+            .collect()
     }
 
     /// The expected `units(s)`: a def id per lane, `None` for an empty one.
@@ -181,7 +202,10 @@ mod tests {
             for face in [&scripts.base, &scripts.radiant] {
                 assert!(face.end_of_turn.is_some());
                 assert_eq!(
-                    face.triggers.iter().map(|trigger| js(&trigger.on)).collect::<Vec<Value>>(),
+                    face.triggers
+                        .iter()
+                        .map(|trigger| js(&trigger.on))
+                        .collect::<Vec<Value>>(),
                     vec![json!(["turnEnded"])],
                 );
             }
@@ -213,9 +237,71 @@ mod tests {
                 assert_eq!(units(&s), lanes([Some(VANILLA), None, None, None, None]));
                 s.expect_in_zone(&ace, "graveyard");
                 assert_eq!(
-                    s.pile(P1, "library").iter().map(|card| card.def_id.clone()).collect::<Vec<String>>(),
+                    s.pile(P1, "library")
+                        .iter()
+                        .map(|card| card.def_id.clone())
+                        .collect::<Vec<String>>(),
                     vec![LUNAR, GARY, VANILLA],
                 );
+            }
+
+            /// R1438, R1440: set from the hand with Lucky 1 given to it, it flips twice and keeps heads,
+            /// so tails then heads fires it.
+            #[test]
+            fn r1438_r1440_given_lucky_1_tails_then_heads_fires_it() {
+                crate::register_all();
+                for attempt in 0..256 {
+                    let mut s = scenario(json!({
+                        "seed": format!("ace-in-the-hole-lucky-{attempt}"),
+                        "p1": { "hand": [ACE, FILLER], "library": [LUNAR, VANILLA, GARY, VANILLA] },
+                        "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+                    }));
+                    crate::give_lucky(&mut s, ACE, 1);
+                    s.play(ACE, json!({}));
+                    let mut coins = Rng::new(&s.state().seed, s.state().rng_cursor);
+                    if coins.coin() || !coins.coin() {
+                        continue;
+                    }
+                    let ace = s.card(ACE).clone();
+                    assert_eq!(lucky_on(s.state(), &ace), 1);
+                    let cursor = s.state().rng_cursor;
+                    s.end_turn();
+                    assert!(s.state().rng_cursor >= cursor + 2);
+                    assert_eq!(fired(&s), 1);
+                    assert_eq!(units(&s), lanes([Some(VANILLA), None, None, None, None]));
+                    s.expect_in_zone(&ace, "graveyard");
+                    return;
+                }
+                panic!("no seed flipped tails then heads");
+            }
+
+            /// R1440: given Lucky 1 it fires wherever it fires with none (its first coin is the plain
+            /// flip), and at more seeds besides.
+            #[test]
+            fn r1440_given_lucky_1_it_fires_more_often_over_100_seeds() {
+                crate::register_all();
+                let fires = |seed: usize, lucky: bool| -> bool {
+                    let mut s = scenario(json!({
+                        "seed": format!("ace-in-the-hole-seeds-{seed}"),
+                        "p1": {
+                            "hand": [FILLER],
+                            "backrow": [{ "def": ACE, "faceUp": false }],
+                            "library": [LUNAR, VANILLA, GARY, VANILLA],
+                        },
+                        "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+                    }));
+                    if lucky {
+                        crate::give_lucky(&mut s, ACE, 1);
+                    }
+                    s.end_turn();
+                    fired(&s) == 1
+                };
+                let plain: Vec<usize> = (0..100).filter(|seed| fires(*seed, false)).collect();
+                let lucky: Vec<usize> = (0..100).filter(|seed| fires(*seed, true)).collect();
+                for seed in &plain {
+                    assert!(lucky.contains(seed));
+                }
+                assert!(lucky.len() > plain.len());
             }
 
             #[test]
@@ -260,7 +346,14 @@ mod tests {
                 let second = next_coin(s.state());
                 s.end_turn(); // p1's end again: a fresh coin.
                 assert_eq!(fired(&s), if second == Coin::Heads { 1 } else { 0 });
-                s.expect_in_zone(ACE, if second == Coin::Heads { "graveyard" } else { "field" });
+                s.expect_in_zone(
+                    ACE,
+                    if second == Coin::Heads {
+                        "graveyard"
+                    } else {
+                        "field"
+                    },
+                );
             }
 
             #[test]
@@ -294,7 +387,10 @@ mod tests {
                 s.end_turn();
                 assert_eq!(fired(&s), 1);
                 assert!(!s.events().iter().map(js).any(|event| event["type"] == "summoned"));
-                assert_eq!(s.pile(P1, "library").first().map(|card| card.def_id.clone()), Some(VANILLA.to_string()));
+                assert_eq!(
+                    s.pile(P1, "library").first().map(|card| card.def_id.clone()),
+                    Some(VANILLA.to_string())
+                );
             }
 
             #[test]
@@ -323,13 +419,19 @@ mod tests {
                 let s = with_coin(Coin::Heads, json!({}));
                 let thawed: GameState =
                     serde_json::from_value(js(s.state())).expect("the state round-trips through JSON");
-                let end: Action = json_as(json!({ "type": "endTurn", "playerId": "p1", "nonce": "ace-roundtrip" }));
+                let end: Action =
+                    json_as(json!({ "type": "endTurn", "playerId": "p1", "nonce": "ace-roundtrip" }));
                 let live = reduce(s.state(), &end);
                 let frozen = reduce(&thawed, &end);
                 assert!(live.error.is_none());
                 assert_eq!(frozen.state, live.state);
                 assert_eq!(frozen.events, live.events);
-                assert!(live.events.iter().map(js).any(|event| event["type"] == "trapFired"));
+                assert!(
+                    live.events
+                        .iter()
+                        .map(js)
+                        .any(|event| event["type"] == "trapFired")
+                );
             }
         }
 
@@ -342,7 +444,10 @@ mod tests {
                 let mut s = with_coin(Coin::Heads, json!({ "radiant": true }));
                 s.end_turn();
                 assert_eq!(fired(&s), 1);
-                assert_eq!(units(&s), lanes([Some(VANILLA), Some(GARY), Some(VANILLA), None, None]));
+                assert_eq!(
+                    units(&s),
+                    lanes([Some(VANILLA), Some(GARY), Some(VANILLA), None, None])
+                );
                 s.expect_in_zone(ACE, "graveyard");
             }
 
@@ -364,7 +469,8 @@ mod tests {
             }
 
             #[test]
-            fn tails_a_recruited_trap_lands_face_down_r33_and_the_set_trap_flips_again_at_your_next_end_of_turn() {
+            fn tails_a_recruited_trap_lands_face_down_r33_and_the_set_trap_flips_again_at_your_next_end_of_turn()
+             {
                 crate::register_all();
                 let mut s = with_coin(
                     Coin::Tails,
@@ -382,7 +488,14 @@ mod tests {
                     units(&s).iter().filter(|unit| unit.is_some()).count(),
                     if second == Coin::Heads { 3 } else { 1 },
                 );
-                s.expect_in_zone(ACE, if second == Coin::Heads { "graveyard" } else { "field" });
+                s.expect_in_zone(
+                    ACE,
+                    if second == Coin::Heads {
+                        "graveyard"
+                    } else {
+                        "field"
+                    },
+                );
             }
 
             #[test]
@@ -399,14 +512,30 @@ mod tests {
                 assert_eq!(frozen.state, live.state);
                 assert_eq!(frozen.events, live.events);
                 assert_eq!(live.state.rng_cursor, s.state().rng_cursor + 1);
-                assert_eq!(live.events.iter().map(js).filter(|event| event["type"] == "summoned").count(), 1);
-                assert!(!live.events.iter().map(js).any(|event| event["type"] == "trapFired"));
+                assert_eq!(
+                    live.events
+                        .iter()
+                        .map(js)
+                        .filter(|event| event["type"] == "summoned")
+                        .count(),
+                    1
+                );
+                assert!(
+                    !live
+                        .events
+                        .iter()
+                        .map(js)
+                        .any(|event| event["type"] == "trapFired")
+                );
             }
 
             #[test]
             fn tails_with_nothing_to_recruit_nothing_happens_and_it_stays_set() {
                 crate::register_all();
-                let mut s = with_coin(Coin::Tails, json!({ "radiant": true, "p1": { "library": [LUNAR] } }));
+                let mut s = with_coin(
+                    Coin::Tails,
+                    json!({ "radiant": true, "p1": { "library": [LUNAR] } }),
+                );
                 s.end_turn();
                 assert_eq!(fired(&s), 0);
                 assert!(!s.events().iter().map(js).any(|event| event["type"] == "summoned"));
@@ -426,7 +555,10 @@ mod tests {
             #[test]
             fn r33_a_recruited_trap_lands_face_down() {
                 crate::register_all();
-                let mut s = with_coin(Coin::Heads, json!({ "radiant": true, "p1": { "library": [SHEEPISH] } }));
+                let mut s = with_coin(
+                    Coin::Heads,
+                    json!({ "radiant": true, "p1": { "library": [SHEEPISH] } }),
+                );
                 s.end_turn();
                 assert_ne!(s.card(SHEEPISH).face_up, Some(true));
                 assert!(!js(&s.view(P2)).to_string().contains(SHEEPISH));

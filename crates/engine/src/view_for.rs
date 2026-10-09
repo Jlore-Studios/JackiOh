@@ -485,6 +485,7 @@ fn unit_view_of(state: &GameState, pile: &[CardInstance], viewer: PlayerId) -> O
         activations: card.activations,
         quest: card.quest,
         copies: card.copies,
+        condition_targets: condition_targets_of(state, top, viewer),
         owner: top.owner,
         controller: top.controller,
         attack: layers.attack,
@@ -508,6 +509,39 @@ fn unit_view_of(state: &GameState, pile: &[CardInstance], viewer: PlayerId) -> O
         // ME-CN, R1301: public on the field like the unit itself (the pile's top, R13).
         chinese: card.chinese,
     })
+}
+
+/// MD-D5, R1121: the yellow a dragged attack paints — the enemy Units an `attack_mods` entry would
+/// apply to if this Unit attacked them now, in `attack_targets` order. Only on the viewer's own
+/// attackers that may act now (their main phase, no prompt open, as R195's flag), and `None` when
+/// the list is empty. Tags are public (§10.8), so the field reveals nothing.
+fn condition_targets_of(
+    state: &GameState,
+    top: &CardInstance,
+    viewer: PlayerId,
+) -> Option<Vec<String>> {
+    if top.controller != viewer || !can_act(state, top) {
+        return None;
+    }
+    let targets: Vec<String> = crate::combat::attack_targets(state, top)
+        .into_iter()
+        .filter_map(|target| match target {
+            crate::damage::DamageTarget::Unit { instance } => {
+                let bonus = crate::combat::attack_mod_for(state, top, &instance);
+                if bonus.attack != 0 || bonus.poisonous {
+                    Some(instance.id.clone())
+                } else {
+                    None
+                }
+            }
+            crate::damage::DamageTarget::Hero { .. } => None,
+        })
+        .collect();
+    if targets.is_empty() {
+        None
+    } else {
+        Some(targets)
+    }
 }
 
 /// §4.1: "each unit has one exertion per turn: one attack or one position switch", so a unit can
@@ -598,6 +632,12 @@ fn backrow_view(state: &GameState, card: Option<&CardInstance>, viewer: PlayerId
         // R351, R371: the controller reads a face-down trap, and the view says the other player cannot.
         unrevealed: if is_face_down(state, card) {
             Some(true)
+        } else {
+            None
+        },
+        // ME-ALTPLAY (R1046, D3): the card's own reveal timing rides the controller's view only.
+        reveal_at: if card.controller == viewer {
+            card.set_as.as_ref().map(|set| set.reveal)
         } else {
             None
         },
@@ -1452,7 +1492,10 @@ fn redact_event(
             shown.remove("arrivedDuring");
             shown.remove("exitsFrom");
             if hidden(&instance) {
+                // ME-ALTPLAY, R1046: a hidden set card shows neither its `x` nor its `embiggened`.
                 shown.remove("formerId");
+                shown.remove("x");
+                shown.remove("embiggened");
                 hide(&mut shown, &["instanceId", "defId"]);
             }
             rebuild(shown)
@@ -1692,6 +1735,8 @@ fn redact_event(
         | GameEventType::PromptAnswered
         | GameEventType::DrawOffered
         | GameEventType::DrawAnswered
+        // MD-D29, R1127: an emote names no card, so both seats read it as it is.
+        | GameEventType::Emoted
         | GameEventType::GameOver => event.clone(),
 
         // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
@@ -2002,6 +2047,12 @@ pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Opt
             None
         },
         defs: None,
+        // MD-D29, R1127: the client's emote layer sends `Emote` actions only while this is true.
+        emotes_heard: if crate::query::emotes_heard(state, player_id) {
+            Some(true)
+        } else {
+            None
+        },
     };
     let defs = match_defs_in(state, &view);
     if !defs.is_empty() {

@@ -7,6 +7,8 @@
 //! refused for — come from the same place, so a client's greyed-out button and the reducer's error
 //! can never disagree (§9.3):
 //!
+//!   emote            → `emoted`, legal only while a card hears it (MD-D29, R1127)
+//!
 //!   play             → `playSteps.runPlaySteps` (§10.5's eight steps), listed by
 //!                      `playChoices.playActionsFor` (R81, R90) for a hand card and by
 //!                      `playChoices.graveyardPlayActionsFor` for a graveyard card a permission
@@ -264,7 +266,33 @@ fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), Engine
         }
         ActionBody::Play { .. } => {
             let play = PlayAction::from_body(&action.body).expect("a play action body is a PlayAction");
+            // MD-D28, R1125: judged on the pre-play state, ahead of §10.5 step 1, from the player's
+            // own concealed view.
+            if crate::subsystems::pareto::watching(sink.state, action.player_id) {
+                let optimal = crate::subsystems::pareto::judge_play(
+                    sink.state,
+                    action.player_id,
+                    &play.instance_id,
+                );
+                let turn = sink.state.turn;
+                sink.state.play_judgement = Some(crate::state::PlayJudgement {
+                    instance_id: play.instance_id.clone(),
+                    optimal,
+                    turn,
+                });
+            }
             run_play_steps(sink, action.player_id, &play).map(|_| ())
+        }
+        ActionBody::Emote { emote } => {
+            // MD-D29, R1127: an emote reaches the board only while a card hears it.
+            if !crate::query::emotes_heard(sink.state, action.player_id) {
+                return Err(EngineError::new("no card hears emotes"));
+            }
+            sink.events.push(GameEvent::Emoted {
+                player: action.player_id,
+                emote: *emote,
+            });
+            Ok(())
         }
         ActionBody::SwitchPosition { instance_id } => switch_action(sink, action.player_id, instance_id),
         ActionBody::Attack {
@@ -561,7 +589,9 @@ fn auto_end_due(state: &GameState) -> bool {
         return false;
     }
     let walk = each_legal_action(state, player, &mut |action| match action.action_type() {
-        ActionType::EndTurn | ActionType::Concede | ActionType::OfferDraw => ControlFlow::Continue(()),
+        ActionType::EndTurn | ActionType::Concede | ActionType::OfferDraw | ActionType::Emote => {
+            ControlFlow::Continue(())
+        }
         _ => ControlFlow::Break(()),
     });
     walk.is_continue()
@@ -754,6 +784,15 @@ fn each_legal_action(
     if has_standing_draw_offer(state, player) {
         visit(ActionBody::AnswerDraw { accept: true })?;
         visit(ActionBody::AnswerDraw { accept: false })?;
+    }
+
+    // MD-D29, R1127: either seat may emote while a card hears it — past the prompt and mulligan
+    // windows above, so never with one open. Otherwise `reduce` refuses it, and other games never
+    // list it.
+    if crate::query::emotes_heard(state, player) {
+        for emote in crate::wire::EMOTE_IDS.iter() {
+            visit(ActionBody::Emote { emote: *emote })?;
+        }
     }
 
     if state.active != player || state.phase != Phase::Main {

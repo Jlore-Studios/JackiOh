@@ -34,6 +34,9 @@ pub fn card_type_of(state: &GameState, instance: &CardInstance) -> CardType {
     if let Zone::Field { row: Row::Units, .. } = instance.zone {
         return CardType::Unit;
     }
+    if let Some(set) = crate::alt_play::set_type_of(state, instance) {
+        return set;
+    }
     card_type_of_face(state, &instance.def_id, instance.radiant)
 }
 

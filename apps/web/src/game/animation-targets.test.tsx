@@ -122,6 +122,7 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     promptAnswered: { type: "promptAnswered", player: "p1", choiceId: "ch1" },
     drawOffered: { type: "drawOffered", player: "p2" },
     drawAnswered: { type: "drawAnswered", player: "p1", accept: false },
+    emoted: { type: "emoted", player: "p2", emote: "greetings" },
     gameOver: { type: "gameOver", winner: "p1", reason: "concede" },
     // Patch v0.2.0 (docs/classic-sets.md B3, B5).
     cardAnnounced: { type: "cardAnnounced", player: "p1", instanceId: hand, defId: "core-002", cardType: "Unit", costPaid: 1, targets: [] },

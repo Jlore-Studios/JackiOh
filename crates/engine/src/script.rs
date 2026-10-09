@@ -397,6 +397,37 @@ pub fn aura_hook(f: impl for<'a> Fn(HookArgs<'a>) -> Vec<AuraEntry<'a>> + Send +
     Arc::new(f)
 }
 
+/// MD-D4, R1120: what one combat-only attack modifier adds to an attacker's strike in the combat it
+/// started against a Unit — attack on top of the layered value, and Poisonous on those hits (§4.4
+/// step 7). Never a layer: the shown attack and §4.2 step 1's "attack above 0" do not see it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+pub struct AttackMod {
+    pub attack: i32,
+    pub poisonous: bool,
+}
+
+/// `Script.attack_mods`' argument: `{ state; self; radiant }` with the combat's attacker and
+/// defender. A PURE READ, like `aura`'s: no writes, no rng.
+#[derive(Clone, Copy)]
+pub struct AttackModArgs<'a> {
+    pub state: &'a GameState,
+    pub self_: &'a CardInstance,
+    pub radiant: bool,
+    pub attacker: &'a CardInstance,
+    pub defender: &'a CardInstance,
+}
+
+/// MD-D4, R1120: a combat-only attack modifier — what this card adds to an attacker's strike while
+/// that attacker attacks a Unit. Read only inside a combat against a Unit (declared or forced).
+pub type AttackModHook = Arc<dyn for<'a> Fn(AttackModArgs<'a>) -> AttackMod + Send + Sync>;
+
+/// Builds an `AttackModHook`.
+pub fn attack_mod_hook(
+    f: impl for<'a> Fn(AttackModArgs<'a>) -> AttackMod + Send + Sync + 'static,
+) -> AttackModHook {
+    Arc::new(f)
+}
+
 /// `boolean | number`: a static flag a fused card may carry several times (R102).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(untagged)]
@@ -532,6 +563,18 @@ pub struct StaticFlags {
     /// #22 Blood Moon's Radiant Field Trap, "From now on").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub heal_to_damage: Option<bool>,
+    /// MD-D28, R1125: while this card acts on the field, each `play` the opponent makes is judged
+    /// against their other playable cards (`subsystems::pareto`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub judges_plays: Option<bool>,
+    /// MD-D29, R1127: while this card acts on the field, the opponent's emotes reach the engine as
+    /// `Emote` actions (`GameEvent::Emoted`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hears_emotes: Option<bool>,
+    /// MD-D31, R1124: damage this card deals to a Unit marks it, and the next state check exiles it
+    /// ahead of deaths (§4.4 step 7, §4.5 step 1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exiles_on_damage: Option<bool>,
 }
 
 string_union! {
@@ -667,6 +710,24 @@ pub struct GraveyardPlayPermission {
 pub type GraveyardPlayHook =
     Arc<dyn for<'a> Fn(CostAuraArgs<'a>) -> Vec<GraveyardPlayPermission> + Send + Sync>;
 
+/// ME-ALTPLAY, R1040, R1044: the permission this card gives its controller to play cards face-down
+/// as Traps — Units under Knowledge Breaker's Aura, Spells under Paranoia's. `echo` is the Echo a
+/// Radiant Paranoia adds to a set Spell (R1045), once per play.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct FaceDownPlayPermission {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub units: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spells: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub echo: Option<i32>,
+}
+
+/// ME-ALTPLAY, R1040, R1044: the face-down play permissions this card grants while it acts.
+pub type FaceDownPlayHook =
+    Arc<dyn for<'a> Fn(CostAuraArgs<'a>) -> Vec<FaceDownPlayPermission> + Send + Sync>;
+
 /// B5 E5: "to target this with anything but an attack, a player must also discard N cards".
 pub type TargetingDiscardsHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
 
@@ -765,6 +826,9 @@ pub struct Script {
     pub cost_aura: Option<CostAuraHook>,
     /// E11, R454: the permissions this card gives its controller to play cards from their graveyard.
     pub graveyard_play: Option<GraveyardPlayHook>,
+    /// ME-ALTPLAY, R1040, R1044: the permissions this card gives its controller to play cards
+    /// face-down as Traps.
+    pub face_down_play: Option<FaceDownPlayHook>,
     /// B5 E5, Classic #89 Paul Allen's Ghost: "to target this with anything but an attack, a player must
     /// also discard N cards" — N now, read while the card is on the field (a pure read, so a Degrade or
     /// Upgrade of the declared number reaches it through `param`). 0 or absent is no cost. The discards
@@ -793,6 +857,9 @@ pub struct Script {
     /// Armor (several multiply, rounded up once, Classic #75 Argusland). A PURE READ, like `aura`; a
     /// list, so a fused card carries each ingredient's.
     pub hero_guard: Option<HeroGuardHook>,
+    /// MD-D4, R1120: the combat-only attack modifiers this card lays while it acts on the field. A
+    /// PURE READ, like `aura`; a fused card carries each ingredient's (`subsystems::fuse`).
+    pub attack_mods: Option<AttackModHook>,
     /// B5 E35: keywords the card has only while a condition holds (Classic #69 Plague Charger's First
     /// Strike "while it has a Plague Counter"), read in the layers with its printed keywords (§10.4), so a
     /// Vanilla takes them. A PURE READ of instance data: like an aura's `applies`, it must never call

@@ -42,7 +42,7 @@ use crate::prompts::{
     run_resume, why_answer_refused,
 };
 use crate::script::EngineSink;
-use crate::state::{CardInstance, EngineError, GameState, PromptOption, Resume, find_instance};
+use crate::state::{CardInstance, EngineError, GameState, PromptOption, Resume, WorkItem, find_instance};
 use crate::stays::{exit_mark, left_field_after};
 use crate::wire::{CardType, PlayerId, PromptKind, Row, Selection, Zone};
 use crate::work::{RUN_MARKS_KEY, begin_work_cascade, drain_work};
@@ -54,11 +54,13 @@ pub const TRIGGER_CRY_HOOK: &str = "@triggerCry";
 const RUN_KEY: &str = "cry";
 
 /// Where the Unit is when its Cry is triggered. (TS `"field" | "graveyard"`.)
+/// ME-ALTPLAY, R1044: a set Spell resolving in the backrow runs from `Backrow`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub enum CryPlace {
     Field,
     Graveyard,
+    Backrow,
 }
 
 /// Which kind of question the open prompt is (TS `"mode" | "target" | null`).
@@ -86,6 +88,13 @@ struct CryRun {
     /// Which kind of question the open prompt is, so its answer is filed where it belongs. `null`, not
     /// absent, while none is open, as TS writes it.
     awaiting: Option<CryAwaiting>,
+    /// ME-ALTPLAY, R1045: Echo repeats a set Spell still owes, with fresh prompts each time.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    repeats: u32,
+}
+
+fn is_zero(n: &u32) -> bool {
+    *n == 0
 }
 
 /// The name a card's definition prints.
@@ -98,6 +107,18 @@ fn name_of(state: &GameState, def_id: &str) -> String {
 /// (§6.3), so no Cry. A pure read: the reader a card's target check uses (Classic #54's "a Unit that
 /// has a Cry").
 pub fn cry_place_of(state: &GameState, card: &CardInstance) -> Option<CryPlace> {
+    // ME-ALTPLAY, R1044: a set Spell whose text is resolving runs from the backrow first.
+    if matches!(
+        card.zone,
+        Zone::Field {
+            row: Row::Backrow,
+            ..
+        }
+    ) && card.set_as.as_ref().and_then(|set| set.revealing) == Some(true)
+    {
+        crate::scripts::script_of(state, card).cry.as_ref()?;
+        return Some(CryPlace::Backrow);
+    }
     if crate::faces::card_type_of(state, card) != CardType::Unit {
         return None;
     }
@@ -126,8 +147,43 @@ pub fn trigger_cry_of(sink: &mut EngineSink, card: &CardInstance, controller: Pl
         decl_at: 0,
         mode_at: 0,
         awaiting: None,
+        repeats: 0,
     };
     continue_run(sink, run);
+}
+
+/// ME-ALTPLAY, R1044, R1045: resolve a set Spell from the backrow with `repeats` Echo repeats.
+/// R703 is read as it reveals: a required declaration the board cannot satisfy fizzles the reveal.
+pub fn reveal_set_spell(sink: &mut EngineSink, card: &CardInstance, controller: PlayerId, repeats: u32) {
+    for decl in crate::play_choices::declared_targets(sink.state, card) {
+        let offered = crate::play_choices::legal_selections_for(sink.state, controller, card, &decl);
+        if crate::play_choices::unmet_requirement(&decl, offered.len()) {
+            return;
+        }
+    }
+    let run = CryRun {
+        instance_id: card.id.clone(),
+        controller,
+        place: CryPlace::Backrow,
+        since: exit_mark(sink.state),
+        targets: Vec::new(),
+        modes: Vec::new(),
+        decl_at: 0,
+        mode_at: 0,
+        awaiting: None,
+        repeats,
+    };
+    continue_run(sink, run);
+}
+
+/// ME-ALTPLAY, R1045: the work hook a paused reveal's repeats wait behind (R113).
+pub const SET_REPEAT_HOOK: &str = "@setRepeat";
+
+/// ME-ALTPLAY: run an owed Echo repeat of a set Spell.
+pub fn run_owed_repeat(sink: &mut EngineSink, item: &WorkItem) {
+    if let Some(run) = run_of(&item.resume.data) {
+        continue_run(sink, run);
+    }
 }
 
 /// The Unit still where the trigger found it, or `None`: on the same stay (R174), or in a graveyard.
@@ -185,6 +241,11 @@ fn key_of(selection: &Selection) -> String {
 fn ask_modes(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> bool {
     let modes = declared_modes(sink.state, card);
     let name = name_of(sink.state, &card.def_id);
+    let title = if run.place == CryPlace::Backrow {
+        format!("Reveal: {name}")
+    } else {
+        format!("Cry: {name}")
+    };
     for (at, decl) in modes.iter().enumerate().skip(run.mode_at) {
         run.mode_at = at + 1;
         if decl.options.is_empty() {
@@ -210,7 +271,7 @@ fn ask_modes(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> bo
                 player: run.controller,
                 kind: decl.kind,
                 aim: None,
-                prompt: format!("Cry: {name}"),
+                prompt: title.clone(),
                 options,
                 min: None,
                 max: None,
@@ -231,6 +292,11 @@ fn ask_modes(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> bo
 fn ask_targets(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> bool {
     let decls = active_target_decls(&declared_targets(sink.state, card), &run.modes);
     let name = name_of(sink.state, &card.def_id);
+    let title = if run.place == CryPlace::Backrow {
+        format!("Reveal: {name}")
+    } else {
+        format!("Cry: {name}")
+    };
     for (at, decl) in decls.iter().enumerate().skip(run.decl_at) {
         run.decl_at = at + 1;
         let options = legal_selections_for(sink.state, run.controller, card, decl);
@@ -262,7 +328,7 @@ fn ask_targets(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> 
                 player: run.controller,
                 kind: decl.kind,
                 aim: None,
-                prompt: format!("Cry: {name}"),
+                prompt: title.clone(),
                 options: prompt_options,
                 min: Some(decl.min),
                 max: Some(decl.max),
@@ -310,8 +376,8 @@ fn run_cry(sink: &mut EngineSink, run: &CryRun, card: &CardInstance) {
         let slices = declaration_slices(sink.state, run.controller, card, &run.targets, &run.modes);
         data.insert(DECLARATION_SLICES_KEY.to_string(), json!(slices));
     }
-    if run.place == CryPlace::Field {
-        run_hook_resumable(
+    if run.place == CryPlace::Field || run.place == CryPlace::Backrow {
+        let ran = run_hook_resumable(
             sink,
             card,
             "cry",
@@ -323,6 +389,39 @@ fn run_cry(sink: &mut EngineSink, run: &CryRun, card: &CardInstance) {
                 exits_from: Some(exits_from),
             },
         );
+        // ME-ALTPLAY, R1045: Echo repeats with fresh prompts, after the hook's parked tail (R113).
+        if run.place == CryPlace::Backrow && run.repeats > 0 {
+            let next = CryRun {
+                instance_id: run.instance_id.clone(),
+                controller: run.controller,
+                place: CryPlace::Backrow,
+                since: exit_mark(sink.state),
+                targets: Vec::new(),
+                modes: Vec::new(),
+                decl_at: 0,
+                mode_at: 0,
+                awaiting: None,
+                repeats: run.repeats - 1,
+            };
+            if !ran {
+                let mut repeat_data: IndexMap<String, Value> = IndexMap::new();
+                repeat_data.insert(
+                    RUN_KEY.to_string(),
+                    serde_json::to_value(&next).unwrap_or(Value::Null),
+                );
+                let resume = Resume {
+                    def_id: String::new(),
+                    hook: SET_REPEAT_HOOK.to_string(),
+                    step: "repeat".to_string(),
+                    radiant: false,
+                    instance_id: None,
+                    data: repeat_data,
+                };
+                crate::work::owe(sink, resume);
+            } else {
+                continue_run(sink, next);
+            }
+        }
         return;
     }
     // Out of a graveyard "this" finds nothing: the Cry runs as its definition's, with no card (R127).
@@ -362,6 +461,7 @@ fn run_of(data: &IndexMap<String, Value>) -> Option<CryRun> {
     let place = match raw.get("place").and_then(Value::as_str) {
         Some("field") => CryPlace::Field,
         Some("graveyard") => CryPlace::Graveyard,
+        Some("backrow") => CryPlace::Backrow,
         _ => return None,
     };
     let number = |key: &str| raw.get(key).and_then(Value::as_f64);
@@ -398,6 +498,7 @@ fn run_of(data: &IndexMap<String, Value>) -> Option<CryRun> {
             Some("target") => Some(CryAwaiting::Target),
             _ => None,
         },
+        repeats: number("repeats").map_or(0, |n| n.max(0.0) as u32),
     })
 }
 

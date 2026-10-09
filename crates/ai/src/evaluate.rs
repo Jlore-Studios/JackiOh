@@ -31,10 +31,12 @@ fn hero_value(health: i32, w: &EvalWeights) -> f64 {
 
 /// §10.8, R33: whether `seat` may read this backrow card. A placeholder never is.
 fn readable_by(state: &GameState, card: &CardInstance, seat: PlayerId) -> bool {
-    let Some(def) = find_def(Some(state), &card.def_id) else {
+    let Some(_def) = find_def(Some(state), &card.def_id) else {
         return false;
     };
-    if def.type_ != CardType::Trap && def.type_ != CardType::FieldTrap {
+    // ME-ALTPLAY, R1046: a set Unit or Spell reads as a Field Trap or Trap.
+    let face = jackioh_engine::faces::card_type_of(state, card);
+    if face != CardType::Trap && face != CardType::FieldTrap {
         return true;
     }
     if card.face_up == Some(true) {

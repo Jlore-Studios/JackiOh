@@ -6,9 +6,9 @@
 //! - **Play-time pick:** a declared Unit on either side (R81). The pick is `required` (R703), so
 //!   with no Unit the play is refused; a cast still fizzles (R70).
 //! - **The roll:** the Cry resolves the target first; with no target it draws nothing (R129). Then
-//!   it flips one `ctx.rng.coin()`. With the face's Lucky X (§6.1 `rng.lucky`; the Spell's printed
-//!   keyword as Nerf and Buff have moved it, read with `numbered_keywords_on` as
-//!   `effects/fruit.rs`'s `lucky_of` reads a Spell's), it flips X more coins. The comparator keeps
+//!   it flips one `ctx.rng.coin()`. With the card's Lucky X (§6.1 `rng.lucky`; the Spell's printed
+//!   keyword as Nerf and Buff have moved it, plus any Lucky given to it, R1438, read with `lucky_on`
+//!   as `effects/fruit.rs`'s `lucky_of` reads a Spell's), it flips X more coins. The comparator keeps
 //!   the outcome better for the caster: the Buffs on a Unit the caster controls, the destroy on an
 //!   enemy one (MD-B17, R902).
 //! - **Heads:** `upgrade({ target: chosen, times })`. **Tails:** `destroy`; an Indestructible Unit
@@ -18,16 +18,10 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-036";
 
-/// The face's Lucky X, as Nerf and Buff have moved it (`effects/fruit.rs`'s `lucky_of` shape).
+/// The card's Lucky X, printed plus given (R1438): the face's as Nerf and Buff have moved it, and any
+/// Lucky given to it (`effects/fruit.rs`'s `lucky_of` shape).
 fn lucky_of(ctx: &EffectContext<'_>) -> i32 {
-    let Some(own) = ctx.self_.as_ref() else {
-        return 0;
-    };
-    numbered_keywords_on(ctx.sink.state, own)
-        .into_iter()
-        .find(|keyword| keyword.key == NumberedKey::Lucky)
-        .map(|keyword| keyword.value)
-        .unwrap_or(0)
+    ctx.self_.as_ref().map_or(0, |own| lucky_on(ctx.sink.state, own))
 }
 
 fn peptides() -> Script {
@@ -44,9 +38,13 @@ fn peptides() -> Script {
             };
             let (id, friendly) = (target.id.clone(), target.controller == ctx.controller);
             let lucky = lucky_of(ctx);
-            let heads = ctx.rng.lucky(lucky, |rng| rng.coin(), move |a, b| {
-                if friendly { a || b } else { a && b }
-            });
+            let heads = ctx.rng.lucky(
+                lucky,
+                |rng| rng.coin(),
+                move |a, b| {
+                    if friendly { a || b } else { a && b }
+                },
+            );
             if heads {
                 vec![upgrade(json_as(json!({
                     "target": { "of": "instance", "instanceId": id },
@@ -126,11 +124,19 @@ mod tests {
     }
 
     fn upgraded(events: &[GameEvent]) -> Vec<Value> {
-        events.iter().filter(|event| matches!(event, GameEvent::Upgraded { .. })).map(crate::js).collect()
+        events
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Upgraded { .. }))
+            .map(crate::js)
+            .collect()
     }
 
     fn destroyed(events: &[GameEvent]) -> Vec<Value> {
-        events.iter().filter(|event| matches!(event, GameEvent::Destroyed { .. })).map(crate::js).collect()
+        events
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Destroyed { .. }))
+            .map(crate::js)
+            .collect()
     }
 
     mod m36_cn_peptides {
@@ -215,6 +221,29 @@ mod tests {
                 s.play(PEPTIDES, pick(&victim.id));
                 assert_eq!(upgraded(s.events()).len(), 3);
             }
+        }
+
+        /// R1438: given Lucky 1, the base face flips twice and keeps the result better for the caster:
+        /// on your own Unit, the 7 Buffs unless both coins land tails.
+        #[test]
+        fn r1438_given_lucky_1_the_base_face_rolls_twice_and_keeps_the_better() {
+            let mut pairs = std::collections::BTreeSet::new();
+            for n in 0..32 {
+                let seed = format!("peptides-given-lucky-{n}");
+                let mut s = aiming(&seed, false, P1, 1, VANILLA);
+                crate::give_lucky(&mut s, PEPTIDES, 1);
+                let victim = s.unit(P1, 1).expect("the victim");
+                let pair = coins(&s, true);
+                pairs.insert((pair[0], pair[1]));
+                s.play(PEPTIDES, pick(&victim.id));
+                if pair[0] || pair[1] {
+                    assert_eq!(upgraded(s.events()).len(), 7, "{seed}");
+                    assert!(destroyed(s.events()).is_empty(), "{seed}");
+                } else {
+                    assert_eq!(destroyed(s.events()).len(), 1, "{seed}");
+                }
+            }
+            assert_eq!(pairs.len(), 4, "all four coin pairs occur over 32 seeds");
         }
 
         mod radiant {

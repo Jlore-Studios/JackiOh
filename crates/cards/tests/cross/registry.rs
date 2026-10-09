@@ -124,6 +124,7 @@ fn fingerprint(script: &Script) -> Value {
             "tributeWhen": script.tribute_when.is_some(),
             "wouldCounter": script.would_counter.is_some(),
             "startOfOpponentTurn": script.start_of_opponent_turn.is_some(),
+            "attackMods": script.attack_mods.is_some(),
         },
         "resume": script.resume.keys().map(|key| (*key).to_string()).collect::<Vec<_>>(),
         "triggers": trigger_ids(&script.triggers),

@@ -745,3 +745,48 @@ mod r382_the_fruit_pool_holds_the_five_grapes_a_pool_that_takes_every_token_take
         }
     }
 }
+
+mod r1437_the_luck_based_pool_meditative_101_gachaholic {
+    use super::*;
+    use jackioh_cards::query::luck_based;
+    use jackioh_engine::testkit::preview_sets;
+    use jackioh_engine::{KeywordKind, has_keyword};
+
+    /// The test's own reading of MD-G1: a non-token card that prints Lucky on either face or whose
+    /// text says "Flip a coin" (any case).
+    fn reads_as_luck_based(def: &CardDef) -> bool {
+        !def.token
+            && [&def.base, &def.radiant].into_iter().any(|face| {
+                has_keyword(&face.keywords, KeywordKind::Lucky)
+                    || face.text.to_lowercase().contains("flip a coin")
+            })
+    }
+
+    #[test]
+    fn r1437_the_luck_based_pool_is_exactly_the_non_token_cards_that_print_lucky_or_flip_a_coin() {
+        register();
+        // The query a card script writes: `query::luck_based()`, which names no set (R1420).
+        assert_eq!(luck_based(), q(json!({ "luckBased": true })));
+        assert_eq!(
+            ids(query(&luck_based())),
+            strings(&[
+                "core-004",
+                "core-023",
+                "core-042",
+                "classic-065",
+                "classicplus-025",
+                "classicplus-053",
+                "classicplus-065",
+                "classicplus-066",
+            ])
+        );
+        let _preview = preview_sets(&[SetName::Meditative]);
+        let expected: Vec<String> = ids(CATALOG.values().filter(|def| reads_as_luck_based(def)));
+        assert_eq!(sorted(ids(query(&luck_based()))), sorted(expected.clone()));
+        // Meditative #36 CN Peptides prints Lucky on its Radiant face; #40 Feng Shui gives Luck and
+        // makes no roll; #101 Gachaholic gives Lucky and prints none.
+        assert!(expected.contains(&"meditative-036".to_string()));
+        assert!(!expected.contains(&"meditative-040".to_string()));
+        assert!(!expected.contains(&"meditative-101".to_string()));
+    }
+}

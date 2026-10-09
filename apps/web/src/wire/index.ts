@@ -140,6 +140,7 @@ export const GAME_EVENT_TYPES = [
   "promptAnswered",
   "drawOffered",
   "drawAnswered",
+  "emoted",
   "gameOver",
   "cardAnnounced",
   "countered",

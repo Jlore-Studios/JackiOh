@@ -25,9 +25,10 @@ Animated, Brittle and Temporary are printed on, or given to, cards that are not 
 | Indestructible | Can't be destroyed or damaged; can be exiled or sacrificed | Pipeline step 4; state check skips it unless its max health is 0 or less ([[R69]]); on would-destroy: Attack Position, lose Taunt this turn ([[R46]]); while Indestructible it has no Taunt to lose ([[R347]]) | #66, #98 |
 | Immutable | Text can't be changed or transformed | Blocks Transform, Vanilla, Fuse-onto, Degrade and Upgrade ([[R23]], [[R386]]), Silence-like effects; Radiant still allowed (it is the card's own text) | #19r, #66r |
 | Stack | May be played onto an occupied zone | Zone becomes a pile; only the top is active (section 3.2) | #92 |
-| Lucky X | Repeat a luck-based roll X extra times, keep the best | RNG helper `lucky(x, roll, better)` with a per-effect comparator | #23r, #42r |
+| Lucky X | Repeat a luck-based roll X extra times, keep the best; a coin flip is luck-based, heads its better side unless the card says otherwise ([[R1440]]); given Lucky adds ([[R1438]]) | RNG helper `lucky(x, roll, better)` with a per-effect comparator; a coin flip is `lucky_coin(x)`, exactly one draw with no Lucky ([[R1440]]); X is the instance's printed Lucky plus any given to it (`lucky_on`, [[R1438]]) | #23r, #42r, M #101, M #102 |
+| Luck-based | Has a roll Lucky improves | A non-token card printing Lucky on either face or whose text says "Flip a coin", read off the definition, so given Lucky never makes a card Luck-based; the query's `luckBased` ([[R1437]]) | M #101 |
 | Can't attack | Cannot declare attacks | Attack validator flag | #86 |
-| Cannot be in Defense Position | Never switches to Defense | Position validator flag, as Spikey Pillow's ([[§4.1]]) | #65.1, C+ #19.1, C+ #48, C+ #51 |
+| Cannot be in Defense Position | Never switches to Defense | Position validator flag, as Spikey Pillow's ([[§4.1]]) | #65.1, C+ #19.1, C+ #48, C+ #51, M #93–#93.3 |
 | Can't be attacked | No attack may target it | [[§4.2]] step 2, forced attacks included; still targeted by effects and hit by "all" effects | C+ #51 |
 | Only Units in this lane can attack this | An attack on it is legal only from the enemy unit zone of its own lane | [[§4.2]] step 2, forced attacks included; its Taunt binds only the attackers that may legally attack it ([[§4.2]] step 3) | C+ #19.1 |
 | Can't attack or be attacked | Neither declares nor receives an attack | [[§4.2]] steps 1 and 2, forced attacks included | A carried Unit ([[R446]]): the Unit stacked onto C+ #33 while its play resolves ([[R653]]) |
@@ -96,7 +97,7 @@ Animated, Brittle and Temporary are printed on, or given to, cards that are not 
 | Damage | Deal X damage to a unit or hero | `damage(source, target, x)`: one instance through [[§4.4]]. "Deal N damage split among enemies" (C+ #3) is N hits of 1, each to a random enemy (the hero or a unit) still standing |
 | Lose health | A hero loses X health | Lowers hero health directly: no pipeline, no Armor, no cap, no on-damage effects ([[R18]]) |
 | Draw | Take the top card of your library | [[§2.4]]: cast on draw, fatigue, hand cap, chain cap ([[R58]]), and a draw limit, past which a draw does not happen at all. "Draw the bottom card of your opponent's deck" (C #58) is a draw of yours taken from their deck, the card becoming yours (Steal off the field) |
-| Add to hand | Put a card into a hand | Creates or moves the card; a full hand burns it ([[§2.4]]), and a unit-token card burned that way ceases to exist instead of reaching the graveyard ([[§3.2]], [[R11]]) |
+| Add to hand | Put a card into a hand | Creates or moves the card; a full hand burns it ([[§2.4]]), and a unit-token card burned that way ceases to exist instead of reaching the graveyard ([[§3.2]], [[R11]]); a `lucky` rider grants Lucky X once in hand ([[R1438]]) |
 | Shuffle into | Put a card into a library | Inserted at a uniformly random position drawn from the match rng |
 | Make Radiant | Upgrade a card | Sets `radiant` ([[§5.2]]); no effect on a Radiant card; random picks follow [[R60]] |
 | Grant tag | Give a card a tag | `grantedTags`; every instance-level tag read sees it, no pool does ([[R923]]) |

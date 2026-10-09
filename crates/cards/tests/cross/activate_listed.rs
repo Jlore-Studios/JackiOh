@@ -32,9 +32,14 @@ const LOCKDOWN: &str = "classic-084";
 const FUSION_LAB: &str = "classicplus-031";
 const DOCTORS_ORDERS: &str = "classicplus-060";
 const BROTHER_PING: &str = "classicplus-076-1";
+const WISHING_WELL: &str = "meditative-097-2";
+const SCHOOL: &str = "meditative-097-3";
+const UNIVERSITY: &str = "meditative-097-6";
+const HEADQUARTERS: &str = "meditative-097-9";
+const GACHAHOLIC: &str = "meditative-101";
 
 /// Every card or token whose base or Radiant text has an Activate ability, each with a case below.
-const ACTIVATE_CARDS: [&str; 14] = [
+const ACTIVATE_CARDS: [&str; 19] = [
     HEROIC_POWER,
     INFINISCEPTER,
     NOSE_HUNTER,
@@ -49,6 +54,11 @@ const ACTIVATE_CARDS: [&str; 14] = [
     FUSION_LAB,
     DOCTORS_ORDERS,
     BROTHER_PING,
+    WISHING_WELL,
+    SCHOOL,
+    UNIVERSITY,
+    HEADQUARTERS,
+    GACHAHOLIC,
 ];
 
 const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2. A spare that keeps R82's auto-end away.
@@ -745,5 +755,167 @@ mod c_n76_1_brother_ping {
             .expect_stats(MENACE, json!({ "health": 8 }));
         let id = s.card(BROTHER_PING).id.clone();
         assert!(listed(&s, &id).is_empty(), "Activate 2 is twice per turn");
+    }
+}
+
+/// The Meditative buildings (#97, MB25): p1's one on its field with a spare in hand and a library each,
+/// so R82's auto-end stays away after its use.
+fn building(card: &str, radiant: bool) -> Scenario {
+    scenario(json!({
+        "p1": { "field": [on(card, radiant)], "hand": [FILLER], "library": [X, X] },
+        "p2": { "hand": [FILLER], "library": [X, X] },
+    }))
+}
+
+/// The `upgraded` events in `events` naming `card`.
+fn upgrades_of(events: &[GameEvent], card: &str) -> usize {
+    events
+        .iter()
+        .filter(|event| matches!(event, GameEvent::Upgraded { instance_id, .. } if instance_id == card))
+        .count()
+}
+
+mod m_n97_2_wishing_well {
+    use super::*;
+
+    /// The Well at 100%, so the roll cannot miss.
+    fn sure(radiant: bool) -> Scenario {
+        let mut s = building(WISHING_WELL, radiant);
+        set_param(s.card_mut(WISHING_WELL), "chance", 100);
+        s
+    }
+
+    #[test]
+    fn r384_base_activate_adds_a_radiant_card_to_your_hand_once_a_turn() {
+        let mut s = sure(false);
+        let hand = s.hand(P1).len();
+        activate_listed(&mut s, WISHING_WELL, any);
+        assert_eq!(s.hand(P1).len(), hand + 1);
+        assert!(
+            s.hand(P1)
+                .iter()
+                .any(|card| card.radiant && card.def_id != FILLER)
+        );
+        let id = s.card(WISHING_WELL).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r384_radiant_activate_adds_a_radiant_card_to_your_hand_once_a_turn() {
+        let mut s = sure(true);
+        let hand = s.hand(P1).len();
+        activate_listed(&mut s, WISHING_WELL, any);
+        assert_eq!(s.hand(P1).len(), hand + 1);
+        let id = s.card(WISHING_WELL).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+}
+
+mod m_n97_3_school {
+    use super::*;
+
+    #[test]
+    fn r384_base_activate_summons_a_unit_once_a_turn() {
+        let mut s = building(SCHOOL, false);
+        assert_eq!(units(&s, P1).len(), 1);
+        activate_listed(&mut s, SCHOOL, any);
+        let board = units(&s, P1);
+        assert_eq!(board.len(), 2);
+        assert!(board.iter().all(|unit| !unit.radiant));
+        let id = s.card(SCHOOL).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r384_radiant_activate_summons_a_radiant_unit_once_a_turn() {
+        let mut s = building(SCHOOL, true);
+        assert_eq!(units(&s, P1).len(), 1);
+        activate_listed(&mut s, SCHOOL, any);
+        let board = units(&s, P1);
+        assert_eq!(board.len(), 2);
+        assert!(board.iter().all(|unit| unit.radiant));
+        let id = s.card(SCHOOL).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+}
+
+mod m_n97_6_university {
+    use super::*;
+
+    #[test]
+    fn r384_base_activate_buffs_it_twice_once_a_turn() {
+        let mut s = building(UNIVERSITY, false);
+        let id = s.card(UNIVERSITY).id.clone();
+        let events = activate_listed(&mut s, UNIVERSITY, any);
+        assert_eq!(upgrades_of(&events, &id), 2);
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r384_radiant_activate_buffs_it_five_times_once_a_turn() {
+        let mut s = building(UNIVERSITY, true);
+        let id = s.card(UNIVERSITY).id.clone();
+        let events = activate_listed(&mut s, UNIVERSITY, any);
+        assert_eq!(upgrades_of(&events, &id), 5);
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+}
+
+mod m_n97_9_jlockheeds_headquarters {
+    use super::*;
+
+    #[test]
+    fn r384_base_activate_fills_the_board_once_a_turn() {
+        let mut s = building(HEADQUARTERS, false);
+        activate_listed(&mut s, HEADQUARTERS, any);
+        assert_eq!(units(&s, P1).len(), 5);
+        let id = s.card(HEADQUARTERS).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r384_radiant_activate_2_fills_the_board_and_is_listed_for_its_second_use() {
+        let mut s = building(HEADQUARTERS, true);
+        activate_listed(&mut s, HEADQUARTERS, any);
+        assert_eq!(units(&s, P1).len(), 5);
+        assert!(units(&s, P1).iter().skip(1).all(|unit| unit.radiant));
+        let id = s.card(HEADQUARTERS).id.clone();
+        assert!(!listed(&s, &id).is_empty(), "Activate 2 has a second use");
+        activate_listed(&mut s, HEADQUARTERS, any);
+        assert!(listed(&s, &id).is_empty(), "Activate 2 is twice per turn");
+    }
+}
+
+mod m_n101_gachaholic {
+    use super::*;
+
+    fn gachaholic(radiant: bool) -> Scenario {
+        scenario(json!({
+            "p1": { "field": [on(GACHAHOLIC, radiant)], "hand": [STOCKPILE] },
+            "p2": { "hand": [FILLER] },
+        }))
+    }
+
+    #[test]
+    fn r384_base_has_no_activate() {
+        let s = gachaholic(false);
+        let id = s.card(GACHAHOLIC).id.clone();
+        assert!(listed(&s, &id).is_empty(), "the base face's pull is a Cry");
+    }
+
+    #[test]
+    fn r384_r1438_radiant_adds_a_luck_based_card_given_lucky_1_once_a_turn() {
+        let mut s = gachaholic(true);
+        activate_listed(&mut s, GACHAHOLIC, any);
+        let pulled: Vec<CardInstance> = s
+            .hand(P1)
+            .into_iter()
+            .filter(|card| card.def_id != STOCKPILE)
+            .collect();
+        assert_eq!(pulled.len(), 1);
+        assert!(is_luck_based(&jackioh_cards::card_def(&pulled[0].def_id)));
+        assert_eq!(pulled[0].granted_keywords, vec![Keyword::Lucky { n: 1 }]);
+        let id = s.card(GACHAHOLIC).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
     }
 }

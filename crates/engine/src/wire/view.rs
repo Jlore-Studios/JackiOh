@@ -10,6 +10,7 @@ use indexmap::IndexMap;
 use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize};
 
+use crate::wire::actions::RevealAt;
 use crate::wire::catalog_types::{CardDef, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row, Tag};
 use crate::wire::events::{GameEvent, GameResult, Position};
 use crate::wire::string_union;
@@ -453,6 +454,12 @@ pub struct UnitView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub chinese: Option<bool>,
+    /// MD-D5, R1121: the enemy Units an `attack_mods` entry would apply to if this Unit attacked them
+    /// now — the drag layer's yellow, beside the green legal glow (R195's sibling). Only on the
+    /// viewer's own attackers that may act now, and only when the list is non-empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub condition_targets: Option<Vec<String>>,
 }
 
 /// A public backrow card's counters: `grade` is #93 Combo-Index's counter, 1..6; `gradeLetter` is the
@@ -564,6 +571,11 @@ pub struct PublicBackrowView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub unrevealed: Option<bool>,
+    /// ME-ALTPLAY (R1046): when a face-down play of yours reveals. Present on the controller's own
+    /// view only, never on the opponent's, and skipped when the card is not a face-down play (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub reveal_at: Option<RevealAt>,
     /// R243, §6.3 Vanilla: the backrow card's text is gone — a client stamps it as it stamps a
     /// vanilla unit. Absent otherwise.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1045,6 +1057,11 @@ pub struct PlayerView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub defs: Option<IndexMap<String, CardDef>>,
+    /// MD-D29, R1127: an acting card of the opponent hears emotes, so the client's emote layer sends
+    /// them as `Emote` actions. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub emotes_heard: Option<bool>,
 }
 
 #[cfg(test)]
