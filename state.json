@@ -4146,11 +4146,11 @@
       "planned_at": "2026-10-08T17:26:47Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-1",
       "queued_at": "2026-10-08T14:54:44Z",
       "requested_by": "squishy-squooby",
-      "run_id": "37857048162",
-      "started_at": "2026-10-08T23:02:33Z",
+      "run_id": "37873000747",
+      "started_at": "2026-10-09T02:07:27Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -4376,9 +4376,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-09T02:06:34Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37872932115",
-    "what": "plan #524 on claude-1"
+    "at": "2026-10-09T02:07:27Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37873000747",
+    "what": "build #562 on claude-1"
   },
   "last_sweep": {
     "at": "2026-10-09T02:05:33Z",
