@@ -3381,6 +3381,7 @@
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
+      "question": "Build #522 is implemented but NOT green: the card test r882_a_crafted_spell_deals_its_damage fails (p2 at 24, want 25 \u2014 an N=5 recipe dealt 6, cause unknown) and the full verification (cards rebuild after cargo clean, engine craft tests, wire regen, web tests, clippy, spec/catalog checks) never completed on the loaded shared machine. Continue verification from .bot-notes.md, or rule on whether the 6-damage observation changes the R882 compiler design?",
       "queued_at": "2026-10-08T09:26:59Z",
       "requested_by": "squishy-squooby",
       "run_id": "37856779013",
