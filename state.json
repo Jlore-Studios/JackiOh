@@ -3894,6 +3894,7 @@
     "550": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -3905,16 +3906,19 @@
         "reason": "`claude-7` reached its usage limit",
         "trail": "- said: You've hit your session limit \u00b7 resets 2pm (UTC)"
       },
-      "interruptions": 1,
+      "interruptions": 0,
       "kind": "build",
+      "landed": "b39a443cb5913352e718b480bd13e90f4cc873cf",
       "last_findings": [],
       "onto": "bot/issue-575",
+      "parked_on": "",
       "part_of": 575,
       "pending_request": false,
       "planned_at": "2026-10-09T09:35:46Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "claude-1",
+      "question": "",
       "queued_at": "2026-10-08T23:06:58Z",
       "requested_by": "squishy-squooby",
       "run_id": "37974456576",
