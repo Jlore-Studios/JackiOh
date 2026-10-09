@@ -565,14 +565,10 @@ mod r1242_the_hand_fusion {
     fn r1242_one_fusable_card_takes_the_zero_and_two_copies() {
         let mut state = game("fuse-one", None, None);
         let kept = in_hand(&mut state, &immutable.id, P1, 1);
-        let only = put(
-            &mut state,
-            "fx-3",
-            slot(P1, Row::Units, 1),
-            json!({ "radiant": true }),
-        );
-        // A Radiant card in hand: moved off the field into the hand by hand.
-        bounce_to_hand(&mut state, &only.id);
+        let only = in_hand(&mut state, "fx-3", P1, 1).remove(0);
+        if let Some(live) = find_instance_mut(&mut state, &only.id) {
+            live.radiant = true;
+        }
         let events = run(&mut state, entry("fuse"), None);
         assert!(events_of_type(&events, GameEventType::Fused).is_empty());
         let hand = state.players.p1.hand.clone();
@@ -659,19 +655,6 @@ mod r1242_the_hand_fusion {
         );
         assert!(events.is_empty());
         assert_eq!(state.players.p1.hand.len(), 3);
-    }
-
-    /// Move a field card into its owner's hand directly, keeping its radiant flag (a test's shortcut).
-    fn bounce_to_hand(state: &mut GameState, id: &str) {
-        let mut sink = sink_for_state(state);
-        let found = find_instance(sink.state, id).cloned();
-        if let Some(found) = found {
-            bounce_card(&mut sink, &found);
-        }
-    }
-
-    fn sink_for_state(state: &mut GameState) -> EngineSink<'_> {
-        crate::rules::fixtures::harness::sink_for(state)
     }
 }
 

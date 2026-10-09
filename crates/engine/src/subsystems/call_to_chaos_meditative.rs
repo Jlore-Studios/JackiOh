@@ -23,6 +23,7 @@ use crate::config::{
 use crate::effects::add_to_hand::AddToHandArgs;
 use crate::effects::delay::ForRestOfGameArgs;
 use crate::effects::targets::{BoardScope, cards_in_scope};
+use crate::effects::tune::{TuneDirection, tune_once};
 use crate::prelude::json_as;
 use crate::script::{Effect, EffectContext, EffectPart, Hook, hook};
 use crate::state::{GameState, ModifierKind, find_instance, find_instance_mut};
@@ -232,18 +233,19 @@ fn build_bounce() -> Effect {
             .collect();
         vec![
             crate::effects::bounce_all(scope),
+            // The card is aimed at in the hand it reached, not on the stay it left (R174 would refuse
+            // `degrade`'s `instanceId`), so each Nerf is one `tune_once` (B3.4 rule 1).
             Effect::new("callToChaosMeditative:nerfBounced", move |ctx| {
                 for id in &bounced {
-                    let in_hand =
-                        find_instance(ctx.state, id).is_some_and(|card| card.zone.z() == ZoneName::Hand);
-                    if !in_hand {
+                    let Some(card) = find_instance(ctx.state, id)
+                        .filter(|card| card.zone.z() == ZoneName::Hand)
+                        .cloned()
+                    else {
                         continue;
+                    };
+                    for _ in 0..CHAOS_MED_NERFS {
+                        tune_once(ctx, &card, TuneDirection::Degrade, true);
                     }
-                    let nerf = crate::effects::tune::degrade(json_as(json!({
-                        "instanceId": id,
-                        "times": CHAOS_MED_NERFS
-                    })));
-                    (nerf.apply)(ctx);
                 }
             }),
         ]

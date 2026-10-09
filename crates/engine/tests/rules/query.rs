@@ -574,3 +574,51 @@ mod r901_highest_permanent_cost_meditative_30 {
         assert_eq!(highest_permanent_cost(&state, P1), Some(4));
     }
 }
+
+/// R1181: a card's §10.4 layer-1 stats (Meditative #94 Shrinking Felinor)
+mod r1181_base_stats_of_meditative_94 {
+    use super::*;
+
+    #[test]
+    fn r1181_base_stats_of_is_the_printed_face_the_card_wears() {
+        let mut state = board("base-stats-printed");
+        let base = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
+        let radiant = put(
+            &mut state,
+            &plain.id,
+            slot(P1, Row::Units, 2),
+            json!({ "radiant": true }),
+        );
+        assert_eq!(
+            base_stats_of(&state, &base),
+            AttackHealth { attack: 3, health: 3 }
+        );
+        assert_eq!(
+            base_stats_of(&state, &radiant),
+            AttackHealth { attack: 6, health: 6 }
+        );
+    }
+
+    #[test]
+    fn r1181_a_stats_override_is_layer_1_and_buffs_damage_and_tuning_are_not() {
+        let mut state = board("base-stats-override");
+        let unit = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
+        let card = must(find_instance_mut(&mut state, &unit.id), "the unit");
+        card.stats_override = Some(AttackHealth { attack: 2, health: 5 });
+        card.buffs = AttackHealth { attack: 4, health: 4 };
+        card.damage = 1;
+        card.tuning = Some(Tuning {
+            attack: Some(1),
+            health: Some(1),
+            ..Tuning::default()
+        });
+        let card = must(find_instance(&state, &unit.id), "the unit").clone();
+        assert_eq!(
+            base_stats_of(&state, &card),
+            AttackHealth { attack: 2, health: 5 }
+        );
+        // Layer 4's tuning rides on `face_of`, which is why `base_stats_of` takes it back off.
+        assert_eq!(face_of(&state, &card).attack, 3);
+        assert_eq!(face_of(&state, &card).health, 6);
+    }
+}
