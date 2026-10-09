@@ -33,7 +33,7 @@ use crate::state::{
     CardInstance, DeclaredAttack, EngineError, Exertion, GameState, Position, Resume, WorkItem,
     find_instance, find_instance_mut,
 };
-use crate::wire::{GameEvent, KeywordKind, PLAYER_IDS, PlayerId, has_keyword, opponent_of};
+use crate::wire::{GameEvent, KeywordKind, PLAYER_IDS, PlayerId, Row, has_keyword, opponent_of};
 use crate::work::{PausedStep, WorkPlan, owe, paused as is_paused, paused_of};
 
 /// What an attack can be declared on (§4.2 step 2): an enemy unit or the enemy hero. It is the
@@ -493,6 +493,28 @@ pub fn attack_mod_for(state: &GameState, attacker: &CardInstance, defender: &Car
     out
 }
 
+/// MD-F14, R1283: multiplier for attacks across its lane in combat.
+pub fn lane_multiplier_for(state: &GameState, striker: &CardInstance, struck: &CardInstance) -> i32 {
+    let Some(printed) = crate::scripts::flags_of(state, striker).lane_multiplier else {
+        return 1;
+    };
+    let Some(striker_slot) = crate::zones::slot_of(state, striker) else {
+        return 1;
+    };
+    let Some(struck_slot) = crate::zones::slot_of(state, struck) else {
+        return 1;
+    };
+    if striker_slot.row == Row::Units
+        && struck_slot.row == Row::Units
+        && striker_slot.player != struck_slot.player
+        && striker_slot.lane == struck_slot.lane
+    {
+        crate::params::declared_or(state, striker, "multiplier", printed)
+    } else {
+        1
+    }
+}
+
 /// §4.4 step 10: Cleave deals the attacker's attack to each unit adjacent to the target as separate
 /// instances. It belongs to the attack rather than to the hit, so it lands even when Divine Shield,
 /// Indestructible or the zero rule stopped the hit on the defender (R63); adjacency never crosses
@@ -541,7 +563,8 @@ fn strike(
     sink: &mut EngineSink<'_>,
     attacker: &CardInstance,
     target: &AttackTarget,
-    attack: i32,
+    hit: i32,
+    cleave_amount: i32,
     poisonous: bool,
 ) {
     let source = live_or_given(sink.state, attacker);
@@ -550,12 +573,12 @@ fn strike(
         DamageArgs {
             source: Some(source),
             target: target.clone(),
-            amount: attack,
+            amount: hit,
             flags: combat_flags_poisonous(poisonous),
         },
     );
     let source = live_or_given(sink.state, attacker);
-    cleave(sink, &source, target, attack, poisonous);
+    cleave(sink, &source, target, cleave_amount, poisonous);
 }
 
 /// The defender's hit back on the attacker.
@@ -603,7 +626,7 @@ pub fn resolve_combat(sink: &mut EngineSink<'_>, attacker: &CardInstance, target
 
     // §4.3: when the defender is a hero, only the attacker deals damage.
     let Some(defender) = defender else {
-        strike(sink, &attacker, target, attack, false);
+        strike(sink, &attacker, target, attack, attack, false);
         return;
     };
 
@@ -616,6 +639,9 @@ pub fn resolve_combat(sink: &mut EngineSink<'_>, attacker: &CardInstance, target
     let bonus = attack_mod_for(sink.state, &attacker, &defender);
     let attack = attack + bonus.attack;
 
+    let hit = attack * lane_multiplier_for(sink.state, &attacker, &defender);
+    let strike_back_attack = strike_back_attack * lane_multiplier_for(sink.state, &defender, &attacker);
+
     let attacker_first = has_keyword(
         &crate::layers::unit_view(sink.state, &attacker).keywords,
         KeywordKind::FirstStrike,
@@ -627,7 +653,7 @@ pub fn resolve_combat(sink: &mut EngineSink<'_>, attacker: &CardInstance, target
 
     // Step 1: one First Strike hits alone, and the other side answers in step 2 only if it survives.
     if attacker_first && !defender_first {
-        strike(sink, &attacker, target, attack, bonus.poisonous);
+        strike(sink, &attacker, target, hit, attack, bonus.poisonous);
         if !has_fallen_now(sink.state, &defender.id) {
             strike_back(sink, &defender, &attacker, strike_back_attack);
         }
@@ -636,14 +662,14 @@ pub fn resolve_combat(sink: &mut EngineSink<'_>, attacker: &CardInstance, target
     if defender_first && !attacker_first {
         strike_back(sink, &defender, &attacker, strike_back_attack);
         if !has_fallen_now(sink.state, &attacker.id) {
-            strike(sink, &attacker, target, attack, bonus.poisonous);
+            strike(sink, &attacker, target, hit, attack, bonus.poisonous);
         }
         return;
     }
 
     // Two First Strikers strike simultaneously in step 1, two ordinary units in step 2, and either
     // way the first death does not cancel the exchange (R59).
-    strike(sink, &attacker, target, attack, bonus.poisonous);
+    strike(sink, &attacker, target, hit, attack, bonus.poisonous);
     strike_back(sink, &defender, &attacker, strike_back_attack);
 }
 

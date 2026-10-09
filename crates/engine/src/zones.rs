@@ -400,6 +400,14 @@ pub fn accepts_stack_card(
     slot.row == Row::Units || carried_at(state, slot).is_none()
 }
 
+/// MD-F12, R1281: whether this slot is an active stack base for `player`.
+pub fn stack_base_at(state: &GameState, player: PlayerId, slot: &ZoneSlot) -> bool {
+    slot.row == Row::Units
+        && slot.player == player
+        && card_at(state, *slot).is_some_and(|card| flags_of(state, card).stack_base == Some(true))
+        && accepts_stack_card(state, slot, Default::default())
+}
+
 /// Everything in a zone, top card first, so a move that lifts whole zones (#52's rotation, #87's board
 /// swap) sets each down whole (§3.2): a unit zone's pile, or a backrow zone's carried Unit, its top
 /// card and the dormant cards beneath (B5 E21, R446). Copies, for the mover to set down.
@@ -720,6 +728,24 @@ pub fn place_on_field(
             side.backrow[index] = Some(placed);
         }
     }
+    true
+}
+
+/// R638, R13: places a card beneath the top card of a unit zone pile.
+/// This is no arrival (R638), and the card lies dormant (R13).
+pub fn place_beneath_top(state: &mut GameState, instance: &mut CardInstance, slot: ZoneSlot) -> bool {
+    if slot.row != Row::Units {
+        return false;
+    }
+    let Some(pile) = pile_at_mut(state, slot) else {
+        return false;
+    };
+    if pile.is_empty() {
+        return false;
+    }
+    instance.controller = slot.player;
+    instance.zone = zone_of(slot);
+    pile.insert(1, instance.clone());
     true
 }
 

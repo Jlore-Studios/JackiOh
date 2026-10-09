@@ -106,11 +106,13 @@ pub fn projected_damage(state: &GameState, attacker: &CardInstance, target: &Att
     if falls_to_first_strike(state, attacker, defender) {
         return 0;
     }
+    let hit = attack * crate::combat::lane_multiplier_for(state, attacker, defender);
     // Each hit is its own damage instance on the hero, so Armor and the cap apply to each (§4.4).
     struck_by(state, attacker, defender)
         .iter()
         .fold(0, |total, unit| {
-            total + projected_hero_damage(state, hero, trample_excess(state, attacker, unit, attack), pierce)
+            let amount = if unit.id == defender.id { hit } else { attack };
+            total + projected_hero_damage(state, hero, trample_excess(state, attacker, unit, amount), pierce)
         })
 }
 
@@ -145,7 +147,8 @@ fn falls_to_first_strike(state: &GameState, attacker: &CardInstance, defender: &
     {
         return false;
     }
-    if theirs.attack <= 0 {
+    let theirs_attack = theirs.attack * crate::combat::lane_multiplier_for(state, defender, attacker);
+    if theirs_attack <= 0 {
         return false;
     }
 
@@ -156,9 +159,9 @@ fn falls_to_first_strike(state: &GameState, attacker: &CardInstance, defender: &
         return false;
     }
     let dealt = if piercing(state, defender) {
-        theirs.attack
+        theirs_attack
     } else {
-        (theirs.attack - armor_of(&mine.keywords)).max(0)
+        (theirs_attack - armor_of(&mine.keywords)).max(0)
     };
     if dealt <= 0 {
         return false;

@@ -379,6 +379,13 @@ fn accepts_stack(state: &GameState, slot: &ZoneSlot) -> bool {
     crate::zones::accepts_stack_card(state, slot, Default::default())
 }
 
+/// MD-F12, R1281: whether this Unit may be played onto a stack base.
+fn onto_stack_base(state: &GameState, player: PlayerId, card: &CardInstance, slot: &ZoneSlot) -> bool {
+    card.set_as.is_none()
+        && row_for_card(state, card) == Row::Units
+        && crate::zones::stack_base_at(state, player, slot)
+}
+
 /// §3.2: "the player picks the zone" — every empty, unlocked, unreserved zone of the right row, plus
 /// the occupied zones of that row for a Stack card (§6.2, B5 E21), plus, for a Unit, the backrow zones
 /// of a carrier that holds none yet (R446, `zones::carrier_zones_for`). `refuse_zone` below reads the
@@ -404,7 +411,9 @@ pub fn legal_zones_for(
             if stack {
                 accepts_stack(state, slot)
             } else {
-                crate::zones::is_open(state, slot) || freed_by_tribute(state, slot, tributes)
+                crate::zones::is_open(state, slot)
+                    || freed_by_tribute(state, slot, tributes)
+                    || onto_stack_base(state, player, card, slot)
             }
         })
         .collect();
@@ -610,7 +619,8 @@ pub fn tribute_value_of(state: &GameState, unit: &CardInstance) -> i32 {
     }
 }
 
-/// §6.3: your own units, plus the enemy's for a card that says so (#55). Dormant cards never.
+/// §6.3, R1282: your own units, plus the enemy's for a card that says so (#55), plus cheap permanents
+/// of either row and side for a wide Tribute (#97.4, R1282: up to 20 permanents). Dormant cards never.
 pub fn legal_tribute_units<'a>(
     state: &'a GameState,
     player: PlayerId,
@@ -629,6 +639,31 @@ pub fn legal_tribute_units<'a>(
             }
         }
     }
+    if let Some(printed) = crate::scripts::script_of(state, card).flags().tribute_cheap {
+        let cheap = crate::params::declared_or(state, card, "cheap", printed);
+        for side in [player, opponent_of(player)] {
+            if side == opponent_of(player) {
+                for unit in crate::zones::active_units_of(state, side) {
+                    if unit.id != card.id
+                        && !out.iter().any(|c| c.id == unit.id)
+                        && crate::mana::cost_now(state, unit) <= cheap
+                    {
+                        out.push(unit);
+                    }
+                }
+            }
+            for slot in crate::zones::slots_of(side, Row::Backrow) {
+                if let Some(c) = crate::zones::card_at(state, slot) {
+                    if c.id != card.id
+                        && !out.iter().any(|existing| existing.id == c.id)
+                        && crate::mana::cost_now(state, c) <= cheap
+                    {
+                        out.push(c);
+                    }
+                }
+            }
+        }
+    }
     out
 }
 
@@ -639,13 +674,13 @@ fn tribute_total(state: &GameState, units: &[&CardInstance]) -> i32 {
 /// Every set of units that pays the Tribute exactly: enough to meet the cost, and minimal, so no unit
 /// in the set could be dropped and still pay it. The Sheep Token's 2 is why a set may overshoot.
 ///
-/// R90: every one of them, with no cut. The Tribute is what the play costs, and a set left off the
+/// R90, R1282: every one of them, with no cut. The Tribute is what the play costs, and a set left off the
 /// list is a price the player can never pay: the client builds a play only out of the plays
 /// `legal_actions` lists (CLAUDE.md rule 7), and the §10.7 policy draws from the same list. Cut at
 /// `MAX_CHOICE_COMBINATIONS` with the player's own units first, a Lava Golem beside four of its own
 /// units and five enemy ones was never offered #55's defining play, three enemy units (R101). The
 /// count is the board's to bound: at most ten units stand, so Core's largest Tribute, #55's 3, has at
-/// most 120 minimal sets.
+/// most 120 minimal sets; a wide Tribute (R1282) on a full board can have C(20,5) = 15,504 sets.
 pub fn legal_tribute_sets(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<Vec<String>> {
     let need = tribute_cost_of(state, card);
     if need == 0 {
@@ -1994,7 +2029,9 @@ fn refuse_zone(
     let takes_it = if plays_on_stack(state, card) {
         accepts_stack(state, &slot)
     } else {
-        crate::zones::is_open(state, slot) || freed_by_tribute(state, &slot, tributes)
+        crate::zones::is_open(state, slot)
+            || freed_by_tribute(state, &slot, tributes)
+            || onto_stack_base(state, player, card, &slot)
     };
     if !takes_it {
         return refuse(format!("that {row} zone is not open"));

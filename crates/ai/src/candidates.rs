@@ -217,6 +217,77 @@ fn round_robin(state: &GameState, actions: &[ActionBody]) -> Vec<ActionBody> {
     out
 }
 
+/// R90, R1282: When a card has more tribute sets than AI_SEARCH.tribute_sets, keep the ones
+/// that spend the fewest of seat's own cards. Ties go to the set seen first.
+fn cap_tribute_sets(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>) -> Vec<ActionBody> {
+    let mut sets_by_instance: IndexMap<String, Vec<Vec<String>>> = IndexMap::new();
+    for action in &actions {
+        if let ActionBody::Play {
+            instance_id,
+            tributes: Some(tributes),
+            ..
+        } = action
+        {
+            let mut sorted = tributes.clone();
+            sorted.sort();
+            let sets = sets_by_instance.entry(instance_id.clone()).or_default();
+            if !sets.contains(&sorted) {
+                sets.push(sorted);
+            }
+        }
+    }
+
+    let mut allowed_sets_by_instance: IndexMap<String, indexmap::IndexSet<Vec<String>>> = IndexMap::new();
+    let limit = AI_SEARCH.tribute_sets as usize;
+
+    for (instance_id, sets) in sets_by_instance {
+        if sets.len() <= limit {
+            continue;
+        }
+        let mut scored: Vec<(usize, Vec<String>, usize)> = sets
+            .into_iter()
+            .enumerate()
+            .map(|(idx, set)| {
+                let own_spent = set
+                    .iter()
+                    .filter(|id| find_instance(state, id).is_some_and(|c| c.controller == seat))
+                    .count();
+                (idx, set, own_spent)
+            })
+            .collect();
+
+        scored.sort_by(|(ia, _, oa), (ib, _, ob)| oa.cmp(ob).then(ia.cmp(ib)));
+
+        let kept: indexmap::IndexSet<Vec<String>> =
+            scored.into_iter().take(limit).map(|(_, set, _)| set).collect();
+
+        allowed_sets_by_instance.insert(instance_id, kept);
+    }
+
+    if allowed_sets_by_instance.is_empty() {
+        return actions;
+    }
+
+    actions
+        .into_iter()
+        .filter(|action| {
+            if let ActionBody::Play {
+                instance_id,
+                tributes: Some(tributes),
+                ..
+            } = action
+            {
+                if let Some(allowed) = allowed_sets_by_instance.get(instance_id) {
+                    let mut sorted = tributes.clone();
+                    sorted.sort();
+                    return allowed.contains(&sorted);
+                }
+            }
+            true
+        })
+        .collect()
+}
+
 /// legal_actions(state, seat) minus AI_SKIPPED_ACTIONS (R84's concede/offerDraw/answerDraw) and minus
 /// `mulligan`, with `play` zone variants collapsed (per otherwise-identical play keep the lowest and
 /// the highest `zone.lane`, AI_SEARCH.zoneVariants), in move order. endTurn, when legal, is last.
@@ -229,7 +300,8 @@ pub fn candidate_actions(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
             !skipped.contains(&kind) && kind != ActionType::Mulligan
         })
         .collect();
-    let actions = collapse_zones(&legal);
+    let capped = cap_tribute_sets(state, seat, legal);
+    let actions = collapse_zones(&capped);
 
     let mut hero_attacks: Vec<ActionBody> = Vec::new();
     let mut good_trades: Vec<ActionBody> = Vec::new();

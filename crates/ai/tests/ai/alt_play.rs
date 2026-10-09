@@ -22,7 +22,7 @@ fn set_state(seed: &str) -> GameState {
         "active": "p1",
         "p1": {
             "mana": 8,
-            "hand": [VANILLA],
+            "hand": [VANILLA, VANILLA],
             "field": [{ "def": BREAKER, "lane": 1 }],
         },
         "p2": { "hand": [VANILLA] },

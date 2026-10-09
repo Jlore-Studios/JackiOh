@@ -39,16 +39,7 @@ const DEALT_BY_A_RULE: &[&str] = &[
 /// R1420: tokens of a set that has not shipped, landed before the card that names them, by that card's
 /// id. Its part empties the entry: the test fails once the maker is in the catalog (Meditative #97
 /// Jlockheed's Evil Blueprints, issue #542, names the nine buildings; issue #541 lands five first).
-const MAKER_STILL_TO_COME: &[(&str, &[&str])] = &[(
-    "meditative-097",
-    &[
-        "meditative-097-2",
-        "meditative-097-3",
-        "meditative-097-6",
-        "meditative-097-7",
-        "meditative-097-9",
-    ],
-)];
+const MAKER_STILL_TO_COME: &[(&str, &[&str])] = &[];
 
 /// R381 (B2.8): card names that are also rules words. A text using one names that card only when the
 /// card's `refs` lists it: Exile the verb and the pile, Burn at the hand cap, Echo the keyword,

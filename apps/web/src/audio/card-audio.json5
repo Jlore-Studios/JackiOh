@@ -1432,6 +1432,13 @@
       play: { voice: "cat", text: "Enjoy me while I'm big." },
       death: { voice: "cat", text: "Honey, I shrunk the cat." },
     },
+    "meditative-097": { // Jlockheed's Evil Blueprints
+      cast: { voice: "sapi-villain", text: "Phase one of the master plan." },
+    },
+    "meditative-097-1": { // Empty Plot
+      play: { voice: "sapi-bureaucrat", text: "Prime real estate for evil." },
+      death: { voice: "sapi-bureaucrat", text: "Back to the drawing board." },
+    },
     "meditative-097-2": { // Wishing Well
       play: { voice: "whisper", text: "Drop a coin. Make a wish." },
       death: { voice: "whisper", text: "The well runs dry." },
@@ -1440,6 +1447,14 @@
       play: { voice: "prof", text: "Settle down, class is in session." },
       death: { voice: "prof", text: "School's out. Forever." },
     },
+    "meditative-097-4": { // Mega Church
+      play: { voice: "posh", text: "All donations are non-refundable." },
+      death: { voice: "posh", text: "The collection plate is empty." },
+    },
+    "meditative-097-5": { // Bunker
+      play: { voice: "guard", text: "Reinforced and ready." },
+      death: { voice: "guard", text: "Breach detected!" },
+    },
     "meditative-097-6": { // University
       play: { voice: "posh", text: "Welcome, freshmen. Tuition is due." },
       death: { voice: "posh", text: "Commencement came early." },
@@ -1447,6 +1462,10 @@
     "meditative-097-7": { // The Great Wall
       play: { voice: "guard", text: "Ten thousand miles. No one gets through." },
       death: { voice: "guard", text: "The wall has fallen." },
+    },
+    "meditative-097-8": { // Prison
+      play: { voice: "guard", text: "Lock the gates." },
+      death: { voice: "guard", text: "Prison break!" },
     },
     "meditative-097-9": { // Jlockheed's Headquarters
       play: { voice: "robot", text: "Headquarters online. Begin the contracts." },

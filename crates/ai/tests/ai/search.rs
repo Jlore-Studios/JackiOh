@@ -365,6 +365,125 @@ mod candidate_actions_b14 {
         .clone();
         assert_eq!(candidate_actions(&state, AI), Vec::<ActionBody>::new());
     }
+
+    /// R1282: A wide tribute card's candidate plays are cut to AI_SEARCH.tribute_sets (120) and stay legal
+    #[test]
+    fn r1282_a_wide_tribute_s_plays_are_cut_to_the_tribute_sets_cap_and_stay_legal() {
+        jackioh_cards::register_all();
+        // 5 cheap units on each side = 10 cheap permanents.
+        // Tribute 5 chooses 5 out of 10 = 252 tribute combinations.
+        let s = scenario(json!({
+            "preview": ["Meditative"],
+            "p1": {
+                "field": [
+                    { "def": "core-011", "lane": 1 },
+                    { "def": "core-011", "lane": 2 },
+                    { "def": "core-011", "lane": 3 },
+                    { "def": "core-011", "lane": 4 },
+                    { "def": "core-011", "lane": 5 },
+                ],
+                "hand": ["meditative-097-4"],
+                "mana": 10,
+            },
+            "p2": {
+                "field": [
+                    { "def": "core-011", "lane": 1 },
+                    { "def": "core-011", "lane": 2 },
+                    { "def": "core-011", "lane": 3 },
+                    { "def": "core-011", "lane": 4 },
+                    { "def": "core-011", "lane": 5 },
+                ],
+            }
+        }));
+        let state = s.state();
+        let legal = legal_actions(state, AI);
+        let candidates = candidate_actions(state, AI);
+
+        // Extract distinct tribute sets for Mega Church from candidate actions
+        let church_id = &state.players.p1.hand[0].id;
+        let mut candidate_tribute_sets = std::collections::HashSet::new();
+        for action in &candidates {
+            if let ActionBody::Play {
+                instance_id,
+                tributes: Some(t),
+                ..
+            } = action
+            {
+                if instance_id == church_id {
+                    let mut sorted = t.clone();
+                    sorted.sort();
+                    candidate_tribute_sets.insert(sorted);
+                }
+            }
+        }
+
+        // Distinct tribute sets in candidates is exactly capped at 120 (AI_SEARCH.tribute_sets)
+        assert_eq!(candidate_tribute_sets.len(), 120);
+
+        // Every candidate action must be legal
+        let legal_keys: IndexSet<String> = legal.iter().map(action_key).collect();
+        for action in &candidates {
+            assert!(legal_keys.contains(&action_key(action)), "{}", action_key(action));
+        }
+    }
+
+    /// R1282: A shipped tribute card keeps every tribute set
+    #[test]
+    fn r1282_a_shipped_tribute_keeps_every_set() {
+        jackioh_cards::register_all();
+        // A tribute play with fewer sets than the cap (e.g. Boom Big Max Tribute 2 on 3 units -> 3 sets)
+        let s = scenario(json!({
+            "p1": {
+                "field": [
+                    { "def": "core-011", "lane": 1 },
+                    { "def": "core-011", "lane": 2 },
+                    { "def": "core-011", "lane": 3 },
+                ],
+                "hand": ["classic-080"],
+                "mana": 10,
+            },
+            "p2": {}
+        }));
+        let state = s.state();
+        let legal = legal_actions(state, AI);
+        let candidates = candidate_actions(state, AI);
+
+        let boom_id = &state.players.p1.hand[0].id;
+        let mut legal_tribute_sets = std::collections::HashSet::new();
+        for action in &legal {
+            if let ActionBody::Play {
+                instance_id,
+                tributes: Some(t),
+                ..
+            } = action
+            {
+                if instance_id == boom_id {
+                    let mut sorted = t.clone();
+                    sorted.sort();
+                    legal_tribute_sets.insert(sorted);
+                }
+            }
+        }
+
+        let mut candidate_tribute_sets = std::collections::HashSet::new();
+        for action in &candidates {
+            if let ActionBody::Play {
+                instance_id,
+                tributes: Some(t),
+                ..
+            } = action
+            {
+                if instance_id == boom_id {
+                    let mut sorted = t.clone();
+                    sorted.sort();
+                    candidate_tribute_sets.insert(sorted);
+                }
+            }
+        }
+
+        assert_eq!(candidate_tribute_sets, legal_tribute_sets);
+        assert!(!candidate_tribute_sets.is_empty());
+    }
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -49,6 +49,8 @@ pub struct AiSearch {
     pub lines_per_action: i32,
     /// Seed of the throwaway determinization that lists candidates for the forced check.
     pub probe_seed: &'static str,
+    /// R90, R1282: the most sets a shipped card lists, #55's 3 of ten units.
+    pub tribute_sets: i32,
 }
 
 pub const AI_SEARCH: AiSearch = AiSearch {
@@ -59,6 +61,7 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     lethal_width: 60,
     lines_per_action: 2,
     probe_seed: "ai:probe",
+    tribute_sets: 120,
 };
 
 /// `AI_EVAL.keyword`: the worth of each keyword in `unitView.keywords` (spent Divine Shield and Reborn

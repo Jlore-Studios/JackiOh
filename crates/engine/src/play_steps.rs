@@ -1552,9 +1552,23 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     // invariant rather than a game rule; should one ever happen, the card waits in `resolving` and
     // step 7 lands it in its graveyard, as R138 has a permanent with no zone do, rather than being
     // left in no pile at all (§10.1).
+    let base = if run.cast != Some(true) {
+        run.zone
+            .as_ref()
+            .filter(|zone| crate::zones::stack_base_at(sink.state, run.player, zone))
+            .and_then(|zone| card_at(sink.state, *zone).cloned())
+    } else {
+        None
+    };
+    let landing_buffs = base.as_ref().and_then(|b| {
+        crate::scripts::flags_of(sink.state, b)
+            .stack_base_buffs
+            .map(|n| crate::params::declared_or(sink.state, b, "buffs", n))
+    });
+
     let placed = match run.zone {
         Some(zone) => {
-            let stack = plays_on_stack(sink.state, &card);
+            let stack = plays_on_stack(sink.state, &card) || base.is_some();
             place_on_field(
                 sink.state,
                 &mut card,
@@ -1610,6 +1624,27 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     record_play(sink.state, run.player, &card);
 
     played_events(sink, run, &card, former_id);
+    if placed
+        && let Some(times) = landing_buffs
+        && times > 0
+    {
+        let mut ctx = crate::resolve::make_context(
+            sink,
+            base.as_ref(),
+            crate::resolve::HookOptions {
+                controller: Some(run.player),
+                ..Default::default()
+            },
+        );
+        crate::resolve::apply_effects(
+            &[crate::effects::upgrade(crate::effects::TuneArgs {
+                instance_id: Some(card.id.clone()),
+                times: Some(times),
+                ..Default::default()
+            })],
+            &mut ctx,
+        );
+    }
     // B3.1 rule 4 (R383): an Animated Field Spell, or an "Animated on your turn" card on its controller's
     // turn, animates as it enters the field.
     animate_on_entry(sink, &card);

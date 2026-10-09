@@ -18,8 +18,8 @@ use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, find_instance};
 use crate::wire::{ControlHow, GameEvent, PlayerId, Row, opponent_of};
 use crate::zones::{
-    PlaceOnFieldOptions, ZoneSlot, card_at, first_entry_zone, is_open, place_on_field, remove_from_field,
-    slot_of, slots_of,
+    PlaceOnFieldOptions, ZoneSlot, card_at, first_entry_zone, is_open, place_beneath_top, place_on_field,
+    remove_from_field, slot_of, slots_of,
 };
 
 /// Which card to steal: the pick the play or a prompt carried (R81), or an instance id a script
@@ -199,5 +199,57 @@ pub fn steal_all(args: StealAllArgs) -> Effect {
             };
             take_control(ctx, &card);
         }
+    })
+}
+
+/// MD-F16, R1284: capture an opponent's card, moving it dormant beneath the holder under the holder's controller.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct CaptureArgs {
+    pub instance_id: String,
+}
+
+pub fn capture(args: CaptureArgs) -> Effect {
+    Effect::new("capture", move |ctx| {
+        let Some(holder_live) = ctx.self_.as_ref().and_then(|c| find_instance(ctx.state, &c.id)) else {
+            return;
+        };
+        let Some(holder_slot) = slot_of(ctx.state, holder_live) else {
+            return;
+        };
+        if holder_slot.row != Row::Units || !is_active_on_field(ctx.state, holder_live) {
+            return;
+        }
+        let Some(target_card) = instance_on_its_stay(ctx, &args.instance_id) else {
+            return;
+        };
+        let Some(target_slot) = slot_of(ctx.state, &target_card) else {
+            return;
+        };
+        if target_slot.row != Row::Units || !is_active_on_field(ctx.state, &target_card) {
+            return;
+        }
+        if target_card.id == holder_live.id || target_card.controller == holder_live.controller {
+            return;
+        }
+
+        let previous = target_card.controller;
+        let mut moving = target_card.clone();
+        remove_from_field(ctx.state, &moving, Default::default());
+        if !place_beneath_top(ctx.state, &mut moving, holder_slot) {
+            return;
+        }
+
+        let placed = find_instance(ctx.state, &moving.id).cloned().unwrap_or(moving);
+        enter_new_side(ctx, &placed, previous);
+
+        ctx.events.push(GameEvent::ControlChanged {
+            instance_id: placed.id.clone(),
+            controller: holder_slot.player,
+            row: Row::Units,
+            lane: holder_slot.lane,
+            former_id: None,
+            how: Some(ControlHow::Steal),
+        });
     })
 }

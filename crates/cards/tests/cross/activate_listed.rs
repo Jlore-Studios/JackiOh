@@ -34,12 +34,13 @@ const DOCTORS_ORDERS: &str = "classicplus-060";
 const BROTHER_PING: &str = "classicplus-076-1";
 const WISHING_WELL: &str = "meditative-097-2";
 const SCHOOL: &str = "meditative-097-3";
+const MEGA_CHURCH: &str = "meditative-097-4";
 const UNIVERSITY: &str = "meditative-097-6";
 const HEADQUARTERS: &str = "meditative-097-9";
 const GACHAHOLIC: &str = "meditative-101";
 
 /// Every card or token whose base or Radiant text has an Activate ability, each with a case below.
-const ACTIVATE_CARDS: [&str; 19] = [
+const ACTIVATE_CARDS: [&str; 20] = [
     HEROIC_POWER,
     INFINISCEPTER,
     NOSE_HUNTER,
@@ -56,6 +57,7 @@ const ACTIVATE_CARDS: [&str; 19] = [
     BROTHER_PING,
     WISHING_WELL,
     SCHOOL,
+    MEGA_CHURCH,
     UNIVERSITY,
     HEADQUARTERS,
     GACHAHOLIC,
@@ -835,6 +837,42 @@ mod m_n97_3_school {
         assert_eq!(board.len(), 2);
         assert!(board.iter().all(|unit| unit.radiant));
         let id = s.card(SCHOOL).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+}
+
+mod m_n97_4_mega_church {
+    use super::*;
+
+    fn church_scene(radiant: bool) -> Scenario {
+        scenario(json!({
+            "p1": { "field": [on(MEGA_CHURCH, radiant)], "hand": [FILLER], "library": [X, X] },
+            "p2": { "field": [on(VANILLA, false)], "hand": [FILLER], "library": [X, X] },
+        }))
+    }
+
+    #[test]
+    fn r384_base_activate_takes_an_enemy_permanent_once_a_turn() {
+        let mut s = church_scene(false);
+        let victim = s.card(VANILLA).id.clone();
+        activate_listed(&mut s, MEGA_CHURCH, |action| {
+            targets_of(action) == vec![instance(&victim)]
+        });
+        assert_eq!(s.card(VANILLA).controller, P1);
+        let id = s.card(MEGA_CHURCH).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r384_radiant_activate_takes_an_enemy_permanent_and_makes_it_radiant_once_a_turn() {
+        let mut s = church_scene(true);
+        let victim = s.card(VANILLA).id.clone();
+        activate_listed(&mut s, MEGA_CHURCH, |action| {
+            targets_of(action) == vec![instance(&victim)]
+        });
+        assert_eq!(s.card(VANILLA).controller, P1);
+        assert!(s.card(VANILLA).radiant);
+        let id = s.card(MEGA_CHURCH).id.clone();
         assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
     }
 }
