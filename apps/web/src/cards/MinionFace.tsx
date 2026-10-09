@@ -156,6 +156,12 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
           {face.cost.text}
         </span>
 
+        {face.element != null && (
+          <span className="cf-element" data-testid="card-element" title={`Element ${face.element}`}>
+            {face.element}
+          </span>
+        )}
+
         <span className="card-name" ref={nameRef}>
           {face.name}
         </span>

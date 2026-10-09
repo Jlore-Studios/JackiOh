@@ -163,6 +163,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   turnCutShort: { type: "turnCutShort", player: "p2", byInstanceId: "b5" },
   marked: { type: "marked", instanceId: "u6", mark: "steal", color: "purple", added: true },
   glitched: { type: "glitched", player: "p1", outcome: "swap" },
+  fengShui: { type: "fengShui", instanceId: "c1", sourceId: "c2", player: "p1", outcome: "positive" },
   translated: { type: "translated", instanceId: "u6" },
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
 };
@@ -273,6 +274,7 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   turnCutShort: "banner",
   marked: "brand",
   glitched: "banner",
+  fengShui: "banner",
   // R1301: a translation pulses its card and nothing decorates it.
   translated: null,
   // Patch v0.3.X (MN05, R1363): a hit the Armor took whole blooms a shield.
@@ -386,15 +388,16 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   turnCutShort: ["jk-banner", 600, "turn-banner"],
   marked: ["jk-radiant-pulse", 400, "card-<instanceId>"],
   glitched: ["jk-banner", 600, "turn-banner"],
+  fengShui: ["jk-banner", 600, "turn-banner"],
   translated: ["jk-radiant-pulse", 400, "card-<instanceId>"],
   damageAbsorbed: ["jk-armor-absorb", 300, "card-<targetId> | hero-<side>"],
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 55 rows of S4, patch v0.2.0, Glitch (R676) and MN05 (R1363) carry fx with the listed recipe and the other 12 carry none", () => {
+  it("B1 exactly the 56 rows of S4, patch v0.2.0, Glitch (R676), MN05 (R1363) and Feng Shui (R983) carry fx with the listed recipe and the other 12 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
-    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(55);
+    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(56);
   });
 
   it("B1 an fx descriptor is data only: one recipe field and nothing else", () => {

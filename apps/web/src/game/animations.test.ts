@@ -103,6 +103,7 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   turnCutShort: 600,
   marked: 400,
   glitched: 600,
+  fengShui: 600,
   translated: 400,
   // Patch v0.3.X (MN05).
   damageAbsorbed: 300,
@@ -199,6 +200,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   turnCutShort: { type: "turnCutShort", player: "p2", byInstanceId: "b5" },
   marked: { type: "marked", instanceId: "u6", mark: "steal", color: "purple", added: true },
   glitched: { type: "glitched", player: "p1", outcome: "swap" },
+  fengShui: { type: "fengShui", instanceId: "c1", sourceId: "c2", player: "p1", outcome: "positive" },
   translated: { type: "translated", instanceId: "u6" },
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
 };
@@ -271,7 +273,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(67);
+    expect(rows).toHaveLength(68);
   });
 
   it("gives every row an animation name and a testid template", () => {

@@ -18,7 +18,11 @@ fn better(state: &GameState) -> impl Fn(CardInstance, CardInstance) -> CardInsta
             return if worth(&a) > worth(&b) { a } else { b };
         }
         if cost_now(state, &a) != cost_now(state, &b) {
-            return if cost_now(state, &a) > cost_now(state, &b) { a } else { b };
+            return if cost_now(state, &a) > cost_now(state, &b) {
+                a
+            } else {
+                b
+            };
         }
         if lane(&b) < lane(&a) { b } else { a }
     }
@@ -30,10 +34,11 @@ fn pick(ctx: &mut EffectContext<'_>) -> Vec<String> {
     if pool.is_empty() {
         return Vec::new();
     }
+    // R987: the controller's Luck rolls extra times beside the card's own Lucky.
     let lucky = match ctx.live_self() {
         None => 0,
         Some(me) => numbered_sum(&card_keywords(&*ctx.state, me), KeywordKind::Lucky).unwrap_or(0),
-    };
+    } + luck_of(&*ctx.state, ctx.controller);
     // The state and the rng are two fields of the sink: the comparator reads the one while the rolls draw
     // from the other.
     let sink = &mut ctx.sink;
@@ -58,7 +63,9 @@ pub fn script() -> CardScripts {
             vec![for_each_card(ForEachCardArgs {
                 cards: Arc::new(pick),
                 each: Arc::new(|instance_id: &str| {
-                    destroy(json_as(json!({ "target": { "of": "instance", "instanceId": instance_id } })))
+                    destroy(json_as(
+                        json!({ "target": { "of": "instance", "instanceId": instance_id } }),
+                    ))
                 }),
             })]
         })),
@@ -152,7 +159,10 @@ mod tests {
                         false,
                         &format!("shot-{seed}"),
                     );
-                    let enemies: Vec<Option<String>> = [1, 2, 4].iter().map(|lane| s.unit(P2, *lane).map(|unit| unit.id)).collect();
+                    let enemies: Vec<Option<String>> = [1, 2, 4]
+                        .iter()
+                        .map(|lane| s.unit(P2, *lane).map(|unit| unit.id))
+                        .collect();
                     s.play(SHOT, json!({}));
                     let dead = destroyed_ids(&s);
                     assert_eq!(dead.len(), 1);
@@ -179,8 +189,39 @@ mod tests {
             }
 
             #[test]
+            fn r987_feng_shui_s_luck_adds_a_roll() {
+                crate::register_all();
+                let _open = preview_sets(&[SetName::Meditative]);
+                let draws = |judge: bool| -> u32 {
+                    let mut p1 = json!({
+                        "hand": [{ "def": SHOT }, FILLER],
+                        "field": [{ "def": BIG, "lane": 3 }],
+                    });
+                    if judge {
+                        p1["backrow"] = json!(["meditative-040"]);
+                    }
+                    let mut s = scenario(json!({
+                        "seed": "soul-shot-luck",
+                        "p1": p1,
+                        "p2": {
+                            "hand": [FILLER],
+                            "field": [{ "def": SMALL, "lane": 1 }, { "def": BIG, "lane": 2 }],
+                        },
+                    }));
+                    let cursor = s.state().rng_cursor;
+                    s.play(SHOT, json!({}));
+                    s.state().rng_cursor - cursor
+                };
+                assert_eq!(draws(true), draws(false) + 1);
+            }
+
+            #[test]
             fn r46_an_indestructible_pick_survives_knocked_to_attack_position() {
-                let mut s = shot(json!({ "field": [{ "def": ROCK, "lane": 1, "position": "DEF" }] }), false, "soul-shot");
+                let mut s = shot(
+                    json!({ "field": [{ "def": ROCK, "lane": 1, "position": "DEF" }] }),
+                    false,
+                    "soul-shot",
+                );
                 s.play(SHOT, json!({}));
                 let rock = s.unit(P2, 1);
                 assert_eq!(rock.as_ref().map(|unit| unit.def_id.as_str()), Some(ROCK));
@@ -204,7 +245,11 @@ mod tests {
 
             #[test]
             fn s6_1_with_only_an_immune_to_spells_unit_nothing_is_destroyed_and_nothing_drawn() {
-                let mut s = shot(json!({ "field": [{ "def": TOP_LOSER, "lane": 1, "radiant": true }] }), false, "soul-shot");
+                let mut s = shot(
+                    json!({ "field": [{ "def": TOP_LOSER, "lane": 1, "radiant": true }] }),
+                    false,
+                    "soul-shot",
+                );
                 let cursor = s.state().rng_cursor;
                 s.play(SHOT, json!({}));
                 assert_eq!(destroyed_ids(&s), Vec::<String>::new());
@@ -216,8 +261,8 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r414_lucky_1_of_two_picks_the_better_dies_with_a_9_9_and_a_3_4_the_9_9_dies_far_more_often_than_one_pick_would(
-            ) {
+            fn r414_lucky_1_of_two_picks_the_better_dies_with_a_9_9_and_a_3_4_the_9_9_dies_far_more_often_than_one_pick_would()
+             {
                 let mut big: i32 = 0;
                 let tries: i32 = 24;
                 for seed in 1..=tries {
@@ -238,10 +283,18 @@ mod tests {
 
             #[test]
             fn r414_each_lucky_pick_is_a_draw_two_draws_where_the_base_face_makes_one() {
-                let mut once = shot(json!({ "field": [{ "def": SMALL, "lane": 1 }, { "def": BIG, "lane": 2 }] }), false, "soul-shot");
+                let mut once = shot(
+                    json!({ "field": [{ "def": SMALL, "lane": 1 }, { "def": BIG, "lane": 2 }] }),
+                    false,
+                    "soul-shot",
+                );
                 let c1 = once.state().rng_cursor;
                 once.play(SHOT, json!({}));
-                let mut twice = shot(json!({ "field": [{ "def": SMALL, "lane": 1 }, { "def": BIG, "lane": 2 }] }), true, "soul-shot");
+                let mut twice = shot(
+                    json!({ "field": [{ "def": SMALL, "lane": 1 }, { "def": BIG, "lane": 2 }] }),
+                    true,
+                    "soul-shot",
+                );
                 let c2 = twice.state().rng_cursor;
                 twice.play(SHOT, json!({}));
                 assert_eq!(twice.state().rng_cursor - c2, 2 * (once.state().rng_cursor - c1));
@@ -254,8 +307,10 @@ mod tests {
                 let (mut split, mut same) = (0, 0);
                 for seed in 1..=24 {
                     let mut s = shot(p2.clone(), true, &format!("r414-{seed}"));
-                    let pool: Vec<String> =
-                        lanes.iter().map(|lane| s.unit(P2, *lane).map(|unit| unit.id).unwrap_or_default()).collect();
+                    let pool: Vec<String> = lanes
+                        .iter()
+                        .map(|lane| s.unit(P2, *lane).map(|unit| unit.id).unwrap_or_default())
+                        .collect();
                     let winner = s.unit(P2, winner_lane).map(|unit| unit.id).unwrap_or_default();
                     let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
                     let first = rng.pick(&pool).cloned();
@@ -266,7 +321,11 @@ mod tests {
                     } else {
                         split += 1;
                     }
-                    let expected = if first == second { first.unwrap_or_default() } else { winner };
+                    let expected = if first == second {
+                        first.unwrap_or_default()
+                    } else {
+                        winner
+                    };
                     assert_eq!(destroyed_ids(&s), vec![expected]);
                 }
                 assert!(split > 0);
@@ -274,7 +333,8 @@ mod tests {
             }
 
             #[test]
-            fn r414_the_better_is_the_higher_attack_plus_current_health_a_1_14_damaged_to_1_4_loses_to_a_4_4() {
+            fn r414_the_better_is_the_higher_attack_plus_current_health_a_1_14_damaged_to_1_4_loses_to_a_4_4()
+            {
                 expect_lucky_keeps(
                     json!({ "field": [{ "def": MOTHS, "lane": 1, "damage": 10 }, { "def": VANILLA, "lane": 2 }] }),
                     &[1, 2],
@@ -284,12 +344,20 @@ mod tests {
 
             #[test]
             fn r414_a_tie_on_attack_plus_health_goes_to_the_higher_cost_a_3_4_4_over_a_1_4_4() {
-                expect_lucky_keeps(json!({ "field": [{ "def": VANILLA, "lane": 1 }, { "def": SILAS, "lane": 3 }] }), &[1, 3], 3);
+                expect_lucky_keeps(
+                    json!({ "field": [{ "def": VANILLA, "lane": 1 }, { "def": SILAS, "lane": 3 }] }),
+                    &[1, 3],
+                    3,
+                );
             }
 
             #[test]
             fn r414_then_to_the_lower_lane_of_two_1_4_4s_the_one_in_lane_2_over_lane_4() {
-                expect_lucky_keeps(json!({ "field": [{ "def": VANILLA, "lane": 2 }, { "def": VANILLA, "lane": 4 }] }), &[2, 4], 2);
+                expect_lucky_keeps(
+                    json!({ "field": [{ "def": VANILLA, "lane": 2 }, { "def": VANILLA, "lane": 4 }] }),
+                    &[2, 4],
+                    2,
+                );
             }
 
             #[test]
@@ -309,12 +377,19 @@ mod tests {
                     serde_json::from_value(serde_json::to_value(s.state()).expect("JSON")).expect("a state");
                 let live = reduce(s.state(), &action);
                 assert!(live.error.is_none());
-                assert_eq!(hash_state(&reduce(&thawed, &action).state), hash_state(&live.state));
+                assert_eq!(
+                    hash_state(&reduce(&thawed, &action).state),
+                    hash_state(&live.state)
+                );
             }
 
             #[test]
             fn r386_lucky_is_tuned_like_any_numbered_keyword_lucky_2_makes_three_picks() {
-                let mut s = shot(json!({ "field": [{ "def": SMALL, "lane": 1 }, { "def": BIG, "lane": 2 }] }), true, "soul-shot");
+                let mut s = shot(
+                    json!({ "field": [{ "def": SMALL, "lane": 1 }, { "def": BIG, "lane": 2 }] }),
+                    true,
+                    "soul-shot",
+                );
                 let tuning = tuning_of(s.card_mut(SHOT));
                 tuning.x = Some(add_step(tuning.x.as_ref(), "Lucky", 1));
                 let cursor = s.state().rng_cursor;

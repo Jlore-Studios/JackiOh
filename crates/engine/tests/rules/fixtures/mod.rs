@@ -11,6 +11,7 @@ pub mod copied_text;
 pub mod core_patches;
 pub mod damage_combat;
 pub mod datacenter;
+pub mod feng_shui;
 pub mod field;
 pub mod fruit;
 pub mod generation;

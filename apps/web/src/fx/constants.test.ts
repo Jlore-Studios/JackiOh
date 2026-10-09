@@ -123,6 +123,8 @@ const S2 = {
     yourTurn: "Your turn",
     opponentTurn: "Opponent's turn",
     autoEnded: "No moves left",
+    auspicious: "吉",
+    inauspicious: "凶",
     chaosRolled: "Call to Chaos:",
     turnCutShort: "Turn cut short",
     victory: "Victory",

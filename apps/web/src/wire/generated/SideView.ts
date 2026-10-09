@@ -45,4 +45,10 @@ carried?: Array<UnitView | null>, locks: RowFlags,
  * Locked zone takes none, so a client that reads only `locks` would draw it open. B3.1 rule 6: the
  * backrow zone an animated "Animated on your turn" card will return to is held the same way.
  */
-reserved: RowFlags, fatigueCount: number, };
+reserved: RowFlags, fatigueCount: number, 
+/**
+ * R987, Meditative #40 Feng Shui: the side's Luck for best-of rolls, read through
+ * `query::luck_of` as the hero panel reads its armor through `hero_armor_of`. Absent at 0, so a
+ * game with no Feng Shui looks as it did (D14).
+ */
+luck?: number, };

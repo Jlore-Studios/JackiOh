@@ -74,6 +74,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (card.tuning !== undefined) inPlay.tuning = card.tuning;
   // B3.3, R385: the Brittle count; B5 E39: the enchantments riding the card.
   if (card.brittle !== undefined) inPlay.brittle = card.brittle;
+  // R980: the card's element, while a Feng Shui acts.
+  if (card.element !== undefined) inPlay.element = card.element;
   if (card.enchantments !== undefined && card.enchantments.length > 0) inPlay.enchantments = card.enchantments;
   // R437: the marks on it, which the inspect overlays spell out (the board draws them, CardMarks.tsx).
   const marks = marksOf(card);

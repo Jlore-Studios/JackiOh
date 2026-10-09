@@ -32,7 +32,9 @@ const RADIANT_CHANCE: f64 = 0.4;
 
 /// R60: one random non-Radiant card in the caster's hand becomes Radiant.
 fn make_one_radiant() -> Vec<Effect> {
-    vec![set_radiant_random(json_as(json!({ "zones": "hand", "count": 1 })))]
+    vec![set_radiant_random(json_as(
+        json!({ "zones": "hand", "count": 1 }),
+    ))]
 }
 
 /// R129: the roll is taken only when the pick has a hand to look in. The hand's size is public; which
@@ -68,11 +70,13 @@ fn end_of_turn() -> Hook {
 pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(hook(|ctx| {
-            if any_to_make_radiant(ctx) && ctx.rng.chance(BASE_CHANCE) {
-                make_one_radiant()
-            } else {
-                vec![]
+            if !any_to_make_radiant(ctx) {
+                return vec![];
             }
+            // R987: the controller's Luck rolls extra times (`lucky(0)` draws once, as before).
+            let luck = luck_of(&*ctx.state, ctx.controller);
+            let hit = ctx.rng.lucky(luck, |rng| rng.chance(BASE_CHANCE), |a, b| a || b);
+            if hit { make_one_radiant() } else { vec![] }
         })),
         end_of_turn: Some(end_of_turn()),
         ..Script::default()
@@ -84,7 +88,11 @@ pub fn script() -> CardScripts {
             if !any_to_make_radiant(ctx) {
                 return vec![];
             }
-            let hit = ctx.rng.lucky(1, |rng| rng.chance(RADIANT_CHANCE), |a, b| a || b);
+            // R987: the controller's Luck rolls extra times beside the face's own Lucky 1.
+            let luck = luck_of(&*ctx.state, ctx.controller);
+            let hit = ctx
+                .rng
+                .lucky(1 + luck, |rng| rng.chance(RADIANT_CHANCE), |a, b| a || b);
             if hit { make_one_radiant() } else { vec![] }
         })),
         end_of_turn: Some(end_of_turn()),
@@ -117,13 +125,13 @@ mod tests {
 
     /// Ten other cards: playing the Dream leaves the hand exactly at HAND_CAP.
     const FULL_HAND: [&str; 10] = [
-        "core-002", "core-003", "core-004", "core-005", "core-008", "core-010", "core-011", "core-012", "core-013",
-        "core-016",
+        "core-002", "core-003", "core-004", "core-005", "core-008", "core-010", "core-011", "core-012",
+        "core-013", "core-016",
     ];
 
     const SEEDS: [&str; 12] = [
-        "dream-01", "dream-02", "dream-03", "dream-04", "dream-05", "dream-06", "dream-07", "dream-08", "dream-09",
-        "dream-10", "dream-11", "dream-12",
+        "dream-01", "dream-02", "dream-03", "dream-04", "dream-05", "dream-06", "dream-07", "dream-08",
+        "dream-09", "dream-10", "dream-11", "dream-12",
     ];
 
     fn dream_in(seed: &str, is_radiant: bool, others: &[&str]) -> Scenario {
@@ -146,13 +154,54 @@ mod tests {
     mod n23_reoccurring_dream {
         use super::*;
 
+        /// Plays the Dream with(out) a Feng Shui in the caster's backrow and counts the Radiant
+        /// cards left in the hand.
+        fn radiants_with(seed: &str, is_radiant: bool, judge: bool) -> usize {
+            let mut hand = vec![json!({ "def": DREAM, "radiant": is_radiant })];
+            hand.extend(OTHERS.iter().map(|def| json!(def)));
+            let mut p1 = json!({ "hand": hand });
+            if judge {
+                p1["backrow"] = json!(["meditative-040"]);
+            }
+            let mut s = scenario(json!({
+                "seed": seed,
+                "p1": p1,
+                "p2": { "hand": ["core-005"] },
+            }));
+            s.play(DREAM, json!({}));
+            s.hand(P1).iter().filter(|card| card.radiant).count()
+        }
+
+        #[test]
+        fn r987_feng_shui_s_luck_adds_a_roll() {
+            crate::register_all();
+            let _open = preview_sets(&[SetName::Meditative]);
+            for radiant in [false, true] {
+                let bare: Vec<usize> = SEEDS
+                    .iter()
+                    .map(|seed| radiants_with(seed, radiant, false))
+                    .collect();
+                let judged: Vec<usize> = SEEDS
+                    .iter()
+                    .map(|seed| radiants_with(seed, radiant, true))
+                    .collect();
+                // One more roll per seed keeps the success: every bare hit is a judged hit, and at
+                // least one bare miss becomes a hit.
+                assert!(bare.iter().zip(&judged).all(|(hit, judged)| judged >= hit));
+                assert!(judged.iter().sum::<usize>() > bare.iter().sum::<usize>());
+            }
+        }
+
         mod base {
             use super::*;
 
             #[test]
             fn r60_the_30_roll_gates_it_and_a_hit_makes_exactly_one_hand_card_radiant() {
                 crate::register_all();
-                let results: Vec<usize> = SEEDS.iter().map(|seed| radiants_after_playing(seed, false)).collect();
+                let results: Vec<usize> = SEEDS
+                    .iter()
+                    .map(|seed| radiants_after_playing(seed, false))
+                    .collect();
 
                 // R60: one random card, never two, and nothing at all on a miss.
                 assert!(results.iter().all(|count| *count == 0 || *count == 1));
@@ -164,7 +213,10 @@ mod tests {
             fn the_roll_is_seeded_one_seed_always_replays_to_the_same_outcome() {
                 crate::register_all();
                 for seed in &SEEDS[..4] {
-                    assert_eq!(radiants_after_playing(seed, false), radiants_after_playing(seed, false));
+                    assert_eq!(
+                        radiants_after_playing(seed, false),
+                        radiants_after_playing(seed, false)
+                    );
                 }
             }
 
@@ -199,10 +251,7 @@ mod tests {
                 s.end_turn();
 
                 s.expect_in_zone(&dream, "hand");
-                assert!(!s
-                    .pile(P1, "graveyard")
-                    .iter()
-                    .any(|card| card.def_id == DREAM));
+                assert!(!s.pile(P1, "graveyard").iter().any(|card| card.def_id == DREAM));
             }
 
             #[test]
@@ -233,10 +282,16 @@ mod tests {
             #[test]
             fn lucky_1_at_40_hits_wherever_the_base_30_hits_and_at_more_seeds_besides() {
                 crate::register_all();
-                let base_hits: Vec<&str> =
-                    SEEDS.iter().copied().filter(|seed| radiants_after_playing(seed, false) == 1).collect();
-                let radiant_hits: Vec<&str> =
-                    SEEDS.iter().copied().filter(|seed| radiants_after_playing(seed, true) == 1).collect();
+                let base_hits: Vec<&str> = SEEDS
+                    .iter()
+                    .copied()
+                    .filter(|seed| radiants_after_playing(seed, false) == 1)
+                    .collect();
+                let radiant_hits: Vec<&str> = SEEDS
+                    .iter()
+                    .copied()
+                    .filter(|seed| radiants_after_playing(seed, true) == 1)
+                    .collect();
 
                 assert!(!base_hits.is_empty());
                 for seed in &base_hits {
@@ -259,7 +314,10 @@ mod tests {
 
                 s.expect_in_zone(&dream, "hand");
                 assert_eq!(
-                    s.hand(P1).iter().find(|card| card.id == dream.id).map(|card| card.radiant),
+                    s.hand(P1)
+                        .iter()
+                        .find(|card| card.id == dream.id)
+                        .map(|card| card.radiant),
                     Some(true)
                 );
             }

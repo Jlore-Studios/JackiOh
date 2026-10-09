@@ -67,9 +67,11 @@ pub struct AddRolledGrapesArgs {
 pub fn add_rolled_grapes(args: AddRolledGrapesArgs) -> Effect {
     Effect::new("addRolledGrapes", move |ctx| {
         let count = args.count.max(0);
+        // R987: the controller's Luck rolls extra times beside the card's own Lucky.
+        let luck = crate::query::luck_of(&*ctx.sink.state, ctx.controller);
         let lucky = match args.lucky {
-            Some(lucky) => lucky,
-            None => lucky_of(ctx),
+            Some(lucky) => lucky + luck,
+            None => lucky_of(ctx) + luck,
         };
         for _ in 0..count {
             if ctx.sink.state.result.is_some() {

@@ -12,6 +12,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_catalog;
 use crate::rules::fixtures::combat::{COMBAT_SCRIPTS, combat_catalog};
+use crate::rules::fixtures::feng_shui::{FS, register_feng_shui};
 use crate::rules::fixtures::fruit::{
     FRUIT_SCRIPTS, cast_on_draw, fruit_catalog, grape_roller, mythic, priced_draw, replacer,
 };
@@ -245,6 +246,27 @@ mod add_rolled_grapes_c_65_66 {
             &self_,
         );
         assert_eq!(plain.rng_cursor, 3);
+    }
+
+    #[test]
+    fn r987_luck_adds_a_roll_to_each_grape() {
+        let mut state = game("grapes-luck-judge");
+        // After `game()`: `new_game` resets the registry, so the judge registers here.
+        register_feng_shui();
+        put(
+            &mut state,
+            &FS.judge.id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
+        let self_ = resolving(&mut state, &grape_roller.id, false, PlayerId::P1);
+        run_as(
+            &mut state,
+            add_rolled_grapes(json_as(json!({ "count": 3 }))),
+            &self_,
+        );
+        // The base face's own Lucky is 0; its controller's Luck 1 doubles the three rolls.
+        assert_eq!(state.rng_cursor, 6);
     }
 
     /// TS: "§2.4 R4 a full hand burns each Grape that doesn't fit".

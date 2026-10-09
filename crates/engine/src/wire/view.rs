@@ -844,6 +844,12 @@ pub struct SideView {
     /// backrow zone an animated "Animated on your turn" card will return to is held the same way.
     pub reserved: RowFlags,
     pub fatigue_count: i32,
+    /// R987, Meditative #40 Feng Shui: the side's Luck for best-of rolls, read through
+    /// `query::luck_of` as the hero panel reads its armor through `hero_armor_of`. Absent at 0, so a
+    /// game with no Feng Shui looks as it did (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub luck: Option<i32>,
 }
 
 /// The `forYou: true` member of `PendingView`: the prompt this viewer must answer.

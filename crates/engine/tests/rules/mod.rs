@@ -94,6 +94,7 @@ pub mod effects_turn_end;
 pub mod embiggen_cost;
 pub mod endgame;
 pub mod faces;
+pub mod feng_shui;
 pub mod fixtures;
 pub mod fuse;
 pub mod fuse_registry;

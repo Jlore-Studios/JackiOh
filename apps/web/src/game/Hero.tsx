@@ -109,6 +109,7 @@ export default function Hero(props: HeroProps): ReactElement {
         portrait={props.emotes?.portrait ?? DEFAULT_PORTRAIT}
         health={hero.health}
         armor={hero.armor}
+        luck={seat.luck}
       >
         {props.emotes?.show !== null && props.emotes?.show !== undefined && (
           <EmoteShowEl key={props.emotes.show.key} show={props.emotes.show} />
