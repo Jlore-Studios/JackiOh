@@ -28,8 +28,8 @@ use crate::config::{
 use crate::rng::Rng;
 use crate::state::GameState;
 use crate::wire::{
-    CATALOG_SETS, CardCost, CardDef, CardDefs, CardType, CatalogQuery, CostRange, FusedIngredient, OneOrMany,
-    Rarity, SetName, Tag, set_ships,
+    AttackHealth, CATALOG_SETS, CardCost, CardDef, CardDefs, CardType, CatalogQuery, CostRange,
+    FusedIngredient, OneOrMany, Rarity, SetName, Tag, set_ships,
 };
 
 /// A hasher for the registries' card ids (`catalog-NNN`, `classicplus-NNN`, …): short strings looked
@@ -213,6 +213,9 @@ pub struct CatalogQueryArgs {
     /// R1422: has at least one of these tags.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub any_tags: Option<Vec<Tag>>,
+    /// R1080: the printed base attack and health a pool asks for.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stats: Option<AttackHealth>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rarity: Option<OneOrMany<Rarity>>,
     /// A set, or several ("Classic or Classic+"). Absent is every set that ships (R380, R1420).
@@ -241,6 +244,7 @@ impl From<CatalogQuery> for CatalogQueryArgs {
             tags: query.tags,
             not_tags: query.not_tags,
             any_tags: query.any_tags,
+            stats: query.stats,
             rarity: query.rarity,
             set: query.set,
             exclude_def_id: query.exclude_def_id,
@@ -352,6 +356,12 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
     // R1422: `anyTags` means "has at least one of them".
     if let Some(any_tags) = &args.any_tags
         && !any_tags.iter().any(|tag| def.tags.contains(tag))
+    {
+        return false;
+    }
+    // R1080: `stats` reads the printed base face; a face that prints none never matches.
+    if let Some(wanted) = args.stats
+        && (def.base.attack != Some(wanted.attack) || def.base.health != Some(wanted.health))
     {
         return false;
     }

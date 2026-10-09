@@ -9,6 +9,7 @@ import type { Keyword } from "./Keyword";
 import type { PlayerId } from "./PlayerId";
 import type { PreviewValue } from "./PreviewValue";
 import type { QuestView } from "./QuestView";
+import type { Tag } from "./Tag";
 import type { Tuning } from "./Tuning";
 
 /**
@@ -26,7 +27,12 @@ chinese?: true, cost: number, attack?: number, health?: number, power?: string, 
 /**
  * Always `false` here (the discriminant).
  */
-faceDown: false, type: CardType, counters: BackrowCounters, owner: PlayerId, controller: PlayerId, 
+faceDown: false, type: CardType, 
+/**
+ * MD-B15, R923: the card's tags, set only where they differ from its definition's — a granted
+ * tag is part of the card, and the view says so.
+ */
+tags?: Array<Tag>, counters: BackrowCounters, owner: PlayerId, controller: PlayerId, 
 /**
  * R351, R371: present, and `true`, on the controller's own view of a Trap or Field Trap that
  * is still face-down: the controller reads the card (R33), and the other player sees only its

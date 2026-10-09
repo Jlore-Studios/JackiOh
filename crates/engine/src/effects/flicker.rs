@@ -87,6 +87,7 @@ pub fn flicker_card(sink: &mut EngineSink<'_>, card: &CardInstance) -> bool {
         row,
         lane,
         former_id,
+        source_id: None,
         arrived_during: None,
         exits_from: None,
     });

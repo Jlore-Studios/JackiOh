@@ -26,8 +26,10 @@ use jackioh_engine::testkit::*;
 
 use jackioh_engine::catalog::registered_catalog;
 use jackioh_engine::config::FUSE_COST_CAP;
-use jackioh_engine::effects::{exile, flip_coin_keyword, flip_coins, fuse_cards, radiant_chance, rotate};
-use jackioh_engine::layers::unit_view;
+use jackioh_engine::effects::{
+    exile, flip_coin_keyword, flip_coins, fuse_cards, grant_keywords_random_unit, radiant_chance, rotate,
+};
+use jackioh_engine::layers::{keywords_of, unit_view};
 use jackioh_engine::mana::effective_cost;
 use jackioh_engine::resolve::{HookOptions, apply_effects, make_context};
 use jackioh_engine::rng::Rng;
@@ -1204,5 +1206,64 @@ mod r14_r88_rotate_s6_3_rotate_s3_1s_rotation_topology_s8_3_c52 {
         assert!(of_type(&ran.events, "controlChanged").is_empty());
         // The card that stayed on this side still rotated.
         assert_eq!(where_is(&state, &stayer), "p1 units 2");
+    }
+}
+
+/// R1085 (M #65 Radiant): `grantKeywordsRandomUnit` grants a named list to one random acting Unit.
+mod r1085_grant_keywords_random_unit {
+    use super::*;
+
+    fn granting() -> Effect {
+        grant_keywords_random_unit(json_as(json!({
+            "keywords": [{ "kind": "Taunt" }, { "kind": "Rush" }],
+        })))
+    }
+
+    fn has(keyword_kinds: &[KeywordKind], kind: KeywordKind) -> bool {
+        keyword_kinds.contains(&kind)
+    }
+
+    #[test]
+    fn r1085_grants_every_keyword_to_one_random_unit() {
+        let mut state = game("grant-keywords");
+        let first = put(
+            &mut state,
+            &gary().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let second = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+
+        let ran = run(&mut state, &[granting()], as_p1());
+
+        // One pick, and exactly one of the two Units holds both keywords afterwards.
+        assert_eq!(draws(&ran), 1);
+        let kinds_of = |id: &str| -> Vec<KeywordKind> {
+            keywords_of(&state, live(&state, id))
+                .iter()
+                .map(|keyword| keyword.kind())
+                .collect()
+        };
+        let first_kinds = kinds_of(&first.id);
+        let second_kinds = kinds_of(&second.id);
+        let first_has = has(&first_kinds, KeywordKind::Taunt) && has(&first_kinds, KeywordKind::Rush);
+        let second_has = has(&second_kinds, KeywordKind::Taunt) && has(&second_kinds, KeywordKind::Rush);
+        assert!(first_has ^ second_has);
+        assert_eq!(of_type(&ran.events, "keywordGranted").len(), 2);
+    }
+
+    #[test]
+    fn r1085_r129_no_unit_no_draw() {
+        let mut state = game("grant-keywords-empty");
+
+        let ran = run(&mut state, &[granting()], as_p1());
+
+        assert!(ran.events.is_empty());
+        assert_eq!(draws(&ran), 0);
     }
 }

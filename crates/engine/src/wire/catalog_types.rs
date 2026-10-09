@@ -368,6 +368,9 @@ pub enum Keyword {
     Temporary,
     /// A Unit may attack and switch position in the same turn (R49).
     Deft,
+    /// R1086: a Unit may be played onto one of its controller's Units, resolving on top of it
+    /// before fusing into it (ME-MAGNETIC). In no random keyword pool (R21).
+    Magnetic,
 }
 
 string_union! {
@@ -398,6 +401,8 @@ string_union! {
         Windfury = "Windfury",
         Temporary = "Temporary",
         Deft = "Deft",
+        /// R1086: ME-MAGNETIC's keyword.
+        Magnetic = "Magnetic",
     }
 }
 
@@ -433,6 +438,7 @@ impl Keyword {
             Keyword::Windfury => KeywordKind::Windfury,
             Keyword::Temporary => KeywordKind::Temporary,
             Keyword::Deft => KeywordKind::Deft,
+            Keyword::Magnetic => KeywordKind::Magnetic,
         }
     }
 
@@ -476,6 +482,7 @@ impl Keyword {
             KeywordKind::Windfury => Keyword::Windfury,
             KeywordKind::Temporary => Keyword::Temporary,
             KeywordKind::Deft => Keyword::Deft,
+            KeywordKind::Magnetic => Keyword::Magnetic,
         }
     }
 }
@@ -968,6 +975,10 @@ pub struct CatalogQuery {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub with_tokens: Option<bool>,
+    /// R1080: the printed base attack and health a pool asks for (M #51's "random 1/1s").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub stats: Option<AttackHealth>,
 }
 
 string_union! {

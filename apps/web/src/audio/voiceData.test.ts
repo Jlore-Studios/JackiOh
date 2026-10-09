@@ -183,6 +183,25 @@ describe("B41 voiceKey, voiceUrl and lineFor", () => {
     expect(hookFor(CARD_AUDIO, "core-066", "attack")).toEqual({ effect: "rumble" });
     expect(lineFor(CARD_AUDIO, "core-066", "attack")).toBeNull();
   });
+
+  it("R1088 parses a trigger list; lineFor reads trigger2", () => {
+    const raw = fixture();
+    raw.cards["core-006"] = {
+      cast: { voice: "crone", text: "Drink up, dearie." },
+      trigger: { voice: "crone", lines: ["First.", "Second.", "Third."] },
+    };
+    const table = parseCardAudio(raw, CATALOG);
+
+    expect(hookFor(table, "core-006", "trigger")).toEqual({
+      voice: "crone",
+      lines: ["First.", "Second.", "Third."],
+    });
+    expect(lineFor(table, "core-006", "trigger2")).toEqual({ text: "Second.", persona: CRONE });
+    expect(lineFor(table, "core-006", "trigger4")).toBeNull();
+    expect(lineFor(table, "core-006", "trigger")).toBeNull();
+    expect(lineFor(table, "core-005", "trigger1")).toBeNull();
+    expect(parseError(raw)).toBe("(no error)");
+  });
 });
 
 describe("B42 parseCardAudio", () => {

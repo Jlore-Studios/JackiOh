@@ -57,6 +57,10 @@ exitsFrom?: number, } | { "type": "summoned", player: PlayerId, instanceId: stri
  */
 formerId?: string, 
 /**
+ * R1088: the card whose effect summoned it, for the client; no rule reads it.
+ */
+sourceId?: string, 
+/**
  * R119: on a played card's step-4 `summoned`, as on its `cardPlayed`. A view never forwards it.
  */
 arrivedDuring?: Array<string>, 

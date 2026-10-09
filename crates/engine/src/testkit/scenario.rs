@@ -433,6 +433,9 @@ pub struct PlayOptions {
     pub x: Option<i32>,
     #[serde(default)]
     pub embiggen: Option<bool>,
+    /// R1086: play this Magnetic card onto the zone's host Unit.
+    #[serde(default)]
+    pub magnetic: Option<bool>,
     #[serde(default)]
     pub targets: Option<Vec<Selection>>,
     #[serde(default)]
@@ -1403,7 +1406,8 @@ impl Scenario {
 
     // --- steps ----------------------------------------------------------------------------------
 
-    /// `opts`: `json!({ "zone"?, "row"?, "x"?, "embiggen"?, "targets"?, "modes"?, "tributes"? })`.
+    /// `opts`: `json!({ "zone"?, "row"?, "x"?, "embiggen"?, "magnetic"?, "targets"?, "modes"?,
+    /// "tributes"? })`.
     pub fn play(&mut self, card: impl Into<CardRef>, opts: Value) -> &mut Scenario {
         let opts: PlayOptions = options_of(opts, "play");
         let id = or_fail(self.resolve(&card.into(), Where::Hand, "play"));
@@ -1449,6 +1453,7 @@ impl Scenario {
                 zone,
                 x: opts.x,
                 embiggen: opts.embiggen,
+                magnetic: opts.magnetic,
                 tributes,
                 targets: opts.targets,
                 modes: opts.modes,

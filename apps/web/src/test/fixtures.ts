@@ -126,6 +126,8 @@ const ALL_KEYWORDS: Keyword[] = [
   { kind: "Temporary" },
   // Patch v0.2.4's keyword (R49).
   { kind: "Deft" },
+  // Meditative batch 16's keyword (R1086).
+  { kind: "Magnetic" },
 ];
 
 export function baseView(over: Partial<PlayerView> = {}): PlayerView {

@@ -121,12 +121,16 @@ function voicesOf(table: Json): Record<string, Json> {
   return table.voices as Record<string, Json>;
 }
 
-/** The keys a table voices: `<defId>-<hook>` for every hook whose assignment names a voice. */
+/** The keys a table voices: `<defId>-<hook>` for every hook whose assignment names a voice, and one `<defId>-trigger<n>` key per trigger line (R1088). */
 function voicedKeys(table: Json): string[] {
   return Object.entries(cardsOf(table)).flatMap(([defId, entry]) =>
-    Object.entries(entry)
-      .filter(([, assignment]) => isRecord(assignment) && assignment.voice !== undefined)
-      .map(([hook]) => `${defId}-${hook}`),
+    Object.entries(entry).flatMap(([hook, assignment]) => {
+      if (!isRecord(assignment) || assignment.voice === undefined) return [];
+      if (hook === "trigger" && Array.isArray(assignment.lines)) {
+        return (assignment.lines as unknown[]).map((_, i) => `${defId}-trigger${i + 1}`);
+      }
+      return [`${defId}-${hook}`];
+    }),
   );
 }
 
@@ -201,11 +205,13 @@ function expectedHash(key: string, table: Json = AUDIO): string | null {
   }
   const entry = cards[defId];
   if (!isRecord(entry)) return null;
-  const assignment = entry[line];
+  // R1088: `trigger<n>` resolves to the n-th line of the card's trigger list.
+  const trigger = /^trigger([0-9]+)$/.exec(line);
+  const assignment = trigger !== null ? entry.trigger : entry[line];
   if (!isRecord(assignment) || typeof assignment.voice !== "string") return null;
   const voice = voices[assignment.voice];
   if (!isRecord(voice)) return null;
-  const text = assignment.text;
+  const text = trigger !== null ? (assignment.lines as unknown[])?.[Number(trigger[1]) - 1] : assignment.text;
   if (typeof text !== "string") return null;
   if (voice.backend === "sapi") {
     return sapiHash({ voice: voice.voice, rate: voice.rate, semitones: voice.semitones, filter: voice.filter, text });
@@ -271,7 +277,7 @@ function runCheck(extraArgs: readonly string[] = []): CheckRun {
 }
 
 /** A problem line starts with the key it is about (Surface: "each starting with the key"). */
-const KEY_AT_START = /^((?:core|classic|classicplus|meditative)-[a-z0-9]+(?:-[a-z0-9]+)*-(?:play|attack|death|cast))(?![a-z0-9])/;
+const KEY_AT_START = /^((?:core|classic|classicplus|meditative)-[a-z0-9]+(?:-[a-z0-9]+)*-(?:play|attack|death|cast|trigger[0-9]+))(?![a-z0-9])/;
 
 /** The keys the run reported a problem for, sorted and deduplicated. */
 function reportedKeys(run: CheckRun): string[] {

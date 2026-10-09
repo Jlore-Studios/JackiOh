@@ -4,11 +4,13 @@
 //!
 //! Port of `packages/engine/test/effects-summon.test.ts`.
 
-use jackioh_engine::effects::{damage, fill_board, recruit, summon};
+use jackioh_engine::effects::{
+    damage, fill_board, fill_board_random, recruit, summon, summon_random_from_hand,
+};
 use jackioh_engine::testkit::*;
 use serde::Serialize;
 
-use super::fixtures::harness::{events_of_type, new_game, put, set_library, slot};
+use super::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
 
 // ---------------------------------------------------------------------------
 // Fixture cards.
@@ -858,5 +860,232 @@ mod fill_your_board_r64_s7_m3_t1 {
             lanes_of(&state, PlayerId::P1, Row::Units),
             json!([null, null, null, null, null])
         );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// fillBoardRandom (R1080) and summonRandomFromHand (R1083).
+// ---------------------------------------------------------------------------
+
+/// Two 1/1 Unit fixtures, so the random pool below holds exactly two definitions.
+fn one_one(name: &str, index: i32) -> CardDef {
+    def_of_kind(
+        name,
+        index,
+        "Unit",
+        json!({
+            "base": { "attack": 1, "health": 1, "keywords": [], "text": name },
+            "radiant": { "attack": 2, "health": 2, "keywords": [], "text": name },
+        }),
+    )
+}
+
+/// `game()` plus the 1/1 fixtures, for the random-fill tests.
+fn game_with_one_ones() -> GameState {
+    let mut state = game();
+    let mut catalog = registered_catalog().clone();
+    for def in [one_one("uno", 801), one_one("dos", 802)] {
+        catalog.insert(def.id.clone(), def);
+    }
+    register_catalog(catalog);
+    state
+}
+
+fn fill_random_query() -> Value {
+    json!({ "query": { "type": "Unit", "stats": { "attack": 1, "health": 1 } } })
+}
+
+mod r1080_fill_board_random {
+    use super::*;
+
+    #[test]
+    fn r1080_fill_board_random_one_pick_per_open_zone_left_to_right() {
+        let mut state = game_with_one_ones();
+        put(
+            &mut state,
+            "sm-crier",
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        put(
+            &mut state,
+            "sm-felinor",
+            slot(PlayerId::P1, Row::Units, 3),
+            json!({}),
+        );
+
+        let events = run(
+            &mut state,
+            fill_board_random(json_as(fill_random_query())),
+            RunOptions::default(),
+        );
+
+        // Lanes 2, 4 and 5 each drew their own pick, left to right; every pick is a printed 1/1.
+        assert_eq!(summoned_lanes(&events), vec![2, 4, 5]);
+        for def_id in summoned_def_ids(&events) {
+            assert!(def_id == "sm-uno" || def_id == "sm-dos");
+        }
+        let lanes = lanes_of(&state, PlayerId::P1, Row::Units);
+        assert_eq!(lanes[0], json!("sm-crier"));
+        assert_eq!(lanes[2], json!("sm-felinor"));
+    }
+
+    #[test]
+    fn r1080_r129_a_full_board_draws_nothing() {
+        let mut state = game_with_one_ones();
+        for lane in 1..=5 {
+            put(
+                &mut state,
+                "sm-crier",
+                slot(PlayerId::P1, Row::Units, lane),
+                json!({}),
+            );
+        }
+        let cursor = state.rng_cursor;
+        let ids = state.next_id;
+
+        let events = run(
+            &mut state,
+            fill_board_random(json_as(fill_random_query())),
+            RunOptions::default(),
+        );
+
+        assert!(events_of_type(&events, GameEventType::Summoned).is_empty());
+        assert_eq!(state.rng_cursor, cursor);
+        assert_eq!(state.next_id, ids);
+    }
+}
+
+mod r1083_summon_random_from_hand {
+    use super::*;
+
+    #[test]
+    fn r1083_summons_a_random_hand_unit_leftmost_with_no_cry() {
+        let mut state = game();
+        // The only Unit in hand is the crier: the pick is deterministic, and had its Cry fired the
+        // enemy hero would be down 3.
+        in_hand(&mut state, "sm-crier", PlayerId::P1, 1);
+        in_hand(&mut state, "sm-spell", PlayerId::P1, 1);
+        let source = put(
+            &mut state,
+            "sm-trap",
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
+
+        let events = run(
+            &mut state,
+            summon_random_from_hand(json_as(json!({}))),
+            RunOptions {
+                self_: Some(source.clone()),
+                ..RunOptions::default()
+            },
+        );
+
+        assert_eq!(
+            lanes_of(&state, PlayerId::P1, Row::Units),
+            json!(["sm-crier", null, null, null, null])
+        );
+        assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
+        assert_eq!(summoned_def_ids(&events), vec!["sm-crier".to_string()]);
+        // R1088: the summon names the card whose effect summoned it.
+        let from: Vec<Option<String>> = events
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Summoned { source_id, .. } => Some(source_id.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(from, vec![Some(source.id)]);
+    }
+
+    #[test]
+    fn r1083_r129_no_zone_or_no_hand_unit_draws_nothing() {
+        // No open zone: the hand Unit stays put and no pick is drawn.
+        let mut state = game();
+        in_hand(&mut state, "sm-crier", PlayerId::P1, 1);
+        for lane in 1..=5 {
+            put(
+                &mut state,
+                "sm-felinor",
+                slot(PlayerId::P1, Row::Units, lane),
+                json!({}),
+            );
+        }
+        let cursor = state.rng_cursor;
+        let events = run(
+            &mut state,
+            summon_random_from_hand(json_as(json!({}))),
+            RunOptions::default(),
+        );
+        assert!(events_of_type(&events, GameEventType::Summoned).is_empty());
+        assert_eq!(state.rng_cursor, cursor);
+        assert_eq!(state.players[PlayerId::P1].hand.len(), 1);
+
+        // No Unit in hand (a Spell only): likewise nothing.
+        let mut state = game();
+        in_hand(&mut state, "sm-spell", PlayerId::P1, 1);
+        let cursor = state.rng_cursor;
+        let events = run(
+            &mut state,
+            summon_random_from_hand(json_as(json!({}))),
+            RunOptions::default(),
+        );
+        assert!(events_of_type(&events, GameEventType::Summoned).is_empty());
+        assert_eq!(state.rng_cursor, cursor);
+    }
+
+    #[test]
+    fn r1083_radiant_on_the_field() {
+        let mut state = game();
+        in_hand(&mut state, "sm-felinor", PlayerId::P1, 1);
+
+        run(
+            &mut state,
+            summon_random_from_hand(json_as(json!({ "radiant": true }))),
+            RunOptions::default(),
+        );
+
+        let unit = card_at(&state, slot(PlayerId::P1, Row::Units, 1)).expect("the summon");
+        assert!(unit.radiant);
+    }
+}
+
+/// R1088: `sourceId` is the client's report — the trigger loop holds the event without it.
+mod r1088_summoned_source_id {
+    use super::*;
+
+    #[test]
+    fn r1088_summoned_names_its_source_the_rules_read_drops_it() {
+        let mut state = game();
+        in_hand(&mut state, "sm-felinor", PlayerId::P1, 1);
+        let source = put(
+            &mut state,
+            "sm-trap",
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
+
+        let events = run(
+            &mut state,
+            summon_random_from_hand(json_as(json!({}))),
+            RunOptions {
+                self_: Some(source),
+                ..RunOptions::default()
+            },
+        );
+
+        let summoned: Vec<GameEvent> = events_of_type(&events, GameEventType::Summoned);
+        assert_eq!(summoned.len(), 1);
+        let with_source = match &summoned[0] {
+            GameEvent::Summoned { source_id, .. } => source_id.clone(),
+            _ => panic!("not a summon"),
+        };
+        assert!(with_source.is_some());
+        // The rules read it without the source: hashes and replays never see it.
+        match summoned[0].as_rules_read() {
+            GameEvent::Summoned { source_id, .. } => assert_eq!(source_id, None),
+            _ => panic!("not a summon"),
+        }
     }
 }

@@ -118,7 +118,9 @@ export type Keyword =
   /** R637: a card discarded from its owner's hand at the end of their turn. Not temporary mana (§2.3). */
   | { kind: "Temporary" }
   /** A Unit may attack and switch position in the same turn (R49). */
-  | { kind: "Deft" };
+  | { kind: "Deft" }
+  /** R1086: a Unit may be played onto one of its controller's Units, resolving on top of it before fusing into it (ME-MAGNETIC). */
+  | { kind: "Magnetic" };
 
 export type KeywordKind = Keyword["kind"];
 
@@ -149,6 +151,7 @@ export const KEYWORD_KINDS = [
   "Windfury",
   "Temporary",
   "Deft",
+  "Magnetic",
 ] as const;
 
 export function keywordKey(keyword: Keyword): string {

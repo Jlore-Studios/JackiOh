@@ -5392,9 +5392,10 @@ mod no_face_prints_taunt_beside_indestructible_spec_6_1_r347 {
 
     // R347 keeps Taunt off an Indestructible unit whatever prints it, so a face printing both would
     // print a Taunt it never has. Patch v0.1.1 dropped Indestructible from the two faces that did, #55
-    // and #56 radiant (issue #27), and none may print both again.
+    // and #56 radiant (issue #27), and none may print both again — except Keymaster Keenus (M #65),
+    // whose list prints every keyword and whose Taunt R347 drops while it is Indestructible (R1084).
     #[test]
-    fn r347_no_unit_face_prints_both() {
+    fn r347_r1084_no_unit_face_prints_both_but_keenus() {
         let both: Vec<String> = entries()
             .into_iter()
             .filter(|entry| entry.type_ == CardType::Unit)
@@ -5409,6 +5410,6 @@ mod no_face_prints_taunt_beside_indestructible_spec_6_1_r347 {
                     })
             })
             .collect();
-        assert_eq!(both, Vec::<String>::new());
+        assert_eq!(both, ["meditative-065 base", "meditative-065 radiant"]);
     }
 }

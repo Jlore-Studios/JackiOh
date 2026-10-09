@@ -7,6 +7,7 @@ import type { Enchantment } from "./Enchantment";
 import type { Keyword } from "./Keyword";
 import type { PreviewValue } from "./PreviewValue";
 import type { QuestView } from "./QuestView";
+import type { Tag } from "./Tag";
 import type { Tuning } from "./Tuning";
 
 export type CardView = { instanceId: string, defId: string, radiant: boolean, 
@@ -64,6 +65,11 @@ preview?: Array<PreviewValue>,
  * its own type (Classic+ #22 Blood Moon's Radiant face is a Field Trap).
  */
 type?: CardType, 
+/**
+ * MD-B15, R923: the card's tags, set only where they differ from its definition's — a granted
+ * tag is part of the card, and the view says so.
+ */
+tags?: Array<Tag>, 
 /**
  * B3.3, R385: the card's Brittle count, where the viewer may read the card and it has one.
  */

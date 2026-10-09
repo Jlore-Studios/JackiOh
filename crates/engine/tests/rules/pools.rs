@@ -277,3 +277,73 @@ mod r387_a_card_never_generates_itself_named_by_its_id {
         assert_eq!(fused_id_parts(None, "t-3"), None);
     }
 }
+
+/// R1080: `stats` reads the printed base face; a face that prints none never matches.
+mod r1080_stats_matches_the_printed_base_face_only {
+    use super::*;
+
+    /// A Unit printing `attack`/`health` on its base face.
+    fn unit(id: &str, attack: i32, health: i32) -> CardDef {
+        card(
+            id,
+            "Core",
+            id,
+            json!({
+                "type": "Unit",
+                "base": { "attack": attack, "health": health, "keywords": [], "text": id },
+                "radiant": {
+                    "attack": attack * 2,
+                    "health": health * 2,
+                    "keywords": [],
+                    "text": id,
+                },
+            }),
+        )
+    }
+
+    fn setup_stats() {
+        setup();
+        let mut catalog = registered_catalog().clone();
+        for def in [
+            unit("core-1-1a", 1, 1),
+            unit("core-1-1b", 1, 1),
+            unit("core-2-1", 2, 1),
+            unit("core-1-2", 1, 2),
+        ] {
+            catalog.insert(def.id.clone(), def);
+        }
+        // A 1/1 token: out of the pool unless the query takes tokens.
+        let one_one_token: CardDef = json_as(json!({
+            "id": "core-t-1-1",
+            "index": "t-1-1",
+            "name": "Pool fixture core-t-1-1",
+            "set": "Core",
+            "type": "Unit",
+            "tags": ["Token"],
+            "rarity": "Token",
+            "token": true,
+            "cost": 1,
+            "base": { "attack": 1, "health": 1, "keywords": [], "text": "token" },
+            "radiant": { "attack": 2, "health": 2, "keywords": [], "text": "token" },
+        }));
+        catalog.insert(one_one_token.id.clone(), one_one_token);
+        register_catalog(catalog);
+    }
+
+    #[test]
+    fn r1080_stats_matches_the_printed_base_face_only() {
+        setup_stats();
+        // Only the two 1/1 Units; the 2/1, the 1/2 and every Spell (no printed stats) are out.
+        assert_eq!(
+            pool(json!({ "type": "Unit", "stats": { "attack": 1, "health": 1 } })),
+            vec!["core-1-1a", "core-1-1b"]
+        );
+        // Tokens join when the query takes them.
+        assert_eq!(
+            pool(json!({ "type": "Unit", "stats": { "attack": 1, "health": 1 }, "withTokens": true })),
+            vec!["core-1-1a", "core-1-1b", "core-t-1-1"]
+        );
+        // The Radiant face's stats are never read: nothing prints 2/2 on its base face.
+        assert!(pool(json!({ "type": "Unit", "stats": { "attack": 2, "health": 2 } })).is_empty());
+    }
+}

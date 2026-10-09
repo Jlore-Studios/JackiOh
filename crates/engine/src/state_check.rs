@@ -509,6 +509,7 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
             row: at.row,
             lane: at.lane,
             former_id: None,
+            source_id: None,
             arrived_during: None,
             exits_from: None,
         };

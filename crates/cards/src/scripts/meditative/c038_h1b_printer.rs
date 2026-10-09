@@ -110,11 +110,9 @@ mod tests {
                 // p1's next start of turn: exactly one printed card arrives.
                 let ids: Vec<String> = s.hand(P1).iter().map(|card| card.id.clone()).collect();
                 s.end_turn();
-                let fresh: Vec<&CardInstance> = s
-                    .hand(P1)
-                    .iter()
-                    .filter(|card| !ids.contains(&card.id))
-                    .collect();
+                let hand = s.hand(P1);
+                let fresh: Vec<&CardInstance> =
+                    hand.iter().filter(|card| !ids.contains(&card.id)).collect();
                 // The turn draw plus the one printed card.
                 assert_eq!(fresh.len(), 2);
                 assert_eq!(fresh.iter().filter(|card| card.radiant).count(), 1);
@@ -129,8 +127,9 @@ mod tests {
                 let mut s = standing("printer-radiant", true);
                 let before: Vec<String> = s.hand(P1).iter().map(|card| card.id.clone()).collect();
                 s.start_turn();
+                let hand = s.hand(P1);
                 let made: Vec<&CardInstance> =
-                    s.hand(P1).iter().filter(|card| !before.contains(&card.id)).collect();
+                    hand.iter().filter(|card| !before.contains(&card.id)).collect();
                 let printed = made.into_iter().find(|card| card.radiant).expect("the printed card");
                 assert!(is_ky_or_cn(&printed.def_id));
                 assert_eq!(printed.cost_override, Some(0));

@@ -39,7 +39,7 @@ const CATALOG_PATH = resolve(REPO, "crates/cards/catalog.json");
 const AUDIO_PATH = resolve(here, "card-audio.json5");
 
 type EntryKind = "unit" | "spell" | "trap";
-type Hook = "play" | "attack" | "death" | "cast";
+type Hook = "play" | "attack" | "death" | "cast" | "trigger";
 
 /** docs/polish/2-sound.md: Unit -> unit; Spell and Field Spell -> spell; Trap and Field Trap -> trap. */
 const KIND_OF_TYPE: Readonly<Record<string, EntryKind>> = {
@@ -52,9 +52,9 @@ const KIND_OF_TYPE: Readonly<Record<string, EntryKind>> = {
 
 /** The hooks each kind may carry (constants.ts CARD_HOOKS), and the lines SPEC §10.11 requires of it. */
 const HOOKS_OF_KIND: Readonly<Record<EntryKind, readonly Hook[]>> = {
-  unit: ["play", "attack", "death"],
-  spell: ["cast"],
-  trap: ["cast"],
+  unit: ["play", "attack", "death", "trigger"],
+  spell: ["cast", "trigger"],
+  trap: ["cast", "trigger"],
 };
 const LINES_OF_KIND: Readonly<Record<EntryKind, readonly Hook[]>> = {
   unit: ["play", "death"],
@@ -62,7 +62,7 @@ const LINES_OF_KIND: Readonly<Record<EntryKind, readonly Hook[]>> = {
   trap: ["cast"],
 };
 /** The fields a hook's assignment allows (types.ts HookAssignment). */
-const ASSIGNMENT_FIELDS: readonly string[] = ["voice", "text", "effect"];
+const ASSIGNMENT_FIELDS: readonly string[] = ["voice", "text", "lines", "effect"];
 
 /** R501: the SAPI voices a Windows install ships, which the SAPI voices choose from. */
 const SAPI_VOICES: readonly string[] = ["Microsoft David Desktop", "Microsoft Zira Desktop"];
@@ -118,13 +118,19 @@ function isLine(value: unknown): boolean {
   return isRecord(value) && typeof value.voice === "string" && typeof value.text === "string";
 }
 
-/** Every line the file carries (an assignment that gives a voice or a text), so a malformed one is still checked. */
+/** Every line the file carries (an assignment that gives a voice, a text or a lines list), so a malformed one is still checked. A trigger's lines count one by one. */
 type Line = { key: string; hook: Hook; text: unknown };
 
 function allLines(): Line[] {
   return allAssignments()
-    .filter(({ hook, value }) => (CARD_HOOK_NAMES as readonly string[]).includes(hook) && isRecord(value) && ("voice" in value || "text" in value))
-    .map(({ key, hook, value }) => ({ key, hook: hook as Hook, text: (value as Json).text }));
+    .filter(({ hook, value }) => (CARD_HOOK_NAMES as readonly string[]).includes(hook) && isRecord(value) && ("voice" in value || "text" in value || "lines" in value))
+    .flatMap(({ key, hook, value }) => {
+      const lines = (value as Json).lines;
+      if (Array.isArray(lines)) {
+        return lines.map((text, i) => ({ key: `${key}-trigger${i + 1}`, hook: hook as Hook, text }));
+      }
+      return [{ key, hook: hook as Hook, text: (value as Json).text }];
+    });
 }
 
 /** R501: a voice rendered by Windows SAPI rather than macOS `say`. */
@@ -240,7 +246,7 @@ describe("card-audio.json5 covers the catalog (B33)", () => {
   });
 
   it("B33 puts no hook on an entry outside CARD_HOOK_NAMES and its kind's, and no field on a hook but voice, text and effect", () => {
-    expect([...CARD_HOOK_NAMES], "the hooks constants.ts CARD_HOOKS names").toEqual(["play", "attack", "death", "cast"]);
+    expect([...CARD_HOOK_NAMES], "the hooks constants.ts CARD_HOOKS names").toEqual(["play", "attack", "death", "cast", "trigger"]);
     const wrong: string[] = [];
     for (const { defId, key, hook, value } of allAssignments()) {
       const kind = catalogKind(defId);
@@ -256,9 +262,16 @@ describe("card-audio.json5 covers the catalog (B33)", () => {
       for (const field of Object.keys(value)) {
         if (!ASSIGNMENT_FIELDS.includes(field)) wrong.push(`${key}: unexpected field "${field}"`);
       }
-      if ("voice" in value !== "text" in value) wrong.push(`${key}: a voice without a text, or a text without a voice`);
+      if ("voice" in value !== ("text" in value || "lines" in value)) wrong.push(`${key}: a voice without a text or lines, or a text or lines without a voice`);
       if (!("voice" in value) && !("effect" in value)) wrong.push(`${key}: neither a line nor an effect`);
+      if ("text" in value && "lines" in value) wrong.push(`${key}: both a text and lines`);
       for (const field of ASSIGNMENT_FIELDS) {
+        if (field === "lines") {
+          if ("lines" in value && (!Array.isArray(value.lines) || value.lines.length === 0 || value.lines.some((line) => typeof line !== "string" || line.trim() === ""))) {
+            wrong.push(`${key}: lines is ${JSON.stringify(value.lines)}`);
+          }
+          continue;
+        }
         if (field in value && typeof value[field] !== "string") wrong.push(`${key}: ${field} is ${JSON.stringify(value[field])}`);
       }
     }
@@ -386,8 +399,8 @@ describe("every voice line is short, plain flavour (B34)", () => {
     expect(wrong, "lines outside /^[A-Za-z ,.'!?-]+$/").toEqual([]);
   });
 
-  it("B34 keeps every line within VOICE_MAX_WORDS for its hook (play 8, attack 4, death 6, cast 8)", () => {
-    expect(VOICE_MAX_WORDS, "the limits the Surface fixes").toEqual({ play: 8, attack: 4, death: 6, cast: 8 });
+  it("B34 keeps every line within VOICE_MAX_WORDS for its hook (play 8, attack 4, death 6, cast 8, trigger 8)", () => {
+    expect(VOICE_MAX_WORDS, "the limits the Surface fixes").toEqual({ play: 8, attack: 4, death: 6, cast: 8, trigger: 8 });
     // The counter itself: punctuation-only tokens are not words, hyphenated and elided ones are one.
     expect(wordCount("Too... slow...")).toBe(2);
     expect(wordCount("Oops - Surf's up!")).toBe(3);

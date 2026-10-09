@@ -19,6 +19,7 @@ use crate::animated::animate_on_entry;
 use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, pick_generated, query};
 use crate::damage::DamageTarget;
 use crate::effects::buff::grant_random_keywords;
+use crate::effects::radiant::set_radiant;
 use crate::effects::targets::{PlayerSpec, TargetSpec, instance_of, player_of, resolve_target};
 use crate::faces::card_type_of;
 use crate::mana::{effective_cost, is_x_cost};
@@ -33,7 +34,7 @@ use crate::wire::{
 };
 use crate::zones::{
     PlaceOnFieldOptions, ZoneSlot, fill_board_zones, first_entry_zone, fresh_face_down_id, is_empty,
-    is_reserved, is_unit_token, lands_face_down, place_on_field, remove_from_any_zone, row_size,
+    is_reserved, is_unit_token, lands_face_down, open_zones, place_on_field, remove_from_any_zone, row_size,
 };
 
 /// TS `{ defId, radiant }`, the partial instance `faces.cardTypeOf` reads a definition's running face
@@ -69,6 +70,9 @@ pub struct SummonPlacement {
     pub armor_override: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stats_override: Option<StatsOverride>,
+    /// R1088: the card whose effect summoned it, for the client; no rule reads it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_id: Option<String>,
 }
 
 /// `summon`'s arguments (TS `SummonPlacement & { defId?; instance?; randomKeywords? }`, the
@@ -117,6 +121,7 @@ impl SummonArgs {
             radiant: self.radiant,
             armor_override: self.armor_override,
             stats_override: self.stats_override,
+            source_id: None,
         }
     }
 }
@@ -214,6 +219,7 @@ fn summon_onto(
         row: slot.row,
         lane: slot.lane,
         former_id,
+        source_id: at.source_id.clone(),
         arrived_during: None,
         exits_from: None,
     });
@@ -845,6 +851,108 @@ pub fn fill_board(args: FillBoardArgs) -> Effect {
                 ..SummonPlacement::default()
             };
             summon_fresh(ctx, &args.def_id, player, &at);
+        }
+    })
+}
+
+/// `fillBoardRandom`'s arguments.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct FillBoardRandomArgs {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub query: Option<CatalogQueryArgs>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub radiant: Option<bool>,
+}
+
+/// R1080 (M #51): "fill your board" where every empty, unlocked unit zone, left to right (R64), gets
+/// its own pick from the match rng (R60), repeats allowed. The pool is `summon_random`'s — every set
+/// (R380) but the card that generated it (R387) — kept to the cards that go in the unit row. With no
+/// open zone nothing is drawn (R129). Summons fire no Cry (R1).
+pub fn fill_board_random(args: FillBoardRandomArgs) -> Effect {
+    Effect::new("fillBoardRandom", move |ctx| {
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        // R129: the zones are read before any draw, so a full board draws no random number.
+        let slots = fill_board_zones(ctx.state, player);
+        if slots.is_empty() {
+            return;
+        }
+        // §5.1: a random pool never offers the card that generated it.
+        let own = ctx
+            .self_
+            .as_ref()
+            .map(|me| me.def_id.clone())
+            .or_else(|| ctx.def_id.clone());
+        let asked: CatalogQueryArgs = args.query.clone().unwrap_or_default();
+        let pool: Vec<_> = query(&excluding_def_id(Some(&*ctx.state), &asked, own.as_deref()))
+            .into_iter()
+            .filter(|def| def.type_ == CardType::Unit)
+            .collect();
+        if pool.is_empty() {
+            return;
+        }
+        for slot in slots {
+            let Some(def_id) = pick_generated(ctx.sink.rng, &pool, None).map(|def| def.id.clone()) else {
+                return;
+            };
+            let at = SummonPlacement {
+                lane: Some(slot.lane),
+                radiant: args.radiant,
+                ..SummonPlacement::default()
+            };
+            summon_fresh(ctx, &def_id, player, &at);
+        }
+    })
+}
+
+/// `summonRandomFromHand`'s arguments.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct SummonRandomFromHandArgs {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub radiant: Option<bool>,
+}
+
+/// R1083 (M #63): summon one random Unit card from your hand, with no Cry (R1) and summoning sick,
+/// into the leftmost open unit zone (R64). The pick is drawn only when a zone is open and a Unit is
+/// in hand (R129), and the opponent sees nothing until it lands (R177). On the Radiant face the Unit
+/// is made Radiant once it is on the field.
+pub fn summon_random_from_hand(args: SummonRandomFromHandArgs) -> Effect {
+    Effect::new("summonRandomFromHand", move |ctx| {
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        // R129: no open zone draws nothing — not even the pick.
+        if open_zones(ctx.state, player, Row::Units).is_empty() {
+            return;
+        }
+        let units: Vec<_> = ctx.state.players[player]
+            .hand
+            .iter()
+            .filter(|card| card_type_of(ctx.state, card) == CardType::Unit)
+            .cloned()
+            .collect();
+        let Some(picked) = ctx.sink.rng.pick(&units).cloned() else {
+            return;
+        };
+        let source_id = ctx.self_.as_ref().map(|me| me.id.clone());
+        let at = SummonPlacement {
+            source_id,
+            ..SummonPlacement::default()
+        };
+        let Some(moved) = summon_existing(ctx, &picked, player, &at) else {
+            return;
+        };
+        if args.radiant == Some(true) {
+            // R174: the Radiant is aimed at the stay the card has just arrived on, the way
+            // `roll_random_keywords` aims its roll.
+            let effect = set_radiant(json_as(json!({ "instanceId": moved.id })));
+            let before = ctx.exits_from;
+            ctx.exits_from = Some(exit_mark(ctx.state));
+            (effect.apply)(ctx);
+            ctx.exits_from = before;
         }
     })
 }

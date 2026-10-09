@@ -227,6 +227,10 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         former_id: Option<String>,
+        /// R1088: the card whose effect summoned it, for the client; no rule reads it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        source_id: Option<String>,
         /// R119: on a played card's step-4 `summoned`, as on its `cardPlayed`. A view never forwards it.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
@@ -854,7 +858,8 @@ impl GameEvent {
     /// which reports what Armor took to the client (§10.10, §10.11) and which no rule reads. R1361: a
     /// `damageAbsorbed` as the hit of 0 it is to the rules (R63), which nothing answers — R240's report
     /// of an absorbed fatigue draw, the one that reaches the loop (R1362). R1366: a `controlChanged`
-    /// without its `how`, likewise the client's. So the state a game passes through, a frontier paused
+    /// without its `how`, likewise the client's. R1088: a `summoned` without its `sourceId`, the card
+    /// whose effect summoned it, which no rule reads. So the state a game passes through, a frontier paused
     /// on a prompt or left by a game's end included, hashes as it did before any of them existed (D14),
     /// and a recorded game's replay keeps its final hash (R768). Every other event is itself.
     pub fn as_rules_read(&self) -> GameEvent {
@@ -898,6 +903,28 @@ impl GameEvent {
                 lane: *lane,
                 former_id: former_id.clone(),
                 how: None,
+            },
+            // R1088: `sourceId` is the client's, like `how` above, so the rules drop it.
+            GameEvent::Summoned {
+                player,
+                instance_id,
+                def_id,
+                row,
+                lane,
+                former_id,
+                source_id: _,
+                arrived_during,
+                exits_from,
+            } => GameEvent::Summoned {
+                player: *player,
+                instance_id: instance_id.clone(),
+                def_id: def_id.clone(),
+                row: *row,
+                lane: *lane,
+                former_id: former_id.clone(),
+                source_id: None,
+                arrived_during: arrived_during.clone(),
+                exits_from: *exits_from,
             },
             other => other.clone(),
         }

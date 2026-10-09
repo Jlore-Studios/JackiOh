@@ -88,15 +88,41 @@ import {
 import type {
   CardAudioTable,
   CardHook,
+  PlayableLineKind,
   SfxId,
   SfxParams,
   SfxTimbre,
   SoundCue,
   StingTier,
-  VoiceLineKind,
   VoicePriority,
 } from "./types.ts";
 import { entryFor, hookFor } from "./voiceData.ts";
+
+/** R1088: the defId the view reads on `instanceId`, or undefined when it shows the card nowhere. */
+function defIdOfInstance(view: PlayerView, instanceId: string): string | undefined {
+  for (const side of ["you", "opponent"] as const) {
+    const sv = side === "you" ? view.you : view.opponent;
+    for (const unit of sv.units) {
+      if (unit !== null && unit.instanceId === instanceId) return unit.defId;
+    }
+    for (const unit of sv.carried ?? []) {
+      if (unit !== null && unit.instanceId === instanceId) return unit.defId;
+    }
+    for (const slot of sv.backrow) {
+      if (slot !== null && !slot.faceDown && slot.instanceId === instanceId) return slot.defId;
+    }
+    for (const card of sv.resolving) {
+      if (card.instanceId === instanceId) return card.defId;
+    }
+  }
+  const hand = view.you.hand;
+  if (Array.isArray(hand)) {
+    for (const card of hand) {
+      if (card.instanceId === instanceId) return card.defId;
+    }
+  }
+  return undefined;
+}
 
 /**
  * The public catalog facts a cue may colour itself with (§5.1): never looked up for "hidden".
@@ -146,6 +172,11 @@ export type CueContext = {
    * drawn. Absent: no play is a cast on draw.
    */
   castOnDraw?: (instanceId: string) => boolean;
+  /**
+   * R1088: the client's own cosmetic rng, a sample from 0 through 1, for picking one trigger line.
+   * Absent: the match's own randomness is never spent on a sound — the director injects one.
+   */
+  random?: () => number;
 };
 
 export type CueRow<K extends GameEventType> = {
@@ -212,7 +243,7 @@ function sfx(id: SfxId, params?: SfxParams, delayMs = 0): SoundCue {
   return params === undefined ? { kind: "sfx", id, delayMs } : { kind: "sfx", id, params, delayMs };
 }
 
-function voice(defId: string, line: VoiceLineKind, delayMs: number, priority: VoicePriority): SoundCue {
+function voice(defId: string, line: PlayableLineKind, delayMs: number, priority: VoicePriority): SoundCue {
   return { kind: "voice", defId, line, delayMs, priority };
 }
 
@@ -259,6 +290,19 @@ function summonCues(event: Extract<GameEvent, { type: "summoned" }>, ctx: CueCon
   else if (rarity === "Mythic") cues.push(sfx("entrance", { mythic: true }));
   if (unit?.radiant === true) cues.push(sfx("radiant", undefined, RADIANT_GLINT_DELAY_MS));
   const played = ctx.wasPlayed?.(event.instanceId) ?? false;
+  // R1088: a summon its source card caused speaks one of the source's trigger lines instead of the
+  // summoned card's own line — picked by the client's own rng, never the match's.
+  if (!played && event.sourceId !== undefined && event.sourceId !== null) {
+    const sourceDef = defIdOfInstance(ctx.view, event.sourceId);
+    const trigger = sourceDef === undefined ? null : hookFor(ctx.lines, sourceDef, "trigger");
+    if (sourceDef !== undefined && trigger !== null && "lines" in trigger) {
+      const n = trigger.lines.length;
+      const rng = ctx.random ?? Math.random;
+      const i = Math.min(n - 1, Math.floor(rng() * n));
+      cues.push(voice(sourceDef, `trigger${i + 1}`, VOICE_DELAY_MS, VOICE_PRIORITY.play));
+      return cues;
+    }
+  }
   if (!played && entryFor(ctx.lines, event.defId)?.kind === "unit") {
     cues.push(...hookCues(ctx, event.defId, "play", VOICE_DELAY_MS, VOICE_PRIORITY.summon));
   }
