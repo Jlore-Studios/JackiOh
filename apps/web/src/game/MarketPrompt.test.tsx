@@ -9,7 +9,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import type { PendingOption, PlayerView } from "@jackioh/shared";
 
-import { closeInspect } from "../cards/index.ts";
+import { INSPECT_SHEET, closeInspect } from "../cards/index.ts";
+import { LONG_PRESS_MS } from "../cards/inspect/index.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import Prompt from "./Prompt.tsx";
 import { baseView, pendingFor, waitingPending } from "../test/fixtures.ts";
@@ -100,5 +101,35 @@ describe("R1000 the night market's stall", () => {
   it("R97 a waiting seat sees no stall", () => {
     renderMarket(baseView({ pending: waitingPending }));
     expect(document.querySelector('[data-prompt-kind="market"]')).toBeNull();
+  });
+});
+
+// #552 (MN09, mobile): a lot is read before it is bought, as a Discover's card is (Prompt.tsx): a
+// long-press opens its card's sheet and buys nothing, and a plain tap still buys it.
+describe("#552 a lot opens its card on a long-press, and only a tap buys it", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("#552 a touch long-press on a lot opens the lot's card in the inspect sheet and sends no deal", () => {
+    vi.useFakeTimers();
+    const onAction = renderMarket(marketView([LOT, LEAVE]));
+    const lot = screen.getByTestId("prompt-option-mode:core-080");
+    fireEvent.pointerDown(lot, { pointerType: "touch", pointerId: 1, clientX: 10, clientY: 10 });
+    act(() => {
+      vi.advanceTimersByTime(LONG_PRESS_MS);
+    });
+    const sheet = screen.getByTestId(INSPECT_SHEET);
+    expect(sheet).toHaveTextContent(CATALOG["core-080"]?.name ?? "core-080");
+    fireEvent.pointerUp(lot, { pointerType: "touch", pointerId: 1 });
+    fireEvent.click(lot);
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it("#552 a tap on a lot still buys it", () => {
+    const onAction = renderMarket(marketView([LOT, LEAVE]));
+    fireEvent.click(screen.getByTestId("prompt-option-mode:core-080"));
+    sent(onAction, [{ pick: "mode", option: "core-080" }]);
+    expect(screen.queryByTestId(INSPECT_SHEET)).toBeNull();
   });
 });

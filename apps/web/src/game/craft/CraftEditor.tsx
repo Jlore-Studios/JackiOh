@@ -21,7 +21,7 @@ import {
   CRAFT_VERB_PRICES,
 } from "../../wire/engineConfig.ts";
 import { craftPreview } from "../../wire/engine.ts";
-import { CardFace, faceModel } from "../../cards/index.ts";
+import { CardFace, faceModel, useInspectTrigger } from "../../cards/index.ts";
 
 import {
   HAT_LABELS,
@@ -230,6 +230,11 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
   }
 
   const def = preview.def;
+  const face = faceModel({ defId: def.id, def, radiant });
+  // #552: the card being crafted is read as any card is, a hover preview with its glossary and, on a
+  // phone, the long-press sheet, so the words its blocks print are a press away. Lines of code is a
+  // hidden stat in matches (the meters above say this card's).
+  const inspect = useInspectTrigger({ key: "craft-preview", face }, { prefer: "above", showLoc: false });
   return (
     <div className="prompt-scrim" data-testid="prompt-scrim">
       <div
@@ -502,7 +507,10 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                 <li key={reason}>{reason}</li>
               ))}
             </ul>
-            <CardFace face={faceModel({ defId: def.id, def, radiant })} />
+            <span className="craft-face" data-testid="craft-face" {...inspect.handlers}>
+              <CardFace face={face} />
+            </span>
+            {inspect.overlay}
             <div className="craft-suggestions" aria-label="Suggestions">
               {presets.map((option, index) =>
                 option.recipe === undefined ? null : (

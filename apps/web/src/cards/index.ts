@@ -71,7 +71,7 @@ export {
 } from "./wheel/StackSheet.tsx";
 export type { StackSheetProps } from "./wheel/StackSheet.tsx";
 
-export { CardFace } from "./CardFace.tsx";
+export { ALL_TRIBES, CardFace } from "./CardFace.tsx";
 export type { CardFaceProps } from "./CardFace.tsx";
 export { MinionFace } from "./MinionFace.tsx";
 export type { MinionFaceProps } from "./MinionFace.tsx";

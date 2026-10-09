@@ -337,6 +337,36 @@ pub fn deal_emote_hand(seed: &str, seat: &str) -> Result<String, JsError> {
     to_json(&engine::deal_emote_hand(seed, player(seat)?))
 }
 
+/// R1420's preview, in the browser: from this call on the module treats `sets` (`SetName[]`) as sets
+/// that ship, as the testkit's `preview_sets` does on a test's thread, so a deck may hold their cards
+/// and a pool that names no set reaches them. WebAssembly runs one thread, so the preview lasts the
+/// module's life. Only a module built with the `preview` feature can preview (the engine's testkit:
+/// `scripts/build-wasm.sh` builds it for development, the unit tests and the e2e client, and apps/web's
+/// `prebuild` builds the production bundle without it); any other refuses a set. The hotseat route
+/// calls it for its E2E injection's `preview`, in development builds only (#552's play-through).
+#[wasm_bindgen]
+pub fn preview_sets(sets_json: &str) -> Result<(), JsError> {
+    let sets: Vec<engine::SetName> = parse("previewSets: the sets", sets_json)?;
+    preview(&sets)
+}
+
+#[cfg(feature = "preview")]
+fn preview(sets: &[engine::SetName]) -> Result<(), JsError> {
+    // The guard ends the preview when it drops; the module keeps it instead.
+    std::mem::forget(engine::testkit::preview_sets(sets));
+    Ok(())
+}
+
+#[cfg(not(feature = "preview"))]
+fn preview(sets: &[engine::SetName]) -> Result<(), JsError> {
+    if sets.is_empty() {
+        return Ok(());
+    }
+    Err(JsError::new(
+        "previewSets: this module was built without the `preview` feature, so it previews no set (R1420)",
+    ))
+}
+
 // ---------------------------------------------------------------------------------------------
 // The AI (SURFACE §9)
 // ---------------------------------------------------------------------------------------------

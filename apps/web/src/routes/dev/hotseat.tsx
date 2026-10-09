@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
-import type { Action, ActionBody, CardDefs, PlayerId, PlayerView } from "@jackioh/shared";
+import type { Action, ActionBody, CardDefs, PlayerId, PlayerView, SetName } from "@jackioh/shared";
 import type { Handicap } from "@jackioh/engine/config";
 
 import Game from "../../game/Game.tsx";
@@ -82,7 +82,13 @@ declare global {
      * ASSUMPTION A1: fixture decks handed to the E2E build of this route, and each seat's handicap
      * when a fixture carries one (R180; `readInjectedHandicaps`).
      */
-    __jackiohE2E?: { seed?: string; decks?: Record<string, string[]>; handicaps?: Partial<Record<PlayerId, unknown>> };
+    __jackiohE2E?: {
+      seed?: string;
+      decks?: Record<string, string[]>;
+      handicaps?: Partial<Record<PlayerId, unknown>>;
+      /** R1420: sets the engine previews before the game is created (`readInjectedPreview`). */
+      preview?: string[];
+    };
   }
 }
 
@@ -200,6 +206,21 @@ export function readInjectedHandicaps(): SeatHandicaps | undefined {
   return Object.keys(out).length === 0 ? undefined : out;
 }
 
+/**
+ * The E2E injection's `preview` (R1420): the sets the engine treats as shipped before the game is
+ * created, so a spec can play a set the catalog holds before it ships (#552's play-through, which
+ * plays every Meditative card). Development builds only, like the rest of the injection, and only
+ * strings pass: whether each names a set is the engine's call (`EnginePort.previewSets` refuses one
+ * that does not, and the refusal reaches the screen as a bad deck's does).
+ */
+export function readInjectedPreview(): SetName[] {
+  const raw = readInjection();
+  if (typeof raw !== "object" || raw === null) return [];
+  const preview = (raw as { preview?: unknown }).preview;
+  if (!Array.isArray(preview)) return [];
+  return preview.filter((set): set is SetName => typeof set === "string");
+}
+
 // ---------------------------------------------------------------------------------------------
 // startup
 // ---------------------------------------------------------------------------------------------
@@ -235,12 +256,18 @@ function catalogOf(port: EnginePort): CardDefs | null {
 function startSession(port: EnginePort, params: HotseatParams): Status {
   const defs = catalogOf(port);
   const handicaps = readInjectedHandicaps();
+  const preview = readInjectedPreview();
   // R184: a handicapped seat's deck holds its handicap's size, so the readable pre-check agrees.
   const sizes: [number, number] = [handicaps?.p1?.deckSize ?? DECK_SIZE, handicaps?.p2?.deckSize ?? DECK_SIZE];
-  const resolved = resolveDecks(params.a, params.b, defs ?? {}, readInjectedDecks(), sizes);
+  const resolved = resolveDecks(params.a, params.b, defs ?? {}, readInjectedDecks(), sizes, preview);
   if ("error" in resolved) return { kind: "no-game", message: resolved.error };
 
   try {
+    // R1420: the injection's sets open before the game is created, so `createGame` takes their cards.
+    if (preview.length > 0) {
+      if (port.previewSets === undefined) return { kind: "no-game", message: `this engine cannot preview ${preview.join(", ")} (R1420)` };
+      port.previewSets(preview);
+    }
     const session = createHotseat({
       seed: params.seed,
       decks: resolved.decks,

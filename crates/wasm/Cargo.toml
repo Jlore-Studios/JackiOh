@@ -9,6 +9,14 @@ publish.workspace = true
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+default = []
+# R1420's preview in the browser (`preview_sets`, #552): the engine's testkit, whose thread-local
+# preview the binding sets. scripts/build-wasm.sh turns it on by default (development, the unit
+# tests, the e2e client) and apps/web's `prebuild` turns it off for the production bundle
+# (`JACKIOH_WASM_PREVIEW=0`), so a module a player loads can preview nothing.
+preview = ["jackioh-engine/testkit"]
+
 [dependencies]
 jackioh-engine = { workspace = true }
 jackioh-cards = { workspace = true }
