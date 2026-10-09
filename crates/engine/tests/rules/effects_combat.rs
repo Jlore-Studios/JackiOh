@@ -1086,8 +1086,7 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
 
     #[test]
     fn r1122_redirected_attack_fights_the_ally() {
-        let (mut state, attacker, defender, neighbour, trap) =
-            redirect_swing("redirect", &redirector().id);
+        let (mut state, attacker, defender, neighbour, trap) = redirect_swing("redirect", &redirector().id);
         let mut sink = sink_for(&mut state);
 
         // Declare on P1's big body; the window re-aims at the attacker's own neighbour.
@@ -1143,7 +1142,12 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
         let attacker = put(&mut state, &big_body.id, slot(P2, Units, 1), json!({}));
         let neighbour = put(&mut state, &plain.id, slot(P2, Units, 2), json!({}));
         let defender = put(&mut state, &plain.id, slot(P1, Units, 1), json!({}));
-        put(&mut state, &redirector_copies().id, slot(P1, Backrow, 1), json!({}));
+        put(
+            &mut state,
+            &redirector_copies().id,
+            slot(P1, Backrow, 1),
+            json!({}),
+        );
         let mut sink = sink_for(&mut state);
 
         let _ = declare_attack(&mut sink.sink(), &attacker, &on_unit(&defender));

@@ -14,6 +14,7 @@ pub mod audit;
 pub mod auto_end_turn;
 pub mod backrow_death;
 pub mod backrow_piles;
+pub mod blueprint;
 pub mod board_history;
 pub mod brittle;
 pub mod call_to_chaos;

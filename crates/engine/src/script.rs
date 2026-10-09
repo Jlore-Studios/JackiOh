@@ -575,6 +575,18 @@ pub struct StaticFlags {
     /// ahead of deaths (§4.4 step 7, §4.5 step 1).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exiles_on_damage: Option<bool>,
+    /// MD-F12, R1281: its controller may play any Unit onto its zone as if it had Stack.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stack_base: Option<bool>,
+    /// MD-F12, R1281: how many times the Unit is Upgraded as it lands, read through `buffs`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stack_base_buffs: Option<i32>,
+    /// MD-F13, R1282: may tribute any permanent costing this or less on either side, read through `cheap`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tribute_cheap: Option<i32>,
+    /// MD-F14, R1283: multiplier for attacks across its lane in combat, read through `multiplier`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lane_multiplier: Option<i32>,
 }
 
 string_union! {

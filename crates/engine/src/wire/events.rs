@@ -519,7 +519,10 @@ pub enum GameEvent {
     },
     /// MD-D29, R1127: `player` emoted — public, and it names no card. Nothing but a card that hears
     /// emotes answers it; every other emote stays R643's cosmetic relay outside `reduce`.
-    Emoted { player: PlayerId, emote: EmoteId },
+    Emoted {
+        player: PlayerId,
+        emote: EmoteId,
+    },
     GameOver {
         winner: Winner,
         reason: GameOverReason,

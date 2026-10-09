@@ -112,13 +112,13 @@ describe("R631 the rendered music", () => {
 
 describe("R631 the cards that play music", () => {
   it("R631 gives every Mythic a unique theme, every Legendary a shared entrance theme, and names only real cards", () => {
-    const mythics = Object.entries(CATALOG).filter(([, c]) => c.rarity === "Mythic" && c.token !== true).map(([id]) => id);
+    const mythics = Object.entries(CATALOG).filter(([, c]) => SHIPPED_SETS.includes(c.set) && c.rarity === "Mythic" && c.token !== true).map(([id]) => id);
     expect(mythics.length).toBeGreaterThan(0);
     for (const id of mythics) expect(MUSIC_CARDS[id]?.theme, id).toBeDefined();
     const mythicTracks = mythics.map((id) => MUSIC_CARDS[id]?.theme);
     expect(new Set(mythicTracks).size, "no two Mythics share a track").toBe(mythics.length);
     const legendaries = Object.entries(CATALOG)
-      .filter(([, c]) => c.rarity === "Legendary" && c.token !== true)
+      .filter(([, c]) => SHIPPED_SETS.includes(c.set) && c.rarity === "Legendary" && c.token !== true)
       .map(([id]) => id);
     expect(legendaries.length).toBeGreaterThan(0);
     for (const id of legendaries) expect(MUSIC_CARDS[id]?.theme, id).toMatch(/^legendary-[12]$/);

@@ -46,8 +46,7 @@ pub fn judge_play(state: &GameState, player: PlayerId, instance_id: &str) -> boo
             candidates.push(id);
         }
     }
-    let Some(mine) =
-        crate::subsystems::scorer::score_instance(state, player, instance_id, Some(&mut base))
+    let Some(mine) = crate::subsystems::scorer::score_instance(state, player, instance_id, Some(&mut base))
     else {
         return true;
     };
@@ -93,11 +92,7 @@ pub fn cane_strike(args: CaneArgs) -> Effect {
         if !crate::zones::acts_on_field(ctx.state, &cane) {
             return;
         }
-        if !crate::animated::animate_card(
-            ctx,
-            &cane,
-            crate::animated::AnimateOptions { position: None },
-        ) {
+        if !crate::animated::animate_card(ctx, &cane, crate::animated::AnimateOptions { position: None }) {
             return;
         }
         let effect = forced_attack_random(ForcedAttackRandomArgs {

@@ -43,7 +43,9 @@ fn run<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R) -> (R
 /// `declareAttack(sink, attacker, target)` with both read live off the sink.
 fn declare(sink: &mut EngineSink<'_>, attacker_id: &str, target: AttackTarget) -> Option<String> {
     let attacker = live(sink.state, attacker_id);
-    declare_attack(sink, &attacker, &target).err().map(|error| error.message)
+    declare_attack(sink, &attacker, &target)
+        .err()
+        .map(|error| error.message)
 }
 
 fn on_unit(state: &GameState, id: &str) -> AttackTarget {
@@ -86,7 +88,12 @@ fn r1124_exiled_before_deaths_no_death_reborn_destroyed() {
     // A 2/2 Banisher into a 3/3: 2 damage marks it, and the check exiles it — though the strike
     // back destroyed the Banisher first.
     let mut state = board("r1124-exiled");
-    let attacker = put(&mut state, &banisher.id, slot(P1, Row::Units, 1), Default::default());
+    let attacker = put(
+        &mut state,
+        &banisher.id,
+        slot(P1, Row::Units, 1),
+        Default::default(),
+    );
     let defender = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
     let (_, events) = run(&mut state, |sink| {
         declare(sink, &attacker.id, on_unit(sink.state, &defender.id))
@@ -101,8 +108,18 @@ fn r1124_exiled_before_deaths_no_death_reborn_destroyed() {
 fn r1124_shield_indestructible_zero_stop_it() {
     // Divine Shield stops the whole hit: nothing marked, nothing exiled, the shield spent instead.
     let mut state = board("r1124-shield");
-    let attacker = put(&mut state, &banisher.id, slot(P1, Row::Units, 1), Default::default());
-    let defender = put(&mut state, &shielded.id, slot(P2, Row::Units, 1), Default::default());
+    let attacker = put(
+        &mut state,
+        &banisher.id,
+        slot(P1, Row::Units, 1),
+        Default::default(),
+    );
+    let defender = put(
+        &mut state,
+        &shielded.id,
+        slot(P2, Row::Units, 1),
+        Default::default(),
+    );
     let (_, events) = run(&mut state, |sink| {
         declare(sink, &attacker.id, on_unit(sink.state, &defender.id))
     });
@@ -111,8 +128,18 @@ fn r1124_shield_indestructible_zero_stop_it() {
 
     // Indestructible takes nothing: nothing marked, nothing exiled.
     let mut state = board("r1124-indestructible");
-    let attacker = put(&mut state, &banisher.id, slot(P1, Row::Units, 1), Default::default());
-    let defender = put(&mut state, &indestructible.id, slot(P2, Row::Units, 1), Default::default());
+    let attacker = put(
+        &mut state,
+        &banisher.id,
+        slot(P1, Row::Units, 1),
+        Default::default(),
+    );
+    let defender = put(
+        &mut state,
+        &indestructible.id,
+        slot(P2, Row::Units, 1),
+        Default::default(),
+    );
     let (_, events) = run(&mut state, |sink| {
         declare(sink, &attacker.id, on_unit(sink.state, &defender.id))
     });
@@ -121,7 +148,12 @@ fn r1124_shield_indestructible_zero_stop_it() {
 
     // The zero rule: a 0-damage hit from the Banisher marks nothing.
     let mut state = board("r1124-zero");
-    let attacker = put(&mut state, &banisher.id, slot(P1, Row::Units, 1), Default::default());
+    let attacker = put(
+        &mut state,
+        &banisher.id,
+        slot(P1, Row::Units, 1),
+        Default::default(),
+    );
     let defender = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
     let (_, events) = run(&mut state, |sink| {
         let source = live(sink.state, &attacker.id);
@@ -147,12 +179,25 @@ fn r1124_cleave_exiles_source_still_dies() {
     // A 4/2 Cleave Banisher into a 5/10 with a 3/3 beside it: the hit and the cleave both mark,
     // both are exiled, and the source still dies to the strike back.
     let mut state = board("r1124-cleave");
-    let attacker = put(&mut state, &banisher_cleave.id, slot(P1, Row::Units, 1), Default::default());
-    let defender = put(&mut state, &big_body.id, slot(P2, Row::Units, 2), Default::default());
+    let attacker = put(
+        &mut state,
+        &banisher_cleave.id,
+        slot(P1, Row::Units, 1),
+        Default::default(),
+    );
+    let defender = put(
+        &mut state,
+        &big_body.id,
+        slot(P2, Row::Units, 2),
+        Default::default(),
+    );
     let neighbour = put(&mut state, &plain.id, slot(P2, Row::Units, 3), Default::default());
     let (_, events) = run(&mut state, |sink| {
         declare(sink, &attacker.id, on_unit(sink.state, &defender.id))
     });
-    assert_eq!(exiled_ids(&events), vec![defender.id.clone(), neighbour.id.clone()]);
+    assert_eq!(
+        exiled_ids(&events),
+        vec![defender.id.clone(), neighbour.id.clone()]
+    );
     assert_eq!(destroyed_ids(&events), vec![attacker.id.clone()]);
 }

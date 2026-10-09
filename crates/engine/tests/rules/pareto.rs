@@ -22,7 +22,12 @@ fn watched(seed: &str) -> GameState {
     state.active = P2;
     state.phase = Phase::Main;
     state.players[P2].mana.current = 10;
-    put(&mut state, &judge.id, slot(P1, Row::Backrow, 1), Default::default());
+    put(
+        &mut state,
+        &judge.id,
+        slot(P1, Row::Backrow, 1),
+        Default::default(),
+    );
     state
 }
 
@@ -44,15 +49,27 @@ fn r1125_top_score_optimal_ties_count() {
     let cheap_card = in_hand(&mut state, &cheap.id, P2, 1).into_iter().next().unwrap();
     let dear_card = in_hand(&mut state, &dear.id, P2, 1).into_iter().next().unwrap();
     // The 1/1 for 1 outrates the 5/5 for 6: top score optimal, the other not.
-    assert!(jackioh_engine::subsystems::pareto::judge_play(&state, P2, &cheap_card.id));
-    assert!(!jackioh_engine::subsystems::pareto::judge_play(&state, P2, &dear_card.id));
+    assert!(jackioh_engine::subsystems::pareto::judge_play(
+        &state,
+        P2,
+        &cheap_card.id
+    ));
+    assert!(!jackioh_engine::subsystems::pareto::judge_play(
+        &state,
+        P2,
+        &dear_card.id
+    ));
 
     // Two identical bodies tie at the top: both optimal.
     let mut state = watched("r1125-tie");
     let first = in_hand(&mut state, &cheap.id, P2, 1).into_iter().next().unwrap();
     let second = in_hand(&mut state, &cheap.id, P2, 1).into_iter().next().unwrap();
-    assert!(jackioh_engine::subsystems::pareto::judge_play(&state, P2, &first.id));
-    assert!(jackioh_engine::subsystems::pareto::judge_play(&state, P2, &second.id));
+    assert!(jackioh_engine::subsystems::pareto::judge_play(
+        &state, P2, &first.id
+    ));
+    assert!(jackioh_engine::subsystems::pareto::judge_play(
+        &state, P2, &second.id
+    ));
 }
 
 #[test]
@@ -63,10 +80,12 @@ fn r1125_concealed_pre_play_view() {
     let dear_card = in_hand(&mut state, &dear.id, P2, 1).into_iter().next().unwrap();
 
     // The copy the judge scores on hides what P2 cannot see, and keeps what they own.
-    let base = jackioh_engine::subsystems::scorer::dry_run_base(&state, P2)
-        .expect("P2 can play now");
+    let base = jackioh_engine::subsystems::scorer::dry_run_base(&state, P2).expect("P2 can play now");
     assert!(
-        base.players[P1].hand.iter().all(|card| card.def_id == "zephyrs:hidden-card"),
+        base.players[P1]
+            .hand
+            .iter()
+            .all(|card| card.def_id == "zephyrs:hidden-card"),
         "P1's hand is concealed from the copy"
     );
     assert!(base.players[P2].hand.iter().any(|card| card.id == cheap_card.id));
@@ -103,7 +122,12 @@ fn r1125_casts_and_unwatched_store_nothing() {
 
     // A judge watches, but an attack is no play: nothing stored.
     let mut state = watched("r1125-attack");
-    let attacker = put(&mut state, &cheap_card.id, slot(P2, Row::Units, 1), Default::default());
+    let attacker = put(
+        &mut state,
+        &cheap_card.id,
+        slot(P2, Row::Units, 1),
+        Default::default(),
+    );
     let out = jackioh_engine::reduce::reduce(
         &state,
         &Action::new(

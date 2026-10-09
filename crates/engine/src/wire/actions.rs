@@ -164,7 +164,9 @@ pub enum ActionBody {
     },
     /// MD-D29, R1127: an emote as a move — legal only while a card hears it (`query::emotes_heard`),
     /// so other games never list it and `reduce` refuses it there.
-    Emote { emote: EmoteId },
+    Emote {
+        emote: EmoteId,
+    },
     Concede,
     EndTurn,
     /// R345: the sender's own preference for R82's automatic turn end. A setting, not a move: it is

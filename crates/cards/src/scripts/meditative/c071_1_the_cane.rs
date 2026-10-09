@@ -29,9 +29,14 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::scenario;
     use jackioh_engine::resolve::{HookOptions, apply_effects, make_context};
     use jackioh_engine::rng::Rng;
     use jackioh_engine::script::EngineSink;
+    use jackioh_engine::testkit::*;
+
+    const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
 
     const SCARAB: &str = "core-007";
 

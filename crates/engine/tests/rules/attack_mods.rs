@@ -48,7 +48,9 @@ fn run<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R) -> (R
 /// `declareAttack(sink, attacker, target)` with both read live off the sink.
 fn declare(sink: &mut EngineSink<'_>, attacker_id: &str, target: AttackTarget) -> Option<String> {
     let attacker = live(sink.state, attacker_id);
-    declare_attack(sink, &attacker, &target).err().map(|error| error.message)
+    declare_attack(sink, &attacker, &target)
+        .err()
+        .map(|error| error.message)
 }
 
 fn on_unit(state: &GameState, id: &str) -> AttackTarget {
@@ -91,9 +93,19 @@ mod attack_mods_r1120 {
     fn r1120_bonus_on_strike_cleave_trample_vs_units_only() {
         // The strike: 3 + 2 on a Unit.
         let mut state = board("r1120-strike");
-        put(&mut state, &herald.id, slot(P1, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &herald.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
         let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
-        let defender = put(&mut state, &big_body.id, slot(P2, Row::Units, 1), Default::default());
+        let defender = put(
+            &mut state,
+            &big_body.id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        );
         let (_, events) = run(&mut state, |sink| {
             declare(sink, &attacker.id, on_unit(sink.state, &defender.id))
         });
@@ -104,8 +116,18 @@ mod attack_mods_r1120 {
 
         // The Cleave: 3 + 2 on each neighbour too.
         let mut state = board("r1120-cleave");
-        put(&mut state, &herald.id, slot(P1, Row::Backrow, 1), Default::default());
-        let attacker = put(&mut state, &cleaver.id, slot(P1, Row::Units, 1), Default::default());
+        put(
+            &mut state,
+            &herald.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        let attacker = put(
+            &mut state,
+            &cleaver.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
         let defender = put(&mut state, &plain.id, slot(P2, Row::Units, 2), Default::default());
         let neighbour = put(&mut state, &plain.id, slot(P2, Row::Units, 3), Default::default());
         let (_, events) = run(&mut state, |sink| {
@@ -122,8 +144,18 @@ mod attack_mods_r1120 {
 
         // The Trample excess: 6 + 2 over a 3-health body sends 5 on.
         let mut state = board("r1120-trample");
-        put(&mut state, &herald.id, slot(P1, Row::Backrow, 1), Default::default());
-        let attacker = put(&mut state, &trampler.id, slot(P1, Row::Units, 1), Default::default());
+        put(
+            &mut state,
+            &herald.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        let attacker = put(
+            &mut state,
+            &trampler.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
         let defender = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
         let (_, events) = run(&mut state, |sink| {
             declare(sink, &attacker.id, on_unit(sink.state, &defender.id))
@@ -139,7 +171,12 @@ mod attack_mods_r1120 {
 
         // A hero takes the listed attack: no bonus.
         let mut state = board("r1120-hero");
-        put(&mut state, &herald.id, slot(P1, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &herald.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
         let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
         let (_, events) = run(&mut state, |sink| {
             declare(sink, &attacker.id, AttackTarget::Hero { player: P2 })
@@ -153,9 +190,19 @@ mod attack_mods_r1120 {
     #[test]
     fn r1120_no_bonus_on_strike_back_heroes_or_shown_attack() {
         let mut state = board("r1120-strike-back");
-        put(&mut state, &herald.id, slot(P1, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &herald.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
         let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
-        let defender = put(&mut state, &big_body.id, slot(P2, Row::Units, 1), Default::default());
+        let defender = put(
+            &mut state,
+            &big_body.id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        );
         // The listed attack never sees the modifier, before or after.
         assert_eq!(unit_view(&state, by_id(&state, &attacker.id)).attack, 3);
         let (_, events) = run(&mut state, |sink| {
@@ -173,9 +220,19 @@ mod attack_mods_r1120 {
     fn r1120_hook_poisonous_marks() {
         // A 1-attack hit with the Poisonous rider destroys a 5/10 all the same (step 7).
         let mut state = board("r1120-poisonous");
-        put(&mut state, &herald_poison.id, slot(P1, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &herald_poison.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
         let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
-        let defender = put(&mut state, &big_body.id, slot(P2, Row::Units, 1), Default::default());
+        let defender = put(
+            &mut state,
+            &big_body.id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        );
         let (_, events) = run(&mut state, |sink| {
             declare(sink, &attacker.id, on_unit(sink.state, &defender.id))
         });
@@ -195,7 +252,12 @@ mod attack_mods_r1120 {
     #[test]
     fn r1120_lethal_reads_bonus() {
         let mut state = board("r1120-lethal");
-        put(&mut state, &herald.id, slot(P1, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &herald.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
         let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
         let defender = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
         let attacker = live(&state, &attacker.id);
@@ -225,7 +287,12 @@ mod attack_mods_r1121 {
     #[test]
     fn r1121_condition_targets_on_own_attackers() {
         let mut state = board("r1121-on");
-        put(&mut state, &herald.id, slot(P1, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &herald.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
         let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
         let first = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
         let second = put(&mut state, &plain.id, slot(P2, Row::Units, 3), Default::default());
@@ -238,7 +305,12 @@ mod attack_mods_r1121 {
     #[test]
     fn r1121_absent_off_turn_in_prompt_on_enemies() {
         let mut state = board("r1121-off");
-        put(&mut state, &herald.id, slot(P1, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &herald.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
         let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
         let foe = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
         // The enemy's cards carry no yellow in the opponent's view.
@@ -262,7 +334,10 @@ mod attack_mods_r1121 {
         assert_eq!(condition_targets(&state, P1, &attacker.id), None);
         // Nor once the attacker has acted.
         state.pending = None;
-        find_instance_mut(&mut state, &attacker.id).unwrap().exertion.attacked = true;
+        find_instance_mut(&mut state, &attacker.id)
+            .unwrap()
+            .exertion
+            .attacked = true;
         assert_eq!(condition_targets(&state, P1, &attacker.id), None);
     }
 }

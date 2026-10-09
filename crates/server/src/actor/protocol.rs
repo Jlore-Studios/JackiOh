@@ -397,7 +397,9 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
     let parsed = type_.parse::<ActionType>().ok();
     // MD-D29, R1127: an emote rides its own message, never the action channel.
     if parsed == Some(ActionType::Emote) {
-        return Err(malformed(r#""emote" is an emote message, never an action (R1127)"#));
+        return Err(malformed(
+            r#""emote" is an emote message, never an action (R1127)"#,
+        ));
     }
     if parsed.is_some_and(|kind| SERVER_ONLY_ACTION_TYPES.contains(&kind)) {
         return Err(malformed(format!(r#""{type_}" is a server-only action (R79)"#)));
@@ -585,9 +587,10 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
             Ok(ActionBody::SetAutoEndTurn { enabled })
         }
         // Unreachable: `CLIENT_ACTION_TYPES` admitted none of these.
-        ActionType::Timeout | ActionType::DisconnectExpired | ActionType::CeilingReached | ActionType::Emote => {
-            Err(malformed(format!(r#""{type_}" is not an action type"#)))
-        }
+        ActionType::Timeout
+        | ActionType::DisconnectExpired
+        | ActionType::CeilingReached
+        | ActionType::Emote => Err(malformed(format!(r#""{type_}" is not an action type"#))),
     }
 }
 

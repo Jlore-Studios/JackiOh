@@ -12011,6 +12011,85 @@
       "text": "Death: Summon a Radiant Shrinking Felinor whose base stats are this one's −{shrinkAttack}/−{shrinkHealth}."
     }
   },
+  "meditative-097": {
+    "id": "meditative-097",
+    "index": "97",
+    "name": "Jlockheed's Evil Blueprints",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "Jlockeed"
+    ],
+    "rarity": "Mythic",
+    "token": false,
+    "cost": 0,
+    "refs": [
+      "meditative-097-1",
+      "meditative-097-2",
+      "meditative-097-3",
+      "meditative-097-4",
+      "meditative-097-5",
+      "meditative-097-6",
+      "meditative-097-7",
+      "meditative-097-8",
+      "meditative-097-9"
+    ],
+    "loc": 42,
+    "base": {
+      "keywords": [],
+      "text": "Piece together the blueprint: Discover one of Empty Plot, Wishing Well, School, Mega Church, Bunker, University, The Great Wall, Prison or Jlockheed's Headquarters."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Piece together the Radiant blueprint: Discover a Radiant one of Empty Plot, Wishing Well, School, Mega Church, Bunker, University, The Great Wall, Prison or Jlockheed's Headquarters."
+    }
+  },
+  "meditative-097-1": {
+    "id": "meditative-097-1",
+    "index": "97.1",
+    "name": "Empty Plot",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Common",
+    "token": true,
+    "cost": 0,
+    "params": [
+      {
+        "key": "buffs",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 20,
+    "base": {
+      "attack": 0,
+      "health": 3,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nYou may play a Unit on top of this, as if it had Stack."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nYou may play a Unit on top of this, as if it had Stack. When you do, Buff that Unit {buffs|time|times}."
+    }
+  },
   "meditative-097-2": {
     "id": "meditative-097-2",
     "index": "97.2",
@@ -12106,6 +12185,113 @@
       "text": "Can't attack\nActivate: Summon a random Radiant ({cost}) Cost Unit."
     }
   },
+  "meditative-097-4": {
+    "id": "meditative-097-4",
+    "index": "97.4",
+    "name": "Mega Church",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Rare",
+    "token": true,
+    "cost": 3,
+    "params": [
+      {
+        "key": "cheap",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 0
+      }
+    ],
+    "loc": 45,
+    "base": {
+      "attack": 0,
+      "health": 5,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Tribute 5, Can't attack\nThis may Tribute any ({cheap}) Cost or less permanent on either side.\nActivate: Take control of an enemy permanent."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        },
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Tribute 5, Can't attack, Divine Shield\nThis may Tribute any ({cheap}) Cost or less permanent on either side.\nActivate: Take control of an enemy permanent. It becomes Radiant."
+    }
+  },
+  "meditative-097-5": {
+    "id": "meditative-097-5",
+    "index": "97.5",
+    "name": "Bunker",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "token": true,
+    "cost": 2,
+    "params": [
+      {
+        "key": "multiplier",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 15,
+    "base": {
+      "attack": 5,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Armor",
+          "n": 3
+        },
+        {
+          "kind": "Can't attack"
+        },
+        {
+          "kind": "First Strike"
+        }
+      ],
+      "text": "Tribute 2, Armor 3, Can't attack, First Strike\nThis strikes Units in its lane with {multiplier} times its Attack."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 30,
+      "keywords": [
+        {
+          "kind": "Armor",
+          "n": 5
+        },
+        {
+          "kind": "Can't attack"
+        },
+        {
+          "kind": "First Strike"
+        }
+      ],
+      "text": "Tribute 2, Armor 5, Can't attack, First Strike\nThis strikes Units in its lane with {multiplier} times its Attack."
+    }
+  },
   "meditative-097-6": {
     "id": "meditative-097-6",
     "index": "97.6",
@@ -12194,6 +12380,49 @@
         }
       ],
       "text": "Tribute 3, Immutable, Armor 2, Can't attack\nCry: Lock every unit zone on your side."
+    }
+  },
+  "meditative-097-8": {
+    "id": "meditative-097-8",
+    "index": "97.8",
+    "name": "Prison",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Legendary",
+    "token": true,
+    "cost": 4,
+    "params": [
+      {
+        "key": "chance",
+        "base": 50,
+        "radiant": 50,
+        "better": "up",
+        "step": 10,
+        "min": 1,
+        "max": 100
+      }
+    ],
+    "loc": 71,
+    "base": {
+      "attack": 0,
+      "health": 16,
+      "keywords": [],
+      "text": "Tribute 2\nAfter your opponent plays a Unit: {chance}% chance to stack it under this. You control it."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 32,
+      "keywords": [
+        {
+          "kind": "Lucky",
+          "n": 1
+        }
+      ],
+      "text": "Tribute 2, Lucky 1\nAfter your opponent plays a Unit: {chance}% chance to stack it under this. You control it."
     }
   },
   "meditative-097-9": {

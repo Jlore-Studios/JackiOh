@@ -103,6 +103,11 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::scenario;
+    use jackioh_engine::testkit::*;
+
+    const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
 
     /// `SideSetup.backrow` takes no `radiant` flag: flip the instance directly.
     fn make_radiant(s: &mut Scenario, card: &str) {

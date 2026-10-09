@@ -1962,8 +1962,12 @@ mod r1127_emotes_become_actions_while_heard {
             "action": { "type": "emote", "emote": "laugh", "nonce": "n9" },
         }));
         h.idle().await;
-        assert!(errors(&h.p2).iter().any(|error| error["reason"]
-            == json!("\"emote\" is an emote message, never an action (R1127)")));
+        assert!(
+            errors(&h.p2)
+                .iter()
+                .any(|error| error["reason"]
+                    == json!("\"emote\" is an emote message, never an action (R1127)"))
+        );
         assert_eq!(relays(&h.p1), Vec::<Value>::new());
         assert_eq!(emote_rows(&h).await, Vec::<Value>::new());
     }

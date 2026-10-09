@@ -91,7 +91,10 @@ enum Task {
     },
     /// MD-D29, R1127: an emote that passed the rate gate, to mint as an `Emote` action once it runs
     /// — the seat resolved then, the legality read off the live state.
-    Emote { home: PlayerId, emote: EmoteId },
+    Emote {
+        home: PlayerId,
+        emote: EmoteId,
+    },
     Submit {
         player: PlayerId,
         nonce: String,
@@ -937,7 +940,10 @@ impl MatchActor {
                 );
                 // MD-D29, R1127: after the relay, the emote also runs as a task, so a card that
                 // hears it answers it in turn order behind every action queued ahead of it.
-                self.enqueue(Task::Emote { home, emote: emote.emote });
+                self.enqueue(Task::Emote {
+                    home,
+                    emote: emote.emote,
+                });
             }
             Ok(ClientMessage::Aim(aim)) => self.receive_aim(&mut core, player, aim.aim),
             Ok(ClientMessage::Action(action)) => {

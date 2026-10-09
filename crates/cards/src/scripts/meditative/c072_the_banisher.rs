@@ -38,6 +38,11 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::scenario;
+    use jackioh_engine::testkit::*;
+
+    const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
 
     /// Banisher 2/1s facing tough enemies.
     const BIG: &str = "core-043";

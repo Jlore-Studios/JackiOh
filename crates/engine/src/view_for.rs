@@ -515,11 +515,7 @@ fn unit_view_of(state: &GameState, pile: &[CardInstance], viewer: PlayerId) -> O
 /// apply to if this Unit attacked them now, in `attack_targets` order. Only on the viewer's own
 /// attackers that may act now (their main phase, no prompt open, as R195's flag), and `None` when
 /// the list is empty. Tags are public (§10.8), so the field reveals nothing.
-fn condition_targets_of(
-    state: &GameState,
-    top: &CardInstance,
-    viewer: PlayerId,
-) -> Option<Vec<String>> {
+fn condition_targets_of(state: &GameState, top: &CardInstance, viewer: PlayerId) -> Option<Vec<String>> {
     if top.controller != viewer || !can_act(state, top) {
         return None;
     }
@@ -537,11 +533,7 @@ fn condition_targets_of(
             crate::damage::DamageTarget::Hero { .. } => None,
         })
         .collect();
-    if targets.is_empty() {
-        None
-    } else {
-        Some(targets)
-    }
+    if targets.is_empty() { None } else { Some(targets) }
 }
 
 /// §4.1: "each unit has one exertion per turn: one attack or one position switch", so a unit can

@@ -1034,6 +1034,10 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 cant_attack_or_be_attacked: flags(|f| f.cant_attack_or_be_attacked),
                 never_berserk: flags(|f| f.never_berserk),
                 heal_to_damage: flags(|f| f.heal_to_damage),
+                stack_base: flags(|f| f.stack_base),
+                stack_base_buffs: numbers(|f| f.stack_base_buffs),
+                tribute_cheap: numbers(|f| f.tribute_cheap),
+                lane_multiplier: numbers(|f| f.lane_multiplier),
             })
         }
     }

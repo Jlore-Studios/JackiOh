@@ -269,11 +269,8 @@ fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), Engine
             // MD-D28, R1125: judged on the pre-play state, ahead of §10.5 step 1, from the player's
             // own concealed view.
             if crate::subsystems::pareto::watching(sink.state, action.player_id) {
-                let optimal = crate::subsystems::pareto::judge_play(
-                    sink.state,
-                    action.player_id,
-                    &play.instance_id,
-                );
+                let optimal =
+                    crate::subsystems::pareto::judge_play(sink.state, action.player_id, &play.instance_id);
                 let turn = sink.state.turn;
                 sink.state.play_judgement = Some(crate::state::PlayJudgement {
                     instance_id: play.instance_id.clone(),

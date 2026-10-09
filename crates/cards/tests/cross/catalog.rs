@@ -5104,7 +5104,7 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             .filter(|row| row.index.starts_with("12.") || row.index.starts_with("19."))
             .map(|row| row.index.to_string())
             .collect();
-        legendary.extend(strings(&["42.1", "46.1", "73.1", "75.1"]));
+        legendary.extend(strings(&["42.1", "45.1", "46.1", "73.1", "75.1"]));
         let mut expected: BTreeMap<String, String> = legendary
             .into_iter()
             .map(|index| (index, "Legendary".to_string()))
@@ -5123,15 +5123,23 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             ("65.3", "Rare"),
             ("65.4", "Legendary"),
             ("65.5", "Mythic"),
+            ("71.1", "Mythic"),
+            ("93.1", "Common"),
+            ("93.2", "Common"),
+            ("93.3", "Common"),
         ] {
             expected.insert(index.to_string(), rarity.to_string());
         }
-        // §8.8 prints it on the five plain buildings of M #97 too.
+        // §8.8 prints it on the nine buildings of M #97 too.
         for (index, rarity) in [
+            ("97.1", "Common"),
             ("97.2", "Common"),
             ("97.3", "Rare"),
+            ("97.4", "Rare"),
+            ("97.5", "Epic"),
             ("97.6", "Epic"),
             ("97.7", "Epic"),
+            ("97.8", "Legendary"),
             ("97.9", "Mythic"),
         ] {
             expected.insert(index.to_string(), rarity.to_string());
@@ -5267,7 +5275,7 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
     use super::*;
 
     #[test]
-    fn r278_tags_core_13_and_14_the_three_classic_plus_jlockheed_cards_48_51_and_52_classic_4_palantir_and_meditative_97_9_headquarters_and_no_other_entry()
+    fn r278_tags_core_13_and_14_the_three_classic_plus_jlockheed_cards_48_51_and_52_classic_4_palantir_and_meditative_97_and_97_9_and_no_other_entry()
      {
         let mut tagged: Vec<String> = entries()
             .into_iter()
@@ -5284,6 +5292,7 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
                 "classicplus-052",
                 "core-013",
                 "core-014",
+                "meditative-097",
                 "meditative-097-9",
             ]),
             "entries tagged Jlockeed"
