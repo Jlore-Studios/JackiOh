@@ -147,16 +147,25 @@ export default function UsernameField({ token, onSaved, label = "Username", disa
         id={id}
         data-testid={usernameTestid.input}
         type="text"
-        autoComplete="username"
+        // Not "username": that marks the sign-in field, and a password manager would offer the
+        // account's email for a name every player sees.
+        autoComplete="off"
         autoCapitalize="off"
         autoCorrect="off"
         spellCheck={false}
         value={value}
-        disabled={saving || disabled}
+        // Read-only while saving rather than disabled, so the box keeps its focus for what the save
+        // answers (a fresh preview after a 409).
+        readOnly={saving}
+        disabled={disabled}
         aria-invalid={current !== null && !current.preview.ok ? true : undefined}
         aria-describedby={`${hintId} ${previewId}`}
         onChange={(event) => {
+          // A verdict belongs to one question: typing a name again asks again, and an older answer
+          // for the same text never comes back while the new one is on its way.
           setValue(event.target.value);
+          setShown(null);
+          setFailure(null);
         }}
       />
       <p className="auth-hint" id={hintId}>

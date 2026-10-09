@@ -641,7 +641,9 @@ step that is not yet implemented says which BUILD task delivers it.
    (R1432–R1436): it replaces `profiles.display_name` with the base name, its key, its tag, the time
    of the last change and whether the prompt was answered, names every existing profile `Player#n`
    in order of sign-up, and names every new one the lowest free `Player#n` by trigger; a client
-   reads its own row's username columns and writes none of them.
+   reads its own row's username columns and writes none of them. It only adds: `display_name`,
+   which no server reads from 0028 on, stays for the deploy before it, which reads it until the new
+   one serves, and a later migration drops it.
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL

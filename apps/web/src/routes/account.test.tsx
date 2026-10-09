@@ -4,7 +4,7 @@
 // their record, and — the one that actually trapped people — could not sign out at all:
 // `net/session.ts` wrote the token and nothing ever cleared it.
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -276,6 +276,23 @@ describe("R1435 the username on the account page", () => {
 
     expect(screen.queryByTestId("account-username-cooldown")).toBeNull();
     expect(screen.getByTestId(usernameTestid.input)).toBeInTheDocument();
+  });
+
+  it("R1435 a cooldown that runs out while the page is open offers the field again", () => {
+    vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
+    try {
+      vi.mocked(getProfile).mockResolvedValue(profileBody());
+      render(<AccountRoute token={TOKEN} me={activeMe({ name: "Max#3", nextChangeAt: Date.now() + 2_000, promptOwed: false })} />);
+      expect(screen.getByTestId("account-username-cooldown")).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(3_000);
+      });
+      expect(screen.queryByTestId("account-username-cooldown")).toBeNull();
+      expect(screen.getByTestId(usernameTestid.input)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("R1435 a pending account sees its username, and no field: the preview and the save are for active accounts", () => {

@@ -49,6 +49,7 @@ import { clearSession, forgetPendingAddresses, readSession } from "../net/sessio
 import ChangeEmail from "../settings/ChangeEmail.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import TwoStepSettings from "../auth/TwoStepSettings.tsx";
+import { useSecondsUntil } from "../auth/cooldown.ts";
 import Username from "../auth/Username.tsx";
 import UsernameField, { nextChangeSentence } from "../auth/UsernameField.tsx";
 
@@ -478,14 +479,15 @@ function AccountUsername({
   canChange: boolean;
 }): ReactElement {
   const nextChangeAt = own.nextChangeAt;
-  const waiting = nextChangeAt !== null && nextChangeAt > Date.now();
+  // Read from the clock at every render, so a page left open past the cooldown offers the field again.
+  const waiting = useSecondsUntil(nextChangeAt) > 0;
   return (
     <div className="account-username">
       <p className="account-label">Username</p>
       <p className="account-username__name" data-testid={accountTestid.username}>
         <Username name={own.name} />
       </p>
-      {!canChange ? null : waiting ? (
+      {!canChange ? null : waiting && nextChangeAt !== null ? (
         <p data-testid={accountTestid.usernameCooldown}>{nextChangeSentence(nextChangeAt)}</p>
       ) : (
         <UsernameField

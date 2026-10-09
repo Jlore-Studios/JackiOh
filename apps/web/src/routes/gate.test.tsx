@@ -9,6 +9,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 
+import { announceAccountChange } from "../net/gate.ts";
 import { readQueued, rememberQueued } from "../net/liveGame.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 
@@ -290,6 +291,32 @@ describe("R1435 the username prompt at the gate", () => {
 
     expect(await screen.findByText("the gate opened", undefined, SLOW)).toBeInTheDocument();
     expect(screen.queryByTestId("username-prompt")).toBeNull();
+  });
+
+  it("R1435 a re-read that finds the prompt owed once the screen is up leaves the screen in place", async () => {
+    signedIn();
+    serveAs("active");
+    render(<Gated>{({ me }) => <p>{me.username === undefined ? "the gate opened" : "the gate read again"}</p>}</Gated>);
+    expect(await screen.findByText("the gate opened", undefined, SLOW)).toBeInTheDocument();
+
+    // A server that now owes the prompt (one that gained usernames meanwhile), read in the background:
+    // the screen takes the new read and stays.
+    serveAs("active", OWED);
+    announceAccountChange();
+    expect(await screen.findByText("the gate read again", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByTestId("username-prompt")).toBeNull();
+  });
+
+  it("R1435 a redemption on a screen open to the pending account is followed by the prompt", async () => {
+    signedIn();
+    serveAs("pending");
+    render(<Gated allowPending>{() => <p>the code screen</p>}</Gated>);
+    expect(await screen.findByText("the code screen", undefined, SLOW)).toBeInTheDocument();
+
+    serveAs("active", OWED);
+    announceAccountChange();
+    expect(await screen.findByTestId("username-prompt", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByText("the code screen")).toBeNull();
   });
 
   it("R1435 a pending account sees only the code screen, never the prompt", async () => {

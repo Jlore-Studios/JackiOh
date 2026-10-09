@@ -34,7 +34,14 @@
 -- numbers, and stays unprompted, so its player meets the prompt once on their
 -- next sign-in (R1434, R1435). The backfill bumps each row's updated_at, as
 -- any update of a profile does. `display_name` (nullable, unchecked, written
--- only by tests and seeding) is replaced by these columns and dropped.
+-- only by tests and seeding) is replaced by these columns: no server from this
+-- one on reads or writes it. It is not dropped here. A deploy migrates before
+-- it serves, and the deploy before it keeps serving until the new one passes
+-- its health check (docs/architecture.md), so for that while, and for good if
+-- the new one never does, the previous server runs on this schema and selects
+-- `display_name` with every profile it reads. A later migration drops it, once
+-- no deployed server reads it. Everything else here only adds, and the
+-- trigger names the rows the previous server inserts.
 --
 -- TRUST BOUNDARY: a username is written only through the API (`PUT
 -- /api/username`), never by a client. `authenticated` keeps 0022's read
@@ -152,7 +159,10 @@ create trigger profiles_assign_default_username
   for each row
   execute function app.assign_default_username();
 
-alter table public.profiles drop column if exists display_name;
+comment on column public.profiles.display_name is
+  'Unused since migration 0028 (R1434): the username columns replace it. Kept '
+  'only for the server deployed before 0028, which reads it; a later migration '
+  'drops it.';
 
 grant select (username_base, username_key, username_tag, username_changed_at, username_prompted)
   on public.profiles to authenticated;

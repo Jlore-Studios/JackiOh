@@ -488,14 +488,14 @@ end $$;
 reset role;
 rollback;
 
-\echo '=== CHECK 7 (R1434): no table but profiles stores a username, and profiles.display_name is gone ==='
+\echo '=== CHECK 7 (R1434): no table but profiles stores a username ==='
 select n.nspname as schema, c.relname as relation, a.attname as column_name
   from pg_attribute a
   join pg_class c on c.oid = a.attrelid
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname in ('public', 'app', 'auth') and c.relkind in ('r', 'p', 'v', 'm', 'f')
    and a.attnum > 0 and not a.attisdropped
-   and (a.attname like '%username%' or a.attname like '%display_name%')
+   and a.attname like '%username%'
  order by 1, 2, 3;
 do $$
 declare
@@ -510,14 +510,14 @@ begin
     join pg_namespace n on n.oid = c.relnamespace
    where n.nspname in ('public', 'app', 'auth') and c.relkind in ('r', 'p', 'v', 'm', 'f')
      and a.attnum > 0 and not a.attisdropped
-     and (a.attname like '%username%' or a.attname like '%display_name%');
+     and a.attname like '%username%';
   if seen is distinct from
      'public.profiles.username_base, public.profiles.username_changed_at, public.profiles.username_key, '
      'public.profiles.username_prompted, public.profiles.username_tag' then
-    raise exception 'FAIL (CHECK 7): the columns that name a username or a display name are %, expected profiles'' five username columns alone',
+    raise exception 'FAIL (CHECK 7): the columns that name a username are %, expected profiles'' five username columns alone',
       seen;
   end if;
-  raise notice 'OK (CHECK 7): profiles'' five username columns are the only ones, and display_name is gone';
+  raise notice 'OK (CHECK 7): profiles'' five username columns are the only ones';
 end $$;
 
 \echo '=== CHECK 8 (R1434): assign_default_username is a DEFINER trigger on profiles inserts that no client role may call or attach ==='

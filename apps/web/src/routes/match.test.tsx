@@ -634,7 +634,11 @@ describe("the match screen's ranks (R604, R612)", () => {
   it("R1436 a seat without a profile id and username is not a ranks body: no banner", async () => {
     const fetchMock = stubFetch({
       ranked: true,
-      seats: { p1: { tag: "ABC123", rank: ranksBody.seats.p1.rank, you: true }, p2: ranksBody.seats.p2 },
+      // The body a server before usernames sent: both seats named by a tag alone.
+      seats: {
+        p1: { tag: "ABC123", rank: ranksBody.seats.p1.rank, you: true },
+        p2: { tag: "DEF456", rank: ranksBody.seats.p2.rank, you: false },
+      },
     });
     render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
     attach({ legal: [{ type: "endTurn" }] });

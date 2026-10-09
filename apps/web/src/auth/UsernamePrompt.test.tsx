@@ -80,6 +80,23 @@ describe("R1435 the username prompt", () => {
     expect(previewUsername).toHaveBeenCalledTimes(1);
   });
 
+  it("R1435 a name typed again is asked again, never shown an older verdict meanwhile", async () => {
+    vi.mocked(previewUsername).mockResolvedValue(TAKEN);
+    prompt();
+
+    await typeAndWait("Max", "Max is taken, so you’d be Max#3");
+    await userEvent.clear(screen.getByTestId(usernameTestid.input));
+    vi.mocked(previewUsername).mockReturnValue(new Promise<UsernamePreview>(() => {}));
+    await userEvent.type(screen.getByTestId(usernameTestid.input), "Max");
+
+    expect(screen.queryByTestId(usernameTestid.preview), "the old answer is gone").toBeNull();
+    expect(screen.getByTestId(usernameTestid.save)).toBeDisabled();
+    await waitFor(() => {
+      expect(previewUsername).toHaveBeenCalledTimes(2);
+    }, PREVIEW);
+    expect(screen.queryByTestId(usernameTestid.preview), "nor while the new one is on its way").toBeNull();
+  });
+
   it("R1435 a new keystroke aborts the question before it", async () => {
     vi.mocked(previewUsername).mockReturnValue(new Promise<UsernamePreview>(() => {}));
     prompt();
