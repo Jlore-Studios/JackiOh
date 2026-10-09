@@ -1,9 +1,7 @@
-//! Port of `apps/server/test/api/catalog.test.ts`: the catalog and validator bindings
-//! (`src/api/catalog.rs`, and `jackioh_engine::validator`, which the handlers call directly): the two
-//! places the server reaches data and rules that live in other crates (SPEC §9.4).
-//!
-//! It is docs/v0.3.0/README.md V18's proof too: the server serves the catalog version of the newest
-//! `patches.json` entry, with `x-deployed-commit`.
+//! The catalog and validator bindings (`src/api/catalog.rs`, and `jackioh_engine::validator`, which
+//! the handlers call directly): the two places the server reaches data and rules that live in other
+//! crates (SPEC §9.4). It is docs/v0.3.0/README.md V18's proof too: the server serves the catalog
+//! version of the newest `patches.json` entry, with `x-deployed-commit`.
 //!
 //! Two SPEC §11 rulings live here as well:
 //!   * R163 — the catalog endpoint a client that ships none can read: whole, unprojected,
@@ -11,15 +9,11 @@
 //!   * R164 — where L6's ban list lives: server state, never a flag on a card definition, read
 //!     through the catalog handle.
 //!
-//! What the Rust server does differently, and so what changed here (SURFACE §11.3, part 18's brief):
-//!   * the catalog is compiled in (`jackioh_cards::catalog_json()`), so nothing is read from a file
-//!     at run time: TS's "refuses to invent a catalog when the file is missing or malformed" is
-//!     `crates/cards/build.rs` failing the build, and has no run-time test;
-//!   * its version is `jackioh_cards::catalog_version()`, whatever `CATALOG_VERSION` says (a different
-//!     value only warns, #488), so "the environment pins the version" is gone;
-//!   * `loadout-validator.ts` is gone: the binding tests hand `jackioh_engine::validator` the snapshot
-//!     a handler builds from the catalog handle (`snapshot` below), JSON in and JSON out (§10.1);
-//!   * `GET /api/catalog/:version` is not served, so of R388's four tests only the 404 one remains.
+//! The catalog is compiled in (`jackioh_cards::catalog_json()`) and its version is
+//! `jackioh_cards::catalog_version()`, whatever `CATALOG_VERSION` says (a different value only
+//! warns). The binding tests hand `jackioh_engine::validator` the snapshot a handler builds from the
+//! catalog handle (`snapshot` below), JSON in and JSON out (§10.1). `GET /api/catalog/:version` is
+//! not served (SURFACE §11.3), so of R388's four tests only the 404 one remains.
 
 use std::sync::Arc;
 
@@ -37,12 +31,10 @@ use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
 use jackioh_server::env::load_env;
 
-// ---------------------------------------------------------------------------
-// Harness (the parts of `test/fakes/deps.ts` this file used)
-// ---------------------------------------------------------------------------
+// Harness
 
-/// The environment `createTestDeps()` stood for: `E2E=1` (the fake store, the fixture auth and
-/// R144's fixtures) at the compiled-in catalog version, built by the same two calls `main.rs` makes.
+/// `E2E=1` (the fake store, the fixture auth and R144's fixtures) at the compiled-in catalog version,
+/// built by the same two calls `main.rs` makes.
 fn test_env() -> IndexMap<String, String> {
     let mut source = IndexMap::new();
     for (name, value) in [("E2E", "1"), ("NODE_ENV", "test"), ("TRUSTED_PROXY_HOPS", "1")] {
@@ -64,7 +56,7 @@ async fn test_app() -> Arc<App> {
     app_from(&test_env()).await
 }
 
-/// `createTestDeps({ catalog })`: the same server, holding `catalog` instead of the one it built.
+/// The same server, holding `catalog` instead of the one it built.
 async fn app_holding(catalog: Catalog) -> Arc<App> {
     let built = Arc::try_unwrap(test_app().await)
         .ok()
@@ -85,7 +77,7 @@ impl Reply {
     }
 }
 
-/// `jsonRequest("GET", path, undefined, { token })` through the whole router (CORS included).
+/// A GET through the whole router (CORS included).
 async fn get(app: &Arc<App>, path: &str, token: Option<&str>) -> Reply {
     let mut builder = Request::builder()
         .method("GET")
@@ -116,7 +108,7 @@ fn from_json<T: DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value).expect("the literal has the port's JSON shape")
 }
 
-/// The catalog file the server loads, as raw defs, so the tests below count it and not a transcription.
+/// The catalog file the server loads, as raw defs, so the tests count it and not a transcription.
 /// R1420: whether an entry's set ships: the server serves, seeds and counts only those.
 fn ships(def: &Value) -> bool {
     serde_json::from_value::<jackioh_engine::SetName>(def["set"].clone())
@@ -150,14 +142,13 @@ fn legal(catalog: &Catalog, count: usize) -> Vec<String> {
         .collect()
 }
 
-/// `new Map(ids.map((cardId) => [cardId, 1]))`: one copy of each, as the validator's collection.
+/// One copy of each, as the validator's collection.
 fn one_of_each(ids: &[String]) -> Value {
     Value::Object(ids.iter().map(|id| (id.clone(), json!(1))).collect())
 }
 
-/// What a handler hands the shared validator for this catalog handle (what TS's
-/// `sharedLoadoutValidator` adapter built): its version, every definition, and the ids the handle
-/// bans. Bannedness is read through the handle and nowhere else (R164).
+/// What a handler hands the shared validator for this catalog handle: its version, every definition,
+/// and the ids the handle bans. Bannedness is read through the handle and nowhere else (R164).
 fn snapshot(catalog: &Catalog) -> Value {
     let banned: Vec<String> = catalog
         .card_ids
@@ -168,7 +159,7 @@ fn snapshot(catalog: &Catalog) -> Value {
     json!({ "version": catalog.version, "cards": catalog_file(), "banned": banned })
 }
 
-/// The validator's verdict as TS's `LoadoutIssue[]`: empty for `{ ok: true }`, else its errors.
+/// The validator's verdict: empty for `{ ok: true }`, else its errors.
 fn issues(result: impl Serialize) -> Vec<Value> {
     let value = serde_json::to_value(&result).expect("a verdict serialises");
     if value.get("ok") == Some(&json!(true)) || value.get("Ok").is_some() {
@@ -182,7 +173,7 @@ fn issues(result: impl Serialize) -> Vec<Value> {
         .expect("a refusal carries its errors")
 }
 
-/// `scope: "trio"` (the default): L1–L6 over `decks` (`validateLoadout`, R253).
+/// `scope: "trio"` (the default): L1–L6 over `decks` (R253).
 fn validate_trio(decks: Value, catalog: &Catalog, owned: Value) -> Vec<Value> {
     issues(validator::validate_loadout(&from_json(json!({
         "decks": decks,
@@ -191,7 +182,7 @@ fn validate_trio(decks: Value, catalog: &Catalog, owned: Value) -> Vec<Value> {
     }))))
 }
 
-/// `scope: "deck"`: one Best-of-1 deck on the one-deck rules L2, L3, L5 and L6 (`validateDeck`, R253).
+/// `scope: "deck"`: one Best-of-1 deck on the one-deck rules L2, L3, L5 and L6 (R253).
 fn validate_one(deck: Value, catalog: &Catalog, owned: Value) -> Vec<Value> {
     issues(validator::validate_deck(&from_json(json!({
         "deck": deck,
@@ -200,7 +191,7 @@ fn validate_one(deck: Value, catalog: &Catalog, owned: Value) -> Vec<Value> {
     }))))
 }
 
-/// Three unnamed decks, as `decks: string[][]` reached the adapter.
+/// Unnamed decks from their card lists.
 fn decks(lists: &[Vec<String>]) -> Value {
     Value::Array(lists.iter().map(|cards| json!({ "cards": cards })).collect())
 }
@@ -238,9 +229,7 @@ fn valid_env() -> IndexMap<String, String> {
     source
 }
 
-// ---------------------------------------------------------------------------
 // catalog (`mod loaded_catalog`: a `mod catalog` inside `catalog.rs` is clippy's module_inception)
-// ---------------------------------------------------------------------------
 
 mod loaded_catalog {
     use super::*;
@@ -264,7 +253,6 @@ mod loaded_catalog {
     #[test]
     fn derives_a_version_from_the_catalog_s_own_bytes_so_it_cannot_drift_from_the_data() {
         let version = catalog_api::version_of("{}");
-        // /^c1-[0-9a-f]{12}$/
         let hex = version.strip_prefix("c1-").expect("the c1- prefix");
         assert_eq!(hex.len(), 12, "{version}");
         assert!(
@@ -276,9 +264,8 @@ mod loaded_catalog {
         assert_ne!(catalog_api::version_of("{}"), catalog_api::version_of("{ }"));
     }
 
-    /// TS let `loadCatalog({ version })` stamp any version. The compiled-in catalog has one version,
-    /// and the server serves it whatever `CATALOG_VERSION` says: a stale or missing value boots on
-    /// the compiled-in version, so a card patch ships without a hand edit on the host (#488).
+    /// The server serves the compiled-in version whatever `CATALOG_VERSION` says: a stale or missing
+    /// value boots on it, so a card patch ships without a hand edit on the host.
     #[tokio::test]
     async fn serves_the_compiled_in_version_whatever_the_environment_says_section_9_4_both_halves_must_agree()
     {
@@ -324,9 +311,7 @@ mod loaded_catalog {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The loadout validator binding (§9.4: one module, shared)
-// ---------------------------------------------------------------------------
 
 mod loadout_validator_binding_section_9_4_one_module_shared {
     use super::*;
@@ -505,9 +490,7 @@ mod loadout_validator_binding_section_9_4_one_module_shared {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R163 — "The catalog a client that ships none can read"
-// ---------------------------------------------------------------------------
 
 mod r163_the_catalog_endpoint_section_9_1_section_9_4_r105 {
     use super::*;
@@ -579,14 +562,10 @@ mod r163_the_catalog_endpoint_section_9_1_section_9_4_r105 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R388 — card patch history: every patch's catalog, served by version
-// ---------------------------------------------------------------------------
 
-/// SURFACE §11.3 drops `GET /api/catalog/:version` (no client called it), so the three TS tests that
-/// read a patch's snapshot through it ("serves every patch in patches.json", "shows what a patch
-/// changed", "serves the version this server runs … whatever it is called") have no route to call.
-/// The one that holds as written is the refusal: no version, known or not, reads a file.
+/// SURFACE §11.3 drops `GET /api/catalog/:version`, so the only test that holds is the refusal: no
+/// version, known or not, reads a file.
 mod r388_get_api_catalog_version_serves_the_catalog_as_each_patch_left_it_b4_2 {
     use super::*;
 
@@ -600,9 +579,7 @@ mod r388_get_api_catalog_version_serves_the_catalog_as_each_patch_left_it_b4_2 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R164 — "Where L6's ban list lives"
-// ---------------------------------------------------------------------------
 
 /// A ban held as server state: the catalog data is untouched, only the handle answers differently.
 fn with_ban(catalog: &Catalog, banned_id: &str) -> Catalog {

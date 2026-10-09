@@ -40,7 +40,6 @@ fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
 }
 
-/// The fake store behind the test app (`Db::Fake`).
 fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
     match &app.db {
         Db::Fake(data) => Arc::clone(data),
@@ -79,7 +78,6 @@ fn encode_query(raw: &str) -> String {
         .collect()
 }
 
-/// A listener over a test app, and the port it serves.
 struct Listening {
     port: u16,
     server: tokio::task::JoinHandle<()>,
@@ -144,7 +142,6 @@ async fn listen_with(matches: usize) -> (Listening, Vec<String>) {
     (Listening { port, server }, tokens)
 }
 
-/// One active player in `match-1`, whose socket the registry keeps open.
 async fn listen() -> (Listening, String) {
     let (listening, tokens) = listen_with(1).await;
     let token = tokens.into_iter().next().expect("profile-1's token");
@@ -173,14 +170,12 @@ impl Opened {
     }
 }
 
-/// A WebSocket client: the handshake, masked text frames out, frames in (RFC 6455).
 struct Client {
     stream: TcpStream,
     /// The `Sec-WebSocket-Protocol` the server echoed, if any.
     protocol: Option<String>,
 }
 
-/// Opens `ws://127.0.0.1:<port>/ws/match?<query>`, offering `protocols`.
 async fn open(port: u16, query: &str, protocols: &[&str]) -> Opened {
     let mut stream = TcpStream::connect(("127.0.0.1", port))
         .await
@@ -228,7 +223,6 @@ async fn open(port: u16, query: &str, protocols: &[&str]) -> Opened {
     Opened::Open(Client { stream, protocol })
 }
 
-/// The query that names `match-1` and carries `token`.
 fn query(match_id: &str, token: &str) -> String {
     format!("matchId={}&token={}", encode_query(match_id), encode_query(token))
 }
@@ -313,7 +307,6 @@ impl Client {
         }
     }
 
-    /// The next text frame, parsed; `None` once the socket closes or stays silent for `wait`.
     async fn next_message(&mut self, wait: Duration) -> Option<Value> {
         loop {
             match self.read_frame(wait).await {
@@ -338,6 +331,7 @@ impl Client {
     }
 
     /// Whether the socket is still open after `wait`: every frame that arrives meanwhile is read (the
+    /// `malformed` answer among them), and none of them may be a close or the end of the stream.
     async fn still_open_after(&mut self, wait: Duration) -> bool {
         let deadline = tokio::time::Instant::now() + wait;
         loop {
@@ -354,7 +348,6 @@ impl Client {
     }
 }
 
-/// One read off the socket.
 enum Read {
     Frame(u8, Vec<u8>),
     /// Nothing arrived in the time given.
@@ -363,7 +356,7 @@ enum Read {
     Ended,
 }
 
-/// TS's `vi.waitFor` around an open: a slot is freed when the server has seen its socket close,
+/// A slot is freed when the server has seen its socket close,
 /// which may land a moment after the client saw it.
 async fn open_when_free(port: u16, query: &str, protocols: &[&str]) -> Client {
     for _ in 0..50 {
@@ -473,7 +466,7 @@ mod the_token_on_the_handshake {
             .await
             .open();
         assert_eq!(client.protocol.as_deref(), Some(WS_SUBPROTOCOL));
-        // attach("match-1", "profile-1", …): profile-1 holds seat p1 of match-1.
+        // profile-1 holds seat p1 of match-1.
         let view = client.first_view().await;
         assert_eq!(view["viewer"], "p1");
     }
@@ -482,7 +475,7 @@ mod the_token_on_the_handshake {
     async fn reads_the_token_from_the_query_and_never_from_the_protocol_header() {
         let _serial = SERIAL.lock().await;
         let (listening, token) = listen().await;
-        // A token offered beside the protocol name is not a credential any more: the socket is
+        // A token offered beside the protocol name is not a credential: the socket is
         // refused as one with no token at all, and the token is never echoed.
         let mut client = open(listening.port, "matchId=match-1", &[WS_SUBPROTOCOL, &token])
             .await

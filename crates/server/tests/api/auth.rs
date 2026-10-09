@@ -862,8 +862,8 @@ mod r160_r145_the_identical_sign_up_and_sign_in_error {
         assert_eq!(malformed.0, 400);
         assert_ne!(malformed.1, refused.1);
 
-        // 4. A server whose provider brokers no password (every Supabase deployment): 503, saying
-        //    where sign-in actually happens (§9.2).
+        // A provider that brokers no password (every Supabase deployment): 503, saying where
+        // sign-in happens (§9.2).
         let h = Harness::new().await;
         let disabled = sign_in(&h.app().await, "x@y.test", "p").await;
         assert_eq!(disabled.0, 503);

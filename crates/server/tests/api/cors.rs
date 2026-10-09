@@ -63,13 +63,11 @@ const APP: &str = "http://localhost:5173";
 const OTHER: &str = "https://play.jackioh.test";
 const ALLOWED: [&str; 2] = [APP, OTHER];
 
-/// Never in the list.
 const STRANGER: &str = "https://evil.example";
 
 const PATH: &str = "/api/queue/population";
 const BODY: &str = r#"{"population":3}"#;
 
-/// One response, read whole.
 struct Reply {
     status: u16,
     headers: HeaderMap,
@@ -200,7 +198,6 @@ mod r162_the_cors_contract_for_the_rest_surface_section_9_1_section_9_2_section_
             second.header("access-control-allow-origin").as_deref(),
             Some(OTHER)
         );
-        // Never the wildcard, whichever origin asked.
         for response in [&first, &second] {
             assert_ne!(
                 response.header("access-control-allow-origin").as_deref(),
@@ -276,7 +273,6 @@ mod r162_the_cors_contract_for_the_rest_surface_section_9_1_section_9_2_section_
             })
             .await;
 
-        // The handler ran for the stranger too — the request was not refused by the CORS layer.
         assert_eq!(layer.calls(), 2);
         // The *ordinary* response: byte for byte what the allowed origin got, minus the headers.
         assert_eq!(unlisted.status, 200);
@@ -286,7 +282,6 @@ mod r162_the_cors_contract_for_the_rest_surface_section_9_1_section_9_2_section_
             unlisted.header("content-type").as_deref(),
             Some("application/json")
         );
-        // …and no CORS headers at all, which is what the browser needs in order to refuse it.
         assert_eq!(unlisted.header("access-control-allow-origin"), None);
         assert_eq!(unlisted.header("access-control-allow-credentials"), None);
     }
@@ -320,7 +315,6 @@ mod r162_the_cors_contract_for_the_rest_surface_section_9_1_section_9_2_section_
         assert_ne!(unlisted.status, 403);
         assert_eq!(unlisted.header("access-control-allow-origin"), None);
         assert_eq!(unlisted.header("access-control-allow-methods"), None);
-        // Neither preflight reached the router.
         assert_eq!(layer.calls(), 0);
     }
 
@@ -328,7 +322,6 @@ mod r162_the_cors_contract_for_the_rest_surface_section_9_1_section_9_2_section_
     async fn r162_leaves_a_caller_with_no_origin_at_all_completely_alone_section_9_1_not_a_browser() {
         let layer = wrapped(&ALLOWED);
 
-        // PREMISE: the same request *with* an allowed origin is decorated.
         let decorated = layer
             .send(Init {
                 origin: Some(APP),
@@ -364,7 +357,6 @@ mod r162_the_cors_contract_for_the_rest_surface_section_9_1_section_9_2_section_
         assert!(is_origin_allowed(&origins, Some(OTHER)));
         assert!(is_origin_allowed(&origins, Some(APP)));
         assert!(!is_origin_allowed(&origins, Some(STRANGER)));
-        // An absent origin is not "allowed"; it is simply not a browser (see the test above).
         assert!(!is_origin_allowed(&origins, None));
 
         // A hand-written PUBLIC_ORIGINS may carry a trailing slash; a browser never sends one.
@@ -411,7 +403,6 @@ mod r162_the_cors_contract_for_the_rest_surface_section_9_1_section_9_2_section_
         assert_eq!(unlisted.header("access-control-allow-origin"), None);
         assert_eq!(unlisted.header("vary").as_deref(), Some("Origin"));
 
-        // And a caller with no Origin at all, which is every non-browser client.
         let anonymous = layer.send(Init::default()).await;
         assert_eq!(anonymous.status, 200);
         assert_eq!(anonymous.header("vary").as_deref(), Some("Origin"));

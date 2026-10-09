@@ -52,7 +52,6 @@ fn give_up_ms() -> i64 {
     SERIES_START_GIVE_UP_SECONDS * 1000
 }
 
-/// One store call in its own transaction.
 macro_rules! store {
     ($app:expr, $t:ident => $call:expr) => {{
         let mut $t = $app
@@ -74,7 +73,6 @@ fn to_json<T: serde::Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("a serialisable value")
 }
 
-/// The fake store behind the test app (`Db::Fake`).
 fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
     match &app.db {
         Db::Fake(data) => Arc::clone(data),
@@ -82,7 +80,6 @@ fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
     }
 }
 
-/// One table of the fake store: rows as JSON.
 async fn table(app: &App, pick: impl Fn(&FakeData) -> Value) -> Vec<Value> {
     let data = fake(app);
     let data = data.lock().await;
@@ -123,7 +120,6 @@ impl Clock {
     }
 }
 
-/// Every timer due fires, and the woken tasks get to run.
 async fn advance(ms: i64) {
     tokio::time::advance(Duration::from_millis(
         u64::try_from(ms).expect("time moves forward"),
@@ -170,7 +166,6 @@ impl Logs {
         (logs, guard)
     }
 
-    /// Whether any line names `event`.
     fn has(&self, event: &str) -> bool {
         let bytes = self.0.lock().expect("the log buffer").clone();
         String::from_utf8_lossy(&bytes)
@@ -191,7 +186,6 @@ fn event_of(entry: &Value) -> Option<&str> {
 
 // Trios, processes and the series
 
-/// Every playable catalog id, in `catalog.json` order.
 fn playable() -> Vec<String> {
     jackioh_cards::register_all();
     jackioh_cards::CATALOG
@@ -296,7 +290,6 @@ fn as_start(row: &Value) -> Value {
 }
 
 impl Process {
-    /// The starts this process made.
     async fn started(&self) -> Vec<Value> {
         started(&self.app)
             .await
@@ -307,7 +300,6 @@ impl Process {
     }
 }
 
-/// Starts the series, and reads the server's clock off the row it wrote.
 async fn begin(process: &mut Process) -> Value {
     let at = tokio::time::Instant::now();
     let mut tx = process.app.db.begin(None).await.expect("store.tx");
@@ -478,7 +470,6 @@ mod r263_a_series_survives_a_restart {
             vec![json!(FIRST_MATCH), json!(FIRST_MATCH)]
         );
 
-        // Running now: the next sweeps do nothing.
         advance(grace_ms()).await;
         assert_eq!(sweep(&a.app).await, nothing_swept());
         assert_eq!(a.started().await.len(), 1);
@@ -537,7 +528,6 @@ mod r263_a_series_survives_a_restart {
         // The first process accepts both picks and dies as it starts the match.
         fail_on(&a.app, "matches.create", "the process exited").await;
         let view = pick_both(&a, [2, 2]).await;
-        // The picks were committed; the answer still names the game.
         assert_eq!(view["status"], "playing");
         assert_eq!(view["currentMatchId"], FIRST_MATCH);
         assert!(logs.has("series.start_failed"));
@@ -580,10 +570,8 @@ mod r263_a_series_survives_a_restart {
         finish_game(&b, ALICE).await.expect("game 1's result");
         let after_game_1 = row(&b.app).await;
         assert_eq!(after_game_1["status"], "picking");
-        // A new id.
         assert_ne!(after_game_1["nextMatchId"], FIRST_MATCH);
 
-        // The players pick through the new process and game 2 starts there.
         let game_2 = pick_both(&b, [1, 1]).await;
         assert_eq!(game_2["currentMatchId"], after_game_1["nextMatchId"]);
         let second = b.started().await.remove(0);

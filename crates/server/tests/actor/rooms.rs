@@ -42,7 +42,6 @@ const AT: i64 = 1_700_000_000_000;
 /// test's seed is never another's count.
 static ROOMS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
-/// One store call in its own transaction.
 macro_rules! store {
     ($app:expr, $t:ident => $call:expr) => {{
         let mut $t = $app
@@ -64,7 +63,6 @@ fn to_json<T: serde::Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("a serialisable value")
 }
 
-/// The fake store behind the test app (`Db::Fake`).
 fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
     match &app.db {
         Db::Fake(data) => Arc::clone(data),
@@ -72,7 +70,6 @@ fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
     }
 }
 
-/// One table of the fake store: rows as JSON.
 async fn table(app: &App, pick: impl Fn(&FakeData) -> Value) -> Vec<Value> {
     let data = fake(app);
     let data = data.lock().await;
@@ -129,12 +126,10 @@ fn deck_at(n: usize) -> Vec<String> {
     playable()[n * size..(n + 1) * size].to_vec()
 }
 
-/// One legal deck.
 fn deck() -> Vec<String> {
     deck_at(0)
 }
 
-/// Saves a deck for a profile straight into the store.
 async fn save_deck(app: &Arc<App>, profile_id: &str, id: &str, cards: &[String], name: &str) {
     let outcome = store!(app, t => t
         .decks_upsert(
@@ -185,7 +180,6 @@ struct Harness {
 }
 
 async fn harness(e2e: bool) -> Harness {
-    // The empty store either way, end-to-end mode only when asked.
     let app = test_app_with(TestAppOptions {
         e2e,
         skip_fixtures: true,
@@ -241,7 +235,6 @@ impl Harness {
     }
 }
 
-/// Creates a room and joins it, returning the code and the seed of the match the join started.
 async fn play_through(h: &Harness, body: Value, join_body: Value) -> (String, String) {
     let (status, created) = h.create(body).await;
     assert_eq!(status, 200, "{created}");
@@ -414,7 +407,6 @@ mod r149_the_bounded_room_code_mint {
     #[tokio::test]
     async fn r149_retries_past_a_code_that_is_already_in_use_and_mints_the_next_one() {
         let _turn = ROOMS.lock().await;
-        // The first two attempts collide with the room the host already opened; the third is free.
         let _codes = script_room_codes(&["AAA234", "AAA234", "AAA234", "BBB234"]);
         let h = harness(false).await;
 
@@ -431,7 +423,6 @@ mod r149_the_bounded_room_code_mint {
     async fn r149_gives_up_after_a_bounded_number_of_collisions_and_says_no_code_is_available() {
         let _turn = ROOMS.lock().await;
         let log = record_logs();
-        // Every attempt mints the same code, which the host's room already holds.
         let _codes = script_room_codes(&["AAA234"]);
         let h = harness(false).await;
         let (status, first) = h.create(json!({})).await;
@@ -533,7 +524,6 @@ mod the_hosts_deck_is_frozen_into_the_room {
         assert_eq!(save(&h, &h.host, &host_deck(), &a).await, 200);
         assert_eq!(save(&h, &h.guest, &guest_deck(), &b).await, 200);
 
-        // 1. The host opens a room on the deck. The freeze happens here.
         let (status, created) =
             create(&h.app, &h.host, json!({ "mode": "bo1", "deckId": host_deck() })).await;
         assert_eq!(status, 200, "{created}");
@@ -541,7 +531,6 @@ mod the_hosts_deck_is_frozen_into_the_room {
         let rooms = table(&h.app, |data| json!(data.tables.rooms)).await;
         assert_eq!(rooms.last().expect("the room")["hostDeck"], json!(a));
 
-        // 2. The swap, while the room sits open waiting for somebody to type the code.
         assert_eq!(save(&h, &h.host, &host_deck(), &c).await, 200);
         // PREMISE: the save landed — otherwise there is nothing that could leak into the match.
         let saved =
@@ -551,7 +540,6 @@ mod the_hosts_deck_is_frozen_into_the_room {
         let rooms = table(&h.app, |data| json!(data.tables.rooms)).await;
         assert_eq!(rooms.last().expect("the room")["hostDeck"], json!(a));
 
-        // 3. The guest joins on their own deck, so each seat is identifiable.
         let (status, joined) = join(
             &h.app,
             &h.guest,
@@ -563,7 +551,6 @@ mod the_hosts_deck_is_frozen_into_the_room {
 
         assert_eq!(deck_in_match_for(&h, HOST).await, Some(json!(a)));
         assert_eq!(deck_in_match_for(&h, GUEST).await, Some(json!(b)));
-        // The substitute deck reached no seat at all.
         let all_started = Value::Array(started(&h.app).await);
         assert!(!all_started.to_string().contains(c[0].as_str()));
     }
@@ -686,7 +673,6 @@ mod r264_rooms_carry_a_mode {
         // Refused before anything was claimed: the room is still open to the right choice.
         assert_eq!(h.rooms().await[0]["guestProfileId"], Value::Null);
 
-        // An All Random room names its own mode the same way.
         let random = create_in(&h, json!({ "mode": "random" })).await;
         let (status, wrong) = join_with(&h, &random, json!({ "mode": "bo1", "deckId": uuid(2) })).await;
         assert_eq!(status, 409);
