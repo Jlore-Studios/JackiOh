@@ -21,6 +21,16 @@
 //! oracle but the Rust engine's own record. `--seeds N` (at most 200) records plain seeds 1..=N and
 //! handicapped seeds 201..=200+N/5 with them, so the default 200 is §13.1's 240 games and 150 is the
 //! brief's smaller fallback (1–150 and 201–230).
+//!
+//! `record --seeds A..B [--force ids] --out <path>` plays the golden seeds A..=B (each within 1–240,
+//! so the decks, game seeds and policy streams are §13.1's) with `bless`'s own recorder into a file of
+//! its own, and never touches `games.jsonl`. Each id of `--force` goes into both decks, in the first
+//! slots, in place of the deck's own cards from the end (a deck keeps its size and holds no card
+//! twice). A token cannot be in a deck (§2.6 L3), so one is forced through the card whose `refs` name
+//! it (R279), the smallest such id of a card that can be in a deck; a token no deck card names, a card
+//! of a set that has not shipped (R1420) and an id the catalog lacks are refused. The file replays
+//! with `check --file` on this build or on any other: `luau diff` records with it and has a parent
+//! build replay it.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -31,13 +41,13 @@ use rayon::prelude::*;
 use serde::Serialize;
 use serde_json::{Value, json};
 
-use jackioh_cards::register_all;
+use jackioh_cards::{CATALOG, register_all};
 use jackioh_engine::replay::{canonical, fnv1a32_utf16};
 use jackioh_engine::rng::Rng;
 use jackioh_engine::subsystems::choose_action;
 use jackioh_engine::{
     Action, CreateGameArgs, FoldArgs, GameEvent, GameOverReason, GameState, Handicap, PerPlayerOpt, PlayerId,
-    Winner, begin_game, create_game, fold, hash_state, legal_actions, reduce, view_for,
+    Tag, Winner, begin_game, create_game, deckable, fold, hash_state, legal_actions, reduce, view_for,
 };
 
 use crate::fuzz::{
@@ -50,7 +60,8 @@ use crate::fuzz::{
 // ---------------------------------------------------------------------------------------------
 
 /// §13.3: the file `check` reads and `bless` writes, by default.
-const GAMES_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../engine/tests/golden/games.jsonl");
+pub(crate) const GAMES_PATH: &str =
+    concat!(env!("CARGO_MANIFEST_DIR"), "/../engine/tests/golden/games.jsonl");
 
 /// §13.3: the hotseat fixture, folded by `check` too.
 const HOTSEAT: &str = include_str!("../../engine/tests/golden/01-hotseat-full-game.json");
@@ -82,7 +93,7 @@ const STEP_CAP: usize = 3000;
 // The command line (SURFACE §12)
 // ---------------------------------------------------------------------------------------------
 
-/// `golden check`, `golden bless [--seeds N]`.
+/// `golden check`, `golden bless [--seeds N]`, `golden record --seeds A..B [--force ids] --out <path>`.
 #[derive(clap::Args)]
 pub struct Args {
     #[command(subcommand)]
@@ -95,6 +106,8 @@ enum Command {
     Check(CheckArgs),
     /// Rewrite games.jsonl from the Rust engine. Only after an intended rules change: v0.3.0 has none.
     Bless(BlessArgs),
+    /// Record golden seeds with cards forced into both decks, into another file.
+    Record(RecordArgs),
 }
 
 #[derive(clap::Args)]
@@ -117,11 +130,25 @@ struct BlessArgs {
     file: PathBuf,
 }
 
+#[derive(clap::Args)]
+struct RecordArgs {
+    /// The golden seeds to play, first..=last (each within 1–240).
+    #[arg(long, value_name = "A..B")]
+    seeds: String,
+    /// Card ids to put into both decks; a token is forced through a card whose `refs` name it (R279).
+    #[arg(long, value_name = "IDS", value_delimiter = ',')]
+    force: Vec<String>,
+    /// The file to write.
+    #[arg(long, value_name = "PATH")]
+    out: PathBuf,
+}
+
 pub fn run(args: Args) -> Result<()> {
     register_all();
     match args.command {
         Command::Check(check) => run_check(&check),
         Command::Bless(bless) => run_bless(&bless),
+        Command::Record(record) => run_record(&record),
     }
 }
 
@@ -601,7 +628,11 @@ fn hashes_of(state: &GameState, events: &[GameEvent]) -> Hashes {
 /// Plays seed k's game as `record.ts` does (fuzz.test.ts's `playGame` loop, nonce `golden-<n>`,
 /// stopped at the game's end or STEP_CAP) and records it.
 fn record_seed(k: u32) -> Result<GameLine> {
-    let spec = spec_for_seed(k)?;
+    record_game(spec_for_seed(k)?)
+}
+
+/// Plays `spec`'s game and records it: `record_seed`'s body, so `bless` and `record` share one recorder.
+fn record_game(spec: GameSpec) -> Result<GameLine> {
     let args = CreateGameArgs {
         seed: spec.seed.clone(),
         decks: spec.decks.clone(),
@@ -699,4 +730,177 @@ fn run_bless(args: &BlessArgs) -> Result<()> {
         args.file.display()
     );
     Ok(())
+}
+
+// ---------------------------------------------------------------------------------------------
+// record: the same games with cards forced into both decks
+// ---------------------------------------------------------------------------------------------
+
+/// `--seeds A..B` as the seeds A through B.
+fn parse_seed_range(text: &str) -> Result<Vec<u32>> {
+    let bad = || anyhow!("--seeds takes first..last, two numbers with \"..\" between them, not {text:?}");
+    let (first, last) = text.split_once("..").ok_or_else(bad)?;
+    let first: u32 = first.trim().parse().map_err(|_| bad())?;
+    let last: u32 = last.trim().parse().map_err(|_| bad())?;
+    if first > last {
+        bail!("--seeds {text}: {first} is after {last}");
+    }
+    Ok((first..=last).collect())
+}
+
+/// What `--force` puts in a deck: each id as it is, or for a token the card whose `refs` name it
+/// (R279); no id twice, in the order given.
+pub(crate) fn resolve_force(ids: &[String]) -> Result<Vec<String>> {
+    let mut forced: Vec<String> = Vec::new();
+    for id in ids {
+        let def = CATALOG
+            .get(id)
+            .ok_or_else(|| anyhow!("--force {id}: not in the catalog"))?;
+        let resolved = if def.token || def.tags.contains(&Tag::Token) {
+            CATALOG
+                .iter()
+                .filter(|(_, carrier)| {
+                    deckable(carrier) && carrier.refs.as_ref().is_some_and(|refs| refs.contains(id))
+                })
+                .map(|(carrier_id, _)| carrier_id)
+                .min()
+                .cloned()
+                .ok_or_else(|| {
+                    anyhow!(
+                        "--force {id}: no deckable card's refs name this token (R279: it comes from a pool \
+                         or a rule); force the card that makes it"
+                    )
+                })?
+        } else if deckable(def) {
+            id.clone()
+        } else {
+            bail!("--force {id}: {:?} has not shipped (R1420)", def.set);
+        };
+        if !forced.contains(&resolved) {
+            forced.push(resolved);
+        }
+    }
+    Ok(forced)
+}
+
+/// `deck` with `forced` in its first slots and as many of its own cards after them as fit: the same
+/// size, no card twice, no rng (`begin_game` shuffles the library).
+fn force_into(deck: &[String], forced: &[String]) -> Vec<String> {
+    forced
+        .iter()
+        .chain(deck.iter().filter(|id| !forced.contains(id)))
+        .take(deck.len())
+        .cloned()
+        .collect()
+}
+
+/// Seed k's game with `forced` in both decks.
+fn record_forced(k: u32, forced: &[String]) -> Result<GameLine> {
+    let mut spec = spec_for_seed(k)?;
+    for deck in [&mut spec.decks.0, &mut spec.decks.1] {
+        if forced.len() > deck.len() {
+            bail!(
+                "{}: {} forced cards do not fit a deck of {}",
+                spec.seed,
+                forced.len(),
+                deck.len()
+            );
+        }
+        *deck = force_into(deck, forced);
+    }
+    record_game(spec)
+}
+
+/// What `record_seeds` wrote.
+pub(crate) struct Recorded {
+    pub games: usize,
+    pub steps: usize,
+    /// The cards that went into both decks, tokens resolved to their carriers.
+    pub forced: Vec<String>,
+}
+
+/// Plays each of `seeds` with `force` in both decks and writes the lines, in seed order, to `out`.
+pub(crate) fn record_seeds(seeds: &[u32], force: &[String], out: &Path) -> Result<Recorded> {
+    let forced = resolve_force(force)?;
+    let games: Vec<GameLine> = seeds
+        .par_iter()
+        .map(|&k| record_forced(k, &forced))
+        .collect::<Result<Vec<_>>>()?;
+    let steps: usize = games.iter().map(|game| game.steps.len()).sum();
+
+    let mut text = String::new();
+    for game in &games {
+        text.push_str(&serde_json::to_string(game)?);
+        text.push('\n');
+    }
+    fs::write(out, text).with_context(|| format!("writing {}", out.display()))?;
+    Ok(Recorded {
+        games: games.len(),
+        steps,
+        forced,
+    })
+}
+
+fn run_record(args: &RecordArgs) -> Result<()> {
+    let seeds = parse_seed_range(&args.seeds)?;
+    let recorded = record_seeds(&seeds, &args.force, &args.out)?;
+    let forced = if recorded.forced.is_empty() {
+        "none".to_string()
+    } else {
+        recorded.forced.join(", ")
+    };
+    println!(
+        "golden record: wrote {} games ({} steps) to {}, forced: {forced}",
+        recorded.games,
+        recorded.steps,
+        args.out.display()
+    );
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ids(ids: &[&str]) -> Vec<String> {
+        ids.iter().map(|id| id.to_string()).collect()
+    }
+
+    #[test]
+    fn a_seed_range_is_inclusive_and_runs_forward() {
+        assert_eq!(parse_seed_range("1..3").unwrap(), vec![1, 2, 3]);
+        assert_eq!(parse_seed_range("5..5").unwrap(), vec![5]);
+        for bad in ["3..1", "1-3", "x..3", "1.."] {
+            assert!(parse_seed_range(bad).is_err(), "{bad}");
+        }
+    }
+
+    #[test]
+    fn a_forced_card_takes_the_first_slots_and_the_deck_keeps_its_size() {
+        assert_eq!(
+            force_into(&ids(&["a", "b", "c", "d", "e"]), &ids(&["c", "x"])),
+            ids(&["c", "x", "a", "b", "d"])
+        );
+    }
+
+    #[test]
+    fn a_token_is_forced_through_the_first_card_by_id_whose_refs_name_it() {
+        // classic-032, core-062 and core-098 all name the Felinor token; the smallest id carries it,
+        // and a card named twice is forced once.
+        assert_eq!(
+            resolve_force(&ids(&["core-t-felinor", "core-090"])).unwrap(),
+            ids(&["classic-032", "core-090"])
+        );
+        assert_eq!(
+            resolve_force(&ids(&["core-t-sheep", "core-041"])).unwrap(),
+            ids(&["core-041"])
+        );
+    }
+
+    #[test]
+    fn a_card_nothing_can_carry_into_a_deck_is_refused() {
+        for id in ["core-t-coin", "no-such-card"] {
+            assert!(resolve_force(&ids(&[id])).is_err(), "{id}");
+        }
+    }
 }
