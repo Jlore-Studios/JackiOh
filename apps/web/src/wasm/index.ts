@@ -329,6 +329,8 @@ export type AiDeckRequest = StreamAt & {
   boost?: { ids: readonly string[]; by: number };
   /** R1370: a set at least `AI_DECK.leanMinShare` of the deck comes from; absent, none. */
   leanSet?: SetName;
+  /** R1390: the sets the draw never deals from; default the AI's soft gate, [] for a human's random deck. */
+  gatedSets?: readonly SetName[];
 };
 
 export function buildAiDeck(request: AiDeckRequest): { deck: string[]; rngCursor: number } {
