@@ -4329,12 +4329,22 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "cognition",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "37945815529",
+            "tier": "strong"
+          }
+        ],
         "sha": "29e0d1b5e5a8180e8b15d15e7e9f40cddf9d5a5a",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "63": {
