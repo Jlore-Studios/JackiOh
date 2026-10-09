@@ -10815,5 +10815,260 @@
       "keywords": [],
       "text": "End of turn: Upgrade 2 random cards in your hand."
     }
+  },
+  "meditative-027": {
+    "id": "meditative-027",
+    "index": "27",
+    "name": "Clip-Farming Lawyer",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "core-t-coin"
+    ],
+    "params": [
+      {
+        "key": "coins",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 33,
+    "base": {
+      "attack": 6,
+      "health": 5,
+      "keywords": [],
+      "text": "End of turn: Unlock a random zone. If you do, add {coins|Coin|Coins} to your hand."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 10,
+      "keywords": [],
+      "text": "End of turn: Unlock a random zone. If you do, add {coins|Coin|Coins} to your hand. If no zone is Locked, Lock a random enemy zone."
+    }
+  },
+  "meditative-028": {
+    "id": "meditative-028",
+    "index": "28",
+    "name": "Shade-iris",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "meditative-028-1"
+    ],
+    "params": [
+      {
+        "key": "curses",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 19,
+    "base": {
+      "attack": 7,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Shuffle {curses|Ancient Curse|Ancient Curses} into your opponent's deck."
+    },
+    "radiant": {
+      "attack": 14,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Shuffle {curses|Ancient Curse|Ancient Curses} into your opponent's deck."
+    }
+  },
+  "meditative-028-1": {
+    "id": "meditative-028-1",
+    "index": "28.1",
+    "name": "Ancient Curse",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Common",
+    "token": true,
+    "cost": 2,
+    "params": [
+      {
+        "key": "damage",
+        "base": 7,
+        "radiant": 7,
+        "better": "down",
+        "step": 2,
+        "min": 1
+      }
+    ],
+    "loc": 21,
+    "base": {
+      "keywords": [],
+      "text": "Cast on draw: Take {damage} damage."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce\nCast on draw: Take {damage} damage."
+    }
+  },
+  "meditative-029": {
+    "id": "meditative-029",
+    "index": "29",
+    "name": "Forbiddenous Factory",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [
+      "Plague"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "meditative-028-1"
+    ],
+    "params": [
+      {
+        "key": "counters",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "curses",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 29,
+    "base": {
+      "keywords": [],
+      "text": "Cry: Place {counters|Plague Counter|Plague Counters} on this.\nEnd of turn: Spend a Plague Counter from this to shuffle {curses|Ancient Curse|Ancient Curses} into your opponent's deck."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Cry: Place {counters|Plague Counter|Plague Counters} on this.\nEnd of turn: Spend a Plague Counter from this to shuffle {curses|Ancient Curse|Ancient Curses} into your opponent's deck."
+    }
+  },
+  "meditative-030": {
+    "id": "meditative-030",
+    "index": "30",
+    "name": "Fickle E-Kitten",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "meditative-030-1"
+    ],
+    "loc": 46,
+    "base": {
+      "attack": 3,
+      "health": 4,
+      "keywords": [],
+      "text": "Start of turn: If your opponent has a more expensive permanent than you, they gain control of this. Otherwise, shuffle a Love Bomb into your deck."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 8,
+      "keywords": [],
+      "text": "Start of turn: If your opponent has a more expensive permanent than you and a larger deck, they gain control of this. Otherwise, shuffle a Radiant Love Bomb into your deck."
+    }
+  },
+  "meditative-030-1": {
+    "id": "meditative-030-1",
+    "index": "30.1",
+    "name": "Love Bomb",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "token": true,
+    "cost": 1,
+    "params": [
+      {
+        "key": "heal",
+        "base": 7,
+        "radiant": 14,
+        "better": "up",
+        "step": 2,
+        "min": 1
+      }
+    ],
+    "loc": 21,
+    "base": {
+      "keywords": [],
+      "text": "Cast on draw: Heal your hero {heal}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Cast on draw: Heal your hero {heal}."
+    }
+  },
+  "meditative-036": {
+    "id": "meditative-036",
+    "index": "36",
+    "name": "CN Peptides",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "CN"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "times",
+        "base": 7,
+        "radiant": 10,
+        "better": "up",
+        "step": 2,
+        "min": 1
+      }
+    ],
+    "loc": 45,
+    "base": {
+      "keywords": [],
+      "text": "Choose a Unit. 50% chance: Buff it {times|time|times}. Otherwise, destroy it."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Lucky",
+          "n": 1
+        }
+      ],
+      "text": "Lucky 1\nChoose a Unit. 50% chance: Buff it {times|time|times}. Otherwise, destroy it."
+    }
   }
 }

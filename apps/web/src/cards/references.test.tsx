@@ -74,6 +74,16 @@ describe("R279 the names a text links", () => {
     }
   }, 30_000);
 
+  it("R903 'Coin' and 'Coins' name The Coin, and a lower-case coin names nothing", () => {
+    const refs = [def("core-t-coin")];
+    expect(findRefs("add a Coin to your hand", refs).map((match) => match.id)).toEqual(["core-t-coin"]);
+    expect(findRefs("add Coins to your hand", refs).map((match) => match.id)).toEqual(["core-t-coin"]);
+    expect(findRefs("shuffle The Coin into each player's deck", refs).map((match) => match.id)).toEqual([
+      "core-t-coin",
+    ]);
+    expect(findRefs("flip a coin", refs)).toEqual([]);
+  });
+
   it("R279 with no catalog to read, a name is plain text", () => {
     const { container } = render(<CardFace face={face("core-090", false)} layout="full" />);
     expect(container.querySelector(".cf-ref")).toBeNull();

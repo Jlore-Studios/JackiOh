@@ -1252,6 +1252,30 @@
     "classicplus-t-ai-10": { // Fine-Tuning
       cast: { voice: "sapi-synth-deep", text: "Adjusting weights. Improving slightly." },
     },
+    "meditative-027": { // Clip-Farming Lawyer
+      play: { voice: "hustler", text: "Objection! That zone is mine now." },
+      death: { voice: "hustler", text: "Case dismissed. No refunds." },
+    },
+    "meditative-028": { // Shade-iris
+      play: { voice: "crone", text: "A little gift for your deck." },
+      death: { voice: "crone", text: "The curse outlives me." },
+    },
+    "meditative-028-1": { // Ancient Curse
+      cast: { voice: "alien", text: "You should not have drawn me." },
+    },
+    "meditative-029": { // Forbiddenous Factory
+      cast: { voice: "robot", text: "Production line online. Shipping curses." },
+    },
+    "meditative-030": { // Fickle E-Kitten
+      play: { voice: "cat", text: "Pet me. Or don't. Whatever." },
+      death: { voice: "cat", text: "Nine lives, zero loyalty." },
+    },
+    "meditative-030-1": { // Love Bomb
+      cast: { voice: "diva", text: "Mwah! You're welcome, darling." },
+    },
+    "meditative-036": { // CN Peptides
+      cast: { voice: "prof", text: "Totally safe. Probably. Fifty fifty." },
+    },
   },
   emotes: {
     vanilla: {

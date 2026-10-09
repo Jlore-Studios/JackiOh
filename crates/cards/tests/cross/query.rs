@@ -51,10 +51,12 @@ fn sorted(mut values: Vec<String>) -> Vec<String> {
 
 /// Every token of every set (B2.1's census itself is catalog.rs's to prove).
 /// Every token a pool may name — all of them but Glitch, which is in none (R674).
+/// Every token of the sets that ship (R1420): like `non_token`, a pool that names no set reaches
+/// no other, so the token lists a pool answers hold no Meditative card until the set ships.
 fn token_ids() -> Vec<String> {
     CATALOG
         .values()
-        .filter(|def| def.token && def.id != GLITCH_DEF_ID)
+        .filter(|def| def.token && def.id != GLITCH_DEF_ID && set_is_open(def.set))
         .map(|def| def.id.clone())
         .collect()
 }

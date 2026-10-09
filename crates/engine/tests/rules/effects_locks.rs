@@ -440,7 +440,7 @@ mod r900_unlock_a_random_locked_zone_meditative_27 {
 
     #[test]
     fn r900_unlocks_one_of_the_locked_zones_of_either_side_and_row_from_the_match_rng_and_replays_to_the_same_zone()
-    {
+     {
         let all = ["p1:units:2", "p2:units:4", "p2:backrow:5"];
         let mut opened: Vec<String> = Vec::new();
         for n in 0..24 {
@@ -489,8 +489,7 @@ mod r900_unlock_a_random_locked_zone_meditative_27 {
     fn r900_a_scope_narrows_the_pick_to_its_side_and_rows() {
         for n in 0..8 {
             let seed = format!("unlock-random-scope-{n}");
-            let (locked, _, draws) =
-                unlock_once(&seed, json!({ "side": "enemy", "rows": ["backrow"] }));
+            let (locked, _, draws) = unlock_once(&seed, json!({ "side": "enemy", "rows": ["backrow"] }));
             assert_eq!(locked, vec!["p1:units:2", "p2:units:4"]);
             assert_eq!(draws, 1);
         }

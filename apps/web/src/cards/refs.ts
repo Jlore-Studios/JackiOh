@@ -9,6 +9,7 @@
 //
 // A name the text calls Radiant ("a Radiant CN-Virus", "five Radiant Rush Tokens") points at that
 // card's Radiant face; any other points at its base face ("a base Right-house defender").
+// R903 adds one alias: "Coin" names The Coin.
 //
 // Presentation only (CLAUDE.md rule 7): the faces a reference shows are printed catalog faces,
 // public by §5.1.
@@ -23,13 +24,17 @@ const PLURAL = "s";
 /** The word before a name that makes it point at the Radiant face. */
 const RADIANT_WORD = "Radiant ";
 
+/** R903: one named alias — "Coin" names The Coin, which M #27's texts call by the short name. */
+const ALIASES: Readonly<Record<string, readonly string[]>> = { "The Coin": ["Coin"] };
+
 /**
  * The names a text may call a card by: its name, and its name before a parenthesis (a Chinese name's
  * full-width one too, "混沌召唤（核心版）", R1301).
  */
 export function namesOf(def: Pick<CardDef, "name">): string[] {
   const bare = def.name.replace(/\s*[(（].*[)）]\s*$/, "");
-  return bare === def.name ? [def.name] : [def.name, bare];
+  const out = bare === def.name ? [def.name] : [def.name, bare];
+  return [...out, ...(ALIASES[def.name] ?? [])];
 }
 
 function isWordChar(char: string | undefined): boolean {

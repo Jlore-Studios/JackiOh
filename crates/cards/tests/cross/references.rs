@@ -8,7 +8,8 @@
 //! reads the same rule: a card's name, or its name before a parenthesis ("Call to Chaos (Core
 //! Edition)" is named as "Call to Chaos"), alone or with a plural "s", standing as whole words — the
 //! characters either side are not letters, digits, an apostrophe or a hyphen, so "CN-Viral" does not
-//! name "CN-Virus" and "Mr. Vanilla" is not named by #61's "Vanilla copy".
+//! name "CN-Virus" and "Mr. Vanilla" is not named by #61's "Vanilla copy". R903 adds one alias:
+//! "Coin" names The Coin.
 //!
 //! Patch v0.2.0 adds two things to the rule. R381 (B2.8): four Classic cards are named like rules
 //! words — #10 Exile, #36 Burn, #57 Echo and #30 Recycle — so a text that says "Exile …" or "Echo 1"
@@ -81,14 +82,23 @@ fn without_parenthetical(name: &str) -> String {
     }
 }
 
+/// R903: one named alias — "Coin" names The Coin, which M #27's texts call by the short name.
+const ALIASES: &[(&str, &str)] = &[("The Coin", "Coin")];
+
 /// The names a text may call a card by: its name, and its name before a parenthesis.
 fn names_of(def: &CardDef) -> Vec<String> {
     let bare = without_parenthetical(&def.name);
-    if bare == def.name {
+    let mut out = if bare == def.name {
         vec![def.name.clone()]
     } else {
         vec![def.name.clone(), bare]
+    };
+    for (name, alias) in ALIASES {
+        if *name == def.name {
+            out.push(alias.to_string());
+        }
     }
+    out
 }
 
 /// `/[A-Za-z0-9'-]/`: a character that continues a word.
@@ -302,6 +312,32 @@ mod r279_the_reference_map_spec_5_7_10_10 {
             "your units other than Spikey Pillows have",
             "Spikey Pillow"
         ));
+    }
+
+    #[test]
+    fn r903_coin_and_coins_name_the_coin_and_a_lower_case_coin_does_not() {
+        let coin = CATALOG.get("core-t-coin").expect("The Coin in the catalog");
+        assert_eq!(coin.name, "The Coin");
+        assert!(names_of(coin).contains(&"Coin".to_string()));
+        // Alone or plural, by the full name or the alias.
+        assert!(names("add a Coin to your hand", "Coin"));
+        assert!(names("add Coins to your hand", "Coin"));
+        assert!(names("shuffle The Coin into each player's deck", "The Coin"));
+        // Case matters: "flip a coin" names nothing.
+        assert!(!names("flip a coin", "Coin"));
+        assert!(!names("flip a coin", "The Coin"));
+        // No other card is named without its "The": every other name stands alone.
+        for card in entries() {
+            let bare = without_parenthetical(&card.name);
+            let mut expected = vec![card.name.clone()];
+            if bare != card.name {
+                expected.push(bare);
+            }
+            if card.id == "core-t-coin" {
+                expected.push("Coin".to_string());
+            }
+            assert_eq!(names_of(card), expected, "{}", card.id);
+        }
     }
 
     #[test]

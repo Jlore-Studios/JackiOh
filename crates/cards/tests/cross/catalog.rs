@@ -5080,6 +5080,8 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             .map(|index| (index, "Legendary".to_string()))
             .collect();
         for (index, rarity) in [
+            ("28.1", "Common"),
+            ("30.1", "Epic"),
             ("32.1", "Epic"),
             ("32.2", "Epic"),
             ("32.3", "Epic"),
@@ -5095,11 +5097,14 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             expected.insert(index.to_string(), rarity.to_string());
         }
         assert_eq!(printed, expected);
+        // §8.8 prints a designer rarity on two Meditative tokens too (M #28.1 Common, M #30.1
+        // Epic); every other printed rarity stays a Classic+ token's.
         assert!(
             entries()
                 .into_iter()
                 .filter(|entry| entry.printed_rarity.is_some())
-                .all(|entry| entry.set == SetName::ClassicPlus && entry.token)
+                .all(|entry| entry.token
+                    && (entry.set == SetName::ClassicPlus || entry.set == SetName::Meditative))
         );
     }
 }
