@@ -991,14 +991,19 @@ impl InvariantMonitor {
                     attacker_id,
                     target_id,
                     forced,
+                    instead_of,
                 } => {
                     // R53: a forced attack is not a declaration and spends nothing (nor readies, R424).
                     self.attack = None;
                     if *forced {
                         continue;
                     }
-                    let current = self.stint_of(attacker_id);
-                    let previous = self.last_attack.get(attacker_id).copied();
+                    // R1202: a substitute's declaration spends its declarer's attack, not its own —
+                    // Windfast's exertion, Windfast's Windfury count — while the strike itself is the
+                    // substitute's to answer for.
+                    let declarer = instead_of.as_deref().unwrap_or(attacker_id);
+                    let current = self.stint_of(declarer);
+                    let previous = self.last_attack.get(declarer).copied();
                     let repeat = previous
                         .is_some_and(|previous| previous.turn == self.turn && previous.stint == current);
                     let mark = AttackMark {
@@ -1009,14 +1014,14 @@ impl InvariantMonitor {
                             _ => 1,
                         },
                     };
-                    let allowed = if self.windfury.get(attacker_id) == Some(&current) {
+                    let allowed = if self.windfury.get(declarer) == Some(&current) {
                         WINDFURY_ATTACKS
                     } else {
                         1
                     };
                     if mark.count > allowed {
-                        let who = match find_instance(state, attacker_id) {
-                            None => attacker_id.clone(),
+                        let who = match find_instance(state, declarer) {
+                            None => declarer.to_string(),
                             Some(unit) => name_of(unit),
                         };
                         found.push(format!(
@@ -1025,7 +1030,7 @@ impl InvariantMonitor {
                             mark.count, self.turn
                         ));
                     }
-                    self.last_attack.insert(attacker_id.clone(), mark);
+                    self.last_attack.insert(declarer.to_string(), mark);
                     self.attack = Some(ShadowAttack {
                         attacker_id: attacker_id.clone(),
                         target_id: target_id.clone(),

@@ -1642,7 +1642,7 @@ fn redact_event(
 
         GameEventType::AttackDeclared => {
             if hidden(&text_at(&shown, "attackerId")) {
-                hide(&mut shown, &["attackerId"]);
+                hide(&mut shown, &["attackerId", "insteadOf"]);
             }
             if hidden(&text_at(&shown, "targetId")) {
                 hide(&mut shown, &["targetId"]);
@@ -1986,6 +1986,12 @@ pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Opt
             None
         },
         defs: None,
+        // R1200: both seats read the same flag — a Mayor acts, or none does.
+        random_targets: if crate::random_targets::targets_random(state) {
+            Some(true)
+        } else {
+            None
+        },
     };
     let defs = match_defs_in(state, &view);
     if !defs.is_empty() {

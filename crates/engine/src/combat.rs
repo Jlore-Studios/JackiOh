@@ -762,13 +762,24 @@ fn resolve_declared_attack(sink: &mut EngineSink<'_>, id: &str) {
     let Some(open) = close_window(sink.state, id) else {
         return;
     };
+    // R1202: the substitute goes home even when its attack never fought.
+    let bounce = open.bounce_after == Some(true);
+    let since = open
+        .exits_from
+        .unwrap_or_else(|| crate::stays::exit_mark(sink.state));
     if open.cancelled {
+        if bounce {
+            crate::attack_summon::bounce_after(sink, &open.attacker_id, since);
+        }
         return;
     }
     if sink.state.result.is_some() {
         return;
     }
     if !declared_attack_stands(sink.state, &open) {
+        if bounce {
+            crate::attack_summon::bounce_after(sink, &open.attacker_id, since);
+        }
         return;
     }
 
@@ -779,8 +790,97 @@ fn resolve_declared_attack(sink: &mut EngineSink<'_>, id: &str) {
         return;
     };
 
-    resolve_combat(sink, &attacker, &target);
-    close_combat(sink, &attacker, &target, false);
+    // R1203: the Prime's joiners attack first. Anything else fights at once, as before, with the
+    // substitute's bounce after its combat.
+    if crate::scripts::flags_of(sink.state, &attacker).attack_joiners != Some(true) {
+        resolve_combat(sink, &attacker, &target);
+        close_combat(sink, &attacker, &target, false);
+        if bounce {
+            crate::attack_summon::bounce_after(sink, &attacker.id, since);
+        }
+        return;
+    }
+    match crate::attack_summon::joiners_first(sink, &attacker, &target, since) {
+        crate::attack_summon::JoinOutcome::Paused => {
+            crate::attack_summon::owe_combat(
+                sink,
+                &attacker.id,
+                &target,
+                false,
+                bounce,
+                Some(open),
+                None,
+                since,
+            );
+        }
+        crate::attack_summon::JoinOutcome::Fight => {
+            prime_combat(
+                sink,
+                &crate::attack_summon::OwedAttackSummon {
+                    attacker_id: attacker.id.clone(),
+                    target_id: target_id_of(&target),
+                    forced: false,
+                    bounce,
+                    declared: Some(open),
+                    instead_of: None,
+                    since,
+                },
+            );
+        }
+    }
+}
+
+/// R1202, R1203: the combat a replacement or rider parked (`attack_summon::run_owed`).
+///
+/// A declared attack that still stands fights now; one whose target has left the field before its
+/// combat is cancelled (`attackCancelled`, MD-E15's shape — the exertion stays spent). A forced
+/// attack fights when its attacker and its target still act since `since`. Then, when the
+/// substitute owes it, the bounce home — whether or not it fought.
+pub(crate) fn prime_combat(sink: &mut EngineSink<'_>, owed: &crate::attack_summon::OwedAttackSummon) {
+    if let Some(open) = &owed.declared {
+        if declared_attack_stands(sink.state, open) {
+            let attacker = find_instance(sink.state, &open.attacker_id).cloned();
+            let target = attack_target_of(sink.state, &open.target_id);
+            if let (Some(attacker), Some(target)) = (attacker, target) {
+                resolve_combat(sink, &attacker, &target);
+                close_combat(sink, &attacker, &target, false);
+            }
+        } else {
+            sink.events.push(GameEvent::AttackCancelled {
+                attacker_id: open.attacker_id.clone(),
+                target_id: open.target_id.clone(),
+                by_instance_id: open.attacker_id.clone(),
+            });
+        }
+    } else {
+        let attacker = find_instance(sink.state, &owed.attacker_id).cloned();
+        let target = attack_target_of(sink.state, &owed.target_id);
+        match (attacker, target) {
+            (Some(attacker), Some(target))
+                if is_active_on_field(sink.state, &attacker)
+                    && !crate::stays::left_field_after(sink.state, owed.since, &attacker.id)
+                    && target_acts_since(sink.state, &target, owed.since) =>
+            {
+                resolve_combat(sink, &attacker, &target);
+                close_combat(sink, &attacker, &target, true);
+            }
+            _ => {}
+        }
+    }
+    if owed.bounce {
+        crate::attack_summon::bounce_after(sink, &owed.attacker_id, owed.since);
+    }
+}
+
+/// Whether a forced attack's target still acts since `since`: a unit on the field on its stay, a
+/// hero always.
+fn target_acts_since(state: &GameState, target: &AttackTarget, since: u32) -> bool {
+    match target {
+        DamageTarget::Hero { .. } => true,
+        DamageTarget::Unit { instance } => find_instance(state, &instance.id).is_some_and(|live| {
+            is_active_on_field(state, live) && !crate::stays::left_field_after(state, since, &live.id)
+        }),
+    }
 }
 
 /// §10.3, §4.2 step 4: the traps answer what the window did before step 5. A trap in the window is an
@@ -824,6 +924,10 @@ pub fn run_owed_attack(sink: &mut EngineSink<'_>, item: &WorkItem) {
 /// The player's attack: §4.2 steps 1 to 5. Validation first, then step 4 — the exertion, then the
 /// trap window — and only then step 5's combat and state check.
 ///
+/// R1202: an attack Windfast would make, its substitute makes instead (`attack_summon`): the
+/// exertion below is Windfast's, spent before the pick, and no `attackDeclared` of its own is ever
+/// emitted for it.
+///
 /// Step 4 in full: "Declaring the attack has now spent the attacker's exertion, before any damage.
 /// Trap window: My Pawn checks whether the hit would be lethal and, if so, cancels the attack; the
 /// exertion is not given back, so the attack is gone either way (R44)." So the declaration goes into
@@ -860,7 +964,6 @@ pub fn declare_attack(
         }
         DamageTarget::Hero { .. } => None,
     };
-    let interposed = interposer.is_some();
     let target: AttackTarget = match interposer {
         None => chosen,
         Some(instance) => DamageTarget::Unit { instance },
@@ -868,6 +971,8 @@ pub fn declare_attack(
 
     // Step 4's first sentence. R44 never gives this back, so a cancelled attack is gone either way.
     // R636: only a repeat attack writes `attacks`, so an ordinary exertion keeps its two-flag shape.
+    // R1202: this is the declarer's exertion — Windfast's, whose substitute spends it without
+    // emitting its own declaration.
     if let Some(live) = find_instance_mut(sink.state, &attacker.id) {
         let attacks = live
             .exertion
@@ -880,6 +985,41 @@ pub fn declare_attack(
         }
     }
 
+    // R1202: the attack Windfast would make, a Unit summoned from its controller's hand makes
+    // instead. Asked parks the attack behind the hand pick; the pick's answer declares it.
+    match crate::attack_summon::replace_attacker(sink, &attacker, &target, false) {
+        crate::attack_summon::Replaced::Asked => return Ok(()),
+        crate::attack_summon::Replaced::By(unit) => {
+            let bounce = crate::scripts::flags_of(sink.state, &attacker).bounce_attacker == Some(true);
+            return declare_instead(sink, &unit, &target, Some(&attacker.id), bounce);
+        }
+        crate::attack_summon::Replaced::No => {}
+    }
+
+    declare_instead(sink, &attacker, &target, None, false)
+}
+
+/// R1202: everything in `declare_attack` after its exertion block — the declaration, the trap
+/// window, the combat — for `attacker`, which a substitute may be. A substitute attacks only when
+/// the unit restrictions let it (`attack_restriction`); otherwise nothing happens, the declarer's
+/// exertion spent either way. Its declaration carries `bounce_after` and an `exits_from` taken
+/// after the summon, and its event carries `instead_of` — the declarer's id — and `forced: false`,
+/// so a declared substitute's attack opens its trap window like any declared attack.
+pub(crate) fn declare_instead(
+    sink: &mut EngineSink<'_>,
+    attacker: &CardInstance,
+    target: &AttackTarget,
+    instead_of: Option<&str>,
+    bounce: bool,
+) -> CombatResult {
+    let attacker = live_or_given(sink.state, attacker);
+    let target = live_target_or_given(sink.state, target);
+    if instead_of.is_some()
+        && crate::restrictions::attack_restriction(sink.state, &attacker, &target).is_err()
+    {
+        return Ok(());
+    }
+
     let target_id = target_id_of(&target);
     let declared = DeclaredAttack {
         id: format!("d{}", sink.state.next_seq),
@@ -889,6 +1029,7 @@ pub fn declare_attack(
         // R220: whose attack it is, and the stays it was declared on.
         by: Some(attacker.controller),
         exits_from: Some(crate::stays::exit_mark(sink.state)),
+        bounce_after: if bounce { Some(true) } else { None },
     };
     sink.state.next_seq += 1;
     let declared_id = declared.id.clone();
@@ -898,16 +1039,19 @@ pub fn declare_attack(
         attacker_id: attacker.id.clone(),
         target_id,
         forced: false,
+        instead_of: instead_of.map(str::to_string),
     };
     let at = sink.events.len();
     sink.events.push(event.clone());
     withhold_from_frontier(sink, at);
     // The interposer's `summoned` and `redirected` stand before the declaration on the frontier, which
     // the window's own dispatch delivers (R100) — the declaration is the window's alone all the same.
-    if interposed {
-        let declaration = sink.events[at].clone();
-        crate::triggers::mark_dispatched(sink, &[declaration]);
-    }
+    // Marked unconditionally: on the paths a replacement parks behind a prompt (`attack_summon`)
+    // the cursor no longer stands at the declaration when the answer makes it, so the mark is what
+    // keeps the frontier from delivering it a second time. Where the cursor did stand there the mark
+    // changes nothing — the declaration was already past it.
+    let declaration = sink.events[at].clone();
+    crate::triggers::mark_dispatched(sink, &[declaration]);
 
     // Step 4's second sentence: the traps answer the declaration, before any damage.
     crate::traps::run_trap_window(sink, &event);
@@ -998,14 +1142,62 @@ pub fn force_attack(sink: &mut EngineSink<'_>, attacker: &CardInstance, target: 
         return;
     }
 
+    // R1202: a forced attack Windfast would make, its substitute makes instead.
+    let since = crate::stays::exit_mark(sink.state);
+    let (attacker, instead_of, bounce) =
+        match crate::attack_summon::replace_attacker(sink, &attacker, &target, true) {
+            crate::attack_summon::Replaced::Asked => return,
+            crate::attack_summon::Replaced::By(unit) => {
+                let bounce = crate::scripts::flags_of(sink.state, &attacker).bounce_attacker == Some(true);
+                (unit, Some(attacker.id.clone()), bounce)
+            }
+            crate::attack_summon::Replaced::No => (attacker, None, false),
+        };
+
+    // R1203: the Prime's joiners attack first, then its own combat.
+    if crate::scripts::flags_of(sink.state, &attacker).attack_joiners == Some(true) {
+        match crate::attack_summon::joiners_first(sink, &attacker, &target, since) {
+            crate::attack_summon::JoinOutcome::Paused => {
+                crate::attack_summon::owe_combat(
+                    sink,
+                    &attacker.id,
+                    &target,
+                    true,
+                    bounce,
+                    None,
+                    instead_of.as_deref(),
+                    since,
+                );
+                return;
+            }
+            crate::attack_summon::JoinOutcome::Fight => {}
+        }
+    }
+
+    force_attack_instead(sink, &attacker, &target, instead_of.as_deref());
+    if bounce {
+        crate::attack_summon::bounce_after(sink, &attacker.id, since);
+    }
+}
+
+/// R1202: a forced attack that skips the replacement — the substitute's own, or any forced attack
+/// continued after its pick or its joiners — made as a forced attack with `instead_of` set, then
+/// its combat and state check.
+pub(crate) fn force_attack_instead(
+    sink: &mut EngineSink<'_>,
+    attacker: &CardInstance,
+    target: &AttackTarget,
+    instead_of: Option<&str>,
+) {
     sink.events.push(GameEvent::AttackDeclared {
         attacker_id: attacker.id.clone(),
-        target_id: target_id_of(&target),
+        target_id: target_id_of(target),
         forced: true,
+        instead_of: instead_of.map(str::to_string),
     });
 
-    resolve_combat(sink, &attacker, &target);
-    close_combat(sink, &attacker, &target, true);
+    resolve_combat(sink, attacker, target);
+    close_combat(sink, attacker, target, true);
 }
 
 /// §4.2 step 2: an attack is made on an enemy unit or the enemy hero, forced or not (R173).
@@ -1265,6 +1457,7 @@ pub fn force_attack_own_hero(sink: &mut EngineSink<'_>, attacker: &CardInstance)
         attacker_id: attacker.id.clone(),
         target_id: target_id_of(&target),
         forced: true,
+        instead_of: None,
     });
     resolve_combat(sink, &attacker, &target);
     close_combat(sink, &attacker, &target, true);

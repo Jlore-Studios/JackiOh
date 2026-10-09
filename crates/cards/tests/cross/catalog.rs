@@ -5093,12 +5093,14 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             ("65.3", "Rare"),
             ("65.4", "Legendary"),
             ("65.5", "Mythic"),
+            // M #91.1 Windfurious Prime (meditative-091-1) prints the designer's Epic.
+            ("91.1", "Epic"),
         ] {
             expected.insert(index.to_string(), rarity.to_string());
         }
         assert_eq!(printed, expected);
-        // §8.8 prints a designer rarity on two Meditative tokens too (M #28.1 Common, M #30.1
-        // Epic); every other printed rarity stays a Classic+ token's.
+        // §8.8 prints a designer rarity on three Meditative tokens too (M #28.1 Common, M #30.1
+        // Epic, M #91.1 Epic); every other printed rarity stays a Classic+ token's.
         assert!(
             entries()
                 .into_iter()
@@ -5285,10 +5287,11 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
     }
 
     #[test]
-    fn tags_classic_plus_38_solarius_and_46_felinor_flagbearer_catalyst_and_no_other_entry() {
+    fn tags_classic_plus_38_solarius_and_46_felinor_flagbearer_and_meditative_91_windfast_catalyst_and_no_other_entry()
+     {
         assert_eq!(
             tagged(Tag::Catalyst),
-            strings(&["classicplus-038", "classicplus-046"])
+            strings(&["classicplus-038", "classicplus-046", "meditative-091"])
         );
     }
 
@@ -5297,7 +5300,7 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
     {
         assert_eq!(
             tagged(Tag::Prime),
-            strings(&["classicplus-038-1", "classicplus-046-1"])
+            strings(&["classicplus-038-1", "classicplus-046-1", "meditative-091-1"])
         );
         // Every entry named "<card> Prime" carries the tag, and each is the token its Catalyst defines.
         let mut named: Vec<String> = entries()
@@ -5315,6 +5318,15 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
                 catalyst.is_some_and(|entry| entry.tags.contains(&Tag::Catalyst)),
                 "{id}"
             );
+            // The designer named M #91.1 Windfurious Prime, not "Windfast Prime".
+            if id == "meditative-091-1" {
+                assert_eq!(
+                    prime.map(|entry| entry.name.clone()),
+                    Some("Windfurious Prime".to_string()),
+                    "{id}"
+                );
+                continue;
+            }
             assert_eq!(
                 prime.map(|entry| entry.name.clone()),
                 Some(format!(

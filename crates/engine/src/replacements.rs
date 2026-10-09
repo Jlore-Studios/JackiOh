@@ -365,46 +365,88 @@ fn finish(
 // §4.4: would take lethal damage (E5, E9)
 // ---------------------------------------------------------------------------
 
-/// §4.4 between the hero's caps and step 5: a hit of `amount` would bring `player`'s hero to 0 or
-/// less. Returns the hero the hit now goes to — the damage pipeline deals it there as a new instance
-/// from the same source, through that hero's Armor, divisor and caps — or `None` when nothing replaced
-/// it. Only the hero's own controller's cards answer: "you would take lethal damage".
-/// (TS `lethalHitWindow(sink, { player, amount, sourceId })`; the hit's three fields are arguments.)
+/// §4.4 between the caps and step 5: a hit of `amount` would bring its target — `player`'s hero,
+/// or, since ME-LETHALGUARD (R1204), one of their Units — to 0 or less. Returns where the hit now
+/// goes — the damage pipeline deals it there as a new instance from the same source, through that
+/// destination's own Armor, divisor and caps — or `None` when nothing replaced it. Only the
+/// target's controller's cards answer: "you would take lethal damage".
+/// (TS `lethalHitWindow(sink, { player, amount, sourceId })`; the hit's fields are arguments, with
+/// the Unit's id added for the guard.)
 pub fn lethal_hit_window(
     sink: &mut EngineSink<'_>,
-    player: PlayerId,
+    target: &DamageTarget,
     amount: i32,
     source_id: Option<String>,
-) -> Option<PlayerId> {
+    caught: &[String],
+) -> Option<DamageTarget> {
+    let controller = match target {
+        DamageTarget::Hero { player } => *player,
+        DamageTarget::Unit { instance } => instance.controller,
+    };
+    let target_id = match target {
+        DamageTarget::Hero { player } => format!("hero-{player}"),
+        DamageTarget::Unit { instance } => instance.id.clone(),
+    };
     let event = ReplacedEvent::LethalHit {
-        player,
+        player: controller,
         amount,
         source_id,
+        instance_id: match target {
+            DamageTarget::Hero { .. } => None,
+            DamageTarget::Unit { instance } => Some(instance.id.clone()),
+        },
     };
     for mut cand in candidates(sink.state, None) {
-        if cand.controller != player {
+        if cand.controller != controller {
             continue;
         }
         let Some(def) = answering(sink.state, &cand, ReplacementMoment::LethalHit, &event) else {
             continue;
         };
-        let to = opponent_of(cand.controller);
+        // R1204: whether this card answers is decided before it fires. A `self` redirect answers
+        // for its controller's hero and other Units — never the target itself, and never twice for
+        // one hit (R460: each Unan catches a given hit once) — and takes the hit itself, as a Unit.
+        // Any other redirect answers only hero targets and sends the hit to the enemy hero, as it
+        // always has.
+        let destination: DamageTarget =
+            if def.instead.redirect == Some(crate::script::InsteadRedirect::SelfCard) {
+                if cand.card.id == target_id || caught.contains(&cand.card.id) {
+                    continue;
+                }
+                DamageTarget::Unit {
+                    instance: live(sink.state, &cand.card),
+                }
+            } else {
+                if !matches!(target, DamageTarget::Hero { .. }) {
+                    continue;
+                }
+                DamageTarget::Hero {
+                    player: opponent_of(cand.controller),
+                }
+            };
         let fired = fire(sink, &mut cand);
+        let to_id = match &destination {
+            DamageTarget::Hero { player } => format!("hero-{player}"),
+            DamageTarget::Unit { instance } => instance.id.clone(),
+        };
         sink.events.push(GameEvent::Redirected {
             what: RedirectWhat::Damage,
-            from_id: format!("hero-{player}"),
-            to_id: format!("hero-{to}"),
+            from_id: target_id.clone(),
+            to_id,
             by_instance_id: Some(cand.card.id.clone()),
         });
         let record = ReplacementRecord {
             event: event.clone(),
-            redirected_to: Some(to),
+            redirected_to: match &destination {
+                DamageTarget::Hero { player } => Some(*player),
+                DamageTarget::Unit { .. } => None,
+            },
             flickered: None,
         };
         finish(sink, &cand, &def, &record, fired);
-        // R460: the hit is not on this hero any more, so nothing later in the walk finds it lethal here;
-        // the new instance meets the other hero's replacements in a walk of its own.
-        return Some(to);
+        // R460: the hit is not on this target any more, so nothing later in the walk finds it lethal
+        // here; the new instance meets its destination's replacements in a walk of its own.
+        return Some(destination);
     }
     None
 }

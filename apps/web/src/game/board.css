@@ -1465,6 +1465,21 @@
   white-space: nowrap;
 }
 
+/* R1200: while a Mayor acts every target is random; the badge sits beside the status chip. */
+.random-targets {
+  min-width: 0;
+  overflow: hidden;
+  padding: 4px 7px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--bg-sunken);
+  color: var(--text-dim);
+  font-size: 0.72em;
+  font-style: italic;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* The turn control is inset into the board rail, with its timer in the same brass housing rather
    than another floating HUD chip. Legality remains the button's native disabled state. */
 .turn-mechanism {

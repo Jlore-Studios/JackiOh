@@ -297,6 +297,7 @@ fn declarations(events: &[GameEvent]) -> Vec<Value> {
                 attacker_id,
                 target_id,
                 forced,
+                ..
             } => {
                 json!({ "attackerId": attacker_id, "targetId": target_id, "forced": forced })
             }

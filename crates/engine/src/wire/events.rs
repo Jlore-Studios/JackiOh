@@ -476,6 +476,11 @@ pub enum GameEvent {
         attacker_id: String,
         target_id: String,
         forced: bool,
+        /// ME-ATTACKSUMMON (R1202): the id of the card whose attack this replaces — Windfast's —
+        /// when a summoned substitute makes it. Absent otherwise.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        instead_of: Option<String>,
     },
     AttackCancelled {
         attacker_id: String,

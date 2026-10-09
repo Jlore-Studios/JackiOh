@@ -3,6 +3,7 @@
 // what comes out was derived from that array and nothing else.
 
 import type { ActionBody, PlayerView, Selection } from "@jackioh/shared";
+import { RANDOM_ATTACK_TARGET } from "@jackioh/engine/config";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -552,6 +553,15 @@ describe("the attack flow", () => {
     const result = onClickTarget(view, legal, attacking, { on: "hero", side: "opponent" });
 
     expect(result.action).toEqual({ type: "attack", attackerId: "u1", targetId: "hero-p2" });
+  });
+
+  it("sends a random attack on the attacker's click", () => {
+    const random: ActionBody = { type: "attack", attackerId: "u1", targetId: RANDOM_ATTACK_TARGET };
+
+    const result = onClickTarget(view, [random], IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 });
+
+    expect(result.action).toEqual(random);
+    expect(result.interaction).toEqual(IDLE);
   });
 
   it("deselects the attacker when it is clicked again", () => {

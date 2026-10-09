@@ -19,8 +19,8 @@
 
 use jackioh_engine::config::{
     AI_DIFFICULTY, AI_TUTORIAL, COIN_DEF_ID, DECK_SIZE, DIFFICULTIES, DRAWS_PER_TURN, GLITCH_DEF_ID,
-    HERO_HEALTH, HUMAN_HANDICAP, LIBRARY_CAP, MAX_COPIES, MAX_MANA, REPLAY_CHECKPOINT_EVERY,
-    REPLAY_PAGE_STEPS, TURN_CAP_PLAYER_TURNS,
+    HERO_HEALTH, HUMAN_HANDICAP, LIBRARY_CAP, MAX_COPIES, MAX_MANA, RANDOM_ATTACK_TARGET,
+    REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS, TURN_CAP_PLAYER_TURNS,
 };
 use serde::Serialize;
 
@@ -82,6 +82,7 @@ fn engine_config_ts() -> String {
         constant("LIBRARY_CAP", None, &LIBRARY_CAP),
         constant("MAX_COPIES", None, &MAX_COPIES),
         constant("MAX_MANA", None, &MAX_MANA),
+        constant("RANDOM_ATTACK_TARGET", None, RANDOM_ATTACK_TARGET),
         constant("REPLAY_CHECKPOINT_EVERY", None, &REPLAY_CHECKPOINT_EVERY),
         constant("REPLAY_PAGE_STEPS", None, &REPLAY_PAGE_STEPS),
         constant("TURN_CAP_PLAYER_TURNS", None, &TURN_CAP_PLAYER_TURNS),
@@ -106,8 +107,8 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    // Fifteen constants, each on its own line, the way the client and the diff check read them.
-    assert_eq!(text.matches("\nexport const ").count(), 15, "{text}");
+    // Sixteen constants, each on its own line, the way the client and the diff check read them.
+    assert_eq!(text.matches("\nexport const ").count(), 16, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }
 

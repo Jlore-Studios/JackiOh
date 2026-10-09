@@ -29,6 +29,7 @@ pub mod wire;
 // The engine (← packages/engine/src), alphabetical.
 pub mod animated;
 pub mod announce;
+pub mod attack_summon;
 pub mod book_swap;
 pub mod brittle;
 pub mod brittle_count;
@@ -69,6 +70,7 @@ pub mod preview;
 pub mod prompts;
 pub mod query;
 pub mod random_cast;
+pub mod random_targets;
 pub mod reduce;
 pub mod replacements;
 pub mod replay;
