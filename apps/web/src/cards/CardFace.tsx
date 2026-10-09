@@ -23,8 +23,8 @@
 // badges (CardStates.tsx): its Brittle count (R385), its tuned mark (R386), its enchantments (E39) and
 // a card standing as a Unit (R383). A tuned card also marks what changed where it shows: the numbers
 // in its text that moved (RulesText's `.cf-tuned`), its stats (`data-tuned` on the sword and drop,
-// a ▲ or ▼ pip, beside the usual tones) and its keywords (a "+" chip for one Upgrade added, a struck
-// "−" chip for one Degrade removed, at the foot of the rules box). An Animated Field Spell or Trap
+// a ▲ or ▼ pip, beside the usual tones) and its keywords (a "+" chip for each one a Buff added, a struck
+// "−" chip for each one a Nerf removed, at the foot of the rules box). An Animated Field Spell or Trap
 // shows the attack and health of the Unit it becomes (B3.1), on its full face.
 //
 // R503: every face with a set shows it as a small mark on the frame (`.cf-set[data-set]`, setMark.ts),
@@ -90,7 +90,7 @@ function printedText(face: FaceModel): string {
   return [`${face.text.full}${values}`, gainedLine(face), tuningLine(face)].filter((part) => part !== "").join(" ");
 }
 
-/** R386: the keywords Upgrade added ("+") and Degrade removed (struck "−"), at the foot of the rules box. */
+/** R386: the keywords a Buff added ("+") and a Nerf removed (struck "−"), at the foot of the rules box. */
 function TuningKeywords({ face }: { face: FaceModel }): ReactElement | null {
   const tuning = face.tuning;
   if (tuning === undefined || tuning === null || (tuning.added.length === 0 && tuning.removed.length === 0)) return null;

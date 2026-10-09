@@ -157,15 +157,17 @@ every Radiant face meets R275's standard (`tests/cross/radiant_standard.rs` agai
 
 - `printedRarity`: the rarity printed on a token, for display only; a token's `rarity` stays
   `"Token"`, so no pool finds one by rarity.
-- `params`: the numbers Degrade, Upgrade and KY's Constant may change (R386), per face, written
-  `{key}` in the text. A script reads `param(ctx, key)`, never a literal.
+- `params`: the numbers a Nerf, a Buff and KY's Constant may change (R386), per face, written
+  `{key}` in the text. A script reads `param(ctx, key)`, never a literal. Players read Nerf and Buff
+  for the engine's Degrade and Upgrade, whose verbs keep their names (`degrade`, `upgrade`, R1320).
 - `loc`: the lines of code of the card's script. Frozen data since v0.3.0: nothing recomputes it, C
   #48 and C+ #44, #45 read it, and a card added since takes its number from
   `cargo jackioh catalog loc <script path>`.
 - A face's own `type` (C+ #22 Blood Moon's Radiant face is a Field Trap) and `xStats` (C+ #69).
 
 Tags are the designer's as written (`Jlockeed` is a pool as well as a filter, R278). No two cards
-share a name (R381). Texts follow the house style (R432, R373).
+share a name (R381). Texts follow the house style (R432, R373): "Nerf" and "Buff", never "Degrade" or
+"Upgrade" (R1320).
 
 ## 3. `catalog.query`, the only random pool (spec §5.1)
 

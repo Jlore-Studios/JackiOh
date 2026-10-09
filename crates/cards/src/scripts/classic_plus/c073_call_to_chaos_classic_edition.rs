@@ -2,8 +2,8 @@
 //! to Chaos, Legendary.
 //!   Base:    "One random effect: Add 5 random Fruits to your hand, which cost (0); add 3 random Books to
 //!            your hand, which cost (0); destroy all enemy permanents; add 3 random Classic cards to your
-//!            hand, which cost (0); Upgrade every card in your hand and deck twice; fuse a random card
-//!            into each card in your deck, each keeping its cost; Degrade every card on your opponent's
+//!            hand, which cost (0); Buff every card in your hand and deck twice; fuse a random card
+//!            into each card in your deck, each keeping its cost; Nerf every card on your opponent's
 //!            field and in their hand three times; summon a Classic Golem; replace your deck with random
 //!            Call to Chaos cards, which cost (0); cast a random Call to Chaos."
 //!   Radiant: "Three different random effects, resolved in the order listed: …" (the same ten).

@@ -365,7 +365,7 @@ describe("B10: RulesText marks terms in bold", () => {
     }
   }, CATALOG_SWEEP_TIMEOUT_MS);
 
-  it("B10 patch v0.2.0's words are bold terms (Activate ♾️, Brittle, Animated, Upgrade, Degrade), and so is Classic #65's End of turn (#85)", () => {
+  it("B10 R1320 patch v0.2.0's words are bold terms (Activate ♾️, Brittle, Animated, Buff, Nerf), and so is Classic #65's End of turn (#85)", () => {
     const termsOf = (id: string): string[] =>
       [...catalogFace(id).querySelectorAll(".card-text strong.cf-term")].map((term) => `${term.getAttribute("data-term") ?? ""}=${term.textContent ?? ""}`);
     expect(termsOf("classic-078")).toContain("Activate=Activate ♾️:");
@@ -375,8 +375,8 @@ describe("B10: RulesText marks terms in bold", () => {
     expect(termsOf("classic-038")[0]).toBe("Animated=Animated");
     cleanup();
     const tuners = termsOf("classicplus-070").map((term) => term.split("=")[0]);
-    expect(tuners).toContain("Upgrade");
-    expect(tuners).toContain("Degrade");
+    expect(tuners).toContain("Buff");
+    expect(tuners).toContain("Nerf");
     cleanup();
     expect(termsOf("classic-065")[0]).toBe("End of turn=End of turn:");
   });

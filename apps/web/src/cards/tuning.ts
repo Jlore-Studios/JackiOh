@@ -1,5 +1,7 @@
-// Degrade and Upgrade on a face (docs/classic-sets.md B3.4, R386): what the view says changed on a card,
-// read for the marks a face draws and the words the inspect overlays print.
+// Degrade and Upgrade on a face (docs/classic-sets.md B3.4, R386), which players read as Nerf and Buff
+// (R1320): what the view says changed on a card, read for the marks a face draws and the words the
+// inspect overlays print. The verdicts keep the engine's words as data (`data-tuned="upgraded"`); the
+// words a player reads are `VERDICT_WORD`'s.
 //
 // The view carries two things about a tuned card (CardView, SPEC §10.8): its declared numbers as they
 // stand now (`params`, which fill the face's `{key}`s) and the record of what Degrade, Upgrade and KY's
@@ -8,7 +10,7 @@
 // (CLAUDE.md rule 7), and names each change better or worse for the card's controller:
 //
 // - a stat: up is better;
-// - a keyword: one added is better, one removed is worse (Upgrade adds, Degrade removes, §6.3);
+// - a keyword: one added is better, one removed is worse (a Buff adds, a Nerf removes, §6.3);
 // - a numbered keyword or X (`tuning.x`): more is better, except Tribute, where less is (§6.3);
 // - a declared number: its live value against the face's printed one, the way its `better` says
 //   (`CardDef.params`, B3.4 rule 5);
@@ -18,7 +20,7 @@
 // The face marks each by shape as well as colour (cardstate.css): a number that moved sits in a dotted
 // box with ▲ (better) or ▼ (worse) after it, a tuned stat wears the same glyph as a pip, an added
 // keyword is a "+" chip and a removed one a struck "−" chip, and the card as a whole carries a mark
-// that says Upgraded (▲, every change better), Degraded (▼, every change worse) or Tuned (◆, mixed).
+// that says Buffed (▲, every change better), Nerfed (▼, every change worse) or Tuned (◆, mixed).
 // The cost change is the card's live cost (`CardView.cost`), which the gem already tones (model.ts).
 //
 // `filledText` fills a face's text exactly as `fillParams` does and records where each number that
@@ -56,9 +58,9 @@ export type FaceTuning = {
   /** The stat pips: which way each stat was tuned; absent for a stat no change moved. */
   attack?: TuneWay;
   health?: TuneWay;
-  /** Keywords Upgrade added, which the face prints as "+" chips. */
+  /** Keywords a Buff added, which the face prints as "+" chips. */
   added: readonly Keyword[];
-  /** Keyword kinds Degrade removed, which the face prints as struck chips. */
+  /** Keyword kinds a Nerf removed, which the face prints as struck chips. */
   removed: readonly KeywordKind[];
 };
 
@@ -72,10 +74,10 @@ export const LESS_IS_BETTER: readonly string[] = ["Tribute"];
 export const WAY_GLYPH: Readonly<Record<TuneWay, string>> = { better: "▲", worse: "▼" };
 export const VERDICT_GLYPH: Readonly<Record<TuneVerdict, string>> = { upgraded: "▲", degraded: "▼", tuned: "◆" };
 
-/** The word each verdict is printed with (the ribbon, the mark's title). */
+/** The word each verdict is printed with (the ribbon, the mark's title): Buffed and Nerfed (R1320). */
 export const VERDICT_WORD: Readonly<Record<TuneVerdict, string>> = {
-  upgraded: "Upgraded",
-  degraded: "Degraded",
+  upgraded: "Buffed",
+  degraded: "Nerfed",
   tuned: "Tuned",
 };
 
@@ -172,7 +174,7 @@ export function changeWords(change: TuneChange): string {
   }
 }
 
-/** The card's mark as one line: "Upgraded: +2 Attack; Gained Rush". */
+/** The card's mark as one line: "Buffed: +2 Attack; Gained Rush". */
 export function tuningSummary(tuning: FaceTuning): string {
   return `${VERDICT_WORD[tuning.verdict]}: ${tuning.changes.map(changeWords).join("; ")}`;
 }
