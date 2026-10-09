@@ -4623,10 +4623,8 @@
     "what": "review #613 on claude-2"
   },
   "last_sweep": {
-    "at": "2026-10-09T20:39:29Z",
-    "notes": [
-      "started a night run, as a lane was free: #613 (medium) is queued to review, for `claude-2`: review on `claude-2` (claude, `opus`, strong)"
-    ],
+    "at": "2026-10-09T20:50:12Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
