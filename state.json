@@ -3914,6 +3914,7 @@
       "forced": false,
       "interruptions": 1,
       "kind": "build",
+      "last_findings": [],
       "onto": "bot/issue-575",
       "part_of": 575,
       "pending_request": false,
