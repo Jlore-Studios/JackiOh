@@ -428,26 +428,22 @@ mod r165_queueing_with_no_saved_deck_at_all {
 
         let (status, body) = enqueue(&app, &token, &uuid()).await;
 
-        // The ruling, exactly: "a queue-time refusal the player fixes in the deckbuilder reports as a
-        // loadout failure". 422, alongside the L1–L6 failures.
+        // A queue-time refusal the player fixes in the deckbuilder is a loadout failure: 422, like L1–L6.
         assert_eq!(body["error"]["code"], "loadout_invalid");
         assert_eq!(status, 422);
-        // A 404 would say the *endpoint* found nothing, sending a client after a route that works.
+        // A 404 would send a client after a route that works.
         assert_ne!(status, 404);
         assert_ne!(body["error"]["code"], "not_found");
-        // Nor is it a staleness problem: the remedy is the deckbuilder, not a client update.
         assert_ne!(body["error"]["code"], "stale_catalog");
         let message = body["error"]["message"].as_str().unwrap_or("").to_lowercase();
         assert!(message.contains("deck"), "message: {message}");
 
-        // Nothing was queued on the way to the refusal.
         assert_eq!(open_count(&app).await, 0);
     }
 
     #[tokio::test(start_paused = true)]
     async fn r165s_control_the_same_profile_and_the_same_route_queue_fine_once_a_deck_is_saved() {
-        // Without this the 422 above could be any of a dozen things the route refuses — a bad token, a
-        // pending account, a broken catalog. Only one thing changes between the two calls.
+        // Control: only the saved deck changes between the two calls.
         let app = test_app().await;
         let token = active_profile(&app, "builder", 1000.0).await;
         let deck_id = uuid();
@@ -471,26 +467,17 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
 
     #[tokio::test(start_paused = true)]
     async fn r166_pairs_the_oldest_ticket_against_the_oldest_opponent_its_window_admits_not_the_closest() {
-        // The whole point of the fixture: `near` is a far better rating match for `oldest` than `mid`
-        // is, and it is the one R166 must NOT choose, because it queued later.
-        //
-        //   oldest  rating 1000, waited 30 s   <- paired first
-        //   mid     rating 1080, waited 20 s   <- qualifies (gap 80), and is the oldest that does
-        //   near    rating 1005, waited  1 s   <- qualifies (gap 5) and is far closer in rating
-        //
-        // Every wait is under 10 s of widening apart, so all three windows are ±100 at sweep time and
-        // the choice is genuinely between "oldest" and "closest" rather than between "qualifies" and
-        // "does not".
+        // `near` is a far better rating match for `oldest` than `mid` is, and R166 must NOT choose it,
+        // because it queued later. `oldest` (1000, waited 30 s) pairs first; `mid` (1080, 20 s) is the oldest
+        // that qualifies; `near` (1005, 1 s) is closest in rating. All windows are ±100 at sweep time.
         let app = test_app().await;
         let oldest = (1000, 30_000);
         let mid = (1080, 20_000);
         let near = (1005, 1_000);
 
-        // PREMISE: both candidates really are inside both windows, so what follows is R166's *choice*
-        // and not §9.5's window quietly excluding one of them.
+        // PREMISE: both candidates are inside both windows, so what follows is R166's *choice* (§9.5).
         expect_qualifies(oldest, mid);
         expect_qualifies(oldest, near);
-        // …and `near` is the better rating match by a wide margin, which is what it must not win on.
         assert!((oldest.0 - near.0).abs() < (oldest.0 - mid.0).abs());
 
         let t = |id, profile_id, (rating, waited_ms): (i64, i64)| SeedTicket {
@@ -506,12 +493,11 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
 
         let made = try_pair(&app).await.expect("a sweep");
 
-        // PREMISE: a pair really was made, and exactly one — three tickets cannot make two.
+        // PREMISE: exactly one pair was made.
         assert_eq!(made, 1);
         assert_eq!(paired_profiles(&app).await, vec![json!(["oldest", "mid"])]);
 
-        // The closer-rated newcomer is still waiting, which is the half that discriminates: a
-        // closest-rating matcher would have paired `oldest` with `near` and left `mid`.
+        // The closer-rated newcomer still waits: a closest-rating matcher would have left `mid`.
         let still_waiting = ticket(&app, "t-near").await;
         assert_eq!(still_waiting["status"], "open");
         assert_eq!(still_waiting["matchId"], Value::Null);
@@ -544,7 +530,6 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
         let made = try_pair(&app).await.expect("a sweep");
 
         assert_eq!(made, 2);
-        // The oldest pair is made first, and each ticket takes the oldest opponent left to it.
         assert_eq!(
             paired_profiles(&app).await,
             vec![json!(["first", "second"]), json!(["third", "fourth"])]
@@ -554,14 +539,13 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
 
     #[tokio::test(start_paused = true)]
     async fn r166_breaks_a_tie_on_ticket_id_so_the_same_open_set_always_pairs_the_same_way() {
-        // `t-zebra` is inserted before `t-alpha` and they queued at the very same instant. Insertion
-        // order would pair `oldest` with `t-zebra`; the id tie-break pairs it with `t-alpha`.
+        // `t-zebra` is inserted before `t-alpha` at the same instant: the id tie-break pairs `oldest` with `t-alpha`.
         let app = test_app().await;
         let oldest = (1000, 30_000);
         let zebra = (1010, 5_000);
         let alpha = (1020, 5_000);
 
-        // PREMISE: both tie-ed candidates qualify, so the loser below loses on its id and nothing else.
+        // PREMISE: both tied candidates qualify, so the loser loses on its id alone.
         expect_qualifies(oldest, zebra);
         expect_qualifies(oldest, alpha);
 
@@ -576,8 +560,7 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
         seed_ticket(&app, t("t-zebra", "zebra", zebra)).await;
         seed_ticket(&app, t("t-alpha", "alpha", alpha)).await;
 
-        // PREMISE: the store really does hand them over in insertion order for an equal `enqueuedAt`,
-        // so the assertion below is about `try_pair`'s sort and not about the store's.
+        // PREMISE: the store hands them over in insertion order, so the assertion is about `try_pair`'s sort.
         let open: Vec<Value> = to_json(&q!(app, tickets_list_open()))
             .as_array()
             .map(|rows| rows.iter().map(|row| row["id"].clone()).collect())
@@ -591,8 +574,7 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
 
     #[tokio::test(start_paused = true)]
     async fn r166_stays_inside_95s_window_an_opponent_both_windows_refuse_is_not_paired_at_all() {
-        // The control on "oldest first": it never drags in someone the window excludes. Both have
-        // waited under 10 s, so both windows are ±100 and a gap of 300 is outside them.
+        // Control: oldest-first never drags in someone the window excludes (both windows ±100, gap 300).
         let app = test_app().await;
         seed_ticket(
             &app,
@@ -621,8 +603,7 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
         assert!(matches_table(&app).await.is_empty());
         assert_eq!(open_count(&app).await, 2);
 
-        // …and once the older one has waited long enough for its window to widen past the gap, the
-        // same two pair. (§9.5: uncapped after 60 s, so both windows admit the gap by then.)
+        // …and once the older one's window has widened past the gap, the same two pair (§9.5: uncapped after 60 s).
         tokio::time::advance(Duration::from_millis(120_000)).await;
         assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
         assert_eq!(paired_profiles(&app).await, vec![json!(["low", "high"])]);
@@ -641,7 +622,7 @@ mod r167_r108_r143_how_a_player_leaves_the_queue {
         let [deck, ..] = decks_from();
         let deck_id = save_deck_for(&app, "leaver", &deck, "leaver's deck").await;
 
-        // PREMISE: there is something to cancel. Every negative below is vacuous without it.
+        // PREMISE: there is something to cancel.
         let (status, queued) = enqueue(&app, &token, &deck_id).await;
         let ticket_id = queued["ticketId"].as_str().unwrap_or("").to_string();
         assert_eq!(status, 200);
@@ -655,8 +636,7 @@ mod r167_r108_r143_how_a_player_leaves_the_queue {
         assert_eq!(ticket(&app, &ticket_id).await["status"], "cancelled");
         assert_eq!(open_count(&app).await, 0);
 
-        // §9.5's enqueue condition — active and not in a match — is satisfiable again, which is the
-        // reason R167 exists: without cancel, a player who queued by mistake waits to be paired.
+        // §9.5's enqueue condition (active, not in a match) holds again, which is why R167 exists.
         let (status, again) = enqueue(&app, &token, &deck_id).await;
         assert_eq!(status, 200);
         assert_ne!(again["ticketId"], json!(ticket_id));
@@ -669,8 +649,7 @@ mod r167_r108_r143_how_a_player_leaves_the_queue {
         let [deck, ..] = decks_from();
         let deck_id = save_deck_for(&app, "twice", &deck, "twice's deck").await;
 
-        // PREMISE, again: cancel the real thing first, so "cancelled: false" below means "already
-        // gone" rather than "nothing was ever queued".
+        // PREMISE: cancel the real thing first, so "cancelled: false" means "already gone".
         let ticket_id = enqueue(&app, &token, &deck_id).await.1["ticketId"]
             .as_str()
             .unwrap_or("")
@@ -681,7 +660,6 @@ mod r167_r108_r143_how_a_player_leaves_the_queue {
 
         assert_eq!(status, 200);
         assert_eq!(second, json!({ "cancelled": false }));
-        // The first cancel is not undone or re-applied by the second.
         assert_eq!(ticket(&app, &ticket_id).await["status"], "cancelled");
         assert_eq!(tickets_table(&app).await.len(), 1);
     }
@@ -701,17 +679,15 @@ mod r167_r108_r143_how_a_player_leaves_the_queue {
             .to_string();
         let (_, paired) = enqueue(&app, &two, &deck_two).await;
 
-        // PREMISE: the race R167 is about really happened — the sweeper on enqueue paired them.
+        // PREMISE: the race R167 is about happened: the sweeper on enqueue paired them.
         assert_eq!(paired["status"], "matched");
         assert_ne!(paired["matchId"], Value::Null);
         assert_eq!(ticket(&app, &first_ticket).await["status"], "matched");
 
-        // The client's cancel arrives after the pairing. It closes nothing.
         let (status, late) = cancel(&app, &one).await;
 
         assert_eq!(status, 200);
         assert_eq!(late, json!({ "cancelled": false }));
-        // The match stands, and the player still belongs in it.
         let stands = ticket(&app, &first_ticket).await;
         assert_eq!(stands["status"], "matched");
         assert_eq!(stands["matchId"], paired["matchId"]);
@@ -733,8 +709,7 @@ mod r167_r108_r143_how_a_player_leaves_the_queue {
 
     #[tokio::test(start_paused = true)]
     async fn r167s_cancel_is_94_gated_like_the_rest_of_the_queue_a_pending_account_gets_403() {
-        // The control on "always 200": `DELETE /api/queue` is not an open door that answers
-        // `cancelled: false` to anybody who asks.
+        // Control: `DELETE /api/queue` answers `cancelled: false` only for a ticket that is not there.
         let app = test_app().await;
         let token = pending_profile(&app, "pending").await;
 
@@ -747,14 +722,9 @@ mod r167_r108_r143_how_a_player_leaves_the_queue {
 
 // §9.4's gate on the queue (BUILD M6-T1)
 
-/// BUILD M6-T1's last acceptance item: "a pending account cannot call collection, loadout or queue
-/// endpoints (403)". Collection and decks are checked against their own routes in `collection.rs`
-/// and `decks.rs`; the queue half was only ever checked for `DELETE` (R167's test above), which left
-/// enqueueing — the endpoint §9.4 actually names when it says a pending account gets "no
-/// collection, loadout, queue or match" — asserted by nobody.
-///
-/// Its own block rather than a sixth test inside R167's: R167 is a ruling about *leaving* the
-/// queue, and this is M6-T1's gate on entering it.
+/// BUILD M6-T1: "a pending account cannot call collection, loadout or queue endpoints (403)". The
+/// other routes are checked in `collection.rs` and `decks.rs`; this is enqueueing, which §9.4 names
+/// ("no collection, loadout, queue or match"). R167's block is about *leaving* the queue.
 mod section_94s_gate_on_the_queue {
     use super::*;
 
@@ -765,8 +735,7 @@ mod section_94s_gate_on_the_queue {
             .filter(|route| route.1 == "/api/queue")
             .map(|route| (route.0.to_string(), matches!(route.2, AuthLevel::Active)))
             .collect();
-        // `src/api/queue.rs` says the gate "is §9.4's gate ... so a pending account gets 403 here
-        // without this handler saying anything about it". That is only true while these say `Active`.
+        // `src/api/queue.rs` leaves the 403 to §9.4's gate, which holds only while these say `Active`.
         assert_eq!(
             declared,
             vec![("POST".to_string(), true), ("DELETE".to_string(), true)]
@@ -784,15 +753,13 @@ mod section_94s_gate_on_the_queue {
 
         assert_eq!(status, 403);
         assert_eq!(body["error"]["code"], "account_pending");
-        // The refusal happens before the handler, so no ticket exists and nothing was logged as queued.
         assert!(tickets_table(&app).await.is_empty());
         assert_eq!(open_count(&app).await, 0);
     }
 
     #[tokio::test(start_paused = true)]
     async fn the_control_the_same_profile_and_the_same_request_queue_fine_once_the_account_is_active() {
-        // Without this, the 403 above could be any of the other things the route refuses. The deck is
-        // saved first in both cases, so the only difference between the two calls is `status`.
+        // Control: the deck is saved first in both calls, so only `status` differs.
         let app = test_app().await;
         let token = pending_profile(&app, "activating").await;
         let [deck, ..] = decks_from();
@@ -810,17 +777,10 @@ mod section_94s_gate_on_the_queue {
 
 // §9.4 / §9.5 / §9.8 — the deck is frozen into the ticket
 
-/// §9.8's abuse vector, by its own name: "Deck swapped after matchmaking → decks are frozen into the
-/// ticket". §9.4 states the rule ("Decks are frozen into the queue ticket") and `src/api/queue.rs`
-/// claims it in its header: nothing re-reads a saved deck after the ticket exists.
-///
-/// So this block runs the vector end to end and through HTTP — enqueue, then **save a different
-/// deck under the same id**, then pair — through the deck routes of the same router, because "edits
-/// the deck" is something the player does with `PUT /api/decks/:id` and not something a test does
-/// to the store.
-///
-/// Every case carries its control, and the controls are the point: an assertion that a match used
-/// deck A is worthless unless the same fixture, with the save moved earlier, uses deck B.
+/// §9.8's abuse vector: "Deck swapped after matchmaking → decks are frozen into the ticket" (§9.4).
+/// Enqueue, then save a different deck under the same id through `PUT /api/decks/:id`, then pair.
+/// Every case carries its control: a match using deck A proves nothing unless the same fixture, with
+/// the save moved earlier, uses deck B.
 mod section_98_decks_are_frozen_into_the_queue_ticket {
     use super::*;
 
@@ -834,36 +794,30 @@ mod section_98_decks_are_frozen_into_the_queue_ticket {
         assert_eq!(save(&app, &swapper, &deck_id, &frozen, None).await, 200);
         let rival_deck = save_deck_for(&app, "rival", &rival_cards, "rival's deck").await;
 
-        // PREMISE: the two decks share no card at all. Without this the assertions below could be
-        // satisfied by a match that used the *new* deck and simply looked the same.
+        // PREMISE: the two decks share no card, so a match on the new deck could not look the same.
         assert!(!frozen.is_empty());
         assert!(frozen.iter().all(|card_id| !substitute.contains(card_id)));
 
-        // 1. Queue with the deck. The ticket freezes it here and nowhere else.
         let (_, queued) = enqueue_with(&app, &swapper, json!({ "mode": "bo1", "deckId": deck_id })).await;
         let ticket_id = queued["ticketId"].as_str().unwrap_or("").to_string();
         assert_eq!(queued["status"], "open");
         assert_eq!(ticket(&app, &ticket_id).await["deck"], json!(frozen));
 
-        // 2. The swap, through the endpoint a player would use, while the ticket is still open.
+        // The swap, while the ticket is still open.
         assert_eq!(save(&app, &swapper, &deck_id, &substitute, None).await, 200);
-        // PREMISE: the save really landed. A rejected save would make every assertion below pass for
-        // the wrong reason — there would be nothing to leak into the match.
+        // PREMISE: the save landed; a rejected save would make every assertion below pass vacuously.
         let saved = q!(app, decks_get(&deck_id))
             .map(|deck| to_json(&deck))
             .unwrap_or(Value::Null);
         assert_eq!(saved["cards"], json!(substitute));
-        // …and the ticket is untouched by it.
         assert_eq!(ticket(&app, &ticket_id).await["deck"], json!(frozen));
 
-        // 3. Someone pairs with the queued player, and the match is created.
         let (_, paired) = enqueue_with(&app, &rival, json!({ "mode": "bo1", "deckId": rival_deck })).await;
         assert_eq!(paired["status"], "matched");
         let match_id = paired["matchId"].as_str().expect("a match id").to_string();
 
         // §9.4, §9.5: the match runs the deck the ticket froze, not the one the player is holding now.
         assert_eq!(seat_deck(&app, &match_id, "swapper").await, json!(frozen));
-        // The substitute deck reached neither the match row nor anything stored with it.
         let row = q!(app, matches_get(&match_id))
             .map(|row| to_json(&row))
             .unwrap_or(Value::Null);
@@ -876,8 +830,7 @@ mod section_98_decks_are_frozen_into_the_queue_ticket {
 
     #[tokio::test(start_paused = true)]
     async fn the_control_the_same_swap_made_before_the_enqueue_is_the_deck_the_match_uses() {
-        // Without this, the test above would pass against a queue that ignored saved decks entirely.
-        // Exactly one thing moves between the two: whether the save happens before or after enqueue.
+        // Control: the save moves before enqueue, so the match uses deck B; else the test above could pass on a queue that ignored saved decks.
         let app = test_app().await;
         let swapper = active_profile(&app, "early", 1000.0).await;
         let rival = active_profile(&app, "late", 1000.0).await;
@@ -956,8 +909,7 @@ mod r257_queue_modes {
 
     #[tokio::test(start_paused = true)]
     async fn r257_never_pairs_tickets_of_different_modes_however_long_they_have_waited() {
-        // Same rating, long waits: every window admits every other ticket, so only the mode can stop a
-        // pairing.
+        // Same rating, long waits: every window admits every ticket, so only the mode can stop a pairing.
         let app = test_app().await;
         seed_ticket(
             &app,
@@ -998,8 +950,7 @@ mod r257_queue_modes {
         assert!(series_table(&app).await.is_empty());
         assert_eq!(open_count(&app).await, 3);
 
-        // The control: a second All Random ticket pairs with the first one, and only with it — even
-        // though the Best-of-1 and Best-of-3 tickets are older.
+        // Control: a second All Random ticket pairs with the first, though the Best-of-1 and Best-of-3 tickets are older.
         seed_ticket(
             &app,
             SeedTicket {
@@ -1338,8 +1289,7 @@ mod a_paired_match_whose_start_fails {
             assert_eq!(in_match_of(&app, id).await, Value::Null);
         }
 
-        // Free means free: the same player can queue straight back up (their ticket is claimed,
-        // never open, so nothing blocks a fresh enqueue).
+        // Free means free: the claimed ticket is never open, so a fresh enqueue is not blocked.
         fake(&app).await.on_call = None;
         let (_, again) = enqueue_with(&app, &one, json!({ "mode": "bo1", "deckId": deck_a })).await;
         assert_eq!(again["status"], "open");
@@ -1354,11 +1304,9 @@ mod a_paired_match_whose_start_fails {
         let trio_b = save_trio_for(&app, "series-b", None, "series-b's trio").await;
 
         enqueue_with(&app, &one, json!({ "mode": "bo3", "trioId": trio_a })).await;
-        // The claim won, `series.create` had already landed inside the transaction, and then the
-        // start failed — what a transaction exists to take back. Without it the 'picking' row would
-        // hold both players out of the queue (R264) until the pick deadline ran the series out
-        // (R333), and the `open` skeleton forever. The fault is the one store call right after the
-        // series row is written, and only that one: the cleanup after it must go through.
+        // The claim won, `series.create` landed inside the transaction, then the start failed. Without the
+        // rollback the 'picking' row would hold both players out of the queue (R264) until the pick deadline
+        // ran the series out (R333). The fault is the one store call right after the series row, and only it.
         let calls = record_calls(&mut *fake(&app).await, |seen, _method| {
             seen.last().is_some_and(|previous| previous == "series.create")
         });
@@ -1393,10 +1341,9 @@ mod a_paired_match_whose_start_fails {
 
 // R642 — the portrait on the ticket and the seat
 
-/// R642, the queue half: a Best-of-1 ticket freezes its deck's portrait with the deck (§9.4, §9.8),
-/// an All Random match deals each seat's portrait from the match seed the way it deals the deck
-/// (R258), and either way the pair lands on the match row seat-ordered — which is what the actor's
-/// `portraits` frame reads back.
+/// R642, the queue half: a Best-of-1 ticket freezes its deck's portrait with the deck (§9.4, §9.8), an
+/// All Random match deals each seat's portrait from the match seed like the deck (R258), and the pair
+/// lands on the match row seat-ordered, which the actor's `portraits` frame reads back.
 mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
     use super::*;
 
@@ -1414,15 +1361,15 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
             200
         );
 
-        // 1. Queue with the deck: its portrait freezes into the ticket here and nowhere else.
+        // Queue with the deck: its portrait freezes into the ticket here.
         let (_, queued) = enqueue_with(&app, &swapper, json!({ "mode": "bo1", "deckId": deck_id })).await;
         let ticket_id = queued["ticketId"].as_str().unwrap_or("").to_string();
         assert_eq!(queued["status"], "open");
         assert_eq!(ticket(&app, &ticket_id).await["portrait"], "gary");
 
-        // 2. The re-save, while the ticket is still open. It lands — and the ticket does not move.
+        // The re-save, while the ticket is still open, lands; the ticket does not move.
         assert_eq!(save(&app, &swapper, &deck_id, &mine, Some("timmy")).await, 200);
-        // PREMISE: the new portrait really is what the deck holds now, so there is something to leak.
+        // PREMISE: the new portrait is what the deck holds now, so there is something to leak.
         let deck = q!(app, decks_get(&deck_id))
             .map(|deck| to_json(&deck))
             .unwrap_or(Value::Null);
@@ -1432,11 +1379,10 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
         // so the first enqueue is made older by a millisecond of the paused clock.
         tokio::time::advance(Duration::from_millis(1)).await;
 
-        // 3. The pairing: the older ticket is p1, and each seat carries what its ticket froze.
+        // The pairing: each seat carries what its ticket froze.
         let (_, paired) = enqueue_with(&app, &rival, json!({ "mode": "bo1", "deckId": rival_deck_id })).await;
         assert_eq!(paired["status"], "matched");
 
-        // …and the match row keeps them in seat order, which is what `portraits` frames read back.
         let row = matches_table(&app).await.last().cloned().expect("the match row");
         assert_eq!(row["players"], json!(["swapper", "rival"]));
         assert_eq!(row["portraits"], json!(["gary", "shredder"]));
@@ -1447,8 +1393,7 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
         let app = test_app().await;
         let one = active_profile(&app, "plain-one", 1000.0).await;
         let two = active_profile(&app, "plain-two", 1000.0).await;
-        // `save_deck_for` writes `portrait: null` — R641's default, and what a deck saved before
-        // portraits existed holds.
+        // `save_deck_for` writes `portrait: null`: R641's default.
         let [first, second, _] = decks_from();
         let a = save_deck_for(&app, "plain-one", &first, "plain-one's deck").await;
         let b = save_deck_for(&app, "plain-two", &second, "plain-two's deck").await;
@@ -1493,8 +1438,7 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
         // PREMISE: the seed really is the one the enqueue supplied (R143), seat order as paired.
         assert_eq!(row["seed"], "portrait-seed");
         assert_eq!(row["players"], json!(["rng-p1", "rng-p2"]));
-        // Each seat's pick is `pick_portrait_from_seed` on its own seat-keyed suffix — the same scheme
-        // the decks are dealt on — so both `:portrait:p1` and `:portrait:p2` are covered here.
+        // Each seat's pick is `pick_portrait_from_seed` on its seat-keyed suffix, as the decks are dealt.
         let expected = json!([
             pick_portrait_from_seed("portrait-seed:portrait:p1"),
             pick_portrait_from_seed("portrait-seed:portrait:p2"),
@@ -1577,11 +1521,10 @@ mod r264_a_series_that_is_not_over_holds_its_players_out_of_the_queue {
 
 // R253 — the real validator at enqueue
 
-/// The production wiring: the real §8 catalog, the real validator, R111's launch grant, and
-/// `POST /api/queue`. It does not re-test L1–L6 — `crates/engine/src/validator.rs` does — only that
-/// a deck or trio the shared module refuses is refused at enqueue, with the module's own issues, the
-/// decks' own names in them, and no ticket written. No sentence is typed out: every expectation is
-/// read off the refusal itself (its first issue's rule, and that the error's message is that issue's).
+/// The production wiring: the real §8 catalog, validator, R111's launch grant and `POST /api/queue`.
+/// It does not re-test L1–L6 (`crates/engine/src/validator.rs` does), only that a deck or trio the shared
+/// module refuses is refused at enqueue with its own issues and no ticket. Expectations are read off the
+/// refusal itself, not typed out.
 mod r253_what_may_be_queued_through_the_real_validator {
     use super::*;
 
@@ -1592,8 +1535,7 @@ mod r253_what_may_be_queued_through_the_real_validator {
         size: usize,
     }
 
-    /// The production wiring for one active profile that owns every card. The deck size is the
-    /// engine config's (BUILD §2), never spelled here.
+    /// The production wiring for one active profile that owns every card; the deck size is the engine config's (BUILD §2).
     async fn real_wiring() -> Real {
         let app = test_app().await;
         let token = active_profile(&app, "real", 1000.0).await;

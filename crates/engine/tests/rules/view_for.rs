@@ -284,7 +284,6 @@ fn mode_option(option: &str) -> PromptOption {
     }
 }
 
-
 mod view_for_10_8_m3_t6 {
     use super::*;
 

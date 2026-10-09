@@ -266,8 +266,8 @@ struct Harness {
 
 #[derive(Default)]
 struct StartOptions {
-    /// Real decks (the real catalog, nothing installed): TS's `{ engine: enginePort(), decks }`.
     /// Real decks (the real catalog, nothing installed).
+    real: Option<(Vec<String>, Vec<String>)>,
 }
 
 fn hand_holds(view: &Value, def_id: &str) -> bool {

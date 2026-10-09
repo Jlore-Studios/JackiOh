@@ -9,6 +9,7 @@
 //!   * R58: the owed chain carries its counter, so resuming cannot evade the cap.
 //!   * R4, R3: hand-cap burn and fatigue still apply past a pause; the paused draw counts once.
 //!   * R70, R122: the paused cast lands on the answer (§10.5 steps 6, 7), before the draw owed behind it.
+//!
 //! Controls: with nothing asking, the chain and "draw N" run in one call and `state.work` stays empty.
 //! Fixtures: defs prefixed `dr-`, indexed from 2700, so they cannot collide with another file (BUILD §0).
 

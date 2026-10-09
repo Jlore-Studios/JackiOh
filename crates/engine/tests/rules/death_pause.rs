@@ -8,6 +8,7 @@
 //!   * R78, R89: the resumed half of a Death hook reads the snapshot taken before the card left.
 //!   * R64, R83: a Reborn unit in a pass that paused comes back at 1 health, summoning sick.
 //!   * R70, R122: a cast whose Cry asks lands only on the answer; `cardResolved` fires once.
+//!
 //! Controls: with nothing asking, the hooks run in one call and `state.work` stays empty.
 //! Fixtures: defs prefixed `dp-`, indexed from 2600, so they cannot collide with another file (BUILD §0).
 

@@ -432,9 +432,8 @@ mod loadout_validator_binding_section_9_4_one_module_shared {
         let app = test_app().await;
         let catalog = &app.catalog;
         let legal = legal(catalog, 60);
-        // R111's launch grant, exactly: one copy of every non-token card, which is what every active
-        // profile owns. The test above owns *nothing*, which R111 makes impossible — so L5 on its own
-        // is only reachable there, never in a real collection.
+        // R111's launch grant: one copy of every non-token card. The test above owns *nothing*,
+        // which R111 makes impossible, so L5 on its own is reachable only there.
         let every: Vec<String> = catalog
             .card_ids
             .iter()
@@ -476,7 +475,7 @@ mod loadout_validator_binding_section_9_4_one_module_shared {
 
             assert_ne!(found, Vec::<String>::new(), "{name} should be refused");
             // The ruling itself: whenever L5 fires against an R111 collection, the rule that made it
-            // reachable fired too. Change R111's quantity or MAX_COPIES and this is the test that goes red.
+            // reachable fired too.
             if found.contains(&"L5".to_string()) {
                 saw_l5 = true;
                 assert!(
@@ -499,9 +498,7 @@ mod r163_the_catalog_endpoint_section_9_1_section_9_4_r105 {
     async fn r163_serves_the_whole_unprojected_catalog_to_a_caller_with_no_account_at_all() {
         let app = test_app().await;
 
-        // PREMISE: the gate is on. The same request with no token is refused by a guarded route
-        // (`GET /api/collection` declares `active`), so "the anonymous call worked" is not just
-        // "this router lets everybody through": §9.4's gate has to be demonstrably awake.
+        // PREMISE: §9.4's gate is on: a guarded route (`GET /api/collection`) refuses no token.
         let gated = get(&app, "/api/collection", None).await;
         assert_eq!(gated.status, 401);
 
@@ -517,9 +514,8 @@ mod r163_the_catalog_endpoint_section_9_1_section_9_4_r105 {
         let file = catalog_file();
         assert_eq!(body["defs"], file);
 
-        // Unprojected: not one field is trimmed off a card on the way out. A trimmed card would be a
-        // second, weaker copy of the catalog, and the deckbuilder's verdict (UX) would stop being the
-        // verdict the save runs (law).
+        // Unprojected: not one field is trimmed off a card, or the deckbuilder's verdict would stop
+        // being the verdict the save runs.
         for card_id in sorted_keys(&file) {
             assert_eq!(
                 sorted_keys(&body["defs"][card_id.as_str()]),

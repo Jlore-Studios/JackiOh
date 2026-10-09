@@ -58,6 +58,8 @@ pub struct Session {
     pub user: AuthUser,
 }
 
+pub type AuthSession = Session;
+
 /// Why a provider call did not produce what was asked.
 ///
 /// - `Invalid`: the token is not currently valid.

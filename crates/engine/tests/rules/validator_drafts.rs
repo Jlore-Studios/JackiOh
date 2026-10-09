@@ -452,7 +452,7 @@ mod r253_what_may_be_queued_a_best_of_1_deck_passes_l2_l3_l5_and_l6 {
 
     #[test]
     fn r253_checks_a_trio_with_l1_l6_a_trio_is_s9_4s_loadout() {
-// Compared by what the two functions answer, on a legal trio and on a short one.
+        // Compared by what the two functions answer, on a legal trio and on a short one.
         let all: Vec<Value> = legal_decks()
             .iter()
             .map(|cards| json!({ "cards": cards }))
@@ -488,7 +488,7 @@ mod r340_room_for_an_imported_trio {
         import_room(json!({ "saved": saved, "limits": limits(), "adding": adding }))
     }
 
-/// Every key of `expected` is in `actual` with the same value.
+    /// Every key of `expected` is in `actual` with the same value.
     fn matches_object(actual: &Value, expected: &Value) -> bool {
         expected
             .as_object()

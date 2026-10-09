@@ -1,13 +1,23 @@
 //! A fused card's scripts are its own, whatever else the process has fused (R77, R179, §9.3).
 //!
-//! The script registry is the process's, and a server or the practice worker's simulated worlds can fuse
-//! into the same `t-<n>` slot from different cards. R179's id names the ingredients, so those fusions get
-//! two ids and two entries, and the engine rebuilds any fused script the registry lacks whenever a state
-//! is entered through `reduce`, `legalActions` or `viewFor`.
+//! The script registry is the process's. A server runs many matches in one process, and the practice
+//! worker runs the AI's simulated worlds beside the real game, so two states can each fuse into the
+//! same `t-<n>` slot from different cards. R179's id names the ingredients, so those two fusions get
+//! two ids; and the engine rebuilds any fused script the registry lacks (a state that came through
+//! JSON, or a registry replaced wholesale) whenever it is entered through `reduce`, `legalActions` or
+//! `viewFor`.
 //!
-//! A fused script is never registered: `scripts::script_of(state, def_id)` composes it from the state's
-//! fused definition and the state keeps what it composed (`GameState::fused_scripts`), so "the registry
-//! lacks it" is the permanent condition. Surface contract: docs/v0.3.0/SURFACE.md §6.6, §17.
+//! A fused script is never registered: `scripts::script_of(state, def_id)` composes it from the
+//! state's fused definition and the state keeps what it composed (`GameState::fused_scripts`).
+//! Surface contract: docs/v0.3.0/SURFACE.md §6.6, §17.
+
+use std::cell::Cell;
+use std::sync::Arc;
+
+use jackioh_engine::effects::fuse_cards;
+use jackioh_engine::reduce::{legal_actions, reduce};
+use jackioh_engine::resolve::{HookOptions, apply_effects, make_context};
+use jackioh_engine::scripts::{ScriptRef, face_ref, script_of};
 use jackioh_engine::subsystems::fuse::fused_ingredients;
 use jackioh_engine::testkit::*;
 use jackioh_engine::view_for::view_for;
@@ -15,7 +25,7 @@ use jackioh_engine::wire::PlayerId::P1;
 
 use crate::rules::fixtures::harness::new_game;
 
-/// The four cards are 1701–1704.
+/// The four cards are indexed 1701–1704.
 fn unit(name: &str, index: i32) -> CardDef {
     json_as(json!({
         "id": format!("fr-{name}"),
@@ -23,7 +33,7 @@ fn unit(name: &str, index: i32) -> CardDef {
         "name": format!("{name} (fuse registry)"),
         "set": "Core",
         "type": "Unit",
-/// The four cards are 1701–1704.
+        "tags": [],
         "rarity": "Common",
         "token": false,
         "cost": 1,
@@ -42,7 +52,7 @@ fn cards() -> [CardDef; 4] {
 }
 
 thread_local! {
-    /// The markers the last Cry run applied, in order. Each `#[test]` runs on its own thread.
+    /// The markers the last Cry run applied, in order; each `#[test]` runs on its own thread.
     static SEEN: Cell<Vec<String>> = const { Cell::new(Vec::new()) };
 }
 
@@ -50,7 +60,8 @@ thread_local! {
 fn marked(name: &str) -> Script {
     let name = name.to_string();
     Script {
-    /// The markers the last Cry run applied, in order. Each `#[test]` runs on its own thread.
+        cry: Some(hook(move |_ctx| {
+            let name = name.clone();
             vec![Effect::new("marker", move |_ctx| {
                 SEEN.with(|seen| {
                     let mut list = seen.take();
@@ -137,17 +148,18 @@ fn only_fused(state: &GameState) -> String {
 }
 
 /// What the scripts for `def_id` do right now: its Cry, run with no play behind it on a copy of
-/// `state` and applied, as the markers its ingredients' Cries record. `script_of` is the one place
-/// a fused id's scripts come from.
+/// `state` and applied, as the markers its ingredients' Cries record. `script_of` is the one place a
+/// fused id's scripts come from.
 fn markers(state: &GameState, def_id: &str) -> Vec<String> {
     let Some(cry) = script_of(state, def_id).base.cry.clone() else {
         return vec![];
     };
     SEEN.with(|seen| seen.set(Vec::new()));
     let mut copy: GameState =
-/// What the scripts for `def_id` do right now: its Cry, run with no play behind it on a copy of
-/// `state` and applied, as the markers its ingredients' Cries record. `script_of` is the one place
-/// a fused id's scripts come from.
+        serde_json::from_value(serde_json::to_value(state).expect("a state serialises"))
+            .expect("a state survives JSON");
+    let mut events = Vec::new();
+    let mut rng = Rng::new(&copy.seed, copy.rng_cursor);
     {
         let mut sink = EngineSink::new(&mut copy, &mut events, &mut rng);
         let mut ctx = make_context(
@@ -183,7 +195,7 @@ fn marker_list(defs: &[&CardDef]) -> Vec<String> {
 }
 
 mod fused_scripts_belong_to_the_state_that_fused_them {
-/// The registry holds nothing for `def_id`.
+    use super::*;
 
     #[test]
     fn r179_two_matches_in_one_process_that_fuse_different_pairs_into_the_same_slot_keep_two_ids_and_their_own_cry()

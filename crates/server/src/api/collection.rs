@@ -82,7 +82,7 @@ fn deltas_from(entries: &[CollectionEntry]) -> Result<IndexMap<String, i64>, Api
 /// transaction rolls back (a `Tx` dropped without `commit`) and neither table moves.
 pub async fn grant_cards(app: &App, input: GrantInput) -> Result<(), ApiError> {
     let deltas = deltas_from(&input.entries)?;
-        // No delta, no write: `collection_grants.delta <> 0` forbids an empty audit row.
+    // No delta, no write: `collection_grants.delta <> 0` forbids an empty audit row.
     if deltas.is_empty() {
         return Ok(());
     }

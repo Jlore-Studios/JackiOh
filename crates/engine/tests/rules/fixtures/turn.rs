@@ -290,7 +290,7 @@ fn second_draw(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
 }
 
 /// A data bag entry as text: a string as itself, `undefined` for a missing key.
-/// A data bag entry as text: a string as itself, `undefined` for a missing key.
+fn js_string(value: Option<&Value>) -> String {
     match value {
         None => "undefined".to_string(),
         Some(Value::String(text)) => text.clone(),
