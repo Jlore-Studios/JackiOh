@@ -49,6 +49,10 @@ pub struct ShuffleIntoArgs {
     pub radiant: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub copy_of: Option<String>,
+    /// ME-DECK-BOTTOM (Meditative #49): put the fresh card at this end of the library instead of
+    /// a random position. Absent is the shuffle.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<crate::ownership::LibraryEnd>,
 }
 
 /// Shuffle fresh copies of a definition into a library (CN-Viral Injection's CN-Virus, Unstable Clone
@@ -65,7 +69,12 @@ pub fn shuffle_into(args: ShuffleIntoArgs) -> Effect {
             }
             let source = source_of(ctx.state, args.copy_of.as_deref()).cloned();
             carry_from(&mut card, source.as_ref());
-            shuffle_into_library(ctx, &mut card, false, args.copy_of.as_deref());
+            match args.position {
+                None => shuffle_into_library(ctx, &mut card, false, args.copy_of.as_deref()),
+                Some(end) => {
+                    crate::draw::put_into_library(ctx, &mut card, false, args.copy_of.as_deref(), end)
+                }
+            };
         }
     })
 }

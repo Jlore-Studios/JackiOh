@@ -76,6 +76,7 @@ mod tests {
             hero_guard,
             conditional_keywords,
             after_attack,
+            after_attacked,
             plague_multiplier,
             deck_triggers,
             graveyard_triggers,
@@ -113,6 +114,7 @@ mod tests {
             && hero_guard.is_none()
             && conditional_keywords.is_none()
             && after_attack.is_none()
+            && after_attacked.is_none()
             && plague_multiplier.is_none()
             && deck_triggers.is_empty()
             && graveyard_triggers.is_empty()

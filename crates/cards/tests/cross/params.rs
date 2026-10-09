@@ -376,8 +376,8 @@ mod r1430_r1431_the_numbers_a_change_reaches {
                 assert_ne!(read(&s, &plain), param.base, "{} {}", card.id, param.key);
             }
         }
-        // The thirteen numbers patch v0.3.3 marked (issue #556).
-        assert_eq!(base_only.len(), 13, "{base_only:#?}");
+        // The thirteen numbers patch v0.3.3 marked (issue #556), and Meditative #49.1's picks (#529).
+        assert_eq!(base_only.len(), 14, "{base_only:#?}");
     }
 
     #[test]

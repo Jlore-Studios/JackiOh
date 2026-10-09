@@ -23,6 +23,7 @@ use serde::{Deserialize, Serialize};
 use crate::modifiers::add_modifier;
 use crate::script::Effect;
 use crate::state::{ModifierExpiry, ModifierKind};
+use crate::wire::opponent_of;
 
 use super::targets::{PlayerSpec, player_of};
 
@@ -57,5 +58,38 @@ pub fn add_player_modifier(args: AddPlayerModifierArgs) -> Effect {
         // function takes the context directly and no state write moves into this file.
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         add_modifier(ctx, player, args.mod_.expiry.clone(), args.mod_.kind.clone());
+    })
+}
+
+/// `makeHeroImmune`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct MakeHeroImmuneArgs {
+    /// Whose hero it covers, relative to the controller. Default "self".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+}
+
+/// MD-C21 (Meditative #48 Tranquility): this player's hero is immune to damage until their next
+/// turn begins — a `HeroImmune` player modifier, read as a cap of 0 at §4.4 step 3.
+///
+/// Expiry is R757's Armor Up expiry: made on this player's turn it lasts through the opponent's
+/// next turn (`nextTurnOf` the opponent), so the cleanup ending that turn takes it off as this
+/// player's next turn begins. Made on the opponent's turn there is no turn of theirs to cover, so
+/// it ends at that turn's cleanup.
+pub fn make_hero_immune(args: MakeHeroImmuneArgs) -> Effect {
+    Effect::new("makeHeroImmune", move |ctx| {
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        let expiry = if ctx.sink.state.active == player {
+            ModifierExpiry::NextTurnOf {
+                player: opponent_of(player),
+                from_turn: ctx.sink.state.turn,
+            }
+        } else {
+            ModifierExpiry::ThisTurn {
+                turn: ctx.sink.state.turn,
+            }
+        };
+        add_modifier(ctx, player, expiry, ModifierKind::HeroImmune);
     })
 }

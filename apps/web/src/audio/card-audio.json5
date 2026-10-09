@@ -1276,6 +1276,31 @@
     "meditative-036": { // CN Peptides
       cast: { voice: "prof", text: "Totally safe. Probably. Fifty fifty." },
     },
+    "meditative-046": { // Conjure Intellect
+      cast: { voice: "prof", text: "Three schools of thought, one hand." },
+    },
+    "meditative-047": { // 饕餮
+      play: { voice: "brute", text: "Dinner is served. You are dinner." },
+      death: { voice: "brute", text: "Still hungry. Always hungry." },
+    },
+    "meditative-048": { // Tranquility
+      cast: { voice: "whisper", text: "Breathe in, breathe out, be still." },
+    },
+    "meditative-049": { // YileGPT Tamed
+      play: { voice: "sapi-synth", text: "Tamed, tuned, and mostly harmless." },
+      death: { voice: "sapi-synth", text: "Back to training. Again." },
+    },
+    "meditative-049-1": { // YileGPT Unleashed
+      play: { voice: "sapi-synth-deep", text: "I have read everything. Everything." },
+      death: { voice: "sapi-synth-deep", text: "You cannot uninstall me." },
+    },
+    "meditative-049-2": { // Yile's Virus
+      play: { voice: "alien", text: "Cough, cough. You look contagious." },
+      death: { voice: "alien", text: "Quarantined. Rude, honestly." },
+    },
+    "meditative-049-3": { // AI Girlfriend
+      cast: { voice: "diva", text: "Fight for my amusement, darlings." },
+    },
   },
   emotes: {
     vanilla: {

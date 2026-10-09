@@ -179,7 +179,8 @@ fn hero_guards_of(state: &GameState, player: PlayerId) -> Vec<HeroGuard> {
 
 /// §4.4 step 3: the smallest hero cap on offer — any Anti-oneshot Armor acting on this player's side,
 /// in its backrow zone or animated into a unit zone (R383: it keeps all of its text), and every
-/// per-hit cap its cards set (E6, Classic+ #11 Anime Armor's 1): the lowest cap wins.
+/// per-hit cap its cards set (E6, Classic+ #11 Anime Armor's 1): the lowest cap wins. A hero immune
+/// to damage (Meditative #48, MD-C21) caps every hit at 0.
 pub fn hero_damage_cap(state: &GameState, player: PlayerId) -> Option<i32> {
     let mut caps: Vec<i32> = acting_texts_of(state, player)
         .iter()
@@ -192,6 +193,14 @@ pub fn hero_damage_cap(state: &GameState, player: PlayerId) -> Option<i32> {
             .iter()
             .filter_map(|guard| guard.cap.map(|cap| cap.max(0))),
     );
+    // MD-C21: immunity is a cap of 0, so it wins over every other cap.
+    if state.players[player]
+        .mods
+        .iter()
+        .any(|modifier| matches!(modifier.kind, ModifierKind::HeroImmune))
+    {
+        caps.push(0);
+    }
     caps.into_iter().min()
 }
 
