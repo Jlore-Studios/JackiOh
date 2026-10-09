@@ -6334,15 +6334,19 @@
         {
           "at": "2026-10-09T09:36:57Z",
           "minutes": 30.5
+        },
+        {
+          "at": "2026-10-09T14:33:53Z",
+          "minutes": 24.0
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-09T14:00:00Z",
-          "utilization": 0.99
+          "resets_at": "2026-10-09T19:00:00Z",
+          "utilization": 0.33
         },
-        "observed_at": "2026-10-09T09:36:57Z",
-        "status": "allowed_warning"
+        "observed_at": "2026-10-09T14:33:53Z",
+        "status": "allowed"
       }
     },
     "devin": {
