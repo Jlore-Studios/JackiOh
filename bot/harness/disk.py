@@ -39,7 +39,8 @@ GIB = 1024 ** 3
 #: A job that starts with less free than this cleans first (`clean`).
 CLEAN_BELOW = 8 * GIB
 #: A job that has less free than this after cleaning does no work: one job's worktrees, install
-#: and checks take about 1 GB, and every other job going needs room to finish.
+#: and builds take about 1 to 2 GB (its Rust builds keep no incremental cache or debug info,
+#: `bot-night.yml`), and every other job going needs room to finish.
 FLOOR = 3 * GIB
 #: The issue opens at this share of the disk used (or under `FLOOR` free) and closes at
 #: `CLEAR_PERCENT` or under, so a disk that hovers near one line does not open and close it.
