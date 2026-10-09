@@ -5322,16 +5322,19 @@
         {
           "at": "2026-10-09T09:56:06Z",
           "minutes": 42.5
+        },
+        {
+          "at": "2026-10-09T14:02:27Z",
+          "minutes": 20.7
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-09T13:30:00Z",
-          "utilization": 1.0
+          "resets_at": "2026-10-09T18:30:00Z",
+          "utilization": 0.26
         },
-        "observed_at": "2026-10-09T09:56:06Z",
-        "rejected_resets_at": "2026-10-09T13:30:00Z",
-        "status": "rejected"
+        "observed_at": "2026-10-09T14:02:27Z",
+        "status": "allowed"
       }
     },
     "claude-2": {
