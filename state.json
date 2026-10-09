@@ -5341,17 +5341,21 @@
         {
           "at": "2026-10-09T21:00:24Z",
           "minutes": 150.0
+        },
+        {
+          "at": "2026-10-09T21:33:11Z",
+          "minutes": 30.9
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-09T22:54:19Z",
-          "utilization": 0.71
+          "utilization": 0.85
         },
-        "observed_at": "2026-10-09T21:00:24Z",
+        "observed_at": "2026-10-09T21:33:11Z",
         "seven_day": {
           "resets_at": "2026-10-16T17:47:52Z",
-          "utilization": 0.12
+          "utilization": 0.15
         },
         "status": "allowed"
       }
