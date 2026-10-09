@@ -1329,6 +1329,26 @@
     "meditative-090": { // Spell Basket
       cast: { voice: "sapi-wizard", text: "A basket full of spells!" },
     },
+    "meditative-093": { // Growing Felinor
+      play: { voice: "cat", text: "Mew! I'm a big cat now!" },
+      death: { voice: "cat", text: "Next time, I'll be bigger." },
+    },
+    "meditative-093-1": { // Growing Felinor Sr
+      play: { voice: "cat", text: "Senior kitty, reporting for duty." },
+      death: { voice: "cat", text: "Back soon. Even bigger." },
+    },
+    "meditative-093-2": { // Growing Felinor Sr Sr
+      play: { voice: "cat", text: "Senior senior cat. Respect your elders." },
+      death: { voice: "cat", text: "One last growth spurt!" },
+    },
+    "meditative-093-3": { // Growing Felinor Super Senior
+      play: { voice: "cat", text: "Super senior. Peak cat achieved." },
+      death: { voice: "cat", text: "Retired at last." },
+    },
+    "meditative-094": { // Shrinking Felinor
+      play: { voice: "cat", text: "Enjoy me while I'm big." },
+      death: { voice: "cat", text: "Honey, I shrunk the cat." },
+    },
     "meditative-045": { // Knowledge Breaker
       play: { voice: "sapi-teacher", text: "Empty your mind. Now." },
       death: { voice: "sapi-teacher", text: "What I knew returns." },

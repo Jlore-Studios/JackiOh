@@ -34,10 +34,10 @@ use serde_json::Value;
 
 use crate::config::HAND_CAP;
 use crate::damage::DamageTarget;
-use crate::layers::unit_has;
+use crate::layers::{face_of, unit_has};
 use crate::script::{EffectContext, FlagOrCount, StaticFlags};
 use crate::state::{CardInstance, FaceUpRecord, GameState, ModifierKind, PlayRecord, find_instance};
-use crate::wire::{CardType, GameEvent, KeywordKind, PlayerId, Row, Tag, Zone, opponent_of};
+use crate::wire::{AttackHealth, CardType, GameEvent, KeywordKind, PlayerId, Row, Tag, Zone, opponent_of};
 use crate::zones::{OffFieldZone, active_units_of, card_at, slot_of, slots_of};
 
 /// A hero's block as a card may see it: §10.1's `{ health, armor }`, copied, so a script cannot
@@ -498,4 +498,16 @@ pub fn highest_permanent_cost(state: &GameState, player: PlayerId) -> Option<i32
         .iter()
         .map(|held| crate::mana::cost_now(state, held))
         .max()
+}
+
+/// R1181 (Meditative #94's "base stats"): §10.4 layer 1, the running face's `statsOverride` as that face
+/// wears it (R349), else its X or printed stats. No buffs, tuning (layer 4), auras or damage: it is
+/// `face_of` with the tuning taken back off.
+pub fn base_stats_of(state: &GameState, card: &CardInstance) -> AttackHealth {
+    let face = face_of(state, card);
+    let tuning = card.tuning.as_ref();
+    AttackHealth {
+        attack: face.attack - tuning.and_then(|tuning| tuning.attack).unwrap_or(0),
+        health: face.health - tuning.and_then(|tuning| tuning.health).unwrap_or(0),
+    }
 }
