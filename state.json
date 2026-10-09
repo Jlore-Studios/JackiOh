@@ -7876,10 +7876,10 @@
   },
   "suggest": {
     "asks": [],
-    "last_run": "2026-10-09T19:13:54Z",
-    "provider": "claude-3",
+    "last_run": "2026-10-07T19:37:11Z",
+    "provider": null,
     "requested": false,
-    "run_id": "37978697454",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
