@@ -157,6 +157,8 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "End the turn",
   "Trigger a Cry",
   "Look at a hand",
+  "Allure",
+  "Jade Counter",
 ];
 
 /**

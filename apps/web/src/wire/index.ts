@@ -165,6 +165,7 @@ export const GAME_EVENT_TYPES = [
   "glitched",
   "translated",
   "damageAbsorbed",
+  "jadeChanged",
 ] as const satisfies readonly GameEventType[];
 
 /**

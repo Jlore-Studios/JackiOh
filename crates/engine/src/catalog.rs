@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::{
     GLITCH_DEF_ID, GLITCH_ODDS_DENOMINATOR, GLITCH_ODDS_PER_SYSTEM_PLAY, GRAPE_ODDS, POOL_TOKEN_TAGS,
+    RollOdds,
 };
 use crate::rng::Rng;
 use crate::state::GameState;
@@ -593,21 +594,21 @@ pub fn query(args: &CatalogQueryArgs) -> Vec<&'static CardDef> {
 // Grapes (C+ #65, #66; R382)
 // ---------------------------------------------------------------------------
 
-/// R382, BUILD §2: one Grape, rolled by `GRAPE_ODDS` — one draw of the match rng over the percents'
-/// sum, walked in the table's order. `lucky` extra rolls (§6.1 Lucky X) keep the best, and the best is
-/// the later entry, since the table runs from worst to best (Rotten < Normal < Large < Golden < Mythic).
-/// Returns the Grape's def id. (TS's `lucky = 0` default: pass 0.)
-pub fn roll_grape(rng: &mut Rng, lucky: i32) -> String {
+/// R960: one weighted roll over `table` — one draw of the match rng over the percents' sum,
+/// walked in the table's order. `lucky` extra rolls (§6.1 Lucky X) keep the best, and the best is
+/// the later entry, since the table runs from worst to best. Returns the rolled entry's def id.
+/// (TS's `lucky = 0` default: pass 0.)
+pub fn roll_weighted(rng: &mut Rng, table: &[RollOdds], lucky: i32) -> String {
     let roll = |rng: &mut Rng| -> usize {
-        let total: i32 = GRAPE_ODDS.iter().map(|grape| grape.percent).sum();
+        let total: i32 = table.iter().map(|entry| entry.percent).sum();
         let mut at = rng.int(total);
-        for (i, grape) in GRAPE_ODDS.iter().enumerate() {
-            if at < grape.percent {
+        for (i, entry) in table.iter().enumerate() {
+            if at < entry.percent {
                 return i;
             }
-            at -= grape.percent;
+            at -= entry.percent;
         }
-        GRAPE_ODDS.len().saturating_sub(1)
+        table.len().saturating_sub(1)
     };
     let extra = lucky.max(0);
     let index = if extra == 0 {
@@ -615,8 +616,16 @@ pub fn roll_grape(rng: &mut Rng, lucky: i32) -> String {
     } else {
         rng.lucky(extra, roll, |a, b| a.max(b))
     };
-    let grape = GRAPE_ODDS.get(index).or_else(|| GRAPE_ODDS.last());
-    grape.map(|grape| grape.def_id.to_string()).unwrap_or_default()
+    let entry = table.get(index).or_else(|| table.last());
+    entry.map(|entry| entry.def_id.to_string()).unwrap_or_default()
+}
+
+/// R382, BUILD §2: one Grape, rolled by `GRAPE_ODDS` — one draw of the match rng over the percents'
+/// sum, walked in the table's order. `lucky` extra rolls (§6.1 Lucky X) keep the best, and the best is
+/// the later entry, since the table runs from worst to best (Rotten < Normal < Large < Golden < Mythic).
+/// Returns the Grape's def id. (TS's `lucky = 0` default: pass 0.)
+pub fn roll_grape(rng: &mut Rng, lucky: i32) -> String {
+    roll_weighted(rng, GRAPE_ODDS, lucky)
 }
 
 /// The def ids `GRAPE_ODDS` rolls: a pool pick naming one of these is re-rolled (R382).

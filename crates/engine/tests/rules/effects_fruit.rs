@@ -6,7 +6,8 @@
 //! Port of `packages/engine/test/effects-fruit.test.ts`.
 
 use jackioh_engine::effects::fruit::{
-    add_rolled_grapes, damage_enemy_or_heal_friend, draw_priced, replace_hand_with_random, roll_grape,
+    add_rolled, add_rolled_grapes, damage_enemy_or_heal_friend, draw_priced, replace_hand_with_random,
+    roll_grape, roll_weighted,
 };
 use jackioh_engine::testkit::*;
 
@@ -16,6 +17,7 @@ use crate::rules::fixtures::fruit::{
     FRUIT_SCRIPTS, cast_on_draw, fruit_catalog, grape_roller, mythic, priced_draw, replacer,
 };
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
+use crate::rules::fixtures::jade::{JADE_SCRIPTS, jade_catalog};
 use crate::rules::fixtures::scripts::{FIXTURE_SCRIPTS, fixture_catalog};
 
 fn grape_ids() -> Vec<&'static str> {
@@ -652,5 +654,141 @@ mod replace_hand_with_random_c_65_5 {
         );
         assert_eq!(events, Vec::<GameEvent>::new());
         assert_eq!(state.rng_cursor, 0);
+    }
+}
+
+mod roll_weighted_r960_md_c1 {
+    use super::*;
+
+    fn rock_ids() -> Vec<&'static str> {
+        AUSPICIOUS_ROCK_ODDS.iter().map(|entry| entry.def_id).collect()
+    }
+
+    /// TS `AUSPICIOUS_ROCK_IDS.indexOf(id)`: -1 when absent.
+    fn rock_index(id: &str) -> i64 {
+        rock_ids()
+            .iter()
+            .position(|entry| *entry == id)
+            .map_or(-1, |index| index as i64)
+    }
+
+    /// `count` rolls over the Rock's table from `rng` with `lucky`, as a share in percent per id.
+    fn rock_shares(seed: &str, lucky: i32, rolls: i32) -> IndexMap<String, f64> {
+        let mut rng = Rng::new(seed, 0);
+        let mut counts: IndexMap<String, i32> = IndexMap::new();
+        for _ in 0..rolls {
+            let id = roll_weighted(&mut rng, AUSPICIOUS_ROCK_ODDS, lucky).to_string();
+            *counts.entry(id).or_insert(0) += 1;
+        }
+        counts
+            .into_iter()
+            .map(|(id, count)| (id, f64::from(count) / f64::from(rolls) * 100.0))
+            .collect()
+    }
+
+    /// `game` with the Jade stand-ins registered too, so an `addRolled` over the Rock's table lands.
+    fn rock_game(seed: &str) -> GameState {
+        let mut state = new_game(seed, None);
+        register_catalog(jade_catalog(fruit_catalog(combat_catalog(fixture_catalog(
+            vanilla_catalog(40, 1),
+        )))));
+        let mut scripts = FIXTURE_SCRIPTS.clone();
+        scripts.extend(COMBAT_SCRIPTS.clone());
+        scripts.extend(FRUIT_SCRIPTS.clone());
+        scripts.extend(JADE_SCRIPTS.clone());
+        register_scripts(scripts);
+        state.players[PlayerId::P1].hand = vec![];
+        state.players[PlayerId::P2].hand = vec![];
+        state
+    }
+
+    #[test]
+    fn r960_auspicious_rock_odds_run_dud_jade_red_jade_and_sum_to_100() {
+        assert_eq!(
+            AUSPICIOUS_ROCK_ODDS
+                .iter()
+                .map(|entry| entry.def_id)
+                .collect::<Vec<_>>(),
+            vec!["meditative-039-3", "meditative-039-2", "meditative-039-4"]
+        );
+        assert_eq!(
+            AUSPICIOUS_ROCK_ODDS
+                .iter()
+                .map(|entry| entry.percent)
+                .collect::<Vec<_>>(),
+            vec![20, 70, 10]
+        );
+        assert_eq!(
+            AUSPICIOUS_ROCK_ODDS
+                .iter()
+                .map(|entry| entry.percent)
+                .sum::<i32>(),
+            100
+        );
+    }
+
+    #[test]
+    fn r960_many_seeded_rolls_match_20_70_10() {
+        let share = rock_shares("rock-odds", 0, 20_000);
+        for entry in AUSPICIOUS_ROCK_ODDS {
+            let got = share.get(entry.def_id).copied().unwrap_or(0.0);
+            assert!(
+                (got - f64::from(entry.percent)).abs() < 1.5,
+                "{}: {got}%",
+                entry.def_id
+            );
+        }
+    }
+
+    #[test]
+    fn r960_lucky_2_is_three_draws_and_keeps_the_best_of_them() {
+        // §6.1: a Lucky 2 roll is three draws of the rng (one plus two extra).
+        let mut lucky = Rng::new("rock-lucky-draws", 0);
+        roll_weighted(&mut lucky, AUSPICIOUS_ROCK_ODDS, 2);
+        assert_eq!(lucky.cursor(), 3);
+        // …and keeps the best of them: with a fixed seed the Lucky 2 pick is the max of three
+        // plain picks, ranked Dud < Jade < Red Jade.
+        for i in 0..30 {
+            let mut plain = Rng::new(&format!("rock-best-{i}"), 0);
+            let picks: Vec<i64> = (0..3)
+                .map(|_| rock_index(&roll_weighted(&mut plain, AUSPICIOUS_ROCK_ODDS, 0).to_string()))
+                .collect();
+            let mut lucky = Rng::new(&format!("rock-best-{i}"), 0);
+            assert_eq!(
+                rock_index(&roll_weighted(&mut lucky, AUSPICIOUS_ROCK_ODDS, 2).to_string()),
+                *picks.iter().max().expect("three picks")
+            );
+        }
+    }
+
+    #[test]
+    fn r960_roll_grape_is_roll_weighted_over_grape_odds() {
+        for i in 0..50 {
+            for lucky in [0, 1, 2] {
+                let mut a = Rng::new(&format!("grape-equiv-{i}-{lucky}"), 0);
+                let mut b = Rng::new(&format!("grape-equiv-{i}-{lucky}"), 0);
+                assert_eq!(
+                    roll_grape(&mut a, lucky),
+                    roll_weighted(&mut b, GRAPE_ODDS, lucky)
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn r960_add_rolled_adds_one_rolled_token_on_its_base_face() {
+        let mut state = rock_game("rock-add");
+        let self_ = resolving_p1(&mut state, &grape_roller.id);
+        let events = run_as(
+            &mut state,
+            add_rolled(json_as(json!({ "table": "auspiciousRock" }))),
+            &self_,
+        );
+        assert_eq!(state.players[PlayerId::P1].hand.len(), 1);
+        let added = &state.players[PlayerId::P1].hand[0];
+        assert!(rock_index(&added.def_id) >= 0, "a Dud, a Jade or a Red Jade");
+        assert!(!added.radiant);
+        assert_eq!(events_of_type(&events, GameEventType::AddedToHand).len(), 1);
+        assert_eq!(state.rng_cursor, 1);
     }
 }

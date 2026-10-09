@@ -74,6 +74,19 @@ describe("R279 the names a text links", () => {
     }
   }, 30_000);
 
+  it("R961 a name inside Jade Counter is no reference", () => {
+    const jade = def("meditative-039-2");
+    // The "Jade" in "Jade Counter" names nothing (R961, R381's rules phrase).
+    expect(findRefs("Add 1 to your Jade Counter. Gain 1 mana.", [jade])).toEqual([]);
+    // Outside the phrase the same name still points at Jade.
+    expect(
+      findRefs("Your Jade Beauties become Radiant.", [jade]).map((match) => [
+        "Your Jade Beauties become Radiant.".slice(match.start, match.end),
+        match.id,
+      ]),
+    ).toEqual([["Jade", "meditative-039-2"]]);
+  });
+
   it("R279 with no catalog to read, a name is plain text", () => {
     const { container } = render(<CardFace face={face("core-090", false)} layout="full" />);
     expect(container.querySelector(".cf-ref")).toBeNull();

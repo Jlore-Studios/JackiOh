@@ -167,7 +167,8 @@
 }
 
 .hero-health,
-.hero-armor {
+.hero-armor,
+.hero-jade {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -191,6 +192,11 @@
 .hero-armor {
   border: 1px solid rgb(203 213 225 / 50%);
   background: radial-gradient(circle at 35% 30%, #94a3b8, #475569 60%, #334155);
+}
+
+.hero-jade {
+  border: 1px solid rgb(52 211 153 / 55%);
+  background: radial-gradient(circle at 35% 30%, #34d399, #047857 55%, #064e3b);
 }
 
 .power-button,

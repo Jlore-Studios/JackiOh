@@ -606,6 +606,8 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // ---- Patch v0.3.X (docs/meditative-set.md M8, MN05) ----
   // R1363: the Armor took the whole hit: a bright ring from the unit's lane (a hero's is centred).
   damageAbsorbed: { sfx: "armorRing", cues: () => [sfx("armorRing")] },
+  // R961: a Jade Counter rose; the badge ticks, the same click as every counter badge.
+  jadeChanged: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
 };
 
 /**
