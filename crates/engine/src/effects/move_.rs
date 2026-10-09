@@ -11,7 +11,6 @@
 use serde::{Deserialize, Serialize};
 
 use crate::announce::{innermost_live_announce, is_announce_live, mark_countered};
-use crate::config::HAND_CAP;
 use crate::draw::add_to_hand;
 use crate::echo::exile_on_landing;
 use crate::effects::targets::{
@@ -479,7 +478,9 @@ pub fn counter_play(args: CounterPlayArgs) -> Effect {
         } else {
             match to {
                 CounterDestination::Thief => {
-                    if ctx.state.players[thief].hand.len() as i32 >= HAND_CAP {
+                    if ctx.state.players[thief].hand.len() as i32
+                        >= crate::query::hand_cap_of(ctx.state, thief)
+                    {
                         CounteredTo::Graveyard
                     } else {
                         CounteredTo::Hand

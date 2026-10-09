@@ -280,6 +280,8 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         radiant,
         chinese: None,
         cost,
+        // filled in by `card_view` from the instance data; bare views carry none.
+        tags: None,
         embiggen_cost: None,
         attack: None,
         health: None,
@@ -314,6 +316,8 @@ fn card_view(state: &GameState, card: &CardInstance) -> CardView {
         effective_cost(state, card, Default::default()),
     );
     view.type_ = data.type_;
+    // MD-B15, R923: a granted tag is part of the card, so a view of it says so.
+    view.tags = data.tags;
     view.brittle = data.brittle;
     view.params = data.params;
     view.tuning = data.tuning;
@@ -472,6 +476,7 @@ fn unit_view_of(state: &GameState, pile: &[CardInstance], viewer: PlayerId) -> O
         countered_on_play: card.countered_on_play,
         preview: card.preview,
         type_: card.type_,
+        tags: card.tags,
         brittle: card.brittle,
         params: card.params,
         tuning: card.tuning,
@@ -563,6 +568,7 @@ fn backrow_view(state: &GameState, card: Option<&CardInstance>, viewer: PlayerId
         def_id: view.def_id,
         radiant: view.radiant,
         chinese: view.chinese,
+        tags: view.tags,
         cost: view.cost,
         attack: view.attack,
         health: view.health,
@@ -592,6 +598,12 @@ fn backrow_view(state: &GameState, card: Option<&CardInstance>, viewer: PlayerId
         // R351, R371: the controller reads a face-down trap, and the view says the other player cannot.
         unrevealed: if is_face_down(state, card) {
             Some(true)
+        } else {
+            None
+        },
+        // ME-ALTPLAY (R1046, D3): the card's own reveal timing rides the controller's view only.
+        reveal_at: if card.controller == viewer {
+            card.set_as.as_ref().map(|set| set.reveal)
         } else {
             None
         },
@@ -812,6 +824,20 @@ fn reserved_mask(state: &GameState, player: PlayerId) -> RowFlags {
     }
 }
 
+/// R1141: how many cards of the opponent's hand carry a mark, while that hand is a count; `None` when
+/// none does, so a seat with no marked hand card looks as it did.
+fn hand_marked_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> Option<i32> {
+    if player == viewer || state.result.is_some() {
+        return None;
+    }
+    let marked = state.players[player]
+        .hand
+        .iter()
+        .filter(|card| !marks_on(state, &card.id).is_empty())
+        .count() as i32;
+    (marked > 0).then_some(marked)
+}
+
 fn side_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> SideView {
     let side: &PlayerState = &state.players[player];
     let powers = hero_powers_of(state, player);
@@ -905,6 +931,8 @@ fn side_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> SideView 
             .map(|card| backrow_view(state, card.as_ref(), viewer))
             .collect(),
         carried: carried_view(state, player, viewer),
+        hand_cap: side.hand_cap,
+        hand_marked: hand_marked_view(state, player, viewer),
         locks: RowFlags {
             units: side.locks.units.clone(),
             backrow: side.locks.backrow.clone(),
@@ -1430,7 +1458,10 @@ fn redact_event(
             shown.remove("arrivedDuring");
             shown.remove("exitsFrom");
             if hidden(&instance) {
+                // ME-ALTPLAY, R1046: a hidden set card shows neither its `x` nor its `embiggened`.
                 shown.remove("formerId");
+                shown.remove("x");
+                shown.remove("embiggened");
                 hide(&mut shown, &["instanceId", "defId"]);
             }
             rebuild(shown)

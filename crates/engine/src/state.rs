@@ -253,6 +253,13 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub set_as: Option<SetAs>,
+    /// MD-B15, R923: tags an effect gave the card (`effects::grant_tag`, Meditative #35). Part of
+    /// the card for every instance-level tag read (`query::tags_of`); catalog pools never see it.
+    /// Kept in every zone and through R78's and R766's resets; an instance copy keeps it, a Fuse
+    /// unites it, a Transform drops it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub granted_tags: Option<Vec<Tag>>,
 }
 
 /// ME-ALTPLAY, R1040, R1044: what a card played face-down as a Trap carries until it has revealed —
@@ -515,6 +522,14 @@ pub struct DelayedEffect {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub watch: Option<String>,
+    /// R1140 (ME-HANDMARK, Meditative #76 Do or Die): the hand cards this effect is aimed at, in the
+    /// order it picked them. Each is dropped the moment its stay in that hand ends
+    /// (`zones::forget_hand_watch`), and the entry with it once none is left; as it runs, its step
+    /// reads the ones still watched (`effects::delay::HAND_WATCH_KEY`). Absent on every other entry,
+    /// so a game that never watches a hand hashes as it did before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hand_watch: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -857,6 +872,14 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub draws: Option<DrawCount>,
+    // ---- Meditative player fields (docs/meditative-set.md M5, ME-HANDCAP) ----
+    /// R1143: this player's hand size for the rest of the game, once an effect has set one (Meditative
+    /// #79 Touched by KY), the latest setting winning; every rule that reads the hand cap reads it
+    /// (`query::hand_cap_of`). Absent means `HAND_CAP`, so a game that never sets one hashes as it did
+    /// before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hand_cap: Option<i32>,
 }
 
 /// Ceaseless Void's four game counters (R55): `GameState.counters`.
@@ -1340,6 +1363,7 @@ pub fn create_player_state() -> PlayerState {
         carried: None,
         game_log: None,
         draws: None,
+        hand_cap: None,
     }
 }
 
@@ -1562,6 +1586,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         times_played: None,
         chinese: None,
         set_as: None,
+        granted_tags: None,
     };
     *next_id += 1;
     instance

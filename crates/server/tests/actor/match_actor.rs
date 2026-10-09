@@ -3571,3 +3571,51 @@ mod the_ws_adapter {
         assert!(!server.app.matches.has(MATCH_ID));
     }
 }
+
+mod r1044_face_down_play_over_the_socket {
+    use super::*;
+    use jackioh_server::actor::protocol::{ActionMessage, ClientMessage, parse_client_message};
+
+    #[test]
+    fn r1044_parses_a_face_down_play_and_refuses_a_bad_timing() {
+        let parsed = parse_client_message(
+            &json!({
+                "type": "action",
+                "action": {
+                    "type": "play",
+                    "instanceId": "c7",
+                    "zone": { "row": "backrow", "lane": 2 },
+                    "faceDown": "startOfNextTurn",
+                    "nonce": "set-1",
+                },
+            })
+            .to_string(),
+        );
+        assert_eq!(
+            parsed,
+            Ok(ClientMessage::Action(ActionMessage {
+                nonce: "set-1".to_string(),
+                body: serde_json::from_value(json!({
+                    "type": "play",
+                    "instanceId": "c7",
+                    "zone": { "row": "backrow", "lane": 2 },
+                    "faceDown": "startOfNextTurn",
+                }))
+                .expect("a play body"),
+            }))
+        );
+        // Anything but a reveal timing is malformed, never passed on.
+        for bad in [json!("tomorrow"), json!(3), json!(true)] {
+            let parsed = parse_client_message(
+                &json!({ "type": "action", "action": {
+                    "type": "play",
+                    "instanceId": "c7",
+                    "faceDown": bad,
+                    "nonce": "bad",
+                } })
+                .to_string(),
+            );
+            assert!(parsed.is_err(), "{bad} parsed as {parsed:?}");
+        }
+    }
+}

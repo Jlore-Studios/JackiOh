@@ -17,7 +17,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use crate::state::{CardInstance, GameState};
-use crate::wire::{CardType, Enchantment, Keyword, Tuning, keyword_key};
+use crate::wire::{CardType, Enchantment, Keyword, Tag, Tuning, keyword_key};
 
 /// TS `Pick<CardView, "type" | "brittle" | "params" | "tuning" | "enchantments">`: the instance-data
 /// keys of a card view, each `None` when it has nothing to say. Serialises as those keys of
@@ -35,6 +35,10 @@ pub struct InstanceData {
     pub tuning: Option<Tuning>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub enchantments: Option<Vec<Enchantment>>,
+    /// MD-B15, R923: the card's tags, set only where they differ from its definition's — a granted
+    /// tag is part of the card, and the view says so.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<Tag>>,
 }
 
 /// The instance-data keys of a card view (this file's header), each only when it has something to say.
@@ -44,6 +48,11 @@ pub fn instance_data_view(state: &GameState, card: &CardInstance) -> InstanceDat
     let type_ = crate::faces::card_type_of(state, card);
     if type_ != crate::catalog::def_of(Some(state), &card.def_id).type_ {
         out.type_ = Some(type_);
+    }
+    // MD-B15, R923: the tags now, where they differ from the definition's (a granted tag).
+    let tags = crate::query::tags_of(state, card);
+    if tags != crate::catalog::def_of(Some(state), &card.def_id).tags {
+        out.tags = Some(tags);
     }
     // B3.3 rule 6: public on the field, the owner's in a hand — both are where this view is built.
     let brittle = crate::brittle_count::active_brittle_count(card);

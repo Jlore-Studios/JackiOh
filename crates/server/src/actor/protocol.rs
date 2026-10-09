@@ -31,8 +31,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use jackioh_engine::{
-    ActionBody, ActionType, Aim, EmoteId, PlayerId, PlayerView, PortraitId, PromptKind, Row, Selection,
-    ZoneChoice, is_emote_id, parse_aim,
+    ActionBody, ActionType, Aim, EmoteId, PlayerId, PlayerView, PortraitId, PromptKind, RevealAt, Row,
+    Selection, ZoneChoice, is_emote_id, parse_aim,
 };
 
 use crate::db::store::MatchClocks;
@@ -456,6 +456,14 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
                 modes = Some(parsed);
             }
             // TS's whitelist has no `plague`: a client play never carries one.
+            // ME-ALTPLAY, R1044: the face-down timing travels as `faceDown`.
+            let mut face_down = None;
+            if let Some(value) = raw.get("faceDown") {
+                let Ok(parsed) = serde_json::from_value::<RevealAt>(value.clone()) else {
+                    return Err(malformed(r#""play.faceDown" must be a reveal timing"#));
+                };
+                face_down = Some(parsed);
+            }
             Ok(ActionBody::Play {
                 instance_id: instance_id.to_string(),
                 zone,
@@ -465,6 +473,7 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
                 targets,
                 modes,
                 plague: None,
+                face_down,
             })
         }
         ActionType::Attack => {

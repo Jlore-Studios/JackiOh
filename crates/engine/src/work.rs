@@ -678,6 +678,7 @@ const ENGINE_WORK_HOOKS: &[&str] = &[
     "@endOfTurn",
     "@activate",
     "@aiTurn",
+    "@setRepeat",
 ];
 
 /// Whether anything at all knows how to resume this item (R113).
@@ -714,6 +715,7 @@ pub fn run_work_item(sink: &mut EngineSink<'_>, item: &WorkItem) {
         "@endOfTurn" => crate::turn::run_owed_end_of_turn(sink, item),
         "@activate" => crate::subsystems::activate::run_owed_activation(sink, item),
         "@aiTurn" => crate::subsystems::ai_policy::run_owed_ai_turn(sink, item),
+        "@setRepeat" => crate::cry_trigger::run_owed_repeat(sink, item),
         _ => {
             // A sequence a test made (`testkit::seams::register_work_handler`): TS's handler map, read
             // before its default handler.

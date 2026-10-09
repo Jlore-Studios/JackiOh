@@ -324,7 +324,7 @@ fn shared_empty_script() -> &'static Script {
 /// Borrowed from the registry: nothing is copied for a registered card (a fused card's script is shared
 /// with the state's, or composed for the lookup).
 fn instance_script(state: &GameState, instance: &CardInstance) -> ScriptRef {
-    if instance.vanilla {
+    if instance.vanilla || crate::alt_play::is_dormant(instance) {
         return ScriptRef::Static(shared_empty_script());
     }
     face_ref(state, &instance.def_id, instance.radiant)
@@ -374,7 +374,7 @@ pub fn script_of<K: ScriptKey>(state: &GameState, key: K) -> K::Scripts {
 
 /// The running face's static flags (`script.staticFlags ?? {}`); none for a Vanilla card.
 pub fn flags_of(state: &GameState, instance: &CardInstance) -> StaticFlags {
-    if instance.vanilla {
+    if instance.vanilla || crate::alt_play::is_dormant(instance) {
         return StaticFlags::default();
     }
     if let Some(entry) = registered_entry(&instance.def_id) {
@@ -503,7 +503,7 @@ pub struct TextFlags {
 /// card that records no prices (a fused card's summed flags among them, all at its one price), one
 /// per ingredient for one that does (R102). A Vanilla card carries none (§6.3, R115).
 pub fn texts_of(state: &GameState, instance: &CardInstance) -> Vec<TextFlags> {
-    if instance.vanilla {
+    if instance.vanilla || crate::alt_play::is_dormant(instance) {
         return Vec::new();
     }
     let Some(records) = ingredients_of(instance) else {

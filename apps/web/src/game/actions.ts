@@ -51,6 +51,7 @@ import type {
   PendingView,
   PlayerId,
   PlayerView,
+  RevealAt,
   Row,
   Selection,
   ZoneChoice,
@@ -82,6 +83,12 @@ export type PlagueSpend = NonNullable<PlayBody["plague"]>;
 /** A plague payment as the player picks it: tokens off a card, or none (the whole price in mana). */
 export type PlagueChoice = PlagueSpend | "none";
 
+/**
+ * ME-ALTPLAY (R1040, R1044): how the card is played — face-up, or face-down as a Trap revealing
+ * at the chosen timing.
+ */
+export type FaceDownChoice = RevealAt | "up";
+
 /** The R81 play-time choices (and an activation's), as the client accumulates them. */
 export type PlayBuild = {
   zone?: ZoneChoice;
@@ -92,6 +99,8 @@ export type PlayBuild = {
   modes?: string[];
   /** B5 E11, E19: how a graveyard play's price is paid in Plague Counters. */
   plague?: PlagueChoice;
+  /** ME-ALTPLAY: face-up, or the reveal timing it is set with. */
+  faceDown?: FaceDownChoice;
 };
 
 type Playing = { stage: "playing"; instanceId: string; candidates: ActionBody[]; picked: Partial<PlayBuild> };
@@ -121,6 +130,7 @@ export function isBuilding(interaction: Interaction): interaction is Building {
 
 /** What is still unchosen about the play in flight, derived only from the candidates. */
 export type PlayNeed =
+  | { kind: "faceDown"; min: number; max: number; options: FaceDownChoice[] }
   | { kind: "zone"; min: number; max: number; zones: ZoneChoice[] }
   | { kind: "x"; min: number; max: number; values: number[] }
   | { kind: "embiggen"; min: number; max: number; values: boolean[] }
@@ -326,6 +336,8 @@ type BuildFields = {
   targets?: Selection[];
   modes?: string[];
   plague?: PlagueSpend;
+  /** ME-ALTPLAY: the reveal timing a set play carries, absent face-up. */
+  faceDown?: RevealAt;
 };
 
 function fieldsOf(body: BuildBody): BuildFields {
@@ -344,8 +356,11 @@ function containsAll(fixed: readonly string[], wanted: readonly string[]): boole
  */
 function matches(candidate: BuildBody, picked: Partial<PlayBuild>): boolean {
   const fixed = fieldsOf(candidate);
-  if (picked.zone !== undefined && fixed.zone !== undefined) {
-    if (zoneKey(fixed.zone) !== zoneKey(picked.zone)) return false;
+  // ME-ALTPLAY: face-up is the absence of a timing, compared strictly.
+  if (picked.faceDown !== undefined && (fixed.faceDown ?? "up") !== picked.faceDown) return false;
+  // A picked zone excludes a candidate that fixes none: a board click never carries through.
+  if (picked.zone !== undefined) {
+    if (fixed.zone === undefined || zoneKey(fixed.zone) !== zoneKey(picked.zone)) return false;
   }
   if (picked.x !== undefined && fixed.x !== undefined && fixed.x !== picked.x) return false;
   if (picked.embiggen !== undefined && fixed.embiggen !== undefined && fixed.embiggen !== picked.embiggen) {
@@ -353,6 +368,10 @@ function matches(candidate: BuildBody, picked: Partial<PlayBuild>): boolean {
   }
   if (picked.tributes !== undefined && fixed.tributes !== undefined) {
     if (!containsAll(fixed.tributes, picked.tributes)) return false;
+  }
+  // ME-ALTPLAY: a set play declares nothing, so a picked target or mode drops it.
+  if (fixed.faceDown !== undefined && (picked.targets !== undefined || picked.modes !== undefined)) {
+    return false;
   }
   if (picked.targets !== undefined && fixed.targets !== undefined) {
     if (!containsAll(fixed.targets.map(selectionKey), picked.targets.map(selectionKey))) return false;
@@ -381,7 +400,8 @@ function mergePicked(candidate: BuildBody, picked: Partial<PlayBuild>): BuildBod
     case "play": {
       const { tributes: _t, targets: _g, modes: _m, ...rest } = candidate;
       const body: PlayBody = { ...rest };
-      const zone = candidate.zone ?? picked.zone;
+      // ME-ALTPLAY: a picked zone is never added to a candidate that fixes none.
+      const zone = candidate.zone;
       const x = candidate.x ?? picked.x;
       const embiggen = candidate.embiggen ?? picked.embiggen;
       if (zone !== undefined) body.zone = zone;
@@ -434,6 +454,16 @@ export function outstandingNeed(interaction: Interaction): PlayNeed | null {
   const remaining = remainingCandidates(interaction);
   if (remaining.length < 2) return null;
   const fields = remaining.map(fieldsOf);
+
+  // ME-ALTPLAY: how it is played is asked before anything else, face-up first.
+  if (interaction.picked.faceDown === undefined) {
+    const options = distinctBy(
+      fields.map((c): FaceDownChoice => c.faceDown ?? "up"),
+      (choice) => choice,
+    );
+    options.sort((a, b) => (a === "up" ? -1 : b === "up" ? 1 : 0));
+    if (options.length > 1) return { kind: "faceDown", min: 1, max: 1, options };
+  }
 
   if (interaction.picked.x === undefined) {
     const values = [...new Set(fields.flatMap((c) => (c.x === undefined ? [] : [c.x])))].sort((a, b) => a - b);

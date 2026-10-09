@@ -40,6 +40,10 @@ import { useSetting } from "../settings/index.ts";
 export type HandProps = {
   side: Side;
   hand: CardView[] | { count: number };
+  /** R1143: this seat's hand size, once set for the rest of the game (Meditative #79). Shown beside the count. */
+  cap?: number | undefined;
+  /** R1141: on the opponent's seat, how many of their hand cards carry a mark. Never which. */
+  marked?: number | undefined;
   /** #165: what a touch hold on a card opens (contract.ts's `touchHoldMode`). */
   touchHold?: "sheet" | "preview";
   highlight?: Highlight;
@@ -93,7 +97,7 @@ function RevealedSlot({ card, index, touchHold }: { card: CardView; index: numbe
 }
 
 export default function Hand(props: HandProps): ReactElement {
-  const { hand, side } = props;
+  const { hand, side, cap, marked } = props;
   const count = handCount(hand);
   const yours = side === "you";
   // R434: the opponent's hand is cards only once the game is over; it is read, never played.
@@ -177,6 +181,7 @@ export default function Hand(props: HandProps): ReactElement {
       data-empty={count === 0 ? "true" : undefined}
       data-revealed={revealed && count > 0 ? "true" : undefined}
       data-hover-preview={yours ? (hoverPreviews ? "on" : "off") : undefined}
+      data-marked={marked}
       aria-label={`${side} hand`}
     >
       <span className="pile">
@@ -184,6 +189,16 @@ export default function Hand(props: HandProps): ReactElement {
         <span className="pile-n" data-testid={`hand-count-${side}`}>
           {count}
         </span>
+        {cap === undefined ? null : (
+          <span className="pile-cap" data-testid={`hand-cap-${side}`}>
+            /{cap}
+          </span>
+        )}
+        {marked === undefined ? null : (
+          <span className="pile-marked" data-testid={`hand-marked-${side}`}>
+            {marked} marked
+          </span>
+        )}
       </span>
       <div className="hand-cards" style={{ "--n": count } as CSSProperties}>
         {count === 0 ? <EmptyHand side={side} /> : null}

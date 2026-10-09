@@ -32,6 +32,7 @@ use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::config::HAND_CAP;
 use crate::damage::DamageTarget;
 use crate::layers::unit_has;
 use crate::script::{EffectContext, FlagOrCount};
@@ -125,6 +126,13 @@ pub fn zone_cards(state: &GameState, player: PlayerId, zone: OffFieldZone) -> Ve
 /// How many cards are in one of a player's off-field piles (§3).
 pub fn zone_count(state: &GameState, player: PlayerId, zone: OffFieldZone) -> i32 {
     pile_of(state, player, zone).len() as i32
+}
+
+/// §2.4, R4, R1143: the most cards this player's hand holds before a card arriving is burned —
+/// `HAND_CAP`, or the hand size an effect set for the rest of the game (Meditative #79). Every rule
+/// that reads the hand cap reads it here: draws, adds, steals, "fill your hand". Public (§10.8).
+pub fn hand_cap_of(state: &GameState, player: PlayerId) -> i32 {
+    state.players[player].hand_cap.unwrap_or(HAND_CAP)
 }
 
 /// The mana this player holds now and has not spent: `turnEnded.unspentMana` is this number as the
@@ -286,6 +294,21 @@ pub fn played_this_turn_of_type(state: &GameState, player: PlayerId, types: &[Ca
                 .unwrap_or(0)
         })
         .sum()
+}
+
+/// MD-B15, R923: every tag a card instance carries — its definition's tags, then each granted tag
+/// (`CardInstance.granted_tags`, Meditative #35) it lacks, in order. Every instance-level tag read
+/// goes through this; catalog pools read definitions and never see granted tags.
+pub fn tags_of(state: &GameState, card: &CardInstance) -> Vec<Tag> {
+    let mut tags: Vec<Tag> = crate::catalog::def_of(Some(state), &card.def_id).tags.clone();
+    if let Some(granted) = card.granted_tags.as_deref() {
+        for tag in granted {
+            if !tags.contains(tag) {
+                tags.push(*tag);
+            }
+        }
+    }
+    tags
 }
 
 /// B5 E4: how many cards carrying `tag` this player has played this game, casts included (R70),

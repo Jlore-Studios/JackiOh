@@ -1082,6 +1082,7 @@ fn combine_objects(records: &[Script]) -> Script {
         cry: None,
         death: hooks(|s| s.death.clone(), "death"),
         start_of_game: hooks(|s| s.start_of_game.clone(), "startOfGame"),
+        enters_hand: hooks(|s| s.enters_hand.clone(), "entersHand"),
         resume: combine_resume(records),
         delayed: hooks(|s| s.delayed.clone(), "delayed"),
         set_stat: None,
@@ -1100,6 +1101,7 @@ fn combine_objects(records: &[Script]) -> Script {
         target_checks: combine_target_checks(records),
         cost_aura: eager_read(records.iter().map(|s| s.cost_aura.clone()).collect()),
         graveyard_play: eager_read(records.iter().map(|s| s.graveyard_play.clone()).collect()),
+        face_down_play: eager_read(records.iter().map(|s| s.face_down_play.clone()).collect()),
         targeting_discards: None,
         records_play_as: None,
         draw_limit: eager_read(records.iter().map(|s| s.draw_limit.clone()).collect()),
@@ -1735,8 +1737,9 @@ fn gain_printed_keywords(kept: &mut CardInstance, before: &CardDef, after: &Card
 }
 
 /// R102, B3.4 rule 4, R443: what a fusion's card carries of its ingredients' instance data — their
-/// tuning summed (`tuning::sum_tunings`) and their enchantments united. A Brittle count is a counter,
-/// which a Fuse keeps only on the kept card as it keeps its other counters (R77).
+/// tuning summed (`tuning::sum_tunings`) and their enchantments united — and their granted tags
+/// united (MD-B15, R923). A Brittle count is a counter, which a Fuse keeps only on the kept card as
+/// it keeps its other counters (R77).
 fn carry_instance_data(card: &mut CardInstance, ingredients: &[CardInstance]) {
     let tunings: Vec<_> = ingredients
         .iter()
@@ -1744,6 +1747,23 @@ fn carry_instance_data(card: &mut CardInstance, ingredients: &[CardInstance]) {
         .collect();
     card.tuning = crate::tuning::sum_tunings(&tunings);
     card.enchantments = crate::enchantments::united_enchantments(ingredients);
+    // MD-B15, R923: a Fuse unites the granted tags of every ingredient, the kept card itself
+    // included, in order — and carries none when no ingredient has any.
+    let mut seen: IndexSet<Tag> = IndexSet::new();
+    for tags in std::iter::once(card.granted_tags.clone().unwrap_or_default()).chain(
+        ingredients
+            .iter()
+            .map(|ingredient| ingredient.granted_tags.clone().unwrap_or_default()),
+    ) {
+        for tag in tags {
+            seen.insert(tag);
+        }
+    }
+    card.granted_tags = if seen.is_empty() {
+        None
+    } else {
+        Some(seen.into_iter().collect())
+    };
 }
 
 /// The terms a crafted hand card is made on (TS `craftInHand`'s `terms`).

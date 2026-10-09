@@ -168,10 +168,12 @@ fn backrow_hidden_from(state: &GameState, card: &CardInstance, seat: PlayerId) -
     if card.controller == seat || card.face_up == Some(true) {
         return false;
     }
-    let Some(def) = find_def(Some(state), &card.def_id) else {
+    let Some(_def) = find_def(Some(state), &card.def_id) else {
         return true;
     };
-    def.type_ == CardType::Trap || def.type_ == CardType::FieldTrap
+    // ME-ALTPLAY, R1046: a set Unit or Spell reads as a Field Trap or Trap.
+    let face = jackioh_engine::faces::card_type_of(state, card);
+    face == CardType::Trap || face == CardType::FieldTrap
 }
 
 /// The instance ids `redact` hides from `seat` (step 2): the opponent's hand and library, every
@@ -252,6 +254,10 @@ fn to_placeholder(card: &mut CardInstance) {
     card.memory = Default::default();
     card.counters = Counters::default();
     card.granted_keywords = Vec::new();
+    // MD-B15, R923: a granted tag is read by rules, so a placeholder carries none.
+    card.granted_tags = None;
+    // ME-ALTPLAY, R1046: a placeholder names no face-down form.
+    card.set_as = None;
     card.buffs = AttackHealth { attack: 0, health: 0 };
     card.damage = 0;
     card.cost_override = None;
@@ -295,6 +301,10 @@ fn to_placeholder_json(card: &mut Value) {
         "tuning",
         "brittle",
         "enchantments",
+        // MD-B15, R923: a granted tag is read by rules, so a placeholder carries none.
+        "grantedTags",
+        // ME-ALTPLAY, R1046: a placeholder names no face-down form.
+        "setAs",
     ] {
         object.remove(key);
     }

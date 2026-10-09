@@ -162,7 +162,7 @@ fn with_brittle_count(keywords: &[Keyword], instance: &CardInstance) -> Vec<Keyw
 /// count in force. What a card in a hand or a deck is made of (B5 E38, R243) — the granted keywords it
 /// gained there ride onto the field with it — and what a Degrade may take off it (B3.4).
 pub fn card_keywords(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
-    let mut all: Vec<Keyword> = if instance.vanilla {
+    let mut all: Vec<Keyword> = if instance.vanilla || crate::alt_play::is_dormant(instance) {
         Vec::new()
     } else {
         face_of(state, instance).keywords
@@ -377,7 +377,7 @@ fn compute_layers(state: &GameState, instance: &CardInstance) -> Layered {
 
     // B3.3 rule 5: a Brittle count in force is the unit's Brittle (`with_brittle_count`).
     let mut listed: Vec<Keyword> = Vec::new();
-    if !instance.vanilla {
+    if !instance.vanilla && !crate::alt_play::is_dormant(instance) {
         listed.extend(printed.keywords.iter().cloned());
     }
     // B5 E35: the keywords its text gives it only while a condition holds, beside the printed ones.

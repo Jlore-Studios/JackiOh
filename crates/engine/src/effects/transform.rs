@@ -12,7 +12,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, pick_generated, query};
+use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, glitch_or_not, pick_generated, query};
 use crate::damage::DamageTarget;
 use crate::enchantments::add_enchantment;
 use crate::faces::card_type_of;
@@ -30,6 +30,7 @@ use crate::zones::{
     replace_in_zone, slot_of, zone_of,
 };
 
+use super::card_scope::{CardScope, cards_in_card_scope};
 use super::summon::clone_of;
 use super::targets::{TargetSpec, instance_on_its_stay, resolve_target};
 
@@ -198,7 +199,7 @@ fn replace_off_field(
     Some(find_instance(ctx.state, &replacement_id).cloned().unwrap_or(made))
 }
 
-/// `transform`'s argument: `TransformTarget & { defId; radiant? }`.
+/// `transform`'s argument: `TransformTarget & { defId; radiant?; costOverride?; chinese? }`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct TransformArgs {
@@ -207,6 +208,34 @@ pub struct TransformArgs {
     pub def_id: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub radiant: Option<bool>,
+    /// MD-B10, R921: the replacement's price where it is a price (a hand or a deck, R766).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_override: Option<i32>,
+    /// ME-CN, R921: the replacement is shown in Chinese (Meditative #37).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chinese: Option<bool>,
+}
+
+/// MD-B10, R921: what a Transform's replacement carries of the riders: `costOverride` only for a
+/// live card in a hand or a library — a price, which R766 takes off a card that reaches a graveyard
+/// or an exile pile — and `chinese` wherever the replacement is.
+fn apply_transform_riders(
+    ctx: &mut EffectContext<'_>,
+    id: &str,
+    cost_override: Option<i32>,
+    chinese: Option<bool>,
+) {
+    let Some(live) = find_instance_mut(ctx.state, id) else {
+        return;
+    };
+    if let Some(cost_override) = cost_override
+        && matches!(live.zone, Zone::Hand { .. } | Zone::Library { .. })
+    {
+        live.cost_override = Some(cost_override);
+    }
+    if chinese == Some(true) {
+        live.chinese = Some(true);
+    }
 }
 
 /// §6.3 Transform: a new instance of `defId` where the old card was, no Cry (R1), and the old card
@@ -221,7 +250,10 @@ pub fn transform(args: TransformArgs) -> Effect {
             return;
         }
         let def = def_of(Some(&*ctx.state), &args.def_id).clone();
-        let _ = replace_card(ctx, &old, &def, args.radiant == Some(true));
+        if let Some(replacement) = replace_card(ctx, &old, &def, args.radiant == Some(true)) {
+            let id = replacement.id.clone();
+            apply_transform_riders(ctx, &id, args.cost_override, args.chinese);
+        }
     })
 }
 
@@ -345,7 +377,8 @@ pub enum TransformRadiant {
     Keep(KeepFace),
 }
 
-/// `transformRandom`'s argument: `TransformTarget & { query?; radiant?; readyToAttack? }`.
+/// `transformRandom`'s argument: `TransformTarget & { query?; radiant?; readyToAttack?;
+/// scope?; same?; costOverride?; chinese?; arrives? }`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TransformRandomArgs {
@@ -357,6 +390,21 @@ pub struct TransformRandomArgs {
     pub radiant: Option<TransformRadiant>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ready_to_attack: Option<bool>,
+    /// MD-B10, R921: replace the scope's cards instead of the target's (Meditative #32's hand).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<CardScope>,
+    /// MD-B10, R921: one definition drawn for every card replaced (Meditative #32's "the same CN card").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub same: Option<bool>,
+    /// MD-B10, R921: the replacements' price where it is a price (a hand or a deck, R766).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_override: Option<i32>,
+    /// ME-CN, R921: the replacements are shown in Chinese (Meditative #37).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chinese: Option<bool>,
+    /// MD-B18, R925: a replacement in a hand runs its own arrival hooks (Meditative #37).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub arrives: Option<bool>,
 }
 
 /// E24, Classic+ #73.1 Classic Golem: "it transforms into a random Classic or Classic+ Unit". A §6.3
@@ -367,12 +415,28 @@ pub struct TransformRandomArgs {
 /// face: `true`, `false` (the default), or `"keep"` the old card's. `readyToAttack` is Classic Golem's
 /// "the new Unit may attack again this turn" (R424): the new body on the field is not summoning sick
 /// this turn (a new instance's exertion is already fresh).
+///
+/// MD-B10, R921 (Meditative #32): with `scope`, every card of the scope is replaced instead of the
+/// target's; with `same`, one definition is drawn for them all — from the definitions every one of
+/// them could take — and each is replaced in its place (R31, R671; an Immutable hand card too, R35),
+/// carrying `costOverride` and `chinese`, each a card generated into a hand or a deck for R673's own
+/// Glitch roll. Without either, one card is drawn for exactly as before.
 pub fn transform_random(args: TransformRandomArgs) -> Effect {
     Effect::new("transformRandom", move |ctx| {
-        let Some(old) = instance_of(ctx, &args.target) else {
-            return;
+        // The cards to replace: the scope's, or the one the target names.
+        let olds: Vec<CardInstance> = match &args.scope {
+            Some(scope) => cards_in_card_scope(ctx, scope, None)
+                .into_iter()
+                .map(|entry| entry.card)
+                .filter(|card| transformable(ctx, card))
+                .collect(),
+            None => match instance_of(ctx, &args.target) {
+                Some(old) if transformable(ctx, &old) => vec![old],
+                _ => Vec::new(),
+            },
         };
-        if !transformable(ctx, &old) {
+        // R129: with nothing to replace, nothing is drawn.
+        if olds.is_empty() {
             return;
         }
         let own: Option<String> = match &ctx.self_ {
@@ -384,29 +448,65 @@ pub fn transform_random(args: TransformRandomArgs) -> Effect {
             &args.query.clone().unwrap_or_default(),
             own.as_deref(),
         );
-        let pool: Vec<&CardDef> = query(&asked)
-            .into_iter()
-            .filter(|def| can_replace(&old, def))
-            .collect();
-        // R673: a card transformed in a hand or a deck is generated there and may be Glitch; one on the
-        // field may not, since Glitch is only ever played.
-        let held = matches!(old.zone, Zone::Hand { .. } | Zone::Library { .. });
-        let glitch: Option<&GameState> = if held { Some(&*ctx.sink.state) } else { None };
-        let Some(def) = pick_generated(ctx.sink.rng, &pool, glitch) else {
+        // With `same`, one definition for them all: drawn from the definitions every old card could
+        // take, so the draw never lands on one a zone would refuse. Without it, each card draws its
+        // own from the definitions it could take, exactly as before.
+        let shared: Option<CardDef> = if args.same == Some(true) {
+            let pool: Vec<&CardDef> = query(&asked)
+                .into_iter()
+                .filter(|def| olds.iter().all(|old| can_replace(old, def)))
+                .collect();
+            pick_generated(ctx.sink.rng, &pool, None).cloned()
+        } else {
+            None
+        };
+        if args.same == Some(true) && shared.is_none() {
             return;
-        };
-        let radiant = match args.radiant {
-            Some(TransformRadiant::Keep(_)) => old.radiant,
-            Some(TransformRadiant::Flag(flag)) => flag,
-            None => false,
-        };
-        let replacement = replace_card(ctx, &old, def, radiant);
-        if let Some(replacement) = replacement
-            && args.ready_to_attack == Some(true)
-            && replacement.zone.z() == ZoneName::Field
-            && let Some(live) = find_instance_mut(ctx.state, &replacement.id)
-        {
-            live.summoned_turn = None;
+        }
+        for old in &olds {
+            // R673: a card transformed in a hand or a deck is generated there and may be Glitch; one on
+            // the field may not, since Glitch is only ever played. Each held replacement rolls on its
+            // own, the shared draw included.
+            let held = matches!(old.zone, Zone::Hand { .. } | Zone::Library { .. });
+            let def: Option<CardDef> = match &shared {
+                Some(shared) if held => Some(glitch_or_not(ctx.sink.rng, shared, &*ctx.sink.state).clone()),
+                Some(shared) => Some(shared.clone()),
+                None => {
+                    let pool: Vec<&CardDef> = query(&asked)
+                        .into_iter()
+                        .filter(|def| can_replace(old, def))
+                        .collect();
+                    let glitch: Option<&GameState> = if held { Some(&*ctx.sink.state) } else { None };
+                    pick_generated(ctx.sink.rng, &pool, glitch).cloned()
+                }
+            };
+            let Some(def) = def else {
+                continue;
+            };
+            let radiant = match args.radiant {
+                Some(TransformRadiant::Keep(_)) => old.radiant,
+                Some(TransformRadiant::Flag(flag)) => flag,
+                None => false,
+            };
+            let replacement = replace_card(ctx, old, &def, radiant);
+            let Some(replacement) = replacement else {
+                continue;
+            };
+            if args.ready_to_attack == Some(true)
+                && replacement.zone.z() == ZoneName::Field
+                && let Some(live) = find_instance_mut(ctx.state, &replacement.id)
+            {
+                live.summoned_turn = None;
+            }
+            let id = replacement.id.clone();
+            apply_transform_riders(ctx, &id, args.cost_override, args.chinese);
+            // MD-B18, R925: opt in, and only for a replacement in a hand (#37's new card arrives).
+            if args.arrives == Some(true)
+                && let Some(live) = find_instance(ctx.state, &id).cloned()
+                && matches!(live.zone, Zone::Hand { .. })
+            {
+                crate::draw::run_arrival_hooks(ctx, &live);
+            }
         }
     })
 }

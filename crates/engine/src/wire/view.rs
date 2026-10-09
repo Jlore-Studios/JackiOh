@@ -10,7 +10,8 @@ use indexmap::IndexMap;
 use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::wire::catalog_types::{CardDef, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row};
+use crate::wire::actions::RevealAt;
+use crate::wire::catalog_types::{CardDef, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row, Tag};
 use crate::wire::events::{GameEvent, GameResult, Position};
 use crate::wire::string_union;
 
@@ -93,6 +94,11 @@ pub struct CardView {
     #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub type_: Option<CardType>,
+    /// MD-B15, R923: the card's tags, set only where they differ from its definition's — a granted
+    /// tag is part of the card, and the view says so.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tags: Option<Vec<Tag>>,
     /// B3.3, R385: the card's Brittle count, where the viewer may read the card and it has one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -383,6 +389,11 @@ pub struct UnitView {
     #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub type_: Option<CardType>,
+    /// MD-B15, R923: the card's tags, set only where they differ from its definition's — a granted
+    /// tag is part of the card, and the view says so.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tags: Option<Vec<Tag>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub brittle: Option<i32>,
@@ -540,6 +551,11 @@ pub struct PublicBackrowView {
     pub face_down: bool,
     #[serde(rename = "type")]
     pub type_: CardType,
+    /// MD-B15, R923: the card's tags, set only where they differ from its definition's — a granted
+    /// tag is part of the card, and the view says so.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tags: Option<Vec<Tag>>,
     pub counters: BackrowCounters,
     pub owner: PlayerId,
     pub controller: PlayerId,
@@ -549,6 +565,11 @@ pub struct PublicBackrowView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub unrevealed: Option<bool>,
+    /// ME-ALTPLAY (R1046): when a face-down play of yours reveals. Present on the controller's own
+    /// view only, never on the opponent's, and skipped when the card is not a face-down play (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub reveal_at: Option<RevealAt>,
     /// R243, §6.3 Vanilla: the backrow card's text is gone — a client stamps it as it stamps a
     /// vanilla unit. Absent otherwise.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -825,6 +846,17 @@ pub struct SideView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub carried: Option<Vec<Option<UnitView>>>,
+    /// R1143: this seat's hand size, once an effect has set one for the rest of the game (Meditative #79);
+    /// public on both seats. Absent means `HAND_CAP`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hand_cap: Option<i32>,
+    /// R1141: on the opponent's seat, how many cards of their hand carry a mark (Meditative #76's
+    /// pending steal) — never which: the viewer's own hand shows each mark on its card. Absent when
+    /// none does, on the viewer's own seat and once the game is over (both hands are revealed, R434).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hand_marked: Option<i32>,
     pub locks: RowFlags,
     /// R64: a zone held for a dying Reborn unit until it comes back. It takes no summon, exactly as a
     /// Locked zone takes none, so a client that reads only `locks` would draw it open. B3.1 rule 6: the

@@ -20,6 +20,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::config::HAND_CAP_MAX;
 use crate::modifiers::add_modifier;
 use crate::script::Effect;
 use crate::state::{ModifierExpiry, ModifierKind};
@@ -57,5 +58,28 @@ pub fn add_player_modifier(args: AddPlayerModifierArgs) -> Effect {
         // function takes the context directly and no state write moves into this file.
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         add_modifier(ctx, player, args.mod_.expiry.clone(), args.mod_.kind.clone());
+    })
+}
+
+/// `setHandCap`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SetHandCapArgs {
+    /// The hand size, held to 0..=`HAND_CAP_MAX`.
+    pub cap: i32,
+    /// Whose hand, relative to the controller. Default "self".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+}
+
+/// ME-HANDCAP, R1143 (Meditative #79 Touched by KY): "for the rest of the game, your hand size is N".
+/// A setting, not an increase: the latest one wins, a second of the same changes nothing, and it lasts
+/// whatever becomes of the card that set it. Every rule that reads the hand cap reads it
+/// (`query::hand_cap_of`). A hand already above a lowered size keeps its cards; only what arrives
+/// next is burned. Public in both views (`SideView.handCap`), so it says so with no event.
+pub fn set_hand_cap(args: SetHandCapArgs) -> Effect {
+    Effect::new("setHandCap", move |ctx| {
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        ctx.state.players[player].hand_cap = Some(args.cap.clamp(0, HAND_CAP_MAX));
     })
 }

@@ -1201,6 +1201,26 @@ pub fn run_start_of_game(sink: &mut EngineSink<'_>, card: &CardInstance, control
     )
 }
 
+/// MD-B18, R925: a card's "When this enters your hand" clause, run as the card arrives in a hand —
+/// after R151's start-of-game clause (`draw::run_arrival_hooks`). An effect list like any other, so
+/// it runs the resumable way too: a question in it pauses the effects after it. Returns true when
+/// the whole clause ran; false when it paused.
+pub fn run_enters_hand(sink: &mut EngineSink<'_>, card: &CardInstance, controller: PlayerId) -> bool {
+    // A Vanilla card carries no text (§6.3), and a card without the clause has nothing to run.
+    if crate::scripts::script_of(sink.state, card).enters_hand.is_none() {
+        return true;
+    }
+    run_hook_resumable(
+        sink,
+        card,
+        "entersHand",
+        HookResumableOptions {
+            controller: Some(controller),
+            ..HookResumableOptions::default()
+        },
+    )
+}
+
 // ---------------------------------------------------------------------------
 // Prompts inside a cast (B5 E12, R452) — play pipeline B's random-answer mode
 // ---------------------------------------------------------------------------

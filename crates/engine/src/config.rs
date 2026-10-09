@@ -33,8 +33,12 @@ pub const SETUP_TURN: i32 = 0;
 /// 30 each. Two 20-card decks that do nothing fatigue out at player-turn 48 (§2.4, R3), so the cap is a
 /// backstop for games that heal, gain Armor or refill a deck, and fatigue is a long game's usual end.
 pub const TURN_CAP_PLAYER_TURNS: i32 = 60;
-/// §2.4, R4 (decide): a card drawn or added to a full hand is burned.
+/// §2.4, R4 (decide): a card drawn or added to a full hand is burned. A player's own hand size, once an
+/// effect sets one (Meditative #79, R1143), is read in its place (`query::hand_cap_of`).
 pub const HAND_CAP: i32 = 10;
+/// R1143: the most a set hand size may be (Meditative #79's `handSize` param's max), the most cards the
+/// client lays out in one hand.
+pub const HAND_CAP_MAX: i32 = 14;
 
 /// §2.1: indexed by seat; the Nth seat (1-based) draws N+2.
 pub const OPENING_DRAW: &[i32] = &[3, 4];
@@ -525,7 +529,7 @@ pub struct KyTestRewardPool {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum KyTestRewardCount {
     N(i32),
-    /// As many as the hand has room for under `HAND_CAP`.
+    /// As many as the hand has room for under the player's hand cap (`hand_cap_of`).
     Fill,
 }
 
@@ -533,8 +537,8 @@ pub enum KyTestRewardCount {
 /// card's text prints it, which the first prompt shows beside its difficulty. A reward is cards: the
 /// one card the text names (`defId`: The Coin, KY's Gift), or random cards from a pool of non-token
 /// cards of every set (`pool`, R380; never KY's Test itself, R387; repeats allowed, R60). `count` is
-/// how many, or `"fill"`: as many as the hand has room for under `HAND_CAP`. `costOverride` is the cost
-/// the text sets each card to ("which costs (0)", "which cost (1)").
+/// how many, or `"fill"`: as many as the hand has room for under the player's hand cap (`hand_cap_of`).
+/// `costOverride` is the cost the text sets each card to ("which costs (0)", "which cost (1)").
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct KyTestReward {
     pub id: &'static str,

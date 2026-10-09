@@ -36,7 +36,7 @@
 
 import type { DragEvent, KeyboardEvent, MouseEvent, ReactElement } from "react";
 
-import type { CardMark, CardType, CardView, PlayerId, UnitView } from "@jackioh/shared";
+import type { CardMark, CardType, CardView, PlayerId, RevealAt, UnitView } from "@jackioh/shared";
 
 import {
   CardBack,
@@ -48,6 +48,8 @@ import {
   Icon,
   MinionFace,
   PileDepth,
+  REVEAL_AT_LABEL,
+  REVEAL_AT_NOTE,
   UNREVEALED_NOTE,
   faceDownLabel,
   faceModel,
@@ -196,6 +198,11 @@ export type CardProps = {
    * "Face down" tag, because the other player sees only its back.
    */
   unrevealed?: boolean;
+  /**
+   * R1046: when the viewer's own face-down play reveals (`BackrowView.revealAt`). Shown beside the
+   * "Face down" tag; the opponent's view never carries it, so their card shows no badge.
+   */
+  revealAt?: RevealAt;
   /**
    * #165: what a touch hold opens — the inspect sheet (default), or the hover preview while the
    * finger stays down. The board hands it `touchHoldMode(view)` (contract.ts).
@@ -462,6 +469,13 @@ export default function Card(props: CardProps): ReactElement {
           <Icon name="eyeOff" />
           <span className="unrevealed-tag-text">{FACE_DOWN_TAG}</span>
           <span className="unrevealed-tag-sr">: your opponent can't see this card</span>
+        </span>
+      )}
+
+      {props.unrevealed === true && props.revealAt !== undefined && (
+        // R1046: the owner's own reveal timing, in the same words the picker used.
+        <span className="reveal-at-badge" data-testid={testid.revealAt(card.instanceId)} title={REVEAL_AT_NOTE}>
+          <span className="reveal-at-badge-text">{REVEAL_AT_LABEL[props.revealAt]}</span>
         </span>
       )}
 

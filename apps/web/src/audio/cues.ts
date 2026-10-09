@@ -411,7 +411,8 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
     sfx: "play",
     cues: (event, ctx) => {
       const kind = entryFor(ctx.lines, event.defId)?.kind;
-      if (kind === "trap") return [sfx("trapSet")];
+      // ME-ALTPLAY (R1040, R203): your own set Unit took a fresh id, so it sets like a Trap.
+      if (kind === "trap" || event.formerId !== undefined) return [sfx("trapSet")];
       const arrive = arrival(event, ctx);
       if (kind === "unit") {
         return [arrive, ...playSting(event, ctx), ...hookCues(ctx, event.defId, "play", VOICE_DELAY_MS, VOICE_PRIORITY.play)];

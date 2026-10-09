@@ -250,6 +250,8 @@ export type FaceSource = {
   inPlay?: InPlay;
   /** ME-CN, R1301: the view says the card is Chinese (`CardView.chinese`); its words are the table's. */
   chinese?: boolean;
+  /** MD-B15, R923: the view's tags where they differ from the definition's (a granted tag). */
+  tags?: readonly Tag[];
 };
 
 /** The gem of a card nobody can name: no catalog, no live cost. */
@@ -304,7 +306,8 @@ export function faceModel(source: FaceSource): FaceModel {
     known: def !== undefined,
     name: def?.name ?? source.name ?? source.defId,
     type,
-    tags: def?.tags ?? [],
+    // MD-B15, R923: in play a face lists the view's tags; outside play the definition's.
+    tags: source.inPlay !== undefined && source.tags !== undefined ? source.tags : (def?.tags ?? []),
     rarity: def?.rarity ?? null,
     printedRarity: def?.printedRarity ?? null,
     index: def?.index ?? null,

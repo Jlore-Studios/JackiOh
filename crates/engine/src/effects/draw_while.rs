@@ -5,13 +5,12 @@
 //!
 //! Each draw is §2.4's own (`draw.draw`). A cast on draw ends it whatever its chain then draws, and a
 //! cast that asks a question leaves the rest of its chain owed to the answer (R113) and ends it too.
-//! The hand holds at most `HAND_CAP` cards, which bounds the loop.
+//! The hand holds at most the player's hand cap (`hand_cap_of`, R1143), which bounds the loop.
 //!
 //! Port of `packages/engine/src/effects/drawWhile.ts`.
 
 use std::sync::Arc;
 
-use crate::config::HAND_CAP;
 use crate::draw::DrawOutcome;
 use crate::effects::targets::{PlayerSpec, player_of};
 use crate::script::{Effect, EffectContext};
@@ -32,7 +31,8 @@ pub fn draw_while(args: DrawWhileArgs) -> Effect {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         // TS compared the prompt objects; a prompt's id names it alone.
         let asked = ctx.sink.state.pending.as_ref().map(|pending| pending.id.clone());
-        for _draws in 0..=HAND_CAP {
+        let cap = crate::query::hand_cap_of(ctx.sink.state, player);
+        for _draws in 0..=cap {
             if ctx.sink.state.result.is_some() || !(args.more)(ctx) {
                 return;
             }

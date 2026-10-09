@@ -14,7 +14,8 @@ use std::sync::LazyLock;
 
 use jackioh_engine::effects::{
     buff_cards, choose_mode, choose_target, chosen_tuning_number, damage, degrade, discover_number, draw,
-    enchant, gain_brittle, give_brittle, grant_keyword_cards, set_number, translate, upgrade,
+    enchant, gain_brittle, give_brittle, grant_keyword_cards, remember, set_number, transform_random,
+    translate, upgrade,
 };
 use jackioh_engine::testkit::*;
 
@@ -408,6 +409,44 @@ pub static translator: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
+/// MD-B18, R925: a Unit that translates itself as it enters a hand.
+pub static greeter: LazyLock<CardDef> = LazyLock::new(|| {
+    def(
+        "greeter",
+        4428,
+        json!({
+            "base": { "keywords": [], "text": "When this enters your hand: translate it." },
+            "radiant": { "keywords": [], "text": "When this enters your hand: translate it." },
+        }),
+    )
+});
+
+/// MD-B18, R925: a Unit that remembers being dealt — its start-of-game clause runs on arrival (R151).
+pub static opener: LazyLock<CardDef> = LazyLock::new(|| {
+    def(
+        "opener",
+        4429,
+        json!({
+            "base": { "keywords": [], "text": "Opened." },
+            "radiant": { "keywords": [], "text": "Opened." },
+        }),
+    )
+});
+
+/// MD-B18, R925: Meditative #37's shape — a Spell that replaces itself in the hand with a random
+/// Radiant card, Chinese and costing (0), which then runs its own arrival hooks.
+pub static bottle: LazyLock<CardDef> = LazyLock::new(|| {
+    def(
+        "bottle",
+        4430,
+        json!({
+            "type": "Spell",
+            "base": { "keywords": [], "text": "When this enters your hand: replace it." },
+            "radiant": { "keywords": [], "text": "When this enters your hand: replace it." },
+        }),
+    )
+});
+
 pub static INSTANCE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
         brittle_unit.clone(),
@@ -437,6 +476,9 @@ pub static INSTANCE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         radiant_number.clone(),
         base_number.clone(),
         translator.clone(),
+        greeter.clone(),
+        opener.clone(),
+        bottle.clone(),
     ]
 });
 
@@ -703,6 +745,40 @@ pub static INSTANCE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
                     vec![translate(json_as(
                         json!({ "scope": { "side": "any", "zones": ["hand", "library"] } }),
                     ))]
+                })),
+                ..Script::default()
+            }),
+        ),
+        (
+            greeter.id.clone(),
+            both(Script {
+                enters_hand: Some(hook(|_ctx| {
+                    vec![translate(json_as(json!({ "target": { "of": "self" } })))]
+                })),
+                ..Script::default()
+            }),
+        ),
+        (
+            opener.id.clone(),
+            both(Script {
+                start_of_game: Some(hook(|_ctx| {
+                    vec![remember(json_as(json!({ "key": "opened", "value": true })))]
+                })),
+                ..Script::default()
+            }),
+        ),
+        (
+            bottle.id.clone(),
+            both(Script {
+                enters_hand: Some(hook(|_ctx| {
+                    vec![transform_random(json_as(json!({
+                        "target": { "of": "self" },
+                        "query": { "defId": ["id-opener"] },
+                        "radiant": true,
+                        "chinese": true,
+                        "costOverride": 0,
+                        "arrives": true,
+                    })))]
                 })),
                 ..Script::default()
             }),

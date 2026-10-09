@@ -199,6 +199,10 @@ pub fn traps_in_order(state: &GameState) -> Vec<CardInstance> {
 }
 
 fn trap_triggers_of(state: &GameState, trap: &CardInstance) -> Vec<TrapTrigger> {
+    // ME-ALTPLAY, R1040, R1044: a set card reveals on its own timing, not on its printed triggers.
+    if trap.set_as.is_some() {
+        return crate::alt_play::reveal_triggers(trap);
+    }
     crate::scripts::script_of(state, trap).triggers.clone()
 }
 
@@ -304,6 +308,10 @@ pub fn consume_trap(sink: &mut EngineSink<'_>, instance: &CardInstance) {
         live.face_up = Some(true);
     }
     if is_field_trap(sink.state, &card) {
+        return;
+    }
+    // ME-ALTPLAY, R1041: a revealed set Unit is a Unit now and stays on the field.
+    if crate::animated::face_type_of(sink.state, &card) == crate::wire::CardType::Unit {
         return;
     }
     // R383 (B3.1 rules 2 and 4): an Animated Trap's firing ends by animating it, so it is a Unit in a unit

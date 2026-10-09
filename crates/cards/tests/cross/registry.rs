@@ -101,6 +101,7 @@ fn fingerprint(script: &Script) -> Value {
             "cry": script.cry.is_some(),
             "death": script.death.is_some(),
             "startOfGame": script.start_of_game.is_some(),
+            "entersHand": script.enters_hand.is_some(),
             "delayed": script.delayed.is_some(),
             "setStat": script.set_stat.is_some(),
             "startOfTurn": script.start_of_turn.is_some(),

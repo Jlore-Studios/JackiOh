@@ -927,3 +927,21 @@ describe("R693: lines of code is a hidden stat in matches", () => {
     }
   });
 });
+
+describe("R1046 the owner's face-down play wears its reveal timing", () => {
+  it("badges your own set card with its timing, and no back wears one", () => {
+    const view = fullBoardView();
+    view.you.backrow[2] = faceUpBackrow("p1", {
+      instanceId: "set1",
+      defId: "core-061",
+      type: "Field Trap",
+      unrevealed: true,
+      revealAt: "startOfNextTurn",
+    });
+    const container = renderBoard(view);
+
+    expect(screen.getByTestId(testid.revealAt("set1"))).toHaveTextContent("Start of your next turn");
+    // The badge is the owner's alone: backs and every other card show none.
+    expect(container.querySelectorAll(".reveal-at-badge")).toHaveLength(1);
+  });
+});

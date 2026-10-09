@@ -3,6 +3,7 @@
 //! files are part 24's.
 
 pub mod activate;
+pub mod alt_play;
 pub mod board_history;
 pub mod call_to_chaos_plus;
 pub mod catalog;

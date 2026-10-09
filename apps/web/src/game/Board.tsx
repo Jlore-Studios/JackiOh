@@ -568,7 +568,7 @@ export default function Board({
           emotes={emotes}
         />
         {/* R434: at the game's end the view shows the opponent's hand, and the row turns it face up. */}
-        <Hand side="opponent" hand={revealedOpponentHand(view) ?? view.opponent.hand} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
+        <Hand side="opponent" hand={revealedOpponentHand(view) ?? view.opponent.hand} cap={view.opponent.handCap} marked={view.opponent.handMarked} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
 
         <div className="field" aria-label="Field" ref={field}>
           <SandSurface field={field} disabled={sandDisabled} />
@@ -592,7 +592,7 @@ export default function Board({
         </div>
 
         <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} />
-        <Hand side="you" hand={yourHand} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("you")} />
+        <Hand side="you" hand={yourHand} cap={view.you.handCap} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("you")} />
 
         <div className="control-bar" aria-label="Controls">
           {boardRail === undefined ? null : <div className="board-rail">{boardRail}</div>}

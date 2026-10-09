@@ -2,6 +2,7 @@
 //! part 1; the files are part 17's.
 
 pub mod activate;
+pub mod alt_play;
 pub mod answer_key;
 pub mod decide;
 pub mod deck;

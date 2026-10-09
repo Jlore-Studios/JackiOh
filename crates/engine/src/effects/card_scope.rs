@@ -18,7 +18,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::catalog::def_of;
 use crate::faces::card_type_of;
 use crate::preview::is_face_down;
 use crate::script::EffectContext;
@@ -131,7 +130,8 @@ pub fn matches_card_scope(ctx: &EffectContext<'_>, card: &CardInstance, scope: &
     {
         return false;
     }
-    let tags = &def_of(Some(&*ctx.state), &card.def_id).tags;
+    // MD-B15, R923: a granted tag is part of the card for a scope too.
+    let tags = crate::query::tags_of(ctx.state, card);
     if let Some(wanted) = &scope.tags
         && !wanted.iter().any(|tag| tags.contains(tag))
     {

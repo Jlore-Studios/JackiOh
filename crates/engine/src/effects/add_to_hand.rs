@@ -13,7 +13,6 @@ use serde::{Deserialize, Serialize};
 
 use super::targets::{PlayerSpec, TargetSpec, instance_of, player_of};
 use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated, query};
-use crate::config::HAND_CAP;
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, find_instance_mut, new_instance};
 use crate::wire::{Keyword, Zone, ZoneName};
@@ -77,14 +76,15 @@ fn apply_cost_riders(card: &mut CardInstance, riders: &HandRiders) {
 /// TS wrote the riders through the live card object. Here `card` is the card as found (or the fresh
 /// instance), so the radiant rider goes on it before it moves, and on the card in its pile too when
 /// it already is in one; the cost riders go on the card where the move put it. Whether it reaches the
-/// hand is `crate::draw::add_to_hand`'s own test, read as it reads it: the owner's hand below
-/// HAND_CAP (§2.4, R4) — else it is burned and takes no price.
+/// hand is `crate::draw::add_to_hand`'s own test, read as it reads it: the owner's hand below their
+/// hand cap (§2.4, R4, R1143, `hand_cap_of`) — else it is burned and takes no price.
 fn put_in_hand_with(ctx: &mut EffectContext<'_>, mut card: CardInstance, riders: &HandRiders) {
     apply_radiant_rider(&mut card, riders);
     if let Some(live) = find_instance_mut(&mut *ctx.state, &card.id) {
         apply_radiant_rider(live, riders);
     }
-    let reaches_hand = (ctx.state.players[card.owner].hand.len() as i32) < HAND_CAP;
+    let reaches_hand =
+        (ctx.state.players[card.owner].hand.len() as i32) < crate::query::hand_cap_of(ctx.state, card.owner);
     let _ = crate::draw::add_to_hand(ctx, &mut card);
     if reaches_hand && let Some(live) = find_instance_mut(&mut *ctx.state, &card.id) {
         apply_cost_riders(live, riders);
@@ -202,6 +202,9 @@ pub struct AddRandomFromCatalogArgs {
     pub cost_mod: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub temporary: Option<bool>,
+    /// ME-CN, R921: the cards added are shown in Chinese (Meditative #33).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chinese: Option<bool>,
 }
 
 impl AddRandomFromCatalogArgs {
@@ -212,7 +215,7 @@ impl AddRandomFromCatalogArgs {
             cost_override: self.cost_override,
             cost_mod: self.cost_mod,
             temporary: self.temporary,
-            chinese: None,
+            chinese: self.chinese,
         }
     }
 }

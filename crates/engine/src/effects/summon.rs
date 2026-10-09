@@ -402,6 +402,8 @@ pub fn clone_of(
     copy.radiant = source.radiant;
     // ME-CN, R1300: a copy of a Chinese card is Chinese, as a copy of a Radiant card is Radiant.
     copy.chinese = source.chinese;
+    // MD-B15, R923: a copy keeps the granted tags of the card copied.
+    copy.granted_tags = source.granted_tags.clone();
     copy.buffs = AttackHealth {
         attack: source.buffs.attack,
         health: source.buffs.health,
@@ -574,13 +576,15 @@ fn matches_filter(ctx: &EffectContext<'_>, card: &CardInstance, filter: &Recruit
     if !def_ids.is_empty() && !def_ids.contains(&def.id) {
         return false;
     }
-    if let Some(tags) = &filter.tags
-        && !tags.iter().all(|tag| def.tags.contains(tag))
+    // MD-B15, R923: a granted tag is part of the card for a Recruit filter too.
+    let tags = crate::query::tags_of(ctx.state, card);
+    if let Some(wanted) = &filter.tags
+        && !wanted.iter().all(|tag| tags.contains(tag))
     {
         return false;
     }
     if let Some(not_tags) = &filter.not_tags
-        && not_tags.iter().any(|tag| def.tags.contains(tag))
+        && not_tags.iter().any(|tag| tags.contains(tag))
     {
         return false;
     }

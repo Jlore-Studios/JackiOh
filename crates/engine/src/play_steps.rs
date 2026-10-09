@@ -91,7 +91,7 @@ use crate::triggers::{
 };
 use crate::wire::{
     CardCost, CardType, Enchantment, GameEvent, PLAYER_IDS, PlagueSpend, PlayedFrom, PlayerId, PromptKind,
-    Row, Selection, TargetAim, TargetDecl, Zone, opponent_of,
+    RevealAt, Row, Selection, TargetAim, TargetDecl, Zone, opponent_of,
 };
 use crate::work::{begin_work_cascade, drain_work, drop_work, paused, paused_of, push_work};
 use crate::zones::{
@@ -640,12 +640,36 @@ pub fn validate_play(
         def_of(Some(&*sink.state), &card.def_id).cost,
         CardCost::Embiggen { .. }
     );
+    // ME-ALTPLAY, R1040, R1044, R1045: stamp the face-down form before the price is read.
+    let face_down_stamp: Option<(RevealAt, i32, Option<i32>)> = action.face_down.map(|reveal| {
+        let turn = sink.state.turn;
+        let echo = {
+            let grants = crate::alt_play::grants_of(sink.state, player);
+            if grants.echo > 0
+                && crate::faces::card_type_of_face(sink.state, &card.def_id, card.radiant)
+                    != crate::wire::CardType::Unit
+            {
+                Some(grants.echo)
+            } else {
+                None
+            }
+        };
+        (reveal, turn, echo)
+    });
     if let Some(stamped) = find_instance_mut(sink.state, &card.id) {
         if chooses {
             stamped.x = Some(action.x.unwrap_or(0));
         }
         if embiggens {
             stamped.embiggened = Some(action.embiggen == Some(true));
+        }
+        if let Some((reveal, turn, echo)) = face_down_stamp {
+            stamped.set_as = Some(crate::state::SetAs {
+                reveal,
+                set_turn: turn,
+                echo,
+                revealing: None,
+            });
         }
     }
     let card = live(sink.state, &card);
@@ -823,7 +847,7 @@ fn consume_used_discounts(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardI
     if is_x_cost(sink.state, &card) {
         return;
     }
-    let type_ = card_type_of(sink.state, &card);
+    let type_ = crate::alt_play::priced_type_of(sink.state, &card);
     let mods = sink.state.players[run.player].mods.clone();
     for modifier in &mods {
         let ModifierKind::CostDiscount {
@@ -1593,6 +1617,8 @@ pub fn take_from_play_source(state: &mut GameState, run: &PlayRun, card: &mut Ca
         return false;
     };
     side.hand.remove(at);
+    // R1140: a card played out of a hand has ended its stay there.
+    crate::zones::forget_hand_watch(state, &card.id);
     true
 }
 

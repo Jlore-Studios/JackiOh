@@ -1484,3 +1484,11 @@ describe("R1366 a steal and a give", () => {
     expect(cuesFor(control("p1", "steal"), ctx({ view }))).toEqual([{ kind: "sfx", id: "steal", params: { pan: LANE_PAN_MAX }, delayMs: 0 }]);
   });
 });
+
+describe("R1044 your own set Unit sounds as a set", () => {
+  it("a cardPlayed carrying a formerId gives trapSet only, and never speaks", () => {
+    const event: GameEvent = { ...played(HIDDEN_DEF_ID, "p1", "h1"), formerId: "h1" };
+    expect(voices(event)).toEqual([]);
+    expect(shape(event)).toEqual([sfx("trapSet")]);
+  });
+});
