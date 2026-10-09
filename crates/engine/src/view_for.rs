@@ -280,6 +280,8 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         radiant,
         chinese: None,
         cost,
+        // filled in by `card_view` from the instance data; bare views carry none.
+        tags: None,
         embiggen_cost: None,
         attack: None,
         health: None,
@@ -314,6 +316,8 @@ fn card_view(state: &GameState, card: &CardInstance) -> CardView {
         effective_cost(state, card, Default::default()),
     );
     view.type_ = data.type_;
+    // MD-B15, R923: a granted tag is part of the card, so a view of it says so.
+    view.tags = data.tags;
     view.brittle = data.brittle;
     view.params = data.params;
     view.tuning = data.tuning;
@@ -472,6 +476,7 @@ fn unit_view_of(state: &GameState, pile: &[CardInstance], viewer: PlayerId) -> O
         countered_on_play: card.countered_on_play,
         preview: card.preview,
         type_: card.type_,
+        tags: card.tags,
         brittle: card.brittle,
         params: card.params,
         tuning: card.tuning,
@@ -563,6 +568,7 @@ fn backrow_view(state: &GameState, card: Option<&CardInstance>, viewer: PlayerId
         def_id: view.def_id,
         radiant: view.radiant,
         chinese: view.chinese,
+        tags: view.tags,
         cost: view.cost,
         attack: view.attack,
         health: view.health,

@@ -19,7 +19,7 @@
 
 use indexmap::{IndexMap, IndexSet};
 
-use crate::catalog::{def_of, fused_id_parts};
+use crate::catalog::fused_id_parts;
 use crate::config::LAST_FACE_UP_SKIPPED_TAGS;
 use crate::faces::card_type_of;
 use crate::script::HookArgs;
@@ -61,7 +61,8 @@ fn played_face_down(type_: CardType) -> bool {
 /// type as they stand after step 3 made it Radiant, if it did).
 pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance) {
     let type_ = card_type_of(state, card);
-    let tags: Vec<Tag> = def_of(Some(&*state), &card.def_id).tags.clone();
+    // MD-B15, R923: a play is counted by the tags the card had as it was played, granted ones included.
+    let tags: Vec<Tag> = crate::query::tags_of(state, card);
 
     {
         let side = &mut state.players[player];
@@ -74,7 +75,7 @@ pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance)
             .as_ref()
             .map(|log| log.played_by_tag.clone())
             .unwrap_or_default();
-        // `new Set(def.tags)`: each tag once, in first-seen order.
+        // `new Set(tags)`: each tag once, in first-seen order.
         let distinct: IndexSet<Tag> = tags.iter().copied().collect();
         for tag in distinct {
             *by_tag.entry(tag).or_insert(0) += 1;

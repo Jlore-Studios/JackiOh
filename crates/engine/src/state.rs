@@ -245,6 +245,13 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub chinese: Option<bool>,
+    /// MD-B15, R923: tags an effect gave the card (`effects::grant_tag`, Meditative #35). Part of
+    /// the card for every instance-level tag read (`query::tags_of`); catalog pools never see it.
+    /// Kept in every zone and through R78's and R766's resets; an instance copy keeps it, a Fuse
+    /// unites it, a Transform drops it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub granted_tags: Option<Vec<Tag>>,
 }
 
 /// B5 E12, R452: one cast being driven that makes its caster's choices at random (`random`), narrows
@@ -1530,6 +1537,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         berserk: None,
         times_played: None,
         chinese: None,
+        granted_tags: None,
     };
     *next_id += 1;
     instance

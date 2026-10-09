@@ -10,7 +10,7 @@ use indexmap::IndexMap;
 use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::wire::catalog_types::{CardDef, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row};
+use crate::wire::catalog_types::{CardDef, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row, Tag};
 use crate::wire::events::{GameEvent, GameResult, Position};
 use crate::wire::string_union;
 
@@ -93,6 +93,11 @@ pub struct CardView {
     #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub type_: Option<CardType>,
+    /// MD-B15, R923: the card's tags, set only where they differ from its definition's — a granted
+    /// tag is part of the card, and the view says so.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tags: Option<Vec<Tag>>,
     /// B3.3, R385: the card's Brittle count, where the viewer may read the card and it has one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -383,6 +388,11 @@ pub struct UnitView {
     #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub type_: Option<CardType>,
+    /// MD-B15, R923: the card's tags, set only where they differ from its definition's — a granted
+    /// tag is part of the card, and the view says so.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tags: Option<Vec<Tag>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub brittle: Option<i32>,
@@ -540,6 +550,11 @@ pub struct PublicBackrowView {
     pub face_down: bool,
     #[serde(rename = "type")]
     pub type_: CardType,
+    /// MD-B15, R923: the card's tags, set only where they differ from its definition's — a granted
+    /// tag is part of the card, and the view says so.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tags: Option<Vec<Tag>>,
     pub counters: BackrowCounters,
     pub owner: PlayerId,
     pub controller: PlayerId,

@@ -726,6 +726,9 @@ pub struct Script {
     pub death: Option<Hook>,
     /// After the mulligan, before turn 1: only Heroic Power uses it (§6.2, R43).
     pub start_of_game: Option<Hook>,
+    /// MD-B18, R925: "When this enters your hand" (Meditative #37) — run by `draw::run_arrival_hooks`
+    /// on every hand arrival, after R151's start-of-game clause.
+    pub enters_hand: Option<Hook>,
     /// Named continuations a prompt answer re-enters (§10.6, R81). Empty: none.
     pub resume: IndexMap<&'static str, Hook>,
     /// A delayed effect this card scheduled, resolved at its R62 point.
@@ -841,14 +844,15 @@ pub struct Script {
 
 impl Script {
     /// `script[name]` for the effect-list hooks TS named by string (`work.scriptStepFor`,
-    /// `triggers.TRIGGER_HOOKS`, `Resume.hook`): "cry", "death", "startOfGame", "delayed",
-    /// "startOfTurn", "endOfTurn", "onPlayHook", "afterAttack", "startOfOpponentTurn". `None` for any
-    /// other name or an absent hook.
+    /// `triggers.TRIGGER_HOOKS`, `Resume.hook`): "cry", "death", "startOfGame", "entersHand",
+    /// "delayed", "startOfTurn", "endOfTurn", "onPlayHook", "afterAttack", "startOfOpponentTurn".
+    /// `None` for any other name or an absent hook.
     pub fn hook_named(&self, name: &str) -> Option<&Hook> {
         match name {
             "cry" => self.cry.as_ref(),
             "death" => self.death.as_ref(),
             "startOfGame" => self.start_of_game.as_ref(),
+            "entersHand" => self.enters_hand.as_ref(),
             "delayed" => self.delayed.as_ref(),
             "startOfTurn" => self.start_of_turn.as_ref(),
             "endOfTurn" => self.end_of_turn.as_ref(),

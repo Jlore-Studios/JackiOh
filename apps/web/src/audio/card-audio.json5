@@ -1273,8 +1273,26 @@
     "meditative-030-1": { // Love Bomb
       cast: { voice: "diva", text: "Mwah! You're welcome, darling." },
     },
+    "meditative-032": { // Spiritually 中国
+      cast: { voice: "prof", text: "Lesson one. Repeat after me." },
+    },
+    "meditative-033": { // First Day of 学校
+      cast: { voice: "diva", text: "First day! Don't forget your lunch." },
+    },
+    "meditative-034": { // 高考
+      cast: { voice: "prof", text: "Pencils down. Only the top scores remain." },
+    },
+    "meditative-035": { // RCTA (CN)
+      cast: { voice: "hustler", text: "Sign here. Congratulations, you're CN now." },
+    },
     "meditative-036": { // CN Peptides
       cast: { voice: "prof", text: "Totally safe. Probably. Fifty fifty." },
+    },
+    "meditative-037": { // CN in a bottle
+      cast: { voice: "alien", text: "Shake the bottle. See what comes out." },
+    },
+    "meditative-038": { // H1B Printer
+      cast: { voice: "robot", text: "Printing visas. Please hold." },
     },
   },
   emotes: {

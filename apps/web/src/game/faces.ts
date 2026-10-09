@@ -98,6 +98,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
     radiant: card.radiant,
     // R1301: the view says the card is shown in Chinese; never a card the viewer may not read.
     chinese: card.chinese === true,
+    // MD-B15, R923: the view's tags where they differ from the definition's (a granted tag).
+    ...(card.tags === undefined ? {} : { tags: card.tags }),
     liveCost: card.cost,
     ...(unit === undefined
       ? {}

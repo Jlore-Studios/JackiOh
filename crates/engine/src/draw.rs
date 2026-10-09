@@ -47,10 +47,17 @@ use crate::wire::{
 /// sink's rng, so the cursor it advanced would be discarded — two determinism bugs for one convenience.
 /// These two functions are the sink-holding funnels §2.4 already routes every hand and library arrival
 /// through (see the header of `effects/add_to_hand.rs`: "Both routes end in `../draw`'s `addToHand`").
-fn run_arrival_hooks(sink: &mut EngineSink, instance: &CardInstance) {
+pub(crate) fn run_arrival_hooks(sink: &mut EngineSink, instance: &CardInstance) {
     // §9.3, R113: the clause is an effect list like any other, so a question in it pauses the rest of
     // it on `state.work` (`prompts::run_start_of_game`), and a draw loop around it owes its remainder.
-    crate::prompts::run_start_of_game(sink, instance, instance.owner);
+    let whole = crate::prompts::run_start_of_game(sink, instance, instance.owner);
+    // MD-B18, R925: a hand arrival also runs "When this enters your hand", after R151's clause.
+    if whole
+        && let Some(live) = crate::state::find_instance(sink.state, &instance.id).cloned()
+        && matches!(live.zone, Zone::Hand { .. })
+    {
+        crate::prompts::run_enters_hand(sink, &live, live.owner);
+    }
 }
 
 /// #75: a backrow card that turns an empty-library draw into a Rush Token card.

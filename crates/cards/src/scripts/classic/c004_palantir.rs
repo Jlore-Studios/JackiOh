@@ -41,8 +41,16 @@ fn answered(ctx: &EffectContext<'_>, event: &GameEvent, books_only: bool) -> Opt
     if *player == ctx.controller || *card_type != CardType::Spell {
         return None;
     }
-    if books_only && !def_of(Some(&*ctx.state), def_id).tags.contains(&Tag::Book) {
-        return None;
+    // MD-B15, R923: a granted Book tag counts — read the announced card itself when it still
+    // exists, else its definition's tags.
+    if books_only {
+        let is_book = match find_instance(&*ctx.state, instance_id) {
+            Some(card) => tags_of(&*ctx.state, card).contains(&Tag::Book),
+            None => def_of(Some(&*ctx.state), def_id).tags.contains(&Tag::Book),
+        };
+        if !is_book {
+            return None;
+        }
     }
     Some(instance_id.clone())
 }
@@ -400,6 +408,27 @@ mod tests {
                 assert_eq!(s.state().players.p2.turn_log.cards_played, 0);
                 s.expect_mana(P2, 3);
                 s.expect_events(json!(["countered"]));
+            }
+
+            #[test]
+            fn r923_a_granted_book_is_stolen() {
+                crate::register_all();
+                let mut s = setup(json!({}), json!({}), false);
+                // Stockpile is no Book — until it is granted the tag.
+                let stockpile = s.card(STOCKPILE).clone();
+                find_instance_mut(s.state_mut(), &stockpile.id).expect("the spell").granted_tags =
+                    Some(vec![Tag::Book]);
+                let palantir = s.card(PALANTIR).clone();
+
+                s.play(&stockpile, json!({}));
+
+                // Stolen like a Book: Palantir is tributed and the spell is countered into your
+                // hand as your card, never played.
+                s.expect_in_zone(&palantir, "graveyard");
+                let taken = s.card(&stockpile.id).clone();
+                assert!(matches_object(&js(&taken.zone), &json!({ "z": "hand", "player": "p1" })));
+                assert_eq!(taken.owner, P1);
+                assert_eq!(count(s.events(), "cardPlayed"), 0);
             }
 
             #[test]

@@ -25,6 +25,8 @@ fn carry_from(copy: &mut CardInstance, source: Option<&CardInstance>) {
         return;
     }
     copy.chinese = source.chinese;
+    // MD-B15, R923: a copy keeps the granted tags of the card copied.
+    copy.granted_tags = source.granted_tags.clone();
     if let Some(tuning) = copy_tuning(source.tuning.as_ref()) {
         copy.tuning = Some(tuning);
     }
