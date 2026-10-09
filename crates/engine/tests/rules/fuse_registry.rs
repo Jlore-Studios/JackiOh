@@ -3,19 +3,13 @@
 //! The script registry is the process's. A server runs many matches in one process, and the practice
 //! worker runs the AI's simulated worlds beside the real game, so two states can each fuse into the
 //! same `t-<n>` slot from different cards. R179's id names the ingredients, so those two fusions get
-//! two ids and two registry entries; and because the id names them, the engine rebuilds any of a
-//! state's fused scripts the registry lacks — a state that came through JSON into a process that never
-//! ran its Fuse, or a registry replaced wholesale — whenever it is entered through `reduce`,
-//! `legalActions` or `viewFor`.
+//! two ids; and the engine rebuilds any fused script the registry lacks (a state that came through
+//! JSON, or a registry replaced wholesale) whenever it is entered through `reduce`, `legalActions` or
+//! `viewFor`.
 //!
-//! In Rust a fused script is never registered at all: `scripts::script_of(state, def_id)` composes it
-//! from the state's fused definition (SURFACE §6.6), and the state keeps what it composed
-//! (`GameState::fused_scripts`, SURFACE §17), so `syncFusedScripts` is gone and "the registry lacks
-//! it" is the permanent condition the TS tests set up by hand. Each test keeps its steps: what TS
-//! read off the registry after a rebuild is read here off `script_of`, and where TS showed the
-//! registry empty before the rebuild, this shows the registry holds no entry for the id.
-//!
-//! Port of `packages/engine/test/fuse-registry.test.ts`.
+//! A fused script is never registered: `scripts::script_of(state, def_id)` composes it from the
+//! state's fused definition and the state keeps what it composed (`GameState::fused_scripts`).
+//! Surface contract: docs/v0.3.0/SURFACE.md §6.6, §17.
 
 use std::cell::Cell;
 use std::sync::Arc;
@@ -31,7 +25,7 @@ use jackioh_engine::wire::PlayerId::P1;
 
 use crate::rules::fixtures::harness::new_game;
 
-/// TS's `let nextIndex = 1700`, incremented once per `unit`: the four cards are 1701–1704.
+/// The four cards are indexed 1701–1704.
 fn unit(name: &str, index: i32) -> CardDef {
     json_as(json!({
         "id": format!("fr-{name}"),
@@ -58,8 +52,7 @@ fn cards() -> [CardDef; 4] {
 }
 
 thread_local! {
-    /// The markers the last Cry run applied, in order (TS's module-level `seen`). Each `#[test]` runs on
-    /// its own thread, so the list is the test's own.
+    /// The markers the last Cry run applied, in order; each `#[test]` runs on its own thread.
     static SEEN: Cell<Vec<String>> = const { Cell::new(Vec::new()) };
 }
 
@@ -155,9 +148,8 @@ fn only_fused(state: &GameState) -> String {
 }
 
 /// What the scripts for `def_id` do right now: its Cry, run with no play behind it on a copy of
-/// `state` and applied, as the markers its ingredients' Cries record. TS read the registry directly,
-/// so no engine entry point got to rebuild the entry first; Rust has no registry entry for a fused id,
-/// and `script_of` is the one place its scripts come from.
+/// `state` and applied, as the markers its ingredients' Cries record. `script_of` is the one place a
+/// fused id's scripts come from.
 fn markers(state: &GameState, def_id: &str) -> Vec<String> {
     let Some(cry) = script_of(state, def_id).base.cry.clone() else {
         return vec![];
@@ -193,7 +185,7 @@ fn drop_scripts(def_ids: &[&str]) {
     register_scripts(rest);
 }
 
-/// The registry holds nothing for `def_id`: TS's `markers` reading `[]` off it before a rebuild.
+/// The registry holds nothing for `def_id`.
 fn registry_lacks(def_id: &str) -> bool {
     registered_scripts().get(def_id).is_none()
 }

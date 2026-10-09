@@ -1,11 +1,7 @@
 //! Fixture cards for copying the last Spell's text (docs/classic-sets.md B5 E14; Classic #57 Echo; R399,
-//! R545–R547). The engine never imports `packages/cards` (CLAUDE.md), so the copier and the Spells it
+//! R545–R547). The engine never imports the cards crate (CLAUDE.md), so the copier and the Spells it
 //! copies are proved on cards of their shape here. Ids are `ct-*`, indices from 5900, registered on top
-//! of the shared fixture catalog by `withCopiedText`.
-//!
-//! Port of `packages/engine/test/fixtures/copiedText.ts`. TS's `CT` object of defs is the struct
-//! `CtDefs` behind the static `CT` (`CT.echo.id`, `CT.x_bolt.id`, field names snake_cased); TS's module
-//! counter (`nextIndex`, from 5900, one per `def` call in the object's order) is each def's stated index.
+//! of the shared fixture catalog by `with_copied_text`.
 
 use std::sync::LazyLock;
 
@@ -13,7 +9,7 @@ use jackioh_engine::effects::{cast_new, choose_target, counter_play, damage, hea
 use jackioh_engine::subsystems::copied_text::copied_text_of;
 use jackioh_engine::testkit::*;
 
-/// TS `def(id, type, extra = {})`: a Core Common at cost 1 whose faces print `id` (`<id> radiant`).
+/// A Core Common at cost 1 whose faces print `id` (`<id> radiant`).
 fn def(id: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     let mut card = json!({
         "id": format!("ct-{id}"),
@@ -55,7 +51,7 @@ fn any_target() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "of": ["unit", "hero"] }))]
 }
 
-/// TS `CT`: the copier, the Spells it copies and the cards around them.
+/// The copier, the Spells it copies and the cards around them.
 pub struct CtDefs {
     /// Classic #57 Echo's shape: has the last Spell's text; its Radiant face adds Echo 1.
     pub echo: CardDef,
@@ -88,7 +84,7 @@ pub struct CtDefs {
 }
 
 impl CtDefs {
-    /// TS `Object.values(CT)`: every def, in the object's order.
+    /// Every def, in field order.
     pub fn values(&self) -> Vec<CardDef> {
         vec![
             self.echo.clone(),
@@ -322,7 +318,7 @@ pub fn register_copied_text() {
     register_scripts(merged);
 }
 
-/// `registerCopiedText` for a game `newGame` has just made (its catalog is registered by then).
+/// `register_copied_text` for a game just made (its catalog is registered by then).
 pub fn with_copied_text(state: GameState) -> GameState {
     register_copied_text();
     state

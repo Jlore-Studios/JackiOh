@@ -1,27 +1,20 @@
-//! Port of `apps/server/test/api/client-address.test.ts`.
-//!
 //! R190, docs/polish/5-sign-in.md B10, B11 and B12: which address a per-IP limit counts.
 //!
 //! §9.4 step 3 (20 redemptions per IP hash per hour) and R157's anonymous API bucket both key on
-//! "the IP hash". Behind a proxy every request arrives from the proxy, so the caller's address is
-//! read from `X-Forwarded-For`, but only from the entry the deployment's own proxies wrote: the
-//! `TRUSTED_PROXY_HOPS`-th from the right. Everything to its left was written by the caller. The
-//! server once read the leftmost entry, which let a caller pick a fresh bucket per request by
-//! changing one header.
+//! "the IP hash". Behind a proxy it is read from `X-Forwarded-For`, but only from the entry the
+//! deployment's own proxies wrote: the `TRUSTED_PROXY_HOPS`-th from the right. Everything to its
+//! left was written by the caller.
 //!
 //!  - B10: with one trusted hop, the rightmost entry is the key, in `code_attempts.ipHash` and in
 //!    the anonymous limiter alike.
 //!  - B11: `CF-Connecting-IP` and `X-Real-IP` are never read; too few entries fall back to the
-//!    socket's peer address (axum's `ConnectInfo<SocketAddr>`, TS's `RequestContext.peerAddress`),
-//!    and no peer to `UNKNOWN_CLIENT_ADDRESS`.
+//!    socket's peer address (axum's `ConnectInfo<SocketAddr>`), and no peer to `UNKNOWN_CLIENT_ADDRESS`.
 //!  - B12: `TRUSTED_PROXY_HOPS` is parsed by `load_env` and defaults to 0 (no proxy trusted), and the
 //!    router reports the fewest entries any request carried, never an address.
 //!  - An IPv6 client is counted by its /56, and an IPv4-mapped address as the IPv4 address.
 //!
-//! Rust deltas: the router is the App's own (`app::router`, SURFACE §11.2), so TS's one-route
-//! `openRouter` is `GET /api/catalog` (R163: `auth: none`) on it, and "a second router" is a second
-//! App; the redemption floor is the production 250 ms on tokio's paused clock (`start_paused`); the
-//! log is `tracing`, read back by the recording layer below.
+//! The router is the App's own (`app::router`, SURFACE §11.2), whose `GET /api/catalog` is open
+//! (R163: `auth: none`); the redemption floor is the production 250 ms on tokio's paused clock.
 
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
@@ -50,9 +43,7 @@ use jackioh_server::env::{SERVER_ONLY_ENV_VARS, load_env};
 
 use crate::support::deps;
 
-// ---------------------------------------------------------------------------------------------
 // Fixtures
-// ---------------------------------------------------------------------------------------------
 
 /// R109's allowance, as the server carries it.
 const LIMIT: usize = API_REQUESTS_PER_MINUTE;
@@ -65,13 +56,13 @@ const CLIENT: &str = "203.0.113.20";
 /// The socket's peer: the proxy itself, or a direct caller.
 const PEER: &str = "192.0.2.10";
 
-/// `CODE_PEPPER` for every server here. `index.ts` keys the IP hash `${CODE_PEPPER}:ip`, and a test
-/// that compares a stored `ipHash` computes the same one (`ip_hash`).
+/// `CODE_PEPPER` for every server here; the IP hash is keyed `${CODE_PEPPER}:ip`, and a test that
+/// compares a stored `ipHash` computes the same one (`ip_hash`).
 const PEPPER: &str = "client-address-test-pepper-of-32-characters-or-more";
 
-/// The environment `createTestDeps()` stood for: `E2E=1` (the fake store and fixture auth), the
-/// compiled-in catalog version (SURFACE §11.3) and one trusted proxy hop, the deployed server
-/// behind Render's edge (`render.yaml`).
+/// The test environment: `E2E=1` (the fake store and fixture auth), the compiled-in catalog
+/// version (SURFACE §11.3) and one trusted proxy hop, the deployed server behind Render's edge
+/// (`render.yaml`).
 fn test_env() -> IndexMap<String, String> {
     let mut source = IndexMap::new();
     for (name, value) in [
@@ -103,8 +94,8 @@ fn env_without_hops() -> IndexMap<String, String> {
     source
 }
 
-/// One App and its router: TS's `deps` and `createRouter(…, deps)`. The router is built once, so
-/// whatever it keeps per router (TS kept the limiter and the forwarded-for minimum) lasts the test.
+/// One App and its router. The router is built once, so whatever it keeps per router (the limiter,
+/// the forwarded-for minimum) lasts the test.
 struct Server {
     app: Arc<App>,
     router: axum::Router,
@@ -129,8 +120,7 @@ impl Reply {
     }
 }
 
-/// The server `createTestDeps(overrides)` built, from `source`, with R144's fixtures wiped so its
-/// store starts as empty as TS's memory store did.
+/// A server from `source`, with R144's fixtures wiped so its store starts empty.
 async fn server_from(source: &IndexMap<String, String>) -> Server {
     let env = app::load_server_env(source).expect("the test environment loads");
     let app = app::build(env).await.expect("the test app builds");
@@ -142,8 +132,8 @@ async fn server_from(source: &IndexMap<String, String>) -> Server {
 }
 
 impl Server {
-    /// `router(request, { peerAddress })`: the peer travels as axum's `ConnectInfo`, which the host
-    /// fills from the socket; `None` is a request whose host named no peer.
+    /// The peer travels as axum's `ConnectInfo`, which the host fills from the socket; `None` is a
+    /// request whose host named no peer.
     async fn send(&self, mut request: Request<Body>, peer: Option<&str>) -> Reply {
         if let Some(peer) = peer {
             let ip: IpAddr = peer.parse().expect("a peer address");
@@ -185,8 +175,8 @@ fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
         .collect()
 }
 
-/// The server's clock (`app::now_ms`, TS `deps.timers.now()`): what it stamps rows with and counts
-/// its windows on. Not the wall clock, which the test clock (tokio's) does not move.
+/// The server's clock (`app::now_ms`): what it stamps rows with and counts its windows on, not the
+/// wall clock, which tokio's test clock does not move.
 fn now_ms() -> i64 {
     jackioh_server::app::now_ms()
 }
@@ -217,7 +207,7 @@ fn hmac_sha256_hex(key: &str, message: &str) -> String {
         .collect()
 }
 
-/// `deps.hashes.ip(raw)`: `crypto.ts`'s `createHashes`, keyed as `index.ts` keys it.
+/// The IP hash of `raw`, keyed as the server keys it.
 fn ip_hash(raw: &str) -> String {
     hmac_sha256_hex(&format!("{PEPPER}:ip"), &raw.trim().to_lowercase())
 }
@@ -288,8 +278,7 @@ async fn seed_caller(server: &Server, id: &str) -> Seeded {
     }
 }
 
-/// An `auth: none` router: TS's one-route `openRouter`, here the App's own router, whose
-/// `GET /api/catalog` is open (R163).
+/// An `auth: none` router: the App's own, whose `GET /api/catalog` is open (R163).
 async fn open_server(source: &IndexMap<String, String>) -> Server {
     server_from(source).await
 }
@@ -323,12 +312,10 @@ async fn attempt_ip_hash(server: &Server, profile_id: &str) -> String {
     rows[0]["ipHash"].as_str().unwrap_or_default().to_string()
 }
 
-// ---------------------------------------------------------------------------------------------
-// The log, as TS's `createRecordingLogger` kept it
-// ---------------------------------------------------------------------------------------------
+// The log
 
-/// One logged event: TS's `{ level, event, data }`. The event's name is its `event` field, else its
-/// message; a snake_case field name is read as TS's camelCase key.
+/// One logged event. Its name is its `event` field, else its message; a snake_case field name is
+/// read as a camelCase key.
 #[derive(Clone, Debug, Serialize)]
 struct Entry {
     level: String,
@@ -408,8 +395,8 @@ impl<S: tracing::Subscriber> tracing_subscriber::Layer<S> for Recording {
             .or_else(|| data.remove("message"))
             .and_then(|value| value.as_str().map(str::to_string))
             .unwrap_or_default();
-        // `api::http::log_info(event, data)` writes TS's data object as one `data` field of JSON
-        // text; its keys are the entry's data, as TS's logger kept them.
+        // `api::http::log_info(event, data)` writes its data as one `data` field of JSON text; its
+        // keys are the entry's data.
         if let Some(Value::String(text)) = data.get("data")
             && let Ok(Value::Object(object)) = serde_json::from_str::<Value>(text)
         {
@@ -433,9 +420,7 @@ fn record() -> (Recording, tracing::subscriber::DefaultGuard) {
     (recording, guard)
 }
 
-// ---------------------------------------------------------------------------------------------
 // client_address
-// ---------------------------------------------------------------------------------------------
 
 mod r190_client_address {
     use super::*;
@@ -527,9 +512,7 @@ mod r190_client_address {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // The router: §9.4 step 3 and R157's anonymous bucket
-// ---------------------------------------------------------------------------------------------
 
 mod r190_the_per_ip_keys_behind_a_proxy {
     use super::*;
@@ -815,8 +798,7 @@ mod r190_the_per_ip_keys_behind_a_proxy {
         assert_eq!(attempt_ip_hash(&server, &caller.profile_id).await, ip_hash(PEER));
     }
 
-    /// `app::router` puts the CORS layer in front of the API (SURFACE §11.2), so this is TS's
-    /// `withCors(router)` with an empty origin list in all but the list.
+    /// `app::router` puts the CORS layer in front of the API (SURFACE §11.2).
     #[tokio::test(start_paused = true)]
     async fn r190_b11_with_cors_hands_the_request_context_through_to_the_router() {
         let server = code_server().await;
@@ -828,9 +810,7 @@ mod r190_the_per_ip_keys_behind_a_proxy {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B12: TRUSTED_PROXY_HOPS in the environment
-// ---------------------------------------------------------------------------------------------
 
 /// A complete, valid environment for the server (crates/server/.env.example's table), minus the hops.
 fn valid_env() -> IndexMap<String, String> {
@@ -931,9 +911,7 @@ mod r190_b12_trusted_proxy_hops {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B12: the api.forwarded_for calibration log
-// ---------------------------------------------------------------------------------------------
 
 mod r190_b12_the_api_forwarded_for_log {
     use super::*;
@@ -988,7 +966,7 @@ mod r190_b12_the_api_forwarded_for_log {
             assert!(!everything.contains(address), "{address}");
         }
 
-        // A second router reports for itself: a second App (TS kept the minimum per router).
+        // A second router reports for itself: a second App.
         let second = open_server(&test_env()).await;
         second
             .send(open_request(&[("x-forwarded-for", "203.0.113.67")]), Some(PEER))
@@ -998,9 +976,8 @@ mod r190_b12_the_api_forwarded_for_log {
 
     #[tokio::test(start_paused = true)]
     async fn r190_b12_a_caller_who_writes_its_own_entries_cannot_raise_the_count_the_operator_reads() {
-        // The adversarial panel's finding: one sample from whoever sent the first X-Forwarded-For
-        // request was the whole signal, and a scanner could make it say anything. Callers only ever
-        // ADD entries, so the minimum over every request is the proxies' own count.
+        // Callers only ever ADD entries, so the minimum over every request is the proxies' own
+        // count, not whatever the first request said.
         let (log, _guard) = record();
         let server = open_server(&test_env()).await;
 
@@ -1114,9 +1091,7 @@ mod r190_b12_the_api_forwarded_for_log {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R190: the default trusts no proxy
-// ---------------------------------------------------------------------------------------------
 
 mod r190_the_default_number_of_trusted_hops {
     use super::*;
@@ -1150,9 +1125,7 @@ mod r190_the_default_number_of_trusted_hops {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R190: an IPv6 client is counted by its /56
-// ---------------------------------------------------------------------------------------------
 
 mod r190_rate_limit_address {
     use super::*;

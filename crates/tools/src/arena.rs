@@ -7,21 +7,16 @@
 //! - `bin:<path>`: another build's AI, spawned as `<path> agent` and spoken to in JSON lines
 //!   (SURFACE §14.1), which is how a promotion plays the AI on `main`.
 //!
-//! The successor of `packages/ai/scripts/duel.ts` (one JSON line per game: who won, why, the hash,
-//! whether the log replays, the decision times) and of the ladder's arena (`ladder/arena/runner.py`:
-//! seeded games, seats alternated). The referee is match.ts's `playMatch` with agents for
-//! controllers: game `n`'s seed is `<base>:<n>`; agent `a` sits p1 when `n` is odd and p2 when it is
-//! even; each seat's deck is `build_ai_deck(createRng("<seed>:deck:<seat>"), …)` over all three sets
-//! minus that seat's own agent's shadow ban (R186), with no handicap (Easy both, R180); each seat's
-//! stream is `createRng("<seed>:ctl:<seat>")`; nonces are `m<log length>`; a refused action is
-//! replaced by endTurn or the first legal answer; a controller that throws ends the game without a
-//! result. So a game is a function of its seed and its two agents, and the thread count never
-//! changes one (`RAYON_NUM_THREADS` is respected, results come back in game order).
+//! Game `n`'s seed is `<base>:<n>`; agent `a` sits p1 on odd games. Each seat's deck is
+//! `build_ai_deck` over all three sets minus its own agent's shadow ban (R186), with no handicap
+//! (Easy both, R180). A refused action is replaced by endTurn or the first legal answer; a
+//! controller that throws ends the game without a result. So a game is a function of its seed and
+//! its two agents, whatever the thread count.
 //!
-//! Every finished game leaves one `GameRecord` (R376, `packages/shared/src/stats.ts`'s format, as
-//! `ai:stats` writes it; `source: "dev"`, `mode: "random"`, R378) on a JSONL line: in
-//! `<--out>/<date>.jsonl`, else `$JACKIOH_TRAINING_OUT/<date>.jsonl`, else on stdout. The duel lines go
-//! to stdout when the records went to a file and to stderr when they took stdout; a tally closes them.
+//! Every finished game leaves one `GameRecord` (R376; `source: "dev"`, `mode: "random"`, R378) on a
+//! JSONL line: in `<--out>/<date>.jsonl`, else `$JACKIOH_TRAINING_OUT/<date>.jsonl`, else on stdout.
+//! The duel lines go to stdout when the records went to a file and to stderr when they took stdout;
+//! a tally closes them.
 
 use std::io::{BufRead, BufReader, Write};
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -44,15 +39,12 @@ use crate::agent::{self, AgentInfo};
 use crate::gate::MS_PER_SECOND;
 use crate::patches::utc_date_of;
 
-/// match.ts's `AI_MATCH.maxActions`: the referee's ceiling on actions in one game. The engine's turn
-/// cap (R2) ends every real game long before it; a game that reaches it has no result.
+/// The referee's ceiling on actions in one game; the engine's turn cap (R2) ends every real game first.
 const ARENA_MAX_ACTIONS: usize = 3000;
 
-/// The directory a lane's game records go to when `--out` names none (docs/v0.3.0/README.md §8:
-/// `~/training-out/<lane>/`, set by `training/loop.sh`).
+/// The directory game records go to when `--out` names none (docs/v0.3.0/README.md §8).
 pub(crate) const TRAINING_OUT_ENV: &str = "JACKIOH_TRAINING_OUT";
 
-/// duel.ts's `msP95`: the share of a seat's decisions at or under the reported time.
 const DUEL_PERCENTILE: f64 = 0.95;
 
 #[derive(clap::Args)]
@@ -86,8 +78,8 @@ pub enum AgentSpec {
     Bin(PathBuf),
 }
 
-/// clap's parser for `--a`/`--b`, so a bad agent is a usage error (exit 2). A leading `~/` in a
-/// `bin:` path is read as `$HOME/`, since no shell expands it inside `bin:~/…`.
+/// clap's parser for `--a`/`--b`, so a bad agent is a usage error. A leading `~/` in a `bin:` path
+/// reads as `$HOME/`, since no shell expands it inside `bin:~/…`.
 fn parse_agent(text: &str) -> Result<AgentSpec, String> {
     match text {
         "self" => Ok(AgentSpec::SelfAi),
@@ -99,7 +91,6 @@ fn parse_agent(text: &str) -> Result<AgentSpec, String> {
     }
 }
 
-/// `~/x` → `$HOME/x`; anything else unchanged.
 fn expand_home(path: &str) -> PathBuf {
     match (path.strip_prefix("~/"), std::env::var_os("HOME")) {
         (Some(rest), Some(home)) => PathBuf::from(home).join(rest),
@@ -107,8 +98,7 @@ fn expand_home(path: &str) -> PathBuf {
     }
 }
 
-/// An agent ready to play: who it is, the label its records carry, and the shadow ban (R186) its
-/// own seats' decks are built without.
+/// An agent ready to play, with the label its records carry and the shadow ban (R186) its seats' decks omit.
 #[derive(Clone, Debug)]
 pub(crate) struct Entrant {
     pub spec: AgentSpec,
@@ -119,9 +109,8 @@ pub(crate) struct Entrant {
     pub shadow_ban: Vec<String>,
 }
 
-/// Readies an agent: `self` reads this build, `bin:` asks the binary (`info`), and `random` is dealt
-/// this build's shadow ban, as the quality gates deal the baseline's seat (gate.ts: "neither side is
-/// dealt cards the other side's rule keeps out").
+/// Readies an agent: `self` reads this build, `bin:` asks the binary (`info`), and `random` is dealt this
+/// build's shadow ban, as the gates deal the baseline's seat.
 pub(crate) fn entrant(spec: &AgentSpec) -> anyhow::Result<Entrant> {
     match spec {
         AgentSpec::SelfAi => {
@@ -154,7 +143,6 @@ pub(crate) fn entrant(spec: &AgentSpec) -> anyhow::Result<Entrant> {
     }
 }
 
-/// Asks a binary's agent who it is (`{"op":"info"}`), then lets it go.
 pub(crate) fn query_info(path: &Path) -> anyhow::Result<AgentInfo> {
     let mut bin = BinAgent::spawn(path)?;
     let answer = bin.call(&json!({ "op": "info" }))?;
@@ -166,7 +154,6 @@ pub(crate) fn query_info(path: &Path) -> anyhow::Result<AgentInfo> {
         .with_context(|| format!("{}: info's answer is not an AgentInfo", path.display()))
 }
 
-/// One game, set up and not yet played.
 #[derive(Clone, Debug)]
 pub(crate) struct ArenaGame {
     /// 1-based, as `gameConfig` numbers a gate's games.
@@ -180,8 +167,7 @@ pub(crate) struct ArenaGame {
     pub labels: (String, String),
 }
 
-/// What a game came to: match.ts's `MatchRecord`, minus what an agent does not report (its search
-/// statistics), plus each seat's decision times (duel.ts).
+/// What a game came to: match.ts's `MatchRecord` minus search statistics, plus each seat's decision times.
 #[derive(Clone, Debug)]
 pub(crate) struct ArenaOutcome {
     pub game: ArenaGame,
@@ -200,8 +186,7 @@ pub(crate) struct ArenaOutcome {
 }
 
 impl ArenaOutcome {
-    /// Whether agent `a` won. A draw is not a win (SURFACE §14.2), and a game without a result is
-    /// nobody's.
+    /// Whether agent `a` won. A draw, or a game without a result, is nobody's win (SURFACE §14.2).
     pub(crate) fn a_won(&self) -> bool {
         won_by(self.result, self.game.a_seat)
     }
@@ -212,13 +197,11 @@ impl ArenaOutcome {
     }
 }
 
-/// Whether `seat` won a game that ended with `result`. A draw and a game without a result are not wins.
 pub(crate) fn won_by(result: Option<GameResult>, seat: PlayerId) -> bool {
     matches!(result, Some(result) if result.winner == Winner::from(seat))
 }
 
-/// Games 1..=games between `a` and `b`, `seed_of(n)` naming game n's seed: a sits p1 on odd games.
-/// Decks are built here, before any game is played, so a deck that cannot be built fails the run.
+/// Games 1..=games between `a` and `b`. Decks are built here, before any game, so an unbuildable deck fails the run.
 pub(crate) fn setups(
     a: &Entrant,
     b: &Entrant,
@@ -232,8 +215,7 @@ pub(crate) fn setups(
     Ok(out)
 }
 
-/// Game `n` on `seed`: agent `a` sits p1 when `n` is odd and p2 when it is even (gate.ts's
-/// `subjectSeatOf`), and each seat's deck is built without its own agent's shadow ban.
+/// Game `n` on `seed`: agent `a` sits p1 on odd `n`, and each seat's deck omits its own agent's shadow ban.
 pub(crate) fn game_setup(seed: String, n: i32, a: &Entrant, b: &Entrant) -> anyhow::Result<ArenaGame> {
     let a_seat = if n % 2 == 1 { PlayerId::P1 } else { PlayerId::P2 };
     let (p1, p2) = if a_seat == PlayerId::P1 { (a, b) } else { (b, a) };
@@ -251,8 +233,8 @@ pub(crate) fn game_setup(seed: String, n: i32, a: &Entrant, b: &Entrant) -> anyh
     })
 }
 
-/// A seat's deck: `buildAiDeck(createRng("<seed>:deck:<seat>"), deckSize, { banned, manaCap })` at
-/// Easy's resources, which are a human's (R180: no handicap), over all three sets (R184, R380).
+/// A seat's deck: `buildAiDeck` seeded `<seed>:deck:<seat>` at Easy's resources (R180: no handicap),
+/// over all three sets (R184, R380).
 fn deck_for(seed: &str, seat: PlayerId, entrant: &Entrant) -> anyhow::Result<Vec<String>> {
     let handicap = AI_DIFFICULTY.easy;
     let mut rng = Rng::new(&format!("{seed}:deck:{}", seat.as_str()), 0);
@@ -273,13 +255,12 @@ fn deck_for(seed: &str, seat: PlayerId, entrant: &Entrant) -> anyhow::Result<Vec
     })
 }
 
-/// Plays every game, in parallel on rayon's pool, and hands the outcomes back in game order. An agent
-/// that cannot be started fails the run; anything that goes wrong inside a game is that game's.
+/// Plays every game in parallel, outcomes in game order. An agent that cannot start fails the run;
+/// anything wrong inside a game is that game's.
 pub(crate) fn play_games(games: &[ArenaGame]) -> anyhow::Result<Vec<ArenaOutcome>> {
     games.par_iter().map(play_game).collect()
 }
 
-/// A live seat for the length of one game.
 enum Live {
     SelfAi,
     Random,
@@ -310,7 +291,6 @@ impl Live {
     }
 }
 
-/// A `<path> agent` child, spoken to in JSON lines.
 pub(crate) struct BinAgent {
     path: PathBuf,
     child: Child,
@@ -318,7 +298,7 @@ pub(crate) struct BinAgent {
     stdout: BufReader<ChildStdout>,
 }
 
-/// `decide`'s request, in SURFACE §14.1's key order, serialised straight from the state.
+/// `decide`'s request, in SURFACE §14.1's key order.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct DecideRequest<'a> {
@@ -354,7 +334,6 @@ impl BinAgent {
         })
     }
 
-    /// One request line out, one answer line back.
     pub(crate) fn call(&mut self, request: &impl Serialize) -> anyhow::Result<Value> {
         let path = self.path.display().to_string();
         serde_json::to_writer(&mut self.stdin, request)
@@ -376,7 +355,6 @@ impl BinAgent {
         serde_json::from_str(&line).with_context(|| format!("arena: {path} answered a line that is not JSON"))
     }
 
-    /// `quit`, then reaps the child. A child that is already gone is no error here.
     pub(crate) fn quit(mut self) {
         let _ = serde_json::to_writer(&mut self.stdin, &json!({ "op": "quit" }));
         let _ = self.stdin.write_all(b"\n");
@@ -385,8 +363,7 @@ impl BinAgent {
         let _ = self.child.wait();
     }
 
-    /// The agent's move on `redact(state, seat)` from the seat's stream; the stream is moved to the
-    /// cursor the agent answers with.
+    /// The agent's move on `redact(state, seat)`; the stream moves to the cursor the agent answers with.
     fn decide(
         &mut self,
         state: &GameState,
@@ -422,9 +399,8 @@ impl BinAgent {
     }
 }
 
-/// One controller call (match.ts's `chooseFor`): the agent's action, `None` for "no move", or what
-/// it threw. `self` decides on `redact(state, seat)`, exactly as `cargo jackioh agent` does on what
-/// it is sent; `random` is the gates' baseline on the referee's state, as gate.ts plays it.
+/// One controller call (match.ts's `chooseFor`): the agent's action, `None` for "no move", or what it
+/// threw. `self` decides on `redact(state, seat)`; `random` plays on the referee's state.
 fn choose_for(
     live: &mut Live,
     state: &GameState,
@@ -447,8 +423,8 @@ fn choose_for(
     }
 }
 
-/// What stands in for a refused action: endTurn when it is legal, else the first legal answer (or
-/// mulligan), else any other legal action the random policy would take. Tried in this order.
+/// What stands in for a refused action: endTurn if legal, else the first legal answer (or mulligan),
+/// else any other legal action the random policy would take.
 fn replacements_for(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
     let legal: Vec<ActionBody> = legal_actions(state, seat)
         .into_iter()
@@ -472,8 +448,7 @@ fn replacements_for(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
     out
 }
 
-/// The chosen action, or, when the reducer refuses it, the first replacement it accepts (recording
-/// the refusal); `None` when nothing is accepted.
+/// The chosen action, or, when the reducer refuses it, the first replacement it accepts (recorded).
 fn accept(
     state: &GameState,
     seat: PlayerId,
@@ -501,11 +476,9 @@ fn accept(
     None
 }
 
-/// Plays one game (match.ts's `playMatch`, with agents for controllers): createGame + beginGame,
-/// then while there is no result: the actor is `seat_to_act` (R265); its stream is
-/// `createRng("<seed>:ctl:<seat>")`; the nonce is `m<log length>`. An agent's "no move" is replaced by
-/// the random policy on the seat's stream; a refused action is recorded in `rejected` and replaced
-/// by endTurn (or the first legal answer); a throw is recorded and ends the game.
+/// Plays one game (match.ts's `playMatch`): the actor is `seat_to_act` (R265), its stream
+/// `createRng("<seed>:ctl:<seat>")`, the nonce `m<log length>`. "No move" is replaced by the random
+/// policy; a refused action is recorded in `rejected` and replaced; a throw ends the game.
 pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
     let options = CreateGameOptions {
         seed: game.seed.clone(),
@@ -621,7 +594,6 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
     })
 }
 
-/// `fold`'s input for a game: its seed, decks and log, with no handicap (R180: Easy both).
 fn fold_args(outcome: &ArenaOutcome) -> anyhow::Result<FoldArgs> {
     let args = json!({
         "seed": outcome.game.seed,
@@ -631,15 +603,13 @@ fn fold_args(outcome: &ArenaOutcome) -> anyhow::Result<FoldArgs> {
     serde_json::from_value(args).context("arena: a game's fold input does not parse")
 }
 
-/// Whether a game's log folds back to its hash with no refusal (duel.ts's `replayOk`).
 pub(crate) fn replays(outcome: &ArenaOutcome) -> anyhow::Result<bool> {
     let replay = fold(&fold_args(outcome)?);
     Ok(replay.errors.is_empty() && hash_state(&replay.state) == outcome.hash)
 }
 
-/// R378: an arena record's id, `dev:<patch>:arena:<a>-vs-<b>:<seed>`. The agents are part of it, so
-/// a promotion's games against random and against the parent, which share their seeds, are other
-/// records, and the same seeds played for another patch are others again.
+/// R378: an arena record's id, `dev:<patch>:arena:<a>-vs-<b>:<seed>`; the agents are part of it, so
+/// games sharing seeds against random and against the parent are separate records.
 pub(crate) fn record_id(patch: &str, game: &ArenaGame) -> String {
     format!(
         "{DEV_RECORD_ID_PREFIX}{patch}:arena:{}-vs-{}:{}",
@@ -682,7 +652,6 @@ pub(crate) fn records_path(out: Option<&Path>) -> Option<PathBuf> {
     Some(dir.join(format!("{}.jsonl", utc_date())))
 }
 
-/// Appends one JSONL line per record, creating the directory and the file as needed.
 pub(crate) fn append_records(path: &Path, records: &[GameRecord]) -> anyhow::Result<()> {
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir).with_context(|| format!("arena: cannot create {}", dir.display()))?;
@@ -702,7 +671,6 @@ pub(crate) fn append_records(path: &Path, records: &[GameRecord]) -> anyhow::Res
     Ok(())
 }
 
-/// Today's date in UTC, `YYYY-MM-DD`.
 pub(crate) fn utc_date() -> String {
     let seconds = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -711,7 +679,7 @@ pub(crate) fn utc_date() -> String {
     utc_date_of(i64::try_from(seconds).unwrap_or(i64::MAX))
 }
 
-/// duel.ts's line for one game, from agent `a`'s side ("subject"), in its key order.
+/// One game's duel line from agent `a`'s side, in key order.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct DuelLine<'a> {
@@ -735,14 +703,12 @@ struct DuelLine<'a> {
     ms_p95: i64,
 }
 
-/// `Math.round` (.5 up) to a whole millisecond.
 fn round_ms(ms: f64) -> i64 {
     (ms + 0.5).floor() as i64
 }
 
-/// duel.ts's per-game line: who won, drew or lost from a's side, whether the game has no result at
-/// all (`aborted`, which no gate counts as a draw), why it ended, its hash, whether it replays, and
-/// a's decision count and times.
+/// duel.ts's per-game line: outcome from a's side, `aborted` (no result; no gate counts it a draw),
+/// why it ended, hash, whether it replays, and a's decision count and times.
 fn duel_line(outcome: &ArenaOutcome, replay_ok: bool) -> anyhow::Result<String> {
     let subject = outcome.game.a_seat;
     let other = subject.opponent();
@@ -773,7 +739,6 @@ fn duel_line(outcome: &ArenaOutcome, replay_ok: bool) -> anyhow::Result<String> 
     Ok(serde_json::to_string(&line)?)
 }
 
-/// A series' totals from a's side.
 #[derive(Serialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Tally {
@@ -801,7 +766,6 @@ pub(crate) fn tally(a: &str, b: &str, outcomes: &[ArenaOutcome]) -> Tally {
     }
 }
 
-/// The records of a series, in game order (finished games only).
 pub(crate) fn records_of(outcomes: &[ArenaOutcome]) -> anyhow::Result<Vec<GameRecord>> {
     let mut records = Vec::new();
     for outcome in outcomes {
@@ -860,7 +824,6 @@ mod tests {
     use super::*;
     use jackioh_engine::GameOverReason;
 
-    /// Seconds in a day.
     const SECONDS_PER_DAY: i64 = 86_400;
 
     fn self_entrant() -> Entrant {
@@ -923,8 +886,7 @@ mod tests {
                 "{} does not replay to its hash",
                 outcome.game.seed
             );
-            // Clean, as a gate game must be (B31): an agent decides on `redact(state, seat)` and
-            // `decide` redacts it again, which must never throw (a face-down trap once did).
+            // Clean, as a gate game must be (B31): `decide` redacts again and must never throw.
             assert_eq!(outcome.thrown, Vec::<String>::new(), "{}", outcome.game.seed);
             assert!(outcome.result.is_some(), "{} has no result", outcome.game.seed);
         }

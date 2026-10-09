@@ -3,25 +3,18 @@
 //! Three rulings own this file:
 //!
 //!  - **R143**, the optional seed. A room's match is not created until someone joins, so the seed
-//!    the host posts to `POST /api/rooms` has to survive until `POST /api/rooms/:code/join` — and
-//!    outside end-to-end mode the field is refused at both doors. BUILD M8 requires every spec to
-//!    set a seed, and `e2e/cypress/e2e/05-reconnect.cy.ts` and `06-room-code.cy.ts` both post one.
+//!    the host posts to `POST /api/rooms` has to survive until the join, and outside end-to-end mode
+//!    the field is refused at both doors. BUILD M8 requires every spec to set a seed.
 //!  - **R149**, the bounded mint: a code is retried a fixed number of times against the codes still
 //!    in use, and then the caller is told none is available rather than the server retrying for ever.
 //!  - **R264**, the room's mode: a room is made in the host's mode with their deck or trio frozen
 //!    into it, a join in another mode is refused with the room's mode named, a Best-of-3 join makes
 //!    the series and an All Random join deals both decks.
 //!
-//! Port of `apps/server/test/match/rooms.test.ts`. The rooms run the real `freeze_choice`
-//! (`api/decks.rs`) over decks saved straight into the store. Where TS leaned on test doubles the
-//! Rust server does not have (SURFACE §11.3), this file uses the real thing instead: the real
-//! validator (so every deck is a legal one of real cards and both players own every card, where TS
-//! had a permissive validator and three ids), the real registry (so "the match the join started" is
-//! the match row it wrote, read off the store, where TS read its fake directory's `started` list),
-//! and a minted seed or code that is the server's own (TS scripted both through `Ids`). The legacy
-//! `{ deckIndex }` body is gone (SURFACE §11.3), so a Best-of-1 choice names its deck by id.
-//! R149's two tests script the code mint to collide through `actor::rooms::script_room_codes`, the
-//! seam that stands where TS's `roomIds(codes)` did.
+//! The rooms run the real `freeze_choice` (`api/decks.rs`), validator and registry over decks saved
+//! into the store; "the match the join started" is the match row it wrote. R149's two tests script
+//! the code mint to collide through `actor::rooms::script_room_codes`.
+//! Surface contract: docs/v0.3.0/SURFACE.md §11.2, §11.3.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -45,11 +38,10 @@ const GUEST: &str = "guest";
 /// The epoch-ms stamp the saved decks carry; nothing reads it back.
 const AT: i64 = 1_700_000_000_000;
 
-/// R143's seeds sit in one process-wide map (`e2e_room_seed_count`), which TS's suite read one test
-/// at a time; these tests take turns so one test's seed is never another's count.
+/// R143's seeds sit in one process-wide map (`e2e_room_seed_count`); these tests take turns so one
+/// test's seed is never another's count.
 static ROOMS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
-/// One store call in its own transaction, as TS's `deps.store.<sub>.<method>(…)` was.
 macro_rules! store {
     ($app:expr, $t:ident => $call:expr) => {{
         let mut $t = $app
@@ -71,7 +63,6 @@ fn to_json<T: serde::Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("a serialisable value")
 }
 
-/// The fake store behind the test app (SURFACE §11.2's `Db::Fake`).
 fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
     match &app.db {
         Db::Fake(data) => Arc::clone(data),
@@ -79,7 +70,6 @@ fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
     }
 }
 
-/// One table of the fake store, as TS's `deps.store.tables.<name>` read it: rows as JSON.
 async fn table(app: &App, pick: impl Fn(&FakeData) -> Value) -> Vec<Value> {
     let data = fake(app);
     let data = data.lock().await;
@@ -89,9 +79,9 @@ async fn table(app: &App, pick: impl Fn(&FakeData) -> Value) -> Vec<Value> {
     }
 }
 
-/// TS's `deps.matches.started`: the matches the registry started, oldest first — every match row
-/// past its `open` reservation (a room's claim reserves the row; the join's start completes it).
-/// Seat order is the row's: index 0 of `players` and `decks` is p1.
+/// The matches the registry started, oldest first — every match row past its `open` reservation
+/// (a room's claim reserves the row; the join's start completes it). Seat order is the row's: index 0
+/// of `players` and `decks` is p1.
 async fn started(app: &App) -> Vec<Value> {
     table(app, |data| json!(data.tables.matches))
         .await
@@ -136,12 +126,10 @@ fn deck_at(n: usize) -> Vec<String> {
     playable()[n * size..(n + 1) * size].to_vec()
 }
 
-/// TS's `DECK` (three ids the permissive validator let through): one legal deck.
 fn deck() -> Vec<String> {
     deck_at(0)
 }
 
-/// Saves a deck for a profile straight into the store.
 async fn save_deck(app: &Arc<App>, profile_id: &str, id: &str, cards: &[String], name: &str) {
     let outcome = store!(app, t => t
         .decks_upsert(
@@ -162,8 +150,7 @@ async fn save_deck(app: &Arc<App>, profile_id: &str, id: &str, cards: &[String],
     assert_eq!(to_json(&outcome), "created");
 }
 
-/// Every playable card in the profile's collection, so the real validator's L5 passes (TS's
-/// permissive validator checked no ownership).
+/// Every playable card in the profile's collection, so the real validator's L5 passes.
 async fn own_everything(app: &Arc<App>, profile_id: &str) {
     let rows: Vec<Value> = playable()
         .iter()
@@ -193,7 +180,6 @@ struct Harness {
 }
 
 async fn harness(e2e: bool) -> Harness {
-    // TS `createTestDeps({ e2e })`: the empty store either way, end-to-end mode only when asked.
     let app = test_app_with(TestAppOptions {
         e2e,
         skip_fixtures: true,
@@ -207,7 +193,7 @@ async fn harness(e2e: bool) -> Harness {
     Harness { app, host, guest }
 }
 
-/// TS's `{ deckIndex: 0, ...body }`: the caller's saved deck, Best of 1, under whatever `body` sets.
+/// The caller's saved deck, Best of 1, under whatever `body` sets.
 fn with_deck(deck_id: &str, body: Value) -> Value {
     let mut merged = json!({ "mode": "bo1", "deckId": deck_id });
     if let Value::Object(fields) = body {
@@ -249,7 +235,6 @@ impl Harness {
     }
 }
 
-/// Creates a room and joins it, returning the code and the seed of the match the join started.
 async fn play_through(h: &Harness, body: Value, join_body: Value) -> (String, String) {
     let (status, created) = h.create(body).await;
     assert_eq!(status, 200, "{created}");
@@ -375,7 +360,7 @@ mod r143_the_optional_seed_on_the_room_endpoints {
     async fn r143_still_mints_a_seed_when_none_is_supplied_s9_3_the_server_owns_it() {
         let _turn = ROOMS.lock().await;
         let h = harness(true).await;
-        // TS's fake `Ids` minted `seed-<n>`; the server's own seed is opaque, and present.
+        // The server's own seed is opaque, and present.
         let (_, seed) = play_through(&h, json!({}), json!({})).await;
         assert!(!seed.is_empty());
     }
@@ -422,7 +407,6 @@ mod r149_the_bounded_room_code_mint {
     #[tokio::test]
     async fn r149_retries_past_a_code_that_is_already_in_use_and_mints_the_next_one() {
         let _turn = ROOMS.lock().await;
-        // The first two attempts collide with the room the host already opened; the third is free.
         let _codes = script_room_codes(&["AAA234", "AAA234", "AAA234", "BBB234"]);
         let h = harness(false).await;
 
@@ -439,7 +423,6 @@ mod r149_the_bounded_room_code_mint {
     async fn r149_gives_up_after_a_bounded_number_of_collisions_and_says_no_code_is_available() {
         let _turn = ROOMS.lock().await;
         let log = record_logs();
-        // Every attempt mints the same code, which the host's room already holds.
         let _codes = script_room_codes(&["AAA234"]);
         let h = harness(false).await;
         let (status, first) = h.create(json!({})).await;
@@ -464,17 +447,12 @@ mod r149_the_bounded_room_code_mint {
     }
 }
 
-// ---------------------------------------------------------------------------
 // §9.4 / §9.5 / §9.8 — the host's deck is frozen into the room
-// ---------------------------------------------------------------------------
 
-/// The room half of §9.8's "Deck swapped after matchmaking → decks are frozen into the ticket". A
-/// room has the same exposure as a queue ticket and a wider window for it: `actor/rooms.rs`
-/// freezes the host's deck at `POST /api/rooms` and the match is not created until somebody joins —
-/// which may be up to `ROOM_CODE_TTL_SECONDS` later, with the deck builder open the whole time.
-///
-/// These put the real `PUT /api/decks/:id` on the same router, so "the host edits the deck" is the
-/// endpoint a player would use and the freeze under test is the production one.
+/// The room half of §9.8's "Deck swapped after matchmaking → decks are frozen into the ticket".
+/// `actor/rooms.rs` freezes the host's deck at `POST /api/rooms`, but the match is not created until
+/// somebody joins, up to `ROOM_CODE_TTL_SECONDS` later. These tests use the real `PUT /api/decks/:id`
+/// on the same router.
 mod the_hosts_deck_is_frozen_into_the_room {
     use super::*;
 
@@ -546,7 +524,6 @@ mod the_hosts_deck_is_frozen_into_the_room {
         assert_eq!(save(&h, &h.host, &host_deck(), &a).await, 200);
         assert_eq!(save(&h, &h.guest, &guest_deck(), &b).await, 200);
 
-        // 1. The host opens a room on the deck. The freeze happens here.
         let (status, created) =
             create(&h.app, &h.host, json!({ "mode": "bo1", "deckId": host_deck() })).await;
         assert_eq!(status, 200, "{created}");
@@ -554,7 +531,6 @@ mod the_hosts_deck_is_frozen_into_the_room {
         let rooms = table(&h.app, |data| json!(data.tables.rooms)).await;
         assert_eq!(rooms.last().expect("the room")["hostDeck"], json!(a));
 
-        // 2. The swap, while the room sits open waiting for somebody to type the code.
         assert_eq!(save(&h, &h.host, &host_deck(), &c).await, 200);
         // PREMISE: the save landed — otherwise there is nothing that could leak into the match.
         let saved =
@@ -564,7 +540,6 @@ mod the_hosts_deck_is_frozen_into_the_room {
         let rooms = table(&h.app, |data| json!(data.tables.rooms)).await;
         assert_eq!(rooms.last().expect("the room")["hostDeck"], json!(a));
 
-        // 3. The guest joins on their own deck, so each seat is identifiable.
         let (status, joined) = join(
             &h.app,
             &h.guest,
@@ -576,7 +551,6 @@ mod the_hosts_deck_is_frozen_into_the_room {
 
         assert_eq!(deck_in_match_for(&h, HOST).await, Some(json!(a)));
         assert_eq!(deck_in_match_for(&h, GUEST).await, Some(json!(b)));
-        // The substitute deck reached no seat at all.
         let all_started = Value::Array(started(&h.app).await);
         assert!(!all_started.to_string().contains(c[0].as_str()));
     }
@@ -610,9 +584,7 @@ mod the_hosts_deck_is_frozen_into_the_room {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R264 — rooms carry a mode
-// ---------------------------------------------------------------------------
 
 mod r264_rooms_carry_a_mode {
     //! R264 — rooms carry a mode (§9.5, R257).
@@ -684,8 +656,7 @@ mod r264_rooms_carry_a_mode {
         let host_trio = save_trio(&h.app, HOST, 20).await;
         let code = create_in(&h, json!({ "mode": "bo3", "trioId": host_trio })).await;
 
-        // A Best-of-1 joiner and an All Random one (TS also sent a legacy body with no mode, which
-        // SURFACE §11.3 retires).
+        // A Best-of-1 joiner and an All Random one.
         for body in [
             json!({ "mode": "bo1", "deckId": uuid(2) }),
             json!({ "mode": "random" }),
@@ -702,7 +673,6 @@ mod r264_rooms_carry_a_mode {
         // Refused before anything was claimed: the room is still open to the right choice.
         assert_eq!(h.rooms().await[0]["guestProfileId"], Value::Null);
 
-        // An All Random room names its own mode the same way.
         let random = create_in(&h, json!({ "mode": "random" })).await;
         let (status, wrong) = join_with(&h, &random, json!({ "mode": "bo1", "deckId": uuid(2) })).await;
         assert_eq!(status, 409);
@@ -927,7 +897,6 @@ mod r264_rooms_carry_a_mode {
      {
         let _turn = ROOMS.lock().await;
         let h = harness(false).await;
-        // TS put the room, queue and series routes on one router; the app's router serves them all.
         let third = player(&h.app, "third", "user-third", "third@example.test").await;
         save_deck(&h.app, "third", &uuid(90), &deck(), "third's deck").await;
 
@@ -995,16 +964,14 @@ mod r264_rooms_carry_a_mode {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R642 — the portraits on a room's match (§9.5)
-// ---------------------------------------------------------------------------
 
 /// R642, the room half: a Best-of-1 room freezes the host deck's portrait at `POST /api/rooms`,
 /// with the deck, and an All Random room deals each seat's portrait off the match seed — the same
 /// `pick_portrait_from_seed` the queue uses (R258's dealing, one layer down).
 ///
 /// The match row these tests read is the real write: the registry's `start` writes it, seat order
-/// and `portrait_or_default` included (TS wrote it through its fake directory for these tests).
+/// and `portrait_or_default` included.
 mod r642_the_portraits_on_a_rooms_match {
     use super::*;
 

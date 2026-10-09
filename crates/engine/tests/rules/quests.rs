@@ -1,13 +1,6 @@
-//! The quests subsystem (docs/classic-sets.md B5 E33; `src/subsystems/quests.ts`; SPEC §8.6 row 90,
-//! §10.1, §10.6, §10.8; R404), proved through the fixture cards of `fixtures/quests.ts` so the engine
-//! half of Classic #90 In Too Deep stands without `packages/cards`: each goal counted and not counted,
-//! counting from the moment a quest opens, completion at the state check on either player's turn, the
-//! base face's `reward` prompt and the Radiant face's every reward and every path, a quest reached by
-//! two paths, a reward two quests offer, an aura held while the card stands, a pause mid-reward through
-//! JSON, a replay from the log, both views, and the two random picks the rewards needed
-//! (`effects/randomPicks.ts`). The real card's own test file proves the same with its real tree.
-//!
-//! Port of `packages/engine/test/quests.test.ts`.
+//! The quests subsystem (docs/classic-sets.md B5 E33; SPEC §8.6 row 90, §10.1, §10.6, §10.8; R404),
+//! through the quest fixture cards, so the engine half of Classic #90 In Too Deep stands without the
+//! cards crate: goals, completion at the state check, the reward prompt, Radiant paths, JSON pause, replay, views.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -57,7 +50,6 @@ fn quest_board(seed: &str) -> GameState {
     state
 }
 
-/// One action's result: the state after it and the events it emitted.
 struct Step {
     state: GameState,
     events: Vec<GameEvent>,
@@ -81,7 +73,6 @@ fn act(state: &GameState, body: Value, log: Option<&mut Vec<Action>>) -> Step {
     }
 }
 
-/// Play a card from its owner's hand, with declared targets.
 fn play(state: &GameState, card: &CardInstance, targets: &[&str], log: Option<&mut Vec<Action>>) -> Step {
     let targets: Vec<Value> = targets
         .iter()
@@ -104,13 +95,11 @@ fn hand(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
         .expect(def_id)
 }
 
-/// TS `play(state, hand(state, defId, player), targets)`: a new copy of the card into the hand, played.
 fn play_new(state: &mut GameState, def_id: &str, player: PlayerId, targets: &[&str]) -> Step {
     let card = hand(state, def_id, player);
     play(state, &card, targets, None)
 }
 
-/// `playQuestCard`'s answer: the step, and the quest card as it stands after it.
 struct Played {
     state: GameState,
     events: Vec<GameEvent>,
@@ -135,8 +124,8 @@ fn json_of(value: impl Serialize) -> Value {
     serde_json::to_value(value).expect("serialisable")
 }
 
-/// vitest's `toMatchObject`: every key the expected object names matches, recursively; an array
-/// matches element for element and in length.
+/// Every key the expected object names matches, recursively; an array matches element for element
+/// and in length.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (Value::Object(actual), Value::Object(expected)) => expected
@@ -149,7 +138,6 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
     }
 }
 
-/// The card's quest line, as JSON (TS `QuestMemory`).
 fn memory_of(state: &GameState, card: &CardInstance) -> Value {
     let live = find_instance(state, &card.id).expect("the card");
     json_of(quest_memory_of(live).expect("a quest line"))
@@ -159,7 +147,6 @@ fn progress_of(state: &GameState, card: &CardInstance, quest: &str) -> i64 {
     memory_of(state, card)["progress"][quest].as_i64().unwrap_or(0)
 }
 
-/// A number a goal names (TS `GOALS.draws.count`, `GOALS.unspentManaAtTurnEnd.mana`, …).
 fn goal_number(goal: impl Serialize, field: &str) -> i64 {
     json_of(goal)[field].as_i64().expect("a goal number")
 }
@@ -178,7 +165,6 @@ fn completed(events: &[GameEvent], card: &CardInstance) -> Vec<String> {
         .collect()
 }
 
-/// One field of every event of a type, as JSON.
 fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value> {
     events_of_type(events, kind)
         .into_iter()
@@ -241,7 +227,6 @@ mod r404_e33_quests_the_first_quest_opens_as_the_card_enters {
                 "goal": goal_number(&GOALS["draws"], "count"),
             }])
         );
-        // The play's own events came before the opening: the quest has counted nothing.
         assert_eq!(progress_of(&after, &card, ONLY_QUEST), 0);
     }
 
@@ -321,7 +306,6 @@ mod e33_quests_each_goal_counted_and_not_counted {
         );
         assert_eq!(completed(&step.events, &card), [ONLY_QUEST]);
 
-        // A burned draw: the hand is full.
         let mut state = quest_board("q-draws-burn");
         set_library(
             &mut state,
@@ -340,7 +324,6 @@ mod e33_quests_each_goal_counted_and_not_counted {
         assert_eq!(events_of_type(&full.events, GameEventType::Burned).len(), 1);
         assert_eq!(completed(&full.events, &card), [ONLY_QUEST]);
 
-        // The opponent's draws: p2's turn starts with a draw, which counts for nothing of p1's.
         let mut state = quest_board("q-draws-theirs");
         let Played {
             state: mut s1, card, ..
@@ -417,7 +400,6 @@ mod e33_quests_each_goal_counted_and_not_counted {
         let mut milled = play_new(&mut s1, &mill().id, P1, &[]);
         assert_eq!(milled.state.players.p1.library.len(), 0);
         assert_eq!(progress_of(&milled.state, &card, ONLY_QUEST), 0);
-        // ... and the fatigue draw after it takes no card either.
         let tired = play_new(&mut milled.state, &draw_one().id, P1, &[]);
         assert_eq!(memory_of(&tired.state, &card)["done"], json!([]));
 
@@ -484,7 +466,6 @@ mod e33_quests_each_goal_counted_and_not_counted {
         in_hand(&mut state, &plain_id, P1, 1);
         in_hand(&mut state, &plain_id, P2, 1);
         let Played { state: s1, card, .. } = goal(&mut state, "unspentManaAtTurnEnd", P1);
-        // 4 mana, 1 paid: 3 left.
         assert_eq!(
             i64::from(s1.players.p1.mana.current),
             goal_number(&GOALS["unspentManaAtTurnEnd"], "mana")
@@ -499,7 +480,6 @@ mod e33_quests_each_goal_counted_and_not_counted {
         let Played { state: s1, card, .. } = goal(&mut state, "unspentManaAtTurnEnd", P1);
         let mut short = end_turn(&s1);
         assert_eq!(progress_of(&short.state, &card, ONLY_QUEST), 0);
-        // p2's turn ends with 4 unspent: not p1's turn.
         assert_eq!(short.state.active, P2);
         short.state.players.p2.mana.current = 4;
         let theirs = end_turn(&short.state);
@@ -658,7 +638,6 @@ mod e33_quests_each_goal_counted_and_not_counted {
             state: mut s1, card, ..
         } = goal(&mut state, "unitsInGraveyard", P1);
         let mut first = play_new(&mut s1, &slay().id, P1, &[a.id.as_str()]);
-        // One Unit and a Slay (a Spell) lie there now.
         assert_eq!(first.state.players.p1.graveyard.len(), 2);
         assert_eq!(memory_of(&first.state, &card)["done"], json!([]));
         let b = put(&mut first.state, &plain.id, slot(P1, Row::Units, 2), json!({}));
@@ -700,7 +679,6 @@ mod e33_quests_the_tree_base_face_a_reward_prompt {
             &memory_of(&state, &card),
             &json!({ "active": [], "done": ["draws"] })
         ));
-        // The other seat sees that a prompt is open, never the options.
         assert_eq!(
             json_of(&view_for(&state, P2).pending),
             json!({ "forYou": false, "pendingFor": "p1" })
@@ -727,7 +705,6 @@ mod e33_quests_the_tree_base_face_a_reward_prompt {
                 .iter()
                 .any(|o| o.key == format!("instance:{}", foe.id))
         );
-        // Paused mid-reward: the quest it leads to is not open yet.
         assert_eq!(memory_of(&state, &card)["active"], json!([]));
 
         let mut copy = round_trip(&state);
@@ -800,7 +777,6 @@ mod e33_quests_the_tree_base_face_a_reward_prompt {
             json!({ "active": ["mana"], "progress": { "mana": 0 }, "done": ["draws", "kill"], "auras": [], "waiting": [] }),
         );
         let mut ended = end_turn(&state);
-        // The end of p1's turn with 4 unspent completes "mana": its one reward is still a prompt.
         open_as(&ended.state, PromptKind::Reward, P1);
         answer_keys(&mut ended.state, &["mode:aura"]);
         let mut s = ended.state;
@@ -809,7 +785,6 @@ mod e33_quests_the_tree_base_face_a_reward_prompt {
             &json!({ "active": [], "auras": ["aura"] })
         ));
         assert!(has_indestructible(&s, &unit));
-        // Both views show the quest line.
         for viewer in [P1, P2] {
             let shown = shown_to(&s, viewer, &card).map(json_of);
             assert!(shown.is_some_and(|shown| matches_object(
@@ -829,7 +804,7 @@ mod e33_quests_the_tree_base_face_a_reward_prompt {
     }
 }
 
-/// TS `fuse(sinkFor(state), { ingredients, target })`: the sink's cursor is not written back, as in TS.
+/// Fuses `ingredients` onto `target`; the sink's cursor is not written back.
 fn fuse_onto(
     state: &mut GameState,
     ingredients: Vec<CardInstance>,
@@ -1078,7 +1053,6 @@ mod e33_quests_the_view_hidden_information_and_replay {
             Some(&mut log),
         )
         .state;
-        // p1's second turn drew a card: 1 of 2. Draw Two finishes it.
         assert_eq!(progress_of(&state, &tree_card, "draws"), 1);
         let twice = state
             .players

@@ -1,9 +1,6 @@
 //! B5 E30, last boards: a match setup input from outside the match (SPEC §8.7 C+ #29, §9.3, §10.1,
-//! R417, R564), driven through `fixtures/lastBoards.ts`' Portal, the smallest script with C+ #29's
-//! two faces. The real card's test (packages/cards/test/classic-plus/029-portal-to-the-past.test.ts)
-//! covers the same cases again with the real catalog.
-//!
-//! Port of `packages/engine/test/lastBoards.test.ts`.
+//! R417, R564), driven through a Portal, the smallest script with C+ #29's two faces. The real
+//! card's test covers the same cases again with the real catalog.
 
 use serde::Serialize;
 
@@ -77,13 +74,12 @@ fn json_of<T: Serialize>(value: T) -> Value {
     serde_json::to_value(value).expect("serialises")
 }
 
-/// TS `JSON.parse(JSON.stringify(state))`.
 fn revive(state: &GameState) -> GameState {
     serde_json::from_value(json_of(state)).expect("a state revives from its JSON")
 }
 
-/// vitest's `toMatchObject`: every key the expected object names matches, recursively; an array
-/// matches element for element and in length.
+/// Every key the expected object names matches, recursively; an array matches element for element
+/// and in length.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (Value::Object(actual), Value::Object(expected)) => expected
@@ -101,8 +97,8 @@ mod b5_e30_last_boards_as_a_create_game_input_r417 {
 
     #[test]
     fn r417_each_seats_board_is_frozen_into_the_match_as_card_and_face_only() {
-        // TS's third entry is `{ defId: "fx-5" }` with no face, which a `LastBoardEntry` cannot hold
-        // (spec-gaps-part-25-3.md); it is written with the face the freeze gives it.
+        // The third entry has no face in the input, which a `LastBoardEntry` cannot hold; it is
+        // written with the face the freeze gives it.
         let state = created(Some(json_as(json!([
             [{ "defId": "fx-3", "radiant": true, "damage": 4 }, { "defId": "fx-4", "radiant": false }],
             [{ "defId": "fx-5", "radiant": false }],
@@ -146,8 +142,7 @@ mod b5_e30_last_boards_as_a_create_game_input_r417 {
         assert!(!rebuildable_from_id("t-4:#0123456789abcdef", catalog));
         assert!(!rebuildable_from_id("t-5:(t-4:#0123456789abcdef)+fx-1", catalog));
 
-        // TS's p1 list also holds `null` and `{ radiant: true }` (no `defId`), which a
-        // `LastBoardInput` cannot hold (spec-gaps-part-25-3.md); the entries it can hold are kept.
+        // Entries a `LastBoardInput` cannot hold are left out.
         let input: LastBoardInput = (
             vec![entry("nope", true), entry(FUSED, true)],
             vec![entry("t-4:#0123456789abcdef", false)],
@@ -471,8 +466,8 @@ mod b5_e30_c_29s_verbs_over_the_frozen_board_r417_r564 {
             &json_of(state.transient_defs.get(FUSED)),
             &json!({ "base": { "attack": 4, "health": 4 } })
         ));
-        // TS `registeredScripts()[NESTED]` is defined: Rust registers no fused scripts (SURFACE §6.6),
-        // it composes them on lookup from the definition above (spec-gaps-part-25-3.md).
+        // Rust registers no fused scripts, it composes them on lookup from the definition above.
+        // Surface contract: docs/v0.3.0/SURFACE.md §6.6.
         let _composed = script_of(&state, NESTED);
     }
 

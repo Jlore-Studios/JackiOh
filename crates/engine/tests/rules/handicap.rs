@@ -1,24 +1,14 @@
-//! Port of `packages/engine/test/handicap.test.ts`.
-//!
 //! The per-seat handicap (SPEC §9.9; R180–R184, R290; docs/polish/3-ai.md B1–B8).
 //!
-//! Practice gives the AI seat more resources than a human: a bigger deck, extra mana crystals up to
-//! a higher cap, an extra opening card and, on Hard, a second draw each turn. The tutorial's
-//! opponent (AI_TUTORIAL, R290) gets fewer: a 12-card deck, 3 crystals at most and a hero that
-//! starts at 20. The human seat always plays with this spec's own numbers, and a game with no
-//! handicap must hash and replay exactly as it did before the field existed. Everything here is observed through `createGame`, `beginGame`,
-//! `reduce`, `fold` and the state they return; nothing reads how the rules are implemented.
+//! Practice gives the AI seat more resources than a human; the tutorial's opponent (AI_TUTORIAL,
+//! R290) gets fewer. A game with no handicap must hash and replay exactly as before the field existed.
 //!
-//! Fixtures: the engine's vanilla catalog (`fx-1`..`fx-40`, every one a 1-cost 2/2), the Hinder and
-//! Going Long fixtures from ./fixtures/scripts, and two cast-on-draw Spells of this file's own
-//! (prefixed `hc-`, indexed from 2800) for R183's draw chain.
+//! Fixtures: the vanilla catalog (`fx-1`..`fx-40`), the Hinder and Going Long fixtures, and two
+//! cast-on-draw Spells of this file's own (`hc-`, from 2800) for R183's draw chain.
 //!
-//! (TS threw from `createGame`, `fold` and `validateHandicap`. Here `create_game` and `fold` panic with
-//! TS's message, caught by `refusal`; `validate_handicap` answers `Result` with TS's message. TS also
-//! handed `validateHandicap` objects its type does not allow — a missing field, a string, `null`, a
-//! fraction, `NaN`, `Infinity`. Rust's `Handicap` holds `i32`s, so such a value is built as JSON and
-//! counts as refused when it does not even deserialise into a `Handicap` (`handicap_refused`); see
-//! `78f131c^:.fullsend/notes/spec-gaps-part-26-3.md` for the three that JSON cannot carry.)
+//! `create_game` and `fold` panic, caught by `refusal`; `validate_handicap` answers `Result`. A value
+//! `Handicap`'s `i32`s cannot hold is built as JSON and counts as refused when it does not deserialise
+//! (`handicap_refused`).
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -28,7 +18,6 @@ use crate::rules::fixtures::catalog::{token_def, vanilla_catalog, vanilla_deck};
 use crate::rules::fixtures::harness::setup_catalog;
 use crate::rules::fixtures::scripts::{going_long, heroic_power, hinder};
 
-/// `Partial<Record<PlayerId, Handicap>>`.
 type Handicaps = PerPlayerOpt<Handicap>;
 
 fn on_p1(handicap: Handicap) -> Handicaps {
@@ -52,9 +41,7 @@ fn on_both(p1: Handicap, p2: Handicap) -> Handicaps {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Fixtures: two cast-on-draw Spells for R183 (the shape draw-pause.test.ts uses).
-// ---------------------------------------------------------------------------
+// Fixtures: two cast-on-draw Spells for R183.
 
 fn spell(id: &str, index: &str) -> CardDef {
     json_as(json!({
@@ -153,9 +140,7 @@ fn register_all() {
     register_scripts(scripts);
 }
 
-// ---------------------------------------------------------------------------
 // Harness.
-// ---------------------------------------------------------------------------
 
 fn size_for(handicaps: Option<&Handicaps>, player: PlayerId) -> i32 {
     handicaps
@@ -182,7 +167,7 @@ fn game(seed: &str, handicaps: Option<Handicaps>, decks: Option<(Vec<String>, Ve
     })
 }
 
-/// TS's module-level `let nonce`; an atomic so that tests running side by side never share a nonce.
+/// An atomic, so tests running side by side never share a nonce.
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
 struct Stepped {
@@ -352,7 +337,7 @@ fn fold_with(seed: &str, live: &Live, handicaps: Option<Handicaps>) -> FoldResul
     })
 }
 
-/// What a panic said, or `None` when `run` returned: TS's `expect(() => …).toThrow(…)`.
+/// What a panic said, or `None` when `run` returned.
 fn refusal(run: impl FnOnce()) -> Option<String> {
     match std::panic::catch_unwind(std::panic::AssertUnwindSafe(run)) {
         Ok(()) => None,
@@ -398,8 +383,8 @@ fn with_field(handicap: &Handicap, field: &str, value: Value) -> Value {
     json
 }
 
-/// `expect(() => validateHandicap(h, label)).toThrow()` for a value TS's type does not hold: refused
-/// where the typed `Handicap` is read from it, or else by `validate_handicap`.
+/// A value `Handicap` cannot hold is refused where the typed `Handicap` is read from it, or else by
+/// `validate_handicap`.
 fn handicap_refused(value: Value, label: &str) -> bool {
     match serde_json::from_value::<Handicap>(value) {
         Err(_) => true,
@@ -407,7 +392,7 @@ fn handicap_refused(value: Value, label: &str) -> bool {
     }
 }
 
-/// Every piece of `pieces` appears in `text`, in order (TS's `/a.*b/`).
+/// Every piece of `pieces` appears in `text`, in order.
 fn in_order(text: &str, pieces: &[&str]) -> bool {
     let mut rest = text;
     for piece in pieces {
@@ -428,9 +413,7 @@ fn keys_sorted(value: &Value) -> Vec<String> {
     keys
 }
 
-// ---------------------------------------------------------------------------
 // R180: the handicap table and what "no handicap" means.
-// ---------------------------------------------------------------------------
 
 mod r180_handicaps_the_table_the_default_and_replay {
     use super::*;
@@ -501,7 +484,6 @@ mod r180_handicaps_the_table_the_default_and_replay {
             on_p1(HUMAN_HANDICAP),
             on_p2(HUMAN_HANDICAP),
             on_both(AI_DIFFICULTY.easy, AI_DIFFICULTY.easy),
-            // TS's `{ ...HUMAN_HANDICAP }`: a copy equal to it, which a Rust const always is.
             on_p2(HUMAN_HANDICAP),
         ];
         for handicaps in variants {
@@ -536,7 +518,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
         let state = game("r180-b1-stored", Some(on_p2(bonus)), Some(decks));
 
         assert_eq!(state.players.p2.handicap, Some(bonus));
-        // TS `not.toBe`: the stored handicap is a copy, never the caller's object.
+        // The stored handicap is a copy, never the caller's object.
         assert!(
             state
                 .players
@@ -758,9 +740,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R181: max mana.
-// ---------------------------------------------------------------------------
 
 mod r181_max_mana_under_a_handicap {
     use super::*;
@@ -907,9 +887,7 @@ mod r181_max_mana_under_a_handicap {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R182: the opening hand.
-// ---------------------------------------------------------------------------
 
 mod r182_the_opening_hand_under_a_handicap {
     use super::*;
@@ -1091,9 +1069,7 @@ mod r182_the_opening_hand_under_a_handicap {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R183: extra draws per turn.
-// ---------------------------------------------------------------------------
 
 mod r183_extra_draws_per_turn {
     use super::*;
@@ -1365,9 +1341,7 @@ mod r183_extra_draws_per_turn {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R184: the deck size of a handicapped seat.
-// ---------------------------------------------------------------------------
 
 mod r184_deck_size_for_a_handicapped_seat {
     use super::*;
@@ -1525,7 +1499,6 @@ mod r184_deck_size_for_a_handicapped_seat {
     fn r184_b2_validate_deck_keeps_s2_6s_message_byte_identical_at_deck_size_and_names_r184_at_any_other_size()
      {
         let catalog = vanilla_catalog(40, 1);
-        // TS's default `size` is DECK_SIZE; Rust passes it.
         assert!(state::validate_deck(&vanilla_deck(DECK_SIZE, 1), &catalog, "p1", DECK_SIZE).is_ok());
         assert!(state::validate_deck(&vanilla_deck(DECK_SIZE, 1), &catalog, "p1", DECK_SIZE).is_ok());
         assert!(state::validate_deck(&vanilla_deck(30, 1), &catalog, "p2", 30).is_ok());
@@ -1557,9 +1530,7 @@ mod r184_deck_size_for_a_handicapped_seat {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R290: the tutorial's handicap, the one below Easy.
-// ---------------------------------------------------------------------------
 
 /// The five fields every handicap has; `heroHealth` (R290) is the optional sixth.
 const FIVE_FIELDS: &[&str] = &[
@@ -1694,7 +1665,7 @@ mod r290_the_tutorial_handicap_ai_tutorial {
         );
 
         assert_eq!(state.players.p2.handicap, Some(AI_TUTORIAL));
-        // TS `not.toBe`: the stored handicap is a copy, never the constant itself.
+        // The stored handicap is a copy, never the constant itself.
         assert!(
             state
                 .players
@@ -1866,7 +1837,7 @@ mod r290_the_tutorial_handicap_ai_tutorial {
 
     #[test]
     fn r290_validate_handicap_refuses_a_hero_health_that_is_not_a_positive_integer_and_accepts_1_and_20() {
-        // 0 and -1 are integers the type holds: refused by validate_handicap, with TS's message.
+        // 0 and -1 are integers the type holds: refused by validate_handicap.
         for hero_health in [0, -1] {
             let result = state::validate_handicap(
                 &Handicap {
@@ -1882,8 +1853,7 @@ mod r290_the_tutorial_handicap_ai_tutorial {
                 "{hero_health}"
             );
         }
-        // 2.5 and "20" are not a count at all: the typed handicap refuses them where it is read. (NaN,
-        // Infinity and null: see the spec-gaps file.)
+        // 2.5 and "20" are not a count at all: the typed handicap refuses them where it is read.
         for hero_health in [json!(2.5), json!("20")] {
             let label = hero_health.to_string();
             assert!(
@@ -2095,7 +2065,6 @@ mod r290_the_tutorial_handicap_ai_tutorial {
     fn r290_20_is_where_the_tutorial_hero_starts_not_a_cap_a_heal_takes_it_past_20_and_a_heal_up_to_30_lifts_it_to_30()
      {
         let mut state = started("r290-heal", Some(on_p2(AI_TUTORIAL)), None);
-        // TS's `{ state, events: [] }`; the Rust sink carries an rng too, which neither heal draws from.
         let mut events = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         let mut sink = EngineSink::new(&mut state, &mut events, &mut rng);

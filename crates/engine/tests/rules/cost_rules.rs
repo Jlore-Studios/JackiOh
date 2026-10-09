@@ -1,5 +1,3 @@
-//! Port of `packages/engine/test/cost-rules.test.ts`.
-//!
 //! Cost rules (docs/classic-sets.md B5 E15, E39; R65, R363, R396, R455): the auras and player
 //! modifiers that price a play, the ladder `mana.effectiveCost` climbs, the ban on (N)+ Cost plays, the
 //! return-after-resolve enchantment's return and floor, and R396's cost reader.
@@ -32,8 +30,7 @@ fn hand_card(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInsta
     only(&in_hand(state, def_id, player, 1))
 }
 
-/// TS `sinkFor(state)` and `sinkOf(state)`: a sink's events and rng (from the state's cursor), lent
-/// with the state to one engine call at a time.
+/// A sink's events and rng (from the state's cursor), lent with the state to one engine call at a time.
 struct Bench {
     events: Vec<GameEvent>,
     rng: Rng,
@@ -52,14 +49,12 @@ impl Bench {
     }
 }
 
-/// TS `addModifier(sinkOf(state), player, modifier)`.
 fn add_modifier_to(state: &mut GameState, player: PlayerId, expiry: ModifierExpiry, kind: ModifierKind) {
     let mut bench = Bench::new(state);
     add_modifier(&mut bench.sink(state), player, expiry, kind);
 }
 
-/// TS `run(state, effects, controller = "p1")`: the effects in one context, the loop settled, the
-/// cursor written back; the sink's events come back.
+/// The effects in one context, the loop settled, the cursor written back; the sink's events come back.
 fn run(state: &mut GameState, effects: Vec<Effect>, controller: PlayerId) -> Vec<GameEvent> {
     let mut bench = Bench::new(state);
     {
@@ -430,18 +425,15 @@ mod r455_e15_price_rules_on_a_player {
             &state,
             json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
         );
-        // Not on the turn it was cast.
         assert_eq!(cost(&after, &only(&held(&after.players.p2.hand, &theirs.id))), 1);
         assert_eq!(
             only(&view_for(&after, PlayerId::P1).opponent.modifiers).label,
             "Your cards cost (1) more (next turn)"
         );
         after = pb_act(&after, json!({ "type": "endTurn", "playerId": "p1" }));
-        // On their next turn: +1.
         assert_eq!(after.active, PlayerId::P2);
         assert_eq!(cost(&after, &only(&held(&after.players.p2.hand, &theirs.id))), 2);
         after = pb_act(&after, json!({ "type": "endTurn", "playerId": "p2" }));
-        // Gone at their cleanup.
         assert!(!after.players.p2.mods.iter().any(is_cost_rule));
     }
 
