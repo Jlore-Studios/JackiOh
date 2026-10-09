@@ -31,6 +31,7 @@ pub mod copied_text;
 pub mod core_patches;
 pub mod cost_rules;
 pub mod counter_warning;
+pub mod craft;
 pub mod damage;
 pub mod damage_pipeline;
 pub mod death_pause;

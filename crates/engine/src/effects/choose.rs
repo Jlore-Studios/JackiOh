@@ -147,6 +147,7 @@ fn label(ctx: &EffectContext<'_>, selection: &Selection) -> String {
             Some(card) => def_of(Some(&*ctx.state), &card.def_id).name.clone(),
         },
         Selection::Mode { option } => option.clone(),
+        Selection::Craft { recipe } => recipe.name(),
         _ => "nothing".to_string(),
     }
 }
@@ -161,6 +162,7 @@ fn key_of(selection: &Selection) -> String {
         Selection::Hero { player } => format!("hero:{player}"),
         Selection::Mode { option } => format!("mode:{option}"),
         Selection::Zone { player, row, lane } => format!("zone:{player}:{row}:{lane}"),
+        Selection::Craft { recipe } => crate::subsystems::craft::craft_id(recipe),
         Selection::None => "none".to_string(),
     }
 }
@@ -523,6 +525,64 @@ pub fn chosen_number(ctx: &EffectContext<'_>) -> Option<i32> {
         }
     }
     None
+}
+
+/// `choose_craft`'s arguments (TS's inline object).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ChooseCraftArgs {
+    pub step: String,
+    pub cost: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub radiant: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub data: StepData,
+}
+
+/// ME-CRAFT (Meditative #17, R880): the block editor's prompt. Its options are the seeded
+/// presets within the budget — a Unit, a Spell, a Field Spell and a Trap — and its answer is one
+/// `Selection::Craft`: a preset, or the player's own recipe, which the reducer validates (R90).
+/// `legal_actions` enumerates the presets, so the AI, the random policy and a timeout all answer
+/// with one (R881, R79); the reducer still accepts any valid recipe.
+pub fn choose_craft(args: ChooseCraftArgs) -> Effect {
+    Effect::new("chooseCraft", move |ctx| {
+        let cost = args.cost.clamp(0, crate::config::CRAFT_MAX_COST);
+        let recipes = crate::subsystems::craft::craft_presets(&mut *ctx.sink.rng, cost);
+        let radiant = args.radiant == Some(true);
+        let options: Vec<PromptOption> = recipes
+            .into_iter()
+            .map(|recipe| PromptOption {
+                key: crate::subsystems::craft::craft_id(&recipe),
+                label: recipe.name(),
+                selection: Selection::Craft { recipe },
+                cost: None,
+                radiant: radiant.then_some(true),
+            })
+            .collect();
+        let player = ctx.controller;
+        let owner = ctx.controller;
+        let resume = resume_self(ctx, &args.step, args.data.clone().unwrap_or_default());
+        let mut asked = ask(
+            player,
+            PromptKind::Craft,
+            args.prompt.clone().unwrap_or_else(|| "Craft a card".to_string()),
+            options,
+            resume,
+        );
+        asked.owner = Some(owner);
+        asked.budget = Some(cost);
+        open_prompt(ctx, asked);
+    })
+}
+
+/// ME-CRAFT: the recipe an answered `craft` prompt carries, if any.
+pub fn chosen_recipe(ctx: &EffectContext<'_>) -> Option<crate::wire::CraftRecipe> {
+    ctx.targets.iter().find_map(|selection| match selection {
+        Selection::Craft { recipe } => Some(recipe.clone()),
+        _ => None,
+    })
 }
 
 /// R465: the ids the options of an `answer` prompt carry, in the order they are shown.

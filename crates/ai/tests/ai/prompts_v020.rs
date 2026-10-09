@@ -354,6 +354,32 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
         assert!(picked.first().is_some_and(|first| options.contains(first)));
     }
 
+    /// R881: a `craft` prompt is answered with one of its presets — the AI never freehands a recipe.
+    #[test]
+    fn r881_the_ai_answers_a_craft_prompt_with_one_of_its_presets() {
+        install();
+        let effect = effects::choose_craft(json_as(json!({ "step": "craft", "cost": 2 })));
+        let state = asked("r881-craft", effect, json!({}), AI);
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.kind),
+            Some(PromptKind::Craft)
+        );
+        let options: Vec<Selection> = state
+            .pending
+            .as_ref()
+            .map(|pending| {
+                pending
+                    .options
+                    .iter()
+                    .map(|option| option.selection.clone())
+                    .collect()
+            })
+            .unwrap_or_default();
+        assert_eq!(options.len(), 4);
+        let picked = selection_of(&answered(&state, "r881-craft"));
+        assert!(picked.first().is_some_and(|first| options.contains(first)));
+    }
+
     /// E18: a mode prompt the opponent's card hands the AI, on the opponent's turn, is answered against the card's owner
     #[test]
     fn e18_a_mode_prompt_the_opponents_card_hands_the_ai_on_the_opponents_turn_is_answered_against_the_cards_owner()

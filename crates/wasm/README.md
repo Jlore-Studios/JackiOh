@@ -22,6 +22,7 @@ opaque `EngineState` brand (CLAUDE.md rule 7) and hands back on every call.
 | `choose_action(state, seat, rng_seed, rng_cursor)` | spec §10.7's random policy, `{ action, rngCursor }` |
 | `validator(call, input)` | one of the validator's functions (`validateDeck`, `validateTrio`, `checkDeckDraft`, `checkImportRoom`, …) by name |
 | `constants()`, `engine_tables()` | the AI budgets, shadow-ban ids and deck builder's numbers (`AI_DECK`); the Call to Chaos and Heroic Power tables the client prints |
+| `craft_preview(recipe, cost)` | ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe — a `CraftPreview` — so the block editor shows what the reducer will say |
 
 A binding returns `Err(JsError)`, which JavaScript sees as a thrown `Error` with the engine's message,
 where a JSON argument does not parse or the setup is refused (a deck or handicap `create_game` will

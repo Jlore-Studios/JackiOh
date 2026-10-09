@@ -12,6 +12,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::wire::actions::RevealAt;
 use crate::wire::catalog_types::{CardDef, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row, Tag};
+use crate::wire::craft::CraftRecipe;
 use crate::wire::events::{GameEvent, GameResult, Position};
 use crate::wire::string_union;
 
@@ -967,6 +968,11 @@ pub struct PendingOption {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub radiant: Option<bool>,
+    /// ME-CRAFT (Meditative #17, R880): the recipe a `craft` prompt's option offers. Only the
+    /// prompt's holder is ever sent it (§10.8). Optional and skipped when absent (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub recipe: Option<CraftRecipe>,
     /// ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
     /// may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
     /// Only ever `Some(true)`.

@@ -698,6 +698,8 @@ fn selection_key(selection: &Selection) -> String {
         Selection::Hero { player } => format!("hero:{player}"),
         Selection::Zone { player, row, lane } => format!("zone:{player}:{row}:{lane}"),
         Selection::Mode { option } => format!("mode:{option}"),
+        // ME-CRAFT (R880): a recipe names its definition, as its prompt's option key does.
+        Selection::Craft { recipe } => crate::subsystems::craft::craft_id(recipe),
         Selection::None => "none".to_string(),
     }
 }
@@ -2128,7 +2130,7 @@ fn why_face_down_refused(
     if let Some(zone) = action.zone.as_ref() {
         let open = crate::alt_play::open_backrow_zones(state, player);
         if !open.contains(zone) {
-            return refuse(format!("no free backrow zone"));
+            return refuse("no free backrow zone".to_string());
         }
     }
     if action.targets.is_some() || action.modes.is_some() {

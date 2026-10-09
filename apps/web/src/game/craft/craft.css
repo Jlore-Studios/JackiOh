@@ -1,0 +1,198 @@
+/* ME-CRAFT (Meditative #17, R880): the block editor's own styles, next to prompt.css. The editor
+   is a dialog, not a page: three columns (palette, canvas, preview) on a panel, one docked sheet
+   on a phone. */
+
+.craft-editor {
+  max-width: 880px;
+}
+
+.craft-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr 220px;
+  gap: 12px;
+  align-items: start;
+}
+
+.craft-palette {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.craft-palette section h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+}
+
+.craft-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.craft-block {
+  border: 1px solid currentcolor;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  padding: 6px 10px;
+  min-height: 32px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.craft-block[aria-pressed="true"] {
+  outline: 2px solid currentcolor;
+  outline-offset: 1px;
+}
+
+.craft-block:focus-visible {
+  outline: 2px solid currentcolor;
+  outline-offset: 2px;
+}
+
+.craft-chosen {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  border-bottom: 1px solid currentcolor;
+  padding: 2px 0;
+}
+
+.craft-stepper {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.craft-stepper button {
+  min-width: 28px;
+  min-height: 28px;
+  font: inherit;
+}
+
+.craft-canvas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 120px;
+}
+
+.craft-hat {
+  border: 1px solid currentcolor;
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.craft-hat[aria-pressed="true"] {
+  outline: 2px solid currentcolor;
+  outline-offset: 1px;
+}
+
+.craft-hat > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.craft-hat > header button {
+  min-width: 28px;
+  min-height: 28px;
+}
+
+.craft-placed {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  cursor: grab;
+  touch-action: none;
+}
+
+.craft-placed:active {
+  cursor: grabbing;
+}
+
+.craft-gap {
+  min-height: 10px;
+}
+
+.craft-side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.craft-meters {
+  display: flex;
+  gap: 12px;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.craft-reasons {
+  margin: 0;
+  padding-left: 18px;
+  min-height: 1em;
+}
+
+.craft-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.craft-suggestions button {
+  min-height: 32px;
+  font: inherit;
+}
+
+.craft-ghost {
+  position: fixed;
+  z-index: 60;
+  transform: translate(-50%, -130%);
+  border: 1px solid currentcolor;
+  border-radius: 6px;
+  background: Canvas;
+  padding: 4px 8px;
+  pointer-events: none;
+  transition: left 60ms linear, top 60ms linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .craft-ghost {
+    transition: none;
+  }
+}
+
+/* Phones: the palette docks as a bottom sheet with 44px targets, the same query as prompt.css. */
+@media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
+  .craft-editor[data-layout="sheet"] .craft-columns {
+    grid-template-columns: 1fr;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .craft-editor[data-layout="sheet"] .craft-palette {
+    position: sticky;
+    bottom: 0;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+
+  .craft-editor[data-layout="sheet"] .craft-block,
+  .craft-editor[data-layout="sheet"] .craft-suggestions button,
+  .craft-editor[data-layout="sheet"] .prompt-submit {
+    min-height: 44px;
+  }
+
+  .craft-editor[data-layout="sheet"] .craft-stepper button,
+  .craft-editor[data-layout="sheet"] .craft-hat > header button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

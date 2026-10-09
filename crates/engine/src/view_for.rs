@@ -959,6 +959,7 @@ fn bare_option(key: String, label: String) -> PendingOption {
         cost: None,
         radiant: None,
         chinese: None,
+        recipe: None,
     }
 }
 
@@ -1019,6 +1020,12 @@ fn option_view(state: &GameState, viewer: PlayerId, option: &PromptOption) -> Pe
             if let Some(def) = find_def_in(state, option) {
                 base.def_id = Some(def.id.clone());
             }
+            base
+        }
+        // ME-CRAFT (R880): the recipe goes only to the prompt's holder — this view is the chooser's
+        // own (§10.8), and the opponent's sees only that a prompt is open.
+        Selection::Craft { recipe } => {
+            base.recipe = Some(recipe.clone());
             base
         }
         Selection::None => base,

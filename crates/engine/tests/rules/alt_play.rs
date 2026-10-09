@@ -450,7 +450,7 @@ mod r1044_set_spell_timings {
     fn r1044_a_paused_reveal_survives_a_json_round_trip() {
         let (state, spell, target) = paranoid("r1044-trip");
         // The set ends p1's turn by itself (R82), so the reveal's prompt is already open.
-        let mut state = set_card(&state, &spell.id, "p1", 2, "endOfThisTurn");
+        let state = set_card(&state, &spell.id, "p1", 2, "endOfThisTurn");
         open_as(&state, PromptKind::Target, P1);
         let mut copy = round_trip(&state);
         let key = format!("instance:{}", target.id);

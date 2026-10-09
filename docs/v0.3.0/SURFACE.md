@@ -754,6 +754,8 @@ keeps behind its opaque `EngineState` brand.
     // §10.7's random policy (subsystems::ai_policy::choose_action); answers { action: ActionBody | null, rngCursor }
 #[wasm_bindgen] pub fn engine_tables() -> String;
     // { chaosEffects: [{label}], chaosPlusEffects: [{label}], heroPowerNames: [..], heroPowers: [{name, x, title, radiantTitle, label, radiantLabel}] }
+#[wasm_bindgen] pub fn craft_preview(recipe_json: &str, cost: f64) -> String;
+    // ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost, a CraftPreview; a malformed recipe throws, an invalid one is a verdict with valid: false
 ```
 
 ### 10.2 Build

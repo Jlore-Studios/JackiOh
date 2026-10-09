@@ -18,8 +18,9 @@
 )]
 
 use jackioh_engine::config::{
-    AI_DIFFICULTY, AI_TUTORIAL, COIN_DEF_ID, DECK_SIZE, DIFFICULTIES, DRAWS_PER_TURN, GLITCH_DEF_ID,
-    HERO_HEALTH, HUMAN_HANDICAP, LIBRARY_CAP, MAX_COPIES, MAX_MANA, REPLAY_CHECKPOINT_EVERY,
+    AI_DIFFICULTY, AI_TUTORIAL, COIN_DEF_ID, CRAFT_ADJECTIVES, CRAFT_HAT_PRICES, CRAFT_KEYWORD_PRICES,
+    CRAFT_MAX_EFFECTS, CRAFT_MAX_N, CRAFT_NOUNS, CRAFT_VERB_PRICES, DECK_SIZE, DIFFICULTIES, DRAWS_PER_TURN,
+    GLITCH_DEF_ID, HERO_HEALTH, HUMAN_HANDICAP, LIBRARY_CAP, MAX_COPIES, MAX_MANA, REPLAY_CHECKPOINT_EVERY,
     REPLAY_PAGE_STEPS, TURN_CAP_PLAYER_TURNS,
 };
 use serde::Serialize;
@@ -37,8 +38,11 @@ const HEADER: &str = "\
 
 import type { Difficulty } from \"./generated/Difficulty.ts\";
 import type { Handicap } from \"./generated/Handicap.ts\";
+import type { CraftHatPrice } from \"./generated/CraftHatPrice.ts\";
+import type { CraftKeywordPrice } from \"./generated/CraftKeywordPrice.ts\";
+import type { CraftVerbPrice } from \"./generated/CraftVerbPrice.ts\";
 
-export type { Difficulty, Handicap };
+export type { Difficulty, Handicap, CraftHatPrice, CraftKeywordPrice, CraftVerbPrice };
 
 ";
 
@@ -73,6 +77,25 @@ fn engine_config_ts() -> String {
         ),
         constant("AI_TUTORIAL", Some("Handicap"), &AI_TUTORIAL),
         constant("COIN_DEF_ID", None, COIN_DEF_ID),
+        constant("CRAFT_ADJECTIVES", Some("readonly string[]"), CRAFT_ADJECTIVES),
+        constant(
+            "CRAFT_HAT_PRICES",
+            Some("readonly CraftHatPrice[]"),
+            CRAFT_HAT_PRICES,
+        ),
+        constant(
+            "CRAFT_KEYWORD_PRICES",
+            Some("readonly CraftKeywordPrice[]"),
+            CRAFT_KEYWORD_PRICES,
+        ),
+        constant("CRAFT_MAX_EFFECTS", None, &CRAFT_MAX_EFFECTS),
+        constant("CRAFT_MAX_N", None, &CRAFT_MAX_N),
+        constant("CRAFT_NOUNS", Some("readonly string[]"), CRAFT_NOUNS),
+        constant(
+            "CRAFT_VERB_PRICES",
+            Some("readonly CraftVerbPrice[]"),
+            CRAFT_VERB_PRICES,
+        ),
         constant("DECK_SIZE", None, &DECK_SIZE),
         constant("DIFFICULTIES", Some("readonly Difficulty[]"), DIFFICULTIES),
         constant("DRAWS_PER_TURN", None, &DRAWS_PER_TURN),
@@ -106,8 +129,8 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    // Fifteen constants, each on its own line, the way the client and the diff check read them.
-    assert_eq!(text.matches("\nexport const ").count(), 15, "{text}");
+    // Twenty-two constants, each on its own line, the way the client and the diff check read them.
+    assert_eq!(text.matches("\nexport const ").count(), 22, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }
 

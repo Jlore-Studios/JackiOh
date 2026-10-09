@@ -8,6 +8,8 @@ import type { Keyword } from "./Keyword";
 import type { KnownAs } from "./KnownAs";
 import type { PlayerId } from "./PlayerId";
 import type { Position } from "./Position";
+import type { SetAs } from "./SetAs";
+import type { Tag } from "./Tag";
 import type { Tuning } from "./Tuning";
 import type { Zone } from "./Zone";
 
@@ -103,4 +105,18 @@ timesPlayed?: number,
  * reads it. Kept in every zone and through R78's and R766's resets; a copy keeps it, a
  * Transform's new card is without it. Only ever `Some(true)`.
  */
-chinese?: true, };
+chinese?: true, 
+/**
+ * ME-ALTPLAY, R1040, R1044: the card was played face-down into the backrow as a Trap (a Unit
+ * under Knowledge Breaker's Aura, a Spell under Paranoia's) and has not finished revealing.
+ * Its controller's alone to read while it is face-down (R33, R1046); R78's reset takes it off
+ * with the card leaving the field (R1045). Absent on every other card.
+ */
+setAs?: SetAs, 
+/**
+ * MD-B15, R923: tags an effect gave the card (`effects::grant_tag`, Meditative #35). Part of
+ * the card for every instance-level tag read (`query::tags_of`); catalog pools never see it.
+ * Kept in every zone and through R78's and R766's resets; an instance copy keeps it, a Fuse
+ * unites it, a Transform drops it.
+ */
+grantedTags?: Array<Tag>, };

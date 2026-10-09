@@ -207,10 +207,10 @@ fn reveal_effect() -> Effect {
             crate::cry_trigger::trigger_cry_of(ctx, &live, controller);
         } else {
             let echo = set.echo.unwrap_or(0);
-            if let Some(stored) = find_instance_mut(ctx.state, &snapshot.id) {
-                stored.set_as.as_mut().map(|set| {
-                    set.revealing = Some(true);
-                });
+            if let Some(stored) = find_instance_mut(ctx.state, &snapshot.id)
+                && let Some(set) = stored.set_as.as_mut()
+            {
+                set.revealing = Some(true);
             }
             let Some(live) = find_instance(ctx.state, &snapshot.id).cloned() else {
                 return;

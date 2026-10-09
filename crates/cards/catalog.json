@@ -11601,4 +11601,25 @@
     },
     "tags": []
   }
+,
+  "meditative-017": {
+    "id": "meditative-017",
+    "index": "17",
+    "name": "True Craft a Card",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Mythic",
+    "token": false,
+    "cost": 0,
+    "loc": 38,
+    "base": {
+      "keywords": [],
+      "text": "Craft a card and add it to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Craft a Radiant card and add it to your hand."
+    }
+  }
 }

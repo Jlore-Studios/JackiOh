@@ -39,7 +39,18 @@ resolving: Array<CardView>, units: Array<UnitView | null>, backrow: Array<Backro
  * a Unit on the field, public like any, that can neither attack nor be attacked. Absent when no
  * carrier on this side holds one.
  */
-carried?: Array<UnitView | null>, locks: RowFlags, 
+carried?: Array<UnitView | null>, 
+/**
+ * R1143: this seat's hand size, once an effect has set one for the rest of the game (Meditative #79);
+ * public on both seats. Absent means `HAND_CAP`.
+ */
+handCap?: number, 
+/**
+ * R1141: on the opponent's seat, how many cards of their hand carry a mark (Meditative #76's
+ * pending steal) — never which: the viewer's own hand shows each mark on its card. Absent when
+ * none does, on the viewer's own seat and once the game is over (both hands are revealed, R434).
+ */
+handMarked?: number, locks: RowFlags, 
 /**
  * R64: a zone held for a dying Reborn unit until it comes back. It takes no summon, exactly as a
  * Locked zone takes none, so a client that reads only `locks` would draw it open. B3.1 rule 6: the

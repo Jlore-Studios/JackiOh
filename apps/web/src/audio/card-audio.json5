@@ -1324,6 +1324,9 @@
     "meditative-099": { // Paranoia
       cast: { voice: "sapi-ghost", text: "They are all watching. Hide it." },
     },
+    "meditative-017": { // True Craft a Card
+      cast: { voice: "narrator", text: "It compiles. Ship it." },
+    },
   },
   emotes: {
     vanilla: {

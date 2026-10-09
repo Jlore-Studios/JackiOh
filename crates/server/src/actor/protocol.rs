@@ -386,6 +386,12 @@ fn parse_selection(value: &Value) -> Option<Selection> {
         Some("mode") => is_string(record.get("option")).map(|option| Selection::Mode {
             option: option.to_string(),
         }),
+        // ME-CRAFT (Meditative #17, R880): a recipe the block editor answers with. Structural
+        // validation only — whether it crafts is the reducer's call — so a malformed recipe is
+        // refused here and an over-budget one by the engine.
+        Some("craft") => serde_json::from_value(record.get("recipe")?.clone())
+            .ok()
+            .map(|recipe| Selection::Craft { recipe }),
         Some("none") => Some(Selection::None),
         _ => None,
     }

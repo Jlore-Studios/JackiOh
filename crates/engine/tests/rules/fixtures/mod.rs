@@ -10,6 +10,7 @@ pub mod catalog;
 pub mod combat;
 pub mod copied_text;
 pub mod core_patches;
+pub mod craft;
 pub mod damage_combat;
 pub mod datacenter;
 pub mod field;

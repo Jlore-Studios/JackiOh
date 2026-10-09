@@ -33,6 +33,7 @@ import initWasm, {
   catalog_version,
   choose_action,
   constants,
+  craft_preview,
   create_game,
   deal_emote_hand,
   engine_tables,
@@ -53,6 +54,8 @@ import initWasm, {
 } from "./pkg/jackioh_wasm.js";
 
 import type { Action, ActionBody, CardDefs, EmoteId, GameEvent, PlayerId, PlayerView, SetName } from "../wire/index.ts";
+import type { CraftPreview } from "../wire/generated/CraftPreview.ts";
+import type { CraftRecipe } from "../wire/generated/CraftRecipe.ts";
 import type { CardInstance } from "../wire/generated/CardInstance.ts";
 import type { GameState } from "../wire/generated/GameState.ts";
 import type { ReplayCheckpoints } from "../wire/generated/ReplayCheckpoints.ts";
@@ -337,6 +340,15 @@ export function chooseAction(state: GameState, seat: PlayerId, stream: StreamAt)
   return call("chooseAction", () =>
     parsed<{ action: ActionBody | null; rngCursor: number }>(choose_action(stateJson(state), seat, stream.rngSeed, stream.rngCursor)),
   );
+}
+
+/**
+ * ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost — a
+ * `CraftPreview` — so the block editor shows what the reducer will say and the client decides
+ * nothing (CLAUDE.md rule 7).
+ */
+export function craftPreview(recipe: CraftRecipe, cost: number): CraftPreview {
+  return call("craftPreview", () => parsed<CraftPreview>(craft_preview(json(recipe), cost)));
 }
 
 /** The deck builder's numbers (`crates/ai/src/deck.rs`'s `AI_DECK`, SPEC §9.9, R1370), as it states them. */

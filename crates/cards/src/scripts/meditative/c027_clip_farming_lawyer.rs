@@ -9,6 +9,7 @@
 //!   `add_to_hand({ defId: "core-t-coin" })` `coins` times.
 //! - If none is Locked, the base face does nothing. The Radiant face runs
 //!   `lock_random_zone({ side: enemy })`.
+//!
 //! The card's `refs` are `[core-t-coin]`; "Coin" names The Coin ([[R903]]).
 
 use jackioh_engine::prelude::*;
@@ -23,7 +24,7 @@ fn any_zone_locked(state: &GameState) -> bool {
     [PlayerId::P1, PlayerId::P2].into_iter().any(|player| {
         [Row::Units, Row::Backrow]
             .into_iter()
-            .any(|row| slots_of(player, row).into_iter().any(|slot| is_locked(state, &slot)))
+            .any(|row| slots_of(player, row).into_iter().any(|slot| is_locked(state, slot)))
     })
 }
 

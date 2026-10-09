@@ -1233,8 +1233,8 @@ mod prompts_s10_6_m3_t3 {
 
     #[test]
     fn r81_opens_discover_target_mode_and_hand_prompts_and_never_one_of_the_five_play_choices() {
-        // §10.6 lists ten kinds; the module names all ten, since the five play choices stay for later sets,
-        // and B5 E18's five new ones (prompt-kinds.test.ts proves each of those).
+        // §10.6 lists sixteen kinds; the module names all sixteen, since the five play choices stay for later sets,
+        // and B5 E18's five new ones (prompt-kinds.test.ts proves each of those), plus ME-CRAFT's `craft`.
         let mut all: Vec<String> = PROMPT_KINDS.iter().map(|kind| kind.to_string()).collect();
         all.sort();
         assert_eq!(
@@ -1242,6 +1242,7 @@ mod prompts_s10_6_m3_t3 {
             [
                 "answer",
                 "cell",
+                "craft",
                 "direction",
                 "discover",
                 "embiggen",

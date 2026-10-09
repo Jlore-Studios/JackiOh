@@ -1583,6 +1583,75 @@ mod r384_activate_over_the_socket {
 }
 
 // ---------------------------------------------------------------------------
+// R880 — a craft answer over the socket (Meditative #17)
+// ---------------------------------------------------------------------------
+
+/// ME-CRAFT's answer through the actor (R880): `{ pick: "craft", recipe }` parses to
+/// `Selection::Craft`, and a malformed recipe is `malformed` before it ever reaches `reduce`.
+mod r880_parses_a_craft_answer_and_refuses_a_malformed_recipe {
+    use super::*;
+    use jackioh_engine::Selection;
+    use jackioh_server::actor::protocol::{ActionMessage, ClientMessage, parse_client_message};
+
+    fn recipe() -> Value {
+        json!({
+            "cost": 1,
+            "type": "Unit",
+            "adjective": "Pure",
+            "noun": "Closure",
+            "attack": 3,
+            "health": 4,
+            "keywords": [],
+            "echo": 0,
+            "hats": [],
+        })
+    }
+
+    #[test]
+    fn r880_parses_a_craft_answer_and_refuses_a_malformed_recipe() {
+        let parsed = parse_client_message(
+            &json!({
+                "type": "action",
+                "action": {
+                    "type": "answer",
+                    "choiceId": "q3",
+                    "selection": [{ "pick": "craft", "recipe": recipe() }],
+                    "nonce": "craft-1",
+                },
+            })
+            .to_string(),
+        );
+        let recipe: jackioh_engine::CraftRecipe = serde_json::from_value(recipe()).expect("the test recipe");
+        assert_eq!(
+            parsed,
+            Ok(ClientMessage::Action(ActionMessage {
+                nonce: "craft-1".to_string(),
+                body: jackioh_engine::ActionBody::Answer {
+                    choice_id: "q3".to_string(),
+                    selection: vec![Selection::Craft { recipe }],
+                },
+            }))
+        );
+        // A recipe of the wrong shape is malformed, never passed on: no `recipe`, and a recipe
+        // whose type is no card type.
+        for wrong in [
+            json!([{ "pick": "craft" }]),
+            json!([{ "pick": "craft", "recipe": { "cost": 1 } }]),
+            json!([{ "pick": "craft", "recipe": 7 }]),
+        ] {
+            let parsed = parse_client_message(
+                &json!({
+                    "type": "action",
+                    "action": { "type": "answer", "choiceId": "q3", "selection": wrong, "nonce": "bad" },
+                })
+                .to_string(),
+            );
+            assert!(parsed.is_err(), "{wrong} parsed as {parsed:?}");
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // R643 — the emote protocol and its shared rate limit (§9.5, §10.10)
 // ---------------------------------------------------------------------------
 

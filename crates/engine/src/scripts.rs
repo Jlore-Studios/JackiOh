@@ -295,7 +295,10 @@ pub fn scripts_ref(state: &GameState, def_id: &str) -> Cow<'static, CardScripts>
     if let Some(entry) = registered_entry(def_id) {
         return Cow::Borrowed(entry);
     }
-    Cow::Owned(fused_scripts(state, def_id).unwrap_or_default())
+    if let Some(scripts) = fused_scripts(state, def_id) {
+        return Cow::Owned(scripts);
+    }
+    Cow::Owned(crafted_scripts(state, def_id).unwrap_or_default())
 }
 
 /// One face of a definition's scripts (`radiant` or base), borrowed as `scripts_ref` borrows.
@@ -303,7 +306,32 @@ pub fn face_ref(state: &GameState, def_id: &str, radiant: bool) -> ScriptRef {
     if let Some(entry) = registered_entry(def_id) {
         return ScriptRef::Static(if radiant { &entry.radiant } else { &entry.base });
     }
-    fused_face(state, def_id, radiant).unwrap_or_else(|| ScriptRef::Static(shared_empty_script()))
+    if let Some(face) = fused_face(state, def_id, radiant) {
+        return face;
+    }
+    crafted_face(state, def_id, radiant).unwrap_or_else(|| ScriptRef::Static(shared_empty_script()))
+}
+
+/// R882 (ME-CRAFT): a crafted definition's two scripts — rebuilt from the def's recipe in any
+/// process, as a fused definition's rebuild from its ingredients. `None` for any other id. No
+/// cache is needed: composing is one walk over at most eight effects.
+fn crafted_scripts(state: &GameState, def_id: &str) -> Option<CardScripts> {
+    if !def_id.starts_with(crate::config::CRAFT_ID_PREFIX) {
+        return None;
+    }
+    let def = state.transient_defs.get(def_id)?;
+    let recipe = def.craft.as_ref()?;
+    Some(crate::subsystems::craft::compile_crafted_scripts(recipe))
+}
+
+/// One face of `crafted_scripts(state, def_id)`: composed alone.
+fn crafted_face(state: &GameState, def_id: &str, radiant: bool) -> Option<ScriptRef> {
+    let scripts = crafted_scripts(state, def_id)?;
+    Some(ScriptRef::Composed(Arc::new(if radiant {
+        scripts.radiant
+    } else {
+        scripts.base
+    })))
 }
 
 /// TS `EMPTY_SCRIPT`, one shared instance: what a Vanilla card runs (immutable, like the registry).
