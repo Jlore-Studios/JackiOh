@@ -9,7 +9,9 @@
 //!
 //! Port of `packages/engine/test/effects-combat.test.ts`.
 
-use jackioh_engine::effects::{ai_plays_out_turn, cancel_attack, forced_attacks, forced_attacks_on, summon};
+use jackioh_engine::effects::{
+    ai_plays_out_turn, cancel_attack, forced_attacks, forced_attacks_on, redirect_attack, summon,
+};
 use jackioh_engine::testkit::*;
 use jackioh_engine::{
     PlayerId::{P1, P2},
@@ -106,6 +108,16 @@ fn pawn() -> CardDef {
 fn meter() -> CardDef {
     def_of_kind("meter", "947", "Field Trap", backrow_faces("field trap"))
 }
+/// A Trap shaped like #64 Traitorous Blood's base face: re-aim the declaration at the attacker's
+/// first acting neighbour (R1122).
+fn redirector() -> CardDef {
+    def_of_kind("redirector", "948", "Trap", backrow_faces("trap"))
+}
+/// A Trap shaped like #64's Radiant face: the same re-aim, then a copy of what the combat destroyed
+/// for its controller (R1123).
+fn redirector_copies() -> CardDef {
+    def_of_kind("redirector-copies", "949", "Trap", backrow_faces("trap"))
+}
 
 /// §8 #9's body, from the shared combat fixtures: 1/14, so three forced attacks do not kill it.
 const MOTHS: &str = "cb-moths";
@@ -121,7 +133,41 @@ fn defs() -> Vec<CardDef> {
         asker(),
         pawn(),
         meter(),
+        redirector(),
+        redirector_copies(),
     ]
+}
+
+/// §6.3 Redirect's attack half (R1122, R1123), the way #64 Traitorous Blood calls it: the first
+/// acting neighbour, `copyDestroyed` on the Radiant-shaped one.
+fn redirect_script(copy_destroyed: bool) -> CardScripts {
+    let script = Script {
+        triggers: vec![TriggerDef::new(
+            "fc-attackDeclared",
+            &[GameEventType::AttackDeclared],
+            move |ctx, event| {
+                let GameEvent::AttackDeclared { attacker_id, .. } = event else {
+                    return Vec::new();
+                };
+                let Some(attacker) = find_instance(ctx.state, attacker_id) else {
+                    return Vec::new();
+                };
+                let neighbours = redirect_neighbours(ctx.state, attacker);
+                let Some(to) = neighbours.into_iter().next() else {
+                    return Vec::new();
+                };
+                vec![redirect_attack(json_as(json!({
+                    "to": to.id,
+                    "copyDestroyed": copy_destroyed,
+                })))]
+            },
+        )],
+        ..Script::default()
+    };
+    CardScripts {
+        base: script.clone(),
+        radiant: script,
+    }
 }
 
 /// A resume nothing can service: answering the prompt just clears it (§10.6).
@@ -216,6 +262,8 @@ fn fc_scripts() -> IndexMap<String, CardScripts> {
         meter().id,
         trap_script(GameEventType::ManaChanged, std::vec::Vec::new),
     );
+    scripts.insert(redirector().id, redirect_script(false));
+    scripts.insert(redirector_copies().id, redirect_script(true));
     scripts
 }
 
@@ -1018,5 +1066,99 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
             ),
             Vec::<GameEvent>::new()
         );
+    }
+}
+
+mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
+    use super::*;
+
+    /// P2's 3/3 with a second 3/3 beside it, declaring on P1's 5/10, with `trap` behind P1.
+    /// The neighbour is the swing's second body (lane 2, beside the attacker in lane 1).
+    fn redirect_swing(
+        seed: &str,
+        trap: &str,
+    ) -> (GameState, CardInstance, CardInstance, CardInstance, CardInstance) {
+        let (state, attacker, defender, backrow) = swing(seed, &[trap.to_string()]);
+        let neighbour = card_at(&state, slot(P2, Units, 2)).cloned().unwrap();
+        let trap = backrow.into_iter().next().unwrap();
+        (state, attacker, defender, neighbour, trap)
+    }
+
+    #[test]
+    fn r1122_redirected_attack_fights_the_ally() {
+        let (mut state, attacker, defender, neighbour, trap) =
+            redirect_swing("redirect", &redirector().id);
+        let mut sink = sink_for(&mut state);
+
+        // Declare on P1's big body; the window re-aims at the attacker's own neighbour.
+        let _ = declare_attack(&mut sink.sink(), &attacker, &on_unit(&defender));
+
+        assert_eq!(
+            json_of(&events_of_type(&sink.events, GameEventType::Redirected)),
+            json!([{ "type": "redirected", "what": "attack", "fromId": defender.id, "toId": neighbour.id, "byInstanceId": trap.id }])
+        );
+        // §4.3 between allies: the 3/3 hits its neighbour for 3 and is struck back for 3. The
+        // original target is untouched, and the window is shut again.
+        assert_eq!(live(sink.state, &defender).damage, 0);
+        assert_eq!(live(sink.state, &neighbour).damage, 3);
+        assert!(sink.state.declared_attack.is_none());
+    }
+
+    #[test]
+    fn r1122_later_trap_skips_it() {
+        // The redirector answers first (lane order); the canceller behind it is never offered the
+        // re-aimed attack, so no attack is cancelled and the allies still fight.
+        let (mut state, attacker, defender, _backrow) =
+            swing("redirect-skip", &[redirector().id, canceller().id]);
+        let neighbour = card_at(&state, slot(P2, Units, 2)).cloned().unwrap();
+        let mut sink = sink_for(&mut state);
+
+        let _ = declare_attack(&mut sink.sink(), &attacker, &on_unit(&defender));
+
+        assert_eq!(events_of_type(&sink.events, GameEventType::Redirected).len(), 1);
+        assert!(events_of_type(&sink.events, GameEventType::AttackCancelled).is_empty());
+        assert_eq!(live(sink.state, &neighbour).damage, 3);
+        assert_eq!(live(sink.state, &defender).damage, 0);
+    }
+
+    #[test]
+    fn r1122_forced_attack_never_opens_the_window() {
+        // A forced attack resolves as aimed: no window, no redirect, the trap stays set.
+        let (mut state, attacker, defender, backrow) = swing("redirect-forced", &[redirector().id]);
+        let trap = backrow.into_iter().next().unwrap();
+        let mut sink = sink_for(&mut state);
+        force_attack(&mut sink.sink(), &attacker, &on_unit(&defender));
+
+        assert!(events_of_type(&sink.events, GameEventType::Redirected).is_empty());
+        assert_eq!(live(sink.state, &defender).damage, 3);
+        assert_eq!(live(sink.state, &trap).zone.z(), ZoneName::Field);
+    }
+
+    #[test]
+    fn r1123_copies_after_the_check() {
+        // P2's 5/10 beside a 3/3, declaring on P1's 3/3: re-aimed at the ally, the 5 kills it, and
+        // P1 — the Radiant trap's controller — gets a fresh copy of it after the check.
+        let mut state = game("redirect-copies");
+        state.active = P2;
+        let attacker = put(&mut state, &big_body.id, slot(P2, Units, 1), json!({}));
+        let neighbour = put(&mut state, &plain.id, slot(P2, Units, 2), json!({}));
+        let defender = put(&mut state, &plain.id, slot(P1, Units, 1), json!({}));
+        put(&mut state, &redirector_copies().id, slot(P1, Backrow, 1), json!({}));
+        let mut sink = sink_for(&mut state);
+
+        let _ = declare_attack(&mut sink.sink(), &attacker, &on_unit(&defender));
+
+        // The copy stands for P1, fresh: no damage on it, a new id, the victim in the graveyard.
+        let copies: Vec<CardInstance> = active_units_of(sink.state, P1)
+            .into_iter()
+            .filter(|unit| unit.def_id == plain.id)
+            .cloned()
+            .collect();
+        assert_eq!(copies.len(), 1);
+        assert_ne!(copies[0].id, neighbour.id);
+        assert_eq!(copies[0].damage, 0);
+        assert!(!copies[0].radiant);
+        assert_eq!(events_of_type(&sink.events, GameEventType::Summoned).len(), 1);
+        assert_eq!(live(sink.state, &defender).damage, 0);
     }
 }

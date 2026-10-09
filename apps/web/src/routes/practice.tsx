@@ -797,7 +797,7 @@ function PracticeScreen({
 
   // R642–R645: the game's emote half — the dealt portraits, the AI's persona and its replies —
   // driven off the controller's snapshots (practice/emotes.ts). With no game it deals nothing.
-  const emotes = usePracticeEmotes(state.config, state.snapshot, state.aiSeat);
+  const emotes = usePracticeEmotes(state.config, state.snapshot, state.aiSeat, controller);
 
   const defs = state.defs;
   const lookup = useMemo(() => (defs === null ? null : lookupFromDefs(defs)), [defs]);

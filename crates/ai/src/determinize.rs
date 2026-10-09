@@ -13,8 +13,8 @@
 use indexmap::IndexSet;
 use jackioh_engine::prelude::json_as;
 use jackioh_engine::{
-    CardInstance, CatalogQueryArgs, CostOptions, GameState, PLAYER_IDS, PlayerId, Rng, active_units_of,
-    effective_cost, query, scripts_for, unit_view,
+    CardInstance, CardType, CatalogQueryArgs, CostOptions, GameState, PLAYER_IDS, PlayerId, RevealAt, Rng,
+    SetAs, active_units_of, effective_cost, find_def, query, scripts_for, unit_view,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -147,6 +147,45 @@ fn slot_card_mut(state: &mut GameState, side: PlayerId, slot: TrapSlot) -> Optio
     }
 }
 
+/// ME-ALTPLAY, R1046: stamp a sampled Unit or Spell as a set card — a Unit at the start of the
+/// next turn, a Spell at a uniformly sampled timing. With no permission nothing is stamped and no
+/// extra rng draw happens.
+fn stamp_sampled_set_as(
+    state: &mut GameState,
+    side: PlayerId,
+    slot: TrapSlot,
+    grants: &jackioh_engine::alt_play::FaceDownGrant,
+    set_turn: i32,
+    rng: &mut Rng,
+) {
+    let Some(def_id) = slot_card(state, side, slot).map(|card| card.def_id.clone()) else {
+        return;
+    };
+    let Some(def) = find_def(Some(&*state), &def_id) else {
+        return;
+    };
+    let is_unit = def.type_ == CardType::Unit && grants.units;
+    let is_spell = def.type_ == CardType::Spell && grants.spells;
+    if !is_unit && !is_spell {
+        return;
+    }
+    // D4: a sampled Spell's timing is uniform; a Unit needs no draw.
+    let reveal = if is_unit {
+        RevealAt::StartOfNextTurn
+    } else {
+        RevealAt::ALL[rng.int(3) as usize]
+    };
+    let Some(card) = slot_card_mut(state, side, slot) else {
+        return;
+    };
+    card.set_as = Some(SetAs {
+        reveal,
+        set_turn,
+        echo: None,
+        revealing: None,
+    });
+}
+
 fn set_slot_def(state: &mut GameState, side: PlayerId, slot: TrapSlot, def_id: &str) {
     if let Some(card) = slot_card_mut(state, side, slot) {
         card.def_id = def_id.to_string();
@@ -272,13 +311,38 @@ pub fn determinize(
     } else {
         String::new()
     };
-    let sampler = TrapSampler {
+    let base_sampler = TrapSampler {
         trap_pool: &trap_pool,
         aura_traps: &aura_traps,
         shown: &shown,
         match_shown_cost: options.match_shown_cost.unwrap_or(true),
     };
     for side in [opp, seat] {
+        // ME-ALTPLAY, R1046: while a face-down permission acts, a hidden backrow card may be a set
+        // Unit or Spell, so that side's pool widens by the Unit and Spell pools.
+        let grants = jackioh_engine::alt_play::grants_of(&next, side);
+        let mut pool = trap_pool.clone();
+        if grants.units {
+            pool.extend(query_ids(json!({ "type": ["Unit"] })));
+        }
+        if grants.spells {
+            pool.extend(query_ids(json!({ "type": ["Spell"] })));
+        }
+        let sampler = if grants.units || grants.spells {
+            TrapSampler {
+                trap_pool: &pool,
+                aura_traps: &aura_traps,
+                shown: &shown,
+                match_shown_cost: options.match_shown_cost.unwrap_or(true),
+            }
+        } else {
+            TrapSampler {
+                trap_pool: base_sampler.trap_pool,
+                aura_traps: base_sampler.aura_traps,
+                shown: base_sampler.shown,
+                match_shown_cost: base_sampler.match_shown_cost,
+            }
+        };
         // B5 E21: then the face-down cards dormant under each backrow pile, lane by lane.
         let mut slots: Vec<TrapSlot> = (0..next.players[side].backrow.len()).map(TrapSlot::Top).collect();
         for (lane, pile) in next.players[side].backrow_piles.iter().flatten().enumerate() {
@@ -291,6 +355,7 @@ pub fn determinize(
             if !is_placeholder(card) {
                 continue;
             }
+            let set_turn = card.summoned_turn.unwrap_or(next.turn);
             // R762: a top card shows its cost (R351); a dormant one beneath shows only that it is there (R447).
             let shown_cost = if matches!(slot, TrapSlot::Top(_)) {
                 card.cost_override
@@ -299,13 +364,22 @@ pub fn determinize(
             };
             let def_id = sampler.trap_for(&mut next, side, slot, shown_cost, &seen, &mut sampled, rng);
             set_slot_def(&mut next, side, slot, &def_id);
+            stamp_sampled_set_as(&mut next, side, slot, &grants, set_turn, rng);
         }
         // R448: a card being set face-down waits in the resolving zone as a placeholder; it is a trap too.
         for at in 0..next.players[side].resolving.len() {
             let slot = TrapSlot::Resolving(at);
+            let Some(card) = slot_card(&next, side, slot) else {
+                continue;
+            };
+            if !is_placeholder(card) {
+                continue;
+            }
+            let set_turn = card.summoned_turn.unwrap_or(next.turn);
             if slot_card(&next, side, slot).is_some_and(is_placeholder) {
                 let def_id = sampler.trap_for(&mut next, side, slot, None, &seen, &mut sampled, rng);
                 set_slot_def(&mut next, side, slot, &def_id);
+                stamp_sampled_set_as(&mut next, side, slot, &grants, set_turn, rng);
             }
         }
     }

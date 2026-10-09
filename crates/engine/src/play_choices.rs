@@ -44,7 +44,7 @@ use crate::script::TargetCheckArgs;
 use crate::state::{CardInstance, EngineError, GameState};
 use crate::wire::{
     ActionBody, CardCost, CardType, FilterOf, FilterSide, KeywordKind, ModeDecl, PlagueSpend, PlayerId,
-    PromptKind, Row, Selection, Tag, TargetDecl, TargetFilter, Zone, ZoneChoice, opponent_of,
+    PromptKind, RevealAt, Row, Selection, Tag, TargetDecl, TargetFilter, Zone, ZoneChoice, opponent_of,
 };
 use crate::zones::ZoneSlot;
 
@@ -68,6 +68,8 @@ pub struct PlayAction {
     pub modes: Option<Vec<String>>,
     /// B5 E11, E19: Plague Counters paying part of the price of a play from the graveyard.
     pub plague: Option<PlagueSpend>,
+    /// ME-ALTPLAY, R1040, R1044: play face-down as a Trap revealing at this timing.
+    pub face_down: Option<RevealAt>,
 }
 
 impl PlayAction {
@@ -93,6 +95,7 @@ impl From<PlayAction> for ActionBody {
             targets: action.targets,
             modes: action.modes,
             plague: action.plague,
+            face_down: action.face_down,
         }
     }
 }
@@ -111,6 +114,7 @@ impl TryFrom<ActionBody> for PlayAction {
                 targets,
                 modes,
                 plague,
+                face_down,
             } => Ok(PlayAction {
                 instance_id,
                 zone,
@@ -120,6 +124,7 @@ impl TryFrom<ActionBody> for PlayAction {
                 targets,
                 modes,
                 plague,
+                face_down,
             }),
             other => Err(format!("not a play action: {}", other.action_type())),
         }
@@ -355,6 +360,10 @@ pub fn needs_zone(state: &GameState, card: &CardInstance) -> bool {
 /// ones an aura gives the cards in a hand (a "Your cards have Stack" aura). A backrow
 /// card with Stack tops an occupied backrow zone as a Unit tops a unit zone (B5 E21, R447).
 pub fn plays_on_stack(state: &GameState, card: &CardInstance) -> bool {
+    // ME-ALTPLAY: a face-down play goes into an open backrow zone, never onto a Stack.
+    if card.set_as.is_some() {
+        return false;
+    }
     if !needs_zone(state, card) {
         return false;
     }
@@ -1114,7 +1123,7 @@ fn take_for(decl: &TargetDecl, offered: usize) -> usize {
 
 /// R703: a declaration the play needs (`required`) that the board cannot satisfy. The play is then
 /// neither offered (`subsets_for`) nor accepted (`refuse_targets`), instead of fizzling as R90 has it.
-fn unmet_requirement(decl: &TargetDecl, offered: usize) -> bool {
+pub(crate) fn unmet_requirement(decl: &TargetDecl, offered: usize) -> bool {
     decl.required == Some(true) && (offered as i64) < i64::from(decl.min)
 }
 
@@ -1546,13 +1555,79 @@ pub fn play_choice_combinations(
 /// prices the player cannot pay. This is what `legal_actions` lists for a card in hand.
 pub fn play_actions_for(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<PlayAction> {
     let mana = state.players[player].mana.current;
-    priced_play_actions(state, player, card, |cost| {
+    let mut out = priced_play_actions(state, player, card, |cost| {
         if cost <= mana {
             vec![PlayPayment::default()]
         } else {
             Vec::new()
         }
-    })
+    });
+    out.extend(face_down_play_actions(state, player, card, false, |cost| {
+        if cost <= mana {
+            vec![PlayPayment::default()]
+        } else {
+            Vec::new()
+        }
+    }));
+    out
+}
+
+/// ME-ALTPLAY, R1040, R1044: every face-down `play` this card could legally produce — one per timing,
+/// price, payment, tribute set and open backrow zone. No targets or modes are declared when set.
+fn face_down_play_actions(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    from_graveyard: bool,
+    payments: impl Fn(i32) -> Vec<PlayPayment>,
+) -> Vec<PlayAction> {
+    let Some(kind) = crate::alt_play::face_down_kind(state, player, card, from_graveyard) else {
+        return Vec::new();
+    };
+    let mut out: Vec<PlayAction> = Vec::new();
+    for reveal in crate::alt_play::timings(kind) {
+        let probe = CardInstance {
+            set_as: Some(crate::state::SetAs {
+                reveal,
+                set_turn: state.turn,
+                echo: None,
+                revealing: None,
+            }),
+            ..card.clone()
+        };
+        for price in play_prices(state, player, &probe) {
+            let paid = payments(price.cost);
+            if paid.is_empty() {
+                continue;
+            }
+            let tribute_sets: Vec<Vec<String>> = match kind {
+                crate::alt_play::SetKind::Unit => legal_tribute_sets(state, player, &probe),
+                crate::alt_play::SetKind::Spell => vec![Vec::new()],
+            };
+            for tributes in &tribute_sets {
+                for zone in crate::alt_play::open_backrow_zones(state, player) {
+                    for payment in &paid {
+                        out.push(PlayAction {
+                            instance_id: card.id.clone(),
+                            zone: Some(zone),
+                            x: price.x,
+                            embiggen: price.embiggen,
+                            tributes: if tributes.is_empty() {
+                                None
+                            } else {
+                                Some(tributes.clone())
+                            },
+                            targets: None,
+                            modes: None,
+                            plague: payment.plague.clone(),
+                            face_down: Some(reveal),
+                        });
+                    }
+                }
+            }
+        }
+    }
+    out
 }
 
 /// E11, R454: every `play` action `legal_actions` lists for a card in the player's graveyard — R81's
@@ -1566,9 +1641,13 @@ pub fn graveyard_play_actions_for(
     if !crate::graveyard_play::playable_from_graveyard(state, card) || card.zone.player() != player {
         return Vec::new();
     }
-    priced_play_actions(state, player, card, |price| {
+    let mut out = priced_play_actions(state, player, card, |price| {
         crate::graveyard_play::graveyard_payments_for(state, player, card, price)
-    })
+    });
+    out.extend(face_down_play_actions(state, player, card, true, |price| {
+        crate::graveyard_play::graveyard_payments_for(state, player, card, price)
+    }));
+    out
 }
 
 /// One price a card's X and embiggen choices come to now (R65): the choices, the probe stamped with
@@ -1705,6 +1784,7 @@ pub fn priced_play_actions(
                             targets: choices.targets.clone(),
                             modes: choices.modes.clone(),
                             plague: payment.plague.clone(),
+                            face_down: None,
                         });
                     }
                 }
@@ -2020,6 +2100,57 @@ fn refuse_modes(
     Ok(())
 }
 
+/// ME-ALTPLAY, R1040, R1044: refusal for a face-down play — no kind, a timing outside its
+/// timings, a named zone outside the open backrow zones, or any target or mode. X, embiggen and
+/// tributes are still checked.
+fn why_face_down_refused(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    action: &PlayAction,
+) -> Result<(), EngineError> {
+    let Some(reveal) = action.face_down else {
+        return refuse("no face-down timing".to_string());
+    };
+    let from_graveyard = matches!(card.zone, crate::wire::Zone::Graveyard { .. });
+    let Some(kind) = crate::alt_play::face_down_kind(state, player, card, from_graveyard) else {
+        return refuse(format!(
+            "{} cannot be played face-down",
+            name_of(state, &card.def_id)
+        ));
+    };
+    if !crate::alt_play::timings(kind).contains(&reveal) {
+        return refuse(format!(
+            "{} cannot reveal at that time",
+            name_of(state, &card.def_id)
+        ));
+    }
+    if let Some(zone) = action.zone.as_ref() {
+        let open = crate::alt_play::open_backrow_zones(state, player);
+        if !open.contains(zone) {
+            return refuse(format!("no free backrow zone"));
+        }
+    }
+    if action.targets.is_some() || action.modes.is_some() {
+        return refuse(format!(
+            "{} declares no targets or modes face-down",
+            name_of(state, &card.def_id)
+        ));
+    }
+    refuse_x(state, player, card, action.x)?;
+    refuse_embiggen(state, card, action.embiggen)?;
+    refuse_tributes(state, player, card, action.tributes.as_deref())?;
+    // B5 E5 discards still apply to a face-down play.
+    let face = resolving_face(
+        state,
+        player,
+        card,
+        cost_with(state, card, action.x, action.embiggen),
+    );
+    let required = targeting_discards_required(state, player, &face, &[], &[], None);
+    crate::targeting::why_targeting_discards_unpayable(state, player, required, &play_uses(card, &[]))
+}
+
 /// §10.5 step 1, R90: every choice the play carried, checked against what the card declared and what
 /// the board allows. Returns `Ok` when the play's choices are legal, and the refusal otherwise —
 /// `reduce` returns that message and leaves the state untouched (§9.3).
@@ -2031,6 +2162,9 @@ pub fn why_choices_refused(
     card: &CardInstance,
     action: &PlayAction,
 ) -> Result<(), EngineError> {
+    if action.face_down.is_some() {
+        return why_face_down_refused(state, player, card, action);
+    }
     let tributes: &[String] = action.tributes.as_deref().unwrap_or(&[]);
     refuse_zone(state, player, card, action.zone.as_ref(), tributes)?;
     refuse_x(state, player, card, action.x)?;

@@ -189,6 +189,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   promptAnswered: { type: "promptAnswered", player: "p1", choiceId: "ch1" },
   drawOffered: { type: "drawOffered", player: "p2" },
   drawAnswered: { type: "drawAnswered", player: "p1", accept: false },
+  emoted: { type: "emoted", player: "p1", emote: "greetings" },
   gameOver: { type: "gameOver", winner: "p1", reason: "hero-death" },
   // Patch v0.2.0 (docs/classic-sets.md B3, B5).
   cardAnnounced: { type: "cardAnnounced", player: "p1", instanceId: "c1", defId: SPELL, cardType: "Spell", costPaid: 1, targets: ["hero-p2"] },
@@ -262,6 +263,7 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   promptAnswered: null,
   drawOffered: "notify",
   drawAnswered: "cancel",
+  emoted: null,
   gameOver: "victory",
   // Patch v0.2.0.
   cardAnnounced: null,
@@ -1482,5 +1484,13 @@ describe("R1366 a steal and a give", () => {
     const moved = unit("p2", { instanceId: "u6" });
     const view = baseView({ opponent: emptySide("p2", { units: [null, null, null, null, moved] }) });
     expect(cuesFor(control("p1", "steal"), ctx({ view }))).toEqual([{ kind: "sfx", id: "steal", params: { pan: LANE_PAN_MAX }, delayMs: 0 }]);
+  });
+});
+
+describe("R1044 your own set Unit sounds as a set", () => {
+  it("a cardPlayed carrying a formerId gives trapSet only, and never speaks", () => {
+    const event: GameEvent = { ...played(HIDDEN_DEF_ID, "p1", "h1"), formerId: "h1" };
+    expect(voices(event)).toEqual([]);
+    expect(shape(event)).toEqual([sfx("trapSet")]);
   });
 });

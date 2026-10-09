@@ -5096,9 +5096,19 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
         ] {
             expected.insert(index.to_string(), rarity.to_string());
         }
+        // §8.8 prints it on the five plain buildings of M #97 too.
+        for (index, rarity) in [
+            ("97.2", "Common"),
+            ("97.3", "Rare"),
+            ("97.6", "Epic"),
+            ("97.7", "Epic"),
+            ("97.9", "Mythic"),
+        ] {
+            expected.insert(index.to_string(), rarity.to_string());
+        }
         assert_eq!(printed, expected);
-        // §8.8 prints a designer rarity on two Meditative tokens too (M #28.1 Common, M #30.1
-        // Epic); every other printed rarity stays a Classic+ token's.
+        // §8.8 prints a designer rarity on Meditative tokens too (M #28.1 Common, M #30.1 Epic, M
+        // #97's buildings); every other printed rarity stays a Classic+ token's.
         assert!(
             entries()
                 .into_iter()
@@ -5227,7 +5237,7 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
     use super::*;
 
     #[test]
-    fn r278_tags_core_13_and_14_the_three_classic_plus_jlockheed_cards_48_51_and_52_and_classic_4_palantir_and_no_other_entry()
+    fn r278_tags_core_13_and_14_the_three_classic_plus_jlockheed_cards_48_51_and_52_classic_4_palantir_and_meditative_97_9_headquarters_and_no_other_entry()
      {
         let mut tagged: Vec<String> = entries()
             .into_iter()
@@ -5244,12 +5254,14 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
                 "classicplus-052",
                 "core-013",
                 "core-014",
+                "meditative-097-9",
             ]),
             "entries tagged Jlockeed"
         );
         // The tag follows the name: every entry whose name says Jlockeed, or the Classic+ spelling
         // Jlockheed, carries it — one faction under two spellings (B2.4) — plus Classic #4 Palantir,
-        // which the balance patch inducted without renaming it.
+        // which the balance patch inducted without renaming it. M #97.9 Jlockheed's Headquarters is
+        // the Meditative set's, a token that fills the board with the faction's Units (§8.8).
         let mut named: Vec<String> = entries()
             .into_iter()
             .filter(|entry| entry.name.contains("Jlockeed") || entry.name.contains("Jlockheed"))

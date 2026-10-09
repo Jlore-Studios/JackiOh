@@ -5,7 +5,6 @@
 use crate::catalog::def_of;
 use crate::config::GLITCH_DEF_ID;
 use crate::cost_rules::{climb_price_rules, cost_floor_of, price_rules_for};
-use crate::faces::card_type_of;
 use crate::graveyard_play::playable_from_graveyard;
 use crate::script::CostArgs;
 use crate::state::{
@@ -208,7 +207,7 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
             used_rules: Vec::new(),
         };
     }
-    let type_ = card_type_of(state, instance);
+    let type_ = crate::alt_play::priced_type_of(state, instance);
 
     for modifier in &side.mods {
         let ModifierKind::CostDiscount {

@@ -153,7 +153,7 @@ use crate::state::{
 };
 use crate::wire::{
     Action, ActionBody, AttackHealth, CardDef, CardDefs, CardType, Counters, GameEvent, PLAYER_IDS, Phase,
-    PlayerId, PlayerView, Position, Row, Selection, Zone, ZoneChoice, opponent_of,
+    PlayerId, PlayerView, Position, RevealAt, Row, Selection, Zone, ZoneChoice, opponent_of,
 };
 use crate::zones::{
     LibraryPosition, MoveResult, MoveToZoneOptions, OffFieldZone, PlaceOnFieldOptions, ZoneSlot,
@@ -440,6 +440,9 @@ pub struct PlayOptions {
     /// Units sacrificed for a Tribute cost; each entry is any card reference on the field.
     #[serde(default)]
     pub tributes: Option<Vec<String>>,
+    /// ME-ALTPLAY, R1040, R1044: play face-down as a Trap revealing at this timing.
+    #[serde(default)]
+    pub face_down: Option<RevealAt>,
 }
 
 /// B3.2, R384: an Activate ability's choices travel in the action as a play's do (R81): `ability`
@@ -1403,7 +1406,7 @@ impl Scenario {
 
     // --- steps ----------------------------------------------------------------------------------
 
-    /// `opts`: `json!({ "zone"?, "row"?, "x"?, "embiggen"?, "targets"?, "modes"?, "tributes"? })`.
+    /// `opts`: `json!({ "zone"?, "row"?, "x"?, "embiggen"?, "targets"?, "modes"?, "tributes"?, "faceDown"? })`.
     pub fn play(&mut self, card: impl Into<CardRef>, opts: Value) -> &mut Scenario {
         let opts: PlayOptions = options_of(opts, "play");
         let id = or_fail(self.resolve(&card.into(), Where::Hand, "play"));
@@ -1413,7 +1416,7 @@ impl Scenario {
 
         let mut zone: Option<ZoneChoice> = None;
         if let Some(lane) = opts.zone {
-            if def.type_ == CardType::Spell {
+            if def.type_ == CardType::Spell && opts.face_down.is_none() {
                 panic!("{what}: a Spell takes no zone, and zone {lane} was given");
             }
             let row = opts.row.unwrap_or(if def.type_ == CardType::Unit {
@@ -1453,6 +1456,7 @@ impl Scenario {
                 targets: opts.targets,
                 modes: opts.modes,
                 plague: None,
+                face_down: opts.face_down,
             },
             inst.controller,
             &what,
@@ -1513,6 +1517,13 @@ impl Scenario {
             who,
             &what,
         );
+        self
+    }
+
+    /// A raw engine action, for the actions with no step helper — the `Emote` action (MD-D29,
+    /// R1127). Panics when `reduce` refuses it, like every other step.
+    pub fn act(&mut self, body: ActionBody, player: PlayerId, what: &str) -> &mut Scenario {
+        self.action(body, player, what);
         self
     }
 

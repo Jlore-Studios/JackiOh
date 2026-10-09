@@ -34,10 +34,10 @@ use serde_json::Value;
 
 use crate::config::HAND_CAP;
 use crate::damage::DamageTarget;
-use crate::layers::unit_has;
-use crate::script::{EffectContext, FlagOrCount};
+use crate::layers::{face_of, unit_has};
+use crate::script::{EffectContext, FlagOrCount, StaticFlags};
 use crate::state::{CardInstance, FaceUpRecord, GameState, ModifierKind, PlayRecord, find_instance};
-use crate::wire::{CardType, GameEvent, KeywordKind, PlayerId, Row, Tag, Zone, opponent_of};
+use crate::wire::{AttackHealth, CardType, GameEvent, KeywordKind, PlayerId, Row, Tag, Zone, opponent_of};
 use crate::zones::{OffFieldZone, active_units_of, card_at, slot_of, slots_of};
 
 /// A hero's block as a card may see it: §10.1's `{ health, armor }`, copied, so a script cannot
@@ -432,6 +432,62 @@ pub fn fusable_permanents_of(state: &GameState, player: PlayerId, except: Option
         .collect()
 }
 
+/// Whether any card acting for this player carries the picked static flag — the active units and
+/// the face-up backrow tops, as `damage.rs`'s `acting_texts_of` walks them (a face-down Trap's text
+/// is in nobody's use until it fires, R33). What the Pareto judge and the emote gate ask (MD-D28,
+/// MD-D29, R1125, R1127).
+pub fn acting_with_flag(
+    state: &GameState,
+    player: PlayerId,
+    pick: fn(&StaticFlags) -> Option<bool>,
+) -> bool {
+    let mut acting: Vec<CardInstance> = active_units_of(state, player).into_iter().cloned().collect();
+    for slot in slots_of(player, Row::Backrow) {
+        let Some(card) = card_at(state, slot) else {
+            continue;
+        };
+        let card_type = crate::faces::card_type_of(state, card);
+        let face_down =
+            (card_type == CardType::Trap || card_type == CardType::FieldTrap) && card.face_up != Some(true);
+        if !face_down {
+            acting.push(card.clone());
+        }
+    }
+    acting
+        .iter()
+        .any(|card| pick(&crate::scripts::flags_of(state, card)) == Some(true))
+}
+
+/// MD-D29, R1127: whether an acting card of the opponent hears emotes, so an `Emote` action is legal.
+pub fn emotes_heard(state: &GameState, player: PlayerId) -> bool {
+    acting_with_flag(state, opponent_of(player), |flags| flags.hears_emotes)
+}
+
+/// MD-D19, R1122: the acting Units adjacent to the attacker on its own side that it may attack, in
+/// lane order — the neighbours a redirect may re-aim the attack at. Taunt is ignored: the target
+/// must pass §4.2 step 2's restrictions, never step 3's wall.
+pub fn redirect_neighbours(state: &GameState, attacker: &CardInstance) -> Vec<CardInstance> {
+    let Some(at) = slot_of(state, attacker) else {
+        return Vec::new();
+    };
+    crate::zones::adjacent(at)
+        .into_iter()
+        .filter_map(|slot| card_at(state, slot).cloned())
+        .filter(|unit| {
+            crate::zones::acts_on_field(state, unit)
+                && !crate::zones::is_carried(state, unit)
+                && crate::restrictions::attack_restriction(
+                    state,
+                    attacker,
+                    &DamageTarget::Unit {
+                        instance: unit.clone(),
+                    },
+                )
+                .is_ok()
+        })
+        .collect()
+}
+
 /// R901 (Meditative #30 Fickle E-Kitten's "a more expensive permanent than you"): the highest cost
 /// among the permanents acting for this player, the tops of their unit piles and their backrow (R13),
 /// each read at R396's `cost_now`: an X card at the X it was played for, 0 without one, any other at
@@ -442,4 +498,16 @@ pub fn highest_permanent_cost(state: &GameState, player: PlayerId) -> Option<i32
         .iter()
         .map(|held| crate::mana::cost_now(state, held))
         .max()
+}
+
+/// R1181 (Meditative #94's "base stats"): §10.4 layer 1, the running face's `statsOverride` as that face
+/// wears it (R349), else its X or printed stats. No buffs, tuning (layer 4), auras or damage: it is
+/// `face_of` with the tuning taken back off.
+pub fn base_stats_of(state: &GameState, card: &CardInstance) -> AttackHealth {
+    let face = face_of(state, card);
+    let tuning = card.tuning.as_ref();
+    AttackHealth {
+        attack: face.attack - tuning.and_then(|tuning| tuning.attack).unwrap_or(0),
+        health: face.health - tuning.and_then(|tuning| tuning.health).unwrap_or(0),
+    }
 }

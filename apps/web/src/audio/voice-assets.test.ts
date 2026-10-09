@@ -104,10 +104,13 @@ function voicedNow(key: string): boolean {
   return typeof set !== "string" || setShips(set as SetName);
 }
 
-/** SPEC §10.11's lines: a play and a death line per Unit (tokens included), one cast line per everything else. */
-const REQUIRED_KEYS: readonly string[] = Object.entries(CATALOG).flatMap(([id, card]) =>
-  card.type === "Unit" ? [`${id}-play`, `${id}-death`] : [`${id}-cast`],
-);
+/**
+ * SPEC §10.11's lines: a play and a death line per Unit (tokens included), one cast line per everything
+ * else, of the sets that have shipped (R1420).
+ */
+const REQUIRED_KEYS: readonly string[] = Object.entries(CATALOG)
+  .flatMap(([id, card]) => (card.type === "Unit" ? [`${id}-play`, `${id}-death`] : [`${id}-cast`]))
+  .filter(voicedNow);
 
 const AUDIO = readJson5(AUDIO_PATH);
 

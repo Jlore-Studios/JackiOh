@@ -34,7 +34,7 @@
 // `setHold("voice", …)` (routes/practice.tsx), so the audio layer needs no handle on this
 // controller: it marks an element while a line plays and clears it when the line ends.
 
-import { opponentOf, type ActionBody, type CardDefs, type PlayerId, type PlayerView } from "@jackioh/shared";
+import { opponentOf, type ActionBody, type CardDefs, type EmoteId, type PlayerId, type PlayerView } from "@jackioh/shared";
 
 import type { PracticePacing } from "./config.ts";
 import type { PracticeHost } from "./host.ts";
@@ -77,6 +77,11 @@ export type PracticeController = {
   resume(config: PracticeStartConfig): Promise<void>;
   /** Queued behind any in-flight request. */
   act(action: ActionBody): void;
+  /**
+   * MD-D29, R1127: the AI persona's emote, queued like an action. The worker applies it only while
+   * the AI seat hears emotes, and drops it without an error otherwise.
+   */
+  aiEmote(emote: EmoteId): void;
   /** Whether the board is still animating a view; the AI's next step waits until it is not. */
   setBoardBusy(busy: boolean): void;
   /**
@@ -325,6 +330,13 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
       clearTimer();
       const gen = generation;
       send({ type: "act", action }, (response) => onSnapshotResponse(gen, response));
+    },
+
+    aiEmote(emote: EmoteId): void {
+      if (disposed) return;
+      if (state.phase !== "playing" && state.phase !== "starting") return;
+      const gen = generation;
+      send({ type: "aiEmote", emote }, (response) => onSnapshotResponse(gen, response));
     },
 
     setBoardBusy(busy: boolean): void {
