@@ -27,7 +27,7 @@ use jackioh_engine::config::MAX_MANA;
 use jackioh_engine::{CardDef, CardType, CatalogQueryArgs, Rng, SetName, Tag, query, query_cost};
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::shadow_ban::SHADOW_BAN_IDS;
+use crate::shadow_ban::{SHADOW_BAN_IDS, shaped_weight};
 
 /// `"0-1" | "2" | "3" | "4+"`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -650,6 +650,18 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
         .map(|boost| boost.ids.iter().cloned().collect())
         .unwrap_or_default();
     let boost_by = options.boost.as_ref().map_or(1.0, |boost| boost.by);
+    // The unban lane's deck shaping (shadow_ban.rs): exactly the seat an arena or a promotion deals
+    // for this AI — `banned` set to this AI's own SHADOW_BAN_IDS, no `include` or `boost` — gets its
+    // weights multiplied by the dealt-quality the lane's records measured. A seat under any other
+    // ban list (the parent's eleven, a human's none, a test's or the sweep's own) deals as before.
+    let shape = options.include.is_none()
+        && options.boost.is_none()
+        && options.banned.as_ref().is_some_and(|listed| {
+            listed.len() == SHADOW_BAN_IDS.len()
+                && SHADOW_BAN_IDS
+                    .iter()
+                    .all(|id| listed.iter().any(|entry| entry == id))
+        });
 
     let mut deck: Vec<&CardDef> = include_defs.clone();
     let mut tally = Tally {
@@ -716,6 +728,9 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
                 }
                 if boosted.contains(&def.id) {
                     weight *= boost_by;
+                }
+                if shape {
+                    weight *= shaped_weight(&def.id);
                 }
                 weight
             })
