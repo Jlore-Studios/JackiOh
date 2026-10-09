@@ -51,6 +51,32 @@ pub struct PlagueSpend {
     pub tokens: i32,
 }
 
+/// ME-ALTPLAY, R1040, R1044: when a card played face-down as a Trap reveals — the end of the turn it
+/// was set in, the start of its controller's next turn, or the end of their next turn. A Unit set
+/// under Knowledge Breaker's Aura reveals at the start of the next turn only (R1041); a Spell set
+/// under Paranoia's at any of the three, chosen as it is played.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub enum RevealAt {
+    EndOfThisTurn,
+    StartOfNextTurn,
+    EndOfNextTurn,
+}
+
+impl RevealAt {
+    /// Every timing, in the order a turn meets them.
+    pub const ALL: [RevealAt; 3] = [
+        RevealAt::EndOfThisTurn,
+        RevealAt::StartOfNextTurn,
+        RevealAt::EndOfNextTurn,
+    ];
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "ts",
@@ -88,6 +114,12 @@ pub enum ActionBody {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         plague: Option<PlagueSpend>,
+        /// ME-ALTPLAY, R1040, R1044: play the card face-down into the backrow as a Trap that reveals
+        /// at this timing — a Unit under Knowledge Breaker's Aura, a Spell under Paranoia's. Absent,
+        /// the card is played as it is printed.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        face_down: Option<RevealAt>,
     },
     Attack {
         attacker_id: String,
@@ -286,6 +318,7 @@ mod tests {
                 targets: Some(vec![Selection::Hero { player: PlayerId::P2 }, Selection::None]),
                 modes: None,
                 plague: None,
+                face_down: None,
             },
             PlayerId::P1,
             "n1",

@@ -21,7 +21,8 @@ use crate::config::{
 use crate::rng::Rng;
 use crate::wire::{
     AttackHealth, CardDef, CardDefs, CardType, Counters, Enchantment, GameEvent, Keyword, PLAYER_IDS,
-    PerPlayer, PerPlayerOpt, PlayerId, PromptKind, Row, RowFlags, Selection, Tag, Tuning, Zone, ZoneRef,
+    PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, Row, RowFlags, Selection, Tag, Tuning, Zone,
+    ZoneRef,
 };
 
 pub use crate::wire::{GameResult, Phase, Position, Winner};
@@ -245,6 +246,36 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub chinese: Option<bool>,
+    /// ME-ALTPLAY, R1040, R1044: the card was played face-down into the backrow as a Trap (a Unit
+    /// under Knowledge Breaker's Aura, a Spell under Paranoia's) and has not finished revealing.
+    /// Its controller's alone to read while it is face-down (R33, R1046); R78's reset takes it off
+    /// with the card leaving the field (R1045). Absent on every other card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub set_as: Option<SetAs>,
+}
+
+/// ME-ALTPLAY, R1040, R1044: what a card played face-down as a Trap carries until it has revealed —
+/// when it reveals, the turn it was set in, the Echo a Radiant Paranoia gave it (R1045), and, once
+/// a set Spell has turned face-up, that its own text now resolves (`revealing`).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct SetAs {
+    pub reveal: RevealAt,
+    pub set_turn: i32,
+    /// R1045: the Echo the permission added as the card was set (Radiant Paranoia's +1), once.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub echo: Option<i32>,
+    /// R1044: a set Spell has fired and its Spell text is resolving now. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub revealing: Option<bool>,
 }
 
 /// B5 E12, R452: one cast being driven that makes its caster's choices at random (`random`), narrows
@@ -1530,6 +1561,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         berserk: None,
         times_played: None,
         chinese: None,
+        set_as: None,
     };
     *next_id += 1;
     instance

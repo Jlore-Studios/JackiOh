@@ -459,6 +459,10 @@ fn set_carried(side: &mut PlayerState, lane: i32, card: Option<CardInstance>) {
 /// (R446). Its face, not where it stands: an animated card in a unit zone is a Unit there (R383) but
 /// never a Unit face, so it never lands on a carrier.
 fn is_unit_face(state: &GameState, instance: &CardInstance) -> bool {
+    // R1040: a Unit set face-down under Knowledge Breaker's Aura stands in the backrow as a Field Trap.
+    if instance.set_as.is_some() {
+        return false;
+    }
     let def = def_of(Some(state), &instance.def_id);
     let face = if instance.radiant { &def.radiant } else { &def.base };
     face.type_.unwrap_or(def.type_) == CardType::Unit
@@ -1082,6 +1086,8 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.reborn_spent = None;
     // B5 E35: Berserk is a status of the unit on the field, lost as it leaves (R78).
     instance.berserk = None;
+    // R1040, R1045: a card set face-down as a Trap is its printed card again once it leaves the field.
+    instance.set_as = None;
 }
 
 /// R766 (#473): a card that reaches a graveyard or an exile pile is its printed card again, its price
@@ -1535,8 +1541,12 @@ pub fn flicker_in_place(state: &mut GameState, card: &CardInstance) -> bool {
     left_the_field(state, &current.id);
     let turn = state.turn;
     let unit_face = row == Row::Units || is_unit_face(state, &current);
+    // R1040: a card set face-down as a Trap re-enters its backrow zone the Trap it was set as, since
+    // a Unit or a Spell face never stands there on its own.
+    let set_as = current.set_as.filter(|_| row == Row::Backrow);
     if let Some(live) = find_instance_mut(state, &current.id) {
         reset_instance(live);
+        live.set_as = set_as;
         live.controller = player;
         live.summoned_turn = Some(turn);
         if unit_face {
