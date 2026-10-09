@@ -4,8 +4,10 @@
 // The gate decides nothing here either (CLAUDE.md rule 7): whether the prompt is owed is the
 // server's `promptOwed` on `/api/auth/me`, and a pending account never gets this far. A pick is the
 // account page's own field (`UsernameField`); "Skip for now" is `POST /api/username/skip`, which
-// keeps `Player#n`. Either way the answer is announced, so the gate reads `/api/auth/me` again,
-// finds nothing owed and opens the screen the player came for.
+// keeps `Player#n`. Either way the gate is told (`onAnswered`) and opens the screen the player came
+// for, and the answer is announced, so the gate reads `/api/auth/me` again for the new name. The
+// screen does not wait on that read: one that fails leaves the account as it was, prompt owed and
+// all, and the player has answered.
 //
 // THE GATE'S FRAME. It wears `ShellPanel`'s markup (main.tsx), written out here because main.tsx
 // imports this file. And like every panel the gate draws, it has a way out: Sign out.
@@ -28,9 +30,11 @@ export type UsernamePromptProps = {
   token: string;
   /** The username the account holds now (`Player#n`). */
   name: string;
+  /** The server took a pick or a skip: the gate opens its screen. */
+  onAnswered: () => void;
 };
 
-export default function UsernamePrompt({ token, name }: UsernamePromptProps): ReactElement {
+export default function UsernamePrompt({ token, name, onAnswered }: UsernamePromptProps): ReactElement {
   const leaving = useSigningOut();
   const [skipping, setSkipping] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +45,7 @@ export default function UsernamePrompt({ token, name }: UsernamePromptProps): Re
     setError(null);
     skipUsernamePrompt(token)
       .then(() => {
+        onAnswered();
         announceAccountChange();
       })
       .catch(() => {
@@ -66,6 +71,7 @@ export default function UsernamePrompt({ token, name }: UsernamePromptProps): Re
           token={token}
           disabled={skipping}
           onSaved={() => {
+            onAnswered();
             announceAccountChange();
           }}
         />

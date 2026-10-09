@@ -189,6 +189,13 @@ mod the_form_r1432 {
         assert_eq!(refusal_of("ヤ김"), Some(UsernameRefusal::MixedScripts));
         assert!(normalize_username("ヤマダ太郎").is_ok());
         assert!(normalize_username("김太").is_ok());
+        // Only digits and `_` go with any script: a modifier letter of no script (`ˈ`, `ː`) joins
+        // none, and an Arabic vowel sign does not sit on a Latin letter, while the kana length mark
+        // goes with kana.
+        assert_eq!(refusal_of("Max\u{02C8}"), Some(UsernameRefusal::MixedScripts));
+        assert_eq!(refusal_of("Max\u{02D0}"), Some(UsernameRefusal::MixedScripts));
+        assert_eq!(refusal_of("Ma\u{064E}x"), Some(UsernameRefusal::MixedScripts));
+        assert!(normalize_username("ラーメン").is_ok());
     }
 
     #[test]
@@ -270,6 +277,16 @@ mod the_filter_r1433 {
             "C0CK_7",
             "5H1T",
             "a55Max",
+            "Dick1",
+            "1Dick",
+            "Nazi1",
+            "Cunt5",
+            "Ass7",
+            "Ass420",
+            "D1ck1",
+            "ꜰᴜᴄᴋ",
+            "ᴅɪᴄᴋ",
+            "Bıtch",
         ] {
             assert_eq!(refusal_of(name), Some(UsernameRefusal::NotAllowed), "{name}");
         }
@@ -288,6 +305,9 @@ mod the_filter_r1433 {
             "Bob_455",
             "Tit4n",
             "H4ck3r",
+            "Dickens1",
+            "Cassandra7",
+            "Yıldız",
             "Grape",
             "Player",
             "admin",

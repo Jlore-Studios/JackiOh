@@ -1,7 +1,7 @@
 // `auth/UsernamePrompt.tsx` and the field inside it (`auth/UsernameField.tsx`): the prompt an active
 // account meets once after activation (R1435). The server judges every name; what is asserted here is
 // that the client asks after a pause in the typing, shows the answer as it stands, saves exactly the
-// username it showed, and reads the account again after a pick or a skip.
+// username it showed, and tells the gate and reads the account again after a pick or a skip.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -37,8 +37,11 @@ afterEach(() => {
   vi.resetAllMocks();
 });
 
+/** What the gate passes the prompt: told once the server takes a pick or a skip. */
+const onAnswered = vi.fn();
+
 function prompt(): void {
-  render(<UsernamePrompt token={TOKEN} name="Player#7" />);
+  render(<UsernamePrompt token={TOKEN} name="Player#7" onAnswered={onAnswered} />);
 }
 
 async function typeAndWait(text: string, expected: string): Promise<void> {
@@ -137,6 +140,7 @@ describe("R1435 the username prompt", () => {
     await waitFor(() => {
       expect(announceAccountChange).toHaveBeenCalledTimes(1);
     });
+    expect(onAnswered, "the gate opens its screen").toHaveBeenCalledTimes(1);
     expect(saveUsername).toHaveBeenCalledWith(TOKEN, "Max#3");
     expect(skipUsernamePrompt).not.toHaveBeenCalled();
   });
@@ -162,11 +166,13 @@ describe("R1435 the username prompt", () => {
     });
     expect(screen.getByTestId(usernameTestid.changed)).toHaveTextContent(USERNAME_CHANGED);
     expect(announceAccountChange, "nothing was saved").not.toHaveBeenCalled();
+    expect(onAnswered, "nothing was saved").not.toHaveBeenCalled();
 
     await userEvent.click(screen.getByTestId(usernameTestid.save));
     await waitFor(() => {
       expect(announceAccountChange).toHaveBeenCalledTimes(1);
     });
+    expect(onAnswered).toHaveBeenCalledTimes(1);
     expect(vi.mocked(saveUsername).mock.calls.map((call) => call[1])).toEqual(["Max#3", "Max#4"]);
   });
 
@@ -220,6 +226,7 @@ describe("R1435 the username prompt", () => {
 
     expect(await screen.findByTestId(usernameTestid.error)).toHaveTextContent(USERNAME_SAVE_FAILED);
     expect(screen.getByTestId(usernameTestid.save), "the same name may be saved again").toBeEnabled();
+    expect(onAnswered).not.toHaveBeenCalled();
   });
 
   it("R1435 Skip for now answers the prompt at the server, then the account is read again", async () => {
@@ -231,6 +238,7 @@ describe("R1435 the username prompt", () => {
     await waitFor(() => {
       expect(announceAccountChange).toHaveBeenCalledTimes(1);
     });
+    expect(onAnswered, "the gate opens its screen").toHaveBeenCalledTimes(1);
     expect(skipUsernamePrompt).toHaveBeenCalledWith(TOKEN);
     expect(saveUsername).not.toHaveBeenCalled();
   });
@@ -244,5 +252,6 @@ describe("R1435 the username prompt", () => {
     expect(await screen.findByTestId(usernameTestid.promptError)).toHaveTextContent(USERNAME_SKIP_FAILED);
     expect(screen.getByTestId(usernameTestid.promptSkip)).toBeEnabled();
     expect(announceAccountChange).not.toHaveBeenCalled();
+    expect(onAnswered).not.toHaveBeenCalled();
   });
 });

@@ -349,17 +349,31 @@ export function redirectFor(account: Account, allowPending: boolean): string | n
   return null;
 }
 
+/**
+ * R1435: the profiles this page has let past the username prompt, for as long as the page lives:
+ * one a gated screen was shown to while active, and one that answered the prompt here. The prompt
+ * meets an account before its first screen, never after. Each route mounts a gate of its own, so a
+ * gate's own state would forget, and a re-read that finds the prompt owed once a screen is up (a
+ * renewal, another tab, a server that gained usernames meanwhile) would raise it over the next
+ * screen: the match a queue just paired, mid-mulligan. Kept here instead, it waits for the next
+ * sign-in (a new page). A redemption on `/invite` showed its screen to a pending account, so the
+ * prompt still follows it. An answer counts at once, whatever the re-read after it finds.
+ */
+const usernamePromptPassed = new Set<string>();
+
+/** Test seam: a new page, which has let no profile past the prompt yet. */
+export function resetUsernamePromptForTests(): void {
+  usernamePromptPassed.clear();
+}
+
 export function Gated({ allowPending = false, children }: GatedProps): ReactElement {
   const account = useAccount();
   // R634: an active account's game settings are kept level with this device's, on every gated screen.
   useSettingsAccountSync(account);
   const target = redirectFor(account, allowPending);
-  // R1435: the profile this gate has shown its screen to while active. The username prompt meets an
-  // account before its screen, never after: a background re-read (a renewal, another tab) that finds
-  // the prompt owed once the screen is up leaves it in place, so the prompt never unmounts a live
-  // match or a half-built deck, and the next sign-in shows it. A redemption on `/invite` showed the
-  // screen to a pending account, so the prompt still follows it.
-  const [shownTo, setShownTo] = useState<string | null>(null);
+  // R1435: renders the gate again once the prompt is answered here, since the page-wide set above
+  // renders nothing by changing.
+  const [, setAnswered] = useState(0);
 
   // In an effect, never during render: `navigate` dispatches an event that re-renders every
   // `usePathname` subscriber, and doing that while this component is rendering would be an update
@@ -395,12 +409,21 @@ export function Gated({ allowPending = false, children }: GatedProps): ReactElem
   // R1435: an active account owes the username prompt until it picks or skips, and meets it before
   // any gated screen. `promptOwed` is the server's; a server that sends no `username` owes none.
   const profileId = account.me.profile.id;
-  if (status === "active" && account.me.username?.promptOwed === true && shownTo !== profileId) {
-    return <UsernamePrompt token={account.token} name={account.me.username.name} />;
+  if (status === "active" && account.me.username?.promptOwed === true && !usernamePromptPassed.has(profileId)) {
+    return (
+      <UsernamePrompt
+        token={account.token}
+        name={account.me.username.name}
+        onAnswered={() => {
+          usernamePromptPassed.add(profileId);
+          setAnswered((count) => count + 1);
+        }}
+      />
+    );
   }
-  // Remembered from the render itself (React's state from an earlier render), so the screen's first
-  // render already counts.
-  if (status === "active" && shownTo !== profileId) setShownTo(profileId);
+  // Remembered from the render itself, so the screen's first render already counts. Adding a member
+  // the set may hold already is the same however often React renders this.
+  if (status === "active") usernamePromptPassed.add(profileId);
 
   return children({ token: account.token, me: account.me });
 }

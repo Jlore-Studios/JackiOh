@@ -7,7 +7,7 @@
 // is sent to the screen §9.4 says the account may see.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import { announceAccountChange } from "../net/gate.ts";
 import { readQueued, rememberQueued } from "../net/liveGame.ts";
@@ -20,7 +20,7 @@ it("vitest runs in MODE=test, which is what main.tsx's mount guard keys on", () 
   expect(import.meta.env.MODE).toBe("test");
 });
 
-const { App, Gated, redirectFor } = await import("../main.tsx");
+const { App, Gated, redirectFor, resetUsernamePromptForTests } = await import("../main.tsx");
 
 // ---------------------------------------------------------------------------------------------
 // the stubbed server
@@ -120,6 +120,7 @@ function pathname(): string {
 
 beforeEach(() => {
   window.localStorage.clear();
+  resetUsernamePromptForTests();
   at("/");
 });
 
@@ -304,6 +305,44 @@ describe("R1435 the username prompt at the gate", () => {
     serveAs("active", OWED);
     announceAccountChange();
     expect(await screen.findByText("the gate read again", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByTestId("username-prompt")).toBeNull();
+  });
+
+  it("R1435 a screen shown to the account keeps the prompt off every screen after it on the page", async () => {
+    signedIn();
+    serveAs("active");
+    render(<Gated>{() => <p>the first screen</p>}</Gated>);
+    expect(await screen.findByText("the first screen", undefined, SLOW)).toBeInTheDocument();
+    cleanup();
+
+    // The server now owes the prompt, and the player moves on (the match a queue just paired): the
+    // next screen's own gate reads it, and opens its screen all the same.
+    serveAs("active", OWED);
+    render(<Gated>{({ me }) => <p>{me.username?.promptOwed === true ? "the next screen" : "a stale read"}</p>}</Gated>);
+    expect(await screen.findByText("the next screen", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByTestId("username-prompt")).toBeNull();
+  });
+
+  it("R1435 a skip opens the screen, even when the read of the account after it fails", async () => {
+    signedIn();
+    let skipped = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: unknown) => {
+        const url = String(input);
+        if (url.endsWith("/api/username/skip")) {
+          skipped = true;
+          return Promise.resolve(jsonResponse(200, { username: { ...OWED, promptOwed: false } }));
+        }
+        if (url.endsWith("/api/auth/me") && !skipped) return Promise.resolve(jsonResponse(200, meBody("active", OWED)));
+        return Promise.resolve(jsonResponse(503, { error: { code: "internal", message: "down" } }));
+      }),
+    );
+    render(<Gated>{() => <p>the gate opened</p>}</Gated>);
+    fireEvent.click(await screen.findByTestId("username-prompt-skip", undefined, SLOW));
+
+    expect(await screen.findByText("the gate opened", undefined, SLOW)).toBeInTheDocument();
+    expect(skipped).toBe(true);
     expect(screen.queryByTestId("username-prompt")).toBeNull();
   });
 

@@ -9,7 +9,11 @@
 // the text around it ("Max is taken, so you'd be محمد#2" would scramble), or pulls its own `#n` into
 // its run. So the whole name sits in a `<bdi>` laid out left to right, the base in an inner `<bdi>`
 // whose direction is its own (`dir="auto"`), and the tag after it as an element of its own. The
-// full name rides on `title`, since a long one is cut with an ellipsis (`username.css`).
+// full name rides on `title`, since a long one is cut with an ellipsis (`username.css`): the base
+// is cut at its own end, whichever way it runs, and the tag is never cut.
+//
+// A server from before usernames sends no name where this one sends `username` (the web client can
+// go out ahead of the server), and a row then shows no name rather than the screen failing to load.
 
 import type { ReactElement } from "react";
 
@@ -25,7 +29,8 @@ export function splitUsername(name: string): { base: string; tag: string | null 
   return { base: name.slice(0, at), tag: name.slice(at + 1) };
 }
 
-export default function Username({ name }: { name: string }): ReactElement {
+export default function Username({ name }: { name: string | undefined }): ReactElement | null {
+  if (typeof name !== "string") return null;
   const { base, tag } = splitUsername(name);
   return (
     <bdi className="username" dir="ltr" title={name}>

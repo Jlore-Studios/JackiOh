@@ -4,12 +4,22 @@
    leave out still draws. */
 
 .username {
-  display: inline-block;
+  display: inline-flex;
   max-width: 19em;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
   vertical-align: bottom;
+}
+
+/* The base is what gives way, cut at its own end (the left of a right-to-left name); the tag keeps
+   its width, so `#n` never disappears first. */
+.username__base {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.username__tag {
+  flex: none;
 }
 
 /* The username field (auth/UsernameField.tsx, R1435): the preview reads as the answer it is, a

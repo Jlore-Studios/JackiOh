@@ -49,6 +49,16 @@ describe("R1436 a username on screen", () => {
     expect(outer?.textContent).toBe("Max");
   });
 
+  it("R1436 a row from a server that sends no username shows no name rather than failing", () => {
+    const { container } = render(
+      <p>
+        #1 <Username name={undefined} />
+      </p>,
+    );
+    expect(container.querySelector("bdi")).toBeNull();
+    expect(container.textContent).toBe("#1 ");
+  });
+
   it("R1436 only digits after the last # are a tag", () => {
     expect(splitUsername("Max#3")).toEqual({ base: "Max", tag: "3" });
     expect(splitUsername("Player#120")).toEqual({ base: "Player", tag: "120" });

@@ -53,7 +53,7 @@
 -- rows still without a name (numbered after the highest `Player` tag already
 -- held), set-not-null, drop-and-add of the check, create-index-if-not-exists,
 -- create-or-replace of the function, drop-and-create of the trigger,
--- drop-column-if-exists, comment-on and grant are all idempotent.
+-- comment-on and grant are all idempotent.
 -- ============================================================================
 
 alter table public.profiles add column if not exists username_base text;

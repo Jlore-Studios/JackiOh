@@ -75,9 +75,12 @@ impl UsernameRefusal {
 /// 2. NFKC.
 /// 3. Every character is a letter (`L*`), a decimal digit (`Nd`), `_`, or a combining mark (`M*`)
 ///    that follows a letter, at most `USERNAME_MAX_MARKS` in a row, and in the BMP.
-/// 4. One script: digits, `_` and anything Common or Inherited go with any script; otherwise every
-///    character shares one, except Han with Hiragana and Katakana (Japanese) and Han with Hangul
-///    (Korean).
+/// 4. One script: digits, `_` and a mark that takes its letter's script go with any script;
+///    otherwise every character shares one (by its `Script_Extensions`, so the kana length mark `ー`
+///    goes with either kana and an Arabic vowel sign with Arabic only), except Han with Hiragana and
+///    Katakana (Japanese) and Han with Hangul (Korean). A letter Unicode files under no script, not
+///    even by extension (`Common`: modifier letters such as `ˈ` and `ː`), is a script of its own, so
+///    it joins no other.
 /// 5. `USERNAME_MIN_LENGTH` to `USERNAME_MAX_LENGTH` extended grapheme clusters.
 /// 6. The light filter.
 pub fn normalize_username(raw: &str) -> Result<String, UsernameRefusal> {
@@ -210,29 +213,68 @@ fn check_characters(name: &str) -> Result<(), UsernameRefusal> {
     Ok(())
 }
 
-/// R1432's one script per name. Digits go with any script, as the issue's rule says, whichever
-/// script Unicode files them under (Arabic-Indic digits are Arabic).
-fn check_scripts(name: &str) -> Result<(), UsernameRefusal> {
-    let mut scripts: Vec<Script> = Vec::new();
-    for ch in name.chars() {
-        if is_digit(ch) {
-            continue;
-        }
-        let script = ch.script();
-        if matches!(script, Script::Common | Script::Inherited | Script::Unknown) {
-            continue;
-        }
-        if !scripts.contains(&script) {
-            scripts.push(script);
+/// What a name may be written in under R1432's one script per name: one of Unicode's scripts, or
+/// one of the two mixes a language needs.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Writing {
+    Script(Script),
+    /// Han with Hiragana and Katakana.
+    Japanese,
+    /// Han with Hangul.
+    Korean,
+}
+
+/// The writings a character may stand in, or None when it goes with any: a digit, whichever script
+/// Unicode files it under (Arabic-Indic digits are Arabic), `_`, and a mark that takes the script
+/// of the letter before it (`Inherited`, with no extension naming scripts). A mark whose extension
+/// names its scripts goes with those alone, so an Arabic vowel sign on a Latin letter is a mix. A
+/// character Unicode files under no script, not even by extension (`Common`), is a writing of its
+/// own: the issue lets only digits and `_` go with any script.
+fn writings(ch: char) -> Option<Vec<Writing>> {
+    if is_digit(ch) || ch == '_' {
+        return None;
+    }
+    let extension = ch.script_extension();
+    if extension.is_inherited() {
+        return None;
+    }
+    if extension.is_common() {
+        return Some(vec![Writing::Script(Script::Common)]);
+    }
+    let mut out = Vec::new();
+    for script in extension.iter() {
+        out.push(Writing::Script(script));
+        let mixes: &[Writing] = match script {
+            Script::Han => &[Writing::Japanese, Writing::Korean],
+            Script::Hiragana | Script::Katakana => &[Writing::Japanese],
+            Script::Hangul => &[Writing::Korean],
+            _ => &[],
+        };
+        for mix in mixes {
+            if !out.contains(mix) {
+                out.push(*mix);
+            }
         }
     }
-    const JAPANESE: &[Script] = &[Script::Han, Script::Hiragana, Script::Katakana];
-    const KOREAN: &[Script] = &[Script::Han, Script::Hangul];
-    let within = |allowed: &[Script]| scripts.iter().all(|script| allowed.contains(script));
-    if scripts.len() <= 1 || within(JAPANESE) || within(KOREAN) {
-        Ok(())
-    } else {
-        Err(UsernameRefusal::MixedScripts)
+    Some(out)
+}
+
+/// R1432's one script per name: some writing every character may stand in. An unassigned
+/// character stands in none, though the character check has refused it already.
+fn check_scripts(name: &str) -> Result<(), UsernameRefusal> {
+    let mut shared: Option<Vec<Writing>> = None;
+    for own in name.chars().filter_map(writings) {
+        shared = Some(match shared {
+            None => own,
+            Some(mut kept) => {
+                kept.retain(|writing| own.contains(writing));
+                kept
+            }
+        });
+    }
+    match shared {
+        Some(kept) if kept.is_empty() => Err(UsernameRefusal::MixedScripts),
+        _ => Ok(()),
     }
 }
 
@@ -253,14 +295,50 @@ fn words(list: &'static str) -> impl Iterator<Item = &'static str> {
 }
 
 /// R1433's folding before a match: the full case fold, NFD with every combining mark dropped (so
-/// `fück` reads `fuck`), underscores dropped, and the common digit substitutions read back as the
-/// letters they stand for.
+/// `fück` reads `fuck`), underscores dropped, the common digit substitutions read back as the
+/// letters they stand for, and the Latin look-alikes read as the letters they imitate.
 fn fold(text: &str) -> String {
     default_case_fold_str(text)
         .nfd()
         .filter(|ch| !is_mark(*ch) && *ch != '_')
-        .map(|ch| substitute(ch).unwrap_or(ch))
+        .map(|ch| substitute(ch).or_else(|| look_alike(ch)).unwrap_or(ch))
         .collect()
+}
+
+/// R1433: the Latin letters that fancy-text tools pass off as plain ones and that neither NFKC nor
+/// the case fold reads back, the small capitals and the dotless `ı` and `ȷ`, as the letter each
+/// imitates, so `ɴɪɢɢᴇʀ` and `Bıtch` meet the lists as their plain spellings do. Only the filter
+/// reads them so; the name keeps them.
+fn look_alike(ch: char) -> Option<char> {
+    let plain = match ch {
+        'ᴀ' => 'a',
+        'ʙ' => 'b',
+        'ᴄ' => 'c',
+        'ᴅ' => 'd',
+        'ᴇ' => 'e',
+        'ꜰ' => 'f',
+        'ɢ' => 'g',
+        'ʜ' => 'h',
+        'ɪ' | 'ı' => 'i',
+        'ᴊ' | 'ȷ' => 'j',
+        'ᴋ' => 'k',
+        'ʟ' => 'l',
+        'ᴍ' => 'm',
+        'ɴ' => 'n',
+        'ᴏ' => 'o',
+        'ᴘ' => 'p',
+        'ꞯ' => 'q',
+        'ʀ' => 'r',
+        'ꜱ' => 's',
+        'ᴛ' => 't',
+        'ᴜ' => 'u',
+        'ᴠ' => 'v',
+        'ᴡ' => 'w',
+        'ʏ' => 'y',
+        'ᴢ' => 'z',
+        _ => return None,
+    };
+    Some(plain)
 }
 
 /// R1433's common digit substitutions: the letter a digit stands for, if it stands for one.
@@ -276,15 +354,27 @@ fn substitute(ch: char) -> Option<char> {
     }
 }
 
-/// R1433: an NFKC name with its substitution digits read back as letters wherever they sit in a
-/// run of letters, before it is split into tokens, so `a55` reads `ass` and `d1ck` reads `dick`. A
+/// Which substitution digits [`read_back_digits`] reads back as letters. A digit at the edge of a
+/// word may be a letter (`a55`) or a number after the word (`Dick1`), so the filter reads a name
+/// both ways.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ReadBack {
+    /// Every one in a run that holds a letter: `a55` reads `ass`, `5h1t` reads `shit`.
+    All,
+    /// Only one with a letter on both sides of it in its run: `d1ck` reads `dick`, and the `1` of
+    /// `Dick1` stays a digit, so `Dick` splits off as a token of its own.
+    Inner,
+}
+
+/// R1433: an NFKC name with its substitution digits read back as letters where they sit in a run of
+/// letters (all of them, or only the inner ones: [`ReadBack`]), before it is split into tokens. A
 /// run is the letters, marks and substitution digits between underscores and other digits; a run
 /// with no letter in it keeps its digits, so they still split off as a token of digits alone and the
 /// `455` of `Bob_455` is never read as `ass`. `Bob455` reads as the one token `Bobass`. A letter read
 /// back takes the case of the nearest letter before it in the run, or else after it, so it never
 /// makes a camelCase split of its own: `C0CK` reads `COCK`, not `CoCK`.
-fn read_back_digits(name: &str) -> String {
-    fn flush(run: &mut Vec<char>, out: &mut String) {
+fn read_back_digits(name: &str, digits: ReadBack) -> String {
+    fn flush(run: &mut Vec<char>, out: &mut String, digits: ReadBack) {
         if !run.iter().copied().any(is_letter) {
             out.extend(run.drain(..));
             return;
@@ -297,7 +387,9 @@ fn read_back_digits(name: &str) -> String {
             };
             let before = run[..at].iter().rev().copied().find(|ch| is_letter(*ch));
             let after = run[at + 1..].iter().copied().find(|ch| is_letter(*ch));
-            if before.or(after).is_some_and(char::is_uppercase) {
+            if digits == ReadBack::Inner && (before.is_none() || after.is_none()) {
+                out.push(ch);
+            } else if before.or(after).is_some_and(char::is_uppercase) {
                 out.push(letter.to_ascii_uppercase());
             } else {
                 out.push(letter);
@@ -311,11 +403,11 @@ fn read_back_digits(name: &str) -> String {
         if is_letter(ch) || is_mark(ch) || substitute(ch).is_some() {
             run.push(ch);
         } else {
-            flush(&mut run, &mut out);
+            flush(&mut run, &mut out, digits);
             out.push(ch);
         }
     }
-    flush(&mut run, &mut out);
+    flush(&mut run, &mut out, digits);
     out
 }
 
@@ -360,18 +452,20 @@ fn tokens(name: &str) -> Vec<String> {
 }
 
 /// R1433: whether the light filter refuses an NFKC name. The token list is matched against the
-/// tokens of the name with its digits read back ([`read_back_digits`]). A token without a letter is
-/// never matched against it: its digits would read back as letters (`455` as `ass`) and refuse an
+/// tokens of the name with its digits read back both ways ([`read_back_digits`], [`ReadBack`]), so
+/// `a55`, `d1ck` and `Dick1` are each refused and `Tit4n` is not. A token without a letter is never
+/// matched against it: its digits would read back as letters (`455` as `ass`) and refuse an
 /// innocent `Bob_455`.
 fn is_blocked(name: &str) -> bool {
     let folded = fold(name);
     if words(BLOCKLIST_ANYWHERE).any(|word| folded.contains(word)) {
         return true;
     }
-    tokens(&read_back_digits(name))
-        .iter()
+    [ReadBack::All, ReadBack::Inner]
+        .into_iter()
+        .flat_map(|digits| tokens(&read_back_digits(name, digits)))
         .filter(|token| token.chars().any(is_letter))
-        .map(|token| fold(token))
+        .map(|token| fold(&token))
         .any(|token| words(BLOCKLIST_TOKEN).any(|word| token == word))
 }
 
@@ -390,16 +484,63 @@ mod tests {
 
     #[test]
     fn r1433_reads_substitution_digits_back_only_in_a_run_with_letters() {
-        assert_eq!(read_back_digits("a55"), "ass");
-        assert_eq!(read_back_digits("BigA55"), "BigASS");
-        assert_eq!(read_back_digits("5h1t"), "shit");
-        assert_eq!(read_back_digits("5H1T"), "SHIT");
-        assert_eq!(read_back_digits("C0CK_7"), "COCK_7");
-        assert_eq!(read_back_digits("Tit4n"), "Titan");
-        assert_eq!(read_back_digits("Bob455"), "Bobass");
-        assert_eq!(read_back_digits("Bob_455"), "Bob_455");
-        assert_eq!(read_back_digits("Ass99"), "Ass99");
-        assert_eq!(read_back_digits("a5s9"), "ass9");
+        let all = |name| read_back_digits(name, ReadBack::All);
+        assert_eq!(all("a55"), "ass");
+        assert_eq!(all("BigA55"), "BigASS");
+        assert_eq!(all("5h1t"), "shit");
+        assert_eq!(all("5H1T"), "SHIT");
+        assert_eq!(all("C0CK_7"), "COCK_7");
+        assert_eq!(all("Tit4n"), "Titan");
+        assert_eq!(all("Bob455"), "Bobass");
+        assert_eq!(all("Bob_455"), "Bob_455");
+        assert_eq!(all("Ass99"), "Ass99");
+        assert_eq!(all("a5s9"), "ass9");
+        assert_eq!(all("Dick1"), "Dicki");
+    }
+
+    #[test]
+    fn r1433_reads_only_inner_substitution_digits_back_the_other_way() {
+        let inner = |name| read_back_digits(name, ReadBack::Inner);
+        assert_eq!(inner("d1ck"), "dick");
+        assert_eq!(inner("Tit4n"), "Titan");
+        assert_eq!(inner("Dick1"), "Dick1");
+        assert_eq!(inner("1Dick"), "1Dick");
+        assert_eq!(inner("D1ck1"), "DIck1");
+        assert_eq!(inner("a55"), "a55");
+        assert_eq!(inner("Bob_455"), "Bob_455");
+        assert_eq!(tokens(&inner("Dick1")), vec!["Dick", "1"]);
+    }
+
+    #[test]
+    fn r1433_folds_small_capitals_and_dotless_letters_to_the_letters_they_imitate() {
+        assert_eq!(fold("ꜰᴜᴄᴋ"), "fuck");
+        assert_eq!(fold("Bıtch"), "bitch");
+        assert_eq!(fold("ᴅɪᴄᴋ"), "dick");
+        assert_eq!(fold("ȷoe"), "joe");
+    }
+
+    #[test]
+    fn r1432_a_name_shares_one_writing_by_script_extensions() {
+        // The kana length mark is Common by script but kana by extension.
+        assert!(check_scripts("ラーメン").is_ok());
+        assert!(check_scripts("らーめん").is_ok());
+        assert!(check_scripts("東京ラーメン").is_ok());
+        // The Arabic tatweel goes with Arabic.
+        assert!(check_scripts("محـمد").is_ok());
+        // A modifier letter of no script, even by extension, joins no other; one whose extension
+        // names Latin (the modifier apostrophe) goes with Latin.
+        assert_eq!(check_scripts("Max\u{02C8}"), Err(UsernameRefusal::MixedScripts));
+        assert_eq!(
+            check_scripts("ラーメン\u{02D0}"),
+            Err(UsernameRefusal::MixedScripts)
+        );
+        assert!(check_scripts("Max\u{02BC}").is_ok());
+        // A mark goes with the scripts its extension names: Arabic vowel signs on Arabic, not on Latin.
+        assert!(check_scripts("مُحَمَّد").is_ok());
+        assert_eq!(check_scripts("Ma\u{064E}x"), Err(UsernameRefusal::MixedScripts));
+        // Digits, `_` and inherited marks go with any.
+        assert!(check_scripts("Zoe\u{308}_99").is_ok());
+        assert!(check_scripts("محمد_٣").is_ok());
     }
 
     #[test]
