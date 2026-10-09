@@ -27,7 +27,7 @@ Animated, Brittle and Temporary are printed on, or given to, cards that are not 
 | Stack | May be played onto an occupied zone | Zone becomes a pile; only the top is active (section 3.2) | #92 |
 | Lucky X | Repeat a luck-based roll X extra times, keep the best | RNG helper `lucky(x, roll, better)` with a per-effect comparator | #23r, #42r |
 | Can't attack | Cannot declare attacks | Attack validator flag | #86 |
-| Cannot be in Defense Position | Never switches to Defense | Position validator flag, as Spikey Pillow's ([[§4.1]]) | #65.1, C+ #19.1, C+ #48, C+ #51 |
+| Cannot be in Defense Position | Never switches to Defense | Position validator flag, as Spikey Pillow's ([[§4.1]]) | #65.1, C+ #19.1, C+ #48, C+ #51, M #93–#93.3 |
 | Can't be attacked | No attack may target it | [[§4.2]] step 2, forced attacks included; still targeted by effects and hit by "all" effects | C+ #51 |
 | Only Units in this lane can attack this | An attack on it is legal only from the enemy unit zone of its own lane | [[§4.2]] step 2, forced attacks included; its Taunt binds only the attackers that may legally attack it ([[§4.2]] step 3) | C+ #19.1 |
 | Can't attack or be attacked | Neither declares nor receives an attack | [[§4.2]] steps 1 and 2, forced attacks included | A carried Unit ([[R446]]): the Unit stacked onto C+ #33 while its play resolves ([[R653]]) |
