@@ -4153,10 +4153,8 @@
     "what": "build #531 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-09T02:28:20Z",
-    "notes": [
-      "started a night run, as a lane was free: #529 (hard) is queued to build, for `muse`: build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)"
-    ],
+    "at": "2026-10-09T02:38:58Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
