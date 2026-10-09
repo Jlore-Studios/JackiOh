@@ -4313,7 +4313,15 @@
       "feedback_since": "2026-10-09T14:10:03Z",
       "issue": 599,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "cognition",
+        "rejections": [],
+        "reviews": [],
+        "sha": "29e0d1b5e5a8180e8b15d15e7e9f40cddf9d5a5a",
+        "tiers": {}
+      }
     },
     "63": {
       "died": 0,
