@@ -56,14 +56,19 @@ is the same budget, so both measure the AI that ships. The same state, seed and 
 same `Decision`. The browser's wall-clock cap arrives as `should_stop` (the WASM binding's deadline),
 which ends the search early with the best line found.
 
-## Decks and the shadow ban (R184, R186, R390, R1370)
+## Decks and the shadow ban (R184, R186, R390, R1370, R1390)
 
 `build_ai_deck(rng, size, &AiDeckOptions)` deals `size` distinct non-token ids from every set by
 weighted sampling without replacement (`AI_DECK`), leaving out `SHADOW_BAN_IDS` unless `banned` says
 otherwise. `lean_set` (R1370) names a set at least `AI_DECK.lean_min_share` of the deck comes from, a
 hard floor kept together with the units' and the theme's; absent, the draw is exactly the one it always
 was. `build_ai_deck_traced` also counts the picks that floor forced, the measurement `lean_boost` was
-chosen by. `src/shadow_ban.rs` holds `SHADOW_BAN` (each card with the sweep flags that banned it) and
+chosen by. `gated_sets` (R1390) names the sets the draw never deals from: its default is the soft gate
+`AI_DECK_GATED_SETS` in `src/config.rs` (the Meditative set, until the AI is trained on its cards), so
+every AI deck holds none of them whatever ships or a thread previews, and a lean on a gated set leans
+on the newest ungated set that ships (`ungated_lean`). A player's random deck passes `Some(vec![])`
+beside `banned: Some(vec![])`; an `include` still forces a gated card in by name. Emptying the list
+lifts the gate and deals every deck as before it. `src/shadow_ban.rs` holds `SHADOW_BAN` (each card with the sweep flags that banned it) and
 `SHADOW_WATCH` (cards found at risk and cleared). Both are decided by the sweep, never by hand: run
 `cargo jackioh sweep` and copy the printed rows and header line into the file. The ban governs AI deck
 building and nothing else: a banned card stays legal for every player.

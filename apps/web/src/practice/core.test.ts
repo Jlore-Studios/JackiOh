@@ -993,7 +993,11 @@ describe("R1373 practice's Random deck with more cards from the newest set", () 
 
       // The human's deck is the deck builder's own deal with the lean (R1370), from the same stream.
       expect(debug.decks[human]).toEqual(
-        buildAiDeck(createRng(`${seed}:human-deck`), DECK_SIZE, { banned: [], leanSet: newestShippedSet() }),
+        buildAiDeck(createRng(`${seed}:human-deck`), DECK_SIZE, {
+          banned: [],
+          gatedSets: [],
+          leanSet: newestShippedSet(),
+        }),
       );
       expect(ofNewest(debug.decks[human])).toBeGreaterThanOrEqual(Math.ceil(DECK_SIZE * AI_DECK.leanMinShare));
       expect(debug.decks[human]).not.toEqual(plainDecks[human]);

@@ -131,13 +131,15 @@ function messageOf(cause: unknown): string {
  * loadout deck. `createGame` checks a preset or a saved deck like any other (§2.6): the engine's
  * ruling, printed as given. R1373: a random deck the player asked to lean on the newest set leans on
  * the newest set that ships (R1371), resolved here, where the deck is dealt; the AI's own deck never
- * leans.
+ * leans. A player's random deck is dealt from every set: neither the AI's shadow ban nor its soft gate
+ * (R1390) applies.
  */
 function humanDeckFor(seed: string, choice: PracticeDeckChoice): string[] {
   switch (choice.kind) {
     case "random":
       return buildAiDeck(createRng(`${seed}:human-deck`), DECK_SIZE, {
         banned: [],
+        gatedSets: [],
         ...(choice.leanNewest === true ? { leanSet: newestShippedSet() } : {}),
       });
     case "preset": {

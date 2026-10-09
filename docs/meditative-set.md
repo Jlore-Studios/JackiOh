@@ -5023,7 +5023,9 @@ Each item is a part of its own (M10). Readings, with what exists today:
   shadow-banned (at most 20, so at least 82 stay in the pool); the AI with the new cards plays the previous AI
   (generation 0, built from `main` before the first card part) for 100 games in `arena` with alternating
   seats, and must win at least 40; where it does not, the part improves the AI until it does. The
-  results are recorded in [[§9.9]] and `crates/ai/generation.json`.
+  results are recorded in [[§9.9]] and `crates/ai/generation.json`. As amended on #551: that training is
+  deferred, and until it is done the AI's random decks hold no Meditative card, a soft gate lifted by
+  emptying `AI_DECK_GATED_SETS` ([[R1390]]).
 - **MN09 Polish.** The small polish found while the set is built, collected on its issue and done
   together near the end.
 

@@ -366,11 +366,12 @@ fn sweep_config(seed: &str, def_id: &str, n: i32, tier: Difficulty, filler: &Fil
         handicap.deck_size,
         &json_as::<AiDeckOptions>(ai_options),
     );
-    // The greedy seat stands in for a human, whose random deck ignores the AI's ban.
+    // The greedy seat stands in for a human, whose random deck ignores the AI's ban and its soft gate
+    // (R1390).
     let greedy_deck = build_ai_deck(
         &mut create_rng(&format!("{seed}:deck:{greedy_seat}"), 0),
         easy.deck_size,
-        &json_as::<AiDeckOptions>(json!({ "banned": [], "manaCap": easy.mana_cap })),
+        &json_as::<AiDeckOptions>(json!({ "banned": [], "gatedSets": [], "manaCap": easy.mana_cap })),
     );
 
     let ai = SeatController::Ai {

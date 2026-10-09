@@ -16,6 +16,12 @@
 //! units. Everything comes from the rng passed in, so the same seed deals the same deck in any process,
 //! and the lean adds no rng draw.
 //!
+//! The soft gate (R1390): the random draw never deals a card of a set in `gated_sets`, whose default is
+//! `AI_DECK_GATED_SETS` (Meditative until the AI is trained on it), whatever ships or a thread
+//! previews; a player's random deck passes `Some(vec![])` and is dealt from every set, and a lean on a
+//! gated set leans on the newest set that ships and is not gated. An empty gate deals exactly what the
+//! draw dealt before it.
+//!
 //! Port of `packages/ai/src/deck.ts` (SURFACE §9: `build_ai_deck(&mut Rng, i32, &AiDeckOptions)`). TS
 //! threw on a bad request; this panics with the same message.
 
@@ -24,9 +30,12 @@ use std::ops::{Index, IndexMut};
 
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::config::MAX_MANA;
-use jackioh_engine::{CardDef, CardType, CatalogQueryArgs, Rng, SetName, Tag, query, query_cost};
+use jackioh_engine::{
+    CardDef, CardType, CatalogQueryArgs, Rng, SHIPPED_SETS, SetName, Tag, query, query_cost,
+};
 use serde::{Deserialize, Deserializer, Serialize};
 
+use crate::config::AI_DECK_GATED_SETS;
 use crate::shadow_ban::SHADOW_BAN_IDS;
 
 /// `"0-1" | "2" | "3" | "4+"`.
@@ -136,6 +145,27 @@ pub struct AiDeckOptions {
     /// R1420); "More cards from the newest set" (R1372, R1373) passes `newest_shipped_set()` (R1371).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lean_set: Option<SetName>,
+    /// R1390: the sets the random draw never deals from. Default `AI_DECK_GATED_SETS`, the AI's own
+    /// decks' soft gate; pass `Some(vec![])`, as `banned`, for a player's random deck. An `include`
+    /// still reaches a gated card (the sweep forces one in by name), and a `lean_set` the gate holds
+    /// leans on `ungated_lean`'s set instead.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gated_sets: Option<Vec<SetName>>,
+}
+
+/// R1390: the set a deck leans on under the gate `gated`: `lean` itself when the gate leaves it, else
+/// the newest set that ships and is not gated (Classic+ while Meditative is gated, before and after
+/// Meditative ships), else none.
+pub fn ungated_lean(lean: Option<SetName>, gated: &[SetName]) -> Option<SetName> {
+    let set = lean?;
+    if !gated.contains(&set) {
+        return Some(set);
+    }
+    SHIPPED_SETS
+        .iter()
+        .rev()
+        .copied()
+        .find(|shipped| !gated.contains(shipped))
 }
 
 /// `AI_DECK`'s shape.
@@ -573,6 +603,8 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
     };
     let include: &[String] = options.include.as_deref().unwrap_or(&[]);
     let mana_cap = options.mana_cap.unwrap_or(MAX_MANA);
+    // R1390: the soft gate, the AI's own decks' unless the caller deals a player's deck.
+    let gated: &[SetName] = options.gated_sets.as_deref().unwrap_or(AI_DECK_GATED_SETS);
 
     // `query` never returns tokens unless asked, so this is §2.6 L3's deck-legal pool of every set
     // (R184, R380).
@@ -604,7 +636,9 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
     let pool: Vec<&CardDef> = every
         .iter()
         .copied()
-        .filter(|def| !banned.contains(&def.id) && !include_ids.contains(&def.id))
+        .filter(|def| {
+            !banned.contains(&def.id) && !include_ids.contains(&def.id) && !gated.contains(&def.set)
+        })
         .collect();
     if ((include_defs.len() + pool.len()) as i32) < size {
         panic!(
@@ -636,8 +670,9 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
     } else {
         (f64::from(size) * AI_DECK.theme_min_share).ceil() as i32
     };
-    // R1370: rounded up, so a handicap's 25-card deck owes 13 and a 30-card one 15.
-    let lean = options.lean_set;
+    // R1370: rounded up, so a handicap's 25-card deck owes 13 and a 30-card one 15. R1390: never on a
+    // gated set.
+    let lean = ungated_lean(options.lean_set, gated);
     let lean_needed = if lean.is_none() {
         0
     } else {
