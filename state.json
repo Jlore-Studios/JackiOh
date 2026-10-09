@@ -5872,16 +5872,19 @@
         {
           "at": "2026-10-08T23:27:48Z",
           "minutes": 24.3
+        },
+        {
+          "at": "2026-10-09T04:23:12Z",
+          "minutes": 20.3
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-09T04:00:00Z",
-          "utilization": 1.02
+          "resets_at": "2026-10-09T09:00:00Z",
+          "utilization": 0.85
         },
-        "observed_at": "2026-10-08T23:27:48Z",
-        "rejected_resets_at": "2026-10-09T04:00:00Z",
-        "status": "rejected"
+        "observed_at": "2026-10-09T04:23:12Z",
+        "status": "allowed"
       }
     },
     "devin": {
