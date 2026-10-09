@@ -156,6 +156,11 @@ on this list during Waves 1–3.
 | thiserror | 2.0.21 | — | server |
 | clap | 4.6.7 | derive | server (main), tools |
 | rayon | 1.12.0 | — | tools (parallel games) |
+| caseless | 0.2.2 | — | server (username checks, R1432–R1434) |
+| unicode-normalization | 0.1.25 | — | server (username checks, R1432–R1434) |
+| unicode-properties | 0.1.4 | — | server (username checks, R1432–R1434) |
+| unicode-script | 0.5.8 | — | server (username checks, R1432–R1434) |
+| unicode-segmentation | 1.13.3 | — | server (username checks, R1432–R1434) |
 
 Crate edges (path dependencies; every crate also takes the third-party crates its rows above name):
 

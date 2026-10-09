@@ -188,6 +188,21 @@ export type MeResponse = {
   currentSeriesId?: string | null;
   /** The address this account is tied to, so a player can see who they are signed in as. */
   email: string | null;
+  /**
+   * R1435: the caller's username, when the next change is allowed, and whether the prompt after
+   * activation is still owed. Optional because a server from before R1435 (or a test stub) omits it.
+   */
+  username?: OwnUsername;
+};
+
+/** The caller's own username, as `/api/auth/me` and every username route answer with it (R1435). */
+export type OwnUsername = {
+  /** The caller's username as shown: `Max` or `Max#3`. */
+  name: string;
+  /** Epoch ms when the next change is allowed, or null when a change is allowed now (R1435). */
+  nextChangeAt: number | null;
+  /** True while the username prompt shown after activation is still owed (R1435). */
+  promptOwed: boolean;
 };
 
 /** `GET /api/profile`: the account screen's read — identity plus the ladder record. */
@@ -207,6 +222,65 @@ export function getProfile(token: string): Promise<ProfileResponse> {
 
 export function getMe(token: string): Promise<MeResponse> {
   return apiRequest<MeResponse>("/api/auth/me", { token });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Usernames (R1435, R1436). The server validates, normalises and tags a name; the client proposes
+// one, shows the server's verdict as it stands, and saves exactly the username that verdict named,
+// so a player never gets a tag they were not shown.
+// ---------------------------------------------------------------------------------------------
+
+/** Why the server refused a name. Its `message` is the sentence a player reads, shown as is. */
+export type UsernameRefusal = "characters" | "mixed_scripts" | "too_short" | "too_long" | "not_allowed" | "unchanged";
+
+/**
+ * `GET /api/username/preview`: what a save of `name` would give. `base` is the stored form of the
+ * base name, `username` the exact username a save would give (`Max` or `Max#3`), and `tagged` says
+ * the base is taken, so the player would take a tag.
+ */
+export type UsernamePreview =
+  | { ok: true; base: string; username: string; tagged: boolean }
+  | { ok: false; reason: UsernameRefusal; message: string }
+  | { ok: false; reason: "cooldown"; message: string; nextChangeAt: number };
+
+export function previewUsername(token: string, name: string, signal?: AbortSignal): Promise<UsernamePreview> {
+  return apiRequest<UsernamePreview>(`/api/username/preview?name=${encodeURIComponent(name)}`, { token, signal });
+}
+
+/**
+ * `PUT /api/username` with a preview's `username`, exactly. Refusals: 400 `bad_request` whose
+ * `details` is the refusing preview, and 409 `conflict` whose `details` is a fresh preview when the
+ * outcome changed since the player looked (the base was taken meanwhile, the cooldown runs, or the
+ * name is already theirs). `usernamePreviewOf` reads either.
+ */
+export async function saveUsername(token: string, username: string): Promise<OwnUsername> {
+  return (await apiRequest<{ username: OwnUsername }>("/api/username", { method: "PUT", token, body: { username } }))
+    .username;
+}
+
+/** `POST /api/username/skip`: answers the prompt after activation, keeping the default name. */
+export async function skipUsernamePrompt(token: string): Promise<OwnUsername> {
+  return (await apiRequest<{ username: OwnUsername }>("/api/username/skip", { method: "POST", token, body: {} }))
+    .username;
+}
+
+/** The preview a username refusal carries in its `details`, or null for any other error. */
+export function usernamePreviewOf(error: unknown): UsernamePreview | null {
+  if (!(error instanceof ApiRequestError)) return null;
+  const details = error.details;
+  if (typeof details !== "object" || details === null) return null;
+  const { ok } = details as { ok?: unknown };
+  if (ok === true) {
+    const { base, username, tagged } = details as { base?: unknown; username?: unknown; tagged?: unknown };
+    return typeof base === "string" && typeof username === "string" && typeof tagged === "boolean"
+      ? (details as UsernamePreview)
+      : null;
+  }
+  if (ok !== false) return null;
+  const { reason, message } = details as { reason?: unknown; message?: unknown };
+  if (typeof reason !== "string" || typeof message !== "string") return null;
+  if (reason === "cooldown" && typeof (details as { nextChangeAt?: unknown }).nextChangeAt !== "number") return null;
+  return details as UsernamePreview;
 }
 
 /**
@@ -645,10 +719,14 @@ export type PeakBadge =
   | { seasonId: string; tier: "jlorious"; position: number }
   | { seasonId: string; tier: GrapeTier; division: number };
 
-/** `GET /api/ranked`: the caller's own season, tag, rank, streak, record and badges. */
+/**
+ * `GET /api/ranked`: the caller's own season, username, rank, streak, record and badges. The
+ * profile id is for keys and requests; a player is only ever shown by `username` (R1436).
+ */
 export type OwnRankResponse = {
   season: string;
-  tag: string;
+  profileId: string;
+  username: string;
   rank: VisibleRank;
   streak: number;
   record: { games: number; wins: number; losses: number; draws: number };
@@ -662,8 +740,12 @@ export function getOwnRank(token: string): Promise<OwnRankResponse> {
 /** `GET /api/leaderboard` (R608, R612): Jlorious #1–#100, then every other tier, then the Raisins. */
 export type LeaderboardResponse = {
   season: string;
-  jlorious: { position: number; tag: string; you: boolean }[];
-  tiers: { tier: GrapeTier; count: number; players: { tag: string; division: number; pips: number; you: boolean }[] }[];
+  jlorious: { position: number; profileId: string; username: string; you: boolean }[];
+  tiers: {
+    tier: GrapeTier;
+    count: number;
+    players: { profileId: string; username: string; division: number; pips: number; you: boolean }[];
+  }[];
   raisins: number;
   you: VisibleRank;
 };
@@ -675,7 +757,7 @@ export function getLeaderboard(token: string): Promise<LeaderboardResponse> {
 /** `GET /api/matches/:id/ranks`: both seats' ranks for the match screen (R604, R612). */
 export type MatchRanksResponse = {
   ranked: boolean;
-  seats: Record<"p1" | "p2", { tag: string; rank: VisibleRank; you: boolean }>;
+  seats: Record<"p1" | "p2", { profileId: string; username: string; rank: VisibleRank; you: boolean }>;
 };
 
 export function getMatchRanks(token: string, matchId: string): Promise<MatchRanksResponse> {
@@ -856,8 +938,9 @@ export function putPlayerStats(
 }
 
 export type PublicPlayerSummary = {
+  /** For keys only: a player is shown by `username`, never by anything made from this (R1436). */
   profileId: string;
-  displayName: string | null;
+  username: string;
   games: number;
   wins: number;
   losses: number;
@@ -878,6 +961,7 @@ export type PublicPlayersResponse = {
   limit: number;
 };
 
+/** `GET /api/stats/players`. `search` matches usernames, folded and compared by the server, not here. */
 export function getPublicPlayers(options: { search?: string; page?: number; signal?: AbortSignal } = {}): Promise<PublicPlayersResponse> {
   const params = new URLSearchParams();
   if (options.search) params.set("search", options.search);

@@ -1,0 +1,34 @@
+# R1433: words refused only as a whole token of a username. The name is split on underscores,
+# on every change between a letter and a digit, and where a lowercase letter is followed by an
+# uppercase one (camelCase); each token is then NFKC case-folded and stripped of combining marks
+# before it is compared. So `BigAss` and `my_ass` are refused while `Cassandra`, `Assassin` and
+# `Scunthorpe` pass. Words that rarely occur inside innocent words go in blocklist_anywhere.txt.
+#
+# One lowercase word per line, as it reads after that folding. Blank lines and lines starting
+# with `#` are skipped. English to start: another language's words may be added below, folded
+# the same way. A refusal never echoes the word that matched.
+ass
+arse
+cunt
+cum
+tit
+tits
+dick
+cock
+piss
+twat
+fag
+slut
+wank
+pussy
+penis
+porn
+rape
+retard
+spic
+chink
+kike
+coon
+clit
+tranny
+nazi

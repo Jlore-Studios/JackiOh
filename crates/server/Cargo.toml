@@ -44,6 +44,12 @@ tracing-subscriber = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 clap = { workspace = true }
+# The username checks (`src/username/`, SPEC §9.4, R1432–R1434).
+caseless = { workspace = true }
+unicode-normalization = { workspace = true }
+unicode-properties = { workspace = true }
+unicode-script = { workspace = true }
+unicode-segmentation = { workspace = true }
 
 [dev-dependencies]
 jackioh-engine = { workspace = true, features = ["testkit"] }

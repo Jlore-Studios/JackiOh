@@ -1,0 +1,13 @@
+/* A username wherever it is shown (auth/Username.tsx, R1436): one line, never wider than sixteen
+   wide (CJK) characters and a tag, and cut with an ellipsis past that, the full name on its title.
+   The font stacks it inherits (fonts.css) end in the system's own faces, so a script the web fonts
+   leave out still draws. */
+
+.username {
+  display: inline-block;
+  max-width: 19em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}

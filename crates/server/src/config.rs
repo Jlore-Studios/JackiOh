@@ -340,8 +340,29 @@ pub const RANK_CONVERGENCE_GAP_PIPS: i32 = 3;
 pub const RANK_CONVERGENCE_PIPS: i32 = 1;
 /// R608: Jlorious is the top this-many Mythic Grape players by hidden rating.
 pub const JLORIOUS_SIZE: usize = 100;
-/// R612: characters in a player's public tag, from the invite-code alphabet (30 bits).
-pub const PLAYER_TAG_LENGTH: usize = 6;
+
+// ---------------------------------------------------------------------------------------------
+// Usernames (SPEC §9.4, R1432–R1435). The checks are `src/username/`.
+// ---------------------------------------------------------------------------------------------
+
+/// R1432: the fewest user-perceived characters (extended grapheme clusters) a base name may have.
+/// Two, so that two-character Chinese, Japanese and Korean names fit. The `#n` tag never counts.
+pub const USERNAME_MIN_LENGTH: usize = 2;
+/// R1432: the most user-perceived characters a base name may have.
+pub const USERNAME_MAX_LENGTH: usize = 16;
+/// R1432: the most combining marks in a row after a letter, enough for the scripts that write
+/// vowels and tones as marks (Devanagari, Thai) and too few for stacked "Zalgo" text.
+pub const USERNAME_MAX_MARKS: usize = 3;
+/// R1432: raw input longer than this many characters is refused as too long without being
+/// normalised, so a huge query string costs nothing to refuse. Far above any name
+/// `USERNAME_MAX_LENGTH` allows, even one whose every character carries its marks.
+pub const USERNAME_INPUT_MAX_CHARS: usize = 64;
+/// R1435: how long after a change of username the next one is allowed (24 hours).
+pub const USERNAME_CHANGE_COOLDOWN_SECONDS: i64 = 86_400;
+/// R1435: how long the client waits after the last keystroke before it asks for a preview.
+pub const USERNAME_PREVIEW_DEBOUNCE_MS: i64 = 400;
+/// R1434: the base name of every new account's default, `Player#n`, always tagged.
+pub const USERNAME_DEFAULT_BASE: &str = "Player";
 
 // ---------------------------------------------------------------------------------------------
 // Seasons (SPEC §9.12, R609). The reset is `src/ranked/season.rs`.
@@ -594,3 +615,5 @@ pub const MULLIGAN_CLOCK_MS: i64 = MULLIGAN_CLOCK_SECONDS * 1000;
 pub const DISCONNECT_GRACE_MS: i64 = DISCONNECT_GRACE_SECONDS * 1000;
 /// R79: `MATCH_CEILING_MINUTES` in milliseconds.
 pub const MATCH_CEILING_MS: i64 = MATCH_CEILING_MINUTES * 60 * 1000;
+/// R1435: `USERNAME_CHANGE_COOLDOWN_SECONDS` in milliseconds.
+pub const USERNAME_CHANGE_COOLDOWN_MS: i64 = USERNAME_CHANGE_COOLDOWN_SECONDS * 1000;

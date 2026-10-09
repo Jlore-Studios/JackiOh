@@ -1,11 +1,12 @@
 # `jackioh-server`
 
-The authority for everything that is not presentation: identity and the invite gate, the collection
-ledger, saved decks and trios, an active account's tutorial progress (R320) and settings (R633), each
-profile's last board (R417), matchmaking in three modes, the Conquest series, the ranked ladder, and
-the match itself: one actor per match holding the `GameState` in memory, one WebSocket per player,
-`reduce` on every action and `view_for` pushed to each player after every change (spec §9.1–§9.5,
-§10.8). Every match that ends leaves a game record for the card statistics (§9.11, R376–R378).
+The authority for everything that is not presentation: identity, usernames (R1432–R1436) and the
+invite gate, the collection ledger, saved decks and trios, an active account's tutorial progress
+(R320) and settings (R633), each profile's last board (R417), matchmaking in three modes, the
+Conquest series, the ranked ladder, and the match itself: one actor per match holding the
+`GameState` in memory, one WebSocket per player, `reduce` on every action and `view_for` pushed to
+each player after every change (spec §9.1–§9.5, §10.8). Every match that ends leaves a game record
+for the card statistics (§9.11, R376–R378).
 
 The client sends intent and renders `view_for`; it never enforces a rule and never sees hidden
 information (CLAUDE.md rule 7). Deployment, the schema, RLS and the env contract are in
@@ -30,6 +31,7 @@ server verifies (JWKS, or the HS256 fallback). It never brokers a password outsi
 | Wire | `actor/protocol.rs`, `actor/contracts.rs` | every WebSocket frame |
 | Persistence | `db/store.rs` (`Db`, `Tx`), `db/pg.rs`, `db/fake.rs`, `db/migrate.rs` | one method per store operation, over Postgres or the in-memory fake |
 | Ranked | `ranked/*.rs` | Glicko-2, the ladder and seasons, pure |
+| Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Config | `env.rs`, `config.rs` | every environment variable and every server number |
 
 There are no traits: `Db`, `Tx` and `Auth` are enums with one variant per implementation (`Pg` and
@@ -115,8 +117,11 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | Method | Path | Auth | What |
 | --- | --- | --- | --- |
 | `POST` | `/api/auth/signin` | none | E2E mode only: a fixture account's session |
-| `GET` | `/api/auth/me` | user | profile status, whether a code is still needed, the current match and series |
+| `GET` | `/api/auth/me` | user | profile status, whether a code is still needed, the current match and series, and the caller's `username: { name, nextChangeAt, promptOwed }` (R1435) |
 | `GET` | `/api/profile` | active | the account screen: who the caller is and their record |
+| `GET` | `/api/username/preview?name=…` | active | the exact username a save would give, tag included, or why it is refused (R1432–R1435) |
+| `PUT` | `/api/username` | active | save the previewed username; 409 with a fresh preview when the outcome changed (R1434, R1435) |
+| `POST` | `/api/username/skip` | active | answer the username prompt by keeping `Player#n` (R1435) |
 | `DELETE` | `/api/account` | user | delete the caller's account and every row only it owns; 409 in a live match or series |
 | `GET` | `/api/catalog` | none | `{ version, defs }`, the bytes the client ships (R163); `x-deployed-commit` |
 | `POST` | `/api/codes/redeem` | user | §9.4's six-step redemption |
@@ -129,11 +134,11 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET` | `/api/queue/population` | user | open tickets, in total and per mode |
 | `POST` | `/api/rooms`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264) |
 | `GET`, `POST` | `/api/series/:id`, `/pick`, `/forfeit` | active | a Conquest series as its player may see it, a sealed pick, a forfeit (R330–R336) |
-| `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks (R604, R612) |
+| `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks, each with its `profileId` and `username` (R604, R612, R1436) |
 | `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672) |
-| `GET` | `/api/ranked`, `/api/leaderboard` | active | the caller's season and rank; the ladder (R608, R612) |
+| `GET` | `/api/ranked`, `/api/leaderboard` | active | the caller's season and rank; the ladder; every player shown with their `profileId` and `username` (R608, R612, R1436) |
 | `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged |
-| `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics (R654) |
+| `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436) |
 | `GET`, `PUT` | `/api/stats/player` | active | the caller's own tracked statistics and privacy setting (R654) |
 
 Deck and trio codes are the client's business; their format versions (`DECK_CODE_VERSION`,

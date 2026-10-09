@@ -131,6 +131,17 @@ export function codeFieldSegmentTestid(index: number): string {
   return `code-field-segment-${String(index)}`;
 }
 
+/** The username field (account screen and prompt) and the prompt after activation (R1435). */
+export const usernameTestid = {
+  input: "username-field-input",
+  preview: "username-field-preview",
+  save: "username-field-save",
+  error: "username-field-error",
+  prompt: "username-prompt",
+  promptSkip: "username-prompt-skip",
+  promptError: "username-prompt-error",
+} as const;
+
 export const shellTestid = {
   loading: "gate-loading",
   error: "gate-error",
