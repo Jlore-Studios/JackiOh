@@ -5778,13 +5778,13 @@
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-09T18:00:00Z",
-          "utilization": 0.9
+          "resets_at": "2026-10-09T23:30:00Z",
+          "utilization": 0.77
         },
-        "observed_at": "2026-10-09T13:48:00Z",
+        "observed_at": "2026-10-09T20:41:43Z",
         "seven_day": {
           "resets_at": "2026-10-10T05:00:00Z",
-          "utilization": 0.89
+          "utilization": 0.99
         },
         "status": "allowed_warning"
       }
