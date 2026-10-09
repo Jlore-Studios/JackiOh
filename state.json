@@ -6192,16 +6192,19 @@
         {
           "at": "2026-10-09T09:35:44Z",
           "minutes": 24.8
+        },
+        {
+          "at": "2026-10-09T09:36:57Z",
+          "minutes": 30.5
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-09T14:00:00Z",
-          "utilization": 1.01
+          "utilization": 0.99
         },
-        "observed_at": "2026-10-09T09:35:44Z",
-        "rejected_resets_at": "2026-10-09T14:00:00Z",
-        "status": "rejected"
+        "observed_at": "2026-10-09T09:36:57Z",
+        "status": "allowed_warning"
       }
     },
     "devin": {
