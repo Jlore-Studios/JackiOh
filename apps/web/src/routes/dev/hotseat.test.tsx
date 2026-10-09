@@ -18,7 +18,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
-import type { Action, CardDef, CardDefs, PlayerId, PlayerView } from "@jackioh/shared";
+import type { Action, CardDef, CardDefs, EmoteId, PlayerId, PlayerView } from "@jackioh/shared";
+
+import { DEFAULT_EMOTE_HAND } from "../../emotes/hand.ts";
 
 import { testid } from "../../game/contract.ts";
 import { setEnginePort } from "../../game/engine.ts";
@@ -457,6 +459,48 @@ describe("the seat", () => {
 /* ------------------------------------------------------------------------------------------- *
  * window.__jackioh — what all twelve specs reach through
  * ------------------------------------------------------------------------------------------- */
+
+/* ------------------------------------------------------------------------------------------- *
+ * R1341: the emote hands the seed deals
+ * ------------------------------------------------------------------------------------------- */
+
+describe("R1341 the hotseat's emote hands", () => {
+  /** The menu items your portrait's picker offers, by emote id. */
+  function offered(): (string | undefined)[] {
+    fireEvent.click(screen.getByTestId("hero-you"));
+    const menu = screen.getByTestId("emote-menu");
+    return Array.from(menu.querySelectorAll<HTMLElement>("[role=menuitem]")).map((item) => item.dataset.testid);
+  }
+
+  it("R1341 each seat's menu holds the hand the port deals it from the URL's seed", async () => {
+    const fake = makeEngine();
+    const asked: [string, PlayerId][] = [];
+    const hands: Record<PlayerId, EmoteId[]> = {
+      p1: ["greetings", "thanks", "threaten", "laugh", "wahWah", "wave", "thumbsUp", "party"],
+      p2: ["wellPlayed", "oops", "thanks", "sob", "clap", "skull", "cool", "gasp"],
+    };
+    setEnginePort({
+      ...fake.port,
+      dealEmoteHand: (seed, seat) => {
+        asked.push([seed, seat]);
+        return hands[seat];
+      },
+    });
+    await mount("?seed=777&a=first20&b=cheap20");
+
+    expect(asked).toEqual([
+      ["777", "p1"],
+      ["777", "p2"],
+    ]);
+    expect(offered()).toEqual(hands.p1.map((emote) => `emote-${emote}`));
+  });
+
+  it("R1343 a port that deals no hand leaves both seats on the default hand", async () => {
+    setEnginePort(makeEngine().port);
+    await mount();
+    expect(offered()).toEqual(DEFAULT_EMOTE_HAND.map((emote) => `emote-${emote}`));
+  });
+});
 
 describe("window.__jackioh outside a production build", () => {
   it("publishes { state, dispatch, seed } plus what Cypress drives two seats with", async () => {

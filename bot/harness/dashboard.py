@@ -202,17 +202,21 @@ BOX_STYLES = (
     "    classDef off fill:#f6f8fa,stroke:#d0d7de,color:#6e7781,stroke-dasharray:4 3",
     "    classDef free fill:#ffffff,stroke:#d0d7de,color:#6e7781,stroke-dasharray:4 3",
 )
-LEGEND = ("🟢 working · ⚪ open, waiting for work · ⏸️ at a usage cap · 🌙 outside its hours · "
+LEGEND = ("🟢 working · ⚪ open, waiting for work · ⏸️ at a usage cap, or too close to one to start "
+          "a build or a plan · 🌙 outside its hours · "
           "⛔ its last run could not work (a login or the CLI) · ⚫ off or suspended · "
           "▫️ free slot")
 
 
 def _account(ctx: Context, state: dict[str, Any], provider: Any) -> tuple[str, str]:
     """A subscription with no run going: its box's style and why, in a line or two. The checks go
-    in the order `providers.availability` makes them."""
+    in the order `providers.availability` makes them. Open means it can start a build, a
+    revision or a plan, which the planner starts only `start_headroom` under each cap
+    (`plan._usable`, `plan.lane_planners`): one under a cap but too close to it is paused."""
     cfg = ctx.cfg
     now = ctx.now()
-    if providers_mod.availability(provider, state, now, cfg.timezone, cfg.secrets) is None:
+    if providers_mod.availability(provider, state, now, cfg.timezone, cfg.secrets,
+                                  starting=True) is None:
         return "open", "⚪ open"
     if not provider.enabled or providers_mod.switched_off_by_date(provider, now, cfg.timezone):
         return "off", "⚫ switched off"
@@ -233,22 +237,23 @@ def _account(ctx: Context, state: dict[str, Any], provider: Any) -> tuple[str, s
 
 
 def _cap_reached(ctx: Context, provider: Any, entry: dict[str, Any]) -> str:
-    """Which limit holds a paused subscription, and until when."""
+    """Which limit holds a paused subscription, and when it can start a build or a plan again."""
     now = ctx.now()
     until = parse_iso(entry.get("refused_until"))
     if until is not None and until > now:
         return f"refused a call<br/>until {_clock(ctx, until)}"
-    usage = entry.get("usage") if isinstance(entry.get("usage"), dict) else {}
-    observed = parse_iso(usage.get("observed_at"))
+    frees = providers_mod.frees_at(provider, entry, now, ctx.cfg.timezone)
+    free_text = f"<br/>free {_clock(ctx, frees)}" if frees else ""
     for window, cap in provider.caps_at(now, ctx.cfg.timezone).items():
         used = _reading(ctx, entry, window)
-        if used is None or used < cap:
+        start = providers_mod.start_under(provider, window, cap)
+        if used is None or used < start:
             continue
-        reading = usage.get(window) if isinstance(usage.get(window), dict) else {}
-        resets = parse_iso(reading.get("resets_at")) or (
-            observed + providers_mod.WINDOWS[window] if observed else None)
-        until_text = f"<br/>resets {_clock(ctx, resets)}" if resets else ""
-        return f"{providers_mod.WINDOW_NAMES[window]} {used:.0%}, cap {cap:.0%}{until_text}"
+        held = f"{providers_mod.WINDOW_NAMES[window]} {used:.0%}, cap {cap:.0%}"
+        if used < cap:  # under its cap, but too close to it to start a long run
+            reviews = "; reviews only" if "review" in provider.roles else ""
+            held += f"<br/>starts under {start:.0%}{reviews}"
+        return held + free_text
     return "at its limit"
 
 
@@ -323,21 +328,39 @@ def subscription_table(ctx: Context, state: dict[str, Any], live: dict[int, str]
     busy: dict[str, list[int]] = {}
     for number, provider_id in live.items():
         busy.setdefault(provider_id, []).append(number)
-    lines = ["| Subscription | Models (tier) | Hours | Now | 5-hour | 7-day |",
-             "|---|---|---|---|---|---|"]
+    lines = ["| Subscription | Models (tier) | Hours | Now | 5-hour session | 7-day week | Read |",
+             "|---|---|---|---|---|---|---|"]
     for provider in cfg.pool.ordered():
         entry = providers_mod.peek_record(state, provider.id)
         if provider.id in busy:
             now = "🟢 " + ", ".join(f"#{n}" if n else "survey" for n in sorted(busy[provider.id]))
         else:
-            reason = providers_mod.availability(provider, state, ctx.now(), cfg.timezone,
-                                                cfg.secrets)
-            now = "⚪ free" if reason is None else "⏸️ " + _cell(reason, 60)
+            style, now = _account(ctx, state, provider)  # what its box says
+            now = "⚪ free" if style == "open" else now
         seats = ", ".join(f"`{seat.model}` {seat.tier}" for seat in cfg.pool.seats(provider))
         lines.append(f"| `{provider.id}` | {seats} | {_cell(provider.hours(cfg.timezone))} "
-                     f"| {now} | {bar(_reading(ctx, entry, 'five_hour'))} "
-                     f"| {bar(_reading(ctx, entry, 'seven_day'))} |")
+                     f"| {now} | {_usage_cell(ctx, provider, entry, 'five_hour')} "
+                     f"| {_usage_cell(ctx, provider, entry, 'seven_day')} "
+                     f"| {_read_ago(ctx, entry)} |")
     return lines
+
+
+def _usage_cell(ctx: Context, provider: Any, entry: dict[str, Any], window: str) -> str:
+    """A usage window's bar, and under it its cap now (and in or outside its hours), the line a
+    build or a plan must start under, and when it resets (`status.window_notes`)."""
+    notes = status_mod.window_notes(ctx, provider, entry, window, lambda at: _clock(ctx, at))
+    cell = bar(_reading(ctx, entry, window))
+    return cell + (f"<br/><sub>{' · '.join(notes)}</sub>" if notes else "")
+
+
+def _read_ago(ctx: Context, entry: dict[str, Any]) -> str:
+    """How old a subscription's usage reading is: the bars are only as fresh as that."""
+    usage = entry.get("usage") if isinstance(entry.get("usage"), dict) else {}
+    observed = parse_iso(usage.get("observed_at"))
+    if observed is None:
+        return "—"
+    age = human_delta(ctx.now() - observed)
+    return _hover("just now" if age == "now" else f"{age} ago", f"read at {_clock(ctx, observed)}")
 
 
 def queue_table(issues: list[dict[str, Any]]) -> list[str]:

@@ -1,5 +1,5 @@
 // Patch v0.2.0's per-card states, drawn wherever the view lets the viewer read the card (SPEC §10.8):
-// a Brittle count (R385), what Degrade and Upgrade changed (R386, R513), the enchantments riding a
+// a Brittle count (R385), what a Nerf and a Buff changed (R386, R513, R1320), the enchantments riding a
 // card (B5 E39), a backrow pile's depth (E21), an Animated card's stats and its standing as a Unit
 // (R383), a face's own type (B2.7) and a card's lines of code (E36), which a match hides (R693).
 //
@@ -187,12 +187,12 @@ describe("R385 Brittle: a cracked-glass badge with the count, on every face that
   });
 });
 
-/* -------------------------------------------------------------------- R386 Degrade / Upgrade */
+/* ------------------------------------------------------------------------ R386 Nerf / Buff */
 
-describe("R386 R513 Degrade and Upgrade: what changed, marked better or worse", () => {
+describe("R386 R513 a Nerf and a Buff: what changed, marked better or worse", () => {
   const BOOK = "classic-012"; // Book of Blood: "Deal {damage} damage to a Unit.", damage 5, better up.
 
-  it("R513 each change is better or worse for the card's controller, and the card as a whole Upgraded, Degraded or Tuned", () => {
+  it("R513 R1320 each change is better or worse for the card's controller, and the card as a whole Buffed, Nerfed or Tuned", () => {
     const book = def(BOOK);
     expect(faceTuning(book, false, undefined, undefined)).toBeNull();
     expect(faceTuning(book, false, undefined, { damage: 5 })).toBeNull();
@@ -244,9 +244,9 @@ describe("R386 R513 Degrade and Upgrade: what changed, marked better or worse", 
     const set = must(faceTuning(def("core-004"), false, { set: { Armor: 3 } }, undefined), "a set");
     expect(set.verdict).toBe("tuned");
     expect(set.changes.map(changeWords)).toEqual(["Armor set to 3"]);
-    expect(tuningSummary(up)).toBe("Upgraded: Damage 5 → 6");
+    expect(tuningSummary(up)).toBe("Buffed: Damage 5 → 6");
     expect(keyWords("drawLimit")).toBe("Draw limit");
-    expect(VERDICT_WORD).toEqual({ upgraded: "Upgraded", degraded: "Degraded", tuned: "Tuned" });
+    expect(VERDICT_WORD).toEqual({ upgraded: "Buffed", degraded: "Nerfed", tuned: "Tuned" });
   });
 
   it("R386 filledText fills every catalog face exactly as fillParams does, and boxes only the numbers that moved", () => {
@@ -280,10 +280,10 @@ describe("R386 R513 Degrade and Upgrade: what changed, marked better or worse", 
     const mark = must(face.querySelector('.cf-state[data-state="tuned"]'), "the tuned mark");
     expect(mark.getAttribute("data-tuned")).toBe("upgraded");
     expect(mark.textContent).toBe("▲");
-    expect(mark.getAttribute("title")).toBe("Upgraded: Damage 5 → 6");
+    expect(mark.getAttribute("title")).toBe("Buffed: Damage 5 → 6");
   });
 
-  it("R386 a number moved the worse way is marked ▼ and the card Degraded", () => {
+  it("R386 a number moved the worse way is marked ▼ and the card Nerfed", () => {
     renderBoard(handView({ defId: BOOK, cost: 1, params: { damage: 4 }, tuning: { numbers: { damage: -1 } } }));
     const face = faceOf(handRoot());
     expect(face.getAttribute("data-tuned")).toBe("degraded");
@@ -314,7 +314,7 @@ describe("R386 R513 Degrade and Upgrade: what changed, marked better or worse", 
     expect(minion.querySelector('.cf-state[data-state="tuned"]')?.getAttribute("data-tuned")).toBe("tuned");
   });
 
-  it("R386 keywords Upgrade added are \"+\" chips and keywords Degrade removed are struck \"−\" chips, and an added one is not also listed as gained", () => {
+  it("R386 keywords a Buff added are \"+\" chips and keywords a Nerf removed are struck \"−\" chips, and an added one is not also listed as gained", () => {
     const tuning: Tuning = { addKeywords: [{ kind: "Rush" }], removeKeywords: ["Taunt"] };
     renderBoard(
       baseView({
@@ -340,12 +340,12 @@ describe("R386 R513 Degrade and Upgrade: what changed, marked better or worse", 
     const preview = hover(handRoot());
     const ribbon = within(preview).getByTestId(INSPECT_TUNED);
     expect(ribbon.getAttribute("data-tuned")).toBe("upgraded");
-    expect(ribbon.querySelector(".inspect-tuned-ribbon")?.textContent).toBe("▲Upgraded");
+    expect(ribbon.querySelector(".inspect-tuned-ribbon")?.textContent).toBe("▲Buffed");
     const lines = Array.from(ribbon.querySelectorAll<HTMLElement>(".inspect-tuned-change"));
     expect(lines.map((line) => line.getAttribute("data-way"))).toEqual(["better"]);
     expect(lines[0]?.textContent).toBe("▲Damage 5 → 6 (better)");
     expect(within(preview).getByTestId(INSPECT_PRINTED).textContent).toContain("Deal 5 damage to a Unit.");
-    expect(preview.querySelector('[data-glossary-term="Upgrade"]')).not.toBeNull();
+    expect(preview.querySelector('[data-glossary-term="Buff"]')).not.toBeNull();
     fireEvent.pointerLeave(handRoot(), { pointerType: "mouse" });
 
     const sheet = longPress(handRoot());
@@ -362,7 +362,7 @@ describe("R386 R513 Degrade and Upgrade: what changed, marked better or worse", 
     const preview = hover(handRoot());
     expect(within(preview).queryByTestId(INSPECT_TUNED)).toBeNull();
     expect(within(preview).queryByTestId(INSPECT_PRINTED)).toBeNull();
-    expect(preview.querySelector('[data-glossary-term="Upgrade"], [data-glossary-term="Degrade"]')).toBeNull();
+    expect(preview.querySelector('[data-glossary-term="Buff"], [data-glossary-term="Nerf"]')).toBeNull();
   });
 
   it("R386 a fused card's text is filled from the view's numbers, never shows a brace, and marks nothing as moved", () => {
@@ -655,7 +655,7 @@ describe("E36 a card's lines of code in the inspect overlays", () => {
 /* --------------------------------------------------------------------- the glossary of states */
 
 describe("R512 the glossary beside a face explains the states it wears", () => {
-  it("R512 Brittle, Upgrade, Degrade, an added keyword, Cast on draw and Animated join the terms its text names", () => {
+  it("R512 Brittle, Buff, Nerf, an added keyword, Cast on draw and Animated join the terms its text names", () => {
     const face = inPlay("core-004", {
       brittle: 1,
       tuning: { attack: 1, health: -1, addKeywords: [{ kind: "Lifesteal" }] },
@@ -663,7 +663,7 @@ describe("R512 the glossary beside a face explains the states it wears", () => {
       animated: {},
     });
     const ids = glossaryFor(face).map((entry) => entry.id);
-    expect(ids).toEqual(expect.arrayContaining(["Cry", "Divine Shield", "Rush", "Brittle", "Upgrade", "Degrade", "Lifesteal", "Cast on draw", "Animated"]));
+    expect(ids).toEqual(expect.arrayContaining(["Cry", "Divine Shield", "Rush", "Brittle", "Buff", "Nerf", "Lifesteal", "Cast on draw", "Animated"]));
     expect(glossaryFor(inPlay("core-004")).map((entry) => entry.id)).toEqual(["Cry", "Divine Shield", "Rush"]);
   });
 });

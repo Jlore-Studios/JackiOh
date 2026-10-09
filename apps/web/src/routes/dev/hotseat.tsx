@@ -18,6 +18,7 @@ import type { Handicap } from "@jackioh/engine/config";
 
 import Game from "../../game/Game.tsx";
 import { getAudioEngine } from "../../audio/index.ts";
+import type { EmoteHands } from "../../emotes/hand.ts";
 import { useEmotes } from "../../emotes/useEmotes.ts";
 import { useSetting } from "../../settings/index.ts";
 import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
@@ -217,6 +218,8 @@ type Status =
       defs: CardDefs | null;
       decks: [string[], string[]];
       handicaps: SeatHandicaps;
+      /** R1341: both seats' emote hands, dealt from the seed by the port; null from a port that deals none. */
+      hands: EmoteHands | null;
     };
 
 function catalogOf(port: EnginePort): CardDefs | null {
@@ -245,7 +248,10 @@ function startSession(port: EnginePort, params: HotseatParams): Status {
       ...(defs === null ? {} : { catalog: defs }),
       ...(handicaps === undefined ? {} : { handicaps }),
     });
-    return { kind: "ready", session, defs, decks: resolved.decks, handicaps: handicaps ?? {} };
+    // R1341: each seat holds the hand the game's seed deals it, as a match on that seed would.
+    const deal = port.dealEmoteHand;
+    const hands = deal === undefined ? null : { p1: deal(params.seed, "p1"), p2: deal(params.seed, "p2") };
+    return { kind: "ready", session, defs, decks: resolved.decks, handicaps: handicaps ?? {}, hands };
   } catch (cause) {
     // `createGame` throws on an illegal deck (§2.6) or handicap (R184) — the engine's ruling,
     // printed as given.
@@ -320,11 +326,13 @@ function Hotseat({
   defs,
   decks,
   handicaps,
+  hands,
 }: {
   session: HotseatSession;
   defs: CardDefs | null;
   decks: [string[], string[]];
   handicaps: SeatHandicaps;
+  hands: EmoteHands | null;
 }) {
   useSessionVersion(session);
   const [error, setError] = useState<string | null>(null);
@@ -395,9 +403,11 @@ function Hotseat({
 
   // R642–R644: hotseat emotes run locally with the same shared gate — no wire, so `send` only
   // shows and plays. The dev decks carry no portrait (they are not saved decks), so both seats
-  // read `vanilla`; the device mute applies to whichever seat isn't holding the device.
+  // read `vanilla`; the device mute applies to whichever seat isn't holding the device. R1341:
+  // each seat holds the hand the game's seed deals it (`startSession`), as a match would.
   const globalMuteEmotes = useSetting("muteOpponentEmotes");
   const emotes = useEmotes({
+    hands,
     engine: getAudioEngine(),
     globalMute: globalMuteEmotes,
     you: view.viewer,
@@ -475,7 +485,15 @@ export function HotseatRoute() {
     return <GamePanel message={status.message} params={params} />;
   }
 
-  return <Hotseat session={status.session} defs={status.defs} decks={status.decks} handicaps={status.handicaps} />;
+  return (
+    <Hotseat
+      session={status.session}
+      defs={status.defs}
+      decks={status.decks}
+      handicaps={status.handicaps}
+      hands={status.hands}
+    />
+  );
 }
 
 export default HotseatRoute;

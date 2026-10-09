@@ -3,7 +3,7 @@
 // preview takes no pointer events, so their tooltips cannot be read there, and a touch sheet has no
 // hover at all: this spells each one out.
 //
-// - The tuned ribbon (R386): "Upgraded", "Degraded" or "Tuned" (every change better, every change
+// - The tuned ribbon (R386, R1320): "Buffed", "Nerfed" or "Tuned" (every change better, every change
 //   worse, or a mix), with its glyph, then each change in words with ▲ (better) or ▼ (worse) and the
 //   word itself for a screen reader: "+2 Attack", "Gained Rush", "Damage 2 → 3", "Tribute −1".
 // - Every other state badge's words: "Brittle 2: crumbles at 0" (R385), "Returns to hand · can't

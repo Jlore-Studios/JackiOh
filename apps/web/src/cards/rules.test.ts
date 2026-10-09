@@ -149,8 +149,8 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Unlock",
   "Flicker",
   "Bounce",
-  "Degrade",
-  "Upgrade",
+  "Nerf",
+  "Buff",
   "Plague Counter",
   "Set health",
   "Redirect",
@@ -493,14 +493,25 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     expect(GLOSSARY["Can't be in Defense Position"].aliases).toEqual([]);
   });
 
-  it("R512 Degrade and Upgrade are two terms with a §6.3 row each, each rule its own word", () => {
-    expect(rowNames("§6.3")).toEqual(expect.arrayContaining(["Degrade", "Upgrade"]));
-    expect(rowOf(GLOSSARY.Degrade)).toBe("Degrade");
-    expect(rowOf(GLOSSARY.Upgrade)).toBe("Upgrade");
-    expect(GLOSSARY.Degrade.rule).toBe("Weaken a card: one change per application");
-    expect(GLOSSARY.Upgrade.rule).toBe("Strengthen a card: one change per application");
-    expect(GLOSSARY.Degrade.section).toBe("§6.3");
-    expect(GLOSSARY.Upgrade.section).toBe("§6.3");
+  it("R512 R1320 Nerf and Buff are two terms with a §6.3 row each, each rule its own word", () => {
+    expect(rowNames("§6.3")).toEqual(expect.arrayContaining(["Nerf", "Buff"]));
+    // R1320: the old names are no row and no term; the engine keeps them as identifiers only.
+    expect(rowNames("§6.3")).not.toContain("Degrade");
+    expect(rowNames("§6.3")).not.toContain("Upgrade");
+    expect(Object.keys(GLOSSARY)).not.toContain("Degrade");
+    expect(Object.keys(GLOSSARY)).not.toContain("Upgrade");
+    expect(rowOf(GLOSSARY.Nerf)).toBe("Nerf");
+    expect(rowOf(GLOSSARY.Buff)).toBe("Buff");
+    expect(GLOSSARY.Nerf.rule).toBe("Weaken a card: one change per application");
+    expect(GLOSSARY.Buff.rule).toBe("Strengthen a card: one change per application");
+    expect(GLOSSARY.Nerf.section).toBe("§6.3");
+    expect(GLOSSARY.Buff.section).toBe("§6.3");
+  });
+
+  it("R1320 a plain stat buff stays plain words: matching is case-sensitive, and a word glued on is no term", () => {
+    expect(termsIn("Give a Unit +2/+2, a plain buff")).toEqual([]);
+    expect(termsIn("Buff it twice. Nerf them")).toEqual(["Buff", "Nerf"]);
+    expect(termsIn("Buffed and Nerfed")).toEqual([]);
   });
 
   it("R512 a ruling's number is no player's word: no rule cites one", () => {
@@ -567,8 +578,8 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
       ["Steal", "classic-032", "base", "Steal"],
       ["Unlock", "classicplus-077", "base", "Unlock"],
       ["Flicker", "classic-014", "radiant", "Flicker"],
-      ["Degrade", "classicplus-008", "base", "Degrade"],
-      ["Upgrade", "classicplus-071", "base", "Upgrade"],
+      ["Nerf", "classicplus-008", "base", "Nerf"],
+      ["Buff", "classicplus-071", "base", "Buff"],
       ["Plague Counter", "classic-039", "base", "Plague Counters"],
       ["Set health", "classic-029", "base", "Set health"],
       ["Redirect", "classic-052", "base", "Redirect"],
@@ -577,7 +588,7 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
       ["Look at a hand", "classic-011", "base", "Look at your opponent's hand"],
     ];
     for (const [term, id, face, spelling] of cases) {
-      // As for any term, a number right after it is taken with it ("Degrade 4 random cards").
+      // As for any term, a number right after it is taken with it ("Nerf 4 random cards").
       const found = termsOf(played(id, face)).filter((entry) => entry.term === term);
       expect(found.length, `${id} ${face}`).toBeGreaterThan(0);
       expect(found.some((entry) => entry.text === spelling || entry.text.startsWith(`${spelling} `)), `${id} ${face}: ${spelling}`).toBe(true);
@@ -619,8 +630,8 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
       "Steal",
       "Unlock",
       "Flicker",
-      "Degrade",
-      "Upgrade",
+      "Nerf",
+      "Buff",
       "Plague Counter",
       "Set health",
       "Redirect",

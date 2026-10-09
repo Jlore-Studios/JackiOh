@@ -35,7 +35,7 @@
       "lanes": 2,
       "schedule": { "mode": "window", "start": "21:00", "end": "07:00" },
       "off_hours": { "five_hour": 0.4 },
-      "limits": { "mode": "caps", "five_hour": 0.98 },
+      "limits": { "mode": "caps", "five_hour": 1.0 },
       "quiet_check": false
     },
     "claude-2": {

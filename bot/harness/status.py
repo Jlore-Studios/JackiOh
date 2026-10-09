@@ -3,7 +3,8 @@ is queued."""
 
 from __future__ import annotations
 
-from typing import Any
+from datetime import datetime
+from typing import Any, Callable
 
 from harness import providers as providers_mod
 from harness import review_rule
@@ -31,9 +32,57 @@ def _numbers(items: list[dict[str, Any]]) -> str:
     return ", ".join(f"#{i['number']}" for i in items)
 
 
+def cap_text(ctx: Context, provider: Provider, window: str) -> str:
+    """The cap on a usage window now: "cap 90%" or "no cap", and for a subscription whose cap
+    changes with its hours (`off_hours`) the other one too: "cap 50% now, 70% in its hours"."""
+    cfg = ctx.cfg
+    now = ctx.now()
+    cap = provider.caps_at(now, cfg.timezone).get(window)
+    text = "no cap" if cap is None else f"cap {cap:.0%}"
+    hours = provider.schedule.window(cfg.timezone)
+    if hours is None or window not in provider.off_hours:
+        return text
+    own = provider.limits.stops.get(window)
+    if hours.is_open(now):
+        outside = min(1.0 if own is None else own, provider.off_hours[window])
+        return f"{text} now, {outside:.0%} outside its hours"
+    return f"{text} now, " + ("none" if own is None else f"{own:.0%}") + " in its hours"
+
+
+def window_notes(ctx: Context, provider: Provider, entry: dict[str, Any], window: str,
+                 when: Callable[[datetime], str] | None = None) -> list[str]:
+    """What a reader needs beside a usage window's reading: its cap now (`cap_text`), the line a
+    build, a revision or a plan must start under (`start_headroom`), the minutes it has spent of
+    a budget, and when the window resets (`when` writes the time: "in 3h 10m" by default)."""
+    now = ctx.now()
+    when = when or (lambda at: f"in {human_delta(at - now)}")
+    cap = provider.caps_at(now, ctx.cfg.timezone).get(window)
+    budget = provider.limits.budgets.get(window)
+    usage = entry.get("usage") if isinstance(entry.get("usage"), dict) else {}
+    reading = usage.get(window)
+    notes = []
+    if cap is not None or (budget is None and isinstance(reading, dict)):
+        notes.append(cap_text(ctx, provider, window))
+    if cap is not None:
+        start = providers_mod.start_under(provider, window, cap)
+        if start < cap:
+            notes.append(f"builds and plans start under {start:.0%}")
+    if budget is not None:
+        since = now - providers_mod.WINDOWS[window]
+        notes.append(f"{providers_mod.minutes_spent(entry, since):.0f} of {budget} min")
+    if isinstance(reading, dict):
+        observed = parse_iso(usage.get("observed_at"))
+        resets = parse_iso(reading.get("resets_at")) or (
+            observed + providers_mod.WINDOWS[window] if observed else None)
+        if resets is not None and resets > now:
+            notes.append(f"resets {when(resets)}")
+    return notes
+
+
 def _usage_text(provider: Provider, entry: dict[str, Any], ctx: Context) -> str:
     usage = entry.get("usage") or {}
     parts = []
+    noted = set()  # the windows whose notes say their minutes
     for window, label in (("five_hour", "5-hour"), ("seven_day", "7-day")):
         reading = usage.get(window) if isinstance(usage, dict) else None
         if not isinstance(reading, dict):
@@ -43,11 +92,14 @@ def _usage_text(provider: Provider, entry: dict[str, Any], ctx: Context) -> str:
             parts.append(f"{label}: reset since the reading")
             continue
         text = f"{label} {float(reading.get('utilization', 0)):.0%}"
-        cap = provider.limits.stops.get(window)
-        if cap is not None:
-            text += f" (cap {cap:.0%})"
+        notes = window_notes(ctx, provider, entry, window)
+        noted.add(window)
+        if notes:
+            text += f" ({'; '.join(notes)})"
         parts.append(text)
     for window, budget in provider.limits.budgets.items():
+        if window in noted:
+            continue
         since = ctx.now() - providers_mod.WINDOWS[window]
         spent = providers_mod.minutes_spent(entry, since)
         parts.append(f"{providers_mod.WINDOW_NAMES[window]} {spent:.0f}/{budget} min")
@@ -138,7 +190,9 @@ def provider_lines(ctx: Context, state: dict[str, Any], held: dict[int, str]) ->
     lines = []
     for provider in cfg.pool.ordered():
         entry = providers_mod.peek_record(state, provider.id)
-        reason = providers_mod.availability(provider, state, ctx.now(), cfg.timezone, cfg.secrets)
+        # An idle subscription waits for a build, a revision or a plan, which start only
+        # `start_headroom` under each cap (`plan._usable`).
+        reason = providers_mod.start_reason(provider, state, ctx.now(), cfg.timezone, cfg.secrets)
         if provider.id in busy:
             number = busy[provider.id]
             now_doing = f"**working on #{number}**" if number else "**running a survey**"

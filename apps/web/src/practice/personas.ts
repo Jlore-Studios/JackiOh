@@ -20,6 +20,8 @@
  *    determinizer's draws, so emotes cannot perturb a seeded game or a search.
  *  - Every number it reads lives in `AI_PERSONAS`/`AI_EMOTE` (below): weights, chances,
  *    pools, caps, thresholds and the 0.8–2.5 s delivery delay.
+ *  - It chooses only within the AI seat's dealt hand (R1344): a row's pool is filtered by the hand
+ *    when it is drawn from, and a row none of whose emotes the hand holds sends nothing.
  *
  * The pure surface is three functions — `pickPersona`, `rollForTrigger`, `rollForReply` — plus
  * `createEmotePersona`, a small state machine the practice page drives: views in, emote intents
@@ -27,7 +29,7 @@
  */
 
 import type { EmoteId, GameEvent, PlayerId, PlayerView, SideView } from "../wire/index.ts";
-import { emoteGate, opponentOf } from "../wire/index.ts";
+import { EMOTE_IDS, emoteGate, handHolds, opponentOf } from "../wire/index.ts";
 
 // ---------------------------------------------------------------------------
 // R645: the AI's emote personas. Every weight, chance, pool, cap, threshold and delay in the
@@ -99,68 +101,73 @@ export type PersonaSpec = {
 };
 
 /**
- * §6, verbatim: Balanced 40 / Polite 25 / BM 20 / Silent 15, and each row of the trigger and reply
- * tables. A dash in the table is an absent key here. Silent holds no rows at all: it sends nothing
- * in any situation, including Greetings and Well Played.
+ * §6: Balanced 40 / Polite 25 / BM 20 / Silent 15, and each row of the trigger and reply tables. A
+ * dash in the table is an absent key here. Silent holds no rows at all: it sends nothing in any
+ * situation, including Greetings and Well Played.
+ *
+ * R1344: each pool is §6's emotes first, verbatim, then MN03's emoji of the same sense — a wave or a
+ * salute where §6 greets, a clap or a thumbs up where it compliments, a skull or a flame where it
+ * gloats — so a persona keeps its manner whichever eight the AI seat was dealt, and draws only from
+ * those the hand holds. Polite's pools still hold no taunt.
  */
 export const AI_PERSONAS: Record<PersonaName, PersonaSpec> = {
   balanced: {
     weight: 0.4,
     caps: { ownTurn: 1, otherTurn: 1, match: 8 },
     triggers: {
-      mulliganEnd: { chance: 1, pool: ["greetings"] },
-      turnStartAhead: { chance: 0.1, pool: ["threaten", "laugh", "yawn"] },
-      dealtBigHit: { chance: 0.35, pool: ["laugh", "threaten", "wahWah"] },
-      killedTopUnit: { chance: 0.2, pool: ["laugh", "wahWah"] },
-      tookBigHit: { chance: 0.25, pool: ["oops", "sob", "angry"] },
-      lostTopUnit: { chance: 0.15, pool: ["sob", "angry", "oops"] },
-      playerTurnLong: { chance: 0.2, pool: ["yawn"] },
-      matchWon: { chance: 0.4, pool: ["wahWah", "laugh", "wellPlayed"] },
-      matchLost: { chance: 1, pool: ["wellPlayed"] },
+      mulliganEnd: { chance: 1, pool: ["greetings", "wave", "salute"] },
+      turnStartAhead: { chance: 0.1, pool: ["threaten", "laugh", "yawn", "cool"] },
+      dealtBigHit: { chance: 0.35, pool: ["laugh", "threaten", "wahWah", "fire"] },
+      killedTopUnit: { chance: 0.2, pool: ["laugh", "wahWah", "skull"] },
+      tookBigHit: { chance: 0.25, pool: ["oops", "sob", "angry", "sweat", "gasp"] },
+      lostTopUnit: { chance: 0.15, pool: ["sob", "angry", "oops", "facepalm", "shrug"] },
+      playerTurnLong: { chance: 0.2, pool: ["yawn", "thinking"] },
+      matchWon: { chance: 0.4, pool: ["wahWah", "laugh", "wellPlayed", "party", "salute"] },
+      matchLost: { chance: 1, pool: ["wellPlayed", "salute", "clap"] },
     },
     replies: {
-      greetings: { chance: 0.7, pool: ["greetings"] },
-      compliment: { chance: 0.3, pool: ["thanks"] },
-      taunt: { chance: 0.25, pool: ["laugh", "wahWah", "yawn", "threaten"] },
+      greetings: { chance: 0.7, pool: ["greetings", "wave"] },
+      compliment: { chance: 0.3, pool: ["thanks", "thumbsUp"] },
+      taunt: { chance: 0.25, pool: ["laugh", "wahWah", "yawn", "threaten", "cool"] },
     },
   },
   polite: {
     weight: 0.25,
     caps: { ownTurn: 1, otherTurn: 1, match: 6 },
     triggers: {
-      mulliganEnd: { chance: 1, pool: ["greetings"] },
-      dealtBigHit: { chance: 0.15, pool: ["oops"] },
-      tookBigHit: { chance: 0.3, pool: ["wellPlayed", "oops"] },
-      lostTopUnit: { chance: 0.2, pool: ["wellPlayed"] },
-      playerBigPlay: { chance: 0.4, pool: ["wellPlayed"] },
-      matchWon: { chance: 1, pool: ["wellPlayed"] },
-      matchLost: { chance: 1, pool: ["wellPlayed"] },
+      mulliganEnd: { chance: 1, pool: ["greetings", "wave", "salute"] },
+      dealtBigHit: { chance: 0.15, pool: ["oops", "sweat"] },
+      tookBigHit: { chance: 0.3, pool: ["wellPlayed", "oops", "clap", "gasp"] },
+      lostTopUnit: { chance: 0.2, pool: ["wellPlayed", "clap"] },
+      playerBigPlay: { chance: 0.4, pool: ["wellPlayed", "clap", "thumbsUp"] },
+      matchWon: { chance: 1, pool: ["wellPlayed", "salute", "heart"] },
+      matchLost: { chance: 1, pool: ["wellPlayed", "clap", "salute"] },
     },
     replies: {
-      greetings: { chance: 1, pool: ["greetings"] },
-      compliment: { chance: 0.8, pool: ["thanks"] },
-      taunt: { chance: 0.3, pool: ["oops", "greetings"] },
-      apology: { chance: 0.5, pool: ["thanks"] },
+      greetings: { chance: 1, pool: ["greetings", "wave"] },
+      compliment: { chance: 0.8, pool: ["thanks", "heart", "thumbsUp"] },
+      taunt: { chance: 0.3, pool: ["oops", "greetings", "shrug"] },
+      apology: { chance: 0.5, pool: ["thanks", "thumbsUp"] },
     },
   },
   bm: {
     weight: 0.2,
     caps: { ownTurn: 2, otherTurn: 2, match: 20 },
     triggers: {
-      mulliganEnd: { chance: 1, pool: ["threaten", "laugh"] },
-      turnStartAhead: { chance: 0.5, pool: ["threaten", "laugh", "yawn", "wahWah"] },
-      dealtBigHit: { chance: 0.8, pool: ["laugh", "wahWah", "threaten"] },
-      killedTopUnit: { chance: 0.6, pool: ["laugh", "wahWah", "yawn"] },
+      mulliganEnd: { chance: 1, pool: ["threaten", "laugh", "cool", "skull"] },
+      turnStartAhead: { chance: 0.5, pool: ["threaten", "laugh", "yawn", "wahWah", "cool"] },
+      dealtBigHit: { chance: 0.8, pool: ["laugh", "wahWah", "threaten", "fire", "skull"] },
+      killedTopUnit: { chance: 0.6, pool: ["laugh", "wahWah", "yawn", "skull"] },
       tookBigHit: { chance: 0.4, pool: ["angry", "threaten"] },
       lostTopUnit: { chance: 0.3, pool: ["angry"] },
       playerTurnLong: { chance: 0.7, pool: ["yawn"] },
-      matchWon: { chance: 1, pool: ["wahWah", "laugh"] },
+      matchWon: { chance: 1, pool: ["wahWah", "laugh", "party", "cool"] },
       matchLost: { chance: 0.5, pool: ["sob", "angry"] },
     },
     replies: {
-      greetings: { chance: 0.6, pool: ["threaten", "laugh"] },
-      compliment: { chance: 0.4, pool: ["yawn"] },
-      taunt: { chance: 0.9, pool: ["laugh", "wahWah", "yawn", "threaten"] },
+      greetings: { chance: 0.6, pool: ["threaten", "laugh", "cool"] },
+      compliment: { chance: 0.4, pool: ["yawn", "cool"] },
+      taunt: { chance: 0.9, pool: ["laugh", "wahWah", "yawn", "threaten", "skull", "fire"] },
       apology: { chance: 0.7, pool: ["laugh", "wahWah"] },
     },
   },
@@ -219,23 +226,35 @@ function rollDelay(rng: () => number): number {
   return AI_EMOTE.delayMinMs + rng() * (AI_EMOTE.delayMaxMs - AI_EMOTE.delayMinMs);
 }
 
+/** R1344: the part of a row's pool the seat's hand holds, in the pool's order. */
+export function poolInHand(pool: readonly EmoteId[], hand: readonly EmoteId[]): EmoteId[] {
+  return pool.filter((emote) => handHolds(hand, emote));
+}
+
 /**
- * One roll of §6's trigger table: `chance` first, then a uniform pick from the row's pool. A row
- * the persona does not have (a dash in the table, or Silent) returns null; so does a missed roll.
- * Caps and the rate limit are NOT here — they are the session's, applied in `admit`.
+ * One roll of §6's trigger table: `chance` first, then a uniform pick from the row's pool as far as
+ * `hand` holds it (R1344; the whole pool by default). A row the persona does not have (a dash in the
+ * table, or Silent) returns null; so does a missed roll, and so does a hit on a row the hand holds
+ * none of. Caps and the rate limit are NOT here — they are the session's, applied in `admit`.
  */
 export function rollForTrigger(
   persona: PersonaName,
   trigger: EmoteTrigger,
   rng: () => number,
+  hand: readonly EmoteId[] = EMOTE_IDS,
 ): AiEmote | null {
   const spec = AI_PERSONAS[persona].triggers[trigger];
   if (spec === undefined || rng() >= spec.chance) return null;
-  const emote = pickFrom(spec.pool, rng);
+  const emote = pickFrom(poolInHand(spec.pool, hand), rng);
   return emote === null ? null : { emote, delayMs: rollDelay(rng) };
 }
 
-/** §6's reply table: which of its four rows a player's emote lands on, if any (a yawn earns none). */
+/**
+ * §6's reply table: which of its four rows a player's emote lands on, if any (a yawn earns none).
+ * R1344 sorts MN03's emoji the same way: a wave greets; a clap, a thumbs up, a heart and a salute
+ * compliment; a flame, a skull, shades and a party popper taunt; a facepalm and a sweat apologise;
+ * a shrug, a thinking face and a gasp, like a yawn, earn no reply.
+ */
 const REPLY_KEY_OF: Partial<Record<EmoteId, EmoteReplyKey>> = {
   greetings: "greetings",
   wellPlayed: "compliment",
@@ -246,23 +265,38 @@ const REPLY_KEY_OF: Partial<Record<EmoteId, EmoteReplyKey>> = {
   angry: "taunt",
   oops: "apology",
   sob: "apology",
+  wave: "greetings",
+  clap: "compliment",
+  thumbsUp: "compliment",
+  heart: "compliment",
+  salute: "compliment",
+  fire: "taunt",
+  skull: "taunt",
+  cool: "taunt",
+  party: "taunt",
+  facepalm: "apology",
+  sweat: "apology",
 };
 
 export function replyKeyOf(emote: EmoteId): EmoteReplyKey | null {
   return REPLY_KEY_OF[emote] ?? null;
 }
 
-/** One roll of §6's reply table for the row `emote` lands on, or null like `rollForTrigger`. */
+/**
+ * One roll of §6's reply table for the row `emote` lands on, or null like `rollForTrigger`, drawn
+ * from the row's pool as far as `hand` holds it (R1344).
+ */
 export function rollForReply(
   persona: PersonaName,
   emote: EmoteId,
   rng: () => number,
+  hand: readonly EmoteId[] = EMOTE_IDS,
 ): (AiEmote & { key: EmoteReplyKey }) | null {
   const key = replyKeyOf(emote);
   if (key === null) return null;
   const spec = AI_PERSONAS[persona].replies[key];
   if (spec === undefined || rng() >= spec.chance) return null;
-  const picked = pickFrom(spec.pool, rng);
+  const picked = pickFrom(poolInHand(spec.pool, hand), rng);
   return picked === null ? null : { emote: picked, delayMs: rollDelay(rng), key };
 }
 
@@ -299,14 +333,16 @@ export type EmotePersona = {
 /**
  * Creates the persona one AI seat plays for a match. `rng` is the injected draw — Math.random in
  * production, a constant table in tests — and every roll the match makes goes through it in call
- * order, so a test that fixes the stream predicts every emote exactly.
+ * order, so a test that fixes the stream predicts every emote exactly. `hand` is the AI seat's dealt
+ * hand (R1341), which every emote it sends comes from (R1344); absent, the whole pool.
  */
 export function createEmotePersona(opts: {
   persona: PersonaName;
   seat: PlayerId;
   rng: () => number;
+  hand?: readonly EmoteId[];
 }): EmotePersona {
-  const { persona, seat, rng } = opts;
+  const { persona, seat, rng, hand = EMOTE_IDS } = opts;
   const spec = AI_PERSONAS[persona];
 
   // §6's bookkeeping: the player's own rate limit (R643), the turn and match caps, the reply
@@ -380,7 +416,7 @@ export function createEmotePersona(opts: {
     // 1. Mulligan ends: the window that showed `mulligan` is gone after one showed it. It can
     // only become true once, so no spent-flag is needed.
     if (prev?.mulligan !== undefined && view.mulligan === undefined) {
-      out.push(...emit(rollForTrigger(persona, "mulliganEnd", rng), moment, now, true));
+      out.push(...emit(rollForTrigger(persona, "mulliganEnd", rng, hand), moment, now, true));
     }
 
     for (const event of fresh) {
@@ -397,20 +433,20 @@ export function createEmotePersona(opts: {
             you.hero.health - enemy.hero.health >= AI_EMOTE.leadHealth ||
             unitCount(you) - unitCount(enemy) >= AI_EMOTE.leadUnits;
           if (ahead) {
-            out.push(...emit(rollForTrigger(persona, "turnStartAhead", rng), moment, now, false));
+            out.push(...emit(rollForTrigger(persona, "turnStartAhead", rng, hand), moment, now, false));
           }
           break;
         }
         case "damage": {
           if (event.targetId === `hero-${opponentOf(seat)}` && event.amount >= AI_EMOTE.bigHit) {
             // 3. AI deals 10+ to your hero in one hit.
-            out.push(...emit(rollForTrigger(persona, "dealtBigHit", rng), moment, now, false));
+            out.push(...emit(rollForTrigger(persona, "dealtBigHit", rng, hand), moment, now, false));
           }
           if (event.targetId === `hero-${seat}` && event.amount >= AI_EMOTE.bigHit) {
             // 5. AI takes 10+ to its hero in one hit — which is also the damage half of 8, "you
             // make a big play", so the same hit rolls both rows (each rolls its own chance once).
-            out.push(...emit(rollForTrigger(persona, "tookBigHit", rng), moment, now, false));
-            out.push(...emit(rollForTrigger(persona, "playerBigPlay", rng), moment, now, false));
+            out.push(...emit(rollForTrigger(persona, "tookBigHit", rng, hand), moment, now, false));
+            out.push(...emit(rollForTrigger(persona, "playerBigPlay", rng, hand), moment, now, false));
           }
           break;
         }
@@ -418,7 +454,7 @@ export function createEmotePersona(opts: {
         case "fatigue": {
           // 5's non-damage half: a "lose health" effect or a fatigue tick of 10+ lands the same.
           if (event.player === seat && event.amount >= AI_EMOTE.bigHit) {
-            out.push(...emit(rollForTrigger(persona, "tookBigHit", rng), moment, now, false));
+            out.push(...emit(rollForTrigger(persona, "tookBigHit", rng, hand), moment, now, false));
           }
           break;
         }
@@ -428,7 +464,7 @@ export function createEmotePersona(opts: {
             // 6. AI loses its highest-attack unit: the dying attack reaches the pre-view top.
             const top = prev === null ? event.attack : maxAttackOf(sideOf(prev, seat));
             if (event.attack >= top) {
-              out.push(...emit(rollForTrigger(persona, "lostTopUnit", rng), moment, now, false));
+              out.push(...emit(rollForTrigger(persona, "lostTopUnit", rng, hand), moment, now, false));
             }
             // 8's second half: you kill 2+ of the AI's units in one turn — a unit the AI
             // controlled dying on the player's turn. Rolled once per turn, when the count first
@@ -438,7 +474,7 @@ export function createEmotePersona(opts: {
               if (killsThisTurn >= AI_EMOTE.killsForBigPlay && bigPlayRolledTurn !== view.turn) {
                 bigPlayRolledTurn = view.turn;
                 out.push(
-                  ...emit(rollForTrigger(persona, "playerBigPlay", rng), moment, now, false),
+                  ...emit(rollForTrigger(persona, "playerBigPlay", rng, hand), moment, now, false),
                 );
               }
             }
@@ -446,7 +482,7 @@ export function createEmotePersona(opts: {
             // 4. AI kills your highest-attack unit, same comparison on the human side.
             const top = prev === null ? event.attack : maxAttackOf(sideOf(prev, opponentOf(seat)));
             if (event.attack >= top) {
-              out.push(...emit(rollForTrigger(persona, "killedTopUnit", rng), moment, now, false));
+              out.push(...emit(rollForTrigger(persona, "killedTopUnit", rng, hand), moment, now, false));
             }
           }
           break;
@@ -455,10 +491,10 @@ export function createEmotePersona(opts: {
           if (event.winner === seat) {
             // 9. You concede, or the AI dealt lethal: any win is the same trigger, and both are
             // §6's exempt end-of-match emotes (as is 10, which fires at the same `gameOver`).
-            out.push(...emit(rollForTrigger(persona, "matchWon", rng), moment, now, true));
+            out.push(...emit(rollForTrigger(persona, "matchWon", rng, hand), moment, now, true));
           } else if (event.winner === opponentOf(seat)) {
             // 10. The AI is about to lose. A draw is nobody's loss, so "draw" wins land nowhere.
-            out.push(...emit(rollForTrigger(persona, "matchLost", rng), moment, now, true));
+            out.push(...emit(rollForTrigger(persona, "matchLost", rng, hand), moment, now, true));
           }
           break;
         }
@@ -475,7 +511,7 @@ export function createEmotePersona(opts: {
     onPlayerEmote: (emote, now) => {
       // §6: each reply rule fires at most once per match — consumed only when an emote actually
       // goes out, so a missed roll leaves the rule live for a later emote of the same kind.
-      const roll = rollForReply(persona, emote, rng);
+      const roll = rollForReply(persona, emote, rng, hand);
       if (roll === null || repliesUsed.has(roll.key)) return [];
       const admitted = admit(
         roll,
@@ -492,7 +528,7 @@ export function createEmotePersona(opts: {
       if (view.active === seat || view.turn === longTurnRolledTurn) return [];
       longTurnRolledTurn = view.turn;
       const admitted = admit(
-        rollForTrigger(persona, "playerTurnLong", rng),
+        rollForTrigger(persona, "playerTurnLong", rng, hand),
         { active: view.active, phase: view.phase },
         now,
         false,

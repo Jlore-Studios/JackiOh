@@ -28,8 +28,8 @@
 //
 // Patch v0.2.0's states (SPEC §10.8). Brittle's count and the Animated cog are keyword treatments
 // above (the view's `brittle` count draws the cracks even when no Brittle keyword lists it). The rest
-// ride a small rail of badges just over the name plate (CardStates.tsx): the tuned mark (▲ Upgraded,
-// ▼ Degraded, ◆ Tuned, R386) and the enchantments (E39). A tuned stat carries `data-tuned` and a ▲ or
+// ride a small rail of badges just over the name plate (CardStates.tsx): the tuned mark (▲ Buffed,
+// ▼ Nerfed, ◆ Tuned, R386) and the enchantments (E39). A tuned stat carries `data-tuned` and a ▲ or
 // ▼ pip beside its tone (cardstate.css), the number itself unchanged.
 //
 // The face draws no "zzz" itself. `canAct` is false for every unit whose controller is not the

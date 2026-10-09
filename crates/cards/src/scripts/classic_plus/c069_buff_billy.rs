@@ -1,6 +1,6 @@
 //! C+ #69 Buff Billy (SPEC §8.7 row 69, R348, R386, R396; BUILD M9 row C+ 69). (X) Unit, Human, Rare.
-//!   Base:    "This is a 3X/3X. / Cry: Upgrade this X times."
-//!   Radiant: "This is a 7X/7X. / Cry: Upgrade this 2X times."
+//!   Base:    "This is a 3X/3X. / Cry: Buff this X times."
+//!   Radiant: "This is a 7X/7X. / Cry: Buff this 2X times."
 //!
 //! The 3X/3X (7X/7X) is the catalog's `xStats` (E40), read by the engine's layer 1 off the X the card
 //! was played for (at least 1, R348); a Recruit or a summon has no X and arrives 0/0 to die at the

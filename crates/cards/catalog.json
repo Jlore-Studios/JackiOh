@@ -3454,7 +3454,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nStart of game: Gain one of 13 random powers. Each is an Activate that spends its (X).\n(3) Expedition Map: Recruit a permanent. Make it Radiant.\n(1) Life Tap: Draw {tapDraw} from each player's deck.\n(1) Steady Shot: Deal {shot} damage to the enemy hero. Upgrade this permanently by +2 damage.\n(2) Ranching: Summon a Radiant Rush Token.\n(1) Cat Cafe: Summon a random Felinor.\n(1) Ping: Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats.\n(2) Witness Value: Discover a Radiant Unit.\n(2) Stitching: Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them.\n(1) Tank Up: Your hero gains {armor} Armor, then this power refreshes.\n(2) Die Insect: Lucky 1. Deal {insect} damage to a random enemy.\n(2) KY Brainstorm: Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(2) Pluck: Add a random Radiant Fruit to your hand. It costs ({fruitCost}).\n(3) Terminus Tricks: Discover a Radiant Trap to summon."
+      "text": "Indestructible\nStart of game: Gain one of 13 random powers. Each is an Activate that spends its (X).\n(3) Expedition Map: Recruit a permanent. Make it Radiant.\n(1) Life Tap: Draw {tapDraw} from each player's deck.\n(1) Steady Shot: Deal {shot} damage to the enemy hero. This permanently deals 2 more damage.\n(2) Ranching: Summon a Radiant Rush Token.\n(1) Cat Cafe: Summon a random Felinor.\n(1) Ping: Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats.\n(2) Witness Value: Discover a Radiant Unit.\n(2) Stitching: Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them.\n(1) Tank Up: Your hero gains {armor} Armor, then this power refreshes.\n(2) Die Insect: Lucky 1. Deal {insect} damage to a random enemy.\n(2) KY Brainstorm: Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(2) Pluck: Add a random Radiant Fruit to your hand. It costs ({fruitCost}).\n(3) Terminus Tricks: Discover a Radiant Trap to summon."
     }
   },
   "core-099": {
@@ -7170,11 +7170,11 @@
     "loc": 18,
     "base": {
       "keywords": [],
-      "text": "Degrade {cards|random card|random cards} in your opponent's deck. Draw {draw}."
+      "text": "Nerf {cards|random card|random cards} in your opponent's deck. Draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Degrade every card in your opponent's deck. Draw {draw}."
+      "text": "Nerf every card in your opponent's deck. Draw {draw}."
     }
   },
   "classicplus-009": {
@@ -10132,7 +10132,7 @@
         "health": 3
       },
       "keywords": [],
-      "text": "This is a 3X/3X.\nCry: Upgrade this X times."
+      "text": "This is a 3X/3X.\nCry: Buff this X times."
     },
     "radiant": {
       "attack": 0,
@@ -10142,7 +10142,7 @@
         "health": 7
       },
       "keywords": [],
-      "text": "This is a 7X/7X.\nCry: Upgrade this 2X times."
+      "text": "This is a 7X/7X.\nCry: Buff this 2X times."
     }
   },
   "classicplus-070": {
@@ -10168,11 +10168,11 @@
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "Start of turn and end of turn: Upgrade {cards|random other card|random other cards} in your hand or on your side of the field. Degrade {cards|random card|random cards} in your opponent's hand or on their side of the field."
+      "text": "Start of turn and end of turn: Buff {cards|random other card|random other cards} in your hand or on your side of the field. Nerf {cards|random card|random cards} in your opponent's hand or on their side of the field."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn and end of turn: Upgrade {cards|random other card|random other cards} in your hand or on your side of the field. Degrade {cards|random card|random cards} in your opponent's hand or on their side of the field."
+      "text": "Start of turn and end of turn: Buff {cards|random other card|random other cards} in your hand or on your side of the field. Nerf {cards|random card|random cards} in your opponent's hand or on their side of the field."
     }
   },
   "classicplus-071": {
@@ -10200,11 +10200,11 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Upgrade a card {times|time|times}. It may be a card in your hand."
+      "text": "Buff a card {times|time|times}. It may be a card in your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Upgrade a card {times|time|times}. It may be a card in your hand."
+      "text": "Buff a card {times|time|times}. It may be a card in your hand."
     }
   },
   "classicplus-072": {
@@ -10232,11 +10232,11 @@
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "Degrade a permanent {times|time|times}."
+      "text": "Nerf a permanent {times|time|times}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Degrade a card {times|time|times}. It may be a card in your hand."
+      "text": "Nerf a card {times|time|times}. It may be a card in your hand."
     }
   },
   "classicplus-073": {
@@ -10259,11 +10259,11 @@
     "loc": 3,
     "base": {
       "keywords": [],
-      "text": "One random effect: Add 5 random Fruits to your hand, which cost (0); add 3 random Books to your hand, which cost (0); destroy all enemy permanents; add 3 random Classic cards to your hand, which cost (0); Upgrade every card in your hand and deck twice; fuse a random card into each card in your deck, each keeping its cost; Degrade every card on your opponent's field and in their hand three times; summon a Classic Golem; replace your deck with random Call to Chaos cards, which cost (0); cast a random Call to Chaos."
+      "text": "One random effect: Add 5 random Fruits to your hand, which cost (0); add 3 random Books to your hand, which cost (0); destroy all enemy permanents; add 3 random Classic cards to your hand, which cost (0); Buff every card in your hand and deck twice; fuse a random card into each card in your deck, each keeping its cost; Nerf every card on your opponent's field and in their hand three times; summon a Classic Golem; replace your deck with random Call to Chaos cards, which cost (0); cast a random Call to Chaos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Three different random effects, resolved in the order listed: Add 5 random Fruits to your hand, which cost (0); add 3 random Books to your hand, which cost (0); destroy all enemy permanents; add 3 random Classic cards to your hand, which cost (0); Upgrade every card in your hand and deck twice; fuse a random card into each card in your deck, each keeping its cost; Degrade every card on your opponent's field and in their hand three times; summon a Classic Golem; replace your deck with random Call to Chaos cards, which cost (0); cast a random Call to Chaos."
+      "text": "Three different random effects, resolved in the order listed: Add 5 random Fruits to your hand, which cost (0); add 3 random Books to your hand, which cost (0); destroy all enemy permanents; add 3 random Classic cards to your hand, which cost (0); Buff every card in your hand and deck twice; fuse a random card into each card in your deck, each keeping its cost; Nerf every card on your opponent's field and in their hand three times; summon a Classic Golem; replace your deck with random Call to Chaos cards, which cost (0); cast a random Call to Chaos."
     }
   },
   "classicplus-073-1": {
@@ -10809,11 +10809,11 @@
     "loc": 9,
     "base": {
       "keywords": [],
-      "text": "End of turn: Upgrade a random card in your hand."
+      "text": "End of turn: Buff a random card in your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Upgrade 2 random cards in your hand."
+      "text": "End of turn: Buff 2 random cards in your hand."
     }
   },
   "meditative-027": {

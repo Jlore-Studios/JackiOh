@@ -1,10 +1,12 @@
-//! Emotes and hero portraits (patch v0.2.X, SPEC §9.4 D5, §9.5, §10.10, §10.11, R641–R645).
+//! Emotes and hero portraits (patch v0.2.X, SPEC §9.4 D5, §9.5, §10.10, §10.11, R641–R645; the
+//! dealt hand of patch v0.3.X's MN03, #545, R1340–R1345).
 //!
 //! Everything here is cosmetic: an emote is never an `ActionBody`, never reaches `reduce`, the
-//! action log, the replay hash or a game record, and a portrait is never part of `PlayerView`
-//! (R643). This module holds only what BOTH sides of the wire must agree on — the id lists, the
-//! portrait roster the deck save checks (D5, R641) and the rate limit the client and the server
-//! enforce identically (R643) — because `apps/web` and the server may not import each other
+//! action log, the replay hash or a game record, and a portrait or an emote hand is never part of
+//! `PlayerView` (R643, R1342). This module holds only what BOTH sides of the wire must agree on —
+//! the id lists, the portrait roster the deck save checks (D5, R641), the hand each seat is dealt
+//! (R1341) and the rate limit the client and the server enforce identically (R643) — because
+//! `apps/web` and the server may not import each other
 //! (§9.2: a client and a server are separate deployables). Constants therefore live here and not
 //! in the server's `config.rs` (CLAUDE.md rule 9): the rule books numbers to one named place,
 //! and this module is the one place both ends read.
@@ -18,12 +20,14 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::rng::Rng;
 use crate::wire::catalog_types::PlayerId;
 use crate::wire::string_union;
 
 string_union! {
-    /// The ten emotes: the five voice lines first (each portrait has its own text), then the five
-    /// shared animated emoji. The wire spells them exactly like this (R643).
+    /// The pool of twenty-four emotes (R1340): the five voice lines first (each portrait has its
+    /// own text), then the nineteen shared animated emoji — the five of patch v0.2.X and the
+    /// fourteen of MN03 (#545). The wire spells them exactly like this (R643).
     pub enum EmoteId {
         Greetings = "greetings",
         WellPlayed = "wellPlayed",
@@ -35,6 +39,20 @@ string_union! {
         Laugh = "laugh",
         Angry = "angry",
         WahWah = "wahWah",
+        Wave = "wave",
+        Clap = "clap",
+        ThumbsUp = "thumbsUp",
+        Facepalm = "facepalm",
+        Shrug = "shrug",
+        Thinking = "thinking",
+        Heart = "heart",
+        Fire = "fire",
+        Skull = "skull",
+        Sweat = "sweat",
+        Cool = "cool",
+        Gasp = "gasp",
+        Salute = "salute",
+        Party = "party",
     }
 }
 
@@ -46,15 +64,30 @@ pub const VOICE_EMOTE_IDS: &[EmoteId] = &[
     EmoteId::Thanks,
     EmoteId::Threaten,
 ];
-/// The five shared animated emoji (R643).
+/// The nineteen shared animated emoji (R643, R1340): patch v0.2.X's five, then MN03's fourteen.
 pub const EMOJI_EMOTE_IDS: &[EmoteId] = &[
     EmoteId::Sob,
     EmoteId::Yawn,
     EmoteId::Laugh,
     EmoteId::Angry,
     EmoteId::WahWah,
+    EmoteId::Wave,
+    EmoteId::Clap,
+    EmoteId::ThumbsUp,
+    EmoteId::Facepalm,
+    EmoteId::Shrug,
+    EmoteId::Thinking,
+    EmoteId::Heart,
+    EmoteId::Fire,
+    EmoteId::Skull,
+    EmoteId::Sweat,
+    EmoteId::Cool,
+    EmoteId::Gasp,
+    EmoteId::Salute,
+    EmoteId::Party,
 ];
-/// `[...VOICE_EMOTE_IDS, ...EMOJI_EMOTE_IDS]`: `EmoteId`'s declaration order is exactly that.
+/// `[...VOICE_EMOTE_IDS, ...EMOJI_EMOTE_IDS]`, the whole pool (R1340): `EmoteId`'s declaration
+/// order is exactly that.
 pub const EMOTE_IDS: &[EmoteId] = EmoteId::ALL;
 
 /// TS's `(typeof VOICE_EMOTE_IDS)[number]`: one of the voice lines (`is_voice_emote` tells).
@@ -62,7 +95,7 @@ pub type VoiceEmoteId = EmoteId;
 /// TS's `(typeof EMOJI_EMOTE_IDS)[number]`: one of the emoji (`!is_voice_emote`).
 pub type EmojiEmoteId = EmoteId;
 
-/// TS `isEmoteId(value: unknown)`: a string that is one of the ten ids.
+/// TS `isEmoteId(value: unknown)`: a string that is one of the pool's ids.
 pub fn is_emote_id(value: &Value) -> bool {
     match value.as_str() {
         Some(text) => EMOTE_IDS.iter().any(|id| id.as_str() == text),
@@ -72,6 +105,49 @@ pub fn is_emote_id(value: &Value) -> bool {
 
 pub fn is_voice_emote(emote: EmoteId) -> bool {
     VOICE_EMOTE_IDS.contains(&emote)
+}
+
+// ---------------------------------------------------------------------------------------------
+// The emote hand (R1341): eight of the pool, dealt to each seat each game from the match seed.
+// ---------------------------------------------------------------------------------------------
+
+/// How many emotes a seat is dealt each game (R1341): the menu shows these and nothing else.
+pub const EMOTE_HAND_SIZE: usize = 8;
+/// How many of a hand are voice lines (R1341); the other `EMOTE_HAND_SIZE - EMOTE_HAND_VOICE` are
+/// emoji. A fixed split, so every hand speaks in its portrait's voice and the menu keeps one shape.
+pub const EMOTE_HAND_VOICE: usize = 3;
+
+/// The seed of a seat's own emote stream (R1341): the match seed and the seat, so the deal never
+/// draws from the match rng (`state.rng`) and no state, log, replay hash or golden trace moves.
+pub fn emote_hand_stream(seed: &str, seat: PlayerId) -> String {
+    format!("{seed}:emotes:{seat}")
+}
+
+/// R1341: the hand `seat` is dealt in the match seeded `seed` — `EMOTE_HAND_VOICE` of the voice
+/// lines and the rest of `EMOTE_HAND_SIZE` from the emoji, each a uniform draw without repeats
+/// (Fisher–Yates on the seat's own stream, `emote_hand_stream`), listed in the pool's order so a
+/// menu reads the same whatever order the draw took. A pure function of `(seed, seat)`: the server
+/// deals it at match start and again after a restart, hotseat and practice deal it from the game
+/// seed through WASM, and a reconnect or a replay sees the same eight.
+pub fn deal_emote_hand(seed: &str, seat: PlayerId) -> Vec<EmoteId> {
+    let mut rng = Rng::new(&emote_hand_stream(seed, seat), 0);
+    let voices = rng.shuffle(VOICE_EMOTE_IDS);
+    let emoji = rng.shuffle(EMOJI_EMOTE_IDS);
+    let dealt: Vec<EmoteId> = voices
+        .into_iter()
+        .take(EMOTE_HAND_VOICE)
+        .chain(emoji.into_iter().take(EMOTE_HAND_SIZE - EMOTE_HAND_VOICE))
+        .collect();
+    EMOTE_IDS
+        .iter()
+        .copied()
+        .filter(|id| dealt.contains(id))
+        .collect()
+}
+
+/// R1342: whether `hand` holds `emote` — the relay's check before it admits a send.
+pub fn hand_holds(hand: &[EmoteId], emote: EmoteId) -> bool {
+    hand.contains(&emote)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -298,16 +374,18 @@ pub struct EmoteRelay {
     pub emote: EmoteId,
 }
 
-// Emotes and hero portraits (SPEC §9.4 D5, §9.5, §10.10, R641–R643).
+// Emotes and hero portraits (SPEC §9.4 D5, §9.5, §10.10, R641–R643, R1340, R1341).
 //
-// `wire/emotes.rs` is the one place both ends of the wire read the emote ids, the portrait roster
-// and the rate limit from, so what is proved here holds for the client's greyed menu items and the
-// server's drop alike (R643), and for the deck save's D5 check, which reads the same roster through
-// the caller's `is_portrait` — proved end to end in the validator's own drafts tests ("R641 …").
+// `wire/emotes.rs` is the one place both ends of the wire read the emote ids, the portrait roster,
+// the hand's deal and the rate limit from, so what is proved here holds for the client's greyed menu
+// items and the server's drop alike (R643), for the hand the actor sends and the one hotseat and
+// practice deal over WASM (R1341), and for the deck save's D5 check, which reads the same roster
+// through the caller's `is_portrait` — proved end to end in the validator's own drafts tests
+// ("R641 …").
 #[cfg(test)]
 mod tests {
     use super::*;
-    use indexmap::IndexSet;
+    use indexmap::{IndexMap, IndexSet};
     use serde_json::json;
 
     fn ids(list: &[EmoteId]) -> Vec<&'static str> {
@@ -318,18 +396,22 @@ mod tests {
         list.iter().map(|id| id.as_str()).collect()
     }
 
-    mod r643_the_ten_emote_ids_the_wire_spells {
+    mod r643_r1340_the_pool_of_emote_ids_the_wire_spells {
         use super::*;
 
         #[test]
-        fn r643_admits_exactly_the_ten_ids_the_five_voice_lines_then_the_five_emoji() {
+        fn r1340_admits_exactly_the_twenty_four_ids_the_five_voice_lines_then_the_nineteen_emoji() {
             assert_eq!(
                 ids(VOICE_EMOTE_IDS),
                 vec!["greetings", "wellPlayed", "oops", "thanks", "threaten"]
             );
             assert_eq!(
                 ids(EMOJI_EMOTE_IDS),
-                vec!["sob", "yawn", "laugh", "angry", "wahWah"]
+                vec![
+                    "sob", "yawn", "laugh", "angry", "wahWah", "wave", "clap", "thumbsUp", "facepalm",
+                    "shrug", "thinking", "heart", "fire", "skull", "sweat", "cool", "gasp", "salute",
+                    "party",
+                ]
             );
             let both: Vec<EmoteId> = VOICE_EMOTE_IDS
                 .iter()
@@ -337,14 +419,48 @@ mod tests {
                 .copied()
                 .collect();
             assert_eq!(EMOTE_IDS.to_vec(), both);
+            // MN03's floor: at least 24 in all, at least 14 of them new beside R643's ten.
+            assert!(EMOTE_IDS.len() >= 24);
+            assert_eq!(EMOTE_IDS.len(), 24);
+            assert!(EMOJI_EMOTE_IDS.len() - 5 >= 14);
+            let distinct: IndexSet<EmoteId> = EMOTE_IDS.iter().copied().collect();
+            assert_eq!(distinct.len(), EMOTE_IDS.len());
             for id in EMOTE_IDS {
                 assert!(is_emote_id(&json!(id.as_str())), "{id}");
             }
         }
 
         #[test]
+        fn r643_r1340_keeps_the_ten_ids_of_patch_v0_2_x_first_and_spelt_as_they_were() {
+            assert_eq!(
+                ids(&EMOTE_IDS[..10]),
+                vec![
+                    "greetings",
+                    "wellPlayed",
+                    "oops",
+                    "thanks",
+                    "threaten",
+                    "sob",
+                    "yawn",
+                    "laugh",
+                    "angry",
+                    "wahWah",
+                ]
+            );
+        }
+
+        #[test]
         fn r643_refuses_an_id_the_wire_does_not_spell_and_anything_that_is_not_a_string() {
-            for bad in ["", "GREETINGS", "greetings ", " emote", "sobbing", "wahWah!"] {
+            for bad in [
+                "",
+                "GREETINGS",
+                "greetings ",
+                " emote",
+                "sobbing",
+                "wahWah!",
+                "Wave",
+                "thumbs_up",
+            ] {
                 assert!(!is_emote_id(&json!(bad)), "{bad:?}");
             }
             // TS's `undefined` and `null` are both `Value::Null` here.
@@ -481,6 +597,125 @@ mod tests {
             }
             assert!(same >= 50, "p1/p2 agree on {same} of {matches}");
             assert!(same <= 200, "p1/p2 agree on {same} of {matches}");
+        }
+    }
+
+    mod r1341_the_hand_each_seat_is_dealt {
+        use super::*;
+        use crate::wire::catalog_types::PlayerId::{P1, P2};
+
+        fn seeds(count: usize) -> impl Iterator<Item = String> {
+            (0..count).map(|i| format!("{i:032x}"))
+        }
+
+        #[test]
+        fn r1341_deals_eight_distinct_pool_ids_three_voice_lines_and_five_emoji() {
+            assert_eq!(EMOTE_HAND_SIZE, 8);
+            assert_eq!(EMOTE_HAND_VOICE, 3);
+            for seed in seeds(300) {
+                for seat in [P1, P2] {
+                    let hand = deal_emote_hand(&seed, seat);
+                    assert_eq!(hand.len(), EMOTE_HAND_SIZE, "{seed} {seat}");
+                    let distinct: IndexSet<EmoteId> = hand.iter().copied().collect();
+                    assert_eq!(distinct.len(), EMOTE_HAND_SIZE, "{seed} {seat}: {hand:?}");
+                    let voices = hand.iter().filter(|id| is_voice_emote(**id)).count();
+                    assert_eq!(voices, EMOTE_HAND_VOICE, "{seed} {seat}: {hand:?}");
+                    assert!(hand.iter().all(|id| EMOTE_IDS.contains(id)));
+                }
+            }
+        }
+
+        #[test]
+        fn r1341_lists_a_hand_in_the_pools_order_so_the_menu_reads_the_same_whatever_the_draw() {
+            for seed in seeds(100) {
+                let hand = deal_emote_hand(&seed, P1);
+                let positions: Vec<usize> = hand
+                    .iter()
+                    .map(|id| EMOTE_IDS.iter().position(|pool| pool == id).unwrap_or(usize::MAX))
+                    .collect();
+                assert!(
+                    positions.windows(2).all(|pair| pair[0] < pair[1]),
+                    "{seed}: {hand:?}"
+                );
+            }
+        }
+
+        #[test]
+        fn r1341_is_a_pure_function_of_the_seed_and_the_seat_the_same_on_every_call() {
+            for seed in seeds(50) {
+                for seat in [P1, P2] {
+                    assert_eq!(deal_emote_hand(&seed, seat), deal_emote_hand(&seed, seat));
+                }
+            }
+            // Pinned, so a reconnect, a restart and a replay see these eight for this match, and a
+            // change to the deal is a change someone meant.
+            assert_eq!(
+                ids(&deal_emote_hand("seed-actor", P1)),
+                PINNED_SEED_ACTOR_P1.to_vec()
+            );
+        }
+
+        /// `deal_emote_hand("seed-actor", p1)`, as dealt when the deal was written (R1341).
+        const PINNED_SEED_ACTOR_P1: [&str; EMOTE_HAND_SIZE] = [
+            "greetings",
+            "thanks",
+            "threaten",
+            "laugh",
+            "wahWah",
+            "wave",
+            "thumbsUp",
+            "party",
+        ];
+
+        #[test]
+        fn r1341_draws_from_the_seats_own_stream_never_the_match_rng() {
+            assert_eq!(emote_hand_stream("match-42", P1), "match-42:emotes:p1");
+            assert_eq!(emote_hand_stream("match-42", P2), "match-42:emotes:p2");
+            // The match rng is `Rng::new(seed, cursor)` on the bare seed; the hand's stream is its own
+            // string, so dealing a hand reads no state and moves no cursor (there is none to move).
+            assert_ne!(emote_hand_stream("match-42", P1), "match-42");
+        }
+
+        #[test]
+        fn r1341_deals_the_two_seats_independently_they_almost_never_hold_the_same_eight() {
+            // C(5,3) x C(19,5) = 116,280 hands, so two seats agreeing is ~1 in 10^5.
+            let same = seeds(400)
+                .filter(|seed| deal_emote_hand(seed, P1) == deal_emote_hand(seed, P2))
+                .count();
+            assert!(same <= 1, "p1 and p2 held the same hand in {same} of 400 matches");
+        }
+
+        #[test]
+        fn r1341_deals_every_id_and_each_at_its_share_three_in_five_voice_lines_five_in_nineteen_emoji() {
+            // 4000 hands. A voice line is in 3/5 of them (2400 ± 31 at 1σ), an emoji in 5/19
+            // (1053 ± 28): the bounds are past 12σ, so they hold a uniform deal and nothing skewed.
+            let mut counts: IndexMap<EmoteId, usize> = EMOTE_IDS.iter().map(|id| (*id, 0)).collect();
+            for seed in seeds(2000) {
+                for seat in [P1, P2] {
+                    for id in deal_emote_hand(&seed, seat) {
+                        *counts.entry(id).or_insert(0) += 1;
+                    }
+                }
+            }
+            for (id, count) in &counts {
+                if is_voice_emote(*id) {
+                    assert!((2000..=2800).contains(count), "{id}: {count}");
+                } else {
+                    assert!((850..=1250).contains(count), "{id}: {count}");
+                }
+            }
+        }
+
+        #[test]
+        fn r1341_hand_holds_answers_for_exactly_the_dealt_eight() {
+            let hand = deal_emote_hand("seed-holds", P2);
+            for id in EMOTE_IDS {
+                assert_eq!(hand_holds(&hand, *id), hand.contains(id), "{id}");
+            }
+            assert_eq!(
+                EMOTE_IDS.iter().filter(|id| hand_holds(&hand, **id)).count(),
+                EMOTE_HAND_SIZE
+            );
         }
     }
 

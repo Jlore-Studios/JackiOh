@@ -1,6 +1,6 @@
 //! C+ #70 Chaos Machine (SPEC §8.7 row 70, R386; BUILD M9 row C+ 70). (2) Field Spell, Rare.
-//!   Both faces: "Start of turn and end of turn: Upgrade {cards} random other card(s) in your hand or
-//!   on your side of the field. Degrade {cards} random card(s) in your opponent's hand or on their
+//!   Both faces: "Start of turn and end of turn: Buff {cards} random other card(s) in your hand or
+//!   on your side of the field. Nerf {cards} random card(s) in your opponent's hand or on their
 //!   side of the field." — cards 1, Radiant 2
 //!
 //! At its controller's start and end of turn (R62). Each pick is uniform over the named hand and field

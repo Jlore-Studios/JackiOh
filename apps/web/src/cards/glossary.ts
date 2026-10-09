@@ -44,7 +44,9 @@
 //   End the turn, Trigger a Cry and Look at a hand ("Look at your opponent's hand"): each label is
 //   the spec's row name and each alias the words cards print. Only capitalised spellings match, so
 //   "steal it" mid-sentence stays plain.
-// - §6.3's Degrade and Upgrade, one row and one entry each, since a card prints one word or the other.
+// - §6.3's Nerf and Buff, one row and one entry each, since a card prints one word or the other. Patch
+//   v0.3.4 (R1320) renamed them from Degrade and Upgrade, the names the engine keeps; a plain stat buff
+//   ("+2/+2") stays plain words, since matching is case-sensitive and "buff" is lower-case there.
 
 import type { KeywordKind } from "@jackioh/shared";
 
@@ -77,8 +79,8 @@ export type VerbTermId =
   | "Unlock"
   | "Flicker"
   | "Bounce"
-  | "Degrade"
-  | "Upgrade"
+  | "Nerf"
+  | "Buff"
   | "Plague Counter"
   | "Set health"
   | "Redirect"
@@ -228,9 +230,9 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Flicker: verb("Flicker", "The card leaves the field then re-enters the same zone at once"),
   // Balance patch 1 (R692): the printed word for a permanent's return from the field to its controller's hand (R746, R747).
   Bounce: verb("Bounce", "Return to controller's hand", { aliases: ["Bounced"] }),
-  // R386, R512: two rows of §6.3, one word each.
-  Degrade: verb("Degrade", "Weaken a card: one change per application"),
-  Upgrade: verb("Upgrade", "Strengthen a card: one change per application"),
+  // R386, R512, R1320: two rows of §6.3, one word each (the engine's Degrade and Upgrade).
+  Nerf: verb("Nerf", "Weaken a card: one change per application"),
+  Buff: verb("Buff", "Strengthen a card: one change per application"),
   "Plague Counter": verb("Plague Counter", "Counter on a permanent, any number, reset on leaving the field", {
     aliases: ["Plague Counters"],
   }),
@@ -246,7 +248,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Radiant: entry(
     "Radiant",
     "§5.2",
-    "Upgrade a card. In hand or deck: cost unchanged, stats and text swap to the radiant form.",
+    "Raise a card to its Radiant form. In hand or deck: cost unchanged, stats and text swap to the radiant form.",
     {},
   ),
 };

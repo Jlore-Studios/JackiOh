@@ -332,10 +332,11 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return `${name.def(event.defId)} returned to ${name.whose(event.player)} ${zoneLabel("backrow", event.backrowLane)}`;
     case "crumbled":
       return `${named(event.defId)} crumbled`;
+    // R1320: players read the engine's Degrade as a Nerf and its Upgrade as a Buff.
     case "degraded":
-      return `${named(event.defId)} was degraded`;
+      return `${named(event.defId)} was nerfed`;
     case "upgraded":
-      return `${named(event.defId)} was upgraded`;
+      return `${named(event.defId)} was buffed`;
     case "numberChanged":
       if (event.key === HIDDEN_CARD) return `${named(event.defId)} changed`;
       // A cost is a price (R432); any other key is a word, a declared number's camelCase split ("draw limit").

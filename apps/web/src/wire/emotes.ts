@@ -1,13 +1,15 @@
 // The web client's own copy of the shared wire helper (docs/v0.3.0/SURFACE.md §10.4), kept as
 // TypeScript and unchanged but for its import paths; the server's port is crates/engine/src/wire/emotes.rs.
 //
-// Emotes and hero portraits (patch v0.2.X, SPEC §9.4 D5, §9.5, §10.10, §10.11, R641–R645).
+// Emotes and hero portraits (patch v0.2.X, SPEC §9.4 D5, §9.5, §10.10, §10.11, R641–R645; the
+// dealt hand of patch v0.3.X's MN03, #545, R1340–R1345).
 //
 // Everything here is cosmetic: an emote is never an `ActionBody`, never reaches `reduce`, the
-// action log, the replay hash or a game record, and a portrait is never part of `PlayerView`
-// (R643). This module holds only what BOTH sides of the wire must agree on — the id lists, the
-// portrait roster the deck save checks (D5, R641) and the rate limit the client and the server
-// enforce identically (R643) — because `apps/web` and `crates/server` may not import each other
+// action log, the replay hash or a game record, and a portrait or an emote hand is never part of
+// `PlayerView` (R643, R1342). This module holds only what BOTH sides of the wire must agree on —
+// the id lists, the portrait roster the deck save checks (D5, R641), the size and shape of the hand
+// each seat is dealt (R1341) and the rate limit the client and the server enforce identically
+// (R643) — because `apps/web` and `crates/server` may not import each other
 // (§9.2: a client and a server are separate deployables). Constants therefore live here and not
 // in the server's config (`crates/server/src/config.rs`, CLAUDE.md rule 9): the rule books numbers to one named place,
 // and this module is the one place both ends read.
@@ -18,10 +20,31 @@
 
 import type { PlayerId } from "./catalog.ts";
 
-/** The ten emotes: the five voice lines first (each portrait has its own text), then the five
- * shared animated emoji. The wire spells them exactly like this (R643). */
+/** The pool of twenty-four emotes (R1340): the five voice lines first (each portrait has its own
+ * text), then the nineteen shared animated emoji — patch v0.2.X's five, then MN03's fourteen. The
+ * wire spells them exactly like this (R643). */
 export const VOICE_EMOTE_IDS = ["greetings", "wellPlayed", "oops", "thanks", "threaten"] as const;
-export const EMOJI_EMOTE_IDS = ["sob", "yawn", "laugh", "angry", "wahWah"] as const;
+export const EMOJI_EMOTE_IDS = [
+  "sob",
+  "yawn",
+  "laugh",
+  "angry",
+  "wahWah",
+  "wave",
+  "clap",
+  "thumbsUp",
+  "facepalm",
+  "shrug",
+  "thinking",
+  "heart",
+  "fire",
+  "skull",
+  "sweat",
+  "cool",
+  "gasp",
+  "salute",
+  "party",
+] as const;
 export const EMOTE_IDS = [...VOICE_EMOTE_IDS, ...EMOJI_EMOTE_IDS] as const;
 
 export type VoiceEmoteId = (typeof VOICE_EMOTE_IDS)[number];
@@ -34,6 +57,22 @@ export function isEmoteId(value: unknown): value is EmoteId {
 
 export function isVoiceEmote(emote: EmoteId): emote is VoiceEmoteId {
   return (VOICE_EMOTE_IDS as readonly string[]).includes(emote);
+}
+
+// ---------------------------------------------------------------------------------------------
+// The emote hand (R1341): eight of the pool, dealt to each seat each game from the match seed.
+// The deal itself is the engine's (`deal_emote_hand`), reached through WASM (`@jackioh/engine`'s
+// `dealEmoteHand`) so the client deals exactly what the server does.
+// ---------------------------------------------------------------------------------------------
+
+/** How many emotes a seat is dealt each game (R1341): the menu shows these and nothing else. */
+export const EMOTE_HAND_SIZE = 8;
+/** How many of a hand are voice lines (R1341); the rest are emoji. */
+export const EMOTE_HAND_VOICE = 3;
+
+/** R1342: whether `hand` holds `emote` — the check both ends make before a send goes out. */
+export function handHolds(hand: readonly EmoteId[], emote: EmoteId): boolean {
+  return hand.includes(emote);
 }
 
 // ---------------------------------------------------------------------------------------------

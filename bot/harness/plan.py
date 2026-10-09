@@ -544,7 +544,9 @@ def why_none(ctx: Context, state: dict[str, Any], lanes: Lanes) -> str:
         if lanes.full(provider):
             parts.append(f"`{provider.id}` is busy")
             continue
-        reason = providers_mod.availability(provider, state, ctx.now(), cfg.timezone, cfg.secrets)
+        # What an idle subscription waits for is a build, a revision or a plan, which start only
+        # `start_headroom` under each cap (`_usable`, `lane_planners`).
+        reason = providers_mod.start_reason(provider, state, ctx.now(), cfg.timezone, cfg.secrets)
         if reason is None and machine_full(cfg.pool, provider, lanes):
             reason = f"waits for room on the machine ({cfg.pool.machine_parallel} at once)"
         if reason is None and provider.quiet_check and cfg.quiet.enabled:

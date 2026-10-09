@@ -1,6 +1,6 @@
 // The deck builder's portrait picker (issue §8, R641, R644): the deck's current portrait as the
 // collapsed control, a grid of the whole six-portrait roster on open, and each tile's Preview
-// panel whose ten emotes play exactly as they would in a match — voice line on the voice channel
+// panel whose pool of emotes plays exactly as they would in a match — voice line on the voice channel
 // plus its speech bubble, emoji synth on the effects channel plus the sticker.
 //
 // The engine seam is the module singleton: `setAudioEngineForTests` installs the recording fake
@@ -15,7 +15,7 @@ import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import type { PortraitId } from "@jackioh/shared";
-import { EMOJI_EMOTE_IDS, PORTRAIT_IDS, VOICE_EMOTE_IDS } from "@jackioh/shared";
+import { EMOJI_EMOTE_IDS, EMOTE_IDS, PORTRAIT_IDS, VOICE_EMOTE_IDS } from "@jackioh/shared";
 
 import { VOICE_PRIORITY } from "../audio/constants.ts";
 import { setAudioEngineForTests } from "../audio/engine.ts";
@@ -143,7 +143,7 @@ describe("the deck's portrait button (R641)", () => {
 });
 
 describe("the emote previews (R644)", () => {
-  it("R644 a tile's Preview opens its ten emotes — five voice lines, five emoji", () => {
+  it("R644 R1343 a tile's Preview opens the whole pool — five voice lines and every emoji a game may deal", () => {
     render(picker("gary"));
     openPicker();
     expect(screen.queryByTestId("portrait-preview-panel")).toBeNull();
@@ -158,8 +158,8 @@ describe("the emote previews (R644)", () => {
       const item = within(panel).getByTestId(`emote-preview-${emote}`);
       expect(item).toHaveAttribute("aria-label", EMOJI_LABEL[emote]);
     }
-    // Exactly ten emote controls, as in the match's menu.
-    expect(within(panel).getAllByRole("button")).toHaveLength(10);
+    // One control for each emote of the pool, whichever eight a game deals (R1340).
+    expect(within(panel).getAllByRole("button")).toHaveLength(EMOTE_IDS.length);
   });
 
   it("R644 a voice preview speaks the previewed portrait's own line and shows its bubble", () => {
