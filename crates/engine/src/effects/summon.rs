@@ -95,6 +95,10 @@ pub struct SummonArgs {
     /// Create a fresh card of this definition, a token included (§7).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub def_id: Option<String>,
+    /// MD-D30, R1126: once the fresh summon has landed, remember its id on the running card under
+    /// this key, as `effects::memory::remember` writes — so a later trigger finds the card it made.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub remember_as: Option<String>,
     /// Or move a card that already exists onto the field (from a hand, library, GY or exile).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub instance: Option<TargetSpec>,
@@ -340,6 +344,14 @@ pub fn summon(args: SummonArgs) -> Effect {
         };
         if let Some(made) = summon_fresh(ctx, def_id, player, &at) {
             roll_random_keywords(ctx, &made, args.random_keywords);
+            // MD-D30, R1126: the running card remembers the summon under `rememberAs`, written the
+            // way `effects::memory::remember` writes it (its own stay, its own part's key).
+            if let Some(key) = &args.remember_as
+                && let Some(this) = super::targets::self_on_its_stay(ctx)
+                && let Some(card) = find_instance_mut(ctx.sink.state, &this.id)
+            {
+                crate::work::remember_on(&mut card.memory, &ctx.data, key, json!(made.id.clone()));
+            }
         }
     })
 }

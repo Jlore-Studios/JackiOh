@@ -61,6 +61,11 @@ pub struct DamageFlags {
     pub lifesteal: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trample: Option<bool>,
+    /// MD-D4, R1120: the effect states that its own damage has Poisonous, as `lifesteal` states
+    /// Lifesteal — so a combat strike an attack modifier gilded destroys its Unit target (step 7)
+    /// without the source having the keyword. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub poisonous: Option<bool>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -507,7 +512,8 @@ fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redire
     // Step 7: Poisonous destroys a damaged unit.
     if let (Some(live), Some(source_card)) = (&unit, source)
         && dealt >= 1
-        && source_has(sink.state, Some(source_card), KeywordKind::Poisonous)
+        && (source_has(sink.state, Some(source_card), KeywordKind::Poisonous)
+            || flags.is_some_and(|flags| flags.poisonous == Some(true)))
         && let Some(card) = find_instance_mut(sink.state, &live.id)
     {
         card.marked_destroyed = Some(true);
@@ -517,6 +523,18 @@ fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redire
             let killer = crate::kill_credit::credited_killer_id(source_card, card);
             card.last_damaged_by = Some(killer);
         }
+    }
+
+    // MD-D31, R1124: exile on damage rides beside Poisonous — when the source's card exiles on
+    // damage, the damaged Unit is marked, and the next state check exiles it ahead of deaths (§4.5
+    // step 1). A hit the pipeline stopped (Divine Shield, Indestructible, the zero rule) never
+    // reaches here, so none of them is exiled.
+    if let (Some(live), Some(source_card)) = (&unit, source)
+        && dealt >= 1
+        && crate::scripts::flags_of(sink.state, source_card).exiles_on_damage == Some(true)
+        && let Some(card) = find_instance_mut(sink.state, &live.id)
+    {
+        card.marked_exiled = Some(true);
     }
 
     // Step 8: Lifesteal heals the source's controller's hero by the amount dealt. R85: an effect

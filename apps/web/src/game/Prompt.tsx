@@ -85,6 +85,7 @@ import {
   zoneKey,
   zonesInBoardOrder,
   parseZoneKey,
+  type FaceDownChoice,
   type Interaction,
   type PlagueChoice,
   type PlayBuild,
@@ -535,6 +536,26 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         submit: (keys) => {
           const choice: PlagueChoice | undefined = keys[0] === undefined ? undefined : byKey.get(keys[0]);
           return choice === undefined ? {} : play({ plague: choice });
+        },
+      };
+    }
+    case "faceDown": {
+      // ME-ALTPLAY (R1040, R1044): how the card is played — face-up, or set as a Trap.
+      const labels: Record<FaceDownChoice, string> = {
+        up: "Play it face-up",
+        endOfThisTurn: "Set face-down: reveal at the end of this turn",
+        startOfNextTurn: "Set face-down: reveal at the start of your next turn",
+        endOfNextTurn: "Set face-down: reveal at the end of your next turn",
+      };
+      return {
+        ...common,
+        chrome: "mode",
+        title: "Play it how?",
+        items: need.options.map((option) => ({ key: option, label: labels[option] })),
+        submit: (keys) => {
+          const choice: FaceDownChoice | undefined =
+            keys[0] === undefined ? undefined : (keys[0] as FaceDownChoice);
+          return choice === undefined || !Object.hasOwn(labels, choice) ? {} : play({ faceDown: choice });
         },
       };
     }

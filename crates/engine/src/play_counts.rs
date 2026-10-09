@@ -57,6 +57,11 @@ fn played_face_down(type_: CardType) -> bool {
     type_ == CardType::Trap || type_ == CardType::FieldTrap
 }
 
+/// ME-ALTPLAY, MB11: Feng Shui judges no face-down play — the one test both systems agree on.
+pub fn is_face_down_play(state: &GameState, card: &CardInstance) -> bool {
+    played_face_down(card_type_of(state, card))
+}
+
 /// §10.5 step 4, B5 E4: count one play of `card` by `player`, read as the card is placed (its face and
 /// type as they stand after step 3 made it Radiant, if it did).
 pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance) {

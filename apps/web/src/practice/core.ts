@@ -116,7 +116,9 @@ type PracticeGame = {
 
 /** R188: the action types the AI never takes on its own, even as a fallback. */
 function isForbiddenAiAction(action: ActionBody): boolean {
-  if (action.type === "concede" || action.type === "offerDraw") return true;
+  // MD-D29, R1127: the persona's emote is no AI decision — it arrives on its own request, and the
+  // random policy never emotes, so the gate answers it, never the search.
+  if (action.type === "concede" || action.type === "offerDraw" || action.type === "emote") return true;
   return action.type === "answerDraw" && action.accept;
 }
 
@@ -538,6 +540,17 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
       case "aiStep": {
         const active = current();
         aiStep(active);
+        return snapshotResponse(request.id, active);
+      }
+      case "aiEmote": {
+        // MD-D29, R1127: the persona's emote, applied only while the AI seat's `legalActions` hold
+        // it — an unheard emote is dropped without an error, and the snapshot still answers.
+        const active = current();
+        const body = { type: "emote", emote: request.emote } as ActionBody;
+        const legal = legalActions(active.state, aiSeatNow(active));
+        if (legal.some((action) => action.type === "emote" && action.emote === request.emote)) {
+          apply(active, body, false);
+        }
         return snapshotResponse(request.id, active);
       }
       case "catalog":

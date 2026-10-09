@@ -21,7 +21,8 @@ use crate::config::{
 use crate::rng::Rng;
 use crate::wire::{
     AttackHealth, CardDef, CardDefs, CardType, Counters, Enchantment, GameEvent, Keyword, PLAYER_IDS,
-    PerPlayer, PerPlayerOpt, PlayerId, PromptKind, Row, RowFlags, Selection, Tag, Tuning, Zone, ZoneRef,
+    PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, Row, RowFlags, Selection, Tag, Tuning, Zone,
+    ZoneRef,
 };
 
 pub use crate::wire::{GameResult, Phase, Position, Winner};
@@ -192,6 +193,12 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub marked_destroyed: Option<bool>,
+    /// MD-D31, R1124: damaged by a card that exiles on damage; the next state check exiles it ahead
+    /// of deaths (§4.4 step 7, §4.5 step 1). No Death, no Reborn, no `destroyed`. Only ever
+    /// `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub marked_exiled: Option<bool>,
     /// Came back through Reborn, so it no longer has it (§4.5 step 4).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -245,6 +252,13 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub chinese: Option<bool>,
+    /// ME-ALTPLAY, R1040, R1044: the card was played face-down into the backrow as a Trap (a Unit
+    /// under Knowledge Breaker's Aura, a Spell under Paranoia's) and has not finished revealing.
+    /// Its controller's alone to read while it is face-down (R33, R1046); R78's reset takes it off
+    /// with the card leaving the field (R1045). Absent on every other card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub set_as: Option<SetAs>,
     /// MD-B15, R923: tags an effect gave the card (`effects::grant_tag`, Meditative #35). Part of
     /// the card for every instance-level tag read (`query::tags_of`); catalog pools never see it.
     /// Kept in every zone and through R78's and R766's resets; an instance copy keeps it, a Fuse
@@ -252,6 +266,29 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub granted_tags: Option<Vec<Tag>>,
+}
+
+/// ME-ALTPLAY, R1040, R1044: what a card played face-down as a Trap carries until it has revealed —
+/// when it reveals, the turn it was set in, the Echo a Radiant Paranoia gave it (R1045), and, once
+/// a set Spell has turned face-up, that its own text now resolves (`revealing`).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct SetAs {
+    pub reveal: RevealAt,
+    pub set_turn: i32,
+    /// R1045: the Echo the permission added as the card was set (Radiant Paranoia's +1), once.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub echo: Option<i32>,
+    /// R1044: a set Spell has fired and its Spell text is resolving now. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub revealing: Option<bool>,
 }
 
 /// B5 E12, R452: one cast being driven that makes its caster's choices at random (`random`), narrows
@@ -684,6 +721,26 @@ pub struct DeclaredAttack {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub exits_from: Option<u32>,
+    /// MD-D19, R1122: a trap in the window re-aimed this attack at an ally of its attacker, which
+    /// §4.3 then resolves as a combat between allies. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub redirected: Option<bool>,
+    /// MD-D20, R1123: once that combat's state check has run, this player gets a fresh copy of each
+    /// Unit it destroyed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub copies_for: Option<PlayerId>,
+}
+
+/// MD-D28, R1125: the verdict on one opponent's play — whether it was their best-scored playable
+/// card, judged on the pre-play state from their own view. Never in a view (§10.8).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayJudgement {
+    pub instance_id: String,
+    pub optimal: bool,
+    pub turn: i32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
@@ -898,6 +955,12 @@ pub struct GameState {
     pub trigger_queue: Vec<QueuedTrigger>,
     /// The attack whose trap window is open, between declaration and damage (§4.2 step 4, R44).
     pub declared_attack: Option<DeclaredAttack>,
+    /// MD-D28, R1125: the verdict on the last judged play, stored as the play began. Never in a
+    /// view (§10.8). Absent while no card judges plays, so a game without one hashes as it did
+    /// before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub play_judgement: Option<PlayJudgement>,
     /// Paused sequences waiting to continue, in order (§9.3, §10.6).
     pub work: Vec<WorkItem>,
     /// R113: how many items the *current* pause cascade has parked. A scope parks its remainder at
@@ -1546,6 +1609,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         last_damaged_by: None,
         divine_shield_spent: None,
         marked_destroyed: None,
+        marked_exiled: None,
         reborn_spent: None,
         known_as: None,
         tuning: None,
@@ -1554,6 +1618,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         berserk: None,
         times_played: None,
         chinese: None,
+        set_as: None,
         granted_tags: None,
     };
     *next_id += 1;
@@ -1625,6 +1690,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameS
         pending: None,
         trigger_queue: Vec::new(),
         declared_attack: None,
+        play_judgement: None,
         work: Vec::new(),
         work_cursor: 0,
         echo_queue: Vec::new(),

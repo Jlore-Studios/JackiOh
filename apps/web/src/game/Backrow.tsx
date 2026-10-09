@@ -88,6 +88,7 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
         controller={entry.controller}
         counters={entry.counters}
         unrevealed={entry.unrevealed === true}
+        revealAt={entry.revealAt}
         className="card-backrow"
         touchHold={props.touchHold}
         target={{ on: "backrow", instanceId: entry.instanceId, side: props.side, lane: props.lane }}

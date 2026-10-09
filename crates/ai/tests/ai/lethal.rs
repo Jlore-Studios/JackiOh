@@ -145,6 +145,7 @@ mod the_lethal_solvers_walks {
                 targets: None,
                 modes: None,
                 plague: None,
+                face_down: None,
             }],
         );
         // No Taunt left, and Pointmaster (7) and Tempo Timmy (3) are still to attack: exactly lethal.

@@ -1317,6 +1317,22 @@
     "meditative-038": { // H1B Printer
       cast: { voice: "robot", text: "Printing visas. Please hold." },
     },
+    "meditative-052": { // Economic Anxiety
+      cast: { voice: "sapi-bureaucrat", text: "The market demands its due." },
+    },
+    "meditative-064": { // Traitorous Blood
+      cast: { voice: "sapi-trickster", text: "Loyalty is negotiable." },
+    },
+    "meditative-071": { // Pareto Optimality
+      cast: { voice: "sapi-teacher", text: "There is always a better move." },
+    },
+    "meditative-071-1": { // The Cane
+      cast: { voice: "sapi-teacher", text: "The cane teaches." },
+    },
+    "meditative-072": { // The Banisher
+      play: { voice: "robot", text: "You are unmade." },
+      death: { voice: "robot", text: "Banished with you." },
+    },
     "meditative-076": { // Do or Die
       cast: { voice: "sapi-trickster", text: "Play it fast, or it's mine." },
     },
@@ -1335,6 +1351,17 @@
     },
     "meditative-090": { // Spell Basket
       cast: { voice: "sapi-wizard", text: "A basket full of spells!" },
+    },
+    "meditative-045": { // Knowledge Breaker
+      play: { voice: "sapi-teacher", text: "Empty your mind. Now." },
+      death: { voice: "sapi-teacher", text: "What I knew returns." },
+    },
+    "meditative-045-1": { // Knowledge Breaker Prime
+      play: { voice: "sapi-teacher", text: "I have seen through everything." },
+      death: { voice: "sapi-teacher", text: "Even this ends." },
+    },
+    "meditative-099": { // Paranoia
+      cast: { voice: "sapi-ghost", text: "They are all watching. Hide it." },
     },
   },
   emotes: {
