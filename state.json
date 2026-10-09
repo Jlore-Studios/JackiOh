@@ -4049,6 +4049,13 @@
     "587": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-09T03:39:08Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "easy line 6 is the closest call (apps/web/scripts/check-production-bundle.mjs sits under scripts/, plus conditional vercel.json edits), and the ~16-file scope breaks line 1 anyway"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "muse",
