@@ -4043,6 +4043,7 @@
       "asks": [],
       "interruptions": 1,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-09T03:52:37Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
