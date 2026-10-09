@@ -3413,6 +3413,7 @@
     "530": {
       "action": "build",
       "asks": [],
+      "died": 1,
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -3434,7 +3435,7 @@
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "queued_at": "2026-10-08T09:29:14Z",
+      "queued_at": "2026-10-09T04:07:44Z",
       "requested_by": "squishy-squooby",
       "run_id": "37880510093",
       "started_at": "2026-10-09T03:43:17Z",
