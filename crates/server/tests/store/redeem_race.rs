@@ -2,26 +2,21 @@
 //!
 //! §9.4 step 6 says "increment uses and set the account active, atomically", and `Tx::redeem` is
 //! the whole six-step transaction. `contract.rs` proves each step one call at a time; this proves
-//! the transaction holds when calls overlap:
+//! it holds when calls overlap:
 //!
-//!  - one pending profile redeeming several good codes at once is activated once and spends exactly
-//!    one code (the in-memory store once let both calls pass step 1 across an `await`, so one account
-//!    used up two codes);
+//!  - one pending profile redeeming several good codes at once is activated once and spends one code;
 //!  - several profiles racing for a code's last use get exactly one `ok`;
 //!  - at §9.4 step 3's per-IP boundary, concurrent redemptions from DIFFERENT profiles at one
-//!    address get exactly one more lookup (Postgres once let 7 to 9 through: the count was not held
-//!    across profiles until migration 0006's advisory lock);
+//!    address get exactly one more lookup (held across profiles by migration 0006's advisory lock);
 //!  - a redemption that overlaps another request's transaction stays committed when that one rolls
-//!    back (the in-memory stores once shared one snapshot between them).
+//!    back.
 //!
-//! ONE suite, TWO stores, like `contract.rs` (the port of `apps/server/test/db/redeem-race.ts` and
-//! its two runners): every case runs against `Db::Fake` always, and against `Db::Pg` too when
-//! `DATABASE_URL` is set (`tests/db/run.sh`, which runs the cases one at a time over one database).
+//! ONE suite, TWO stores, like `contract.rs`: every case runs against `Db::Fake` always, and against
+//! `Db::Pg` too when `DATABASE_URL` is set (`tests/db/run.sh`, one case at a time over one database).
 //!
-//! Every call is started before any is awaited (`join_all`, TS's `Promise.all`), so the stores see
-//! them overlap. The fake serialises them on its one lock (`FakeTx` holds it from `begin` to
-//! commit or drop); Postgres runs them on separate connections under `app.redeem_invite_code`'s
-//! row and advisory locks.
+//! Every call is started before any is awaited (`join_all`), so the stores see them overlap. The fake
+//! serialises them on its one lock; Postgres runs them on separate connections under
+//! `app.redeem_invite_code`'s row and advisory locks.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -38,9 +33,8 @@ use sqlx::postgres::PgPool;
 
 use crate::support::deps::test_app;
 
-/// One transaction around one store call, as TS's store gave every method called outside
-/// `store.tx`: begin, the call, commit. Answers the call's value, or the first error's text; an
-/// error drops the transaction, which rolls it back.
+/// One transaction around one store call made outside `store.tx`: begin, the call, commit. Answers
+/// the call's value, or the first error's text; an error drops the transaction, rolling it back.
 macro_rules! once {
     ($db:expr, $sub:expr, |$tx:ident| $call:expr) => {
         async {
@@ -53,9 +47,7 @@ macro_rules! once {
     };
 }
 
-// ---------------------------------------------------------------------------
-// The two ends of the contract (`test/db/harness.ts`, the parts this suite uses)
-// ---------------------------------------------------------------------------
+// The two ends of the contract
 
 /// The fixture catalog the Postgres end seeds: 64 playable ids and two tokens (§9.4 L1–L3).
 const CATALOG_VERSION: &str = "core-1";
@@ -69,9 +61,9 @@ fn token_ids() -> Vec<String> {
     vec!["core-001.1".to_string(), "core-002.1".to_string()]
 }
 
-/// Every table the migrations create, children first. `cards` is seeded once and kept. The loadout
-/// tables are no longer written by anything (R254) but are emptied all the same, so a test that
-/// wrote one by hand leaves nothing behind.
+/// Every table the migrations create, children first. `cards` is seeded once and kept. Nothing
+/// writes the loadout tables (R254) but they are emptied all the same, so a hand-written row leaves
+/// nothing behind.
 const TRUNCATE: &str = "truncate
   public.game_records, public.tutorial_progress, public.player_settings,
   public.rated_games, public.bot_ratings, public.season_ranks, public.seasons,
@@ -138,7 +130,7 @@ async fn memory_harness() -> Harness {
     }
 }
 
-/// The Postgres end, emptied: TS's `postgresHarness()` and its `reset()` before the case.
+/// The Postgres end, emptied before the case.
 async fn postgres_harness(url: &str) -> Harness {
     let admin = PgPool::connect(url).await.expect("the admin connection");
     sqlx::raw_sql(TRUNCATE).execute(&admin).await.expect("truncate");
@@ -206,9 +198,7 @@ impl Harness {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 /// uuids, because the Postgres store types every id column as `uuid`.
 fn uuid() -> String {
@@ -219,7 +209,7 @@ fn must<T>(value: Option<T>, what: &str) -> T {
     value.unwrap_or_else(|| panic!("expected {what}"))
 }
 
-/// A row from the JSON TS wrote it as; the store method's parameter names the type.
+/// A row from its JSON; the store method's parameter names the type.
 fn de<T: DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
 }
@@ -228,12 +218,12 @@ fn js<T: Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("a store row serialises")
 }
 
-/// `harness.now()`: the wall clock in epoch ms.
+/// The wall clock in epoch ms.
 fn now_ms() -> i64 {
     (time::OffsetDateTime::now_utc().unix_timestamp_nanos() / 1_000_000) as i64
 }
 
-/// Every future started before any is awaited, as `Promise.all` starts them; the answers in order.
+/// Every future started before any is awaited (`join_all`); the answers in order.
 async fn join_all<F: Future>(futures: Vec<F>) -> Vec<F::Output> {
     let mut futures: Vec<Pin<Box<F>>> = futures.into_iter().map(Box::pin).collect();
     let mut outputs: Vec<Option<F::Output>> = futures.iter().map(|_| None).collect();
@@ -322,9 +312,7 @@ fn sorted(mut values: Vec<String>) -> Vec<String> {
     values
 }
 
-// ---------------------------------------------------------------------------
 // B14 concurrent redemptions (SPEC §9.4 step 6)
-// ---------------------------------------------------------------------------
 
 mod b14_concurrent_redemptions {
     use super::*;

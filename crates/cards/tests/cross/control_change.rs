@@ -1,28 +1,14 @@
-//! Port of `packages/cards/test/control-change.test.ts` (part 27.1).
-//!
 //! R171 and R172 with the real cards (SPEC §4.1, §11; docs/polish/4-edge-cases.md behaviours 1 to 10,
 //! 14 and 15). Every card that changes control — #36 radiant, #49, #50, #52, #86 and #87 — makes the
 //! unit it moves enter its new controller's side on that turn: summoning sick exactly as a unit
 //! summoned that turn is, with Rush and Charge applying as usual, and with a fresh exertion for its
 //! new controller. A unit that only moves between lanes on its own side has entered nothing.
 //!
-//! R172 is the case the brief asked to check: a stolen unit dies as its controller's. Its Death runs
-//! for that player (#81, radiant #3) and a Reborn body comes back on that player's side, sick.
-//!
-//! Two cases the hunt's second round added at the end, where a card crossing the centre line meets
-//! another rule: radiant #52 still takes the opponent's card that crosses onto its side (R14), and a
-//! played #52 that crossed onto #85's side is not a Fuse target for itself (R61).
-//!
-//! The engine-fixture proofs of the same rows are `packages/engine/test/control-change.test.ts` and
-//! `control-change.property.test.ts`; this file is the proof through `scenario()` that the cards
-//! reach the rule.
-//!
-//! Every case that crosses a turn boundary keeps a card in hand or a unit on the board for both
-//! sides, so R82's automatic turn end never skips a turn (see the harness header).
-//!
-//! Props: #25 4-mana 7/7 (no Rush or Charge; Armor 7, so a small attacker bounces off it), #8 Mr.
-//! Vanilla (a plain 4/4), #20 Pointmaster (a 7/1 that never matters), #56 Jilliax (Rush), #45 Deft Duelist (Charge), #11 Tempo Timmy (Charge radiant), #14 Jlockeed's Weapons
-//! (an aura granting Rush), #68 Twisted Sorcerer (4 damage to a target), #41 Sheepish (a Trap).
+//! R172: a stolen unit dies as its controller's: its Death runs for that player (#81, radiant #3)
+//! and a Reborn body comes back on that player's side, sick. Radiant #52 still takes the
+//! opponent's card that crosses onto its side (R14), and a played #52 that crossed onto #85's side
+//! is not a Fuse target for itself (R61). A case that crosses a turn boundary keeps a card in hand
+//! or a unit on the board for both sides, so R82's automatic turn end never skips a turn.
 
 use jackioh_engine::testkit::*;
 
@@ -46,13 +32,11 @@ const SHEEPISH: &str = "core-041";
 const UNLICENSED: &str = "core-085";
 const LIBRARY: [&str; 4] = [VANILLA, VANILLA, VANILLA, VANILLA];
 
-// TS's `/summoning sick/`, `/Rush cannot hit the hero/`, `/already acted/`: literal patterns.
 const SICK: &str = "summoning sick";
 const RUSH_NOT_HERO: &str = "Rush cannot hit the hero";
 const ALREADY_ACTED: &str = "already acted";
 
-/// The harness with the real catalog and every card script registered (TS's `_harness.ts` import
-/// ran `registerAll()`; the engine's testkit cannot name the cards crate, so the cards test does).
+/// The harness with every card script registered: the engine's testkit cannot name the cards crate.
 fn setup(opts: Value) -> Scenario {
     jackioh_cards::register_all();
     scenario(opts)
@@ -502,8 +486,8 @@ mod r171_with_the_cards_that_change_control {
     #[test]
     fn r171_c49_radiant_making_a_stolen_c11_radiant_gives_it_charge_so_it_may_attack_the_hero_at_once() {
         let mut g = setup(json!({
-            // #49 costs (4) since patch v0.2.0 (issue #40): a fifth mana keeps Mr. Vanilla playable, so the
-            // turn does not auto-end (R82) and hand p2 a fatigue draw before the hero is read.
+            // #49 costs (4): a fifth mana keeps Mr. Vanilla playable, so the turn does not auto-end
+            // (R82) and hand p2 a fatigue draw before the hero is read.
             "p1": { "hand": [{ "def": MIND_CONTROL, "radiant": true }, VANILLA], "mana": 5 },
             "p2": { "field": [{ "def": TIMMY, "lane": 2 }, { "def": VANILLA, "lane": 4 }] },
         }));
@@ -594,7 +578,7 @@ mod r172_a_stolen_unit_dies_as_its_controllers {
         // Death: "Make your other Units Radiant" — "your" is the thief.
         assert!(g.card(&mine).radiant);
         assert!(!g.card(&theirs).radiant);
-        // No Reborn since patch v0.1.1: off the field she is her owner's again (R12).
+        // Off the field she is her owner's again (R12).
         assert!(g.unit("p1", 2).is_none());
         assert!(
             g.pile("p2", "graveyard")

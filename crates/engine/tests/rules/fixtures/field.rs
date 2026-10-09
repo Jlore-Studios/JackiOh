@@ -1,14 +1,8 @@
 //! Fixtures for the field workstream's systems (docs/classic-sets.md B3.1 Animated, B5 E20 Lock variants
 //! and Unlock, E21 backrow piles and carriers, E22 Flicker). Test-only scripts, since the engine never
-//! imports `packages/cards` (CLAUDE.md): each is the shape of a Classic or Classic+ card that uses the
+//! imports `crates/cards` (CLAUDE.md): each is the shape of a Classic or Classic+ card that uses the
 //! system, cut down to the part the engine test exercises. Defs are prefixed `fd-` and indexed from
 //! 9400, so they collide with no other file's catalog (BUILD §0).
-//!
-//! Port of `packages/engine/test/fixtures/field.ts`. Each exported def is a `pub static` under TS's
-//! name; TS's module counter (`nextIndex`, from 9400, one per `def` call in file order) is each def's
-//! stated index. TS's module `let nonce` is a per-thread counter (each Rust test runs on its own
-//! thread, as each TS test file ran in its own module), and an action body is the TS literal as JSON
-//! (`act(&state, json!({ "type": "endTurn", "playerId": "p1" }))`) or any `ActionInput`.
 
 #![allow(non_upper_case_globals)]
 
@@ -23,7 +17,7 @@ use jackioh_engine::testkit::*;
 
 use super::harness::new_game;
 
-/// TS `def(name, type, extra = {})`: a Core Common at cost 1 whose faces print `name`, `extra` over it.
+/// A Core Common at cost 1 whose faces print `name`, `extra` over it.
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     let mut card = json!({
         "id": format!("fd-{name}"),
@@ -46,7 +40,7 @@ fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     json_as(card)
 }
 
-/// TS `face(attack, health, keywords, text = "")`, as the JSON a def literal takes.
+/// A face as the JSON a def literal takes.
 fn face(attack: i32, health: i32, keywords: Value) -> Value {
     json!({ "attack": attack, "health": health, "keywords": keywords, "text": "" })
 }
@@ -130,11 +124,11 @@ pub static wisp: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
-/// A carrier whose aura gives its controller's cards Stack: Classic+ #33 Ivory Tower's shape before patch v0.2.3.
+/// A carrier whose aura gives its controller's cards Stack: Classic+ #33 Ivory Tower's earlier shape.
 pub static tower: LazyLock<CardDef> =
     LazyLock::new(|| def("tower", 9407, "Field Spell", json!({ "cost": 2 })));
 
-/// Classic+ #33 Ivory Tower's shape since patch v0.2.3: a carrier that takes one Unit a stay (R653).
+/// Classic+ #33 Ivory Tower's current shape: a carrier that takes one Unit a stay (R653).
 pub static fuser: LazyLock<CardDef> =
     LazyLock::new(|| def("fuser", 9408, "Field Spell", json!({ "cost": 2 })));
 
@@ -239,7 +233,7 @@ fn both(script: Script) -> CardScripts {
 pub const NOTES: &str = "fdNotes";
 
 /// An effect that appends `name` to the running card's own notes (`memory.fdNotes`): on the card as it
-/// stands in the state (TS wrote through the live `ctx.self`), and on the context's copy of it.
+/// stands in the state, and on the context's copy of it.
 pub fn note(name: impl Into<String>) -> Effect {
     let name: String = name.into();
     Effect::new("fd:note", move |ctx| {
@@ -260,8 +254,7 @@ pub fn note(name: impl Into<String>) -> Effect {
     })
 }
 
-/// A card's notes, or none (TS `notesOf(card: CardInstance | undefined | null)`: pass `&card`,
-/// `Some(&card)` or `None`).
+/// A card's notes, or none: pass `&card`, `Some(&card)` or `None`.
 pub fn notes_of<'a>(card: impl Into<Option<&'a CardInstance>>) -> Vec<String> {
     match card
         .into()
@@ -298,7 +291,6 @@ fn tesla_face(amount: i32) -> Script {
     }
 }
 
-/// A trigger on an enemy play whose list is `notes` then, when `animates`, `animate()`.
 fn enemy_play_noter(id: &'static str, entry: &'static str, animates: bool) -> Script {
     Script {
         triggers: vec![
@@ -498,7 +490,6 @@ pub static FIELD_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::ne
     ])
 });
 
-/// A game with the field fixtures registered beside the engine's own.
 pub fn field_game(seed: &str) -> GameState {
     let state = new_game(seed, None);
     let mut defs: CardDefs = registered_catalog().clone();
@@ -513,7 +504,6 @@ pub fn field_game(seed: &str) -> GameState {
 }
 
 thread_local! {
-    /// TS's module `let nonce = 0`.
     static NONCE: Cell<u32> = const { Cell::new(0) };
 }
 
@@ -557,7 +547,7 @@ pub fn playing(seed: &str) -> GameState {
     state
 }
 
-/// Gives a player plenty of mana for a test's plays. TS `flush(state, player, mana = 10)`.
+/// Gives a player plenty of mana for a test's plays.
 pub fn flush(state: &mut GameState, player: PlayerId, mana: i32) {
     state.players[player].mana.current = mana;
     state.players[player].mana.max = mana;

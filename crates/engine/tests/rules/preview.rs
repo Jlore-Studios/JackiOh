@@ -1,11 +1,8 @@
 //! R280 (SPEC §10.8, §10.9): the number a formula comes to now, as `viewFor` carries it on a card
 //! view (`preview`), and a Fuse's list (R102).
 //!
-//! Every card here is a test-only definition whose script carries a `vi.fn` `preview`, so each test
-//! controls what the hook answers and reads back every question the engine asked it. The pattern is
-//! conditionActive.test.ts's: the definitions go on top of the fixture catalog and scripts, and the
-//! registries are put back in `afterAll`. The real Core hooks are proved in packages/cards
-//! (test/preview.test.ts).
+//! Every card here is a test-only definition whose script carries a recording `preview` hook, so each
+//! test controls what the hook answers and reads back every question the engine asked it.
 //!
 //! Where the view carries it (§10.8), both seats:
 //!   - the viewer's own hand, in any phase and on either turn;
@@ -17,12 +14,8 @@
 //! resolving card — and the hook is not even asked about those. Absent, never `[]`, when the hook
 //! answers nothing or the card has none.
 //!
-//! Port of `packages/engine/test/preview.test.ts`. A `vi.fn` hook is a hook that records each question
-//! it is asked (the parts of its `ConditionContext` the tests read) in a thread-local log; `mockClear`
-//! empties its entries. The registries are the testkit's per-thread override (SURFACE §8) and each test
-//! runs on its own thread, so TS's `beforeAll`/`afterAll` save and restore have nothing left to do, and
-//! TS's `beforeEach` clear is the fresh thread's empty log. TS held the live card `put` and `inHand`
-//! returned; here a card is re-read from the state (`live`) and written through `find_instance_mut`.
+//! The registries are the testkit's per-thread override (Surface contract: docs/v0.3.0/SURFACE.md §8)
+//! and each test runs on its own thread, so the hook log starts empty.
 
 use std::cell::Cell;
 
@@ -33,9 +26,7 @@ use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 
 use crate::rules::fixtures::harness::{in_hand, new_game, put, set_library, sink_for, slot};
 
-// ---------------------------------------------------------------------------
 // Fixtures
-// ---------------------------------------------------------------------------
 
 /// Which `vi.fn` answered.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -47,7 +38,7 @@ enum HookId {
     B,
 }
 
-/// One question a hook was asked: what the tests read off TS's recorded `ConditionContext`.
+/// One question a hook was asked: what the tests read off its `ConditionContext`.
 #[derive(Clone, Debug)]
 struct Asked {
     hook: HookId,
@@ -57,12 +48,12 @@ struct Asked {
     zone: ConditionZone,
     your_turn: bool,
     turn: i32,
-    /// The context's keys as TS names them, sorted (TS `Object.keys(ctx).sort()`).
+    /// The context's keys, sorted.
     keys: Vec<&'static str>,
 }
 
 thread_local! {
-    /// Every question every hook has been asked since its last clear (TS `hook.mock.calls`).
+    /// Every question every hook has been asked since its last clear.
     static CALLS: Cell<Vec<Asked>> = const { Cell::new(Vec::new()) };
 }
 
@@ -106,7 +97,7 @@ fn calls_of(hook: HookId) -> Vec<Asked> {
     calls().into_iter().filter(|call| call.hook == hook).collect()
 }
 
-/// TS `hook.mockClear()` for each of `hooks`.
+/// Empties the log entries of each of `hooks`.
 fn clear(hooks: &[HookId]) {
     CALLS.with(|cell| {
         let calls: Vec<Asked> = cell
@@ -173,7 +164,7 @@ fn hook_b() -> PreviewHook {
     })
 }
 
-/// TS `{ ...base, ...extra }`: every key of `extra` written over `base`.
+/// Every key of `extra` written over `base`.
 fn spread(mut base: Value, extra: Value) -> Value {
     if let (Some(target), Value::Object(extra)) = (base.as_object_mut(), extra) {
         for (key, value) in extra {
@@ -183,8 +174,7 @@ fn spread(mut base: Value, extra: Value) -> Value {
     base
 }
 
-/// TS `def(name, type, extra = {})`. TS's module counter `nextIndex` (from 2800) is written out as the
-/// index each definition got, in the order the file made them.
+/// A test definition; `index` is the one each definition got, in the order the file made them.
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     json_as(spread(
         json!({
@@ -219,7 +209,7 @@ fn unit_def(name: &str, index: i32, extra: Value) -> CardDef {
     )
 }
 
-/// TS `STACK_TEXT` spread under the given stats.
+/// A Stack face under the given stats.
 fn stack_face(attack: i32, health: i32) -> Value {
     json!({ "attack": attack, "health": health, "keywords": [{ "kind": "Stack" }], "text": "stack" })
 }
@@ -309,7 +299,7 @@ fn both(base: Option<PreviewHook>, radiant: Option<PreviewHook>) -> CardScripts 
     }
 }
 
-/// TS `HOOKED`.
+/// Both faces hooked.
 fn hooked() -> CardScripts {
     both(Some(base_hook()), Some(radiant_hook()))
 }
@@ -351,7 +341,7 @@ fn one(cards: Vec<CardInstance>) -> CardInstance {
     cards.into_iter().next().expect("expected a card")
 }
 
-/// The card as it stands in `state` now (TS held the live object).
+/// The card as it stands in `state` now.
 fn live(state: &GameState, card: &CardInstance) -> CardInstance {
     find_instance(state, &card.id)
         .cloned()
@@ -443,7 +433,7 @@ fn to_json(value: &impl serde::Serialize) -> String {
     serde_json::to_string(value).expect("serialises")
 }
 
-/// TS `"key" in object`, on the serialised object.
+/// Whether the serialised object holds `key`.
 fn has_key(value: &impl serde::Serialize, key: &str) -> bool {
     serde_json::to_value(value)
         .expect("serialises")
@@ -455,9 +445,7 @@ fn side(view: &PlayerView, viewer: PlayerId) -> &SideView {
     if viewer == P1 { &view.you } else { &view.opponent }
 }
 
-// ---------------------------------------------------------------------------
 // The viewer's hand
-// ---------------------------------------------------------------------------
 
 /// R280 preview in the viewer's own hand
 mod r280_preview_in_the_viewer_s_own_hand {
@@ -574,9 +562,7 @@ mod r280_preview_in_the_viewer_s_own_hand {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The field: the top of a unit pile, the backrow
-// ---------------------------------------------------------------------------
 
 /// R280 preview on the field
 mod r280_preview_on_the_field {
@@ -763,9 +749,7 @@ mod r280_preview_on_the_field {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Nowhere else
-// ---------------------------------------------------------------------------
 
 /// R280 preview is nowhere else
 mod r280_preview_is_nowhere_else {
@@ -892,9 +876,7 @@ mod r280_preview_is_nowhere_else {
     }
 }
 
-// ---------------------------------------------------------------------------
 // A read, and nothing more
-// ---------------------------------------------------------------------------
 
 /// R280 the hook is a pure read
 mod r280_the_hook_is_a_pure_read {
@@ -944,15 +926,13 @@ mod r280_the_hook_is_a_pure_read {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R102: a fused card's list, and its refs
-// ---------------------------------------------------------------------------
 
 /// R280 a fusion's preview is its ingredients' lists in ingredient order (R102)
 mod r280_r102_a_fusion_s_preview_is_its_ingredients_lists_in_ingredient_order {
     use super::*;
 
-    /// Craft a fusion of `def_ids` into p1's hand through the real R77 `fuse`, the path #99 takes.
+    /// Craft a fusion of `def_ids` into p1's hand through the real R77 `fuse`.
     fn craft(state: &mut GameState, def_ids: &[String]) -> CardInstance {
         let ingredients: Vec<CardInstance> = def_ids
             .iter()

@@ -1,17 +1,10 @@
-//! Nothing happens after the game is over (SPEC §2.5, §4.5 step 2, R96, R216). Found by the polish-4
-//! edge-case hunt, round 4 (docs/polish/4-edge-cases.md, lens "engine invariants"), which checked
-//! seeded random games for a finished game that stays finished; every case here failed before its
-//! fix, and the fuzz monitor's I5 now checks the same thing in every random game.
-//!
-//! Round 5 (lens L1) found /fullsend's Combo draws drawing on, one per rider, after a cast inside the
-//! first had ended the game. Round 7 (lens "engine invariants") found a game conceded under an open
-//! Discover still holding the prompt, which nothing could answer.
+//! Nothing happens after the game is over (SPEC §2.5, §4.5 step 2, R96, R216); the fuzz monitor's I5
+//! checks the same thing in every random game.
 //!
 //! The check that finds a hero at 0 or less ends the game at once. Whatever was still to resolve then
 //! does not: the rest of the effect list the check ran inside, owed work, queued triggers, or a trap's
-//! consumption after the AI turn it handed over has ended the game.
-//!
-//! Port of `packages/cards/test/game-over.test.ts` (SURFACE §4.1, §8).
+//! consumption after the AI turn it handed over has ended the game. A game conceded under an open
+//! Discover leaves no prompt behind. Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
 
 use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -32,13 +25,11 @@ const DOOM: &str = "destroy a Unit at the start of your next turn";
 
 use super::scenario;
 
-/// TS `lastEvents.map((event) => event.type)`.
 fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
     events.iter().map(GameEvent::event_type).collect()
 }
 
-/// TS `types.slice(types.indexOf("gameOver") + 1)`: what follows the first `gameOver` (the whole list
-/// when there is none, as `indexOf`'s -1 + 1 = 0 gives).
+/// What follows the first `gameOver`: the whole list when there is none.
 fn after_game_over(types: &[GameEventType]) -> Vec<GameEventType> {
     let from = types
         .iter()
@@ -112,10 +103,9 @@ mod r216_nothing_happens_after_the_game_is_over {
     #[test]
     fn r216_fullsends_combo_draws_stop_once_a_cast_on_draw_draw_inside_them_has_ended_the_game_2_5_2_4_10_5_step_5()
      {
-        // Two Radiant /fullsends (the face with the Combo rider since patch v0.1.1) make two "Combo:
-        // draw 1" riders. The Vanilla played after them owes two draws;
-        // the first draws Hinder, which is cast (R70) and owes the same two draws of its own, both from an
-        // empty library (fatigue 1, then 2), and the check after that cast finds p1 at 0 or less: the
+        // Two Radiant /fullsends make two "Combo: draw 1" riders, so the Vanilla played after them owes
+        // two draws. The first draws Hinder, cast on its draw (R70), which owes two draws of its own from
+        // an empty library (fatigue 1, then 2); the check after that cast finds p1 at 0 or less and the
         // game is over. The Vanilla's second Combo draw must not happen.
         let mut g = scenario(json!({
             "p1": {
@@ -154,7 +144,7 @@ mod r216_nothing_happens_after_the_game_is_over {
 
     #[test]
     fn r216_r437_a_marked_unit_that_dies_with_its_hero_says_nothing_of_its_mark_after_game_over_2_5() {
-        // Fuzz seed 329 (#562), cut down: p1's The Power to Punish marks p2's Pointmaster for a destroy at
+        // Fuzz seed 329, cut down: p1's The Power to Punish marks p2's Pointmaster for a destroy at
         // the start of p1's next turn (R437's red mark). Shredder's end-of-turn 2 damage kills the
         // Pointmaster and p2's hero in one state check, which ends the game (§2.5). The destroy went
         // with its Unit, but the mark's `marked` (added: false) may not follow `gameOver`.

@@ -1,28 +1,17 @@
 //! A prompt opened inside the end-of-turn trap window (SPEC §2.2, §9.3, §10.3, §10.6; R62, R100,
 //! R113).
 //!
-//! The window of §2.2 delivers one `turnEnded` event to every armed trap on both sides, in R68's
-//! order. It is therefore a sequence that can span a prompt, and the governing rule of this engine
-//! is that such a sequence must be resumable through `state.work`: never an effect list, a closure
-//! or a remaining-traps array held across the pause, only the step's name and its captured data as
-//! plain JSON (§9.3, R113). `traps.runTrapWindow` parks the event plus the ids of the traps that
-//! have not seen it as a `TRAP_WINDOW_WORK` item, and `triggers.settle`'s drain finishes the window
-//! once the answer arrives.
+//! The window delivers one `turnEnded` event to every armed trap on both sides, in R68's order, so
+//! it can span a prompt and must be resumable through `state.work`: only the event and the ids of
+//! the traps that have not seen it, as plain JSON (§9.3, R113).
 //!
-//! The three things pinned here:
+//!   * R113: a trap that prompts stops the window; the rest is owed, and the answer fires it in the
+//!     window's order. A JSON round trip of the paused game resumes identically.
+//!   * R100 and R33: the resumed window offers the event only to the traps still owed it, so the
+//!     Field Trap that prompted does not fire twice.
+//!   * R62: the window finishes before the end-of-turn delayed effects and cleanup, prompt or not.
 //!
-//!   * R113 — a trap that prompts stops the window and the rest of it is *owed*, not dropped. The
-//!     answer fires the traps that had not seen the event, in the window's own order, and a
-//!     `JSON.parse(JSON.stringify(state))` of the paused game resumes identically.
-//!   * R100 and R33 — the resumed window offers the event only to the traps still owed it, so the
-//!     Field Trap that prompted, which stays on the field after firing, does not fire a second time.
-//!   * R62 — the window finishes before the end-of-turn delayed effects and before cleanup, whether
-//!     or not a prompt interrupted it.
-//!
-//! Fixtures are this file's own: defs are prefixed `tw-` and indexed from 2200, so they cannot
-//! collide with another test file's catalog (BUILD §0).
-//!
-//! Port of `packages/engine/test/trap-window-pause.test.ts`.
+//! Fixtures are this file's own: `tw-` defs indexed from 2200 (BUILD §0).
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -30,11 +19,8 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
 
-// ---------------------------------------------------------------------------
-// The sink: TS `sinkFor(state)`, a sink whose rng starts at the state's cursor, as reduce does.
-// Rust's `EngineSink` borrows the state, so the event list and the rng live here and each call
-// borrows the state again; the state is read between calls as TS read `state`.
-// ---------------------------------------------------------------------------
+// The sink: its rng starts at the state's cursor, as reduce's does. `EngineSink` borrows the state,
+// so the event list and the rng live here and each call borrows the state again.
 
 struct SinkFor {
     events: Vec<GameEvent>,
@@ -54,15 +40,11 @@ impl SinkFor {
     }
 }
 
-/// TS `JSON.parse(JSON.stringify(x))`.
 fn round_trip<T: serde::Serialize + serde::de::DeserializeOwned>(value: &T) -> T {
     serde_json::from_value(serde_json::to_value(value).expect("serialises")).expect("deserialises")
 }
 
-// ---------------------------------------------------------------------------
-// Fixtures. TS numbered them from a module counter starting at 2200; each def's index is written
-// out here in the order TS created them.
-// ---------------------------------------------------------------------------
+// Fixtures.
 
 fn def(name: &str, index: u32, type_: &str) -> CardDef {
     json_as(json!({
@@ -84,7 +66,7 @@ fn def(name: &str, index: u32, type_: &str) -> CardDef {
 fn log_card() -> CardDef {
     def("log", 2201, "Field Spell")
 }
-/// #18's shape, but it asks first: a Field Trap on `turnEnded` that prompts its own controller.
+/// A Field Trap on `turnEnded` that prompts its own controller.
 fn ask_trap() -> CardDef {
     def("ask", 2202, "Field Trap")
 }
@@ -111,9 +93,7 @@ fn defs() -> Vec<CardDef> {
     ]
 }
 
-// ---------------------------------------------------------------------------
 // The note log: what fired, in the order it fired.
-// ---------------------------------------------------------------------------
 
 const NOTE_LANE: usize = 5;
 
@@ -253,9 +233,7 @@ fn scripts() -> Vec<(String, CardScripts)> {
     ]
 }
 
-// ---------------------------------------------------------------------------
 // Harness.
-// ---------------------------------------------------------------------------
 
 fn game(seed: &str) -> GameState {
     let state = new_game(seed, None);
@@ -272,10 +250,9 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// TS's module-level `let nonce`.
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
-/// `body` is the TS `ActionInput` literal; the nonce is added here.
+/// The nonce is added here.
 fn act_result(state: &GameState, body: Value) -> ReduceResult {
     let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
     let mut action = body;
@@ -359,8 +336,6 @@ fn strings(items: &[&str]) -> Vec<String> {
     items.iter().map(|item| item.to_string()).collect()
 }
 
-// ---------------------------------------------------------------------------
-
 mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
     use super::*;
 
@@ -396,8 +371,8 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
         assert_eq!(notes(paused), strings(&["window1"]));
         assert_eq!(trap_fired_ids(&ended.events), vec![asking.id.clone()]);
 
-        // R113: the window parked what it still owes — the event, and the traps that have not seen it,
-        // in the window's order. This is the whole fix: without it the rest of the window is lost.
+        // R113: the window parked what it still owes: the event, and the traps that have not seen it,
+        // in the window's order.
         let parked = only(owed_work(paused, Some(TRAP_WINDOW_WORK)));
         let owed = owed_window_of(&parked.resume);
         assert_eq!(
@@ -408,7 +383,7 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
             owed.as_ref().map(|window| window.owed.clone()),
             Some(vec![second.id.clone(), third.id.clone()])
         );
-        // Plain data, so no effect list, closure or live trap array is held across the prompt (§9.3).
+        // Plain data (§9.3).
         assert_eq!(round_trip(&parked), parked);
 
         // §10.1: the paused game survives a round trip and resumes from the round-tripped copy.
@@ -422,8 +397,7 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
         assert_eq!(resumed.error, None);
         let answered = &resumed.state;
 
-        // The traps the pause stopped the window from reaching fire on the answer, in R62's order:
-        // the ending player's side first, then the opponent's.
+        // The owed traps fire on the answer, in R62's order: the ending player's side first.
         assert_eq!(
             notes(answered),
             strings(&["window1", "answered", "window2", "window3"])
@@ -432,7 +406,6 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
             trap_fired_ids(&resumed.events),
             vec![second.id.clone(), third.id.clone()]
         );
-        // Nothing is owed any more, and no prompt is left open.
         assert!(answered.pending.is_none());
         assert!(owed_work(answered, Some(TRAP_WINDOW_WORK)).is_empty());
         assert!(answered.work.is_empty());
@@ -465,8 +438,7 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
 
         let paused = act_result(&state, json!({ "type": "endTurn", "playerId": "p1" })).state;
         assert!(paused.pending.is_some());
-        // The trap that fired is a Field Trap: it is still on the field, so re-offering it the event
-        // is a real risk and the owed list is what rules it out (§5.1, R33).
+        // A Field Trap stays on the field after firing; the owed list is what stops a re-offer (§5.1, R33).
         assert_eq!(
             card_at(&paused, slot(PlayerId::P1, Row::Backrow, 1)).map(|c| c.id.clone()),
             Some(asking.id.clone())
@@ -524,32 +496,20 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
         assert_eq!(dispatch.fired, Vec::<String>::new());
         assert!(dispatch.paused);
         assert!(notes(&state).is_empty());
-        // Every matched trap is owed the event: a bare `if (pending !== null) return;` would drop them.
+        // Every matched trap is owed the event.
         assert_eq!(
             owed_window_of(&only(owed_work(&state, Some(TRAP_WINDOW_WORK))).resume).map(|window| window.owed),
             Some(vec![first.id.clone(), second.id.clone()])
         );
 
-        // And once the prompt is gone the drain delivers it, in the window's order.
         close_prompt(&mut sink.on(&mut state));
         settle(&mut sink.on(&mut state), SettleOptions::default());
         assert_eq!(notes(&state), strings(&["window2", "window3"]));
         assert!(state.work.is_empty());
     }
 
-    // NOTE — this one fails today, and the half that is missing is not the window's.
-    //
-    // It is the joint acceptance criterion for §2.2's end of turn: `traps.runTrapWindow` now owes its
-    // remainder (the three tests above), but `turn.ts`'s `endTurn` does not notice that the window
-    // paused. It calls `runTrapWindow` and walks straight on to `runDelayed`, `cleanup` and the next
-    // `startTurn` with the prompt still open, so the delayed effect below resolves *inside* the
-    // unfinished window and cleanup closes the turn log before the window's last traps have fired —
-    // R62's order, broken on the pause path.
-    //
-    // The fix is the same shape as the window's and belongs to `turn.ts`: park the steps after the
-    // window as a work item of its own when `state.pending !== null`. Parked at `state.workCursor` it
-    // lands behind the window's remainder, so the drain finishes the window first and R62's order
-    // survives the pause. `traps.ts` cannot do it — `runDelayed` and `cleanup` are `turn.ts`'s alone.
+    // The joint acceptance criterion for §2.2's end of turn: when the window pauses, the steps after
+    // it (delayed effects, cleanup) wait behind its owed remainder, so R62's order survives the pause.
     #[test]
     fn r62_finishes_the_window_before_the_end_of_turn_delayed_effects_and_before_cleanup() {
         let mut state = playing("window-before-delayed");
@@ -572,7 +532,6 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
             json!({}),
         );
 
-        // §2.2's order for the end of a turn: triggers, window, delayed effects, cleanup (R62).
         let mut sink = sink_for(&state);
         let scheduled = schedule_delayed(
             &mut sink.on(&mut state),
@@ -596,8 +555,7 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
         let paused = act_result(&state, json!({ "type": "endTurn", "playerId": "p1" })).state;
         assert_eq!(paused.pending.as_ref().map(|p| p.player_id), Some(PlayerId::P1));
 
-        // The window is unfinished, so nothing R62 puts after it has happened: the delayed effect is
-        // still due and cleanup has not closed p1's turn log.
+        // The window is unfinished: the delayed effect is still due and cleanup has not run.
         assert_eq!(notes(&paused), strings(&["window1"]));
         assert_eq!(
             paused
@@ -609,7 +567,6 @@ mod a_prompt_inside_the_end_of_turn_trap_window_s2_2_r62_r100_r113 {
         );
         assert_eq!(paused.players.p1.turn_log.unspent_at_end, None);
 
-        // The answer finishes the window first, and only then the rest of R62's order runs.
         let answered = answer(&paused).state;
         assert_eq!(
             notes(&answered),
