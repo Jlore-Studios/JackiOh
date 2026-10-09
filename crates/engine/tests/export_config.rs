@@ -1,7 +1,7 @@
 //! Writes `apps/web/src/wire/engineConfig.ts`, the engine constants the web client imports as
 //! `@jackioh/engine/config` (docs/v0.3.0/SURFACE.md §5.1): the values and two types that a file under
 //! `apps/web/src` imports from it today (SURFACE's twelve, plus `LIBRARY_CAP`, which a web test
-//! imports, and R768's two replay constants), generated from `crates/engine/src/config.rs` so the
+//! imports, R768's two replay constants and R1382's `TRIBAL_TAGS`), generated from `crates/engine/src/config.rs` so the
 //! client never restates a rules number (CLAUDE.md rule 9).
 //!
 //! `cargo test -p jackioh-engine --test export_config` writes it; the file is committed, and CI runs
@@ -11,7 +11,7 @@
 //! annotation is the one `packages/engine/src/config.ts` declared, so the client's code typechecks
 //! against the same shapes it did (`DIFFICULTIES` is `readonly Difficulty[]`, not `string[]`). The
 //! two types come from the generated ts-rs files, which are `config.rs`'s own `Handicap` and
-//! `Difficulty`.
+//! `Difficulty`; `TRIBAL_TAGS` is typed with the generated `Tag`.
 #![allow(
     clippy::disallowed_methods,
     reason = "a generator, not the rules: it writes the client's constants file, as build.rs writes the registry"
@@ -20,7 +20,7 @@
 use jackioh_engine::config::{
     AI_DIFFICULTY, AI_TUTORIAL, COIN_DEF_ID, DECK_SIZE, DIFFICULTIES, DRAWS_PER_TURN, GLITCH_DEF_ID,
     HERO_HEALTH, HUMAN_HANDICAP, LIBRARY_CAP, MAX_COPIES, MAX_MANA, REPLAY_CHECKPOINT_EVERY,
-    REPLAY_PAGE_STEPS, TURN_CAP_PLAYER_TURNS,
+    REPLAY_PAGE_STEPS, TRIBAL_TAGS, TURN_CAP_PLAYER_TURNS,
 };
 use serde::Serialize;
 
@@ -37,6 +37,7 @@ const HEADER: &str = "\
 
 import type { Difficulty } from \"./generated/Difficulty.ts\";
 import type { Handicap } from \"./generated/Handicap.ts\";
+import type { Tag } from \"./generated/Tag.ts\";
 
 export type { Difficulty, Handicap };
 
@@ -84,6 +85,7 @@ fn engine_config_ts() -> String {
         constant("MAX_MANA", None, &MAX_MANA),
         constant("REPLAY_CHECKPOINT_EVERY", None, &REPLAY_CHECKPOINT_EVERY),
         constant("REPLAY_PAGE_STEPS", None, &REPLAY_PAGE_STEPS),
+        constant("TRIBAL_TAGS", Some("readonly Tag[]"), TRIBAL_TAGS),
         constant("TURN_CAP_PLAYER_TURNS", None, &TURN_CAP_PLAYER_TURNS),
     ];
     constants.sort_by(|a, b| a.name.cmp(b.name));
@@ -106,8 +108,8 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    // Fifteen constants, each on its own line, the way the client and the diff check read them.
-    assert_eq!(text.matches("\nexport const ").count(), 15, "{text}");
+    // Sixteen constants, each on its own line, the way the client and the diff check read them.
+    assert_eq!(text.matches("\nexport const ").count(), 16, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }
 

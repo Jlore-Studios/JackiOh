@@ -15,6 +15,9 @@
 // runs with `hover: false` and hands both gestures to `onInspect`. Adding takes one gesture still:
 // the "+", or a drag onto the deck.
 //
+// A card of the newest shipped set wears a small "New" ribbon (`.db-new`) for the patch that ships
+// the set and the one after (R1383, patches/ribbon.ts); its accessible name says "new".
+//
 // The card's accessible name is the card, not just its name: cost, type, rarity, the deck that
 // holds it, and what a click does. The face inside is decoration to a screen reader (it repeats
 // the name), and the detail view reads the rules out in full.
@@ -26,11 +29,12 @@
 
 import { useMemo, type DragEvent, type ReactElement } from "react";
 
-import type { CardDef } from "@jackioh/shared";
+import type { CardDef, SetName } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { CardFace, faceModel, useInspectTrigger } from "../../cards/index.ts";
 import { costText } from "../../patches/diff.ts";
+import { NEW_RIBBON_SET } from "../../patches/ribbon.ts";
 import { CARD_POOL, addPoolId, poolCardId } from "./testids.ts";
 import type { Holder } from "./workshop.ts";
 
@@ -43,6 +47,8 @@ type PoolGridBaseProps = {
   ids: readonly string[];
   catalog: CatalogSnapshot;
   onInspect: (cardId: string) => void;
+  /** R1383: the set whose cards wear the "New" ribbon; `NEW_RIBBON_SET` when absent, null for none. */
+  ribbon?: SetName | null;
 };
 
 /** The deck editor's half: the open deck, ownership, the "+" and the drag. */
@@ -82,6 +88,8 @@ type PoolItemProps = {
   cardId: string;
   def: CardDef;
   deck: PoolItemDeck | null;
+  /** R1383: the card wears the "New" ribbon. */
+  fresh: boolean;
   onInspect: (cardId: string) => void;
 };
 
@@ -95,15 +103,21 @@ export function placeWords(place: PoolPlace): string | null {
  * The pool card's accessible name: "Bigot, Unit, (2) Cost, Common, in Control, unavailable. Show details" (R432).
  * A read-only card (the almanac) has no place and no ownership: "Bigot, Unit, (2) Cost, Common. Show details".
  */
-export function poolCardLabel(def: CardDef, place: PoolPlace = null, owned: boolean | null = null): string {
+export function poolCardLabel(
+  def: CardDef,
+  place: PoolPlace = null,
+  owned: boolean | null = null,
+  fresh = false,
+): string {
   const parts = [def.name, def.type, costText(def.cost), def.rarity];
+  if (fresh) parts.push("new");
   if (place === "deck") parts.push("in this deck");
   else if (place !== null) parts.push(`in ${place.name}, unavailable`);
   if (owned === false) parts.push("not in your collection");
   return `${parts.join(", ")}. Show details`;
 }
 
-function PoolItem({ cardId, def, deck, onInspect }: PoolItemProps): ReactElement {
+function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): ReactElement {
   const place = deck?.place ?? null;
   const badge = placeWords(place);
 
@@ -139,7 +153,7 @@ function PoolItem({ cardId, def, deck, onInspect }: PoolItemProps): ReactElement
         data-owned={deck === null || deck.owned === null ? undefined : deck.owned ? "true" : "false"}
         data-rarity={def.rarity}
         aria-disabled={deck === null ? undefined : place !== null}
-        aria-label={poolCardLabel(def, place, deck?.owned ?? null)}
+        aria-label={poolCardLabel(def, place, deck?.owned ?? null, fresh)}
         draggable={deck === null ? undefined : true}
         onDragStart={
           deck === null
@@ -159,6 +173,11 @@ function PoolItem({ cardId, def, deck, onInspect }: PoolItemProps): ReactElement
         <span className="db-card-face" aria-hidden="true" data-skippable="">
           <CardFace face={face} layout="full" lazyArt />
         </span>
+        {fresh ? (
+          <span className="db-new" data-new-set={def.set} aria-hidden="true">
+            New
+          </span>
+        ) : null}
         {badge === null ? null : (
           <span className="db-held" data-place={place === "deck" ? "deck" : "other"} aria-hidden="true">
             {badge}
@@ -202,14 +221,23 @@ function itemDeck(props: PoolGridProps, cardId: string): PoolItemDeck | null {
 }
 
 export default function PoolGrid(props: PoolGridProps): ReactElement {
-  const { ids, catalog, onInspect } = props;
+  const { ids, catalog, onInspect, ribbon = NEW_RIBBON_SET } = props;
 
   return (
     <section className="db-pool" aria-label="Card pool" data-testid={CARD_POOL}>
       {ids.map((cardId) => {
         const def = catalog.cards[cardId];
         if (def === undefined) return null;
-        return <PoolItem key={cardId} cardId={cardId} def={def} deck={itemDeck(props, cardId)} onInspect={onInspect} />;
+        return (
+          <PoolItem
+            key={cardId}
+            cardId={cardId}
+            def={def}
+            deck={itemDeck(props, cardId)}
+            fresh={ribbon !== null && def.set === ribbon}
+            onInspect={onInspect}
+          />
+        );
       })}
     </section>
   );

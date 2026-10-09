@@ -34,10 +34,14 @@
 // ME-CN, R1301: a Chinese face (`face.chinese`) prints its name and text as the model gives them (the
 // Chinese table's) and its type line, tags and keywords in the table's words (chinese.ts); its art
 // keeps the English name's motif, so the picture is the same card's.
+//
+// R1382: a card with every tribal tag (R1424, Meditative #87) prints "All Tribes" on its tags line in
+// place of the five, its other tags after it; its tags themselves are unchanged.
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
-import { keywordKey, type CardType, type Keyword, type KeywordKind, type Rarity } from "@jackioh/shared";
+import { TRIBAL_TAGS } from "@jackioh/engine/config";
+import { keywordKey, type CardType, type Keyword, type KeywordKind, type Rarity, type Tag } from "@jackioh/shared";
 
 import { CardArt, type ArtShape } from "./art/index.ts";
 import { CardStates } from "./CardStates.tsx";
@@ -100,6 +104,21 @@ export function tuningLine(face: FaceModel): string {
     ...tuning.added.map((keyword) => `+${keywordWords(face, keyword)}`),
     ...tuning.removed.map((kind) => `${MINUS}${kindWords(face, kind)}`),
   ].join(" ");
+}
+
+/** R1382: what the frame prints for a card with every tribal tag (R1424), in place of the five. */
+export const ALL_TRIBES = "All Tribes";
+
+/** R1382: "All Tribes" in place of the five tribal tags on a card with them all, other tags after. */
+export function frameTags(tags: readonly Tag[]): readonly (Tag | typeof ALL_TRIBES)[] {
+  if (!TRIBAL_TAGS.every((tribe) => tags.includes(tribe))) return tags;
+  return [ALL_TRIBES, ...tags.filter((tag) => !TRIBAL_TAGS.includes(tag))];
+}
+
+/** A frame tag in the face's words (R1301). */
+function tagWords(face: FaceModel, tag: Tag | typeof ALL_TRIBES): string {
+  if (tag === ALL_TRIBES) return face.chinese === true ? CHINESE_TERMS.allTribes : ALL_TRIBES;
+  return face.chinese === true ? CHINESE_TERMS.tags[tag] : tag;
 }
 
 /** Everything the rules box prints, as one string: what `textTier` and `useFitText` measure. */
@@ -274,9 +293,9 @@ export function CardFace({ face, layout = "full", className, lazyArt = false }: 
 
         {full && !glitch && face.tags.length > 0 && (
           <span className="cf-tags">
-            {face.tags.map((tag) => (
+            {frameTags(face.tags).map((tag) => (
               <span key={tag} className="cf-tag" data-tag={tag}>
-                {face.chinese === true ? CHINESE_TERMS.tags[tag] : tag}
+                {tagWords(face, tag)}
               </span>
             ))}
           </span>

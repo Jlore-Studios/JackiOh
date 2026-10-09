@@ -1,13 +1,14 @@
 // The set mark on a card's frame (R503): a small glyph that says which set a card is from, the way a
 // printed card carries its expansion symbol. Core is a ringed orb, Classic a columned temple, and
-// Classic+ the same temple with a plus beside it; a set with no glyph of its own (the reserved Boss
+// Classic+ the same temple with a plus beside it, and Meditative an ensō, a brushed open circle in
+// ink with a small red seal (R503); a set with no glyph of its own (the reserved Boss
 // sets, or one this client does not know yet) gets a plain diamond, so every card still shows one.
 //
 // Presentation only: the set is public catalog data (§5.1) and no rule reads the mark (CLAUDE.md
 // rule 7). Each glyph is an original SVG drawn as an `<img>` of a `data:` URI with no <text> and no
 // <title>, as icons.tsx draws the face's other glyphs, so a face stays span, strong and img (B12).
 
-export type SetMarkKind = "core" | "classic" | "classic-plus" | "unknown";
+export type SetMarkKind = "core" | "classic" | "classic-plus" | "meditative" | "unknown";
 
 export type SetMark = {
   kind: SetMarkKind;
@@ -40,6 +41,10 @@ const GLYPHS: Readonly<Record<SetMarkKind, string>> = {
   "classic-plus":
     `<g transform='translate(0 4.6) scale(0.8)'>${TEMPLE}</g>` +
     `<path d='M17.6 0.8H21.2V4.4H23.6V8H21.2V11.6H17.6V8H14.4V4.4H17.6Z' fill='#9dff8a' stroke='#0f2e0a' stroke-width='1.2' stroke-linejoin='round'/>`,
+  meditative:
+    `<circle cx='12' cy='12' r='10.6' fill='#efe6d2' stroke='#1b1f27' stroke-width='1.2'/>` +
+    `<path d='M15.9 5.25A7.8 7.8 0 1 0 19.33 9.33L18.35 9.12A5.8 5.8 0 1 1 15.8 6.08Z' fill='#17130f' stroke='#17130f' stroke-width='0.7' stroke-linejoin='round'/>` +
+    `<rect x='15.6' y='15.6' width='4.2' height='4.2' rx='0.5' fill='#c8322b' stroke='#5a0f0b' stroke-width='0.6'/>`,
   unknown: `<path d='M12 1.6L22.4 12L12 22.4L1.6 12Z' fill='#bba8dc' stroke='#1d1530' stroke-width='1.6' stroke-linejoin='round'/><path d='M12 7.4L16.6 12L12 16.6L7.4 12Z' fill='#1d1530'/>`,
 };
 
@@ -51,6 +56,7 @@ const SRC: Readonly<Record<SetMarkKind, string>> = {
   core: dataUri(GLYPHS.core),
   classic: dataUri(GLYPHS.classic),
   "classic-plus": dataUri(GLYPHS["classic-plus"]),
+  meditative: dataUri(GLYPHS.meditative),
   unknown: dataUri(GLYPHS.unknown),
 };
 
@@ -58,6 +64,7 @@ const KINDS: Readonly<Record<string, SetMarkKind>> = {
   Core: "core",
   Classic: "classic",
   "Classic+": "classic-plus",
+  Meditative: "meditative",
 };
 
 /** The mark a card of `set` wears. A set name this client has no glyph for gets the diamond. */
