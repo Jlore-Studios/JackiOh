@@ -1487,7 +1487,7 @@ describe("R1366 a steal and a give", () => {
 
 describe("R1044 your own set Unit sounds as a set", () => {
   it("a cardPlayed carrying a formerId gives trapSet only, and never speaks", () => {
-    const event: GameEvent = { ...played(HIDDEN_DEF_ID, "p1", "h1"), formerId: "h1" };
+    const event: GameEvent = { type: "cardPlayed", player: "p1", instanceId: "h1", defId: HIDDEN_DEF_ID, costPaid: 2, formerId: "h1" };
     expect(voices(event)).toEqual([]);
     expect(shape(event)).toEqual([sfx("trapSet")]);
   });

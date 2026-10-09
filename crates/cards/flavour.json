@@ -953,6 +953,9 @@
   "classicplus-t-ai-10": {
     "flavour": "A little more training and it'll be perfect."
   },
+  "meditative-017": {
+    "flavour": "Twenty-four lines of code, not one more."
+  },
   "meditative-027": {
     "flavour": "Billable hours, payable in zones."
   },
@@ -992,6 +995,12 @@
   "meditative-038": {
     "flavour": "Out of paper, never out of applicants."
   },
+  "meditative-045": {
+    "flavour": "Sit still. What you know is about to leave you."
+  },
+  "meditative-045-1": {
+    "flavour": "It broke through thinking about breaking through."
+  },
   "meditative-076": {
     "flavour": "Use it or lose it."
   },
@@ -1010,16 +1019,7 @@
   "meditative-090": {
     "flavour": "Some assembly required."
   },
-  "meditative-045": {
-    "flavour": "Sit still. What you know is about to leave you."
-  },
-  "meditative-045-1": {
-    "flavour": "It broke through thinking about breaking through."
-  },
   "meditative-099": {
     "flavour": "Everyone is planning something. Probably."
-  },
-  "meditative-017": {
-    "flavour": "Twenty-four lines of code, not one more."
   }
 }

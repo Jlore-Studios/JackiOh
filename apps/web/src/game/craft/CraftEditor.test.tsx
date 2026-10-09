@@ -69,6 +69,17 @@ function editorProps(over: { options?: PendingOption[]; budget?: number } = {}):
   };
 }
 
+/** jsdom has no `document.elementFromPoint`, which the drag reads on release to find the drop
+ * target: stand one in that always answers `target`, and give back what restores the document. */
+function pointAt(target: Element): () => void {
+  const own = Object.getOwnPropertyDescriptor(document, "elementFromPoint");
+  Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => target });
+  return () => {
+    if (own === undefined) Reflect.deleteProperty(document, "elementFromPoint");
+    else Object.defineProperty(document, "elementFromPoint", own);
+  };
+}
+
 describe("the block editor (R880)", () => {
   it("R880 shows the engine's meters and the preview face", () => {
     const props = editorProps();
@@ -118,7 +129,7 @@ describe("the block editor (R880)", () => {
     render(<CraftEditor pending={props.pending} onAction={props.onAction} />);
 
     // The Spell preset's When cast holds one effect; snapping a second under it is valid.
-    fireEvent.click(screen.getByRole("button", { name: /Heal your hero/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Heal your hero ·/ }));
     expect(screen.getByTestId("craft-points")).toHaveTextContent("9/12 pts");
     expect(screen.getByLabelText("Heal your hero 1 under When cast")).toBeInTheDocument();
   });
@@ -142,15 +153,15 @@ describe("the block editor (R880)", () => {
     const props = editorProps({ options: [presetOption(spellPreset(), 0)] });
     render(<CraftEditor pending={props.pending} onAction={props.onAction} />);
 
-    const palette = screen.getByRole("button", { name: /Heal your hero/ });
+    const palette = screen.getByRole("button", { name: /^Heal your hero ·/ });
     const hat = screen.getByLabelText("When cast hat");
-    const elementFromPoint = vi.spyOn(document, "elementFromPoint").mockReturnValue(hat);
+    const restore = pointAt(hat);
     try {
       fireEvent.pointerDown(palette, { clientX: 10, clientY: 10, pointerType: "mouse", button: 0 });
       fireEvent.pointerMove(window, { clientX: 60, clientY: 60 });
       fireEvent.pointerUp(window, { clientX: 60, clientY: 60 });
     } finally {
-      elementFromPoint.mockRestore();
+      restore();
     }
     expect(screen.getByLabelText("Heal your hero 1 under When cast")).toBeInTheDocument();
     expect(screen.getByTestId("craft-points")).toHaveTextContent("9/12 pts");
@@ -160,7 +171,7 @@ describe("the block editor (R880)", () => {
     const props = editorProps({ options: [presetOption(spellPreset(), 0)] });
     render(<CraftEditor pending={props.pending} onAction={props.onAction} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Heal your hero/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Heal your hero ·/ }));
     const blocks = () =>
       [...document.querySelectorAll(".craft-placed")].map(
         (node) => node.getAttribute("aria-label") ?? "",
@@ -173,13 +184,13 @@ describe("the block editor (R880)", () => {
     // Drag the first block onto the second: it lands after it.
     const first = screen.getByLabelText("Deal damage to the enemy hero 8 under When cast");
     const second = screen.getByLabelText("Heal your hero 1 under When cast");
-    const elementFromPoint = vi.spyOn(document, "elementFromPoint").mockReturnValue(second);
+    const restore = pointAt(second);
     try {
       fireEvent.pointerDown(first, { clientX: 10, clientY: 10, pointerType: "mouse", button: 0 });
       fireEvent.pointerMove(window, { clientX: 60, clientY: 60 });
       fireEvent.pointerUp(window, { clientX: 60, clientY: 60 });
     } finally {
-      elementFromPoint.mockRestore();
+      restore();
     }
     expect(blocks()).toEqual([
       "Heal your hero 1 under When cast",

@@ -73,6 +73,7 @@ export type { PrintedRarity } from "./generated/PrintedRarity.ts";
 export type { PromptKind } from "./generated/PromptKind.ts";
 export type { QuestView } from "./generated/QuestView.ts";
 export type { Rarity } from "./generated/Rarity.ts";
+export type { RevealAt } from "./generated/RevealAt.ts";
 export type { Row } from "./generated/Row.ts";
 export type { Selection } from "./generated/Selection.ts";
 export type { SetName } from "./generated/SetName.ts";

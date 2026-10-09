@@ -1252,6 +1252,9 @@
     "classicplus-t-ai-10": { // Fine-Tuning
       cast: { voice: "sapi-synth-deep", text: "Adjusting weights. Improving slightly." },
     },
+    "meditative-017": { // True Craft a Card
+      cast: { voice: "narrator", text: "It compiles. Ship it." },
+    },
     "meditative-027": { // Clip-Farming Lawyer
       play: { voice: "hustler", text: "Objection! That zone is mine now." },
       death: { voice: "hustler", text: "Case dismissed. No refunds." },
@@ -1294,6 +1297,14 @@
     "meditative-038": { // H1B Printer
       cast: { voice: "robot", text: "Printing visas. Please hold." },
     },
+    "meditative-045": { // Knowledge Breaker
+      play: { voice: "sapi-teacher", text: "Empty your mind. Now." },
+      death: { voice: "sapi-teacher", text: "What I knew returns." },
+    },
+    "meditative-045-1": { // Knowledge Breaker Prime
+      play: { voice: "sapi-teacher", text: "I have seen through everything." },
+      death: { voice: "sapi-teacher", text: "Even this ends." },
+    },
     "meditative-076": { // Do or Die
       cast: { voice: "sapi-trickster", text: "Play it fast, or it's mine." },
     },
@@ -1313,19 +1324,8 @@
     "meditative-090": { // Spell Basket
       cast: { voice: "sapi-wizard", text: "A basket full of spells!" },
     },
-    "meditative-045": { // Knowledge Breaker
-      play: { voice: "sapi-teacher", text: "Empty your mind. Now." },
-      death: { voice: "sapi-teacher", text: "What I knew returns." },
-    },
-    "meditative-045-1": { // Knowledge Breaker Prime
-      play: { voice: "sapi-teacher", text: "I have seen through everything." },
-      death: { voice: "sapi-teacher", text: "Even this ends." },
-    },
     "meditative-099": { // Paranoia
       cast: { voice: "sapi-ghost", text: "They are all watching. Hide it." },
-    },
-    "meditative-017": { // True Craft a Card
-      cast: { voice: "narrator", text: "It compiles. Ship it." },
     },
   },
   emotes: {

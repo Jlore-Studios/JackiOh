@@ -188,7 +188,7 @@ pub struct CraftHatPrice {
     pub hat: CraftHatKind,
     pub lines: i32,
     pub multiplier: i32,
-    #[cfg_attr(feature = "ts", ts(type = "CardType[]"))]
+    #[cfg_attr(feature = "ts", ts(as = "Vec<CardType>"))]
     pub types: &'static [CardType],
 }
 

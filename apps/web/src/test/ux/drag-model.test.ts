@@ -599,7 +599,7 @@ describe("R1044 setting by drag asks its timing", () => {
   const liftedS1 = lifting("s1", [S1, setAt("endOfThisTurn"), setAt("startOfNextTurn"), setAt("endOfNextTurn")]);
   const planS1 = plan({
     kind: "play",
-    source: hand("s1"),
+    source: { on: "hand", instanceId: "s1" },
     sourceTestid: "hand-card-s1",
     lifted: liftedS1,
     dropTestids: ["zone-you-backrow-2"],

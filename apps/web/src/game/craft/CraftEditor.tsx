@@ -159,8 +159,9 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
       setRecipe((prev) => {
         if (prev.hats[hat] === undefined) return prev;
         const withEffect = addEffect(prev, hat, payload.verb);
-        if (at === undefined) return withEffect;
-        const from = { hat, effect: withEffect.hats[hat].effects.length - 1 };
+        const placed = withEffect.hats[hat];
+        if (at === undefined || placed === undefined) return withEffect;
+        const from = { hat, effect: placed.effects.length - 1 };
         return moveEffect(withEffect, from, { hat, effect: at });
       });
       setSelectedHat(hat);

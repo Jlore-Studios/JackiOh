@@ -23,7 +23,7 @@
 import { describe, expect, it } from "vitest";
 
 import { DECK_SIZE, HUMAN_HANDICAP, LIBRARY_CAP, type Handicap } from "@jackioh/engine/config";
-import type { ActionBody, CardDef, GameEventType, PlayerId, PlayerView } from "@jackioh/shared";
+import { setShips, type ActionBody, type CardDef, type GameEventType, type PlayerId, type PlayerView } from "@jackioh/shared";
 
 import { newEventsSince } from "./animations.ts";
 import { byIndex, printedCost } from "./decks.ts";
@@ -103,11 +103,12 @@ const CLONE_MACHINE = "core-033";
 /** #90 CN-Viral Injection: a CN-Virus into the opponent's library. */
 const VIRAL_INJECTION = "core-090";
 
-/** `n` distinct deckable ids, cheapest first (as `cheap20` picks them), after the ones a game needs. */
+/** `n` distinct deckable ids, cheapest first (as `cheap20` picks them), after the ones a game needs.
+ * Deckable is `cheap20`'s rule: no token, and only a set that ships (R1420). */
 function cheapest(n: number, needs: readonly string[] = []): string[] {
   const catalog = realPort().catalog?.() ?? {};
   const pool = Object.values(catalog)
-    .filter((def: CardDef) => !def.token && !def.tags.includes("Token"))
+    .filter((def: CardDef) => !def.token && !def.tags.includes("Token") && setShips(def.set))
     .sort(byIndex)
     .sort((a, b) => printedCost(a.cost) - printedCost(b.cost));
   const deck = [...needs];

@@ -99,6 +99,10 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Swap",
     "Rotate",
     "Replace",
+    "Craft",
+    "Grant tag",
+    "Hand size",
+    "Mark in a hand",
   ],
 };
 

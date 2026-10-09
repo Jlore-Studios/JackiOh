@@ -2,7 +2,7 @@
 // computes legality itself — every one of them feeds a hand-built `ActionBody[]` and checks that
 // what comes out was derived from that array and nothing else.
 
-import type { ActionBody, CraftRecipe, PlayerView, Selection } from "@jackioh/shared";
+import type { ActionBody, CraftRecipe, PlayerView, RevealAt, Selection } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -933,7 +933,7 @@ describe("a selection keeps the rest of the board's affordances", () => {
 
 describe("R1044 playing face-down as a Trap", () => {
   const view = seatedView();
-  const set = (lane: number, faceDown: string): ActionBody => ({
+  const set = (lane: number, faceDown: RevealAt): ActionBody => ({
     type: "play",
     instanceId: "h1",
     zone: { row: "backrow", lane },
