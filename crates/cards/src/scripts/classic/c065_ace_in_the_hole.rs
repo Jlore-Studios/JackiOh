@@ -39,9 +39,15 @@ fn flip(on_tails: bool) -> Hook {
     hook(move |ctx| {
         let lucky = ctx.live_self().map_or(0, |me| lucky_on(&*ctx.state, me));
         if ctx.rng.lucky_coin(lucky) {
-            return vec![remember(json_as(json!({ "key": HEADS, "value": ctx.state.turn })))];
+            return vec![remember(json_as(
+                json!({ "key": HEADS, "value": ctx.state.turn }),
+            ))];
         }
-        if on_tails { vec![recruit(json_as(json!({})))] } else { vec![] }
+        if on_tails {
+            vec![recruit(json_as(json!({})))]
+        } else {
+            vec![]
+        }
     })
 }
 
@@ -118,7 +124,11 @@ mod tests {
 
     /// The coin the match rng gives next: the one the trap flips as the active player's turn ends.
     fn next_coin(state: &GameState) -> Coin {
-        if Rng::new(&state.seed, state.rng_cursor).coin() { Coin::Heads } else { Coin::Tails }
+        if Rng::new(&state.seed, state.rng_cursor).coin() {
+            Coin::Heads
+        } else {
+            Coin::Tails
+        }
     }
 
     /// A board with an Ace in the Hole set in p1's backrow, on the first seed whose next coin is `coin`.
@@ -156,12 +166,18 @@ mod tests {
     }
 
     fn fired(s: &Scenario) -> usize {
-        s.events().iter().map(js).filter(|event| event["type"] == "trapFired").count()
+        s.events()
+            .iter()
+            .map(js)
+            .filter(|event| event["type"] == "trapFired")
+            .count()
     }
 
     /// p1's unit row, lanes 1–5: each lane's def id, or null.
     fn units(s: &Scenario) -> Vec<Option<String>> {
-        (1..=5).map(|lane| s.unit(P1, lane).map(|unit| unit.def_id.clone())).collect()
+        (1..=5)
+            .map(|lane| s.unit(P1, lane).map(|unit| unit.def_id.clone()))
+            .collect()
     }
 
     /// The expected `units(s)`: a def id per lane, `None` for an empty one.
@@ -186,7 +202,10 @@ mod tests {
             for face in [&scripts.base, &scripts.radiant] {
                 assert!(face.end_of_turn.is_some());
                 assert_eq!(
-                    face.triggers.iter().map(|trigger| js(&trigger.on)).collect::<Vec<Value>>(),
+                    face.triggers
+                        .iter()
+                        .map(|trigger| js(&trigger.on))
+                        .collect::<Vec<Value>>(),
                     vec![json!(["turnEnded"])],
                 );
             }
@@ -218,7 +237,10 @@ mod tests {
                 assert_eq!(units(&s), lanes([Some(VANILLA), None, None, None, None]));
                 s.expect_in_zone(&ace, "graveyard");
                 assert_eq!(
-                    s.pile(P1, "library").iter().map(|card| card.def_id.clone()).collect::<Vec<String>>(),
+                    s.pile(P1, "library")
+                        .iter()
+                        .map(|card| card.def_id.clone())
+                        .collect::<Vec<String>>(),
                     vec![LUNAR, GARY, VANILLA],
                 );
             }
@@ -324,7 +346,14 @@ mod tests {
                 let second = next_coin(s.state());
                 s.end_turn(); // p1's end again: a fresh coin.
                 assert_eq!(fired(&s), if second == Coin::Heads { 1 } else { 0 });
-                s.expect_in_zone(ACE, if second == Coin::Heads { "graveyard" } else { "field" });
+                s.expect_in_zone(
+                    ACE,
+                    if second == Coin::Heads {
+                        "graveyard"
+                    } else {
+                        "field"
+                    },
+                );
             }
 
             #[test]
@@ -358,7 +387,10 @@ mod tests {
                 s.end_turn();
                 assert_eq!(fired(&s), 1);
                 assert!(!s.events().iter().map(js).any(|event| event["type"] == "summoned"));
-                assert_eq!(s.pile(P1, "library").first().map(|card| card.def_id.clone()), Some(VANILLA.to_string()));
+                assert_eq!(
+                    s.pile(P1, "library").first().map(|card| card.def_id.clone()),
+                    Some(VANILLA.to_string())
+                );
             }
 
             #[test]
@@ -387,13 +419,19 @@ mod tests {
                 let s = with_coin(Coin::Heads, json!({}));
                 let thawed: GameState =
                     serde_json::from_value(js(s.state())).expect("the state round-trips through JSON");
-                let end: Action = json_as(json!({ "type": "endTurn", "playerId": "p1", "nonce": "ace-roundtrip" }));
+                let end: Action =
+                    json_as(json!({ "type": "endTurn", "playerId": "p1", "nonce": "ace-roundtrip" }));
                 let live = reduce(s.state(), &end);
                 let frozen = reduce(&thawed, &end);
                 assert!(live.error.is_none());
                 assert_eq!(frozen.state, live.state);
                 assert_eq!(frozen.events, live.events);
-                assert!(live.events.iter().map(js).any(|event| event["type"] == "trapFired"));
+                assert!(
+                    live.events
+                        .iter()
+                        .map(js)
+                        .any(|event| event["type"] == "trapFired")
+                );
             }
         }
 
@@ -406,7 +444,10 @@ mod tests {
                 let mut s = with_coin(Coin::Heads, json!({ "radiant": true }));
                 s.end_turn();
                 assert_eq!(fired(&s), 1);
-                assert_eq!(units(&s), lanes([Some(VANILLA), Some(GARY), Some(VANILLA), None, None]));
+                assert_eq!(
+                    units(&s),
+                    lanes([Some(VANILLA), Some(GARY), Some(VANILLA), None, None])
+                );
                 s.expect_in_zone(ACE, "graveyard");
             }
 
@@ -428,7 +469,8 @@ mod tests {
             }
 
             #[test]
-            fn tails_a_recruited_trap_lands_face_down_r33_and_the_set_trap_flips_again_at_your_next_end_of_turn() {
+            fn tails_a_recruited_trap_lands_face_down_r33_and_the_set_trap_flips_again_at_your_next_end_of_turn()
+             {
                 crate::register_all();
                 let mut s = with_coin(
                     Coin::Tails,
@@ -446,7 +488,14 @@ mod tests {
                     units(&s).iter().filter(|unit| unit.is_some()).count(),
                     if second == Coin::Heads { 3 } else { 1 },
                 );
-                s.expect_in_zone(ACE, if second == Coin::Heads { "graveyard" } else { "field" });
+                s.expect_in_zone(
+                    ACE,
+                    if second == Coin::Heads {
+                        "graveyard"
+                    } else {
+                        "field"
+                    },
+                );
             }
 
             #[test]
@@ -463,14 +512,30 @@ mod tests {
                 assert_eq!(frozen.state, live.state);
                 assert_eq!(frozen.events, live.events);
                 assert_eq!(live.state.rng_cursor, s.state().rng_cursor + 1);
-                assert_eq!(live.events.iter().map(js).filter(|event| event["type"] == "summoned").count(), 1);
-                assert!(!live.events.iter().map(js).any(|event| event["type"] == "trapFired"));
+                assert_eq!(
+                    live.events
+                        .iter()
+                        .map(js)
+                        .filter(|event| event["type"] == "summoned")
+                        .count(),
+                    1
+                );
+                assert!(
+                    !live
+                        .events
+                        .iter()
+                        .map(js)
+                        .any(|event| event["type"] == "trapFired")
+                );
             }
 
             #[test]
             fn tails_with_nothing_to_recruit_nothing_happens_and_it_stays_set() {
                 crate::register_all();
-                let mut s = with_coin(Coin::Tails, json!({ "radiant": true, "p1": { "library": [LUNAR] } }));
+                let mut s = with_coin(
+                    Coin::Tails,
+                    json!({ "radiant": true, "p1": { "library": [LUNAR] } }),
+                );
                 s.end_turn();
                 assert_eq!(fired(&s), 0);
                 assert!(!s.events().iter().map(js).any(|event| event["type"] == "summoned"));
@@ -490,7 +555,10 @@ mod tests {
             #[test]
             fn r33_a_recruited_trap_lands_face_down() {
                 crate::register_all();
-                let mut s = with_coin(Coin::Heads, json!({ "radiant": true, "p1": { "library": [SHEEPISH] } }));
+                let mut s = with_coin(
+                    Coin::Heads,
+                    json!({ "radiant": true, "p1": { "library": [SHEEPISH] } }),
+                );
                 s.end_turn();
                 assert_ne!(s.card(SHEEPISH).face_up, Some(true));
                 assert!(!js(&s.view(P2)).to_string().contains(SHEEPISH));

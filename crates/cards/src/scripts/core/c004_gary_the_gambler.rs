@@ -124,7 +124,10 @@ mod tests {
             assert_eq!(attack % 2, 0);
             assert_eq!(health % 2, 0);
             // Radiant 2/2 plus the buff.
-            s.expect_stats("core-004", json!({ "attack": 2 + attack, "maxHealth": 2 + health }));
+            s.expect_stats(
+                "core-004",
+                json!({ "attack": 2 + attack, "maxHealth": 2 + health }),
+            );
         }
 
         /// The draws a play of Gary takes beyond what a play costs by itself (a Mr. Vanilla's on the
@@ -169,7 +172,9 @@ mod tests {
             let heads = |lucky: bool| -> i32 {
                 (0..200)
                     .map(|n| {
-                        let mut s = scenario(json!({ "seed": format!("core-004-lucky-{n}"), "p1": { "hand": ["core-004"] } }));
+                        let mut s = scenario(
+                            json!({ "seed": format!("core-004-lucky-{n}"), "p1": { "hand": ["core-004"] } }),
+                        );
                         if lucky {
                             crate::give_lucky(&mut s, "core-004", 1);
                         }

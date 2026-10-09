@@ -757,7 +757,8 @@ mod r1437_the_luck_based_pool_meditative_101_gachaholic {
     fn reads_as_luck_based(def: &CardDef) -> bool {
         !def.token
             && [&def.base, &def.radiant].into_iter().any(|face| {
-                has_keyword(&face.keywords, KeywordKind::Lucky) || face.text.to_lowercase().contains("flip a coin")
+                has_keyword(&face.keywords, KeywordKind::Lucky)
+                    || face.text.to_lowercase().contains("flip a coin")
             })
     }
 

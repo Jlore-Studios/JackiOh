@@ -136,7 +136,10 @@ mod tests {
     }
 
     fn radiant_flags(s: &Scenario) -> Vec<bool> {
-        s.pile(PlayerId::P1, "library").iter().map(|card| card.radiant).collect()
+        s.pile(PlayerId::P1, "library")
+            .iter()
+            .map(|card| card.radiant)
+            .collect()
     }
 
     /// "#42 Eugenics — base"
@@ -186,7 +189,8 @@ mod tests {
 
         /// "R60 the exiled cards are never rolled: the exile happens first, the chance rolls over what is left"
         #[test]
-        fn r60_the_exiled_cards_are_never_rolled_the_exile_happens_first_the_chance_rolls_over_what_is_left() {
+        fn r60_the_exiled_cards_are_never_rolled_the_exile_happens_first_the_chance_rolls_over_what_is_left()
+        {
             let s = cast(57, "eugenics");
 
             assert_eq!(s.pile(PlayerId::P1, "exile").len(), 7);
@@ -225,7 +229,12 @@ mod tests {
         lucky.play("core-042", json!({}));
 
         assert_eq!(lucky.state().rng_cursor - plain.state().rng_cursor, 50);
-        let converted = |s: &Scenario| s.pile(PlayerId::P1, "library").iter().filter(|card| card.radiant).count();
+        let converted = |s: &Scenario| {
+            s.pile(PlayerId::P1, "library")
+                .iter()
+                .filter(|card| card.radiant)
+                .count()
+        };
         assert!(converted(&lucky) > converted(&plain));
         assert!(converted(&lucky) < 50);
     }

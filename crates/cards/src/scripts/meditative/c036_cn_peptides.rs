@@ -38,9 +38,13 @@ fn peptides() -> Script {
             };
             let (id, friendly) = (target.id.clone(), target.controller == ctx.controller);
             let lucky = lucky_of(ctx);
-            let heads = ctx.rng.lucky(lucky, |rng| rng.coin(), move |a, b| {
-                if friendly { a || b } else { a && b }
-            });
+            let heads = ctx.rng.lucky(
+                lucky,
+                |rng| rng.coin(),
+                move |a, b| {
+                    if friendly { a || b } else { a && b }
+                },
+            );
             if heads {
                 vec![upgrade(json_as(json!({
                     "target": { "of": "instance", "instanceId": id },
@@ -120,11 +124,19 @@ mod tests {
     }
 
     fn upgraded(events: &[GameEvent]) -> Vec<Value> {
-        events.iter().filter(|event| matches!(event, GameEvent::Upgraded { .. })).map(crate::js).collect()
+        events
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Upgraded { .. }))
+            .map(crate::js)
+            .collect()
     }
 
     fn destroyed(events: &[GameEvent]) -> Vec<Value> {
-        events.iter().filter(|event| matches!(event, GameEvent::Destroyed { .. })).map(crate::js).collect()
+        events
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Destroyed { .. }))
+            .map(crate::js)
+            .collect()
     }
 
     mod m36_cn_peptides {

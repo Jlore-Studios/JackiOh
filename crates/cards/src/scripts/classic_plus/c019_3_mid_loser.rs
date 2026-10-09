@@ -21,12 +21,18 @@ fn lands_heads(ctx: &mut EffectContext<'_>) -> bool {
 fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     if lands_heads(ctx) {
         let heads = param(&*ctx, "heads");
-        return vec![buff(json_as(json!({ "target": { "of": "self" }, "attack": heads, "health": heads })))];
+        return vec![buff(json_as(
+            json!({ "target": { "of": "self" }, "attack": heads, "health": heads }),
+        ))];
     }
     let tails = param(&*ctx, "tails");
     vec![
-        buff(json_as(json!({ "target": { "of": "self" }, "attack": -tails, "health": -tails }))),
-        next_turn_mana(json_as(json!({ "amount": param(&*ctx, "oppMana"), "player": "enemy" }))),
+        buff(json_as(
+            json!({ "target": { "of": "self" }, "attack": -tails, "health": -tails }),
+        )),
+        next_turn_mana(json_as(
+            json!({ "amount": param(&*ctx, "oppMana"), "player": "enemy" }),
+        )),
     ]
 }
 
@@ -169,7 +175,12 @@ mod tests {
                 let mut tails = seeded(tesla, |each| next_flip(each, 0) == Flip::Tails);
                 let doomed = tails.card(MID).clone();
                 tails.play(MID, json!({}));
-                assert!(tails.events().iter().any(|event| event.event_type() == GameEventType::TrapFired));
+                assert!(
+                    tails
+                        .events()
+                        .iter()
+                        .any(|event| event.event_type() == GameEventType::TrapFired)
+                );
                 tails.expect_in_zone(&doomed, "gone");
                 assert_eq!(tails.state().players[P2].mana.next_turn_mod, 1);
 
@@ -187,10 +198,16 @@ mod tests {
                     "p2": { "hand": [FILLER], "library": DECK },
                 }));
                 let eaten = s.unit(P1, 1).expect("setup");
-                s.play(CUBE, json!({ "zone": 2, "targets": [{ "pick": "instance", "instanceId": eaten.id }] }));
+                s.play(
+                    CUBE,
+                    json!({ "zone": 2, "targets": [{ "pick": "instance", "instanceId": eaten.id }] }),
+                );
                 let cube = s.unit(P1, 2).expect("no cube");
                 let cursor = s.state().rng_cursor;
-                s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": cube.id }] }));
+                s.play(
+                    HIT_JOB,
+                    json!({ "targets": [{ "pick": "instance", "instanceId": cube.id }] }),
+                );
                 let copies: Vec<CardInstance> = [1, 2, 3, 4, 5]
                     .into_iter()
                     .filter_map(|lane| s.unit(P1, lane).filter(|unit| unit.def_id == MID))
@@ -250,7 +267,10 @@ mod tests {
                     serde_json::from_value(serde_json::to_value(s.state()).expect("JSON")).expect("a state");
                 let live = reduce(s.state(), &action);
                 assert!(live.error.is_none());
-                assert_eq!(hash_state(&reduce(&thawed, &action).state), hash_state(&live.state));
+                assert_eq!(
+                    hash_state(&reduce(&thawed, &action).state),
+                    hash_state(&live.state)
+                );
             }
 
             #[test]

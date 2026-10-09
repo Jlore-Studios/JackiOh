@@ -52,10 +52,20 @@ mod tests {
             s.expect_stats(ID, json!({ "attack": 7, "health": 7, "maxHealth": 7 }));
             assert!(s.stats(ID).keywords.is_empty());
             // No text: the play emits the play itself and nothing else.
-            let types: Vec<&str> = s.last_events().iter().map(|event| event.event_type().as_str()).collect();
+            let types: Vec<&str> = s
+                .last_events()
+                .iter()
+                .map(|event| event.event_type().as_str())
+                .collect();
             assert_eq!(
                 types,
-                vec!["manaChanged", "cardAnnounced", "cardPlayed", "summoned", "cardResolved"]
+                vec![
+                    "manaChanged",
+                    "cardAnnounced",
+                    "cardPlayed",
+                    "summoned",
+                    "cardResolved"
+                ]
             );
         }
 

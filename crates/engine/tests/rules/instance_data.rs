@@ -277,7 +277,13 @@ mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
         let mut state = playing("r1438-lucky");
         let rider = effects::add_to_hand(json_as(json!({ "defId": numbered_body.id, "lucky": 1 })));
         let events = run(&mut state, &rider);
-        let card = state.players.p1.hand.last().cloned().expect("the card is in the hand");
+        let card = state
+            .players
+            .p1
+            .hand
+            .last()
+            .cloned()
+            .expect("the card is in the hand");
         assert_eq!(card.def_id, numbered_body.id);
         assert_eq!(card.granted_keywords, vec![Keyword::Lucky { n: 1 }]);
         assert_eq!(query::lucky_on(&state, &card), 2);
@@ -293,7 +299,10 @@ mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
             .iter()
             .find(|c| c.instance_id == card.id)
             .expect("the card is in the hand");
-        let shown = seen.keywords.clone().expect("its owner sees the Lucky it was given");
+        let shown = seen
+            .keywords
+            .clone()
+            .expect("its owner sees the Lucky it was given");
         assert_eq!(tuning::numbered_sum(&shown, KeywordKind::Lucky), Some(2));
         let count = state.players.p1.hand.len();
         assert_eq!(

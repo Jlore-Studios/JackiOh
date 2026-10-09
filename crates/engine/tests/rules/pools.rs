@@ -292,18 +292,43 @@ mod r1437_the_luck_based_pool_is_read_off_the_definitions {
 
     fn luck_defs() -> Vec<CardDef> {
         vec![
-            card("core-201", "Core", "201", json!({ "radiant": lucky_face("Lucky 1\nRoll") })),
-            card("core-202", "Core", "202", json!({ "base": plain_face("Flip a coin. On heads, draw a card.") })),
+            card(
+                "core-201",
+                "Core",
+                "201",
+                json!({ "radiant": lucky_face("Lucky 1\nRoll") }),
+            ),
+            card(
+                "core-202",
+                "Core",
+                "202",
+                json!({ "base": plain_face("Flip a coin. On heads, draw a card.") }),
+            ),
             card("core-203", "Core", "203", json!({})),
-            card("core-204", "Core", "204", json!({ "base": plain_face("Give a card Lucky 1.") })),
+            card(
+                "core-204",
+                "Core",
+                "204",
+                json!({ "base": plain_face("Give a card Lucky 1.") }),
+            ),
             card(
                 "core-205",
                 "Core",
                 "205",
                 json!({ "tags": ["Token"], "rarity": "Token", "token": true, "base": lucky_face("Lucky 1") }),
             ),
-            card("classic-206", "Classic", "206", json!({ "radiant": plain_face("Cry: flip a coin.") })),
-            card("meditative-207", "Meditative", "207", json!({ "base": lucky_face("Lucky 1") })),
+            card(
+                "classic-206",
+                "Classic",
+                "206",
+                json!({ "radiant": plain_face("Cry: flip a coin.") }),
+            ),
+            card(
+                "meditative-207",
+                "Meditative",
+                "207",
+                json!({ "base": lucky_face("Lucky 1") }),
+            ),
         ]
     }
 

@@ -115,7 +115,8 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r64_summons_1_2_rush_tokens_3_3_rush_into_your_leftmost_open_zones_the_count_random_but_never_above_the_curve() {
+        fn r64_summons_1_2_rush_tokens_3_3_rush_into_your_leftmost_open_zones_the_count_random_but_never_above_the_curve()
+         {
             let mut counts: IndexSet<usize> = IndexSet::new();
             for n in 0..20 {
                 let mut s = book(

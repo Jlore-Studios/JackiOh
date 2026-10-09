@@ -138,7 +138,8 @@ mod tests {
                 s.play(ID, json!({}));
                 let card = added(&s, 1).remove(0);
                 assert_eq!(card.granted_keywords, vec![Keyword::Lucky { n: 1 }]);
-                let printed = tuning::numbered_sum(&crate::card_def(&card.def_id).base.keywords, KeywordKind::Lucky);
+                let printed =
+                    tuning::numbered_sum(&crate::card_def(&card.def_id).base.keywords, KeywordKind::Lucky);
                 assert_eq!(lucky_on(s.state(), &card), printed.unwrap_or(0) + 1);
             }
 
@@ -202,7 +203,11 @@ mod tests {
                 s.activate(ID, json!({}));
                 let pulled = added(&s, 1);
                 assert_eq!(pulled.len(), 1);
-                assert!(SHIPPED_POOL.contains(&pulled[0].def_id.as_str()), "{}", pulled[0].def_id);
+                assert!(
+                    SHIPPED_POOL.contains(&pulled[0].def_id.as_str()),
+                    "{}",
+                    pulled[0].def_id
+                );
                 assert_eq!(pulled[0].granted_keywords, vec![Keyword::Lucky { n: 1 }]);
                 assert!(!pulled[0].radiant);
                 s.expect_refused(|s| s.activate(ID, json!({})));

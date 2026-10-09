@@ -33,7 +33,9 @@ const RADIANT_CHANCE: f64 = 0.4;
 
 /// R60: one random non-Radiant card in the caster's hand becomes Radiant.
 fn make_one_radiant() -> Vec<Effect> {
-    vec![set_radiant_random(json_as(json!({ "zones": "hand", "count": 1 })))]
+    vec![set_radiant_random(json_as(
+        json!({ "zones": "hand", "count": 1 }),
+    ))]
 }
 
 /// R129: the roll is taken only when the pick has a hand to look in. The hand's size is public; which
@@ -75,7 +77,8 @@ pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(hook(|ctx| {
             let lucky = lucky(ctx);
-            if any_to_make_radiant(ctx) && ctx.rng.lucky(lucky, |rng| rng.chance(BASE_CHANCE), |a, b| a || b) {
+            if any_to_make_radiant(ctx) && ctx.rng.lucky(lucky, |rng| rng.chance(BASE_CHANCE), |a, b| a || b)
+            {
                 make_one_radiant()
             } else {
                 vec![]
@@ -92,7 +95,9 @@ pub fn script() -> CardScripts {
                 return vec![];
             }
             let lucky = lucky(ctx);
-            let hit = ctx.rng.lucky(lucky, |rng| rng.chance(RADIANT_CHANCE), |a, b| a || b);
+            let hit = ctx
+                .rng
+                .lucky(lucky, |rng| rng.chance(RADIANT_CHANCE), |a, b| a || b);
             if hit { make_one_radiant() } else { vec![] }
         })),
         end_of_turn: Some(end_of_turn()),
@@ -125,13 +130,13 @@ mod tests {
 
     /// Ten other cards: playing the Dream leaves the hand exactly at HAND_CAP.
     const FULL_HAND: [&str; 10] = [
-        "core-002", "core-003", "core-004", "core-005", "core-008", "core-010", "core-011", "core-012", "core-013",
-        "core-016",
+        "core-002", "core-003", "core-004", "core-005", "core-008", "core-010", "core-011", "core-012",
+        "core-013", "core-016",
     ];
 
     const SEEDS: [&str; 12] = [
-        "dream-01", "dream-02", "dream-03", "dream-04", "dream-05", "dream-06", "dream-07", "dream-08", "dream-09",
-        "dream-10", "dream-11", "dream-12",
+        "dream-01", "dream-02", "dream-03", "dream-04", "dream-05", "dream-06", "dream-07", "dream-08",
+        "dream-09", "dream-10", "dream-11", "dream-12",
     ];
 
     fn dream_in(seed: &str, is_radiant: bool, others: &[&str]) -> Scenario {
@@ -160,7 +165,10 @@ mod tests {
             #[test]
             fn r60_the_30_roll_gates_it_and_a_hit_makes_exactly_one_hand_card_radiant() {
                 crate::register_all();
-                let results: Vec<usize> = SEEDS.iter().map(|seed| radiants_after_playing(seed, false)).collect();
+                let results: Vec<usize> = SEEDS
+                    .iter()
+                    .map(|seed| radiants_after_playing(seed, false))
+                    .collect();
 
                 // R60: one random card, never two, and nothing at all on a miss.
                 assert!(results.iter().all(|count| *count == 0 || *count == 1));
@@ -172,7 +180,10 @@ mod tests {
             fn the_roll_is_seeded_one_seed_always_replays_to_the_same_outcome() {
                 crate::register_all();
                 for seed in &SEEDS[..4] {
-                    assert_eq!(radiants_after_playing(seed, false), radiants_after_playing(seed, false));
+                    assert_eq!(
+                        radiants_after_playing(seed, false),
+                        radiants_after_playing(seed, false)
+                    );
                 }
             }
 
@@ -207,10 +218,7 @@ mod tests {
                 s.end_turn();
 
                 s.expect_in_zone(&dream, "hand");
-                assert!(!s
-                    .pile(P1, "graveyard")
-                    .iter()
-                    .any(|card| card.def_id == DREAM));
+                assert!(!s.pile(P1, "graveyard").iter().any(|card| card.def_id == DREAM));
             }
 
             #[test]
@@ -241,10 +249,16 @@ mod tests {
             #[test]
             fn lucky_1_at_40_hits_wherever_the_base_30_hits_and_at_more_seeds_besides() {
                 crate::register_all();
-                let base_hits: Vec<&str> =
-                    SEEDS.iter().copied().filter(|seed| radiants_after_playing(seed, false) == 1).collect();
-                let radiant_hits: Vec<&str> =
-                    SEEDS.iter().copied().filter(|seed| radiants_after_playing(seed, true) == 1).collect();
+                let base_hits: Vec<&str> = SEEDS
+                    .iter()
+                    .copied()
+                    .filter(|seed| radiants_after_playing(seed, false) == 1)
+                    .collect();
+                let radiant_hits: Vec<&str> = SEEDS
+                    .iter()
+                    .copied()
+                    .filter(|seed| radiants_after_playing(seed, true) == 1)
+                    .collect();
 
                 assert!(!base_hits.is_empty());
                 for seed in &base_hits {
@@ -267,7 +281,10 @@ mod tests {
 
                 s.expect_in_zone(&dream, "hand");
                 assert_eq!(
-                    s.hand(P1).iter().find(|card| card.id == dream.id).map(|card| card.radiant),
+                    s.hand(P1)
+                        .iter()
+                        .find(|card| card.id == dream.id)
+                        .map(|card| card.radiant),
                     Some(true)
                 );
             }
@@ -286,10 +303,21 @@ mod tests {
                 }
                 let before = s.state().rng_cursor;
                 s.play(DREAM, json!({}));
-                (s.hand(P1).iter().filter(|card| card.radiant).count(), s.state().rng_cursor - before)
+                (
+                    s.hand(P1).iter().filter(|card| card.radiant).count(),
+                    s.state().rng_cursor - before,
+                )
             };
-            let base_hits: Vec<&str> = SEEDS.iter().copied().filter(|seed| cast(seed, false).0 == 1).collect();
-            let lucky_hits: Vec<&str> = SEEDS.iter().copied().filter(|seed| cast(seed, true).0 == 1).collect();
+            let base_hits: Vec<&str> = SEEDS
+                .iter()
+                .copied()
+                .filter(|seed| cast(seed, false).0 == 1)
+                .collect();
+            let lucky_hits: Vec<&str> = SEEDS
+                .iter()
+                .copied()
+                .filter(|seed| cast(seed, true).0 == 1)
+                .collect();
 
             for seed in &base_hits {
                 assert!(lucky_hits.contains(seed));

@@ -4402,7 +4402,16 @@ const MEDITATIVE: &[SpecRow] = &[
         NO_STATS,
         NO_STATS,
     ),
-    row("100", "Greaser", c(2), T::Unit, &[], R::Common, st(7, 7), st(21, 21)),
+    row(
+        "100",
+        "Greaser",
+        c(2),
+        T::Unit,
+        &[],
+        R::Common,
+        st(7, 7),
+        st(21, 21),
+    ),
     row(
         "101",
         "Gachaholic",
