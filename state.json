@@ -3728,11 +3728,11 @@
       "onto": "bot/issue-575",
       "part_of": 575,
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-7",
       "queued_at": "2026-10-08T09:32:03Z",
       "requested_by": "squishy-squooby",
-      "run_id": "37905333871",
-      "started_at": "2026-10-09T08:30:48Z",
+      "run_id": "37908892224",
+      "started_at": "2026-10-09T09:05:02Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
@@ -4311,9 +4311,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-09T09:04:02Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37908783512",
-    "what": "plan #526 on claude-3"
+    "at": "2026-10-09T09:05:02Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37908892224",
+    "what": "plan #540 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-09T08:58:53Z",
