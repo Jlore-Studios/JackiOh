@@ -1083,8 +1083,8 @@ handicap (Easy both). It promotes when:
 
 | Lane | vs random | vs parent | shadow bans |
 |---|---|---|---|
-| `improve` | ≥ `TRAINING_IMPROVE.vs_random` = 90 | ≥ `TRAINING_IMPROVE.vs_parent` = 85 | — |
-| `unban` | ≥ `TRAINING_UNBAN.vs_random` = 90 | ≥ `TRAINING_UNBAN.vs_parent` = 75 | strictly fewer than the parent's |
+| `improve` | ≥ `TRAINING_IMPROVE.vs_random` = 90 | ≥ `TRAINING_IMPROVE.vs_parent` = 75 | — |
+| `unban` | ≥ `TRAINING_UNBAN.vs_random` = 90 | ≥ `TRAINING_UNBAN.vs_parent` = 65 | strictly fewer than the parent's |
 
 A draw is not a win. `TRAINING_GAMES`, `TRAINING_IMPROVE` and `TRAINING_UNBAN` are constants in
 `crates/engine/src/config.rs` next to `AI_GATE` (CLAUDE.md rule 9; part 1 writes them). Without
