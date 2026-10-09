@@ -4244,11 +4244,11 @@
       "action": "build",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-09T03:39:08Z",
+        "at": "2026-10-09T09:56:08Z",
         "difficulty": "medium",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "easy line 6 is the closest call (apps/web/scripts/check-production-bundle.mjs sits under scripts/, plus conditional vercel.json edits), and the ~16-file scope breaks line 1 anyway"
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "fails the easy rule on size (16 files) and on review-only paths (vite.config.ts, scripts/, public/_redirects); no engine or AI work, so it is not hard"
       },
       "handoff": {
         "at": "2026-10-09T08:21:56Z",
