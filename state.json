@@ -3912,7 +3912,7 @@
       "asks": [],
       "failures": 0,
       "forced": false,
-      "interruptions": 0,
+      "interruptions": 1,
       "kind": "build",
       "onto": "bot/issue-575",
       "part_of": 575,
