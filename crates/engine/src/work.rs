@@ -711,6 +711,7 @@ pub fn run_work_item(sink: &mut EngineSink<'_>, item: &WorkItem) {
         "@forcedRun" => crate::combat::run_owed_forced_run(sink, item),
         "@forcedRandom" => crate::combat::run_owed_forced_random(sink, item),
         "@afterAttack" => crate::combat::run_owed_after_attack(sink, item),
+        "@combatCopies" => crate::combat::run_owed_combat_copies(sink, item),
         "@startOfTurn" => crate::turn::run_owed_start_of_turn(sink, item),
         "@endOfTurn" => crate::turn::run_owed_end_of_turn(sink, item),
         "@activate" => crate::subsystems::activate::run_owed_activation(sink, item),

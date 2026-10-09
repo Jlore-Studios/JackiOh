@@ -1294,6 +1294,22 @@
     "meditative-038": { // H1B Printer
       cast: { voice: "robot", text: "Printing visas. Please hold." },
     },
+    "meditative-052": { // Economic Anxiety
+      cast: { voice: "sapi-bureaucrat", text: "The market demands its due." },
+    },
+    "meditative-064": { // Traitorous Blood
+      cast: { voice: "sapi-trickster", text: "Loyalty is negotiable." },
+    },
+    "meditative-071": { // Pareto Optimality
+      cast: { voice: "sapi-teacher", text: "There is always a better move." },
+    },
+    "meditative-071-1": { // The Cane
+      cast: { voice: "sapi-teacher", text: "The cane teaches." },
+    },
+    "meditative-072": { // The Banisher
+      play: { voice: "robot", text: "You are unmade." },
+      death: { voice: "robot", text: "Banished with you." },
+    },
     "meditative-076": { // Do or Die
       cast: { voice: "sapi-trickster", text: "Play it fast, or it's mine." },
     },

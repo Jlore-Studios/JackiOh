@@ -189,6 +189,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   promptAnswered: { type: "promptAnswered", player: "p1", choiceId: "ch1" },
   drawOffered: { type: "drawOffered", player: "p2" },
   drawAnswered: { type: "drawAnswered", player: "p1", accept: false },
+  emoted: { type: "emoted", player: "p1", emote: "greetings" },
   gameOver: { type: "gameOver", winner: "p1", reason: "hero-death" },
   // Patch v0.2.0 (docs/classic-sets.md B3, B5).
   cardAnnounced: { type: "cardAnnounced", player: "p1", instanceId: "c1", defId: SPELL, cardType: "Spell", costPaid: 1, targets: ["hero-p2"] },
@@ -262,6 +263,7 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   promptAnswered: null,
   drawOffered: "notify",
   drawAnswered: "cancel",
+  emoted: null,
   gameOver: "victory",
   // Patch v0.2.0.
   cardAnnounced: null,

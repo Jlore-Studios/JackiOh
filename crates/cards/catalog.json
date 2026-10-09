@@ -11261,6 +11261,158 @@
       "text": "Start of turn: Add a random Radiant KY or CN card to your hand. It costs (0)."
     }
   },
+  "meditative-052": {
+    "id": "meditative-052",
+    "index": "52",
+    "name": "Economic Anxiety",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "bonus",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 60,
+    "base": {
+      "keywords": [],
+      "text": "Aura: Units have +{bonus} Attack while attacking a Unit that shares none of their tags."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Aura: Your Units have +{bonus} Attack and Poisonous while attacking a Unit that shares none of their tags."
+    }
+  },
+  "meditative-064": {
+    "id": "meditative-064",
+    "index": "64",
+    "name": "Traitorous Blood",
+    "set": "Meditative",
+    "type": "Trap",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "loc": 60,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit with an adjacent Unit attacks: Redirect the attack to that adjacent Unit."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit with an adjacent Unit attacks: Redirect the attack to that adjacent Unit. Then summon a copy of each Unit that combat destroyed."
+    }
+  },
+  "meditative-071": {
+    "id": "meditative-071",
+    "index": "71",
+    "name": "Pareto Optimality",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Mythic",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "meditative-071-1"
+    ],
+    "loc": 100,
+    "base": {
+      "keywords": [],
+      "text": "Cry: Summon The Cane.\nWhenever your opponent plays a card that isn't the AI's optimal move, The Cane attacks a random enemy."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Cry: Summon a Radiant The Cane.\nWhenever your opponent emotes or plays a card that isn't the AI's optimal move, The Cane attacks a random enemy."
+    }
+  },
+  "meditative-071-1": {
+    "id": "meditative-071-1",
+    "index": "71.1",
+    "name": "The Cane",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [
+      "CN",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "token": true,
+    "cost": 2,
+    "loc": 30,
+    "base": {
+      "attack": 3,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Animated on your turn"
+        },
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Animated on your turn and when Pareto Optimal, Indestructible, Pierce"
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Animated on your turn"
+        },
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Pierce"
+        },
+        {
+          "kind": "Trample"
+        }
+      ],
+      "text": "Animated on your turn and when Pareto Optimal, Indestructible, Pierce, Trample"
+    }
+  },
+  "meditative-072": {
+    "id": "meditative-072",
+    "index": "72",
+    "name": "The Banisher",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "loc": 40,
+    "base": {
+      "attack": 2,
+      "health": 1,
+      "keywords": [],
+      "text": "Whenever this damages a Unit, exile that Unit."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Cleave"
+        }
+      ],
+      "text": "Cleave\nWhenever this damages a Unit, exile that Unit."
+    }
+  },
   "meditative-076": {
     "id": "meditative-076",
     "index": "76",

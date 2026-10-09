@@ -139,6 +139,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   promptAnswered: { type: "promptAnswered", player: "p1", choiceId: "ch1" },
   drawOffered: { type: "drawOffered", player: "p2" },
   drawAnswered: { type: "drawAnswered", player: "p1", accept: false },
+  emoted: { type: "emoted", player: "p1", emote: "greetings" },
   gameOver: { type: "gameOver", winner: "p1", reason: "hero-death" },
   // Patch v0.2.0 (docs/classic-sets.md B3, B5).
   cardAnnounced: { type: "cardAnnounced", player: "p1", instanceId: "c1", defId: "core-035", cardType: "Spell", costPaid: 1, targets: ["hero-p2"] },
@@ -248,6 +249,7 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   promptAnswered: null,
   drawOffered: null,
   drawAnswered: null,
+  emoted: null,
   gameOver: null,
   // Patch v0.2.0: the new events ride the existing recipes, each with a look of its own (fx/v020.test.ts),
   // and `rolledBack` rewinds the whole board.
@@ -362,6 +364,7 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   promptAnswered: ["jk-fade-out", 150, "prompt-modal"],
   drawOffered: ["jk-toast-in", 150, "draw-toast"],
   drawAnswered: ["jk-toast-resolve", 300, "draw-toast"],
+  emoted: ["jk-loss-pop", 0, "hero-<side>"],
   gameOver: ["jk-result-overlay", 0, "result-overlay"],
   // Patch v0.2.0 (docs/classic-sets.md B3, B5).
   cardAnnounced: ["jk-card-played", 300, "hand-card-<instanceId> | hand-<side>"],

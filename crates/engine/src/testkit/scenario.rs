@@ -1520,6 +1520,13 @@ impl Scenario {
         self
     }
 
+    /// A raw engine action, for the actions with no step helper — the `Emote` action (MD-D29,
+    /// R1127). Panics when `reduce` refuses it, like every other step.
+    pub fn act(&mut self, body: ActionBody, player: PlayerId, what: &str) -> &mut Scenario {
+        self.action(body, player, what);
+        self
+    }
+
     pub fn end_turn(&mut self) -> &mut Scenario {
         let active = self.current.active;
         self.action(

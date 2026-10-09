@@ -191,7 +191,7 @@ fn is_dormant(state: &GameState, instance: &CardInstance) -> bool {
 }
 
 /// Every permanent whose aura is in play, in lane order per side (§10.4 layer 5).
-fn aura_sources(state: &GameState) -> Vec<&CardInstance> {
+pub(crate) fn aura_sources(state: &GameState) -> Vec<&CardInstance> {
     // Every unit read walks this list, so it is built with plain loops (#188), straight off the rows
     // as `zones::active_units_of` reads them: each unit zone's top card in lane order, then the Units
     // the side's carriers hold (R446), then the backrow by lane.
