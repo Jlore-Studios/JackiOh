@@ -36,11 +36,11 @@ use serde_json::json;
 use crate::config::{SCORER_DRY_RUN_PLAYS, SCORER_LOW_HEALTH, SCORER_WEIGHTS};
 use crate::damage::DamageTarget;
 use crate::layers::unit_view;
-use crate::play_choices::PlayAction;
+use crate::play_choices::{PlayAction, graveyard_play_actions_for};
 use crate::prelude::json_as;
 use crate::rng::Rng;
 use crate::script::EngineSink;
-use crate::state::{CardInstance, GameState};
+use crate::state::{CardInstance, GameState, find_instance};
 use crate::wire::{
     CardCost, CardDef, CardFace, CardType, KeywordKind, Phase, PlayerId, Rarity, Row, Selection, SetName,
     Winner, Zone, ZoneChoice, has_keyword, opponent_of,
@@ -317,7 +317,17 @@ fn play_fields(action: &PlayAction) -> PlayFields<'_> {
 /// one — so those plays come first, whatever order `playActionsFor` found them in, and a board full
 /// of the viewer's own permanents cannot crowd the one enemy unit out of the plays tried.
 fn dry_run_plays(state: &GameState, viewer: PlayerId, card: &CardInstance) -> Vec<PlayAction> {
-    let all = crate::play_choices::play_actions_for(state, viewer, card);
+    // MD-D28, R1125: a card in the graveyard a permission lets its player play is played from there
+    // (`play_choices::graveyard_play_actions_for`), as the judge's candidates may be.
+    let in_graveyard = state.players[viewer]
+        .graveyard
+        .iter()
+        .any(|held| held.id == card.id);
+    let all = if in_graveyard {
+        graveyard_play_actions_for(state, viewer, card)
+    } else {
+        crate::play_choices::play_actions_for(state, viewer, card)
+    };
     if all.is_empty() {
         return vec![];
     }
@@ -416,46 +426,30 @@ fn may_act_now(state: &GameState, def: &CardDef, radiant: bool) -> bool {
         == Some(true)
         || script.cry.is_some()
         || script.aura.is_some()
+        || script.attack_mods.is_some()
         || script.set_stat.is_some()
         || script.on_play_hook.is_some()
         || !script.triggers.is_empty()
 }
 
-/// §10.7's dry run: the card is put in the viewer's hand on a copy of the state and played now, with
-/// the viewer's own mana, once per play `dryRunPlays` names, and the copy after the play says what it
-/// did. Lethal is available when the enemy hero is dead, or when what the viewer's board can then
-/// send at it this turn finishes it (a Charge unit, a buff, a Taunt removed); it clears the enemy
-/// board when the enemy had units and has none; and it heals when the viewer's hero ends above where
-/// it began. A card whose play asks something is read as it stands at the question.
+/// §10.7's dry run of one candidate's plays: each play `dryRunPlays` names is made on a copy of
+/// `base` (`dryRunBase`) with the viewer's own mana, and the copy after the play says what it did.
+/// Lethal is available when the enemy hero is dead, or when what the viewer's board can then send at
+/// it this turn finishes it (a Charge unit, a buff, a Taunt removed); it clears the enemy board when
+/// the enemy had units and has none; and it heals when the viewer's hero ends above where it began. A
+/// card whose play asks something is read as it stands at the question.
 ///
-/// The play is made on a copy of `base` (`dryRunBase`), which the candidate joins for its turn and
-/// leaves again, and the copy draws from a seed of its own, so the match's state and rng are untouched
-/// and the ranking stays a pure function of the state (R29, §9.3).
-pub fn dry_run(
-    state: &GameState,
-    viewer: PlayerId,
-    def: &CardDef,
-    radiant: bool,
-    base: Option<&mut GameState>,
-) -> DryRun {
-    let Some(base) = base else {
-        return NOTHING;
-    };
-    if dry_running(state) || !may_act_now(state, def, radiant) {
-        return NOTHING;
-    }
+/// The copy draws from a seed of its own, so the match's state and rng are untouched and the ranking
+/// stays a pure function of the state (R29, §9.3).
+fn trial_plays(base: &GameState, viewer: PlayerId, card: &CardInstance) -> DryRun {
     let enemy = opponent_of(viewer);
-    let mut card = crate::state::new_instance(&mut *base, &def.id, viewer, Zone::Hand { player: viewer });
-    card.radiant = radiant;
-    base.players[viewer].hand.push(card.clone());
-
     let enemy_units_before = crate::zones::active_units_of(base, enemy).len();
     let health_before = base.players[viewer].hero.health;
     // A play aimed at the viewer's own hero can only answer the heal question, which asks nothing
     // of a hero at SCORER_LOW_HEALTH or more, so it is not played then.
     let heal_matters = health_before < SCORER_LOW_HEALTH;
     let mut outcome = NOTHING;
-    for action in dry_run_plays(base, viewer, &card) {
+    for action in dry_run_plays(base, viewer, card) {
         if !heal_matters && target_rank(base, viewer, &action) == 1 {
             continue;
         }
@@ -489,12 +483,54 @@ pub fn dry_run(
             break;
         }
     }
+    outcome
+}
+
+/// §10.7's dry run: the card is put in the viewer's hand on a copy of the state and played now.
+///
+/// The play is made on a copy of `base` (`dryRunBase`), which the candidate joins for its turn and
+/// leaves again.
+pub fn dry_run(
+    state: &GameState,
+    viewer: PlayerId,
+    def: &CardDef,
+    radiant: bool,
+    base: Option<&mut GameState>,
+) -> DryRun {
+    let Some(base) = base else {
+        return NOTHING;
+    };
+    if dry_running(state) || !may_act_now(state, def, radiant) {
+        return NOTHING;
+    }
+    let mut card = crate::state::new_instance(&mut *base, &def.id, viewer, Zone::Hand { player: viewer });
+    card.radiant = radiant;
+    base.players[viewer].hand.push(card.clone());
+
+    let outcome = trial_plays(base, viewer, &card);
     // TS's `finally`: the candidate leaves the shared copy's hand again.
     let hand = &mut base.players[viewer].hand;
     if let Some(at) = hand.iter().position(|held| held.id == card.id) {
         hand.remove(at);
     }
     outcome
+}
+
+/// MD-D28, R1125: §10.7's dry run of a card already on the copy — the viewer's own card, at its own
+/// price, tuning and face, where it stands (hand or graveyard). No `new_instance`, and it is not
+/// removed afterwards: the copy is the judge's to keep.
+fn dry_run_card(state: &GameState, viewer: PlayerId, card: &CardInstance, base: &mut GameState) -> DryRun {
+    if dry_running(state) {
+        return NOTHING;
+    }
+    let Some(standing) = find_instance(base, &card.id).cloned() else {
+        return NOTHING;
+    };
+    let def = crate::catalog::def_of(Some(base), &standing.def_id).clone();
+    if !may_act_now(base, &def, standing.radiant) {
+        return NOTHING;
+    }
+    trial_plays(base, viewer, &standing)
 }
 
 /// The copy of the state every dry run of one ranking plays on, or null when the viewer cannot play
@@ -638,11 +674,46 @@ pub fn score_def(
 ) -> Scored {
     let radiant = options.radiant == Some(true);
     let face = face_for(def, radiant);
-    let enemy = opponent_of(viewer);
-    let enemy_units = crate::zones::active_units_of(state, enemy);
     let has_base = base.is_some();
     // What the card's text does, which its printed data cannot say (§10.7's dry run).
     let played = dry_run(state, viewer, def, radiant, base);
+    score_parts(state, viewer, def, face, played, has_base)
+}
+
+/// MD-D28, R1125: one of the viewer's own cards' score for this state — the judge's reading of a
+/// play. The card is dry-run where it stands, at its own price, tuning and face, on the shared copy
+/// `base` the caller computed (`dry_run_base`); `None` for a card that is not the viewer's to play.
+pub fn score_instance(
+    state: &GameState,
+    viewer: PlayerId,
+    instance_id: &str,
+    base: Option<&mut GameState>,
+) -> Option<Scored> {
+    let card = find_instance(state, instance_id)?.clone();
+    if card.controller != viewer {
+        return None;
+    }
+    let def = crate::catalog::def_of(Some(state), &card.def_id).clone();
+    let face = face_for(&def, card.radiant).clone();
+    let has_base = base.is_some();
+    let played = match base {
+        None => NOTHING,
+        Some(base) => dry_run_card(state, viewer, &card, base),
+    };
+    Some(score_parts(state, viewer, &def, &face, played, has_base))
+}
+
+/// One candidate's score from its dry run: the shared half of `score_def` and `score_instance`.
+fn score_parts(
+    state: &GameState,
+    viewer: PlayerId,
+    def: &CardDef,
+    face: &CardFace,
+    played: DryRun,
+    has_base: bool,
+) -> Scored {
+    let enemy = opponent_of(viewer);
+    let enemy_units = crate::zones::active_units_of(state, enemy);
 
     // With a dry run to read, a Charge body's swing is the one it plays (`mayActNow`), through the
     // viewer's auras; the printed attack stands in for it only when the viewer cannot play now.

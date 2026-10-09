@@ -5,6 +5,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::wire::catalog_types::{PlayerId, Row};
+use crate::wire::emotes::EmoteId;
 use crate::wire::string_union;
 
 /// Where a permanent is being played (§3.2: the player picks the zone).
@@ -129,6 +130,9 @@ pub enum ActionBody {
     AnswerDraw {
         accept: bool,
     },
+    /// MD-D29, R1127: an emote as a move — legal only while a card hears it (`query::emotes_heard`),
+    /// so other games never list it and `reduce` refuses it there.
+    Emote { emote: EmoteId },
     Concede,
     EndTurn,
     /// R345: the sender's own preference for R82's automatic turn end. A setting, not a move: it is
@@ -157,6 +161,7 @@ string_union! {
         Answer = "answer",
         OfferDraw = "offerDraw",
         AnswerDraw = "answerDraw",
+        Emote = "emote",
         Concede = "concede",
         EndTurn = "endTurn",
         SetAutoEndTurn = "setAutoEndTurn",
@@ -179,6 +184,7 @@ impl ActionBody {
             ActionBody::Answer { .. } => ActionType::Answer,
             ActionBody::OfferDraw => ActionType::OfferDraw,
             ActionBody::AnswerDraw { .. } => ActionType::AnswerDraw,
+            ActionBody::Emote { .. } => ActionType::Emote,
             ActionBody::Concede => ActionType::Concede,
             ActionBody::EndTurn => ActionType::EndTurn,
             ActionBody::SetAutoEndTurn { .. } => ActionType::SetAutoEndTurn,
@@ -250,6 +256,8 @@ pub const NON_ACTIVE_ACTION_TYPES: &[ActionType] = &[
     ActionType::Answer,
     ActionType::Concede,
     ActionType::AnswerDraw,
+    // MD-D29, R1127: either seat may emote while a card hears it.
+    ActionType::Emote,
     ActionType::SetAutoEndTurn,
     ActionType::DisconnectExpired,
     ActionType::Timeout,
@@ -302,5 +310,14 @@ mod tests {
         assert_eq!(serde_json::from_value::<Action>(json).unwrap(), action);
         let end: Action = serde_json::from_str(r#"{"type":"endTurn","playerId":"p2","nonce":"x"}"#).unwrap();
         assert_eq!(end.action_type(), ActionType::EndTurn);
+        // MD-D29, R1127: the emote action rides the wire as `{"type":"emote","emote":…}`.
+        let emote: Action =
+            serde_json::from_str(r#"{"type":"emote","emote":"greetings","playerId":"p1","nonce":"e"}"#)
+                .unwrap();
+        assert_eq!(emote.action_type(), ActionType::Emote);
+        assert_eq!(
+            serde_json::to_value(&emote).unwrap(),
+            serde_json::json!({"type":"emote","emote":"greetings","playerId":"p1","nonce":"e"})
+        );
     }
 }

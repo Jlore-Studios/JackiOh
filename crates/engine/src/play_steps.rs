@@ -1486,6 +1486,17 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     {
         former_id = Some(fresh_face_down_id(sink.state, &mut card));
         run.instance_id = card.id.clone();
+        // MD-D28, R1125: the judgement names the play as the action named it; it follows the card to
+        // its fresh id, so the trigger reads it off the play's `cardResolved`.
+        if sink
+            .state
+            .play_judgement
+            .as_ref()
+            .is_some_and(|judgement| Some(&judgement.instance_id) == former_id.as_ref())
+            && let Some(judgement) = sink.state.play_judgement.as_mut()
+        {
+            judgement.instance_id = card.id.clone();
+        }
     }
 
     // §3.2/§6.2 Stack: step 1 already accepted an occupied unit zone for a Stack card, so the

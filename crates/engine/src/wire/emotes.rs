@@ -1,8 +1,9 @@
 //! Emotes and hero portraits (patch v0.2.X, SPEC §9.4 D5, §9.5, §10.10, §10.11, R641–R645).
 //!
-//! Everything here is cosmetic: an emote is never an `ActionBody`, never reaches `reduce`, the
-//! action log, the replay hash or a game record, and a portrait is never part of `PlayerView`
-//! (R643). This module holds only what BOTH sides of the wire must agree on — the id lists, the
+//! Everything here is cosmetic, except while a card hears emotes: an emote is never an `ActionBody`,
+//! never reaches `reduce`, the action log, the replay hash or a game record, and a portrait is never
+//! part of `PlayerView` (R643, revised by R1127: an `Emote` action exists exactly while a card with
+//! `StaticFlags.hears_emotes` acts). This module holds only what BOTH sides of the wire must agree on — the id lists, the
 //! portrait roster the deck save checks (D5, R641) and the rate limit the client and the server
 //! enforce identically (R643) — because `apps/web` and the server may not import each other
 //! (§9.2: a client and a server are separate deployables). Constants therefore live here and not

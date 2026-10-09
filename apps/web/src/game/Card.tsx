@@ -65,7 +65,7 @@ import { useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
 import { isSpent, useActingSeat } from "./spent.ts";
 import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
-import { COUNTERED_NOTE, conditionAttr, counteredAttr, glowAttr } from "./glow.ts";
+import { COUNTERED_NOTE, conditionAttr, conditionTargetAttr, counteredAttr, glowAttr } from "./glow.ts";
 import { useSetting } from "../settings/store.ts";
 
 import "./facedown.css";
@@ -394,7 +394,7 @@ export default function Card(props: CardProps): ReactElement {
       data-card-type={cardType}
       // animations.css keeps a fired Field Trap on the board with its own flip (trapFired).
       data-field-trap={cardType === "Field Trap" ? "true" : undefined}
-      data-condition-active={conditionAttr(card)}
+      data-condition-active={conditionAttr(card) ?? conditionTargetAttr(props.highlight, testId)}
       // R667: the engine says a card on the field would counter this hand card if played now.
       data-countered-on-play={counteredAttr(card)}
       data-owner={props.owner ?? unit?.owner}

@@ -272,6 +272,20 @@ impl ParamContext for HookArgs<'_> {
     }
 }
 
+/// MD-D4, R1120: an `attack_mods` hook reads its card's declared numbers (`param`) like any other
+/// pure-read hook.
+impl ParamContext for crate::script::AttackModArgs<'_> {
+    fn param_state(&self) -> &GameState {
+        self.state
+    }
+    fn param_self(&self) -> Option<&CardInstance> {
+        Some(self.self_)
+    }
+    fn param_radiant(&self) -> bool {
+        self.radiant
+    }
+}
+
 impl ParamContext for ConditionContext<'_> {
     fn param_state(&self) -> &GameState {
         self.state

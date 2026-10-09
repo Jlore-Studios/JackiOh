@@ -847,6 +847,44 @@ pub fn sacrifice_together(sink: &mut EngineSink<'_>, cards: &[CardInstance]) {
     run_death_pass(sink, &mut pass, None);
 }
 
+/// MD-D31, R1124: §4.5 step 1 exiles the units damage marked ahead of deaths — in R68's order,
+/// the active player's units first. The move is §6.3 Exile's (`effects::move_::exile_card`): to the
+/// exile pile (a unit token ceases to exist instead, R11), the exile counter fed (R55), `exiled`
+/// reported. No Death, no Reborn, no `destroyed` (R461), even when the hit was lethal.
+fn exile_marked(sink: &mut EngineSink<'_>) {
+    let order: [PlayerId; 2] = if sink.state.active == PlayerId::P1 {
+        [PlayerId::P1, PlayerId::P2]
+    } else {
+        [PlayerId::P2, PlayerId::P1]
+    };
+    let mut marked: Vec<CardInstance> = Vec::new();
+    for player in order {
+        marked.extend(
+            units_of(sink.state, player)
+                .into_iter()
+                .filter(|unit| unit.marked_exiled == Some(true)),
+        );
+    }
+    for unit in marked {
+        let Some(live) = find_instance(sink.state, &unit.id).cloned() else {
+            continue;
+        };
+        if live.marked_exiled != Some(true) {
+            continue;
+        }
+        let mut card = live;
+        let moved = crate::zones::move_to_zone(sink.state, &mut card, OffFieldZone::Exile, Default::default());
+        if matches!(moved, MoveResult::Moved) {
+            sink.state.counters.exiled += 1;
+        }
+        sink.events.push(GameEvent::Exiled {
+            instance_id: card.id.clone(),
+            def_id: card.def_id.clone(),
+            owner: card.owner,
+        });
+    }
+}
+
 /// R42: `lastDamagedBy` names the hit that took a unit to 0 or less health. A unit the check leaves
 /// standing above 0 — healed, buffed, or given back its health by an aura leaving — was killed by no
 /// hit, so an older credit must not name the killer of a death the layers cause later.
@@ -921,6 +959,12 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
                 return;
             }
             continue;
+        }
+
+        // MD-D31, R1124: the marked units leave for exile before anything is collected for death.
+        exile_marked(sink);
+        if sink.state.result.is_some() || sink.state.pending.is_some() {
+            return;
         }
 
         let order: [PlayerId; 2] = if sink.state.active == PlayerId::P1 {

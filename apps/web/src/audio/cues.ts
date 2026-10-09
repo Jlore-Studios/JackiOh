@@ -542,6 +542,7 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
     sfx: "cancel",
     cues: (event, ctx) => (event.player === ctx.view.viewer || event.accept ? NONE : [sfx("cancel")]),
   },
+  emoted: silent("the emote layer sounds it (R644)"),
   gameOver: {
     sfx: "victory",
     cues: (event, ctx) => {

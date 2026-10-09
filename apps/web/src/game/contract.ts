@@ -180,6 +180,12 @@ export type Highlight = {
    * `legalActions` and the open prompt's options alone. Absent means nothing glows.
    */
   glow?: ReadonlySet<string>;
+  /**
+   * MD-D5, R1121: the yellow a dragged or selected attack paints — the selected attacker's
+   * `conditionTargets` inside `glow`. A subset of `glow`, derived by `highlightFor` while
+   * attacking alone. Absent means nothing reads yellow from the drag layer.
+   */
+  condition?: ReadonlySet<string>;
 };
 
 export const NO_HIGHLIGHT: Highlight = { legal: new Set(), selected: new Set() };

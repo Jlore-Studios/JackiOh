@@ -13,9 +13,13 @@ use crate::script::Effect;
 use crate::state::{CardInstance, GameState};
 use crate::wire::opponent_of;
 
-/// "Still standing": above 0 health and not marked destroyed, so the check will not collect it (§4.5).
+/// "Still standing": above 0 health and neither marked destroyed nor marked exiled, so the
+/// check will not collect it (§4.5). A unit marked for exile (MD-D31, R1124) falls with the
+/// destroyed, though no death collects it.
 fn standing(state: &GameState, unit: &CardInstance) -> bool {
-    unit_view(state, unit).health > 0 && unit.marked_destroyed != Some(true)
+    unit_view(state, unit).health > 0
+        && unit.marked_destroyed != Some(true)
+        && unit.marked_exiled != Some(true)
 }
 
 /// `damageSplit`'s `among`: every enemy (the hero included), or the enemy Units only.

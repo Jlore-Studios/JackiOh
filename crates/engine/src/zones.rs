@@ -1083,6 +1083,7 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.embiggened = None;
     instance.divine_shield_spent = None;
     instance.marked_destroyed = None;
+    instance.marked_exiled = None;
     instance.reborn_spent = None;
     // B5 E35: Berserk is a status of the unit on the field, lost as it leaves (R78).
     instance.berserk = None;
