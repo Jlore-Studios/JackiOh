@@ -4646,10 +4646,8 @@
     "what": "build #579 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-09T23:03:43Z",
-    "notes": [
-      "started a night run, as a lane was free: #579 (hard) is queued to build, for `claude-6`: build on `claude-6` (claude, `opus`, strong); review on `claude-6` (claude, `opus`, strong)"
-    ],
+    "at": "2026-10-09T23:06:10Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
