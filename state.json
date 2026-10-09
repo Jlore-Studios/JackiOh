@@ -6079,14 +6079,18 @@
         {
           "at": "2026-10-09T15:36:31Z",
           "minutes": 89.1
+        },
+        {
+          "at": "2026-10-09T15:38:47Z",
+          "minutes": 34.2
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-09T19:00:00Z",
-          "utilization": 0.58
+          "utilization": 0.59
         },
-        "observed_at": "2026-10-09T15:36:31Z",
+        "observed_at": "2026-10-09T15:38:47Z",
         "status": "allowed"
       }
     },
