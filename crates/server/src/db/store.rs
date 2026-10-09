@@ -1326,7 +1326,11 @@ impl Tx<'_> {
     /// R1434: the tag a claim of the base whose key is `key` would carry now: none when no other
     /// profile holds the bare name, otherwise the lowest tag from 1 that no other profile holds.
     /// `profile_id`'s own name never counts as taken against it. A read: nothing is reserved.
-    pub async fn profiles_username_tag_for(&mut self, profile_id: &str, key: &str) -> StoreResult<Option<i64>> {
+    pub async fn profiles_username_tag_for(
+        &mut self,
+        profile_id: &str,
+        key: &str,
+    ) -> StoreResult<Option<i64>> {
         dispatch!(self, profiles_username_tag_for(profile_id, key))
     }
 
@@ -1335,7 +1339,10 @@ impl Tx<'_> {
     /// cooldown runs (the first change away from the default is never refused), and refused when
     /// the tag the name would carry is not `claim.expected_tag`. A claim that lands starts the
     /// cooldown and answers the prompt.
-    pub async fn profiles_claim_username(&mut self, claim: &UsernameClaim) -> StoreResult<UsernameClaimOutcome> {
+    pub async fn profiles_claim_username(
+        &mut self,
+        claim: &UsernameClaim,
+    ) -> StoreResult<UsernameClaimOutcome> {
         dispatch!(self, profiles_claim_username(claim))
     }
 

@@ -631,7 +631,8 @@ mod r612_what_the_client_reads {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r612_r1436_get_api_leaderboard_lists_usernames_and_ranks_marks_the_caller_and_counts_the_raisins() {
+    async fn r612_r1436_get_api_leaderboard_lists_usernames_and_ranks_marks_the_caller_and_counts_the_raisins()
+     {
         let Routed { app, token_a, .. } = routed().await;
         put_rank(
             &app,
@@ -760,13 +761,22 @@ mod r612_what_the_client_reads {
         let before = get(&app, "/api/leaderboard", &token_a).await;
         assert_eq!(names(&before.body), vec![json!([A, "Alice"])]);
 
-        let (status, _headers, renamed) =
-            call(&app, "PUT", "/api/username", Some(&token_a), json!({ "username": "Alicia" })).await;
+        let (status, _headers, renamed) = call(
+            &app,
+            "PUT",
+            "/api/username",
+            Some(&token_a),
+            json!({ "username": "Alicia" }),
+        )
+        .await;
         assert_eq!(status, 200, "{renamed}");
 
         let after = get(&app, "/api/leaderboard", &token_a).await;
         assert_eq!(names(&after.body), vec![json!([A, "Alicia"])]);
-        assert_eq!(get(&app, "/api/ranked", &token_a).await.body["username"], json!("Alicia"));
+        assert_eq!(
+            get(&app, "/api/ranked", &token_a).await.body["username"],
+            json!("Alicia")
+        );
         assert_eq!(json_of(&store!(app, ranked_rank(&season(), A))), row_before);
     }
 }

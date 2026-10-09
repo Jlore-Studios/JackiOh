@@ -172,8 +172,9 @@ function asMatchRanks(value: unknown): MatchRanksResponse | null {
 
 /**
  * Both seats' ranks for the match bar (R604, R612): whether this game moves the rating, and each
- * seat's visible rank beside its username, never its profile id (R1436). Read once: a promotion mid-match shows on the next one. An answer that is
- * not a ranks body — or no answer — leaves no banner rather than breaking the board.
+ * seat's visible rank beside its username, never its profile id (R1436). Read once: a promotion
+ * mid-match shows on the next one. An answer that is not a ranks body — or no answer — leaves no
+ * banner rather than breaking the board.
  */
 function useMatchRanks(token: string, matchId: string): MatchRanksResponse | null {
   const [ranks, setRanks] = useState<MatchRanksResponse | null>(null);

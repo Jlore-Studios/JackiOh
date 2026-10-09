@@ -8,7 +8,8 @@
 # with `#` are skipped. English to start: another language's words may be added below, folded
 # the same way. A refusal never echoes the word that matched.
 fuck
-shit
+bullshit
+shithead
 bitch
 asshole
 cocksucker

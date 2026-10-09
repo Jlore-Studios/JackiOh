@@ -669,8 +669,22 @@ mod r654_public_card_and_player_stats {
         let app = test_app().await;
         let alice_id = seed_profile(&app, "u-alice", "Alice").await;
         let bob_id = seed_profile(&app, "u-bob", "Bob").await;
-        put_player_stats(&app, &alice_id, json!({ "games": 5, "wins": 3, "losses": 2 }), false, 1000).await;
-        put_player_stats(&app, &bob_id, json!({ "games": 9, "wins": 4, "losses": 5 }), false, 2000).await;
+        put_player_stats(
+            &app,
+            &alice_id,
+            json!({ "games": 5, "wins": 3, "losses": 2 }),
+            false,
+            1000,
+        )
+        .await;
+        put_player_stats(
+            &app,
+            &bob_id,
+            json!({ "games": 9, "wins": 4, "losses": 5 }),
+            false,
+            2000,
+        )
+        .await;
         let rows = |data: &Value| -> Vec<Value> {
             data["players"]
                 .as_array()

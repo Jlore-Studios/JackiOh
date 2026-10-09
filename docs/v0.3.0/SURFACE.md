@@ -884,7 +884,8 @@ impl Tx<'_> {
     pub async fn commit(self) -> Result<(), StoreError>;
     // one method per TS Store method, named <substore>_<method> snake_cased, TS's argument order:
     //   profiles_get_by_id, profiles_get_by_user_id, profiles_get_many, profiles_create, profiles_set_status,
-    //   profiles_set_glicko, profiles_set_display_name, profiles_set_in_match, profiles_remove,
+    //   profiles_set_glicko, profiles_set_in_match, profiles_remove,
+    //   profiles_username_tag_for, profiles_claim_username, profiles_answer_username_prompt (R1434, R1435),
     //   codes_insert, codes_find_by_hash, codes_claim, codes_log_attempt, …,
     //   matches_create, matches_get, matches_append_actions, matches_actions, matches_set_clocks, matches_finish,
     //   matches_live, matches_mode_of, matches_discard_open, matches_forget_voided, …,

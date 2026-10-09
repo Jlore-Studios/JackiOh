@@ -2190,7 +2190,9 @@ pub fn player_stats_list_public(
         .into_iter()
         .skip(usize::try_from(options.offset).unwrap_or(usize::MAX))
         .take(usize::try_from(options.limit).unwrap_or(0))
-        .map(|(row, username)| to_public_player_summary(&row.profile_id, username, &row.stats, row.updated_at))
+        .map(|(row, username)| {
+            to_public_player_summary(&row.profile_id, username, &row.stats, row.updated_at)
+        })
         .collect())
 }
 

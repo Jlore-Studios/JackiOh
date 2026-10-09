@@ -741,9 +741,7 @@ pub async fn leaderboard(app: &App, viewer_id: &str) -> Result<LeaderboardBody, 
     let standings = tx.ranked_standings(&season_id).await?;
     let usernames = usernames_of(
         &mut tx,
-        standings
-            .iter()
-            .map(|standing| standing.rank.profile_id.as_str()),
+        standings.iter().map(|standing| standing.rank.profile_id.as_str()),
     )
     .await?;
     tx.commit().await?;

@@ -264,8 +264,7 @@ fn tokens(name: &str) -> Vec<String> {
         let split = match last {
             None => false,
             Some((last_kind, last_ch)) => {
-                last_kind != kind
-                    || (kind == Kind::Letter && last_ch.is_lowercase() && ch.is_uppercase())
+                last_kind != kind || (kind == Kind::Letter && last_ch.is_lowercase() && ch.is_uppercase())
             }
         };
         if split {

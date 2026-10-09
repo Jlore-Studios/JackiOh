@@ -168,12 +168,17 @@ pub async fn put_username(app: &Arc<App>, req: Req) -> ApiResult {
         UsernameClaimOutcome::Claimed { .. } => {
             let saved = tx.profiles_get_by_id(&profile.id).await?;
             tx.commit().await?;
-            let saved = saved.ok_or_else(|| ApiError::internal("the profile that claimed a username is gone"))?;
+            let saved =
+                saved.ok_or_else(|| ApiError::internal("the profile that claimed a username is gone"))?;
             Ok(json(200, json!({ "username": own_username(&saved, now) })))
         }
         UsernameClaimOutcome::Cooldown { next_change_at } => {
             drop(tx);
-            Err(refused(ApiErrorCode::Conflict, cooldown_message(), cooldown_preview(next_change_at)))
+            Err(refused(
+                ApiErrorCode::Conflict,
+                cooldown_message(),
+                cooldown_preview(next_change_at),
+            ))
         }
         UsernameClaimOutcome::Changed { .. } => {
             drop(tx);
@@ -194,6 +199,10 @@ pub async fn post_skip(app: &Arc<App>, req: Req) -> ApiResult {
     tx.profiles_answer_username_prompt(&profile.id).await?;
     let answered = tx.profiles_get_by_id(&profile.id).await?;
     tx.commit().await?;
-    let answered = answered.ok_or_else(|| ApiError::internal("the profile that skipped the prompt is gone"))?;
-    Ok(json(200, json!({ "username": own_username(&answered, now_ms()) })))
+    let answered =
+        answered.ok_or_else(|| ApiError::internal("the profile that skipped the prompt is gone"))?;
+    Ok(json(
+        200,
+        json!({ "username": own_username(&answered, now_ms()) }),
+    ))
 }

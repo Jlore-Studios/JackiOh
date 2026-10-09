@@ -3,12 +3,16 @@
 # uppercase one (camelCase); each token is then NFKC case-folded and stripped of combining marks
 # before it is compared. So `BigAss` and `my_ass` are refused while `Cassandra`, `Assassin` and
 # `Scunthorpe` pass. Words that rarely occur inside innocent words go in blocklist_anywhere.txt.
+# `shit` is here and not there because it sits inside romanised Japanese names (`Yoshitaka`,
+# `Toshiteru`); its compounds that never do are in blocklist_anywhere.txt.
 #
 # One lowercase word per line, as it reads after that folding. Blank lines and lines starting
 # with `#` are skipped. English to start: another language's words may be added below, folded
 # the same way. A refusal never echoes the word that matched.
 ass
 arse
+shit
+shitty
 cunt
 cum
 tit

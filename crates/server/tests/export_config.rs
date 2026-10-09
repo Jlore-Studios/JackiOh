@@ -187,8 +187,9 @@ fn every_name_is_listed_once() {
     names.dedup();
     assert_eq!(names.len(), listed, "a constant is listed twice");
     assert_eq!(
-        listed, 51,
-        "the 50 names the client imported from apps/server/src/config.ts, and ROOM_CODE_FORMAT (R767)"
+        listed, 55,
+        "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767) and the \
+         four USERNAME_* hints (R1432, R1435)"
     );
 }
 

@@ -1895,7 +1895,8 @@ pub async fn profiles_set_status(
 /// of one key run one after the other and the second reads a table that holds the first. Migration
 /// 0028's `app.assign_default_username` takes the same lock on `player` before it names a new
 /// account, so a claim of `Player` and a sign-up never hand out one tag twice.
-const USERNAME_LOCK_SQL: &str = "select pg_advisory_xact_lock(hashtextextended('jackioh.username:' || $1::text, 0))";
+const USERNAME_LOCK_SQL: &str =
+    "select pg_advisory_xact_lock(hashtextextended('jackioh.username:' || $1::text, 0))";
 
 /// R1434's tag for a claim of key `$2` by profile `$1`: null while no other profile holds the bare
 /// name, else 1 when no other profile holds `#1`, else the lowest held tag whose successor nobody
@@ -1962,7 +1963,9 @@ pub async fn profiles_claim_username(
         return Ok(UsernameClaimOutcome::Changed { tag });
     }
     let tag_column = tag.map(i32::try_from).transpose().map_err(|error| {
-        StoreError::from(format!("username tag {tag:?} does not fit profiles.username_tag: {error}"))
+        StoreError::from(format!(
+            "username tag {tag:?} does not fit profiles.username_tag: {error}"
+        ))
     })?;
     sqlx::query(concat!(
         "update public.profiles

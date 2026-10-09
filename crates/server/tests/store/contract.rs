@@ -41,17 +41,19 @@ use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 
 use jackioh_engine::{Action, GameRecord, LastBoardEntry};
+use jackioh_server::config::USERNAME_CHANGE_COOLDOWN_MS;
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
     BotRating, CodeAttempt, CollectionEntry, CollectionGrant, Db, FrozenTrio, GameRecordQuery, InviteCode,
     LastBoardKind, MatchActionRow, MatchClocks, MatchRow, PlayerSettingsLimits, PlayerSettingsMergeInput,
     PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput, ProfileStatus, RatedGameRow,
     RedeemInviteCodeInput, ResultRow, RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeriesRow,
-    StoreError, Ticket, TutorialMergeInput, TutorialProgressRow, Tx,
+    StoreError, Ticket, TutorialMergeInput, TutorialProgressRow, Tx, UsernameClaim, UsernameClaimOutcome,
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{SeasonRank, fresh_rank};
 use jackioh_server::ranked::season::ResetChange;
+use jackioh_server::username::{normalize_username, username_key};
 
 // ---------------------------------------------------------------------------
 // One store call, one transaction
@@ -754,6 +756,278 @@ mod profiles {
         moves_the_rating_and_the_in_match_pointer,
         r603_round_trips_the_whole_glicko_triple,
         r111_grants_one_copy_of_every_non_token_card_on_pending_active_idempotently,
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Usernames (SPEC §9.4, R1434, R1435)
+// ---------------------------------------------------------------------------
+
+mod r1434_usernames {
+    use super::*;
+
+    const COOLDOWN_MS: i64 = USERNAME_CHANGE_COOLDOWN_MS;
+
+    /// A claim of `base` (already in its stored form) by `profile_id`, expecting `expected_tag`.
+    fn claim_of(profile_id: &str, base: &str, expected_tag: Option<i64>, at: i64) -> UsernameClaim {
+        UsernameClaim {
+            profile_id: profile_id.to_string(),
+            base: base.to_string(),
+            key: username_key(base),
+            expected_tag,
+            at,
+            cooldown_ms: COOLDOWN_MS,
+        }
+    }
+
+    /// The username a profile shows now, read back from the store.
+    async fn username_now(harness: &StoreHarness, profile_id: &str) -> String {
+        must(q!(harness, t => t.profiles_get_by_id(profile_id)), "the profile").username()
+    }
+
+    /// Claims `base` for `profile_id` at the tag the store says it would carry now, as a save of a
+    /// fresh preview does, and answers that tag.
+    async fn claim(harness: &StoreHarness, profile_id: &str, base: &str, at: i64) -> Option<i64> {
+        let key = username_key(base);
+        let tag = q!(harness, t => t.profiles_username_tag_for(profile_id, &key));
+        let outcome = q!(harness, t => t.profiles_claim_username(&claim_of(profile_id, base, tag, at)));
+        assert_eq!(
+            outcome,
+            UsernameClaimOutcome::Claimed { tag },
+            "{}: claim {base}",
+            harness.name
+        );
+        tag
+    }
+
+    /// R1434: a new account is the lowest free `Player#n`, in order, always tagged and unprompted.
+    async fn r1434_new_accounts_are_player_1_2_3_in_order(harness: &StoreHarness) {
+        let a = pending_profile(harness, None).await;
+        let b = pending_profile(harness, None).await;
+        let c = pending_profile(harness, None).await;
+        assert_eq!(
+            [a.username(), b.username(), c.username()],
+            ["Player#1", "Player#2", "Player#3"]
+        );
+        for profile in [&a, &b, &c] {
+            assert_eq!(profile.username_key, "player");
+            assert!(!profile.username_prompted);
+            assert_eq!(profile.username_changed_at, None);
+        }
+        assert_eq!(username_now(harness, &b.id).await, "Player#2");
+    }
+
+    /// R1434: a default tag freed by a rename or a deleted account goes to the next new account.
+    async fn r1434_a_freed_default_tag_goes_to_the_next_new_account(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        assert_eq!(c.username(), "Player#3");
+
+        assert_eq!(claim(harness, &b.id, "Bob", harness.now()).await, None);
+        assert_eq!(username_now(harness, &b.id).await, "Bob");
+        let d = pending_profile(harness, None).await;
+        assert_eq!(d.username(), "Player#2", "{}: the rename freed #2", harness.name);
+
+        assert!(q!(harness, t => t.profiles_remove(&a.id)));
+        let e = pending_profile(harness, None).await;
+        assert_eq!(
+            e.username(),
+            "Player#1",
+            "{}: the deletion freed #1",
+            harness.name
+        );
+        let f = pending_profile(harness, None).await;
+        assert_eq!(f.username(), "Player#4");
+    }
+
+    /// R1434: the first claim of a base is bare, later ones take the lowest free tag, and a tag
+    /// freed by a rename goes to the next taker.
+    async fn r1434_first_claim_is_bare_then_the_lowest_free_tag_and_freed_tags_are_reused(
+        harness: &StoreHarness,
+    ) {
+        let at = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let d = active_profile(harness, None).await;
+        assert_eq!(claim(harness, &a.id, "Max", at).await, None);
+        assert_eq!(claim(harness, &b.id, "Max", at).await, Some(1));
+        assert_eq!(claim(harness, &c.id, "Max", at).await, Some(2));
+        assert_eq!(
+            [
+                username_now(harness, &a.id).await,
+                username_now(harness, &b.id).await,
+                username_now(harness, &c.id).await
+            ],
+            ["Max", "Max#1", "Max#2"]
+        );
+
+        // b renames once the cooldown has run, which frees `Max#1` for the next taker.
+        assert_eq!(claim(harness, &b.id, "Zed", at + COOLDOWN_MS).await, None);
+        assert_eq!(claim(harness, &d.id, "Max", at).await, Some(1));
+        assert_eq!(username_now(harness, &d.id).await, "Max#1");
+
+        // a renames too: the bare name is free again, and the next taker gets it bare.
+        assert_eq!(claim(harness, &a.id, "Ann", at + COOLDOWN_MS).await, None);
+        let e = active_profile(harness, None).await;
+        assert_eq!(claim(harness, &e.id, "Max", at).await, None);
+        assert_eq!(username_now(harness, &e.id).await, "Max");
+    }
+
+    /// R1434: two base names clash when their NFKC case folds match.
+    async fn r1434_names_clash_on_their_nfkc_case_fold(harness: &StoreHarness) {
+        let at = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let d = active_profile(harness, None).await;
+        let e = active_profile(harness, None).await;
+        assert_eq!(claim(harness, &a.id, "Max", at).await, None);
+        assert_eq!(claim(harness, &b.id, "max", at).await, Some(1));
+        // Fullwidth `ＭＡＸ` is stored as `MAX` (R1432), whose key is `max` as well.
+        let fullwidth = normalize_username("ＭＡＸ").expect("fullwidth MAX is a name");
+        assert_eq!(fullwidth, "MAX");
+        assert_eq!(claim(harness, &c.id, &fullwidth, at).await, Some(2));
+        assert_eq!(username_now(harness, &c.id).await, "MAX#2");
+
+        assert_eq!(claim(harness, &d.id, "Straße", at).await, None);
+        assert_eq!(claim(harness, &e.id, "STRASSE", at).await, Some(1));
+        assert_eq!(username_now(harness, &e.id).await, "STRASSE#1");
+    }
+
+    /// R1434: a player's own current name never counts as taken against them.
+    async fn r1434_the_callers_own_name_is_not_taken_against_them(harness: &StoreHarness) {
+        let at = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        assert_eq!(claim(harness, &a.id, "Max", at).await, None);
+        assert_eq!(q!(harness, t => t.profiles_username_tag_for(&a.id, "max")), None);
+        assert_eq!(
+            q!(harness, t => t.profiles_username_tag_for(&b.id, "max")),
+            Some(1)
+        );
+        // A new account's own `Player#n` is not taken against it either.
+        let tag = q!(harness, t => t.profiles_username_tag_for(&b.id, "player"));
+        assert_eq!(tag, None, "{}: no one else holds bare Player", harness.name);
+        // a moves to another form of the same name, keeping it bare.
+        assert_eq!(claim(harness, &a.id, "MAX", at + COOLDOWN_MS).await, None);
+        assert_eq!(username_now(harness, &a.id).await, "MAX");
+    }
+
+    /// R1435: a claim whose tag no longer matches the preview's writes nothing and says what the
+    /// name would carry now.
+    async fn r1435_a_claim_whose_outcome_changed_writes_nothing(harness: &StoreHarness) {
+        let at = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        // b previews `Max`, bare; a takes it first.
+        assert_eq!(q!(harness, t => t.profiles_username_tag_for(&b.id, "max")), None);
+        assert_eq!(claim(harness, &a.id, "Max", at).await, None);
+        let stale = q!(harness, t => t.profiles_claim_username(&claim_of(&b.id, "Max", None, at)));
+        assert_eq!(stale, UsernameClaimOutcome::Changed { tag: Some(1) });
+        let unchanged = must(q!(harness, t => t.profiles_get_by_id(&b.id)), "b");
+        assert_eq!(unchanged.username(), b.username());
+        assert_eq!(unchanged.username_changed_at, None);
+        assert!(!unchanged.username_prompted);
+    }
+
+    /// R1434: two claims of one name at the same moment get different tags.
+    async fn r1434_two_concurrent_claims_of_one_name_get_different_tags(harness: &StoreHarness) {
+        let at = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        // Both previewed `Max` bare, and both save at once.
+        let (first, second) = tokio::join!(
+            async { q!(harness, t => t.profiles_claim_username(&claim_of(&a.id, "Max", None, at))) },
+            async { q!(harness, t => t.profiles_claim_username(&claim_of(&b.id, "Max", None, at))) },
+        );
+        let mut outcomes = [first.clone(), second.clone()];
+        outcomes.sort_by_key(|outcome| matches!(outcome, UsernameClaimOutcome::Changed { .. }));
+        assert_eq!(
+            outcomes,
+            [
+                UsernameClaimOutcome::Claimed { tag: None },
+                UsernameClaimOutcome::Changed { tag: Some(1) }
+            ],
+            "{}: one claim lands bare and the other is told the name is taken",
+            harness.name
+        );
+        // The one that lost saves its fresh preview, `Max#1`.
+        let loser = if matches!(first, UsernameClaimOutcome::Claimed { .. }) {
+            &b
+        } else {
+            &a
+        };
+        assert_eq!(claim(harness, &loser.id, "Max", at).await, Some(1));
+        let mut names = [
+            username_now(harness, &a.id).await,
+            username_now(harness, &b.id).await,
+        ];
+        names.sort();
+        assert_eq!(names, ["Max", "Max#1"]);
+    }
+
+    /// R1434: two sign-ups at the same moment never share a default number.
+    async fn r1434_two_concurrent_new_accounts_get_different_tags(harness: &StoreHarness) {
+        let (a, b) = tokio::join!(pending_profile(harness, None), pending_profile(harness, None));
+        let mut names = [a.username(), b.username()];
+        names.sort();
+        assert_eq!(names, ["Player#1", "Player#2"]);
+    }
+
+    /// R1435: a change starts the cooldown; another inside it is refused with the time the next is
+    /// allowed, and the first change away from the default is allowed at once.
+    async fn r1435_a_second_change_inside_the_cooldown_is_refused(harness: &StoreHarness) {
+        let at = harness.now();
+        let a = active_profile(harness, None).await;
+        assert_eq!(a.username_changed_at, None);
+        assert_eq!(claim(harness, &a.id, "Max", at).await, None);
+        let changed = must(q!(harness, t => t.profiles_get_by_id(&a.id)), "a");
+        assert_eq!(changed.username_changed_at, Some(at));
+        assert!(
+            changed.username_prompted,
+            "{}: a pick answers the prompt",
+            harness.name
+        );
+
+        let early =
+            q!(harness, t => t.profiles_claim_username(&claim_of(&a.id, "Ann", None, at + COOLDOWN_MS - 1)));
+        assert_eq!(
+            early,
+            UsernameClaimOutcome::Cooldown {
+                next_change_at: at + COOLDOWN_MS
+            }
+        );
+        assert_eq!(username_now(harness, &a.id).await, "Max");
+
+        assert_eq!(claim(harness, &a.id, "Ann", at + COOLDOWN_MS).await, None);
+        assert_eq!(username_now(harness, &a.id).await, "Ann");
+    }
+
+    /// R1435: "Skip for now" answers the prompt and keeps the default, with no cooldown started.
+    async fn r1435_skipping_answers_the_prompt_and_keeps_the_name(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        assert!(!a.username_prompted);
+        q!(harness, t => t.profiles_answer_username_prompt(&a.id));
+        let skipped = must(q!(harness, t => t.profiles_get_by_id(&a.id)), "a");
+        assert!(skipped.username_prompted);
+        assert_eq!(skipped.username(), a.username());
+        assert_eq!(skipped.username_changed_at, None);
+        assert!(call!(harness, t => t.profiles_answer_username_prompt(&id())).is_err());
+    }
+
+    both_stores!(
+        r1434_new_accounts_are_player_1_2_3_in_order,
+        r1434_a_freed_default_tag_goes_to_the_next_new_account,
+        r1434_first_claim_is_bare_then_the_lowest_free_tag_and_freed_tags_are_reused,
+        r1434_names_clash_on_their_nfkc_case_fold,
+        r1434_the_callers_own_name_is_not_taken_against_them,
+        r1435_a_claim_whose_outcome_changed_writes_nothing,
+        r1434_two_concurrent_claims_of_one_name_get_different_tags,
+        r1434_two_concurrent_new_accounts_get_different_tags,
+        r1435_a_second_change_inside_the_cooldown_is_refused,
+        r1435_skipping_answers_the_prompt_and_keeps_the_name,
     );
 }
 
@@ -2176,11 +2450,24 @@ mod player_stats {
         let p2 = active_profile(harness, None).await;
         let p3 = active_profile(harness, None).await;
 
-        q!(harness, t => t.profiles_set_display_name(&p1.id, Some("Alice Wonderland")));
-        q!(harness, t => t.profiles_set_display_name(&p2.id, Some("Bob Builder")));
-        q!(harness, t => t.profiles_set_display_name(&p3.id, Some("Alice Secret")));
-
+        // R1436: each row shows its player's username, joined in from `profiles`.
         let now = harness.now();
+        for (profile, name) in [
+            (&p1, "Alice_Wonderland"),
+            (&p2, "Bob_Builder"),
+            (&p3, "Alice_Secret"),
+        ] {
+            let claim = UsernameClaim {
+                profile_id: profile.id.clone(),
+                base: name.to_string(),
+                key: username_key(name),
+                expected_tag: None,
+                at: now,
+                cooldown_ms: USERNAME_CHANGE_COOLDOWN_MS,
+            };
+            q!(harness, t => t.profiles_claim_username(&claim));
+        }
+
         let stats_1 = bag(json!({
             "games": 50,
             "wins": 30,
@@ -2209,8 +2496,8 @@ mod player_stats {
                 .map(j)
                 .collect();
         assert_eq!(profile_ids(&public_all), vec![json!(p2.id), json!(p1.id)]);
-        assert_eq!(public_all[0]["displayName"], "Bob Builder");
-        assert_eq!(public_all[1]["displayName"], "Alice Wonderland");
+        assert_eq!(public_all[0]["username"], "Bob_Builder");
+        assert_eq!(public_all[1]["username"], "Alice_Wonderland");
         assert_eq!(
             public_all[1]["favouriteCards"],
             json!([{ "id": "c-strike", "count": 25 }, { "id": "c-shield", "count": 15 }])
@@ -2226,6 +2513,25 @@ mod player_stats {
                 .map(j)
                 .collect();
         assert_eq!(profile_ids(&search_alice), vec![json!(p1.id)]);
+        // R1436: the search matches by the NFKC case fold (R1434), tag included.
+        for term in ["alice_WONDERLAND", "ＢＯＢ", "bob_builder"] {
+            let found: Vec<Value> =
+                q!(harness, t => t.player_stats_list_public(&list_options(json!({ "search": term, "limit": 10, "offset": 0 }))))
+                    .iter()
+                    .map(j)
+                    .collect();
+            assert_eq!(found.len(), 1, "{}: search {term}", harness.name);
+        }
+        let by_tag: Vec<Value> =
+            q!(harness, t => t.player_stats_list_public(&list_options(json!({ "search": "#1", "limit": 10, "offset": 0 }))))
+                .iter()
+                .map(j)
+                .collect();
+        assert!(
+            by_tag.is_empty(),
+            "{}: no public player carries a tag",
+            harness.name
+        );
 
         let page_1: Vec<Value> =
             q!(harness, t => t.player_stats_list_public(&list_options(json!({ "limit": 1, "offset": 0 }))))
