@@ -153,12 +153,45 @@ fn is_digit(ch: char) -> bool {
     ch.general_category() == GeneralCategory::DecimalNumber
 }
 
-/// R1432's characters, over the NFKC form.
+/// Unicode's `Default_Ignorable_Code_Point` ranges (DerivedCoreProperties.txt): characters a
+/// renderer draws as nothing. Some of them are letters or marks by category (the Hangul fillers are
+/// `Lo`, the combining grapheme joiner and the variation selectors `Mn`), so the category test alone
+/// would let `Max` plus an invisible joiner stand as a second bare name beside `Max`, or a name of
+/// fillers render blank. The `Cf` ones are refused by category already and are listed for
+/// completeness.
+const DEFAULT_IGNORABLE: &[(char, char)] = &[
+    ('\u{00AD}', '\u{00AD}'),
+    ('\u{034F}', '\u{034F}'),
+    ('\u{061C}', '\u{061C}'),
+    ('\u{115F}', '\u{1160}'),
+    ('\u{17B4}', '\u{17B5}'),
+    ('\u{180B}', '\u{180F}'),
+    ('\u{200B}', '\u{200F}'),
+    ('\u{202A}', '\u{202E}'),
+    ('\u{2060}', '\u{206F}'),
+    ('\u{3164}', '\u{3164}'),
+    ('\u{FE00}', '\u{FE0F}'),
+    ('\u{FEFF}', '\u{FEFF}'),
+    ('\u{FFA0}', '\u{FFA0}'),
+    ('\u{FFF0}', '\u{FFF8}'),
+    ('\u{1BCA0}', '\u{1BCA3}'),
+    ('\u{1D173}', '\u{1D17A}'),
+    ('\u{E0000}', '\u{E0FFF}'),
+];
+
+fn is_default_ignorable(ch: char) -> bool {
+    DEFAULT_IGNORABLE
+        .iter()
+        .any(|(first, last)| (*first..=*last).contains(&ch))
+}
+
+/// R1432's characters, over the NFKC form. An invisible character is refused whatever its
+/// category says.
 fn check_characters(name: &str) -> Result<(), UsernameRefusal> {
     // How many marks in a row follow the last letter; None while no letter leads the run.
     let mut marks: Option<usize> = None;
     for ch in name.chars() {
-        if !in_bmp(ch) {
+        if !in_bmp(ch) || is_default_ignorable(ch) {
             return Err(UsernameRefusal::Characters);
         }
         if is_mark(ch) {
@@ -226,16 +259,64 @@ fn fold(text: &str) -> String {
     default_case_fold_str(text)
         .nfd()
         .filter(|ch| !is_mark(*ch) && *ch != '_')
-        .map(|ch| match ch {
-            '0' => 'o',
-            '1' => 'i',
-            '3' => 'e',
-            '4' => 'a',
-            '5' => 's',
-            '7' => 't',
-            other => other,
-        })
+        .map(|ch| substitute(ch).unwrap_or(ch))
         .collect()
+}
+
+/// R1433's common digit substitutions: the letter a digit stands for, if it stands for one.
+fn substitute(ch: char) -> Option<char> {
+    match ch {
+        '0' => Some('o'),
+        '1' => Some('i'),
+        '3' => Some('e'),
+        '4' => Some('a'),
+        '5' => Some('s'),
+        '7' => Some('t'),
+        _ => None,
+    }
+}
+
+/// R1433: an NFKC name with its substitution digits read back as letters wherever they sit in a
+/// run of letters, before it is split into tokens, so `a55` reads `ass` and `d1ck` reads `dick`. A
+/// run is the letters, marks and substitution digits between underscores and other digits; a run
+/// with no letter in it keeps its digits, so they still split off as a token of digits alone and the
+/// `455` of `Bob_455` is never read as `ass`. `Bob455` reads as the one token `Bobass`. A letter read
+/// back takes the case of the nearest letter before it in the run, or else after it, so it never
+/// makes a camelCase split of its own: `C0CK` reads `COCK`, not `CoCK`.
+fn read_back_digits(name: &str) -> String {
+    fn flush(run: &mut Vec<char>, out: &mut String) {
+        if !run.iter().copied().any(is_letter) {
+            out.extend(run.drain(..));
+            return;
+        }
+        for at in 0..run.len() {
+            let ch = run[at];
+            let Some(letter) = substitute(ch) else {
+                out.push(ch);
+                continue;
+            };
+            let before = run[..at].iter().rev().copied().find(|ch| is_letter(*ch));
+            let after = run[at + 1..].iter().copied().find(|ch| is_letter(*ch));
+            if before.or(after).is_some_and(char::is_uppercase) {
+                out.push(letter.to_ascii_uppercase());
+            } else {
+                out.push(letter);
+            }
+        }
+        run.clear();
+    }
+    let mut out = String::with_capacity(name.len());
+    let mut run: Vec<char> = Vec::new();
+    for ch in name.chars() {
+        if is_letter(ch) || is_mark(ch) || substitute(ch).is_some() {
+            run.push(ch);
+        } else {
+            flush(&mut run, &mut out);
+            out.push(ch);
+        }
+    }
+    flush(&mut run, &mut out);
+    out
 }
 
 /// R1433's tokens of an NFKC name: split on `_`, on every change between a letter and a digit, and
@@ -278,15 +359,16 @@ fn tokens(name: &str) -> Vec<String> {
     out
 }
 
-/// R1433: whether the light filter refuses an NFKC name. A token without a letter is never matched
-/// against the token list: its digits would read back as letters (`455` as `ass`) and refuse an
-/// innocent `Bob455`.
+/// R1433: whether the light filter refuses an NFKC name. The token list is matched against the
+/// tokens of the name with its digits read back ([`read_back_digits`]). A token without a letter is
+/// never matched against it: its digits would read back as letters (`455` as `ass`) and refuse an
+/// innocent `Bob_455`.
 fn is_blocked(name: &str) -> bool {
     let folded = fold(name);
     if words(BLOCKLIST_ANYWHERE).any(|word| folded.contains(word)) {
         return true;
     }
-    tokens(name)
+    tokens(&read_back_digits(name))
         .iter()
         .filter(|token| token.chars().any(is_letter))
         .map(|token| fold(token))
@@ -304,6 +386,20 @@ mod tests {
         assert_eq!(tokens("Ass99"), vec!["Ass", "99"]);
         assert_eq!(tokens("Scunthorpe"), vec!["Scunthorpe"]);
         assert_eq!(tokens("MAX__x"), vec!["MAX", "x"]);
+    }
+
+    #[test]
+    fn r1433_reads_substitution_digits_back_only_in_a_run_with_letters() {
+        assert_eq!(read_back_digits("a55"), "ass");
+        assert_eq!(read_back_digits("BigA55"), "BigASS");
+        assert_eq!(read_back_digits("5h1t"), "shit");
+        assert_eq!(read_back_digits("5H1T"), "SHIT");
+        assert_eq!(read_back_digits("C0CK_7"), "COCK_7");
+        assert_eq!(read_back_digits("Tit4n"), "Titan");
+        assert_eq!(read_back_digits("Bob455"), "Bobass");
+        assert_eq!(read_back_digits("Bob_455"), "Bob_455");
+        assert_eq!(read_back_digits("Ass99"), "Ass99");
+        assert_eq!(read_back_digits("a5s9"), "ass9");
     }
 
     #[test]

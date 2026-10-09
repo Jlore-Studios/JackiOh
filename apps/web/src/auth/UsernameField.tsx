@@ -34,6 +34,12 @@ export const USERNAME_SAVE_FAILED = "Couldn’t save your username just now. Try
 /** A save the server refused because the outcome changed since the preview (a 409's fresh one). */
 export const USERNAME_CHANGED = "That changed since you looked. Check the name above, then save again.";
 
+/** R1435: when the next change is allowed, in the player's own clock and locale. The preview's
+ * cooldown refusal and the account page's cooldown line both say it. */
+export function nextChangeSentence(nextChangeAt: number): string {
+  return `You can change your username again on ${new Date(nextChangeAt).toLocaleString()}.`;
+}
+
 /** The server's answer for one name exactly as typed; on screen only while the box still holds it. */
 type Shown = { name: string; preview: UsernamePreview; changed: boolean };
 
@@ -49,7 +55,12 @@ export type UsernameFieldProps = {
 
 /** A preview in a player's words, every name in it isolated (R1436). */
 function PreviewWords({ preview }: { preview: UsernamePreview }): ReactElement {
-  if (!preview.ok) return <>{preview.message}</>;
+  if (!preview.ok) {
+    // The cooldown's end comes with the refusal (R1435), the time the server sent and not one the
+    // field works out.
+    if (preview.reason === "cooldown") return <>{`${preview.message} ${nextChangeSentence(preview.nextChangeAt)}`}</>;
+    return <>{preview.message}</>;
+  }
   if (preview.tagged) {
     return (
       <>

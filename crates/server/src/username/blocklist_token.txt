@@ -1,4 +1,6 @@
-# R1433: words refused only as a whole token of a username. The name is split on underscores,
+# R1433: words refused only as a whole token of a username. The common digit substitutions are
+# first read back as letters wherever they sit among letters (`a55` is `ass`, `d1ck` is `dick`;
+# the digits of `Bob_455` stay digits), then the name is split on underscores,
 # on every change between a letter and a digit, and where a lowercase letter is followed by an
 # uppercase one (camelCase); each token is then NFKC case-folded and stripped of combining marks
 # before it is compared. So `BigAss` and `my_ass` are refused while `Cassandra`, `Assassin` and

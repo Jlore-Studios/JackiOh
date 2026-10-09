@@ -50,7 +50,7 @@ import ChangeEmail from "../settings/ChangeEmail.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import TwoStepSettings from "../auth/TwoStepSettings.tsx";
 import Username from "../auth/Username.tsx";
-import UsernameField from "../auth/UsernameField.tsx";
+import UsernameField, { nextChangeSentence } from "../auth/UsernameField.tsx";
 
 import "../auth/tavern.css";
 import "./account.css";
@@ -486,9 +486,7 @@ function AccountUsername({
         <Username name={own.name} />
       </p>
       {!canChange ? null : waiting ? (
-        <p data-testid={accountTestid.usernameCooldown}>
-          You can change your username again on {new Date(nextChangeAt).toLocaleString()}.
-        </p>
+        <p data-testid={accountTestid.usernameCooldown}>{nextChangeSentence(nextChangeAt)}</p>
       ) : (
         <UsernameField
           token={token}

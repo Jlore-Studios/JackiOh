@@ -144,6 +144,25 @@ mod the_form_r1432 {
     }
 
     #[test]
+    fn r1432_refuses_invisible_characters_whose_category_is_a_letter_or_a_mark() {
+        // Default_Ignorable_Code_Point: the combining grapheme joiner and the variation selectors are
+        // `Mn`, the Hangul fillers `Lo` (the halfwidth one becomes U+1160 under NFKC). Each would
+        // render as `Max`, or as nothing, beside a real name.
+        for name in [
+            "Max\u{034F}",
+            "Max\u{FE0F}",
+            "Max\u{FE00}",
+            "Ma\u{180B}x",
+            "\u{115F}\u{1160}\u{115F}\u{1160}",
+            "\u{3164}\u{3164}",
+            "\u{FFA0}\u{FFA0}",
+            "민\u{3164}수",
+        ] {
+            assert_eq!(refusal_of(name), Some(UsernameRefusal::Characters), "{name:?}");
+        }
+    }
+
+    #[test]
     fn r1432_allows_three_combining_marks_after_a_letter_and_refuses_a_fourth() {
         // `q` has no precomposed form with these, so NFKC leaves every mark in place.
         assert_eq!(
@@ -242,6 +261,15 @@ mod the_filter_r1433 {
             "ASS",
             "Shit",
             "LordShit",
+            "5h1t",
+            "sh1t",
+            "a55",
+            "my_a55",
+            "BigA55",
+            "d1ck",
+            "C0CK_7",
+            "5H1T",
+            "a55Max",
         ] {
             assert_eq!(refusal_of(name), Some(UsernameRefusal::NotAllowed), "{name}");
         }
@@ -257,6 +285,9 @@ mod the_filter_r1433 {
             "Hancock",
             "Dickens",
             "Bob455",
+            "Bob_455",
+            "Tit4n",
+            "H4ck3r",
             "Grape",
             "Player",
             "admin",

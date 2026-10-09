@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiRequestError, previewUsername, saveUsername, skipUsernamePrompt, type UsernamePreview } from "../net/api.ts";
 import { announceAccountChange } from "../net/gate.ts";
 import { usernameTestid } from "./testids.ts";
-import { USERNAME_CHANGED, USERNAME_SAVE_FAILED } from "./UsernameField.tsx";
+import { nextChangeSentence, USERNAME_CHANGED, USERNAME_SAVE_FAILED } from "./UsernameField.tsx";
 import UsernamePrompt, { USERNAME_SKIP_FAILED } from "./UsernamePrompt.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
@@ -153,7 +153,7 @@ describe("R1435 the username prompt", () => {
     expect(vi.mocked(saveUsername).mock.calls.map((call) => call[1])).toEqual(["Max#3", "Max#4"]);
   });
 
-  it("R1435 a 409 whose fresh preview refuses (the cooldown) shows that refusal and Save goes off", async () => {
+  it("R1435 a 409 whose fresh preview refuses (the cooldown) shows that refusal with its end time and Save goes off", async () => {
     vi.mocked(previewUsername).mockResolvedValue(TAKEN);
     vi.mocked(saveUsername).mockRejectedValue(
       new ApiRequestError(409, {
@@ -168,9 +168,28 @@ describe("R1435 the username prompt", () => {
     await userEvent.click(screen.getByTestId(usernameTestid.save));
 
     await waitFor(() => {
-      expect(screen.getByTestId(usernameTestid.preview).textContent).toBe("You changed your username recently.");
+      expect(screen.getByTestId(usernameTestid.preview).textContent).toBe(
+        `You changed your username recently. ${nextChangeSentence(1_900_000_000_000)}`,
+      );
     });
     expect(screen.queryByTestId(usernameTestid.changed)).toBeNull();
+    expect(screen.getByTestId(usernameTestid.save)).toBeDisabled();
+  });
+
+  it("R1435 a preview refused for the cooldown says when the next change is allowed", async () => {
+    vi.mocked(previewUsername).mockResolvedValue({
+      ok: false,
+      reason: "cooldown",
+      message: "You can change your username once every 24 hours.",
+      nextChangeAt: 1_900_000_000_000,
+    });
+    prompt();
+
+    await typeAndWait(
+      "Max",
+      `You can change your username once every 24 hours. ${nextChangeSentence(1_900_000_000_000)}`,
+    );
+    expect(screen.getByTestId(usernameTestid.preview)).toHaveTextContent(new Date(1_900_000_000_000).toLocaleString());
     expect(screen.getByTestId(usernameTestid.save)).toBeDisabled();
   });
 
