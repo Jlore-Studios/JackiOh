@@ -44,6 +44,10 @@ const NAMES_ITS_OWN_POOL: &[(&str, &str)] = &[
         "classicplus-073",
         "Call to Chaos (Classic+ Edition) names the Call to Chaos pool (R28, rule 3)",
     ),
+    (
+        "meditative-095",
+        "Call to Chaos (Meditative Edition) names the Call to Chaos pool (R28, rule 3)",
+    ),
 ];
 
 /// The seeds each card is played under.

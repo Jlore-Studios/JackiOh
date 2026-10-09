@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use super::targets::{PlayerSpec, TargetSpec, instance_of, player_of};
 use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated, query};
 use crate::script::{Effect, EffectContext};
-use crate::state::{CardInstance, find_instance_mut, new_instance};
+use crate::state::{CardInstance, find_instance, find_instance_mut, new_instance};
 use crate::wire::{Keyword, Zone, ZoneName};
 
 /// The riders a card reaches a hand with. R65 starts the cost from `costOverride` IN PLACE OF the
@@ -100,6 +100,17 @@ fn create_in_hand(ctx: &mut EffectContext<'_>, def_id: &str, riders: &HandRiders
     put_in_hand_with(ctx, card, riders);
 }
 
+/// R57, R1242: what a copy made into a hand carries of the card copied, as `library_copies`'s do.
+fn copy_riders(copy: &mut CardInstance, source: &CardInstance) {
+    copy.radiant = source.radiant;
+    // ME-CN, R1300: a copy of a Chinese card is Chinese.
+    copy.chinese = source.chinese;
+    // MD-B15, R923: a copy keeps the granted tags of the card copied.
+    copy.granted_tags = source.granted_tags.clone();
+    copy.stats_override = source.stats_override;
+    copy.tuning = source.tuning.clone();
+}
+
 /// `add_to_hand`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
@@ -122,6 +133,11 @@ pub struct AddToHandArgs {
     /// Initiative), so it is Chinese too.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chinese: Option<bool>,
+    /// R1242: create a copy of this instance instead (Meditative #95's fused card), a fresh card of
+    /// its definition carrying R57's riders: the radiant flag, the `chinese` flag, granted tags,
+    /// `statsOverride` and `tuning`. The card copied stays where it is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub copy_of: Option<String>,
 }
 
 impl AddToHandArgs {
@@ -147,11 +163,24 @@ impl AddToHandArgs {
 /// always goes to its owner's hand, library, graveyard or exile", which is what `crate::draw`'s
 /// pipeline does. `player` therefore names the hand only on the creation path.
 ///
+/// With `copyOf`, create a copy of that instance (R1242) with R57's riders, into `player`'s hand, the
+/// card copied staying where it is; it names no card, nothing happens.
+///
 /// `bounce` is the neighbouring verb and deliberately not this one: it returns a card from the FIELD
 /// and resets the instance (§6.3, R78), which would throw away exactly the riders this verb keeps.
 pub fn add_to_hand(args: AddToHandArgs) -> Effect {
     Effect::new("addToHand", move |ctx| {
         let riders = args.riders();
+        if let Some(source_id) = &args.copy_of {
+            let Some(source) = find_instance(ctx.state, source_id).cloned() else {
+                return;
+            };
+            let player = player_of(ctx, riders.player.unwrap_or(PlayerSpec::SelfSide));
+            let mut copy = new_instance(&mut *ctx.state, &source.def_id, player, Zone::Hand { player });
+            copy_riders(&mut copy, &source);
+            put_in_hand_with(ctx, copy, &riders);
+            return;
+        }
         if let Some(spec) = &args.instance {
             let Some(card) = instance_of(ctx, spec) else {
                 return;

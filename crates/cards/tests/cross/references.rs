@@ -22,7 +22,7 @@
 
 use indexmap::IndexSet;
 use jackioh_cards::CATALOG;
-use jackioh_engine::{CardDef, SetName, Tag};
+use jackioh_engine::{CardDef, SetName, Tag, set_ships};
 
 fn entries() -> Vec<&'static CardDef> {
     CATALOG.values().collect()
@@ -128,11 +128,14 @@ fn names(text: &str, name: &str) -> bool {
     }
 }
 
-/// Every catalog id a card's base or Radiant text names, in catalog order.
+/// Every catalog id a card's base or Radiant text names, in catalog order. R1249: a card of a set that
+/// ships names no card of a set that has not (R1420), so its shipped `refs` stay as they are until
+/// that set ships ("Call to Chaos" on Core #95 and C+ #73 reaches Meditative #95 then).
 fn named_by(card: &CardDef) -> Vec<String> {
     let texts = [&card.base.text, &card.radiant.text];
     entries()
         .into_iter()
+        .filter(|other| !set_ships(card.set) || set_ships(other.set))
         .filter(|other| {
             names_of(other)
                 .iter()
@@ -299,6 +302,35 @@ mod r279_the_reference_map_spec_5_7_10_10 {
         assert_eq!(listing, Vec::<String>::new());
         // "Recycler" is a longer word, so Malzahar's Recycler never names Recycle at all.
         assert!(!names("Malzahar's Recycler", "Recycle"));
+    }
+
+    #[test]
+    fn r1249_a_card_of_a_set_that_ships_names_no_card_of_a_set_that_has_not() {
+        let card = |id: &str| CATALOG.get(id).unwrap_or_else(|| panic!("{id} in the catalog"));
+        let meditative = card("meditative-095");
+        assert!(!set_ships(meditative.set));
+        // Core #95 and C+ #73 say "Call to Chaos", which names Meditative #95 only once its set ships.
+        for shipped in ["core-095", "classicplus-073"] {
+            let named = named_by(card(shipped));
+            assert!(
+                named.contains(&shipped.to_string()),
+                "{shipped} names its own pool"
+            );
+            assert!(
+                !named.contains(&meditative.id),
+                "{shipped} names no unshipped card"
+            );
+        }
+        // A card of a set that has not shipped names every card its texts name, shipped or not.
+        let named = named_by(meditative);
+        for id in [
+            "core-095",
+            "classicplus-073",
+            "meditative-095",
+            "meditative-095-1",
+        ] {
+            assert!(named.contains(&id.to_string()), "meditative-095 names {id}");
+        }
     }
 
     #[test]

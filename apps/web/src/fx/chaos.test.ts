@@ -11,6 +11,7 @@ import {
   CHAOS_CLASSIC_PLUS,
   CHAOS_CORE,
   CHAOS_EFFECT_NAMES,
+  CHAOS_MEDITATIVE,
   chaosCues,
   chaosEffectName,
   chaosLandAt,
@@ -27,6 +28,8 @@ import type { FxChaosCue, FxCue } from "./types.ts";
 const CORE_KEYS = subsystems.CHAOS_EFFECTS.map((effect) => effect.label);
 /** The Classic+ Edition's, as `CHAOS_PLUS_EFFECTS` (subsystems/callToChaosPlus.ts) names them. */
 const PLUS_KEYS = subsystems.CHAOS_PLUS_EFFECTS.map((effect) => effect.label);
+/** The Meditative Edition's, as `CHAOS_MED_EFFECTS` (subsystems/call_to_chaos_meditative.rs) names them. */
+const MED_KEYS = subsystems.CHAOS_MED_EFFECTS.map((effect) => effect.label);
 const [UNITS, HEAL, , , , , DISCOUNT, GOLEM, , RECAST] = CORE_KEYS as [string, string, string, string, string, string, string, string, string, string];
 const DESTROY = "Destroy all enemy permanents";
 
@@ -49,9 +52,10 @@ function planRoll(event: GameEvent, view: PlayerView, D = ANIMATIONS.chaosRolled
 }
 
 describe("R436 the words for each rolled effect", () => {
-  it("R436 every Core clause the engine rolls, and every Classic+ clause, has its own short words", () => {
+  it("R436 every Core clause the engine rolls, every Classic+ clause and every Meditative clause, has its own short words", () => {
     expect(Object.keys(CHAOS_EFFECT_NAMES[CHAOS_CORE] ?? {})).toEqual(CORE_KEYS);
     expect(Object.keys(CHAOS_EFFECT_NAMES[CHAOS_CLASSIC_PLUS] ?? {})).toEqual(PLUS_KEYS);
+    expect(Object.keys(CHAOS_EFFECT_NAMES[CHAOS_MEDITATIVE] ?? {})).toEqual(MED_KEYS);
     for (const table of Object.values(CHAOS_EFFECT_NAMES)) {
       for (const name of Object.values(table)) {
         expect(name.length, name).toBeLessThanOrEqual(48);
@@ -68,8 +72,9 @@ describe("R436 the words for each rolled effect", () => {
   it("R436 a clause reads per edition, and as the edition that prints it when the card is hidden", () => {
     expect(chaosEffectName(CHAOS_CORE, GOLEM)).toBe("Summon a Chaos Golem");
     expect(chaosEffectName(CHAOS_CLASSIC_PLUS, "Summon a Classic Golem")).toBe("Summon a Classic Golem");
+    expect(chaosEffectName(CHAOS_MEDITATIVE, "Summon a CN Golem")).toBe("Summon a CN Golem");
     expect(chaosEffectName("hidden", GOLEM)).toBe("Summon a Chaos Golem");
-    // Printed by both, and spelled the same, so it reads the same whoever cast it.
+    // Printed by all three, and spelled the same, so it reads the same whoever cast it.
     expect(chaosEffectName("hidden", RECAST)).toBe("Cast a random Call to Chaos");
     expect(chaosEffectName("hidden", "Add 5 random Fruits to your hand, which cost (0)")).toBe("Add 5 (0) Cost Fruits");
   });
@@ -93,6 +98,7 @@ describe("R436 the words for each rolled effect", () => {
     for (const [defId, keys] of [
       [CHAOS_CORE, CORE_KEYS],
       [CHAOS_CLASSIC_PLUS, PLUS_KEYS],
+      [CHAOS_MEDITATIVE, MED_KEYS],
     ] as const) {
       for (const key of keys) {
         const reel = chaosReel(defId, key, 1);

@@ -376,6 +376,7 @@ export function aiConstants(): AiConstants {
 export type EngineTables = {
   chaosEffects: readonly { label: string }[];
   chaosPlusEffects: readonly { label: string }[];
+  chaosMedEffects: readonly { label: string }[];
   heroPowerNames: readonly string[];
   heroPowers: readonly {
     name: string;

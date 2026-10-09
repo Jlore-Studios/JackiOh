@@ -6,10 +6,11 @@
 // - #98 Heroic Power rolled one of thirteen powers as it arrived (R43, R151, R752). In play its text is
 //   that power alone, read off the view's `power` (a hand card's `CardView.power`, a backrow card's
 //   `HeroPowerView`), with its name and its X; the collection keeps the list of thirteen.
-// - A card with the Call to Chaos tag (Core #95, Classic+ #73) reads "???" in play. What it does is
-//   rolled when it resolves (§8 #95), and the game keeps it a mystery; the collection prints the real
-//   text, so a player building a deck can still read it. The Classic+ Edition's Radiant face reads
-//   "!!!", as its designer wrote it (docs/classic-sets.md B7 #73), one mystery for three effects.
+// - A card with the Call to Chaos tag (Core #95, Classic+ #73, Meditative #95) reads "???" in play.
+//   What it does is rolled when it resolves (§8 #95), and the game keeps it a mystery; the collection
+//   prints the real text, so a player building a deck can still read it. The Classic+ and Meditative
+//   Editions' Radiant faces read "!!!", as the Classic+ Edition's designer wrote it
+//   (docs/classic-sets.md B7 #73), one mystery for three effects.
 // - A unit a Vanilla took the text of (§6.3, R115) prints that its text is gone: the definition the
 //   client reads still names the keywords and scripts it no longer has, and the view says so
 //   (`UnitView.vanilla`, R243).
@@ -30,12 +31,13 @@ export const CONCEALED_TAG: Tag = "Call to Chaos";
 /** What a concealed card's rules box reads in play. */
 export const CONCEALED_TEXT = "???";
 
-/** Classic+ #73's Radiant face in play (the designer's "!!!", three effects at once). */
+/** Classic+ #73's and Meditative #95's Radiant faces in play (the designer's "!!!", three effects at once). */
 export const CONCEALED_TEXT_LOUD = "!!!";
 
 /** The concealed faces that read something other than {@link CONCEALED_TEXT}, by id and face. */
 const CONCEALED_OVERRIDES: Readonly<Record<string, { radiant?: string }>> = {
   "classicplus-073": { radiant: CONCEALED_TEXT_LOUD },
+  "meditative-095": { radiant: CONCEALED_TEXT_LOUD },
 };
 
 /** What a concealed card's face reads in play: "???", or its own override. */

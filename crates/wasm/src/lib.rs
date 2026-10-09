@@ -449,18 +449,24 @@ pub fn constants() -> Result<String, JsError> {
 // The engine's tables the web's tests read (`subsystems.*`)
 // ---------------------------------------------------------------------------------------------
 
-/// `{ chaosEffects: [{label}], chaosPlusEffects: [{label}], heroPowerNames, heroPowers: [{name, x,
-/// title, radiantTitle, label, radiantLabel}] }`. `heroPowerNames` is TypeScript's
-/// `HERO_POWERS.map((power) => power.name)`.
+/// `{ chaosEffects: [{label}], chaosPlusEffects: [{label}], chaosMedEffects: [{label}], heroPowerNames,
+/// heroPowers: [{name, x, title, radiantTitle, label, radiantLabel}] }`. `heroPowerNames` is
+/// TypeScript's `HERO_POWERS.map((power) => power.name)`.
 #[wasm_bindgen]
 pub fn engine_tables() -> Result<String, JsError> {
-    use jackioh_engine::subsystems::{call_to_chaos, call_to_chaos_plus, hero_power};
+    use jackioh_engine::subsystems::{
+        call_to_chaos, call_to_chaos_meditative, call_to_chaos_plus, hero_power,
+    };
 
     let chaos_effects: Vec<Value> = call_to_chaos::CHAOS_EFFECTS
         .iter()
         .map(|effect| json!({ "label": effect.label }))
         .collect();
     let chaos_plus_effects: Vec<Value> = call_to_chaos_plus::CHAOS_PLUS_EFFECTS
+        .iter()
+        .map(|effect| json!({ "label": effect.label }))
+        .collect();
+    let chaos_med_effects: Vec<Value> = call_to_chaos_meditative::CHAOS_MED_EFFECTS
         .iter()
         .map(|effect| json!({ "label": effect.label }))
         .collect();
@@ -481,6 +487,7 @@ pub fn engine_tables() -> Result<String, JsError> {
     to_json(&json!({
         "chaosEffects": chaos_effects,
         "chaosPlusEffects": chaos_plus_effects,
+        "chaosMedEffects": chaos_med_effects,
         "heroPowerNames": hero_power_names,
         "heroPowers": hero_powers,
     }))

@@ -17,6 +17,7 @@ pub mod backrow_piles;
 pub mod board_history;
 pub mod brittle;
 pub mod call_to_chaos;
+pub mod call_to_chaos_meditative;
 pub mod call_to_chaos_plus;
 pub mod carried_damage;
 pub mod combat_positions;

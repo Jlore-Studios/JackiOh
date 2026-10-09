@@ -1337,6 +1337,20 @@
       play: { voice: "sapi-teacher", text: "I have seen through everything." },
       death: { voice: "sapi-teacher", text: "Even this ends." },
     },
+    "meditative-095": { // Call to Chaos (Meditative Edition)
+      cast: { voice: "announcer", text: "Breathe in. Now roll the dice!" },
+    },
+    "meditative-095-1": { // CN Golem
+      play: { voice: "brute-golem", text: "Golem made in CN. Smash!" },
+      attack: { effect: "heavyStomp" },
+      death: { voice: "brute-golem", text: "Back to the factory." },
+    },
+    "meditative-096": { // Meditative Journey
+      cast: { voice: "elder", text: "Go now, and find yourselves." },
+    },
+    "meditative-096-1": { // Journey Complete
+      cast: { voice: "elder", text: "You have returned, and shine brighter." },
+    },
     "meditative-099": { // Paranoia
       cast: { voice: "sapi-ghost", text: "They are all watching. Hide it." },
     },

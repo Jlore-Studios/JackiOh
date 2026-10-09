@@ -67,6 +67,10 @@ export const subsystems = {
   get CHAOS_PLUS_EFFECTS(): EngineTables["chaosPlusEffects"] {
     return engineTables().chaosPlusEffects;
   },
+  /** R1240: Call to Chaos (Meditative Edition)'s table. */
+  get CHAOS_MED_EFFECTS(): EngineTables["chaosMedEffects"] {
+    return engineTables().chaosMedEffects;
+  },
   /** R752: every power Heroic Power can roll, by name. */
   get HERO_POWER_NAMES(): EngineTables["heroPowerNames"] {
     return engineTables().heroPowerNames;

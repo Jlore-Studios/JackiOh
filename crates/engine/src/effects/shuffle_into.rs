@@ -2,7 +2,9 @@
 //!
 //! Port of `packages/engine/src/effects/shuffleInto.ts`.
 
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::draw::shuffle_into_library;
 use crate::enchantments::united_enchantments;
@@ -51,6 +53,10 @@ pub struct ShuffleIntoArgs {
     pub radiant: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub copy_of: Option<String>,
+    /// R1246: written on each new card's `memory` (§10.1), so a card shuffled in remembers what made it
+    /// (Meditative #96's Journey Complete, `memory.journey`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory: Option<IndexMap<String, Value>>,
 }
 
 /// Shuffle fresh copies of a definition into a library (CN-Viral Injection's CN-Virus, Unstable Clone
@@ -67,6 +73,9 @@ pub fn shuffle_into(args: ShuffleIntoArgs) -> Effect {
             }
             let source = source_of(ctx.state, args.copy_of.as_deref()).cloned();
             carry_from(&mut card, source.as_ref());
+            if let Some(memory) = &args.memory {
+                card.memory.extend(memory.clone());
+            }
             shuffle_into_library(ctx, &mut card, false, args.copy_of.as_deref());
         }
     })

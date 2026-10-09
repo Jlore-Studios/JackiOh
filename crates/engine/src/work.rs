@@ -638,6 +638,11 @@ fn activation_step_for(script: &Script, resume: &Resume) -> Option<Hook> {
 /// `resume.step` is the step. The effect-list hooks are `Script::hook_named`'s, and the one object of
 /// steps is `resume`; no continuation names any other key.
 pub fn script_step_for(script: &Script, resume: &Resume) -> Option<Hook> {
+    // R1241: Meditative #95's rest-of-game effect is the engine's own step, whatever script it names: a
+    // start-of-turn effect re-enters through here and never reaches `run_engine_delayed`.
+    if resume.hook == crate::subsystems::CHAOS_ETERNAL_HOOK {
+        return Some(crate::subsystems::eternal_step());
+    }
     if let Some(step) = script.hook_named(&resume.hook) {
         return Some(step.clone());
     }
