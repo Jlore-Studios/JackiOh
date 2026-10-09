@@ -401,4 +401,44 @@ describe("Board", () => {
     expect(log).toHaveTextContent("Opponent drew a card");
     expect(log.innerHTML).not.toContain("core-042");
   });
+
+  it("R1224 the tray locks the instalment's crystals and lists what is owed", () => {
+    const view = fullBoardView();
+    render(
+      <Board
+        view={{
+          ...view,
+          you: {
+            ...view.you,
+            mana: { current: 3, max: 4 },
+            credit: { available: 3, owed: [1, 1, 1], locked: 1, used: true },
+          },
+        }}
+      />,
+    );
+
+    // Four crystals, three filled; the top one (index 3 ≥ current and ≥ 4 − 1) is locked.
+    const tray = screen.getByTestId("mana-you");
+    expect(tray.querySelectorAll(".mana-crystal")).toHaveLength(4);
+    expect(tray.querySelectorAll('.mana-crystal[data-locked="true"]')).toHaveLength(1);
+    expect(tray.querySelectorAll('.mana-crystal[data-locked="true"][data-filled="false"]')).toHaveLength(1);
+
+    const chip = screen.getByTestId("credit-you");
+    expect(chip).toHaveTextContent("+3 credit");
+    expect(chip).toHaveTextContent("owed 1·1·1");
+    expect(chip).toHaveTextContent("used");
+  });
+
+  it("R1225 the credit chip says whether the line was used", () => {
+    const view = fullBoardView();
+    const { rerender } = render(
+      <Board view={{ ...view, you: { ...view.you, credit: { available: 4, owed: [], used: false } } }} />,
+    );
+    expect(screen.getByTestId("credit-you")).toHaveTextContent("unused");
+
+    rerender(
+      <Board view={{ ...view, you: { ...view.you, credit: { available: 4, owed: [], used: true } } }} />,
+    );
+    expect(screen.getByTestId("credit-you")).toHaveTextContent("used");
+  });
 });

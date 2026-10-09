@@ -37,6 +37,7 @@ export type { CardType } from "./generated/CardType.ts";
 export type { CardView } from "./generated/CardView.ts";
 export type { CatalogQuery } from "./generated/CatalogQuery.ts";
 export type { CopiedTextView } from "./generated/CopiedTextView.ts";
+export type { CreditView } from "./generated/CreditView.ts";
 export type { Enchantment } from "./generated/Enchantment.ts";
 export type { FusedIngredient } from "./generated/FusedIngredient.ts";
 export type { GameEvent } from "./generated/GameEvent.ts";

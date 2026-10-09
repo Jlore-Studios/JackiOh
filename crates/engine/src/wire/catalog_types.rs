@@ -368,6 +368,8 @@ pub enum Keyword {
     Temporary,
     /// A Unit may attack and switch position in the same turn (R49).
     Deft,
+    /// R1220: no Tribute cost may take this card, and every Sacrifice of it does nothing.
+    Untributable,
 }
 
 string_union! {
@@ -398,6 +400,7 @@ string_union! {
         Windfury = "Windfury",
         Temporary = "Temporary",
         Deft = "Deft",
+        Untributable = "Untributable",
     }
 }
 
@@ -433,6 +436,7 @@ impl Keyword {
             Keyword::Windfury => KeywordKind::Windfury,
             Keyword::Temporary => KeywordKind::Temporary,
             Keyword::Deft => KeywordKind::Deft,
+            Keyword::Untributable => KeywordKind::Untributable,
         }
     }
 
@@ -476,6 +480,7 @@ impl Keyword {
             KeywordKind::Windfury => Keyword::Windfury,
             KeywordKind::Temporary => Keyword::Temporary,
             KeywordKind::Deft => Keyword::Deft,
+            KeywordKind::Untributable => Keyword::Untributable,
         }
     }
 }

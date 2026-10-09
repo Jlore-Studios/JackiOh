@@ -11,6 +11,7 @@ import type { PlayerId } from "./PlayerId";
 import type { Position } from "./Position";
 import type { PreviewValue } from "./PreviewValue";
 import type { QuestView } from "./QuestView";
+import type { Tag } from "./Tag";
 import type { Tuning } from "./Tuning";
 
 /**
@@ -18,7 +19,12 @@ import type { Tuning } from "./Tuning";
  * makes `attack`, `health` and `keywords` required where the card view has them optional — all but
  * `embiggenCost`, which only a card in its owner's hand carries (#492).
  */
-export type UnitView = { instanceId: string, defId: string, radiant: boolean, cost: number, power?: string, conditionActive?: true, counteredOnPlay?: true, preview?: Array<PreviewValue>, type?: CardType, brittle?: number, params?: { [key in string]: number }, tuning?: Tuning, enchantments?: Array<Enchantment>, marks?: Array<CardMark>, activations?: Array<ActivationView>, quest?: QuestView, copies?: CopiedTextView, owner: PlayerId, controller: PlayerId, attack: number, maxHealth: number, health: number, keywords: Array<Keyword>, armor: number, position: Position, counters: Counters, 
+export type UnitView = { instanceId: string, defId: string, radiant: boolean, cost: number, power?: string, conditionActive?: true, counteredOnPlay?: true, preview?: Array<PreviewValue>, type?: CardType, 
+/**
+ * MD-B15, R923: the card's tags, set only where they differ from its definition's — a granted
+ * tag is part of the card, and the view says so.
+ */
+tags?: Array<Tag>, brittle?: number, params?: { [key in string]: number }, tuning?: Tuning, enchantments?: Array<Enchantment>, marks?: Array<CardMark>, activations?: Array<ActivationView>, quest?: QuestView, copies?: CopiedTextView, owner: PlayerId, controller: PlayerId, attack: number, maxHealth: number, health: number, keywords: Array<Keyword>, armor: number, position: Position, counters: Counters, 
 /**
  * Cards under this one in a Stack pile are face-down and dormant (§3.2).
  */

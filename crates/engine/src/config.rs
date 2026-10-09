@@ -375,7 +375,9 @@ pub const TUNE_ATTACK_FLOOR: i32 = 0;
 pub const TUNE_HEALTH_FLOOR: i32 = 1;
 /// B3.4 rule 3: the keywords a Degrade never removes, because losing them would help the card —
 /// "Cannot be in Defense Position" is a static flag (§8 #65.1), not a keyword, so it is never offered.
-pub const TUNE_HARMFUL_KEYWORDS: &[KeywordKind] = &[KeywordKind::CantAttack, KeywordKind::Brittle];
+/// R1220: Untributable is harmful the same way — losing it would let a Tribute take the card.
+pub const TUNE_HARMFUL_KEYWORDS: &[KeywordKind] =
+    &[KeywordKind::CantAttack, KeywordKind::Brittle, KeywordKind::Untributable];
 
 /// `{ upTo, step }`: one band of `PARAM_DEFAULT_STEP`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]

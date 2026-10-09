@@ -805,6 +805,10 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
 /// hero check is left to the state check that follows the whole effect (R59): a sacrifice is one
 /// effect among the list that made it, and nothing about it touches a hero.
 pub fn sacrifice_now(sink: &mut EngineSink<'_>, card: &CardInstance) {
+    // R1220: a Sacrifice of an Untributable card does nothing.
+    if crate::query::is_untributable(sink.state, card) {
+        return;
+    }
     let mut pass = collect(sink, std::slice::from_ref(card), DeathCause::Sacrificed);
     pass.sacrificed = Some(true);
     run_death_pass(sink, &mut pass, None);
@@ -817,6 +821,12 @@ pub fn sacrifice_now(sink: &mut EngineSink<'_>, card: &CardInstance) {
 /// by one, the first sacrifice's Death ran before the others had died, so the client chose the order
 /// the Deaths resolved in (#81's Death radiating a unit #86's Death was about to steal, or not).
 pub fn sacrifice_together(sink: &mut EngineSink<'_>, cards: &[CardInstance]) {
+    // R1220: Untributable cards are dropped from a Sacrifice first; when none is left, nothing happens.
+    let cards: Vec<CardInstance> = cards
+        .iter()
+        .filter(|card| !crate::query::is_untributable(sink.state, card))
+        .cloned()
+        .collect();
     if cards.is_empty() {
         return;
     }
@@ -830,7 +840,7 @@ pub fn sacrifice_together(sink: &mut EngineSink<'_>, cards: &[CardInstance]) {
     for player in order {
         for row in [Row::Units, Row::Backrow] {
             for lane in 1..=crate::zones::row_size(row) {
-                for card in cards {
+                for card in &cards {
                     if let Some(at) = crate::zones::slot_of(sink.state, card)
                         && at.player == player
                         && at.row == row
@@ -902,16 +912,19 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
             permanents_in_play(state)
                 .into_iter()
                 .filter(|card| {
-                    crate::scripts::script_of(state, card)
-                        .tribute_when
-                        .as_ref()
-                        .is_some_and(|when| {
-                            when(HookArgs {
-                                state,
-                                self_: card,
-                                radiant: card.radiant,
+                    // R1220: an Untributable card's `tributeWhen` never fires — without this, a card
+                    // whose condition holds would loop the state check up to its pass cap.
+                    !crate::query::is_untributable(state, card)
+                        && crate::scripts::script_of(state, card)
+                            .tribute_when
+                            .as_ref()
+                            .is_some_and(|when| {
+                                when(HookArgs {
+                                    state,
+                                    self_: card,
+                                    radiant: card.radiant,
+                                })
                             })
-                        })
                 })
                 .collect()
         };

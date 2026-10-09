@@ -1030,6 +1030,9 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 cant_attack_or_be_attacked: flags(|f| f.cant_attack_or_be_attacked),
                 never_berserk: flags(|f| f.never_berserk),
                 heal_to_damage: flags(|f| f.heal_to_damage),
+                credit_line: numbers(|f| f.credit_line),
+                credit_instalments: numbers(|f| f.credit_instalments),
+                credit_lapses: flags(|f| f.credit_lapses),
             })
         }
     }

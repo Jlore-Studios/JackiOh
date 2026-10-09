@@ -46,7 +46,7 @@ use serde_json::{Value, json};
 use crate::config::ACTIVATE_UNLIMITED_CAP;
 use crate::effects::move_::discard_random;
 use crate::layers::unit_view;
-use crate::mana::{mana_event, spend_mana};
+use crate::mana::mana_event;
 use crate::play_choices::{
     DeclaredChoices, in_declared_order, play_choice_combinations, targeting_discards_required,
     why_declared_choices_refused,
@@ -292,11 +292,18 @@ fn tribute_units_for(
     let units: Vec<CardInstance> = active_units_of(state, player).into_iter().cloned().collect();
     // "Tribute this" pays with the card itself, so it is not also one of the units a Tribute counts.
     // R683: a cost that excludes itself (Classic #21) never lists the card either.
+    // R1220: no Tribute cost may take an Untributable card.
     let cost = decl.cost.unwrap_or_default();
     if cost.tribute_self == Some(true) || cost.tribute_excludes_self == Some(true) {
-        return units.into_iter().filter(|unit| unit.id != card.id).collect();
+        return units
+            .into_iter()
+            .filter(|unit| unit.id != card.id && !crate::query::is_untributable(state, unit))
+            .collect();
     }
     units
+        .into_iter()
+        .filter(|unit| !crate::query::is_untributable(state, unit))
+        .collect()
 }
 
 fn plural(count: i32, one: &str) -> String {
@@ -351,7 +358,8 @@ fn why_ability_unusable(
     let side = &state.players[player];
     let cost = decl.cost.unwrap_or_default();
     let mana = cost.mana.unwrap_or(0).max(0);
-    if mana > side.mana.current {
+    // R1223: an Activate's mana cost may be borrowed too.
+    if mana > crate::credit::spendable_mana(state, player) {
         return Err(EngineError::new(format!(
             "that ability costs {mana}, more than your mana"
         )));
@@ -362,6 +370,10 @@ fn why_ability_unusable(
             "that ability needs {} in your hand to discard",
             plural(discards, "card")
         )));
+    }
+    // R1220: an Untributable card's own "Tribute this" can never be paid.
+    if cost.tribute_self == Some(true) && crate::query::is_untributable(state, card) {
+        return Err("that card can't be Tributed".into());
     }
     let tributes = cost.tribute.unwrap_or(0).max(0);
     if tributes > tribute_units_for(state, player, card, decl).len() as i32 {
@@ -652,7 +664,8 @@ fn pay_costs(
 
     let mana = cost.mana.unwrap_or(0).max(0);
     if mana > 0 {
-        spend_mana(&mut sink.state.players[run.player], mana);
+        // R1223: an Activate's mana cost may be borrowed past current mana.
+        crate::credit::pay_mana(sink.state, run.player, mana);
         let event = mana_event(run.player, &sink.state.players[run.player]);
         sink.events.push(event);
     }

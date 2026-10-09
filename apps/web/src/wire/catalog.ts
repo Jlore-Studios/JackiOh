@@ -118,7 +118,9 @@ export type Keyword =
   /** R637: a card discarded from its owner's hand at the end of their turn. Not temporary mana (§2.3). */
   | { kind: "Temporary" }
   /** A Unit may attack and switch position in the same turn (R49). */
-  | { kind: "Deft" };
+  | { kind: "Deft" }
+  /** R1220: no Tribute cost may take this card, and every Sacrifice of it does nothing. */
+  | { kind: "Untributable" };
 
 export type KeywordKind = Keyword["kind"];
 
@@ -149,6 +151,7 @@ export const KEYWORD_KINDS = [
   "Windfury",
   "Temporary",
   "Deft",
+  "Untributable",
 ] as const;
 
 export function keywordKey(keyword: Keyword): string {

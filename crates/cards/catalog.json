@@ -11392,6 +11392,45 @@
       "text": "Cry: For the rest of the game, your hand size is {handSize}. Draw {draw|card|cards}. Each becomes Radiant."
     }
   },
+  "meditative-080": {
+    "id": "meditative-080",
+    "index": "80",
+    "name": "Aluneth",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [
+      "Quickdraw"
+    ],
+    "rarity": "Legendary",
+    "token": false,
+    "cost": 3,
+    "loc": 32,
+    "base": {
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Untributable"
+        },
+        {
+          "kind": "Immutable"
+        }
+      ],
+      "text": "Indestructible, Untributable, Immutable\nEnd of turn: Draw 3 cards."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Immutable"
+        }
+      ],
+      "text": "Indestructible, Immutable\nActivate: Exile this.\nEnd of turn: Draw 3 cards."
+    }
+  },
   "meditative-081": {
     "id": "meditative-081",
     "index": "81",
@@ -11433,6 +11472,78 @@
     "radiant": {
       "keywords": [],
       "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw|card|cards}.\nPaid (2): Each copy has a {chance}% chance to become Radiant."
+    }
+  },
+  "meditative-088": {
+    "id": "meditative-088",
+    "index": "88",
+    "name": "The True Sheep",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "worth",
+        "base": 5,
+        "radiant": 500,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 51,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [],
+      "text": "Worth {worth|Tribute|Tributes}.\nCry: Discover a card with Tribute to replace this with."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Worth {worth|Tribute|Tributes}.\nCry: Discover a Radiant card with Tribute to replace this with."
+    }
+  },
+  "meditative-089": {
+    "id": "meditative-089",
+    "index": "89",
+    "name": "Jlarna",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "credit",
+        "base": 4,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "instalments",
+        "base": 4,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 46,
+    "base": {
+      "keywords": [],
+      "text": "Aura: Credit line {credit}: you can spend mana you don't have, owing up to {credit} at once. Pay it back in {instalments|instalment|instalments}, one at the start of each of your next turns.\nEnd of turn: If you didn't use your credit line this turn, Tribute this."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Aura: Credit line {credit}: you can spend mana you don't have, owing up to {credit} at once. Pay it back in {instalments|instalment|instalments}, one at the start of each of your next turns."
     }
   },
   "meditative-090": {

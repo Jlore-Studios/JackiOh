@@ -92,7 +92,8 @@ use crate::subsystems::quests::quest_view_of;
 use crate::turn::standing_draw_offer;
 use crate::wire::{
     AnimatedView, BackrowCounters, BackrowView, CardDef, CardMark, CardType, CardView, CopiedTextView,
-    DrawOfferView, FaceDownBackrowView, GameEvent, GameEventType, GameResult, GlitchOutcome, HandView,
+    CreditView, DrawOfferView, FaceDownBackrowView, GameEvent, GameEventType, GameResult, GlitchOutcome,
+    HandView,
     HeroPowerView, HeroView, ManaView, ModifierView, MulliganView, PLAYER_IDS, PendingElsewhereView,
     PendingOption, PendingPromptView, PendingView, PlayerId, PlayerView, PreviewValue, PublicBackrowView,
     Row, RowFlags, Selection, SideView, TuningChange, UnitView, Zone, ZoneName, opponent_of,
@@ -832,6 +833,25 @@ fn hand_marked_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> Op
     (marked > 0).then_some(marked)
 }
 
+/// R1223–R1225: this seat's credit line as the client shows it — `None` with no line acting,
+/// nothing owed and no locked instalment. `available` is set only while a line acts, and `used`
+/// only while a lapsing face acts. Reads public state only: face-up lenders and the public schedule.
+fn credit_view(state: &GameState, player: PlayerId) -> Option<CreditView> {
+    let terms = crate::credit::credit_terms(state, player);
+    let owed: Vec<i32> = state.players[player].owed_instalments.clone().unwrap_or_default();
+    let locked = state.players[player].turn_log.mana_locked;
+    if terms.is_none() && owed.iter().all(|owed| *owed == 0) && locked.is_none() {
+        return None;
+    }
+    Some(CreditView {
+        available: terms.map(|_| crate::credit::credit_available(state, player)),
+        owed,
+        locked,
+        used: crate::credit::lapsing_face_acts(state, player)
+            .then_some(crate::query::credit_used_this_turn(state, player)),
+    })
+}
+
 fn side_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> SideView {
     let side: &PlayerState = &state.players[player];
     let powers = hero_powers_of(state, player);
@@ -927,6 +947,7 @@ fn side_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> SideView 
         carried: carried_view(state, player, viewer),
         hand_cap: side.hand_cap,
         hand_marked: hand_marked_view(state, player, viewer),
+        credit: credit_view(state, player),
         locks: RowFlags {
             units: side.locks.units.clone(),
             backrow: side.locks.backrow.clone(),

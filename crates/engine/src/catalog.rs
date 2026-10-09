@@ -230,6 +230,18 @@ pub struct CatalogQueryArgs {
     /// §5.1: `true` asks for tokens only, `false` forbids them (the default already does).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub token: Option<bool>,
+    /// R1221: `true` asks for cards with a Tribute play cost only, `false` forbids them. A script
+    /// flag, not catalog data, so the pool keeps up with every new Tribute card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tribute: Option<bool>,
+}
+
+/// R1221: whether this definition carries a Tribute play cost — the `tribute` static flag of its
+/// base face, read off the registered script without state.
+fn has_tribute_cost(def: &CardDef) -> bool {
+    crate::scripts::registered_entry(&def.id)
+        .map(|entry| entry.base.static_flags.as_ref().is_some_and(|flags| flags.tribute.unwrap_or(0) > 0))
+        .unwrap_or(false)
 }
 
 impl From<CatalogQuery> for CatalogQueryArgs {
@@ -247,6 +259,7 @@ impl From<CatalogQuery> for CatalogQueryArgs {
             with_tokens: query.with_tokens,
             def_id: None,
             token: None,
+            tribute: None,
         }
     }
 }
@@ -352,6 +365,12 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
     // R1422: `anyTags` means "has at least one of them".
     if let Some(any_tags) = &args.any_tags
         && !any_tags.iter().any(|tag| def.tags.contains(tag))
+    {
+        return false;
+    }
+    // R1221: the Tribute-cost filter, read off the registered script.
+    if let Some(wanted) = args.tribute
+        && has_tribute_cost(def) != wanted
     {
         return false;
     }

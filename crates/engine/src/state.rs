@@ -712,6 +712,20 @@ pub struct TurnLog {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub played_by_type: Option<IndexMap<CardType, i32>>,
+    /// R1223: how much mana this player borrowed this turn (every instalment not yet taken counts).
+    /// `startTurn` rebuilds the log, which clears it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub mana_borrowed: Option<i32>,
+    /// R1223: how many instalments this turn's debt is split into. Cleared with the log.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub borrowed_parts: Option<i32>,
+    /// R1224: the instalment actually taken off this turn's refresh, after any forgiveness — the
+    /// locked crystals the view shows. Set at the refresh, so it survives the log reset.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub mana_locked: Option<i32>,
 }
 
 /// `PlayerState.hero`.
@@ -797,6 +811,11 @@ pub struct PlayerState {
     pub fatigue_count: i32,
     /// Turns this player has started, for the mana refresh (§2.3).
     pub turns_started: i32,
+    /// R1223: the instalment due at each of this player's coming refreshes, the next one first,
+    /// with trailing zeros trimmed; `None` when empty, so a game without credit hashes as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub owed_instalments: Option<Vec<i32>>,
     /// My Pawn: the AI policy plays out the rest of this turn (R44).
     pub ai_turn: bool,
     /// R180: this seat's handicap. Absent means HUMAN_HANDICAP, and createGame never stores one equal
@@ -1325,6 +1344,7 @@ pub fn create_player_state() -> PlayerState {
         draw_offer: DrawOfferState::default(),
         fatigue_count: 0,
         turns_started: 0,
+        owed_instalments: None,
         ai_turn: false,
         handicap: None,
         auto_end_turn: None,

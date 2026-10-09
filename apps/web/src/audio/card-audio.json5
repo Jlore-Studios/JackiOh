@@ -1307,8 +1307,18 @@
       play: { voice: "sapi-teacher", text: "We must expand our minds." },
       death: { voice: "sapi-teacher", text: "Class... dismissed." },
     },
+    "meditative-080": { // Aluneth
+      cast: { voice: "sapi-wizard", text: "Come, child. Let us wreak havoc." },
+    },
     "meditative-081": { // Deadman's Hand
       cast: { voice: "sapi-ghost", text: "Aces and eights. Deal me back in." },
+    },
+    "meditative-088": { // The True Sheep
+      play: { voice: "sapi-critter", text: "I am the true sheep. Follow me." },
+      death: { voice: "sapi-critter", text: "The flock scatters now." },
+    },
+    "meditative-089": { // Jlarna
+      cast: { voice: "sapi-trickster", text: "Four easy payments. No refunds." },
     },
     "meditative-090": { // Spell Basket
       cast: { voice: "sapi-wizard", text: "A basket full of spells!" },

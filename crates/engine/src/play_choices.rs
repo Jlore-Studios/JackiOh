@@ -490,7 +490,8 @@ pub fn why_x_refused(
     value: i32,
     most: Option<i32>,
 ) -> Result<(), EngineError> {
-    let mana = state.players[player].mana.current;
+    // R1223: an X may be chosen out of borrowed mana too.
+    let mana = crate::credit::spendable_mana(state, player);
     let most = most.unwrap_or(mana);
     // TS also refused an X that is not a whole number ("X must be a whole number"); an `i32` always is.
     if value < 0 {
@@ -512,7 +513,8 @@ pub fn why_x_refused(
 /// The most X a play of this card may choose: the player's current mana for an X-cost card, and for a
 /// copier with an X-cost text the mana left once its own price is paid (B5 E14, R545).
 fn most_x(state: &GameState, player: PlayerId, card: &CardInstance) -> i32 {
-    let mana = state.players[player].mana.current;
+    // R1223: an X may be chosen out of borrowed mana too.
+    let mana = crate::credit::spendable_mana(state, player);
     if !crate::subsystems::copied_text::copies_text(card) {
         return mana;
     }
@@ -614,7 +616,8 @@ pub fn legal_tribute_units<'a>(
     let mut out: Vec<&'a CardInstance> = Vec::new();
     for side in sides {
         for unit in crate::zones::active_units_of(state, side) {
-            if unit.id != card.id {
+            // R1220: no Tribute cost may take an Untributable card.
+            if unit.id != card.id && !crate::query::is_untributable(state, unit) {
                 out.push(unit);
             }
         }
@@ -878,7 +881,8 @@ fn reachable(
     candidate: &CardInstance,
 ) -> bool {
     if decl.kind == PromptKind::Tribute {
-        return true;
+        // R1220: a declared Tribute never offers an Untributable card.
+        return !crate::query::is_untributable(state, candidate);
     }
     if crate::restrictions::spell_cannot_reach(state, Some(card), candidate) {
         return false;
@@ -1545,7 +1549,8 @@ pub fn play_choice_combinations(
 /// Every `play` action this card could legally produce: R81's five choice kinds crossed, skipping the
 /// prices the player cannot pay. This is what `legal_actions` lists for a card in hand.
 pub fn play_actions_for(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<PlayAction> {
-    let mana = state.players[player].mana.current;
+    // R1223: a card affordable on borrowed mana is listed.
+    let mana = crate::credit::spendable_mana(state, player);
     priced_play_actions(state, player, card, |cost| {
         if cost <= mana {
             vec![PlayPayment::default()]

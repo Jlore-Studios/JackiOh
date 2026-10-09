@@ -20,6 +20,11 @@ resolving: Array<CardInstance>, units: Array<Array<CardInstance> | null>, backro
  */
 turnsStarted: number, 
 /**
+ * R1223: the instalment due at each of this player's coming refreshes, the next one first,
+ * with trailing zeros trimmed; `None` when empty, so a game without credit hashes as before.
+ */
+owedInstalments?: Array<number>, 
+/**
  * My Pawn: the AI policy plays out the rest of this turn (R44).
  */
 aiTurn: boolean, 
@@ -61,4 +66,11 @@ gameLog?: GameLog,
  * fatigue draw included, a draw a limit stopped not. A count kept for an earlier turn reads as 0,
  * so it resets where the turn log does without anything clearing it (`draw::draws_this_turn`).
  */
-draws?: DrawCount, };
+draws?: DrawCount, 
+/**
+ * R1143: this player's hand size for the rest of the game, once an effect has set one (Meditative
+ * #79 Touched by KY), the latest setting winning; every rule that reads the hand cap reads it
+ * (`query::hand_cap_of`). Absent means `HAND_CAP`, so a game that never sets one hashes as it did
+ * before this field existed (D14).
+ */
+handCap?: number, };
