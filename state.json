@@ -3439,6 +3439,10 @@
       "run_id": "37880510093",
       "started_at": "2026-10-09T03:43:17Z",
       "stop_requested": false,
+      "strike_log": [
+        "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
+      ],
+      "strikes": 1,
       "taken_asks": []
     },
     "531": {
