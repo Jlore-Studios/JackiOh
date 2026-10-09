@@ -4340,6 +4340,7 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-09T14:57:38Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
