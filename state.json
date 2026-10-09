@@ -5551,14 +5551,18 @@
         {
           "at": "2026-10-09T14:15:27Z",
           "minutes": 32.3
+        },
+        {
+          "at": "2026-10-09T18:54:22Z",
+          "minutes": 16.4
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-09T18:30:00Z",
-          "utilization": 0.4
+          "resets_at": "2026-10-09T23:30:00Z",
+          "utilization": 0.14
         },
-        "observed_at": "2026-10-09T14:15:27Z",
+        "observed_at": "2026-10-09T18:54:22Z",
         "status": "allowed"
       }
     },
