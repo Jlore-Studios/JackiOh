@@ -201,9 +201,9 @@ function ManaTray({
           data-available={credit.available === undefined ? "none" : String(credit.available)}
           data-used={credit.used === undefined ? "none" : String(credit.used)}
         >
-          {credit.available !== undefined && `+${credit.available} credit`}
-          {(credit.owed?.length ?? 0) > 0 && `owed ${(credit.owed ?? []).join("·")}`}
-          {credit.used !== undefined && (credit.used ? "used" : "unused")}
+          {credit.available !== undefined && <span>+{credit.available} credit</span>}
+          {(credit.owed?.length ?? 0) > 0 && <span>owed {(credit.owed ?? []).join("·")}</span>}
+          {credit.used !== undefined && <span>{credit.used ? "used" : "unused"}</span>}
         </span>
       )}
     </span>

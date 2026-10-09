@@ -20,6 +20,7 @@ import type { PendingChoice } from "./PendingChoice";
 import type { PerPlayer } from "./PerPlayer";
 import type { PerPlayerOpt } from "./PerPlayerOpt";
 import type { Phase } from "./Phase";
+import type { PlayJudgement } from "./PlayJudgement";
 import type { PlayRecord } from "./PlayRecord";
 import type { PlayerId } from "./PlayerId";
 import type { PlayerState } from "./PlayerState";
@@ -36,6 +37,12 @@ turn: number, active: PlayerId, phase: Phase, players: PerPlayer<PlayerState>, p
  * The attack whose trap window is open, between declaration and damage (§4.2 step 4, R44).
  */
 declaredAttack: DeclaredAttack | null, 
+/**
+ * MD-D28, R1125: the verdict on the last judged play, stored as the play began. Never in a
+ * view (§10.8). Absent while no card judges plays, so a game without one hashes as it did
+ * before this field existed (D14).
+ */
+playJudgement?: PlayJudgement, 
 /**
  * Paused sequences waiting to continue, in order (§9.3, §10.6).
  */

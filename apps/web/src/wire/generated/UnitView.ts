@@ -51,4 +51,10 @@ berserk?: true,
  * may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
  * Only ever `Some(true)`.
  */
-chinese?: true, };
+chinese?: true, 
+/**
+ * MD-D5, R1121: the enemy Units an `attack_mods` entry would apply to if this Unit attacked them
+ * now — the drag layer's yellow, beside the green legal glow (R195's sibling). Only on the
+ * viewer's own attackers that may act now, and only when the list is non-empty.
+ */
+conditionTargets?: Array<string>, };

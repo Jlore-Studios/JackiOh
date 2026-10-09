@@ -35,7 +35,7 @@ use serde_json::Value;
 use crate::config::HAND_CAP;
 use crate::damage::DamageTarget;
 use crate::layers::unit_has;
-use crate::script::{EffectContext, FlagOrCount};
+use crate::script::{EffectContext, FlagOrCount, StaticFlags};
 use crate::state::{CardInstance, FaceUpRecord, GameState, ModifierKind, PlayRecord, find_instance};
 use crate::wire::{CardType, GameEvent, KeywordKind, PlayerId, Row, Tag, Zone, opponent_of};
 use crate::zones::{OffFieldZone, active_units_of, card_at, slot_of, slots_of};
@@ -429,6 +429,62 @@ pub fn fusable_permanents_of(state: &GameState, player: PlayerId, except: Option
     permanents_held_by(state, player)
         .into_iter()
         .filter(|held| Some(held.id.as_str()) != except && !unit_has(state, held, KeywordKind::Immutable))
+        .collect()
+}
+
+/// Whether any card acting for this player carries the picked static flag — the active units and
+/// the face-up backrow tops, as `damage.rs`'s `acting_texts_of` walks them (a face-down Trap's text
+/// is in nobody's use until it fires, R33). What the Pareto judge and the emote gate ask (MD-D28,
+/// MD-D29, R1125, R1127).
+pub fn acting_with_flag(
+    state: &GameState,
+    player: PlayerId,
+    pick: fn(&StaticFlags) -> Option<bool>,
+) -> bool {
+    let mut acting: Vec<CardInstance> = active_units_of(state, player).into_iter().cloned().collect();
+    for slot in slots_of(player, Row::Backrow) {
+        let Some(card) = card_at(state, slot) else {
+            continue;
+        };
+        let card_type = crate::faces::card_type_of(state, card);
+        let face_down =
+            (card_type == CardType::Trap || card_type == CardType::FieldTrap) && card.face_up != Some(true);
+        if !face_down {
+            acting.push(card.clone());
+        }
+    }
+    acting
+        .iter()
+        .any(|card| pick(&crate::scripts::flags_of(state, card)) == Some(true))
+}
+
+/// MD-D29, R1127: whether an acting card of the opponent hears emotes, so an `Emote` action is legal.
+pub fn emotes_heard(state: &GameState, player: PlayerId) -> bool {
+    acting_with_flag(state, opponent_of(player), |flags| flags.hears_emotes)
+}
+
+/// MD-D19, R1122: the acting Units adjacent to the attacker on its own side that it may attack, in
+/// lane order — the neighbours a redirect may re-aim the attack at. Taunt is ignored: the target
+/// must pass §4.2 step 2's restrictions, never step 3's wall.
+pub fn redirect_neighbours(state: &GameState, attacker: &CardInstance) -> Vec<CardInstance> {
+    let Some(at) = slot_of(state, attacker) else {
+        return Vec::new();
+    };
+    crate::zones::adjacent(at)
+        .into_iter()
+        .filter_map(|slot| card_at(state, slot).cloned())
+        .filter(|unit| {
+            crate::zones::acts_on_field(state, unit)
+                && !crate::zones::is_carried(state, unit)
+                && crate::restrictions::attack_restriction(
+                    state,
+                    attacker,
+                    &DamageTarget::Unit {
+                        instance: unit.clone(),
+                    },
+                )
+                .is_ok()
+        })
         .collect()
 }
 

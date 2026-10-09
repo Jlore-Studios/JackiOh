@@ -27,6 +27,7 @@
 pub mod wire;
 
 // The engine (← packages/engine/src), alphabetical.
+pub mod alt_play;
 pub mod animated;
 pub mod announce;
 pub mod book_swap;

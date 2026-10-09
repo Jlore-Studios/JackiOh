@@ -63,13 +63,14 @@ mod r1220_untributable {
             &state,
             json!({
                 "type": "play",
+                "playerId": "p1",
                 "instanceId": card.id,
                 "zone": { "row": "units", "lane": 3 },
                 "tributes": [keeper.id],
             }),
         );
-        assert!(find_instance(&after, &safe.id).is_some());
-        assert!(find_instance(&after, &keeper.id).is_none());
+        assert!(on_field(&after, &safe.id));
+        assert!(!on_field(&after, &keeper.id));
     }
 
     #[test]
@@ -94,7 +95,7 @@ mod r1220_untributable {
             let mut sink = sink_for(&mut state);
             sacrifice_now(&mut sink, &target);
         }
-        assert!(find_instance(&state, &safe.id).is_some());
+        assert!(on_field(&state, &safe.id));
 
         // In a Sacrifice together with another unit, only the other dies.
         let pair = vec![live(&state, &safe), live(&state, &other)];
@@ -102,8 +103,8 @@ mod r1220_untributable {
             let mut sink = sink_for(&mut state);
             sacrifice_together(&mut sink, &pair);
         }
-        assert!(find_instance(&state, &safe.id).is_some());
-        assert!(find_instance(&state, &other.id).is_none());
+        assert!(on_field(&state, &safe.id));
+        assert!(!on_field(&state, &other.id));
         assert!(
             state.players.p1.graveyard.iter().any(|card| card.id == other.id),
             "the tributed body reaches the graveyard",
@@ -162,6 +163,10 @@ mod r1220_untributable {
             rows.iter().all(|row| *row != TuneRow::Keyword),
             "no keyword row is offered: {rows:?}",
         );
+    }
+
+    fn on_field(state: &GameState, id: &str) -> bool {
+        find_instance(state, id).is_some_and(|card| matches!(card.zone, Zone::Field { .. }))
     }
 
     fn only<T: Clone>(items: &[T]) -> T {

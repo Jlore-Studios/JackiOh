@@ -91,6 +91,7 @@ fn play(g: &Scenario, card: &str, zone: Option<ZoneChoice>, embiggen: bool) -> R
         targets: None,
         modes: None,
         plague: None,
+        face_down: None,
     };
     reduce(g.state(), &Action::new(body, P1, format!("embiggen-{nonce}")))
 }

@@ -86,7 +86,14 @@ fn trample_excess(state: &GameState, source: &CardInstance, unit: &CardInstance,
 /// Armor and the Anti-oneshot cap, Trample excess from an attack on a unit included (R44).
 /// The attack is assumed legal: §4.2 steps 1 to 3 have already passed when the trap window opens.
 pub fn projected_damage(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> i32 {
-    let attack = unit_view(state, attacker).attack;
+    // MD-D4, R1120: a combat-only bonus on the attacker's strike at a Unit target is dealt there, so
+    // the projection reads it through the same function the combat does.
+    let attack = match target {
+        DamageTarget::Hero { .. } => unit_view(state, attacker).attack,
+        DamageTarget::Unit { instance } => {
+            unit_view(state, attacker).attack + crate::combat::attack_mod_for(state, attacker, instance).attack
+        }
+    };
     let hero = defending_hero(target);
     let pierce = piercing(state, attacker);
     let defender = match target {

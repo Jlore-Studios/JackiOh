@@ -898,3 +898,78 @@ describe("a selection keeps the rest of the board's affordances", () => {
     expect(lit.has(testid.endTurn)).toBe(true);
   });
 });
+
+describe("R1044 playing face-down as a Trap", () => {
+  const view = seatedView();
+  const set = (lane: number, faceDown: string): ActionBody => ({
+    type: "play",
+    instanceId: "h1",
+    zone: { row: "backrow", lane },
+    faceDown,
+  });
+  const legal: ActionBody[] = [
+    playZone("h1", 3),
+    set(1, "endOfThisTurn"),
+    set(1, "startOfNextTurn"),
+    set(1, "endOfNextTurn"),
+    set(2, "startOfNextTurn"),
+  ];
+  const start = () => onClickTarget(view, legal, IDLE, { on: "hand", instanceId: "h1" }).interaction;
+
+  it("faceDown is asked first, face-up first", () => {
+    expect(outstandingNeed(start())).toEqual({
+      kind: "faceDown",
+      min: 1,
+      max: 1,
+      options: ["up", "endOfThisTurn", "startOfNextTurn", "endOfNextTurn"],
+    });
+  });
+
+  it('picking "up" drops the set plays', () => {
+    const result = pickInPlay(start(), { faceDown: "up" });
+
+    expect(result.action).toEqual(playZone("h1", 3));
+    expect(result.interaction).toEqual(IDLE);
+  });
+
+  it("a zone click keeps only the set plays", () => {
+    const result = onClickTarget(view, legal, start(), { on: "zone", side: "you", row: "backrow", lane: 1 });
+
+    expect(result.action).toBeUndefined();
+    expect(outstandingNeed(result.interaction)).toEqual({
+      kind: "faceDown",
+      min: 1,
+      max: 1,
+      options: ["endOfThisTurn", "startOfNextTurn", "endOfNextTurn"],
+    });
+  });
+
+  it("a target click drops them", () => {
+    const targeted: ActionBody[] = [
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 3 }, targets: [{ pick: "hero", player: "p2" }] },
+      set(1, "startOfNextTurn"),
+    ];
+    const playing = onClickTarget(view, targeted, IDLE, { on: "hand", instanceId: "h1" }).interaction;
+    const result = onClickTarget(view, targeted, playing, { on: "hero", side: "opponent" });
+
+    expect(result.action).toEqual({
+      type: "play",
+      instanceId: "h1",
+      zone: { row: "units", lane: 3 },
+      targets: [{ pick: "hero", player: "p2" }],
+    });
+  });
+
+  it("the sent body has faceDown", () => {
+    const zoned = onClickTarget(view, legal, start(), {
+      on: "zone",
+      side: "you",
+      row: "backrow",
+      lane: 1,
+    }).interaction;
+    const result = pickInPlay(zoned, { faceDown: "startOfNextTurn" });
+
+    expect(result.action).toEqual(set(1, "startOfNextTurn"));
+    expect(result.interaction).toEqual(IDLE);
+  });
+});

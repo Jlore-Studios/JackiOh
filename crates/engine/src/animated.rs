@@ -85,6 +85,9 @@ fn live(state: &GameState, card: &CardInstance) -> CardInstance {
 /// while it stands in a unit zone (`faces::card_type_of`, R383), but what its text *is* — a trap that
 /// fires, a Field Trap that stays — is its face's, and the trap machinery reads this.
 pub fn face_type_of(state: &GameState, card: &CardInstance) -> CardType {
+    if let Some(set) = crate::alt_play::set_type_of(state, card) {
+        return set;
+    }
     let def = def_of(Some(state), &card.def_id);
     let face = if card.radiant { &def.radiant } else { &def.base };
     face.type_.unwrap_or(def.type_)

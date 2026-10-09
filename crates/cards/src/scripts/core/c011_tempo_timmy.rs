@@ -84,6 +84,8 @@ mod tests {
             tribute_when,
             would_counter,
             start_of_opponent_turn,
+            face_down_play: _,
+            attack_mods: _,
         } = script;
         cost.is_none()
             && cry.is_none()

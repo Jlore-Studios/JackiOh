@@ -31,8 +31,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use jackioh_engine::{
-    ActionBody, ActionType, Aim, EmoteId, PlayerId, PlayerView, PortraitId, PromptKind, Row, Selection,
-    ZoneChoice, is_emote_id, parse_aim,
+    ActionBody, ActionType, Aim, EmoteId, PlayerId, PlayerView, PortraitId, PromptKind, RevealAt, Row,
+    Selection, ZoneChoice, is_emote_id, parse_aim,
 };
 
 use crate::db::store::MatchClocks;
@@ -395,6 +395,10 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
         return Err(malformed(r#""action.type" must be a string"#));
     };
     let parsed = type_.parse::<ActionType>().ok();
+    // MD-D29, R1127: an emote rides its own message, never the action channel.
+    if parsed == Some(ActionType::Emote) {
+        return Err(malformed(r#""emote" is an emote message, never an action (R1127)"#));
+    }
     if parsed.is_some_and(|kind| SERVER_ONLY_ACTION_TYPES.contains(&kind)) {
         return Err(malformed(format!(r#""{type_}" is a server-only action (R79)"#)));
     }
@@ -456,6 +460,14 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
                 modes = Some(parsed);
             }
             // TS's whitelist has no `plague`: a client play never carries one.
+            // ME-ALTPLAY, R1044: the face-down timing travels as `faceDown`.
+            let mut face_down = None;
+            if let Some(value) = raw.get("faceDown") {
+                let Ok(parsed) = serde_json::from_value::<RevealAt>(value.clone()) else {
+                    return Err(malformed(r#""play.faceDown" must be a reveal timing"#));
+                };
+                face_down = Some(parsed);
+            }
             Ok(ActionBody::Play {
                 instance_id: instance_id.to_string(),
                 zone,
@@ -465,6 +477,7 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
                 targets,
                 modes,
                 plague: None,
+                face_down,
             })
         }
         ActionType::Attack => {
@@ -572,7 +585,7 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
             Ok(ActionBody::SetAutoEndTurn { enabled })
         }
         // Unreachable: `CLIENT_ACTION_TYPES` admitted none of these.
-        ActionType::Timeout | ActionType::DisconnectExpired | ActionType::CeilingReached => {
+        ActionType::Timeout | ActionType::DisconnectExpired | ActionType::CeilingReached | ActionType::Emote => {
             Err(malformed(format!(r#""{type_}" is not an action type"#)))
         }
     }

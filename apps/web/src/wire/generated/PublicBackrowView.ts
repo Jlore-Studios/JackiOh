@@ -9,6 +9,7 @@ import type { Keyword } from "./Keyword";
 import type { PlayerId } from "./PlayerId";
 import type { PreviewValue } from "./PreviewValue";
 import type { QuestView } from "./QuestView";
+import type { RevealAt } from "./RevealAt";
 import type { Tag } from "./Tag";
 import type { Tuning } from "./Tuning";
 
@@ -39,6 +40,11 @@ tags?: Array<Tag>, counters: BackrowCounters, owner: PlayerId, controller: Playe
  * back. Absent on every public card and on a Field Trap that has fired.
  */
 unrevealed?: true, 
+/**
+ * ME-ALTPLAY (R1046): when a face-down play of yours reveals. Present on the controller's own
+ * view only, never on the opponent's, and skipped when the card is not a face-down play (D14).
+ */
+revealAt?: RevealAt, 
 /**
  * R243, §6.3 Vanilla: the backrow card's text is gone — a client stamps it as it stamps a
  * vanilla unit. Absent otherwise.

@@ -14,7 +14,7 @@
 //! one `draw` of 3, which burns past the cap and takes fatigue past the deck card by card (§2.4);
 //! Quickdraw is the static flag `setup.rs` reads (R640), beside the catalog tag filters see.
 
-use jackioh_engine::effects::{TuneDirection, applicable_changes, draw, exile, transform};
+use jackioh_engine::effects::{draw, exile};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-080";
@@ -62,7 +62,8 @@ pub fn script() -> CardScripts {
 // Activate: exile this".
 #[cfg(test)]
 mod tests {
-    use super::{DRAWS, ID};
+    use super::{DRAWS, ID, script};
+    use jackioh_engine::effects::{TuneDirection, applicable_changes, transform};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -71,10 +72,6 @@ mod tests {
     const VANILLA: &str = "core-008";
     const FILLER: &str = "core-016";
     const JAMMED: &str = "core-036"; // destroy target backrow card, Lock its zone
-
-    fn spare() -> Value {
-        json!({ "hand": [FILLER], "library": [VANILLA, VANILLA, VANILLA] })
-    }
 
     /// Aluneth in p1's backrow, both sides with hands and libraries to draw into.
     fn fielded(seed: &str, radiant: bool) -> Scenario {
@@ -95,16 +92,27 @@ mod tests {
             fn quickdraw_deals_it_in_the_opening_hand() {
                 let _preview = preview_sets(&[SetName::Meditative]);
                 crate::register_all();
-                // `setup` moves every library card carrying `quickdraw` into the opening hand; what
-                // this card owes is the flag on both faces, read through the engine's own reader.
-                let s = crate::scenario(json!({
-                    "p1": { "library": [ID, { "def": ID, "radiant": true }] },
-                }));
-                let library = s.pile(P1, "library");
-                assert_eq!(library.len(), 2);
-                for card in &library {
-                    assert_eq!(flags_of(s.state(), card).quickdraw, Some(true));
-                }
+                // R640: `setup` deals every library card carrying `quickdraw` into the opening hand,
+                // the base face and the Radiant one alike.
+                let scripts = script();
+                assert_eq!(scripts.base.flags().quickdraw, Some(true));
+                assert_eq!(scripts.radiant.flags().quickdraw, Some(true));
+                // Plain Core Units, then Aluneth: one copy of each (§2.6 L3).
+                let others = [
+                    "core-002", "core-005", "core-006", "core-008", "core-011", "core-012", "core-013", "core-015",
+                    "core-016", "core-019", "core-020", "core-025", "core-026", "core-032", "core-036", "core-043",
+                    "core-044", "core-053", "core-055",
+                ];
+                let mut deck: Vec<String> = others.iter().map(|id| id.to_string()).collect();
+                deck.push(ID.to_string());
+                let created = create_game(&CreateGameOptions {
+                    seed: "aluneth-quickdraw".to_string(),
+                    decks: (deck.clone(), deck),
+                    ..CreateGameOptions::default()
+                });
+                let state = begin_game(&created).state;
+                assert!(state.players.p1.hand.iter().any(|card| card.def_id == ID));
+                assert!(state.players.p1.library.iter().all(|card| card.def_id != ID));
             }
 
             #[test]
@@ -113,8 +121,8 @@ mod tests {
                 assert_eq!(s.hand(P1).len(), 1);
                 s.end_turn(); // p1's end of turn: three draws.
                 assert_eq!(s.hand(P1).len(), 1 + DRAWS as usize);
-                s.end_turn(); // p2's end of turn: none for p1.
-                assert_eq!(s.hand(P1).len(), 1 + DRAWS as usize);
+                s.end_turn(); // p2's end of turn: none for p1, only its own turn's draw (§2.2).
+                assert_eq!(s.hand(P1).len(), 1 + DRAWS as usize + 1);
             }
 
             #[test]

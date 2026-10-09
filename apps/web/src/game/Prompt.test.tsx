@@ -642,3 +642,53 @@ describe("min and max gate the confirm, and both came from the view", () => {
     expect(screen.queryByTestId("prompt-cancel")).toBeNull();
   });
 });
+
+describe("R1044 the face-down picker asks how to play it", () => {
+  it("shows its labels, and a pick sends", () => {
+    const onAction = vi.fn();
+    const onInteraction = vi.fn();
+    const view = viewWith();
+    const set = {
+      type: "play",
+      instanceId: "h1",
+      zone: { row: "backrow", lane: 1 },
+      faceDown: "startOfNextTurn",
+    } as const;
+    const interaction = playing([
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 3 } },
+      { ...set, faceDown: "endOfThisTurn" },
+      set,
+      { ...set, faceDown: "endOfNextTurn" },
+    ]);
+
+    render(
+      <Prompt
+        view={view}
+        interaction={interaction}
+        legal={interaction.stage === "playing" ? interaction.candidates : []}
+        onAction={onAction}
+        onInteraction={onInteraction}
+      />,
+    );
+
+    expect(kindOfModal()).toBe("mode");
+    expect(screen.getByText("Play it how?")).not.toBeNull();
+    expect(optionTestids()).toEqual([
+      "prompt-option-up",
+      "prompt-option-endOfThisTurn",
+      "prompt-option-startOfNextTurn",
+      "prompt-option-endOfNextTurn",
+    ]);
+    expect(screen.getByText("Play it face-up")).not.toBeNull();
+    expect(screen.getByText("Set face-down: reveal at the start of your next turn")).not.toBeNull();
+
+    fireEvent.click(screen.getByTestId("prompt-option-up"));
+
+    expect(onAction).toHaveBeenCalledWith({
+      type: "play",
+      instanceId: "h1",
+      zone: { row: "units", lane: 3 },
+    });
+    expect(onInteraction).toHaveBeenCalledWith(IDLE);
+  });
+});

@@ -192,10 +192,16 @@ mod tests {
                 s.play(VANILLA, json!({ "zone": 3 }));
                 s.play(VANILLA, json!({ "zone": 4 }));
                 assert_eq!(owed_mana_of(s.state(), P1), 4);
+                assert_eq!(credit_available(s.state(), P1), 0);
                 s.end_turn();
                 s.expect_in_zone(ID, "field");
+                // ...nothing more can be borrowed while the full 4 is owed...
+                assert_eq!(spendable_mana(s.state(), P1), s.state().players.p1.mana.current);
                 s.end_turn();
-                // ...but nothing more can be borrowed, so the next turn lapses it.
+                // ...and the instalment p1's refresh takes frees 1 of the limit again. Unused, the
+                // line lapses at that turn's end.
+                assert_eq!(owed_mana_of(s.state(), P1), 3);
+                assert_eq!(credit_available(s.state(), P1), 1);
                 s.end_turn();
                 s.expect_in_zone(ID, "graveyard");
             }
@@ -208,11 +214,15 @@ mod tests {
             fn radiant_never_tributes_itself() {
                 let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = fielded("jlarna-radiant", true);
+                // A turn with nothing borrowed: the Radiant face has no self-Tribute.
+                assert!(!credit_used_this_turn(s.state(), P1));
                 s.end_turn();
                 s.expect_in_zone(ID, "field");
-                // And borrowing still schedules the debt.
+                s.end_turn();
+                // Its credit line still lends: p1's next turn, with no mana left, borrows 1.
+                s.state_mut().players.p1.mana.current = 0;
                 s.play(VANILLA, json!({ "zone": 1 }));
-                assert!(owed_mana_of(s.state(), P1) > 0);
+                assert_eq!(s.state().players.p1.owed_instalments, Some(vec![1]));
                 s.end_turn();
                 s.expect_in_zone(ID, "field");
             }

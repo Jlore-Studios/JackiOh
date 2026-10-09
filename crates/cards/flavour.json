@@ -992,6 +992,21 @@
   "meditative-038": {
     "flavour": "Out of paper, never out of applicants."
   },
+  "meditative-052": {
+    "flavour": "The market demands sacrifice."
+  },
+  "meditative-064": {
+    "flavour": "Blood is thicker than orders."
+  },
+  "meditative-071": {
+    "flavour": "There is always a better move. It just isn't yours."
+  },
+  "meditative-071-1": {
+    "flavour": "Spare the rod, spoil the matchup."
+  },
+  "meditative-072": {
+    "flavour": "It doesn't kill. It unmakes."
+  },
   "meditative-076": {
     "flavour": "Use it or lose it."
   },
@@ -1018,5 +1033,14 @@
   },
   "meditative-090": {
     "flavour": "Some assembly required."
+  },
+  "meditative-045": {
+    "flavour": "Sit still. What you know is about to leave you."
+  },
+  "meditative-045-1": {
+    "flavour": "It broke through thinking about breaking through."
+  },
+  "meditative-099": {
+    "flavour": "Everyone is planning something. Probably."
   }
 }

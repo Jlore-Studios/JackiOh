@@ -8,6 +8,7 @@ import type { Keyword } from "./Keyword";
 import type { KnownAs } from "./KnownAs";
 import type { PlayerId } from "./PlayerId";
 import type { Position } from "./Position";
+import type { SetAs } from "./SetAs";
 import type { Tag } from "./Tag";
 import type { Tuning } from "./Tuning";
 import type { Zone } from "./Zone";
@@ -53,6 +54,12 @@ divineShieldSpent?: boolean,
  * Destroyed by an effect; the next state check collects it (§4.5, §6.3 Destroy).
  */
 markedDestroyed?: boolean, 
+/**
+ * MD-D31, R1124: damaged by a card that exiles on damage; the next state check exiles it ahead
+ * of deaths (§4.4 step 7, §4.5 step 1). No Death, no Reborn, no `destroyed`. Only ever
+ * `Some(true)`.
+ */
+markedExiled?: true, 
 /**
  * Came back through Reborn, so it no longer has it (§4.5 step 4).
  */
@@ -105,6 +112,13 @@ timesPlayed?: number,
  * Transform's new card is without it. Only ever `Some(true)`.
  */
 chinese?: true, 
+/**
+ * ME-ALTPLAY, R1040, R1044: the card was played face-down into the backrow as a Trap (a Unit
+ * under Knowledge Breaker's Aura, a Spell under Paranoia's) and has not finished revealing.
+ * Its controller's alone to read while it is face-down (R33, R1046); R78's reset takes it off
+ * with the card leaving the field (R1045). Absent on every other card.
+ */
+setAs?: SetAs, 
 /**
  * MD-B15, R923: tags an effect gave the card (`effects::grant_tag`, Meditative #35). Part of
  * the card for every instance-level tag read (`query::tags_of`); catalog pools never see it.

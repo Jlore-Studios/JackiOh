@@ -12,7 +12,7 @@
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
-import { IDLE, onClickTarget, pickInPlay, type Interaction } from "../../game/actions.ts";
+import { IDLE, onClickTarget, outstandingNeed, pickInPlay, type Interaction } from "../../game/actions.ts";
 import type { ClickTarget } from "../../game/contract.ts";
 import { planDrag, resolveDrop, type DragPlan, type DropSpot } from "../../game/drag/model.ts";
 import { baseView, card, emptySide, unit } from "../fixtures.ts";
@@ -579,5 +579,50 @@ describe("R658 a play narrowed to its zone is dragged again from that zone to it
     // x1 has nothing on the board to aim at: its X is a picker's.
     const x = pickInPlay(clicked(hand("x1")), {}).interaction;
     expect(planDrag(view(), LEGAL, x, hand("x1"), "hand-card-x1")?.lifted).toEqual(lifting("x1", [X1_1, X1_2]));
+  });
+});
+
+describe("R1044 setting by drag asks its timing", () => {
+  const setAt = (faceDown: "endOfThisTurn" | "startOfNextTurn" | "endOfNextTurn"): ActionBody => ({
+    type: "play",
+    instanceId: "s1",
+    zone: { row: "backrow", lane: 2 },
+    faceDown,
+  });
+  const legal: readonly ActionBody[] = [
+    S1,
+    setAt("endOfThisTurn"),
+    setAt("startOfNextTurn"),
+    setAt("endOfNextTurn"),
+    { type: "endTurn" },
+  ];
+  const liftedS1 = lifting("s1", [S1, setAt("endOfThisTurn"), setAt("startOfNextTurn"), setAt("endOfNextTurn")]);
+  const planS1 = plan({
+    kind: "play",
+    source: hand("s1"),
+    sourceTestid: "hand-card-s1",
+    lifted: liftedS1,
+    dropTestids: ["zone-you-backrow-2"],
+    freeDrop: false,
+    arrow: false,
+  });
+
+  it("a free drop casts face-up", () => {
+    const got = resolveDrop(view(), LEGAL, PLAN_S1, BOARD);
+    expect(got.action).toEqual(S1);
+    expect(got.interaction).toEqual({ stage: "idle" });
+  });
+
+  it("a drop on the backrow asks the timing", () => {
+    const spot = at(yourZone("backrow", 2), "zone-you-backrow-2");
+    const got = resolveDrop(view(), legal, planS1, spot);
+
+    expect(got.action).toBeUndefined();
+    expect(got.interaction.stage).toBe("playing");
+    if (got.interaction.stage !== "playing") return;
+    const need = outstandingNeed(got.interaction);
+    expect(need?.kind).toBe("faceDown");
+    if (need?.kind !== "faceDown") return;
+    expect(need.options).toEqual(["endOfThisTurn", "startOfNextTurn", "endOfNextTurn"]);
   });
 });

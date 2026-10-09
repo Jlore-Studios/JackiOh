@@ -31,6 +31,7 @@ mod r1223_borrowing {
             &state,
             json!({
                 "type": "play",
+                "playerId": "p1",
                 "instanceId": card.id,
                 "zone": { "row": "units", "lane": 1 },
             }),
@@ -59,6 +60,7 @@ mod r1223_borrowing {
             &state,
             json!({
                 "type": "play",
+                "playerId": "p1",
                 "instanceId": card.id,
                 "zone": { "row": "units", "lane": 1 },
             }),
@@ -83,6 +85,7 @@ mod r1223_borrowing {
             &after,
             json!({
                 "type": "play",
+                "playerId": "p1",
                 "instanceId": second.id,
                 "zone": { "row": "units", "lane": 2 },
             }),
@@ -132,7 +135,7 @@ mod r1223_borrowing {
         assert!(why_cannot_activate_ability(&state, PlayerId::P1, &tapper.id, Some("tap")).is_ok());
         let after = act(
             &state,
-            json!({ "type": "activate", "instanceId": tapper.id, "ability": "tap" }),
+            json!({ "type": "activate", "playerId": "p1", "instanceId": tapper.id, "ability": "tap" }),
         );
         assert_eq!(after.players.p1.mana.current, 0);
         assert_eq!(after.players.p1.owed_instalments, Some(vec![1]));
@@ -212,7 +215,7 @@ mod r1224_repayment {
             let mut sink = sink_for(&mut state);
             sacrifice_now(&mut sink, &gone);
         }
-        assert!(find_instance(&state, &lender.id).is_none());
+        assert!(!on_field(&state, &lender.id));
         assert_eq!(credit_terms(&state, PlayerId::P1), None);
         assert_eq!(owed_mana_of(&state, PlayerId::P1), 2);
         refresh_for(&mut state, PlayerId::P1, 4);
@@ -247,6 +250,10 @@ mod r1224_repayment {
         assert_eq!(p1["turnLog"].get("borrowedParts"), None);
         assert_eq!(p1["turnLog"].get("manaLocked"), None);
         assert_eq!(view_for(&state, PlayerId::P1).you.credit, None);
+    }
+
+    fn on_field(state: &GameState, id: &str) -> bool {
+        find_instance(state, id).is_some_and(|card| matches!(card.zone, Zone::Field { .. }))
     }
 
     /// `pay_mana` straight on the state, as the pay steps call it.

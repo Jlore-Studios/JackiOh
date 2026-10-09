@@ -44,4 +44,9 @@ autoEndTurn?: false,
  * them, and a card the view shows could not otherwise be read. Only a card the viewer may read
  * brings its definition: a hidden one's id is already the sentinel (R97). Absent when none.
  */
-defs?: { [key in string]: CardDef }, };
+defs?: { [key in string]: CardDef }, 
+/**
+ * MD-D29, R1127: an acting card of the opponent hears emotes, so the client's emote layer sends
+ * them as `Emote` actions. Only ever `Some(true)`.
+ */
+emotesHeard?: true, };

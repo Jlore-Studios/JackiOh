@@ -38,4 +38,14 @@ by?: PlayerId,
 /**
  * R220, R174: the field's departures when it was declared (`stays::exit_mark`).
  */
-exitsFrom?: number, };
+exitsFrom?: number, 
+/**
+ * MD-D19, R1122: a trap in the window re-aimed this attack at an ally of its attacker, which
+ * §4.3 then resolves as a combat between allies. Only ever `Some(true)`.
+ */
+redirected?: true, 
+/**
+ * MD-D20, R1123: once that combat's state check has run, this player gets a fresh copy of each
+ * Unit it destroyed.
+ */
+copiesFor?: PlayerId, };
