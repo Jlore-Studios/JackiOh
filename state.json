@@ -5132,6 +5132,16 @@
       "stall_some": 2.0,
       "swapped": 194691,
       "total": 8153972736
+    },
+    {
+      "at": "2026-10-09T21:54:49Z",
+      "high_swap": 577662976,
+      "low_available": 6515953664,
+      "runner": "night-vm-agy",
+      "stall_full": 0.1,
+      "stall_some": 0.7,
+      "swapped": 18395,
+      "total": 8153972736
     }
   ],
   "providers": {
