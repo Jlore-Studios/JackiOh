@@ -1074,7 +1074,9 @@ impl InvariantMonitor {
 
         self.note_windfury(state);
 
-        // I4: the engine's bookkeeping agrees with the shadow.
+        // I4: the engine's bookkeeping agrees with the shadow. R1202: an attacker whose replacement's
+        // hand pick is open spent its exertion on a declaration the stream reports after the answer.
+        let picking = crate::attack_summon::open_pick_attacker(state);
         for card in field_cards(state) {
             // I3 reports a card with no entry before the next action.
             let Some(at) = self.entered.get(&card.id).copied() else {
@@ -1092,7 +1094,7 @@ impl InvariantMonitor {
                     state.turn
                 ));
             }
-            if card.exertion.attacked {
+            if card.exertion.attacked && picking.as_deref() != Some(card.id.as_str()) {
                 let mark = self.last_attack.get(&card.id);
                 if mark.is_none_or(|mark| mark.stint != self.stint_of(&card.id)) {
                     found.push(format!(

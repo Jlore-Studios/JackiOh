@@ -229,6 +229,16 @@ pub fn replace_attacker(
     Replaced::Asked
 }
 
+/// R1202: the attacker whose replacement's hand pick is the open prompt, if one is. A declared
+/// attack spent its exertion before the pick opened, and its `attackDeclared` follows the answer.
+pub fn open_pick_attacker(state: &GameState) -> Option<String> {
+    let pending = state.pending.as_ref()?;
+    if pending.resume.hook != ATTACK_SUMMON_HOOK || pending.resume.step != PICK_STEP {
+        return None;
+    }
+    owed_of(&pending.resume.data).map(|owed| owed.attacker_id)
+}
+
 /// R1202: the attack the pick makes — summoned if that is still possible, else the declarer
 /// itself (MD-E14: with nothing to summon Windfast attacks itself). A declared attack keeps its
 /// window; a forced one stays forced.
