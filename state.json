@@ -4463,7 +4463,7 @@
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
-    "issue": 595,
+    "issue": null,
     "reading": {
       "at": "2026-10-09T14:35:16Z",
       "free": 24773410816,
@@ -4472,7 +4472,7 @@
     },
     "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37942064534",
     "runner": "night-vm-devin",
-    "shown": "2026-10-09T11:08:25Z"
+    "shown": null
   },
   "machine_memory": [
     {
