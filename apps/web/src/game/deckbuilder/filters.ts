@@ -16,7 +16,6 @@
 
 import {
   SHIPPED_SETS,
-  setShips,
   fillParams,
   type CardCost,
   type CardDef,
@@ -28,8 +27,8 @@ import {
 } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
-import { isGlitch } from "../../cards/glitch.ts";
 import { poolFrom } from "./loadout.ts";
+import { almanacShelf } from "./shelf.ts";
 
 /**
  * Cost filter chips and mana-curve buckets. Core tops out at 6, plus the 100-cost Ceaseless Void, and
@@ -303,11 +302,7 @@ export function almanacPool(
   winRates?: ReadonlyMap<string, CardWinRateInfo>,
 ): readonly string[] {
   // R674: every card but Glitch, which the almanac never shows; R1420: none of a set not shipped yet.
-  const shelf = Object.keys(catalog.cards).filter((id) => {
-    const def = catalog.cards[id];
-    return def !== undefined && !isGlitch(id) && setShips(def.set);
-  });
-  return filteredAndSorted(shelf, catalog, filter, sort, winRates);
+  return filteredAndSorted(almanacShelf(catalog.cards), catalog, filter, sort, winRates);
 }
 
 function filteredAndSorted(
