@@ -963,8 +963,9 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         }
 
         // MD-D31, R1124: the marked units leave for exile before anything is collected for death.
+        // Exiling asks nothing, so a prompt already open (R156) does not stop the collection below.
         exile_marked(sink);
-        if sink.state.result.is_some() || sink.state.pending.is_some() {
+        if sink.state.result.is_some() {
             return;
         }
 
