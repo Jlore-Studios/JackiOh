@@ -51,6 +51,17 @@ describe("Board", () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
+  it("shows the random-targets badge only when the view flags it", () => {
+    const flagged = render(<Board view={{ ...fullBoardView(), randomTargets: true }} />);
+    expect(screen.getByTestId("random-targets")).toHaveTextContent("Targets are random");
+    expect(flagged.container.firstChild).toHaveAttribute("data-random-targets", "");
+    flagged.unmount();
+
+    render(<Board view={fullBoardView()} />);
+    expect(screen.queryByTestId("random-targets")).toBeNull();
+    expect(screen.getByTestId(testid.board)).not.toHaveAttribute("data-random-targets");
+  });
+
   it("builds End turn into its rail and reflects existing legality without deciding a move", () => {
     const view = fullBoardView();
     const active = render(<Board view={view} highlight={highlightOf([testid.endTurn])} />);

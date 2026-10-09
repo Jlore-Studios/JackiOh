@@ -56,6 +56,7 @@ import type {
   Selection,
   ZoneChoice,
 } from "@jackioh/shared";
+import { RANDOM_ATTACK_TARGET } from "@jackioh/engine/config";
 
 import {
   LANES,
@@ -926,6 +927,9 @@ export function onClickTarget(
       }
       const candidates = attacksBy(legal, target.instanceId);
       if (candidates.length === 0) return { interaction };
+      // R1200: while a Mayor acts the attack names no target, so the click sends it at once.
+      const only = candidates.length === 1 ? candidates[0] : undefined;
+      if (only?.targetId === RANDOM_ATTACK_TARGET) return { interaction: IDLE, action: only };
       return { interaction: { stage: "attacking", attackerId: target.instanceId, candidates } };
     }
 

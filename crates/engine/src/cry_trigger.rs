@@ -314,6 +314,19 @@ fn ask_targets(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> 
         if options.is_empty() {
             continue;
         }
+        // R1200: while a Mayor acts a `target` Cry pick is drawn at random, and nobody is asked.
+        if decl.kind == PromptKind::Target && crate::random_targets::targets_random(sink.state) {
+            run.targets.extend(crate::random_targets::draw_picks(
+                sink.state,
+                &mut *sink.rng,
+                run.controller,
+                &options,
+                decl.min,
+                decl.max,
+                crate::targeting::target_aim(decl),
+            ));
+            continue;
+        }
         run.awaiting = Some(CryAwaiting::Target);
         let prompt_options: Vec<PromptOption> = options
             .iter()

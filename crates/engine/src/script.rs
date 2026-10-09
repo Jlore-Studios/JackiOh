@@ -532,6 +532,23 @@ pub struct StaticFlags {
     /// #22 Blood Moon's Radiant Field Trap, "From now on").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub heal_to_damage: Option<bool>,
+    /// Meditative #86 Mayor Medinamogger (ME-RANDOMTARGETS, R1200): while this card acts on the
+    /// field, both players' declared targets, `target` prompts and attack targets are drawn at
+    /// random from the legal ones.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub random_targets: Option<bool>,
+    /// Meditative #91 Windfast (ME-ATTACKSUMMON, R1202): when this would attack, a Unit summoned
+    /// from its controller's hand makes that attack instead.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attack_from_hand: Option<bool>,
+    /// Meditative #91 Windfast's base face (ME-ATTACKSUMMON, R1202): the summoned substitute is
+    /// bounced to its controller's hand after its combat if it is still on the field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bounce_attacker: Option<bool>,
+    /// Meditative #91.1 Windfurious Prime (ME-ATTACKSUMMON, R1203): when this attacks, summoned
+    /// joiners attack its target first.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attack_joiners: Option<bool>,
 }
 
 string_union! {
@@ -1089,11 +1106,15 @@ string_union! {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[serde(tag = "moment", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ReplacedEvent {
-    /// A hit of `amount` (after Armor, divisor and caps) would bring `player`'s hero to 0 or less.
+    /// A hit of `amount` (after Armor, divisor and caps) would bring `player`'s hero — or, since
+    /// ME-LETHALGUARD (R1204), the Unit `instance_id` names — to 0 or less.
     LethalHit {
         player: PlayerId,
         amount: i32,
         source_id: Option<String>,
+        /// The Unit the hit would kill, when it is a Unit's hit. Absent for a hero's, as before.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        instance_id: Option<String>,
     },
     /// A heal of `amount` (its stated amount, R462) would land on `target`.
     Healed { target: HealedRef, amount: i32 },
@@ -1168,6 +1189,9 @@ string_union! {
     /// `instead.redirect` (on `lethalHit`).
     pub enum InsteadRedirect {
         EnemyHero = "enemyHero",
+        /// ME-LETHALGUARD (R1204): the hit goes to the replacing card itself, as a new instance
+        /// from the same source through its own pipeline (Meditative #92 Unan).
+        SelfCard = "self",
     }
 }
 
@@ -1230,6 +1254,9 @@ pub struct ReplacementInstead {
 /// One replacement a card makes. The moment fixes what `instead` may say:
 ///  - `lethalHit`: `redirect: "enemyHero"` — the hit moves to the enemy hero as a new instance from
 ///    the same source, through that hero's Armor and caps (E9). Answers only for its own hero.
+///    `redirect: "self"` — the hit moves to the replacing card itself as a new instance from the
+///    same source, through its own pipeline (ME-LETHALGUARD, R1204). Answers for its controller's
+///    hero and other Units, once each per hit.
 ///  - `healed`: `damage: "pierce"` — the heal becomes that much Pierce damage from this card (E8);
 ///    `lasting: "thisTurn"` also converts every later heal on its enemies this turn (a player
 ///    modifier). Answers only a heal on its controller's enemies.

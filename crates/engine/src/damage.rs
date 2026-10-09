@@ -325,14 +325,21 @@ pub fn deal_damage(sink: &mut DamageSink<'_>, args: DamageArgs) -> i32 {
     }
     // E6: before step 1, a Spell's hit is raised by its controller's Spell Damage.
     let raised = amount_in + spell_damage_for(sink.state, args.source.as_ref());
-    land_hit(sink, &args, raised, 0)
+    land_hit(sink, &args, raised, 0, &[])
 }
 
 /// §4.4 from step 1, for a hit already raised by Spell Damage. A Trample excess (step 9) and a
 /// redirected hit (E9) are new instances of the same hit, so they come back in here rather than
 /// through `deal_damage`, which would raise them a second time. `redirects` counts how often this hit
-/// has moved hero already (`DAMAGE_REDIRECT_CAP`).
-fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redirects: u32) -> i32 {
+/// has moved already (`DAMAGE_REDIRECT_CAP`); `caught` names the guards that have caught it, so each
+/// catches a given hit once (R1204, R460).
+fn land_hit(
+    sink: &mut DamageSink<'_>,
+    args: &DamageArgs,
+    amount_in: i32,
+    redirects: u32,
+    caught: &[String],
+) -> i32 {
     let source = args.source.as_ref();
     let target = &args.target;
     let flags = args.flags.as_ref();
@@ -405,13 +412,20 @@ fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redire
         && sink.state.players[*player].hero.health - amount <= 0
     {
         let source_id = source.map(|card| card.id.clone());
-        let to = crate::replacements::lethal_hit_window(sink, *player, amount, source_id);
+        let to = crate::replacements::lethal_hit_window(sink, target, amount, source_id, caught);
         if let Some(to) = to {
+            // R1204: the hit the guard catches is never caught again by the same guard — and a
+            // hero-to-hero redirect changes controllers, so the old side's catchers can never answer
+            // the new walk anyway. Only a Unit destination names its catcher.
+            let mut next_caught: Vec<String> = caught.to_vec();
+            if let DamageTarget::Unit { instance } = &to {
+                next_caught.push(instance.id.clone());
+            }
             let redirected = DamageArgs {
-                target: DamageTarget::Hero { player: to },
+                target: to,
                 ..args.clone()
             };
-            return land_hit(sink, &redirected, amount_in, redirects + 1);
+            return land_hit(sink, &redirected, amount_in, redirects + 1, &next_caught);
         }
     }
 
@@ -444,6 +458,32 @@ fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redire
         return 0;
     }
 
+    // ME-LETHALGUARD (R1204): §4.4 step 4a opens for Units too. A hit that alone would leave a Unit
+    // nothing has killed yet (R42) at 0 or less — judged after steps 0 to 4, so a Divine Shield
+    // that took the hit and an Indestructible that takes nothing never open it — meets the
+    // replacements, which may send it to a guard as a new instance from the same source, through
+    // the guard's own pipeline.
+    if let Some(live) = &unit
+        && amount > 0
+        && redirects < DAMAGE_REDIRECT_CAP
+        && !already_killed(sink.state, live)
+        && crate::layers::unit_view(sink.state, live).health - amount <= 0
+    {
+        let source_id = source.map(|card| card.id.clone());
+        let to = crate::replacements::lethal_hit_window(sink, target, amount, source_id, caught);
+        if let Some(to) = to {
+            let mut next_caught: Vec<String> = caught.to_vec();
+            if let DamageTarget::Unit { instance } = &to {
+                next_caught.push(instance.id.clone());
+            }
+            let redirected = DamageArgs {
+                target: to,
+                ..args.clone()
+            };
+            return land_hit(sink, &redirected, amount_in, redirects + 1, &next_caught);
+        }
+    }
+
     // Step 5: apply, capping what a Trample source deals to a unit at its health (R63).
     let mut dealt = amount;
     let mut trample_excess = 0;
@@ -473,7 +513,7 @@ fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redire
                 amount: trample_excess,
                 flags: args.flags,
             };
-            land_hit(sink, &excess, trample_excess, 0);
+            land_hit(sink, &excess, trample_excess, 0, caught);
         }
         return 0;
     }
@@ -530,7 +570,7 @@ fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redire
     }
 
     // Step 9: Trample sends the excess to the target's controller's hero as its own instance — of the
-    // same hit, so not raised again by Spell Damage.
+    // same hit, so not raised again by Spell Damage. R1204: the excess keeps the hit's catchers.
     if trample_excess > 0 {
         let excess = DamageArgs {
             source: args.source.clone(),
@@ -540,7 +580,7 @@ fn land_hit(sink: &mut DamageSink<'_>, args: &DamageArgs, amount_in: i32, redire
             amount: trample_excess,
             flags: args.flags,
         };
-        land_hit(sink, &excess, trample_excess, 0);
+        land_hit(sink, &excess, trample_excess, 0, caught);
     }
 
     dealt

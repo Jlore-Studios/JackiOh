@@ -173,6 +173,23 @@ fn attack(
         return Err(EngineError::new(format!("no unit {attacker_id} you control")));
     };
 
+    // R1200: while a Mayor acts the attack names no target — the sentinel `"random"` — and the
+    // engine draws it from the attacker's legal ones. The sentinel with no Mayor, or a named
+    // target while a Mayor acts, is refused.
+    if target_id == crate::config::RANDOM_ATTACK_TARGET {
+        if !crate::random_targets::targets_random(sink.state) {
+            return Err(EngineError::new(format!("no target {target_id}")));
+        }
+        let Some(target) = crate::random_targets::draw_attack_target(sink.state, &mut *sink.rng, &attacker)
+        else {
+            return Err(EngineError::new(format!("no target {target_id}")));
+        };
+        return declare_attack(sink, &attacker, &target).map(|_| ());
+    }
+    if crate::random_targets::targets_random(sink.state) {
+        return Err(EngineError::new("targets are drawn at random while a Mayor acts"));
+    }
+
     let Some(target) = attack_target_of(sink.state, player, target_id) else {
         return Err(EngineError::new(format!("no target {target_id}")));
     };
@@ -774,12 +791,24 @@ fn each_legal_action(
         }
     }
 
+    // R1200: while a Mayor acts each attack is listed once per attacker with no target — the
+    // reducer draws it — so the client asks for none.
+    let random = crate::random_targets::targets_random(state);
     for unit in active_units_of(state, player) {
-        for target in attack_targets(state, unit) {
-            visit(ActionBody::Attack {
-                attacker_id: unit.id.clone(),
-                target_id: attack_target_id(&target),
-            })?;
+        if random {
+            if !attack_targets(state, unit).is_empty() {
+                visit(ActionBody::Attack {
+                    attacker_id: unit.id.clone(),
+                    target_id: crate::config::RANDOM_ATTACK_TARGET.to_string(),
+                })?;
+            }
+        } else {
+            for target in attack_targets(state, unit) {
+                visit(ActionBody::Attack {
+                    attacker_id: unit.id.clone(),
+                    target_id: attack_target_id(&target),
+                })?;
+            }
         }
         if can_switch(state, unit) {
             visit(ActionBody::SwitchPosition {

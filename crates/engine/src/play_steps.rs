@@ -633,6 +633,28 @@ pub fn validate_play(
         ));
     }
 
+    // R1200: while a Mayor acts the action carries no declared targets — `legal_actions`
+    // offered it stripped — so draw each one at random before anything is checked or paid, and the
+    // targeting point, the targeting costs and Joro's replacements meet the drawn target (MD-E9).
+    // A face-down play (ME-ALTPLAY, R1044) declares nothing, so it draws nothing.
+    let mut owned = action.clone();
+    if crate::random_targets::targets_random(sink.state) && owned.face_down.is_none() {
+        let face = crate::play_choices::face_for_action(sink.state, player, &card, &owned);
+        let given = owned.targets.clone().unwrap_or_default();
+        let modes = owned.modes.clone().unwrap_or_default();
+        let decls = crate::play_choices::declared_targets(sink.state, &face);
+        let drawn = crate::play_choices::with_drawn_target_picks(
+            sink.state,
+            &mut *sink.rng,
+            player,
+            &face,
+            &decls,
+            &given,
+            &modes,
+        )?;
+        owned.targets = Some(drawn);
+    }
+    let action: &PlayAction = &owned;
     why_choices_refused(sink.state, player, &card, action)?;
 
     let chooses = chooses_x(sink.state, &card);
@@ -2144,6 +2166,22 @@ fn ask_repeat_targets(
         }
         let options = cast_target_options(sink.state, run, card, decl);
         if options.is_empty() {
+            continue;
+        }
+        // R1200: while a Mayor acts a `target` repeat is drawn at random, and nobody is asked.
+        if decl.kind == PromptKind::Target && crate::random_targets::targets_random(sink.state) {
+            let picks = crate::random_targets::draw_picks(
+                sink.state,
+                &mut *sink.rng,
+                run.player,
+                &options,
+                decl.min,
+                decl.max,
+                crate::targeting::target_aim(decl),
+            );
+            if let Some(repeat) = run.repeat.as_mut() {
+                repeat.targets.extend(picks);
+            }
             continue;
         }
         // R452: a random cast makes this pick itself, at random, and asks nobody.

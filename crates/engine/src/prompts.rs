@@ -534,7 +534,10 @@ pub type PromptAnswerer = fn(&mut EngineSink<'_>, &AnswerInput) -> Result<(), En
 /// the sequence register its answerer at module scope (`registerPromptAnswerer`); here the registry
 /// is this list of hooks, and `answer_owned` below calls each owner directly (SURFACE §6.6).
 fn has_answerer(hook: &str) -> bool {
-    matches!(hook, "play" | "plague:placement" | "fuse:onto" | "@triggerCry")
+    matches!(
+        hook,
+        "play" | "plague:placement" | "fuse:onto" | "@triggerCry" | "@attackSummon"
+    )
 }
 
 /// The answer of the engine sequence a prompt's hook names, or `None` when no engine sequence owns
@@ -553,6 +556,8 @@ fn answer_owned(
         "fuse:onto" => Some(crate::effects::fuse::answer_fuse_onto(sink, answer)),
         // `cryTrigger.TRIGGER_CRY_HOOK`: a Cry a trigger fires.
         "@triggerCry" => Some(crate::cry_trigger::answer_cry_prompt(sink, answer)),
+        // `attackSummon.ATTACK_SUMMON_HOOK`: Windfast's hand pick.
+        "@attackSummon" => Some(crate::attack_summon::answer_pick(sink, answer)),
         _ => None,
     }
 }
@@ -1257,6 +1262,21 @@ fn cast_prompt_shape(sink: &mut EngineSink<'_>, args: OpenPromptArgs) -> Option<
     if has_answerer(&args.resume.hook) {
         return Some(args);
     }
+    // R1200: while a Mayor acts a `target` prompt is answered at once at random, for whichever
+    // player it opened for — nothing opens, and the pick meets no targeting point, as R452's
+    // random picks meet none. R1201: the opener's Lucky rolls again.
+    if args.kind == PromptKind::Target && crate::random_targets::targets_random(sink.state) {
+        let shaped = OpenPromptArgs {
+            options: crate::targeting_point::targetable_options(sink.state, &args),
+            ..args
+        };
+        if shaped.options.is_empty() {
+            return None;
+        }
+        let luck = crate::random_targets::mayor_luck(sink.state, shaped.player);
+        answer_at_random(sink, &shaped, luck);
+        return None;
+    }
     let Some(mode) =
         crate::random_cast::cast_mode_for_prompt(sink.state, args.player, args.resume.instance_id.as_deref())
     else {
@@ -1289,7 +1309,7 @@ fn cast_prompt_shape(sink: &mut EngineSink<'_>, args: OpenPromptArgs) -> Option<
     if !mode.random {
         return Some(shaped);
     }
-    answer_at_random(sink, &shaped);
+    answer_at_random(sink, &shaped, 0);
     None
 }
 
@@ -1298,7 +1318,10 @@ fn cast_prompt_shape(sink: &mut EngineSink<'_>, args: OpenPromptArgs) -> Option<
 /// `answerPrompt` does, inside the effect that asked: the step runs first and the rest of that effect's
 /// list after it, the order a parked tail would have kept (R113). Nothing is emitted for the prompt,
 /// since none was open. A prompt with no answer at all resolves into nothing.
-fn answer_at_random(sink: &mut EngineSink<'_>, args: &OpenPromptArgs) {
+///
+/// R1201: `luck` rolls the answer again and keeps the one with more picks on the prompt's aim side
+/// (a friend for help, an enemy otherwise) — Mayor Medinamogger's Radiant face.
+fn answer_at_random(sink: &mut EngineSink<'_>, args: &OpenPromptArgs, luck: i32) {
     let max = clamp(args.max.unwrap_or(1), 0, args.options.len() as i32);
     let probe = PendingChoice {
         id: String::new(),
@@ -1315,7 +1338,37 @@ fn answer_at_random(sink: &mut EngineSink<'_>, args: &OpenPromptArgs) {
     if answers.is_empty() {
         return;
     }
-    let drawn = sink.rng.int(answers.len() as i32);
+    let state: &GameState = sink.state;
+    let sided = |at: i32| -> usize {
+        usize::try_from(at)
+            .ok()
+            .and_then(|at| answers.get(at))
+            .map(|answer| match answer {
+                ActionBody::Answer { selection, .. } => selection
+                    .iter()
+                    .filter(|pick| {
+                        if args.aim == Some(TargetAim::Help) {
+                            crate::random_cast::is_friendly_pick(state, args.player, pick)
+                        } else {
+                            crate::random_cast::is_enemy_pick(state, args.player, pick)
+                        }
+                    })
+                    .count(),
+                _ => 0,
+            })
+            .unwrap_or(0)
+    };
+    let drawn = sink.rng.lucky(
+        luck,
+        |rng| rng.int(answers.len() as i32),
+        |first, second| {
+            if sided(second) > sided(first) {
+                second
+            } else {
+                first
+            }
+        },
+    );
     let Some(ActionBody::Answer { selection, .. }) =
         usize::try_from(drawn).ok().and_then(|at| answers.get(at))
     else {

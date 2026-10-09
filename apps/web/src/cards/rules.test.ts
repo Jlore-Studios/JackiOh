@@ -74,7 +74,7 @@ function rowNames(section: TableSection): string[] {
  */
 const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
   "§6.1": ["Can't attack or be attacked", "A keyword while a condition holds"],
-  "§6.2": ["Cry and Death", "Hand and deck triggers", 'Replacement ("would … instead")', "Targets chosen randomly", "Fatigue"],
+  "§6.2": ["Cry and Death", "Hand and deck triggers", 'Replacement ("would … instead")', "Targets chosen randomly", "Fatigue", "Attack summon"],
   "§6.3": [
     "Summon",
     "Play",

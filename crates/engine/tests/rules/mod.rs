@@ -121,6 +121,7 @@ pub mod lethal;
 pub mod library_copies;
 pub mod mana;
 pub mod mana_before_play;
+pub mod mb22;
 pub mod modifiers;
 pub mod mulligan_concurrent;
 pub mod overflow_events;

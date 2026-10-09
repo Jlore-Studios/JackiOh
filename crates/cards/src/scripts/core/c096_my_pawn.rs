@@ -86,6 +86,7 @@ fn would_be_lethal(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
         attacker_id,
         target_id,
         forced,
+        ..
     } = event
     else {
         return false;
@@ -217,6 +218,7 @@ mod tests {
             attacker_id: attacker_id.to_string(),
             target_id: target_id.to_string(),
             forced,
+                instead_of: None,
         }
     }
 

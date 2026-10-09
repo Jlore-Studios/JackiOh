@@ -181,6 +181,11 @@ pub const QUICKSTRIKER_COMBO_MULTIPLE: ByFace = ByFace { base: 1, radiant: 2 };
 /// R636: the attacks a Unit with Windfury may declare in one turn, where every other Unit has one.
 pub const WINDFURY_ATTACKS: i32 = 2;
 
+/// R1200 (Meditative #86 Mayor Medinamogger, ME-RANDOMTARGETS): the target an `attack` action
+/// names while a Mayor acts — the engine draws the attack's target from the attacker's legal
+/// ones, so the action lists one attack per attacker under this sentinel.
+pub const RANDOM_ATTACK_TARGET: &str = "random";
+
 /// R21: Plastic Surgery and Zao Gao draw from this pool; a unit never gets a keyword it has. R346:
 /// patch v0.1.1 added Pierce, at the end. R636 added Windfury after it; Deft (R49) was added by
 /// patch v0.2.4; Temporary (R637) stays out, since a card on the field is never in a hand to be discarded.

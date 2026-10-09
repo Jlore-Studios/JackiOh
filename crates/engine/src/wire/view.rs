@@ -1057,6 +1057,12 @@ pub struct PlayerView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub defs: Option<IndexMap<String, CardDef>>,
+    /// R1200 (ME-RANDOMTARGETS): a Mayor acts on the field, so both players' declared targets,
+    /// `target` prompts and attack targets are drawn at random and the client asks for none.
+    /// Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub random_targets: Option<bool>,
 }
 
 #[cfg(test)]

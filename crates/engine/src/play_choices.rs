@@ -40,6 +40,7 @@ use serde_json::Value;
 
 use crate::config::{MAX_CHOICE_COMBINATIONS, MIN_CHOSEN_X};
 use crate::graveyard_play::PlayPayment;
+use crate::rng::Rng;
 use crate::script::TargetCheckArgs;
 use crate::state::{CardInstance, EngineError, GameState};
 use crate::wire::{
@@ -1714,6 +1715,107 @@ pub fn offered_play_costs(state: &GameState, player: PlayerId, card: &CardInstan
         .collect()
 }
 
+/// R1200 (ME-RANDOMTARGETS): the face §10.5 step 1 reads a play's choices against — the one
+/// `why_choices_refused` computes (`resolving_face` with the action's own prices).
+pub fn face_for_action(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    action: &PlayAction,
+) -> CardInstance {
+    resolving_face(
+        state,
+        player,
+        card,
+        cost_with(state, card, action.x, action.embiggen),
+    )
+}
+
+/// R1200 (ME-RANDOMTARGETS): a play's picks with every `target` declaration's slice left out —
+/// what `legal_actions` offers while a Mayor acts, so the client asks for no target. The slices
+/// are `split_selections`' own, so the draw below inverts them exactly. An empty remainder is
+/// `None`, the same as no picks at all.
+pub fn without_target_picks(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    decls: &[TargetDecl],
+    targets: &[Selection],
+    modes: &[String],
+) -> Option<Vec<Selection>> {
+    let active = active_target_decls(decls, modes);
+    let offered: Vec<Vec<Selection>> = active
+        .iter()
+        .map(|decl| legal_selections_for(state, player, card, decl))
+        .collect();
+    let kept: Vec<Selection> = split_selections(&active, &offered, targets)
+        .into_iter()
+        .enumerate()
+        .filter(|(index, _)| active[*index].kind != PromptKind::Target)
+        .flat_map(|(_, slice)| slice)
+        .collect();
+    if kept.is_empty() { None } else { Some(kept) }
+}
+
+/// R1200 (ME-RANDOMTARGETS): rebuild a stripped play's full target list, drawing each `target`
+/// declaration's picks at random (`random_targets::draw_picks`) with `subsets_for`'s own bounds —
+/// `take_for` picks off the list for every declaration but the last, which takes the rest — so the
+/// full list splits again exactly as `legal_actions` split it. Any other declaration takes its
+/// slice of the picks the action carried. Picks left over refuse the play: a named target is no
+/// play while a Mayor acts.
+pub fn with_drawn_target_picks(
+    state: &GameState,
+    rng: &mut Rng,
+    player: PlayerId,
+    card: &CardInstance,
+    decls: &[TargetDecl],
+    given: &[Selection],
+    modes: &[String],
+) -> Result<Vec<Selection>, EngineError> {
+    let active = active_target_decls(decls, modes);
+    let offered: Vec<Vec<Selection>> = active
+        .iter()
+        .map(|decl| legal_selections_for(state, player, card, decl))
+        .collect();
+    let mut out: Vec<Selection> = Vec::new();
+    let mut at = 0usize;
+    for (index, decl) in active.iter().enumerate() {
+        let is_last = index + 1 == active.len();
+        if decl.kind == PromptKind::Target {
+            let options = &offered[index];
+            let low = take_for(decl, options.len()) as i32;
+            let high = if is_last {
+                at_most(decl.max, options.len()) as i32
+            } else {
+                low
+            };
+            out.extend(crate::random_targets::draw_picks(
+                state,
+                rng,
+                player,
+                options,
+                low,
+                high,
+                crate::targeting::target_aim(decl),
+            ));
+            continue;
+        }
+        let rest = &given[at.min(given.len())..];
+        if is_last {
+            out.extend_from_slice(rest);
+            at = given.len();
+            continue;
+        }
+        let take = take_for(decl, offered[index].len()).min(rest.len());
+        out.extend_from_slice(&rest[..take]);
+        at += take;
+    }
+    if at != given.len() {
+        return Err(EngineError::new("targets are drawn at random while a Mayor acts"));
+    }
+    Ok(out)
+}
+
 /// R81, R90's enumeration with the payment left to the caller: for each price the card's X and embiggen
 /// choices come to, `payments` answers the ways a play may pay it — none, and that price is not offered;
 /// `{}` for a price paid in mana alone. A hand card pays in mana (`play_actions_for`); a card a permission
@@ -1773,7 +1875,7 @@ pub fn priced_play_actions(
                         continue;
                     }
                     for payment in &paid {
-                        out.push(PlayAction {
+                        let mut pushed = PlayAction {
                             instance_id: card.id.clone(),
                             zone: *zone,
                             x,
@@ -1787,7 +1889,24 @@ pub fn priced_play_actions(
                             modes: choices.modes.clone(),
                             plague: payment.plague.clone(),
                             face_down: None,
-                        });
+                        };
+                        // R1200: while a Mayor acts the play carries no declared targets — the
+                        // reducer draws them — so collapsed choices list one action, not one per
+                        // target set.
+                        if crate::random_targets::targets_random(state) {
+                            pushed.targets = without_target_picks(
+                                state,
+                                player,
+                                &face,
+                                &declared_targets(state, &face),
+                                targets,
+                                modes,
+                            );
+                            if out.contains(&pushed) {
+                                continue;
+                            }
+                        }
+                        out.push(pushed);
                     }
                 }
             }

@@ -11552,6 +11552,35 @@
       "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw|card|cards}.\nPaid (2): Each copy has a {chance}% chance to become Radiant."
     }
   },
+  "meditative-086": {
+    "id": "meditative-086",
+    "index": "86",
+    "name": "Mayor Medinamogger",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Legendary",
+    "token": false,
+    "cost": 2,
+    "loc": 12,
+    "base": {
+      "attack": 5,
+      "health": 4,
+      "keywords": [],
+      "text": "Aura: All targets are chosen at random."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Lucky",
+          "n": 1
+        }
+      ],
+      "text": "Lucky 1\nAura: All targets are chosen at random."
+    }
+  },
   "meditative-090": {
     "id": "meditative-090",
     "index": "90",
@@ -11580,6 +11609,132 @@
     "radiant": {
       "keywords": [],
       "text": "Add {cards|random Radiant Spell|random Radiant Spells} to your hand."
+    }
+  },
+  "meditative-091": {
+    "id": "meditative-091",
+    "index": "91",
+    "name": "Windfast",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Catalyst"
+    ],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "meditative-091-1"
+    ],
+    "loc": 26,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Windfury"
+        }
+      ],
+      "text": "Tribute 1, Windfury\nWhen this would attack, summon a Unit of your choice from your hand to make that attack instead. Bounce it afterwards if it survives.\nDeath: Shuffle a Windfurious Prime into your deck."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Windfury"
+        }
+      ],
+      "text": "Tribute 1, Windfury\nWhen this would attack, summon a Unit of your choice from your hand to make that attack instead.\nDeath: Shuffle a Radiant Windfurious Prime into your deck."
+    }
+  },
+  "meditative-091-1": {
+    "id": "meditative-091-1",
+    "index": "91.1",
+    "name": "Windfurious Prime",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Prime",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "token": true,
+    "cost": 3,
+    "params": [
+      {
+        "key": "joiners",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 12,
+    "base": {
+      "attack": 5,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Rush"
+        },
+        {
+          "kind": "Windfury"
+        }
+      ],
+      "text": "Rush, Windfury\nWhenever this attacks: Summon {joiners|random Unit|random Units} from your hand or deck. They attack its target first."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "Rush"
+        },
+        {
+          "kind": "Windfury"
+        },
+        {
+          "kind": "First Strike"
+        }
+      ],
+      "text": "Rush, Windfury, First Strike\nWhenever this attacks: Summon {joiners|random Unit|random Units} from your hand or deck. They attack its target first."
+    }
+  },
+  "meditative-092": {
+    "id": "meditative-092",
+    "index": "92",
+    "name": "Unan",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 3,
+    "loc": 20,
+    "base": {
+      "attack": 3,
+      "health": 13,
+      "keywords": [
+        {
+          "kind": "Armor",
+          "n": 3
+        }
+      ],
+      "text": "Armor 3\nLethal damage your hero or your other Units would take is redirected to this."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 26,
+      "keywords": [
+        {
+          "kind": "Armor",
+          "n": 7
+        }
+      ],
+      "text": "Armor 7\nLethal damage your hero or your other Units would take is redirected to this."
     }
   },
   "meditative-099": {

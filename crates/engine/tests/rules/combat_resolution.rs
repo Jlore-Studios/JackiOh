@@ -82,6 +82,7 @@ fn attack_declared(events: &[GameEvent]) -> Vec<(String, String, bool)> {
                 attacker_id,
                 target_id,
                 forced,
+                ..
             } => Some((attacker_id.clone(), target_id.clone(), *forced)),
             _ => None,
         })

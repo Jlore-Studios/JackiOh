@@ -258,6 +258,16 @@ fn summon_fresh(
     }
 }
 
+/// ME-ATTACKSUMMON (R1202): summon a card that already exists — a Unit from its controller's
+/// hand — with the default placement: the leftmost open zone of its row (R64), no Cry (R1).
+pub fn summon_existing_card(
+    ctx: &mut EffectContext<'_>,
+    card: &CardInstance,
+    player: PlayerId,
+) -> Option<CardInstance> {
+    summon_existing(ctx, card, player, &SummonPlacement::default())
+}
+
 /// A card that already exists, moved onto the field "from anywhere else" (§6.3 Summon).
 fn summon_existing(
     ctx: &mut EffectContext<'_>,

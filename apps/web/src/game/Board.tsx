@@ -555,6 +555,7 @@ export default function Board({
         data-viewer={view.viewer}
         data-drag={dragToPlay ? "on" : "off"}
         data-log={logOpen ? "open" : undefined}
+        data-random-targets={view.randomTargets === true ? "" : undefined}
       >
         <Seat
           view={view}
@@ -617,6 +618,12 @@ export default function Board({
             </span>
           </div>
           {matchStatus === undefined ? null : <div className="board-status">{matchStatus}</div>}
+          {/* R1200: while a Mayor acts every target is drawn at random, so the board says so. */}
+          {view.randomTargets === true ? (
+            <div className="random-targets" data-testid="random-targets" role="status">
+              Targets are random
+            </div>
+          ) : null}
           <div className="turn-mechanism" data-turn-state={endTurnState}>
             <ControlButton
               control="end-turn"

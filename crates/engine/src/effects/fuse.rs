@@ -608,6 +608,19 @@ pub fn fuse_onto_your_card(args: FuseOntoYourCardArgs) -> Effect {
             }
             return;
         }
+        // R1200: while a Mayor acts the fuse-onto pick is drawn at random, and nobody is asked.
+        if crate::random_targets::targets_random(ctx.sink.state) {
+            let at = ctx.sink.rng.int(candidates.len() as i32);
+            let picked = usize::try_from(at)
+                .ok()
+                .and_then(|at| candidates.get(at))
+                .map(|card| Selection::Instance {
+                    instance_id: card.id.clone(),
+                });
+            let ingredient_id = ingredient.id.clone();
+            fuse_onto_picked(ctx, &ingredient_id, picked);
+            return;
+        }
         let options: Vec<PromptOption> = candidates
             .iter()
             .map(|card| PromptOption {
@@ -656,24 +669,10 @@ pub fn fuse_onto_your_card(args: FuseOntoYourCardArgs) -> Effect {
     })
 }
 
-/// R122: the answer to `fuseOntoYourCard`'s prompt — validated as any prompt's, then the fusion onto
-/// the pick, then what the prompt interrupted (R113). An ingredient no longer on the field, or a pick
-/// that has moved to a pile it may not be kept in, fuses nothing. (TS registered it at module scope
-/// under `FUSE_ONTO_HOOK`; `prompts.rs` calls it by that hook.)
-pub fn answer_fuse_onto(sink: &mut EngineSink<'_>, answer: &AnswerInput) -> Result<(), EngineError> {
-    let Some(pending) = sink.state.pending.clone() else {
-        return Err(EngineError::new("no prompt is open"));
-    };
-    why_answer_refused(&pending, answer)?;
-    // TS `resumeOf(pending).data`: a typed `Resume` has every field already, so its data is the data.
-    let Some(data) = fuse_onto_data(&pending.resume.data) else {
-        return Err(EngineError::new("that prompt carries no card to fuse"));
-    };
-    let picked: Option<Selection> = in_offered_order(&pending, &answer.selection).into_iter().next();
-
-    close_prompt(sink);
-    begin_work_cascade(sink);
-    let ingredient = find_instance(sink.state, &data.ingredient).cloned();
+/// The fusion onto the pick — the answered pick's, or the random one drawn under a Mayor
+/// (R1200) — shared by the prompt's answer and the effect's random branch.
+fn fuse_onto_picked(sink: &mut EngineSink<'_>, ingredient_id: &str, picked: Option<Selection>) {
+    let ingredient = find_instance(sink.state, ingredient_id).cloned();
     let onto = match &picked {
         Some(Selection::Instance { instance_id }) => find_instance(sink.state, instance_id).cloned(),
         _ => None,
@@ -697,6 +696,26 @@ pub fn answer_fuse_onto(sink: &mut EngineSink<'_>, answer: &AnswerInput) -> Resu
             },
         );
     }
+}
+
+/// R122: the answer to `fuseOntoYourCard`'s prompt — validated as any prompt's, then the fusion onto
+/// the pick, then what the prompt interrupted (R113). An ingredient no longer on the field, or a pick
+/// that has moved to a pile it may not be kept in, fuses nothing. (TS registered it at module scope
+/// under `FUSE_ONTO_HOOK`; `prompts.rs` calls it by that hook.)
+pub fn answer_fuse_onto(sink: &mut EngineSink<'_>, answer: &AnswerInput) -> Result<(), EngineError> {
+    let Some(pending) = sink.state.pending.clone() else {
+        return Err(EngineError::new("no prompt is open"));
+    };
+    why_answer_refused(&pending, answer)?;
+    // TS `resumeOf(pending).data`: a typed `Resume` has every field already, so its data is the data.
+    let Some(data) = fuse_onto_data(&pending.resume.data) else {
+        return Err(EngineError::new("that prompt carries no card to fuse"));
+    };
+    let picked: Option<Selection> = in_offered_order(&pending, &answer.selection).into_iter().next();
+
+    close_prompt(sink);
+    begin_work_cascade(sink);
+    fuse_onto_picked(sink, &data.ingredient, picked);
     drain_work(sink);
     Ok(())
 }

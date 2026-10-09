@@ -1676,6 +1676,11 @@ fn redact_event(
             if hidden(&text_at(&shown, "attackerId")) {
                 hide(&mut shown, &["attackerId"]);
             }
+            // R1202: the Windfast a substitute attacks for, hidden when this viewer may not read it;
+            // an event with no `insteadOf` stays without one.
+            if nullable_at(&shown, "insteadOf").is_some_and(|windfast| hidden(&windfast)) {
+                hide(&mut shown, &["insteadOf"]);
+            }
             if hidden(&text_at(&shown, "targetId")) {
                 hide(&mut shown, &["targetId"]);
             }
@@ -2018,6 +2023,12 @@ pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Opt
             None
         },
         defs: None,
+        // R1200: both seats read the same flag — a Mayor acts, or none does.
+        random_targets: if crate::random_targets::targets_random(state) {
+            Some(true)
+        } else {
+            None
+        },
     };
     let defs = match_defs_in(state, &view);
     if !defs.is_empty() {

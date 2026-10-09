@@ -715,6 +715,11 @@ pub struct DeclaredAttack {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub exits_from: Option<u32>,
+    /// ME-ATTACKSUMMON (R1202): bounce the substitute after its combat when set — Windfast's base
+    /// face bounces the summoned Unit if it is still on the field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub bounce_after: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]

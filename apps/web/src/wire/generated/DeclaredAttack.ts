@@ -38,4 +38,9 @@ by?: PlayerId,
 /**
  * R220, R174: the field's departures when it was declared (`stays::exit_mark`).
  */
-exitsFrom?: number, };
+exitsFrom?: number, 
+/**
+ * ME-ATTACKSUMMON (R1202): bounce the substitute after its combat when set — Windfast's base
+ * face bounces the summoned Unit if it is still on the field.
+ */
+bounceAfter?: boolean, };

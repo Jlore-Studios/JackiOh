@@ -44,4 +44,10 @@ autoEndTurn?: false,
  * them, and a card the view shows could not otherwise be read. Only a card the viewer may read
  * brings its definition: a hidden one's id is already the sentinel (R97). Absent when none.
  */
-defs?: { [key in string]: CardDef }, };
+defs?: { [key in string]: CardDef }, 
+/**
+ * R1200 (ME-RANDOMTARGETS): a Mayor acts on the field, so both players' declared targets,
+ * `target` prompts and attack targets are drawn at random and the client asks for none.
+ * Only ever `Some(true)`.
+ */
+randomTargets?: true, };

@@ -21,6 +21,7 @@
 // Pure: no DOM, no React, no state of its own.
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
+import { RANDOM_ATTACK_TARGET } from "@jackioh/engine/config";
 
 import {
   IDLE,
@@ -129,9 +130,14 @@ function planAttack(
   if (source.side !== "you") return null;
   // While a play or an activation is in flight a press on your own unit is a tribute or target click.
   if (isBuilding(interaction)) return null;
-  const candidates = legal.filter((body) => body.type === "attack" && body.attackerId === source.instanceId);
+  const candidates = legal.filter(
+    (body): body is Extract<ActionBody, { type: "attack" }> =>
+      body.type === "attack" && body.attackerId === source.instanceId,
+  );
   // R384: a unit with nothing to attack with lifts its Activate ability instead, when it has one.
   if (candidates.length === 0) return planCardActivation(view, legal, source);
+  // R1200: while a Mayor acts the attack names no target, so there is nothing to drag it to.
+  if (candidates.length === 1 && candidates[0]?.targetId === RANDOM_ATTACK_TARGET) return null;
 
   const lifted: Attacking = { stage: "attacking", attackerId: source.instanceId, candidates };
   return {

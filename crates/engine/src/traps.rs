@@ -583,6 +583,7 @@ fn declaration_stands(state: &GameState, event: &GameEvent) -> bool {
         attacker_id,
         target_id,
         forced,
+        ..
     } = event
     else {
         return true;

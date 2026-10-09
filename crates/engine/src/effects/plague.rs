@@ -220,14 +220,14 @@ fn ask_placement(sink: &mut EngineSink<'_>, player: PlayerId, resume: Resume) ->
     // this hook answers its own prompts (`prompts.rs` calls `answer_placement` for it), so
     // `open_prompt` would ask instead.
     let mode = cast_mode_for_prompt(sink.state, player, resume.instance_id.as_deref());
-    if let Some(mode) = mode
-        && mode.random
-    {
+    // R1200: while a Mayor acts the placement is drawn at random too, and nobody is asked.
+    let random = mode.is_some_and(|mode| mode.random) || crate::random_targets::targets_random(sink.state);
+    if random {
         let now: Vec<CardInstance> = permanents_on_field(sink.state, player)
             .into_iter()
             .cloned()
             .collect();
-        let pool: Vec<CardInstance> = if mode.target_enemies {
+        let pool: Vec<CardInstance> = if mode.is_some_and(|mode| mode.target_enemies) {
             prefer_enemies(
                 sink.state,
                 player,

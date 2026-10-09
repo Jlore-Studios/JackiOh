@@ -1321,8 +1321,24 @@
     "meditative-081": { // Deadman's Hand
       cast: { voice: "sapi-ghost", text: "Aces and eights. Deal me back in." },
     },
+    "meditative-086": { // Mayor Medinamogger
+      play: { voice: "sapi-bureaucrat", text: "Vote for me! Or anyone, really." },
+      death: { voice: "sapi-bureaucrat", text: "Recount! I demand a recount!" },
+    },
     "meditative-090": { // Spell Basket
       cast: { voice: "sapi-wizard", text: "A basket full of spells!" },
+    },
+    "meditative-091": { // Windfast
+      play: { voice: "sapi-trickster", text: "Why fight when friends will?" },
+      death: { voice: "sapi-trickster", text: "Something bigger is coming." },
+    },
+    "meditative-091-1": { // Windfurious Prime
+      play: { voice: "sapi-giant", text: "The storm brings company!" },
+      death: { voice: "sapi-giant", text: "The winds fall still." },
+    },
+    "meditative-092": { // Unan
+      play: { voice: "sapi-hero", text: "Stand behind me." },
+      death: { voice: "sapi-hero", text: "I held the line." },
     },
     "meditative-099": { // Paranoia
       cast: { voice: "sapi-ghost", text: "They are all watching. Hide it." },

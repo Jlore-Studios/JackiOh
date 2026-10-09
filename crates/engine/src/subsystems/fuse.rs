@@ -1031,6 +1031,10 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 cant_attack_or_be_attacked: flags(|f| f.cant_attack_or_be_attacked),
                 never_berserk: flags(|f| f.never_berserk),
                 heal_to_damage: flags(|f| f.heal_to_damage),
+                random_targets: flags(|f| f.random_targets),
+                attack_from_hand: flags(|f| f.attack_from_hand),
+                bounce_attacker: flags(|f| f.bounce_attacker),
+                attack_joiners: flags(|f| f.attack_joiners),
             })
         }
     }

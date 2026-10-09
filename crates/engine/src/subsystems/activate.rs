@@ -529,7 +529,7 @@ pub fn activate_actions_for(state: &GameState, player: PlayerId, card: &CardInst
                 if why_targeting_discards_unpayable(state, player, owed, &hand_picks(&targets)).is_err() {
                     continue;
                 }
-                out.push(ActivateAction {
+                let mut pushed = ActivateAction {
                     instance_id: card.id.clone(),
                     ability: Some(decl.id.clone()),
                     tributes: if tributes.is_empty() {
@@ -539,7 +539,23 @@ pub fn activate_actions_for(state: &GameState, player: PlayerId, card: &CardInst
                     },
                     targets: choice.targets.clone(),
                     modes: choice.modes.clone(),
-                });
+                };
+                // R1200: while a Mayor acts the activation carries no declared targets — the
+                // reducer draws them — so collapsed choices list one action, not one per target set.
+                if crate::random_targets::targets_random(state) {
+                    pushed.targets = crate::play_choices::without_target_picks(
+                        state,
+                        player,
+                        card,
+                        &declared_of(&decl).targets,
+                        &targets,
+                        &modes,
+                    );
+                    if out.contains(&pushed) {
+                        continue;
+                    }
+                }
+                out.push(pushed);
             }
         }
     }
@@ -814,6 +830,29 @@ pub fn activate_ability(
     player: PlayerId,
     action: &ActivateAction,
 ) -> Result<(), EngineError> {
+    // R1200: while a Mayor acts the action carries no declared targets — `legal_actions` offered
+    // it stripped — so draw each one at random before anything is checked or paid. A card or an
+    // ability this does not find is the validation's refusal to give, not this draw's.
+    let mut owned = action.clone();
+    if crate::random_targets::targets_random(sink.state)
+        && let Some(card) = find_instance(sink.state, &owned.instance_id).cloned()
+        && let Ok(decl) = find_ability(sink.state, &card, owned.ability.as_deref())
+    {
+        let given = owned.targets.clone().unwrap_or_default();
+        let modes = owned.modes.clone().unwrap_or_default();
+        let declared = declared_of(&decl);
+        let drawn = crate::play_choices::with_drawn_target_picks(
+            sink.state,
+            &mut *sink.rng,
+            player,
+            &card,
+            &declared.targets,
+            &given,
+            &modes,
+        )?;
+        owned.targets = Some(drawn);
+    }
+    let action: &ActivateAction = &owned;
     why_activate_refused(sink.state, player, action)?;
     let Some(card) = find_instance(sink.state, &action.instance_id).cloned() else {
         return Err(EngineError::new(format!("no card {}", action.instance_id)));
