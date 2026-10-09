@@ -1,19 +1,16 @@
 //! A Tribute's deaths and the targets they take with them (SPEC §6.3 Tribute, §10.5 steps 1, 2 and 5,
-//! R68, R90, R101, R174). Found by the polish-4 edge-case hunt, round 3 (docs/polish/4-edge-cases.md,
-//! lens L9: `legalActions` and `reduce` disagreeing); both cases failed before their fix.
+//! R68, R90, R101, R174).
+//! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
 //!
-//!  - R68, R101: the tributed set is one payment and dies together, its Death hooks in R68's order,
-//!    so the order a play lists it in means nothing: `legalActions` offers each set once and `reduce`
-//!    accepts any listing of it, and every listing is the same play.
+//!  - R68, R101: the tributed set dies together, its Death hooks in R68's order, so the order a play
+//!    lists it in means nothing: `legalActions` offers each set once, `reduce` accepts any listing.
 //!  - R174: a target the play's own Tribute sacrificed has left the field, so the effect aimed at it
 //!    fizzles (§8 Conventions) instead of landing on a card in a graveyard.
-//!  - Round 5 (lenses L9 and "keywords and layers"). §6.3 Vanilla, §7: a Sheep Token's "worth 2
-//!    Tributes" is its text, so a Vanilla copy of one is worth 1 like any other unit.
-//!  - Round 9, lens "card by card". R119, R210: a play's arrivals are counted from the moment it
-//!    begins, so the copies a tributed Cube's Death puts on the field at step 2 answer neither its step
-//!    4 (#41), its step 5 (#38) nor its step 7 (#33).
-//!
-//! Port of `packages/cards/test/tributes.test.ts` (SURFACE §4.1, §8).
+//!  - §6.3 Vanilla, §7: a Sheep Token's "worth 2 Tributes" is its text, so a Vanilla copy of one is
+//!    worth 1 like any other unit.
+//!  - R119, R210: a play's arrivals are counted from the moment it begins, so the copies a tributed
+//!    Cube's Death puts on the field at step 2 answer neither its step 4 (#41), its step 5 (#38) nor
+//!    its step 7 (#33).
 
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
@@ -38,7 +35,7 @@ fn must<T>(value: Option<T>, what: &str) -> T {
     }
 }
 
-/// `[...ids].sort().join()`: a tributed set as one string, whatever order it is listed in.
+/// A tributed set as one string, whatever order it is listed in.
 fn sorted_join(ids: &[String]) -> String {
     let mut sorted = ids.to_vec();
     sorted.sort();
@@ -299,9 +296,7 @@ mod r102_3_2_a_sheep_s_worth_is_its_text_and_a_fuse_keeps_it {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Round 9: what a Tribute's Death puts on the field is an arrival (R119, R210)
-// ---------------------------------------------------------------------------
+// What a Tribute's Death puts on the field is an arrival (R119, R210)
 
 const MR_VANILLA: &str = "core-008";
 const TEMPO_TIMMY: &str = "core-011";
@@ -317,7 +312,6 @@ const R119_LIBRARY: [&str; 6] = [
     MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA,
 ];
 
-/// `ofType(events, "summoned")`, as the def id each summoned.
 fn summoned_defs(events: &[GameEvent]) -> Vec<String> {
     events
         .iter()
@@ -328,7 +322,7 @@ fn summoned_defs(events: &[GameEvent]) -> Vec<String> {
         .collect()
 }
 
-/// `ofType(events, type)`: the events of one type.
+/// The events of one type.
 fn of_type(events: &[GameEvent], type_: GameEventType) -> Vec<GameEvent> {
     events
         .iter()
@@ -366,8 +360,7 @@ fn unit_carrying(s: &mut Scenario, player: PlayerId, unit_lane: i32, backrow_lan
         s.backrow(player, backrow_lane),
         &format!("{player}'s backrow card in lane {backrow_lane}"),
     );
-    // TS `{ state: s.state, events: [], rng: createRng(s.state.seed, s.state.rngCursor) }`: the live
-    // state, a fresh event list and an rng whose cursor is never written back.
+    // The live state, a fresh event list and an rng whose cursor is never written back.
     let state = s.state_mut();
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);

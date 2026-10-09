@@ -1,5 +1,3 @@
-//! Port of `packages/cards/test/resolving-face.test.ts` (v0.3.0 part 27.5).
-//!
 //! #64 Gifted Program's first cheap card, and the face a play's choices answer (SPEC §8 #64, §10.5
 //! steps 1 and 3, R56, R81, R90, R213, R214). Found by the polish-4 edge-case hunt, round 3
 //! (docs/polish/4-edge-cases.md, lenses L1, L2 and L9); every case here failed before its fix, except
@@ -34,7 +32,7 @@ const LIBRARY: [&str; 8] = [
     VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA,
 ];
 
-/// TS `at(card)`: the one-instance selection list naming `id`.
+/// The one-instance selection list naming `id`.
 fn at(id: &str) -> Value {
     json!([{ "pick": "instance", "instanceId": id }])
 }
@@ -61,7 +59,7 @@ fn offered(g: &Scenario, id: &str) -> Vec<ActionBody> {
         .collect()
 }
 
-/// The `modes` of each offered play, as TS's `.map((action) => action.modes)`.
+/// The `modes` of each offered play.
 fn offered_modes(g: &Scenario, id: &str) -> Vec<Option<Vec<String>>> {
     offered(g, id)
         .into_iter()
@@ -103,7 +101,7 @@ mod r213_gifted_programs_first_cheap_card_is_its_controllers_first_of_the_turn {
         // p1's turn begins. p1 holds #9 Moths to the Flame, worn down to 4 health; p2 holds Gifted
         // Program, a Prem Panther, and a Hinder on top of the library.
         let mut g = scenario(json!({
-            // Snom Bunny Mind Control (4 since patch v0.2.0, issue #40) and Stockpile (1).
+            // Snom Bunny Mind Control (4) and Stockpile (1).
             "p1": {
                 "hand": [MIND_CONTROL, STOCKPILE],
                 "field": [{ "def": MOTHS, "lane": 1, "damage": 10 }],
@@ -215,8 +213,8 @@ mod r214_a_plays_choices_are_the_choices_of_the_face_it_resolves_with {
      {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
-            // Patch v0.2.9 costs Pocket Chaos at (4): a −2 costMod puts the play at (2), inside
-            // radiant Gifted Program's threshold, while its base cost stays (4).
+            // Pocket Chaos costs (4): a −2 costMod puts the play at (2), inside radiant Gifted
+            // Program's threshold, while its base cost stays (4).
             "p1": {
                 "hand": [{ "def": POCKET_CHAOS, "costMod": -2 }, STOCKPILE],
                 "library": [STOCKPILE],
@@ -243,7 +241,7 @@ mod r214_a_plays_choices_are_the_choices_of_the_face_it_resolves_with {
                 .count(),
             0
         );
-        // The radiant face draws nothing since patch v0.1.1: the library's Stockpile stays there.
+        // The radiant face draws nothing: the library's Stockpile stays there.
         assert_eq!(
             g.hand(PlayerId::P1)
                 .iter()
@@ -347,9 +345,9 @@ mod r214_step_3_applies_the_face_step_1_checked_whatever_step_2_put_on_the_board
         // keeps its instance and its type (R77). #22 eats Units only (R428), and this one is a Unit.
         let vanilla = must(s.unit(PlayerId::P1, 3), "p1's Mr. Vanilla");
         let gifted = must(s.backrow(PlayerId::P1, 1), "p1's Gifted Program");
-        // #99's result, built the way `099-craft-a-card.test.ts` builds one: Lava Golem + Bigot, a
-        // Unit with Tribute 3 costing 0, whose base face names an enemy non-Human unit to destroy and
-        // whose radiant face destroys every enemy non-Human unit and names nothing (R102, R214).
+        // #99's result: Lava Golem + Bigot, a Unit with Tribute 3 costing 0, whose base face names an
+        // enemy non-Human unit to destroy and whose radiant face destroys every enemy non-Human unit
+        // and names nothing (R102, R214).
         let lava_golem = s.card(LAVA_GOLEM).clone();
         let bigot = s.card(BIGOT).clone();
         let (gifted_unit, crafted) = {

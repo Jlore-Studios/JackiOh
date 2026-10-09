@@ -1,19 +1,16 @@
-//! The engine half of patch v0.2.0's Core patches and cosmetics (docs/classic-sets.md B0, issue #40):
+//! The engine half of the Core patches and cosmetics (docs/classic-sets.md B0):
 //!
 //!   R429  §10.5 step 4 counts a card's plays on its instance when its script asks
 //!         (`StaticFlags.countsPlays`, `timesPlayed`), which #31 KY's Math Equation reads; and, with
-//!   R766  (issue #557), step 7 notes the price a Spell whose return keeps it was played at
+//!   R766  step 7 notes the price a Spell whose return keeps it was played at
 //!         (`StaticFlags.returnKeepsPrice`), which #31's return gives back;
 //!   R433  `createGame` learns the seats that were dealt a deck, whose library lists as unknown;
 //!   R434  once the game is over, each view carries the other player's hand;
-//!   R437  a delayed effect aimed at a card marks it in both views while it waits (`marks.ts`).
+//!   R437  a delayed effect aimed at a card marks it in both views while it waits.
 //!
-//! R426 (#32 Prem Panther) rides `Script.afterAttack`, proved in after-attack.test.ts. Every behaviour
-//! runs through fixture scripts (`fixtures/corePatches.ts`); the real cards prove it again in
-//! packages/cards. Pauses are JSON round-tripped mid-way, and the games that can be folded
-//! from `(seed, decks, log)` are folded and compared (§9.3).
-//!
-//! Port of `packages/engine/test/corePatches.test.ts`.
+//! R426 (#32 Prem Panther) rides `Script.afterAttack`. Every behaviour runs through fixture scripts;
+//! the real cards prove it again in `crates/cards`. Pauses are JSON round-tripped mid-way, and the
+//! games that can be folded from `(seed, decks, log)` are folded and compared (§9.3).
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -40,19 +37,18 @@ use crate::rules::fixtures::core_patches::{
 };
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
 
-/// TS's module-level `let nonce = 0`: every action this file sends gets a fresh nonce.
+/// Every action this file sends gets a fresh nonce.
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
 fn json_of<T: serde::Serialize>(value: T) -> Value {
     serde_json::to_value(value).expect("serialisable")
 }
 
-/// `JSON.parse(JSON.stringify(state))`.
 fn round_trip(state: &GameState) -> GameState {
     serde_json::from_value(json_of(state)).expect("a state survives JSON")
 }
 
-/// vitest's `toMatchObject`: every key the expected object names matches, recursively.
+/// Every key the expected object names matches, recursively.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (Value::Object(actual), Value::Object(expected)) => expected
@@ -65,9 +61,7 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
     }
 }
 
-/// TS `sinkFor(state)`: a sink whose rng starts at the state's cursor, as reduce does. The events and
-/// the rng are kept beside the state, so the test can read the state between calls as TS's shared
-/// objects let it.
+/// A sink whose rng starts at the state's cursor, as reduce does, kept beside the state.
 struct Sink {
     events: Vec<GameEvent>,
     rng: Rng,
@@ -109,7 +103,7 @@ fn board(seed: &str) -> GameState {
     state
 }
 
-/// `reduce` with a fresh nonce; `body` is the TS `ActionInput` literal (its `playerId` included).
+/// `reduce` with a fresh nonce; `body` carries its `playerId`.
 fn act(state: &GameState, body: Value) -> ReduceResult {
     let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
     let mut action = body;
@@ -150,7 +144,7 @@ fn view_events_of(view: &Value, ty: &str) -> Vec<Value> {
         .unwrap_or_default()
 }
 
-/// The sum of a library list's entry counts (`list.cards.reduce((sum, entry) => sum + entry.count, 0)`).
+/// The sum of a library list's entry counts.
 fn listed(list: &Value) -> i64 {
     list["cards"]
         .as_array()
@@ -158,9 +152,7 @@ fn listed(list: &Value) -> i64 {
         .unwrap_or(0)
 }
 
-// ---------------------------------------------------------------------------------------------
 // R429: the times a card has been played
-// ---------------------------------------------------------------------------------------------
 
 mod r429_10_5_step_4_counts_the_plays_of_a_card_that_asks {
     use super::*;
@@ -242,7 +234,6 @@ mod r429_10_5_step_4_counts_the_plays_of_a_card_that_asks {
 
         cast_card(&mut sink.on(&mut state), &card, CastOptions::default());
 
-        // TS read the live instance the cast changed; Rust reads it back from the state by its id.
         assert_eq!(
             times_played_of(find_instance(&state, &card.id).expect("the cast card")),
             1
@@ -264,9 +255,7 @@ mod r429_10_5_step_4_counts_the_plays_of_a_card_that_asks {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
-// R429, R766 (issues #557, #572): the climb a return that keeps it was played at
-// ---------------------------------------------------------------------------------------------
+// R429, R766: the climb a return that keeps it was played at
 
 mod r429_r766_step_7_notes_the_price_a_return_that_keeps_it_was_played_at {
     use super::*;
@@ -275,7 +264,7 @@ mod r429_r766_step_7_notes_the_price_a_return_that_keeps_it_was_played_at {
     use jackioh_engine::resolve::{RETURN_PRICE_KEY, add_return_price};
 
     /// p1 plays its copy of `def` from hand at `cost_mod`, `climb` of it the price its own earlier
-    /// returns gave it (`setCostMod`'s `returnPrice`): the state after the play, and the card's id.
+    /// returns gave it: the state after the play, and the card's id.
     fn play_at(seed: &str, def: &CardDef, cost_mod: i32, climb: i32) -> (GameState, String) {
         let mut state = board(seed);
         put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
@@ -307,7 +296,7 @@ mod r429_r766_step_7_notes_the_price_a_return_that_keeps_it_was_played_at {
     #[test]
     fn r429_r766_a_spell_whose_return_keeps_its_price_lies_in_its_graveyard_at_its_printed_cost_with_the_climb_it_was_played_at_noted()
      {
-        // Played at a `costMod` of 3, 2 of it its climb and 1 a surcharge (issue #572).
+        // Played at a `costMod` of 3, 2 of it its climb and 1 a surcharge.
         let (state, id) = play_at("r766-noted", &priced_return, 3, 2);
         let card = lying(&state, &id);
         // R155: step 7 flagged it for its end-of-turn return.
@@ -331,8 +320,7 @@ mod r429_r766_step_7_notes_the_price_a_return_that_keeps_it_was_played_at {
         assert!(card.memory.get(RETURN_PRICE_KEY).is_none());
         assert_eq!(return_price_of(&card), 0);
 
-        // A card that asks but has no climb: nothing to note, whatever else it was played at (issue
-        // #572), so its state is the one it had before the note existed.
+        // A card that asks but has no climb notes nothing, whatever else it was played at.
         let (state, id) = play_at("r766-zero", &priced_return, 0, 0);
         assert!(lying(&state, &id).memory.get(RETURN_PRICE_KEY).is_none());
         let (state, id) = play_at("r766-discounted", &priced_return, -1, 0);
@@ -411,7 +399,6 @@ mod r427_r174_a_resolved_plays_card_that_something_answering_the_play_has_since_
             }))
         };
 
-        // Standing: nothing has taken it.
         let event = resolved_now(&state);
         assert!(!left_field_since_resolved(&state, &event));
 
@@ -433,9 +420,7 @@ mod r427_r174_a_resolved_plays_card_that_something_answering_the_play_has_since_
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R433: a dealt deck
-// ---------------------------------------------------------------------------------------------
 
 /// Both mulligans answered keeping everything, in seat order.
 fn keep_all(state: GameState, log: &mut Vec<Action>) -> GameState {
@@ -573,9 +558,7 @@ mod r433_a_dealt_deck_lists_only_the_cards_its_owner_has_been_shown {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R434: the game's end reveals both hands
-// ---------------------------------------------------------------------------------------------
 
 mod r434_once_the_game_is_over_each_view_carries_the_other_players_hand {
     use super::*;
@@ -614,7 +597,6 @@ mod r434_once_the_game_is_over_each_view_carries_the_other_players_hand {
             &hand[0],
             &json!({ "defId": plain.id, "attack": 3, "health": 3 })
         ));
-        // And for the other seat, symmetrically.
         let other: Vec<Value> = json_of(view_for(&over, P2))["opponent"]["hand"]
             .as_array()
             .map(|cards| cards.iter().map(|card| card["defId"].clone()).collect())
@@ -656,9 +638,7 @@ mod r434_once_the_game_is_over_each_view_carries_the_other_players_hand {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R437: a marked card shows its mark
-// ---------------------------------------------------------------------------------------------
 
 fn unit_view_of(state: &GameState, viewer: PlayerId, side: &str, lane: usize) -> Value {
     let unit = json_of(view_for(state, viewer))[side]["units"][lane - 1].clone();

@@ -1,25 +1,15 @@
-//! Deaths, their killers and Reborn bodies (SPEC §4.5, §6.1, §6.3 Sacrifice, R42, R78, R83, R89,
-//! R174). Found by the polish-4 edge-case hunt, round 2 (docs/polish/4-edge-cases.md, lenses L2, L3
-//! and L8); every case here failed before its fix.
+//! Deaths, their killers and Reborn bodies (SPEC §4.5, §6.1, §6.3 Sacrifice, R42, R78, R83,
+//! R89, R174), from the polish-4 edge-case hunt (docs/polish/4-edge-cases.md, lenses L2, L3 and L8).
+//! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
 //!
 //!  - §4.5 step 1, R89: the units one check collects are read before any of them moves, so each dies
-//!    with the aura and the layer-2 stats it had — not with lane order deciding which it lost.
-//!  - R42, R89: the killer is the hit that took the unit to 0, credited as it lands, so a unit an
-//!    aura later starves has no killer.
+//!    with the aura and the layer-2 stats it had, not with lane order deciding which it lost.
+//!  - R42, R89: the killer is the hit that took the unit to 0, credited as it lands; a unit is
+//!    killed once, by the first thing that dooms it, and a unit an aura later starves has no killer.
 //!  - R174: what a card queued while it stood on the field, and a delayed effect aimed at it, end
 //!    with that stay, so a Reborn body is not acted on by either.
-//!  - Round 6, lens L2. §4.5 step 4, §10.1: Reborn returns a collected unit from the graveyard step 1
-//!    moved it to, and from nowhere else, so a Death hook of the same pass that moved it on (a later
-//!    set's "exile your graveyard", built here as a fixture) does not leave it in two zones.
-//!  - Round 9, lens "combat windows". R42, R89: a unit is killed once, by the first thing that dooms
-//!    it before the check collects it, and what lands on it afterwards changes nothing: a destroy after
-//!    the lethal hit, a Poisonous hit on a unit already at 0, a hit on a unit a Poisonous hit already
-//!    marked. The cards are fixtures (no Core Death deals damage, and no Core Cry both damages and
-//!    destroys; #99 crafting #68 with #2 is the Core shape of the first).
-//!
-//! Port of `packages/cards/test/deaths-and-reborn.test.ts` (SURFACE §4.1, §8). TS's live card objects
-//! are owned copies here, read back from the state by id (`g.card(&id)`) after every step and written
-//! through `find_instance_mut`.
+//!  - §4.5 step 4, §10.1: Reborn returns a collected unit from the graveyard step 1 moved it to, and
+//!    from nowhere else, so a Death hook that moved it on does not leave it in two zones.
 
 use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::effects::{damage, destroy, draw, exile_matching};
@@ -45,16 +35,15 @@ const FAUCI: &str = "core-091";
 const FIENDER: &str = "core-092";
 const LIBRARY: [&str; 10] = [VANILLA; 10];
 
-/// On these seeds #63 Plastic Surgery's first random keyword is Reborn: for a unit that already has
-/// Rush (Fed Fauci) the pool order and the first rng draw match re-entry.test.ts's token, so it shares
-/// that seed; the Gravedigger scenario draws from a fuller pool at another rng cursor, so it carries
-/// its own.
+/// On these seeds #63 Plastic Surgery's first random keyword is Reborn. The Gravedigger scenario
+/// draws from a fuller pool at another rng cursor than a unit that already has Rush (Fed Fauci), so
+/// it carries its own seed.
 const REBORN_SEED: &str = "re-entry-reborn-token-32"; // R346 put Pierce in the pool, which moved the roll off "-4"; R636's Windfury moved it off "-10" and "-19"; R49's Deft moved it off "-31".
 const REBORN_SEED_DIGGER: &str = "re-entry-reborn-token-40"; // Same history: R49's Deft moved the roll off "-31".
 
 use super::scenario;
 
-/// TS `at(card)`: the one-instance target list a play sends.
+/// The one-instance target list a play sends.
 fn at(card: &CardInstance) -> Value {
     json!([{ "pick": "instance", "instanceId": card.id }])
 }
@@ -192,7 +181,7 @@ mod r42_the_killer_is_the_hit_that_took_the_unit_to_0 {
             } if *instance_id == dfender.id => Some(killer_id.clone()),
             _ => None,
         });
-        // toMatchObject({ killerId: null }): the event is there, and names no killer.
+        // The event is there, and names no killer.
         assert_eq!(destroyed, Some(None));
         // §8 #32: "whenever this destroys a unit, draw 2" — it did not, so nothing was drawn.
         assert_eq!(s.hand(P1).len(), hand_before - 1);
@@ -266,11 +255,10 @@ mod r174_what_was_queued_for_a_cards_old_stay_does_not_act_on_its_reborn_body {
     #[test]
     fn r174_r76_a_delayed_steal_whose_target_died_and_came_back_through_reborn_during_an_earlier_delayed_effect_fizzles()
      {
-        // p1 plays two K-Pop Fanatics on turn 9: A on p2's Big Felinor, then B on p2's Felinor Fiender,
-        // which has Reborn and 10 damage and stands at 8/17 only because Big Felinor feeds its stats
-        // (§8 #92, R116). At p1's next start of turn A steals Big Felinor first (R68's creation order),
-        // the Fiender drops to 5/7 and dies, and Reborn brings it straight back at 1 health. B's target
-        // left the field in between, so B fizzles (R76) and the Reborn body stays p2's.
+        // p1 plays two K-Pop Fanatics: A on p2's Big Felinor, B on p2's Felinor Fiender, which has Reborn
+        // and 10 damage and stands at 8/17 only because Big Felinor feeds its stats (§8 #92, R116). At
+        // p1's next start of turn A steals Big Felinor first (R68's creation order), the Fiender dies at
+        // 5/7 and Reborn returns it; B's target left the field in between, so B fizzles (R76).
         let mut g = scenario(json!({
             "p1": { "hand": [KPOP, KPOP, VANILLA], "library": LIBRARY },
             "p2": {
@@ -314,13 +302,11 @@ mod r174_what_was_queued_for_a_cards_old_stay_does_not_act_on_its_reborn_body {
         g.end_turn();
         assert_eq!(g.state().active, P1);
 
-        // A landed; the Fiender died and came back.
         assert_eq!(g.card(&felinor.id).controller, P1);
         assert!(was_destroyed(g.events(), &fiender.id));
         g.expect_in_zone(&fiender.id, "field");
         assert_eq!(g.card(&fiender.id).reborn_spent, Some(true));
 
-        // B fizzled: the body that came back is still p2's.
         assert_eq!(g.card(&fiender.id).controller, P2);
     }
 }
@@ -336,8 +322,7 @@ fn must<T>(value: Option<T>, what: &str) -> T {
     }
 }
 
-/// A fixture card: a transient def in the match state and its script in the registry. TS
-/// `fixture(s, id, type, script, stats = { attack: 2, health: 2 })`.
+/// A fixture card: a transient def in the match state and its script in the registry.
 fn fixture(s: &mut Scenario, id: &str, type_: CardType, script: Script, stats: Option<AttackHealth>) {
     let stats = stats.unwrap_or(AttackHealth { attack: 2, health: 2 });
     let face = if type_ == CardType::Unit {
@@ -461,12 +446,10 @@ mod section_4_5_step_4_10_1_reborn_never_leaves_one_card_in_two_zones {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Round 9: a unit already killed is not killed again (R42, R89, §4.4 step 7)
-// ---------------------------------------------------------------------------
 
 /// A fixture unit with a face of its own: a transient def in the match state and its script in the
-/// registry. TS `fixtureUnit(s, id, script, stats, keywords = [])`.
+/// registry.
 fn fixture_unit(s: &mut Scenario, id: &str, script: Script, stats: AttackHealth, keywords: Vec<Keyword>) {
     let face = json!({ "attack": stats.attack, "health": stats.health, "keywords": keywords, "text": id });
     let def: CardDef = json_as(json!({
@@ -519,7 +502,7 @@ fn place_unit(s: &mut Scenario, def_id: &str, player: PlayerId, lane: i32) -> Ca
     live.clone()
 }
 
-/// TS `killerOf`: `None` when the unit has no `destroyed` event (TS `undefined`), else its killer.
+/// `None` when the unit has no `destroyed` event, else its killer.
 fn killer_of(s: &Scenario, card: &CardInstance) -> Option<Option<String>> {
     s.events().iter().find_map(|event| match event {
         GameEvent::Destroyed {
@@ -698,7 +681,7 @@ mod r42_r89_a_unit_already_killed_is_not_killed_again {
         assert!(hit_landed(&s, &sting, &vanilla, 1));
         assert!(hit_landed(&s, &hammer, &vanilla, 5));
         s.expect_in_zone(&vanilla.id, "graveyard");
-        // "The Poisonous hit is the one that destroys it, whatever health it left" (damage.ts, R42):
+        // "The Poisonous hit is the one that destroys it, whatever health it left" (R42):
         // the sting's hit killed it, and the hammer's 5 landed on a unit already destroyed.
         assert_eq!(killer_of(&s, &vanilla), Some(Some(sting.id.clone())));
     }

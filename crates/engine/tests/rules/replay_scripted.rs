@@ -1,18 +1,11 @@
-// Replay with scripted decks (SPEC §9.2, §9.3; REVIEW B1.2, B8). `replay.test.ts` folds 100 games
-// to identical hashes, but its decks are script-less fixture units, so M3's new state queues are
-// empty in every fold: the M3 review measured `echoQueue`, `triggerQueue`, `delayed` and the
-// dispatch frontier as never reached across all 100 seeds. These decks are scripted — an
-// end-of-turn trigger, a Death hook, two traps, a delayed effect, an Echo card and three cards
-// that open prompts — so the folds exercise the queues, and the run asserts that they did.
+// Replay with scripted decks (SPEC §9.2, §9.3; REVIEW B1.2, B8). Script-less fixture decks leave the
+// state queues (`echoQueue`, `triggerQueue`, `delayed`, the dispatch frontier) empty in every fold.
+// These decks are scripted — an end-of-turn trigger, a Death hook, two traps, a delayed effect, an Echo
+// card and three cards that open prompts — so the folds exercise the queues, and the run asserts it.
 //
-// 30 seeds, not 100: a game on these decks runs ~85 actions rather than a vanilla game's handful
-// (every prompt is an action of its own), and each seed is played once and then replayed twice —
-// once through `fold` for the M1 gate's own check, once step by step to compare every state on the
-// way. That is ~2,600 actions and three passes per seed, and it reaches every queue. The run is
-// seeded end to end, so what it reaches is fixed rather than sampled: more seeds would add breadth,
-// not confidence.
-//
-// Port of `packages/engine/test/replay-scripted.test.ts`.
+// 30 seeds: a game on these decks runs ~85 actions (every prompt is an action), and each seed is
+// played once and replayed twice (`fold`, then step by step). The run is seeded end to end, so what it
+// reaches is fixed rather than sampled: more seeds would add breadth, not confidence.
 
 use std::sync::OnceLock;
 
@@ -22,7 +15,6 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::setup_catalog;
 
-/// `{ ...into, ...from }` on two JSON objects.
 fn spread(into: &mut Value, from: &Value) {
     if let (Some(into), Some(from)) = (into.as_object_mut(), from.as_object()) {
         for (key, value) in from {
@@ -31,7 +23,6 @@ fn spread(into: &mut Value, from: &Value) {
     }
 }
 
-/// TS's module `let nextIndex = 1400`, written out: each def takes the index it had.
 fn def(name: &str, type_: &str, index: u32, extra: Value) -> CardDef {
     let mut def = json!({
         "id": format!("rs-{name}"),
@@ -81,11 +72,8 @@ fn asker() -> CardDef {
     unit("asker", 1404, 1, 1, json!({}))
 }
 /// Echo 2 on a Spell whose Cry prompts, so a repeat is left *waiting* in `echoQueue` while a prompt
-/// is open. Echo 1 does not reach that state: `playSteps.takeEchoRepeat` drops the entry as it takes
-/// the last repeat, so the one repeat is in flight (inside the owed play's own record) rather than
-/// in the queue, and every state this run observes has `echoQueue` empty. With two, the first repeat
-/// pauses on its fresh prompt while the second is still owed in the queue — which is what §10.5
-/// step 6 has to survive a pause for, and what this run must pass through to prove the fold.
+/// is open. Echo 1 never reaches that state: the one repeat is in flight, not queued. With two, the
+/// first repeat pauses while the second is still owed in the queue — what §10.5 step 6 must survive.
 fn echo_asker() -> CardDef {
     def("echo-asker", "Spell", 1405, json!({}))
 }
@@ -501,7 +489,7 @@ fn start_state(seed: &str) -> GameState {
 }
 
 /// One game by the random policy of §10.7 (`chooseAction`, so the run draws from exactly the set
-/// R84 names), walking every state it passes through on the way. TS's `Walk & { log }`.
+/// R84 names), walking every state it passes through on the way.
 fn play_scripted_game(seed: &str) -> (Walk, Vec<Action>) {
     register_all();
     let mut state = start_state(seed);
@@ -610,8 +598,7 @@ fn run() -> &'static Run {
             let (played, log) = play_scripted_game(&seed);
             merge(&mut live, &played.peaks);
 
-            // Fold the recorded log from the seed in a fresh state (the M1 gate's own check), and then
-            // walk the same log again to compare every state on the way, queues included.
+            // Fold the recorded log from the seed (the M1 gate's own check), then walk it again step by step.
             register_all();
             let folded = fold(&FoldArgs {
                 seed: seed.clone(),

@@ -5,8 +5,6 @@
 //!
 //! The fixture defs these tests need are registered here, on top of the shared fixture catalog, so
 //! no shared fixture has to grow for them (CLAUDE.md, BUILD §0).
-//!
-//! Port of `packages/engine/test/effects-library.test.ts`.
 
 use jackioh_engine::effects::add_to_hand::{add_random_from_catalog, add_to_hand};
 use jackioh_engine::effects::choose::{discover_from_catalog, discover_from_library};
@@ -15,12 +13,9 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, set_library};
 
-// ---------------------------------------------------------------------------
 // Fixture cards.
-// ---------------------------------------------------------------------------
 
-/// TS `makeDef(name, overrides)`: `nextIndex` starts at 1800 and is bumped once per call, in the order
-/// the TS file declares its defs; `overrides` is spread over the literal (a shallow merge).
+/// `overrides` is spread over the literal (a shallow merge).
 fn make_def(name: &str, index: u32, overrides: Value) -> CardDef {
     let mut def = json!({
         "id": format!("lib-{name}"),
@@ -81,9 +76,8 @@ fn unit_token() -> CardDef {
     )
 }
 
-// A pool of its own set, so `query({ set: "Boss" })` is exactly these three and nothing the shared
-// fixture catalog happens to contain. Making `ctx.self` one OF the pool is what makes §5.1's "a
-// random pool never offers the card that generated it" observable rather than vacuous.
+// A pool of its own set, so `query({ set: "Boss" })` is exactly these three. Making `ctx.self` one OF
+// the pool makes §5.1's "never offers the card that generated it" observable rather than vacuous.
 fn pool_a() -> CardDef {
     make_def("pool-a", 1807, json!({ "set": "Boss" }))
 }
@@ -172,15 +166,14 @@ fn resolving_self(state: &mut GameState, def_id: &str, player: PlayerId) -> Card
     card
 }
 
-/// TS `run(state, effects, { controller, self })`: the effects applied in order through one context on
-/// a fresh sink over `state`; its events. Like TS's, the rng is not written back.
+/// The effects applied in order through one context on a fresh sink over `state`; its events. The rng
+/// is not written back.
 fn run(
     state: &mut GameState,
     effects: Vec<Effect>,
     controller: Option<PlayerId>,
     self_: Option<&CardInstance>,
 ) -> Vec<GameEvent> {
-    // TS passed the live object; here the card as it stands now.
     let self_: Option<CardInstance> = self_.map(|card| {
         find_instance(&*state, &card.id)
             .cloned()
@@ -246,14 +239,11 @@ fn instance(id: &str) -> Value {
     json!({ "of": "instance", "instanceId": id })
 }
 
-// ---------------------------------------------------------------------------
 // §6.3 Add to hand: "Creates OR MOVES the card"
-// ---------------------------------------------------------------------------
 
 mod add_to_hand_moves_an_existing_card_51_72 {
     use super::*;
 
-    /// TS: "§6.3 moves a library card and a graveyard card into the hand, leaving no copy behind".
     #[test]
     fn moves_a_library_card_and_a_graveyard_card_into_the_hand_leaving_no_copy_behind() {
         let mut state = game("move-to-hand");
@@ -325,7 +315,6 @@ mod add_to_hand_moves_an_existing_card_51_72 {
         );
     }
 
-    /// TS: "§6.3 does nothing when the instance it names is already in a hand".
     #[test]
     fn does_nothing_when_the_instance_it_names_is_already_in_a_hand() {
         let mut state = game("already-in-hand");
@@ -393,7 +382,6 @@ mod add_to_hand_moves_an_existing_card_51_72 {
         assert_eq!(effective_cost(&state, priced, Default::default()), 1);
     }
 
-    /// TS: "§2.4 a moved card added to a full hand is burned instead (R4)".
     #[test]
     fn r4_a_moved_card_added_to_a_full_hand_is_burned_instead() {
         let mut state = game("move-into-full-hand");
@@ -421,14 +409,11 @@ mod add_to_hand_moves_an_existing_card_51_72 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // §5.1 / §10.7 the catalog add (#54, #57, #59)
-// ---------------------------------------------------------------------------
 
 mod add_random_from_catalog_54_57_59 {
     use super::*;
 
-    /// TS: "§5.1 never offers the card that generated the pool".
     #[test]
     fn never_offers_the_card_that_generated_the_pool() {
         let mut state = game("pool-excludes-self");
@@ -499,7 +484,6 @@ mod add_random_from_catalog_54_57_59 {
         assert_eq!(events_of_type(&events, GameEventType::PromptOpened).len(), 1);
     }
 
-    /// TS: "§6.3 carries the radiant flag and the cost riders onto every card it creates (#54, #59)".
     #[test]
     fn carries_the_radiant_flag_and_the_cost_riders_onto_every_card_it_creates_54_59() {
         let mut state = game("pool-riders");
@@ -521,7 +505,6 @@ mod add_random_from_catalog_54_57_59 {
         }
     }
 
-    /// TS: "§6.3 an empty pool fizzles and the card still resolves".
     #[test]
     fn an_empty_pool_fizzles_and_the_card_still_resolves() {
         let mut state = game("pool-empty");
@@ -539,9 +522,7 @@ mod add_random_from_catalog_54_57_59 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // §6.3 Exile out of a library (#34, #40, #42, #65)
-// ---------------------------------------------------------------------------
 
 mod exile_random_from_library_34_42 {
     use super::*;
@@ -585,7 +566,6 @@ mod exile_random_from_library_34_42 {
         assert_eq!(reported, sorted);
     }
 
-    /// TS: "#34 exiles from the library the player argument names".
     #[test]
     fn exiles_from_the_library_the_player_argument_names_34() {
         let mut state = game("exile-random-enemy");
@@ -607,7 +587,6 @@ mod exile_random_from_library_34_42 {
         assert_eq!(state.players[PlayerId::P2].library.len(), 1);
     }
 
-    /// TS: "#42 fewer than count in the library exiles all of them".
     #[test]
     fn fewer_than_count_in_the_library_exiles_all_of_them_42() {
         let mut state = game("exile-random-short");
@@ -653,9 +632,7 @@ mod exile_random_from_library_34_42 {
         );
 
         assert_eq!(state.players[PlayerId::P1].library.len(), 0);
-        // R11/R86: it is in no pile and its zone says so. (The zone half, `{ z: "gone" }` on TS's live
-        // object, has no Rust counterpart: a card in no pile is not reachable from the state.
-        // `78f131c^:.fullsend/notes/spec-gaps-part-24-3.md`.)
+        // R11/R86: it is in no pile, so it is not reachable from the state.
         assert!(find_instance(&state, &token.id).is_none());
         assert!(!ids(&state.players[PlayerId::P1].exile).contains(&token.id));
         assert_eq!(state.players[PlayerId::P1].exile.len(), 2);
@@ -669,7 +646,6 @@ mod exile_random_from_library_34_42 {
 mod exile_bottom_of_library_40_65 {
     use super::*;
 
-    /// TS: "#40 takes the BOTTOM card of the library, not the top".
     #[test]
     fn takes_the_bottom_card_of_the_library_not_the_top_40() {
         let mut state = game("exile-bottom");
@@ -708,7 +684,6 @@ mod exile_bottom_of_library_40_65 {
         assert_eq!(state.counters.exiled, 2);
     }
 
-    /// TS: "#40 an empty library exiles nothing and causes NO fatigue".
     #[test]
     fn an_empty_library_exiles_nothing_and_causes_no_fatigue_40() {
         let mut state = game("exile-bottom-empty");
@@ -726,7 +701,7 @@ mod exile_bottom_of_library_40_65 {
         assert_eq!(events, Vec::<GameEvent>::new());
         assert_eq!(state.players[PlayerId::P1].exile.len(), 0);
         assert_eq!(state.counters.exiled, 0);
-        // Fatigue is the price of a DRAW from an empty library; this verb never reaches `draw.ts`.
+        // Fatigue is the price of a DRAW from an empty library; this verb never draws.
         assert_eq!(state.players[PlayerId::P1].fatigue_count, before);
         assert_eq!(state.players[PlayerId::P1].hero.health, health);
         assert_eq!(events_of_type(&events, GameEventType::Damage).len(), 0);
@@ -745,17 +720,14 @@ mod exile_bottom_of_library_40_65 {
             None,
         );
 
-        // TS: `token.zone` is `{ z: "gone", player: "p1" }`. A card that is gone is in no pile, so it is
-        // no longer reachable from the state (`78f131c^:.fullsend/notes/spec-gaps-part-24-3.md`).
+        // A card that is gone is in no pile, so it is not reachable from the state.
         assert!(find_instance(&state, &token.id).is_none());
         assert_eq!(state.players[PlayerId::P1].exile.len(), 0);
         assert_eq!(state.counters.exiled, 0);
     }
 }
 
-// ---------------------------------------------------------------------------
 // §6.3 Discover with the library as the pool (#51)
-// ---------------------------------------------------------------------------
 
 mod discover_from_library_51_ky_s_private_tutor {
     use super::*;
@@ -796,7 +768,6 @@ mod discover_from_library_51_ky_s_private_tutor {
         ids
     }
 
-    /// TS: "§10.6 offers exactly the matching library instances and resumes at the step it was given".
     #[test]
     fn offers_exactly_the_matching_library_instances_and_resumes_at_the_step_it_was_given() {
         let mut state = game("discover-library");
@@ -875,7 +846,6 @@ mod discover_from_library_51_ky_s_private_tutor {
         );
     }
 
-    /// TS: "#51 a Field Trap counts as a Trap for type matching".
     #[test]
     fn a_field_trap_counts_as_a_trap_for_type_matching_51() {
         let mut state = game("discover-library-field-trap");
@@ -939,7 +909,6 @@ mod discover_from_library_51_ky_s_private_tutor {
         }
     }
 
-    /// TS: "§6.3 opens no prompt when nothing matches: the effect fizzles and the card still resolves".
     #[test]
     fn opens_no_prompt_when_nothing_matches_the_effect_fizzles_and_the_card_still_resolves() {
         let mut state = game("discover-library-no-match");
@@ -973,7 +942,6 @@ mod discover_from_library_51_ky_s_private_tutor {
         assert!(state.pending.is_none());
     }
 
-    /// TS: "§10.8 the prompt belongs to the chooser even when the pool is the other player's library".
     #[test]
     fn the_prompt_belongs_to_the_chooser_even_when_the_pool_is_the_other_player_s_library() {
         let mut state = game("discover-library-enemy-pool");

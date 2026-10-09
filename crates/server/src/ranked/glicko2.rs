@@ -1,19 +1,16 @@
 //! The hidden rating (SPEC §9.12, R603): Glicko-2, as Mark Glickman's "Example of the Glicko-2
-//! system" (2013) writes it, step for step (← `apps/server/src/ranked/glicko2.ts`). Every number is
-//! `src/config.rs`'s.
+//! system" (2013) writes it, step for step. Every number is `src/config.rs`'s.
 //!
 //! One rated game is one rating period: each side is updated against the other's rating from before
-//! the game, so the two updates do not depend on which is computed first. A draw scores 0.5 for both,
-//! a concede and a disconnect are losses (§2.5's endings decide who won; this file only reads the
-//! score).
+//! the game. A draw scores 0.5 for both, a concede and a disconnect are losses (§2.5's endings decide
+//! who won; this file only reads the score).
 //!
-//! Pure and deterministic: the same inputs give the same output on every machine, because the only
-//! operations are IEEE-754 arithmetic, `exp`, `ln` and `sqrt`, and the volatility iteration runs a
-//! fixed rule to a fixed tolerance. `tests/api/glicko2.rs` checks it against Glickman's worked
-//! example and against reference values computed independently at 50 digits.
+//! Pure and deterministic: only IEEE-754 arithmetic, `exp`, `ln` and `sqrt`, and the volatility
+//! iteration runs a fixed rule to a fixed tolerance. `tests/api/glicko2.rs` checks it against
+//! Glickman's worked example and reference values computed at 50 digits.
 //!
-//! Glicko-2's update depends only on rating differences, so the scale's centre (Glickman's 1500) is
-//! any fixed number; this file uses `RATING_START`, and an Elo rating carries over as it is (R603).
+//! The update depends only on rating differences, so the scale's centre is any fixed number; this
+//! file uses `RATING_START`, and an Elo rating carries over as it is (R603).
 
 use serde::{Deserialize, Serialize};
 
@@ -31,8 +28,7 @@ pub struct Glicko {
     pub volatility: f64,
 }
 
-/// A game's score for the side it is read from: a win (1), a draw (0.5) or a loss (0). TS's
-/// `0 | 0.5 | 1`, a numeric union, is an `f64` holding one of those three values.
+/// A game's score for the side it is read from: a win (1), a draw (0.5) or a loss (0).
 pub type Score = f64;
 
 /// One game of a rating period: the opponent's rating before it, and the score against them.
@@ -104,8 +100,6 @@ fn next_volatility(sigma: f64, phi: f64, v: f64, delta: f64, tau: f64) -> f64 {
 
 /// Glickman's steps 2–8 for one player over one rating period. A period with no games only widens
 /// the deviation (step 6 alone); the server never rates one, but the formula is defined there too.
-///
-/// TS's `tau` defaulted to `GLICKO_TAU`; Rust has no default arguments, so callers pass it.
 pub fn glicko2_period(player: &Glicko, games: &[RatedOpponent], tau: f64) -> Glicko {
     // Step 2: onto the Glicko-2 scale.
     let mu = (player.rating - RATING_START) / GLICKO_SCALE;
@@ -148,7 +142,7 @@ pub fn glicko2_period(player: &Glicko, games: &[RatedOpponent], tau: f64) -> Gli
     }
 }
 
-/// `rate_game`'s answer: both sides' ratings after the game (TS `{ a: Glicko; b: Glicko }`).
+/// `rate_game`'s answer: both sides' ratings after the game.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 pub struct RatedGame {
     pub a: Glicko,

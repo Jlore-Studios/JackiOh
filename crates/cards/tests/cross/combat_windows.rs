@@ -1,29 +1,15 @@
-//! Port of `packages/cards/test/combat-windows.test.ts` (part 27.1).
-//!
 //! Who killed a unit, what My Pawn projects, and the AI turn My Pawn hands over (SPEC §4.2 step 4,
-//! §4.3, §5.1, §10.3, R42, R44, R89, R152, R176). Found by the polish-4 edge-case hunt
-//! (docs/polish/4-edge-cases.md, lenses L5 and L7); every case here failed before its fix.
+//! §4.3, §5.1, §10.3, R42, R44, R89, R152, R176; docs/polish/4-edge-cases.md, lenses L5 and L7).
 //!
 //!  - R42, R89: a destroy effect is no damage instance, so an earlier non-lethal hit is not the kill.
-//!  - R176: My Pawn's lethal projection follows the combat — an attacker a First Strike defender
-//!    kills first lands nothing, and Trample excess from the attack's Cleave hits counts.
+//!  - R176: My Pawn's lethal projection follows the combat: First Strike, Trample excess from Cleave,
+//!    and a Lifesteal strike back that heals in the same combat, by what it really deals.
 //!  - §5.1: My Pawn fires once, even while its own AI turn is still being played out.
 //!  - R44, R152: the AI plays out the rest of the turn My Pawn took, not the player's next turn.
 //!  - §10.3: the AI turn's events are dispatched once, not again by the enclosing action.
-//!  - R220 (round 6): a declared attack resolves only while it stands as it was declared — a trap in
-//!    §4.2 step 4's window that destroyed, stole or moved the attacker or its target, or swapped the
-//!    boards, ends it, and a My Pawn later in the window has nothing to answer. No Core trap but My
-//!    Pawn answers a declaration, and My Pawn cancels, so the trap in the window is a fixture (a
-//!    transient def and its script in the registry, as paused-sequences.test.ts builds them).
-//!  - R176 (round 6): a defender's Lifesteal strike back heals its hero in the same combat, so a
-//!    Trample swing it outheals is not lethal.
-//!  - R212 (round 7): the ordinary triggers on a declaration are queued after the window, and meet
-//!    the board as it stood when the attack was declared: a unit a trap in the window stole answers
-//!    for the player who controlled it then, and one a trap summoned there answers nothing.
-//!  - R176 (round 8): that strike back heals what it really deals — with Trample, only up to the
-//!    attacker's health on the unit, and its excess through the attacking hero's Armor.
-//!  - R220, §10.3 (round 8): a trap answering what a trap in the window did (its hit on the attacker)
-//!    fires inside the window, before step 5, with or without a question first.
+//!  - R220: a declared attack resolves only while it stands as declared; a trap answering a window
+//!    trap fires inside step 4's window, before step 5. The window's traps are fixtures.
+//!  - R212: the ordinary triggers on a declaration meet the board as it stood when it was declared.
 
 use jackioh_engine::testkit::*;
 
@@ -50,8 +36,7 @@ const JILLIAX: &str = "core-056";
 const GOING_LONG: &str = "core-084";
 const WINDOW_LIBRARY: [&str; 6] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 
-/// The harness with the real catalog and every card script registered (TS's `_harness.ts` import
-/// ran `registerAll()`; the engine's testkit cannot name the cards crate, so the cards test does).
+/// The harness with every card script registered: the engine's testkit cannot name the cards crate.
 fn setup(opts: Value) -> Scenario {
     jackioh_cards::register_all();
     scenario(opts)
@@ -351,7 +336,7 @@ fn must<T>(value: Option<T>, what: &str) -> T {
     value.unwrap_or_else(|| panic!("expected {what}"))
 }
 
-/// A fixture card's definition, as TS's object literal (`face` is the printed face of both sides).
+/// A fixture card's definition (`face` is the printed face of both sides).
 fn fixture_def(id: &str, type_: &str, face: Value) -> CardDef {
     json_as(json!({
         "id": id,
@@ -368,7 +353,6 @@ fn fixture_def(id: &str, type_: &str, face: Value) -> CardDef {
     }))
 }
 
-/// TS `registerScripts({ ...registeredScripts(), [id]: { base: script, radiant: script } })`.
 fn register_fixture_script(id: &str, script: Script) {
     let mut all: IndexMap<String, CardScripts> = scripts::registered_scripts().clone();
     all.insert(
@@ -520,7 +504,7 @@ fn swapper() -> Script {
     }
 }
 
-/// The attacker id a trap stored in its question's data (TS `String(ctx.data.attackerId)`).
+/// The attacker id a trap stored in its question's data.
 fn stored_attacker_id(ctx: &EffectContext<'_>) -> String {
     match ctx.data.get("attackerId") {
         Some(Value::String(id)) => id.clone(),
@@ -845,10 +829,8 @@ mod r176_the_hero_my_pawn_projects_is_the_one_the_combat_leaves {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Round 7 (lens "combat windows"): the ordinary triggers on a declaration meet the board as it stood
-// when the attack was declared (R212), whatever a trap in the window did to it since.
-// ---------------------------------------------------------------------------
+// The ordinary triggers on a declaration meet the board as it stood when the attack was declared
+// (R212), whatever a trap in the window did to it since.
 
 /// A fixture unit with a face of its own: a transient def and its script in the registry.
 fn fixture_unit(s: &mut Scenario, id: &str, script: Script, stats: AttackHealth) {
@@ -985,9 +967,7 @@ mod r212_a_declaration_is_answered_as_the_board_stood_when_it_was_declared {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
-// Round 8: the strike back's Trample split, and the window's own chain before step 5
-// ---------------------------------------------------------------------------------------------
+// The strike back's Trample split, and the window's own chain before step 5
 
 /// R176: a Lifesteal strike back that tramples heals what it really deals
 mod r176_a_lifesteal_strike_back_that_tramples_heals_what_it_really_deals {
@@ -996,11 +976,10 @@ mod r176_a_lifesteal_strike_back_that_tramples_heals_what_it_really_deals {
     #[test]
     fn r176_r63_a_defenders_lifesteal_heals_only_what_its_trample_strike_back_really_deals_so_the_swing_is_lethal_s4_4_steps_2_8_9()
      {
-        // p1's Bigot (6/1) with Trample attacks p2's Jilliax (3/2, Taunt, Lifesteal, shield spent) with
-        // Trample, p2 at 3, and p1's hero behind Going Long (Armor 2). The swing sends 6 - 2 = 4 through
-        // to p2. Jilliax strikes back 3 into a 1-health Bigot: 1 lands and heals p2 for 1, and the 2 that
-        // tramples on is stopped by p1's Armor 2 (the zero rule), so it heals nothing. p2 ends the combat
-        // at 3 - 4 + 1 = 0: the attack is lethal, and My Pawn cancels it.
+        // p1's Bigot (6/1, Trample) attacks p2's Jilliax (3/2, Taunt, Lifesteal, Trample, shield spent)
+        // with p2 at 3 and p1's hero behind Going Long (Armor 2). The swing sends 6 - 2 = 4 through.
+        // Jilliax's 3 into a 1-health Bigot lands 1 (heals p2 for 1); the 2 that tramples on is stopped
+        // by Armor 2 (the zero rule) and heals nothing. p2 ends at 3 - 4 + 1 = 0: lethal, so My Pawn cancels.
         let mut s = setup(json!({
             "seed": "cw8-pawn-trample-strikeback",
             "p1": {

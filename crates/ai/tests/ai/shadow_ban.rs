@@ -1128,16 +1128,53 @@ const TS_SHADOW_BAN: &[(&str, &str)] = &[
 mod v12 {
     use super::*;
 
-    /// Generation 0 is the port: its shadow ban is TypeScript's, entry for entry, and its record
-    /// counts eleven. A promoted generation may change the table (the unban lane exists to shrink
-    /// it), so the pin holds while `generation.json` still names generation 0.
+    /// The unban lane's generation-1 table: removals only from TypeScript's eleven — every retained
+    /// entry is verbatim in it, and the four it dropped are exactly the ones the sweep of record
+    /// cleared or the eval now sees (`SHADOW_BAN`'s own doc comment).
+    const UNBAN_LANE_SHADOW_BAN: &[(&str, &str)] = &[
+        (
+            "core-042",
+            "neverPlayed: hard: affordable in hand on 21 turns, never played",
+        ),
+        (
+            "core-055",
+            "neverPlayed: hard: affordable in hand on 22 turns, never played",
+        ),
+        (
+            "core-057",
+            "neverPlayed: hard: affordable in hand on 4 turns, never played",
+        ),
+        (
+            "core-076",
+            "neverPlayed: hard: affordable in hand on 15 turns, never played",
+        ),
+        (
+            "core-078",
+            "neverPlayed: easy: affordable in hand on 31 turns, never played",
+        ),
+        (
+            "core-094",
+            "neverPlayed: hard: affordable in hand on 13 turns, never played",
+        ),
+        (
+            "core-099",
+            "neverPlayed: easy: affordable in hand on 21 turns, never played; hard: affordable in hand on 13 turns, never played",
+        ),
+    ];
+
     #[test]
-    fn v12_generation_zero_holds_typescripts_eleven_shadow_bans() {
+    fn v12_the_unban_lanes_table_is_the_seven_entries_it_left_of_typescripts_eleven() {
+        assert_eq!(SHADOW_BAN, UNBAN_LANE_SHADOW_BAN);
+        for entry in SHADOW_BAN {
+            assert!(
+                TS_SHADOW_BAN.contains(entry),
+                "{} removed or rewritten — the lane removes only",
+                entry.0
+            );
+        }
         let record: Value = serde_json::from_str(GENERATION_JSON).expect("generation.json is JSON");
         if record["generation"].as_i64() == Some(0) {
             assert_eq!(record["lane"].as_str(), Some("port"));
-            assert_eq!(record["shadowBan"].as_u64(), Some(11));
-            assert_eq!(SHADOW_BAN, TS_SHADOW_BAN);
         }
     }
 }
