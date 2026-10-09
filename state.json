@@ -4485,8 +4485,10 @@
     "what": "review #605 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-09T14:26:17Z",
-    "notes": [],
+    "at": "2026-10-09T14:40:08Z",
+    "notes": [
+      "#604: typed it Bug"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
