@@ -108,6 +108,13 @@ impl Rng {
         }
         best
     }
+
+    /// R1440: a coin flip is a luck-based roll whose better side is heads (§6.1), so Lucky X flips X
+    /// more coins and keeps heads if any lands heads. With no Lucky it is exactly one draw, as `coin`
+    /// is, so a flip that nothing made lucky replays as it always did.
+    pub fn lucky_coin(&mut self, x: i32) -> bool {
+        self.lucky(x, |rng| rng.coin(), |a, b| a || b)
+    }
 }
 
 /// TS `createRng(seed, cursor = 0)`, by its TS name (SURFACE §4.2): the same as `Rng::new`.
@@ -199,5 +206,36 @@ mod tests {
         let best = r.lucky(2, |g| g.int(100), |a, b| a.max(b));
         assert_eq!(r.cursor(), 3);
         assert_eq!(best, 92);
+    }
+
+    /// R1440: with no Lucky (or a negative one) the flip is the one draw `coin` takes, at any cursor.
+    #[test]
+    fn r1440_lucky_coin_with_no_lucky_is_one_draw_exactly_as_coin() {
+        for cursor in 0..10 {
+            let mut plain = Rng::new("golden", cursor);
+            for x in [0, -1] {
+                let mut lucky = Rng::new("golden", cursor);
+                assert_eq!(lucky.lucky_coin(x), plain.clone().coin());
+                assert_eq!(lucky.cursor(), cursor + 1);
+            }
+            plain.coin();
+            assert_eq!(plain.cursor(), cursor + 1);
+        }
+    }
+
+    /// R1440: "golden" lands tails, tails, heads (0.66, 0.92, 0.49), so Lucky 1 from the start is two
+    /// tails and stays tails, Lucky 1 one draw on is tails then heads and keeps heads, and Lucky 2 from
+    /// the start reaches the heads: 1 + X draws each time.
+    #[test]
+    fn r1440_lucky_coin_keeps_heads_if_any_of_its_1_plus_x_coins_lands_heads() {
+        let mut first = Rng::new("golden", 0);
+        assert!(!first.lucky_coin(1));
+        assert_eq!(first.cursor(), 2);
+        let mut second = Rng::new("golden", 1);
+        assert!(second.lucky_coin(1));
+        assert_eq!(second.cursor(), 3);
+        let mut third = Rng::new("golden", 0);
+        assert!(third.lucky_coin(2));
+        assert_eq!(third.cursor(), 3);
     }
 }

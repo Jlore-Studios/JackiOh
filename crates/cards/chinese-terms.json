@@ -75,6 +75,7 @@
   },
   "radiant": "光辉",
   "created": "生成",
+  "allTribes": "全部种族",
   "glossary": {
     "Taunt": { "label": "嘲讽", "rule": "敌人必须先攻击具有嘲讽的单位" },
     "Rush": { "label": "突袭", "rule": "在召唤的回合即可攻击单位，但不能攻击英雄" },
@@ -141,6 +142,9 @@
     "End the turn": { "label": "结束回合", "rule": "由一个效果结束回合" },
     "Trigger a Cry": { "label": "触发战吼", "rule": "再次触发一个单位的战吼" },
     "Look at a hand": { "label": "查看手牌", "rule": "在提示中查看对手的手牌" },
+    "Exile": { "label": "放逐", "rule": "从任何位置置入放逐区，不会触发亡语" },
+    "Hand size": { "label": "手牌上限", "rule": "一名玩家的手牌最多能容纳的牌数，持续到本局对战结束" },
+    "Mark in a hand": { "label": "标记", "rule": "标记手牌中的牌；之后的效果作用于仍在手牌中的那些牌" },
     "Radiant": { "label": "光辉", "rule": "强化一张牌。在手牌或牌库中：法力值消耗不变，属性和文本变为其光辉形态。" }
   }
 }

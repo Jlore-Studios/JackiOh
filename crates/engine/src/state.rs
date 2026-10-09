@@ -193,6 +193,12 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub marked_destroyed: Option<bool>,
+    /// MD-D31, R1124: damaged by a card that exiles on damage; the next state check exiles it ahead
+    /// of deaths (§4.4 step 7, §4.5 step 1). No Death, no Reborn, no `destroyed`. Only ever
+    /// `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub marked_exiled: Option<bool>,
     /// Came back through Reborn, so it no longer has it (§4.5 step 4).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -721,6 +727,26 @@ pub struct DeclaredAttack {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub bounce_after: Option<bool>,
+    /// MD-D19, R1122: a trap in the window re-aimed this attack at an ally of its attacker, which
+    /// §4.3 then resolves as a combat between allies. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub redirected: Option<bool>,
+    /// MD-D20, R1123: once that combat's state check has run, this player gets a fresh copy of each
+    /// Unit it destroyed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub copies_for: Option<PlayerId>,
+}
+
+/// MD-D28, R1125: the verdict on one opponent's play — whether it was their best-scored playable
+/// card, judged on the pre-play state from their own view. Never in a view (§10.8).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayJudgement {
+    pub instance_id: String,
+    pub optimal: bool,
+    pub turn: i32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
@@ -940,6 +966,12 @@ pub struct GameState {
     pub trigger_queue: Vec<QueuedTrigger>,
     /// The attack whose trap window is open, between declaration and damage (§4.2 step 4, R44).
     pub declared_attack: Option<DeclaredAttack>,
+    /// MD-D28, R1125: the verdict on the last judged play, stored as the play began. Never in a
+    /// view (§10.8). Absent while no card judges plays, so a game without one hashes as it did
+    /// before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub play_judgement: Option<PlayJudgement>,
     /// Paused sequences waiting to continue, in order (§9.3, §10.6).
     pub work: Vec<WorkItem>,
     /// R113: how many items the *current* pause cascade has parked. A scope parks its remainder at
@@ -1589,6 +1621,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         last_damaged_by: None,
         divine_shield_spent: None,
         marked_destroyed: None,
+        marked_exiled: None,
         reborn_spent: None,
         known_as: None,
         tuning: None,
@@ -1669,6 +1702,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameS
         pending: None,
         trigger_queue: Vec::new(),
         declared_attack: None,
+        play_judgement: None,
         work: Vec::new(),
         work_cursor: 0,
         echo_queue: Vec::new(),

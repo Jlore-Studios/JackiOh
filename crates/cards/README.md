@@ -2,7 +2,7 @@
 
 318 catalog entries in the three shipped sets, Core (100 cards and 11 tokens), Classic (90 cards and
 Glitch, a hidden token) and Classic+ (78 cards and 38 tokens), 268 cards and 50 tokens in all, and the
-Meditative set (99 cards and 30 tokens, spec §8.8) joining the catalog part by part before it ships
+Meditative set (102 cards and 30 tokens, spec §8.8) joining the catalog part by part before it ships
 (R1420: no pool that names no set, no deck and no random deck holds its cards until the release, and a
 test opens it with the testkit's `preview_sets`); one script file
 per entry with its tests inside it; the catalog query every random pool goes through; and the
@@ -130,7 +130,9 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `face_of`, `stats_with_buffs`, `unit_view` | a unit through the §10.4 layers, never off the instance |
 | `def_of`, `printed_cost`, `effective_cost`, `query_cost`, `own_cost`, `cost_now` | a definition and its costs (R65, R386, R396, R455) |
 | `tags_of(state, card)` | the card's tags now — its definition's plus what effects granted (R923); every instance-level tag read goes through it |
+| `lucky_on(state, card)` | the card's Lucky X now — its printed Lucky as tuning leaves it plus every Lucky it was given (R1438); every luck-based roll a card makes reads it |
 | `highest_permanent_cost(state, player)` | the highest R396 cost among the permanents acting on a side, `None` with none (R901) |
+| `base_stats_of(state, card)` | §10.4 layer 1: the stat override as its face wears it, else the printed stats; no buffs, tuning or auras (R1181) |
 | `find_instance(state, id)` | an instance id, wherever the card has since landed (R98) |
 | `instance_of(ctx, spec)` | the card a `TargetSpec` names on the stay the run aimed at (R174) |
 | `recalled(ctx, key)` | what the running card remembers under a key (`remember`'s write; R102) |

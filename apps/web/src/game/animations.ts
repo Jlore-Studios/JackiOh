@@ -522,6 +522,14 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "draw-toast",
     target: () => animTestid.drawToast,
   },
+  // MD-D29, R1127: the emoter's hero shakes — the emote layer shows the emote itself (R644), so the
+  // game animation only marks who sent it, and resolves instantly on an existing keyframe.
+  emoted: {
+    animation: "jk-loss-pop",
+    durationMs: 0,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
   // Result overlay. BUILD's Duration column is "—": the overlay is terminal, nothing renders
   // behind it and nothing waits on it, so its duration is 0 and the entry resolves instantly.
   gameOver: {

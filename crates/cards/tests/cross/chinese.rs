@@ -437,7 +437,7 @@ mod r1303_the_chinese_tables {
                 }
             }
         }
-        for word in ["radiant", "created"] {
+        for word in ["radiant", "created", "allTribes"] {
             if !plain(&terms[word]) {
                 problems.push(word.to_string());
             }

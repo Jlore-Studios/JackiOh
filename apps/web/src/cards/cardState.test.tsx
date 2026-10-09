@@ -1,7 +1,8 @@
 // Patch v0.2.0's per-card states, drawn wherever the view lets the viewer read the card (SPEC §10.8):
 // a Brittle count (R385), what a Nerf and a Buff changed (R386, R513, R1320), the enchantments riding a
 // card (B5 E39), a backrow pile's depth (E21), an Animated card's stats and its standing as a Unit
-// (R383), a face's own type (B2.7) and a card's lines of code (E36), which a match hides (R693).
+// (R383), a face's own type (B2.7) and a card's lines of code (E36), which a match hides (R693); and
+// a Lucky given to a hand card, summed with the Lucky it prints (R1438).
 //
 // Every view here is a fixture shaped as `viewFor` builds it (src/test/fixtures.ts, the view types of
 // crates/engine/src/wire/view.rs), rendered on the board — a hand card (the tall face), a unit (the
@@ -601,6 +602,32 @@ describe("B2.7 a card the view gives a type of its own draws as that type", () =
     const face = faceOf(screen.getByTestId(testid.card("b1")));
     expect(face.getAttribute("data-card-type")).toBe("Field Trap");
     expect(face.querySelector(".card-type")?.textContent).toBe("Field Trap");
+  });
+});
+
+/* ------------------------------------------------------------------------ R1438 a given Lucky */
+
+describe("R1438 a Lucky given to a card in hand rides on its face", () => {
+  const BOOK = "classicplus-053"; // Book of Tokens: its base face prints no keyword, its Radiant face Lucky 1.
+
+  it("R1438 a hand card the view gives Lucky shows it, summed with its printed Lucky", () => {
+    const base = must(lookup(BOOK, false), "Book of Tokens");
+    const radiant = must(lookup(BOOK, true), "Radiant Book of Tokens");
+    const given = liveFace(base, card({ defId: BOOK, cost: 1, keywords: [{ kind: "Lucky", n: 1 }] }));
+    expect(given.keywords).toEqual([{ kind: "Lucky", n: 1 }]);
+    expect(given.gained).toEqual([{ kind: "Lucky", n: 1 }]);
+    // The view keeps each Lucky entry (the printed one and the given one), and the face prints their sum once.
+    const summed = liveFace(radiant, card({ defId: BOOK, radiant: true, cost: 1, keywords: [{ kind: "Lucky", n: 1 }, { kind: "Lucky", n: 1 }] }));
+    expect(summed.gained).toEqual([{ kind: "Lucky", n: 2 }]);
+    // A hand card the view gives no keywords has gained none: its printed Lucky is its text's.
+    expect(liveFace(base, card({ defId: BOOK, cost: 1 })).gained).toEqual([]);
+    expect(liveFace(radiant, card({ defId: BOOK, radiant: true, cost: 1 })).gained).toEqual([]);
+
+    // On the board the hand card prints the sum after its text.
+    renderBoard(handView({ defId: BOOK, radiant: true, cost: 1, keywords: [{ kind: "Lucky", n: 1 }, { kind: "Lucky", n: 1 }] }));
+    const line = must(faceOf(handRoot()).querySelector<HTMLElement>(".cf-text-gained"), "the gained keywords");
+    expect(line.getAttribute("data-gained")).toBe("Lucky 2");
+    expect(line.textContent).toBe("Lucky 2");
   });
 });
 

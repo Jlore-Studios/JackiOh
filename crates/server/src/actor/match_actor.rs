@@ -89,6 +89,9 @@ enum Task {
         nonce: String,
         body: ActionBody,
     },
+    /// MD-D29, R1127: an emote that passed the rate gate, to mint as an `Emote` action once it runs
+    /// — the seat resolved then, the legality read off the live state.
+    Emote { home: PlayerId, emote: EmoteId },
     Submit {
         player: PlayerId,
         nonce: String,
@@ -113,6 +116,7 @@ impl Task {
             Task::Arm => "arm".to_string(),
             Task::Hello { .. } => "hello".to_string(),
             Task::Action { body, .. } | Task::Submit { body, .. } => format!("action:{}", body.action_type()),
+            Task::Emote { .. } => "emote".to_string(),
             Task::Expire(expiry) => format!("expiry:{}", expiry.kind()),
             Task::Disconnect { .. } => "disconnect".to_string(),
             Task::Attach { .. } => "attach".to_string(),
@@ -414,6 +418,25 @@ impl MatchActor {
             } => {
                 let answer = self.apply_action(player, nonce, body).await;
                 let _ = reply.send(answer);
+            }
+            Task::Emote { home, emote } => {
+                // MD-D29, R1127: the seat is the one this account plays when the emote runs, and the
+                // `Emote` action is minted only while a card hears it — otherwise the relay above is
+                // all the emote ever was (R643). The reply is discarded: the sender already showed
+                // the emote locally, and a rate-limited emote is silently dropped.
+                let player = playing(&self.lock(), home);
+                let wanted = ActionBody::Emote { emote };
+                let nonce = {
+                    let core = self.lock();
+                    if engine::legal_actions(&core.state, player).contains(&wanted) {
+                        Some(format!("{SERVER_NONCE_PREFIX}emote-{}", core.next_seq))
+                    } else {
+                        None
+                    }
+                };
+                if let Some(nonce) = nonce {
+                    let _ = self.apply_action(player, nonce, wanted).await;
+                }
             }
             Task::Expire(expiry) => self.on_expire(expiry).await,
             Task::Disconnect { home } => {
@@ -930,6 +953,9 @@ impl MatchActor {
                     player.opponent(),
                     &emote_relay_message(player, emote.emote),
                 );
+                // MD-D29, R1127: after the relay, the emote also runs as a task, so a card that
+                // hears it answers it in turn order behind every action queued ahead of it.
+                self.enqueue(Task::Emote { home, emote: emote.emote });
             }
             Ok(ClientMessage::Aim(aim)) => self.receive_aim(&mut core, player, aim.aim),
             Ok(ClientMessage::Action(action)) => {

@@ -8,6 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::wire::catalog_types::{CardType, Keyword, PlayerId, PromptKind, Row, Zone, ZoneName};
+use crate::wire::emotes::EmoteId;
 use crate::wire::string_union;
 
 string_union! {
@@ -521,6 +522,9 @@ pub enum GameEvent {
         player: PlayerId,
         accept: bool,
     },
+    /// MD-D29, R1127: `player` emoted — public, and it names no card. Nothing but a card that hears
+    /// emotes answers it; every other emote stays R643's cosmetic relay outside `reduce`.
+    Emoted { player: PlayerId, emote: EmoteId },
     GameOver {
         winner: Winner,
         reason: GameOverReason,
@@ -830,6 +834,7 @@ string_union! {
         PromptAnswered = "promptAnswered",
         DrawOffered = "drawOffered",
         DrawAnswered = "drawAnswered",
+        Emoted = "emoted",
         GameOver = "gameOver",
         CardAnnounced = "cardAnnounced",
         Countered = "countered",
@@ -963,6 +968,7 @@ impl GameEvent {
             GameEvent::PromptAnswered { .. } => GameEventType::PromptAnswered,
             GameEvent::DrawOffered { .. } => GameEventType::DrawOffered,
             GameEvent::DrawAnswered { .. } => GameEventType::DrawAnswered,
+            GameEvent::Emoted { .. } => GameEventType::Emoted,
             GameEvent::GameOver { .. } => GameEventType::GameOver,
             GameEvent::CardAnnounced { .. } => GameEventType::CardAnnounced,
             GameEvent::Countered { .. } => GameEventType::Countered,

@@ -10,7 +10,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { CardDef, Tag } from "@jackioh/shared";
-import { setShips } from "@jackioh/shared";
+import { SHIPPED_SETS, setShips } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -20,7 +20,7 @@ import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 import { INSPECT_CLOSE, INSPECT_DETAIL, closeInspect } from "../cards/index.ts";
 import { CARD_FLAVOUR } from "../cards/flavour.ts";
 import { INSPECT_FLAVOUR, INSPECT_STATS } from "../cards/inspect/testids.ts";
-import { ALMANAC_TAGS, DEFAULT_FILTER, DEFAULT_SORT, almanacPool, costBucket } from "../game/deckbuilder/filters.ts";
+import { ALMANAC_CHIP_TAGS, DEFAULT_FILTER, DEFAULT_SORT, almanacPool, costBucket } from "../game/deckbuilder/filters.ts";
 import { poolCardLabel } from "../game/deckbuilder/PoolGrid.tsx";
 import {
   CARD_POOL,
@@ -40,6 +40,7 @@ import {
   poolCardId,
 } from "../game/deckbuilder/testids.ts";
 import { SITE_ORIGIN, paths } from "../net/navigate.ts";
+import { NEW_RIBBON_SET } from "../patches/ribbon.ts";
 import AlmanacRoute, { ALMANAC_CATALOG, almanacMeta, almanacTestid } from "./almanac.tsx";
 import LandingRoute from "./landing.tsx";
 import LoginRoute from "./login.tsx";
@@ -182,7 +183,7 @@ describe("R630 the almanac's browse pane", () => {
         expect(card.hasAttribute(attribute), `${id} ${attribute}`).toBe(false);
       }
       const label = card.getAttribute("aria-label") ?? "";
-      expect(label, id).toBe(poolCardLabel(cardOf(id)));
+      expect(label, id).toBe(poolCardLabel(cardOf(id), null, null, cardOf(id).set === NEW_RIBBON_SET));
       expect(label, id).toMatch(/\. Show details$/u);
       expect(label, id).not.toMatch(/deck|collection|unavailable/iu);
     }
@@ -262,9 +263,23 @@ describe("R630 the almanac's browse pane", () => {
 
   it("R630 every almanac tag has a chip, and the Token chip keeps exactly the tokens", () => {
     render(<AlmanacRoute />);
-    for (const tag of ALMANAC_TAGS) expect(screen.getByTestId(filterTagId(tag)), tag).toBeInTheDocument();
+    for (const tag of ALMANAC_CHIP_TAGS) expect(screen.getByTestId(filterTagId(tag)), tag).toBeInTheDocument();
     fireEvent.click(screen.getByTestId(filterTagId("Token" satisfies Tag)));
     expect([...shownIds()].sort()).toEqual(TOKENS.map((def) => def.id).sort());
+  });
+
+  it("R1380 R1381 the set chips are the sets that ship and the tag chips the tags their cards carry", () => {
+    render(<AlmanacRoute />);
+    const chips = (group: string): string[] =>
+      within(within(screen.getByTestId(DB_FILTERS)).getByRole("group", { name: group }))
+        .getAllByRole("button")
+        .map((chip) => chip.textContent ?? "");
+    // A set the catalog holds before it ships has no chip; Meditative's arrives with its patch.
+    expect(chips("Set")).toEqual([...SHIPPED_SETS]);
+    expect(chips("Set").includes("Meditative")).toBe(setShips("Meditative"));
+    expect(chips("Tag")).toEqual([...ALMANAC_CHIP_TAGS]);
+    // Wincon has a chip only if a card on the shelf carries it.
+    expect(chips("Tag").includes("Wincon")).toBe(CARDS.some((def) => def.tags.includes("Wincon")));
   });
 
   it("R630 a rarity chip keeps the cards of that rarity, and Clear filters shows every card again", () => {

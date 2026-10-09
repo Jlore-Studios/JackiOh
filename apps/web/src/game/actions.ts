@@ -754,7 +754,17 @@ export function highlightFor(
       legalIds.add(where);
       glow.add(where);
     }
-    return { legal: legalIds, selected, glow: withinLegal(glow, legalIds) };
+    // MD-D5, R1121: the attacker's `conditionTargets` inside the glow read yellow too — the drag
+    // layer paints them while the attack is dragged or selected. Anything outside the glow is a
+    // target the modifier would not apply to, so it stays green-or-dark as the engine listed it.
+    const attacker = view.you.units.find((unit) => unit?.instanceId === interaction.attackerId);
+    const condition = new Set<string>();
+    for (const id of attacker?.conditionTargets ?? []) {
+      const where = testid.card(id);
+      if (glow.has(where)) condition.add(where);
+    }
+    const kept = withinLegal(glow, legalIds);
+    return { legal: legalIds, selected, glow: kept, condition: withinLegal(condition, kept) };
   }
 
   let canAct = false;

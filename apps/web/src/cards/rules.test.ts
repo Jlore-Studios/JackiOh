@@ -73,14 +73,13 @@ function rowNames(section: TableSection): string[] {
  * glossary, or the first B11 test fails.
  */
 const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
-  "§6.1": ["Can't attack or be attacked", "A keyword while a condition holds"],
+  "§6.1": ["Can't attack or be attacked", "A keyword while a condition holds", "Luck-based"],
   "§6.2": ["Cry and Death", "Hand and deck triggers", 'Replacement ("would … instead")', "Targets chosen randomly", "Fatigue", "Attack summon"],
   "§6.3": [
     "Summon",
     "Play",
     "Destroy",
     "Sacrifice",
-    "Exile",
     "Discard",
     "Heal X",
     "Mana / gain mana",
@@ -91,6 +90,7 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Add to hand",
     "Shuffle into",
     "Make Radiant",
+    "Grant tag",
     "Switch position",
     "Forced attack",
     "Cancel an attack",
@@ -163,6 +163,9 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Look at a hand",
   "Allure",
   "Jade Counter",
+  "Exile",
+  "Hand size",
+  "Mark in a hand",
 ];
 
 /**
@@ -546,6 +549,10 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
         expect(entry.aliases, key).toEqual(["Look at your opponent's hand"]);
       } else if (key === "Bounce") {
         expect(entry.aliases, key).toEqual(["Bounced"]);
+      } else if (key === "Hand size") {
+        expect(entry.aliases, key).toEqual(["hand size"]);
+      } else if (key === "Mark in a hand") {
+        expect(entry.aliases, key).toEqual(["Mark"]);
       } else {
         expect(entry.aliases, key).toEqual([]);
       }
@@ -653,5 +660,38 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
     for (const { where, text } of PLAYED_TEXTS) {
       expect(joined(text), where).toBe(text);
     }
+  });
+});
+
+describe("R1384: the glossary's rows for the Meditative cards' words", () => {
+  it("R1384 Exile, Hand size and Mark in a hand are found where a Meditative card prints them", () => {
+    const cases: readonly (readonly [GlossaryTermId, string, "base" | "radiant", string])[] = [
+      ["Exile", "meditative-078", "base", "Exile"],
+      ["Hand size", "meditative-079", "base", "hand size"],
+      ["Mark in a hand", "meditative-076", "base", "Mark"],
+      ["Mark in a hand", "meditative-076", "radiant", "Mark"],
+      ["Unlock", "meditative-027", "base", "Unlock"],
+      ["Lock", "meditative-027", "radiant", "Lock"],
+    ];
+    for (const [term, id, face, spelling] of cases) {
+      const found = termsOf(played(id, face)).filter((entry) => entry.term === term);
+      expect(found.length, `${id} ${face}`).toBeGreaterThan(0);
+      expect(found.some((entry) => entry.text === spelling || entry.text.startsWith(`${spelling} `)), `${id} ${face}: ${spelling}`).toBe(true);
+    }
+  });
+
+  it("R1384 the rows say what §6.3 says, in a player's words", () => {
+    expect(GLOSSARY.Exile.section).toBe("§6.3");
+    expect(GLOSSARY.Exile.rule).toContain("no Death");
+    expect(GLOSSARY["Hand size"].rule).toContain("rest of the game");
+    expect(GLOSSARY["Mark in a hand"].rule).toContain("hand");
+    // A lower-case "hand size" is a word of card text, and the capitalised row is matched as well.
+    expect(termsIn("your hand size is 12")).toEqual(["Hand size"]);
+    expect(termsIn("Hand size 12")).toEqual(["Hand size"]);
+  });
+
+  it("R1384 Grant tag is rules vocabulary: no glossary row, and no card text prints the row's name", () => {
+    expect(Object.keys(GLOSSARY)).not.toContain("Grant tag");
+    expect(PLAYED_TEXTS.filter(({ text }) => text.includes("Grant tag"))).toEqual([]);
   });
 });

@@ -953,8 +953,26 @@
   "classicplus-t-ai-10": {
     "flavour": "A little more training and it'll be perfect."
   },
+  "meditative-002": {
+    "flavour": "Every bruise costs it something. It keeps running anyway."
+  },
+  "meditative-003": {
+    "flavour": "Built to watch the other side of the table, and to panic accordingly."
+  },
+  "meditative-015": {
+    "flavour": "Nobody wants to sit next to Steven during finals week."
+  },
+  "meditative-016": {
+    "flavour": "He leaves surprises the way other people leave tips."
+  },
   "meditative-017": {
     "flavour": "Twenty-four lines of code, not one more."
+  },
+  "meditative-023": {
+    "flavour": "Every neighbor he greets ends up a little woollier."
+  },
+  "meditative-024": {
+    "flavour": "The oldest trick in the book, and the book is now a sheep."
   },
   "meditative-027": {
     "flavour": "Billable hours, payable in zones."
@@ -1031,6 +1049,21 @@
   "meditative-045-1": {
     "flavour": "It broke through thinking about breaking through."
   },
+  "meditative-052": {
+    "flavour": "The market demands sacrifice."
+  },
+  "meditative-064": {
+    "flavour": "Blood is thicker than orders."
+  },
+  "meditative-071": {
+    "flavour": "There is always a better move. It just isn't yours."
+  },
+  "meditative-071-1": {
+    "flavour": "Spare the rod, spoil the matchup."
+  },
+  "meditative-072": {
+    "flavour": "It doesn't kill. It unmakes."
+  },
   "meditative-076": {
     "flavour": "Use it or lose it."
   },
@@ -1061,7 +1094,43 @@
   "meditative-092": {
     "flavour": "Whatever was meant for you was meant for Unan first."
   },
+  "meditative-093": {
+    "flavour": "Every kitten thinks it's a lion. This one is working on it."
+  },
+  "meditative-093-1": {
+    "flavour": "Promoted for showing up."
+  },
+  "meditative-093-2": {
+    "flavour": "Held back a year, on purpose."
+  },
+  "meditative-093-3": {
+    "flavour": "Graduated. Refuses to leave campus."
+  },
+  "meditative-094": {
+    "flavour": "It was a lot more cat yesterday."
+  },
+  "meditative-097-2": {
+    "flavour": "Toss a coin, make a wish, and try not to read the odds."
+  },
+  "meditative-097-3": {
+    "flavour": "Class starts at one. Attendance is mandatory."
+  },
+  "meditative-097-6": {
+    "flavour": "Four years of tuition, and everyone graduates a little stronger."
+  },
+  "meditative-097-7": {
+    "flavour": "Built to keep everyone out. Including you."
+  },
+  "meditative-097-9": {
+    "flavour": "Every office has a corner, and every corner has a contractor."
+  },
   "meditative-099": {
     "flavour": "Everyone is planning something. Probably."
+  },
+  "meditative-100": {
+    "flavour": "Comb in the back pocket, grease in the hair, and not one other thing on his mind."
+  },
+  "meditative-101": {
+    "flavour": "One more pull. The next one is the one. It has to be."
   }
 }

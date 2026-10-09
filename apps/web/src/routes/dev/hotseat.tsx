@@ -411,6 +411,11 @@ function Hotseat({
     engine: getAudioEngine(),
     globalMute: globalMuteEmotes,
     you: view.viewer,
+    // MD-D29, R1127: hotseat sends the emote through the engine too — as an `Emote` action, and
+    // only while the view hears emotes.
+    emit: (emote) => {
+      if (view.emotesHeard === true) dispatch({ type: "emote", emote });
+    },
   });
 
   // A finished game's ways on (Result.tsx): the same seed and decks again, or back to the start.

@@ -32,4 +32,5 @@ export const MAX_MANA = 4;
 export const RANDOM_ATTACK_TARGET = "random";
 export const REPLAY_CHECKPOINT_EVERY = 16;
 export const REPLAY_PAGE_STEPS = 16;
+export const TRIBAL_TAGS: readonly Tag[] = ["Human","Felinor","KY","CN","Jlockeed"];
 export const TURN_CAP_PLAYER_TURNS = 60;

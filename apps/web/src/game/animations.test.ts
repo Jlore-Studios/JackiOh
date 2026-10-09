@@ -78,6 +78,7 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   promptAnswered: 150,
   drawOffered: 150,
   drawAnswered: 300,
+  emoted: 0,
   costChanged: 200,
   modifierChanged: 200,
   // Patch v0.2.0 (docs/classic-sets.md B3, B5).
@@ -177,6 +178,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   promptAnswered: { type: "promptAnswered", player: "p1", choiceId: "ch1" },
   drawOffered: { type: "drawOffered", player: "p2" },
   drawAnswered: { type: "drawAnswered", player: "p1", accept: false },
+  emoted: { type: "emoted", player: "p1", emote: "greetings" },
   gameOver: { type: "gameOver", winner: "p1", reason: "hero-death" },
   // Patch v0.2.0 (docs/classic-sets.md B3, B5).
   cardAnnounced: { type: "cardAnnounced", player: "p1", instanceId: "c1", defId: "core-035", cardType: "Spell", costPaid: 1, targets: ["hero-p2"] },

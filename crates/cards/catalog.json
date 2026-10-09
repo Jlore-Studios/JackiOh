@@ -10816,6 +10816,152 @@
       "text": "End of turn: Buff 2 random cards in your hand."
     }
   },
+  "meditative-002": {
+    "id": "meditative-002",
+    "index": "2",
+    "name": "Rampaging Rhino",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "discards",
+        "base": 1,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 32,
+    "base": {
+      "attack": 5,
+      "health": 9,
+      "keywords": [],
+      "text": "Whenever this takes damage, discard {discards|card|cards}."
+    },
+    "radiant": {
+      "attack": 11,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "Trample"
+        }
+      ],
+      "text": "Trample\nWhenever this takes damage, discard {discards|card|cards}."
+    }
+  },
+  "meditative-003": {
+    "id": "meditative-003",
+    "index": "3",
+    "name": "Jlockwork Machine",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "exiles",
+        "base": 3,
+        "radiant": 3,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 37,
+    "base": {
+      "attack": 10,
+      "health": 10,
+      "keywords": [],
+      "text": "Whenever your opponent plays a card, exile the top {exiles|card|cards} of your deck."
+    },
+    "radiant": {
+      "attack": 20,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Rush\nWhenever your opponent plays a card, exile the top {exiles|card|cards} of your deck."
+    }
+  },
+  "meditative-015": {
+    "id": "meditative-015",
+    "index": "15",
+    "name": "Smelly Steven",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "surcharge",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 19,
+    "base": {
+      "attack": 5,
+      "health": 5,
+      "keywords": [],
+      "text": "Cry: Your opponent's Spells cost ({surcharge}) more during their next turn."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 10,
+      "keywords": [],
+      "text": "Cry: Your opponent's Spells cost ({surcharge}) more during their next turn."
+    }
+  },
+  "meditative-016": {
+    "id": "meditative-016",
+    "index": "16",
+    "name": "Trenful Trickster",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "traps",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 17,
+    "base": {
+      "attack": 1,
+      "health": 5,
+      "keywords": [],
+      "text": "End of turn: Summon {traps|random Trap|random Traps}."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 10,
+      "keywords": [],
+      "text": "End of turn: Summon {traps|random Trap|random Traps}."
+    }
+  },
   "meditative-017": {
     "id": "meditative-017",
     "index": "17",
@@ -10834,6 +10980,58 @@
     "radiant": {
       "keywords": [],
       "text": "Craft a Radiant card and add it to your hand."
+    }
+  },
+  "meditative-023": {
+    "id": "meditative-023",
+    "index": "23",
+    "name": "Golly Bob Howdy",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "core-t-sheep"
+    ],
+    "loc": 26,
+    "base": {
+      "attack": 3,
+      "health": 5,
+      "keywords": [],
+      "text": "Cry: Transform the Units next to this into Sheep Tokens."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 10,
+      "keywords": [],
+      "text": "Cry: Transform the Units next to this into Radiant Sheep Tokens."
+    }
+  },
+  "meditative-024": {
+    "id": "meditative-024",
+    "index": "24",
+    "name": "Polymorph",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "core-t-sheep"
+    ],
+    "loc": 35,
+    "base": {
+      "keywords": [],
+      "text": "Transform a Unit into a Sheep Token."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Transform a Unit and the Units next to it into Sheep Tokens."
     }
   },
   "meditative-027": {
@@ -11722,6 +11920,158 @@
       "text": "Rush, Poisonous\nCry: Summon {traps|random Radiant Trap|random Radiant Traps}. Exile every other CN or KY permanent.\nAura: You may play your Units face-down into your backrow as Animated Field Traps that reveal at the start of your turn."
     }
   },
+  "meditative-052": {
+    "id": "meditative-052",
+    "index": "52",
+    "name": "Economic Anxiety",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "bonus",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 60,
+    "base": {
+      "keywords": [],
+      "text": "Aura: Units have +{bonus} Attack while attacking a Unit that shares none of their tags."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Aura: Your Units have +{bonus} Attack and Poisonous while attacking a Unit that shares none of their tags."
+    }
+  },
+  "meditative-064": {
+    "id": "meditative-064",
+    "index": "64",
+    "name": "Traitorous Blood",
+    "set": "Meditative",
+    "type": "Trap",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "loc": 60,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit with an adjacent Unit attacks: Redirect the attack to that adjacent Unit."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit with an adjacent Unit attacks: Redirect the attack to that adjacent Unit. Then summon a copy of each Unit that combat destroyed."
+    }
+  },
+  "meditative-071": {
+    "id": "meditative-071",
+    "index": "71",
+    "name": "Pareto Optimality",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Mythic",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "meditative-071-1"
+    ],
+    "loc": 100,
+    "base": {
+      "keywords": [],
+      "text": "Cry: Summon The Cane.\nWhenever your opponent plays a card that isn't the AI's optimal move, The Cane attacks a random enemy."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Cry: Summon a Radiant The Cane.\nWhenever your opponent emotes or plays a card that isn't the AI's optimal move, The Cane attacks a random enemy."
+    }
+  },
+  "meditative-071-1": {
+    "id": "meditative-071-1",
+    "index": "71.1",
+    "name": "The Cane",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [
+      "CN",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "token": true,
+    "cost": 2,
+    "loc": 30,
+    "base": {
+      "attack": 3,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Animated on your turn"
+        },
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Animated on your turn and when Pareto Optimal, Indestructible, Pierce"
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Animated on your turn"
+        },
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Pierce"
+        },
+        {
+          "kind": "Trample"
+        }
+      ],
+      "text": "Animated on your turn and when Pareto Optimal, Indestructible, Pierce, Trample"
+    }
+  },
+  "meditative-072": {
+    "id": "meditative-072",
+    "index": "72",
+    "name": "The Banisher",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "loc": 40,
+    "base": {
+      "attack": 2,
+      "health": 1,
+      "keywords": [],
+      "text": "Whenever this damages a Unit, exile that Unit."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Cleave"
+        }
+      ],
+      "text": "Cleave\nWhenever this damages a Unit, exile that Unit."
+    }
+  },
   "meditative-076": {
     "id": "meditative-076",
     "index": "76",
@@ -12079,6 +12429,431 @@
       "text": "Armor 7\nLethal damage your hero or your other Units would take is redirected to this."
     }
   },
+  "meditative-093": {
+    "id": "meditative-093",
+    "index": "93",
+    "name": "Growing Felinor",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "meditative-093",
+      "meditative-093-1"
+    ],
+    "loc": 22,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [],
+      "text": "Can't be in Defense Position.\nDeath: Summon a Growing Felinor Sr."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Divine Shield"
+        },
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Divine Shield, Rush\nCan't be in Defense Position.\nDeath: Summon a Radiant Growing Felinor Sr."
+    }
+  },
+  "meditative-093-1": {
+    "id": "meditative-093-1",
+    "index": "93.1",
+    "name": "Growing Felinor Sr",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Felinor",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Common",
+    "token": true,
+    "cost": 1,
+    "refs": [
+      "meditative-093",
+      "meditative-093-1",
+      "meditative-093-2"
+    ],
+    "loc": 22,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Can't be in Defense Position.\nDeath: Summon a Growing Felinor Sr Sr."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Divine Shield"
+        },
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Divine Shield, Rush\nCan't be in Defense Position.\nDeath: Summon a Radiant Growing Felinor Sr Sr."
+    }
+  },
+  "meditative-093-2": {
+    "id": "meditative-093-2",
+    "index": "93.2",
+    "name": "Growing Felinor Sr Sr",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Felinor",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Common",
+    "token": true,
+    "cost": 1,
+    "refs": [
+      "meditative-093",
+      "meditative-093-3"
+    ],
+    "loc": 22,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [],
+      "text": "Can't be in Defense Position.\nDeath: Summon a Growing Felinor Super Senior."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Divine Shield"
+        },
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Divine Shield, Rush\nCan't be in Defense Position.\nDeath: Summon a Radiant Growing Felinor Super Senior."
+    }
+  },
+  "meditative-093-3": {
+    "id": "meditative-093-3",
+    "index": "93.3",
+    "name": "Growing Felinor Super Senior",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Felinor",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Common",
+    "token": true,
+    "cost": 1,
+    "loc": 12,
+    "base": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Can't be in Defense Position."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Divine Shield"
+        },
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Divine Shield, Rush\nCan't be in Defense Position."
+    }
+  },
+  "meditative-094": {
+    "id": "meditative-094",
+    "index": "94",
+    "name": "Shrinking Felinor",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 4,
+    "refs": [
+      "meditative-094"
+    ],
+    "params": [
+      {
+        "key": "shrinkAttack",
+        "base": 3,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "shrinkHealth",
+        "base": 3,
+        "radiant": 3,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 29,
+    "base": {
+      "attack": 9,
+      "health": 11,
+      "keywords": [],
+      "text": "Death: Summon a Shrinking Felinor whose base stats are this one's −{shrinkAttack}/−{shrinkHealth}."
+    },
+    "radiant": {
+      "attack": 18,
+      "health": 22,
+      "keywords": [],
+      "text": "Death: Summon a Radiant Shrinking Felinor whose base stats are this one's −{shrinkAttack}/−{shrinkHealth}."
+    }
+  },
+  "meditative-097-2": {
+    "id": "meditative-097-2",
+    "index": "97.2",
+    "name": "Wishing Well",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Common",
+    "token": true,
+    "cost": 1,
+    "params": [
+      {
+        "key": "chance",
+        "base": 10,
+        "radiant": 12,
+        "better": "up",
+        "step": 2,
+        "min": 1,
+        "max": 100
+      }
+    ],
+    "loc": 42,
+    "base": {
+      "attack": 0,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nActivate: {chance}% chance to add a random Radiant card to your hand."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        },
+        {
+          "kind": "Lucky",
+          "n": 1
+        }
+      ],
+      "text": "Can't attack, Lucky 1\nActivate: {chance}% chance to add a random Radiant card to your hand."
+    }
+  },
+  "meditative-097-3": {
+    "id": "meditative-097-3",
+    "index": "97.3",
+    "name": "School",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Rare",
+    "token": true,
+    "cost": 2,
+    "params": [
+      {
+        "key": "cost",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 32,
+    "base": {
+      "attack": 0,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nActivate: Summon a random ({cost}) Cost Unit."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 16,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nActivate: Summon a random Radiant ({cost}) Cost Unit."
+    }
+  },
+  "meditative-097-6": {
+    "id": "meditative-097-6",
+    "index": "97.6",
+    "name": "University",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "token": true,
+    "cost": 4,
+    "params": [
+      {
+        "key": "times",
+        "base": 2,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 28,
+    "base": {
+      "attack": 0,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nActivate: Buff each of your permanents {times|time|times}."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 24,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nActivate: Buff each of your permanents {times|time|times}."
+    }
+  },
+  "meditative-097-7": {
+    "id": "meditative-097-7",
+    "index": "97.7",
+    "name": "The Great Wall",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "token": true,
+    "cost": 2,
+    "loc": 25,
+    "base": {
+      "attack": 0,
+      "health": 50,
+      "keywords": [
+        {
+          "kind": "Immutable"
+        },
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Tribute 3, Immutable, Can't attack\nCry: Lock every unit zone on your side."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 100,
+      "keywords": [
+        {
+          "kind": "Immutable"
+        },
+        {
+          "kind": "Armor",
+          "n": 2
+        },
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Tribute 3, Immutable, Armor 2, Can't attack\nCry: Lock every unit zone on your side."
+    }
+  },
+  "meditative-097-9": {
+    "id": "meditative-097-9",
+    "index": "97.9",
+    "name": "Jlockheed's Headquarters",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Jlockeed",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "token": true,
+    "cost": 4,
+    "loc": 47,
+    "base": {
+      "attack": 0,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Tribute 5, Indestructible, Can't attack\nActivate: Fill your board with random Jlockheed Units."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 50,
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Tribute 5, Indestructible, Can't attack\nActivate 2: Fill your board with random Radiant Jlockheed Units."
+    }
+  },
   "meditative-099": {
     "id": "meditative-099",
     "index": "99",
@@ -12117,5 +12892,66 @@
       "text": "Aura: You may play your Spells face-down as Traps. Each reveals at the time you choose as you play it: the end of this turn, the start of your next turn, or the end of your next turn. Each has Echo +{echo}.\nCry: Draw {draw|card|cards}."
     },
     "tags": []
+  },
+  "meditative-100": {
+    "id": "meditative-100",
+    "index": "100",
+    "name": "Greaser",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "attack": 7,
+      "health": 7,
+      "keywords": [],
+      "text": ""
+    },
+    "radiant": {
+      "attack": 21,
+      "health": 21,
+      "keywords": [],
+      "text": ""
+    }
+  },
+  "meditative-101": {
+    "id": "meditative-101",
+    "index": "101",
+    "name": "Gachaholic",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "CN",
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "lucky",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 29,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [],
+      "text": "Cry: Add a random Luck-based card to your hand. Give it Lucky {lucky}."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Activate: Add a random Luck-based card to your hand. Give it Lucky {lucky}."
+    }
   }
 }

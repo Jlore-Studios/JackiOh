@@ -182,6 +182,12 @@ export type Highlight = {
    * `legalActions` and the open prompt's options alone. Absent means nothing glows.
    */
   glow?: ReadonlySet<string>;
+  /**
+   * MD-D5, R1121: the yellow a dragged or selected attack paints — the selected attacker's
+   * `conditionTargets` inside `glow`. A subset of `glow`, derived by `highlightFor` while
+   * attacking alone. Absent means nothing reads yellow from the drag layer.
+   */
+  condition?: ReadonlySet<string>;
 };
 
 export const NO_HIGHLIGHT: Highlight = { legal: new Set(), selected: new Set() };
@@ -196,8 +202,8 @@ export type AnimationFrames = { frames: AnimatingMap; events: readonly GameEvent
  * The emote surface one hero carries (R643–R644, issue §1–§5): its portrait, what it is showing,
  * and which menu — yours' picker or the opponent's "Mute emotes" — is open on it. Game owns the
  * state; the board only draws and reports. `onPortrait` is the click that is NOT a target pick
- * (the legal branch still goes to `onClick`), which is what opens a menu (issue §2: targeting
- * wins).
+ * (the legal branch still goes to `onClick`), which is what opens the hero's inspect view (R1330,
+ * issue §2: targeting wins). `menu` says that view is open and which menu it holds.
  */
 export type HeroEmotes = {
   portrait: PortraitId;

@@ -2003,6 +2003,139 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
 }
 
 // ---------------------------------------------------------------------------
+// R1127 — emotes become engine actions while a card hears them (MD-D29)
+// ---------------------------------------------------------------------------
+
+/// An emote that passed the rate gate runs as a task behind every action queued ahead of it: while
+/// a card with `hears_emotes` acts, the actor mints an `Emote` action for it (nonce `srv-emote-*`,
+/// R270), and the append-only log holds the row. Unheard, rate-limited, or sent on the action
+/// channel, an emote stays R643's cosmetic relay — or a refusal.
+mod r1127_emotes_become_actions_while_heard {
+    use super::*;
+    use crate::support::engine::TEST_HEARS_EMOTES;
+
+    fn relays(socket: &Client) -> Vec<Value> {
+        socket.of_type("emote")
+    }
+
+    fn options() -> Options {
+        Options {
+            decks: Decks::Scripted {
+                p1: vec![TEST_HEARS_EMOTES],
+                p2: vec![],
+            },
+            ..Options::default()
+        }
+    }
+
+    /// The rows the actor minted for emotes: `srv-emote-*` nonces (R270).
+    async fn emote_rows(h: &Harness) -> Vec<Value> {
+        h.rows()
+            .await
+            .into_iter()
+            .filter(|row| {
+                row["action"]["nonce"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .starts_with("srv-emote-")
+            })
+            .collect()
+    }
+
+    /// p1 plays the hearing Field Spell, so either seat's emote is an action from here on.
+    async fn hear(h: &Harness) {
+        send(
+            h,
+            &h.p1,
+            "n1",
+            json!({ "type": "play", "instanceId": in_hand(&h.p1, TEST_HEARS_EMOTES) }),
+        )
+        .await;
+        assert!(acks(&h.p1).iter().any(|ack| ack["nonce"] == "n1"));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1127_heard_emote_minted_and_logged() {
+        let h = harness(options()).await;
+        hear(&h).await;
+        h.p1.clear();
+        h.p2.clear();
+
+        h.p2.receive_json(json!({ "type": "emote", "emote": "laugh" }));
+        h.idle().await;
+
+        // The relay still runs first, to the opponent alone.
+        assert_eq!(
+            relays(&h.p1),
+            vec![json!({ "type": "emote", "from": "p2", "emote": "laugh" })]
+        );
+        assert_eq!(relays(&h.p2), Vec::<Value>::new());
+        // Then the minted action: one row, the server's nonce, the emote's type — and no reply,
+        // since the sender already showed the emote locally.
+        let rows = emote_rows(&h).await;
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["action"]["type"], json!("emote"));
+        assert_eq!(rows[0]["action"]["emote"], json!("laugh"));
+        assert_eq!(acks(&h.p2), Vec::<Value>::new());
+        assert_eq!(errors(&h.p2), Vec::<Value>::new());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1127_unheard_only_relays() {
+        let h = harness(Options::default()).await;
+        h.p1.clear();
+        h.p2.clear();
+
+        // No card hears anything here: the emote relays and mints nothing.
+        h.p1.receive_json(json!({ "type": "emote", "emote": "laugh" }));
+        h.idle().await;
+        assert_eq!(
+            relays(&h.p2),
+            vec![json!({ "type": "emote", "from": "p1", "emote": "laugh" })]
+        );
+        assert_eq!(emote_rows(&h).await, Vec::<Value>::new());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1127_rate_limited_mints_nothing() {
+        let h = harness(options()).await;
+        hear(&h).await;
+        h.p1.clear();
+        h.p2.clear();
+
+        h.p2.receive_json(json!({ "type": "emote", "emote": "laugh" }));
+        h.idle().await;
+        assert_eq!(emote_rows(&h).await.len(), 1);
+
+        // Inside the cooldown the shared gate says no: no second relay, no second row, no error.
+        h.p2.receive_json(json!({ "type": "emote", "emote": "thanks" }));
+        h.idle().await;
+        assert_eq!(relays(&h.p1).len(), 1);
+        assert_eq!(emote_rows(&h).await.len(), 1);
+        assert_eq!(errors(&h.p2), Vec::<Value>::new());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1127_action_channel_emote_malformed() {
+        let h = harness(options()).await;
+        hear(&h).await;
+        h.p1.clear();
+        h.p2.clear();
+
+        // An emote rides its own message, never the action channel — even while heard.
+        h.p2.receive_json(json!({
+            "type": "action",
+            "action": { "type": "emote", "emote": "laugh", "nonce": "n9" },
+        }));
+        h.idle().await;
+        assert!(errors(&h.p2).iter().any(|error| error["reason"]
+            == json!("\"emote\" is an emote message, never an action (R1127)")));
+        assert_eq!(relays(&h.p1), Vec::<Value>::new());
+        assert_eq!(emote_rows(&h).await, Vec::<Value>::new());
+    }
+}
+
+// ---------------------------------------------------------------------------
 // R642 — the portraits frame (§9.5, §10.11)
 // ---------------------------------------------------------------------------
 

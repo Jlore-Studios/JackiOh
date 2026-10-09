@@ -169,13 +169,13 @@ fn sets() -> Vec<SetExpectation> {
                 ("Mythic", 3),
             ],
         },
-        // R1420: the Meditative set (issue #496, docs/meditative-set.md M2): 99 cards and the 30 tokens they
+        // R1420: the Meditative set (issue #496, docs/meditative-set.md M2): 102 cards and the 30 tokens they
         // define, the designer's rarities with five filled in by §8's rubric. It does not ship yet, so its
         // entries are checked for their shape alone until the patch that lists it in SHIPPED_SETS.
         SetExpectation {
             set: "Meditative",
             segment: "meditative",
-            cards: 99,
+            cards: 102,
             card_defined_tokens: texts(&[
                 "19.1", "22.1", "28.1", "30.1", "39.1", "39.2", "39.3", "39.4", "39.5", "45.1", "49.1",
                 "49.2", "49.3", "70.1", "71.1", "91.1", "93.1", "93.2", "93.3", "95.1", "96.1", "97.1",
@@ -183,7 +183,7 @@ fn sets() -> Vec<SetExpectation> {
             ]),
             shared_tokens: Vec::new(),
             rarities: &[
-                ("Common", 26),
+                ("Common", 29),
                 ("Rare", 29),
                 ("Epic", 22),
                 ("Legendary", 16),

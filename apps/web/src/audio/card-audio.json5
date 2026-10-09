@@ -1252,8 +1252,31 @@
     "classicplus-t-ai-10": { // Fine-Tuning
       cast: { voice: "sapi-synth-deep", text: "Adjusting weights. Improving slightly." },
     },
+    "meditative-002": { // Rampaging Rhino
+      play: { voice: "brute", text: "Out of my way, little ones!" },
+      death: { voice: "brute", text: "Even rhinos get tired." },
+    },
+    "meditative-003": { // Jlockwork Machine
+      play: { voice: "robot", text: "Tick tock. I am watching you." },
+      death: { voice: "robot", text: "Gears grinding to a halt." },
+    },
+    "meditative-015": { // Smelly Steven
+      play: { voice: "goof", text: "Do you smell that? It's me!" },
+      death: { voice: "goof", text: "I showered last week, I swear." },
+    },
+    "meditative-016": { // Trenful Trickster
+      play: { voice: "sapi-trickster", text: "Watch your step, friend." },
+      death: { voice: "sapi-trickster", text: "Tricked by my own trick." },
+    },
     "meditative-017": { // True Craft a Card
       cast: { voice: "narrator", text: "It compiles. Ship it." },
+    },
+    "meditative-023": { // Golly Bob Howdy
+      play: { voice: "elder", text: "Well golly bob howdy, neighbors!" },
+      death: { voice: "elder", text: "Golly, that smarts." },
+    },
+    "meditative-024": { // Polymorph
+      cast: { voice: "sapi-wizard", text: "You look better with wool." },
     },
     "meditative-027": { // Clip-Farming Lawyer
       play: { voice: "hustler", text: "Objection! That zone is mine now." },
@@ -1338,6 +1361,22 @@
       play: { voice: "sapi-teacher", text: "I have seen through everything." },
       death: { voice: "sapi-teacher", text: "Even this ends." },
     },
+    "meditative-052": { // Economic Anxiety
+      cast: { voice: "sapi-bureaucrat", text: "The market demands its due." },
+    },
+    "meditative-064": { // Traitorous Blood
+      cast: { voice: "sapi-trickster", text: "Loyalty is negotiable." },
+    },
+    "meditative-071": { // Pareto Optimality
+      cast: { voice: "sapi-teacher", text: "There is always a better move." },
+    },
+    "meditative-071-1": { // The Cane
+      cast: { voice: "sapi-teacher", text: "The cane teaches." },
+    },
+    "meditative-072": { // The Banisher
+      play: { voice: "robot", text: "You are unmade." },
+      death: { voice: "robot", text: "Banished with you." },
+    },
     "meditative-076": { // Do or Die
       cast: { voice: "sapi-trickster", text: "Play it fast, or it's mine." },
     },
@@ -1373,8 +1412,56 @@
       play: { voice: "sapi-hero", text: "Stand behind me." },
       death: { voice: "sapi-hero", text: "I held the line." },
     },
+    "meditative-093": { // Growing Felinor
+      play: { voice: "cat", text: "Mew! I'm a big cat now!" },
+      death: { voice: "cat", text: "Next time, I'll be bigger." },
+    },
+    "meditative-093-1": { // Growing Felinor Sr
+      play: { voice: "cat", text: "Senior kitty, reporting for duty." },
+      death: { voice: "cat", text: "Back soon. Even bigger." },
+    },
+    "meditative-093-2": { // Growing Felinor Sr Sr
+      play: { voice: "cat", text: "Senior senior cat. Respect your elders." },
+      death: { voice: "cat", text: "One last growth spurt!" },
+    },
+    "meditative-093-3": { // Growing Felinor Super Senior
+      play: { voice: "cat", text: "Super senior. Peak cat achieved." },
+      death: { voice: "cat", text: "Retired at last." },
+    },
+    "meditative-094": { // Shrinking Felinor
+      play: { voice: "cat", text: "Enjoy me while I'm big." },
+      death: { voice: "cat", text: "Honey, I shrunk the cat." },
+    },
+    "meditative-097-2": { // Wishing Well
+      play: { voice: "whisper", text: "Drop a coin. Make a wish." },
+      death: { voice: "whisper", text: "The well runs dry." },
+    },
+    "meditative-097-3": { // School
+      play: { voice: "prof", text: "Settle down, class is in session." },
+      death: { voice: "prof", text: "School's out. Forever." },
+    },
+    "meditative-097-6": { // University
+      play: { voice: "posh", text: "Welcome, freshmen. Tuition is due." },
+      death: { voice: "posh", text: "Commencement came early." },
+    },
+    "meditative-097-7": { // The Great Wall
+      play: { voice: "guard", text: "Ten thousand miles. No one gets through." },
+      death: { voice: "guard", text: "The wall has fallen." },
+    },
+    "meditative-097-9": { // Jlockheed's Headquarters
+      play: { voice: "robot", text: "Headquarters online. Begin the contracts." },
+      death: { voice: "robot", text: "Evacuate the building!" },
+    },
     "meditative-099": { // Paranoia
       cast: { voice: "sapi-ghost", text: "They are all watching. Hide it." },
+    },
+    "meditative-100": { // Greaser
+      play: { voice: "sapi-rasp", text: "Slick it back. Roll up the sleeves." },
+      death: { voice: "sapi-rasp", text: "Ain't nothin' but a scratch." },
+    },
+    "meditative-101": { // Gachaholic
+      play: { voice: "sapi-trickster", text: "Just one more pull. I can feel it." },
+      death: { voice: "sapi-trickster", text: "The pity was so close..." },
     },
   },
   emotes: {

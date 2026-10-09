@@ -22,7 +22,7 @@
 
 use indexmap::IndexSet;
 use jackioh_cards::CATALOG;
-use jackioh_engine::{CardDef, SetName, Tag};
+use jackioh_engine::{CardDef, SetName, Tag, set_ships};
 
 fn entries() -> Vec<&'static CardDef> {
     CATALOG.values().collect()
@@ -35,6 +35,20 @@ const DEALT_BY_A_RULE: &[&str] = &[
     // Summoned by the Jade Counter crossing 5 or 10, never named by a card (R962).
     "meditative-039-5",
 ];
+
+/// R1420: tokens of a set that has not shipped, landed before the card that names them, by that card's
+/// id. Its part empties the entry: the test fails once the maker is in the catalog (Meditative #97
+/// Jlockheed's Evil Blueprints, issue #542, names the nine buildings; issue #541 lands five first).
+const MAKER_STILL_TO_COME: &[(&str, &[&str])] = &[(
+    "meditative-097",
+    &[
+        "meditative-097-2",
+        "meditative-097-3",
+        "meditative-097-6",
+        "meditative-097-7",
+        "meditative-097-9",
+    ],
+)];
 
 /// R381 (B2.8): card names that are also rules words. A text using one names that card only when the
 /// card's `refs` lists it: Exile the verb and the pile, Burn at the hand cap, Echo the keyword,
@@ -248,6 +262,23 @@ mod r279_the_reference_map_spec_5_7_10_10 {
                 .filter(|card| card.token && card.tags.contains(&pool.tag))
             {
                 named.insert(member.id.clone());
+            }
+        }
+        for (maker, tokens) in MAKER_STILL_TO_COME {
+            assert!(
+                !CATALOG.contains_key(*maker),
+                "{maker} is in the catalog: take its tokens off MAKER_STILL_TO_COME"
+            );
+            for token in *tokens {
+                let card = CATALOG
+                    .get(*token)
+                    .expect("a token waiting for its maker is in the catalog");
+                assert!(card.token, "{token} is not a token");
+                assert!(
+                    !set_ships(card.set),
+                    "{token} is in a shipped set: its maker must exist"
+                );
+                named.insert(token.to_string());
             }
         }
         let unnamed: Vec<String> = entries()

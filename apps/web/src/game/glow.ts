@@ -26,6 +26,19 @@ export function conditionAttr(card: Pick<CardView, "conditionActive"> | null | u
 }
 
 /**
+ * MD-D5, R1121: `data-condition-active` from the drag layer — "true" when `testId` is in
+ * `highlight.condition`, which `highlightFor` filled from the dragged or selected attacker's
+ * `conditionTargets`; undefined otherwise.
+ */
+export function conditionTargetAttr(
+  highlight: Highlight | undefined,
+  testId: string | undefined,
+): "true" | undefined {
+  if (highlight === undefined || testId === undefined) return undefined;
+  return highlight.condition?.has(testId) === true ? "true" : undefined;
+}
+
+/**
  * R667: what the warning on a hand card says, in its tooltip, its inspect note and to a screen reader.
  * Classic #87 Plague Chalice is the one card whose counter the engine reads ahead (`wouldCounter`).
  */

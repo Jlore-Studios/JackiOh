@@ -314,6 +314,8 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return `${name.seat(event.player)} offered a draw`;
     case "drawAnswered":
       return `${name.seat(event.player)} ${event.accept ? "accepted" : "declined"} the draw`;
+    case "emoted":
+      return `${name.seat(event.player)} emoted`;
     case "gameOver": {
       const why = resultReason(outcomeFor({ winner: event.winner, reason: event.reason }, view.viewer), event.reason);
       return event.winner === "draw" ? `Draw. ${why}` : `${seatLabel(view, event.winner)} won. ${why}`;

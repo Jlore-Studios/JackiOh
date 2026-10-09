@@ -56,6 +56,8 @@ export type ChineseTerms = {
   readonly labels: Readonly<Record<string, string>>;
   readonly radiant: string;
   readonly created: string;
+  /** R1382: what the frame prints in place of the five tribal tags on a card with them all. */
+  readonly allTribes: string;
   readonly glossary: Readonly<Record<GlossaryTermId, ChineseGlossaryEntry>>;
 };
 

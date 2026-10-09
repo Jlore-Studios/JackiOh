@@ -5,10 +5,11 @@
 // Two kinds of face come out of it (SPEC §10.10). A face with no `inPlay` is the card as printed:
 // the collection's, both faces of it in the catalog's words. A face with `inPlay` is the card as the
 // view says it stands in a game (R243): the cost the view gives it, the stats of a Unit in its
-// owner's hand with what it gained there (#89 Corpse Eater), the numbers and keywords of a unit on
-// the field, the Vanilla marker, and inPlay.ts's words where play and print part ways — a #98
-// Heroic Power's rolled power, "???" for Call to Chaos. A match-made definition (a Fuse's, R77) is
-// just the `def` the caller found in the view's `defs`, and prints its own name, text and stats.
+// owner's hand with what it gained there (#89 Corpse Eater), a hand card's keywords where the view
+// gives them (a Lucky given in hand, R1438), the numbers and keywords of a unit on the field, the
+// Vanilla marker, and inPlay.ts's words where play and print part ways — a #98 Heroic Power's rolled
+// power, "???" for Call to Chaos. A match-made definition (a Fuse's, R77) is just the `def` the
+// caller found in the view's `defs`, and prints its own name, text and stats.
 //
 // Nothing here is a rule (CLAUDE.md rule 7). The tones compare two numbers the view and the catalog
 // already carry — the live cost against the printed price, the live stats against the printed
@@ -154,7 +155,10 @@ export type FaceModel = {
    * braces after its label. Always empty in the collection, and wherever play prints other words.
    */
   values: readonly PreviewValue[];
-  /** Live keywords when `live` was given, else the printed face's keywords. */
+  /**
+   * Live keywords when `live` was given, a hand card's as the view gives them (`InPlay.handKeywords`),
+   * else the printed face's keywords.
+   */
   keywords: readonly Keyword[];
   /** A face in a game (`FaceSource.inPlay` given) rather than the collection's. */
   inPlay: boolean;
@@ -162,8 +166,9 @@ export type FaceModel = {
   vanilla: boolean;
   /**
    * Keywords the card has now that its printed face does not print (a Plastic Surgery's, an aura's,
-   * Defense Position's Taunt, every keyword a Vanilla unit still has): the face prints them after
-   * its text, since the text no longer says them. Empty outside play.
+   * Defense Position's Taunt, every keyword a Vanilla unit still has, a Lucky given in hand): the
+   * face prints them after its text, since the text no longer says them. Lucky is one entry at its
+   * sum whenever the sum is not the printed one (R1438). Empty outside play.
    */
   gained: readonly Keyword[];
   /**
@@ -207,6 +212,11 @@ export type FaceModel = {
 export type InPlay = {
   /** R243: a Unit card's stats in its owner's hand, as they stand (`CardView.attack`, `.health`). */
   handStats?: { attack: number; health: number };
+  /**
+   * B5 E38, R1438: a hand card's keywords as the view gives them (`CardView.keywords`): its printed
+   * ones as Degrade and Upgrade left them, and those it was given in the hand or the deck (a Lucky).
+   */
+  handKeywords?: readonly Keyword[];
   /** R243: the unit's text is gone (`UnitView.vanilla`). */
   vanilla?: boolean;
   /** R43, R243: the power a #98 Heroic Power rolled (R752). */
@@ -284,7 +294,8 @@ export function faceModel(source: FaceSource): FaceModel {
   const copies = viewCopies === undefined || !chinese ? viewCopies : { ...viewCopies, def: chineseDef(viewCopies.def) };
   const liveText = copies === undefined ? ownText : copiedText(ownText, def, textOf(copies.def, copies.radiant, copies.params));
   const text = inPlay === undefined ? printedText : textInPlay(def, source.radiant, liveText, inPlay);
-  const keywords = source.live?.keywords ?? printed?.keywords ?? [];
+  // B5 E38, R1438: a hand card's keywords are the view's where it gives them (a Lucky given in hand).
+  const keywords = source.live?.keywords ?? inPlay?.handKeywords ?? printed?.keywords ?? [];
   // The values belong to the card's own words, its numbers as they stand included: a formula play
   // does not print (Vanilla, "???", a rolled power) has no value to show.
   const printsItsText = text.full === liveText.full;
@@ -325,7 +336,7 @@ export function faceModel(source: FaceSource): FaceModel {
     vanilla,
     // A Vanilla unit prints no keyword of its own any more (§6.3), so every one it still has is gained.
     gained:
-      inPlay === undefined || source.live === undefined
+      inPlay === undefined || (source.live === undefined && inPlay.handKeywords === undefined)
         ? []
         : gainedKeywords(keywords, vanilla ? [] : (printed?.keywords ?? [])).filter((keyword) => !tunedKeys.has(keywordKey(keyword))),
     printed: inPlay === undefined || sameText(text, printedText) || concealed(def) ? null : printedText,
@@ -388,18 +399,35 @@ function handLive(stats: InPlay["handStats"], printed: PrintedFace | undefined):
   return { attack: stats.attack, health: stats.health, maxHealth: stats.health, keywords: printed?.keywords ?? [] };
 }
 
-/** The keywords a card has now that its printed face does not print, each once, in the order it has them. */
+/**
+ * The keywords a card has now that its printed face does not print, each once, in the order it has
+ * them. Lucky X stacks, and the view keeps each entry for the sum (layers.rs), so Lucky is gained when
+ * its sum is not the printed sum, as one entry at the sum where its first entry stands: a Lucky 1 card
+ * given Lucky 1 has gained Lucky 2 (R1438).
+ */
 function gainedKeywords(live: readonly Keyword[], printed: readonly Keyword[]): Keyword[] {
   const printedKeys = new Set(printed.map(keywordKey));
+  const luck = luckOf(live);
+  let luckGained = luck !== luckOf(printed);
   const seen = new Set<string>();
   const gained: Keyword[] = [];
   for (const keyword of live) {
+    if (keyword.kind === "Lucky") {
+      if (luckGained) gained.push({ kind: "Lucky", n: luck });
+      luckGained = false;
+      continue;
+    }
     const key = keywordKey(keyword);
     if (printedKeys.has(key) || seen.has(key)) continue;
     seen.add(key);
     gained.push(keyword);
   }
   return gained;
+}
+
+/** Lucky X's sum over a list of keywords (§6.1: Lucky stacks). */
+function luckOf(keywords: readonly Keyword[]): number {
+  return keywords.reduce((sum, keyword) => (keyword.kind === "Lucky" ? sum + keyword.n : sum), 0);
 }
 
 function sameText(a: FaceText, b: FaceText): boolean {

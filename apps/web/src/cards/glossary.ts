@@ -47,6 +47,9 @@
 // - §6.3's Nerf and Buff, one row and one entry each, since a card prints one word or the other. Patch
 //   v0.3.4 (R1320) renamed them from Degrade and Upgrade, the names the engine keeps; a plain stat buff
 //   ("+2/+2") stays plain words, since matching is case-sensitive and "buff" is lower-case there.
+// - The Meditative set's words (R1384): §6.3's Exile, Hand size (matched in lower case, as #79 prints
+//   it) and Mark in a hand (printed "Mark"). Grant tag stays rules vocabulary: #35 says it in plain
+//   words, so no card prints the row's name.
 
 import type { KeywordKind } from "@jackioh/shared";
 
@@ -88,7 +91,10 @@ export type VerbTermId =
   | "Trigger a Cry"
   | "Look at a hand"
   | "Allure"
-  | "Jade Counter";
+  | "Jade Counter"
+  | "Exile"
+  | "Hand size"
+  | "Mark in a hand";
 /** §6.1's unit statuses that are not keyword kinds (patch v0.2.0, B5 E35). */
 export type StatusTermId =
   | "Can't be in Defense Position"
@@ -250,6 +256,12 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
     "Marked enemy Units join your side at the start of your next turn, or die if you have no room",
   ),
   "Jade Counter": verb("Jade Counter", "A public count each player has, that only rises"),
+  // R1384: §6.3's words the Meditative cards print; "hand size" matches as #79 prints it.
+  Exile: verb("Exile", "Send to the exile pile, from anywhere; it triggers no Death"),
+  "Hand size": verb("Hand size", "How many cards a hand holds, set for the rest of the game", { aliases: ["hand size"] }),
+  "Mark in a hand": verb("Mark in a hand", "Mark cards in a hand; a later effect acts on the ones still there", {
+    aliases: ["Mark"],
+  }),
 
   // §5.2 Radiant: §6.3's "Make Radiant" rule, then §5.2's sentence about a card in hand or deck.
   Radiant: entry(

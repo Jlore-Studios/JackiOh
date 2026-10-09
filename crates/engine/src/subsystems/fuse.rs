@@ -53,10 +53,11 @@ use serde_json::{Value, json};
 
 use crate::config::{CRAFTED_CARD_COST, FUSE_COST_CAP, FUSE_MIN_INGREDIENTS, FUSED_ID_CAP};
 use crate::script::{
-    ActivationDecl, AuraEntry, AuraHook, CardScripts, ConditionContext, ConditionHook, Effect, EffectApply,
-    EffectContext, EffectPart, EngineSink, FlagOrCount, Hook, HookArgs, PlagueMultiplierHook, QuestBook,
-    Script, SetStat, SetStatHook, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef, TriggerRun,
-    WouldCounterHook, aura_hook, condition_hook, hook, read_hook, target_check, would_counter_hook,
+    ActivationDecl, AttackMod, AttackModArgs, AttackModHook, AuraEntry, AuraHook, CardScripts,
+    ConditionContext, ConditionHook, Effect, EffectApply, EffectContext, EffectPart, EngineSink, FlagOrCount,
+    Hook, HookArgs, PlagueMultiplierHook, QuestBook, Script, SetStat, SetStatHook, StatMod, StaticFlags,
+    TargetCheck, TributeWhenHook, TriggerDef, TriggerRun, WouldCounterHook, attack_mod_hook, aura_hook,
+    condition_hook, hook, read_hook, target_check, would_counter_hook,
 };
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
 use crate::wire::{
@@ -1026,6 +1027,9 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                     _ => Some(concat(tagged)),
                 },
                 copies_last_spell: flags(|f| f.copies_last_spell),
+                judges_plays: flags(|f| f.judges_plays),
+                hears_emotes: flags(|f| f.hears_emotes),
+                exiles_on_damage: flags(|f| f.exiles_on_damage),
                 cant_be_attacked: flags(|f| f.cant_be_attacked),
                 attacked_only_from_lane: flags(|f| f.attacked_only_from_lane),
                 cant_attack_or_be_attacked: flags(|f| f.cant_attack_or_be_attacked),
@@ -1094,6 +1098,7 @@ fn combine_objects(records: &[Script]) -> Script {
         start_of_turn: hooks(|s| s.start_of_turn.clone(), "startOfTurn"),
         end_of_turn: hooks(|s| s.end_of_turn.clone(), "endOfTurn"),
         aura: None,
+        attack_mods: None,
         triggers: lists_of_triggers(|s| s.triggers.clone()),
         on_play_hook: hooks(|s| s.on_play_hook.clone(), "onPlayHook"),
         hand_triggers: lists_of_triggers(|s| s.hand_triggers.clone()),
@@ -1124,12 +1129,49 @@ fn combine_objects(records: &[Script]) -> Script {
     }
 }
 
+/// MD-D4, R1120: a fusion carries every ingredient's combat-only attack modifiers — attacks added,
+/// Poisonous or-ed — each read with its own ingredient as the source, as `fused_aura` reads.
+fn fused_attack_mods(faces: &[Face]) -> Option<AttackModHook> {
+    let hooks: Vec<Option<AttackModHook>> =
+        faces.iter().map(|face| face.script.attack_mods.clone()).collect();
+    if hooks.iter().all(Option::is_none) {
+        return None;
+    }
+    Some(attack_mod_hook(move |args| {
+        let mut out = AttackMod::default();
+        for (index, hook) in hooks.iter().enumerate() {
+            let Some(hook) = hook else {
+                continue;
+            };
+            let recorded =
+                crate::scripts::ingredients_of(args.self_).is_some_and(|records| records.len() > index);
+            if !recorded {
+                let got = hook(args);
+                out.attack += got.attack;
+                out.poisonous = out.poisonous || got.poisonous;
+                continue;
+            }
+            let card = crate::scripts::as_ingredient(args.self_, index);
+            let got = hook(AttackModArgs {
+                state: args.state,
+                self_: &card,
+                radiant: args.radiant,
+                attacker: args.attacker,
+                defender: args.defender,
+            });
+            out.attack += got.attack;
+            out.poisonous = out.poisonous || got.poisonous;
+        }
+        out
+    }))
+}
+
 /// One ingredient's script, ready to be combined: without its `cost` hook, because R77 fixes the
 /// fused cost at min(sum, 4) and a surviving Ceaseless Void hook would overrule it (R65); without the
 /// members that return no list (`setStat`, summed like every other stat R77 sums; `conditionMet`,
 /// R195's yellow glow, which answers a boolean, so the ingredients' hooks are or-ed (R196);
 /// `tributeWhen` and `wouldCounter` (R403, R667), or-ed the same way; `plagueMultiplier` (R471), which
-/// multiplies), each combined on its own; and with its trigger ids namespaced, so two ingredients that
+/// multiplies; `attackMods` (R1120), summed the same way), each combined on its own; and with its trigger ids namespaced, so two ingredients that
 /// both call a trigger "turn-end" stay two distinct conditions on the fused card — each running in its
 /// ingredient's place (R102), so a question it asks comes back to its own step — and its Activate
 /// abilities run in its place (R102, R384).
@@ -1497,6 +1539,7 @@ fn fused_script(
     combined.set_stat = fused_set_stat(&scripts);
     combined.condition_met = fused_condition_met(&scripts);
     combined.aura = fused_aura(&faces);
+    combined.attack_mods = fused_attack_mods(&faces);
     combined.cry = fused_cry(&faces);
     combined.plague_multiplier = fused_plague_multiplier(&scripts);
     combined
