@@ -3,6 +3,7 @@ import type { CardType } from "./CardType";
 import type { ControlHow } from "./ControlHow";
 import type { CounterKind } from "./CounterKind";
 import type { CounteredTo } from "./CounteredTo";
+import type { EmoteId } from "./EmoteId";
 import type { GameOverReason } from "./GameOverReason";
 import type { GlitchOutcome } from "./GlitchOutcome";
 import type { Keyword } from "./Keyword";
@@ -103,7 +104,7 @@ lost?: true, } | { "type": "counterChanged", instanceId: string, counter: Counte
  * ME-ATTACKSUMMON (R1202): the id of the card whose attack this replaces — Windfast's —
  * when a summoned substitute makes it. Absent otherwise.
  */
-insteadOf?: string, } | { "type": "attackCancelled", attackerId: string, targetId: string, byInstanceId: string, } | { "type": "manaChanged", player: PlayerId, current: number, max: number, } | { "type": "turnStarted", player: PlayerId, turn: number, } | { "type": "turnEnded", player: PlayerId, turn: number, unspentMana: number, } | { "type": "turnAutoEnded", player: PlayerId, turn: number, } | { "type": "promptOpened", player: PlayerId, choiceId: string, kind: PromptKind, } | { "type": "promptAnswered", player: PlayerId, choiceId: string, } | { "type": "drawOffered", player: PlayerId, } | { "type": "drawAnswered", player: PlayerId, accept: boolean, } | { "type": "gameOver", winner: Winner, reason: GameOverReason, } | { "type": "cardAnnounced", player: PlayerId, instanceId: string, defId: string, cardType: CardType, costPaid: number, targets: Array<string>, row?: Row, lane?: number, 
+insteadOf?: string, } | { "type": "attackCancelled", attackerId: string, targetId: string, byInstanceId: string, } | { "type": "manaChanged", player: PlayerId, current: number, max: number, } | { "type": "turnStarted", player: PlayerId, turn: number, } | { "type": "turnEnded", player: PlayerId, turn: number, unspentMana: number, } | { "type": "turnAutoEnded", player: PlayerId, turn: number, } | { "type": "promptOpened", player: PlayerId, choiceId: string, kind: PromptKind, } | { "type": "promptAnswered", player: PlayerId, choiceId: string, } | { "type": "drawOffered", player: PlayerId, } | { "type": "drawAnswered", player: PlayerId, accept: boolean, } | { "type": "emoted", player: PlayerId, emote: EmoteId, } | { "type": "gameOver", winner: Winner, reason: GameOverReason, } | { "type": "cardAnnounced", player: PlayerId, instanceId: string, defId: string, cardType: CardType, costPaid: number, targets: Array<string>, row?: Row, lane?: number, 
 /**
  * Only ever `Some(true)`.
  */

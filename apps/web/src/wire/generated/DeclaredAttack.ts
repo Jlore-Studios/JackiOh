@@ -43,4 +43,14 @@ exitsFrom?: number,
  * ME-ATTACKSUMMON (R1202): bounce the substitute after its combat when set — Windfast's base
  * face bounces the summoned Unit if it is still on the field.
  */
-bounceAfter?: boolean, };
+bounceAfter?: boolean, 
+/**
+ * MD-D19, R1122: a trap in the window re-aimed this attack at an ally of its attacker, which
+ * §4.3 then resolves as a combat between allies. Only ever `Some(true)`.
+ */
+redirected?: true, 
+/**
+ * MD-D20, R1123: once that combat's state check has run, this player gets a fresh copy of each
+ * Unit it destroyed.
+ */
+copiesFor?: PlayerId, };

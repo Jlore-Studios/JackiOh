@@ -55,6 +55,12 @@ divineShieldSpent?: boolean,
  */
 markedDestroyed?: boolean, 
 /**
+ * MD-D31, R1124: damaged by a card that exiles on damage; the next state check exiles it ahead
+ * of deaths (§4.4 step 7, §4.5 step 1). No Death, no Reborn, no `destroyed`. Only ever
+ * `Some(true)`.
+ */
+markedExiled?: true, 
+/**
  * Came back through Reborn, so it no longer has it (§4.5 step 4).
  */
 rebornSpent?: boolean, 

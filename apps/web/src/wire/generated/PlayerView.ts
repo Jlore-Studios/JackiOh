@@ -50,4 +50,9 @@ defs?: { [key in string]: CardDef },
  * `target` prompts and attack targets are drawn at random and the client asks for none.
  * Only ever `Some(true)`.
  */
-randomTargets?: true, };
+randomTargets?: true, 
+/**
+ * MD-D29, R1127: an acting card of the opponent hears emotes, so the client's emote layer sends
+ * them as `Emote` actions. Only ever `Some(true)`.
+ */
+emotesHeard?: true, };

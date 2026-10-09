@@ -7,6 +7,7 @@ import type { Handicap } from "./generated/Handicap.ts";
 import type { CraftHatPrice } from "./generated/CraftHatPrice.ts";
 import type { CraftKeywordPrice } from "./generated/CraftKeywordPrice.ts";
 import type { CraftVerbPrice } from "./generated/CraftVerbPrice.ts";
+import type { Tag } from "./generated/Tag.ts";
 
 export type { Difficulty, Handicap, CraftHatPrice, CraftKeywordPrice, CraftVerbPrice };
 
