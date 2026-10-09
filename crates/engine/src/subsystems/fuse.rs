@@ -508,6 +508,7 @@ fn build_def(
         // R179, R468: the list the id names, kept on the definition so the scripts can be rebuilt from
         // it even when the id is only a digest of it.
         ingredients: Some(specs),
+        craft: None,
         base: fused_face(ingredients, defs, false, forced),
         radiant: fused_face(ingredients, defs, true, forced),
     }

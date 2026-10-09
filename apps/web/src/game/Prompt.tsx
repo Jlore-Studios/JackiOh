@@ -93,6 +93,7 @@ import {
 import { CardBack, CardFace, faceModel, useInspectTrigger, type FaceModel } from "../cards/index.ts";
 import { chineseName } from "../cards/chinese.ts";
 import { MatchCardsProvider, useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
+import { CraftEditor } from "./craft/CraftEditor.tsx";
 import { liveFace } from "./faces.ts";
 import { DISCOVER_OPTION_LIMIT, X_CARD_LIMIT, sideOf, testid } from "./contract.ts";
 import { modeText } from "./modeText.ts";
@@ -288,6 +289,8 @@ function selectionLabel(view: PlayerView, selection: Selection): string {
       return `${sideOf(view, selection.player) === "you" ? "Your" : "Enemy"} ${zoneLabel(selection.row, selection.lane)}`;
     case "mode":
       return selection.option;
+    case "craft":
+      return `${selection.recipe.adjective} ${selection.recipe.noun}`;
     case "none":
       return "Nothing";
   }
@@ -1321,6 +1324,14 @@ export default function Prompt(props: PromptProps) {
   // R243: an option naming a match-made card (a crafted card in a hand pick) reads its definition
   // from the view, and a Heroic Power on the field its power.
   if (pending !== null) {
+    // ME-CRAFT (Meditative #17, R880): a craft prompt opens the block editor, not the picker.
+    if (pending.kind === "craft") {
+      return (
+        <MatchCardsProvider view={props.view}>
+          <CraftEditor key={pending.choiceId} pending={pending} onAction={props.onAction} />
+        </MatchCardsProvider>
+      );
+    }
     return (
       <MatchCardsProvider view={props.view}>
         <PromptModal

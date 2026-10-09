@@ -1252,6 +1252,9 @@
     "classicplus-t-ai-10": { // Fine-Tuning
       cast: { voice: "sapi-synth-deep", text: "Adjusting weights. Improving slightly." },
     },
+    "meditative-017": { // True Craft a Card
+      cast: { voice: "narrator", text: "It compiles. Ship it." },
+    },
   },
   emotes: {
     vanilla: {

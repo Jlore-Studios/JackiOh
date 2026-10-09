@@ -5,6 +5,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::wire::catalog_types::{PlayerId, Row};
+use crate::wire::craft::CraftRecipe;
 use crate::wire::string_union;
 
 /// Where a permanent is being played (§3.2: the player picks the zone).
@@ -29,10 +30,24 @@ pub struct ZoneChoice {
 )]
 #[serde(tag = "pick", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum Selection {
-    Instance { instance_id: String },
-    Hero { player: PlayerId },
-    Zone { player: PlayerId, row: Row, lane: i32 },
-    Mode { option: String },
+    Instance {
+        instance_id: String,
+    },
+    Hero {
+        player: PlayerId,
+    },
+    Zone {
+        player: PlayerId,
+        row: Row,
+        lane: i32,
+    },
+    Mode {
+        option: String,
+    },
+    /// ME-CRAFT (Meditative #17, R880): the recipe a `craft` prompt's answer carries.
+    Craft {
+        recipe: CraftRecipe,
+    },
     None,
 }
 

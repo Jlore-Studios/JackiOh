@@ -3156,6 +3156,7 @@ fn pick_name(selection: &Selection) -> &'static str {
         Selection::Hero { .. } => "hero",
         Selection::Zone { .. } => "zone",
         Selection::Mode { .. } => "mode",
+        Selection::Craft { .. } => "craft",
         Selection::None => "none",
     }
 }

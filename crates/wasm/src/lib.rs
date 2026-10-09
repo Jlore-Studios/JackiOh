@@ -33,8 +33,8 @@ use std::rc::Rc;
 use std::str::FromStr;
 
 use jackioh_engine::{
-    self as engine, Action, CardDefs, CreateGameArgs, DECK_SIZE, FoldArgs, GameState, PLAYER_IDS,
-    PerPlayerOpt, PlayerId, ReduceResult, ReplayCheckpoints, ReplayRecord, Rng,
+    self as engine, Action, CardDefs, CraftRecipe, CreateGameArgs, DECK_SIZE, FoldArgs, GameState,
+    PLAYER_IDS, PerPlayerOpt, PlayerId, ReduceResult, ReplayCheckpoints, ReplayRecord, Rng,
 };
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -448,6 +448,18 @@ pub fn constants() -> Result<String, JsError> {
 // ---------------------------------------------------------------------------------------------
 // The engine's tables the web's tests read (`subsystems.*`)
 // ---------------------------------------------------------------------------------------------
+
+/// ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost —
+/// a `CraftPreview` — so the block editor shows what the reducer will say and the client decides
+/// nothing (CLAUDE.md rule 7).
+#[wasm_bindgen]
+pub fn craft_preview(recipe_json: &str, cost: f64) -> Result<String, JsError> {
+    let recipe: CraftRecipe = parse("craftPreview: the recipe", recipe_json)?;
+    if !(0.0..=f64::from(i32::MAX)).contains(&cost) || cost.fract() != 0.0 {
+        return Err(JsError::new("craftPreview: the cost must be a whole number"));
+    }
+    to_json(&engine::subsystems::craft::craft_preview(&recipe, cost as i32))
+}
 
 /// `{ chaosEffects: [{label}], chaosPlusEffects: [{label}], heroPowerNames, heroPowers: [{name, x,
 /// title, radiantTitle, label, radiantLabel}] }`. `heroPowerNames` is TypeScript's

@@ -167,6 +167,7 @@ fn label_of(state: &GameState, selection: &Selection, chooser: PlayerId) -> Stri
         Selection::Hero { player } => hero_option_label(*player, chooser),
         Selection::Zone { player, row, lane } => cell_option_label(*player, *row, *lane, chooser),
         Selection::Mode { option } => option.clone(),
+        Selection::Craft { recipe } => recipe.name(),
         Selection::None => "nothing".to_string(),
     }
 }
@@ -177,6 +178,8 @@ fn key_of(selection: &Selection) -> String {
         Selection::Hero { player } => format!("hero:{player}"),
         Selection::Zone { player, row, lane } => format!("zone:{player}:{row}:{lane}"),
         Selection::Mode { option } => format!("mode:{option}"),
+        // ME-CRAFT (R880): a recipe names its definition, as its prompt's option key does.
+        Selection::Craft { recipe } => crate::subsystems::craft::craft_id(recipe),
         Selection::None => "none".to_string(),
     }
 }

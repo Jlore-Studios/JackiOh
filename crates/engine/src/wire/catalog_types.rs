@@ -842,6 +842,13 @@ pub struct CardDef {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub ingredients: Option<Vec<FusedIngredient>>,
+    /// R882: a crafted definition's recipe (Meditative #17 True Craft a Card) — what its scripts
+    /// rebuild from, as `ingredients` is for a fused one. Only the crafter writes it. Optional and
+    /// skipped when absent, so a game that never crafts one serialises, hashes and replays as
+    /// before (D14: no golden trace moves).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub craft: Option<crate::wire::craft::CraftRecipe>,
     pub base: CardFace,
     pub radiant: CardFace,
 }
@@ -991,6 +998,8 @@ string_union! {
         Cell = "cell",
         Reward = "reward",
         Pick = "pick",
+        /// ME-CRAFT (Meditative #17, R880): the block editor's answer, a `Selection::Craft`.
+        Craft = "craft",
     }
 }
 
@@ -1315,6 +1324,7 @@ mod tests {
             loc: None,
             radiant_fallback: None,
             ingredients: None,
+            craft: None,
             base: face.clone(),
             radiant: face,
         }

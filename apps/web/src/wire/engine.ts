@@ -30,6 +30,7 @@ export { createRng, type Rng } from "./rng.ts";
 
 export {
   beginGame,
+  craftPreview,
   createGame,
   findInstance,
   fold,

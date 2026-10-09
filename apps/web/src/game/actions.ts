@@ -157,6 +157,8 @@ export function selectionKey(selection: Selection): string {
       return `zone:${selection.player}:${selection.row}:${selection.lane}`;
     case "mode":
       return `mode:${selection.option}`;
+    case "craft":
+      return `craft:${JSON.stringify(selection.recipe)}`;
     case "none":
       return "none";
   }
@@ -257,6 +259,7 @@ export function selectionTestid(view: PlayerView, selection: Selection): string 
     case "zone":
       return testid.zone(sideOf(view, selection.player), selection.row, selection.lane);
     case "mode":
+    case "craft":
     case "none":
       return null;
   }
@@ -946,7 +949,7 @@ export function onControl(legal: readonly ActionBody[], control: BoardControl): 
 // ---------------------------------------------------------------------------------------------
 
 /** The `<pick>:` prefixes the engine puts on an option key (`crates/engine/src/effects/choose.rs`). */
-const KEY_PREFIXES = ["instance:", "hero:", "zone:", "mode:"] as const;
+const KEY_PREFIXES = ["instance:", "hero:", "zone:", "mode:", "craft:"] as const;
 
 function withoutPickPrefix(key: string): string {
   for (const prefix of KEY_PREFIXES) if (key.startsWith(prefix)) return key.slice(prefix.length);
@@ -964,6 +967,8 @@ function withoutPickPrefix(key: string): string {
  * the `Selection` verbatim in `PendingOption` would delete this function.
  */
 export function selectionForOption(option: PendingOption): Selection {
+  // ME-CRAFT (Meditative #17, R880): a craft preset carries its recipe; nothing else sets it.
+  if (option.recipe !== undefined) return { pick: "craft", recipe: option.recipe };
   if (option.row !== undefined && option.lane !== undefined && option.player !== undefined) {
     return { pick: "zone", player: option.player, row: option.row, lane: option.lane };
   }

@@ -10,7 +10,7 @@
 // Plus: the other seat sees "waiting for choice" and no options at all, a disabled confirm fires
 // nothing, and `min`/`max` gate the confirm for `tribute` and `mulligan`.
 
-import type { ActionBody, PlayerView } from "@jackioh/shared";
+import type { ActionBody, CraftRecipe, PlayerView } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -527,6 +527,40 @@ describe("the R81 kinds render the same picker when the engine does open them as
       expect(screen.getByTestId(present)).toBeInTheDocument();
     });
   }
+
+  it("R880 a craft prompt opens the block editor", () => {
+    const onAction = vi.fn();
+    const recipe: CraftRecipe = {
+      cost: 2,
+      type: "Unit",
+      adjective: "Pure",
+      noun: "Closure",
+      attack: 5,
+      health: 6,
+      keywords: [],
+      echo: 0,
+      hats: [],
+    };
+    const view = viewWith({
+      pending: pendingFor(
+        "craft",
+        [{ key: "craft:#digest", label: "Pure Closure", recipe: { ...recipe } }],
+        { budget: 2 },
+      ),
+    });
+
+    render(<Prompt view={view} onAction={onAction} />);
+
+    expect(kindOfModal()).toBe("craft");
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-prompt-kind", "craft");
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("10/12 pts");
+    fireEvent.click(screen.getByTestId("prompt-submit"));
+    expect(onAction).toHaveBeenCalledWith({
+      type: "answer",
+      choiceId: "ch1",
+      selection: [{ pick: "craft", recipe: { ...recipe } }],
+    });
+  });
 
   it("#492 an x prompt of a few values is the card picker too, each number on a card", () => {
     const onAction = vi.fn();

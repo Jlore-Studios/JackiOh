@@ -14,7 +14,10 @@ use std::ops::Index;
 
 use serde::{Deserialize, Serialize};
 
-use crate::wire::{GlitchOutcome, KeywordKind, Rarity, Tag, string_union};
+use crate::wire::{
+    CardType, CraftHatKind, CraftHatPrice, CraftKeywordPrice, CraftVerb, CraftVerbPrice, GlitchOutcome,
+    KeywordKind, Rarity, Tag, string_union,
+};
 
 /// §2.6
 pub const DECK_SIZE: i32 = 20;
@@ -883,6 +886,417 @@ pub const TRAINING_UNBAN: TrainingGate = TrainingGate {
 pub const REPLAY_CHECKPOINT_EVERY: usize = 16;
 /// R768: the most steps one page of a replay gives.
 pub const REPLAY_PAGE_STEPS: usize = 16;
+
+// ---------------------------------------------------------------------------------------------
+// ME-CRAFT (Meditative #17 True Craft a Card, docs/meditative-set.md M6 #17, R880–R883).
+// ---------------------------------------------------------------------------------------------
+
+/// The highest cost a crafted card may have (0 to 4).
+pub const CRAFT_MAX_COST: i32 = 4;
+/// How many seeded presets a `craft` prompt offers: a Unit, a Spell, a Field Spell and a Trap.
+pub const CRAFT_PRESETS: usize = 4;
+/// The point budget is this base plus this per point of the chosen cost (2, 7, 12, 17, 22).
+pub const CRAFT_POINTS_BASE: i32 = 2;
+pub const CRAFT_POINTS_PER_MANA: i32 = 5;
+/// The most lines of code a recipe may use, frame included (the catalog's 75th percentile).
+pub const CRAFT_LOC_BUDGET: i32 = 24;
+/// The `pub const ID` / `pub fn script()` / `CardScripts` frame every card file carries
+/// (Core #8's `loc` 3).
+pub const CRAFT_LOC_SKELETON: i32 = 3;
+/// The most effect blocks one recipe may hold.
+pub const CRAFT_MAX_EFFECTS: usize = 8;
+/// The range of every block number: 1 to 10.
+pub const CRAFT_MAX_N: i32 = 10;
+/// The Radiant face doubles every number and stat (R275 by construction).
+pub const CRAFT_RADIANT_MULTIPLIER: i32 = 2;
+/// What one Echo costs, per N.
+pub const CRAFT_ECHO_POINTS_PER_N: i32 = 4;
+/// What a crafted definition's id starts with, before the recipe's digest (R882).
+pub const CRAFT_ID_PREFIX: &str = "craft:";
+/// The first words of a crafted card's name; the designer may replace them (R883).
+pub const CRAFT_ADJECTIVES: &[&str] = &[
+    "Pure",
+    "Seeded",
+    "Async",
+    "Recursive",
+    "Generic",
+    "Static",
+    "Lazy",
+    "Mutable",
+];
+/// The last words of a crafted card's name; the designer may replace them (R883).
+pub const CRAFT_NOUNS: &[&str] = &[
+    "Closure", "Reducer", "Iterator", "Trait", "Crate", "Struct", "Macro", "Enum",
+];
+
+/// The point budget for the chosen cost: `CRAFT_POINTS_BASE + CRAFT_POINTS_PER_MANA × cost`.
+pub fn craft_points_budget(cost: i32) -> i32 {
+    CRAFT_POINTS_BASE + CRAFT_POINTS_PER_MANA * cost
+}
+
+/// One row of the verb price table (`docs/meditative-set.md` M6 #17): `points + per_n × N`,
+/// halved (rounded up) when `halve` is set. `lines` counts the `TargetDecl` line a targeted
+/// verb's declaration adds. In table order.
+pub const CRAFT_VERB_PRICES: &[CraftVerbPrice] = &[
+    CraftVerbPrice {
+        verb: CraftVerb::DamageTarget,
+        points: 0,
+        per_n: 1,
+        halve: false,
+        lines: 2,
+        targeted: true,
+        takes_n: true,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::DamageEnemyHero,
+        points: 0,
+        per_n: 1,
+        halve: false,
+        lines: 1,
+        targeted: false,
+        takes_n: true,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::DamageRandomEnemy,
+        points: 0,
+        per_n: 1,
+        halve: false,
+        lines: 1,
+        targeted: false,
+        takes_n: true,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::DamageEachEnemy,
+        points: 0,
+        per_n: 3,
+        halve: false,
+        lines: 1,
+        targeted: false,
+        takes_n: true,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::HealTarget,
+        points: 0,
+        per_n: 1,
+        halve: true,
+        lines: 2,
+        targeted: true,
+        takes_n: true,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::HealYourHero,
+        points: 0,
+        per_n: 1,
+        halve: true,
+        lines: 1,
+        targeted: false,
+        takes_n: true,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::HealYourSide,
+        points: 0,
+        per_n: 1,
+        halve: false,
+        lines: 2,
+        targeted: false,
+        takes_n: true,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::Draw,
+        points: 0,
+        per_n: 3,
+        halve: false,
+        lines: 1,
+        targeted: false,
+        takes_n: true,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::GainMana,
+        points: 0,
+        per_n: 3,
+        halve: false,
+        lines: 1,
+        targeted: false,
+        takes_n: true,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::GainArmor,
+        points: 0,
+        per_n: 1,
+        halve: false,
+        lines: 1,
+        targeted: false,
+        takes_n: true,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::SummonRush,
+        points: 5,
+        per_n: 0,
+        halve: false,
+        lines: 1,
+        targeted: false,
+        takes_n: false,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::SummonFelinor,
+        points: 2,
+        per_n: 0,
+        halve: false,
+        lines: 1,
+        targeted: false,
+        takes_n: false,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::SummonSheep,
+        points: 2,
+        per_n: 0,
+        halve: false,
+        lines: 1,
+        targeted: false,
+        takes_n: false,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::BuffTarget,
+        points: 0,
+        per_n: 2,
+        halve: false,
+        lines: 2,
+        targeted: true,
+        takes_n: true,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::BuffYourUnits,
+        points: 0,
+        per_n: 4,
+        halve: false,
+        lines: 1,
+        targeted: false,
+        takes_n: true,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::GrantKeyword,
+        points: 0,
+        per_n: 0,
+        halve: false,
+        lines: 2,
+        targeted: true,
+        takes_n: false,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::Destroy,
+        points: 9,
+        per_n: 0,
+        halve: false,
+        lines: 2,
+        targeted: true,
+        takes_n: false,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::Bounce,
+        points: 4,
+        per_n: 0,
+        halve: false,
+        lines: 2,
+        targeted: true,
+        takes_n: false,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::AddRandom,
+        points: 4,
+        per_n: 0,
+        halve: false,
+        lines: 1,
+        targeted: false,
+        takes_n: false,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::Discover,
+        points: 5,
+        per_n: 0,
+        halve: false,
+        lines: 1,
+        targeted: false,
+        takes_n: false,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::OpponentDiscards,
+        points: 0,
+        per_n: 3,
+        halve: false,
+        lines: 1,
+        targeted: false,
+        takes_n: true,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::BuffRandomCard,
+        points: 3,
+        per_n: 0,
+        halve: false,
+        lines: 1,
+        targeted: false,
+        takes_n: false,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::NerfRandomEnemyCard,
+        points: 3,
+        per_n: 0,
+        halve: false,
+        lines: 1,
+        targeted: false,
+        takes_n: false,
+    },
+    CraftVerbPrice {
+        verb: CraftVerb::LockRandomZone,
+        points: 2,
+        per_n: 0,
+        halve: false,
+        lines: 1,
+        targeted: false,
+        takes_n: false,
+    },
+];
+
+/// One row of the keyword price table, in palette order. Armor costs `per_n × N`; `spell` marks
+/// the keywords a Spell may take (R883).
+pub const CRAFT_KEYWORD_PRICES: &[CraftKeywordPrice] = &[
+    CraftKeywordPrice {
+        kind: KeywordKind::Taunt,
+        points: 2,
+        per_n: 0,
+        spell: false,
+    },
+    CraftKeywordPrice {
+        kind: KeywordKind::Rush,
+        points: 2,
+        per_n: 0,
+        spell: false,
+    },
+    CraftKeywordPrice {
+        kind: KeywordKind::FirstStrike,
+        points: 2,
+        per_n: 0,
+        spell: false,
+    },
+    CraftKeywordPrice {
+        kind: KeywordKind::Cleave,
+        points: 2,
+        per_n: 0,
+        spell: false,
+    },
+    CraftKeywordPrice {
+        kind: KeywordKind::Trample,
+        points: 2,
+        per_n: 0,
+        spell: false,
+    },
+    CraftKeywordPrice {
+        kind: KeywordKind::Pierce,
+        points: 2,
+        per_n: 0,
+        spell: true,
+    },
+    CraftKeywordPrice {
+        kind: KeywordKind::Lifesteal,
+        points: 2,
+        per_n: 0,
+        spell: true,
+    },
+    CraftKeywordPrice {
+        kind: KeywordKind::Deft,
+        points: 1,
+        per_n: 0,
+        spell: false,
+    },
+    CraftKeywordPrice {
+        kind: KeywordKind::DivineShield,
+        points: 3,
+        per_n: 0,
+        spell: false,
+    },
+    CraftKeywordPrice {
+        kind: KeywordKind::Reborn,
+        points: 3,
+        per_n: 0,
+        spell: false,
+    },
+    CraftKeywordPrice {
+        kind: KeywordKind::Charge,
+        points: 4,
+        per_n: 0,
+        spell: false,
+    },
+    CraftKeywordPrice {
+        kind: KeywordKind::Poisonous,
+        points: 4,
+        per_n: 0,
+        spell: false,
+    },
+    CraftKeywordPrice {
+        kind: KeywordKind::Windfury,
+        points: 4,
+        per_n: 0,
+        spell: false,
+    },
+    CraftKeywordPrice {
+        kind: KeywordKind::Armor,
+        points: 0,
+        per_n: 2,
+        spell: false,
+    },
+];
+
+/// One row of the hat price table: `lines` for the hook, `multiplier` on the points of the
+/// effects under it, and the card types that may take it (R883).
+pub const CRAFT_HAT_PRICES: &[CraftHatPrice] = &[
+    CraftHatPrice {
+        hat: CraftHatKind::Cry,
+        lines: 2,
+        multiplier: 1,
+        types: &[CardType::Unit, CardType::FieldSpell],
+    },
+    CraftHatPrice {
+        hat: CraftHatKind::Death,
+        lines: 2,
+        multiplier: 1,
+        types: &[CardType::Unit],
+    },
+    CraftHatPrice {
+        hat: CraftHatKind::StartOfTurn,
+        lines: 2,
+        multiplier: 2,
+        types: &[CardType::Unit, CardType::FieldSpell],
+    },
+    CraftHatPrice {
+        hat: CraftHatKind::EndOfTurn,
+        lines: 2,
+        multiplier: 2,
+        types: &[CardType::Unit, CardType::FieldSpell],
+    },
+    CraftHatPrice {
+        hat: CraftHatKind::WhenCast,
+        lines: 2,
+        multiplier: 1,
+        types: &[CardType::Spell],
+    },
+    CraftHatPrice {
+        hat: CraftHatKind::OpponentPlaysUnit,
+        lines: 4,
+        multiplier: 1,
+        types: &[CardType::Trap],
+    },
+    CraftHatPrice {
+        hat: CraftHatKind::OpponentPlaysSpell,
+        lines: 4,
+        multiplier: 1,
+        types: &[CardType::Trap],
+    },
+    CraftHatPrice {
+        hat: CraftHatKind::OpponentAttacks,
+        lines: 4,
+        multiplier: 1,
+        types: &[CardType::Trap],
+    },
+];
 
 #[cfg(test)]
 mod tests {

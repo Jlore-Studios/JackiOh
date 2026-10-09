@@ -61,11 +61,12 @@ use crate::work::{
 /// card the hook did rather than the instance R78 has reset since.
 pub const SELF_KEY: &str = "__self";
 
-/// The ten kinds of §10.6. `x`, `embiggen`, `zone`, `tribute` and `direction` are play choices for
+/// The sixteen kinds of §10.6. `x`, `embiggen`, `zone`, `tribute` and `direction` are play choices for
 /// every Core card (R81) and stay here for later sets. B5 E18 adds five: `number` (a number from a
 /// fixed range), `answer` (one option of a multiple-choice problem, whose key never leaves the engine,
 /// R465), `cell` (a board cell, either side, either row), `reward` (a completed quest's reward) and
-/// `pick` (several cards from a pile under a budget). This module reads the kind for the mulligan,
+/// `pick` (several cards from a pile under a budget). ME-CRAFT adds `craft` (a recipe the block
+/// editor answers with, R880). This module reads the kind for the mulligan,
 /// which §2.1 answers with its own action, and for `pick`, whose answers it enumerates its own way.
 pub const PROMPT_KINDS: &[PromptKind] = &[
     PromptKind::Discover,
@@ -83,6 +84,7 @@ pub const PROMPT_KINDS: &[PromptKind] = &[
     PromptKind::Cell,
     PromptKind::Reward,
     PromptKind::Pick,
+    PromptKind::Craft,
 ];
 
 /// The `Script` key holding the step table a prompt answer re-enters (`resume: { picked: … }`).
@@ -388,6 +390,7 @@ fn same_selection(a: &Selection, b: &Selection) -> bool {
                 lane: m,
             },
         ) => p == q && r == s && l == m,
+        (Selection::Craft { recipe: x }, Selection::Craft { recipe: y }) => x == y,
         (Selection::None, Selection::None) => true,
         _ => false,
     }
@@ -416,6 +419,7 @@ fn name_of(selection: &Selection, chooser: PlayerId) -> String {
         Selection::Hero { player } => hero_option_label(*player, chooser),
         Selection::Mode { option } => option.clone(),
         Selection::Zone { player, row, lane } => cell_option_label(*player, *row, *lane, chooser),
+        Selection::Craft { recipe } => recipe.name(),
         Selection::None => "nothing".to_string(),
     }
 }
@@ -457,6 +461,22 @@ pub fn why_answer_refused(pending: &PendingChoice, answer: &AnswerInput) -> Resu
                 pending.min, pending.max
             )
         }));
+    }
+
+    // ME-CRAFT (R880): a `craft` prompt's answer is a recipe, not one of the options — a preset
+    // or the player's own — so the membership and spend checks below are skipped and the recipe is
+    // validated against the prompt's budget instead.
+    if pending.kind == PromptKind::Craft {
+        let Some(Selection::Craft { recipe }) = picks.first() else {
+            return Err(EngineError::new("that prompt takes a crafted recipe"));
+        };
+        return match crate::subsystems::craft::validate_recipe(recipe, pending.budget.unwrap_or(-1)) {
+            Ok(()) => Ok(()),
+            Err(reasons) => Err(EngineError::new(format!(
+                "that recipe cannot be crafted: {}",
+                reasons.join("; ")
+            ))),
+        };
     }
 
     let mut used: IndexSet<usize> = IndexSet::new();

@@ -2,7 +2,7 @@
 // computes legality itself — every one of them feeds a hand-built `ActionBody[]` and checks that
 // what comes out was derived from that array and nothing else.
 
-import type { ActionBody, PlayerView, Selection } from "@jackioh/shared";
+import type { ActionBody, CraftRecipe, PlayerView, Selection } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -17,6 +17,8 @@ import {
   pendingHighlight,
   pickInPlay,
   selectionForOption,
+  selectionKey,
+  selectionTestid,
   withNonce,
   type Interaction,
 } from "./actions.ts";
@@ -749,6 +751,36 @@ describe("answerAction: one case per PromptKind (§10.6)", () => {
       choiceId: "ch1",
       selection: [{ pick: "mode", option: "true" }],
     });
+  });
+
+  it("craft → the preset's recipe (R880)", () => {
+    const recipe: CraftRecipe = {
+      cost: 2,
+      type: "Unit",
+      adjective: "Pure",
+      noun: "Closure",
+      attack: 5,
+      health: 6,
+      keywords: [],
+      echo: 0,
+      hats: [],
+    };
+    const pending = pendingFor(
+      "craft",
+      [{ key: "craft:#digest", label: "Pure Closure", recipe: { ...recipe } }],
+      { budget: 2 },
+    );
+    if (!pending.forYou) throw new Error("fixture");
+
+    expect(answerAction(pending, ["craft:#digest"], view)).toEqual({
+      type: "answer",
+      choiceId: "ch1",
+      selection: [{ pick: "craft", recipe: { ...recipe } }],
+    });
+    expect(selectionKey({ pick: "craft", recipe: { ...recipe } })).toBe(
+      `craft:${JSON.stringify(recipe)}`,
+    );
+    expect(selectionTestid(view, { pick: "craft", recipe: { ...recipe } })).toBeNull();
   });
 
   it("maps a no-op option to { pick: 'none' }", () => {
