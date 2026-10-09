@@ -4234,6 +4234,7 @@
         "tier": "strong",
         "why": "fails the easy rule on size (16 files) and on review-only paths (vite.config.ts, scripts/, public/_redirects); no engine or AI work, so it is not hard"
       },
+      "failures": 0,
       "handoff": {
         "at": "2026-10-09T13:47:42Z",
         "family": "claude",
@@ -4250,7 +4251,9 @@
       "planned_at": "2026-10-09T09:56:10Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_tier": "strong",
+      "pr": 606,
       "provider": "claude-3",
+      "question": "",
       "run_id": "37941399999",
       "started_at": "2026-10-09T14:04:52Z",
       "stop_requested": false,
