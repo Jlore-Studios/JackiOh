@@ -953,6 +953,12 @@
   "classicplus-t-ai-10": {
     "flavour": "A little more training and it'll be perfect."
   },
+  "meditative-025": {
+    "flavour": "It has heard every insult about its kind. None of them stick."
+  },
+  "meditative-026": {
+    "flavour": "The wells run dry for everyone. Then the wells appear."
+  },
   "meditative-027": {
     "flavour": "Billable hours, payable in zones."
   },
@@ -970,6 +976,9 @@
   },
   "meditative-030-1": {
     "flavour": "A hug with a fuse, signed with a kiss."
+  },
+  "meditative-031": {
+    "flavour": "All aboard, everyone who was never on the original list."
   },
   "meditative-032": {
     "flavour": "Immersion learning, whether you signed up or not."
@@ -1009,6 +1018,9 @@
   },
   "meditative-090": {
     "flavour": "Some assembly required."
+  },
+  "meditative-098": {
+    "flavour": "High noon. One lane. Nobody else gets in."
   },
   "meditative-045": {
     "flavour": "Sit still. What you know is about to leave you."

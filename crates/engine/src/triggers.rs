@@ -120,6 +120,10 @@ pub const TRIGGER_HOOKS: &[HookName] = &[
 /// The `hook` of the one queue entry that is not a card's trigger: an event owed to the traps.
 pub const OWED_TO_TRAPS: &str = "@traps";
 
+/// MD-B22, R946: the `hook` of a lane watcher's queue entry — Showdown's watcher answering a card
+/// entering its lane (Meditative #98, Radiant face).
+pub const LANE_WATCH: &str = "@laneWatch";
+
 /// How many times `settle` may go round before the board is called stuck (§10.3). Each pass resolves
 /// something — a dispatch, owed work, a check or one queued trigger — so the cap has to hold every
 /// trigger one legal action can set off, and R58 bounds that from the rules: "draw your whole
@@ -835,8 +839,102 @@ fn dispatch_event_at(sink: &mut EngineSink<'_>, event: &GameEvent, at: Option<us
             queued.push(queue_trigger(sink, &holder, def, event));
         }
     }
+    // MD-B22, R946: Showdown's watchers answer the event before anything notes its removals.
+    queued.extend(offer_to_lane_watches(sink, event));
     // R212: the removal this event reports, if any, has been answered (`stays::note_reported`).
     crate::stays::note_reported(sink.state, event);
+    queued
+}
+
+/// MD-B22, R946: offer one event to every live lane watcher (`ModifierKind::LaneWatch`). A watch
+/// matches a `cardResolved` for a permanent played into one of its owner's zones in its lane, and a
+/// `summoned` onto its owner's side in its lane that is no play's step-4 (`exits_from` absent — a
+/// played card answers through its resolution instead, so it is cast on once). Each match queues one
+/// `LANE_WATCH` entry carrying the stored resume with the card's id (`instanceId`) and the watcher
+/// (`watcher`) in its data, in R68's order (the active player's watcher first).
+fn offer_to_lane_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<QueuedTrigger> {
+    // The card the event puts into the lane, when it puts one there: its owner, its id, its lane.
+    // A played permanent answers through its resolution; a play's step-4 summon (`exits_from` set)
+    // is not a placing of its own, so only a summon no play made answers as a summon.
+    let placed: Option<(PlayerId, String, i32)> = match event {
+        GameEvent::CardResolved {
+            permanent,
+            player,
+            instance_id,
+            ..
+        } if *permanent => {
+            let Some(card) = find_instance(sink.state, instance_id) else {
+                return Vec::new();
+            };
+            match card.zone {
+                Zone::Field {
+                    player: at, lane, ..
+                } if at == *player => Some((*player, instance_id.clone(), lane)),
+                _ => None,
+            }
+        }
+        GameEvent::Summoned {
+            player,
+            lane,
+            exits_from: None,
+            instance_id,
+            ..
+        } => Some((*player, instance_id.clone(), *lane)),
+        _ => None,
+    };
+    let Some((player, instance_id, lane)) = placed else {
+        return Vec::new();
+    };
+    let mut queued: Vec<QueuedTrigger> = Vec::new();
+    let order: [PlayerId; 2] = if sink.state.active == PLAYER_IDS[0] {
+        PLAYER_IDS
+    } else {
+        [PLAYER_IDS[1], PLAYER_IDS[0]]
+    };
+    for owner in order {
+        if owner != player {
+            continue;
+        }
+        let watches: Vec<(String, i32, Resume)> = sink.state.players[owner]
+            .mods
+            .iter()
+            .filter_map(|modifier| match &modifier.kind {
+                crate::state::ModifierKind::LaneWatch {
+                    lane: watched,
+                    resume,
+                    ..
+                } if modifier.expiry
+                    == crate::state::ModifierExpiry::ThisTurn {
+                        turn: sink.state.turn,
+                    } =>
+                {
+                    Some((modifier.id.clone(), *watched, resume.clone()))
+                }
+                _ => None,
+            })
+            .collect();
+        for (id, watched, resume) in watches {
+            if watched != lane {
+                continue;
+            }
+            let (entry_id, seq) = next_entry_id(sink.state, false, "w");
+            let mut data = resume.data.clone();
+            data.insert("instanceId".to_string(), Value::String(instance_id.clone()));
+            data.insert("watcher".to_string(), Value::String(owner.as_str().to_string()));
+            let entry = QueuedTrigger {
+                id: entry_id,
+                seq,
+                instance_id: id,
+                hook: LANE_WATCH.to_string(),
+                resume: Resume {
+                    data,
+                    ..resume
+                },
+            };
+            sink.state.trigger_queue.push(entry.clone());
+            queued.push(entry);
+        }
+    }
     queued
 }
 
@@ -853,6 +951,23 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
         if let Some(event) = event {
             run_owed_traps(sink, &event, entry);
         }
+        return;
+    }
+    // MD-B22, R946: a lane watcher's answer — the stored resume runs as its owner.
+    if entry.hook == LANE_WATCH {
+        let watcher = entry.resume.data.get("watcher").and_then(Value::as_str);
+        let owner = PLAYER_IDS
+            .into_iter()
+            .find(|player| Some(player.as_str()) == watcher)
+            .unwrap_or(PLAYER_IDS[0]);
+        crate::prompts::run_resume(
+            sink,
+            &entry.resume,
+            crate::prompts::ResumeOptions {
+                controller: Some(owner),
+                ..Default::default()
+            },
+        );
         return;
     }
 

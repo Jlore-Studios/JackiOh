@@ -362,6 +362,9 @@ pub enum Keyword {
     /// E35: a Spell can't target this and doesn't affect it.
     #[serde(rename = "Immune to Spells")]
     ImmuneToSpells,
+    /// MD-B1, R940: harmful effects that pick cards by a tribal tag can't target or affect this.
+    #[serde(rename = "Immune to tribal tag based hate")]
+    ImmuneToTribalHate,
     /// R636: a Unit may attack twice each turn.
     Windfury,
     /// R637: a card discarded from its owner's hand at the end of their turn. Not temporary mana (§2.3).
@@ -395,6 +398,7 @@ string_union! {
         Brittle = "Brittle",
         SpellDamage = "Spell Damage",
         ImmuneToSpells = "Immune to Spells",
+        ImmuneToTribalHate = "Immune to tribal tag based hate",
         Windfury = "Windfury",
         Temporary = "Temporary",
         Deft = "Deft",
@@ -430,6 +434,7 @@ impl Keyword {
             Keyword::Brittle { .. } => KeywordKind::Brittle,
             Keyword::SpellDamage { .. } => KeywordKind::SpellDamage,
             Keyword::ImmuneToSpells => KeywordKind::ImmuneToSpells,
+            Keyword::ImmuneToTribalHate => KeywordKind::ImmuneToTribalHate,
             Keyword::Windfury => KeywordKind::Windfury,
             Keyword::Temporary => KeywordKind::Temporary,
             Keyword::Deft => KeywordKind::Deft,
@@ -473,6 +478,7 @@ impl Keyword {
             KeywordKind::Brittle => Keyword::Brittle { n },
             KeywordKind::SpellDamage => Keyword::SpellDamage { n },
             KeywordKind::ImmuneToSpells => Keyword::ImmuneToSpells,
+            KeywordKind::ImmuneToTribalHate => Keyword::ImmuneToTribalHate,
             KeywordKind::Windfury => Keyword::Windfury,
             KeywordKind::Temporary => Keyword::Temporary,
             KeywordKind::Deft => Keyword::Deft,

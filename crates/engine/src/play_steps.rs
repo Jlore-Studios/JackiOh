@@ -462,6 +462,10 @@ pub struct PlayRun {
         deserialize_with = "present"
     )]
     pub copied: Option<Option<PlayRecord>>,
+    /// MD-B22, R946: an aimed cast's named first pick — the instance id the cast card's first target
+    /// declaration takes when it is a legal pick (Meditative #98's Book of Buff). Absent otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub aim_at: Option<String>,
 }
 
 /// A run with every cursor at rest and every optional field absent, for `validate_play` and
@@ -510,6 +514,7 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         replaced: None,
         drawn_as: None,
         copied: None,
+        aim_at: None,
     }
 }
 
@@ -2143,6 +2148,17 @@ fn ask_repeat_targets(
         if options.is_empty() {
             continue;
         }
+        // MD-B22, R946: an aimed cast takes the named legal pick for its first declaration.
+        if at == 0 && run.cast == Some(true) && let Some(aimed) = run.aim_at.clone() {
+            if let Some(pick) = options.iter().find(|option| {
+                matches!(option, Selection::Instance { instance_id } if instance_id == &aimed)
+            }) {
+                if let Some(repeat) = run.repeat.as_mut() {
+                    repeat.targets.push(pick.clone());
+                }
+                continue;
+            }
+        }
         // R452: a random cast makes this pick itself, at random, and asks nobody.
         if run.random == Some(true) || random_cast_of(sink.state, run.player).is_some() {
             let picks = random_picks(sink.rng, &options, decl.min, decl.max);
@@ -2760,6 +2776,8 @@ pub fn cast_through_pipeline(sink: &mut EngineSink<'_>, instance: &CardInstance,
     if target_enemies {
         run.target_enemies = Some(true);
     }
+    // MD-B22, R946: an aimed cast names its first pick.
+    run.aim_at = options.aim_at.clone();
     run.mana_before = Some(sink.state.players[player].mana.current);
     // A cast starts past the pay step, so it owes no targeting cost (as before: casts never paid one).
     run.targeting_owed = 0;

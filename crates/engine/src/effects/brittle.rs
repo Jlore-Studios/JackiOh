@@ -12,7 +12,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::card_scope::{CardScope, Readers, cards_in_card_scope};
+use super::card_scope::{CardScope, CardScopeOptions, Readers, cards_in_card_scope};
 use super::targets::{TargetSpec, instance_on_its_stay, resolve_target};
 use crate::brittle_count::{active_brittle_count, gain_brittle_count, give_brittle_count};
 use crate::damage::DamageTarget;
@@ -53,7 +53,15 @@ struct Reached {
 
 fn reached(ctx: &EffectContext<'_>, args: &BrittleTarget) -> Vec<Reached> {
     if let Some(scope) = &args.scope {
-        return cards_in_card_scope(ctx, scope, None)
+        // MD-B1, R940: Brittle is harmful — an immune card in a tribal scope is passed by.
+        return cards_in_card_scope(
+            ctx,
+            scope,
+            Some(&CardScopeOptions {
+                aim: Some(crate::wire::TargetAim::Harm),
+                ..Default::default()
+            }),
+        )
             .into_iter()
             .map(|entry| Reached {
                 report: entry.readers == Readers::Everyone,

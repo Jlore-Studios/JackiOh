@@ -298,6 +298,7 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
                 def_id: SHEEPISH.into(),
                 radiant: false,
                 count: 1,
+                created: None,
             }],
             unknown: 0,
         });

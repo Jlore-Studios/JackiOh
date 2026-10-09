@@ -113,6 +113,8 @@ export type Keyword =
   | { kind: "Spell Damage"; n: number }
   /** E35: a Spell can't target this and doesn't affect it. */
   | { kind: "Immune to Spells" }
+  /** MD-B1, R940: harmful effects that pick cards by a tribal tag can't target or affect this. */
+  | { kind: "Immune to tribal tag based hate" }
   /** R636: a Unit may attack twice each turn. */
   | { kind: "Windfury" }
   /** R637: a card discarded from its owner's hand at the end of their turn. Not temporary mana (§2.3). */
@@ -146,6 +148,7 @@ export const KEYWORD_KINDS = [
   "Brittle",
   "Spell Damage",
   "Immune to Spells",
+  "Immune to tribal tag based hate",
   "Windfury",
   "Temporary",
   "Deft",

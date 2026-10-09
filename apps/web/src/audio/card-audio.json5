@@ -1252,6 +1252,13 @@
     "classicplus-t-ai-10": { // Fine-Tuning
       cast: { voice: "sapi-synth-deep", text: "Adjusting weights. Improving slightly." },
     },
+    "meditative-025": { // Blue-Eyes White Felinor
+      play: { voice: "cat", text: "Two bow. One rises." },
+      death: { voice: "cat", text: "Even legends nap." },
+    },
+    "meditative-026": { // Alternate Fate
+      cast: { voice: "sapi-wizard", text: "The well runs dry. Now drink from mine." },
+    },
     "meditative-027": { // Clip-Farming Lawyer
       play: { voice: "hustler", text: "Objection! That zone is mine now." },
       death: { voice: "hustler", text: "Case dismissed. No refunds." },
@@ -1272,6 +1279,10 @@
     },
     "meditative-030-1": { // Love Bomb
       cast: { voice: "diva", text: "Mwah! You're welcome, darling." },
+    },
+    "meditative-031": { // The Conductor
+      play: { voice: "prof", text: "All aboard the made-up express!" },
+      death: { voice: "prof", text: "End of the line." },
     },
     "meditative-032": { // Spiritually 中国
       cast: { voice: "prof", text: "Lesson one. Repeat after me." },
@@ -1312,6 +1323,9 @@
     },
     "meditative-090": { // Spell Basket
       cast: { voice: "sapi-wizard", text: "A basket full of spells!" },
+    },
+    "meditative-098": { // Showdown
+      cast: { voice: "sapi-trickster", text: "This lane. Nobody else." },
     },
     "meditative-045": { // Knowledge Breaker
       play: { voice: "sapi-teacher", text: "Empty your mind. Now." },

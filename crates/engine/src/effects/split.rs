@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::damage::{DamageArgs, DamageTarget, deal_damage};
-use crate::effects::targets::{BoardScope, cards_in_scope};
+use crate::effects::targets::{BoardScope, cards_in_scope_aimed};
 use crate::layers::unit_view;
 use crate::prelude::json_as;
 use crate::script::Effect;
@@ -55,7 +55,11 @@ pub fn damage_split(args: DamageSplitArgs) -> Effect {
             if ctx.state.result.is_some() {
                 return;
             }
-            let units: Vec<CardInstance> = cards_in_scope(ctx, &scope).into_iter().collect();
+            // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
+            let units: Vec<CardInstance> =
+                cards_in_scope_aimed(ctx, &scope, crate::wire::TargetAim::Harm)
+                    .into_iter()
+                    .collect();
             let mut pool: Vec<DamageTarget> = Vec::new();
             for instance in units {
                 if standing(ctx.state, &instance) {

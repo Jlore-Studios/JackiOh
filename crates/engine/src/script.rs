@@ -532,6 +532,11 @@ pub struct StaticFlags {
     /// #22 Blood Moon's Radiant Field Trap, "From now on").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub heal_to_damage: Option<bool>,
+    /// MD-B2, R941: while this card acts on the field — face-up, top of its pile — no player generates
+    /// mana naturally: each start-of-turn refresh sets max mana as usual but current mana to the
+    /// next-turn rider only (Meditative #26).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub no_natural_mana: Option<bool>,
 }
 
 string_union! {

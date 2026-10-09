@@ -246,6 +246,13 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub chinese: Option<bool>,
+    /// MD-B6, R943 (ME-CREATED): the instance was minted after the decks were built — by an
+    /// effect or a rule during the game, never a dealt deck card. Public wherever the viewer may
+    /// read the card. Kept in every zone and through R78's and R766's resets; a card that keeps
+    /// its instance keeps it. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub created: Option<bool>,
     /// ME-ALTPLAY, R1040, R1044: the card was played face-down into the backrow as a Trap (a Unit
     /// under Knowledge Breaker's Aura, a Spell under Paranoia's) and has not finished revealing.
     /// Its controller's alone to read while it is face-down (R33, R1046); R78's reset takes it off
@@ -460,6 +467,15 @@ pub enum ModifierKind {
     /// `nextTurnOf` the opponent), so it is gone when this player's next turn begins.
     HeroArmor {
         amount: i32,
+    },
+    /// MD-B22, R946: Showdown's turn watcher (Meditative #98, Radiant face) — for the rest of the
+    /// turn, after a card of this player enters one of their zones in `lane`, the stored `resume`
+    /// re-enters the card's step with the card's id in its data. Expiry `thisTurn`. `label` is its
+    /// badge (R169), the card's own words.
+    LaneWatch {
+        lane: i32,
+        resume: Resume,
+        label: String,
     },
 }
 
@@ -1585,11 +1601,25 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         berserk: None,
         times_played: None,
         chinese: None,
+        created: Some(true),
         set_as: None,
         granted_tags: None,
     };
     *next_id += 1;
     instance
+}
+
+/// MD-B6, R943: the dealt deck cards — `build_game`'s deck loop and a Glitch reset's new deal —
+/// are never Created. Every other `new_instance` call mints a Created card.
+pub fn new_dealt_instance(
+    state: &mut impl NextId,
+    def_id: &str,
+    owner: PlayerId,
+    zone: Zone,
+) -> CardInstance {
+    let mut card = new_instance(state, def_id, owner, zone);
+    card.created = None;
+    card
 }
 
 /// A game in phase `setup`: libraries hold the decks in list order, and `setup.rs` (M1-T5)
@@ -1705,7 +1735,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameS
         let deck = deck_of(options, seat);
         let mut library: Vec<CardInstance> = deck
             .iter()
-            .map(|def_id| new_instance(&mut state, def_id, player, Zone::Library { player }))
+            .map(|def_id| new_dealt_instance(&mut state, def_id, player, Zone::Library { player }))
             .collect();
         let numbers: Vec<String> = library.iter().map(|card| card.id.clone()).collect();
         let ids = numbering.shuffle(&numbers);
@@ -1897,7 +1927,7 @@ mod tests {
                 "id": "c7", "defId": "core-001", "owner": "p2", "controller": "p2", "radiant": false,
                 "zone": { "z": "hand", "player": "p2" }, "damage": 0, "buffs": { "attack": 0, "health": 0 },
                 "grantedKeywords": [], "vanilla": false, "costMod": 0, "counters": {}, "memory": {},
-                "exertion": { "attacked": false, "switched": false }
+                "exertion": { "attacked": false, "switched": false }, "created": true
             })
         );
         assert_eq!(serde_json::from_value::<CardInstance>(json).unwrap(), card);

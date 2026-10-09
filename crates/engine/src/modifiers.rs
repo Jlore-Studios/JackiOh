@@ -335,6 +335,27 @@ pub fn cut_turn_short(
     );
 }
 
+/// MD-B22, R946: Showdown's turn watcher — a `thisTurn` modifier on `player` that answers a card
+/// of theirs entering one of their zones in `lane` (Meditative #98, Radiant face).
+pub fn add_lane_watch(
+    sink: &mut EngineSink<'_>,
+    player: PlayerId,
+    lane: i32,
+    resume: Resume,
+    label: &str,
+) -> PlayerModifier {
+    add_modifier(
+        sink,
+        player,
+        ModifierExpiry::ThisTurn { turn: sink.state.turn },
+        ModifierKind::LaneWatch {
+            lane,
+            resume,
+            label: label.to_string(),
+        },
+    )
+}
+
 /// B5 E28, R458: "For the rest of the game: at the start of your turn, …" — a `never` modifier on
 /// `player` that re-enters `resume` at each start of their turn (`turn.ts`'s delayed stage). Its `seq`
 /// is the one its id is numbered from (`addModifier`), R68's creation order among the delayed effects.

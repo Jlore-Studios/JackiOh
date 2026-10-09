@@ -81,7 +81,7 @@ fn compare_entries(state: &GameState, a: &LibraryEntryView, b: &LibraryEntryView
         return compare_text(&a.def_id, &b.def_id);
     }
     // `Number(a.radiant) - Number(b.radiant)`: base (false) before Radiant (true).
-    a.radiant.cmp(&b.radiant)
+    a.radiant.cmp(&b.radiant).then(a.created.cmp(&b.created))
 }
 
 /// R310–R312: `player`'s own library as they may know it. Pure: reads the state, shares nothing.
@@ -93,7 +93,18 @@ pub fn own_library_view(state: &GameState, player: PlayerId) -> LibraryView {
             unknown += 1;
             continue;
         };
-        let key = format!("{}:{}", if known.radiant { "R" } else { "B" }, known.def_id);
+        // MD-B6, R943: a Created card the owner knows is marked, so it groups apart.
+        let created = if card.created == Some(true) {
+            Some(true)
+        } else {
+            None
+        };
+        let key = format!(
+            "{}:{}:{}",
+            if known.radiant { "R" } else { "B" },
+            if created == Some(true) { "C" } else { "-" },
+            known.def_id
+        );
         match counts.get_mut(&key) {
             Some(entry) => entry.count += 1,
             None => {
@@ -103,6 +114,7 @@ pub fn own_library_view(state: &GameState, player: PlayerId) -> LibraryView {
                         def_id: known.def_id.clone(),
                         radiant: known.radiant,
                         count: 1,
+                        created,
                     },
                 );
             }

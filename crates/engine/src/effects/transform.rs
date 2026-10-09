@@ -30,7 +30,7 @@ use crate::zones::{
     replace_in_zone, slot_of, zone_of,
 };
 
-use super::card_scope::{CardScope, cards_in_card_scope};
+use super::card_scope::{CardScope, CardScopeOptions, cards_in_card_scope};
 use super::summon::clone_of;
 use super::targets::{TargetSpec, instance_on_its_stay, resolve_target};
 
@@ -425,7 +425,15 @@ pub fn transform_random(args: TransformRandomArgs) -> Effect {
     Effect::new("transformRandom", move |ctx| {
         // The cards to replace: the scope's, or the one the target names.
         let olds: Vec<CardInstance> = match &args.scope {
-            Some(scope) => cards_in_card_scope(ctx, scope, None)
+            // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
+            Some(scope) => cards_in_card_scope(
+                ctx,
+                scope,
+                Some(&CardScopeOptions {
+                    aim: Some(crate::wire::TargetAim::Harm),
+                    ..Default::default()
+                }),
+            )
                 .into_iter()
                 .map(|entry| entry.card)
                 .filter(|card| transformable(ctx, card))

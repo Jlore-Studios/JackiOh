@@ -234,7 +234,11 @@ function browseEntries(
   if (browse.kind === "library") {
     for (const entry of browse.library.cards) {
       const face = namedFace(lookup, browse.view, { defId: entry.defId, radiant: entry.radiant });
-      if (face !== null) entries.push({ key: `${entry.defId}:${entry.radiant ? "radiant" : "base"}`, face, count: entry.count });
+      if (face !== null) {
+        if (entry.created === true) face.created = true;
+        const created = entry.created === true ? ":created" : "";
+        entries.push({ key: `${entry.defId}:${entry.radiant ? "radiant" : "base"}${created}`, face, count: entry.count });
+      }
     }
     if (browse.library.unknown > 0) entries.push({ key: "unknown", face: null, count: browse.library.unknown });
     return { entries, order: LIBRARY_ORDER };

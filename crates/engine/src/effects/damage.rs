@@ -6,7 +6,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::damage::{DamageArgs, DamageFlags, DamageTarget, deal_damage};
-use crate::effects::targets::{BoardScope, TargetSpec, cards_in_scope, resolve_target, sides_of};
+use crate::effects::targets::{BoardScope, TargetSpec, cards_in_scope_aimed, resolve_target, sides_of};
+use crate::wire::TargetAim;
 use crate::script::Effect;
 
 /// The §4.4 modifiers an effect may put on its own damage; shared by `damage` and `damageAll`.
@@ -102,7 +103,8 @@ pub struct DamageAllArgs {
 pub fn damage_all(args: DamageAllArgs) -> Effect {
     Effect::new("damageAll", move |ctx| {
         let flags = damage_flags(&args.flags);
-        let targets = cards_in_scope(ctx, &args.scope);
+        // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
+        let targets = cards_in_scope_aimed(ctx, &args.scope, TargetAim::Harm);
 
         for instance in targets {
             let source = ctx.self_.clone();

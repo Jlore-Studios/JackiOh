@@ -16,9 +16,10 @@ import type { CardType, Enchantment, QuestView } from "@jackioh/shared";
 
 import type { IconName } from "./icons.tsx";
 import type { FaceModel } from "./model.ts";
+import { CHINESE_TERMS } from "./chinese.ts";
 import { VERDICT_GLYPH, VERDICT_WORD, tuningSummary } from "./tuning.ts";
 
-export type StateBadgeKind = "brittle" | "quest" | "tuned" | Enchantment["kind"] | "animated" | "berserk";
+export type StateBadgeKind = "brittle" | "quest" | "tuned" | Enchantment["kind"] | "animated" | "berserk" | "created";
 
 export type StateBadge = {
   kind: StateBadgeKind;
@@ -156,6 +157,16 @@ export function stateBadges(face: FaceModel): StateBadge[] {
   // B5 E35: a Berserk unit, in its glossary row's words (§6.1).
   if (face.berserk === true) {
     badges.push({ kind: "berserk", text: null, icon: "sword", words: BERSERK_WORDS, data: { "data-berserk": "true" } });
+  }
+  // MD-B6, R943: a Created card, made during the game.
+  if (face.created === true) {
+    badges.push({
+      kind: "created",
+      text: face.chinese === true ? CHINESE_TERMS.created : "Created",
+      icon: null,
+      words: "Created: made during the game",
+      data: { "data-created": "true" },
+    });
   }
   return badges;
 }
