@@ -3360,6 +3360,7 @@
     "522": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -3371,7 +3372,7 @@
         "reason": "dependency install failed on untouched main (exit 127): \nbash: line 1: rustup: command not found\n",
         "trail": ""
       },
-      "interruptions": 2,
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "onto": "bot/issue-575",
