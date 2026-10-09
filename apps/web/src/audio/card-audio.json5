@@ -1313,6 +1313,26 @@
     "meditative-090": { // Spell Basket
       cast: { voice: "sapi-wizard", text: "A basket full of spells!" },
     },
+    "meditative-097-2": { // Wishing Well
+      play: { voice: "whisper", text: "Drop a coin. Make a wish." },
+      death: { voice: "whisper", text: "The well runs dry." },
+    },
+    "meditative-097-3": { // School
+      play: { voice: "prof", text: "Settle down, class is in session." },
+      death: { voice: "prof", text: "School's out. Forever." },
+    },
+    "meditative-097-6": { // University
+      play: { voice: "posh", text: "Welcome, freshmen. Tuition is due." },
+      death: { voice: "posh", text: "Commencement came early." },
+    },
+    "meditative-097-7": { // The Great Wall
+      play: { voice: "guard", text: "Ten thousand miles. No one gets through." },
+      death: { voice: "guard", text: "The wall has fallen." },
+    },
+    "meditative-097-9": { // Jlockheed's Headquarters
+      play: { voice: "robot", text: "Headquarters online. Begin the contracts." },
+      death: { voice: "robot", text: "Evacuate the building!" },
+    },
   },
   emotes: {
     vanilla: {

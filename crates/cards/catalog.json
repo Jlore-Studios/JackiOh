@@ -11464,5 +11464,232 @@
       "keywords": [],
       "text": "Add {cards|random Radiant Spell|random Radiant Spells} to your hand."
     }
+  },
+  "meditative-097-2": {
+    "id": "meditative-097-2",
+    "index": "97.2",
+    "name": "Wishing Well",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Common",
+    "token": true,
+    "cost": 1,
+    "params": [
+      {
+        "key": "chance",
+        "base": 10,
+        "radiant": 12,
+        "better": "up",
+        "step": 2,
+        "min": 1,
+        "max": 100
+      }
+    ],
+    "loc": 42,
+    "base": {
+      "attack": 0,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nActivate: {chance}% chance to add a random Radiant card to your hand."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        },
+        {
+          "kind": "Lucky",
+          "n": 1
+        }
+      ],
+      "text": "Can't attack, Lucky 1\nActivate: {chance}% chance to add a random Radiant card to your hand."
+    }
+  },
+  "meditative-097-3": {
+    "id": "meditative-097-3",
+    "index": "97.3",
+    "name": "School",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Rare",
+    "token": true,
+    "cost": 2,
+    "params": [
+      {
+        "key": "cost",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 32,
+    "base": {
+      "attack": 0,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nActivate: Summon a random ({cost}) Cost Unit."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 16,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nActivate: Summon a random Radiant ({cost}) Cost Unit."
+    }
+  },
+  "meditative-097-6": {
+    "id": "meditative-097-6",
+    "index": "97.6",
+    "name": "University",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "token": true,
+    "cost": 4,
+    "params": [
+      {
+        "key": "times",
+        "base": 2,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 28,
+    "base": {
+      "attack": 0,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nActivate: Buff each of your permanents {times|time|times}."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 24,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nActivate: Buff each of your permanents {times|time|times}."
+    }
+  },
+  "meditative-097-7": {
+    "id": "meditative-097-7",
+    "index": "97.7",
+    "name": "The Great Wall",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "token": true,
+    "cost": 2,
+    "loc": 21,
+    "base": {
+      "attack": 0,
+      "health": 50,
+      "keywords": [
+        {
+          "kind": "Immutable"
+        },
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Tribute 3, Immutable, Can't attack\nCry: Lock every unit zone on your side."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 100,
+      "keywords": [
+        {
+          "kind": "Immutable"
+        },
+        {
+          "kind": "Armor",
+          "n": 2
+        },
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Tribute 3, Immutable, Armor 2, Can't attack\nCry: Lock every unit zone on your side."
+    }
+  },
+  "meditative-097-9": {
+    "id": "meditative-097-9",
+    "index": "97.9",
+    "name": "Jlockheed's Headquarters",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Jlockeed",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "token": true,
+    "cost": 4,
+    "loc": 47,
+    "base": {
+      "attack": 0,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Tribute 5, Indestructible, Can't attack\nActivate: Fill your board with random Jlockheed Units."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 50,
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Tribute 5, Indestructible, Can't attack\nActivate 2: Fill your board with random Radiant Jlockheed Units."
+    }
   }
 }
