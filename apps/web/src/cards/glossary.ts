@@ -86,7 +86,9 @@ export type VerbTermId =
   | "Redirect"
   | "End the turn"
   | "Trigger a Cry"
-  | "Look at a hand";
+  | "Look at a hand"
+  | "Allure"
+  | "Jade Counter";
 /** §6.1's unit statuses that are not keyword kinds (patch v0.2.0, B5 E35). */
 export type StatusTermId =
   | "Can't be in Defense Position"
@@ -243,6 +245,11 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   "Look at a hand": verb("Look at a hand", "See the opponent's hand in a prompt", {
     aliases: ["Look at your opponent's hand"],
   }),
+  Allure: verb(
+    "Allure",
+    "Marked enemy Units join your side at the start of your next turn, or die if you have no room",
+  ),
+  "Jade Counter": verb("Jade Counter", "A public count each player has, that only rises"),
 
   // §5.2 Radiant: §6.3's "Make Radiant" rule, then §5.2's sentence about a card in hand or deck.
   Radiant: entry(

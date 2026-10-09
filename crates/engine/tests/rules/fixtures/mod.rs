@@ -18,6 +18,7 @@ pub mod fruit;
 pub mod generation;
 pub mod harness;
 pub mod instance_data;
+pub mod jade;
 pub mod kill_credit;
 pub mod ky_test;
 pub mod last_boards;

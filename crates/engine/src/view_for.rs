@@ -939,6 +939,8 @@ fn side_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> SideView 
         },
         reserved: reserved_mask(state, player),
         fatigue_count: side.fatigue_count,
+        // R961: public on both seats, and absent until it first rises (D14).
+        jade: side.jade.filter(|value| *value > 0),
     }
 }
 
@@ -1713,7 +1715,9 @@ fn redact_event(
         | GameEventType::PromptAnswered
         | GameEventType::DrawOffered
         | GameEventType::DrawAnswered
-        | GameEventType::GameOver => event.clone(),
+        | GameEventType::GameOver
+        // R961: the Jade Counter is public, a player and a number.
+        | GameEventType::JadeChanged => event.clone(),
 
         // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
 

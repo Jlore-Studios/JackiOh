@@ -397,6 +397,23 @@ describe("Board", () => {
     expect(screen.getByTestId(testid.hero("opponent")).querySelector(".loss-pop")).toBeNull();
   });
 
+  it("R961 each seat's Jade Counter shows beside its hero above 0, nothing before", () => {
+    const plain = fullBoardView();
+    render(<Board view={plain} />);
+    expect(document.querySelectorAll(".hero-jade")).toHaveLength(0);
+    cleanup();
+
+    const jaded = {
+      ...plain,
+      you: { ...plain.you, jade: 5 },
+      opponent: { ...plain.opponent, jade: 2 },
+    };
+    render(<Board view={jaded} />);
+    const badges = [...document.querySelectorAll(".hero-jade")];
+    expect(badges.map((badge) => badge.getAttribute("data-jade")).sort()).toEqual(["2", "5"]);
+    for (const badge of badges) expect(badge.getAttribute("title")).toBe("Jade Counter");
+  });
+
   it("writes the log from view.events without naming a drawn card", () => {
     const view = fullBoardView();
     const logged = withEvents(view, [

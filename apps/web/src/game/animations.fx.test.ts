@@ -165,6 +165,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   glitched: { type: "glitched", player: "p1", outcome: "swap" },
   translated: { type: "translated", instanceId: "u6" },
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
+  jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
 };
 
 function longStream(rounds: number): GameEvent[] {
@@ -204,7 +205,7 @@ function startOf(signal: RunnerSignal | undefined) {
  * B1: the fx column
  * ------------------------------------------------------------------------------------------- */
 
-/** S4's table and patch v0.2.0's rows: `type → recipe`, `null` for the 12 rows that carry no effect. */
+/** S4's table and patch v0.2.0's rows: `type → recipe`, `null` for the 13 rows that carry no effect. */
 const S4_RECIPES: Record<GameEventType, string | null> = {
   cardPlayed: "cast",
   summoned: "summon",
@@ -277,6 +278,8 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   translated: null,
   // Patch v0.3.X (MN05, R1363): a hit the Armor took whole blooms a shield.
   damageAbsorbed: "armor",
+  // Meditative #39.2 (R961): the Jade badge ticks and nothing decorates it.
+  jadeChanged: null,
 };
 
 /** Every member of S1's `FxRecipe`. */
@@ -388,10 +391,11 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   glitched: ["jk-banner", 600, "turn-banner"],
   translated: ["jk-radiant-pulse", 400, "card-<instanceId>"],
   damageAbsorbed: ["jk-armor-absorb", 300, "card-<targetId> | hero-<side>"],
+  jadeChanged: ["jk-badge-tick", 200, "hero-<side>"],
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 55 rows of S4, patch v0.2.0, Glitch (R676) and MN05 (R1363) carry fx with the listed recipe and the other 12 carry none", () => {
+  it("B1 exactly the 55 rows of S4, patch v0.2.0, Glitch (R676) and MN05 (R1363) carry fx with the listed recipe and the other 13 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
     expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(55);
@@ -406,9 +410,9 @@ describe("B1 the fx column of ANIMATIONS", () => {
     }
   });
 
-  it("B1 the 12 rows without an effect have no fx value at all", () => {
+  it("B1 the 13 rows without an effect have no fx value at all", () => {
     const bare = GAME_EVENT_TYPES.filter((t) => S4_RECIPES[t] === null);
-    expect(bare).toHaveLength(12);
+    expect(bare).toHaveLength(13);
     for (const type of bare) expect(ANIMATIONS[type].fx, type).toBeUndefined();
   });
 

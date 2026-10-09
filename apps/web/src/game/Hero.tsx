@@ -127,6 +127,11 @@ export default function Hero(props: HeroProps): ReactElement {
         )}
       </HeroPortrait>
       <span className="hero-seat">{side === "you" ? "You" : "Opponent"}</span>
+      {(seat.jade ?? 0) > 0 && (
+        <span className="hero-jade" data-jade={seat.jade} title="Jade Counter">
+          {seat.jade}
+        </span>
+      )}
 
       {hero.power !== null &&
         (side === "you" ? (

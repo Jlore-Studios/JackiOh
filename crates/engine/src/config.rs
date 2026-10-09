@@ -679,6 +679,35 @@ pub struct GrapeOdds {
     pub percent: i32,
 }
 
+/// R960: one entry of any weighted roll table: the def id it names and its chance in percent. The
+/// table runs from worst to best, so a roll with Lucky keeps the later of its draws.
+pub type RollOdds = GrapeOdds;
+
+/// R960: Auspicious Rock's table (Meditative #39.1, MD-C1): Dud 20, Jade 70, Red Jade 10, ordered
+/// worst to best (Dud < Jade < Red Jade). A distribution, so config and not params: the odds must
+/// add to 100.
+pub const AUSPICIOUS_ROCK_ODDS: &[RollOdds] = &[
+    RollOdds {
+        def_id: "meditative-039-3",
+        percent: 20,
+    },
+    RollOdds {
+        def_id: "meditative-039-2",
+        percent: 70,
+    },
+    RollOdds {
+        def_id: "meditative-039-4",
+        percent: 10,
+    },
+];
+
+/// R962: the Jade Counter a summon of Jade Beauty (Meditative #39.5) is crossed at (ME-JADE).
+pub const JADE_BEAUTY_AT: i32 = 5;
+/// R962: the Jade Counter every Jade Beauty its player controls is made Radiant at (ME-JADE).
+pub const JADE_ASCEND_AT: i32 = 10;
+/// R962: the definition ME-JADE summons and ascends (Meditative #39.5 Jade Beauty).
+pub const JADE_BEAUTY_DEF_ID: &str = "meditative-039-5";
+
 /// R382: each Grape's chance in percent, in Lucky's order from worst to best (Rotten < Normal < Large <
 /// Golden < Mythic): a roll with Lucky keeps the later of its two.
 pub const GRAPE_ODDS: &[GrapeOdds] = &[

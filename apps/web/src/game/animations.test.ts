@@ -106,6 +106,8 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   translated: 400,
   // Patch v0.3.X (MN05).
   damageAbsorbed: 300,
+  // Patch v0.3.X (Meditative #39.2, R961).
+  jadeChanged: 200,
 };
 
 /* ------------------------------------------------------------------------------------------- *
@@ -201,6 +203,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   glitched: { type: "glitched", player: "p1", outcome: "swap" },
   translated: { type: "translated", instanceId: "u6" },
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
+  jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
 };
 
 const ALL_SAMPLES: GameEvent[] = GAME_EVENT_TYPES.map((t) => SAMPLES[t]);
@@ -271,7 +274,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(67);
+    expect(rows).toHaveLength(68);
   });
 
   it("gives every row an animation name and a testid template", () => {

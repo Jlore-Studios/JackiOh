@@ -745,6 +745,13 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
       return side !== null ? testid.hero(side) : locateInstance(view, e.targetId);
     },
   },
+  // R961 (Meditative #39.2): the Jade Counter rose; the hero's Jade badge ticks, no fx.
+  jadeChanged: {
+    animation: "jk-badge-tick",
+    durationMs: 200,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
 };
 
 /* ------------------------------------------------------------------------------------------- *

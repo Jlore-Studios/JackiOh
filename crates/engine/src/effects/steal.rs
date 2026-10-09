@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::combat::{enter_new_side, is_active_on_field};
 use crate::damage::DamageTarget;
+use crate::effects::destroy::{DestroyArgs, destroy};
 use crate::effects::targets::{TargetSpec, instance_on_its_stay, resolve_target};
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, find_instance};
@@ -31,6 +32,17 @@ pub struct StealTarget {
     pub target: Option<TargetSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub instance_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub otherwise: Option<StealOtherwise>,
+}
+
+/// R963, MD-C4 (Meditative #39.5 Jade Beauty's Allure): what a steal does when the card cannot be
+/// taken because its new side has no free zone.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum StealOtherwise {
+    /// An ordinary destroy (§6.3), so Death and Reborn apply and an Indestructible card stays (R46).
+    Destroy,
 }
 
 fn instance_of(ctx: &EffectContext<'_>, args: &StealTarget) -> Option<CardInstance> {
@@ -129,7 +141,24 @@ pub fn steal(args: StealTarget) -> Effect {
         let Some(card) = instance_of(ctx, &args) else {
             return;
         };
-        take_control(ctx, &card);
+        if take_control(ctx, &card) {
+            return;
+        }
+        // R963, MD-C4: with no open zone on the taker's side, `otherwise: destroy` destroys it
+        // instead — but only a card still standing on the field under the other player (`instance_of`
+        // already narrowed it to the stay the run began on, R174): a card the taker already controls
+        // is neither stolen nor destroyed (R76). Anything else the steal refused — off the field,
+        // dormant — fizzles in `destroy`'s own resolution, so only the taker's own card is guarded.
+        if args.otherwise != Some(StealOtherwise::Destroy) {
+            return;
+        }
+        if card.controller == ctx.controller {
+            return;
+        }
+        let target = TargetSpec::Instance {
+            instance_id: card.id.clone(),
+        };
+        (destroy(DestroyArgs { target }).apply)(ctx);
     })
 }
 

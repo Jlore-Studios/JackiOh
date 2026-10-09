@@ -148,6 +148,7 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     glitched: { type: "glitched", player: "p1", outcome: "swap" },
     translated: { type: "translated", instanceId: enemy },
     damageAbsorbed: { type: "damageAbsorbed", sourceId: unit, targetId: enemy, absorbed: 2, combat: true },
+    jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
   };
 }
 

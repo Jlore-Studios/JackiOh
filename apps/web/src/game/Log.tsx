@@ -259,6 +259,8 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return `${capitalised(name.instance(event.instanceId))} ${event.lost === true ? "lost" : "gained"} ${event.keyword.kind}`;
     case "counterChanged":
       return `${capitalised(name.instance(event.instanceId))} ${event.counter} counters: ${event.value}`;
+    case "jadeChanged":
+      return capitalised(`${name.whose(event.player)} Jade Counter is ${event.value}`);
     case "costChanged":
       // R177: a card this seat may not read arrives with its cost redacted to a negative sentinel.
       return event.cost < 0

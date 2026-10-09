@@ -1297,6 +1297,36 @@
     "meditative-038": { // H1B Printer
       cast: { voice: "robot", text: "Printing visas. Please hold." },
     },
+    "meditative-039": { // 赌石 Addict
+      play: { voice: "hustler", text: "Cut it open! Cut them all open!" },
+      death: { voice: "hustler", text: "Should have folded." },
+    },
+    "meditative-039-1": { // Auspicious Rock
+      cast: { voice: "digger", text: "Crack it! Crack it now!", effect: "stoneThud" },
+    },
+    "meditative-039-2": { // Jade
+      cast: { voice: "whisper", text: "Green and gleaming.", effect: "crystalHum" },
+    },
+    "meditative-039-3": { // Dud
+      cast: { voice: "goof", text: "Nothing. Absolutely nothing.", effect: "crumble" },
+    },
+    "meditative-039-4": { // Red Jade
+      cast: { voice: "diva", text: "Behold! Red as sunrise.", effect: "crystalHum" },
+    },
+    "meditative-039-5": { // Jade Beauty
+      play: { voice: "diva", text: "Gaze upon me, little stones." },
+      death: { voice: "diva", text: "Back into the mountain." },
+    },
+    "meditative-041": { // CN Smuggler
+      play: { voice: "hustler", text: "Nothing to declare. Wink." },
+      death: { voice: "hustler", text: "You saw nothing." },
+    },
+    "meditative-043": { // CN Jade Market
+      cast: { voice: "narrator", text: "Rocks for sale! Finest rocks!" },
+    },
+    "meditative-044": { // CN Jade Well
+      cast: { voice: "crone", text: "Drink from the deep green.", effect: "wellDrip" },
+    },
     "meditative-045": { // Knowledge Breaker
       play: { voice: "sapi-teacher", text: "Empty your mind. Now." },
       death: { voice: "sapi-teacher", text: "What I knew returns." },

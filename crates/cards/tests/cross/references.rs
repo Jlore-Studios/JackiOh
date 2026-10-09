@@ -29,12 +29,40 @@ fn entries() -> Vec<&'static CardDef> {
 }
 
 /// §2.1, R244: dealt by a rule, so no card's text names it — The Coin, and Glitch, which R673's roll deals.
-const DEALT_BY_A_RULE: &[&str] = &["core-t-coin", "classic-t-glitch"];
+const DEALT_BY_A_RULE: &[&str] = &[
+    "core-t-coin",
+    "classic-t-glitch",
+    // Summoned by the Jade Counter crossing 5 or 10, never named by a card (R962).
+    "meditative-039-5",
+];
 
 /// R381 (B2.8): card names that are also rules words. A text using one names that card only when the
 /// card's `refs` lists it: Exile the verb and the pile, Burn at the hand cap, Echo the keyword,
 /// Recycle the verb.
 const RULES_WORDS: &[&str] = &["Exile", "Burn", "Echo", "Recycle"];
+
+/// R961: rules phrases that hold a card's name without naming it (R381): "Jade Counter" holds
+/// "Jade" (Meditative #39.2), which names nothing inside it.
+const RULES_PHRASES: &[&str] = &["Jade Counter"];
+
+/// Whether the match at byte range `at..end` lies inside a rules phrase: the phrase holds the
+/// name, so the name reads as the phrase's word, not the card's. Both bounds sit on the match's
+/// own edges, so every byte index here is a character boundary.
+fn inside_rules_phrase(text: &str, at: usize, end: usize) -> bool {
+    RULES_PHRASES.iter().any(|phrase| {
+        let mut from = 0;
+        loop {
+            let Some(offset) = text[from..].find(phrase) else {
+                return false;
+            };
+            let start = from + offset;
+            if start <= at && end <= start + phrase.len() {
+                return true;
+            }
+            from = start + 1;
+        }
+    })
+}
 
 /// R480: the token pools a card names by tag, and the phrase that names each.
 struct TokenPool {
@@ -106,7 +134,8 @@ fn is_word(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '\'' || c == '-'
 }
 
-/// Whether `text` names `name` as whole words, alone or plural.
+/// Whether `text` names `name` as whole words, alone or plural — never from inside a rules
+/// phrase (R961: the "Jade" in "Jade Counter" names no card).
 fn names(text: &str, name: &str) -> bool {
     let mut from = 0;
     loop {
@@ -120,7 +149,10 @@ fn names(text: &str, name: &str) -> bool {
             end += 1;
         }
         let after = text[end..].chars().next();
-        if before.is_none_or(|c| !is_word(c)) && after.is_none_or(|c| !is_word(c)) {
+        if before.is_none_or(|c| !is_word(c))
+            && after.is_none_or(|c| !is_word(c))
+            && !inside_rules_phrase(text, at, end)
+        {
             return true;
         }
         // `from = at + 1`, kept on a character boundary.
@@ -299,6 +331,35 @@ mod r279_the_reference_map_spec_5_7_10_10 {
         assert_eq!(listing, Vec::<String>::new());
         // "Recycler" is a longer word, so Malzahar's Recycler never names Recycle at all.
         assert!(!names("Malzahar's Recycler", "Recycle"));
+    }
+
+    #[test]
+    fn r961_reads_jade_counter_as_a_rules_word_the_jade_inside_names_no_card() {
+        assert!(!names(
+            "Add {jade} to your Jade Counter. Gain {mana} mana.",
+            "Jade"
+        ));
+        assert!(!names(
+            "You summon this when your Jade Counter reaches 5.",
+            "Jade"
+        ));
+        // Outside the phrase it still names Jade (Meditative #39.2).
+        assert!(names("Your Jade Beauties become Radiant.", "Jade"));
+        assert!(names(
+            "Add one of these: Dud (20%), Jade (70%) or Red Jade (10%).",
+            "Jade"
+        ));
+        // So neither Jade nor Red Jade lists a `refs` for the Counter alone.
+        for id in ["meditative-039-2", "meditative-039-4"] {
+            assert_eq!(
+                CATALOG
+                    .get(id)
+                    .and_then(|card| card.refs.clone())
+                    .unwrap_or_default(),
+                Vec::<String>::new(),
+                "{id} names no card"
+            );
+        }
     }
 
     #[test]

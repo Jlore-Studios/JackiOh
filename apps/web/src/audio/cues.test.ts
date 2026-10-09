@@ -216,6 +216,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   translated: { type: "translated", instanceId: "u6" },
   // Patch v0.3.X (MN05).
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
+  // Patch v0.3.X (Meditative #39.2, R961).
+  jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -289,6 +291,8 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   translated: null,
   // Patch v0.3.X (MN05).
   damageAbsorbed: "armorRing",
+  // Patch v0.3.X (Meditative #39.2, R961).
+  jadeChanged: "uiClick",
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */

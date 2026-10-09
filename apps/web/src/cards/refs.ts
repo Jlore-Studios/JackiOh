@@ -41,6 +41,25 @@ function isWordChar(char: string | undefined): boolean {
   return char !== undefined && WORD.test(char);
 }
 
+/**
+ * Rules phrases that hold a card's name without naming it (R961): "Jade Counter" holds "Jade"
+ * (Meditative #39.2), which names nothing inside it.
+ */
+const RULES_PHRASES: readonly string[] = ["Jade Counter"];
+
+/** Whether the match at [start, end) lies inside a rules phrase, which reads as the phrase's word. */
+function insideRulesPhrase(text: string, start: number, end: number): boolean {
+  return RULES_PHRASES.some((phrase) => {
+    let from = 0;
+    for (;;) {
+      const at = text.indexOf(phrase, from);
+      if (at < 0) return false;
+      if (at <= start && end <= at + phrase.length) return true;
+      from = at + 1;
+    }
+  });
+}
+
 /** Every whole-word occurrence of `name` (plural included) in `text`, as [start, end) pairs. */
 function occurrences(text: string, name: string): { start: number; end: number }[] {
   const found: { start: number; end: number }[] = [];
@@ -50,7 +69,9 @@ function occurrences(text: string, name: string): { start: number; end: number }
     if (at < 0) return found;
     let end = at + name.length;
     if (text[end] === PLURAL) end += 1;
-    if (!isWordChar(text[at - 1]) && !isWordChar(text[end])) found.push({ start: at, end });
+    if (!isWordChar(text[at - 1]) && !isWordChar(text[end]) && !insideRulesPhrase(text, at, end)) {
+      found.push({ start: at, end });
+    }
     from = at + 1;
   }
 }

@@ -864,6 +864,11 @@ pub struct SideView {
     /// backrow zone an animated "Animated on your turn" card will return to is held the same way.
     pub reserved: RowFlags,
     pub fatigue_count: i32,
+    /// ME-JADE, R961: this seat's Jade Counter, shown to both seats beside its hero. Absent until it
+    /// first rises, so a game without a Jade sends the view it always did (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub jade: Option<i32>,
 }
 
 /// The `forYou: true` member of `PendingView`: the prompt this viewer must answer.

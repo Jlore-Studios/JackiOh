@@ -24,6 +24,7 @@ use serde_json::Value;
 
 use crate::effects::destroy::{DestroyArgs, destroy, destroy_all};
 use crate::effects::move_::{DiscardHandArgs, discard_hand};
+use crate::effects::steal::{StealOtherwise, StealTarget, steal};
 use crate::effects::targets::{
     BoardScope, PlayerSpec, TargetSpec, cards_in_scope, instance_of, player_of, stands_since_script_began,
 };
@@ -33,8 +34,9 @@ use crate::prompts::{SELF_KEY, resume_self};
 use crate::resolve::{HookOptions, make_context};
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{DelayedAt, DelayedEffect, Resume, find_instance, is_turn_of};
-use crate::wire::{CardMark, Phase, PlayerId, ZoneName};
+use crate::wire::{CardMark, Phase, PlayerId, Row, ZoneName, opponent_of};
 use crate::work::RUN_MARKS_KEY;
+use crate::zones::{card_at, slots_of};
 
 /// The `Script` key a delayed continuation lands on unless the card names another. `script.ts`
 /// documents `delayed` as "a delayed effect this card scheduled, resolved at its R62 point", and it
@@ -258,6 +260,12 @@ fn ends_other_players_turn(ctx: &EffectContext<'_>, at: &DelayAt) -> bool {
 /// card's step for every other entry (R126).
 pub const DELAYED_DESTROY_HOOK: &str = "@delayedDestroy";
 pub const DELAYED_DISCARD_HAND_HOOK: &str = "@delayedDiscardHand";
+/// R963, MD-C4 (Meditative #39.5 Jade Beauty's Allure): the hook an Allured Unit's steal waits under.
+pub const DELAYED_ALLURE_HOOK: &str = "@delayedAllure";
+/// R963: the mark an Allured enemy Unit carries in both views while the steal waits (R437).
+pub const ALLURE_MARK: &str = "allure";
+/// R963: that mark's colour.
+pub const ALLURE_MARK_COLOR: &str = "pink";
 
 /// A card's def id for the record an engine delayed effect keeps: the text that made it, if any — the
 /// running `ctx.defId` first, as `prompts.resumeSelf` names it (B5 E14, R546). `(defId, radiant)`.
@@ -351,6 +359,45 @@ pub fn destroy_at_next_turn_start(args: DestroyAtNextTurnStartArgs) -> Effect {
                     mark_delayed(ctx, &entry, mark);
                 }
             }
+        }
+    })
+}
+
+/// R963, MD-C4 (Meditative #39.5 Jade Beauty): "Allure every enemy Unit" — each enemy Unit on
+/// the field now (the top of its pile, `card_at`, so a carried Unit, R446, and a card dormant
+/// under a Stack, R13, are never marked) is stolen at the start of the Allurer's next turn, in
+/// lane order, or destroyed with no open unit zone (`otherwise: destroy`). One delayed entry per
+/// Unit, each watching its stay (R174) and carrying the public `allure` mark (R437) until it
+/// resolves, fizzles or is forgotten. The entries outlive the Allurer (R76).
+pub fn allure_enemy_units() -> Effect {
+    Effect::new("allureEnemyUnits", move |ctx| {
+        let (def_id, radiant) = maker_of(ctx);
+        let owner = ctx.controller;
+        let at = DelayedAt {
+            phase: Phase::Start,
+            player: owner,
+        };
+        let mark = CardMark {
+            mark: ALLURE_MARK.to_string(),
+            color: ALLURE_MARK_COLOR.to_string(),
+        };
+        // `slots_of` walks the row in lane order; `card_at` reads the top of each pile.
+        for slot in slots_of(opponent_of(owner), Row::Units) {
+            let Some(unit) = card_at(ctx.state, slot).cloned() else {
+                continue;
+            };
+            let mut data: IndexMap<String, Value> = IndexMap::new();
+            data.insert("instanceId".to_string(), Value::String(unit.id.clone()));
+            let resume = Resume {
+                def_id: def_id.clone(),
+                hook: DELAYED_ALLURE_HOOK.to_string(),
+                step: "unit".to_string(),
+                radiant,
+                instance_id: None,
+                data,
+            };
+            let entry = schedule_delayed(ctx, owner, at, resume, Some(unit.id.clone()), None);
+            mark_delayed(ctx, &entry, &mark);
         }
     })
 }
@@ -499,6 +546,17 @@ pub fn run_engine_delayed(sink: &mut EngineSink<'_>, effect: &DelayedEffect) -> 
                 player: Some(PlayerSpec::SelfSide),
             });
             (discard.apply)(&mut ctx);
+            true
+        }
+        DELAYED_ALLURE_HOOK => {
+            if let Some(instance_id) = data.get("instanceId").and_then(Value::as_str) {
+                let target = StealTarget {
+                    instance_id: Some(instance_id.to_string()),
+                    otherwise: Some(StealOtherwise::Destroy),
+                    ..StealTarget::default()
+                };
+                (steal(target).apply)(&mut ctx);
+            }
             true
         }
         _ => false,

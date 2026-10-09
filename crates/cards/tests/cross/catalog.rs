@@ -5063,6 +5063,7 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
      {
         let printed: BTreeMap<String, String> = entries()
             .into_iter()
+            .filter(|entry| entry.set == SetName::ClassicPlus)
             .filter_map(|entry| {
                 entry
                     .printed_rarity
@@ -5108,6 +5109,42 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
                 .all(|entry| entry.token
                     && (entry.set == SetName::ClassicPlus || entry.set == SetName::Meditative))
         );
+    }
+
+    #[test]
+    fn b2_5_prints_the_designer_s_rarity_on_every_meditative_token_the_catalog_holds() {
+        // The designer's rarity of each Meditative token the catalog holds yet, by index: Rare for
+        // the Rock and the Jade, Common for the Dud, Mythic for the Red Jade and the Beauty.
+        const MEDITATIVE_PRINTED: &[(&str, &str)] = &[
+            ("39.1", "Rare"),
+            ("39.2", "Rare"),
+            ("39.3", "Common"),
+            ("39.4", "Mythic"),
+            ("39.5", "Mythic"),
+        ];
+        let printed: BTreeMap<String, String> = entries()
+            .into_iter()
+            .filter(|entry| entry.set == SetName::Meditative)
+            .filter_map(|entry| {
+                entry
+                    .printed_rarity
+                    .map(|rarity| (entry.index.clone(), rarity.as_str().to_string()))
+            })
+            .collect();
+        for (index, rarity) in MEDITATIVE_PRINTED {
+            assert_eq!(
+                printed.get(*index).map(String::as_str),
+                Some(*rarity),
+                "Meditative token {index} prints {rarity}"
+            );
+        }
+        // Every Meditative token present has a row above.
+        let without_row: Vec<String> = printed
+            .keys()
+            .filter(|index| !MEDITATIVE_PRINTED.iter().any(|(row, _)| row == index))
+            .cloned()
+            .collect();
+        assert_eq!(without_row, Vec::<String>::new(), "every present token has a row");
     }
 }
 

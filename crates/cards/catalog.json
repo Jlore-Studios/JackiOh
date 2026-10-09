@@ -11281,6 +11281,316 @@
       "text": "Start of turn: Add a random Radiant KY or CN card to your hand. It costs (0)."
     }
   },
+  "meditative-039": {
+    "id": "meditative-039",
+    "index": "39",
+    "name": "赌石 Addict",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "CN"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "meditative-039-1"
+    ],
+    "loc": 18,
+    "base": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Add an Auspicious Rock to your hand."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Add a Radiant Auspicious Rock to your hand."
+    }
+  },
+  "meditative-039-1": {
+    "id": "meditative-039-1",
+    "index": "39.1",
+    "name": "Auspicious Rock",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "CN",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Rare",
+    "token": true,
+    "cost": 0,
+    "refs": [
+      "meditative-039-2",
+      "meditative-039-3",
+      "meditative-039-4"
+    ],
+    "params": [
+      {
+        "key": "life",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 18,
+    "base": {
+      "keywords": [],
+      "text": "Lose {life} health. Add one of these to your hand at random: Dud (20%), Jade (70%) or Red Jade (10%)."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Lucky",
+          "n": 2
+        }
+      ],
+      "text": "Lucky 2\nLose {life} health. Add one of these to your hand at random: Dud (20%), Jade (70%) or Red Jade (10%)."
+    }
+  },
+  "meditative-039-2": {
+    "id": "meditative-039-2",
+    "index": "39.2",
+    "name": "Jade",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "CN",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Rare",
+    "token": true,
+    "cost": 0,
+    "params": [
+      {
+        "key": "jade",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "mana",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 17,
+    "base": {
+      "keywords": [],
+      "text": "Add {jade} to your Jade Counter. Gain {mana} mana."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add {jade} to your Jade Counter. Gain {mana} mana."
+    }
+  },
+  "meditative-039-3": {
+    "id": "meditative-039-3",
+    "index": "39.3",
+    "name": "Dud",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "CN",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Common",
+    "token": true,
+    "cost": 0,
+    "params": [
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 15,
+    "base": {
+      "keywords": [],
+      "text": "Deal {damage} damage."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Deal {damage} damage."
+    }
+  },
+  "meditative-039-4": {
+    "id": "meditative-039-4",
+    "index": "39.4",
+    "name": "Red Jade",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "CN",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "token": true,
+    "cost": 0,
+    "params": [
+      {
+        "key": "jade",
+        "base": 5,
+        "radiant": 10,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 12,
+    "base": {
+      "keywords": [],
+      "text": "Add {jade} to your Jade Counter."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add {jade} to your Jade Counter."
+    }
+  },
+  "meditative-039-5": {
+    "id": "meditative-039-5",
+    "index": "39.5",
+    "name": "Jade Beauty",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "CN",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "token": true,
+    "cost": 10,
+    "refs": [
+      "meditative-039-2"
+    ],
+    "loc": 12,
+    "base": {
+      "attack": 20,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        },
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Immutable"
+        }
+      ],
+      "text": "Can't attack, Indestructible, Immutable\nEnd of turn: Allure every enemy Unit. At the start of your next turn they join your side, or die of heartbreak if you have no room.\nYou summon this when your Jade Counter reaches 5."
+    },
+    "radiant": {
+      "attack": 40,
+      "health": 40,
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Immutable"
+        }
+      ],
+      "text": "Indestructible, Immutable\nEnd of turn: Allure every enemy Unit. At the start of your next turn they join your side, or die of heartbreak if you have no room.\nYour Jade Beauties become Radiant when your Jade Counter reaches 10."
+    }
+  },
+  "meditative-041": {
+    "id": "meditative-041",
+    "index": "41",
+    "name": "CN Smuggler",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "CN"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "meditative-039-1"
+    ],
+    "loc": 24,
+    "base": {
+      "attack": 4,
+      "health": 5,
+      "keywords": [],
+      "text": "Start of turn: Add an Auspicious Rock and a random CN card to your hand."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 10,
+      "keywords": [],
+      "text": "Start of turn: Add a Radiant Auspicious Rock and a random Radiant CN card to your hand."
+    }
+  },
+  "meditative-043": {
+    "id": "meditative-043",
+    "index": "43",
+    "name": "CN Jade Market",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "CN"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": "X",
+    "refs": [
+      "meditative-039-1"
+    ],
+    "loc": 19,
+    "base": {
+      "keywords": [],
+      "text": "Add X Auspicious Rocks to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add X Radiant Auspicious Rocks to your hand."
+    }
+  },
+  "meditative-044": {
+    "id": "meditative-044",
+    "index": "44",
+    "name": "CN Jade Well",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [
+      "CN"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "meditative-039-1"
+    ],
+    "loc": 16,
+    "base": {
+      "keywords": [],
+      "text": "Start of turn: Add an Auspicious Rock to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Start of turn: Add a Radiant Auspicious Rock to your hand."
+    }
+  },
   "meditative-045": {
     "id": "meditative-045",
     "index": "45",
