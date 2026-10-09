@@ -3735,6 +3735,10 @@
       "run_id": "37905333871",
       "started_at": "2026-10-09T08:30:48Z",
       "stop_requested": false,
+      "strike_log": [
+        "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
+      ],
+      "strikes": 1,
       "taken_asks": []
     },
     "541": {
