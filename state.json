@@ -4471,7 +4471,25 @@
       "run_id": "37990783836",
       "started_at": "2026-10-09T21:01:31Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "votes": {
+        "approvals": [
+          "gemini"
+        ],
+        "builder": "",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "gemini",
+            "run": "37990783836",
+            "tier": "medium"
+          }
+        ],
+        "sha": "19dcac4f237d11efc8a30ad1fa29dc755474f06a",
+        "tiers": {
+          "gemini": "medium"
+        }
+      }
     },
     "63": {
       "died": 0,
