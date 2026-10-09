@@ -110,7 +110,7 @@ CI's `training gate` re-runs its promotion before anything merges.
 | Way in | Session Manager only, like the night box: no inbound port, no key pair. It uses the night box's subnet and instance profile (`jackioh-night-vm`: `AmazonSSMManagedInstanceCore`, and `CloudWatchAgentServerPolicy`). IMDSv2 required. |
 | Users | `agent-train-improve` and `agent-train-unban`: a home only each can read, no `sudo`, no Docker |
 | In each home | `~/JackiOh`, the lane's checkout (`loop.sh` resets it to `main` every cycle; its `target/` stays, so builds after the first are incremental); Rust (rustup and the toolchain `rust-toolchain.toml` pins, with `rustfmt` and `clippy`); `~/training-out/<lane>/` (the games' records, `attempts.md`, the gate's reports); `~/logs/<lane>.log` (the loop's log) |
-| CLIs | `devin` (as on the night box), `gh` (GitHub's apt repository), `git` (pushing through `gh`'s login) |
+| CLIs | `devin` (as on the night box), `gh` (GitHub's apt repository), `git` (pushing through `gh`'s login), Node 24 and pnpm (corepack), with which the loop and Devin run the web's tests that play the AI before a promotion goes up |
 | Services | `jackioh-train@.service`: `User=agent-train-%i`, `training/loop.sh %i` from the lane's checkout, `Restart=always` after `RestartSec=60`, `DEVIN_MODEL=swe-2-max` (the knob for Devin's model), `RAYON_NUM_THREADS=2` (the two lanes' games share the box's vCPUs), `JACKIOH_TRAINING_OUT` the lane's `~/training-out/<lane>`; both enabled, so they start at boot |
 | Idle stop | none: the box never powers itself off, and no starter wakes it |
 
@@ -147,8 +147,11 @@ Running the lanes:
 
 - **Stop a lane** (its Devin session ends with it): `sudo systemctl stop jackioh-train@improve`;
   `sudo systemctl disable jackioh-train@improve` keeps it stopped across reboots, and `sudo
-  systemctl enable --now jackioh-train@improve` starts it again. To refuse one promotion, close its
-  pull request: the lane waits while one is open and starts again from `main` once it is closed.
+  systemctl enable --now jackioh-train@improve` starts it again.
+- **Watch a lane**: each keeps a pull request open from `ai/<lane>`, a draft while Devin works, with
+  one comment per session rewritten every 15 minutes (`training/README.md`, Watching a lane on
+  GitHub). To refuse one promotion, close its pull request: the lane starts again from `main` with a
+  new draft.
 - **Change Devin's model**: edit `DEVIN_MODEL` in `setup.sh`'s unit, run `setup.sh --training`
   again, then `sudo systemctl restart jackioh-train@improve jackioh-train@unban` (a running lane
   reads a changed unit only when it restarts). SWE-2 is free on Devin's CLI only through

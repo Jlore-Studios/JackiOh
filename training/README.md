@@ -15,24 +15,54 @@ docs/v0.3.0/SURFACE.md §14.
 The training box (an always-on EC2 `m7i-flex.large`, set up by #306's part 39) runs two systemd services,
 `jackioh-train@improve` and `jackioh-train@unban`, each as its own Linux user (`agent-train-improve`,
 `agent-train-unban`) with its own checkout, Devin login and GitHub token. Each runs
-[`loop.sh`](loop.sh) `<lane>` forever (`Restart=always`):
+[`loop.sh`](loop.sh) `<lane>` forever (`Restart=always`).
 
-1. Fetch `main`, reset the lane's branch `ai/<lane>` to it, build `jackioh` from it and keep that
-   binary as `~/parent-jackioh`. The parent is always the AI on `main`.
-2. Run one Devin session on the lane's standing prompt
+Each lane keeps one pull request open from `ai/<lane>`: a draft while Devin works, and ready for
+review, with auto-merge on, once a promotion is in it. Each cycle:
+
+1. If the pull request holds a promotion waiting on CI, look after it and do nothing else. When
+   `main` moved under it (GitHub calls it behind or conflicting, or a check failed on a `main` that
+   has moved on since), land it on `main` again (step 4) and push, so CI runs again. When a required
+   check failed, set it back: back to draft, with a comment naming the failing checks, its commit kept
+   as a local branch `ai/<lane>-set-back-<t>`, and an entry in `attempts.md` saying why, which the
+   next session reads first. Otherwise wait.
+2. Otherwise fetch `main`, reset `ai/<lane>` to it, build `jackioh` from it and keep that binary as
+   `~/parent-jackioh`. The parent is always the AI on `main`. Push `ai/<lane>` as `main` plus an
+   empty `[skip ci]` commit naming the session, and make the lane's pull request this session's
+   draft, titled `AI gen <N> (<lane>): in training, nothing promoted yet` (opening one if none is
+   open).
+3. Run one Devin session on the lane's standing prompt
    (`devin -p --prompt-file training/<lane>.md --model "$DEVIN_MODEL" --permission-mode dangerous
    --respect-workspace-trust false --export ~/logs/<lane>-<t>.json`). Devin changes the AI, measures
    it with dry runs of the gate, and commits only once a real run of the gate has passed. A session
-   ends after a promotion or after four hours.
-3. When the session ends with a promotion commit, rebase it on `main`. If `main`'s AI, engine or
-   cards changed meanwhile, the parent changed, so the promotion is dropped (kept as a local
-   `ai/<lane>-stale-<t>` branch and noted in `attempts.md`) and the cycle starts again at 1.
-   Otherwise the loop re-checks it against the parent (`cargo jackioh promote --verify`), pushes
-   `ai/<lane>` and opens a pull request titled `AI gen <N> (<lane>): <what changed>` with the gate's
-   report as its body, with auto-merge (squash) on.
-4. Sleep 60 seconds and repeat. While a pull request from `ai/<lane>` is open, the loop waits for it.
+   ends after a promotion or after four hours. Meanwhile, every 15 minutes
+   (`TRAIN_PROGRESS_SECONDS`), the loop pushes the checkout as it is to `ai/<lane>` as one
+   `[skip ci]` commit when it changed, and rewrites the session's comment on the draft.
+4. When the session ends with a promotion commit, land it on `main`. If `main`'s crates did not move
+   since the session's start, the parent and the candidate are the builds the gate measured: rebase
+   the commit and re-check it against the parent (`cargo jackioh promote --verify`). If they moved,
+   the parent changed: build it from `main` again, apply the promotion's change (less the record the
+   gate writes) to `main`'s AI and play the gate again for real, which renumbers the generation.
+   Then run the web's tests that play the AI (the tutorial's lessons and practice, as the standing
+   prompts' "Beyond the gate" lists them) when the box has `pnpm`, push `ai/<lane>`, retitle the pull
+   request with the promotion's subject (`AI gen <N> (<lane>): <what changed>`), give it the gate's
+   report as its body, mark it ready and turn on auto-merge (squash). A promotion that fails any of
+   that is set back as in 1.
+5. Sleep 60 seconds and repeat.
 
 A lane never merges anything itself: CI does, through branch protection, once its checks pass.
+
+### Watching a lane on GitHub
+
+The lane's pull request is the place to follow it. Its **Files changed** is the session's work in
+progress against `main` (CI does not run on a `[skip ci]` commit), and its comments say what
+happened:
+
+- one comment per session, rewritten every 15 minutes while it runs: how long it has run, the
+  checkout's diff against `main` with a link to it, and everything `attempts.md` gained this session
+  (each attempt, its dry run's numbers, kept or reverted). The last rewrite says how it ended;
+- a comment when a promotion goes up, with the gate's table, and when one is set back, with the
+  failing checks.
 
 ## What a lane may change
 
@@ -40,7 +70,8 @@ Only `crates/ai/**` and `training/history/**`. A pull request from an `ai/*` bra
 anything else is refused by CI, and so is one whose `crates/ai/generation.json` is not `main`'s
 plus one (part 30's `training-gate` job). That job builds `main`'s `jackioh` and the branch's, and
 runs `promote --lane <lane> --verify` again on the same seeds: a lane's own claim is never trusted.
-Branch protection's "require branches to be up to date" makes a lane whose parent moved run again.
+Branch protection's "require branches to be up to date" holds a promotion whose `main` moved on
+until the loop lands it on `main` again (How a lane runs, step 1).
 
 The engine (`crates/engine`), the cards (`crates/cards`), every test outside `crates/ai`, the gate
 (`crates/tools/src/promote.rs`, `arena.rs`) and its thresholds (`TRAINING_*` in
@@ -99,9 +130,9 @@ thread count.
 | Every game the arena plays (a promotion run or an experiment): one `GameRecord` (R376) per line, `source: "dev"`, `mode: "random"` | `~/training-out/<lane>/<date>.jsonl` (`$JACKIOH_TRAINING_OUT`; `arena` without it prints to stdout) |
 | The same records in Postgres, loaded once per finished day when the box has `DATABASE_URL` | `jackioh-server stats-import`, read back with `jackioh-server stats-cards --source=dev` |
 | A promotion's gate numbers | `training/history/<lane>.jsonl` and `crates/ai/generation.json`, committed with it |
-| What each Devin session tried | `~/training-out/<lane>/attempts.md` |
+| What each Devin session tried, and why the loop set a promotion back | `~/training-out/<lane>/attempts.md`, quoted in each session's comment on the lane's pull request |
 | The gate's report for each pull request | `~/training-out/<lane>/promote-<t>.md` |
-| The loop's log, and each Devin session's export | `~/logs/<lane>.log`, `~/logs/<lane>-<t>.json` |
+| The loop's log, each Devin session's export, and each run of the web's tests | `~/logs/<lane>.log`, `~/logs/<lane>-<t>.json`, `~/logs/<lane>-web-<t>.log` |
 
 ## Stopping, starting and watching a lane
 
@@ -113,8 +144,9 @@ systemctl status jackioh-train@unban
 tail -f ~agent-train-unban/logs/unban.log
 ```
 
-To refuse a promotion, close its pull request: the loop waits while one is open, and starts again
-from `main` once it is closed. A lane's thresholds change only by a pull request from a person to
+To refuse a promotion, close its pull request: the loop opens a new draft with its next session,
+from `main`. A lane notices a new `loop.sh` on `main` at the start of a cycle, or while it waits on a
+promotion, and restarts on it. A lane's thresholds change only by a pull request from a person to
 `crates/engine/src/config.rs`.
 
 ## Reading the history

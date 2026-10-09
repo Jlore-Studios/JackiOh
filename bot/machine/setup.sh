@@ -119,6 +119,15 @@ install_devin() {
   chmod -R a+rX /usr/local/lib/devin
 }
 
+# Node 24 (the repo's .nvmrc), and pnpm through corepack (package.json pins the version). On the
+# training box, loop.sh and Devin run the web's tests that play the AI with them before a promotion
+# goes up (training/README.md).
+if ! node --version 2>/dev/null | grep -q '^v24\.'; then
+  curl -fsSL https://deb.nodesource.com/setup_24.x | bash - >/dev/null
+  apt-get install -y -qq nodejs >/dev/null
+fi
+corepack enable
+
 if [ -n "$training" ]; then
   # GitHub's CLI from GitHub's own apt repository (cli.github.com): loop.sh lists, opens and
   # auto-merges the lanes' pull requests with it, and git pushes through it.
@@ -180,6 +189,8 @@ RestartSec=60
 Environment=DEVIN_MODEL=swe-2-max
 Environment=RAYON_NUM_THREADS=2
 Environment=JACKIOH_TRAINING_OUT=/home/agent-train-%i/training-out/%i
+Environment=COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+Environment=CYPRESS_INSTALL_BINARY=0
 Environment=PATH=/home/agent-train-%i/.cargo/bin:/usr/local/bin:/usr/bin:/bin
 
 [Install]
@@ -198,7 +209,8 @@ EOF
       "$(cd "/home/$user" && sudo -u "$user" -H "/home/$user/.cargo/bin/rustc" --version 2>&1 | awk '{print $2}')" \
       "$(cd "/home/$user" && sudo -u "$user" -H gh auth status >/dev/null 2>&1 && echo "gh logged in" || echo "gh not logged in")"
   done
-  printf '%-7s %s\n' devin "$(devin --version 2>&1 | head -1)" gh "$(gh --version 2>&1 | head -1)"
+  printf '%-7s %s\n' devin "$(devin --version 2>&1 | head -1)" gh "$(gh --version 2>&1 | head -1)" \
+    node "$(node --version 2>&1)"
   df -h / | awk 'NR==2 {print "disk: " $4 " free of " $2}'
   exit 0
 fi
@@ -206,13 +218,6 @@ fi
 # Codex sandboxes commands with bubblewrap, which Ubuntu's AppArmor blocks by default.
 echo 'kernel.apparmor_restrict_unprivileged_userns=0' > /etc/sysctl.d/60-codex-bwrap.conf
 sysctl -q -p /etc/sysctl.d/60-codex-bwrap.conf
-
-# Node 24 (the repo's .nvmrc), and pnpm through corepack (package.json pins the version).
-if ! node --version 2>/dev/null | grep -q '^v24\.'; then
-  curl -fsSL https://deb.nodesource.com/setup_24.x | bash - >/dev/null
-  apt-get install -y -qq nodejs >/dev/null
-fi
-corepack enable
 
 # The model CLIs, installed for every user. Each user's login stays in its own home.
 npm install -g --loglevel=error @anthropic-ai/claude-code@latest @openai/codex@latest >/dev/null
