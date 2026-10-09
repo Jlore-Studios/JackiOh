@@ -4041,6 +4041,7 @@
     "579": {
       "action": "build",
       "asks": [],
+      "interruptions": 1,
       "kind": "build",
       "pending_request": false,
       "planned_at": "2026-10-09T03:52:37Z",
