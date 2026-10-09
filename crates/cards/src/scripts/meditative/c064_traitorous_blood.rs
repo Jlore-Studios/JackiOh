@@ -81,6 +81,10 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use jackioh_engine::testkit::*;
+
+    const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
 
     /// Human 4/4, untagged Scarab 1/1, big Felinor 3/10.
     const SCARAB: &str = "core-007";

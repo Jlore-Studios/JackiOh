@@ -75,6 +75,7 @@ mod tests {
             draw_limit,
             replacements,
             hero_guard,
+            attack_mods,
             conditional_keywords,
             after_attack,
             plague_multiplier,
@@ -114,6 +115,7 @@ mod tests {
             && draw_limit.is_none()
             && replacements.is_empty()
             && hero_guard.is_none()
+            && attack_mods.is_none()
             && conditional_keywords.is_none()
             && after_attack.is_none()
             && plague_multiplier.is_none()

@@ -873,7 +873,8 @@ fn exile_marked(sink: &mut EngineSink<'_>) {
             continue;
         }
         let mut card = live;
-        let moved = crate::zones::move_to_zone(sink.state, &mut card, OffFieldZone::Exile, Default::default());
+        let moved =
+            crate::zones::move_to_zone(sink.state, &mut card, OffFieldZone::Exile, Default::default());
         if matches!(moved, MoveResult::Moved) {
             sink.state.counters.exiled += 1;
         }

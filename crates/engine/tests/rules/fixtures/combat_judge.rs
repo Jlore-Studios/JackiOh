@@ -236,7 +236,17 @@ pub static COMBAT_JUDGE_SCRIPTS: LazyLock<Vec<(String, CardScripts)>> = LazyLock
 pub fn register_combat_judge_fixtures() -> CardDefs {
     setup_catalog();
     let mut defs: CardDefs = registered_catalog().clone();
-    for card in [&*herald, &*herald_poison, &*banisher, &*banisher_cleave, &*judge, &*judge_emote, &*cheap, &*dear, &*snare] {
+    for card in [
+        &*herald,
+        &*herald_poison,
+        &*banisher,
+        &*banisher_cleave,
+        &*judge,
+        &*judge_emote,
+        &*cheap,
+        &*dear,
+        &*snare,
+    ] {
         defs.insert(card.id.clone(), card.clone());
     }
     register_catalog(defs.clone());

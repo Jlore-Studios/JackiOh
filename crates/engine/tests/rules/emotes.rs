@@ -10,8 +10,8 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat_judge::{combat_judge_game, judge_emote};
-use crate::rules::fixtures::harness::slot;
 use crate::rules::fixtures::harness::put;
+use crate::rules::fixtures::harness::slot;
 
 fn emote_action(player: PlayerId, nonce: &str) -> Action {
     Action::new(
@@ -29,7 +29,12 @@ fn heard(seed: &str) -> GameState {
     state.turn = 4;
     state.active = P1;
     state.phase = Phase::Main;
-    put(&mut state, &judge_emote.id, slot(P1, Row::Backrow, 1), Default::default());
+    put(
+        &mut state,
+        &judge_emote.id,
+        slot(P1, Row::Backrow, 1),
+        Default::default(),
+    );
     state
 }
 
@@ -38,14 +43,13 @@ fn r1127_legal_either_seat_only_while_heard() {
     let state = heard("r1127-heard");
     // Either seat lists every emote while a card hears them.
     for player in [P1, P2] {
-        let emotes: Vec<EmoteId> =
-            jackioh_engine::reduce::legal_actions(&state, player)
-                .into_iter()
-                .filter_map(|body| match body {
-                    ActionBody::Emote { emote } => Some(emote),
-                    _ => None,
-                })
-                .collect();
+        let emotes: Vec<EmoteId> = jackioh_engine::reduce::legal_actions(&state, player)
+            .into_iter()
+            .filter_map(|body| match body {
+                ActionBody::Emote { emote } => Some(emote),
+                _ => None,
+            })
+            .collect();
         assert_eq!(emotes, EMOTE_IDS.to_vec(), "seat {player} lists every emote");
         let out = jackioh_engine::reduce::reduce(&state, &emote_action(player, "n1"));
         assert!(out.error.is_none());
@@ -135,7 +139,10 @@ fn r1127_policy_never_emotes_auto_end_ignores() {
         .map(|event| event.event_type().as_str())
         .collect();
     assert!(kinds.contains(&"emoted"), "the emote resolved: {kinds:?}");
-    assert!(kinds.contains(&"turnAutoEnded"), "the turn still auto-ended: {kinds:?}");
+    assert!(
+        kinds.contains(&"turnAutoEnded"),
+        "the turn still auto-ended: {kinds:?}"
+    );
 }
 
 #[test]

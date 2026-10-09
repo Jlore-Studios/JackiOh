@@ -742,6 +742,11 @@ pub struct DeclaredAttack {
 /// MD-D28, R1125: the verdict on one opponent's play — whether it was their best-scored playable
 /// card, judged on the pre-play state from their own view. Never in a view (§10.8).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayJudgement {
     pub instance_id: String,

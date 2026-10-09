@@ -91,7 +91,8 @@ pub fn projected_damage(state: &GameState, attacker: &CardInstance, target: &Att
     let attack = match target {
         DamageTarget::Hero { .. } => unit_view(state, attacker).attack,
         DamageTarget::Unit { instance } => {
-            unit_view(state, attacker).attack + crate::combat::attack_mod_for(state, attacker, instance).attack
+            unit_view(state, attacker).attack
+                + crate::combat::attack_mod_for(state, attacker, instance).attack
         }
     };
     let hero = defending_hero(target);
