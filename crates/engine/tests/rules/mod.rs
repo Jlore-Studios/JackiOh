@@ -151,6 +151,7 @@ pub mod rulings_b;
 pub mod rulings_c;
 pub mod rulings_config;
 pub mod scorer;
+pub mod secrets;
 pub mod self_tribute;
 pub mod sets_not_shipped;
 pub mod setup;

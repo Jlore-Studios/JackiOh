@@ -216,6 +216,10 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   translated: { type: "translated", instanceId: "u6" },
   // Patch v0.3.X (MN05).
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
+  // Meditative MB05 (ME-SECRET).
+  secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
+  secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
+  predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -289,6 +293,10 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   translated: null,
   // Patch v0.3.X (MN05).
   damageAbsorbed: "armorRing",
+  // Meditative MB05 (ME-SECRET).
+  secretChosen: "trapSet",
+  secretRevealed: "trapSting",
+  predicted: "notify",
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */

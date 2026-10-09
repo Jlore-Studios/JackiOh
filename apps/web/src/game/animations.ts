@@ -745,6 +745,26 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
       return side !== null ? testid.hero(side) : locateInstance(view, e.targetId);
     },
   },
+  // ME-SECRET (MB05, R860–R864): a secret is kept, revealed or judged. The badge by the hero
+  // fades in or out — no number, no effects-layer work (FX "—"): the badge itself is the change.
+  secretChosen: {
+    animation: "jk-badge-fade",
+    durationMs: 300,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
+  secretRevealed: {
+    animation: "jk-badge-fade",
+    durationMs: 400,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
+  predicted: {
+    animation: "jk-badge-fade",
+    durationMs: 400,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
 };
 
 /* ------------------------------------------------------------------------------------------- *

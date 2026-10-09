@@ -136,6 +136,24 @@ describe("Log: a line never prints an id or the sentinel (integration QA)", () =
     render(<Log view={withEvents(fullBoardView(), [{ type: "gameOver", winner: "p2", reason: "concede" }])} />);
     expect(lines()).toEqual(["Opponent won. You conceded."]);
   });
+
+  it("R860 a kept secret's line names no choice; a revealed one names it", () => {
+    render(
+      <Log
+        view={withEvents(fullBoardView(), [
+          { type: "secretChosen", player: "p1", secretId: "secret-1" },
+          { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
+          { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
+        ])}
+      />,
+    );
+    expect(lines()).toEqual([
+      "You kept a secret",
+      "Your secret was Greed",
+      "Opponent guessed Attack: the reward is cancelled",
+    ]);
+    expect(lines().join("\n")).not.toContain("greed");
+  });
 });
 
 describe("Log: a line about a card opens that card", () => {

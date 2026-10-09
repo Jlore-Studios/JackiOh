@@ -606,6 +606,12 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // ---- Patch v0.3.X (docs/meditative-set.md M8, MN05) ----
   // R1363: the Armor took the whole hit: a bright ring from the unit's lane (a hero's is centred).
   damageAbsorbed: { sfx: "armorRing", cues: () => [sfx("armorRing")] },
+
+  // ---- Meditative MB05 (ME-SECRET, R860–R864) ----
+  // A secret is kept like a trap is set; its reveal stings like a trap's; a judgement notifies.
+  secretChosen: { sfx: "trapSet", cues: () => [sfx("trapSet")] },
+  secretRevealed: { sfx: "trapSting", cues: () => [sfx("trapSting")] },
+  predicted: { sfx: "notify", cues: () => [sfx("notify")] },
 };
 
 /**

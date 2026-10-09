@@ -243,7 +243,7 @@ pub const RESOLVE_PARTS: &[ResolvePart] = &[
 pub const PLAY_WORK_KIND: &str = "play";
 
 /// Where the run record sits inside `resume.data`, so the rest of `data` stays the card's own.
-const RUN_KEY: &str = "__play";
+pub(crate) const RUN_KEY: &str = "__play";
 
 /// `PlayRun.awaiting`: which bucket the answer to a prompt this pipeline opened fills.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]

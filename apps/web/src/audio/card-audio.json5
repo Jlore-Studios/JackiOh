@@ -1252,6 +1252,12 @@
     "classicplus-t-ai-10": { // Fine-Tuning
       cast: { voice: "sapi-synth-deep", text: "Adjusting weights. Improving slightly." },
     },
+    "meditative-022": { // Mind Games
+      cast: { voice: "sapi-mystic", text: "I've already chosen. You'll find out." },
+    },
+    "meditative-022-1": { // Fortify Mind
+      cast: { voice: "sapi-trickster", text: "I can read you like a book." },
+    },
   },
   emotes: {
     vanilla: {

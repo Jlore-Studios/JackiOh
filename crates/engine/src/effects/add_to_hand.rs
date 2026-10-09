@@ -9,7 +9,9 @@
 //!
 //! Port of `packages/engine/src/effects/addToHand.ts`.
 
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use super::targets::{PlayerSpec, TargetSpec, instance_of, player_of};
 use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated, query};
@@ -35,6 +37,9 @@ struct HandRiders {
     temporary: Option<bool>,
     /// ME-CN, R1300: the card is a copy of a Chinese card, so it is Chinese too.
     chinese: Option<bool>,
+    /// ME-SECRET, R862: what the new card remembers from the start (Mind Games' link rides the
+    /// Fortify Mind it hands the opponent).
+    memory: Option<IndexMap<String, Value>>,
 }
 
 /// `costMod` ADDS (R65 sums it); `costOverride` and `radiant` replace.
@@ -47,6 +52,13 @@ struct HandRiders {
 fn apply_radiant_rider(card: &mut CardInstance, riders: &HandRiders) {
     if riders.radiant == Some(true) {
         card.radiant = true;
+    }
+    // ME-SECRET, R862: the link rides the instance from the start, so the card remembers its secret
+    // wherever it lands — even burned into the graveyard, where a full hand puts it (§2.4, R4).
+    if let Some(memory) = &riders.memory {
+        for (key, value) in memory {
+            card.memory.insert(key.clone(), value.clone());
+        }
     }
     // ME-CN, R1300: what the card is shown in, like what face it wears, so a burned card keeps it too.
     if riders.chinese == Some(true) {
@@ -122,6 +134,9 @@ pub struct AddToHandArgs {
     /// Initiative), so it is Chinese too.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chinese: Option<bool>,
+    /// ME-SECRET, R862: what the new card remembers from the start.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory: Option<IndexMap<String, Value>>,
 }
 
 impl AddToHandArgs {
@@ -133,6 +148,7 @@ impl AddToHandArgs {
             cost_mod: self.cost_mod,
             temporary: self.temporary,
             chinese: self.chinese,
+            memory: self.memory.clone(),
         }
     }
 }
@@ -213,6 +229,7 @@ impl AddRandomFromCatalogArgs {
             cost_mod: self.cost_mod,
             temporary: self.temporary,
             chinese: None,
+            memory: None,
         }
     }
 }

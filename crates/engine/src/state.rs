@@ -21,7 +21,8 @@ use crate::config::{
 use crate::rng::Rng;
 use crate::wire::{
     AttackHealth, CardDef, CardDefs, CardType, Counters, Enchantment, GameEvent, Keyword, PLAYER_IDS,
-    PerPlayer, PerPlayerOpt, PlayerId, PromptKind, Row, RowFlags, Selection, Tag, Tuning, Zone, ZoneRef,
+    PerPlayer, PerPlayerOpt, PlayerId, PromptKind, Row, RowFlags, SecretChoice, Selection, Tag, Tuning, Zone,
+    ZoneRef,
 };
 
 pub use crate::wire::{GameResult, Phase, Position, Winner};
@@ -1002,6 +1003,12 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub glitch_boards: Option<PerPlayerOpt<Vec<LastBoardEntry>>>,
+    // ---- Meditative MB05 (ME-SECRET, R860–R865) ----
+    /// R860: the hidden choices Mind Games kept. D14: absent until the first secret is kept, so a game
+    /// that never uses one hashes exactly as before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub secrets: Option<Vec<SecretRecord>>,
     // ---- derived, never sent, stored or hashed ----
     /// R179: the scripts of `transient_defs`' fused definitions, composed once (as a Fuse mints one, and
     /// on entry to `reduce`: `scripts::sync_fused_scripts`) and shared by every state cloned from this
@@ -1042,6 +1049,27 @@ pub struct LastBoardEntry {
 
 /// R417: each seat's last board in seat order, as `create_game` and `replay::fold` take them.
 pub type LastBoardInput = (Vec<LastBoardEntry>, Vec<LastBoardEntry>);
+
+/// ME-SECRET, R860: one hidden choice a Mind Games kept (`state.secrets`). The choice reaches only
+/// its owner's view until `revealed` is set — by the reward resolving, or by a Fortify Mind judged
+/// against it (R864) — and the AI's `redact` drops it while `determinize` samples it (R865).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct SecretRecord {
+    pub id: String,
+    pub owner: PlayerId,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub choice: Option<SecretChoice>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub revealed: Option<bool>,
+}
 
 /// R437: one mark on one card, while the delayed effect `delayedId` waits (`marks.rs`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
@@ -1635,6 +1663,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameS
         reset_owed: None,
         seat_swaps: None,
         glitch_boards: None,
+        secrets: None,
         fused_scripts: crate::scripts::FusedScripts::default(),
     };
 

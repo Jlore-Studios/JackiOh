@@ -911,6 +911,8 @@ fn side_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> SideView 
         },
         reserved: reserved_mask(state, player),
         fatigue_count: side.fatigue_count,
+        // R860: the side's secrets, the choice only where the viewer may read it.
+        secrets: crate::secrets::secret_views(state, player, viewer),
     }
 }
 
@@ -1670,7 +1672,12 @@ fn redact_event(
         | GameEventType::PromptAnswered
         | GameEventType::DrawOffered
         | GameEventType::DrawAnswered
-        | GameEventType::GameOver => event.clone(),
+        | GameEventType::GameOver
+        // R860, R864: a kept secret names only its player and id, and a reveal and a prediction
+        // are public once they happen.
+        | GameEventType::SecretChosen
+        | GameEventType::SecretRevealed
+        | GameEventType::Predicted => event.clone(),
 
         // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
 

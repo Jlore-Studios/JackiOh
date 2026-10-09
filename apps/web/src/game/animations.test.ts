@@ -106,6 +106,10 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   translated: 400,
   // Patch v0.3.X (MN05).
   damageAbsorbed: 300,
+  // Meditative MB05 (ME-SECRET).
+  secretChosen: 300,
+  secretRevealed: 400,
+  predicted: 400,
 };
 
 /* ------------------------------------------------------------------------------------------- *
@@ -201,6 +205,9 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   glitched: { type: "glitched", player: "p1", outcome: "swap" },
   translated: { type: "translated", instanceId: "u6" },
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
+  secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
+  secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
+  predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
 };
 
 const ALL_SAMPLES: GameEvent[] = GAME_EVENT_TYPES.map((t) => SAMPLES[t]);
@@ -271,7 +278,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(67);
+    expect(rows).toHaveLength(70);
   });
 
   it("gives every row an animation name and a testid template", () => {

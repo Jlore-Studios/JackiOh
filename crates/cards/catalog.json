@@ -10815,5 +10815,155 @@
       "keywords": [],
       "text": "End of turn: Upgrade 2 random cards in your hand."
     }
+  },
+  "meditative-022": {
+    "id": "meditative-022",
+    "index": "22",
+    "name": "Mind Games",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "meditative-022-1"
+    ],
+    "params": [
+      {
+        "key": "mana",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "draw",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "damage",
+        "base": 8,
+        "radiant": 8,
+        "better": "up",
+        "step": 2,
+        "min": 1
+      },
+      {
+        "key": "heal",
+        "base": 8,
+        "radiant": 8,
+        "better": "up",
+        "step": 2,
+        "min": 1
+      },
+      {
+        "key": "armor",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "fortifyCost",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 0,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 0,
+    "base": {
+      "keywords": [],
+      "text": "Choose one in secret: Greed, Attack or Defend. At the start of your next turn, gain its reward.\nGreed: Gain {mana} mana and draw {draw|card|cards}.\nAttack: Deal {damage} damage to each enemy.\nDefend: Heal your hero and each of your Units {heal}. They gain +{armor} Armor.\nAdd a Fortify Mind to your opponent's hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Choose one in secret: Greed, Attack or Defend. At the start of your next turn, gain its reward.\nGreed: Gain {mana} mana and draw {draw|card|cards}.\nAttack: Deal {damage} damage to each enemy.\nDefend: Heal your hero and each of your Units {heal}. They gain +{armor} Armor.\nAdd a Fortify Mind to your opponent's hand. It costs ({fortifyCost})."
+    }
+  },
+  "meditative-022-1": {
+    "id": "meditative-022-1",
+    "index": "22.1",
+    "name": "Fortify Mind",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "token": true,
+    "cost": 0,
+    "refs": [
+      "meditative-022"
+    ],
+    "params": [
+      {
+        "key": "mana",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "discards",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "damage",
+        "base": 8,
+        "radiant": 8,
+        "better": "down",
+        "step": 2,
+        "min": 1
+      },
+      {
+        "key": "heal",
+        "base": 8,
+        "radiant": 8,
+        "better": "down",
+        "step": 2,
+        "min": 1
+      },
+      {
+        "key": "armor",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 0,
+    "base": {
+      "keywords": [
+        {
+          "kind": "Temporary"
+        }
+      ],
+      "text": "Temporary\nChoose one: Greed, Attack or Defend, to guess your opponent's Mind Games. If yours beats theirs (Attack beats Greed, Greed beats Defend, Defend beats Attack), cancel their reward. If you chose the same, nothing happens. If theirs beats yours, take your choice's penalty.\nGreed: You have {mana} less mana next turn. Discard {discards|random card|random cards}.\nAttack: Deal {damage} damage to your hero and each of your Units.\nDefend: Heal your opponent's hero and each of their Units {heal}. They gain +{armor} Armor.\nWhen you discard this, take all three penalties."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Temporary"
+        }
+      ],
+      "text": "Temporary\nChoose one: Greed, Attack or Defend, to guess your opponent's Mind Games. If yours beats theirs (Attack beats Greed, Greed beats Defend, Defend beats Attack), cancel their reward. If you chose the same, nothing happens. If theirs beats yours, take your choice's penalty.\nGreed: You have {mana} less mana next turn. Discard {discards|random card|random cards}.\nAttack: Deal {damage} damage to your hero and each of your Units.\nDefend: Heal your opponent's hero and each of their Units {heal}. They gain +{armor} Armor."
+    }
   }
 }

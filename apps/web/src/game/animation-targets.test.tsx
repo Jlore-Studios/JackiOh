@@ -148,6 +148,9 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     glitched: { type: "glitched", player: "p1", outcome: "swap" },
     translated: { type: "translated", instanceId: enemy },
     damageAbsorbed: { type: "damageAbsorbed", sourceId: unit, targetId: enemy, absorbed: 2, combat: true },
+    secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
+    secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
+    predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
   };
 }
 

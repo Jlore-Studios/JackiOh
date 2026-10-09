@@ -165,6 +165,9 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   glitched: { type: "glitched", player: "p1", outcome: "swap" },
   translated: { type: "translated", instanceId: "u6" },
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
+  secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
+  secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
+  predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
 };
 
 function longStream(rounds: number): GameEvent[] {
@@ -277,6 +280,10 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   translated: null,
   // Patch v0.3.X (MN05, R1363): a hit the Armor took whole blooms a shield.
   damageAbsorbed: "armor",
+  // Meditative MB05 (ME-SECRET): the badge by the hero is the change; no effect decorates it.
+  secretChosen: null,
+  secretRevealed: null,
+  predicted: null,
 };
 
 /** Every member of S1's `FxRecipe`. */
@@ -388,6 +395,9 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   glitched: ["jk-banner", 600, "turn-banner"],
   translated: ["jk-radiant-pulse", 400, "card-<instanceId>"],
   damageAbsorbed: ["jk-armor-absorb", 300, "card-<targetId> | hero-<side>"],
+  secretChosen: ["jk-badge-fade", 300, "hero-<side>"],
+  secretRevealed: ["jk-badge-fade", 400, "hero-<side>"],
+  predicted: ["jk-badge-fade", 400, "hero-<side>"],
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {

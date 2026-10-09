@@ -701,6 +701,25 @@ pub fn hidden_information_violations(
             report("definition", "legalActions", def, offer, where_);
         }
     }
+    // R860: the opponent's unrevealed choices reach neither seat's view of the other side. A
+    // `choice: Some` on the opponent's entry of the view, while its record is not revealed, is
+    // the choice leaking through `secret_views`.
+    if let Some(records) = &state.secrets {
+        let hidden: Vec<&str> = records
+            .iter()
+            .filter(|secret| secret.owner != viewer && secret.revealed != Some(true))
+            .map(|secret| secret.id.as_str())
+            .collect();
+        for entry in view.opponent.secrets.iter().flatten() {
+            if entry.choice.is_some() && hidden.contains(&entry.id.as_str()) {
+                found.push(format!(
+                    "I6 hidden choice in the view: {viewer} is sent a choice for secret \"{}\" on turn {} (§9.1, §10.8, R860)",
+                    entry.id,
+                    state.turn,
+                ));
+            }
+        }
+    }
     found
 }
 

@@ -137,6 +137,13 @@ after [[R703]]. It edits [[§10.10]], [[R374]] and [[R639]].
 
 **[[R768]] is what a replay shows (issue #508, part 1 of #430, 2026-10-08)**: a seat's view at any step of a finished game, refused on another catalog version or a final-hash mismatch. It takes the next number after [[R767]]. It edits [[§9.3]].
 
+**[[R860]] to [[R865]] are ME-SECRET (issue #521, part MB05 of #496, 2026-10-08)**: Mind Games files its
+declared mode as a secret only its owner's view carries ([[R860]]); the reward lands at the start of
+the caster's next turn ([[R861]]); Fortify Mind guesses the secret that made it or nothing
+([[R862]]), and the penalties fall on whoever plays or discards the card ([[R863]]); judging is
+rock, paper, scissors, revealed once and in public ([[R864]]); and the AI never reads a secret
+([[R865]]). They edit [[§6.3]], [[§10.1]], [[§10.3]], [[§10.8]] and [[§10.9]].
+
 **[[R1300]] to [[R1303]] are ME-CN (issue #516, part MS01 of #496, 2026-10-08)**: the Chinese flag, presentation only and kept everywhere, with `translate` and the `addToHand` rider ([[R1300]]); who sees a Chinese card and how the client draws it, with the `translated` event ([[R1301]]); a face printed in Chinese, read by CJK punctuation and diffed character by character ([[R1302]]); and the Chinese tables themselves ([[R1303]]). They take the first numbers of MS01's block (R1300–R1319, `docs/meditative-set.md` M10). They edit [[§10.1]], [[§10.3]], [[§10.8]] and [[§10.10]].
 
 **[[R1350]] to [[R1352]] are the Legendaries' and Mythics' intros (issue #547, part MN04 of #496, 2026-10-08)**, after Hearthstone's legendary music: when a card's own intro plays and what it ducks ([[R1350]]), what cuts it short ([[R1351]]), and the intros themselves, one per Legendary and Mythic of the sets that ship, tokens printed so included, composed and rendered as the music is under a raised size cap ([[R1352]]). Presentation only: no rule, state, event or golden trace moves. They take the first numbers of MN04's block (R1350–R1359, `docs/meditative-set.md` M10). They edit [[§10.11]] and [[R631]].

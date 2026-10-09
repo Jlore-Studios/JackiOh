@@ -54,6 +54,20 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 10X% chance to become Radiant." },
     Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +2X Health and Armor X." },
   },
+  // M #22 Mind Games: "Choose one in secret: Greed, Attack or Defend." The detail names no
+  // numbers — the reward waits until the start of the caster's next turn (R861).
+  "meditative-022": {
+    greed: { label: "Greed", detail: "In secret: at the start of your next turn, gain mana and draw cards." },
+    attack: { label: "Attack", detail: "In secret: at the start of your next turn, deal damage to each enemy." },
+    defend: { label: "Defend", detail: "In secret: at the start of your next turn, heal your side and grant Armor." },
+  },
+  // M #22.1 Fortify Mind: "Choose one: Greed, Attack or Defend, to guess your opponent's Mind
+  // Games." Rock beats scissors here: Attack beats Greed, Greed beats Defend, Defend beats Attack.
+  "meditative-022-1": {
+    greed: { label: "Guess Greed", detail: "Beats Defend; loses to Attack." },
+    attack: { label: "Guess Attack", detail: "Beats Greed; loses to Defend." },
+    defend: { label: "Guess Defend", detail: "Beats Attack; loses to Greed." },
+  },
 };
 
 /**
