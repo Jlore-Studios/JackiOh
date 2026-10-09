@@ -14,9 +14,9 @@ import type { EmoteId, PortraitId } from "@jackioh/shared";
 import { EMOJI_EMOTE_IDS, PORTRAIT_IDS, PORTRAITS, VOICE_EMOTE_IDS } from "@jackioh/shared";
 
 import { getAudioEngine } from "../audio/index.ts";
-import { CardArt } from "../cards/art/CardArt.tsx";
 import { EmojiArt, EMOJI_LABEL } from "./EmojiArt.tsx";
 import { emoteShowInfo, playEmote } from "./play.ts";
+import { PortraitArt } from "./PortraitArt.tsx";
 import { PORTRAIT_DEFS } from "./portraits.ts";
 import type { EmoteShow as EmoteShowState } from "./session.ts";
 import { EmoteShow } from "./ui.tsx";
@@ -29,7 +29,7 @@ const VOICE_LABEL: Record<(typeof VOICE_EMOTE_IDS)[number], string> = {
   threaten: "Threaten",
 };
 
-/** One portrait's tile: its oval art, name and flavour, and the pick/preview controls. */
+/** One portrait's tile: its vivid oval art (R1332), name and flavour, and the pick/preview controls. */
 function PortraitTile({
   portrait,
   selected,
@@ -43,7 +43,7 @@ function PortraitTile({
   onPick: () => void;
   onPreview: () => void;
 }): ReactElement {
-  const { defId, def } = PORTRAIT_DEFS[portrait];
+  const { def } = PORTRAIT_DEFS[portrait];
   return (
     <div className="portrait-tile" data-portrait={portrait} data-selected={selected ? "true" : undefined}>
       <button
@@ -54,7 +54,7 @@ function PortraitTile({
         title={`${def.name} — ${PORTRAITS[portrait].flavour}`}
         onClick={onPick}
       >
-        <CardArt defId={defId} radiant={false} tags={def.tags} type={def.type} shape="oval" name={def.name} />
+        <PortraitArt portrait={portrait} />
         <span className="portrait-name">{def.name}</span>
       </button>
       <button
@@ -124,7 +124,7 @@ export function PortraitPicker({
     playEmote(getAudioEngine(), forPortrait, emote);
   }, []);
 
-  const { defId, def } = PORTRAIT_DEFS[portrait];
+  const { def } = PORTRAIT_DEFS[portrait];
   return (
     <div className="portrait-picker" ref={root} data-testid="portrait-picker">
       <button
@@ -138,7 +138,7 @@ export function PortraitPicker({
           setOpen((was) => !was);
         }}
       >
-        <CardArt defId={defId} radiant={false} tags={def.tags} type={def.type} shape="oval" name={def.name} />
+        <PortraitArt portrait={portrait} />
         <span className="portrait-current-label">Portrait</span>
       </button>
 

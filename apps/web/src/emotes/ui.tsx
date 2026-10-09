@@ -1,5 +1,7 @@
 // The emote UI (issue §2, §5): the picker that opens on your own portrait, the one-item "Mute
-// emotes" menu on the opponent's, and the bubble/sticker that pops out of a hero.
+// emotes" menu on the opponent's, and the bubble/sticker that pops out of a hero. Since R1330 the
+// two menus are drawn inline in the hero's inspect view (`HeroInspect.tsx`); the hung-off-the-hero
+// placement below is what each does when it is not `inline`.
 //
 // Placement is inside the hero element (`position: relative`), so it needs no board coordinates:
 // the voice lines sit on an arc above the portrait, the emoji in a row under them, the bubble or
@@ -75,8 +77,9 @@ export function menuShift(rect: { left: number; right: number }, viewportWidth: 
  * mounts the app under it), and a re-run that read the shift the first run applied would take the
  * slid menu for centred and write 0 back — the rect carries the transform.
  */
-function useKeepOnScreen(ref: RefObject<HTMLDivElement | null>): void {
+function useKeepOnScreen(ref: RefObject<HTMLDivElement | null>, enabled: boolean): void {
   useLayoutEffect(() => {
+    if (!enabled) return;
     const menu = ref.current;
     if (menu === null) return;
     menu.style.setProperty("--emote-menu-shift", "0px");
@@ -88,7 +91,7 @@ function useKeepOnScreen(ref: RefObject<HTMLDivElement | null>): void {
       return;
     }
     menu.style.setProperty("--emote-menu-shift", `${menuShift(rect, viewportWidth, EMOTE_MENU_EDGE_PX)}px`);
-  }, [ref]);
+  }, [ref, enabled]);
 }
 
 /**
@@ -101,15 +104,18 @@ export function EmoteMenu({
   gate,
   onPick,
   onClose,
+  inline = false,
 }: {
   side: "you" | "opponent";
   gate: () => EmoteGate;
   onPick: (emote: EmoteId) => void;
   onClose: () => void;
+  /** Drawn inside the hero's inspect view (R1330): the view owns its lifetime and placement. */
+  inline?: boolean;
 }): ReactElement {
-  useMenuLifetime(true, onClose);
+  useMenuLifetime(!inline, onClose);
   const menuRef = useRef<HTMLDivElement>(null);
-  useKeepOnScreen(menuRef);
+  useKeepOnScreen(menuRef, !inline);
   const [, forceTick] = useState(0);
   useEffect(() => {
     const timer = window.setInterval(() => forceTick((tick) => tick + 1), EMOTE_MENU_TICK_MS);
@@ -128,7 +134,7 @@ export function EmoteMenu({
   return (
     <div
       ref={menuRef}
-      className={`emote-menu emote-menu-${side}`}
+      className={`emote-menu emote-menu-${side}${inline ? " emote-menu--inline" : ""}`}
       data-emote-menu="true"
       data-testid="emote-menu"
       role="menu"
@@ -188,18 +194,21 @@ export function MuteMenu({
   muted,
   onMute,
   onClose,
+  inline = false,
 }: {
   muted: boolean;
   onMute: () => void;
   onClose: () => void;
+  /** Drawn inside the hero's inspect view (R1330): the view owns its lifetime and placement. */
+  inline?: boolean;
 }): ReactElement {
-  useMenuLifetime(true, onClose);
+  useMenuLifetime(!inline, onClose);
   const menuRef = useRef<HTMLDivElement>(null);
-  useKeepOnScreen(menuRef);
+  useKeepOnScreen(menuRef, !inline);
   return (
     <div
       ref={menuRef}
-      className="emote-menu emote-menu-mute"
+      className={`emote-menu emote-menu-mute${inline ? " emote-menu--inline" : ""}`}
       data-emote-menu="true"
       data-testid="emote-mute-menu"
       role="menu"
