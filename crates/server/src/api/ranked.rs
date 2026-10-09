@@ -13,8 +13,8 @@
 //!  - `app.rs` at boot (`open_season`, SURFACE §11.2), and `cli/season_start.rs` by hand, to open
 //!    the build's season (R609).
 //!
-//! Nothing here ever sends a rating to a client (R612): the reads answer with `VisibleRank`s, tags,
-//! and the season's badges.
+//! Nothing here ever sends a rating to a client (R612): the reads answer with `VisibleRank`s, each
+//! player's profile id and username (R1436), and the season's badges.
 
 use std::sync::Arc;
 
@@ -25,7 +25,6 @@ use serde_json::{Value, json};
 use jackioh_engine::PerPlayer;
 
 use crate::api::collection::caller_profile;
-use crate::api::crypto::player_tag;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, log_alert, log_info, now_ms, ok_of};
 use crate::app::App;
 use crate::db::store::{
@@ -611,12 +610,41 @@ pub struct RankRecord {
     pub draws: i64,
 }
 
-/// `GET /api/ranked`: the caller's own season, tag and badges.
+/// R1436: each listed profile's username as shown, read in the transaction that read the standings
+/// it labels, so a rename shows on every read at once and nothing but `profiles` holds a name. A
+/// seat a deleted account left empty names nobody and is not looked up; a profile with no row
+/// shows an empty name.
+async fn usernames_of<'a>(
+    tx: &mut Tx<'_>,
+    profile_ids: impl IntoIterator<Item = &'a str>,
+) -> Result<IndexMap<String, String>, StoreError> {
+    let wanted: IndexSet<String> = profile_ids
+        .into_iter()
+        .filter(|profile_id| !profile_id.is_empty())
+        .map(str::to_string)
+        .collect();
+    let wanted: Vec<String> = wanted.into_iter().collect();
+    Ok(tx
+        .profiles_get_many(&wanted)
+        .await?
+        .iter()
+        .map(|profile| (profile.id.clone(), profile.username()))
+        .collect())
+}
+
+/// A profile's username out of `usernames_of`'s answer.
+fn username_in(usernames: &IndexMap<String, String>, profile_id: &str) -> String {
+    usernames.get(profile_id).cloned().unwrap_or_default()
+}
+
+/// `GET /api/ranked`: the caller's own season, profile id, username and badges.
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct OwnRankBody {
     pub season: String,
-    pub tag: String,
+    /// R1436: for keys and requests only; a player is shown by `username`.
+    pub profile_id: String,
+    pub username: String,
     pub rank: VisibleRank,
     /// The current win streak, which earns bonus pips below Mythic Grape (R606).
     pub streak: i64,
@@ -630,6 +658,7 @@ pub async fn own_rank(app: &App, profile_id: &str) -> Result<OwnRankBody, ApiErr
     let mut tx = app.db.begin(Some(profile_id)).await?;
     let standings = tx.ranked_standings(&season_id).await?;
     let history = tx.ranked_ranks_of(profile_id).await?;
+    let usernames = usernames_of(&mut tx, [profile_id]).await?;
     tx.commit().await?;
     let jlorious = jlorious_order(&standings_of(&standings));
     let mine = standings
@@ -638,7 +667,8 @@ pub async fn own_rank(app: &App, profile_id: &str) -> Result<OwnRankBody, ApiErr
         .map(|standing| &standing.rank);
     Ok(OwnRankBody {
         season: season_id,
-        tag: player_tag(profile_id),
+        profile_id: profile_id.to_string(),
+        username: username_in(&usernames, profile_id),
         rank: rank_in(&standings, &jlorious, profile_id),
         streak: mine.map(|rank| rank.streak as i64).unwrap_or(0),
         record: RankRecord {
@@ -655,7 +685,9 @@ pub async fn own_rank(app: &App, profile_id: &str) -> Result<OwnRankBody, ApiErr
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct LeaderboardRow {
-    pub tag: String,
+    /// R1436: the client's list key; the row is shown by `username`.
+    pub profile_id: String,
+    pub username: String,
     pub division: i64,
     pub pips: i64,
     pub you: bool,
@@ -666,7 +698,8 @@ pub struct LeaderboardRow {
 #[serde(rename_all = "camelCase")]
 pub struct JloriousRow {
     pub position: i32,
-    pub tag: String,
+    pub profile_id: String,
+    pub username: String,
     pub you: bool,
 }
 
@@ -697,7 +730,7 @@ pub struct LeaderboardBody {
 /// A placed player as a tier's list holds them before sorting.
 #[derive(Clone, Debug)]
 struct TierEntry {
-    tag: String,
+    profile_id: String,
     ladder: i32,
     you: bool,
 }
@@ -706,6 +739,13 @@ pub async fn leaderboard(app: &App, viewer_id: &str) -> Result<LeaderboardBody, 
     let season_id = build_season_id(&SeasonDeps::current());
     let mut tx = app.db.begin(Some(viewer_id)).await?;
     let standings = tx.ranked_standings(&season_id).await?;
+    let usernames = usernames_of(
+        &mut tx,
+        standings
+            .iter()
+            .map(|standing| standing.rank.profile_id.as_str()),
+    )
+    .await?;
     tx.commit().await?;
     let jlorious = jlorious_order(&standings_of(&standings));
     let in_jlorious: IndexSet<&str> = jlorious.iter().map(String::as_str).collect();
@@ -723,7 +763,7 @@ pub async fn leaderboard(app: &App, viewer_id: &str) -> Result<LeaderboardBody, 
         }
         let index = (tier_index_of(ladder) as usize).min(tier_count.saturating_sub(1));
         groups[index].push(TierEntry {
-            tag: player_tag(&standing.rank.profile_id),
+            profile_id: standing.rank.profile_id.clone(),
             ladder,
             you: standing.rank.profile_id == viewer_id,
         });
@@ -735,7 +775,12 @@ pub async fn leaderboard(app: &App, viewer_id: &str) -> Result<LeaderboardBody, 
         .rev()
         .map(|(index, tier)| {
             let mut rows = groups[index].clone();
-            rows.sort_by(|a, b| b.ladder.cmp(&a.ladder).then_with(|| a.tag.cmp(&b.tag)));
+            // A tie on the ladder is broken by profile id, which no rename moves (R1436).
+            rows.sort_by(|a, b| {
+                b.ladder
+                    .cmp(&a.ladder)
+                    .then_with(|| a.profile_id.cmp(&b.profile_id))
+            });
             LeaderboardTier {
                 tier: *tier,
                 count: rows.len(),
@@ -744,7 +789,8 @@ pub async fn leaderboard(app: &App, viewer_id: &str) -> Result<LeaderboardBody, 
                     .map(|row| {
                         let place = place_of(row.ladder);
                         LeaderboardRow {
-                            tag: row.tag.clone(),
+                            profile_id: row.profile_id.clone(),
+                            username: username_in(&usernames, &row.profile_id),
                             division: place.division as i64,
                             pips: place.pips as i64,
                             you: row.you,
@@ -762,7 +808,8 @@ pub async fn leaderboard(app: &App, viewer_id: &str) -> Result<LeaderboardBody, 
             .enumerate()
             .map(|(index, profile_id)| JloriousRow {
                 position: index as i32 + 1,
-                tag: player_tag(profile_id),
+                profile_id: profile_id.clone(),
+                username: username_in(&usernames, profile_id),
                 you: profile_id == viewer_id,
             })
             .collect(),
@@ -776,7 +823,9 @@ pub async fn leaderboard(app: &App, viewer_id: &str) -> Result<LeaderboardBody, 
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct SeatRank {
-    pub tag: String,
+    /// R1436: empty for a seat a deleted account left, as the match row holds it.
+    pub profile_id: String,
+    pub username: String,
     pub rank: VisibleRank,
     pub you: bool,
 }
@@ -807,10 +856,12 @@ pub async fn match_ranks(
     let standings = tx
         .ranked_standings(&build_season_id(&SeasonDeps::current()))
         .await?;
+    let usernames = usernames_of(&mut tx, [row.players.0.as_str(), row.players.1.as_str()]).await?;
     tx.commit().await?;
     let jlorious = jlorious_order(&standings_of(&standings));
     let seat = |profile_id: &str| SeatRank {
-        tag: player_tag(profile_id),
+        profile_id: profile_id.to_string(),
+        username: username_in(&usernames, profile_id),
         rank: rank_in(&standings, &jlorious, profile_id),
         you: profile_id == viewer_id,
     };
@@ -828,7 +879,7 @@ pub async fn match_ranks(
 // `ROUTES`: GET /api/ranked → get_ranked; GET /api/leaderboard → get_leaderboard;
 // GET /api/matches/:matchId/ranks → get_match_ranks.
 
-/// `GET /api/ranked`: the caller's own rank, record, streak, tag and season badges. Never the
+/// `GET /api/ranked`: the caller's own rank, record, streak, username and season badges. Never the
 /// rating (R612).
 pub async fn get_ranked(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;

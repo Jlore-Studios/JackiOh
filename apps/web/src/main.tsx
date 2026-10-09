@@ -12,7 +12,9 @@
 // and answers 403 `account_pending`, and `wsServer.ts` runs the same `assertActive` on the upgrade.
 // What `Gated` does is read `GET /api/auth/me`, the endpoint §9.4 provides precisely so "the client
 // knows to show the code screen", and send the browser to the screen that will actually work. It
-// lives in exactly one place so there is one thing to change when §9.4 grows a status.
+// lives in exactly one place so there is one thing to change when §9.4 grows a status. The same
+// read says whether an active account still owes the username prompt (R1435), which the gate then
+// shows in place of the screen until the player picks a name or skips (`auth/UsernamePrompt.tsx`).
 //
 // NO DEAD ENDS (docs/polish/5-sign-in.md, B40). Every panel this file draws itself — the gate's
 // error, the banned account, the 404, a screen whose code failed to load, and a check that is
@@ -61,6 +63,7 @@ import { GATE_SLOW_NOTICE_SECONDS } from "@jackioh/server-config";
 import { useSecondsUntil } from "./auth/cooldown.ts";
 import { adoptAuthRedirect, sessionIdFromToken } from "./auth/redirect.ts";
 import { shellTestid } from "./auth/testids.ts";
+import UsernamePrompt from "./auth/UsernamePrompt.tsx";
 import { useAccount, type Account } from "./net/gate.ts";
 import { useQueueFollow } from "./net/liveGame.ts";
 import { adoptRoomLink } from "./net/roomLink.ts";
@@ -382,6 +385,11 @@ export function Gated({ allowPending = false, children }: GatedProps): ReactElem
         </div>
       </ShellPanel>
     );
+  }
+  // R1435: an active account owes the username prompt until it picks or skips, and meets it before
+  // any gated screen. `promptOwed` is the server's; a server that sends no `username` owes none.
+  if (status === "active" && account.me.username?.promptOwed === true) {
+    return <UsernamePrompt token={account.token} name={account.me.username.name} />;
   }
 
   return children({ token: account.token, me: account.me });

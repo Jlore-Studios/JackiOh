@@ -17,7 +17,8 @@ use axum::body::Body;
 use axum::response::Response;
 use serde_json::{Value, json};
 
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Caller, Req, json};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Caller, Req, json, now_ms};
+use crate::api::username::own_username;
 use crate::app::App;
 use crate::auth::{ACCOUNT_DELETION_UNAVAILABLE_MESSAGE, AuthError, Session};
 
@@ -239,6 +240,10 @@ pub async fn get_me(app: &Arc<App>, req: Req) -> ApiResult {
             // in as. Read from the auth provider's user (the same place §9.4 step 1 reads
             // `emailVerified` from), never from the token's user_metadata, which is user-editable.
             "email": caller.user.email,
+            // R1435: the caller's own username, when they may next change it, and whether the
+            // prompt after activation is still owed. Their own only: no read about another player
+            // carries the last two (R1436).
+            "username": own_username(profile, now_ms()),
         }),
     ))
 }

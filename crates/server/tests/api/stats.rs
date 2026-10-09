@@ -21,8 +21,10 @@ use axum::http::HeaderMap;
 use jackioh_server::app::App;
 use jackioh_server::config::{
     CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_MIN_SAMPLE, PLAYER_STATS_BYTES_MAX,
-    PLAYER_STATS_CACHE_TTL_SECONDS, PUBLIC_STATS_MIN_LIVE_GAMES,
+    PLAYER_STATS_CACHE_TTL_SECONDS, PUBLIC_STATS_MIN_LIVE_GAMES, USERNAME_CHANGE_COOLDOWN_MS,
 };
+use jackioh_server::db::store::{UsernameClaim, UsernameClaimOutcome};
+use jackioh_server::username::username_key;
 use serde::de::DeserializeOwned;
 use serde_json::{Map, Value, json};
 
@@ -133,8 +135,8 @@ async fn insert_records(app: &App, records: Vec<Value>) {
     tx.commit().await.expect("commit");
 }
 
-/// A new active profile with a display name, as TS's `seedProfile`; answers its id.
-async fn seed_profile(app: &App, user_id: &str, display_name: &str) -> String {
+/// A new active profile that picked `username` at time 0, as TS's `seedProfile`; answers its id.
+async fn seed_profile(app: &App, user_id: &str, username: &str) -> String {
     let mut tx = app.db.begin(None).await.expect("a store transaction");
     let profile = tx
         .profiles_create(&from(json!({
@@ -142,7 +144,6 @@ async fn seed_profile(app: &App, user_id: &str, display_name: &str) -> String {
             "email": format!("{user_id}@example.test"),
             "rating": 1000,
             "at": 0,
-            "displayName": display_name,
         })))
         .await
         .expect("profiles.create");
@@ -150,7 +151,26 @@ async fn seed_profile(app: &App, user_id: &str, display_name: &str) -> String {
         .await
         .expect("profiles.setStatus");
     tx.commit().await.expect("commit");
+    claim_username(app, &profile.id, username, 0).await;
     profile.id
+}
+
+/// R1435: `profile_id` claims the bare base `base` at `at`, through the store as a save does.
+async fn claim_username(app: &App, profile_id: &str, base: &str, at: i64) {
+    let mut tx = app.db.begin(Some(profile_id)).await.expect("a store transaction");
+    let claimed = tx
+        .profiles_claim_username(&UsernameClaim {
+            profile_id: profile_id.to_string(),
+            base: base.to_string(),
+            key: username_key(base),
+            expected_tag: None,
+            at,
+            cooldown_ms: USERNAME_CHANGE_COOLDOWN_MS,
+        })
+        .await
+        .expect("profiles.claimUsername");
+    assert_eq!(claimed, UsernameClaimOutcome::Claimed { tag: None });
+    tx.commit().await.expect("commit");
 }
 
 /// `playerStats.put(profileId, stats, isPrivate, at)`.
@@ -552,9 +572,9 @@ mod r654_public_card_and_player_stats {
     {
         let app = test_app().await;
         // Setup profiles
-        let alice_id = seed_profile(&app, "u-alice", "Alice Wonder").await;
-        let bob_id = seed_profile(&app, "u-bob", "Bob Builder").await;
-        let charlie_id = seed_profile(&app, "u-charlie", "Charlie Secret").await;
+        let alice_id = seed_profile(&app, "u-alice", "Alice_Wonder").await;
+        let bob_id = seed_profile(&app, "u-bob", "Bob_Builder").await;
+        let charlie_id = seed_profile(&app, "u-charlie", "Charlie_Secret").await;
 
         // Alice: public, 50 games
         put_player_stats(
@@ -610,8 +630,9 @@ mod r654_public_card_and_player_stats {
             .collect();
         assert_eq!(ids, [bob_id.as_str(), alice_id.as_str()]);
         let (bob, alice) = (&players[0], &players[1]);
-        assert_eq!(bob["displayName"], "Bob Builder");
-        assert_eq!(alice["displayName"], "Alice Wonder");
+        assert_eq!(bob["username"], "Bob_Builder");
+        assert_eq!(alice["username"], "Alice_Wonder");
+        assert!(bob.get("displayName").is_none());
 
         // Elo/rating must NOT be exposed
         assert!(bob.get("rating").is_none());
@@ -627,8 +648,8 @@ mod r654_public_card_and_player_stats {
             json!({ "nemesisCardId": "core-nemesis", "totalDestroyed": 2, "totalDefeated": 4 })
         );
 
-        // Search by display name
-        let (_, _, search_data) = get_public(&app, "/api/stats/players?search=Alice").await;
+        // Search by username, by its case fold (R1436)
+        let (_, _, search_data) = get_public(&app, "/api/stats/players?search=ALICE").await;
         let found: Vec<&str> = search_data["players"]
             .as_array()
             .expect("players is a list")
@@ -639,5 +660,39 @@ mod r654_public_card_and_player_stats {
 
         let (_, _, search_none_data) = get_public(&app, "/api/stats/players?search=Charlie").await;
         assert_eq!(search_none_data["players"], json!([])); // Charlie opted out
+    }
+
+    /// R1436: the stats rows name nobody; each row's `username` is joined in from `profiles`, so a
+    /// rename shows on the next read, with the row it labels left as it was.
+    #[tokio::test]
+    async fn r1436_get_api_stats_players_shows_a_rename_at_once_and_rewrites_no_stats_row() {
+        let app = test_app().await;
+        let alice_id = seed_profile(&app, "u-alice", "Alice").await;
+        let bob_id = seed_profile(&app, "u-bob", "Bob").await;
+        put_player_stats(&app, &alice_id, json!({ "games": 5, "wins": 3, "losses": 2 }), false, 1000).await;
+        put_player_stats(&app, &bob_id, json!({ "games": 9, "wins": 4, "losses": 5 }), false, 2000).await;
+        let rows = |data: &Value| -> Vec<Value> {
+            data["players"]
+                .as_array()
+                .expect("players is a list")
+                .iter()
+                .map(|player| json!([player["profileId"], player["username"], player["updatedAt"]]))
+                .collect()
+        };
+        let (_, _, before) = get_public(&app, "/api/stats/players").await;
+        assert_eq!(
+            rows(&before),
+            vec![json!([bob_id, "Bob", 2000]), json!([alice_id, "Alice", 1000])]
+        );
+
+        claim_username(&app, &alice_id, "Alicia", USERNAME_CHANGE_COOLDOWN_MS).await;
+
+        let (_, _, after) = get_public(&app, "/api/stats/players").await;
+        assert_eq!(
+            rows(&after),
+            vec![json!([bob_id, "Bob", 2000]), json!([alice_id, "Alicia", 1000])]
+        );
+        let (_, _, found) = get_public(&app, "/api/stats/players?search=alicia").await;
+        assert_eq!(rows(&found), vec![json!([alice_id, "Alicia", 1000])]);
     }
 }

@@ -41,6 +41,7 @@ use jackioh_engine::validator::TRIO_DECKS;
 use crate::cli::mint_code::is_integer;
 use crate::config::{AUTH_PASSWORD_MAX_LENGTH, AUTH_PASSWORD_MIN_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS};
 use crate::env::{js_number, load_env, quoted};
+use crate::username::username_key;
 
 const DEFAULT_COUNT: i64 = 2;
 const EMAIL_DOMAIN: &str = "example.com";
@@ -49,6 +50,8 @@ const MAX_COUNT: i64 = 20;
 /// How many times, and how far apart, the profile row `app.handle_new_user` writes is looked for.
 const PROFILE_POLL_ATTEMPTS: usize = 20;
 const PROFILE_POLL_INTERVAL: Duration = Duration::from_millis(250);
+/// R1435: the base of every seeded account's fixed username, numbered like its email.
+const FIXTURE_USERNAME_BASE: &str = "Fixture";
 /// The admin listing's first page, which the search for an existing account reads.
 const ADMIN_USERS_PER_PAGE: usize = 200;
 
@@ -125,6 +128,11 @@ pub fn seed_accounts_settings(
         return Err(anyhow!("refusing to seed accounts:\n{}", listed.join("\n")));
     }
     Ok(SeedAccountsSettings { password: secret })
+}
+
+/// R1435: the `index`-th seeded account's username, `Fixture1` and up.
+fn fixture_username(index: i64) -> String {
+    format!("{FIXTURE_USERNAME_BASE}{index}")
 }
 
 fn email_for(index: i64) -> String {
@@ -383,6 +391,21 @@ async fn seed_with(
              where id = $1 and status <> 'active'",
         )
         .bind(uuid_of(&id)?)
+        .execute(&mut *client)
+        .await?;
+
+        // R1435: a fixed username, bare, with the prompt after activation already answered and no
+        // cooldown running, so a seeded account goes straight to the game and can still be renamed.
+        // A second run writes the same name over itself. The key is the server's own
+        // (`username::username_key`), as every write of a name computes it.
+        let username = fixture_username(i);
+        sqlx::query(
+            "update public.profiles set username_base = $2, username_key = $3, username_tag = null, \
+             username_changed_at = null, username_prompted = true where id = $1",
+        )
+        .bind(uuid_of(&id)?)
+        .bind(&username)
+        .bind(username_key(&username))
         .execute(&mut *client)
         .await?;
 

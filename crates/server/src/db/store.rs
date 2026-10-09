@@ -54,6 +54,7 @@ use super::{fake, pg};
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::{SeasonRank, VisibleRank};
 use crate::ranked::season::{ResetChange, ResetPlayer};
+use crate::username::render_username;
 
 /// R417: one card of a last board — the card and its face, never its stats (C+ #29). `ports.ts`
 /// declared the same `{ defId, radiant }` shape as the engine's; the engine's is the one type.
@@ -207,9 +208,19 @@ pub struct Profile {
     /// The managed-auth user id.
     pub user_id: String,
     pub email: String,
-    /// TS `displayName?: string | null`: absent, cleared (`null`) or set.
-    #[serde(default, skip_serializing_if = "Option::is_none", with = "absent_or_null")]
-    pub display_name: Option<Option<String>>,
+    /// R1432, R1434: the username's base name, in its stored (NFKC) form: `Max` of `Max#3`. A new
+    /// account's is `Player` (`USERNAME_DEFAULT_BASE`). Only ever written through the username
+    /// routes; every read that shows a player joins it in from here (R1436).
+    pub username_base: String,
+    /// R1434: the key two base names clash on, `username::username_key` of the base.
+    pub username_key: String,
+    /// R1434: the tag, 1 or more, when the base was taken; none for a bare name.
+    pub username_tag: Option<i64>,
+    /// R1435: epoch ms of the last change of username, which starts the cooldown. None while the
+    /// account still holds the default it was given.
+    pub username_changed_at: Option<i64>,
+    /// R1435: whether the prompt after activation has been answered, by a pick or a skip.
+    pub username_prompted: bool,
     pub status: ProfileStatus,
     /// R603: the hidden Glicko-2 rating, its deviation and its volatility. Server-side only: no
     /// response carries any of the three (R612), the queue's rating window reads the first.
@@ -221,7 +232,15 @@ pub struct Profile {
     pub created_at: i64,
 }
 
-/// `ProfileStore.create`'s argument (TS's anonymous `{ userId, email, rating, at, displayName? }`).
+impl Profile {
+    /// The username as shown: `Max`, or `Max#3` when it carries a tag (R1432).
+    pub fn username(&self) -> String {
+        render_username(&self.username_base, self.username_tag)
+    }
+}
+
+/// `ProfileStore.create`'s argument (TS's anonymous `{ userId, email, rating, at }`). The new
+/// profile's username is the store's to give, the lowest free `Player#n` (R1434).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ProfileCreateInput {
@@ -229,8 +248,33 @@ pub struct ProfileCreateInput {
     pub email: String,
     pub rating: f64,
     pub at: i64,
-    #[serde(default, skip_serializing_if = "Option::is_none", with = "absent_or_null")]
-    pub display_name: Option<Option<String>>,
+}
+
+/// R1434, R1435: one claim of a username, `profiles_claim_username`'s argument. `base` is the
+/// stored (NFKC) form `username::normalize_username` answered and `key` its `username_key`;
+/// `expected_tag` is the tag the player's preview showed, so a claim whose outcome has changed
+/// since is refused rather than handing the player a tag they were not shown.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UsernameClaim {
+    pub profile_id: String,
+    pub base: String,
+    pub key: String,
+    pub expected_tag: Option<i64>,
+    /// Epoch ms: when the claim is made, the time the cooldown runs from.
+    pub at: i64,
+    /// How long after a change the next is allowed (`USERNAME_CHANGE_COOLDOWN_MS`).
+    pub cooldown_ms: i64,
+}
+
+/// What a claim of a username came to (R1434, R1435).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum UsernameClaimOutcome {
+    /// The name is the player's now, with this tag.
+    Claimed { tag: Option<i64> },
+    /// Nothing written: the name would carry this tag now, not the one the player was shown.
+    Changed { tag: Option<i64> },
+    /// Nothing written: the last change was too recent, and the next is allowed at this epoch ms.
+    Cooldown { next_change_at: i64 },
 }
 
 // ---------------------------------------------------------------------------
@@ -1023,7 +1067,9 @@ pub struct FunStats {
 #[serde(rename_all = "camelCase")]
 pub struct PublicPlayerSummary {
     pub profile_id: String,
-    pub display_name: Option<String>,
+    /// The player's username as shown (R1436), joined in from `profiles`, so a rename shows here
+    /// at once with no stats row rewritten.
+    pub username: String,
     pub games: i64,
     pub wins: i64,
     pub losses: i64,
@@ -1277,12 +1323,25 @@ impl Tx<'_> {
         dispatch!(self, profiles_set_glicko(profile_id, glicko))
     }
 
-    pub async fn profiles_set_display_name(
-        &mut self,
-        profile_id: &str,
-        display_name: Option<&str>,
-    ) -> StoreResult<()> {
-        dispatch!(self, profiles_set_display_name(profile_id, display_name))
+    /// R1434: the tag a claim of the base whose key is `key` would carry now: none when no other
+    /// profile holds the bare name, otherwise the lowest tag from 1 that no other profile holds.
+    /// `profile_id`'s own name never counts as taken against it. A read: nothing is reserved.
+    pub async fn profiles_username_tag_for(&mut self, profile_id: &str, key: &str) -> StoreResult<Option<i64>> {
+        dispatch!(self, profiles_username_tag_for(profile_id, key))
+    }
+
+    /// R1434, R1435: claims a username for `claim.profile_id`, under a transaction-level lock on
+    /// the key, so two claims of one name at the same moment get different tags. Refused while the
+    /// cooldown runs (the first change away from the default is never refused), and refused when
+    /// the tag the name would carry is not `claim.expected_tag`. A claim that lands starts the
+    /// cooldown and answers the prompt.
+    pub async fn profiles_claim_username(&mut self, claim: &UsernameClaim) -> StoreResult<UsernameClaimOutcome> {
+        dispatch!(self, profiles_claim_username(claim))
+    }
+
+    /// R1435: answers the prompt after activation without changing the name ("Skip for now").
+    pub async fn profiles_answer_username_prompt(&mut self, profile_id: &str) -> StoreResult<()> {
+        dispatch!(self, profiles_answer_username_prompt(profile_id))
     }
 
     /// Pass `None` to clear. §9.5: every terminal reason clears both players'.

@@ -11,3 +11,19 @@
   white-space: nowrap;
   vertical-align: bottom;
 }
+
+/* The username field (auth/UsernameField.tsx, R1435): the preview reads as the answer it is, a
+   refusal in the danger colour the tavern's field errors use, and a changed outcome in gold. */
+
+.username-field__preview,
+.username-field__changed {
+  margin: 0;
+}
+
+.tavern.app-shell .username-field__preview[data-ok="true"] {
+  color: var(--tavern-parchment);
+}
+
+.tavern.app-shell .username-field__changed {
+  color: var(--tavern-gold-pale);
+}

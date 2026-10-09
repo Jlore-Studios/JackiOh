@@ -137,6 +137,8 @@ export const usernameTestid = {
   preview: "username-field-preview",
   save: "username-field-save",
   error: "username-field-error",
+  /** A save came back with a fresh preview: the outcome changed since the player looked. */
+  changed: "username-field-changed",
   prompt: "username-prompt",
   promptSkip: "username-prompt-skip",
   promptError: "username-prompt-error",

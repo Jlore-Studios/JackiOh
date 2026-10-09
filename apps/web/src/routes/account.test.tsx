@@ -8,13 +8,28 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getOwnRank, getProfile, type OwnRankResponse } from "../net/api.ts";
+import { usernameTestid } from "../auth/testids.ts";
+import {
+  getOwnRank,
+  getProfile,
+  previewUsername,
+  saveUsername,
+  type MeResponse,
+  type OwnRankResponse,
+  type OwnUsername,
+} from "../net/api.ts";
+import { announceAccountChange } from "../net/gate.ts";
 import { SESSION_STORAGE_KEY, readSession } from "../net/session.ts";
 import AccountRoute, { formatWinRate, resetSigningOutForTests, statusWords } from "./account.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
-  return { ...actual, getProfile: vi.fn(), getOwnRank: vi.fn() };
+  return { ...actual, getProfile: vi.fn(), getOwnRank: vi.fn(), previewUsername: vi.fn(), saveUsername: vi.fn() };
+});
+
+vi.mock("../net/gate.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../net/gate.ts")>();
+  return { ...actual, announceAccountChange: vi.fn() };
 });
 
 const TOKEN = "token-1";
@@ -33,7 +48,8 @@ function profileBody(over: Partial<Parameters<typeof Object.assign>[0]> = {}) {
 function rankBody(over: Partial<OwnRankResponse> = {}): OwnRankResponse {
   return {
     season: "v0.2",
-    tag: "ABC123",
+    profileId: "p1",
+    username: "Max#3",
     rank: { tier: "normal", division: 3, pips: 1, pipsPerDivision: 3, floor: "rotten" },
     streak: 2,
     record: { games: 10, wins: 7, losses: 2, draws: 1 },
@@ -114,7 +130,7 @@ describe("the account screen", () => {
     render(<AccountRoute token={TOKEN} />);
 
     expect(await screen.findByTestId("account-rank")).toHaveTextContent(
-      "ABC123 · Normal Grape III · 1/3 pips · Season v0.2",
+      "Max#3 · Normal Grape III · 1/3 pips · Season v0.2",
     );
     expect(screen.getByTestId("account-badges")).toHaveTextContent("Season best: Normal Grape II · v0.1");
     expect(screen.getByTestId("account-leaderboard")).toHaveAttribute("href", "/leaderboard");
@@ -186,6 +202,99 @@ describe("the account screen", () => {
       vi.unstubAllEnvs();
       vi.unstubAllGlobals();
     }
+  });
+});
+
+// R1435: the username, from the gate's read of the account, with its change field or its cooldown.
+describe("R1435 the username on the account page", () => {
+  /** The preview's debounce plus a stubbed round trip, retried against the DOM, never slept. */
+  const PREVIEW = { timeout: 3_000 } as const;
+
+  function activeMe(username: OwnUsername): MeResponse {
+    return {
+      profile: { id: "p1", status: "active" },
+      needsInviteCode: false,
+      emailVerified: true,
+      currentMatchId: null,
+      email: "player1@example.com",
+      username,
+    };
+  }
+
+  it("R1435 the change field says 'Max is taken, so you’d be Max#3' for a tagged preview and 'You’d be Max' for an untagged one", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    let taken = true;
+    vi.mocked(previewUsername).mockImplementation((_token, name) =>
+      Promise.resolve(
+        taken
+          ? { ok: true as const, base: name, username: `${name}#3`, tagged: true }
+          : { ok: true as const, base: name, username: name, tagged: false },
+      ),
+    );
+    vi.mocked(saveUsername).mockResolvedValue({ name: "Max", nextChangeAt: Date.now() + 86_400_000, promptOwed: false });
+    render(<AccountRoute token={TOKEN} me={activeMe({ name: "Player#7", nextChangeAt: null, promptOwed: false })} />);
+
+    expect(screen.getByTestId("account-username").textContent).toBe("Player#7");
+    expect(screen.queryByTestId("account-username-cooldown")).toBeNull();
+
+    const input = screen.getByTestId(usernameTestid.input);
+    await userEvent.type(input, "Max");
+    await waitFor(() => {
+      expect(screen.getByTestId(usernameTestid.preview).textContent).toBe("Max is taken, so you’d be Max#3");
+    }, PREVIEW);
+
+    taken = false;
+    await userEvent.clear(input);
+    expect(screen.queryByTestId(usernameTestid.preview), "an empty box shows no preview").toBeNull();
+    await userEvent.type(input, "Max");
+    await waitFor(() => {
+      expect(screen.getByTestId(usernameTestid.preview).textContent).toBe("You’d be Max");
+    }, PREVIEW);
+
+    await userEvent.click(screen.getByTestId(usernameTestid.save));
+    await waitFor(() => {
+      expect(announceAccountChange, "the gate reads the account again").toHaveBeenCalled();
+    });
+    expect(saveUsername).toHaveBeenCalledWith(TOKEN, "Max");
+  });
+
+  it("R1435 during the cooldown says when the next change is allowed, and offers no field", () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    const next = Date.now() + 3_600_000;
+    render(<AccountRoute token={TOKEN} me={activeMe({ name: "Max#3", nextChangeAt: next, promptOwed: false })} />);
+
+    expect(screen.getByTestId("account-username").textContent).toBe("Max#3");
+    expect(screen.getByTestId("account-username-cooldown")).toHaveTextContent(
+      `You can change your username again on ${new Date(next).toLocaleString()}`,
+    );
+    expect(screen.queryByTestId(usernameTestid.input)).toBeNull();
+  });
+
+  it("R1435 a cooldown that has run out offers the field again", () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    render(<AccountRoute token={TOKEN} me={activeMe({ name: "Max#3", nextChangeAt: Date.now() - 1_000, promptOwed: false })} />);
+
+    expect(screen.queryByTestId("account-username-cooldown")).toBeNull();
+    expect(screen.getByTestId(usernameTestid.input)).toBeInTheDocument();
+  });
+
+  it("R1435 a pending account sees its username, and no field: the preview and the save are for active accounts", () => {
+    render(
+      <AccountRoute
+        token={TOKEN}
+        me={{
+          profile: { id: "p1", status: "pending" },
+          needsInviteCode: true,
+          emailVerified: true,
+          currentMatchId: null,
+          email: "player1@example.com",
+          username: { name: "Player#7", nextChangeAt: null, promptOwed: false },
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId("account-username").textContent).toBe("Player#7");
+    expect(screen.queryByTestId(usernameTestid.input)).toBeNull();
   });
 });
 
