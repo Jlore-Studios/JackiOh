@@ -1,13 +1,11 @@
-//! The persistence port (SPEC §9.1, §9.2; ← `apps/server/src/api/ports.ts`, the `Store` half;
-//! docs/v0.3.0/SURFACE.md §11.2). Everything under `api` and `actor` reads and writes the database
+//! The persistence port (SPEC §9.1, §9.2; `docs/v0.3.0/SURFACE.md` §4.3, §11.2, §11.3).
+//! Everything under `api` and `actor` reads and writes the database
 //! through the methods below and never through a driver, so the same handlers run against Postgres
-//! (`pg`, `src/db/store.ts` in TS) and against the in-memory fake (`fake`, TS's `e2e-store.ts` and
-//! `memory-stores.ts`) that the unit tests and `E2E=1` use.
+//! (`pg`) and against the in-memory fake (`fake`) that the unit tests and `E2E=1` use.
 //!
-//! No traits (SURFACE §11.3): `Db` and `Tx` are enums with one variant per implementation, and every
-//! TS `Store` method is one method on `Tx`, named `<substore>_<method>` snake_cased, in TS's
-//! argument order, whose body dispatches to `pg::<name>` or `fake::<name>`. TS's
-//! `store.tx(async (t) => …)` becomes
+//! No traits: `Db` and `Tx` are enums with one variant per implementation, and every store
+//! method is one method on `Tx`, named `<substore>_<method>`, whose body dispatches to `pg::<name>`
+//! or `fake::<name>`. A transaction is
 //!
 //! ```ignore
 //! let mut tx = app.db.begin(Some(profile_id)).await?;
@@ -16,27 +14,12 @@
 //! ```
 //!
 //! and a `Tx` dropped without `commit` rolls back (Postgres: sqlx's `Transaction` drop; the fake:
-//! `FakeTx` restores the snapshot it took at `begin`), which is TS's "rolls back if `fn` throws".
-//! TS's nested `tx` joined the enclosing transaction; a Rust `Tx` is passed down instead, so there is
-//! nothing to nest.
+//! `FakeTx` restores the snapshot it took at `begin`). A `Tx` is passed down, so nothing nests.
 //!
-//! What `ports.ts` held that is not here, and where it went (SURFACE §11.3):
+//! Clocks and limits: `config.rs` (R79; §9.4, §9.5).
 //!
-//! - `Timers`/`systemTimers` → `tokio::time` (tests: `tokio::time::pause()` and `advance()`).
-//! - `Logger` → `tracing` JSON lines with the same `event` names.
-//! - `Ids`/`systemIds` → `uuid` and `getrandom`; `Hashes` → functions in `api/crypto.rs`.
-//! - `ServerConfig` and `ApiLimits` → the constants of `config.rs` (R79's clocks, §9.4's redemption
-//!   and breaker limits, §9.5's queue windows, `ROOM_CODE_TTL_SECONDS`).
-//! - `CatalogInfo` → `api::catalog::Catalog`; `LoadoutIssue`/`LoadoutValidateInput`/
-//!   `LoadoutValidator` → `jackioh_engine::validator`, which the handlers call directly.
-//! - `AuthUser`, `AuthSession`, `AuthProvider` → `auth.rs` (the `Auth` enum).
-//! - `MatchDirectory` → `actor::registry::Registry`; `ServerDeps` → `app::App`.
-//! - `GameRecorder` → `jackioh_engine::summarize_game` and the catalog's newest patch, called
-//!   directly where a finished match is filed (R376).
-//! - `ProfileStore.setRating` (no caller) is not ported (SURFACE §11.2).
-//!
-//! Integers: epoch milliseconds, counts, caps and sequence numbers are `i64` (as TS stored them, and
-//! as Postgres's `int8`/`count(*)` answer); ratings, deviations and volatilities are `f64` (migration
+//! Integers: epoch milliseconds, counts, caps and sequence numbers are `i64` (as Postgres's
+//! `int8`/`count(*)` answer); ratings, deviations and volatilities are `f64` (migration
 //! 0022 made them `double precision`).
 
 use std::ops::{Index, IndexMut};
@@ -55,23 +38,19 @@ use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::{SeasonRank, VisibleRank};
 use crate::ranked::season::{ResetChange, ResetPlayer};
 
-/// R417: one card of a last board — the card and its face, never its stats (C+ #29). `ports.ts`
-/// declared the same `{ defId, radiant }` shape as the engine's; the engine's is the one type.
+/// R417: one card of a last board — the card and its face, never its stats (C+ #29).
 pub use jackioh_engine::state::LastBoardEntry;
 
-/// R611: who played a side of a rated game: a person, or one of the AI bots (R610). `ports.ts`
-/// declared the same `"human" | "ai"` as `packages/shared`'s `Pilot`; the wire's is the one type.
+/// R611: who played a side of a rated game: a person, or one of the AI bots (R610).
 pub use jackioh_engine::wire::Pilot;
 
-// ---------------------------------------------------------------------------
 // Errors
-// ---------------------------------------------------------------------------
 
 /// What a store method can fail with. A refusal the port answers as a value (`RedeemResult`,
 /// `UpsertOutcome`, a `false`, a `None`) is never an error.
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
-    /// TS's `DuplicateResultError`: `results.insert`'s refusal of a second row for one match
+    /// `results.insert`'s refusal of a second row for one match
     /// (§9.5), as its own variant so the writer can tell it from a real failure. A transaction whose
     /// `getByMatch` ran before a concurrent first writer committed only meets the duplicate here,
     /// and that collision is a clean no-op arriving the hard way — `results.rs` retries on it and
@@ -110,11 +89,9 @@ impl From<serde_json::Error> for StoreError {
 /// Every store method's answer.
 pub type StoreResult<T> = Result<T, StoreError>;
 
-// ---------------------------------------------------------------------------
 // Serde helpers and the string unions
-// ---------------------------------------------------------------------------
 
-/// A TS field `x?: T | null`, which has three states — absent, `null`, a value — kept apart:
+/// A field with three states — absent, `null`, a value — kept apart:
 /// `None` is absent, `Some(None)` is `null`, `Some(Some(x))` is `x`. Used with
 /// `#[serde(default, skip_serializing_if = "Option::is_none", with = "absent_or_null")]`.
 pub(crate) mod absent_or_null {
@@ -137,9 +114,9 @@ pub(crate) mod absent_or_null {
     }
 }
 
-/// A TS string-literal union as a Rust enum (SURFACE §4.3): one unit variant per literal,
+/// A string-literal union as a Rust enum: one unit variant per literal,
 /// serialised as exactly that literal, with `as_str` (the text a SQL column or function holds),
-/// `FromStr`, `Display` and `ALL` (TS order).
+/// `FromStr`, `Display` and `ALL` (declaration order).
 macro_rules! store_union {
     (
         $(#[$meta:meta])*
@@ -154,10 +131,10 @@ macro_rules! store_union {
         }
 
         impl $name {
-            /// Every literal of the union, in the TS declaration order.
+            /// Every literal of the union, in declaration order.
             pub const ALL: &'static [$name] = &[ $( $name::$variant ),+ ];
 
-            /// The literal itself, as TS writes it and as the database stores it.
+            /// The literal itself, as the wire and the database hold it.
             pub fn as_str(self) -> &'static str {
                 match self {
                     $( $name::$variant => $text ),+
@@ -188,9 +165,7 @@ macro_rules! store_union {
     };
 }
 
-// ---------------------------------------------------------------------------
 // Profiles
-// ---------------------------------------------------------------------------
 
 store_union! {
     pub enum ProfileStatus {
@@ -207,7 +182,7 @@ pub struct Profile {
     /// The managed-auth user id.
     pub user_id: String,
     pub email: String,
-    /// TS `displayName?: string | null`: absent, cleared (`null`) or set.
+    /// Absent, cleared (`null`) or set.
     #[serde(default, skip_serializing_if = "Option::is_none", with = "absent_or_null")]
     pub display_name: Option<Option<String>>,
     pub status: ProfileStatus,
@@ -221,7 +196,7 @@ pub struct Profile {
     pub created_at: i64,
 }
 
-/// `ProfileStore.create`'s argument (TS's anonymous `{ userId, email, rating, at, displayName? }`).
+/// `profiles_create`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ProfileCreateInput {
@@ -233,9 +208,7 @@ pub struct ProfileCreateInput {
     pub display_name: Option<Option<String>>,
 }
 
-// ---------------------------------------------------------------------------
 // Invite codes (SPEC §9.4: codes stored hashed; §9.8: per-IP-hash limits)
-// ---------------------------------------------------------------------------
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -269,27 +242,12 @@ pub struct CodeAttempt {
 }
 
 store_union! {
-    /// Exactly the strings `app.redeem_invite_code(uuid, text, text)` returns — migration 0001 §6
-    /// lists them, and nothing else is a legal answer. The set is the SQL function's contract, so
-    /// the port states it rather than a shape that would be pleasanter in Rust:
-    ///
-    ///  - `not_pending` covers "no such profile", "banned" and "already active" together, because
-    ///    the function decides all three from one `select ... for update` and cannot tell a caller
-    ///    which. R145 requires those three to be reported *distinctly* to the client, so `codes.rs`
-    ///    decides them from the caller's own resolved profile before it calls here and treats this
-    ///    result as the race it is: the account stopped being pending between the two. R170 fixes
-    ///    what that race answers — a conflict, never a second 401 after authorization has already
-    ///    passed.
-    ///  - `email_unverified` is the function's own read of `auth.users.email_confirmed_at`, which
-    ///    `public.profiles` does not carry. The server already knows the answer from the access
-    ///    token (R159) and refuses first; this is the database's independent second opinion.
-    ///  - `circuit_open` is the *database-side* half of §9.4's breaker
-    ///    (`app.settings.redemption_enabled` plus the function's own failure count). It is not the
-    ///    same object as the server's R106 breaker in `codes.rs`, which alerts, backs
-    ///    `GET /api/codes/status` and is checked before this port is touched at all. Both answer 503.
-    ///  - missing, revoked, expired and exhausted all collapse onto `invalid_code`, which is §9.4's
-    ///    "Missing, expired and exhausted codes return an identical error" at the storage layer as
-    ///    well as at the wire.
+    /// Exactly the strings `app.redeem_invite_code(uuid, text, text)` returns (migration 0001 §6).
+    /// `not_pending` covers no such profile, banned and already active together: `codes.rs` tells
+    /// them apart first (R145), so here it is a race, answered as a conflict (R170).
+    /// `email_unverified` is the database's second opinion (R159); `circuit_open` is its half of
+    /// §9.4's breaker, beside the server's (R106). Missing, revoked, expired and exhausted codes
+    /// all answer `invalid_code` (§9.4).
     pub enum RedeemResult {
         Ok = "ok",
         NotPending = "not_pending",
@@ -307,20 +265,14 @@ pub struct RedeemInviteCodeInput {
     pub profile_id: String,
     /// The keyed hash of the normalized code (`api::crypto`'s code hash); the store never sees
     /// plaintext.
-    ///
-    /// `None` means the caller has already established that this string could never be a code at
-    /// all — wrong length, or a character outside §9.4's alphabet (R104). It is passed down rather
-    /// than refused early because §9.4 orders the attempt log (step 4) *before* the lookup (step
-    /// 5): a malformed code must still cost the caller a row in `code_attempts`, or it would be the
-    /// one cheap probe in an interface built to make probing expensive. Both implementations answer
-    /// `invalid_code` for it, indistinguishably from a code that was simply never minted.
+    /// `None` when the string could never be a code (R104): it is passed down, not refused early,
+    /// because §9.4 logs the attempt (step 4) before the lookup (step 5), so a malformed code still
+    /// costs a row in `code_attempts`. Both implementations answer `invalid_code` for it.
     pub code_hash: Option<String>,
     pub ip_hash: String,
 }
 
-// ---------------------------------------------------------------------------
 // The collection (§9.4: an entitlement ledger)
-// ---------------------------------------------------------------------------
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -344,12 +296,10 @@ pub struct CollectionGrant {
     pub at: i64,
 }
 
-// ---------------------------------------------------------------------------
 // Saved decks and trios (SPEC §9.4, R250–R256). They replace the single three-deck loadout: a
 // profile keeps up to `MAX_SAVED_DECKS` named decks and builds up to `MAX_SAVED_TRIOS` trios from
 // them. Both are drafts (R250, R252): a save checks structure only, and legality is judged when a
 // deck or a trio is queued (R253).
-// ---------------------------------------------------------------------------
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -370,8 +320,7 @@ pub struct SavedDeck {
     pub updated_at: i64,
 }
 
-/// A trio's three slots, in order. `None` is an empty slot, which a saved trio may have (R252). A TS
-/// tuple is a Rust tuple (SURFACE §4.3), serialised as the same 3-array.
+/// A trio's three slots, in order. `None` is an empty slot, which a saved trio may have (R252).
 pub type TrioSlots = (Option<String>, Option<String>, Option<String>);
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -424,9 +373,7 @@ impl From<UpsertOutcome> for TrioUpsertOutcome {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Queue modes (SPEC §9.5, R257) and what a ticket or a room freezes.
-// ---------------------------------------------------------------------------
 
 store_union! {
     /// R257: a ticket pairs only with a ticket of the same mode.
@@ -437,8 +384,8 @@ store_union! {
     }
 }
 
-/// TS's `Record<QueueMode, T>`: one value per mode, every mode present (as `PerPlayer` is for
-/// `Record<PlayerId, T>`). Serialises as `{ "bo1": …, "bo3": …, "random": … }`.
+/// One value per mode, every mode present (as `PerPlayer` is one per seat). Serialises as
+/// `{ "bo1": …, "bo3": …, "random": … }`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 pub struct PerMode<T> {
     pub bo1: T,
@@ -489,9 +436,7 @@ pub struct FrozenTrio {
     pub decks: (FrozenDeck, FrozenDeck, FrozenDeck),
 }
 
-// ---------------------------------------------------------------------------
 // Matches
-// ---------------------------------------------------------------------------
 
 store_union! {
     pub enum MatchStatus {
@@ -569,9 +514,7 @@ pub struct MatchActionRow {
     pub at: i64,
 }
 
-// ---------------------------------------------------------------------------
 // Rooms and tickets
-// ---------------------------------------------------------------------------
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -633,9 +576,7 @@ pub struct Ticket {
     pub match_id: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // Results
-// ---------------------------------------------------------------------------
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -665,12 +606,9 @@ pub struct ProfileRecord {
     pub draws: i64,
 }
 
-// ---------------------------------------------------------------------------
 // Game records for the card statistics (SPEC §9.11, R376–R378). Server-only (migration 0014).
-// ---------------------------------------------------------------------------
 
-/// R377, R378: which records a read returns (TS: `Pick<CardStatsFilter, "source" | "mode" |
-/// "patch">`). Pilots are per seat, so `card_stats` applies those.
+/// R377, R378: which records a read returns. Pilots are per seat, so `card_stats` applies those.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct GameRecordQuery {
@@ -681,14 +619,11 @@ pub struct GameRecordQuery {
     pub patch: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
 // The Conquest series (SPEC §9.5, R330–R338, R262–R264). One row per series, persisted so a series
 // survives a server restart; every transition is a pure function in `api/series_rules.rs` written
 // back with `series_update`, which is compare-and-set on `version`.
-// ---------------------------------------------------------------------------
 
 /// A series seat. Index 0 of `SeriesRow.sides` is `p1`; it is not the seat a game's match uses.
-/// TS's `"p1" | "p2"`, the same literals as `PlayerId`, so the one type.
 pub type SeriesSeat = PlayerId;
 
 store_union! {
@@ -725,7 +660,7 @@ pub struct SeriesGame {
     pub slots: (i64, i64),
     /// Which side went first — was the match's `p1` (R335: odd games p1, even games p2).
     pub first: SeriesSeat,
-    /// Null while the game is being played (TS `SeriesSeat | "draw" | null`).
+    /// Null while the game is being played.
     pub winner: Option<Winner>,
     pub reason: Option<GameOverReason>,
 }
@@ -778,11 +713,9 @@ pub struct SeriesRow {
     pub version: i64,
 }
 
-// ---------------------------------------------------------------------------
 // The ranked ladder (SPEC §9.12, R603–R612): seasons, each player's season on the ladder, the bots'
 // ratings, and the record of every rated game. The rules are `ranked/*`, pure; `api/ranked.rs`
 // reads and writes through this port.
-// ---------------------------------------------------------------------------
 
 /// R609: a season, named by the minor version of the game (`v0.2`), and the patch that opened it.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -793,8 +726,7 @@ pub struct Season {
     pub started_at: i64,
 }
 
-/// One player's season row with their current hidden rating: what percentiles and Jlorious read
-/// (TS: `SeasonRank & { rating: number }`).
+/// One player's season row with their current hidden rating: what percentiles and Jlorious read.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SeasonStanding {
@@ -838,8 +770,7 @@ store_union! {
     }
 }
 
-/// How a rated game ended: the match's reason, or the series' (R334). TS:
-/// `GameOverReason | SeriesEnd`, whose literals are disjoint.
+/// How a rated game ended: the match's reason, or the series' (R334), whose literals are disjoint.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum RatedReason {
@@ -868,10 +799,8 @@ pub struct RatedGameRow {
     pub ended_at: i64,
 }
 
-// ---------------------------------------------------------------------------
 // Tutorial progress on the account (SPEC §9.10, R320). The device keeps its own copy (R294) and the
 // client merges the two (R321); this is the account's half, which only ever grows.
-// ---------------------------------------------------------------------------
 
 /// R320, R322: the player's newest explicit choice to hide or show the lesson path, and when it
 /// was made (epoch ms, the choosing device's clock, never later than the server's when it arrived).
@@ -914,10 +843,8 @@ pub enum TutorialMergeOutcome {
     Limit,
 }
 
-// ---------------------------------------------------------------------------
 // Player settings on the account (SPEC §9.1, R633, R634). The device keeps its own copy and the
 // client merges the two; this is the account's half, where a group is replaced only by a newer one.
-// ---------------------------------------------------------------------------
 
 /// One setting's value. The server does not know the settings: it keeps flat booleans, numbers and
 /// short texts. A number stays the JSON number it arrived as (`1` stays `1`, never `1.0`).
@@ -976,9 +903,7 @@ pub enum PlayerSettingsMergeOutcome {
     Limit,
 }
 
-// ---------------------------------------------------------------------------
 // Last boards (R417, R565, R678)
-// ---------------------------------------------------------------------------
 
 store_union! {
     /// R417: "your last game" is your last finished game of the same kind; only `server` is
@@ -989,9 +914,7 @@ store_union! {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Player statistics on the account (SPEC §9.11, R639, R654).
-// ---------------------------------------------------------------------------
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -1002,7 +925,7 @@ pub struct PlayerStatsRow {
     pub updated_at: i64,
 }
 
-/// One of `PublicPlayerSummary.favourite_cards` (TS's anonymous `{ id, count }`).
+/// One of `PublicPlayerSummary.favourite_cards`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct FavouriteCard {
@@ -1010,7 +933,7 @@ pub struct FavouriteCard {
     pub count: i64,
 }
 
-/// `PublicPlayerSummary.fun_stats` (TS's anonymous object).
+/// `PublicPlayerSummary.fun_stats`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct FunStats {
@@ -1034,7 +957,7 @@ pub struct PublicPlayerSummary {
     pub updated_at: i64,
 }
 
-/// `PlayerStatsStore.listPublic`'s argument (TS's anonymous `{ search?, limit, offset }`).
+/// `player_stats_list_public`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerStatsListOptions {
@@ -1044,9 +967,7 @@ pub struct PlayerStatsListOptions {
     pub offset: i64,
 }
 
-// ---------------------------------------------------------------------------
 // The retention purge
-// ---------------------------------------------------------------------------
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -1062,10 +983,8 @@ pub struct RetentionPurgeResult {
     pub match_actions: i64,
 }
 
-// ---------------------------------------------------------------------------
 // Live matches: what `queue.rs`, the room endpoints, the series and the rematch hand
-// `actor::registry::Registry::start` (TS's `MatchDirectory.start` input).
-// ---------------------------------------------------------------------------
+// `actor::registry::Registry::start`.
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -1097,9 +1016,7 @@ pub struct StartMatchInput {
     pub stake: Option<i64>,
 }
 
-// ---------------------------------------------------------------------------
 // The store: Db (a pool or the fake's tables) and Tx (one transaction)
-// ---------------------------------------------------------------------------
 
 /// Migration 0001 §8, and the same closing note in 0002-0009: `service_role` is the role the API
 /// server and the match actor hold. It is the only role granted EXECUTE on
@@ -1110,20 +1027,10 @@ const ACTING_ROLE: &str = "service_role";
 
 /// One statement, two `SET LOCAL`s. `set_config(name, value, true)` is `SET LOCAL name = value`,
 /// and unlike `SET LOCAL` it takes parameters, so the profile id is bound rather than interpolated.
-///
-/// `request.jwt.claim.sub` is the GUC Supabase's `auth.uid()` reads (see
-/// `tests/sql/00_supabase_stub.sql`, which stands the same function up for a plain Postgres). Every
-/// RLS policy in 0002-0007 is `profile_id = app.current_profile_id()`, and
-/// `app.profile_is_active()` reads `auth.uid()` directly, so a transaction that leaves it unset is
-/// a transaction where those expressions silently see NULL. `service_role` carries BYPASSRLS, which
-/// means this cannot change the result of anything today; it is set anyway so that the day a
-/// policy, a trigger or a SECURITY INVOKER helper does consult the caller, it sees the profile the
-/// call is about rather than nobody.
-///
-/// `SET LOCAL` is scoped to a transaction and is a silent no-op with a warning outside one, which
-/// is exactly how a driver ends up quietly running as a superuser with RLS bypassed. `Db::begin`
-/// is therefore the only way to a `Tx`: it issues `BEGIN` before it issues the role switch, and
-/// nothing executes SQL outside a `Tx` (store.ts's rule 2).
+/// `request.jwt.claim.sub` is the GUC `auth.uid()` reads (`tests/sql/00_supabase_stub.sql`).
+/// `service_role` bypasses RLS, but a policy, trigger or SECURITY INVOKER helper that consults the
+/// caller then sees the right profile. `SET LOCAL` is a silent no-op outside a transaction, so
+/// `Db::begin` is the only way to a `Tx`: `BEGIN` first, and no SQL runs outside a `Tx`.
 const SESSION_SQL: &str =
     "select set_config('role', $1, true), set_config('request.jwt.claim.sub', $2, true)";
 
@@ -1135,7 +1042,7 @@ pub enum Db {
     Fake(Arc<tokio::sync::Mutex<fake::FakeData>>),
 }
 
-/// One transaction on the store. Every TS `Store` method is a method here. Dropped without
+/// One transaction on the store. Every store method is a method here. Dropped without
 /// `commit`, it rolls back.
 pub enum Tx<'a> {
     Pg(sqlx::Transaction<'a, sqlx::Postgres>),
@@ -1143,8 +1050,7 @@ pub enum Tx<'a> {
 }
 
 impl Db {
-    /// An empty fake store: the in-memory tables the unit tests and `E2E=1` run on (TS
-    /// `createMemoryStore()` / `createE2EStore()`).
+    /// An empty fake store: the in-memory tables the unit tests and `E2E=1` run on.
     pub fn fake() -> Db {
         Db::Fake(Arc::new(tokio::sync::Mutex::new(fake::FakeData::default())))
     }
@@ -1152,7 +1058,7 @@ impl Db {
     /// Opens one transaction. Postgres: `BEGIN`, then the role switch to `service_role` and
     /// `request.jwt.claim.sub` set to `claim_sub` — the profile the call is about, or `""` for the
     /// calls that are about nobody (`tickets_list_open`, `matches_live`, the breaker's
-    /// `codes_count_failures`) — in the one `SESSION_SQL` statement (store.ts's rule 2). The fake:
+    /// `codes_count_failures`) — in the one `SESSION_SQL` statement. The fake:
     /// takes the tables' lock and a snapshot to restore if the transaction is dropped uncommitted.
     pub async fn begin(&self, claim_sub: Option<&str>) -> Result<Tx<'_>, StoreError> {
         match self {
@@ -1169,8 +1075,7 @@ impl Db {
         }
     }
 
-    /// TS `PostgresStore.close()`: lets the pool's connections go, for a CLI about to exit. A no-op
-    /// on the fake.
+    /// Lets the pool's connections go, for a CLI about to exit. A no-op on the fake.
     pub async fn close(&self) {
         if let Db::Pg(pool) = self {
             pool.close().await;
@@ -1205,35 +1110,15 @@ impl Tx<'_> {
         }
     }
 
-    // -----------------------------------------------------------------------
     // Root
-    // -----------------------------------------------------------------------
 
-    /// SPEC §9.4's redemption, whole: "Redemption is one server-side transaction: (1) reject
-    /// unless the account is pending with a verified email; (2) reject if this profile made more
-    /// than 5 attempts in the last hour; (3) reject if this IP hash made more than 20; (4) log the
-    /// attempt either way; (5) look up by hash and reject if revoked, expired or exhausted; (6)
-    /// increment uses and set the account active, atomically."
-    ///
-    /// It sits beside the transaction rather than under `codes` because it *is* a transaction and
-    /// it writes three tables (`profiles`, `invite_codes`, `code_attempts`); it is not an operation
-    /// on the code table. In Postgres it is one statement — `select app.redeem_invite_code(...)`,
-    /// migration 0001 §6 — which is why the result type is that function's return values verbatim.
-    ///
-    /// Steps 2 and 3's limits and their window are ENFORCED BY THE STORE, NOT BY A HANDLER: they run
-    /// where steps 4-6 run — inside the database, under the same lock. `config.rs` holds the
-    /// deployment's copy of the numbers, which is also where the fake takes its default;
-    /// `app.redeem_invite_code` writes §9.4's `5` and `20` into its own body (`pg.rs`'s KNOWN
-    /// DIVERGENCES, "redemption limits").
-    ///
-    /// Two orderings the spec fixes and both implementations keep:
-    ///  - steps 2 and 3 reject BEFORE step 4, so a caller already over the limit does not pin their
-    ///    own counter by retrying and a flood is cheap to refuse;
-    ///  - a rejection is RETURNED, never thrown, so the attempt row step 4 owes is never rolled back
-    ///    by a later rejection in the same transaction.
-    ///
-    /// What it deliberately does not do is time: §9.4's "identical error in identical time" is
-    /// R107's response floor, which is the server's job (`codes.rs`) and which SQL cannot deliver.
+    /// SPEC §9.4's redemption, whole: one transaction over `profiles`, `invite_codes` and
+    /// `code_attempts`; in Postgres one statement, `app.redeem_invite_code` (migration 0001 §6),
+    /// whose return values are the result type. Steps 2 and 3's limits run in the database, not a
+    /// handler (`config.rs` has the fake's copy; `pg.rs`'s KNOWN DIVERGENCES, "redemption limits").
+    /// Steps 2 and 3 reject BEFORE step 4, so a caller over the limit cannot pin their own counter
+    /// by retrying, and a rejection is RETURNED, never thrown, so step 4's attempt row is never
+    /// rolled back. §9.4's "identical time" is R107's response floor in `codes.rs`, not SQL's.
     pub async fn redeem(&mut self, input: &RedeemInviteCodeInput) -> StoreResult<RedeemResult> {
         dispatch!(self, redeem(input))
     }
@@ -1247,9 +1132,7 @@ impl Tx<'_> {
         dispatch!(self, purge_expired(input))
     }
 
-    // -----------------------------------------------------------------------
     // profiles
-    // -----------------------------------------------------------------------
 
     pub async fn profiles_get_by_id(&mut self, profile_id: &str) -> StoreResult<Option<Profile>> {
         dispatch!(self, profiles_get_by_id(profile_id))
@@ -1303,9 +1186,7 @@ impl Tx<'_> {
         dispatch!(self, profiles_remove(profile_id))
     }
 
-    // -----------------------------------------------------------------------
     // codes
-    // -----------------------------------------------------------------------
 
     pub async fn codes_insert(&mut self, code: &InviteCode) -> StoreResult<()> {
         dispatch!(self, codes_insert(code))
@@ -1358,11 +1239,9 @@ impl Tx<'_> {
         dispatch!(self, codes_count_failures(since))
     }
 
-    // -----------------------------------------------------------------------
     // collection (§9.4: an entitlement ledger. `collection_upsert_quantities` and
     // `collection_append_grants` are the two writes every mutation makes, and callers must make
     // them inside one transaction.)
-    // -----------------------------------------------------------------------
 
     pub async fn collection_get(&mut self, profile_id: &str) -> StoreResult<Vec<CollectionEntry>> {
         dispatch!(self, collection_get(profile_id))
@@ -1384,9 +1263,7 @@ impl Tx<'_> {
         dispatch!(self, collection_append_grants(grants))
     }
 
-    // -----------------------------------------------------------------------
     // decks
-    // -----------------------------------------------------------------------
 
     /// A profile's decks, oldest first: `created_at`, then `id`.
     pub async fn decks_list(&mut self, profile_id: &str) -> StoreResult<Vec<SavedDeck>> {
@@ -1412,9 +1289,7 @@ impl Tx<'_> {
         dispatch!(self, decks_remove(profile_id, deck_id))
     }
 
-    // -----------------------------------------------------------------------
     // trios
-    // -----------------------------------------------------------------------
 
     /// A profile's trios, oldest first: `created_at`, then `id`.
     pub async fn trios_list(&mut self, profile_id: &str) -> StoreResult<Vec<SavedTrio>> {
@@ -1436,9 +1311,7 @@ impl Tx<'_> {
         dispatch!(self, trios_remove(profile_id, trio_id))
     }
 
-    // -----------------------------------------------------------------------
     // matches
-    // -----------------------------------------------------------------------
 
     pub async fn matches_create(&mut self, row: &MatchRow) -> StoreResult<()> {
         dispatch!(self, matches_create(row))
@@ -1495,9 +1368,7 @@ impl Tx<'_> {
         dispatch!(self, matches_forget_voided(match_id))
     }
 
-    // -----------------------------------------------------------------------
     // rooms
-    // -----------------------------------------------------------------------
 
     /// False when the code is already taken.
     pub async fn rooms_create(&mut self, room: &Room) -> StoreResult<bool> {
@@ -1520,9 +1391,7 @@ impl Tx<'_> {
         dispatch!(self, rooms_claim(code, guest_profile_id, match_id, at))
     }
 
-    // -----------------------------------------------------------------------
     // tickets
-    // -----------------------------------------------------------------------
 
     pub async fn tickets_insert(&mut self, ticket: &Ticket) -> StoreResult<()> {
         dispatch!(self, tickets_insert(ticket))
@@ -1565,9 +1434,7 @@ impl Tx<'_> {
         dispatch!(self, tickets_cancel(ticket_id, at))
     }
 
-    // -----------------------------------------------------------------------
     // results
-    // -----------------------------------------------------------------------
 
     /// One row per match (§9.5). Rejects a second row for the same match with
     /// `StoreError::Duplicate`.
@@ -1584,9 +1451,7 @@ impl Tx<'_> {
         dispatch!(self, results_record_for(profile_id))
     }
 
-    // -----------------------------------------------------------------------
     // series
-    // -----------------------------------------------------------------------
 
     pub async fn series_create(&mut self, series: &SeriesRow) -> StoreResult<()> {
         dispatch!(self, series_create(series))
@@ -1625,9 +1490,7 @@ impl Tx<'_> {
         dispatch!(self, series_active())
     }
 
-    // -----------------------------------------------------------------------
     // ranked
-    // -----------------------------------------------------------------------
 
     /// Serializes season opens: `open_season_in_tx` takes it before reading `ranked_seasons()`, so
     /// two opens racing in different transactions — even under different season ids — run one
@@ -1714,9 +1577,7 @@ impl Tx<'_> {
         dispatch!(self, ranked_game(id))
     }
 
-    // -----------------------------------------------------------------------
     // tutorial (R320: tutorial progress kept on the account)
-    // -----------------------------------------------------------------------
 
     /// The profile's row, or `None` before its first write.
     pub async fn tutorial_get(&mut self, profile_id: &str) -> StoreResult<Option<TutorialProgressRow>> {
@@ -1735,9 +1596,7 @@ impl Tx<'_> {
         dispatch!(self, tutorial_merge(input, max_lessons))
     }
 
-    // -----------------------------------------------------------------------
     // playerSettings (R633: the player's game settings kept on the account)
-    // -----------------------------------------------------------------------
 
     /// The profile's row, or `None` before its first write.
     pub async fn player_settings_get(&mut self, profile_id: &str) -> StoreResult<Option<PlayerSettingsRow>> {
@@ -1755,9 +1614,7 @@ impl Tx<'_> {
         dispatch!(self, player_settings_merge(input, limits))
     }
 
-    // -----------------------------------------------------------------------
     // lastBoards (R417, R565: each profile's last finished game's board, per kind, C+ #29)
-    // -----------------------------------------------------------------------
 
     /// The profile's last board of this kind, or `None` before its first finished game of it.
     pub async fn last_boards_get(
@@ -1790,9 +1647,7 @@ impl Tx<'_> {
         dispatch!(self, last_boards_sample_others(exclude_profile_ids, count))
     }
 
-    // -----------------------------------------------------------------------
     // gameRecords (R376: the card statistics' game records)
-    // -----------------------------------------------------------------------
 
     /// R376: one record per id. False, and nothing written, when a record with this id exists.
     pub async fn game_records_insert(&mut self, record: &GameRecord) -> StoreResult<bool> {
@@ -1804,9 +1659,7 @@ impl Tx<'_> {
         dispatch!(self, game_records_list(query))
     }
 
-    // -----------------------------------------------------------------------
     // playerStats (R654: each profile's player statistics and privacy setting)
-    // -----------------------------------------------------------------------
 
     pub async fn player_stats_get(&mut self, profile_id: &str) -> StoreResult<Option<PlayerStatsRow>> {
         dispatch!(self, player_stats_get(profile_id))
