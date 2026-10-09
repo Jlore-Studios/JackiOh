@@ -1,21 +1,16 @@
 //! Player modifiers and delayed effects (BUILD M3-T5, SPEC §2.2, §10.1, R48, R62, R68).
 //!
-//! Two halves. The modifiers half proves each of the three expiries `ModifierExpiry` offers —
-//! `thisTurn`, `nextTurnOf(player)` and `used` — at its boundary, with R48's timing (a next-turn
-//! modifier does nothing on the turn it was made) in a test of its own. The delayed half proves
-//! they resolve at their R62 point in creation order, that K-Pop Fanatic's steal fires after its
-//! unit has died (§8 #50, R76), that a continuation whose instance has ceased to exist still
+//! The modifiers half proves each `ModifierExpiry` (`thisTurn`, `nextTurnOf(player)`, `used`) at its
+//! boundary, with R48's timing (a next-turn modifier does nothing on the turn it was made) apart. The
+//! delayed half proves they resolve at their R62 point in creation order, that K-Pop Fanatic's steal
+//! fires after its unit has died (§8 #50, R76), that a continuation whose instance is gone still
 //! resolves with `ctx.self === null` (R127), and that Efficiency Dividend's mana is a
-//! `mana.nextTurnMod` rather than a delayed effect at all (§8 #24).
+//! `mana.nextTurnMod`, not a delayed effect (§8 #24).
 //!
-//! The expiry boundaries call `expireModifiers` directly, so one state object carries a whole test
-//! and the modifier ids stay comparable; `reduce` clones, so the tests that need a real turn
-//! boundary re-find their cards in the state that comes back.
+//! The expiry boundaries call `expireModifiers` directly, so one state carries a whole test; `reduce`
+//! clones, so tests that need a real turn boundary re-find their cards in the state that comes back.
 //!
-//! Port of `packages/engine/test/modifiers.test.ts`. The TS fixtures' delayed steps live on a
-//! script's `activate` hook, which SURFACE §7.2 does not port; here they are the script's `delayed`
-//! hook (`Resume.hook` "delayed", `Script::hook_named`'s name for the same step) — see
-//! `78f131c^:.fullsend/notes/spec-gaps-part-25-3.md`.
+//! Surface contract: docs/v0.3.0/SURFACE.md §7.2 (delayed steps are the script's `delayed` hook).
 
 use std::cell::Cell;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -29,12 +24,10 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 use crate::rules::fixtures::combat::{indestructible, plain, trampler};
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, sink_for, slot};
 
-// ---------------------------------------------------------------------------
-// Local defs. Indices start above 1300 so they never collide with a fixture catalog or with
-// another test file's local defs.
-// ---------------------------------------------------------------------------
+// Local defs. Indices start above 1300 so they never collide with a fixture catalog or another test
+// file's local defs.
 
-/// TS `{ ...base, ...extra }`: the keys `extra` names replace the defaults'.
+/// The keys `extra` names replace the defaults'.
 fn spread(mut base: Value, extra: Value) -> Value {
     if let (Value::Object(base), Value::Object(extra)) = (&mut base, extra) {
         for (key, value) in extra {
@@ -44,7 +37,6 @@ fn spread(mut base: Value, extra: Value) -> Value {
     base
 }
 
-/// TS `def(overrides)`; `index` is the value TS's running `nextIndex` (from 1300) gives it.
 fn def(index: u32, overrides: Value) -> CardDef {
     json_as(spread(
         json!({
@@ -157,9 +149,7 @@ fn mod_defs() -> Vec<CardDef> {
 
 thread_local! {
     /// Every `ctx.self` `delayed_bolt`'s continuation has been re-entered with, as an instance id or
-    /// `None`. R127 ("a continuation with no instance still resolves … with `ctx.self === null`") is a
-    /// statement about the context the step runs in, which is only observable from inside the script.
-    /// (TS: a module array; here one per test thread, as each `#[test]` runs on its own.)
+    /// `None`: R127's `ctx.self === null` is only observable from inside the script. One per test thread.
     static SELF_AT_RESUME: Cell<Vec<Option<String>>> = const { Cell::new(Vec::new()) };
 }
 
@@ -375,7 +365,6 @@ fn removals(events: &[GameEvent]) -> usize {
         .count()
 }
 
-/// `eventsOfType(events, "damage").map((e) => e.amount)`.
 fn amounts(events: &[GameEvent]) -> Vec<i64> {
     events_of_type(events, GameEventType::Damage)
         .into_iter()
@@ -383,7 +372,7 @@ fn amounts(events: &[GameEvent]) -> Vec<i64> {
         .collect()
 }
 
-/// TS `types.indexOf(type)`: -1 when absent.
+/// Index of the first event of `type`, -1 when absent.
 fn index_of(types: &[GameEventType], kind: GameEventType) -> i64 {
     types
         .iter()
@@ -391,7 +380,7 @@ fn index_of(types: &[GameEventType], kind: GameEventType) -> i64 {
         .map_or(-1, |at| at as i64)
 }
 
-/// TS `types.lastIndexOf(type)`: -1 when absent.
+/// Index of the last event of `type`, -1 when absent.
 fn last_index_of(types: &[GameEventType], kind: GameEventType) -> i64 {
     types
         .iter()
@@ -441,7 +430,6 @@ mod player_modifiers_and_their_three_expiries_2_2_10_1 {
         assert_eq!(mod_ids(sink.state), vec![later.id.clone()]);
         assert_eq!(cost(sink.state, &four), 3);
 
-        // And on the turn it names, it goes.
         sink.state.turn += 1;
         expire_modifiers(&mut sink, P1);
         assert!(sink.state.players.p1.mods.is_empty());
@@ -476,7 +464,6 @@ mod player_modifiers_and_their_three_expiries_2_2_10_1 {
         assert!(!modifier_is_live(&state, &modifier));
         assert_eq!(cost(&state, &four), 4);
 
-        // Live once p1's next turn has begun.
         state = end_turns(&state, 2);
         assert_eq!(state.turn, 3);
         assert_eq!(state.active, P1);
@@ -503,14 +490,9 @@ mod player_modifiers_and_their_three_expiries_2_2_10_1 {
         assert_eq!(state.active, P2);
         assert_eq!(state.turn, 2);
 
-        // DISCREPANCY: src/mana.ts does A; SPEC §8 #77 and R48 say B.
-        //   A: `modifierIsLive` is `state.turn > mod.expiry.fromTurn`, which is already true on the
-        //      opponent's intervening turn, so p1's discount reads live on turns 2 and 3 alike —
-        //      `expireModifiers` only ends it at the cleanup of p1's own next turn.
-        //   B: #77's text is "during your next turn", and BUILD M3-T5's acceptance is "applies only on
-        //      the next turn"; turn 2 is p2's turn, not p1's next turn, so the modifier owes nothing
-        //      there. It is observable through §10.8's `viewFor`, which shows p1 their hand's costs
-        //      while the opponent is playing.
+        // #77 says "during your next turn" (§8 #77, R48; BUILD M3-T5: "applies only on the next turn"): turn 2
+        // is p2's, so the modifier owes nothing there. Observable through §10.8's `viewFor`, which shows p1
+        // their hand's costs while the opponent plays.
         assert!(!modifier_is_live(&state, &mod_of(&state, &modifier.id)));
         assert_eq!(cost(&state, &hand_card(&state, &four.id)), 4);
     }
@@ -546,8 +528,7 @@ mod player_modifiers_and_their_three_expiries_2_2_10_1 {
         assert_eq!(cost(&state, &five_plain), 4);
         assert_eq!(cost(&state, &three), 3);
 
-        // R65's order: other discounts first, then Curvature against the result. A second −1 moves
-        // every card's current cost, so which card Curvature reaches moves with it.
+        // R65's order: other discounts first, then Curvature against the result.
         add_modifier(
             &mut sink_for(&mut state),
             P1,
@@ -837,11 +818,9 @@ mod delayed_effects_10_1_r62_r68 {
         assert_eq!(ended.state.players.p2.hero.health, 23);
 
         // R62: "end-of-turn triggers → the end-of-turn trap window → end-of-turn delayed effects →
-        // cleanup". `turnEnded` is no longer the cleanup marker: `turn.ts` emits it *before* the trap
-        // window, because a trap in that window reads the event (#18 Bread and Butter answers
-        // `event.unspentMana`, which only exists while the turn log is still open). So the window's
-        // own boundary is read off `turnEnded` and cleanup's off `turnStarted`, the first event the
-        // next turn pushes after cleanup has run.
+        // cleanup". `turnEnded` comes *before* the trap window (a trap there reads it: #18 Bread and Butter's
+        // `event.unspentMana`), so the window's boundary is read off `turnEnded` and cleanup's off
+        // `turnStarted`.
         let types = types_of(&ended.events);
         let first_damage = index_of(&types, GameEventType::Damage);
         assert!(index_of(&types, GameEventType::Drawn) < first_damage);
@@ -926,8 +905,8 @@ mod delayed_effects_10_1_r62_r68 {
         assert!(due_delayed(&state, Phase::End, P1).is_empty());
         assert!(state.players.p1.mods.is_empty());
 
-        // §2.3: the refresh reads it once, into that turn's current mana — temporary mana, which "adds to
-        // current mana" while max stays min(turns, 4) — and clears it.
+        // §2.3: the refresh reads it once into that turn's current mana (temporary: max stays min(turns, 4))
+        // and clears it.
         state = end_turns(&state, 2);
         assert_eq!(state.players.p1.turns_started, 2);
         assert!(matches_object(
@@ -958,14 +937,12 @@ mod delayed_effects_10_1_r62_r68 {
         );
         SELF_AT_RESUME.with(|cell| cell.set(Vec::new()));
 
-        // The intent this test was written for still holds — the missing instance must not throw:
-        // `endTurns` goes through `act`, which rethrows anything `reduce` raised.
+        // The missing instance must not throw: `endTurns` goes through `act`, which rethrows what `reduce` raised.
         state = end_turns(&state, 2);
         assert_eq!(state.turn, 3);
 
-        // R127: the continuation names its script by stored def id, so it re-enters all the same —
-        // dropping it would silently lose a sequence, which R113 forbids. The 3 comes out of
-        // `resume.data`, which is where a step keeps what it needs precisely because `self` may be gone.
+        // R127: the continuation names its script by stored def id, so it re-enters all the same; dropping it
+        // would silently lose a sequence, which R113 forbids. The 3 comes from `resume.data`.
         assert_eq!(state.players.p2.hero.health, 27);
         assert_eq!(self_at_resume(), vec![None]);
 

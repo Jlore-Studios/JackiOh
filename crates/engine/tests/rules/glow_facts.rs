@@ -1,15 +1,8 @@
-//! Port of `packages/engine/test/glow-facts.test.ts`.
-//!
-//! R662: the board facts the yellow glow reads for the cards R195 left out (`src/query.ts`), and the
-//! granted half of `conditionActive` (`src/condition.ts` rule 5): a hand card glows while a condition
-//! another card grants it holds. The real cards (#38, #64, #78, #96, #85) prove the same again in
-//! their own test files; here the granting cards are test-only definitions carrying the same static
-//! flags and modifiers the pipeline reads, registered on top of the fixture catalog and put back in
-//! `afterAll`.
-//!
-//! (TS saved the registries in `beforeAll` and put them back in `afterAll`. The testkit's registries
-//! are thread-local and every `#[test]` runs on its own thread, so nothing outlives a test and there
-//! is nothing to put back.)
+//! R662: the board facts the yellow glow reads for the cards R195 left out, and the granted half of
+//! `conditionActive` (rule 5): a hand card glows while a condition another card grants it holds. The
+//! real cards (#38, #64, #78, #96, #85) prove the same in their own test files; here the granting
+//! cards are test-only definitions with the same static flags and modifiers, registered on the
+//! fixture catalog. The testkit's registries are thread-local, so nothing outlives a test.
 
 use jackioh_engine::testkit::*;
 
@@ -17,7 +10,7 @@ use crate::rules::fixtures::call_to_chaos_plus::immutable;
 use crate::rules::fixtures::combat::{plain, trampler};
 use crate::rules::fixtures::harness::{in_hand, new_game, put, slot};
 
-/// A Field Spell with no other text, indexed from 1981 in the order TS made them.
+/// A Field Spell with no other text, indexed from 1981.
 fn field_spell(name: &str, index: u32) -> CardDef {
     json_as(json!({
         "id": format!("gf-{name}"),
@@ -108,7 +101,7 @@ fn played_one(state: &mut GameState, paid: i32) {
     log.costs_paid = Some(costs);
 }
 
-/// `{ kind: "comboDraw"; amount } | { kind: "quickstrikerDamage" }`, as a JSON literal.
+/// A rider body, `comboDraw` (with an `amount`) or `quickstrikerDamage`, as a JSON literal.
 fn add_mod(state: &mut GameState, body: Value) {
     let mut rider = json!({
         "id": format!("gf-mod-{}", state.players.p1.mods.len()),
@@ -120,7 +113,7 @@ fn add_mod(state: &mut GameState, body: Value) {
     state.players.p1.mods.push(json_as::<PlayerModifier>(rider));
 }
 
-/// The card as the state holds it now (TS read its live object).
+/// The card as the state holds it now.
 fn live(state: &GameState, id: &str) -> CardInstance {
     find_instance(state, id).expect("the card is in the game").clone()
 }

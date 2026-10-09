@@ -1,10 +1,7 @@
 //! Classic+ #62 KY's Papaya's curve targeting (SPEC §8.7 row 62, R422; docs/classic-sets.md B5 E32),
-//! through the fixture Spell in `fixtures/papaya.ts`: the grid from the caster's seat, the curve in
-//! exact rationals, the cells on it, the one-cell-at-a-time prompts (E18's `cell` kind), the exile of
-//! the top card at each cell, the Radiant face's enemy rows, what the other seat sees (R97, R177), a
-//! random cast's answers (R452), and a pause that survives JSON and a game that replays (§9.2, §9.3).
-//!
-//! Port of `packages/engine/test/papaya.test.ts`.
+//! through the fixture Spell: the grid, the curve in exact rationals, the one-cell prompts (E18's
+//! `cell` kind), the Radiant face's enemy rows, what the other seat sees (R97, R177), a random cast
+//! (R452), and a pause that survives JSON and a game that replays (§9.2, §9.3).
 
 use serde::Serialize;
 
@@ -29,7 +26,6 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// A grid cell, `{ x, y }`.
 fn pt(x: i32, y: i32) -> PapayaPoint {
     PapayaPoint { x, y }
 }
@@ -38,7 +34,6 @@ fn pts(cells: &[(i32, i32)]) -> Vec<PapayaPoint> {
     cells.iter().map(|&(x, y)| pt(x, y)).collect()
 }
 
-/// A curve's cells as `(x, y)` pairs, for comparing with TS's `{ x, y }` literals.
 fn cells(points: Vec<PapayaPoint>) -> Vec<(i32, i32)> {
     points.iter().map(|point| (point.x, point.y)).collect()
 }
@@ -50,7 +45,6 @@ fn key(x: i32, y: i32) -> String {
 }
 
 /// Cast the curve for p1 and answer these cells, then "done" when fewer than four were given.
-/// (TS `draw`.)
 fn draw_curve(state: &mut GameState, points: &[(i32, i32)], radiant: bool) {
     cast_now(state, &curve().id, P1, radiant);
     for &(x, y) in points {
@@ -120,7 +114,6 @@ fn sorted(mut ids: Vec<String>) -> Vec<String> {
     ids
 }
 
-/// The zone a card stands in now (TS read `card.zone.z` off the live object).
 fn zone_name(state: &GameState, id: &str) -> Option<ZoneName> {
     find_instance(state, id).map(|card| card.zone.z())
 }
@@ -132,7 +125,6 @@ fn answer_count(state: &GameState, player: PlayerId) -> usize {
         .count()
 }
 
-/// `expect(() => run()).toThrow(/text/)`: TS threw, Rust panics with the same message.
 fn panics_with(run: impl FnOnce(), text: &str) {
     let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(run));
     let payload = caught.expect_err("expected a panic");
@@ -468,7 +460,7 @@ mod r422_every_card_on_the_curve_is_exiled {
             Default::default(),
         );
         draw_curve(&mut state, &[(0, 2)], false);
-        // TS: `made.zone.z` is "gone"; a card that ceased to exist is in no zone of the state.
+        // A card that ceased to exist is in no zone of the state.
         assert!(find_instance(&state, &made.id).is_none());
         assert!(state.players.p2.exile.is_empty());
     }
@@ -528,7 +520,6 @@ mod r422_every_card_on_the_curve_is_exiled {
         let mut state = game("papaya-read");
         let board = full_board(&mut state);
         let own = &board[0];
-        // TS passes `{ state, controller: "p1" }`, the two context fields it reads.
         let ids = cards_on_curve(&state, P1, &pts(&[(0, 1)]), false);
         assert_eq!(ids, ids_of(&own[..5]));
         assert!(cards_on_curve(&state, P1, &pts(&[(0, 1)]), true).is_empty());

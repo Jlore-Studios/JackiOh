@@ -1,5 +1,3 @@
-//! Port of `packages/cards/test/re-entry.test.ts` (v0.3.0 part 27.5).
-//!
 //! Leaving the field, coming back, and what travels with a card between zones (SPEC §3.2, §4.5, R11,
 //! R13, R47, R57, R64, R76, R78, R83, R174, R175). Found by the polish-4 edge-case hunt
 //! (docs/polish/4-edge-cases.md, lenses L1, L2 and L8); every case here failed before its fix.
@@ -11,29 +9,6 @@
 //!    returns on top of it.
 //!  - §3.2 and R13: an aura does not reach a card dormant under a Stack pile.
 //!  - §7, R41, R57: a copy keeps a Radiant Bread Token's Armor X beside its X/X.
-//!  - §8 #52, R4, R78: a card radiant Silly Silas bounces into a full hand is burned without its
-//!    "costing 0".
-//!  - Round 4, lens L2. R77, R175: a Fuse onto a token summoned X/X sums that X/X, not the printed
-//!    0/0, and the Bread Token's Armor X stands for its own Armor only. R35, §3.2: a Transform
-//!    replaces a card in a Locked zone, since the Lock refuses summons and a Replace is none.
-//!  - Round 5, lens L2. R174: a later part of one effect list is aimed at the stay the play chose, so
-//!    a fused card's part fizzles on a card an earlier part took off the field — #68's damage on the
-//!    meal's Reborn body, #61's copy of a card in a graveyard, #50's steal of a card bounced and
-//!    replayed. #85 fuses the opponent's played card onto a unit, which is bounced and played again.
-//!  - Round 6, lens L2. R174, R113: that holds across a prompt too — a crafted Cube + Scarab +
-//!    Sorcerer's Discover splits the list across actions, and the Sorcerer's part still fizzles on the
-//!    Reborn body of the unit the Cube's part ate.
-//!  - Round 7, lens L2. R174: it holds for "this" card as well — a crafted Silas + Gary that its own
-//!    Silas part bounced to hand is not buffed there by its Gary part.
-//!  - Round 8, lens L2. R174: a Transform takes the card off the field like any departure, so a
-//!    second Sheepish is not offered the play the first turned into a Sheep. R102, R212: a card a
-//!    Fuse kept is on the same stay, so a trigger it queued before the Fuse (Fed Fauci's Plague Counter
-//!    for the Cry that hit it) still resolves under the fused definition's namespaced id.
-//!  - Round 9, lens "re-entry and stays". R174: #22 reads its meal on the stay the play chose, so a
-//!    crafted Cube + Cube naming one Reborn unit twice remembers it once; and a card the play's own
-//!    Stack card buried is not on the field for its Cry (§3.2, R13). §4.5 step 4: the Reborn bodies of
-//!    one check return together, each at 1 health once all stand. R102, R77: what a card a Fuse kept
-//!    remembered moves with its texts, so the texts fused onto it read none of it.
 
 use jackioh_engine::subsystems::FuseArgs;
 use jackioh_engine::testkit::*;
@@ -75,7 +50,7 @@ const FELINOR_TOKEN: &str = "core-t-felinor";
 const BREAD: &str = "core-t-bread";
 const LIBRARY: [&str; 6] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 
-/// TS `at(card)`: the one-instance selection list naming `id`.
+/// The one-instance selection list naming `id`.
 fn at(id: &str) -> Value {
     json!([{ "pick": "instance", "instanceId": id }])
 }
@@ -119,7 +94,7 @@ fn has_keyword(g: &Scenario, id: &str, kind: KeywordKind) -> bool {
     g.stats(id).keywords.iter().any(|keyword| keyword.kind() == kind)
 }
 
-/// TS `g.card(ref).grantedKeywords = …`: a write to the live instance.
+/// A write to the live instance's granted keywords.
 fn grant(g: &mut Scenario, id: &str, keywords: Vec<Keyword>) {
     must(find_instance_mut(g.state_mut(), id), id).granted_keywords = keywords;
 }
@@ -168,7 +143,7 @@ mod r174_50_k_pop_fanatics_delayed_steal_and_a_target_that_left_the_field {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
             "p1": { "hand": [KPOP, VANILLA], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },
-            // The Coin pays for the replay: Flood costs (4) since patch v0.2.0 (issue #40).
+            // The Coin pays for the replay: Flood costs (4).
             "p2": { "hand": [FLOOD, SEVEN_SEVEN, COIN], "field": [{ "def": VANILLA, "lane": 2 }], "library": LIBRARY },
         }));
         let prey = unit_at(&g, PlayerId::P2, 2).id;
@@ -368,7 +343,7 @@ mod c7_r41_r57_what_a_copy_keeps {
                 "library": LIBRARY,
                 "mana": 3,
             },
-            // The Coin pays for Jilliax beside Hit Job, (3) since patch v0.2.0 (issue #40).
+            // The Coin pays for Jilliax beside Hit Job, (3).
             "p2": { "hand": [HIT_JOB, JILLIAX, HIT_JOB, COIN], "library": LIBRARY },
         }));
         let saintess = g.card(SAINTESS).id.clone();
@@ -586,9 +561,7 @@ mod r35_3_2_a_transform_replaces_the_occupant_of_a_locked_zone {
         assert!(g.state().players.p1.locks.backrow[0]);
 
         // R35: every board card but an Immutable one is replaced in place; the lock only stops summons
-        // and "the current occupant is unaffected" (§3.2). Since patch v0.2.9 (issue #44) the Legendary
-        // Field Spell pool holds #93, Classic #4 and #7, Classic #28 and Classic+ #78; this seed draws
-        // Classic #4 Palantir.
+        // and "the current occupant is unaffected" (§3.2). This seed draws Classic #4 Palantir.
         g.play(TRANSMOGULATE, json!({}));
         assert_eq!(
             g.backrow(PlayerId::P1, 1).map(|card| card.def_id.clone()),
@@ -700,7 +673,7 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
                 "library": LIBRARY,
             },
             "p2": {
-                // The Coin pays for Flood beside Magic Jammed: Flood costs (4) since patch v0.2.0 (issue #40).
+                // The Coin pays for Flood beside Magic Jammed: Flood costs (4).
                 "hand": [MAGIC_JAMMED, FLOOD, VANILLA, VANILLA, COIN],
                 "field": [{ "def": KPOP, "lane": 3 }],
                 "backrow": [{ "def": EXPERIMENTATION, "lane": 3 }],
@@ -778,8 +751,8 @@ mod r174_a_later_part_of_one_effect_list_meets_the_stay_the_play_chose_across_a_
         let timmy = must(g.unit(PlayerId::P1, 1).map(|card| card.id.clone()), "Tempo Timmy");
         grant(&mut g, &timmy, vec![Keyword::Reborn]);
         // Radiant Craft a Card's three-ingredient card, made as the card makes it (R77): its Discovers
-        // draw from every set's Units since patch v0.2.0 (R380), so the test builds the card directly
-        // rather than hunting a seed that offers these three.
+        // draw from every set's Units (R380), so the test builds the card directly rather than
+        // hunting a seed that offers these three.
         let card = craft(&mut g, PlayerId::P1, &[CUBE, SCARAB, SORCERER]);
         let saintess = must(
             g.unit(PlayerId::P1, 1).map(|card| card.id.clone()),
@@ -819,9 +792,7 @@ mod r174_a_later_part_of_one_effect_list_meets_the_stay_the_play_chose_across_a_
     }
 }
 
-// ---------------------------------------------------------------------------
 // Round 7 (lens L2): "this" card is aimed at its stay too.
-// ---------------------------------------------------------------------------
 
 const GARY: &str = "core-004";
 const GLOWY_JELLY_BEAN: &str = "core-026";
@@ -960,9 +931,7 @@ mod r102_r212_a_card_a_fuse_kept_is_the_same_card_on_the_same_stay {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Round 9: meals, Reborn bodies and buried picks (R174, R102, §4.5 step 4, §3.2)
-// ---------------------------------------------------------------------------
 
 const MR_VANILLA: &str = "core-008";
 const MIDRANGE_MENACE: &str = "core-019";
@@ -970,9 +939,8 @@ const MROW: &str = "core-086";
 const NETHER: &str = "core-088";
 const UNLICENSED: &str = "core-085";
 
-/// Craft a Card's and #85's fusions are built directly, as `fused-hooks.test.ts` does (R77). TS
-/// `subsystems.fuse(sinkFor(s), args)`: a fresh sink over the live state, whose rng cursor is not
-/// written back (as TS's `sinkFor` did not).
+/// Craft a Card's and #85's fusions are built directly (R77): a fresh sink over the live state,
+/// whose rng cursor is not written back.
 fn fuse_on(s: &mut Scenario, args: FuseArgs) -> Option<CardInstance> {
     let mut events: Vec<GameEvent> = vec![];
     let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
@@ -980,7 +948,7 @@ fn fuse_on(s: &mut Scenario, args: FuseArgs) -> Option<CardInstance> {
     subsystems::fuse(&mut sink, args)
 }
 
-/// TS `const hand = s.hand("p1")`: a copy of the hand as it stands.
+/// A copy of the hand as it stands.
 fn hand_of(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
     s.hand(player)
 }
@@ -1189,7 +1157,7 @@ mod c3_2_r13_r174_a_card_the_plays_own_stack_buried_is_not_on_the_field_for_its_
         );
         s.expect_in_zone(vanilla.id.as_str(), "field");
         // "Choose a Human unit on the field; summon a Vanilla copy": the chosen unit is no longer on the
-        // field, so the copy fizzles, as #68's damage does on a buried pick. The engine summons one.
+        // field, so the copy fizzles, as #68's damage does on a buried pick.
         let rest: Vec<Option<String>> = (2..=5)
             .map(|lane| s.unit(PlayerId::P1, lane).map(|card| card.def_id.clone()))
             .collect();
@@ -1206,7 +1174,7 @@ mod c3_2_r13_r174_a_card_the_plays_own_stack_buried_is_not_on_the_field_for_its_
             Some(crafted.id.clone())
         );
         // The meal is dormant under the crafted card when the Cry resolves, so there is nothing on the
-        // field to tribute and the Cry fizzles (R41). The engine sacrifices it out of the pile.
+        // field to tribute and the Cry fizzles (R41).
         s.expect_in_zone(vanilla.id.as_str(), "field");
         assert!(!s.events().iter().any(
             |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == vanilla.id)
@@ -1273,8 +1241,7 @@ mod r102_r77_r41_a_card_85_keeps_reads_its_meals_with_its_own_text {
         );
 
         // The kept Cube's text copies its meal twice ("each Death copies its own", R102). The played
-        // Cube's text ate a Midrange Menace on another instance, never a Timmy. The engine hands the kept
-        // card's one meal to both texts and summons four Timmies.
+        // Cube's text ate a Midrange Menace on another instance, never a Timmy.
         assert_eq!(count(&unit_row(&s), TIMMY), 2);
     }
 
@@ -1397,8 +1364,7 @@ mod r102_r77_r41_a_card_85_keeps_reads_its_meals_with_its_own_text {
         );
 
         // The kept card "still reads what it remembered before" (R102): its two Cubes copy a Timmy twice
-        // and a Mr. Vanilla twice. The engine reads its first meal off the played Cube's text and
-        // nothing off its own, so only two Timmies arrive.
+        // and a Mr. Vanilla twice.
         let row = unit_row(&s);
         assert_eq!(count(&row, TIMMY), 2);
         assert_eq!(count(&row, MR_VANILLA), 2);

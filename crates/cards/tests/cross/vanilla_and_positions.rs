@@ -1,21 +1,14 @@
-//! Port of `packages/cards/test/vanilla-and-positions.test.ts`.
-//!
 //! A Vanilla copy has no text at all, and R46's knock-down reports only a real switch (SPEC §6.3
 //! Vanilla, §6.2, R46, R49, R91, R115). Found by the polish-4 edge-case hunt
-//! (docs/polish/4-edge-cases.md, lens L3); every case here failed before its fix.
+//! (docs/polish/4-edge-cases.md, lens L3).
 //!
 //! #61 Prejudiced Postdoc summons a Vanilla copy (R57, R23). §6.3's Vanilla "clears printed keywords
 //! and scripts", and R115 says so of every hook, so the copy keeps none of the card's text: not Deft
 //! Duelist's second exertion, not Spikey Pillow's "cannot be in Defense Position", not Fed Fauci's
 //! on-damage trigger and not radiant Right-house defender's Death.
 //!
-//! Round 9, lens "keywords and layers": §6.1's keywords are a set, so a keyword two sources give — a
-//! printed one an aura grants again, a Taunt unit's own Taunt in Defense Position — is listed once in
-//! the view (§10.4, §10.8), Armor apart, which sums across its sources.
-//!
-//! Round 10 (lenses "engine invariants" and "keywords and layers"): the Taunt R46's knock-down takes
-//! from a unit already in Attack Position went with no event (§10.3), and a unit's view did not say
-//! its text was gone, so a client rendering it showed a Vanilla copy's scripted text (R243).
+//! Also: a keyword two sources give is listed once in the view (§6.1, §10.4, §10.8), Armor apart;
+//! R46's knock-down changes nothing silently (§10.3); a unit's view says its text is gone (R243).
 
 use jackioh_engine::testkit::*;
 
@@ -52,7 +45,7 @@ fn offers_switch(s: &Scenario, card: &CardInstance) -> bool {
         .any(|action| matches!(action, ActionBody::SwitchPosition { instance_id } if *instance_id == live.id))
 }
 
-/// `keywords.map((k) => k.kind)`, by the kind's printed name.
+/// The keywords' kinds, by the kind's printed name.
 fn kinds(keywords: &[Keyword]) -> Vec<String> {
     keywords
         .iter()
@@ -217,12 +210,10 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
         }));
     }
 
-    // Found by the probe's silent-change check (a top unit's view changed in an action whose events
-    // name neither it nor anything on the board around it): #55 radiant Lava Golem and #56 radiant
-    // Jilliax, both printing Taunt beside Indestructible, lost Taunt to R46 with nothing in the
-    // action's stream saying so, and R46 was given its `keywordGranted … lost` report. R347 (patch
-    // v0.1.1) has since taken Taunt off every Indestructible unit, so such a unit never has a Taunt
-    // for a knock-down to take: it shows none before the destroy and none after, and so reports none.
+    // #55 radiant Lava Golem and #56 radiant Jilliax print Taunt beside Indestructible, and the probe's
+    // silent-change check found R46 taking that Taunt with nothing in the action's stream saying so.
+    // R347 takes Taunt off every Indestructible unit, so a knock-down has none to take: the view shows
+    // none before the destroy and none after, and the action reports none.
     #[test]
     fn r46_r347_r91_an_indestructible_unit_given_taunt_shows_none_so_shrugging_off_a_destroy_changes_nothing_a_view_shows_s10_3()
      {
@@ -275,9 +266,7 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Round 9: a unit's keywords are a set (§6.1, §10.4, §10.8)
-// ---------------------------------------------------------------------------
+// A unit's keywords are a set (§6.1, §10.4, §10.8)
 
 const TIMMY: &str = "core-011"; // Unit, 1: Rush, First Strike
 const WEAPONS: &str = "core-014"; // Field Spell: your units have +4 attack, Rush, First Strike
@@ -326,9 +315,7 @@ mod a_units_keywords_are_a_set_s6_1_s10_4_s10_8 {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Round 10: a Vanilla unit's view says its text is gone (R243)
-// ---------------------------------------------------------------------------
+// A Vanilla unit's view says its text is gone (R243)
 
 mod r243_r115_a_vanilla_units_view_says_its_text_is_gone_s6_3_vanilla_s10_8 {
     use super::*;

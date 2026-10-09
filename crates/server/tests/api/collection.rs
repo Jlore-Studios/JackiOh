@@ -1,21 +1,13 @@
-//! Port of `apps/server/test/api/collection.test.ts`.
-//!
 //! SPEC §9.4's entitlement ledger, and §9.8's first row ("Claiming unowned cards → the collection
 //! is server-owned").
 //!
-//! Two of BUILD M6-T2's three acceptance items are proved here:
-//!  - "a grant with `reason` writes both tables or neither (fault-injection test)" — the fake
-//!    store's `on_call` seam fails one of the two writes mid-transaction, once each way round;
-//!  - "a direct insert attempt through the public API is impossible (no endpoint)" — asserted over
-//!    the route table itself (`app::ROUTES`), so a mutating route cannot be added without this file
-//!    going red.
+//! Two of BUILD M6-T2's acceptance items are proved here:
+//!  - a grant with `reason` writes both tables or neither (the fake store's `on_call` seam fails one
+//!    of the two writes mid-transaction, once each way round);
+//!  - no endpoint inserts directly, asserted over `app::ROUTES` so a mutating route cannot be added
+//!    without this file going red.
 //!
-//! The third ('a stale `catalogVersion` gets "update required"') belongs to the deck endpoints and
-//! lives in `decks.rs`.
-//!
-//! The catalog is the real one (`jackioh_cards`, compiled in): TS's `createTestCatalog()` (24
-//! synthetic ids and one token) has no Rust stand-in, since the server reads its catalog from the
-//! cards crate. Every expectation below is computed from the catalog handle, as TS's were.
+//! The catalog is the real one (`jackioh_cards`, compiled in); every expectation is computed from it.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -43,8 +35,7 @@ use crate::support::deps;
 const PROFILE: &str = "p1";
 const USER: &str = "u1";
 
-/// The environment `createTestDeps()` stood for: `E2E=1` (the fake store and fixture auth) at the
-/// compiled-in catalog version (SURFACE §11.3).
+/// `E2E=1` (the fake store and fixture auth) at the compiled-in catalog version (SURFACE §11.3).
 fn test_env() -> IndexMap<String, String> {
     let mut source = IndexMap::new();
     for (name, value) in [("E2E", "1"), ("NODE_ENV", "test"), ("TRUSTED_PROXY_HOPS", "1")] {
@@ -57,7 +48,7 @@ fn test_env() -> IndexMap<String, String> {
     source
 }
 
-/// One App and its router: TS's `deps` and `createRouter(createCollectionRoutes(), deps)`.
+/// One App and its router.
 struct Server {
     app: Arc<App>,
     router: axum::Router,
@@ -83,9 +74,8 @@ async fn built_app() -> App {
         .expect("app::build keeps no second handle on the App it returns")
 }
 
-/// `createTestDeps(overrides)`: an App, with R144's fixtures wiped so its store starts as empty as
-/// TS's memory store (the launch grant R144 hands the active fixtures would otherwise fill both
-/// ledger tables before a test begins).
+/// An App with R144's fixtures wiped, so its store starts empty (the launch grant R144 hands the
+/// active fixtures would otherwise fill both ledger tables).
 async fn serve(app: App) -> Server {
     let app = Arc::new(app);
     store_of(&app).lock().await.reset();
@@ -99,7 +89,6 @@ async fn fresh_server() -> Server {
     serve(built_app().await).await
 }
 
-/// `createTestDeps({ catalog })`.
 async fn server_holding(catalog: Catalog) -> Server {
     let built = built_app().await;
     serve(App { catalog, ..built }).await
@@ -124,7 +113,6 @@ impl Server {
     }
 }
 
-/// `jsonRequest(method, path, body, { token })`.
 fn json_request(method: &str, path: &str, body: Option<Value>, token: Option<&str>) -> Request<Body> {
     let mut builder = Request::builder()
         .method(method)
@@ -155,18 +143,18 @@ fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
         .collect()
 }
 
-/// `deps.store.tables.collection`, as TS's rows read.
+/// The collection table's rows.
 async fn collection_rows(server: &Server) -> Vec<Value> {
     json_rows(&store_of(&server.app).lock().await.tables.collection)
 }
 
-/// `deps.store.tables.grants`, as TS's rows read.
+/// The grants table's rows.
 async fn grant_rows(server: &Server) -> Vec<Value> {
     json_rows(&store_of(&server.app).lock().await.tables.grants)
 }
 
-/// The server's clock (`app::now_ms`, TS `deps.timers.now()`): what it stamps rows with and counts
-/// its windows on. Not the wall clock, which the test clock (tokio's) does not move.
+/// The server's clock (`app::now_ms`): what it stamps rows with and counts its windows on. Not the
+/// wall clock, which the test clock (tokio's) does not move.
 fn now_ms() -> i64 {
     jackioh_server::app::now_ms()
 }
@@ -180,14 +168,13 @@ async fn active_profile(server: &Server, id: &str, user_id: &str) -> String {
     deps::add_user(&server.app, user_id, &format!("{id}@example.test"), true)
 }
 
-/// `beforeEach`: fresh deps and an active `p1` with its token.
+/// Fresh deps and an active `p1` with its token.
 async fn setup() -> (Server, String) {
     let server = fresh_server().await;
     let token = active_profile(&server, PROFILE, USER).await;
     (server, token)
 }
 
-/// `grantCards(deps, { profileId, entries, reason })`, `entries` as TS's literal.
 async fn grant(server: &Server, profile_id: &str, entries: Value, reason: &str) -> Result<(), ApiError> {
     grant_cards(
         &server.app,
@@ -200,7 +187,7 @@ async fn grant(server: &Server, profile_id: &str, entries: Value, reason: &str) 
     .await
 }
 
-/// `ownedMap(deps, profileId)`, quantities widened so a literal compares whatever their width.
+/// Quantities widened so a literal compares whatever their width.
 async fn owned(server: &Server, profile_id: &str) -> IndexMap<String, i64> {
     owned_map(&server.app, profile_id)
         .await
@@ -209,7 +196,6 @@ async fn owned(server: &Server, profile_id: &str) -> IndexMap<String, i64> {
         .collect()
 }
 
-/// `deps.store.onCall = (method) => { if (method === failing) throw new Error("injected fault"); }`.
 async fn fail_on(server: &Server, failing: &'static str) {
     store_of(&server.app).lock().await.on_call =
         Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
@@ -238,9 +224,7 @@ fn with_ban(catalog: &Catalog, banned_id: &str) -> Catalog {
     }
 }
 
-// ---------------------------------------------------------------------------
 // grantCards (§9.4: one transaction, both tables)
-// ---------------------------------------------------------------------------
 
 mod grant_cards_section_9_4_one_transaction_both_tables {
     use super::*;
@@ -341,7 +325,7 @@ mod grant_cards_section_9_4_one_transaction_both_tables {
                 json!({ "profileId": PROFILE, "cardId": "core-002", "delta": 2, "reason": "reward" }),
             ]
         );
-        // TS stamped `deps.timers.now()` on both; the server's own clock is read once per grant.
+        // The server's own clock is read once per grant.
         let stamps: Vec<i64> = grants
             .iter()
             .map(|row| row["at"].as_i64().expect("an epoch-ms stamp"))
@@ -395,8 +379,7 @@ mod grant_cards_section_9_4_one_transaction_both_tables {
         assert_eq!(grant_rows(&server).await.len(), 1);
     }
 
-    /// TS also tried `1.5`; a quantity is an integer here (SURFACE §4.3), so a fraction cannot be
-    /// sent at all.
+    /// A quantity is an integer here (SURFACE §4.3), so a fraction cannot be sent at all.
     #[tokio::test]
     async fn refuses_a_delta_that_is_not_a_positive_whole_number_and_writes_nothing() {
         let (server, _token) = setup().await;
@@ -436,9 +419,7 @@ mod grant_cards_section_9_4_one_transaction_both_tables {
     }
 }
 
-// ---------------------------------------------------------------------------
 // grantEntireCatalog (BUILD M6-T2: launch mode grants every card)
-// ---------------------------------------------------------------------------
 
 mod grant_entire_catalog_build_m6_t2_launch_mode_grants_every_card {
     use super::*;
@@ -548,9 +529,7 @@ mod grant_entire_catalog_build_m6_t2_launch_mode_grants_every_card {
     }
 }
 
-// ---------------------------------------------------------------------------
 // ownedMap (§9.4 L5's input)
-// ---------------------------------------------------------------------------
 
 mod owned_map_section_9_4_l5_s_input {
     use super::*;
@@ -584,9 +563,7 @@ mod owned_map_section_9_4_l5_s_input {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The routes (§9.4: no client path writes the collection)
-// ---------------------------------------------------------------------------
 
 mod the_routes_section_9_4_no_client_path_writes_the_collection {
     use super::*;

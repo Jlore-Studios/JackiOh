@@ -1,8 +1,6 @@
 //! Exile, Bounce, Discard and Counter (SPEC §6.3, §2.4, §3.2, R11, R12, R16, R78, BUILD M3-T1).
-//! The fixture defs and scripts these tests need are registered here, on top of the shared fixture
-//! catalog, so no shared fixture has to grow for them (CLAUDE.md, BUILD §0).
-//!
-//! Port of `packages/engine/test/effects-move.test.ts`.
+//! Fixture defs and scripts are registered here on top of the shared catalog, so no shared fixture has
+//! to grow for them (CLAUDE.md, BUILD §0).
 
 use jackioh_engine::testkit::*;
 
@@ -23,12 +21,8 @@ use jackioh_engine::zones::{PlaceOnFieldOptions, card_at, place_on_field};
 use super::fixtures::catalog::token_def;
 use super::fixtures::harness::{in_hand, new_game, put, slot};
 
-// ---------------------------------------------------------------------------
 // Fixture cards.
-// ---------------------------------------------------------------------------
 
-/// TS numbered these from a module counter starting at 800, in declaration order: `noisy` 801,
-/// `gifted` 802.
 fn unit_def_of(name: &str, index: i32) -> CardDef {
     json_as(json!({
         "id": format!("mv-{name}"),
@@ -122,7 +116,6 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// TS `RunOptions = { controller?, self? }`.
 #[derive(Default)]
 struct RunOptions {
     controller: Option<PlayerId>,
@@ -168,12 +161,10 @@ fn as_controller(player: PlayerId) -> RunOptions {
     }
 }
 
-/// `{ target: { of: "chosen" } }`.
 fn chosen() -> Value {
     json!({ "target": { "of": "chosen" } })
 }
 
-/// `fixtures/harness.ts`'s `eventsOfType`, as JSON: the events of one type, each as TS writes it.
 fn of_type(events: &[GameEvent], kind: &str) -> Vec<Value> {
     events
         .iter()
@@ -182,7 +173,6 @@ fn of_type(events: &[GameEvent], kind: &str) -> Vec<Value> {
         .collect()
 }
 
-/// `eventsOfType(events, kind).map((e) => e.instanceId)`.
 fn ids_of_type(events: &[GameEvent], kind: &str) -> Vec<String> {
     of_type(events, kind)
         .iter()
@@ -190,7 +180,6 @@ fn ids_of_type(events: &[GameEvent], kind: &str) -> Vec<String> {
         .collect()
 }
 
-/// `events.map((e) => e.type)`.
 fn types(events: &[GameEvent]) -> Vec<String> {
     events
         .iter()
@@ -207,7 +196,7 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
 
-/// The card under `id` as it stands in the state now (TS read the live object).
+/// The card under `id` as it stands in the state now.
 fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).expect("the card is in the state")
 }
@@ -224,8 +213,7 @@ fn at(state: &GameState, player: PlayerId, row: Row, lane: i32) -> Option<String
     card_at(state, slot(player, row, lane)).map(|card| card.id.clone())
 }
 
-/// `newInstance` in `player`'s hand, then `placeOnField` on p1's unit lane 1: a unit p1 controls that
-/// `player` owns.
+/// A unit p1 controls that `player` owns: made in `player`'s hand, placed on p1's unit lane 1.
 fn placed_from_hand_of(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
     let mut card = new_instance(state, def_id, player, Zone::Hand { player });
     assert!(place_on_field(
@@ -237,9 +225,7 @@ fn placed_from_hand_of(state: &mut GameState, def_id: &str, player: PlayerId) ->
     card
 }
 
-// ---------------------------------------------------------------------------
 // exile
-// ---------------------------------------------------------------------------
 
 mod exile_s6_3_m3_t1 {
     use super::*;
@@ -396,9 +382,7 @@ mod exile_s6_3_m3_t1 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // bounce
-// ---------------------------------------------------------------------------
 
 mod bounce_s6_3_m3_t1 {
     use super::*;
@@ -573,9 +557,7 @@ mod bounce_s6_3_m3_t1 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // discard
-// ---------------------------------------------------------------------------
 
 mod r16_discard_s6_3_m3_t1 {
     use super::*;
@@ -712,13 +694,10 @@ mod r16_discard_s6_3_m3_t1 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // counter
-// ---------------------------------------------------------------------------
 
 /// B5 E1, R448: what §10.5's announce leaves for a Counter to answer — the card moved out of its
-/// player's hand into the resolving zone and its announce open. The pipeline's own announce is proved
-/// in `announce.test.ts`; these pin the verb.
+/// player's hand into the resolving zone and its announce open. These pin the verb.
 fn announced(state: &mut GameState, card: Option<CardInstance>) -> CardInstance {
     let Some(mut card) = card else {
         panic!("no card to announce");

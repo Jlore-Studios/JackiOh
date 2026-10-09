@@ -1,30 +1,15 @@
-//! Port of `packages/engine/test/conditionActive.test.ts` (its l.765–825, the B10 block that reads
-//! SPEC.md's wording and the rulings index, is dropped by #133: `cargo jackioh spec check` reads ids
-//! and test names, never prose).
-//!
 //! R195 (SPEC §10.8, §10.9): the engine's yellow glow, `conditionActive`, as `viewFor` surfaces it.
+//! B10 (SPEC's wording vs the rulings index) is not tested: `spec check` reads ids and test names.
 //!
-//! Every card here is a test-only definition whose script carries a `vi.fn` `conditionMet`, so each
-//! test controls what the hook answers and can read back every question the engine asked it. The
-//! definitions are registered on top of the fixture catalog and scripts (the pattern viewFor.test.ts
-//! uses for its own defs), and the registries are put back in `afterAll`.
+//! Every card is a test-only def whose hook is a `ConditionHook` built per test (`Hooks::new`): its
+//! answer is an `Arc<AtomicBool>` the test sets, and every question it is asked goes down a channel
+//! the test reads back. Defs and scripts go over the fixture catalog per test thread (the testkit's
+//! thread-local registries, SURFACE §8).
 //!
-//! The rules under test (docs/polish/7-mobile-ux.md, S2), first match wins:
-//!   1. the game is over                                   -> false
-//!   2. zone "field" and the card is not the viewer's      -> false, hook not called
-//!   3. zone "hand" outside the viewer's own main phase with no prompt open -> false, hook not called
-//!   4. the running face has no hook (a transient def with no script included) -> false
-//!   5. otherwise the hook's answer, and only an answer of exactly `true` lights the card.
-//!
-//! The key is absent otherwise: never `false`, never on the opponent's cards.
-//!
-//! R196 is proved here too, through a real `fuse` (R77): a fused card's hook is its ingredients'
-//! hooks or-ed, so it glows when any ingredient's condition holds.
-//!
-//! In Rust a `vi.fn` is a `ConditionHook` built per test (`Hooks::new`): its answer is an
-//! `Arc<AtomicBool>` the test sets, and every question it is asked goes down an mpsc channel the test
-//! reads back (`Hooks::calls`). Each test thread registers its own (the testkit's thread-local
-//! registries, SURFACE §8), which is what TS's `beforeEach` reset and `afterAll` restore did.
+//! First match wins (docs/polish/7-mobile-ux.md, S2): game over; a field card not the viewer's; a
+//! hand card outside the viewer's own main phase or with a prompt open; a face with no hook -> false.
+//! Else the hook's answer, and the key is absent, never `false`.
+//! R196 is proved too, through a real `fuse` (R77): a fused card's hooks are its ingredients', or-ed.
 
 use std::cell::Cell;
 use std::sync::Arc;
@@ -37,11 +22,8 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::harness::{in_hand, new_game, put, slot};
 
-// ---------------------------------------------------------------------------
 // Fixtures
-// ---------------------------------------------------------------------------
 
-/// TS's `def(name, type, extra)`, its `nextIndex` (from 1950) written out as the index each def gets.
 fn def(name: &str, type_: &str, index: i32, extra: Value) -> CardDef {
     let mut literal = json!({
         "id": format!("ca-{name}"),
@@ -78,7 +60,6 @@ fn unit_def(name: &str, index: i32, extra: Value) -> CardDef {
     def(name, "Unit", index, faces)
 }
 
-/// `STACK_TEXT` spread into a face with the given stats.
 fn stack_face(attack: i32, health: i32) -> Value {
     json!({ "attack": attack, "health": health, "keywords": [{ "kind": "Stack" }], "text": "stack" })
 }
@@ -151,7 +132,6 @@ fn defs() -> Vec<CardDef> {
     ]
 }
 
-/// Which `vi.fn` was asked: `baseHook`, `radiantHook`, `hookA` or `hookB`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Which {
     Base,
@@ -161,7 +141,7 @@ enum Which {
 }
 
 /// One question a hook was asked: its `ConditionContext`, kept as the values it carried (the
-/// context borrows the state, so the state is kept by address, for TS's `toBe(state)`).
+/// context borrows the state, so the state is kept by address).
 #[derive(Clone, Debug)]
 struct Asked {
     which: Which,
@@ -174,8 +154,8 @@ struct Asked {
     your_turn: bool,
 }
 
-/// The four `vi.fn`s of one test: what each answers, and every question each was asked since its
-/// last clear. A fresh one per `game()` is TS's `beforeEach` (answers reset, mocks cleared).
+/// The four hooks of one test: what each answers, and every question each was asked since its
+/// last clear. A fresh one per `game()`.
 struct Hooks {
     base_answer: Arc<AtomicBool>,
     radiant_answer: Arc<AtomicBool>,
@@ -209,7 +189,7 @@ fn hooked_script(hook: &ConditionHook) -> Script {
 }
 
 impl Hooks {
-    /// The hooks (base and radiant answer `true`, A and B `false`) and this file's `SCRIPTS`.
+    /// The hooks (base and radiant answer `true`, A and B `false`) and the scripts that carry them.
     fn new() -> (Hooks, IndexMap<String, CardScripts>) {
         let (outbox, inbox) = channel();
         let hooks = Hooks {
@@ -272,7 +252,6 @@ impl Hooks {
         log
     }
 
-    /// `<hook>.mock.calls`, as contexts.
     fn calls(&self, which: Which) -> Vec<Asked> {
         self.pulled()
             .into_iter()
@@ -280,7 +259,6 @@ impl Hooks {
             .collect()
     }
 
-    /// `<hook>.mockClear()`.
     fn clear(&self, which: Which) {
         let mut log = self.pulled();
         log.retain(|call| call.which != which);
@@ -336,7 +314,7 @@ fn one(cards: Vec<CardInstance>) -> CardInstance {
     cards.into_iter().next().expect("expected a card")
 }
 
-/// The instance as the state holds it now (TS reads its live object).
+/// The instance as the state holds it now.
 fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("{id} is in no zone"))
 }
@@ -359,7 +337,6 @@ fn to_json<T: serde::Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("serialises")
 }
 
-/// `"conditionActive" in card`.
 fn has_key<T: serde::Serialize>(card: &T, key: &str) -> bool {
     to_json(card).get(key).is_some()
 }
@@ -380,8 +357,8 @@ fn glows<T: serde::Serialize>(card: Option<&T>) -> bool {
     }
 }
 
-/// Jest's `toMatchObject` over serialised JSON: every key `expected` names is in `actual` with a
-/// matching value (objects by subset, arrays element by element and of the same length).
+/// Every key `expected` names is in `actual` with a matching value (objects by subset, arrays
+/// element by element and of the same length).
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (Value::Object(actual), Value::Object(expected)) => expected
@@ -402,7 +379,7 @@ fn view_json_mentions(view: &PlayerView, needle: &str) -> bool {
     serde_json::to_string(view).expect("serialises").contains(needle)
 }
 
-/// A fresh sink over `state`, its rng at the state's cursor as reduce builds it (TS `sinkFor`).
+/// A fresh sink over `state`, its rng at the state's cursor as reduce builds it.
 fn with_sink<R>(state: &mut GameState, run: impl FnOnce(&mut EngineSink) -> R) -> R {
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -441,11 +418,7 @@ fn open_mode_prompt(state: &mut GameState, player: PlayerId) {
     assert!(state.pending.is_some());
 }
 
-// ---------------------------------------------------------------------------
 // B1: the viewer's hand, in their own main phase
-// ---------------------------------------------------------------------------
-
-/// `describe("conditionActive in the viewer's hand (R195, B1)")`.
 mod r195_condition_active_in_the_viewer_s_hand_b1 {
     use super::*;
 
@@ -459,7 +432,6 @@ mod r195_condition_active_in_the_viewer_s_hand_b1 {
 
         assert!(glows(Some(&hand_card(&view, &spell.id))));
         assert!(glows(Some(&hand_card(&view, &unit.id))));
-        // The hook was asked as a hand card of the viewer's, on the viewer's own turn.
         let calls = hooks.asked_about(&spell.id);
         assert!(!calls.is_empty());
         for ctx in &calls {
@@ -486,9 +458,7 @@ mod r195_condition_active_in_the_viewer_s_hand_b1 {
         assert!(!hooks.asked_about(&spell.id).is_empty());
     }
 
-    // TS's `it("R195 B1: only an answer of exactly true lights the card")` (l.256) hands the hook a
-    // truthy non-boolean (`1`, `"yes"`). A Rust `ConditionHook` returns `bool`, so no hook can answer
-    // anything but `true` or `false`: the test has no Rust form (spec-gaps-part-26-2.md).
+    // No test of a truthy non-boolean answer: a `ConditionHook` returns `bool` (spec-gaps-part-26-2.md).
 
     #[test]
     fn r195_b1_a_radiant_card_asks_its_radiant_face_s_hook_with_radiant_true() {
@@ -567,11 +537,7 @@ mod r195_condition_active_in_the_viewer_s_hand_b1 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // B2: never in hand outside the viewer's own main phase with no prompt and no result
-// ---------------------------------------------------------------------------
-
-/// `describe("conditionActive stays off a hand card outside its playable window (R195, B2)")`.
 mod r195_condition_active_stays_off_a_hand_card_outside_its_playable_window_b2 {
     use super::*;
 
@@ -701,11 +667,7 @@ mod r195_condition_active_stays_off_a_hand_card_outside_its_playable_window_b2 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // B3: the viewer's own units (top of the pile) and backrow, on either turn
-// ---------------------------------------------------------------------------
-
-/// `describe("conditionActive on the viewer's own field (R195, B3)")`.
 mod r195_condition_active_on_the_viewer_s_own_field_b3 {
     use super::*;
 
@@ -943,11 +905,7 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // B4: never on the opponent's side, and never without a hook
-// ---------------------------------------------------------------------------
-
-/// `describe("conditionActive is the viewer's alone (R195, B4)")`.
 mod r195_condition_active_is_the_viewer_s_alone_b4 {
     use super::*;
 
@@ -976,14 +934,12 @@ mod r195_condition_active_is_the_viewer_s_alone_b4 {
         // p2's own hooked unit, so p2's view is not simply a view with nothing to ask about.
         let their_unit = put(&mut state, &glow_unit().id, slot(P2, Row::Units, 2), json!({}));
 
-        // p1 sees all five of its own cards glowing.
         let mine = view_for(&state, P1);
         assert!(glows(Some(&hand_card(&mine, &hand.id))));
         assert!(glows(mine.you.units[0].as_ref()));
         assert!(glows(mine.you.backrow[0].as_ref()));
         assert!(glows(mine.you.backrow[1].as_ref()));
         assert!(glows(mine.you.backrow[2].as_ref()));
-        // And p2's unit from the other side carries nothing.
         assert!(!glows(mine.opponent.units[1].as_ref()));
 
         hooks.clear(Which::Base);
@@ -1095,15 +1051,11 @@ mod r195_condition_active_is_the_viewer_s_alone_b4 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R196: a fused card glows when any ingredient's condition holds
-// ---------------------------------------------------------------------------
-
-/// `describe("R196 a fusion's conditionMet is its ingredients' hooks or-ed")`.
 mod r196_a_fusion_s_condition_met_is_its_ingredients_hooks_or_ed {
     use super::*;
 
-    /// Craft a fusion of `def_ids` into p1's hand through the real R77 `fuse`, the path #99 takes.
+    /// Craft a fusion of `def_ids` into p1's hand through the real R77 `fuse`.
     fn craft(state: &mut GameState, def_ids: &[String]) -> CardInstance {
         let ingredients: Vec<CardInstance> = def_ids
             .iter()
@@ -1151,9 +1103,8 @@ mod r196_a_fusion_s_condition_met_is_its_ingredients_hooks_or_ed {
         let (mut state, hooks) = game("r196-context");
         let fused = craft(&mut state, &[glow_a().id, glow_b().id]);
 
-        // TS answers `1` and `"yes"`, truthy and not `true`; a Rust hook answers a `bool`, so the
-        // nearest answers are `false` both (spec-gaps-part-26-2.md): neither lights the card, and the
-        // or-ed hook must still ask both ingredients.
+        // Both answer `false` (a hook answers a `bool`, spec-gaps-part-26-2.md): neither lights the
+        // card, and the or-ed hook must still ask both ingredients.
         hooks.answer(Which::A, false);
         hooks.answer(Which::B, false);
         assert!(!condition_active(

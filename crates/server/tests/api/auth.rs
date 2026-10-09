@@ -1,28 +1,23 @@
 //! SPEC §11 R159, R160, R194 and R665 — the rulings `src/auth.rs` and `src/api/auth.rs` make about
-//! §9.4's front door (← `apps/server/test/api/auth.test.ts`).
+//! §9.4's front door.
 //!
 //!  - **R159**: §9.4 step 1's "verified email" is read from the auth provider, and only the
 //!    *positive* answer may be remembered, briefly and per user id. A provider that cannot be
 //!    reached fails closed.
 //!  - **R160**: sign-up and sign-in answer identically for every outcome that depends on whether an
-//!    account exists, so neither endpoint becomes an account-enumeration oracle. v0.3.0 brokers no
-//!    sign-up at all (SURFACE §11.3) and keeps sign-in for the E2E fixtures only, so R160 is held
+//!    account exists, so neither endpoint becomes an account-enumeration oracle. No sign-up is
+//!    brokered at all (SURFACE §11.3) and sign-in is for the E2E fixtures only, so R160 is held
 //!    by those two doors.
 //!  - **R194**: a session the provider has ended is not honoured here either.
 //!  - **R665**: an account with an authenticator app is honoured only at `aal2`.
 //!
-//! Nothing here reaches the internet or the wall clock. TS injected four seams into
-//! `createSupabaseAuth` (`clientFactory`, `fetchImpl`, `keySet`, `now`); the Rust provider talks to
-//! GoTrue over HTTP, so the tests stand up [`GoTrue`], a scripted GoTrue on `127.0.0.1` that answers
-//! the four endpoints the provider calls (the JWKS, `/auth/v1/user`, the admin user lookup and the
-//! admin delete) and counts every call, and hand the provider its URL. The JWKS it publishes is
-//! empty, so tier 1 fails *locally*; the cache clock is [`Clock`], a manual one, through the
-//! provider's `now` seam.
+//! Nothing here reaches the internet or the wall clock. [`GoTrue`] is a scripted GoTrue on
+//! `127.0.0.1` answering the four endpoints the provider calls (the JWKS, `/auth/v1/user`, the admin
+//! user lookup and the admin delete) and counting every call. Its JWKS is empty, so tier 1 fails
+//! *locally*; the cache clock is [`Clock`], a manual one, through the provider's `now` seam.
 //!
-//! Tokens are signed here with `jsonwebtoken` against `SUPABASE_JWT_SECRET`, which is
-//! `verify`'s tier 2 — the shortest honest path to a verified identity. TS's tokens carried no
-//! `exp`; these carry one far in the future, so the verifier's expiry check passes whatever its
-//! settings, without the test reading a clock.
+//! Tokens are signed with `jsonwebtoken` against `SUPABASE_JWT_SECRET`, which is `verify`'s tier 2.
+//! They carry an `exp` far in the future, so the expiry check passes without the test reading a clock.
 
 use std::io;
 use std::sync::atomic::{AtomicI64, Ordering};
@@ -46,24 +41,19 @@ use jackioh_server::db::store::{Db, Profile};
 
 use crate::support::deps::{call, test_app};
 
-// ---------------------------------------------------------------------------
 // Fixtures
-// ---------------------------------------------------------------------------
 
 pub(crate) const JWT_SECRET: &str = "hs256-secret-used-only-by-this-test";
 
-/// GoTrue user ids are UUIDs, and the real admin client refuses anything else before it asks
-/// (supabase-js's `validateUUID`); TS's admin double took any string, so its ids were names.
+/// GoTrue user ids are UUIDs: the real admin client refuses anything else before it asks.
 const ALICE: &str = "a11ce000-0000-4000-8000-000000000001";
 const BOB: &str = "b0b00000-0000-4000-8000-000000000002";
 
 /// 2100-01-01: an expiry no test run reaches.
 const FAR_FUTURE: i64 = 4_102_444_800;
 
-/// `EMAIL_CONFIRMED_CACHE_TTL_MS` in the provider. R159 says only "briefly", so this is read as an
-/// order of magnitude and never asserted exactly: the tests below check that *some* window exists
-/// (a hit one millisecond later) and that it *ends* (a miss ten windows later), which stays true for
-/// any sane value of the constant.
+/// `EMAIL_CONFIRMED_CACHE_TTL_MS` in the provider. R159 says only "briefly", so it is read as an
+/// order of magnitude: the tests check that *some* window exists and that it *ends* (ten windows on).
 const CACHE_TTL_MS: i64 = 30_000;
 
 /// `AUTH_SESSION_LIVE_CACHE_SECONDS`, read as an order of magnitude (like `CACHE_TTL_MS`).
@@ -112,15 +102,11 @@ fn counts(entries: &[(&str, u32)]) -> IndexMap<String, u32> {
         .collect()
 }
 
-// ---------------------------------------------------------------------------
 // A manual clock for the provider's caches
-// ---------------------------------------------------------------------------
 
-/// TS `createVirtualTimers()`: epoch ms that move only when a test says so.
-///
-/// The provider's caches read it through `SupabaseAuthInput.now` (TS `now: timers.now`). Tokio's
-/// clock is left alone: a test that paused it would see the provider's real requests to the scripted
-/// GoTrue time out, since a paused runtime jumps to the next timer whenever it waits on a socket.
+/// Epoch ms that move only when a test says so, read by the provider's caches through
+/// `SupabaseAuthInput.now`. Tokio's clock is left alone: a paused runtime jumps to the next timer
+/// whenever it waits on a socket, so the scripted GoTrue's requests would time out.
 #[derive(Clone)]
 pub(crate) struct Clock(Arc<AtomicI64>);
 
@@ -139,9 +125,7 @@ impl Clock {
     }
 }
 
-// ---------------------------------------------------------------------------
 // A scripted GoTrue
-// ---------------------------------------------------------------------------
 
 /// What the admin lookup of a user id answers.
 pub(crate) enum AdminReply {
@@ -159,7 +143,7 @@ pub(crate) enum UserReply {
     Live(Value),
     /// 403 `session_not_found`: GoTrue's answer once `/logout` has deleted the session.
     Ended,
-    /// 503: TS's `fetch failed`, as the provider sees it (neither live nor ended).
+    /// 503: neither live nor ended, as the provider sees it.
     Unreachable,
     /// Never answers.
     Hang,
@@ -283,7 +267,7 @@ async fn user_by_token(State(state): State<Arc<Mutex<GoTrueState>>>, headers: He
 
 impl GoTrue {
     /// Starts one. The admin lookup answers a confirmed user, deletes succeed, and `/auth/v1/user`
-    /// answers as unreachable (TS's `fetchImpl` that throws) until a test scripts it.
+    /// answers as unreachable until a test scripts it.
     pub(crate) async fn start() -> GoTrue {
         let state = Arc::new(Mutex::new(GoTrueState {
             admin: Arc::new(|user_id: &str| AdminReply::Ok(confirmed_user(user_id))),
@@ -372,7 +356,7 @@ pub(crate) fn sign(gotrue: &GoTrue, user_id: &str, mut claims: Value) -> String 
     .expect("an HS256 token")
 }
 
-/// The provider, its GoTrue and its clock, as TS's `providerWith` built them.
+/// The provider, its GoTrue and its clock.
 pub(crate) struct Harness {
     pub(crate) gotrue: GoTrue,
     pub(crate) clock: Clock,
@@ -423,7 +407,7 @@ impl Harness {
     }
 
     /// The suite's server with this harness's GoTrue behind a provider of its own (same GoTrue,
-    /// same clock), which is how TS's `createRouter(…, createTestDeps({ auth: h.auth }))` read.
+    /// same clock).
     pub(crate) async fn app(&self) -> Arc<App> {
         app_with(supabase_auth(&self.gotrue, &self.clock)).await
     }
@@ -439,9 +423,8 @@ pub(crate) async fn app_with(auth: Auth) -> Arc<App> {
     Arc::new(app)
 }
 
-/// One request through the real router, answered with its status and its exact body bytes (TS's
-/// `wire()`: R145's and R160's comparisons are byte for byte). Written as `support::deps::call`
-/// writes a request: JSON, one proxy hop's `X-Forwarded-For`, a bearer token when given.
+/// One request through the real router, answered with its status and its exact body bytes (R145's
+/// and R160's comparisons are byte for byte), written as `support::deps::call` writes a request.
 pub(crate) async fn raw(
     app: &Arc<App>,
     method: &str,
@@ -475,7 +458,7 @@ pub(crate) async fn raw(
     (status, String::from_utf8(bytes.to_vec()).expect("a UTF-8 body"))
 }
 
-/// A store row from its JSON (camelCase, as TS's literal), so a test writes rows the way TS did.
+/// A store row from its JSON (camelCase).
 pub(crate) fn row<T: serde::de::DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value).expect("a store row")
 }
@@ -500,8 +483,7 @@ async fn profile_of(app: &Arc<App>, user_id: &str) -> Profile {
     profile
 }
 
-/// A writer `tracing` can log into, so a test can read the lines a request wrote (TS's
-/// `createRecordingLogger`).
+/// A writer `tracing` can log into, so a test can read the lines a request wrote.
 #[derive(Clone, Default)]
 pub(crate) struct Captured(Arc<Mutex<Vec<u8>>>);
 
@@ -534,9 +516,7 @@ impl Captured {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R159
-// ---------------------------------------------------------------------------
 
 /// R159 — how long a verified email stays verified (§9.2, §9.4).
 mod r159_how_long_a_verified_email_stays_verified {
@@ -548,14 +528,12 @@ mod r159_how_long_a_verified_email_stays_verified {
         let alice = h.token_for(ALICE);
         let bob = h.token_for(BOB);
 
-        // PREMISE: the yes came from the auth server, not from the token. Without this first lookup
-        // every "still 1" below would be satisfied by a provider that never asks anybody anything.
+        // PREMISE: the yes came from the auth server, not from the token.
         let first = h.auth.verify(&alice).await.expect("alice verifies");
         assert_eq!(first.user_id, ALICE);
         assert!(first.email_verified);
         assert_eq!(h.gotrue.lookups(), counts(&[(ALICE, 1)]));
 
-        // A second call inside the window is answered from the cache: no round trip in front of it.
         h.clock.charge(1).await;
         assert!(
             h.auth
@@ -667,12 +645,9 @@ mod r159_how_long_a_verified_email_stays_verified {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R194: a session the provider has ended is not honoured here either
-// ---------------------------------------------------------------------------
 
-/// TS `providerWithSessions`: the provider with `/auth/v1/user` scripted (R194's session check) and
-/// the admin lookup counted.
+/// The provider with `/auth/v1/user` scripted (R194's session check) and the admin lookup counted.
 async fn with_sessions(user: impl Fn(&str) -> UserReply + Send + Sync + 'static) -> Harness {
     let h = Harness::new().await;
     h.gotrue.answer_user(user);
@@ -692,7 +667,6 @@ mod r194_an_ended_sessions_access_token_is_refused_here_too {
         assert!(h.auth.verify(&token).await.is_err());
         assert_eq!(h.gotrue.user_calls(), 1);
 
-        // Through the router: /api/auth/me answers 401, so a copied token cannot read the account.
         let app = h.app().await;
         let (status, _, _) = call(&app, "GET", "/api/auth/me", Some(&token), Value::Null).await;
         assert_eq!(status, 401);
@@ -707,7 +681,6 @@ mod r194_an_ended_sessions_access_token_is_refused_here_too {
         assert_eq!(first.user_id, ALICE);
         assert!(first.email_verified);
         assert_eq!(h.gotrue.user_calls(), 1);
-        // The provider's answer was the authoritative user: no admin lookup in front of it.
         assert_eq!(h.gotrue.total(), 0);
 
         // Signed out elsewhere. Inside the window the live answer still stands…
@@ -762,9 +735,8 @@ mod r194_an_ended_sessions_access_token_is_refused_here_too {
 
     #[tokio::test(start_paused = true)]
     async fn r194_the_session_check_cannot_hang_a_request_it_goes_out_with_a_timeout() {
-        // TS asserted the fetch carried an `AbortSignal`; here the provider's `/auth/v1/user` never
-        // answers, and the request still comes back, on the provider's own timeout. The clock is
-        // paused so the timeout costs no real time (tokio advances it once nothing else can run).
+        // `/auth/v1/user` never answers, and the request still comes back, on the provider's own
+        // timeout. The clock is paused so the timeout costs no real time.
         let h = with_sessions(|_| UserReply::Hang).await;
         let token = h.session_token_for(ALICE, "session-a");
         let bound = Duration::from_secs(u64::try_from(AUTH_PROVIDER_TIMEOUT_SECONDS * 2).expect("seconds"));
@@ -800,16 +772,13 @@ mod r194_an_ended_sessions_access_token_is_refused_here_too {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R160
-// ---------------------------------------------------------------------------
 
 /// R160 — the identical sign-up and sign-in error (§9.2, §9.4, §9.8; extends R145).
 ///
-/// TS drove a scripted password client. v0.3.0's Supabase provider brokers no password at all
-/// (SURFACE §11.3: `sign_in` answers unavailable, and `/api/auth/signup` is gone), so the doors R160
-/// guards are the E2E fixture sign-in (`/api/auth/signin`, under `E2E=1` only) and the absent
-/// sign-up route.
+/// The Supabase provider brokers no password at all (SURFACE §11.3: `sign_in` answers unavailable,
+/// and `/api/auth/signup` is gone), so the doors R160 guards are the E2E fixture sign-in
+/// (`/api/auth/signin`, under `E2E=1` only) and the absent sign-up route.
 mod r160_r145_the_identical_sign_up_and_sign_in_error {
     use super::*;
 
@@ -836,7 +805,6 @@ mod r160_r145_the_identical_sign_up_and_sign_in_error {
         assert!(responses.iter().all(|(status, _)| *status == 401));
         let bodies: IndexSet<&str> = responses.iter().map(|(_, body)| body.as_str()).collect();
         assert_eq!(bodies.len(), 1);
-        // Not a shred of the provider's own wording survives.
         for (_, body) in &responses {
             assert!(!body.to_lowercase().contains("invalid login credentials"));
             assert!(!body.contains("ghost@example.test"));
@@ -845,9 +813,8 @@ mod r160_r145_the_identical_sign_up_and_sign_in_error {
 
     #[tokio::test]
     async fn r160_brokers_no_sign_up_so_an_address_that_has_an_account_looks_exactly_like_a_new_one() {
-        // TS answered "already registered" and every other rejection with one 401, and a taken
-        // address like a fresh one. The route is gone in v0.3.0 (sign-up is the browser's, against
-        // Supabase Auth, §9.2), so every address gets the router's one "no such endpoint".
+        // The route is gone (sign-up is the browser's, against Supabase Auth, §9.2), so every
+        // address gets the router's one "no such endpoint".
         let app = test_app().await;
         let body = |email: &str| json!({ "email": email, "password": "hunter2" });
         let taken = raw(
@@ -873,21 +840,17 @@ mod r160_r145_the_identical_sign_up_and_sign_in_error {
 
     #[tokio::test]
     async fn r160s_control_the_same_endpoint_still_tells_four_other_outcomes_apart() {
-        // Without this, "byte-identical" above would be satisfied by an endpoint that answers the
-        // same thing to absolutely everything, which proves nothing about enumeration.
+        // Control: an endpoint answering the same to everything would prove nothing about enumeration.
         let app = test_app().await;
 
-        // 1. The account-existence rejection: 401, the flattened wording.
         let refused = sign_in(&app, "x@y.test", "p").await;
         assert_eq!(refused.0, 401);
 
-        // 2. A sign-in that works: 200, with a session. Plainly distinguishable.
         let accepted = sign_in(&app, "e2e-p1@jackioh.test", "e2e-p1-password").await;
         assert_eq!(accepted.0, 200);
         assert!(accepted.1.contains("accessToken"));
         assert_ne!(accepted.1, refused.1);
 
-        // 3. A malformed body: 400.
         let malformed = raw(
             &app,
             "POST",
@@ -899,15 +862,13 @@ mod r160_r145_the_identical_sign_up_and_sign_in_error {
         assert_eq!(malformed.0, 400);
         assert_ne!(malformed.1, refused.1);
 
-        // 4. A server whose provider brokers no password (every Supabase deployment): 503, saying
-        //    where sign-in actually happens (§9.2).
+        // A provider that brokers no password (every Supabase deployment): 503, saying where
+        // sign-in happens (§9.2).
         let h = Harness::new().await;
         let disabled = sign_in(&h.app().await, "x@y.test", "p").await;
         assert_eq!(disabled.0, 503);
         assert_ne!(disabled.1, refused.1);
 
-        // Four distinct answers, so the identity above is a property of the account-existence cases
-        // and not of the endpoint.
         let distinct: IndexSet<&str> = [&refused.1, &accepted.1, &malformed.1, &disabled.1]
             .into_iter()
             .map(String::as_str)
@@ -917,9 +878,8 @@ mod r160_r145_the_identical_sign_up_and_sign_in_error {
 
     #[tokio::test]
     async fn r160_flattens_a_provider_refusal_too_not_only_one_that_names_the_account() {
-        // TS's `callProvider` turned anything the provider raised into the same 401, so a transport
-        // failure could not be told from a refusal; the fixture provider's refusal is a plain error
-        // ("invalid login credentials"), and none of its words, nor the address, reach the client.
+        // The fixture provider's refusal is a plain error ("invalid login credentials"); none of
+        // its words, nor the address, reach the client.
         let app = test_app().await;
         let (status, body) = sign_in(&app, "e2e-p2@jackioh.test", "not-the-password").await;
         assert_eq!(status, 401);
@@ -929,30 +889,22 @@ mod r160_r145_the_identical_sign_up_and_sign_in_error {
 
     #[tokio::test]
     async fn r160_keeps_the_503_for_an_unconfigured_password_path_an_unavailable_not_a_flattened_401() {
-        // The one rejection that is *not* about an account: it is passed through unchanged, which is
-        // what makes the control above honest.
+        // The one rejection that is not about an account: passed through unchanged.
         let h = Harness::new().await;
         let refused = h.auth.sign_in("a@b.test", "p").await;
         assert!(matches!(refused, Err(AuthError::Unavailable { .. })));
     }
 }
 
-// ---------------------------------------------------------------------------
 // `currentMatchId` on /api/auth/me (§9.5)
-// ---------------------------------------------------------------------------
 
-/// The read that makes a two-player game reachable.
+/// The read that makes a two-player game reachable. In both lobby flows only ONE player's HTTP
+/// response carries the match id (the joiner of a room, or whoever enqueued second), and no other
+/// route names a profile's match, so the other player needs `/api/auth/me` to learn it.
 ///
-/// In both lobby flows only ONE player's HTTP response carried the match id — the joiner of a room,
-/// or whoever enqueued second. The other player was already in the match and had no way to learn
-/// it: `/api/auth/me` returned status and rating and nothing else, and there is no other route that
-/// names a profile's match. So one player sat on /play while their opponent sat on the board, and
-/// the only way to actually play was to paste the URL across.
-///
-/// `profiles.current_match_id` is set when a match starts and cleared by every ending (§9.5), so
-/// reporting it here is the authoritative answer to "am I in a match" for the player who waited,
-/// and the way back in after a reload that lost the URL. TS registered a fake user per test; here
-/// the caller is the E2E fixture `e2e-p1` (`e2e-token-p1`).
+/// `profiles.current_match_id` is set when a match starts and cleared by every ending (§9.5), so it
+/// is the authoritative answer to "am I in a match", and the way back in after a reload that lost
+/// the URL. The caller is the E2E fixture `e2e-p1` (`e2e-token-p1`).
 mod api_auth_me_reports_the_callers_own_current_match {
     use super::*;
 
@@ -1058,9 +1010,7 @@ mod api_auth_me_reports_the_callers_own_current_match {
     }
 }
 
-// ---------------------------------------------------------------------------
 // GET /api/profile (§9.5) — the account screen's read
-// ---------------------------------------------------------------------------
 
 /// `/api/profile` reports identity and the ladder record. The caller is the active fixture `e2e-p1`.
 mod api_profile_reports_identity_and_the_ladder_record {
@@ -1138,9 +1088,7 @@ mod api_profile_reports_identity_and_the_ladder_record {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R665: an account with an authenticator app is honoured only at `aal2`
-// ---------------------------------------------------------------------------
 
 /// R665 — two-step sign-in: an account with an authenticator app needs an aal2 token.
 mod r665_two_step_sign_in_an_account_with_an_authenticator_app_needs_an_aal2_token {

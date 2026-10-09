@@ -1,34 +1,15 @@
 //! The Conquest series as pure transitions over `SeriesRow` (SPEC §9.5, R330–R337, with R262–R264).
-//! Port of `apps/server/src/api/series-rules.ts`.
 //!
-//! Conquest is the trio mode (the queue's `bo3`, called Best of 3 before R330): a player takes the
-//! series by winning one game with EACH of their three decks. A deck that has won is locked for the
-//! rest of the series; a deck that lost or drew may be picked again (R330). Before each game both
-//! players pick at once, from their decks that have not won yet, and a pick is sealed: final once
-//! made, and hidden from the other side until both are in (R331). A player with one deck left has it
-//! picked for them (R332).
+//! Conquest is the trio mode (`bo3`): a player takes the series by winning one game with EACH of
+//! their three decks. A deck that has won is locked; one that lost or drew may be picked again
+//! (R330). Both players pick at once, sealed until both are in (R331); one deck left is picked for
+//! its player (R332).
 //!
-//! Every rule of a series lives here and nowhere else: who may pick what and when, when a game
-//! begins and which seat goes first, what a finished game does to the score, when the series is
-//! over and how it scores for the rating, and what each player is allowed to see of it. `series.rs` reads
-//! a row, applies one of these, and writes the result back by compare-and-set; `results.rs` does the
-//! same inside the game result's transaction. Nothing here reads a clock, a store or an id minter:
-//! time and the next match id arrive as parameters, so the same inputs always give the same row and
-//! a CAS retry can re-apply a transition to the row it re-read.
-//!
-//! Every exported transition returns a NEW row whose `version` is exactly one more than its input's
-//! and whose `updated_at` is `now`, because `series_update` writes only over the version before
-//! (R263). A transition that composes others (a pick that completes both picks begins the game) is
-//! still one write, so it still moves the version by one.
-//!
-//! A transition that does not apply returns `SeriesRefusal`, with a sentence a player can read;
-//! `series.rs` turns it into an HTTP answer.
-//!
-//! THE ROW IS THE ONE R259 WROTE. Which decks have won is not stored: it is read off `games` (the
-//! slot each side played and who won), and `SeriesSide.wins` stays the count of games won, which a
-//! locked deck makes the same number (a deck wins at most once). So a series begun before Conquest
-//! shipped reads as a Conquest series with the games it has played (R337), and no migration was
-//! needed.
+//! Every rule of a series lives here; `series.rs` and `results.rs` apply it by compare-and-set.
+//! Nothing here reads a clock, a store or an id minter, so a CAS retry can re-apply a transition to
+//! the row it re-read. Each transition returns a NEW row with `version` one more (`series_update`
+//! writes only over the version before, R263). Which decks have won is read off `games` (R259's
+//! row, R337).
 
 use indexmap::IndexSet;
 use jackioh_engine::{GameOverReason, PlayerId, Winner};
@@ -47,9 +28,7 @@ const FIRST_GAME: i32 = 1;
 
 const SEATS: [SeriesSeat; 2] = [SeriesSeat::P1, SeriesSeat::P2];
 
-// ---------------------------------------------------------------------------
 // The projection's shape
-// ---------------------------------------------------------------------------
 
 /// What `GET /api/series/:id` answers: `SeriesView` in `apps/web/src/net/api.ts`, field for field.
 /// It is restated rather than imported because the web module reads `import.meta.env`, which the
@@ -168,9 +147,7 @@ pub struct SeriesViewResult {
     pub ranked: bool,
 }
 
-// ---------------------------------------------------------------------------
 // Refusals
-// ---------------------------------------------------------------------------
 
 /// Why a transition did not apply. The first five reach a player (`series.rs` maps them to 409 or
 /// 400); the rest are the server calling a transition out of turn — a CAS retry that re-read a row
@@ -201,7 +178,7 @@ pub enum SeriesRefusalReason {
 }
 
 impl SeriesRefusalReason {
-    /// The literal TS wrote (`"not_picking"`, …).
+    /// The wire literal (`"not_picking"`, …).
     pub fn as_str(self) -> &'static str {
         match self {
             SeriesRefusalReason::NotPicking => "not_picking",
@@ -218,7 +195,7 @@ impl SeriesRefusalReason {
     }
 }
 
-/// TS `class SeriesRefusal extends Error`: the reason and the sentence a player can read.
+/// The reason and the sentence a player can read.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SeriesRefusal {
     pub reason: SeriesRefusalReason,
@@ -242,16 +219,14 @@ impl std::fmt::Display for SeriesRefusal {
 
 impl std::error::Error for SeriesRefusal {}
 
-/// TS `refuse(reason, message): never`, as the `Err` a transition returns.
+/// A refusal as the `Err` a transition returns.
 fn refuse<T>(reason: SeriesRefusalReason, message: impl Into<String>) -> Result<T, SeriesRefusal> {
     Err(SeriesRefusal::new(reason, message))
 }
 
 const OVER_MESSAGE: &str = "This series is over.";
 
-// ---------------------------------------------------------------------------
 // Small reads
-// ---------------------------------------------------------------------------
 
 pub fn seat_index(seat: SeriesSeat) -> usize {
     if seat == SeriesSeat::P1 { 0 } else { 1 }
@@ -342,7 +317,6 @@ pub fn won_slots(seat: SeriesSeat, games: &[SeriesGame]) -> IndexSet<usize> {
 }
 
 /// The slots this seat may still pick: every slot of its trio whose deck has not won (R330).
-/// TS's optional `games` defaulted to `series.games`; pass `&series.games` for that.
 pub fn unwon_slots(series: &SeriesRow, seat: SeriesSeat, games: &[SeriesGame]) -> Vec<usize> {
     let won = won_slots(seat, games);
     let mut open = Vec::new();
@@ -356,7 +330,6 @@ pub fn unwon_slots(series: &SeriesRow, seat: SeriesSeat, games: &[SeriesGame]) -
 
 /// R333: the deck a player who did not pick is given — their first deck in trio order that has not
 /// won — or null when every deck has won (the series is then already over).
-/// TS's optional `games` defaulted to `series.games`; pass `&series.games` for that.
 pub fn first_unwon(series: &SeriesRow, seat: SeriesSeat, games: &[SeriesGame]) -> Option<usize> {
     unwon_slots(series, seat, games).first().copied()
 }
@@ -408,11 +381,9 @@ pub fn series_score(series: &SeriesRow) -> Option<f64> {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Transitions
-// ---------------------------------------------------------------------------
 
-/// TS `structuredClone(series)`.
+/// A copy of the row to transition.
 fn copy(series: &SeriesRow) -> SeriesRow {
     series.clone()
 }
@@ -556,13 +527,12 @@ pub fn new_series(input: &NewSeriesInput, now: i64) -> SeriesRow {
     }
 }
 
-/// R331: `seat` picks trio slot `slot` for the next game. The pick is sealed: once it is in it is
-/// final (`pick_sealed`, checked first, which `series.rs` answers as a success when the same slot is
-/// sent again, so a retried request is harmless), and the other side learns only that it is in. A
-/// pick that names its game (`game_no`) is refused as `stale_pick` when that is not the game being
-/// picked for, so a late duplicate of game n's pick can never become game n + 1's. The pick that
-/// completes both begins the game at once. Refused once the pick clock has run out (R333), for a slot
-/// the trio does not have, and for a deck that has already won in this series (R330).
+/// R331: `seat` picks trio slot `slot` for the next game. A pick is final once in (`pick_sealed`,
+/// checked first; `series.rs` answers a repeat of the same slot as a success) and the other side
+/// learns only that it is in. A `game_no` other than the one being picked for is `stale_pick`, so
+/// game n's late duplicate never becomes game n + 1's. The pick that completes both begins the
+/// game. Refused after the clock ran out (R333), for a slot the trio lacks, and for a won deck
+/// (R330).
 pub fn pick_deck(
     series: &SeriesRow,
     seat: SeriesSeat,
@@ -628,12 +598,11 @@ pub fn begin_game(series: &SeriesRow, now: i64) -> Result<SeriesRow, SeriesRefus
     Ok(stamp(next, series, now))
 }
 
-/// R330, R334: the game in play ended. `winner` is the series seat that won it — the deck it played
-/// is locked from now on — or `Draw`, which counts for neither side and locks nothing. A side at
-/// `SERIES_WINS_NEEDED` wins has won with every deck and takes the series (`decided`). After
-/// `SERIES_MAX_GAMES` games without that, more wins takes it and equal wins is a series draw
-/// (`exhausted`). Otherwise the next pick phase opens under `new_match_id` (R263), with the picks made
-/// for a side that has one deck left (R332) — and when both have, the game begins at once.
+/// R330, R334: the game in play ended. `winner` is the series seat that won it, whose deck is locked
+/// from now on, or `Draw`, which counts for neither and locks nothing. A side at
+/// `SERIES_WINS_NEEDED` wins takes the series (`decided`); after `SERIES_MAX_GAMES` games more wins
+/// takes it and equal wins is a draw (`exhausted`). Otherwise the next pick phase opens under
+/// `new_match_id` (R263), picks made for a side with one deck left (R332).
 pub fn game_ended(
     series: &SeriesRow,
     winner: Winner,
@@ -773,8 +742,7 @@ pub fn forfeit_series(series: &SeriesRow, seat: SeriesSeat, now: i64) -> Result<
     Ok(stamp(next, series, now))
 }
 
-/// TS `{ before: [number, number]; after: [number, number] }`: R262's one rating move of a series,
-/// series p1's rating then p2's.
+/// R262's one rating move of a series: series p1's rating then p2's, before and after.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct RatingMove {
     pub before: (f64, f64),
@@ -799,11 +767,9 @@ pub fn rate_series(series: &SeriesRow, rating_move: Option<RatingMove>) -> Serie
     next
 }
 
-// ---------------------------------------------------------------------------
 // The game in play
-// ---------------------------------------------------------------------------
 
-/// TS `{ seats: [MatchSeat, MatchSeat]; seed: string }`: `game_seats`'s answer.
+/// `game_seats`'s answer.
 #[derive(Clone, Debug, PartialEq)]
 pub struct GameSeats {
     pub seats: (MatchSeat, MatchSeat),
@@ -873,9 +839,7 @@ pub fn already_picked(series: &SeriesRow, seat: SeriesSeat, slot: i32, game_no: 
     }
 }
 
-// ---------------------------------------------------------------------------
 // The projection
-// ---------------------------------------------------------------------------
 
 /// What one player may see of a series (R336): all of their own trio, and of the opponent's only
 /// which slots have won and whether a pick is in — never its slot before both have picked (by then

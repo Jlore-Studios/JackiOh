@@ -1,18 +1,16 @@
-//! Echo's repeats, the state check between them, and a Spell that exiles itself (SPEC §4.5, §6.2
-//! Echo, §10.5 steps 4 to 7, R30, R59, R178). Found by the polish-4 edge-case hunt
-//! (docs/polish/4-edge-cases.md, lens L7); every case here failed before its fix.
+//! Echo's repeats, the state check between them, and a Spell that exiles itself (SPEC §4.5,
+//! §6.2 Echo, §10.5 steps 4 to 7, R30, R59, R178). Found by the polish-4 edge-case hunt
+//! (docs/polish/4-edge-cases.md, lens L7).
+//! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
 //!
 //!  - §4.5: the state check runs after a Spell's first resolution, before its Echo repeat asks
-//!    anything, so a unit the first resolution killed is not offered again and a hero it killed ends
-//!    the game there.
+//!    anything, so a unit it killed is not offered again and a hero it killed ends the game.
 //!  - R178: "exile this" is where §10.5 step 7 sends a Spell, so a self-exiling Spell still takes
 //!    Twinspell's Echo and still resolves its repeat; and the Echo is gained as the Spell is played,
 //!    so a Spell that moves Twinspell away (#87's board swap) has already taken it.
 //!  - Round 9, lens "card by card". R119: an Echo repeat is the same play resolving again, so its
 //!    granted Combo parts count neither a Quickstriker the first resolution summoned (#95) nor a
 //!    Combo modifier the play itself installed (#78's own "Combo: draw 1").
-//!
-//! Port of `packages/cards/test/echo-and-exile.test.ts` (SURFACE §4.1, §8).
 
 use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -31,7 +29,7 @@ const LIBRARY: [&str; 6] = [RENO; 6];
 
 use super::scenario;
 
-/// TS `at(card)`: the one-instance target list a play sends.
+/// The one-instance target list a play sends.
 fn at(card: &CardInstance) -> Value {
     json!([{ "pick": "instance", "instanceId": card.id }])
 }
@@ -66,8 +64,7 @@ fn echo_mods(g: &Scenario, player: PlayerId) -> usize {
         .count()
 }
 
-/// Answers the open prompt with its first option until none is open (TS's `while (pending !== null)`
-/// loop, which stops on a prompt with no options).
+/// Answers the open prompt with its first option until none is open, or one has no options.
 fn answer_first_selections(g: &mut Scenario) {
     while let Some(pending) = g.state().pending.as_ref() {
         let Some(first) = pending.options.first() else {
@@ -186,9 +183,7 @@ mod r178_a_spells_exile_this_is_its_landing_and_its_echo_is_gained_as_it_is_play
     }
 }
 
-// ---------------------------------------------------------------------------
 // Round 9: an Echo repeat is the same play (R119, §10.5 step 6)
-// ---------------------------------------------------------------------------
 
 const STOCKPILE: &str = "core-005";
 const MR_VANILLA: &str = "core-008";
@@ -227,7 +222,6 @@ fn quickstriker_cursor() -> u32 {
     panic!("no cursor rolls a Quickstriker into #95's backrow");
 }
 
-/// TS `ofType(events, "drawn")`.
 fn drawn_count(events: &[GameEvent]) -> usize {
     events
         .iter()
@@ -253,7 +247,7 @@ mod r119_10_5_step_6_an_echo_repeats_granted_combo_parts_do_not_answer_what_its_
      {
         let mut s = scenario(json!({
             // A unit that can still switch keeps §2.5's auto-end from passing the turn once the hand is empty.
-            // The Radiant /fullsend: the face that grants "Combo: Draw 1" since patch v0.1.1.
+            // The Radiant /fullsend: the face that grants "Combo: Draw 1".
             "p1": { "hand": [TWINSPELL, { "def": FULLSEND, "radiant": true }], "field": [MR_VANILLA], "mana": 8, "library": R119_LIBRARY },
             "p2": { "hand": [STOCKPILE], "field": [MIDRANGE_MENACE], "library": R119_LIBRARY },
         }));
@@ -290,7 +284,7 @@ mod r119_10_5_step_6_an_echo_repeats_granted_combo_parts_do_not_answer_what_its_
      {
         // The roll is pinned (R423 left the base face's one roll as it was): the play's first rng draw is
         // #95's roll, and the five picks of "summon 5 random Field Spells or Traps" follow it, from the
-        // pool of every set (R380). `quickstrikerCursor` finds a cursor at which the roll is that effect
+        // pool of every set (R380). `quickstriker_cursor` finds a cursor at which the roll is that effect
         // and a Quickstriker is among the five, so the fixture holds whatever else the pools hold.
         let mut s = scenario(json!({
             "seed": R119_SEED,
