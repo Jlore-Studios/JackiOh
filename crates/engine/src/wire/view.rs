@@ -825,6 +825,17 @@ pub struct SideView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub carried: Option<Vec<Option<UnitView>>>,
+    /// R1143: this seat's hand size, once an effect has set one for the rest of the game (Meditative #79);
+    /// public on both seats. Absent means `HAND_CAP`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hand_cap: Option<i32>,
+    /// R1141: on the opponent's seat, how many cards of their hand carry a mark (Meditative #76's
+    /// pending steal) — never which: the viewer's own hand shows each mark on its card. Absent when
+    /// none does, on the viewer's own seat and once the game is over (both hands are revealed, R434).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hand_marked: Option<i32>,
     pub locks: RowFlags,
     /// R64: a zone held for a dying Reborn unit until it comes back. It takes no summon, exactly as a
     /// Locked zone takes none, so a client that reads only `locks` would draw it open. B3.1 rule 6: the

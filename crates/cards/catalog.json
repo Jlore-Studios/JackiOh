@@ -11070,5 +11070,207 @@
       ],
       "text": "Lucky 1\nChoose a Unit. 50% chance: Buff it {times|time|times}. Otherwise, destroy it."
     }
+  },
+  "meditative-076": {
+    "id": "meditative-076",
+    "index": "76",
+    "name": "Do or Die",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "marks",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "base"
+      }
+    ],
+    "loc": 0,
+    "base": {
+      "keywords": [],
+      "text": "Mark {marks|random card|random cards} in your opponent's hand. At the start of your next turn, steal each marked card still in their hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Mark every card in your opponent's hand. At the start of your next turn, steal each marked card still in their hand."
+    }
+  },
+  "meditative-077": {
+    "id": "meditative-077",
+    "index": "77",
+    "name": "Bulk Booster",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 3,
+    "loc": 0,
+    "base": {
+      "keywords": [],
+      "text": "Fill your hand with random Common cards."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Fill your hand with random Radiant Common cards."
+    }
+  },
+  "meditative-078": {
+    "id": "meditative-078",
+    "index": "78",
+    "name": "Occidentless Mandate",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "CN"
+    ],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "discount",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 0,
+    "base": {
+      "keywords": [],
+      "text": "Exile every non-CN permanent. Add a random CN card to your hand for each of yours exiled this way."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Exile every non-CN permanent. Add a random Radiant CN card to your hand for each of yours exiled this way. Each costs ({discount}) less."
+    }
+  },
+  "meditative-079": {
+    "id": "meditative-079",
+    "index": "79",
+    "name": "Touched by KY",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "KY"
+    ],
+    "rarity": "Legendary",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "handSize",
+        "base": 12,
+        "radiant": 12,
+        "better": "up",
+        "step": 1,
+        "min": 11,
+        "max": 14
+      },
+      {
+        "key": "draw",
+        "base": 4,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 0,
+    "base": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: For the rest of the game, your hand size is {handSize}. Draw {draw|card|cards}."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: For the rest of the game, your hand size is {handSize}. Draw {draw|card|cards}. Each becomes Radiant."
+    }
+  },
+  "meditative-081": {
+    "id": "meditative-081",
+    "index": "81",
+    "name": "Deadman's Hand",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": {
+      "base": 0,
+      "embiggen": 2
+    },
+    "params": [
+      {
+        "key": "chance",
+        "base": 25,
+        "radiant": 100,
+        "better": "up",
+        "step": 6,
+        "min": 1,
+        "max": 100
+      },
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 0,
+    "base": {
+      "keywords": [],
+      "text": "Shuffle a copy of each card in your hand, and of this, into your deck.\nPaid (2): Each copy has a {chance}% chance to become Radiant."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw|card|cards}.\nPaid (2): Each copy has a {chance}% chance to become Radiant."
+    }
+  },
+  "meditative-090": {
+    "id": "meditative-090",
+    "index": "90",
+    "name": "Spell Basket",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "cards",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 0,
+    "base": {
+      "keywords": [],
+      "text": "Add {cards|random Spell|random Spells} to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add {cards|random Radiant Spell|random Radiant Spells} to your hand."
+    }
   }
 }

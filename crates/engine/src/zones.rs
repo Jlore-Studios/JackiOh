@@ -1020,6 +1020,10 @@ pub fn remove_from_any_zone(state: &mut GameState, instance: &mut CardInstance) 
             pile.remove(at);
             // R212: a move of a card that left a pile's top ends that removal's Stack note.
             note_moved(state, &instance.id);
+            // R1140: and a card leaving a hand ends its stay there, which a hand watch was aimed at.
+            if zone == OffFieldZone::Hand {
+                forget_hand_watch(state, &instance.id);
+            }
             // R155: §5.1's end-of-turn return belongs to the Spell its own play landed in the graveyard
             // (§10.5 step 7). A card that leaves the graveyard has spent that landing, so whatever puts
             // it back there this turn — a discard (#76), a burn — is no play of its, and it stays (R153).
@@ -1109,6 +1113,30 @@ fn forget_watchers(state: &mut GameState, instance_id: &str) {
     state
         .delayed
         .retain(|effect| effect.watch.as_deref() != Some(instance_id));
+}
+
+/// R1140: a card leaving a hand ends its stay there. Every delayed effect watching it there
+/// (`DelayedEffect.handWatch`, Meditative #76) stops watching it, and one left watching nothing is
+/// dropped, so a card that comes back to a hand is a new stay nobody watches (R174) and its mark goes
+/// at the next sweep (`marks::sweep_marks`). Called by every removal from a hand: `remove_from_any_zone`
+/// and a play taking the card out of the hand (`play_steps::take_from_play_source`).
+pub fn forget_hand_watch(state: &mut GameState, instance_id: &str) {
+    if !state.delayed.iter().any(|effect| {
+        effect
+            .hand_watch
+            .as_ref()
+            .is_some_and(|ids| ids.iter().any(|id| id == instance_id))
+    }) {
+        return;
+    }
+    for effect in &mut state.delayed {
+        if let Some(ids) = effect.hand_watch.as_mut() {
+            ids.retain(|id| id != instance_id);
+        }
+    }
+    state
+        .delayed
+        .retain(|effect| effect.hand_watch.as_ref().is_none_or(|ids| !ids.is_empty()));
 }
 
 /// The zones a queue entry names when the card answered from the field (`triggers::queue_trigger`).

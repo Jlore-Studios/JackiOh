@@ -1593,6 +1593,8 @@ pub fn take_from_play_source(state: &mut GameState, run: &PlayRun, card: &mut Ca
         return false;
     };
     side.hand.remove(at);
+    // R1140: a card played out of a hand has ended its stay there.
+    crate::zones::forget_hand_watch(state, &card.id);
     true
 }
 

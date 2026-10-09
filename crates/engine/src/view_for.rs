@@ -812,6 +812,20 @@ fn reserved_mask(state: &GameState, player: PlayerId) -> RowFlags {
     }
 }
 
+/// R1141: how many cards of the opponent's hand carry a mark, while that hand is a count; `None` when
+/// none does, so a seat with no marked hand card looks as it did.
+fn hand_marked_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> Option<i32> {
+    if player == viewer || state.result.is_some() {
+        return None;
+    }
+    let marked = state.players[player]
+        .hand
+        .iter()
+        .filter(|card| !marks_on(state, &card.id).is_empty())
+        .count() as i32;
+    (marked > 0).then_some(marked)
+}
+
 fn side_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> SideView {
     let side: &PlayerState = &state.players[player];
     let powers = hero_powers_of(state, player);
@@ -905,6 +919,8 @@ fn side_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> SideView 
             .map(|card| backrow_view(state, card.as_ref(), viewer))
             .collect(),
         carried: carried_view(state, player, viewer),
+        hand_cap: side.hand_cap,
+        hand_marked: hand_marked_view(state, player, viewer),
         locks: RowFlags {
             units: side.locks.units.clone(),
             backrow: side.locks.backrow.clone(),

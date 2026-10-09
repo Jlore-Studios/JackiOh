@@ -16,6 +16,7 @@ use crate::effects::add_to_hand::{AddToHandArgs, add_to_hand};
 use crate::effects::cost::{SetCostModArgs, SetCostOverrideArgs, set_cost_mod, set_cost_override};
 use crate::effects::damage::{DamageEffectArgs, DamageFlagArgs, damage};
 use crate::effects::heal::{HealArgs, heal};
+use crate::effects::radiant::{RadiantTarget, set_radiant};
 use crate::effects::targets::{PlayerSpec, TargetSpec, player_of};
 use crate::numbers::{NumberedKey, numbered_keywords_on};
 use crate::script::{Effect, EffectContext, EngineSink};
@@ -192,13 +193,18 @@ pub struct DrawPricedArgs {
     pub cost_override: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub player: Option<PlayerSpec>,
+    /// Meditative #79 Radiant ("Draw 4 cards. Each becomes Radiant."): the card the draw put in the hand
+    /// becomes Radiant (§5.2, §6.3 Make Radiant).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub radiant: Option<bool>,
 }
 
 /// C+ #65.2 "Draw N. Each costs (1) less." / #65.3 "Draw N. Each costs (0).": ONE draw (§2.4 — "draw N"
 /// is N of these, one effect each, so a draw whose cast-on-draw card asks pauses the rest of the list
 /// and the answer makes the rest, R113), and the card that draw put in the hand takes the price: a
-/// `costMod` that stacks with every other modifier, or a `costOverride` (R65). A card cast on draw, a
-/// burned card, a fatigue draw and a limited draw take nothing (`cardThisDrawPutInHand`).
+/// `costMod` that stacks with every other modifier, or a `costOverride` (R65), and with `radiant` the
+/// Radiant face (Meditative #79). A card cast on draw, a burned card, a fatigue draw and a limited draw
+/// take nothing (`cardThisDrawPutInHand`, R596).
 pub fn draw_priced(args: DrawPricedArgs) -> Effect {
     Effect::new("drawPriced", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -207,6 +213,13 @@ pub fn draw_priced(args: DrawPricedArgs) -> Effect {
         let Some(card) = card_this_draw_put_in_hand(ctx, player, from, outcome) else {
             return;
         };
+        if args.radiant == Some(true) {
+            let made = set_radiant(RadiantTarget {
+                target: None,
+                instance_id: Some(card.id.clone()),
+            });
+            (made.apply)(ctx);
+        }
         let target = TargetSpec::Instance {
             instance_id: card.id.clone(),
         };

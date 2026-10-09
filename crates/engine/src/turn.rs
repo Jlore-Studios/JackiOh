@@ -178,15 +178,16 @@ fn run_due_entry(sink: &mut EngineSink, player: PlayerId, entry: &DueEntry) -> b
             // steal kills a second steal's target, and `zones::forget_watchers` drops the entry aimed at it
             // even if Reborn brings the card straight back. The list was read before either ran, so an
             // entry is run only while `state.delayed` still holds it.
-            if !sink.state.delayed.iter().any(|due| due.id == effect.id) {
+            // R1140: and it runs as it stands now, a hand watch with the cards it still watches.
+            let Some(live) = sink.state.delayed.iter().find(|due| due.id == effect.id).cloned() else {
                 return false;
-            }
+            };
             // `modifiers.dropDelayed(state, effect.id)`.
             sink.state.delayed.retain(|due| due.id != effect.id);
             // B5 E27: the engine's own delayed kinds (a destroy, a hand discarded) run as verbs; every other
             // entry re-enters its card's step (R126).
-            if !crate::effects::delay::run_engine_delayed(sink, effect) {
-                run_resume_for(sink, &effect.resume, effect.owner);
+            if !crate::effects::delay::run_engine_delayed(sink, &live) {
+                run_resume_for(sink, &crate::effects::delay::due_resume(&live), live.owner);
             }
             true
         }

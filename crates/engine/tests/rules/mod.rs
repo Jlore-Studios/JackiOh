@@ -104,6 +104,7 @@ pub mod glitch;
 pub mod glow_facts;
 pub mod graveyard_play;
 pub mod graveyard_reset;
+pub mod hand_size;
 pub mod handicap;
 pub mod hero_power;
 pub mod hotseat_smoke;

@@ -1276,6 +1276,25 @@
     "meditative-036": { // CN Peptides
       cast: { voice: "prof", text: "Totally safe. Probably. Fifty fifty." },
     },
+    "meditative-076": { // Do or Die
+      cast: { voice: "sapi-trickster", text: "Play it fast, or it's mine." },
+    },
+    "meditative-077": { // Bulk Booster
+      cast: { voice: "sapi-announcer", text: "Booster box! Rip them all open!" },
+    },
+    "meditative-078": { // Occidentless Mandate
+      cast: { voice: "sapi-bureaucrat", text: "By order of the mandate, clear the board." },
+    },
+    "meditative-079": { // Touched by KY
+      play: { voice: "sapi-teacher", text: "We must expand our minds." },
+      death: { voice: "sapi-teacher", text: "Class... dismissed." },
+    },
+    "meditative-081": { // Deadman's Hand
+      cast: { voice: "sapi-ghost", text: "Aces and eights. Deal me back in." },
+    },
+    "meditative-090": { // Spell Basket
+      cast: { voice: "sapi-wizard", text: "A basket full of spells!" },
+    },
   },
   emotes: {
     vanilla: {

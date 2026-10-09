@@ -19,7 +19,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::config::{CAST_ON_DRAW_CHAIN_CAP, FATIGUE_DAMAGE, HAND_CAP, LIBRARY_CAP, SETUP_TURN};
+use crate::config::{CAST_ON_DRAW_CHAIN_CAP, FATIGUE_DAMAGE, LIBRARY_CAP, SETUP_TURN};
 use crate::script::{DrawLimit, DrawLimitPlayer, EngineSink, HookArgs};
 use crate::state::{CardInstance, DrawCount, GameState, Resume, WorkItem, find_instance_mut, new_instance};
 use crate::wire::{
@@ -76,9 +76,11 @@ pub enum AddToHandOutcome {
     Burned,
 }
 
-/// §2.4, R4: a card entering a full hand is burned to the graveyard; unit tokens vanish (R11).
+/// §2.4, R4: a card entering a full hand is burned to the graveyard; unit tokens vanish (R11). Full is
+/// the owner's hand cap, `HAND_CAP` or the hand size an effect set (R1143).
 pub fn add_to_hand(sink: &mut EngineSink, instance: &mut CardInstance) -> AddToHandOutcome {
-    let full = sink.state.players[instance.owner].hand.len() as i32 >= HAND_CAP;
+    let full = sink.state.players[instance.owner].hand.len() as i32
+        >= crate::query::hand_cap_of(sink.state, instance.owner);
     if full {
         let landed = crate::zones::move_to_zone(
             sink.state,

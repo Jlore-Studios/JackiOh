@@ -484,6 +484,14 @@ pub struct DelayedEffect {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub watch: Option<String>,
+    /// R1140 (ME-HANDMARK, Meditative #76 Do or Die): the hand cards this effect is aimed at, in the
+    /// order it picked them. Each is dropped the moment its stay in that hand ends
+    /// (`zones::forget_hand_watch`), and the entry with it once none is left; as it runs, its step
+    /// reads the ones still watched (`effects::delay::HAND_WATCH_KEY`). Absent on every other entry,
+    /// so a game that never watches a hand hashes as it did before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hand_watch: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -826,6 +834,14 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub draws: Option<DrawCount>,
+    // ---- Meditative player fields (docs/meditative-set.md M5, ME-HANDCAP) ----
+    /// R1143: this player's hand size for the rest of the game, once an effect has set one (Meditative
+    /// #79 Touched by KY), the latest setting winning; every rule that reads the hand cap reads it
+    /// (`query::hand_cap_of`). Absent means `HAND_CAP`, so a game that never sets one hashes as it did
+    /// before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hand_cap: Option<i32>,
 }
 
 /// Ceaseless Void's four game counters (R55): `GameState.counters`.
@@ -1309,6 +1325,7 @@ pub fn create_player_state() -> PlayerState {
         carried: None,
         game_log: None,
         draws: None,
+        hand_cap: None,
     }
 }
 

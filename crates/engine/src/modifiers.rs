@@ -225,6 +225,7 @@ pub fn schedule_delayed(
         not_before,
         resume,
         watch,
+        hand_watch: None,
     };
     sink.state.next_seq += 1;
     sink.state.delayed.push(effect.clone());
