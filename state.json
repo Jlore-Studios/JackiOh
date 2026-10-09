@@ -4163,7 +4163,8 @@
         "bot/issue-532",
         "bot/issue-533",
         "bot/issue-536",
-        "bot/issue-539"
+        "bot/issue-539",
+        "bot/issue-540"
       ],
       "tree": {
         "adopted": true,
