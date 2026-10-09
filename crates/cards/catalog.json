@@ -10816,6 +10816,204 @@
       "text": "End of turn: Upgrade 2 random cards in your hand."
     }
   },
+  "meditative-002": {
+    "id": "meditative-002",
+    "index": "2",
+    "name": "Rampaging Rhino",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "discards",
+        "base": 1,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 32,
+    "base": {
+      "attack": 5,
+      "health": 9,
+      "keywords": [],
+      "text": "Whenever this takes damage, discard {discards|card|cards}."
+    },
+    "radiant": {
+      "attack": 11,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "Trample"
+        }
+      ],
+      "text": "Trample\nWhenever this takes damage, discard {discards|card|cards}."
+    }
+  },
+  "meditative-003": {
+    "id": "meditative-003",
+    "index": "3",
+    "name": "Jlockwork Machine",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "exiles",
+        "base": 3,
+        "radiant": 3,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 37,
+    "base": {
+      "attack": 10,
+      "health": 10,
+      "keywords": [],
+      "text": "Whenever your opponent plays a card, exile the top {exiles|card|cards} of your deck."
+    },
+    "radiant": {
+      "attack": 20,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Rush\nWhenever your opponent plays a card, exile the top {exiles|card|cards} of your deck."
+    }
+  },
+  "meditative-015": {
+    "id": "meditative-015",
+    "index": "15",
+    "name": "Smelly Steven",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "surcharge",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 19,
+    "base": {
+      "attack": 5,
+      "health": 5,
+      "keywords": [],
+      "text": "Cry: Your opponent's Spells cost ({surcharge}) more during their next turn."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 10,
+      "keywords": [],
+      "text": "Cry: Your opponent's Spells cost ({surcharge}) more during their next turn."
+    }
+  },
+  "meditative-016": {
+    "id": "meditative-016",
+    "index": "16",
+    "name": "Trenful Trickster",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "traps",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 17,
+    "base": {
+      "attack": 1,
+      "health": 5,
+      "keywords": [],
+      "text": "End of turn: Summon {traps|random Trap|random Traps}."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 10,
+      "keywords": [],
+      "text": "End of turn: Summon {traps|random Trap|random Traps}."
+    }
+  },
+  "meditative-023": {
+    "id": "meditative-023",
+    "index": "23",
+    "name": "Golly Bob Howdy",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "core-t-sheep"
+    ],
+    "loc": 26,
+    "base": {
+      "attack": 3,
+      "health": 5,
+      "keywords": [],
+      "text": "Cry: Transform the Units next to this into Sheep Tokens."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 10,
+      "keywords": [],
+      "text": "Cry: Transform the Units next to this into Radiant Sheep Tokens."
+    }
+  },
+  "meditative-024": {
+    "id": "meditative-024",
+    "index": "24",
+    "name": "Polymorph",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "core-t-sheep"
+    ],
+    "loc": 35,
+    "base": {
+      "keywords": [],
+      "text": "Transform a Unit into a Sheep Token."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Transform a Unit and the Units next to it into Sheep Tokens."
+    }
+  },
   "meditative-027": {
     "id": "meditative-027",
     "index": "27",

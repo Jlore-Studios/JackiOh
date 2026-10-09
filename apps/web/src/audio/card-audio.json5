@@ -1252,6 +1252,29 @@
     "classicplus-t-ai-10": { // Fine-Tuning
       cast: { voice: "sapi-synth-deep", text: "Adjusting weights. Improving slightly." },
     },
+    "meditative-002": { // Rampaging Rhino
+      play: { voice: "brute", text: "Out of my way, little ones!" },
+      death: { voice: "brute", text: "Even rhinos get tired." },
+    },
+    "meditative-003": { // Jlockwork Machine
+      play: { voice: "robot", text: "Tick tock. I am watching you." },
+      death: { voice: "robot", text: "Gears grinding to a halt." },
+    },
+    "meditative-015": { // Smelly Steven
+      play: { voice: "goof", text: "Do you smell that? It's me!" },
+      death: { voice: "goof", text: "I showered last week, I swear." },
+    },
+    "meditative-016": { // Trenful Trickster
+      play: { voice: "sapi-trickster", text: "Watch your step, friend." },
+      death: { voice: "sapi-trickster", text: "Tricked by my own trick." },
+    },
+    "meditative-023": { // Golly Bob Howdy
+      play: { voice: "elder", text: "Well golly bob howdy, neighbors!" },
+      death: { voice: "elder", text: "Golly, that smarts." },
+    },
+    "meditative-024": { // Polymorph
+      cast: { voice: "sapi-wizard", text: "You look better with wool." },
+    },
     "meditative-027": { // Clip-Farming Lawyer
       play: { voice: "hustler", text: "Objection! That zone is mine now." },
       death: { voice: "hustler", text: "Case dismissed. No refunds." },
