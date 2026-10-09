@@ -4032,7 +4032,8 @@
         "bot/issue-520",
         "bot/issue-521",
         "bot/issue-525",
-        "bot/issue-527"
+        "bot/issue-527",
+        "bot/issue-529"
       ],
       "tree": {
         "adopted": true,
