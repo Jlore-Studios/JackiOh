@@ -7027,12 +7027,12 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-09T03:53:00Z",
-          "utilization": 0.2
+          "utilization": 0.28
         },
-        "observed_at": "2026-10-09T01:31:59Z",
+        "observed_at": "2026-10-09T02:30:25Z",
         "seven_day": {
           "resets_at": "2026-10-12T00:00:00Z",
-          "utilization": 0.51
+          "utilization": 0.53
         },
         "status": "allowed"
       }
