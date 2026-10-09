@@ -7032,17 +7032,21 @@
         {
           "at": "2026-10-09T01:29:59Z",
           "minutes": 150.1
+        },
+        {
+          "at": "2026-10-09T02:36:00Z",
+          "minutes": 150.1
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-09T03:53:00Z",
-          "utilization": 0.28
+          "utilization": 0.29
         },
-        "observed_at": "2026-10-09T02:30:25Z",
+        "observed_at": "2026-10-09T02:36:00Z",
         "seven_day": {
           "resets_at": "2026-10-12T00:00:00Z",
-          "utilization": 0.53
+          "utilization": 0.54
         },
         "status": "allowed"
       }
