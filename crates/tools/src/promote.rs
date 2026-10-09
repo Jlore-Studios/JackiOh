@@ -625,10 +625,18 @@ mod tests {
         assert!(mismatches[0].starts_with("generation:"));
         assert!(mismatches[1].starts_with("vsParent:"));
 
-        // Generation 0's record (the port) never verifies as a promotion.
-        let port: Value = serde_json::from_str(include_str!("../../ai/generation.json")).unwrap();
-        assert_eq!(port["generation"], json!(0));
-        assert_eq!(port["lane"], json!("port"));
+        // Generation 0's record (the port) never verifies as a promotion. Its text, not the live
+        // crates/ai/generation.json, which every promotion replaces and no lane may test around.
+        let port = json!({
+            "generation": 0,
+            "lane": "port",
+            "parent": null,
+            "vsRandom": "94/100",
+            "vsParent": null,
+            "shadowBan": 11,
+            "date": "2026-10-07",
+            "source": "packages/ai at 91cc43c (94/100, 35/50, 47/50 in TS)"
+        });
         assert!(!verify_mismatches(&port, &measured).is_empty());
     }
 

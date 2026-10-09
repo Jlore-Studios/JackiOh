@@ -6,22 +6,12 @@
 //! the ones `reduce` really emits. Then the two things §9.5 asks of the writer itself: it is
 //! idempotent, and the reaper resolves anything past the ceiling.
 //!
-//! Port of `apps/server/test/api/results.test.ts`. What changed with the port:
-//!
-//! - "The scripted engine" is the real one (SURFACE §11.2: the server has no `Engine` trait):
-//!   `support::engine` installs `test/fakes/engine.ts`'s scripted cards as real scripts with the
-//!   testkit override, and `play` drives `jackioh_engine::reduce` from a testkit `scenario()` that
-//!   puts them in p1's hand, so every outcome and turn count is still one the engine emitted.
-//! - The match directory is the real registry (`app.matches`). TS's default fake directory only
-//!   recorded a start; the registry writes the match row and runs an actor, so a scenario starts its
-//!   match through the registry instead of writing the row first. A match backdated past its ceiling
-//!   is written straight to the store with no actor, which is the crashed-actor case §9.5's reaper
-//!   exists for (an actor would resolve its own ceiling first).
-//! - The store is the fake behind `support::deps::test_app()`, emptied of the E2E fixtures first;
-//!   `tables`, `seed_profile` and `on_call` are TS's `tables`, `seedProfile` and `onCall`. The
-//!   recording logger is a `tracing` subscriber that keeps this thread's JSON lines.
-//! - Rows are compared as their JSON (TS's keys), so the cases depend on the wire shape of the
-//!   port types, not on Rust field types.
+//! The scripted engine is the real one: `support::engine` installs the scripted cards as real
+//! scripts and `play` drives `reduce` from a testkit `scenario()`, so every outcome and turn count
+//! is one the engine emitted. A scenario starts its match through the registry (`app.matches`); one
+//! backdated past its ceiling is written to the store with no actor, the crashed-actor case §9.5's
+//! reaper exists for. Rows are compared as their JSON, so the cases depend on the port types' wire
+//! shape (`docs/v0.3.0/SURFACE.md` §11.2, §11.3).
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
@@ -55,9 +45,7 @@ const MATCH_ID: &str = "match-1";
 const A: &str = "profile-a";
 const B: &str = "profile-b";
 
-// ---------------------------------------------------------------------------
 // The harness's small reads (private copies, CLAUDE.md's fullsend rule 5)
-// ---------------------------------------------------------------------------
 
 /// Every store call in this file: one transaction, committed when the call answers.
 macro_rules! store {
@@ -71,12 +59,12 @@ macro_rules! store {
     }};
 }
 
-/// The JSON a row or any port value serialises to (TS's object).
+/// The JSON a row or any port value serialises to.
 fn j<T: Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("the value serialises")
 }
 
-/// TS's `toMatchObject`: every key `expected` names holds the same value in `actual` (objects
+/// Every key `expected` names holds the same value in `actual` (objects
 /// partially, arrays element for element), and nothing else is compared.
 fn assert_match(actual: &Value, expected: &Value) {
     fn matches(actual: &Value, expected: &Value) -> bool {
@@ -93,7 +81,6 @@ fn assert_match(actual: &Value, expected: &Value) {
     assert!(matches(actual, expected), "expected {actual} to match {expected}");
 }
 
-/// TS's `array.map(f)` over a JSON array.
 fn map(array: &Value, f: impl Fn(&Value) -> Value) -> Value {
     Value::Array(
         array
@@ -103,7 +90,7 @@ fn map(array: &Value, f: impl Fn(&Value) -> Value) -> Value {
     )
 }
 
-/// A slot in whatever integer type the series rules take (TS: `number`).
+/// A slot in whatever integer type the series rules take.
 fn int<T: TryFrom<i64>>(n: i64) -> T
 where
     T::Error: std::fmt::Debug,
@@ -119,18 +106,18 @@ fn fake(app: &App) -> &Arc<tokio::sync::Mutex<FakeData>> {
     }
 }
 
-/// TS's `createTestDeps()` began on an empty memory store; `test_app()` holds the E2E fixtures
+/// `test_app()` holds the E2E fixtures
 /// (R144), so they go first and every row a test reads is one it wrote.
 async fn fresh_store(app: &App) {
     fake(app).lock().await.reset();
 }
 
-/// TS's `store.seedProfile(input)`: a profile written without the API (status `active` unless set).
+/// A profile written without the API (status `active` unless set).
 async fn seed_profile(app: &App, input: Value) {
     let _ = fake(app).lock().await.seed_profile(input);
 }
 
-/// One read of the fake's raw tables (TS's `store.tables`), as JSON.
+/// One read of the fake's raw tables, as JSON.
 async fn table(app: &App, read: impl Fn(&FakeData) -> Value) -> Value {
     let data = fake(app).lock().await;
     read(&data)
@@ -148,7 +135,7 @@ async fn reap(app: &Arc<App>) -> Vec<String> {
     reap_stuck_matches(app).await.expect("the reaper sweeps")
 }
 
-/// The catalog version every match here is created at (TS's `deps.catalog.version`).
+/// The catalog version every match here is created at.
 fn catalog_version() -> &'static str {
     jackioh_cards::catalog_version()
 }
@@ -159,8 +146,7 @@ async fn start(app: &Arc<App>, input: Value) {
     app.matches.start(app, input).await.expect("the match starts");
 }
 
-/// The seats of a match as its row records them: index 0 is p1 (`results.ts`'s `seatsOf`). TS read
-/// them off the fake directory's record of the start, which held the same profiles and decks.
+/// The seats of a match as its row records them: index 0 is p1.
 async fn started_seats(app: &App, match_id: &str) -> (MatchSeat, MatchSeat) {
     let row = match_row(app, match_id).await;
     if row.is_null() {
@@ -177,8 +163,7 @@ fn seat_of(profile_id: Value, player: &str, deck: Value) -> MatchSeat {
         .expect("a MatchSeat")
 }
 
-/// TS's recording logger: every `tracing` line this thread writes (SURFACE §11.3: `Logger` →
-/// `tracing` JSON lines with the same `event` names), kept for the test to read.
+/// A recording logger: every `tracing` line this thread writes, kept for the test to read.
 #[derive(Clone, Default)]
 struct Logs(Arc<StdMutex<Vec<u8>>>);
 
@@ -213,16 +198,14 @@ impl Logs {
             .collect()
     }
 
-    /// TS's `log.entries.find((entry) => entry.event === event)`: the first line naming it.
+    /// The first line naming `event`.
     fn find(&self, event: &str) -> Option<String> {
         let quoted = format!("\"{event}\"");
         self.lines().into_iter().find(|line| line.contains(&quoted))
     }
 }
 
-// ---------------------------------------------------------------------------
-// The file's own helpers, in TS order
-// ---------------------------------------------------------------------------
+// The file's own helpers
 
 /// The two seats every scenario plays.
 fn seats() -> (MatchSeat, MatchSeat) {
@@ -242,11 +225,9 @@ fn seats() -> (MatchSeat, MatchSeat) {
 /// Runs the engine with the scripted cards (`support/engine.rs`) to a terminal state and hands back
 /// the outcome and turn count the actor would pass to `record_result`.
 ///
-/// The game is a testkit `scenario()` on turn 1 with both scripted cards in p1's hand, which is
-/// where TS's scripted engine began (it dealt no mulligan). An input names a card by its id
-/// (`"card": "test-lethal"`) where TS named a hand slot (`"instanceId": "p1-h0"`); `play` puts the
-/// instance id in. Before the inputs, both seats switch off R345's automatic end of turn, so a
-/// turn ends only when an input ends it, as in the scripted engine.
+/// The game is a testkit `scenario()` on turn 1 with both scripted cards in p1's hand. An input
+/// names a card by its id; `play` puts the instance id in. Both seats switch off R345's automatic
+/// end of turn first, so a turn ends only when an input ends it.
 fn play(inputs: &[Value]) -> (TerminalOutcome, i32) {
     play_from(1, inputs)
 }
@@ -295,7 +276,7 @@ fn play_from(turn: i32, inputs: &[Value]) -> (TerminalOutcome, i32) {
 }
 
 /// R603: the Glicko-2 move one ranked game makes between two players new to it (each at a new
-/// player's deviation and volatility), `score_a` being the first one's score. TS's `move`.
+/// player's deviation and volatility), `score_a` being the first one's score.
 fn rating_move(rating_a: f64, rating_b: f64, score_a: f64) -> (f64, f64) {
     let fresh = |rating: f64| Glicko {
         rating,
@@ -306,9 +287,8 @@ fn rating_move(rating_a: f64, rating_b: f64, score_a: f64) -> (f64, f64) {
     (next.a.rating, next.b.rating)
 }
 
-/// The last two player-turns before the cap end the match in a draw (§2.5). TS ended thirty turns
-/// of its scripted engine (`FAKE_TURN_CAP`); the real engine's cap is `TURN_CAP_PLAYER_TURNS`,
-/// reached here from the turn before it (`play_from`), since thirty real turns of empty libraries
+/// The last two player-turns before the cap end the match in a draw (§2.5). The cap is reached
+/// here from the turn before it (`play_from`), since that many real turns of empty libraries
 /// would end in fatigue first.
 fn to_the_turn_cap() -> Vec<Value> {
     (0..2)
@@ -319,7 +299,7 @@ fn to_the_turn_cap() -> Vec<Value> {
         .collect()
 }
 
-/// TS's scenario options: both ratings, how long ago the match started, and whether the queue
+/// Scenario options: both ratings, how long ago the match started, and whether the queue
 /// paired it.
 #[derive(Default)]
 struct ScenarioOptions {
@@ -468,8 +448,8 @@ mod results_m7_t2 {
     async fn both_heroes_dead_both_heroes_dying_in_the_same_check_is_a_draw_and_rates_as_one_2_5() {
         // The seventh reason `api/results.rs`'s own header names and `0004_matches.sql`'s `reason`
         // CHECK allows. It is the one ending that is a *draw produced by lethal damage*, so the thing
-        // to prove is that the writer scores it 0.5/0.5 and names no winner — `scoreForSeat` decides
-        // that on `outcome.winner === "draw"` alone, and a writer that read the reason instead (or
+        // to prove is that the writer scores it 0.5/0.5 and names no winner, deciding on the
+        // outcome's winner alone; a writer that read the reason instead (or
         // that treated "somebody died" as a win) would name A here.
         install_test_cards();
         let app = scenario(ScenarioOptions {
@@ -553,7 +533,6 @@ mod results_m7_t2 {
         .await;
     }
 
-    /// TS: "turn-cap: the 30th player-turn is a draw" (its scripted engine's cap, `FAKE_TURN_CAP`).
     #[tokio::test]
     async fn turn_cap_the_last_player_turn_is_a_draw() {
         install_test_cards();
@@ -668,12 +647,12 @@ mod results_m7_t2 {
         let app = scenario(ScenarioOptions::default()).await;
         // Two writers — an actor and the reaper — pass `getByMatch` together, each inside its own
         // transaction. The first commits; the second's insert meets `results_pkey`, which the port
-        // reports as `StoreError::Duplicate` (TS's DuplicateResultError). Simulate exactly that: this
+        // reports as `StoreError::Duplicate`. Simulate exactly that: this
         // store's first `results.insert` refuses as if the collision had happened, and the racing
         // writer's row lands the moment the loser's transaction lets the store go, so the next
         // `getByMatch` — run inside the retry's fresh transaction — sees the row the winner committed.
         //
-        // TS rewrote `getByMatch` to push the row; the fake's one seam is `on_call`, called with the
+        // The fake's one seam is `on_call`, called with the
         // store held, so the racing writer is a thread queued on the store's lock instead: the lock
         // is fair, so it writes after the loser rolls back and before the loser's retry reads.
         let winner_row: ResultRow = serde_json::from_value(json!({
@@ -835,8 +814,7 @@ mod results_m7_t2 {
             let games = table(&app, |data| j(&data.tables.rated_games)).await;
             assert_eq!(games.as_array().map(Vec::len), Some(1));
             let game = &games[0];
-            // TS ran as `TEST_PATCH_VERSION` (season `v0.1`); the Rust server rates in the season of
-            // the patch it was built at (SURFACE §11.3).
+            // The server rates in the season of the patch it was built at.
             let patch = catalog_version();
             assert_match(
                 game,
@@ -972,7 +950,7 @@ mod results_m7_t2 {
         const SERIES_ID: &str = "series-1";
 
         /// A trio whose decks are named after their owner and slot. Their cards are the scripted
-        /// filler deck (TS: one made-up card each), so the real engine accepts every game they play.
+        /// filler deck, so the real engine accepts every game they play.
         fn trio(owner: &str) -> Value {
             let deck = |slot: i64| json!({ "name": format!("{owner} {slot}"), "cards": fake_deck(&[]) });
             json!({ "name": owner, "decks": [deck(0), deck(1), deck(2)] })
@@ -1042,9 +1020,6 @@ mod results_m7_t2 {
         }
 
         /// A in series seat p1 at 1200, B in p2 at 1000, game 1 (match `MATCH_ID`) being played.
-        ///
-        /// TS swapped in `createFakeMatchDirectory(deps.store)`, which writes the match row; the
-        /// registry behind `app.matches` writes it the same way, and runs the game's actor besides.
         async fn series_scenario() -> Arc<App> {
             let app = test_app().await;
             fresh_store(&app).await;
@@ -1127,8 +1102,7 @@ mod results_m7_t2 {
             let game5_id = game5["nextMatchId"].as_str().unwrap_or_default().to_owned();
             assert_match(&game5["games"][4], &json!({ "gameNo": 5, "slots": [2, 2] }));
 
-            // TS: "The fake directory's rows carry a ceiling of 0, so game 5 is long past it." The
-            // registry's row carries the real one (R79), so game 5's actor is stopped, as a crashed
+            // The row has the real ceiling (R79), so game 5's actor is stopped, as a crashed
             // one would be, and its ceiling moved to 0: the reaper is for a match nobody answers for.
             app.matches.stop(&game5_id).await;
             let clocks = {

@@ -49,6 +49,31 @@ which prints one line per game and a tally (agent `a` sits p1 in odd games). To 
 one card, `cargo jackioh sweep <card id>` runs R186's sweep on it, and `cargo jackioh trace` prints one
 game turn by turn.
 
+## Beyond the gate
+
+The gate is not the only check a promotion must pass. Once the loop puts it up, CI runs every check
+on it, and a promotion that fails one goes back to draft instead of merging. The checks an AI change
+can break are the tests outside `crates/ai` that play the shipping AI on fixed seeds:
+
+- the tutorial's lessons (R293, `apps/web/src/tutorial/scripts/*.test.ts`). Each lesson is a game
+  against this AI (the tutorial plays the AI every tier plays, R290), and it must still be won within
+  its turns, reach every step its coach shows and bring up its mechanics;
+- practice (`apps/web/src/practice/`, `apps/web/src/routes/practice*.test.tsx`), and e2e spec 13,
+  whose Easy game must last four turns of a human who only ends them (CI runs it; you cannot).
+
+You may not change them (2. above), so a change that breaks one must change how the AI plays, not
+the test: keep each change to the cards and situations it is for, and the lessons' games stay as
+they were. After a change passes a dry run, run them:
+
+```sh
+sh scripts/build-wasm.sh && pnpm --dir apps/web exec vitest run src/tutorial src/practice src/routes/practice
+```
+
+The loop runs the same before it puts a promotion up. When a promotion of this lane was set back,
+`attempts.md` says why (the failing checks, with links) and names the local branch that keeps its
+commit; read those checks' logs (`gh pr checks <n>`, `gh run view <run id> --log-failed`) before you
+try that change again.
+
 ## What was tried before
 
 Before you change anything, read `training/history/unban.jsonl` (every promotion of this lane and its

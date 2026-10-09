@@ -732,9 +732,8 @@ def refusal(provider: Provider, entry: Mapping[str, Any], at: datetime,
     observed = parse_iso(usage.get("observed_at")) if isinstance(usage, dict) else None
     caps = provider.caps_at(at, zone_name)
     outside = caps != dict(provider.limits.stops)
-    room = provider.limits.headroom if starting else {}
     for window, cap in caps.items():
-        stop = max(0.0, cap - room.get(window, 0.0))
+        stop = start_under(provider, window, cap) if starting else cap
         reading = usage.get(window) if isinstance(usage, dict) else None
         if not isinstance(reading, dict):
             continue
@@ -756,6 +755,39 @@ def refusal(provider: Provider, entry: Mapping[str, Any], at: datetime,
         used = minutes_spent(entry, at - WINDOWS[window])
         if used >= budget:
             return f"it has spent {used:.0f} of its {budget} minutes in the {WINDOW_NAMES[window]} window"
+    return None
+
+
+def start_under(provider: Provider, window: str, cap: float) -> float:
+    """The usage a build, a revision or a plan must be under to start, under `cap`."""
+    return max(0.0, cap - provider.limits.headroom.get(window, 0.0))
+
+
+def frees_at(provider: Provider, entry: Mapping[str, Any], at: datetime,
+             zone_name: str) -> datetime | None:
+    """When a subscription whose usage stops a build or a plan starting now
+    (`refusal(..., starting=True)`) may start one again, with nothing more spent: the first of
+    its refusal's end, its readings' resets and its window's opening that clears it. None when
+    none of those does (a minute budget, say)."""
+    times: set[datetime] = set()
+    until = parse_iso(entry.get("refused_until"))
+    if until is not None and until > at:
+        times.add(until)
+    usage = entry.get("usage") if isinstance(entry.get("usage"), Mapping) else {}
+    observed = parse_iso(usage.get("observed_at"))
+    for window, span in WINDOWS.items():
+        reading = usage.get(window)
+        if not isinstance(reading, Mapping):
+            continue
+        resets = parse_iso(reading.get("resets_at")) or (observed + span if observed else None)
+        if resets is not None and resets > at:
+            times.add(resets)
+    window = provider.schedule.window(zone_name)
+    if window is not None and provider.off_hours and not window.is_open(at):
+        times.add(window.next_open(at))  # its in-hours caps are the looser ones
+    for when in sorted(times):
+        if refusal(provider, entry, when, zone_name, starting=True) is None:
+            return when
     return None
 
 
@@ -885,24 +917,61 @@ def availability(provider: Provider, state: dict[str, Any], at: datetime, zone_n
     return refusal(provider, entry, at, zone_name, starting=starting)
 
 
+def usage_frees_at(provider: Provider, state: dict[str, Any], at: datetime, zone_name: str,
+                   reason: str | None) -> datetime | None:
+    """When `provider`'s usage lets it start a build or a plan again, if `reason` (its
+    `availability(..., starting=True)`) is its usage and nothing else: not its hours, its login
+    or a suspension, which no reset lifts."""
+    entry = peek_record(state, provider.id)
+    if reason is None or reason != refusal(provider, entry, at, zone_name, starting=True):
+        return None
+    return frees_at(provider, entry, at, zone_name)
+
+
+def start_reason(provider: Provider, state: dict[str, Any], at: datetime, zone_name: str,
+                 secrets: Secrets) -> str | None:
+    """Why `provider` may not start a build, a revision or a plan now, or None when it may: what
+    an idle subscription waits for, and what `plan` holds it to (`start_headroom` under each
+    cap). One its usage holds says whether it still takes reviews, which go up to the cap, and
+    when it may start one again."""
+    reason = availability(provider, state, at, zone_name, secrets, starting=True)
+    entry = peek_record(state, provider.id)
+    if reason is None or reason != refusal(provider, entry, at, zone_name, starting=True):
+        return reason  # free, or held by something no reset lifts
+    if "review" in provider.roles and availability(provider, state, at, zone_name,
+                                                   secrets) is None:
+        reason += "; it takes reviews only"
+    frees = frees_at(provider, entry, at, zone_name)
+    if frees is not None and frees != parse_iso(entry.get("refused_until")):  # that one says so
+        reason += f"; it can start a build or a plan again in {human_delta(frees - at)}"
+    return reason
+
+
 def when_free(pool: Pool, state: dict[str, Any], at: datetime, zone_name: str,
               secrets: Secrets) -> str:
-    """When a queued item can expect a run: now, or when the soonest subscription opens."""
+    """When a queued item can expect a run: now, or when the soonest subscription opens or has
+    room under its caps again."""
     now_free = [p.id for p in pool.ordered()
-                if availability(p, state, at, zone_name, secrets) is None]
+                if start_reason(p, state, at, zone_name, secrets) is None]
     if now_free:
         return f"in the next run ({', '.join(f'`{p}`' for p in now_free)} can take it now)"
-    soonest: tuple[datetime, Provider] | None = None
+    soonest: tuple[datetime, str] | None = None
     for provider in pool.ordered():
         window = provider.schedule.window(zone_name)
-        if window is None or availability(provider, state, at, zone_name, secrets,
-                                          forced=True) is not None:
-            continue
-        opens = window.next_open(at)
+        if window is not None and availability(provider, state, at, zone_name, secrets,
+                                               forced=True, starting=True) is None:
+            opens = window.next_open(at)
+            text = (f"when `{provider.id}` opens ({provider.schedule.describe(zone_name)}, in "
+                    f"{human_delta(opens - at)})")
+        else:
+            reason = availability(provider, state, at, zone_name, secrets, starting=True)
+            frees = usage_frees_at(provider, state, at, zone_name, reason)
+            if frees is None:
+                continue
+            opens, text = frees, (f"when `{provider.id}` has room under its caps again (in "
+                                  f"{human_delta(frees - at)})")
         if soonest is None or opens < soonest[0]:
-            soonest = (opens, provider)
+            soonest = (opens, text)
     if soonest is not None:
-        opens, provider = soonest
-        return (f"when `{provider.id}` opens ({provider.schedule.describe(zone_name)}, in "
-                f"{human_delta(opens - at)})")
+        return soonest[1]
     return f"when a subscription is free again (`{CURRENT.slash} status` says why none is now)"

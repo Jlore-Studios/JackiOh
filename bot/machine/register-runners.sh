@@ -8,7 +8,9 @@
 #
 #   bot/machine/register-runners.sh OWNER/REPO
 #
-# Safe to run again: a runner already registered and running is left alone, job and all.
+# Safe to run again: a runner already registered and running is left alone, job and all, except
+# that one without Rust on its PATH (its .path, which config.sh writes from sudo's PATH) gets it
+# and restarts once it holds no job.
 set -euo pipefail
 repo="${1:?OWNER/REPO, the repository the runners serve}"
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -54,9 +56,25 @@ for entry in "$@"; do
       fi
     fi
     [ -f .service ] || ./svc.sh install "$user" >/dev/null
+    service="$(cat .service)"
+    # config.sh writes .path from the PATH it ran with, sudo's, which has no Rust: put the user's
+    # Rust first again, as setup.sh does, or every job on this lane fails at `rustup`. A runner
+    # reads .path only when it starts, so a running one restarts with it, unless this lane holds a
+    # job, which a restart would kill: that one keeps its old .path for the next run of this.
+    path="/home/$user/.cargo/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
+    fixed=""
+    if [ "$(cat .path 2>/dev/null)" != "$path" ]; then
+      if systemctl is-active --quiet "$service" && pgrep -f "$dir/bin/Runner.Worker" >/dev/null; then
+        echo "$name: busy with a job, and no Rust on its PATH yet; run this again once it ends"
+        continue
+      fi
+      echo "$path" | sudo -u "$user" tee .path >/dev/null
+      systemctl is-active --quiet "$service" && ./svc.sh stop >/dev/null
+      fixed=", Rust on its PATH now"
+    fi
     # Started only if it isn't running: a restart would kill the job a running one holds.
-    systemctl is-active --quiet "$(cat .service)" || ./svc.sh start >/dev/null
-    echo "$name: $(systemctl is-active "$(cat .service)") as $user"
+    systemctl is-active --quiet "$service" || ./svc.sh start >/dev/null
+    echo "$name: $(systemctl is-active "$service") as $user$fixed"
   done
 done
 exit "$failed"

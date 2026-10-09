@@ -113,7 +113,7 @@ describe("R768 practice replays", () => {
       let last = snapshotOf(await host.request({ type: "start", config: config(seed, { portraits }) }));
       const live = [last];
       const rng = createRng(`${seed}:human`);
-      for (let n = 0; n < 40; n += 1) {
+      for (let n = 0; n < 40 && last.view.result === null; n += 1) {
         const { state } = await debug(host);
         let response: PracticeResponse;
         if (last.aiToAct) response = await host.request({ type: "aiStep" });
@@ -125,9 +125,14 @@ describe("R768 practice replays", () => {
         last = snapshotOf(response);
         if ((await debug(host)).log.length === live.length) live.push(last);
       }
-      expect(last.view.result, "the walk leaves the game in progress").toBeNull();
-      last = snapshotOf(await host.request({ type: "act", action: { type: "concede" } }));
-      live.push(last);
+      // The walk plays the shipping AI, which a training lane's promotion changes, so it may win
+      // inside the walk: the human concedes only a game still in progress.
+      if (last.view.result === null) {
+        last = snapshotOf(await host.request({ type: "act", action: { type: "concede" } }));
+        live.push(last);
+      }
+      const winner = last.view.result?.winner;
+      const result = winner === "draw" ? "draw" : winner === HUMAN ? "win" : "loss";
 
       const setup = await debug(host);
       const log = setup.log;
@@ -135,7 +140,7 @@ describe("R768 practice replays", () => {
       expect(log.length).toBeGreaterThan(REPLAY_PAGE_STEPS);
 
       const replays = await listed(host);
-      expect(replays).toEqual([{ game: 1, endedAt: 0, result: "loss", turns: last.view.turn, steps: live.length, portraits }]);
+      expect(replays).toEqual([{ game: 1, endedAt: 0, result, turns: last.view.turn, steps: live.length, portraits }]);
       expect(Object.keys(replays[0] ?? {}).sort()).toEqual(["endedAt", "game", "portraits", "result", "steps", "turns"]);
 
       const { steps, total, wire } = await allSteps(host, 1);

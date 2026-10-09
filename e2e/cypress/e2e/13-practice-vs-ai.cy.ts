@@ -84,11 +84,13 @@ import type { Action, Lane, PlayerId } from "../../support/types.ts";
  * random deck, R635 re-dealt the old seed (`13-practice`) into a game the human lost after its third
  * turn, and patch v0.2.9's Pocket Chaos (2)→(4) re-dealt `13-practice-n` the same way (the AI-deck
  * draw is cost-bucket weighted), into a game the Easy AI wins on turn 7, before the human's fourth.
- * This one survives six human turns with the human answering nothing but the mulligan, and the AI
- * plays on its first turn — found by playing each candidate through the practice core, the same
- * method as before.
+ * The AI's own moves deal games too: AI generation 1 (#585, the unban lane) won `13-practice-r`
+ * after the human's second turn. This one lets the human, answering nothing but the mulligan, reach
+ * five of its turns against generation 0 and six against generation 1, where the spec needs four —
+ * found by playing each candidate through the practice core with both AIs, the same method as
+ * before. A later AI promotion that wins it sooner fails this spec in its own pull request.
  */
-const SEED = seedFor("13-practice-r");
+const SEED = seedFor("13-practice-t");
 
 /**
  * The Hard game's own seed: it needs an AI first turn the page has time to show, which the old seed
