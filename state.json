@@ -4032,11 +4032,11 @@
       "planned_at": "2026-10-08T14:48:12Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_tier": "medium",
-      "provider": "claude-3",
+      "provider": "claude-4",
       "queued_at": "2026-10-08T14:38:59Z",
       "requested_by": "squishy-squooby",
-      "run_id": "37911031750",
-      "started_at": "2026-10-09T09:25:05Z",
+      "run_id": "37916619397",
+      "started_at": "2026-10-09T10:17:40Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -4416,9 +4416,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-09T09:57:00Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37914457314",
-    "what": "plan #571 on claude-4"
+    "at": "2026-10-09T10:17:40Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37916619397",
+    "what": "plan #559 on claude-4"
   },
   "last_sweep": {
     "at": "2026-10-09T10:13:10Z",
