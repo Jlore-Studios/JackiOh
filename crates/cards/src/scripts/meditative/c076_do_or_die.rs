@@ -314,6 +314,9 @@ mod tests {
                 }));
                 let theirs = ids(&s.hand(P2));
                 s.play(ID, json!({}));
+                // The steal fires at p1's *next* start of turn: end this turn first, since p1 is
+                // still the active player and `until_active` alone would advance nothing.
+                s.end_turn();
                 until_active(&mut s, P1);
                 let mine = ids(&s.hand(P1));
                 assert_eq!(mine.len() as i32, HAND_CAP);
@@ -328,6 +331,8 @@ mod tests {
                 let mut s = casting("do-or-die-token", false, json!([RUSH_TOKEN, FILLER]));
                 let token = s.hand(P2)[0].clone();
                 s.play(ID, json!({}));
+                // As above: the steal waits for p1's next start of turn, past the end of this one.
+                s.end_turn();
                 until_active(&mut s, P1);
                 // A hand to a hand: it stays in a hand, so it does not cease to exist (R11).
                 assert!(ids(&s.hand(P1)).contains(&token.id));

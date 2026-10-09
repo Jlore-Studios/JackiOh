@@ -153,6 +153,15 @@ describe("B7: faceModel copies the def and picks the face", () => {
     }
   });
 
+  it("R923 in play a face lists the view's tags; outside play the definition's", () => {
+    // Outside play the definition's tags stand (core-020 is Human).
+    expect(face("core-020", false).tags).toEqual(["Human"]);
+    // In play with the view's tags, the view's stand (MD-B15: a granted tag is part of the card).
+    expect(face("core-020", false, { inPlay: {}, tags: ["Human", "CN"] }).tags).toEqual(["Human", "CN"]);
+    // In play with no view tags, the definition's stand.
+    expect(face("core-020", false, { inPlay: {} }).tags).toEqual(["Human"]);
+  });
+
   it("B7 non-units have null stats: Spell, Field Spell, Trap, Field Trap", () => {
     for (const id of ["core-005", "core-006", "core-041", "core-018"]) {
       expect(face(id, false).stats, id).toBeNull();

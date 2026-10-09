@@ -11034,6 +11034,151 @@
       "text": "Cast on draw: Heal your hero {heal}."
     }
   },
+  "meditative-032": {
+    "id": "meditative-032",
+    "index": "32",
+    "name": "Spiritually 中国",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "CN"
+    ],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "units",
+        "base": 5,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 43,
+    "base": {
+      "keywords": [],
+      "text": "One random effect: Get ready to learn Chinese; transform every card in your hand into the same random CN card, which cost (0); summon {units} random CN Units."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "随机一项效果：准备好学中文；将你手牌中的每张牌变形为同一张随机的光辉中国牌，它们的法力值消耗为(0)；召唤{units}个随机的光辉中国单位。"
+    }
+  },
+  "meditative-033": {
+    "id": "meditative-033",
+    "index": "33",
+    "name": "First Day of 学校",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "CN"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 0,
+    "params": [
+      {
+        "key": "cards",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 25,
+    "base": {
+      "keywords": [],
+      "text": "Add {cards|random CN card|random CN cards} to your hand. Each costs ({discount}) less."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add {cards|random Radiant CN card|random Radiant CN cards} to your hand. Each costs ({discount}) less."
+    }
+  },
+  "meditative-034": {
+    "id": "meditative-034",
+    "index": "34",
+    "name": "高考",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "CN",
+      "KY"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "times",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 26,
+    "base": {
+      "keywords": [],
+      "text": "Destroy every permanent that is neither CN nor KY. Buff each CN or KY permanent {times|time|times}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Destroy every enemy permanent that is neither CN nor KY. Buff each of your CN or KY permanents {times|time|times}."
+    }
+  },
+  "meditative-035": {
+    "id": "meditative-035",
+    "index": "35",
+    "name": "RCTA (CN)",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "CN"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "stats",
+        "base": 2,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "times",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 44,
+    "base": {
+      "keywords": [],
+      "text": "Give a non-CN permanent the CN tag and +{stats}/+{stats}. Buff it {times|time|times}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Give a non-CN permanent the CN tag and +{stats}/+{stats}. Buff it {times|time|times}."
+    }
+  },
   "meditative-036": {
     "id": "meditative-036",
     "index": "36",
@@ -11071,6 +11216,53 @@
       "text": "Lucky 1\nChoose a Unit. 50% chance: Buff it {times|time|times}. Otherwise, destroy it."
     }
   },
+  "meditative-037": {
+    "id": "meditative-037",
+    "index": "37",
+    "name": "CN in a bottle",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "CN"
+    ],
+    "rarity": "Epic",
+    "token": false,
+    "cost": "X",
+    "params": [],
+    "loc": 23,
+    "base": {
+      "keywords": [],
+      "text": "When this enters your hand: Replace it with a random Radiant card."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "When this enters your hand: Replace it with a random Radiant card. It costs (0)."
+    }
+  },
+  "meditative-038": {
+    "id": "meditative-038",
+    "index": "38",
+    "name": "H1B Printer",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [
+      "CN",
+      "KY"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 2,
+    "params": [],
+    "loc": 18,
+    "base": {
+      "keywords": [],
+      "text": "Start of turn: Add a random Radiant KY or CN card to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Start of turn: Add a random Radiant KY or CN card to your hand. It costs (0)."
+    }
+  },
   "meditative-076": {
     "id": "meditative-076",
     "index": "76",
@@ -11092,7 +11284,7 @@
         "tunedOn": "base"
       }
     ],
-    "loc": 0,
+    "loc": 53,
     "base": {
       "keywords": [],
       "text": "Mark {marks|random card|random cards} in your opponent's hand. At the start of your next turn, steal each marked card still in their hand."
@@ -11112,7 +11304,7 @@
     "rarity": "Common",
     "token": false,
     "cost": 3,
-    "loc": 0,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Fill your hand with random Common cards."
@@ -11145,7 +11337,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 0,
+    "loc": 32,
     "base": {
       "keywords": [],
       "text": "Exile every non-CN permanent. Add a random CN card to your hand for each of yours exiled this way."
@@ -11186,7 +11378,7 @@
         "min": 1
       }
     ],
-    "loc": 0,
+    "loc": 22,
     "base": {
       "attack": 4,
       "health": 4,
@@ -11233,7 +11425,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 0,
+    "loc": 38,
     "base": {
       "keywords": [],
       "text": "Shuffle a copy of each card in your hand, and of this, into your deck.\nPaid (2): Each copy has a {chance}% chance to become Radiant."
@@ -11263,7 +11455,7 @@
         "min": 1
       }
     ],
-    "loc": 0,
+    "loc": 19,
     "base": {
       "keywords": [],
       "text": "Add {cards|random Spell|random Spells} to your hand."

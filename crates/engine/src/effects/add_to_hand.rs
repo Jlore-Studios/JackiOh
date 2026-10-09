@@ -202,6 +202,9 @@ pub struct AddRandomFromCatalogArgs {
     pub cost_mod: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub temporary: Option<bool>,
+    /// ME-CN, R921: the cards added are shown in Chinese (Meditative #33).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chinese: Option<bool>,
 }
 
 impl AddRandomFromCatalogArgs {
@@ -212,7 +215,7 @@ impl AddRandomFromCatalogArgs {
             cost_override: self.cost_override,
             cost_mod: self.cost_mod,
             temporary: self.temporary,
-            chinese: None,
+            chinese: self.chinese,
         }
     }
 }

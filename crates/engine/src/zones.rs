@@ -1056,7 +1056,7 @@ pub fn remove_from_any_zone(state: &mut GameState, instance: &mut CardInstance) 
 /// Degrade, Upgrade and KY's Constant changed), `brittle` (the Brittle count) and `enchantments` —
 /// none of them is touched here. The one exception is a Brittle count that has crumbled its card, which
 /// is spent and goes (R441, `brittle_count::drop_spent_brittle`). ME-CN's `chinese` flag persists the
-/// same way: nothing removes it (R1300).
+/// same way: nothing removes it (R1300). So do the tags an effect granted (R923).
 pub fn reset_instance(instance: &mut CardInstance) {
     drop_spent_brittle(instance);
     instance.damage = 0;
@@ -1092,8 +1092,8 @@ pub fn reset_instance(instance: &mut CardInstance) {
 /// included — `costMod` (a discount, a surcharge, a Degrade's or Upgrade's cost step, KY's Constant's
 /// cost) and `costOverride` (a "(0)" given in a hand) both go, so it costs its printed cost (R65), or a
 /// fused card its fused definition's (R77). Its Radiant face, its `tuning`, its Brittle and times-played
-/// counts, its enchantments and its `chinese` flag (R1300) are what the card is or what happened to it,
-/// not a price, and stay.
+/// counts, its enchantments, its `chinese` flag (R1300) and its granted tags (R923) are what the card
+/// is or what happened to it, not a price, and stay.
 pub fn reset_price(instance: &mut CardInstance) {
     instance.cost_mod = 0;
     instance.cost_override = None;

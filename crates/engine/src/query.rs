@@ -296,6 +296,21 @@ pub fn played_this_turn_of_type(state: &GameState, player: PlayerId, types: &[Ca
         .sum()
 }
 
+/// MD-B15, R923: every tag a card instance carries — its definition's tags, then each granted tag
+/// (`CardInstance.granted_tags`, Meditative #35) it lacks, in order. Every instance-level tag read
+/// goes through this; catalog pools read definitions and never see granted tags.
+pub fn tags_of(state: &GameState, card: &CardInstance) -> Vec<Tag> {
+    let mut tags: Vec<Tag> = crate::catalog::def_of(Some(state), &card.def_id).tags.clone();
+    if let Some(granted) = card.granted_tags.as_deref() {
+        for tag in granted {
+            if !tags.contains(tag) {
+                tags.push(*tag);
+            }
+        }
+    }
+    tags
+}
+
 /// B5 E4: how many cards carrying `tag` this player has played this game, casts included (R70),
 /// countered plays never (R448); never reset (Classic+ #64's Fruit, AI Scaling Law's AI).
 pub fn played_this_game_with_tag(state: &GameState, player: PlayerId, tag: Tag) -> i32 {

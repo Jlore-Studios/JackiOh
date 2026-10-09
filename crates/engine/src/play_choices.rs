@@ -282,7 +282,8 @@ pub fn resolving_face(
 /// controller's (§8 Conventions), a Vanilla one has none (`flags_of`), and it never catches its own
 /// play: step 3 runs before step 4 puts it on the field (R119).
 pub fn tagged_play_radiant(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
-    let tags: Vec<Tag> = crate::catalog::def_of(Some(state), &card.def_id).tags.clone();
+    // MD-B15, R923: a granted tag counts for the play's tags too.
+    let tags: Vec<Tag> = crate::query::tags_of(state, card);
     if tags.is_empty() {
         return false;
     }
@@ -767,8 +768,22 @@ fn card_allowed(
     if filter.and_then(|filter| filter.exclude_self) == Some(true) && held.id == self_.id {
         return false;
     }
-    let tags: Vec<Tag> = crate::catalog::def_of(Some(state), &held.def_id).tags.clone();
-    if !type_allows(filter, crate::faces::card_type_of(state, held)) || !tags_allow(filter, &tags) {
+    // MD-B15, R923: a granted tag is part of the card for a declaration too. MD-B16, R924: a
+    // face-down backrow card its chooser cannot read is a legal pick whatever its tags, so the
+    // picks reveal nothing — no shipped declaration filters the backrow by tag, so only the tag
+    // check is skipped for one.
+    let tags: Vec<Tag> = crate::query::tags_of(state, held);
+    let unreadable_backrow = matches!(
+        held.zone,
+        Zone::Field {
+            row: Row::Backrow,
+            ..
+        }
+    ) && crate::preview::is_face_down(state, held)
+        && held.controller != player;
+    if !type_allows(filter, crate::faces::card_type_of(state, held))
+        || (!unreadable_backrow && !tags_allow(filter, &tags))
+    {
         return false;
     }
     // §10.6, B5: the v0.2.0 filter fields. The cost is R65's where the card is now (a hand card at its

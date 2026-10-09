@@ -8,7 +8,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::catalog::def_of;
 use crate::damage::DamageTarget;
 use crate::faces::card_type_of;
 use crate::restrictions::unaffected_by;
@@ -281,19 +280,20 @@ pub fn matches_scope(ctx: &EffectContext<'_>, card: &CardInstance, scope: &Board
     if unaffected_by(ctx, card) {
         return false;
     }
-    let def = def_of(Some(&*ctx.state), &card.def_id);
     if let Some(types) = &scope.types
         && !types.contains(&card_type_of(ctx.state, card))
     {
         return false;
     }
-    if let Some(tags) = &scope.tags
-        && !tags.iter().any(|tag| def.tags.contains(tag))
+    // MD-B15, R923: a granted tag is part of the card for a scope too.
+    let tags = crate::query::tags_of(ctx.state, card);
+    if let Some(wanted) = &scope.tags
+        && !wanted.iter().any(|tag| tags.contains(tag))
     {
         return false;
     }
     if let Some(not_tags) = &scope.not_tags
-        && not_tags.iter().any(|tag| def.tags.contains(tag))
+        && not_tags.iter().any(|tag| tags.contains(tag))
     {
         return false;
     }

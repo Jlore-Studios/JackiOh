@@ -252,6 +252,8 @@ fn to_placeholder(card: &mut CardInstance) {
     card.memory = Default::default();
     card.counters = Counters::default();
     card.granted_keywords = Vec::new();
+    // MD-B15, R923: a granted tag is read by rules, so a placeholder carries none.
+    card.granted_tags = None;
     card.buffs = AttackHealth { attack: 0, health: 0 };
     card.damage = 0;
     card.cost_override = None;
@@ -295,6 +297,8 @@ fn to_placeholder_json(card: &mut Value) {
         "tuning",
         "brittle",
         "enchantments",
+        // MD-B15, R923: a granted tag is read by rules, so a placeholder carries none.
+        "grantedTags",
     ] {
         object.remove(key);
     }

@@ -28,7 +28,8 @@ fn felinor_aura(include_self: bool) -> AuraHook {
                 unit.controller == ctx.self_.controller
                     && matches!(unit.zone, Zone::Field { row: Row::Units, .. })
                     && (include_self || unit.id != ctx.self_.id)
-                    && def_of(Some(ctx.state), &unit.def_id).tags.contains(&Tag::Felinor)
+                    // MD-B15, R923: a granted Felinor tag counts.
+                    && tags_of(ctx.state, unit).contains(&Tag::Felinor)
             }),
             mod_: StatMod {
                 attack: Some(amount),
@@ -179,6 +180,19 @@ mod tests {
             s.end_turn();
             s.play(TRUE_STRIKE, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
             s.expect_health(P1, 26);
+        }
+
+        #[test]
+        fn r923_a_granted_felinor_gets_the_aura() {
+            crate::register_all();
+            let mut s = rally(Rally::default());
+            s.play(FLAG, json!({}));
+            let vanilla = s.unit(P1, 2).expect("p1's lane 2");
+            s.expect_stats(&vanilla, json!({ "attack": 4, "health": 4 }));
+            // Grant the Vanilla Felinor: the aura's +1/+1 reaches it (MD-B15).
+            find_instance_mut(s.state_mut(), &vanilla.id).expect("the unit").granted_tags =
+                Some(vec![Tag::Felinor]);
+            s.expect_stats(&vanilla, json!({ "attack": 5, "health": 5 }));
         }
 
         #[test]

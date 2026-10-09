@@ -877,9 +877,10 @@ fn pickable(state: &GameState, card: &CardInstance, filter: &PickFilter) -> bool
     {
         return false;
     }
-    if let Some(tags) = &filter.tags {
-        let printed = &def_of(Some(state), &card.def_id).tags;
-        if !tags.iter().all(|tag| printed.contains(tag)) {
+    if let Some(wanted) = &filter.tags {
+        // MD-B15, R923: a granted tag is part of the card for a Discover pick too.
+        let tags = crate::query::tags_of(state, card);
+        if !wanted.iter().all(|tag| tags.contains(tag)) {
             return false;
         }
     }
