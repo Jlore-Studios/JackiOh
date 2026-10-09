@@ -12,7 +12,7 @@ from datetime import timedelta
 from unittest import mock
 
 from harness import __main__ as main_mod
-from harness import dashboard, providers
+from harness import dashboard, providers, status
 from harness.__main__ import cmd_dashboard
 from harness.clock import iso
 from harness.config import LABEL_BUILD, LABEL_PR, LABEL_REVISE, LABEL_WORKING
@@ -22,6 +22,7 @@ from harness.state import item as state_item
 from tests.fakes import OPERATOR, STRANGER, FakeGitHub
 from tests.support import NIGHT, make_config, make_ctx, raw_providers
 from tests.test_cross import ALL
+from tests.test_providers import EARLY, too_close_to_start
 
 
 def opened(gh: FakeGitHub) -> list[int]:
@@ -222,7 +223,7 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(dashboard._account(self.ctx, state, pool.get("claude-1")),
                          ("open", "⚪ open"))
         self.assertEqual(dashboard._account(self.ctx, state, pool.get("claude-2")),
-                         ("paused", "⏸️ 5-hour 95%, cap 90%<br/>resets 23:10"))
+                         ("paused", "⏸️ 5-hour 95%, cap 90%<br/>free 23:10"))
         self.assertEqual(dashboard._account(self.ctx, state, pool.get("claude-3")),
                          ("broken", "⛔ last run could not work<br/>tries again 23:50"))
         day = make_ctx(self.gh, at=NIGHT + timedelta(hours=12), cfg=self.ctx.cfg)
@@ -233,6 +234,46 @@ class DashboardTests(unittest.TestCase):
         unset = make_ctx(self.gh, at=NIGHT, cfg=make_config(env={"HARNESS_SECRETS_SET": ""}))
         self.assertEqual(dashboard._account(unset, state, unset.cfg.pool.get("claude-4")),
                          ("off", "⚫ off: no secret set"))
+
+    def test_an_account_too_close_to_its_cap_to_start_is_paused_not_open(self):
+        """claude-4 and claude-6 at 01:00, outside their hours: under their 50% cap there but not
+        `start_headroom` under it, so the planner starts no build or plan on them. Their boxes
+        and rows say so, and when each can start one again; the usage cells carry the caps in
+        and outside their hours, the line a build starts under and the reset; and the full
+        status says the same."""
+        cfg = make_config(env=ALL, committed_hours=True)
+        ctx = make_ctx(self.gh, at=EARLY, cfg=cfg)
+        ctx.store.update(lambda s: s["providers"].update(too_close_to_start()["providers"]),
+                         "seed")
+        state = ctx.store.load()
+        pool = cfg.pool
+        self.assertEqual(dashboard._account(ctx, state, pool.get("claude-4")),
+                         ("paused", "⏸️ 5-hour 49%, cap 50%<br/>starts under 45%; reviews only"
+                                    "<br/>free 03:00"))
+        self.assertEqual(dashboard._account(ctx, state, pool.get("claude-6")),
+                         ("paused", "⏸️ 5-hour 45%, cap 50%<br/>starts under 45%; reviews only"
+                                    "<br/>free 02:50"))
+        body = dashboard.render(ctx)
+        self.assertNotIn('"]:::open', body)  # no account box says open
+        self.assertIn("| Subscription | Models (tier) | Hours | Now | 5-hour session | "
+                      "7-day week | Read |", body)
+        self.assertIn("| ⏸️ 5-hour 49%, cap 50%<br/>starts under 45%; reviews only<br/>free 03:00 "
+                      "| ▰▰▰▰▰▱▱▱▱▱ 49%<br/><sub>cap 50% now, 70% in its hours · builds and "
+                      "plans start under 45% · resets 04:10</sub> | — | "
+                      '<span title="read at Thu 23:37">1h 22m ago</span> |', body)
+        self.assertIn("`claude-4` (claude: `opus` strong, `sonnet` medium; 03:00–15:00 "
+                      "America/Chicago, outside them up to 50% of 5-hour): 5-hour usage is 49%, "
+                      "too close to its 50% cap outside its hours", body)
+        self.assertIn("Usage: 5-hour 49% (cap 50% now, 70% in its hours; builds and plans start "
+                      "under 45%; resets in 3h 10m) (read 1h 22m ago).", body)
+        # In its hours the other cap is the one outside them; an uncapped account says so.
+        day = make_ctx(self.gh, at=EARLY + timedelta(hours=3), cfg=cfg)
+        self.assertEqual(status.cap_text(day, pool.get("claude-4"), "five_hour"),
+                         "cap 70% now, 50% outside its hours")
+        self.assertEqual(status.cap_text(day, pool.get("claude-3"), "five_hour"), "no cap")
+        # A refusal already names its reset: no second time for it.
+        self.assertIn("claude-3` (claude: `opus` strong, `sonnet` medium; any time): it refused "
+                      "a call; its limit resets at 2026-10-09T12:00:00Z. Usage:", body)
 
     def test_a_cell_stays_one_line_without_pipes(self):
         self.assertEqual(dashboard._cell("a | b\nc"), "a \\| b c")
