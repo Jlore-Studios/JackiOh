@@ -401,6 +401,13 @@ pub const PARAM_DEFAULT_STEP: ParamDefaultStep = ParamDefaultStep {
 /// names no `min`, an X, a numbered keyword (Activate X, Tribute X, Armor …) and a Brittle count a
 /// Degrade lowers.
 pub const TUNE_MIN_AMOUNT: i32 = 1;
+/// R1160 (Meditative #84 Volatility, ME-TUNEMULT): no tune multiplier — one Buff or Nerf
+/// application moves each row once.
+pub const TUNE_MULTIPLIER_NONE: i32 = 1;
+/// R1160: Volatility's base face makes Buffs and Nerfs twice as effective on it.
+pub const VOLATILITY_TUNE_MULTIPLIER: i32 = 2;
+/// R1160: Volatility's Radiant face makes Buffs three times as effective on it (Nerfs plain).
+pub const VOLATILITY_RADIANT_BUFF_MULTIPLIER: i32 = 3;
 
 // ---- v0.2.0 constants: field (B3.1 Animated, E20, E21, E22) ----
 

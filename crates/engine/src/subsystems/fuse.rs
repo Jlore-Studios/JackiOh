@@ -56,7 +56,8 @@ use crate::script::{
     ActivationDecl, AuraEntry, AuraHook, CardScripts, ConditionContext, ConditionHook, Effect, EffectApply,
     EffectContext, EffectPart, EngineSink, FlagOrCount, Hook, HookArgs, PlagueMultiplierHook, QuestBook,
     Script, SetStat, SetStatHook, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef, TriggerRun,
-    WouldCounterHook, aura_hook, condition_hook, hook, read_hook, target_check, would_counter_hook,
+    TuneMultiplier, WouldCounterHook, aura_hook, condition_hook, hook, read_hook, target_check,
+    would_counter_hook,
 };
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
 use crate::wire::{
@@ -973,6 +974,28 @@ fn summed_count(values: impl IntoIterator<Item = Option<FlagOrCount>>) -> Option
     }
 }
 
+/// R1160 (Meditative #84 Volatility, ME-TUNEMULT): a fused card's tune multipliers multiply.
+/// None when no ingredient names one; otherwise each direction is the product of the ingredients
+/// that name it, and a direction none names is none.
+fn multiplied_tune(values: impl IntoIterator<Item = Option<TuneMultiplier>>) -> Option<TuneMultiplier> {
+    let defined: Vec<TuneMultiplier> = values.into_iter().flatten().collect();
+    if defined.is_empty() {
+        return None;
+    }
+    let product = |read: fn(&TuneMultiplier) -> Option<i32>| {
+        let factors: Vec<i32> = defined.iter().filter_map(read).collect();
+        if factors.is_empty() {
+            None
+        } else {
+            Some(factors.iter().product())
+        }
+    };
+    Some(TuneMultiplier {
+        upgrade: product(|flags| flags.upgrade),
+        degrade: product(|flags| flags.degrade),
+    })
+}
+
 /// `summed_count` for a flag that holds only a number (`echoGrant`).
 fn summed_number(values: impl IntoIterator<Item = Option<i32>>) -> Option<i32> {
     let defined: Vec<i32> = values.into_iter().flatten().collect();
@@ -1025,6 +1048,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                     _ => Some(concat(tagged)),
                 },
                 copies_last_spell: flags(|f| f.copies_last_spell),
+                tune_multiplier: multiplied_tune(defined.iter().map(|f| f.tune_multiplier)),
                 cant_be_attacked: flags(|f| f.cant_be_attacked),
                 attacked_only_from_lane: flags(|f| f.attacked_only_from_lane),
                 cant_attack_or_be_attacked: flags(|f| f.cant_attack_or_be_attacked),

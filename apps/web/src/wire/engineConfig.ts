@@ -4,6 +4,7 @@
 
 import type { Difficulty } from "./generated/Difficulty.ts";
 import type { Handicap } from "./generated/Handicap.ts";
+import type { Tag } from "./generated/Tag.ts";
 
 export type { Difficulty, Handicap };
 
@@ -21,4 +22,5 @@ export const MAX_COPIES = 1;
 export const MAX_MANA = 4;
 export const REPLAY_CHECKPOINT_EVERY = 16;
 export const REPLAY_PAGE_STEPS = 16;
+export const TRIBAL_TAGS: readonly Tag[] = ["Human","Felinor","KY","CN","Jlockeed"];
 export const TURN_CAP_PLAYER_TURNS = 60;

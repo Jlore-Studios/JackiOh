@@ -68,6 +68,7 @@ import {
   powerText,
   type RolledPower,
 } from "./inPlay.ts";
+import { TRIBAL_TAGS } from "@jackioh/engine/config";
 import { chineseDef, chinesePreviewLabel } from "./chinese.ts";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { radiantMarks, type TextRange } from "./radiantDiff.ts";
@@ -457,6 +458,22 @@ function printedValues(def: CardDef, radiant: boolean): Record<string, number> {
  */
 export function frameRarity(face: Pick<FaceModel, "rarity" | "printedRarity">): Rarity | null {
   return face.printedRarity ?? face.rarity;
+}
+
+/** R1162 (Meditative #87 Tatches the Totem): the frame's word for a card with every tribal tag. */
+export const ALL_TRIBES = "All Tribes";
+
+/**
+ * R1162: the tags the frame prints. A card with every tribal tag (`TRIBAL_TAGS`, R1424) prints
+ * `ALL_TRIBES` in their place, then its non-tribal tags in order; any other card prints its tags.
+ * Read off the tags: no catalog field.
+ */
+export function frameTags(tags: readonly Tag[]): string[] {
+  if (TRIBAL_TAGS.every((tag) => tags.includes(tag))) {
+    const tribal = new Set<string>(TRIBAL_TAGS);
+    return [ALL_TRIBES, ...tags.filter((tag) => !tribal.has(tag))];
+  }
+  return [...tags];
 }
 
 /**

@@ -2,7 +2,9 @@
 //! number to 3": the verbs that write a card's `tuning` (`tuning.rs` holds the readers, `numbers.rs`
 //! the numbers on a card).
 //!
-//! One application is one change, drawn from the menu rows that can change the card now (B3.4 rule 3):
+//! One application is one change, drawn from the menu rows that can change the card now (B3.4 rule 3).
+//! R1160 (Meditative #84 Volatility, ME-TUNEMULT): one application is still one draw and one event,
+//! with the change scaled by the card's tune multiplier (`tune_multiplier_of`):
 //!
 //! ```text
 //!   | Row     | Degrade                          | Upgrade                         | Can apply to
@@ -41,7 +43,7 @@ use serde_json::{Value, json};
 use crate::brittle_count::active_brittle_count;
 use crate::config::{
     TUNE_ATTACK_FLOOR, TUNE_COST_CAP, TUNE_COST_FLOOR, TUNE_COST_STEP, TUNE_HARMFUL_KEYWORDS,
-    TUNE_HEALTH_FLOOR, TUNE_STAT_TOTAL, TUNE_X_STEP,
+    TUNE_HEALTH_FLOOR, TUNE_MULTIPLIER_NONE, TUNE_STAT_TOTAL, TUNE_X_STEP,
 };
 use crate::faces::card_type_of;
 use crate::layers::{card_keywords, printed_keywords_of, stats_with_buffs, unclamped_attack, unit_view};
@@ -50,7 +52,7 @@ use crate::numbers::{
     NumberRef, current_stats, number_key, number_on, number_ref_id, numbered_keywords_on, numbers_on,
     own_cost, parse_number_ref,
 };
-use crate::params::{set_param, step_param, steppable_params};
+use crate::params::{set_param, step_param, steppable_params_times};
 use crate::prompts::{OpenPromptArgs, open_prompt, resume_self};
 use crate::script::{Effect, EffectContext};
 use crate::state::{BrittleCounter, CardInstance, GameState, PromptOption, find_instance, find_instance_mut};
@@ -82,6 +84,18 @@ impl TuneDirection {
             TuneDirection::Upgrade => "upgrade",
         }
     }
+}
+
+/// R1160 (Meditative #84 Volatility, ME-TUNEMULT): how many times as effective one Buff or Nerf
+/// application is on this card — that direction's field of the running face's `tune_multiplier`,
+/// none on a Vanilla card, floored at plain.
+pub fn tune_multiplier_of(state: &GameState, card: &CardInstance, direction: TuneDirection) -> i32 {
+    let flags = crate::scripts::flags_of(state, card);
+    let named = match direction {
+        TuneDirection::Degrade => flags.tune_multiplier.and_then(|flags| flags.degrade),
+        TuneDirection::Upgrade => flags.tune_multiplier.and_then(|flags| flags.upgrade),
+    };
+    named.unwrap_or(TUNE_MULTIPLIER_NONE).max(TUNE_MULTIPLIER_NONE)
 }
 
 /// Which cards a Degrade or Upgrade reaches: one named card — a pick the play or a prompt carried
@@ -120,14 +134,16 @@ enum MenuApply {
     /// `costMod` moves by `delta`.
     Cost { delta: i32 },
     /// A split drawn as it applies, floored by the stats the card had (`attack`, `health`).
-    Stats { attack: i32, health: i32 },
-    /// A Degrade's keyword: one of `kinds` drawn, `own` naming the keyword the event shows.
+    /// R1160: `total` is the split's size (`TUNE_STAT_TOTAL` times the multiplier).
+    Stats { attack: i32, health: i32, total: i32 },
+    /// A Degrade's keyword: `count` of `kinds` drawn, `own` naming the keyword the event shows.
     RemoveKeyword {
         own: Vec<Keyword>,
         kinds: Vec<KeywordKind>,
+        count: i32,
     },
-    /// An Upgrade's keyword: one of `candidates` drawn and added.
-    AddKeyword { candidates: Vec<Keyword> },
+    /// An Upgrade's keyword: `count` of `candidates` drawn and added.
+    AddKeyword { candidates: Vec<Keyword>, count: i32 },
     /// One of the X row's items drawn and written.
     X { items: Vec<XItem> },
     /// One declared number drawn and stepped: `(key, steps, delta)` per item.
@@ -182,11 +198,12 @@ fn pick_one<'a, T>(ctx: &mut EffectContext<'_>, items: &'a [T]) -> &'a T {
 }
 
 /// B3.4 rule 3, cost: `costMod` one step toward (4) or toward (0); never an X-cost card (R65).
-fn cost_row(state: &GameState, card: &CardInstance, direction: TuneDirection) -> Option<MenuRow> {
+/// R1160: the step is `times` steps, clamped as today.
+fn cost_row(state: &GameState, card: &CardInstance, direction: TuneDirection, times: i32) -> Option<MenuRow> {
     let own = own_cost(state, card)?;
     let delta = match direction {
-        TuneDirection::Degrade => TUNE_COST_STEP.min(TUNE_COST_CAP - own),
-        TuneDirection::Upgrade => 0 - TUNE_COST_STEP.min(own - TUNE_COST_FLOOR),
+        TuneDirection::Degrade => (TUNE_COST_STEP * times).min(TUNE_COST_CAP - own),
+        TuneDirection::Upgrade => 0 - (TUNE_COST_STEP * times).min(own - TUNE_COST_FLOOR),
     };
     if (direction == TuneDirection::Degrade && delta <= 0)
         || (direction == TuneDirection::Upgrade && delta >= 0)
@@ -203,7 +220,12 @@ fn cost_row(state: &GameState, card: &CardInstance, direction: TuneDirection) ->
 /// Degrade's attack floors at 0 and its current health at 1, and what the floors refuse is lost; so a
 /// Degrade can apply only while the card has attack above 0 or health above 1. On the field the change
 /// moves max health, damage staying, so current health moves with it (B3.4 rule 6).
-fn stats_row(state: &GameState, card: &CardInstance, direction: TuneDirection) -> Option<MenuRow> {
+fn stats_row(
+    state: &GameState,
+    card: &CardInstance,
+    direction: TuneDirection,
+    times: i32,
+) -> Option<MenuRow> {
     let stats = current_stats(state, card)?;
     if direction == TuneDirection::Degrade
         && stats.attack <= TUNE_ATTACK_FLOOR
@@ -216,6 +238,7 @@ fn stats_row(state: &GameState, card: &CardInstance, direction: TuneDirection) -
         apply: MenuApply::Stats {
             attack: stats.attack,
             health: stats.health,
+            total: TUNE_STAT_TOTAL * times,
         },
     })
 }
@@ -228,7 +251,12 @@ const HARMFUL: &[KeywordKind] = TUNE_HARMFUL_KEYWORDS;
 /// one out of `tuning.addKeywords`, a granted one off the instance. An Upgrade adds one R21 keyword a
 /// Unit lacks (`tuning.addKeywords`); a Vanilla unit's text is gone, and an added keyword would be
 /// text, so nothing is added to one.
-fn keyword_row(state: &GameState, card: &CardInstance, direction: TuneDirection) -> Option<MenuRow> {
+fn keyword_row(
+    state: &GameState,
+    card: &CardInstance,
+    direction: TuneDirection,
+    times: i32,
+) -> Option<MenuRow> {
     if direction == TuneDirection::Degrade {
         let own: Vec<Keyword> = card_keywords(state, card)
             .into_iter()
@@ -245,7 +273,11 @@ fn keyword_row(state: &GameState, card: &CardInstance, direction: TuneDirection)
         }
         return Some(MenuRow {
             row: TuneRow::Keyword,
-            apply: MenuApply::RemoveKeyword { own, kinds },
+            apply: MenuApply::RemoveKeyword {
+                own,
+                kinds,
+                count: times,
+            },
         });
     }
     if card_type_of(state, card) != CardType::Unit || card.vanilla {
@@ -261,7 +293,10 @@ fn keyword_row(state: &GameState, card: &CardInstance, direction: TuneDirection)
     }
     Some(MenuRow {
         row: TuneRow::Keyword,
-        apply: MenuApply::AddKeyword { candidates },
+        apply: MenuApply::AddKeyword {
+            candidates,
+            count: times,
+        },
     })
 }
 
@@ -352,12 +387,12 @@ fn with_x_step(card: &CardInstance, key: &str, delta: i32) -> CardInstance {
 /// step always applies ("its X counts 1 less or more when it resolves"). On the field its X has
 /// resolved, so it has no X to move (SPEC §8.7 row 69: Classic+ #69 Buff Billy's Cry Upgrades draw
 /// from the stats and keyword rows only); elsewhere one applies while the X it counts can move.
-fn x_items(state: &GameState, card: &CardInstance, direction: TuneDirection) -> Vec<XItem> {
+fn x_items(state: &GameState, card: &CardInstance, direction: TuneDirection, times: i32) -> Vec<XItem> {
     let mut items: Vec<XItem> = Vec::new();
     let better = if direction == TuneDirection::Upgrade {
-        TUNE_X_STEP
+        TUNE_X_STEP * times
     } else {
-        -TUNE_X_STEP
+        -TUNE_X_STEP * times
     };
     let step = |key: &str, delta: i32| XWrite::Step {
         key: key.to_string(),
@@ -380,7 +415,7 @@ fn x_items(state: &GameState, card: &CardInstance, direction: TuneDirection) -> 
                         key: X_KEY.to_string(),
                         before,
                         after,
-                        write: step(X_KEY, better),
+                        write: step(X_KEY, after - before),
                     });
                 }
             }
@@ -419,7 +454,7 @@ fn x_items(state: &GameState, card: &CardInstance, direction: TuneDirection) -> 
                     continue;
                 }
                 items.push(XItem {
-                    write: step(&key, delta),
+                    write: step(&key, after - entry.value),
                     key,
                     before: entry.value,
                     after,
@@ -430,8 +465,8 @@ fn x_items(state: &GameState, card: &CardInstance, direction: TuneDirection) -> 
     items
 }
 
-fn x_row(state: &GameState, card: &CardInstance, direction: TuneDirection) -> Option<MenuRow> {
-    let items = x_items(state, card, direction);
+fn x_row(state: &GameState, card: &CardInstance, direction: TuneDirection, times: i32) -> Option<MenuRow> {
+    let items = x_items(state, card, direction, times);
     if items.is_empty() {
         return None;
     }
@@ -442,8 +477,14 @@ fn x_row(state: &GameState, card: &CardInstance, direction: TuneDirection) -> Op
 }
 
 /// B3.4 rule 3, number: one declared number one step worse or better (`params::steppable_params`).
-fn number_row(state: &GameState, card: &CardInstance, direction: TuneDirection) -> Option<MenuRow> {
-    let items: Vec<(String, i32, i32)> = steppable_params(state, card, direction)
+/// R1160: `times` steps at once (`steppable_params_times`).
+fn number_row(
+    state: &GameState,
+    card: &CardInstance,
+    direction: TuneDirection,
+    times: i32,
+) -> Option<MenuRow> {
+    let items: Vec<(String, i32, i32)> = steppable_params_times(state, card, direction, times)
         .into_iter()
         .map(|item| (item.param.key.clone(), item.steps, item.delta))
         .collect();
@@ -473,9 +514,10 @@ fn apply_row(
         MenuApply::Stats {
             attack: had_attack,
             health: had_health,
+            total,
         } => {
-            let k = ctx.rng.int(TUNE_STAT_TOTAL + 1);
-            let rest = TUNE_STAT_TOTAL - k;
+            let k = ctx.rng.int(total + 1);
+            let rest = total - k;
             // TS wrote `0 - n`, never `-n`, so a share the floors refuse whole is 0, not −0; integers
             // have no −0.
             let attack = if direction == TuneDirection::Upgrade {
@@ -496,31 +538,66 @@ fn apply_row(
             }
             TuningChange::Stats { attack, health }
         }
-        MenuApply::RemoveKeyword { own, kinds } => {
-            let kind = *pick_one(ctx, kinds);
-            let shown = own.iter().find(|keyword| keyword.kind() == kind).cloned();
-            remove_kind(ctx.state, card_id, kind);
+        MenuApply::RemoveKeyword { own, kinds, count } => {
+            // R1160: one draw per pick, distinct kinds, today's write each time.
+            let mut left: Vec<KeywordKind> = kinds.clone();
+            let mut picked: Vec<Keyword> = Vec::new();
+            for _ in 0..(*count).max(1) {
+                if left.is_empty() {
+                    break;
+                }
+                let kind = *pick_one(ctx, &left);
+                left.retain(|kept| *kept != kind);
+                picked.push(
+                    own.iter()
+                        .find(|keyword| keyword.kind() == kind)
+                        .cloned()
+                        .unwrap_or_else(|| Keyword::of_kind(kind, 0)),
+                );
+                remove_kind(ctx.state, card_id, kind);
+            }
+            let mut moved = picked.into_iter();
+            let first = moved.next().expect("a keyword row always moves one");
+            let also: Vec<Keyword> = moved.collect();
             TuningChange::Keyword {
-                keyword: shown.unwrap_or_else(|| Keyword::of_kind(kind, 0)),
+                keyword: first,
                 added: false,
+                also: if also.is_empty() { None } else { Some(also) },
             }
         }
-        MenuApply::AddKeyword { candidates } => {
-            let keyword = pick_one(ctx, candidates).clone();
-            if let Some(card) = find_instance_mut(ctx.state, card_id) {
-                let tuning = tuning_of(card);
-                let mut added = tuning.add_keywords.clone().unwrap_or_default();
-                added.push(keyword.clone());
-                tuning.add_keywords = Some(added);
-                // §10.4: a keyword the card gains anew is up, as a granted one is (`buff::grant_to`).
-                if keyword.kind() == KeywordKind::DivineShield {
-                    card.divine_shield_spent = None;
+        MenuApply::AddKeyword { candidates, count } => {
+            // R1160: one draw per pick, distinct kinds, today's write each time.
+            let mut left: Vec<Keyword> = candidates.clone();
+            let mut picked: Vec<Keyword> = Vec::new();
+            for _ in 0..(*count).max(1) {
+                if left.is_empty() {
+                    break;
                 }
-                if keyword.kind() == KeywordKind::Reborn {
-                    card.reborn_spent = None;
+                let keyword = pick_one(ctx, &left).clone();
+                left.retain(|kept| kept.kind() != keyword.kind());
+                if let Some(card) = find_instance_mut(ctx.state, card_id) {
+                    let tuning = tuning_of(card);
+                    let mut added = tuning.add_keywords.clone().unwrap_or_default();
+                    added.push(keyword.clone());
+                    tuning.add_keywords = Some(added);
+                    // §10.4: a keyword the card gains anew is up, as a granted one is (`buff::grant_to`).
+                    if keyword.kind() == KeywordKind::DivineShield {
+                        card.divine_shield_spent = None;
+                    }
+                    if keyword.kind() == KeywordKind::Reborn {
+                        card.reborn_spent = None;
+                    }
                 }
+                picked.push(keyword);
             }
-            TuningChange::Keyword { keyword, added: true }
+            let mut moved = picked.into_iter();
+            let first = moved.next().expect("a keyword row always moves one");
+            let also: Vec<Keyword> = moved.collect();
+            TuningChange::Keyword {
+                keyword: first,
+                added: true,
+                also: if also.is_empty() { None } else { Some(also) },
+            }
         }
         MenuApply::X { items } => {
             let item = pick_one(ctx, items);
@@ -541,17 +618,18 @@ fn apply_row(
 }
 
 /// B3.4 rules 1–3: the rows that can change the card now, in the menu's order.
-fn menu_of(state: &GameState, card: &CardInstance, direction: TuneDirection) -> Vec<MenuRow> {
+/// R1160: `times` scales each row's change, still one row drawn per application.
+fn menu_of(state: &GameState, card: &CardInstance, direction: TuneDirection, times: i32) -> Vec<MenuRow> {
     // Rule 2: an Immutable card is never changed, and nothing is drawn for it.
     if has_keyword(&keywords_now(state, card), KeywordKind::Immutable) {
         return Vec::new();
     }
     [
-        cost_row(state, card, direction),
-        stats_row(state, card, direction),
-        keyword_row(state, card, direction),
-        x_row(state, card, direction),
-        number_row(state, card, direction),
+        cost_row(state, card, direction, times),
+        stats_row(state, card, direction, times),
+        keyword_row(state, card, direction, times),
+        x_row(state, card, direction, times),
+        number_row(state, card, direction, times),
     ]
     .into_iter()
     .flatten()
@@ -561,7 +639,7 @@ fn menu_of(state: &GameState, card: &CardInstance, direction: TuneDirection) -> 
 /// B3.4 rule 3: the rows that can change the card now, in the menu's order — a pure read, for a
 /// `conditionMet` or a `targetChecks` predicate (a Degrade with nothing to change) and for the tests.
 pub fn applicable_changes(state: &GameState, card: &CardInstance, direction: TuneDirection) -> Vec<TuneRow> {
-    menu_of(state, card, direction)
+    menu_of(state, card, direction, TUNE_MULTIPLIER_NONE)
         .into_iter()
         .map(|row| row.row)
         .collect()
@@ -583,8 +661,10 @@ pub fn tune_once(ctx: &mut EffectContext<'_>, card: &CardInstance, direction: Tu
         .unwrap_or_else(|| card.clone());
     // R177: who could not read the card where it changed, judged before the change moves anything.
     let hidden_from = unreadable_by(ctx.state, &card);
+    // R1160: the card's own multiplier scales this one application.
+    let times = tune_multiplier_of(ctx.state, &card, direction);
     let menu = if matches {
-        menu_of(ctx.state, &card, direction)
+        menu_of(ctx.state, &card, direction, times)
     } else {
         Vec::new()
     };

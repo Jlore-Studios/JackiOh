@@ -1294,6 +1294,26 @@
     "meditative-038": { // H1B Printer
       cast: { voice: "robot", text: "Printing visas. Please hold." },
     },
+    "meditative-082": { // Medina Outfitter
+      play: { voice: "sapi-hero", text: "Step right up, everyone gets a fitting!" },
+      death: { voice: "sapi-hero", text: "Out of thread." },
+    },
+    "meditative-083": { // Medina Enforcer
+      play: { voice: "sapi-bureaucrat", text: "Nobody leaves this market unimproved." },
+      death: { voice: "sapi-bureaucrat", text: "Shift's over." },
+    },
+    "meditative-084": { // Volatility
+      play: { voice: "sapi-synth", text: "Handle with extreme care!" },
+      death: { voice: "sapi-synth", text: "Too unstable to last." },
+    },
+    "meditative-085": { // Playtester
+      play: { voice: "sapi-teacher", text: "Let me try this build." },
+      death: { voice: "sapi-teacher", text: "Needs more testing." },
+    },
+    "meditative-087": { // Tatches the Totem
+      play: { voice: "sapi-mystic", text: "Every tribe, one totem." },
+      death: { voice: "sapi-mystic", text: "The totem topples." },
+    },
   },
   emotes: {
     vanilla: {

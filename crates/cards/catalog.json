@@ -11262,5 +11262,177 @@
       "keywords": [],
       "text": "Start of turn: Add a random Radiant KY or CN card to your hand. It costs (0)."
     }
+  },
+  "meditative-082": {
+    "id": "meditative-082",
+    "index": "82",
+    "name": "Medina Outfitter",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "times",
+        "base": 1,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 17,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [],
+      "text": "Cry: Buff every card in your hand."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Buff every card in your hand {times|time|times}."
+    }
+  },
+  "meditative-083": {
+    "id": "meditative-083",
+    "index": "83",
+    "name": "Medina Enforcer",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "times",
+        "base": 1,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 17,
+    "base": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "End of turn: Buff every card in your hand."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 8,
+      "keywords": [],
+      "text": "End of turn: Buff every card in your hand {times|time|times}."
+    }
+  },
+  "meditative-084": {
+    "id": "meditative-084",
+    "index": "84",
+    "name": "Volatility",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "loc": 25,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [],
+      "text": "Buffs and Nerfs are twice as effective on this."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "Buffs are three times as effective on this."
+    }
+  },
+  "meditative-085": {
+    "id": "meditative-085",
+    "index": "85",
+    "name": "Playtester",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "classicplus-071",
+      "classicplus-072"
+    ],
+    "params": [
+      {
+        "key": "books",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 35,
+    "base": {
+      "attack": 4,
+      "health": 5,
+      "keywords": [],
+      "text": "Start of turn: Choose one: add {books|Book of Buff|Books of Buff} or {books|Book of Nerf|Books of Nerf} to your hand."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 10,
+      "keywords": [],
+      "text": "Start of turn: Choose one: add {books|Radiant Book of Buff|Radiant Books of Buff} or {books|Radiant Book of Nerf|Radiant Books of Nerf} to your hand."
+    }
+  },
+  "meditative-087": {
+    "id": "meditative-087",
+    "index": "87",
+    "name": "Tatches the Totem",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Human",
+      "Felinor",
+      "KY",
+      "CN",
+      "Jlockeed"
+    ],
+    "rarity": "Legendary",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "cards",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 58,
+    "base": {
+      "attack": 0,
+      "health": 3,
+      "keywords": [],
+      "text": "While this is in your deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand or deck."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 6,
+      "keywords": [],
+      "text": "While this is in your deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand or deck. Then Buff each Unit adjacent to this."
+    }
   }
 }

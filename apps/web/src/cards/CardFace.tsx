@@ -47,7 +47,7 @@ import { nameTier, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
-import { foilFor, frameRarity, type FaceModel } from "./model.ts";
+import { foilFor, frameRarity, frameTags, type FaceModel } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
 import { setMarkOf } from "./setMark.ts";
 import { useCardSettings } from "./settings.ts";
@@ -274,9 +274,9 @@ export function CardFace({ face, layout = "full", className, lazyArt = false }: 
 
         {full && !glitch && face.tags.length > 0 && (
           <span className="cf-tags">
-            {face.tags.map((tag) => (
+            {frameTags(face.tags).map((tag) => (
               <span key={tag} className="cf-tag" data-tag={tag}>
-                {face.chinese === true ? CHINESE_TERMS.tags[tag] : tag}
+                {face.chinese === true ? (CHINESE_TERMS.tags[tag as keyof typeof CHINESE_TERMS.tags] ?? tag) : tag}
               </span>
             ))}
           </span>

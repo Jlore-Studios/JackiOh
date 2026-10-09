@@ -17,10 +17,11 @@
     reason = "a generator, not the rules: it writes the client's constants file, as build.rs writes the registry"
 )]
 
+// R1424's `TRIBAL_TAGS` is exported too, so the client's All Tribes frame reads the engine's list.
 use jackioh_engine::config::{
     AI_DIFFICULTY, AI_TUTORIAL, COIN_DEF_ID, DECK_SIZE, DIFFICULTIES, DRAWS_PER_TURN, GLITCH_DEF_ID,
     HERO_HEALTH, HUMAN_HANDICAP, LIBRARY_CAP, MAX_COPIES, MAX_MANA, REPLAY_CHECKPOINT_EVERY,
-    REPLAY_PAGE_STEPS, TURN_CAP_PLAYER_TURNS,
+    REPLAY_PAGE_STEPS, TRIBAL_TAGS, TURN_CAP_PLAYER_TURNS,
 };
 use serde::Serialize;
 
@@ -37,6 +38,7 @@ const HEADER: &str = "\
 
 import type { Difficulty } from \"./generated/Difficulty.ts\";
 import type { Handicap } from \"./generated/Handicap.ts\";
+import type { Tag } from \"./generated/Tag.ts\";
 
 export type { Difficulty, Handicap };
 
@@ -84,6 +86,7 @@ fn engine_config_ts() -> String {
         constant("MAX_MANA", None, &MAX_MANA),
         constant("REPLAY_CHECKPOINT_EVERY", None, &REPLAY_CHECKPOINT_EVERY),
         constant("REPLAY_PAGE_STEPS", None, &REPLAY_PAGE_STEPS),
+        constant("TRIBAL_TAGS", Some("readonly Tag[]"), TRIBAL_TAGS),
         constant("TURN_CAP_PLAYER_TURNS", None, &TURN_CAP_PLAYER_TURNS),
     ];
     constants.sort_by(|a, b| a.name.cmp(b.name));
@@ -106,8 +109,8 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    // Fifteen constants, each on its own line, the way the client and the diff check read them.
-    assert_eq!(text.matches("\nexport const ").count(), 15, "{text}");
+    // Sixteen constants, each on its own line, the way the client and the diff check read them.
+    assert_eq!(text.matches("\nexport const ").count(), 16, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }
 
