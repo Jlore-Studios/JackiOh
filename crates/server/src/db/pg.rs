@@ -1894,8 +1894,9 @@ pub async fn profiles_set_status(
 /// R1434: one lock per username key, transaction-scoped like `ranked_lock_seasons`, so two claims
 /// of one key run one after the other and the second reads a table that holds the first. Migration
 /// 0028's `app.assign_default_username` takes the same lock on `player` before it names a new
-/// account, so a claim of `Player` and a sign-up never hand out one tag twice.
-const USERNAME_LOCK_SQL: &str =
+/// account, so a claim of `Player` and a sign-up never hand out one tag twice, and `seed-accounts`
+/// takes it before it names its accounts (`cli/seed_accounts.rs`).
+pub const USERNAME_LOCK_SQL: &str =
     "select pg_advisory_xact_lock(hashtextextended('jackioh.username:' || $1::text, 0))";
 
 /// R1434's tag for a claim of key `$2` by profile `$1`: null while no other profile holds the bare

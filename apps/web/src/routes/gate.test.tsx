@@ -323,6 +323,25 @@ describe("R1435 the username prompt at the gate", () => {
     expect(screen.queryByTestId("username-prompt")).toBeNull();
   });
 
+  it("R1435 an account in a match or a Conquest series goes to its screen, prompt owed or not", async () => {
+    for (const playing of [{ currentMatchId: "m-1" }, { currentSeriesId: "s-1" }]) {
+      signedIn();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((input: unknown) =>
+          String(input).endsWith("/api/auth/me")
+            ? Promise.resolve(jsonResponse(200, { ...meBody("active", OWED), ...playing }))
+            : Promise.resolve(jsonResponse(404, { error: { code: "not_found", message: "no stub" } })),
+        ),
+      );
+      render(<Gated>{() => <p>the board</p>}</Gated>);
+      expect(await screen.findByText("the board", undefined, SLOW)).toBeInTheDocument();
+      expect(screen.queryByTestId("username-prompt")).toBeNull();
+      cleanup();
+      resetUsernamePromptForTests();
+    }
+  });
+
   it("R1435 a skip opens the screen, even when the read of the account after it fails", async () => {
     signedIn();
     let skipped = false;

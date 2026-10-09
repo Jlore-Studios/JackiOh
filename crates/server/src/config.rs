@@ -353,10 +353,11 @@ pub const USERNAME_MAX_LENGTH: usize = 16;
 /// R1432: the most combining marks in a row after a letter, enough for the scripts that write
 /// vowels and tones as marks (Devanagari, Thai) and too few for stacked "Zalgo" text.
 pub const USERNAME_MAX_MARKS: usize = 3;
-/// R1432: raw input longer than this many characters is refused as too long without being
-/// normalised, so a huge query string costs nothing to refuse. Far above any name
-/// `USERNAME_MAX_LENGTH` allows, even one whose every character carries its marks.
-pub const USERNAME_INPUT_MAX_CHARS: usize = 64;
+/// R1432: raw input longer than this many characters (code points) is refused as too long without
+/// being normalised, so a huge query string costs nothing to refuse. Far above any real name
+/// `USERNAME_MAX_LENGTH` allows: one user-perceived character can hold many code points, a letter
+/// with its marks or an Indic conjunct (`स्त्री` is six), so sixteen of them can run past 64.
+pub const USERNAME_INPUT_MAX_CHARS: usize = 256;
 /// R1435: how long after a change of username the next one is allowed (24 hours).
 pub const USERNAME_CHANGE_COOLDOWN_SECONDS: i64 = 86_400;
 /// R1435: how long the client waits after the last keystroke before it asks for a preview.

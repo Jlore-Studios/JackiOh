@@ -411,8 +411,17 @@ export function Gated({ allowPending = false, children }: GatedProps): ReactElem
   }
   // R1435: an active account owes the username prompt until it picks or skips, and meets it before
   // any gated screen. `promptOwed` is the server's; a server that sends no `username` owes none.
+  // Never while the account is in a match or a Conquest series: a reload mid-game, or the landing's
+  // Rejoin, opens the board (or the series' pick, its clock running) on a new page, and the prompt
+  // waits for the next sign-in like any other screen it found open.
   const profileId = account.me.profile.id;
-  if (status === "active" && account.me.username?.promptOwed === true && !usernamePromptPassed.has(profileId)) {
+  const playing = account.me.currentMatchId !== null || (account.me.currentSeriesId ?? null) !== null;
+  if (
+    status === "active" &&
+    account.me.username?.promptOwed === true &&
+    !playing &&
+    !usernamePromptPassed.has(profileId)
+  ) {
     return (
       <UsernamePrompt
         token={account.token}

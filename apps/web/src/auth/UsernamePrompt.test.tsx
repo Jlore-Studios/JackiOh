@@ -7,6 +7,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { USERNAME_CHANGE_COOLDOWN_SECONDS } from "@jackioh/server-config";
 import { ApiRequestError, previewUsername, saveUsername, skipUsernamePrompt, type UsernamePreview } from "../net/api.ts";
 import { announceAccountChange } from "../net/gate.ts";
 import { usernameTestid } from "./testids.ts";
@@ -24,6 +25,9 @@ vi.mock("../net/gate.ts", async (importOriginal) => {
 });
 
 const TOKEN = "token-1";
+
+/** Unit conversion: the cooldown is stated in seconds and said in hours. */
+const SECONDS_PER_HOUR = 3600;
 
 /** The preview's debounce plus a stubbed round trip, retried against the DOM, never slept. */
 const PREVIEW = { timeout: 3_000 } as const;
@@ -59,6 +63,10 @@ describe("R1435 the username prompt", () => {
     expect(root).toHaveTextContent("You’re Player#7 for now.");
     expect(screen.getByTestId(usernameTestid.promptSkip)).toHaveTextContent("Skip for now");
     expect(screen.getByTestId(usernameTestid.save), "nothing to save before a preview").toBeDisabled();
+    // The hint's numbers are the server's own constants, as words: the cooldown in hours.
+    expect(root).toHaveTextContent(
+      `You can change it once every ${String(USERNAME_CHANGE_COOLDOWN_SECONDS / SECONDS_PER_HOUR)} hours.`,
+    );
   });
 
   it("R1435 previews once the typing pauses, for the whole name, and shows the tag it would get", async () => {

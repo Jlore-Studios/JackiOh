@@ -4,9 +4,9 @@
 // its characters, its script or the filter (R1432, R1433). `USERNAME_PREVIEW_DEBOUNCE_MS` after the
 // last keystroke the field asks `GET /api/username/preview` what a save would give, aborting the
 // question before it, and shows the answer as it stands: the exact username, tag and all ("Max is
-// taken, so you’d be Max#3"), or the server's own sentence for a refusal. The length numbers in the
-// hint are only words for the player, and the input carries no `maxLength`, since the server counts
-// what a player sees (graphemes), not what a browser counts.
+// taken, so you’d be Max#3"), or the server's own sentence for a refusal. The length and cooldown
+// numbers in the hint are only words for the player, and the input carries no `maxLength`, since
+// the server counts what a player sees (graphemes), not what a browser counts.
 //
 // A PLAYER IS NEVER GIVEN A TAG THEY WERE NOT SHOWN. Save is live only while the preview on screen
 // is a yes for the name in the box, and sends exactly the username that preview named. If the
@@ -16,7 +16,12 @@
 
 import { useEffect, useId, useState, type FormEvent, type ReactElement } from "react";
 
-import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, USERNAME_PREVIEW_DEBOUNCE_MS } from "@jackioh/server-config";
+import {
+  USERNAME_CHANGE_COOLDOWN_SECONDS,
+  USERNAME_MAX_LENGTH,
+  USERNAME_MIN_LENGTH,
+  USERNAME_PREVIEW_DEBOUNCE_MS,
+} from "@jackioh/server-config";
 import {
   previewUsername,
   saveUsername,
@@ -26,6 +31,9 @@ import {
 } from "../net/api.ts";
 import Username from "./Username.tsx";
 import { usernameTestid } from "./testids.ts";
+
+/** Unit conversion, not configuration: the cooldown is stated in seconds and said in hours. */
+const SECONDS_PER_HOUR = 3600;
 
 /** A preview could not be read (the network, a rate limit): said plainly, never as a verdict. */
 export const USERNAME_PREVIEW_FAILED = "Couldn’t check that name just now. Try again in a moment.";
@@ -170,7 +178,8 @@ export default function UsernameField({ token, onSaved, label = "Username", disa
       />
       <p className="auth-hint" id={hintId}>
         {String(USERNAME_MIN_LENGTH)} to {String(USERNAME_MAX_LENGTH)} letters, digits or underscores. If someone
-        already has the name, you get a number after it.
+        already has the name, you get a number after it. You can change it once every{" "}
+        {String(USERNAME_CHANGE_COOLDOWN_SECONDS / SECONDS_PER_HOUR)} hours.
       </p>
       <div id={previewId} aria-live="polite">
         {current !== null ? (

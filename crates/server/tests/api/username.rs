@@ -211,6 +211,15 @@ mod the_form_r1432 {
         let marked = "q\u{301}\u{302}".repeat(USERNAME_MAX_LENGTH);
         assert!(normalize_username(&marked).is_ok());
         assert_eq!(refusal_of(&format!("{marked}q")), Some(UsernameRefusal::TooLong));
+        // So does an Indic conjunct, however many code points it holds: sixteen of `स्त्री`, six
+        // each, are sixteen characters.
+        let conjuncts = "\u{938}\u{94D}\u{924}\u{94D}\u{930}\u{940}".repeat(USERNAME_MAX_LENGTH);
+        assert_eq!(conjuncts.chars().count(), 6 * USERNAME_MAX_LENGTH);
+        assert!(normalize_username(&conjuncts).is_ok());
+        assert_eq!(
+            refusal_of(&format!("{conjuncts}\u{915}")),
+            Some(UsernameRefusal::TooLong)
+        );
         // Sixteen wide characters fit.
         assert!(normalize_username(&"李".repeat(USERNAME_MAX_LENGTH)).is_ok());
         // Input far past any name is refused unread.
