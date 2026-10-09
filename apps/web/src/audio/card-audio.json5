@@ -1276,6 +1276,41 @@
     "meditative-036": { // CN Peptides
       cast: { voice: "prof", text: "Totally safe. Probably. Fifty fifty." },
     },
+    "meditative-055": { // Dragon Fruit
+      cast: { voice: "diva", text: "Pink on the outside, prime on the inside!" },
+    },
+    "meditative-056": { // House Party
+      cast: { voice: "announcer", text: "Everybody in! The house is open!" },
+    },
+    "meditative-061": { // Joon Jorker
+      play: { voice: "hustler", text: "Let me hype up my neighbor!" },
+      death: { voice: "hustler", text: "Who hypes you now?" },
+    },
+    "meditative-062": { // Small Time Recruits
+      cast: { voice: "guard", text: "Small fry, report for duty!" },
+    },
+    "meditative-066": { // Fiery Waraxe
+      cast: { voice: "hero", text: "Burn bright, swing hard!" },
+    },
+    "meditative-068": { // Catnip
+      cast: { voice: "cat", text: "Mrrrow! Who left the nip out?" },
+    },
+    "meditative-070": { // I'M WILL BE YOUR DOOM
+      play: { voice: "brute", text: "I'M WILL BE YOUR DOOM" },
+      death: { voice: "brute", text: "Doom... was me." },
+    },
+    "meditative-070-1": { // Ready… I'm
+      play: { voice: "kid", text: "Ready... I'm" },
+      death: { voice: "kid", text: "Not ready!" },
+    },
+    "meditative-073": { // Plate Packer
+      play: { voice: "brute", text: "Three-oh-five is the new two-twenty-five" },
+      death: { voice: "brute", text: "Spot me... spot me!" },
+    },
+    "meditative-074": { // Montaña Giant
+      play: { voice: "storyteller", text: "The mountain wakes." },
+      death: { voice: "storyteller", text: "The mountain sleeps." },
+    },
   },
   emotes: {
     vanilla: {

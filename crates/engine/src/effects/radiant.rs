@@ -76,7 +76,7 @@ fn hidden_from_someone(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
 /// pick non-Radiant cards (R60), and a public card's face is public either way.
 ///
 /// `card` is a snapshot; the card is read again by its id, as it stands now, and written there.
-fn make_radiant(ctx: &mut EffectContext<'_>, card: &CardInstance) -> bool {
+pub(crate) fn make_radiant(ctx: &mut EffectContext<'_>, card: &CardInstance) -> bool {
     let card = find_instance(ctx.state, &card.id)
         .cloned()
         .unwrap_or_else(|| card.clone());

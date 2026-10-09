@@ -5063,6 +5063,7 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
      {
         let printed: BTreeMap<String, String> = entries()
             .into_iter()
+            .filter(|entry| entry.set == SetName::ClassicPlus)
             .filter_map(|entry| {
                 entry
                     .printed_rarity
@@ -5097,14 +5098,50 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             expected.insert(index.to_string(), rarity.to_string());
         }
         assert_eq!(printed, expected);
-        // §8.8 prints a designer rarity on two Meditative tokens too (M #28.1 Common, M #30.1
-        // Epic); every other printed rarity stays a Classic+ token's.
+        // §8.8's "Token (printed …)" cells for the Meditative set.
+        const MEDITATIVE_PRINTED: [(&str, &str); 21] = [
+            ("45.1", "Legendary"),
+            ("49.1", "Mythic"),
+            ("49.2", "Mythic"),
+            ("49.3", "Mythic"),
+            ("70.1", "Common"),
+            ("71.1", "Mythic"),
+            ("91.1", "Epic"),
+            ("93.1", "Common"),
+            ("93.2", "Common"),
+            ("93.3", "Common"),
+            ("95.1", "Legendary"),
+            ("96.1", "Rare"),
+            ("97.1", "Common"),
+            ("97.2", "Common"),
+            ("97.3", "Rare"),
+            ("97.4", "Rare"),
+            ("97.5", "Epic"),
+            ("97.6", "Epic"),
+            ("97.7", "Epic"),
+            ("97.8", "Legendary"),
+            ("97.9", "Mythic"),
+        ];
+        let meditative: BTreeMap<String, String> = entries()
+            .into_iter()
+            .filter(|entry| entry.set == SetName::Meditative)
+            .filter_map(|entry| {
+                entry
+                    .printed_rarity
+                    .map(|rarity| (entry.index.clone(), rarity.as_str().to_string()))
+            })
+            .collect();
+        let held: BTreeMap<String, String> = MEDITATIVE_PRINTED
+            .into_iter()
+            .filter(|(index, _)| meditative.contains_key(*index))
+            .map(|(index, rarity)| (index.to_string(), rarity.to_string()))
+            .collect();
+        assert_eq!(meditative, held);
         assert!(
             entries()
                 .into_iter()
                 .filter(|entry| entry.printed_rarity.is_some())
-                .all(|entry| entry.token
-                    && (entry.set == SetName::ClassicPlus || entry.set == SetName::Meditative))
+                .all(|entry| entry.token && matches!(entry.set, SetName::ClassicPlus | SetName::Meditative))
         );
     }
 }

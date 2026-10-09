@@ -130,6 +130,7 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `face_of`, `stats_with_buffs`, `unit_view` | a unit through the §10.4 layers, never off the instance |
 | `def_of`, `printed_cost`, `effective_cost`, `query_cost`, `own_cost`, `cost_now` | a definition and its costs (R65, R386, R396, R455) |
 | `highest_permanent_cost(state, player)` | the highest R396 cost among the permanents acting on a side, `None` with none (R901) |
+| `armor_on_field(state)` | every point of Armor on the field, Units through §10.4 and both heroes (R1064) |
 | `find_instance(state, id)` | an instance id, wherever the card has since landed (R98) |
 | `instance_of(ctx, spec)` | the card a `TargetSpec` names on the stay the run aimed at (R174) |
 | `recalled(ctx, key)` | what the running card remembers under a key (`remember`'s write; R102) |

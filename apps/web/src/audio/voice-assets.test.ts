@@ -105,9 +105,12 @@ function voicedNow(key: string): boolean {
 }
 
 /** SPEC §10.11's lines: a play and a death line per Unit (tokens included), one cast line per everything else. */
-const REQUIRED_KEYS: readonly string[] = Object.entries(CATALOG).flatMap(([id, card]) =>
-  card.type === "Unit" ? [`${id}-play`, `${id}-death`] : [`${id}-cast`],
-);
+const REQUIRED_KEYS: readonly string[] = Object.entries(CATALOG)
+  .flatMap(([id, card]) =>
+    card.type === "Unit" ? [`${id}-play`, `${id}-death`] : [`${id}-cast`],
+  )
+  // R1420: a set that has not shipped owes no file
+  .filter(voicedNow);
 
 const AUDIO = readJson5(AUDIO_PATH);
 

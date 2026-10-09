@@ -124,7 +124,8 @@ fn unit_zone_for(state: &GameState, player: PlayerId, lane: i32) -> Option<ZoneS
 }
 
 /// B3.1 rules 2, 4 and 5 (R383): animate a card acting in its controller's backrow — move it into a unit
-/// zone as a Unit, face-up, summoning sick, with a fresh exertion, in `position` (Attack unless the text
+/// zone as a Unit, face-up, summoning sick (an entry; the start-of-turn animation of an "Animated on your turn"
+/// card is none, R1062), with a fresh exertion, in `position` (Attack unless the text
 /// says otherwise), without leaving the field. An "Animated on your turn" card's backrow zone is held for
 /// its return (rule 6). Emits `animated`, never `summoned` (R445).
 ///
@@ -133,6 +134,16 @@ fn unit_zone_for(state: &GameState, player: PlayerId, lane: i32) -> Option<ZoneS
 /// (dormant under a pile, a carried Unit, off the field) or no unit zone of its side is open (rule 2:
 /// it stays where it is).
 pub fn animate_card(sink: &mut FieldSink<'_>, card: &CardInstance, options: AnimateOptions) -> bool {
+    step_into_units(sink, card, options, true)
+}
+
+/// B3.1 rules 2, 4 and 5 shared by `animate_card` (an entry) and `animate_at_turn_start` (none, R1062).
+fn step_into_units(
+    sink: &mut FieldSink<'_>,
+    card: &CardInstance,
+    options: AnimateOptions,
+    entry: bool,
+) -> bool {
     let card = live(sink.state, card);
     if is_animated(sink.state, &card) && acts_on_field(sink.state, &card) {
         return true;
@@ -155,7 +166,9 @@ pub fn animate_card(sink: &mut FieldSink<'_>, card: &CardInstance, options: Anim
         return false;
     };
     animated.position = Some(options.position.unwrap_or(Position::Atk));
-    animated.summoned_turn = Some(turn);
+    if entry {
+        animated.summoned_turn = Some(turn);
+    }
     animated.exertion = Exertion {
         attacked: false,
         switched: false,
@@ -282,7 +295,7 @@ pub fn animate_at_turn_start(sink: &mut FieldSink<'_>, player: PlayerId) {
         if animated_kind_of(sink.state, &card) != Some(AnimatedKind::AnimatedOnYourTurn) {
             continue;
         }
-        animate_card(sink, &card, AnimateOptions::default());
+        step_into_units(sink, &card, AnimateOptions::default(), false);
     }
 }
 

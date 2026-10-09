@@ -11070,5 +11070,343 @@
       ],
       "text": "Lucky 1\nChoose a Unit. 50% chance: Buff it {times|time|times}. Otherwise, destroy it."
     }
+  },
+  "meditative-055": {
+    "id": "meditative-055",
+    "index": "55",
+    "name": "Dragon Fruit",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "CN",
+      "Fruit"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "cards",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 19,
+    "base": {
+      "keywords": [],
+      "text": "Add {cards|random Prime card|random Prime cards} to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add {cards|random Radiant Prime card|random Radiant Prime cards} to your hand."
+    }
+  },
+  "meditative-056": {
+    "id": "meditative-056",
+    "index": "56",
+    "name": "House Party",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "core-003"
+    ],
+    "loc": 17,
+    "base": {
+      "keywords": [],
+      "text": "Fill your board with Right-house defenders."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Fill your board with Radiant Right-house defenders."
+    }
+  },
+  "meditative-061": {
+    "id": "meditative-061",
+    "index": "61",
+    "name": "Joon Jorker",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "times",
+        "base": 5,
+        "radiant": 10,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 27,
+    "base": {
+      "attack": 7,
+      "health": 5,
+      "keywords": [],
+      "text": "End of turn: Buff the Unit to the right of this {times} times."
+    },
+    "radiant": {
+      "attack": 14,
+      "health": 10,
+      "keywords": [],
+      "text": "End of turn: Buff the Unit to the right of this {times} times."
+    }
+  },
+  "meditative-062": {
+    "id": "meditative-062",
+    "index": "62",
+    "name": "Small Time Recruits",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 0,
+    "params": [
+      {
+        "key": "cards",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 36,
+    "base": {
+      "keywords": [],
+      "text": "Draw {cards|(1) Cost Unit|(1) Cost Units} from your deck."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Draw {cards|(1) Cost Unit|(1) Cost Units} from your deck. Make them Radiant."
+    }
+  },
+  "meditative-066": {
+    "id": "meditative-066",
+    "index": "66",
+    "name": "Fiery Waraxe",
+    "set": "Meditative",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "attack": 3,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Animated on your turn"
+        }
+      ],
+      "text": "Animated on your turn"
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Animated on your turn"
+        },
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Animated on your turn, Pierce"
+    }
+  },
+  "meditative-068": {
+    "id": "meditative-068",
+    "index": "68",
+    "name": "Catnip",
+    "set": "Meditative",
+    "type": "Field Trap",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 1,
+    "loc": 28,
+    "base": {
+      "attack": 5,
+      "health": 5,
+      "keywords": [
+        {
+          "kind": "Animated"
+        }
+      ],
+      "text": "Animated\nReveals after your opponent plays a Spell."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Animated"
+        },
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Animated, Taunt\nReveals after your opponent plays a Spell."
+    }
+  },
+  "meditative-070": {
+    "id": "meditative-070",
+    "index": "70",
+    "name": "I'M WILL BE YOUR DOOM",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "meditative-070-1"
+    ],
+    "loc": 21,
+    "base": {
+      "attack": 5,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Summon a Ready… I'm for your opponent."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 16,
+      "keywords": [],
+      "text": "Cry: Summon a Ready… I'm for your opponent and a Radiant Ready… I'm for yourself."
+    }
+  },
+  "meditative-070-1": {
+    "id": "meditative-070-1",
+    "index": "70.1",
+    "name": "Ready… I'm",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Common",
+    "token": true,
+    "cost": 1,
+    "loc": 6,
+    "base": {
+      "attack": 2,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Poisonous"
+        }
+      ],
+      "text": "Poisonous"
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Poisonous"
+        },
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Poisonous, Divine Shield"
+    }
+  },
+  "meditative-073": {
+    "id": "meditative-073",
+    "index": "73",
+    "name": "Plate Packer",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "per",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 14,
+    "base": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Gain +{per}/+{per} for each Armor on the field, heroes' included."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 12,
+      "keywords": [],
+      "text": "Cry: Gain +{per}/+{per} for each Armor on the field, heroes' included."
+    }
+  },
+  "meditative-074": {
+    "id": "meditative-074",
+    "index": "74",
+    "name": "Montaña Giant",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 8,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "buff",
+        "base": 8,
+        "radiant": 8,
+        "better": "up",
+        "step": 2,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 44,
+    "base": {
+      "attack": 8,
+      "health": 8,
+      "keywords": [],
+      "text": "Costs ({discount}) less for each card in your hand.\nEnd of turn: If your hand is full, make this Radiant."
+    },
+    "radiant": {
+      "attack": 16,
+      "health": 16,
+      "keywords": [],
+      "text": "Costs ({discount}) less for each card in your hand.\nEnd of turn: If your hand is full, this gains +{buff}/+{buff}."
+    }
   }
 }
