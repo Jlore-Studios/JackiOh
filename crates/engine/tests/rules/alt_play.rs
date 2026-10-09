@@ -277,6 +277,35 @@ mod r1041_set_unit_reveal {
     }
 
     #[test]
+    fn r1041_a_set_unit_that_came_back_onto_the_field_reveals_counting_from_its_return() {
+        // A set Unit that came back onto the field after it was set (a Rollback restoring the board,
+        // a steal giving it a fresh id) entered on that later turn, so its reveal keeps that turn
+        // (§4.1, R171), not the turn it was first set.
+        let (mut state, _set) = set_second_breaker("r1041-came-back");
+        state = act(&state, json!({ "type": "endTurn", "playerId": "p1" }), None);
+        let returned = state.turn;
+        let set_id = must(
+            state
+                .players
+                .p1
+                .backrow
+                .iter()
+                .flatten()
+                .find(|card| card.def_id == breaker().id),
+            "the set breaker",
+        )
+        .id
+        .clone();
+        must(find_instance_mut(&mut state, &set_id), "the set breaker").summoned_turn = Some(returned);
+        state = act(&state, json!({ "type": "endTurn", "playerId": "p2" }), None);
+        let answered = answer_keys(&mut state, &["hero:p2"]);
+        assert_eq!(answered.error, None);
+        let live = must(find_instance(&state, &set_id), "the revealed breaker");
+        assert_eq!(live.set_as, None);
+        assert_eq!(live.summoned_turn, Some(returned));
+    }
+
+    #[test]
     fn r1041_with_no_open_unit_zone_it_stays_face_up_and_reveals_next_turn() {
         let (mut state, _set) = set_second_breaker("r1041-full");
         // Fill every remaining unit zone: the granter plus four fillers.

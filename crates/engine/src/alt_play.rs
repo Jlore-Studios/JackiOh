@@ -195,9 +195,14 @@ fn reveal_effect() -> Effect {
             if !animated {
                 return;
             }
+            // R1041, R171: it counts as summoned on its set turn, or on the later turn it came back
+            // onto the field after it was set (a Rollback restoring it, a steal's fresh id).
+            let entered = card
+                .summoned_turn
+                .map_or(set.set_turn, |turn| turn.max(set.set_turn));
             if let Some(stored) = find_instance_mut(ctx.state, &snapshot.id) {
                 stored.set_as = None;
-                stored.summoned_turn = Some(set.set_turn);
+                stored.summoned_turn = Some(entered);
             }
             // R1041: the Cry meets the card as it stands revealed — still stamped, it reads as a
             // Field Trap still and `cry_place_of` declines it, so the Cry never runs.
