@@ -16,8 +16,8 @@ costsPaid?: Array<number>,
  */
 playedByType?: { [key in CardType]?: number }, 
 /**
- * R1223: how much mana this player borrowed this turn (every instalment not yet taken counts).
- * `startTurn` rebuilds the log, which clears it.
+ * R1223: how much mana this player borrowed this turn, one debt however many spends made it;
+ * above 0 is "used the credit line" (R1225). `startTurn` rebuilds the log, which clears it.
  */
 manaBorrowed?: number, 
 /**
@@ -26,6 +26,6 @@ manaBorrowed?: number,
 borrowedParts?: number, 
 /**
  * R1224: the instalment actually taken off this turn's refresh, after any forgiveness — the
- * locked crystals the view shows. Set at the refresh, so it survives the log reset.
+ * locked crystals the view shows. Set at the refresh, which follows the log reset.
  */
 manaLocked?: number, };

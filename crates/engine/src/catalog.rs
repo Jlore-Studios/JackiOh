@@ -196,7 +196,8 @@ pub fn query_cost(def: &CardDef) -> i32 {
 /// every non-token card of every set (R380).
 ///
 /// (TS `CatalogQuery & { defId?, token? }`: the wire query's fields written out beside the two of its
-/// own, in that order, so a card writes the TS object literal as `json_as(json!({ … }))`.)
+/// own, in that order, so a card writes the TS object literal as `json_as(json!({ … }))`; R1221's
+/// `tribute` came after the port, on this side only.)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct CatalogQueryArgs {
@@ -240,7 +241,13 @@ pub struct CatalogQueryArgs {
 /// base face, read off the registered script without state.
 fn has_tribute_cost(def: &CardDef) -> bool {
     crate::scripts::registered_entry(&def.id)
-        .map(|entry| entry.base.static_flags.as_ref().is_some_and(|flags| flags.tribute.unwrap_or(0) > 0))
+        .map(|entry| {
+            entry
+                .base
+                .static_flags
+                .as_ref()
+                .is_some_and(|flags| flags.tribute.unwrap_or(0) > 0)
+        })
         .unwrap_or(false)
 }
 

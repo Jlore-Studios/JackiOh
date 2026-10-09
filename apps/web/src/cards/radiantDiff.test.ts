@@ -113,8 +113,9 @@ describe("R277 the word diff", () => {
     // v0.2.1 adds Classic+ #34 Memory Leak: its Radiant face is its base text less "Choose one."
     // (both modes, no choice). Balance patch 1 gives Classic #28 Second Wind's base face the same
     // minimum price as its Radiant face, so its Radiant face is its base text less the exile
-    // replacement.
-    expect(silent).toEqual(["core-055", "classic-028", "classic-060", "classicplus-005", "classicplus-034"]);
+    // replacement. Meditative #89 Jlarna's Radiant face is the designer's: its base text less the
+    // end-of-turn Tribute (R1225).
+    expect(silent).toEqual(["core-055", "classic-028", "classic-060", "classicplus-005", "classicplus-034", "meditative-089"]);
   });
 });
 

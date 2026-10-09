@@ -426,7 +426,7 @@ describe("Board", () => {
     const chip = screen.getByTestId("credit-you");
     expect(chip).toHaveTextContent("+3 credit");
     expect(chip).toHaveTextContent("owed 1·1·1");
-    expect(chip).toHaveTextContent("used");
+    expect(chip).toHaveAttribute("data-used", "true");
   });
 
   it("R1225 the credit chip says whether the line was used", () => {
@@ -434,11 +434,18 @@ describe("Board", () => {
     const { rerender } = render(
       <Board view={{ ...view, you: { ...view.you, credit: { available: 4, owed: [], used: false } } }} />,
     );
+    expect(screen.getByTestId("credit-you")).toHaveAttribute("data-used", "false");
     expect(screen.getByTestId("credit-you")).toHaveTextContent("unused");
 
     rerender(
       <Board view={{ ...view, you: { ...view.you, credit: { available: 4, owed: [], used: true } } }} />,
     );
-    expect(screen.getByTestId("credit-you")).toHaveTextContent("used");
+    expect(screen.getByTestId("credit-you")).toHaveAttribute("data-used", "true");
+    expect(screen.getByTestId("credit-you")).not.toHaveTextContent("unused");
+
+    // The Radiant face has no use-it-or-lose-it: no `used`, and the chip says nothing about it.
+    rerender(<Board view={{ ...view, you: { ...view.you, credit: { available: 4, owed: [] } } }} />);
+    expect(screen.getByTestId("credit-you")).toHaveAttribute("data-used", "none");
+    expect(screen.getByTestId("credit-you")).not.toHaveTextContent("used");
   });
 });

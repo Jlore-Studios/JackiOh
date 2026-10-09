@@ -187,7 +187,7 @@ function ManaTray({
             key={index}
             className="mana-crystal crystal"
             data-filled={index < mana.current ? "true" : "false"}
-            data-locked={index >= mana.current && index >= crystals - locked && locked > 0 ? "true" : "false"}
+            data-locked={index >= mana.current && index >= crystals - locked ? "true" : undefined}
           />
         ))}
       </span>

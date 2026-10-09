@@ -165,7 +165,7 @@ list (in M6, after its cards) says more.
 | discard guard | "you cannot be forced to discard on your opponent's turn" | #1 | MB02 |
 | computed Echo X | Echo from max mana | #5 | MB02 |
 | ME-TRIG | start/end-of-turn and Cry/Death trigger multipliers; "trigger your end of turn effects" | #9, #10, #12 (#11, #13) | MB03 |
-| ME-TURN | lost refreshes ("lose all mana next N turns"), extra turns and the once-a-game Rift flag; the zeroed refresh aura (#26); a repayment schedule (#89) | #18, #19, #19.1; #26; #89; #22 | MB04 (the aura in MB09, the schedule in MB23) |
+| ME-TURN | lost refreshes ("lose all mana next N turns"), extra turns and the once-a-game Rift flag; the zeroed refresh aura (#26); a repayment schedule (#89's credit line) | #18, #19, #19.1; #26; #89; #22 | MB04 (the aura in MB09, the schedule in MB23) |
 | ME-WIN | an effect that wins; chosen alternative win conditions held by the state check | #8, #20 | MB04 |
 | ME-SECRET | a hidden choice kept until a later turn, the opponent's prediction | #22, #22.1 | MB05 |
 | ME-CRAFT | the card crafter: a block editor over the engine's real keywords, hooks and verbs, priced in mana and lines of code, building a transient definition as Fuse does | #17 | MB06 |
@@ -3859,11 +3859,12 @@ Jlarna is played too.
   dropped as its stay in that hand ends (R174), and mark each (R437 on hand cards): the owner sees
   the marks, the other player's hand count carries how many (MD-E2). At its point it runs with the
   cards still watched, and `give_from_hand` gains a selector by instance ids to steal them (R12).
-- **ME-TURN** (#89). Besides "next turn" mana, a per-player schedule of refresh changes keyed to that
-  player's next N turn starts (`turnsStarted + k`), each lowering that refresh by its share, mana
-  floored at 0 (MD-E13, rewritten). Jlarna's credit line borrows past current mana up to its limit
-  through the one affordability function, and its instalments are one schedule, a missed one
-  forgiven. Extra turns count as turns.
+- **ME-TURN** (#89). Besides "next turn" mana, a per-player repayment schedule, `owedInstalments`:
+  the instalment due at each of that player's next refreshes, next first, each refresh taking its
+  share off what it gives, mana floored at 0 (MD-E13, rewritten; R1224). Jlarna's credit line borrows
+  past current mana up to its limit through the one affordability function (`spendable_mana`,
+  R1223), its instalments go on that one schedule, and a missed one is forgiven. Extra turns count as
+  turns.
 - **NEW: ME-TUNEMULT** (#84). A static flag `tuneMultiplier { upgrade?, degrade? }` read off a card's
   running face in every zone, which `tune_effect` passes to `tune_once`. Each menu row then scales by
   it: N cost steps, N × `TUNE_STAT_TOTAL`, N keywords, N X steps, N number steps, still one draw and one
@@ -4959,7 +4960,7 @@ policy and the timeout can answer it.
 | MB20 | #536 | buffs: #82 Medina Outfitter, #83 Medina Enforcer, #84 Volatility, #85 Playtester, #87 Tatches the Totem | ME-TUNEMULT: "Buffs and Nerfs are twice as effective on this" (one application, a doubled change, R440 kept); Tatches' deck trigger on a card with a tribal tag (R1424) | #515 | hard |
 | MB21 | #537 | the Felinor chains: #93 Growing Felinor, #93.1 Growing Felinor Sr, #93.2 Growing Felinor Sr Sr, #93.3 Growing Felinor Super Senior, #94 Shrinking Felinor | nothing new: named Death summons and `statsOverride` | #515 | medium |
 | MB22 | #538 | combat replacements: #86 Mayor Medinamogger, #91 Windfast, #91.1 Windfurious Prime, #92 Unan | ME-RANDOMTARGETS: "all targets are random", for both players' targets, attacks and target prompts; attack summons (#91, #91.1); the lethal guard (#92): §4.4 step 4a opening for Units as well as heroes | #515 | hard |
-| MB23 | #539 | the play pipeline: #80 Aluneth, #88 The True Sheep, #89 Jlarna | the Untributable keyword; a catalog pool of cards with a Tribute cost; ME-TURN's repayment schedule (#89), on MB04's refresh | #515, #520 | hard |
+| MB23 | #539 | the play pipeline: #80 Aluneth, #88 The True Sheep, #89 Jlarna | the Untributable keyword (R1220); a catalog pool of cards with a Tribute cost (R1221); Jlarna's credit line: borrowing past current mana up to its limit through one affordability function (R1223), ME-TURN's repayment schedule taking an instalment off each refresh, a missed one forgiven (R1224), and the turn log's record of borrowing that the base face's Tribute reads (R1225), on MB04's refresh | #515, #520 | hard |
 | MB24 | #540 | chaos and the journey: #95 Call to Chaos (Meditative Edition), #95.1 CN Golem, #96 Meditative Journey, #96.1 Journey Complete | the third Call to Chaos table, `subsystems/call_to_chaos_meditative.rs`, with "for the rest of the game" bounded by a cap and R28, R87, R380, R423 and R436 reworded for three editions (their pools find the Meditative edition once the set ships, R1420); memory written on a shuffled card (#96) | #515, #525 | hard |
 | MB25 | #541 | the plain buildings: #97.2 Wishing Well, #97.3 School, #97.6 University, #97.7 The Great Wall, #97.9 Jlockheed's Headquarters | nothing new beyond an optional `lock_all` | #515 | medium |
 | MB26 | #542 | the blueprint: #97 Jlockheed's Evil Blueprints, #97.1 Empty Plot, #97.4 Mega Church, #97.5 Bunker, #97.8 Prison | stack base (#97.1); wide tribute (#97.4); lane strike (#97.5); capture (#97.8) | #515, #541 | hard |

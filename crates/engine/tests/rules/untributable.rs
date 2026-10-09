@@ -54,7 +54,9 @@ mod r1220_untributable {
             .err()
             .map(|error| error.message);
         assert!(
-            refusal.as_deref().is_some_and(|message| message.contains("cannot be tributed")),
+            refusal
+                .as_deref()
+                .is_some_and(|message| message.contains("cannot be tributed")),
             "unexpected refusal: {refusal:?}",
         );
 

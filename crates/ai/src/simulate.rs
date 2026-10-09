@@ -12,8 +12,8 @@ use std::cell::Cell;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::{
-    Action, ActionBody, GameState, PLAYER_IDS, Phase, PlayerId, active_units_of, legal_actions,
-    opponent_of, owed_mana_of, reduce,
+    Action, ActionBody, GameState, PLAYER_IDS, Phase, PlayerId, active_units_of, legal_actions, opponent_of,
+    owed_mana_of, reduce,
 };
 use serde::{Deserialize, Serialize};
 

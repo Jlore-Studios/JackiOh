@@ -159,6 +159,29 @@ mod tests {
             }
 
             #[test]
+            fn r1221_the_tribute_query_holds_the_five_shipped_tribute_cost_cards() {
+                crate::register_all();
+                // A pool that names no set draws from the sets that ship (R1420): Lava Golem, The
+                // Rock, Nature Titan, Plague-Bringer Goliath and BOOM! Big Max. Turtinator's
+                // Tribute is an Activate's cost, not a play cost, so it is not one of them.
+                let pool: Vec<&str> = jackioh_engine::catalog::query(&CatalogQueryArgs {
+                    tribute: Some(true),
+                    ..CatalogQueryArgs::default()
+                })
+                .into_iter()
+                .map(|def| def.id.as_str())
+                .collect();
+                assert_eq!(pool, ["core-055", "core-066", "classic-045", "classic-061", "classic-080"]);
+                // `false` forbids them.
+                let without = jackioh_engine::catalog::query(&CatalogQueryArgs {
+                    tribute: Some(false),
+                    ..CatalogQueryArgs::default()
+                });
+                assert!(without.iter().all(|def| !pool.contains(&def.id.as_str())));
+                assert!(!without.is_empty());
+            }
+
+            #[test]
             fn r1222_discovers_three_different_to_hand_and_stays() {
                 let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = holding("sheep-stays", false);

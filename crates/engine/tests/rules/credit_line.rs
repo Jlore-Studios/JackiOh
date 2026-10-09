@@ -71,7 +71,13 @@ mod r1223_borrowing {
 
         // The second body needs 3 with only 1 spendable: the listing hides it, and the reducer
         // refuses it — the two agree.
-        let second = after.players.p1.hand.iter().find(|card| card.def_id == body().id).cloned();
+        let second = after
+            .players
+            .p1
+            .hand
+            .iter()
+            .find(|card| card.def_id == body().id)
+            .cloned();
         let second = second.expect("the second body is still in hand");
         let listed: Vec<String> = legal_actions(&after, PlayerId::P1)
             .into_iter()
@@ -90,7 +96,10 @@ mod r1223_borrowing {
                 "zone": { "row": "units", "lane": 2 },
             }),
         );
-        assert!(result.error.is_some(), "the reducer refuses what the listing hides");
+        assert!(
+            result.error.is_some(),
+            "the reducer refuses what the listing hides"
+        );
     }
 
     #[test]
@@ -241,6 +250,44 @@ mod r1224_repayment {
     }
 
     #[test]
+    fn r1225_r1224_the_view_shows_the_offer_the_schedule_and_whether_it_was_used() {
+        let mut state = playing("credit-view");
+        put(
+            &mut state,
+            &lender().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
+        let before = view_for(&state, PlayerId::P2)
+            .opponent
+            .credit
+            .expect("a line acts");
+        assert_eq!(before.available, Some(4));
+        assert!(before.owed.is_empty());
+        assert_eq!(before.used, Some(false), "the lapsing face shows the line unused");
+        state.players.p1.mana.current = 0;
+        assert_eq!(pay_on(&mut state, PlayerId::P1, 2), 2);
+        // Both seats see it: the schedule is public, as Hinder's is.
+        for viewer in [PlayerId::P1, PlayerId::P2] {
+            let view = view_for(&state, viewer);
+            let side = if viewer == PlayerId::P1 {
+                view.you
+            } else {
+                view.opponent
+            };
+            let credit = side.credit.expect("a line acts");
+            assert_eq!(credit.available, Some(2));
+            assert_eq!(credit.owed, vec![1, 1]);
+            assert_eq!(credit.used, Some(true), "still shown once the line is used");
+        }
+        // The next refresh locks the first instalment's crystal.
+        refresh_for(&mut state, PlayerId::P1, 4);
+        let credit = view_for(&state, PlayerId::P1).you.credit.expect("a line acts");
+        assert_eq!(credit.locked, Some(1));
+        assert_eq!(credit.owed, vec![1]);
+    }
+
+    #[test]
     fn r1224_a_game_without_credit_serializes_as_before() {
         let state = playing("credit-absent");
         let json = serde_json::to_value(&state).expect("a game serialises");
@@ -268,9 +315,5 @@ mod r1224_repayment {
         side.mana.max = given;
         side.mana.next_turn_mod = 0;
         take_instalment(side);
-    }
-
-    fn only<T: Clone>(items: &[T]) -> T {
-        items.first().cloned().expect("expected at least one item")
     }
 }

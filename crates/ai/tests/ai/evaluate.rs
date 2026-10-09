@@ -347,8 +347,8 @@ mod face_threat_b13 {
 mod r1224_r1225_credit_line {
     use super::*;
 
-    use jackioh_engine::testkit::preview_sets;
     use jackioh_engine::SetName;
+    use jackioh_engine::testkit::preview_sets;
 
     const JLARNA: &str = "meditative-089";
 

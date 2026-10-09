@@ -38,13 +38,9 @@ pub fn credit_terms(state: &GameState, player: PlayerId) -> Option<CreditTerms> 
             };
             let line = crate::params::declared_or(state, card, "credit", line);
             limit = Some(limit.unwrap_or(line).max(line));
-            let parts = crate::params::declared_or(
-                state,
-                card,
-                "instalments",
-                flags.credit_instalments.unwrap_or(1),
-            )
-            .max(1);
+            let parts =
+                crate::params::declared_or(state, card, "instalments", flags.credit_instalments.unwrap_or(1))
+                    .max(1);
             instalments = Some(instalments.unwrap_or(parts).max(parts));
         }
     }
@@ -99,11 +95,7 @@ fn trim(schedule: Vec<i32>) -> Option<Vec<i32>> {
     while schedule.last() == Some(&0) {
         schedule.pop();
     }
-    if schedule.is_empty() {
-        None
-    } else {
-        Some(schedule)
-    }
+    if schedule.is_empty() { None } else { Some(schedule) }
 }
 
 /// R1223: pay `amount` mana, borrowing the shortfall past current mana up to the credit limit.
@@ -162,9 +154,10 @@ pub fn take_instalment(side: &mut PlayerState) {
 }
 
 /// R1225: whether a face carrying the end-of-turn Tribute for an unused line acts on this player's
-/// field now (Jlarna's base face).
+/// field now (Jlarna's base face), borrowed from or not: the view shows whether the line was used
+/// only while one does.
 pub fn lapsing_face_acts(state: &GameState, player: PlayerId) -> bool {
-    !credit_lapsing(state, player).is_empty()
+    !lapsing_faces(state, player).is_empty()
 }
 
 /// R1225: the ids of the acting `credit_lapses` cards whose line went unused this turn — the Jlarnas
@@ -173,6 +166,11 @@ pub fn credit_lapsing(state: &GameState, player: PlayerId) -> Vec<String> {
     if state.players[player].turn_log.mana_borrowed.unwrap_or(0) > 0 {
         return Vec::new();
     }
+    lapsing_faces(state, player)
+}
+
+/// The ids of the acting `credit_lapses` cards on this player's field, in slot order.
+fn lapsing_faces(state: &GameState, player: PlayerId) -> Vec<String> {
     let mut out = Vec::new();
     for row in [Row::Units, Row::Backrow] {
         for slot in crate::zones::slots_of(player, row) {

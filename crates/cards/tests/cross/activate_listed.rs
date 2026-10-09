@@ -32,9 +32,10 @@ const LOCKDOWN: &str = "classic-084";
 const FUSION_LAB: &str = "classicplus-031";
 const DOCTORS_ORDERS: &str = "classicplus-060";
 const BROTHER_PING: &str = "classicplus-076-1";
+const ALUNETH: &str = "meditative-080";
 
 /// Every card or token whose base or Radiant text has an Activate ability, each with a case below.
-const ACTIVATE_CARDS: [&str; 14] = [
+const ACTIVATE_CARDS: [&str; 15] = [
     HEROIC_POWER,
     INFINISCEPTER,
     NOSE_HUNTER,
@@ -49,6 +50,7 @@ const ACTIVATE_CARDS: [&str; 14] = [
     FUSION_LAB,
     DOCTORS_ORDERS,
     BROTHER_PING,
+    ALUNETH,
 ];
 
 const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2. A spare that keeps R82's auto-end away.
@@ -745,5 +747,39 @@ mod c_n76_1_brother_ping {
             .expect_stats(MENACE, json!({ "health": 8 }));
         let id = s.card(BROTHER_PING).id.clone();
         assert!(listed(&s, &id).is_empty(), "Activate 2 is twice per turn");
+    }
+}
+
+mod m80_aluneth {
+    use super::*;
+
+    fn fielded(radiant: bool) -> Scenario {
+        scenario(json!({
+            "p1": { "backrow": [on(ALUNETH, radiant)], "hand": [STOCKPILE] },
+            "p2": { "hand": [FILLER] },
+        }))
+    }
+
+    #[test]
+    fn r384_base_has_no_activate() {
+        let s = fielded(false);
+        let id = s.card(ALUNETH).id.clone();
+        assert!(
+            listed(&s, &id).is_empty(),
+            "only the Radiant face prints an Activate"
+        );
+    }
+
+    #[test]
+    fn r384_radiant_activate_exiles_it() {
+        let mut s = fielded(true);
+        let events = activate_listed(&mut s, ALUNETH, any);
+        s.expect_in_zone(ALUNETH, "exile");
+        // Exiled, not destroyed: no Death and no graveyard (R384).
+        assert!(
+            !events
+                .iter()
+                .any(|event| matches!(event, GameEvent::EnteredGraveyard { .. }))
+        );
     }
 }
