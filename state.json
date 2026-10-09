@@ -2639,7 +2639,6 @@
     },
     "432": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-08T02:52:55Z",
@@ -2652,24 +2651,19 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-08T02:52:57Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 490,
       "provider": "claude-3",
-      "question": "",
       "run_id": "37720060922",
       "started_at": "2026-10-08T02:53:54Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "436": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-07T14:07:24Z",
@@ -2680,30 +2674,18 @@
       },
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-08T08:05:44Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "## State\n\n- Third run (claude-3, sonnet). Premise of the plan is out of date: `main` now has the whole Rust workspace and the matrix split of `rust (test)` (commits 11af4df4, 05155a7a, 48ab2747, \"v0.3.0 part 30\"), made after the reported run (`a717c8f`, 12:00 UTC 2026-10-07; split 12:50-13:04). The plan's diff is obsolete (its `cache-key` input already exists; ci.yml has 7 groups: engine rules, engine, cards lib, cards, server, ai, tools+wasm).\n- Nothing to change on this branch: ci.yml/.github is off limits, and no GitHub access to read post-split job times. No file edited.\n- Left for a person: read the newest main CI run's `rust (test \u2026)` times; close #436 if all < 5 min. If `rust (test engine)` is over (lib + golden + export_config + doc in one job), split `--test golden` into its own group.\n- Dead ends: none. Plan's 8-piece diff must NOT be applied now.\n\n## Log\n- Read journal, checked ci.yml on main and history: split already landed after the reported run. Result: stopping `blocked` with a new question.\n",
-        "provider": "claude-3",
-        "reason": "the builder needs a person to decide something",
-        "trail": "- Bash: {\"command\": \"cat .bot-journal.md | head -80; echo ---; cat .bot-notes.md 2>/dev/null | head -60; echo ---; git status --short | head; ls; git log --oneline | head -5\", \"description\": \"Read journal, n\u2026\n- Bash: {\"command\": \"grep -n \\\"rust-test\\\" -A 60 .github/workflows/ci.yml | head -140; echo ---; grep -n \\\"cache-key\\\" -r .github | head; git log --oneline -5 -- .github/workflows/ci.yml\", \"description\": \"Ch\u2026\n- Bash: {\"command\": \"git log --oneline -30 -- .github/workflows/ci.yml .github/actions/setup/action.yml; git log --all --oneline --grep='436' | head; git log -8 --format='%h %ad %s' --date=short\", \"descripti\u2026\n- Bash: {\"command\": \"git cat-file -t a717c8f 2>&1; git log --oneline --format='%h %ad %s' --date=iso -3 05155a7a; git log --format='%h %ad %s' --date=iso -3 48ab2747; git merge-base --is-ancestor a717c8f HEA\u2026\n- Bash: {\"command\": \"git log --format='%h %ad %s' --date=iso -1 a717c8f; git log --format='%h %ad %s' --date=iso a717c8f..HEAD -- .github/ | head -20; git merge-base --is-ancestor 05155a7a a717c8f && echo \\\"\u2026\n- Bash: {\"command\": \"nproc; free -g | head -2; ls target 2>&1 | head -3; sed -n 1,80p Cargo.toml; sed -n 1,60p .github/actions/setup/action.yml; git show 05155a7a --stat | head -20\", \"description\": \"Machine \u2026\n- Bash: {\"command\": \"git show 05155a7a -- .github/workflows/ci.yml | head -120; git show 11af4df4 --stat | head -20\", \"description\": \"Read how the split commits explain the timings\"}\n- Bash: {\"command\": \"grep -rn \\\"rust (test\\\" --include=*.md --include=*.yml --include=*.json --include=*.py . 2>/dev/null | grep -v node_modules | grep -v \\\"^./target\\\" | head -20; git log -5 --format='%h %a\u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\[\\\\[test\\\\]\\\\]\\\" -A 4 crates/engine/Cargo.toml crates/cards/Cargo.toml; grep -n \\\"features\\\" -B1 -A6 crates/engine/Cargo.toml | head -30\", \"description\": \"Check engine test t\u2026\n- said: Now I'll update the notes' State, then report.\n- Bash: {\"command\": \"cat > .bot-notes.md <<'EOF'\\n## State\\n\\n- Third run (claude-3, sonnet). Premise of the plan is out of date: `main` now has the whole Rust workspace and the matrix split of `rust (test)`\u2026\n- said: <!-- bot: {\"status\": \"blocked\", \"question\": \"Issue #436's fix has already landed on main by another route, and I cannot read CI job times, so I need a person to check. The reported run (a717c8f, 12:00 UTC 2026-10-07) was one `rust (test)` job. Commits 11af4df4, 05155a7a and 48ab2747 (v0.3.0 part 30\u2026"
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-07T14:07:27Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "claude-3",
-      "question": "Issue #436's fix has already landed on main by another route, and I cannot read CI job times, so I need a person to check. The reported run (a717c8f, 12:00 UTC 2026-10-07) was one `rust (test)` job. Commits 11af4df4, 05155a7a and 48ab2747 (v0.3.0 part 30, 12:50 to 13:17 UTC) then split it into seven `rust (test <group>)` matrix pieces, each with its own cache key. Please open the newest CI run on main and read the seven `rust (test \u2026)` times. Option A: every piece is under 5 minutes, so close #436 and no code change is needed. Option B: a piece is still over 5 minutes, so tell me which one. I expect `rust (test engine)` (`--lib`, `--test golden`, `--test export_config` and doctests in one job), and the fix there is a ci.yml change I cannot make, splitting `--test golden` into its own matrix entry. The earlier plan's eight-piece diff must not be applied: its `cache-key` input already exists and its groups would clash with the current ones.",
       "queued_at": "2026-10-08T08:00:38Z",
       "requested_by": "jgoetzmann",
       "run_id": "37747314725",
       "started_at": "2026-10-08T08:03:53Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "44": {
       "action": "build",
@@ -2727,47 +2709,37 @@
     },
     "443": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "pr": 501,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-07T20:47:18Z",
       "requested_by": "squishy-squooby",
       "run_id": "37736809101",
       "started_at": "2026-10-08T06:18:18Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "444": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "pr": 514,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-07T20:47:38Z",
       "requested_by": "squishy-squooby",
       "run_id": "37742245508",
       "started_at": "2026-10-08T07:15:23Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "45": {
       "action": "build",
@@ -2803,20 +2775,6 @@
       "stopped_at": "2026-10-03T04:51:43Z",
       "stopped_by": "MaxGoetzmann"
     },
-    "48": {
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "pr": 56,
-      "queued_at": "2026-09-30T15:44:18Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "36839423547",
-      "started_at": "2026-10-01T09:06:25Z",
-      "stop_requested": false
-    },
     "49": {
       "action": "build",
       "died": 0,
@@ -2847,26 +2805,7 @@
       "feedback_since": "2026-10-08T02:53:54Z",
       "issue": 432,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "37720060922",
-            "tier": "strong"
-          }
-        ],
-        "sha": "8080b8f0e92e780c58ab40bf681835d55f92aa61",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "501": {
       "cleared": {
@@ -2880,30 +2819,10 @@
       "feedback_since": "2026-10-08T06:18:18Z",
       "issue": 443,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "37736809101",
-            "tier": "strong"
-          }
-        ],
-        "sha": "eca84db6b12e909b3f92e0ccd6c8bc2fe012206d",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "504": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-08T08:33:33Z",
@@ -2914,34 +2833,21 @@
       },
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-08T08:36:16Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "**The bot cannot open this pull request.** The mistake is fixable, but only in `bot/`, which no bot may change. The builder changes nothing and stops `blocked`, and a person applies the tested patches under **Files to touch**.\n\n**Why the revise command on #436 went unanswered.** The comment was written by the `@squishy-squooby` account itself, so it came from Squishy rather than being addressed to Squishy. The night bot treats that account as the other bot, and it acts on the other bot's comments only for a bare `stop`.\n\nWhat is certain, from the state branches and the code:\n\n1. **Squishy's harness has never answered anything.** `origin/squishy-state` has 280 commits since 2026-10-06T07:15Z, all `state: start`, `sweep` or `labels synced`. It has never held a `handled` claim or an item, and `last_run` is `null`. Its sweep would have answered any trusted, unedited `/squishy` or `@squishy-squooby` comment more than ten minutes old, and it never noted one.\n2. **The night bot keeps reporting a comment on #436 as answered without answering it.** Every night-bot sweep since 2026-10-08T05:53Z notes \"answered a comment on #436 that was never answered\" (`origin/bot-state`, `last_sweep.notes`), and #430 has had the same note since 02:49Z. None of those sweeps wrote a claim. In `events.on_comment`, a trusted comment that names the night bot can end without a claim only through `from_other_bot`. So the comment's author is `squishy-squooby`, and it names `@jgoetzmann-bot` or `/harness`. It was posted between about 05:32 and 05:43Z (the one on #430 between about 02:28 and 02:39Z).\n3. **The night bot drops it without a word.** In `bot/harness/events.py`, `OTHER_BOT_VERBS = (\"stop\",)` keeps only a bare `stop` from the other bot. That is #60's rule (\"so two bots never talk for ever\"), and it leaves no reply, no reaction and no claim. `sweep._comments` then calls `on_comment` on every tick and returns its \"answered\" note whatever `on_comment` returned (`_reviews` checks the result; `_comments` does not). Reproduced with the harness's own fakes (Step 2): the event returns `['no command']`, every sweep returns the false note, and no reply or claim follows.\n4. **Something outside Squishy's harness drives the `squishy-squooby` account.** It queued the night bot's #397\u2013#417 (2026-10-07T00:05\u201300:17Z) and #443\u2013#444 (20:47Z). It could only have done that by label or assignment, since the night bot claimed no comment of its then, and those events never pass through `from_other_bot`. On 2026-10-02 it sent `/harness build` and `/harness stop` on #66, #67 and #79, before #363 (2026-10-06) made it \"the other bot\". None of this is in Squishy's state.\n\nWhat follows from this, though nothing proves it: someone working as `squishy-squooby` asked the night bot by comment to revise #436. That worked until #363. At 07:59Z jgoetzmann posted the same request themselves (`/harness revise. Just pushed the rust patch in, \u2026`), and the event handler took it at once (claimed 07:59:46Z, queued 07:59:50Z).\n\n## Goal\n\nThe builder edits no tracked file. It re-runs the evidence (Steps 1\u20132) and stops `blocked` with the question in Step 4. The answer above then stands in the issue, and a person holds patches that need no further work: Patch 1 always, and Option B only if they choose it.\n\n## Files to touch\n\n| Path | Change | What |\n|---|---|---|\n| (none) | none | the builder edits, creates and deletes no tracked file |\n\nMust not touch: any tracked file, above all `bot/`, `.github/`, `.harness/` and `.squishy/`. No SPEC section or ruling governs this. It is the bots' harness, under #60 and `bot/README.md` (Squishy, \"One owner per issue\").\n\n**For a person.** Both patches were made on an export of `d5bc6c4c`, and `git apply --check` passes on this branch. `cd bot && python3 -m unittest discover -s tests -t .` gives 701 OK before, 702 OK with Patch 1, and 704 OK with both. Each new test fails without its change.\n\n**Patch 1 (no decision needed): the sweep reports only what it answered.*\n(the rest of the state was cut here)\n\n## Log\n(earlier lines of the log were cut here)\n- Re-ran Step 1: `squishy-state` has no `handled` key, `items == {}`, `last_run is None`; `bot-state` `last_sweep.notes` still lists #436 and #430 as \"answered ... never answered\" (at 2026-10-08T08:25:02Z).\n- Re-ran Step 2 from /tmp/repro504: `event: ['no command']`, two sweeps both return the false note, `replies: [] claims: []`.\n- Step 3: `git status --porcelain` and `--ignored -- bot` both empty.\n",
-        "provider": "claude-7",
-        "reason": "the builder needs a person to decide something",
-        "trail": "- said: I'll start with the journal and notes from the earlier run.\n- Bash: {\"command\": \"ls -la | head -30; cat .bot-journal.md 2>/dev/null | head -80; echo ----; cat .bot-notes.md 2>/dev/null | head -40; git status --porcelain\"}\n- Bash: {\"command\": \"grep -n '^## ' .bot-notes.md; git branch -a | head; git log --oneline -1; git fetch origin squishy-state bot-state 2>&1 | tail -3; git branch -r | head -20\"}\n- Bash: {\"command\": \"git show origin/squishy-state:state.json | python3 -c 'import json,sys; s=json.load(sys.stdin); print(\\\"handled\\\" in s, s[\\\"items\\\"], s[\\\"last_run\\\"])'; echo ---; git show origin/bot-sta\u2026\n- said: Step 1 matches. Now Step 2, the reproduction outside the worktree.\n- Bash: {\"command\": \"mkdir -p /tmp/repro504 && cat > /tmp/repro504/repro.py <<'EOF'\\nfrom datetime import timedelta\\nfrom harness import events, sweep\\nfrom harness.clock import iso\\nfrom harness.config impo\u2026\n- Bash: {\"command\": \"grep -n 'OTHER_BOT_VERBS' bot/harness/events.py; sed -n 215,230p bot/harness/sweep.py\"}\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n\\n## State\\n\\n- Plan stands; nothing in it was wrong. This builder edits no tracked file (every fix is in `bot/`, which no bot may change).\\n- Done (run 2, \u2026\n- said: <!-- bot: {\"status\": \"blocked\", \"question\": \"The revise request on #436 was written by the @squishy-squooby account, and the night bot acts on the other bot's comments only for a bare stop (OTHER_BOT_VERBS in bot/harness/events.py, #60), so it gave no reply and no reaction; its sweep then logged 'a\u2026"
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-08T08:33:36Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "claude-7",
-      "question": "The revise request on #436 was written by the @squishy-squooby account, and the night bot acts on the other bot's comments only for a bare stop (OTHER_BOT_VERBS in bot/harness/events.py, #60), so it gave no reply and no reaction; its sweep then logged 'answered a comment on #436 that was never answered' every ten minutes without answering (bot/harness/sweep.py, _comments). Both fixes are in bot/, which the bot may not change, so a person applies them from the plan in #504's description: Patch 1 (the sweep's note) in any case, and then either A, keep the rule and hand the night bot work from that account with bot:build or bot:revise labels, or B, also apply Option B so the night bot acts on build, revise, review and rebuild from it. A or B?",
       "queued_at": "2026-10-08T08:04:37Z",
       "requested_by": "jgoetzmann",
       "run_id": "37750687019",
       "started_at": "2026-10-08T08:34:47Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "505": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-08T08:19:58Z",
@@ -2952,34 +2858,21 @@
       },
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-08T08:23:22Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "**Neither bot can build this.** Every file it needs is a forbidden path: `bot/`, `.harness/`, `.squishy/` and `.claude/` (`.harness/config.json` `forbidden_paths`). The harness reverts any change there before review, and deliver refuses to push one, so a bot run ends with nothing to deliver. The Night bot issue form labels issues like this `human` for exactly that reason. **Label #505 `human`** and have a person build it from this plan, or a Claude Code session the maintainer runs outside the harness.\n\n## Goal\n\nBoth bots get a **fullsend** mode, with the labels `bot:fullsend` and `squishy:fullsend` (the \"fullsend tag\") and the verbs `/harness fullsend` and `/squishy fullsend`.\n\n1. A strong model splits the issue into parts, sub-issues that own disjoint files.\n2. Deliver sets up a temporary integration branch, `<prefix>issue-<parent>`, from `main`.\n3. Each part's run lands its change on that branch, not on `main`: no PR, no review, no harness checks.\n4. When every part has closed, a different strong run reconciles the branch, following `.claude/skills/fullsend/` phases 3\u20136. It makes every check green, passes review, and opens one PR into `main`, under the usual review rule and auto-merge.\n\n## Files to touch\n\n| Path | | What changes |\n|---|---|---|\n| `bot/harness/identity.py` | change | `MODES` gains `\"fullsend\"` |\n| `bot/harness/config.py` | change | `_MODE_LABELS[\"fullsend\"]`, mode texts through `said()`, the `tree` text |\n| `bot/harness/commands.py` | change | verb `fullsend`: `VERBS`, `LEVELS`, `_MENTION_ARGS`, `offered`, `HELP_ROWS`, `VERB_HELP`, the verb list (~269) |\n| `bot/harness/events.py` | change | the mode-verb branch (~309) |\n| `bot/harness/queue.py` | change | `OWNING`, `MODE_WORDS`, `candidates`, `queue_build` |\n| `bot/harness/plan.py` | change | `claim`, `split_builders` |\n| `bot/harness/split.py` | change | `FULLSEND_NOTES`, `PART_NOTE`, `body`, `checklist` |\n| `bot/harness/work.py` | change | `_item`, `_split`, `_prepare`, `_first_prompt`, new `_part` |\n| `bot/harness/deliver.py` | change | `_deliver_item`, `_split_out`, `_bundle_counts`, new `_land_part` |\n| `bot/harness/sweep.py` | change | `_trees` |\n| `bot/harness/prompts.py` | change | `NAMES` gains `\"reconcile\"` |\n| `bot/prompts/split.md` | change | `$fullsend` placeholder |\n| `bot/prompts/reconcile.md` | new | the reconcile run's first prompt |\n| `.harness/config.json` | change | `identity.modes` |\n| `.squishy/config.json` | change | `identity.modes` |\n| `.harness/README.md` | change | one sentence |\n| `bot/README.md` | change | a Fullsend section; Commands, Labels and Squishy-modes rows |\n| `CLAUDE.md` | change | one sentence each in \"The night bot\" and \"Squishy\" |\n| `docs/issues-and-patches.md` | change | the bot label list (lines 4\u20137) |\n| `bot/tests/test_fullsend.py` | new | the night bot's cases |\n| `bot/tests/squishy_cases.py` | change | Squishy's case and its mode sets |\n| `bot/tests/test_squishy.py` | change | the night bot's `config.MODES` assertion (~53) |\n\nDo not touch:\n\n- `.github/`: the action stays `build` and the mode travels in `plan.json`, so no workflow changes.\n- `crates/`, `apps/`, `e2e/` and `spec/`.\n- `dashboard.py` and `stats.py`.\n- The `oneshot` and `split` behaviour.\n\nNo spec section or ruling governs this change. The contracts are `bot/README.md` and `.claude/skills/fullsend/SKILL.md`.\n\n## Steps\n\n1. **`bot/harness/identity.py`.** Set `MODES = (\"oneshot\", \"split\", \"split-bot\", \"fullsend\")` and update its comment.\n\n2. **`bot/harness/config.py`.**\n   - Add to `_MODE_LABELS`: `\"fullsend\": (\"b60205\", \"Queued for the night bot to split into parts that land on one branch, then reconcile into one PR\")`. The description must stay within `LABEL_DESCRIPTION_MAX` (100).\n   - Change `tree`'s text to \"A parent whose sub-issues the night bot made and watches\".\n   - In `LABELS`, pass the mode entries through `said()`, as `_OWN`'s are. The night bot then gets `bot:tree` through the existing `\"tree\" and MODES` rule.\n\n3. **Configs.** In `.harness/\n(the rest of the state was cut here)\n\n## Log\n(earlier lines of the log were cut here)\n- Build run: read the journal and notes, checked `forbidden_paths` in `.harness/config.json` (it has `.github/`, `.harness/`,\n  `.squishy/`, `bot/`, `.claude/`, \u2026). Stopped as blocked with no edits.\n",
-        "provider": "claude-7",
-        "reason": "the builder needs a person to decide something",
-        "trail": "- Bash: {\"command\": \"cat .bot-journal.md; echo ----; cat .bot-notes.md | head -80; echo ----; git status --short; git log --oneline -1\", \"description\": \"Read the journal, notes and branch state\"}\n- Bash: {\"command\": \"python3 -c \\\"import json;c=json.load(open('.harness/config.json'));print(json.dumps({k:v for k,v in c.items() if 'forbid' in k.lower()},indent=1))\\\"; grep -n \\\"forbidden\\\" -r .harness/co\u2026\n- Bash: {\"command\": \"wc -l .bot-notes.md; grep -n \\\"^## \\\" .bot-notes.md\", \"description\": \"Find the notes file's sections\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-505/.bot-notes.md\", \"offset\": 200}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-505/.bot-notes.md\", \"old_string\": \"- **Out of scope:** a cross-bot tree (`fullsend bot`, like `split bot`), and fullsend counts \u2026\n- Bash: {\"command\": \"git status --short\", \"description\": \"Confirm the worktree has no changes\"}\n- said: <!-- bot: {\"status\": \"blocked\", \"question\": \"#505 (the fullsend mode for both bots) can only be built by changing bot/, .harness/, .squishy/ and .claude/. All four are in .harness/config.json's forbidden_paths, and the builder prompt also forbids editing them, so no bot run can deliver it. Will a p\u2026"
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-08T08:20:01Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "claude-7",
-      "question": "#505 (the fullsend mode for both bots) can only be built by changing bot/, .harness/, .squishy/ and .claude/. All four are in .harness/config.json's forbidden_paths, and the builder prompt also forbids editing them, so no bot run can deliver it. Will a person label #505 `human` and build it from the Plan in the issue, outside the harness? The other option is to close it. A docs-only PR is not one: it would describe a mode that does not exist.",
       "queued_at": "2026-10-08T08:05:14Z",
       "requested_by": "jgoetzmann",
       "run_id": "37749180202",
       "started_at": "2026-10-08T08:21:42Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "506": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-08T08:17:41Z",
@@ -2989,32 +2882,19 @@
         "why": "Easy-rule line 7 wants a unit test the plan names, and an empty change has nothing to test. Since I can't tell that line holds, it stays at the medium the item already carries."
       },
       "forced": false,
-      "handoff": {
-        "at": "2026-10-08T08:37:13Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "## State\n\n- Plan (claude-4, opus): #506 is a test issue; acceptance says \"no changes needed, you can close it\". No file changes.\n- Pass 3 (opus): the reviewer's only blocking finding is \"the branch has no change from main\". That finding does not hold for this issue: an empty diff is exactly what the acceptance asks for. Answered in the report, not in code.\n- Verified: `git status --porcelain` prints nothing; `git diff --stat 25a252f6...HEAD` is empty (the branch's only commit is a merge of the base). Note the local `main` ref is stale (`d5bc6c4c`), so `git diff main...HEAD` shows the base's own commits (#512), not this branch's work.\n- Report status `blocked`: a person must close #506 (the bot holds no GitHub credential), since another pass cannot produce a non-empty diff without breaking the acceptance and Never rule 6.\n- Decisions: no placeholder file or empty commit (rejected: it would satisfy the reviewer but break the issue's acceptance and rule 6). Dead ends: none.\n\n## Log\n\n- Pass 1/2: read the journal and the plan; tree clean, nothing to build.\n- Pass 3: checked status and diff against the base: both empty. Reporting blocked so a person closes the issue.\n",
-        "provider": "claude-3",
-        "reason": "the builder needs a person to decide something",
-        "trail": "- Bash: {\"command\": \"git status --porcelain && echo --- && git diff --stat 25a252f61930540fc7f6e4d2fc7e8677bbcc8248...HEAD && echo --- && git diff --stat main...HEAD; cat .bot-notes.md 2>/dev/null\", \"descrip\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-506/.bot-notes.md\", \"content\": \"## State\\n\\n- Plan (claude-4, opus): #506 is a test issue; acceptance says \\\"no changes needed, you can close it\\\". No\u2026\n- said: <!-- bot: {\"status\": \"blocked\", \"question\": \"Issue #506 is a pickup test. Its acceptance says no change is needed and the issue can be closed. The reviewer blocks the branch only because its diff is empty, and that empty diff is what the acceptance asks for. Can a person close #506 (and drop its bo\u2026"
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-08T08:17:42Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "claude-3",
-      "question": "Issue #506 is a pickup test. Its acceptance says no change is needed and the issue can be closed. The reviewer blocks the branch only because its diff is empty, and that empty diff is what the acceptance asks for. Can a person close #506 (and drop its bot:build queue entry)? The bot has no GitHub credential, and any later pass could only get a non-empty diff by adding a file the task does not need, which breaks the acceptance and Never rule 6.",
       "run_id": "37748911613",
       "started_at": "2026-10-08T08:18:47Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "508": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-08T08:32:14Z",
@@ -3027,26 +2907,21 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-08T08:32:16Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 546,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-08T08:13:59Z",
       "requested_by": "squishy-squooby",
       "run_id": "37750523996",
       "started_at": "2026-10-08T08:33:21Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "509": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-08T10:04:16Z",
@@ -3059,22 +2934,18 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-08T10:04:19Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "pr": 554,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-08T08:14:18Z",
       "requested_by": "squishy-squooby",
       "run_id": "37761056494",
       "started_at": "2026-10-08T10:05:15Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
-      "taken_asks": []
+      "strikes": 0
     },
     "51": {
       "failures": 0,
@@ -3154,37 +3025,16 @@
       "feedback_since": "2026-10-08T07:15:23Z",
       "issue": 444,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "37742245508",
-            "tier": "strong"
-          }
-        ],
-        "sha": "a4155557a46d4007c2c17af1582c725bd8218d63",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "516": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "2f5ea4d240143422713aaa5513e08b5b16d4e0f1",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "",
       "part_of": 575,
@@ -3193,13 +3043,11 @@
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-08T09:24:59Z",
       "requested_by": "squishy-squooby",
       "run_id": "37839303558",
       "started_at": "2026-10-08T20:25:44Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "517": {
       "action": "plan",
@@ -3233,14 +3081,12 @@
     },
     "518": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "bot/issue-518",
       "part_of": 575,
@@ -3249,24 +3095,20 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-08T09:25:55Z",
       "requested_by": "squishy-squooby",
       "run_id": "37839383544",
       "started_at": "2026-10-08T20:26:28Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "519": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "bot/issue-519",
       "part_of": 575,
@@ -3275,13 +3117,11 @@
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-08T09:26:08Z",
       "requested_by": "squishy-squooby",
       "run_id": "37839470208",
       "started_at": "2026-10-08T20:27:19Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "52": {
       "died": 1,
@@ -3299,14 +3139,12 @@
     },
     "520": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "bot/issue-520",
       "part_of": 575,
@@ -3315,28 +3153,21 @@
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-08T09:26:21Z",
       "requested_by": "squishy-squooby",
       "run_id": "37839583330",
       "started_at": "2026-10-08T20:28:09Z",
       "stop_requested": false,
-      "strike_log": [
-        "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
-      ],
-      "strikes": 1,
-      "taken_asks": []
+      "strikes": 1
     },
     "521": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "bot/issue-521",
       "part_of": 575,
@@ -3345,13 +3176,11 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-08T09:26:43Z",
       "requested_by": "squishy-squooby",
       "run_id": "37862818111",
       "started_at": "2026-10-09T00:04:39Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "522": {
       "action": "build",
@@ -3388,14 +3217,12 @@
     },
     "523": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "7c93be3e9ce720df837ec9d5ada7a2956bb4a58b",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "",
       "part_of": 575,
@@ -3404,13 +3231,11 @@
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-08T09:27:10Z",
       "requested_by": "squishy-squooby",
       "run_id": "37856693312",
       "started_at": "2026-10-08T22:58:50Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "524": {
       "action": "plan",
@@ -3446,14 +3271,12 @@
     },
     "525": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "",
-      "last_findings": [],
       "onto": "bot/issue-575",
       "parked_on": "bot/issue-525",
       "part_of": 575,
@@ -3462,13 +3285,11 @@
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-08T09:27:46Z",
       "requested_by": "squishy-squooby",
       "run_id": "37862890557",
       "started_at": "2026-10-09T00:05:22Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "526": {
       "failures": 0,
@@ -3889,26 +3710,7 @@
       "feedback_since": "2026-10-08T08:33:21Z",
       "issue": 508,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "37750523996",
-            "tier": "strong"
-          }
-        ],
-        "sha": "410fadbf8e3305067886715d2f69067e8cb9a768",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "547": {
       "failures": 0,
@@ -4004,26 +3806,7 @@
       "feedback_since": "2026-10-08T10:05:15Z",
       "issue": 509,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "37761056494",
-            "tier": "strong"
-          }
-        ],
-        "sha": "1142192163bfc51034effed1eb7960e05f14c671",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "558": {
       "failures": 0,
@@ -4069,14 +3852,6 @@
       "started_at": "2026-10-08T14:43:46Z",
       "stop_requested": false,
       "taken_asks": []
-    },
-    "56": {
-      "closed_at": "2026-10-01T12:34:03Z",
-      "failures": 0,
-      "feedback_since": "2026-10-01T09:06:25Z",
-      "issue": 48,
-      "kind": "revise",
-      "merged": true
     },
     "560": {
       "action": "build",
@@ -7090,9 +6865,9 @@
     }
   },
   "pruned": {
-    "at": "2026-10-08T02:38:21Z",
+    "at": "2026-10-09T02:38:34Z",
     "dropped": 2,
-    "shed": 8
+    "shed": 21
   },
   "rate_limited_until": "2026-10-02T21:30:00Z",
   "run_requested": null,
