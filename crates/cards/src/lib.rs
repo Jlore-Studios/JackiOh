@@ -21,7 +21,7 @@
 use std::sync::{LazyLock, OnceLock};
 
 use indexmap::IndexMap;
-use jackioh_engine::{CardDef, CardDefs, CardScripts, SetName};
+use jackioh_engine::{CardDef, CardDefs, CardScripts, SetName, WinRateTable};
 
 include!(concat!(env!("OUT_DIR"), "/registry.rs"));
 
@@ -102,6 +102,19 @@ pub fn scripts_of() -> IndexMap<String, CardScripts> {
         .collect()
 }
 
+/// ME-STATS (Meditative #50 CN Tech): `data/win_rates.json` as compiled in, the table CN Tech
+/// reads. A sidecar like `flavour.json`: no rule but CN Tech reads it, and only through the engine's
+/// registered copy.
+pub fn win_rates_json() -> &'static str {
+    include_str!("../data/win_rates.json")
+}
+
+/// ME-STATS: the compiled win-rate table, parsed once, on first use.
+pub static WIN_RATES: LazyLock<WinRateTable> = LazyLock::new(|| {
+    serde_json::from_str(win_rates_json())
+        .unwrap_or_else(|error| panic!("crates/cards/data/win_rates.json: {error}"))
+});
+
 /// Registers the shipped catalog (§9.4) and the card scripts with the engine (SURFACE §7.4): the
 /// engine's two `OnceLock`s are set here, once per process, and read-only after. Idempotent: a second
 /// call does nothing. A test that wants fixture cards uses the testkit's thread-local override
@@ -109,7 +122,7 @@ pub fn scripts_of() -> IndexMap<String, CardScripts> {
 pub fn register_all() {
     static REGISTERED: OnceLock<()> = OnceLock::new();
     REGISTERED.get_or_init(|| {
-        jackioh_engine::catalog::register_catalog(CATALOG.clone(), CATALOG_VERSION);
+        jackioh_engine::catalog::register_catalog(CATALOG.clone(), CATALOG_VERSION, WIN_RATES.clone());
         jackioh_engine::scripts::register_scripts(scripts_of());
     });
 }

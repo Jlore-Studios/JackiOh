@@ -31,6 +31,7 @@ pub use crate::combat::*;
 pub use crate::config::*;
 pub use crate::cost_rules::*;
 pub use crate::faces::*;
+pub use crate::grants::*;
 pub use crate::graveyard_play::*;
 pub use crate::kill_credit::*;
 pub use crate::layers::*;
@@ -48,6 +49,7 @@ pub use crate::state::*;
 pub use crate::times_played::*;
 pub use crate::traps::*;
 pub use crate::tuning::*;
+pub use crate::win_rates::*;
 pub use crate::zones::*;
 
 pub use crate::effects::*;

@@ -7,11 +7,12 @@ use crate::config::GLITCH_DEF_ID;
 use crate::cost_rules::{climb_price_rules, cost_floor_of, price_rules_for};
 use crate::faces::card_type_of;
 use crate::graveyard_play::playable_from_graveyard;
-use crate::script::CostArgs;
+use crate::script::{CostArgs, EngineSink};
 use crate::state::{
     CardInstance, GameState, ModifierExpiry, ModifierKind, PlayerModifier, PlayerState, handicap_of,
 };
-use crate::wire::{CardCost, GameEvent, PlayerId, Zone};
+use crate::triggers::{TriggerZone, holders_answering};
+use crate::wire::{CardCost, GameEvent, GameEventType, ManaSpentFor, PlayerId, Zone};
 
 /// §2.3, R181: max mana is min(turns started + the seat's mana bonus, its mana cap), plus persistent
 /// modifiers, floored at 0. With no handicap the bonus is 0 and the cap is MAX_MANA, which is §2.3's
@@ -68,6 +69,27 @@ pub fn mana_event(player: PlayerId, side: &PlayerState) -> GameEvent {
         current: side.mana.current,
         max: side.mana.max,
     }
+}
+
+/// MD-D26: whether a `manaSpent` would be heard — some card answers it that is not a trap and sits
+/// on the field or in the backrow. Those cards are public, and a trigger on a public card is
+/// public, so asking costs a listener nothing hidden.
+pub fn mana_spent_heard(state: &GameState) -> bool {
+    holders_answering(state, GameEventType::ManaSpent)
+        .iter()
+        .any(|holder| {
+            !holder.is_trap && matches!(holder.zone, TriggerZone::Field | TriggerZone::Backrow)
+        })
+}
+
+/// MD-D26: report mana `player` spent, for a play's price or an activation's — but only while
+/// something answers it, so a game with no listener keeps its events, and its `next_seq` hashes,
+/// exactly as before (D14). Nothing is emitted for an amount below 1.
+pub fn push_mana_spent(sink: &mut EngineSink<'_>, player: PlayerId, amount: i32, for_: ManaSpentFor) {
+    if amount <= 0 || !mana_spent_heard(sink.state) {
+        return;
+    }
+    sink.events.push(GameEvent::ManaSpent { player, amount, for_ });
 }
 
 /// The printed cost as it stands: X uses the chosen X, an embiggen card the chosen price (R65).

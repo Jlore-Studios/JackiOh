@@ -132,6 +132,7 @@ function publicNames(events: readonly GameEvent[]): Map<string, string> {
       case "libraryOverflow":
       case "discarded":
       case "radiantSet":
+      case "deradianted":
       case "trapFired":
         note(event.instanceId, event.defId);
         break;
@@ -271,6 +272,12 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     }
     case "radiantSet":
       return `${name.def(event.defId)} became Radiant`;
+    case "deradianted":
+      // MD-D6: the mirror of `radiantSet`'s line.
+      return `${name.def(event.defId)} is no longer Radiant`;
+    case "manaSpent":
+      // MD-D26: the spend is noise beside the play or activation it paid for; `manaChanged` says the total.
+      return null;
     case "transformed":
       return `${name.def(event.fromDefId)} became ${name.def(event.toDefId)}`;
     case "fused":
@@ -464,6 +471,13 @@ function cardOf(event: GameEvent, view: PlayerView, remembered: ReadonlyMap<stri
       const card = event.instanceId === HIDDEN_CARD ? null : byDef(event.defId, event.instanceId);
       return card === null ? null : { ...card, radiant: true };
     }
+    case "deradianted": {
+      // MD-D6: the mirror of `radiantSet`'s card.
+      const card = event.instanceId === HIDDEN_CARD ? null : byDef(event.defId, event.instanceId);
+      return card === null ? null : { ...card, radiant: false };
+    }
+    case "manaSpent":
+      return null;
     case "transformed":
       return byDef(event.toDefId, event.newInstanceId);
     case "fused":

@@ -36,7 +36,7 @@ Rarity, tribe and set are pure filter tags. The tribes are Human, Felinor, KY, C
 
 The source defines Radiant only as "upgraded versions of normal cards". Rulings that make it implementable ([[R74]]):
 
-- Radiant is a boolean on an instance, never a separate card id. Making a card Radiant sets it; nothing in any set un-sets it.
+- Radiant is a boolean on an instance, never a separate card id. Making a card Radiant sets it; nothing in any set un-sets it — except De-Radiant, which clears it ([[R1102]]).
 - In hand or library: cost unchanged, stats and text swap to the radiant form, and a face with its own type swaps the card's type with it: a C+ #22 Blood Moon made Radiant in hand is a Field Trap there, which pools and filters then read.
 - On the field (Radiant Saintess, Knockoff Temu Glowy Jelly Bean, radiant GIGA Glowy Jelly Bean, Snom Bunny Mind Control, radiant K-Pop Fanatic's steal): the base-stat layer swaps immediately, damage taken and buffs are kept, newly gained keywords apply at once, ongoing triggers use the radiant text from then on, and Cry does not re-fire.
 - A copy of a Radiant card is Radiant. A card an effect generates "Radiant" is Radiant. Tokens can be Radiant (Radiant CN-Virus, Radiant Reminisce).

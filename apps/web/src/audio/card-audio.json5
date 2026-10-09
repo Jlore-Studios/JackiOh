@@ -1294,6 +1294,24 @@
     "meditative-038": { // H1B Printer
       cast: { voice: "robot", text: "Printing visas. Please hold." },
     },
+    "meditative-050": { // CN Tech
+      cast: { voice: "robot", text: "Winning formula found. You're welcome." },
+    },
+    "meditative-053": { // Prestige
+      cast: { voice: "diva", text: "Darling, true class never fades." },
+    },
+    "meditative-058": { // Permanent Underclassman
+      play: { voice: "zoomer", text: "First year! Best year! Only year!" },
+      death: { voice: "zoomer", text: "Held back. Again." },
+    },
+    "meditative-059": { // Permanent Upperclassman
+      play: { voice: "prof", text: "Seniors rule. Permanently." },
+      death: { voice: "prof", text: "Graduation postponed. Indefinitely." },
+    },
+    "meditative-069": { // The Maestro
+      play: { voice: "posh", text: "I conduct. You suffer." },
+      death: { voice: "posh", text: "Encore? Never." },
+    },
     "meditative-076": { // Do or Die
       cast: { voice: "sapi-trickster", text: "Play it fast, or it's mine." },
     },

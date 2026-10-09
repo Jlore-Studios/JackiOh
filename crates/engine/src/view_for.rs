@@ -507,6 +507,8 @@ fn unit_view_of(state: &GameState, pile: &[CardInstance], viewer: PlayerId) -> O
         },
         // ME-CN, R1301: public on the field like the unit itself (the pile's top, R13).
         chinese: card.chinese,
+        // ME-GRANT (MD-D13): the granted Death abilities, as the Unit's lines read them.
+        grants: crate::grants::grant_texts(state, top),
     })
 }
 
@@ -1501,7 +1503,7 @@ fn redact_event(
         // only (R60), so a cue located in the hand, or at a face-down trap's lane, would tell this viewer
         // that the hand still held a base-face card, or that the trap was base-face (R33). The zone is
         // given as that player's hand, the region this viewer is shown the player's unread cards in.
-        GameEventType::RadiantSet => {
+        GameEventType::RadiantSet | GameEventType::Deradianted => {
             let zone = shown.get("zone").unwrap_or(Value::Null);
             let in_library = zone.get("z").and_then(Value::as_str) == Some("library");
             let unread = in_library || hidden(&instance);
@@ -1685,6 +1687,7 @@ fn redact_event(
         | GameEventType::Swapped
         | GameEventType::Locked
         | GameEventType::ManaChanged
+        | GameEventType::ManaSpent
         | GameEventType::TurnStarted
         | GameEventType::TurnEnded
         | GameEventType::TurnAutoEnded

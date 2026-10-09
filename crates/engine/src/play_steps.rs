@@ -53,7 +53,9 @@ use crate::echo::{
 };
 use crate::faces::card_type_of;
 use crate::graveyard_play::{in_own_graveyard, mana_due, spend_plague_tokens, why_graveyard_play_refused};
-use crate::mana::{cost_rules_spent_by, is_x_cost, mana_event, modifier_is_live, play_cost, spend_mana};
+use crate::mana::{
+    cost_rules_spent_by, is_x_cost, mana_event, modifier_is_live, play_cost, push_mana_spent, spend_mana,
+};
 use crate::modifiers::remove_modifier;
 use crate::play_choices::{
     DECLARATION_SLICES_KEY, active_target_decls, chooses_x, declaration_slices, declared_modes,
@@ -90,8 +92,8 @@ use crate::triggers::{
     run_queued_trigger, settle, trigger_holder_for, trigger_holders_with_hook,
 };
 use crate::wire::{
-    CardCost, CardType, Enchantment, GameEvent, PLAYER_IDS, PlagueSpend, PlayedFrom, PlayerId, PromptKind,
-    Row, Selection, TargetAim, TargetDecl, Zone, opponent_of,
+    CardCost, CardType, Enchantment, GameEvent, ManaSpentFor, PLAYER_IDS, PlagueSpend, PlayedFrom,
+    PlayerId, PromptKind, Row, Selection, TargetAim, TargetDecl, Zone, opponent_of,
 };
 use crate::work::{begin_work_cascade, drain_work, drop_work, paused, paused_of, push_work};
 use crate::zones::{
@@ -864,9 +866,13 @@ fn pay_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
 
     // R454: Plague Counters pay their part of the price, and the mana the rest.
     let due = mana_due(run.cost_paid, run.plague.as_ref());
+    let before = sink.state.players[run.player].mana.current;
     spend_mana(&mut sink.state.players[run.player], due);
     let changed = mana_event(run.player, &sink.state.players[run.player]);
     sink.events.push(changed);
+    // MD-D26: the mana actually taken, which answers `manaSpent` while something hears it.
+    let taken = before - sink.state.players[run.player].mana.current;
+    push_mana_spent(sink, run.player, taken, ManaSpentFor::Play);
     if let Some(plague) = run.plague.clone()
         && let Some(holder) = snapshot(sink.state, &plague.from)
     {

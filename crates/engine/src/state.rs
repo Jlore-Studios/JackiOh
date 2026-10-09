@@ -94,6 +94,25 @@ pub struct KnownAs {
     pub radiant: bool,
 }
 
+/// ME-GRANT (MD-D13): one Death ability another card granted this one — `<defId>#<key>` naming a
+/// hook the granting card registers beside its faces (`Script.grants`), the face it was granted on,
+/// and the numbers it was granted with. Plain data, never a closure, so state stays JSON and
+/// replays exactly. A grant behaves like a granted keyword (§10.4): it shows on the Unit, survives
+/// a copy (R57) and a Vanilla, and is lost when the card leaves the field (R78).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct Grant {
+    pub grant: String,
+    pub radiant: bool,
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub params: IndexMap<String, i32>,
+}
+
 /// B3.3, R385, R638: a card's Brittle count and the turn it started (`CardInstance.brittle`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
@@ -252,6 +271,12 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub granted_tags: Option<Vec<Tag>>,
+    /// ME-GRANT (MD-D13): the Death abilities other cards granted this card, in the order granted.
+    /// R78's reset takes them off with the card leaving the field; an instance copy keeps them, a
+    /// Fuse unites them, a Transform drops them — as `granted_tags` above.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub grants: Option<Vec<Grant>>,
 }
 
 /// B5 E12, R452: one cast being driven that makes its caster's choices at random (`random`), narrows
@@ -1555,6 +1580,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         times_played: None,
         chinese: None,
         granted_tags: None,
+        grants: None,
     };
     *next_id += 1;
     instance

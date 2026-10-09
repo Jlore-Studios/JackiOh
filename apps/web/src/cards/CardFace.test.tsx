@@ -870,6 +870,18 @@ describe("R503: the set mark and a token's printed rarity", () => {
   });
 });
 
+describe("R1107: a granted Death ability prints on its own line", () => {
+  it("R1107 prints a granted ability after the gained keywords and inside the printed text", () => {
+    const grant = "Death: Add 1 random Book card to your hand.";
+    const cf = catalogFace("meditative-058", false, "full", { inPlay: { grants: [grant] } });
+    const text = one(cf, ".card-text");
+    const granted = text.querySelectorAll(".cf-text-granted");
+    expect(granted).toHaveLength(1);
+    expect(granted[0]?.textContent).toBe(grant);
+    expect(text.textContent).toContain(grant);
+  });
+});
+
 function FitProbe({ content }: { content: string }): ReactElement {
   const ref = useRef<HTMLSpanElement>(null);
   useFitText(ref, content);

@@ -175,6 +175,8 @@ thread_local! {
     static CATALOG_OVERRIDE: Cell<Option<&'static CardDefs>> = const { Cell::new(None) };
     static CATALOG_VERSION_OVERRIDE: Cell<Option<&'static str>> = const { Cell::new(None) };
     static SCRIPTS_OVERRIDE: Cell<Option<&'static IndexMap<String, CardScripts>>> = const { Cell::new(None) };
+    static WIN_RATES_OVERRIDE: Cell<Option<&'static crate::win_rates::WinRateTable>> =
+        const { Cell::new(None) };
 }
 
 /// TS `registerCatalog(defs)` for this thread: the catalog `catalog::registered_catalog()` answers
@@ -213,12 +215,25 @@ pub fn scripts_override() -> Option<&'static IndexMap<String, CardScripts>> {
     SCRIPTS_OVERRIDE.with(Cell::get)
 }
 
+/// ME-STATS: the win-rate table this thread registered, if any: what
+/// `catalog::registered_win_rates()` answers first. A leaked `&'static`, like the catalog's.
+pub fn register_win_rates(table: crate::win_rates::WinRateTable) {
+    let table: &'static crate::win_rates::WinRateTable = Box::leak(Box::new(table));
+    WIN_RATES_OVERRIDE.with(|cell| cell.set(Some(table)));
+}
+
+/// The win-rate table this thread registered, if any.
+pub fn win_rates_override() -> Option<&'static crate::win_rates::WinRateTable> {
+    WIN_RATES_OVERRIDE.with(Cell::get)
+}
+
 /// Back to the production registries (`jackioh_cards::register_all()`'s) for this thread: TS's
 /// `registerAll()` after a fixture registration.
 pub fn clear_overrides() {
     CATALOG_OVERRIDE.with(|cell| cell.set(None));
     CATALOG_VERSION_OVERRIDE.with(|cell| cell.set(None));
     SCRIPTS_OVERRIDE.with(|cell| cell.set(None));
+    WIN_RATES_OVERRIDE.with(|cell| cell.set(None));
 }
 
 // ---------------------------------------------------------------------------------------------

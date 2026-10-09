@@ -84,6 +84,7 @@ mod tests {
             tribute_when,
             would_counter,
             start_of_opponent_turn,
+            grants,
         } = script;
         cost.is_none()
             && cry.is_none()
@@ -122,6 +123,7 @@ mod tests {
             && tribute_when.is_none()
             && would_counter.is_none()
             && start_of_opponent_turn.is_none()
+            && grants.is_empty()
     }
 
     fn kinds(keywords: &[Keyword]) -> Vec<&'static str> {

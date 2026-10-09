@@ -87,6 +87,7 @@ struct Registered {
     defs: CardDefs,
     version: String,
     index: indexmap::IndexMap<String, usize, IdHash>,
+    win_rates: crate::win_rates::WinRateTable,
 }
 
 static REGISTERED: OnceLock<Registered> = OnceLock::new();
@@ -116,17 +117,39 @@ fn registered() -> &'static CardDefs {
     }
 }
 
-/// TS `registerCatalog(defs, catalogVersion = "test")`. Set once per process: a second call is
-/// ignored (the registry is a `OnceLock`, SURFACE §3); a test that needs another catalog sets the
-/// testkit's override instead (SURFACE §8).
-pub fn register_catalog(defs: CardDefs, catalog_version: &str) {
+/// TS `registerCatalog(defs, catalogVersion = "test")`, with the compiled win-rate table beside
+/// them (ME-STATS, MD-D1). Set once per process: a second call is ignored (the registry is a
+/// `OnceLock`, SURFACE §3); a test that needs another catalog sets the testkit's override instead
+/// (SURFACE §8).
+pub fn register_catalog(
+    defs: CardDefs,
+    catalog_version: &str,
+    win_rates: crate::win_rates::WinRateTable,
+) {
     let index = defs.keys().enumerate().map(|(at, id)| (id.clone(), at)).collect();
     let _ = REGISTERED.set(Registered {
         defs,
         version: catalog_version.to_string(),
         index,
+        win_rates,
     });
 }
+
+/// ME-STATS: the win-rate table CN Tech reads — the testkit's override first, then the registered
+/// table, then an empty table held in a `OnceLock` (nothing registered yet).
+pub fn registered_win_rates() -> &'static crate::win_rates::WinRateTable {
+    #[cfg(feature = "testkit")]
+    if let Some(table) = crate::testkit::scenario::win_rates_override() {
+        return table;
+    }
+    match REGISTERED.get() {
+        Some(registered) => &registered.win_rates,
+        None => EMPTY_WIN_RATES.get_or_init(crate::win_rates::WinRateTable::default),
+    }
+}
+
+/// What `registered_win_rates` answers before anything is registered.
+static EMPTY_WIN_RATES: OnceLock<crate::win_rates::WinRateTable> = OnceLock::new();
 
 pub fn registered_catalog() -> &'static CardDefs {
     registered()

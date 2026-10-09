@@ -371,6 +371,13 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "radiant" },
     target: (e, view) => zoneOfCard(view, e.zone, e.instanceId),
   },
+  // The gold glow goes out, stats swap back. The `zone` payload says where the card is standing.
+  deradianted: {
+    animation: "jk-radiant-pulse",
+    durationMs: 400,
+    testid: "card-<instanceId>",
+    target: (e, view) => zoneOfCard(view, e.zone, e.instanceId),
+  },
   // Card spins and shows its new face. Pre-update the old instance is the one on the board.
   transformed: {
     animation: "jk-spin-face",
@@ -467,6 +474,13 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     durationMs: 150,
     testid: "mana-<side>",
     fx: { recipe: "mana" },
+    target: (e, view) => animTestid.mana(sideOf(view, e.player)),
+  },
+  // Mana paid for a play or an activation; `manaChanged` sounds it.
+  manaSpent: {
+    animation: "jk-crystal-fill",
+    durationMs: 150,
+    testid: "mana-<side>",
     target: (e, view) => animTestid.mana(sideOf(view, e.player)),
   },
   // Banner "Your turn" / "Opponent's turn".
@@ -1205,6 +1219,7 @@ const REWRITTEN_WITH_IDENTITY: Partial<Record<GameEventType, readonly string[]>>
   numberChanged: ["value"],
   cardAnnounced: ["cardType"],
   radiantSet: ["zone"],
+  deradianted: ["zone"],
   libraryOverflow: ["radiant"],
 };
 

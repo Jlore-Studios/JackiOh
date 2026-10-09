@@ -106,6 +106,9 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   translated: 400,
   // Patch v0.3.X (MN05).
   damageAbsorbed: 300,
+  // Meditative batch 17 (MB17).
+  deradianted: 400,
+  manaSpent: 150,
 };
 
 /* ------------------------------------------------------------------------------------------- *
@@ -151,6 +154,12 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
     defId: "core-017",
     zone: { z: "field", player: "p1", row: "units", lane: 2 },
   },
+  deradianted: {
+    type: "deradianted",
+    instanceId: "u3",
+    defId: "core-017",
+    zone: { z: "field", player: "p1", row: "units", lane: 2 },
+  },
   transformed: {
     type: "transformed",
     instanceId: "u3",
@@ -168,6 +177,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   attackDeclared: { type: "attackDeclared", attackerId: "u1", targetId: "u6", forced: false },
   attackCancelled: { type: "attackCancelled", attackerId: "u1", targetId: "u6", byInstanceId: "b5" },
   manaChanged: { type: "manaChanged", player: "p1", current: 2, max: 4 },
+  manaSpent: { type: "manaSpent", player: "p1", amount: 2, for: "play" },
   turnStarted: { type: "turnStarted", player: "p1", turn: 3 },
   turnEnded: { type: "turnEnded", player: "p1", turn: 3, unspentMana: 2 },
   turnAutoEnded: { type: "turnAutoEnded", player: "p1", turn: 3 },
@@ -526,6 +536,26 @@ describe("target resolution", () => {
         view,
       ),
     ).toBe(testid.zone("opponent", "backrow", 4));
+  });
+
+  it("deradianted follows the zone in the payload, like radiantSet", () => {
+    expect(
+      targetFor(
+        {
+          type: "deradianted",
+          instanceId: YOUR_UNIT_1,
+          defId: "core-011",
+          zone: { z: "field", player: "p1", row: "units", lane: 1 },
+        },
+        view,
+      ),
+    ).toBe(testid.card(YOUR_UNIT_1));
+    expect(
+      targetFor(
+        { type: "deradianted", instanceId: "hidden", defId: "core-011", zone: { z: "hand", player: "p2" } },
+        view,
+      ),
+    ).toBe(animTestid.hand("opponent"));
   });
 
   it("radiantSet follows the zone in the payload", () => {

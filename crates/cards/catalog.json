@@ -11263,6 +11263,178 @@
       "text": "Start of turn: Add a random Radiant KY or CN card to your hand. It costs (0)."
     }
   },
+  "meditative-050": {
+    "id": "meditative-050",
+    "index": "50",
+    "name": "CN Tech",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [
+      "CN"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 0,
+    "params": [],
+    "loc": 18,
+    "base": {
+      "keywords": [],
+      "text": "Add the highest win rate card to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add the highest win rate card to your hand. It is Radiant."
+    }
+  },
+  "meditative-053": {
+    "id": "meditative-053",
+    "index": "53",
+    "name": "Prestige",
+    "set": "Meditative",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "cards",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 83,
+    "base": {
+      "keywords": [],
+      "text": "De-Radiant a Radiant Unit or face-up backrow card on either side, or a Radiant card in your hand. Add {cards|AI generated card|AI generated cards} to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "De-Radiant every enemy card: every Radiant card of the opponent's field, hand and library. Add {cards|AI generated card|AI generated cards} to your hand."
+    }
+  },
+  "meditative-058": {
+    "id": "meditative-058",
+    "index": "58",
+    "name": "Permanent Underclassman",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "books",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 43,
+    "base": {
+      "attack": 2,
+      "health": 1,
+      "keywords": [],
+      "text": "Cry: Summon a random (1) Unit. It gains 'Death: Add {books|random Book card|random Book cards} to your hand.'",
+      "grants": {
+        "bookDeath": "Death: Add {books|random Book card|random Book cards} to your hand."
+      }
+    },
+    "radiant": {
+      "attack": 3,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Summon a random Radiant (1) Unit. It gains 'Death: Add {books|random Book card|random Book cards} to your hand.'",
+      "grants": {
+        "bookDeath": "Death: Add {books|random Book card|random Book cards} to your hand."
+      }
+    }
+  },
+  "meditative-059": {
+    "id": "meditative-059",
+    "index": "59",
+    "name": "Permanent Upperclassman",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 3,
+    "params": [],
+    "loc": 42,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [],
+      "text": "Cry: Summon a random (4) Unit. It gains 'Death: Fuse a random Book and AI card.'",
+      "grants": {
+        "fusedBookDeath": "Death: Fuse a random Book and AI card."
+      }
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Summon a random Radiant (4) Unit. It gains 'Death: Fuse a random Radiant Book and AI card.'",
+      "grants": {
+        "fusedBookDeath": "Death: Fuse a random Radiant Book and AI card."
+      }
+    }
+  },
+  "meditative-069": {
+    "id": "meditative-069",
+    "index": "69",
+    "name": "The Maestro",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "price",
+        "base": 4,
+        "radiant": 4,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "exiles",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 55,
+    "base": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Whenever you spend mana, place 1 Plague Counter on this. Activate: Spend ({price}) Plague Counters: Exile {exiles|random enemy card|random enemy cards} from each of the opponent's field, hand, deck, and graveyard zones."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 8,
+      "keywords": [],
+      "text": "Whenever you spend mana, place 1 Plague Counter on this. Activate: Spend ({price}) Plague Counters: Exile {exiles|random enemy card|random enemy cards} from each of the opponent's field, hand, deck, and graveyard zones."
+    }
+  },
   "meditative-076": {
     "id": "meditative-076",
     "index": "76",

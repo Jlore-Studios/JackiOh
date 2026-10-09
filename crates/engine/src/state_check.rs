@@ -572,7 +572,8 @@ fn run_death_pass(sink: &mut EngineSink<'_>, pass: &mut DeathPass, at: Option<Pa
         }
 
         // §5.2: the face the card was wearing as it died, which is the snapshot's own.
-        let Some(hook) = crate::scripts::script_of(sink.state, &snapshot).death.clone() else {
+        // ME-GRANT (MD-D13): the card's own Death, then each granted Death in the order granted.
+        let Some(hook) = crate::grants::death_hook_of(sink.state, &snapshot) else {
             pass.owed.remove(0);
             resume_at = None;
             continue;

@@ -46,7 +46,8 @@ use serde_json::{Value, json};
 use crate::config::ACTIVATE_UNLIMITED_CAP;
 use crate::effects::move_::discard_random;
 use crate::layers::unit_view;
-use crate::mana::{mana_event, spend_mana};
+use crate::mana::{mana_event, push_mana_spent, spend_mana};
+use crate::params::{ParamValueOptions, param_decl_of, param_value};
 use crate::play_choices::{
     DeclaredChoices, in_declared_order, play_choice_combinations, targeting_discards_required,
     why_declared_choices_refused,
@@ -56,8 +57,8 @@ use crate::preview::is_face_down;
 use crate::prompts::{HookInstance, HookResumableOptions, run_hook_resumable};
 use crate::resolve::{HookOptions, make_context};
 use crate::script::{
-    ActivationDecl, ActivationUses, ConditionContext, ConditionZone, EffectContext, EngineSink, HookArgs,
-    activation_decls, activation_hook,
+    ActivationCost, ActivationDecl, ActivationUses, ConditionContext, ConditionZone, EffectContext,
+    EngineSink, HookArgs, activation_decls, activation_hook,
 };
 use crate::state::{
     CardInstance, EngineError, GameState, Resume, WorkItem, find_instance, find_instance_mut,
@@ -67,7 +68,9 @@ use crate::stays::exit_mark;
 use crate::targeting::why_targeting_discards_unpayable;
 use crate::targeting_point::pay_targeting_discards;
 use crate::tuning::tuned_count;
-use crate::wire::{ActionBody, ActivationView, GameEvent, Phase, PlayerId, Row, Selection, ZoneName};
+use crate::wire::{
+    ActionBody, ActivationView, GameEvent, ManaSpentFor, Phase, PlayerId, Row, Selection, ZoneName,
+};
 use crate::work::{paused, push_work};
 use crate::zones::{active_units_of, acts_on_field, slot_of};
 
@@ -133,6 +136,17 @@ impl TryFrom<ActionBody> for ActivateAction {
 
 /// B3.2 rule 9: the tuning key Degrade and Upgrade move an "Activate N" by (`tuning::tuned_count`).
 pub const ACTIVATE_TUNING_KEY: &str = "Activate";
+
+/// MD-D9: the mana price of the ability's cost — the declared number `mana_param` names, read off
+/// the card as it stands (so a Buffed price reaches it, B3.4), or `mana` as written. Never below 0.
+pub fn mana_price(state: &GameState, card: &CardInstance, cost: ActivationCost) -> i32 {
+    if let Some(key) = cost.mana_param
+        && param_decl_of(state, &card.def_id, key).is_some()
+    {
+        return param_value(state, Some(card), key, ParamValueOptions::default()).max(0);
+    }
+    cost.mana.unwrap_or(0).max(0)
+}
 
 // ---------------------------------------------------------------------------
 // The card and its abilities
@@ -350,7 +364,7 @@ fn why_ability_unusable(
 
     let side = &state.players[player];
     let cost = decl.cost.unwrap_or_default();
-    let mana = cost.mana.unwrap_or(0).max(0);
+    let mana = mana_price(state, card, cost);
     if mana > side.mana.current {
         return Err(EngineError::new(format!(
             "that ability costs {mana}, more than your mana"
@@ -373,6 +387,16 @@ fn why_ability_unusable(
     Ok(())
 }
 
+/// MD-D9: whether a seat that does not control the card may still activate the named ability —
+/// the card acts on the field, the ability exists, and its cost opens it to either player.
+fn opponent_may_activate(state: &GameState, card: &CardInstance, ability: Option<&str>) -> bool {
+    if card.zone.z() != ZoneName::Field || !is_acting_on_field(state, card) {
+        return false;
+    }
+    find_ability(state, card, ability)
+        .is_ok_and(|decl| decl.cost.is_some_and(|cost| cost.either_player == Some(true)))
+}
+
 /// R384: why `player` cannot activate that ability of that card right now, or `Ok` when they can.
 /// `ability` names one of several (B3.2 rule 5); none named is the card's only one. `legal_actions`
 /// lists an `activate` for exactly the abilities this answers `Ok` for, so the two agree (§10.2).
@@ -385,7 +409,9 @@ pub fn why_cannot_activate_ability(
     let Some(card) = find_instance(state, instance_id) else {
         return Err(EngineError::new(format!("no card {instance_id}")));
     };
-    if card.controller != player {
+    // MD-D9: an ability open to either player may be used by the other seat too: the card acts on
+    // the field, the ability exists, and its cost opens it. Every other refusal stands, word for word.
+    if card.controller != player && !opponent_may_activate(state, card, ability) {
         return Err("that card is not yours".into());
     }
     if card.zone.z() != ZoneName::Field {
@@ -650,11 +676,15 @@ fn pay_costs(
 ) {
     let cost = decl.cost.unwrap_or_default();
 
-    let mana = cost.mana.unwrap_or(0).max(0);
+    let mana = mana_price(sink.state, card, cost);
     if mana > 0 {
+        let before = sink.state.players[run.player].mana.current;
         spend_mana(&mut sink.state.players[run.player], mana);
         let event = mana_event(run.player, &sink.state.players[run.player]);
         sink.events.push(event);
+        // MD-D26: the mana actually taken, which answers `manaSpent` while something hears it.
+        let taken = before - sink.state.players[run.player].mana.current;
+        push_mana_spent(sink, run.player, taken, ManaSpentFor::Activate);
     }
 
     // B5 E5, R450, R682: a targeting cost is part of the price, paid with it (Classic #89) — random
@@ -869,18 +899,25 @@ pub fn activate_ability(
 // The view (§10.8)
 // ---------------------------------------------------------------------------
 
-/// R384: the card's abilities as its controller's client needs them — on the controller's own view
-/// of a card acting on the field, and nowhere else (the other player reads the card's text; whether it
-/// could be used is its controller's business). `usable` is exactly whether `legal_actions` lists it.
+/// R384: the card's abilities as a client needs them — on the controller's own view of a card
+/// acting on the field, and nowhere else (the other player reads the card's text; whether it could
+/// be used is its controller's business). MD-D9: a viewer who is not the controller sees only the
+/// abilities either player may use. `usable` is exactly whether `legal_actions` lists it.
 pub fn activation_views_for(
     state: &GameState,
     viewer: PlayerId,
     card: &CardInstance,
 ) -> Option<Vec<ActivationView>> {
-    if card.controller != viewer || !is_acting_on_field(state, card) {
+    if !is_acting_on_field(state, card) {
         return None;
     }
-    let abilities = abilities_of(state, card);
+    let abilities: Vec<ActivationDecl> = abilities_of(state, card)
+        .into_iter()
+        .filter(|decl| {
+            card.controller == viewer
+                || decl.cost.is_some_and(|cost| cost.either_player == Some(true))
+        })
+        .collect();
     if abilities.is_empty() {
         return None;
     }

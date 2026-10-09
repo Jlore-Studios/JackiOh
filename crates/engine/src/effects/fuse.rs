@@ -415,6 +415,10 @@ pub struct FuseGeneratedArgs {
     pub to_hand: Option<PlayerSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hand_price: Option<HandPrice>,
+    /// MD-D14: one pick from each named pool, in order (Meditative #59 fuses a random Book and a
+    /// random AI card). Set: `count` and `query` are ignored; an empty pool fuses nothing (R142).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pools: Option<Vec<CatalogQueryArgs>>,
 }
 
 /// E23: "fuse 3 random AI generated cards and add the result to your hand; it costs (0)" (Classic+
@@ -426,24 +430,42 @@ pub struct FuseGeneratedArgs {
 /// picks is no fusion, so it draws nothing (R77, R129), and neither does an empty pool.
 pub fn fuse_generated(args: FuseGeneratedArgs) -> Effect {
     Effect::new("fuseGenerated", move |ctx| {
-        let count = args.count;
-        if count < FUSE_MIN_INGREDIENTS as i32 {
-            return;
-        }
-        let pool = pool_for(ctx, args.query.as_ref());
-        if pool.is_empty() {
-            return;
-        }
+        // MD-D14: with named pools, one `pool_for` pick from each pool, in order — and if any pool
+        // is empty, fuse nothing (R142).
+        let picked_ids: Vec<String> = if let Some(pools) = &args.pools {
+            let mut picked_ids: Vec<String> = Vec::with_capacity(pools.len());
+            for pool in pools {
+                let pool = pool_for(ctx, Some(pool));
+                let Some(picked) = ctx.sink.rng.pick(&pool) else {
+                    return;
+                };
+                picked_ids.push(picked.id.clone());
+            }
+            picked_ids
+        } else {
+            let count = args.count;
+            if count < FUSE_MIN_INGREDIENTS as i32 {
+                return;
+            }
+            let pool = pool_for(ctx, args.query.as_ref());
+            if pool.is_empty() {
+                return;
+            }
+            let mut picked_ids: Vec<String> = Vec::with_capacity(count as usize);
+            for _ in 0..count {
+                let Some(picked) = ctx.sink.rng.pick(&pool) else {
+                    return;
+                };
+                picked_ids.push(picked.id.clone());
+            }
+            picked_ids
+        };
         let player = player_of(ctx, args.to_hand.unwrap_or(PlayerSpec::SelfSide));
         let mut ingredients: Vec<CardInstance> = Vec::new();
-        for _ in 0..count {
-            let Some(picked) = ctx.sink.rng.pick(&pool) else {
-                return;
-            };
-            let picked_id = picked.id.clone();
+        for picked_id in &picked_ids {
             ingredients.push(new_instance(
                 &mut *ctx.sink.state,
-                &picked_id,
+                picked_id,
                 player,
                 Zone::Gone { player },
             ));
