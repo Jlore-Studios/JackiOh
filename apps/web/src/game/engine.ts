@@ -12,7 +12,7 @@
 // action builders and the animation table compile and test with no engine at all, and tests install
 // a scripted port with `setEnginePort`.
 
-import type { Action, ActionBody, CardDefs, EmoteId, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
+import type { Action, ActionBody, CardDefs, EmoteId, GameEvent, PlayerId, PlayerView, SetName } from "@jackioh/shared";
 import type { Handicap } from "@jackioh/engine/config";
 
 import * as wasm from "../wasm/index.ts";
@@ -57,6 +57,12 @@ export type EnginePort = {
    * scripted port may leave it out, and both seats then show the default hand (R1343).
    */
   dealEmoteHand?: (seed: string, seat: PlayerId) => EmoteId[];
+  /**
+   * R1420: treat these sets as sets that ship from now on, so a deck may hold their cards: the dev
+   * hotseat's E2E injection plays a set before it ships with it (#552). A module built without the
+   * preview (the production bundle's) throws; a scripted port may leave it out.
+   */
+  previewSets?: (sets: readonly SetName[]) => void;
 };
 
 /** The functions `enginePort()` needs from the WebAssembly wrapper, for the missing-export report. */
@@ -125,6 +131,7 @@ export function enginePort(): EnginePort {
     hashState: (state) => wasm.hashState(raw(state)),
     catalog: () => wasm.registeredCatalog(),
     dealEmoteHand: (seed, seat) => wasm.dealEmoteHand(seed, seat),
+    previewSets: (sets) => wasm.previewSets(sets),
   };
 }
 

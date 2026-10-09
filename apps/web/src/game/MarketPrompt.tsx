@@ -3,7 +3,7 @@ import { useEffect, useRef, type KeyboardEvent } from "react";
 import type { ActionBody, PendingOption, PendingView, PlayerView } from "@jackioh/shared";
 
 import { chineseName } from "../cards/chinese.ts";
-import { CardFace, faceModel } from "../cards/index.ts";
+import { CardFace, faceModel, useInspectTrigger } from "../cards/index.ts";
 import { answerAction } from "./actions.ts";
 import { useCardInfo } from "./catalog.ts";
 import "./market.css";
@@ -32,25 +32,35 @@ function yuan(amount: number): string {
   return `¥${String(amount)}`;
 }
 
-/** One lot on the stall: the card as it will arrive (its base face), its name and its price. */
+/**
+ * One lot on the stall: the card as it will arrive (its base face), its name and its price. Like a
+ * Discover's card option (Prompt.tsx), the face opens the hover preview and, on a phone, the
+ * long-press sheet, so a lot can be read before it is bought: the click a long-press ends with is
+ * swallowed (`useInspectTrigger`), and only a tap buys (#552).
+ */
 function Lot(props: { option: PendingOption; onPick: () => void }) {
   const defId = props.option.defId ?? "";
   const info = useCardInfo(defId, false);
   const price = props.option.cost ?? 0;
   const face = faceModel({ defId, def: info.def, name: info.name, radiant: false, chinese: false, inPlay: {} });
+  const testId = `prompt-option-${props.option.key}`;
+  // Lines of code is a hidden stat in matches.
+  const inspect = useInspectTrigger({ key: testId, face }, { prefer: "above", showLoc: false });
   return (
     <li className="market-lot">
       <button
         type="button"
         className="market-deal"
-        data-testid={`prompt-option-${props.option.key}`}
+        data-testid={testId}
         aria-label={`${props.option.label}, ${String(price)} yuan`}
         onClick={props.onPick}
+        {...inspect.handlers}
       >
         <CardFace face={face} layout="full" />
         <span className="market-caption">{props.option.label}</span>
         <span className="market-price">{yuan(price)}</span>
       </button>
+      {inspect.overlay}
     </li>
   );
 }

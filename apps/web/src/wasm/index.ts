@@ -44,6 +44,7 @@ import initWasm, {
   initSync,
   last_board_for,
   legal_actions,
+  preview_sets,
   reduce as reduce_action,
   replay_open,
   replay_page,
@@ -272,6 +273,18 @@ export function findInstance(state: GameState, instanceId: string): CardInstance
 /** R1341: the emote hand `seat` is dealt in the game seeded `seed`, as the server's actor deals it. */
 export function dealEmoteHand(seed: string, seat: PlayerId): EmoteId[] {
   return call("dealEmoteHand", () => parsed<EmoteId[]>(deal_emote_hand(seed, seat)));
+}
+
+/**
+ * R1420: from now on the module treats `sets` as sets that ship (a deck may hold their cards, a pool
+ * that names no set reaches them), as the testkit previews a set on a test's thread. Only a module
+ * built with crates/wasm's `preview` feature can (scripts/build-wasm.sh; the production bundle's is
+ * built without it and throws). The hotseat route calls it for its E2E injection's `preview` alone.
+ */
+export function previewSets(sets: readonly SetName[]): void {
+  call("previewSets", () => {
+    preview_sets(json(sets));
+  });
 }
 
 let catalogCache: CardDefs | null = null;

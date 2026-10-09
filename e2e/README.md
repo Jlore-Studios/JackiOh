@@ -1,4 +1,4 @@
-# `e2e/` — the thirty-five specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34` and the settings dialog's `35`, plus fourteen component specs
+# `e2e/` — the thirty-six specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35` and the Meditative play-through's `36`, plus sixteen component specs
 
 Cypress runs against `apps/web` in `E2E=1` mode: the `/dev/hotseat` route for the local specs and
 a test server with fixture accounts for the networked ones, the Rust `jackioh-server` started with
@@ -18,7 +18,7 @@ everywhere in here:
 e2e/
   cypress.config.ts        e2e: specPattern cypress/e2e, fixturesFolder fixtures, supportFile support/e2e.ts;
                            component: specPattern cypress/component, support/component.tsx, support/component-index.html
-  cypress/e2e/*.cy.ts      the thirty-five specs (`99-online-smoke` is skipped unless enabled); CI splits them
+  cypress/e2e/*.cy.ts      the thirty-six specs (`99-online-smoke` is skipped unless enabled); CI splits them
                            over its e2e shards with scripts/shard-specs.mjs
   cypress/e2e/01-hotseat-full-game.cy.ts  BUILD M8: a seeded game played to completion through the UI with two aggro decks
   cypress/e2e/02-prompts.cy.ts  BUILD M8: each of the ten choice pickers rendered once and answered, whether it builds the `play` action or answers a `PendingChoice` (R81)
@@ -55,6 +55,7 @@ e2e/
   cypress/e2e/33-almanac.cy.ts  R630 on `/` and `/almanac`, against `build:e2e` with no server: signed out, the footer's "Card almanac" link (right after Patch notes) opens the almanac, read-only (no "Owned only", no "+", no draggable card), a cost chip keeps only cards of that cost, a card's detail view opens with no add action and closes, no `/api` call except the public stats block (R654) is made on the page, and Back returns to the landing page
   cypress/e2e/34-stats.cy.ts  R654, R661 on `/` and `/stats`, against `build:e2e` with stubbed endpoints: signed out, the landing's calls to action carry no Stats link and the footer's "Stats" link opens `/stats`, the provisional banner names no data source and no count towards the gate, summary tiles, sortable cards table, search, card drill-down dialog, and players tab (with no Elo rating displayed); Back returns to the landing page
   cypress/e2e/35-settings-dialog.cy.ts  #128, #129, R633, R634 (#263): the dialog's three tabs by click and arrow key, the tab it reopens on, Reduce motion applied at once, Reset this tab and Reset all, the background-music switch kept across a reload, and signed in as `e2e-p1` a change reaching the account (`PUT /api/settings`) and a fresh device taking the account's copy (`GET`), read through the API since the sync runs silently (#304)
+  cypress/e2e/36-meditative-play-through.cy.ts  #552 (MN09), R1400, on /dev/hotseat: every Meditative card a deck may hold, read off the catalog at run time, played once through the browser with the set previewed (`seedGame`'s `preview` and inline `decks`), game after game until each is done (a card another turned into something else goes into the next game; #37 CN in a bottle, which replaces itself as it enters a hand, is done once dealt); after every play nothing is left `data-animating`, every log line reads as English, the card's hover preview prints no id or unfilled value, and each prompt is on the board under its view's kind
   cypress/component/audio-recipes.cy.tsx  polish 2: every SFX recipe rendered in Chrome's OfflineAudioContext is finite, audible and quiet after its length, impact grows with damage, and through the real mix each effect sits in its band against the shipped voice lines
   cypress/component/audio-toggle.cy.tsx   polish 2: inside .app-shell the mute toggle is a 44 px circle with a 22 px icon
   cypress/component/board-layout.cy.tsx  BUILD M5-T1's pixel acceptance: the fixture view with 10 units, 10 backrow cards and a stacked pile has no layout overflow at 1280x720 and 390x844
@@ -64,6 +65,8 @@ e2e/
   cypress/component/fx-layer.cy.tsx  polish 1: the effects layer's real device pixel ratio (B28), the board shake (B35), and B40's browser half: it takes no click, the canvas draws, the board still fits
   cypress/component/keyword-visuals.cy.tsx  R438 (#40): the keyword visuals on a board minion as Chrome paints them
   cypress/component/landing-and-code-field.cy.tsx  polish 5, B39: at 360, 390, 768 and 1280 px neither the landing page nor the invite code field overflows, and every CTA and the code input are on screen
+  cypress/component/meditative-faces.cy.tsx  #552 (MN09): every Meditative card's base, Radiant and Chinese faces fit their frames at the inspect view's sizes (the hover preview's and the smallest phone's sheet), every Meditative card's name fits where the board draws it (hand, unit zone, backrow) at 1280x720, 390x844 and 360x780, the ensō and "All Tribes" sit where they should, and no two Meditative cards draw the same art
+  cypress/component/meditative-prompts.cy.tsx  #552 (MN09): the crafter and the night market at 360x780 and 390x844: a bottom sheet across the width, nothing scrolling sideways, 44 px controls, and a long-press on the card each shows opening its inspect sheet without picking it
   cypress/component/mobile-ux.cy.tsx  polish 7: the glow colours from the computed box-shadow and the mobile layout only a real layout engine can measure
   cypress/component/practice-table.cy.tsx  the practice table at the viewports practice is played on, on the M5-T1 fixture board with a hand of 4, 7 and 10 cards
   cypress/component/radiant-marks.cy.tsx  the Radiant pass: the gold mark's weight, underline and contrast on both backgrounds, a reference's tooltip in the detail view, and a computed value inside its rules box
@@ -79,6 +82,9 @@ e2e/
     testids.ts             every selector the suite uses, in one file
     ux.ts                  polish 7: the pointer-drag gesture (spec 16) and the drag, glow and
                            settings selectors (specs 16 and 35)
+    playthrough.ts         spec 36: the decks built from the catalog, the one-step driver over `window.__jackioh`
+                           (whoever owes the move answers, plays a card still to play, or ends the turn) and the
+                           English checks on log lines and inspect text
     tutorial.ts            specs 22 and 23: the lesson URL, seeded progress, the practice and
                            tutorial dev handles, and the driver that follows the coach by clicking
     config.ts              routes, endpoints, fixture accounts, the session key, timeouts,
@@ -219,7 +225,7 @@ place to change.
 
 | # | Assumption | Where | Ask |
 | --- | --- | --- | --- |
-| A1 | In E2E mode the hotseat route resolves `a=`/`b=` from `window.__jackiohE2E = { seed, decks, handicaps? }` (also mirrored into `localStorage["jackioh.e2e.decks"]`, so a reload keeps it) before falling back to built-in dev decks. `seedGame` injects it in `onBeforeLoad`, with fixture A's `handicap` as `handicaps.p1` and fixture B's as `handicaps.p2` (R180); the route drops a seat's handicap that is not shaped like one, hands the rest to `createGame` (which validates the numbers, R184, and whose refusal it prints), and reports them on `window.__jackioh.handicaps` for `cy.replayCheck`. Development builds only, like the rest of the injection. | `support/commands.ts`, `support/types.ts` | `apps/web` |
+| A1 | In E2E mode the hotseat route resolves `a=`/`b=` from `window.__jackiohE2E = { seed, decks, handicaps? }` (also mirrored into `localStorage["jackioh.e2e.decks"]`, so a reload keeps it) before falling back to built-in dev decks. `seedGame` injects it in `onBeforeLoad`, with fixture A's `handicap` as `handicaps.p1` and fixture B's as `handicaps.p2` (R180); the route drops a seat's handicap that is not shaped like one, hands the rest to `createGame` (which validates the numbers, R184, and whose refusal it prints), and reports them on `window.__jackioh.handicaps` for `cy.replayCheck`. The injection's `preview` (spec 36's `["Meditative"]`) has the engine preview those sets before it creates the game (R1400, R1420). Development builds only, like the rest of the injection. | `support/commands.ts`, `support/types.ts` | `apps/web` |
 | A2 | `window.__jackioh` also carries `log: Action[]` (every action reduced, in order, with its nonce) and `decks: [string[], string[]]`. Only spec 01 needs them: they are the "recorded actions" BUILD M8 folds for the replay hash. | `support/types.ts`, `cy.replayCheck` | `apps/web` |
 | A3 | `<side>` in `zone-<side>-…` and `hero-<side>` is view-relative, `you` \| `opponent`, matching `PlayerView.you` / `.opponent`. Lanes are 1..5, as `crates/engine/src/zones.rs` numbers them (not an assumption — the engine fixes it). | `support/testids.ts` | `apps/web` |
 | A4 | Prompt internals: one option per `PendingOption.key` at `prompt-option-<key>`, a `prompt-submit` confirm button for multi-select kinds, and `prompt-x` for the numeric input of an `x` picker with more values than its cards take (#492: a few X values, like an embiggen price, are cards, each its own `prompt-option-<key>`). A chosen option is marked `aria-pressed="true"` (or `data-selected="true"`), which is how `keepMulligans` knows it does not have to click it again. `answerPrompt` prefers these and falls back to the board testids for pickers M5-T2 renders on the board (target, zone, tribute). | `support/testids.ts`, `support/commands.ts` | `apps/web` |

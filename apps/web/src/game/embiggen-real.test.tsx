@@ -195,16 +195,36 @@ describe("#492 R81 every Embiggen card asks for its price when both are affordab
 describe("#492 the Embiggened card shows the embiggen price as it stands, and the play pays it", () => {
   /** p1's player modifiers live this turn (§10.1 `mods`, as the state holds them). */
   const thisTurn = { until: "thisTurn", turn: TURN };
-  type Case = { name: string; change: CostChange; normal: (a: number) => number; embiggened: (b: number) => number; tone: string };
+  /** R363's threshold in the discount below: it reaches a price of this or more. */
+  const CURVE_FROM = 4;
+  type Case = {
+    name: string;
+    change: CostChange;
+    normal: (a: number) => number;
+    embiggened: (b: number) => number;
+    tone: string;
+    /** Whether the change moves this card's embiggen price at all (R363's threshold). */
+    applies?: (b: number) => boolean;
+  };
   const cases: Case[] = [
-    { name: "its own discount (costMod -1)", change: { costMod: -1 }, normal: (a) => a - 1, embiggened: (b) => b - 1, tone: "down" },
+    // A cost never drops below 0 (§6.3 Cost), so a card printed (0) stays (0) on its normal price.
     {
-      // R363: Professor Curvature's shape reaches a price of 4 or more: the embiggen price, not the base one.
+      name: "its own discount (costMod -1)",
+      change: { costMod: -1 },
+      normal: (a) => Math.max(0, a - 1),
+      embiggened: (b) => Math.max(0, b - 1),
+      tone: "down",
+      applies: (b) => b > 0,
+    },
+    {
+      // R363: Professor Curvature's shape reaches a price of 4 or more: the embiggen price, not the
+      // base one. An embiggen price under 4 (Meditative #81 Deadman's Hand's (2)) is out of its reach.
       name: "a (4)+ Cost discount (R363)",
-      change: { mods: [{ id: "m492-curve", expiry: thisTurn, kind: "costDiscount", amount: 1, minCurrentCost: 4 }] },
+      change: { mods: [{ id: "m492-curve", expiry: thisTurn, kind: "costDiscount", amount: 1, minCurrentCost: CURVE_FROM }] },
       normal: (a) => a,
       embiggened: (b) => b - 1,
       tone: "down",
+      applies: (b) => b >= CURVE_FROM,
     },
     {
       name: "a surcharge of 1 (R455)",
@@ -216,7 +236,8 @@ describe("#492 the Embiggened card shows the embiggen price as it stands, and th
   ];
 
   for (const { def, base, embiggen } of EMBIGGEN) {
-    for (const { name, change, normal, embiggened, tone } of cases) {
+    for (const { name, change, normal, embiggened, tone, applies } of cases) {
+      if (applies !== undefined && !applies(embiggen)) continue;
       const price = embiggened(embiggen);
       it(`${def.name} under ${name}: Normal says (${String(normal(base))}), Embiggened (${String(price)}), and the play pays that`, () => {
         const { state, cardId } = board(def.id, false, price, change);

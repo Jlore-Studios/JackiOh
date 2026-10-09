@@ -3,10 +3,12 @@
 // the reducer will say.
 
 import type { ActionBody } from "@jackioh/shared";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { CraftRecipe, PendingOption, PendingPromptView } from "../../wire/index.ts";
+import { INSPECT_SHEET, closeInspect } from "../../cards/index.ts";
+import { LONG_PRESS_MS } from "../../cards/inspect/index.ts";
 import { CraftEditor } from "./CraftEditor.tsx";
 
 afterEach(cleanup);
@@ -208,5 +210,30 @@ describe("the block editor (R880)", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+});
+
+// #552 (MN09, mobile): the card being crafted is read as any card is: a touch long-press on its face
+// opens the inspect sheet, and crafts nothing.
+describe("R880 the crafted card opens on a long-press", () => {
+  afterEach(() => {
+    act(() => {
+      closeInspect();
+    });
+    vi.useRealTimers();
+  });
+
+  it("R880 a touch long-press on the preview face opens its inspect sheet and sends no answer", () => {
+    vi.useFakeTimers();
+    const props = editorProps();
+    render(<CraftEditor pending={props.pending} onAction={props.onAction} />);
+    const face = screen.getByTestId("craft-face");
+    fireEvent.pointerDown(face, { pointerType: "touch", pointerId: 1, clientX: 10, clientY: 10 });
+    act(() => {
+      vi.advanceTimersByTime(LONG_PRESS_MS);
+    });
+    expect(screen.getByTestId(INSPECT_SHEET)).toHaveTextContent("Pure Closure");
+    fireEvent.pointerUp(face, { pointerType: "touch", pointerId: 1 });
+    expect(props.onAction).not.toHaveBeenCalled();
   });
 });

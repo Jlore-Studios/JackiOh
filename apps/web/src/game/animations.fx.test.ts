@@ -206,7 +206,7 @@ function startOf(signal: RunnerSignal | undefined) {
  * B1: the fx column
  * ------------------------------------------------------------------------------------------- */
 
-/** S4's table and patch v0.2.0's rows: `type → recipe`, `null` for the 13 rows that carry no effect. */
+/** S4's table and patch v0.2.0's rows: `type → recipe`, `null` for the 14 rows that carry no effect. */
 const S4_RECIPES: Record<GameEventType, string | null> = {
   cardPlayed: "cast",
   summoned: "summon",
@@ -398,7 +398,7 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 55 rows of S4, patch v0.2.0, Glitch (R676) and MN05 (R1363) carry fx with the listed recipe and the other 13 carry none", () => {
+  it("B1 exactly the 55 rows of S4, patch v0.2.0, Glitch (R676) and MN05 (R1363) carry fx with the listed recipe and the other 14 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
     expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(55);
@@ -413,9 +413,9 @@ describe("B1 the fx column of ANIMATIONS", () => {
     }
   });
 
-  it("B1 the 13 rows without an effect have no fx value at all", () => {
+  it("B1 the 14 rows without an effect have no fx value at all", () => {
     const bare = GAME_EVENT_TYPES.filter((t) => S4_RECIPES[t] === null);
-    expect(bare).toHaveLength(13);
+    expect(bare).toHaveLength(14);
     for (const type of bare) expect(ANIMATIONS[type].fx, type).toBeUndefined();
   });
 

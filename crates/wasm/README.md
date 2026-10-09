@@ -22,6 +22,7 @@ opaque `EngineState` brand (CLAUDE.md rule 7) and hands back on every call.
 | `choose_action(state, seat, rng_seed, rng_cursor)` | spec §10.7's random policy, `{ action, rngCursor }` |
 | `validator(call, input)` | one of the validator's functions (`validateDeck`, `validateTrio`, `checkDeckDraft`, `checkImportRoom`, …) by name |
 | `constants()`, `engine_tables()` | the AI budgets, shadow-ban ids and deck builder's numbers (`AI_DECK`); the Call to Chaos and Heroic Power tables the client prints |
+| `preview_sets(sets)` | R1400, R1420: treat `SetName[]` as shipped for the module's life (the dev hotseat's E2E injection); a module built without the `preview` feature refuses any set |
 | `craft_preview(recipe, cost)` | ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe — a `CraftPreview` — so the block editor shows what the reducer will say |
 
 A binding returns `Err(JsError)`, which JavaScript sees as a thrown `Error` with the engine's message,
@@ -37,7 +38,9 @@ The pure crates never read a clock (CLAUDE.md rule 4). The AI's wall-clock cap i
 `scripts/build-wasm.sh` builds the module in release for `wasm32-unknown-unknown` and runs
 `wasm-bindgen --target web` into `apps/web/src/wasm/pkg/` (gitignored). It adds the target and
 downloads the pinned `wasm-bindgen-cli` (the same version as the crate, `=0.2.129`) only when they
-are missing. `apps/web/package.json`'s `predev`, `prebuild`, `prebuild:e2e` and `pretest` run it.
+are missing. `apps/web/package.json`'s `predev`, `prebuild`, `prebuild:e2e` and `pretest` run it. By
+default it builds with the `preview` feature (the engine's testkit, for `preview_sets`, R1400);
+`prebuild`, the production bundle's, sets `JACKIOH_WASM_PREVIEW=0` and builds without it.
 
 `apps/web/src/wasm/index.ts` is the only caller: `loadWasm()` (or `loadWasmSync(bytes)` under jsdom)
 and one typed function per binding, named as the TypeScript engine named it. `apps/web/src/wire/`

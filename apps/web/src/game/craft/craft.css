@@ -128,6 +128,12 @@
   gap: 8px;
 }
 
+/* The card being crafted: a block box for the face (cards.css sizes it off its width), which opens
+   the card's preview and long-press sheet (#552). */
+.craft-face {
+  display: block;
+}
+
 .craft-meters {
   display: flex;
   gap: 12px;
@@ -186,7 +192,8 @@
 
   .craft-editor[data-layout="sheet"] .craft-block,
   .craft-editor[data-layout="sheet"] .craft-suggestions button,
-  .craft-editor[data-layout="sheet"] .prompt-submit {
+  .craft-editor[data-layout="sheet"] .prompt-submit,
+  .craft-editor[data-layout="sheet"] select {
     min-height: 44px;
   }
 

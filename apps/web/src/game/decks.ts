@@ -11,7 +11,7 @@
 // so the route can print a readable sentence instead of showing a thrown stack, which is the same
 // trade `e2e/support/commands.ts` makes in `asDeck`.
 
-import { setShips, type CardCost, type CardDef, type CardDefs } from "@jackioh/shared";
+import { setShips, type CardCost, type CardDef, type CardDefs, type SetName } from "@jackioh/shared";
 
 /**
  * SPEC §2.6 L2 / L3. Re-exported from the engine's own `config` entry point rather than restated:
@@ -48,10 +48,11 @@ export function printedCost(cost: CardCost): number {
 
 /**
  * `validateDeck`'s L3, mirrored: not a Token (`def.token || def.tags.includes("Token")`, §2.6) and
- * not a card of a set that has not shipped (R1420). A deck built from anything else is refused.
+ * not a card of a set that has not shipped (R1420), unless the engine was told to preview that set
+ * (`preview`, the E2E injection's, `EnginePort.previewSets`). A deck built from anything else is refused.
  */
-function deckable(def: CardDef): boolean {
-  return !def.token && !def.tags.includes("Token") && setShips(def.set);
+function deckable(def: CardDef, preview: readonly SetName[] = []): boolean {
+  return !def.token && !def.tags.includes("Token") && (setShips(def.set) || preview.includes(def.set));
 }
 
 /**
@@ -71,7 +72,9 @@ export function byIndex(a: CardDef, b: CardDef): number {
 }
 
 function candidates(catalog: CardDefs): CardDef[] {
-  return Object.values(catalog).filter(deckable).sort(byIndex);
+  return Object.values(catalog)
+    .filter((def) => deckable(def))
+    .sort(byIndex);
 }
 
 /**
@@ -111,7 +114,7 @@ export function deckSource(id: string): DeckSource | undefined {
  * A readable message for a list that `validateDeck` would refuse, or `null` when it would not.
  * `size` is the seat's deck size: §2.6's DECK_SIZE, or a handicap's `deckSize` (R184).
  */
-function refusal(deck: readonly string[], catalog: CardDefs, id: string, size: number): string | null {
+function refusal(deck: readonly string[], catalog: CardDefs, id: string, size: number, preview: readonly SetName[]): string | null {
   if (deck.length !== size) {
     return size === DECK_SIZE
       ? `deck "${id}" holds ${deck.length} cards; a deck is exactly ${DECK_SIZE} (§2.6 L2)`
@@ -123,8 +126,8 @@ function refusal(deck: readonly string[], catalog: CardDefs, id: string, size: n
   for (const defId of deck) {
     const def = catalog[defId];
     if (def === undefined) return `deck "${id}": "${defId}" is not in the catalog (§9.4 L6)`;
-    if (!deckable(def)) {
-      return setShips(def.set)
+    if (!deckable(def, preview)) {
+      return setShips(def.set) || preview.includes(def.set)
         ? `deck "${id}": "${defId}" is a Token card and cannot be in a deck (§2.6 L3)`
         : `deck "${id}": "${defId}" is a card of ${def.set}, which has not shipped yet (§2.6 L3, R1420)`;
     }
@@ -144,6 +147,9 @@ function refusal(deck: readonly string[], catalog: CardDefs, id: string, size: n
  * seat a handicap, whose `deckSize` rules instead (R184). The dev decks are always DECK_SIZE long, so
  * a handicapped seat plays an injected deck of its own size or none.
  *
+ * `preview` is the sets the E2E injection had the engine preview (R1420): an injected deck may hold
+ * their cards. The dev decks never do; they deal from what ships.
+ *
  * Never throws and never invents a card id: an unknown deck id, an empty catalog or a catalog too
  * small to fill a deck all come back as `{ error }` for the route to print.
  */
@@ -152,11 +158,12 @@ export function resolveDeck(
   catalog: CardDefs,
   overrides?: Readonly<Record<string, readonly string[]>>,
   size: number = DECK_SIZE,
+  preview: readonly SetName[] = [],
 ): ResolvedDeck {
   const injected = overrides?.[id];
   if (injected !== undefined) {
     const deck = [...injected];
-    const bad = refusal(deck, catalog, id, size);
+    const bad = refusal(deck, catalog, id, size, preview);
     return bad === null ? { deck } : { error: bad };
   }
 
@@ -183,13 +190,14 @@ export function resolveDeck(
   }
 
   const deck = source.resolve(catalog);
-  const bad = refusal(deck, catalog, id, size);
+  const bad = refusal(deck, catalog, id, size, []);
   return bad === null ? { deck } : { error: bad };
 }
 
 /**
  * Both seats at once: `[p1, p2]`, or the first error either side produced. `sizes` is each seat's
- * deck size in the same order (see `resolveDeck`), DECK_SIZE for both when omitted.
+ * deck size in the same order (see `resolveDeck`), DECK_SIZE for both when omitted, and `preview`
+ * the sets an injected deck may draw from beyond what ships (R1420).
  */
 export function resolveDecks(
   a: string,
@@ -197,10 +205,11 @@ export function resolveDecks(
   catalog: CardDefs,
   overrides?: Readonly<Record<string, readonly string[]>>,
   sizes: readonly [number, number] = [DECK_SIZE, DECK_SIZE],
+  preview: readonly SetName[] = [],
 ): { decks: [string[], string[]] } | { error: string } {
-  const first = resolveDeck(a, catalog, overrides, sizes[0]);
+  const first = resolveDeck(a, catalog, overrides, sizes[0], preview);
   if ("error" in first) return { error: first.error };
-  const second = resolveDeck(b, catalog, overrides, sizes[1]);
+  const second = resolveDeck(b, catalog, overrides, sizes[1], preview);
   if ("error" in second) return { error: second.error };
   return { decks: [first.deck, second.deck] };
 }

@@ -2322,6 +2322,24 @@
   }
 }
 
+/* A narrow phone, 360 to 380 px wide (#552): the one row of controls has 30 px less than at 390x844,
+   where it fits with a pixel to spare, and the gear ran off the screen, so the page scrolled
+   sideways. The row tightens its gaps and the buttons' side padding; every button stays a 44 px
+   target (B29). */
+@media (max-width: 380px) {
+  .board .control-bar {
+    gap: 4px;
+  }
+
+  .board .control-bar .control {
+    padding-inline: 6px;
+  }
+
+  .board .control-bar [data-testid="settings-open-game"] {
+    padding-inline: 10px;
+  }
+}
+
 /* Phone landscape, 844x390: a phone on its side has height for the four field rows and little
    else, and the route above the board (the turn banner, a match or hotseat bar) takes some of that
    too. So the seats sit in a left column, the field in the middle, and the opponent's hand (top)
