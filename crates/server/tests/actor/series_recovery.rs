@@ -12,15 +12,12 @@
 //!    and the rating move down with the result row;
 //!  - two starts racing for the same game.
 //!
-//! Port of `apps/server/test/match/series-recovery.test.ts`. TS's processes each had a fake match
-//! directory that recorded starts and could be told to throw; the Rust server has the one real
-//! registry (SURFACE §11.2), so here a start is the match row it wrote (read off the shared store),
-//! a "process" is an app over the same store whose predecessor's actors are stopped (the crash),
-//! a start that fails is the store refusing the match row's insert (TS's `store.onCall`), and every
-//! trio holds legal decks of real cards so the real engine can begin the game. TS's three
-//! compare-and-set races replaced `store.series.update` to lose, or to land a rival write first;
-//! here the fake store's race hook (`FakeData.before_call`) runs before the update with the tables
-//! in hand, writes the rival row, or makes the update lose.
+//! A start is the match row it wrote (read off the shared store); a "process" is an app over the same
+//! store whose predecessor's actors are stopped (the crash); a failing start is the store refusing the
+//! match row's insert. The compare-and-set races use the fake store's race hook
+//! (`FakeData.before_call`), which runs before the update with the tables in hand and writes the rival
+//! row or makes the update lose.
+//! Surface contract: docs/v0.3.0/SURFACE.md §11.2, §11.3.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -55,7 +52,7 @@ fn give_up_ms() -> i64 {
     SERIES_START_GIVE_UP_SECONDS * 1000
 }
 
-/// One store call in its own transaction, as TS's `deps.store.<sub>.<method>(…)` was.
+/// One store call in its own transaction.
 macro_rules! store {
     ($app:expr, $t:ident => $call:expr) => {{
         let mut $t = $app
@@ -77,7 +74,7 @@ fn to_json<T: serde::Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("a serialisable value")
 }
 
-/// The fake store behind the test app (SURFACE §11.2's `Db::Fake`).
+/// The fake store behind the test app (`Db::Fake`).
 fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
     match &app.db {
         Db::Fake(data) => Arc::clone(data),
@@ -85,7 +82,7 @@ fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
     }
 }
 
-/// One table of the fake store, as TS's `deps.store.tables.<name>` read it: rows as JSON.
+/// One table of the fake store: rows as JSON.
 async fn table(app: &App, pick: impl Fn(&FakeData) -> Value) -> Vec<Value> {
     let data = fake(app);
     let data = data.lock().await;
@@ -95,7 +92,7 @@ async fn table(app: &App, pick: impl Fn(&FakeData) -> Value) -> Vec<Value> {
     }
 }
 
-/// TS's `store.onCall`: every store method named `method` fails with `message` until cleared.
+/// Every store method named `method` fails with `message` until cleared.
 async fn fail_on(app: &App, method: &'static str, message: &'static str) {
     fake(app).lock().await.on_call = Some(Arc::new(move |called: &str| {
         if called == method {
@@ -110,12 +107,10 @@ async fn stop_failing(app: &App) {
     fake(app).lock().await.on_call = None;
 }
 
-// ---------------------------------------------------------------------------------------------
-// Time and logs: TS's manual `Timers` and recording `Logger`
-// ---------------------------------------------------------------------------------------------
+// Time and logs
 
-/// TS's `deps.timers.now()`: the server's clock, read as the epoch-ms stamp it wrote on the series
-/// row at `begin` plus the tokio time (paused, moved only by `advance`) since.
+/// The server's clock, read as the epoch-ms stamp it wrote on the series row at `begin` plus the
+/// tokio time (paused, moved only by `advance`) since.
 #[derive(Clone, Copy)]
 struct Clock {
     base_ms: i64,
@@ -128,7 +123,7 @@ impl Clock {
     }
 }
 
-/// TS's `deps.timers.advance(ms)`: every timer due fires, and the woken tasks get to run.
+/// Every timer due fires, and the woken tasks get to run.
 async fn advance(ms: i64) {
     tokio::time::advance(Duration::from_millis(
         u64::try_from(ms).expect("time moves forward"),
@@ -175,7 +170,7 @@ impl Logs {
         (logs, guard)
     }
 
-    /// Whether any line names `event` (SURFACE §11.3 keeps TS's event names).
+    /// Whether any line names `event`.
     fn has(&self, event: &str) -> bool {
         let bytes = self.0.lock().expect("the log buffer").clone();
         String::from_utf8_lossy(&bytes)
@@ -194,9 +189,7 @@ fn event_of(entry: &Value) -> Option<&str> {
     })
 }
 
-// ---------------------------------------------------------------------------------------------
 // Trios, processes and the series
-// ---------------------------------------------------------------------------------------------
 
 /// Every playable catalog id, in `catalog.json` order.
 fn playable() -> Vec<String> {
@@ -213,8 +206,7 @@ fn playable() -> Vec<String> {
         .collect()
 }
 
-/// The cards of `owner`'s deck in `slot`: a legal deck of real ids, disjoint from every other
-/// deck here (TS: `<owner>-card-<slot>a`, `<owner>-card-<slot>b`).
+/// The cards of `owner`'s deck in `slot`: a legal deck of real ids, disjoint from every other deck here.
 fn trio_deck(owner: &str, slot: usize) -> Vec<String> {
     let size = usize::try_from(jackioh_engine::config::DECK_SIZE).expect("a deck size");
     let first = if owner == "alice" { 0 } else { 3 } + slot;
@@ -227,8 +219,7 @@ fn trio(owner: &str) -> Value {
     json!({ "name": format!("{owner}'s trio"), "decks": [deck(0), deck(1), deck(2)] })
 }
 
-/// One server process. TS also gave each its own prefixed `Ids`, so a second process minted no id
-/// twice; the Rust server's ids are its own random ones.
+/// One server process.
 struct Process {
     app: Arc<App>,
     alice: String,
@@ -290,7 +281,7 @@ async fn started(app: &App) -> Vec<Value> {
         .collect()
 }
 
-/// A started row as TS's directory recorded the `StartMatchInput` (seat order is the row's).
+/// A started row as the match row recorded it (seat order is the row's).
 fn as_start(row: &Value) -> Value {
     json!({
         "matchId": row["id"],
@@ -305,7 +296,7 @@ fn as_start(row: &Value) -> Value {
 }
 
 impl Process {
-    /// TS's `deps.matches.started`: the starts this process made.
+    /// The starts this process made.
     async fn started(&self) -> Vec<Value> {
         started(&self.app)
             .await
@@ -589,7 +580,7 @@ mod r263_a_series_survives_a_restart {
         finish_game(&b, ALICE).await.expect("game 1's result");
         let after_game_1 = row(&b.app).await;
         assert_eq!(after_game_1["status"], "picking");
-        // TS: an id the new process minted (`b-…`); here, a new id.
+        // A new id.
         assert_ne!(after_game_1["nextMatchId"], FIRST_MATCH);
 
         // The players pick through the new process and game 2 starts there.
@@ -754,8 +745,7 @@ mod r263_every_write_is_a_compare_and_set {
     use super::*;
     use std::sync::atomic::{AtomicBool, Ordering};
 
-    /// TS's `store.series.update = async (next) => { if (!raced) { raced = true; … } return
-    /// update(next); }`: `rival` rewrites the series row once, just before the first update runs.
+    /// `rival` rewrites the series row once, just before the first update runs.
     async fn race_first_update(app: &App, rival: impl Fn(&SeriesRow) -> SeriesRow + Send + Sync + 'static) {
         let raced = AtomicBool::new(false);
         fake(app).lock().await.before_call = Some(Arc::new(move |method: &str, tables: &mut FakeTables| {
@@ -850,7 +840,7 @@ mod r263_every_write_is_a_compare_and_set {
         let playing = write_picks_only(&a.app, &series, [0, 0], now).await;
 
         // Another process won the start a moment earlier: its row is in the store, so this start's
-        // insert of the same id is refused (TS: a directory that wrote the row, then threw).
+        // insert of the same id is refused.
         let winner = from(json!({
             "id": FIRST_MATCH,
             "seed": "seed-base:1",

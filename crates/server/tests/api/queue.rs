@@ -17,27 +17,20 @@
 //!  - **R1372**: an All Random ticket's `leanNewest` leans the deck dealt to its own seat on the
 //!    newest set, and only that seat's.
 //!
-//! Port of `apps/server/test/api/queue.test.ts`. Everything runs on tokio's paused clock through
-//! `test_app()`, so `enqueuedAt` and the widening window are set by this file rather than by the
-//! host clock (`app::now_ms()` reads tokio's clock).
+//! Everything runs on tokio's paused clock through `test_app()`, so `enqueuedAt` and the widening
+//! window are set by this file rather than by the host clock (`app::now_ms()` reads tokio's clock).
 //!
-//! What moved, and why. `test_app()` is the production wiring on the fake store: the real catalog,
-//! the real validator (`jackioh_engine::validator`) and the real registry, which starts a real
-//! game on every pairing. So every deck here is real: the catalog's playable ids, sliced into
-//! disjoint decks of the engine's `DECK_SIZE`, and every player owns the whole catalog (R111's
-//! launch grant). TS's permissive validator, synthetic 24-id catalog and recording match directory
-//! have no Rust counterpart: a started match is read off its row (`matches_get`, the fake's
-//! `tables.matches`), where TS read `deps.matches.started`. The legacy `{ deckIndex }` body is gone
-//! (SURFACE §11.3), so R165's "nothing saved" is a deck id that was never saved and R257's legacy
-//! half is its refusal. A failing start is a store fault (`on_call`) instead of a replaced
-//! `matches.start`, and R253's expected issues are read for their rule and sentence instead of being
-//! recomputed through the adapter TS called.
+//! `test_app()` is the production wiring on the fake store: the real catalog, validator and registry,
+//! which starts a real game on every pairing. So every deck here is real (the catalog's playable ids,
+//! sliced into disjoint decks of the engine's `DECK_SIZE`) and every player owns the whole catalog
+//! (R111's launch grant). A started match is read off its row (`matches_get`, the fake's
+//! `tables.matches`). R165's "nothing saved" is a deck id that was never saved. A failing start is a
+//! store fault (`on_call`). Surface contract: docs/v0.3.0/SURFACE.md §11.3.
 //!
-//! R166's fixture is built by writing tickets straight into the store. That is deliberate: the
-//! ruling is about *which* qualifying opponent `try_pair` picks, and the only way to ask that
-//! question is to control each ticket's age and rating exactly. The endpoint-driven tests below
-//! (R165, R167) go through the router instead, so the route's auth declaration and §9.4's gate
-//! take part.
+//! R166's fixture writes tickets straight into the store: the ruling is about *which* qualifying
+//! opponent `try_pair` picks, and only exact control of each ticket's age and rating asks that. The
+//! endpoint-driven tests (R165, R167) go through the router, so the route's auth declaration and
+//! §9.4's gate take part.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
@@ -62,7 +55,7 @@ use crate::support::deps::{add_user, call, test_app};
 
 // Plumbing (private copies: each test file of this binary keeps its own)
 
-/// A port value built from TS's own object literal, so the test depends on the JSON shape only.
+/// A port value built from an object literal, so the test depends on the JSON shape only.
 fn from<T: DeserializeOwned>(value: Value) -> T {
     match serde_json::from_value(value.clone()) {
         Ok(parsed) => parsed,
@@ -74,7 +67,7 @@ fn to_json<T: Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("serialises")
 }
 
-/// One store call in its own transaction, as every TS `deps.store.<x>.<y>(…)` call was.
+/// One store call in its own transaction.
 macro_rules! q {
     ($app:expr, $method:ident($($arg:expr),* $(,)?)) => {{
         let mut tx = $app.db.begin(None).await.expect("begin");
@@ -91,12 +84,11 @@ async fn fake(app: &App) -> MutexGuard<'_, FakeData> {
     }
 }
 
-/// R143's seeds are held in `queue.rs`'s process-wide map, which every test of this binary shares
-/// (TS's module map was one per test file). The tests that send a seed, or count the map, take
-/// this, so `e2e_seed_count()` sees only their own.
+/// R143's seeds are held in `queue.rs`'s process-wide map, which every test of this binary shares.
+/// The tests that send a seed, or count the map, take this, so `e2e_seed_count()` sees only their own.
 static SEED_MAP: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
-/// `{ status, body }` of one request (TS's `router(jsonRequest(…))` and `readJson`).
+/// `{ status, body }` of one request.
 async fn request(app: &Arc<App>, method: &str, path: &str, token: &str, body: Option<Value>) -> (u16, Value) {
     let (status, _headers, body) = call(app, method, path, Some(token), body.unwrap_or(Value::Null)).await;
     (status, body)
@@ -280,12 +272,12 @@ async fn in_match_of(app: &App, profile_id: &str) -> Value {
         .unwrap_or(Value::Null)
 }
 
-/// A field TS wrote `null` that a Rust row may leave absent: either reads as `null`.
+/// A field a Rust row may leave absent or `null`: either reads as `null`.
 fn nullable(row: &Value, key: &str) -> Value {
     row.get(key).cloned().unwrap_or(Value::Null)
 }
 
-/// The deck the started match gave this profile's seat (TS read the match directory's `started`).
+/// The deck the started match gave this profile's seat.
 async fn seat_deck(app: &App, match_id: &str, profile_id: &str) -> Value {
     let row = q!(app, matches_get(match_id))
         .map(|row| to_json(&row))
@@ -405,7 +397,7 @@ async fn save(app: &Arc<App>, token: &str, deck_id: &str, cards: &[String], port
         .0
 }
 
-/// The store's call log and a fault to raise in it, as TS's `onCall` gave both.
+/// The store's call log and a fault to raise in it.
 fn record_calls(
     app_data: &mut FakeData,
     fail: impl Fn(&[String], &str) -> bool + Send + Sync + 'static,
@@ -926,7 +918,7 @@ mod r257_queue_modes {
         tokio::time::advance(Duration::from_millis(1_000)).await;
         let younger = save_deck_for(&app, "legacy", &two, "younger").await;
 
-        // SURFACE §11.3: the legacy `{ deckIndex }` body, with no mode, is gone; it queues nothing.
+        // The legacy `{ deckIndex }` body, with no mode, is gone; it queues nothing (SURFACE §11.3).
         let (status, _) = enqueue_with(&app, &legacy, json!({ "deckIndex": 1 })).await;
         assert_eq!(status, 400);
         assert!(tickets_table(&app).await.is_empty());
@@ -1171,9 +1163,8 @@ mod r258_all_random {
             ticket(&app, first["ticketId"].as_str().unwrap_or("")).await["deck"],
             json!([])
         );
-        // The older ticket is p1 (R166: oldest first, ties on the ticket id). TS's fake ids rose with
-        // each enqueue, so its tie went to the first; the server's ids are random, so the first
-        // enqueue is made older by a millisecond of the paused clock instead.
+        // The older ticket is p1 (R166: oldest first, ties on the ticket id). The server's ids are random,
+        // so the first enqueue is made older by a millisecond of the paused clock.
         tokio::time::advance(Duration::from_millis(1)).await;
 
         let (_, second) = enqueue_with(&app, &two, json!({ "mode": "random" })).await;
@@ -1207,9 +1198,8 @@ mod r258_all_random {
         let two = active_profile(&app, "pin-two", 1000.0).await;
 
         enqueue_with(&app, &one, json!({ "mode": "random", "seed": "spec-seed" })).await;
-        // The older ticket is p1 (R166: oldest first, ties on the ticket id). TS's fake ids rose with
-        // each enqueue, so its tie went to the first; the server's ids are random, so the first
-        // enqueue is made older by a millisecond of the paused clock instead.
+        // The older ticket is p1 (R166: oldest first, ties on the ticket id). The server's ids are random,
+        // so the first enqueue is made older by a millisecond of the paused clock.
         tokio::time::advance(Duration::from_millis(1)).await;
         let (_, paired) = enqueue_with(&app, &two, json!({ "mode": "random" })).await;
         let match_id = paired["matchId"].as_str().expect("a match id").to_string();
@@ -1326,7 +1316,7 @@ mod a_paired_match_whose_start_fails {
 
         enqueue_with(&app, &one, json!({ "mode": "bo1", "deckId": deck_a })).await;
         // The registry writes the match row only once the game has begun; refusing that write is a
-        // start that fails after the claim (TS replaced `matches.start` with one that threw).
+        // start that fails after the claim.
         let calls = record_calls(&mut *fake(&app).await, |_, method| method == "matches.create");
 
         // The claim won, the in-match transaction committed, and then the start failed — the pair
@@ -1368,8 +1358,7 @@ mod a_paired_match_whose_start_fails {
         // start failed — what a transaction exists to take back. Without it the 'picking' row would
         // hold both players out of the queue (R264) until the pick deadline ran the series out
         // (R333), and the `open` skeleton forever. The fault is the one store call right after the
-        // series row is written (TS made the log line after it throw), and only that one: the
-        // cleanup after it must go through.
+        // series row is written, and only that one: the cleanup after it must go through.
         let calls = record_calls(&mut *fake(&app).await, |seen, _method| {
             seen.last().is_some_and(|previous| previous == "series.create")
         });
@@ -1439,9 +1428,8 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
             .unwrap_or(Value::Null);
         assert_eq!(deck["portrait"], "timmy");
         assert_eq!(ticket(&app, &ticket_id).await["portrait"], "gary");
-        // The older ticket is p1 (R166: oldest first, ties on the ticket id). TS's fake ids rose with
-        // each enqueue, so its tie went to the first; the server's ids are random, so the first
-        // enqueue is made older by a millisecond of the paused clock instead.
+        // The older ticket is p1 (R166: oldest first, ties on the ticket id). The server's ids are random,
+        // so the first enqueue is made older by a millisecond of the paused clock.
         tokio::time::advance(Duration::from_millis(1)).await;
 
         // 3. The pairing: the older ticket is p1, and each seat carries what its ticket froze.
@@ -1487,9 +1475,8 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
         let two = active_profile(&app, "rng-p2", 1000.0).await;
 
         enqueue_with(&app, &one, json!({ "mode": "random", "seed": "portrait-seed" })).await;
-        // The older ticket is p1 (R166: oldest first, ties on the ticket id). TS's fake ids rose with
-        // each enqueue, so its tie went to the first; the server's ids are random, so the first
-        // enqueue is made older by a millisecond of the paused clock instead.
+        // The older ticket is p1 (R166: oldest first, ties on the ticket id). The server's ids are random,
+        // so the first enqueue is made older by a millisecond of the paused clock.
         tokio::time::advance(Duration::from_millis(1)).await;
         let (_, paired) = enqueue_with(&app, &two, json!({ "mode": "random" })).await;
         assert_eq!(paired["status"], "matched");

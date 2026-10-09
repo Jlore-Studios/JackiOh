@@ -5,15 +5,12 @@
 //!    library's default ceiling is far larger);
 //!  - one client address holds at most `WS_MAX_CONNECTIONS_PER_ADDRESS` sockets, handshakes
 //!    included;
-//!  - the token travels as `?token=` (SURFACE §11.3: the `Sec-WebSocket-Protocol` and
-//!    `Authorization` paths are gone), and `WS_SUBPROTOCOL` is still echoed when it is offered.
+//!  - the token travels as `?token=`, and `WS_SUBPROTOCOL` is still echoed when it is offered.
 //!
-//! Port of `apps/server/test/match/ws-server.test.ts`. TS ran `attachWebSocketServer` over a Node
-//! listener with a mocked registry `attach`; here the whole app is served (`app::router`, which
-//! mounts `/ws/match`, SURFACE §11.2) and the registry is the real one, so "attach was called for
-//! `match-1` and `profile-1`" is read off the socket itself: the actor's first `view` frame names
-//! the seat (`viewer: "p1"`). The client is a small hand-rolled RFC 6455 client over a
-//! `TcpStream`, since no WebSocket client crate is on SURFACE §2's list.
+//! The whole app is served (`app::router`, which mounts `/ws/match`) and the registry is the real
+//! one, so the actor's first `view` frame names the seat (`viewer: "p1"`). The client is a small
+//! hand-rolled RFC 6455 client over a `TcpStream`.
+//! Surface contract: docs/v0.3.0/SURFACE.md §2, §11.2, §11.3.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -35,16 +32,15 @@ use crate::support::deps::{add_user, test_app};
 /// real I/O, so tokio's clock is not paused in this file.
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
 
-/// The per-address count may be process-wide (TS kept one map per attached server, vitest one
-/// process per file), so the tests of this file run one at a time: each opens up to the cap from
-/// 127.0.0.1.
+/// The per-address count may be process-wide, so the tests of this file run one at a time: each opens
+/// up to the cap from 127.0.0.1.
 static SERIAL: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
 }
 
-/// The fake store behind the test app (SURFACE §11.2's `Db::Fake`).
+/// The fake store behind the test app (`Db::Fake`).
 fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
     match &app.db {
         Db::Fake(data) => Arc::clone(data),
@@ -91,7 +87,7 @@ struct Listening {
 
 impl Drop for Listening {
     fn drop(&mut self) {
-        // TS's `afterEach`: every client terminated, the sockets closed and the listener released.
+        // Every client terminated, the sockets closed and the listener released.
         self.server.abort();
     }
 }
@@ -148,7 +144,7 @@ async fn listen_with(matches: usize) -> (Listening, Vec<String>) {
     (Listening { port, server }, tokens)
 }
 
-/// TS's `listen()`: one active player in `match-1`, whose socket the registry keeps open.
+/// One active player in `match-1`, whose socket the registry keeps open.
 async fn listen() -> (Listening, String) {
     let (listening, tokens) = listen_with(1).await;
     let token = tokens.into_iter().next().expect("profile-1's token");
@@ -341,8 +337,7 @@ impl Client {
         }
     }
 
-    /// TS's `readyState === OPEN` after `wait`: every frame that arrives meanwhile is read (the
-    /// `malformed` answer among them), and none of them may be a close or the end of the stream.
+    /// Whether the socket is still open after `wait`: every frame that arrives meanwhile is read (the
     async fn still_open_after(&mut self, wait: Duration) -> bool {
         let deadline = tokio::time::Instant::now() + wait;
         loop {
@@ -466,9 +461,8 @@ mod sockets_per_client_address {
 }
 
 mod the_token_on_the_handshake {
-    //! TS: "the token in Sec-WebSocket-Protocol". SURFACE §11.3 keeps one token path, `?token=`
-    //! (what the browser and the e2e Node player send), and still echoes `jackioh.v1` when it is
-    //! offered; these hold the server to exactly that.
+    //! SURFACE §11.3: one token path, `?token=` (what the browser and the e2e Node player send), and
+    //! `jackioh.v1` is still echoed when it is offered; these hold the server to exactly that.
     use super::*;
 
     #[tokio::test]

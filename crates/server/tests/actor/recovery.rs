@@ -8,8 +8,8 @@
 //!
 //! The real clock (`actor/clock.rs`) runs on tokio's paused clock: the view carries `clockMs` (R79). No
 //! time passes across the crash; re-arming clocks from stored deadlines is M7-T1's (`docs/architecture.md` §5.2).
-//! The scripted block (`support::engine`'s cards) is below the real-engine block's reason: only real cards settle "the same `viewFor`".
-//! Surface contract: docs/v0.3.0/SURFACE.md §11.3.
+//! The first block runs scripted cards; the last deals real ones, which "the same `viewFor`" needs.
+//! Surface contract: docs/v0.3.0/SURFACE.md §11.2, §11.3.
 
 use std::any::Any;
 use std::sync::Arc;
@@ -409,7 +409,6 @@ mod m6_t4_crash_recovery {
 
     #[tokio::test(start_paused = true)]
     async fn a_start_the_engine_refuses_writes_no_match_row_and_registers_no_actor() {
-        // The opening draw runs before the row is written, so a game the engine cannot build (a
         // The opening draw runs before the row is written, so a game the engine cannot build (a deck a
         // catalog change stranded, say) fails the start cleanly. Written the other way round the row went
         // `live` first: a match no socket could ever build an actor for, which only the ceiling reaper
@@ -608,7 +607,6 @@ mod m6_t4_crash_recovery {
 /// socket protocol, kills the actor and folds the log back: the shuffle is the match rng replayed from
 /// `seed` (`setup.rs`), the opening draw is §2.1's table, and the mulligan answers in the log must land
 /// on the same instances or the two views come back different.
-/// two hands — and therefore the two views — come back different.
 mod m6_t4_crash_recovery_with_the_real_engine {
     use super::*;
 
