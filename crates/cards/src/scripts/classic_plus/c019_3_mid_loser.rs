@@ -7,7 +7,7 @@ pub const ID: &str = "classicplus-019-3";
 
 // "your opponent gains 1 mana next turn": the declared number `oppMana` (R386), less being better.
 
-/// One coin, Lucky X times more, heads kept if any of them lands heads.
+/// One coin, Lucky X times more, heads kept if any of them lands heads (R1440's `lucky_coin`).
 fn lands_heads(ctx: &mut EffectContext<'_>) -> bool {
     let lucky = match ctx.live_self() {
         Some(me) if me.zone.z() == ZoneName::Field => {
@@ -15,12 +15,7 @@ fn lands_heads(ctx: &mut EffectContext<'_>) -> bool {
         }
         _ => 0,
     };
-    let flip = |rng: &mut Rng| -> bool { rng.coin() };
-    if lucky > 0 {
-        ctx.rng.lucky(lucky, flip, |a, b| a || b)
-    } else {
-        flip(&mut *ctx.rng)
-    }
+    ctx.rng.lucky_coin(lucky)
 }
 
 fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {

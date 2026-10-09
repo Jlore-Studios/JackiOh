@@ -10,7 +10,8 @@
 //!
 //! Both rolls go through the seeded `ctx.rng` (CLAUDE.md rule 4), the base one roll at 0.3 and the
 //! radiant `lucky(1, …)` — two rolls at 0.4, keeping a success, which is §6.1's Lucky X read on a
-//! yes/no roll. No effect verb gates on a probability, so the hook does the roll and returns either
+//! yes/no roll. The X is the card's own Lucky (`lucky_on`: printed plus given, R1438), so a base face
+//! given Lucky 1 rolls twice at 0.3, and a Radiant face given Lucky 1 three times at 0.4. No effect verb gates on a probability, so the hook does the roll and returns either
 //! the effect or nothing; see the report for the `chanceOf` verb this wants. With an empty hand the
 //! effect has nothing to do, so it rolls nothing (R129, R60). A hand that is all Radiant is rolled
 //! like any other: whether the hand holds a base-face card is the hand's (§9.1), so neither the roll
@@ -42,6 +43,11 @@ fn any_to_make_radiant(ctx: &EffectContext<'_>) -> bool {
     !zone_cards(ctx.state, ctx.controller, OffFieldZone::Hand).is_empty()
 }
 
+/// §6.1, R1438: the Lucky the Dream has as it resolves, printed plus given.
+fn lucky(ctx: &EffectContext<'_>) -> i32 {
+    ctx.live_self().map_or(0, |me| lucky_on(&*ctx.state, me))
+}
+
 /// §5.1 and R68: at the end of the turn it was played on, the spell goes from the graveyard back to
 /// its owner's hand, and a full hand burns it (§2.4, R4) — both of which `bounce` does.
 fn returns_to_hand(ctx: &EffectContext<'_>) -> bool {
@@ -68,7 +74,8 @@ fn end_of_turn() -> Hook {
 pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(hook(|ctx| {
-            if any_to_make_radiant(ctx) && ctx.rng.chance(BASE_CHANCE) {
+            let lucky = lucky(ctx);
+            if any_to_make_radiant(ctx) && ctx.rng.lucky(lucky, |rng| rng.chance(BASE_CHANCE), |a, b| a || b) {
                 make_one_radiant()
             } else {
                 vec![]
@@ -84,7 +91,8 @@ pub fn script() -> CardScripts {
             if !any_to_make_radiant(ctx) {
                 return vec![];
             }
-            let hit = ctx.rng.lucky(1, |rng| rng.chance(RADIANT_CHANCE), |a, b| a || b);
+            let lucky = lucky(ctx);
+            let hit = ctx.rng.lucky(lucky, |rng| rng.chance(RADIANT_CHANCE), |a, b| a || b);
             if hit { make_one_radiant() } else { vec![] }
         })),
         end_of_turn: Some(end_of_turn()),
@@ -263,6 +271,40 @@ mod tests {
                     Some(true)
                 );
             }
+        }
+
+        /// R1438: given Lucky 1, the base face rolls twice at 30% and keeps a success, so it hits
+        /// wherever the plain base face hits and at more seeds besides, one card at a time. Where the
+        /// two come out the same, the lucky cast took exactly one more draw: its second roll.
+        #[test]
+        fn r1438_given_lucky_1_the_base_face_rolls_twice_and_keeps_the_better() {
+            crate::register_all();
+            let cast = |seed: &str, lucky: bool| -> (usize, u32) {
+                let mut s = dream_in(seed, false, &OTHERS);
+                if lucky {
+                    crate::give_lucky(&mut s, DREAM, 1);
+                }
+                let before = s.state().rng_cursor;
+                s.play(DREAM, json!({}));
+                (s.hand(P1).iter().filter(|card| card.radiant).count(), s.state().rng_cursor - before)
+            };
+            let base_hits: Vec<&str> = SEEDS.iter().copied().filter(|seed| cast(seed, false).0 == 1).collect();
+            let lucky_hits: Vec<&str> = SEEDS.iter().copied().filter(|seed| cast(seed, true).0 == 1).collect();
+
+            for seed in &base_hits {
+                assert!(lucky_hits.contains(seed));
+            }
+            assert!(lucky_hits.len() > base_hits.len());
+            let mut alike = 0;
+            for seed in &SEEDS {
+                let ((plain, plain_draws), (lucky, lucky_draws)) = (cast(seed, false), cast(seed, true));
+                assert!(lucky <= 1);
+                if plain == lucky {
+                    alike += 1;
+                    assert_eq!(lucky_draws, plain_draws + 1);
+                }
+            }
+            assert!(alike > 0);
         }
 
         #[test]

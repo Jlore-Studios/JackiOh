@@ -49,6 +49,9 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use jackioh_engine::testkit::*; // TEMP-571
+    #[allow(dead_code)] const P1: PlayerId = PlayerId::P1; // TEMP-571
+    #[allow(dead_code)] const P2: PlayerId = PlayerId::P2; // TEMP-571
 
     /// Felinor 3/4, Human 4/4, big Felinor 3/10, untagged Scarab 1/1.
     const FELINOR: &str = "core-012";

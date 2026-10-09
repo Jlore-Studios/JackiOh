@@ -13,7 +13,7 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::harness::{in_hand, put, set_library, slot};
 use crate::rules::fixtures::instance_data::{
-    CONSTANT_STEP, body, constant, instance_deck, instance_game, military, nerfer, numbered,
+    CONSTANT_STEP, body, constant, instance_deck, instance_game, military, nerfer, numbered, numbered_body,
     register_instance_fixtures,
 };
 
@@ -267,6 +267,60 @@ mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
             assert_eq!(now.buffs, AttackHealth { attack: 0, health: 0 });
             assert_eq!(now.granted_keywords, Vec::<Keyword>::new());
         }
+    }
+
+    /// R1438: a `lucky` rider gives the card Lucky X once it is in the hand, as a granted keyword that
+    /// adds to the Lucky it prints (Lucky 1 + 1 = 2), shown to its owner and to no one else, with no
+    /// event; it rides onto the field (E38). A full hand burns the card, which is given nothing.
+    #[test]
+    fn r1438_a_lucky_rider_lands_in_hand_adds_to_printed_lucky_and_rides_onto_the_field() {
+        let mut state = playing("r1438-lucky");
+        let rider = effects::add_to_hand(json_as(json!({ "defId": numbered_body.id, "lucky": 1 })));
+        let events = run(&mut state, &rider);
+        let card = state.players.p1.hand.last().cloned().expect("the card is in the hand");
+        assert_eq!(card.def_id, numbered_body.id);
+        assert_eq!(card.granted_keywords, vec![Keyword::Lucky { n: 1 }]);
+        assert_eq!(query::lucky_on(&state, &card), 2);
+        assert!(
+            !events
+                .iter()
+                .any(|event| matches!(event, GameEvent::KeywordGranted { .. }))
+        );
+        let HandView::Cards(hand) = view_for(&state, PlayerId::P1).you.hand else {
+            panic!("own hand is a list")
+        };
+        let seen = hand
+            .iter()
+            .find(|c| c.instance_id == card.id)
+            .expect("the card is in the hand");
+        let shown = seen.keywords.clone().expect("its owner sees the Lucky it was given");
+        assert_eq!(tuning::numbered_sum(&shown, KeywordKind::Lucky), Some(2));
+        let count = state.players.p1.hand.len();
+        assert_eq!(
+            serde_json::to_value(&view_for(&state, PlayerId::P2).opponent.hand).expect("a view serialises"),
+            json!({ "count": count })
+        );
+
+        let play = play_of(&state, &card, None);
+        state = act(&state, play, None);
+        let unit = on_field(&state, &card.id);
+        assert_eq!(query::lucky_on(&state, &unit), 2);
+        let keywords = layers::unit_view(&state, &unit).keywords;
+        assert_eq!(tuning::numbered_sum(&keywords, KeywordKind::Lucky), Some(2));
+
+        let room = config::HAND_CAP - state.players.p1.hand.len() as i32;
+        in_hand(&mut state, &body.id, PlayerId::P1, room);
+        run(&mut state, &rider);
+        let burned = state
+            .players
+            .p1
+            .graveyard
+            .last()
+            .cloned()
+            .expect("the full hand burned the card");
+        assert_eq!(burned.def_id, numbered_body.id);
+        assert!(burned.granted_keywords.is_empty());
+        assert_eq!(query::lucky_on(&state, &burned), 1);
     }
 
     #[test]

@@ -277,3 +277,55 @@ mod r387_a_card_never_generates_itself_named_by_its_id {
         assert_eq!(fused_id_parts(None, "t-3"), None);
     }
 }
+
+/// R1437: the Luck-based pool (Meditative #101 Gachaholic's) is read off the definitions
+mod r1437_the_luck_based_pool_is_read_off_the_definitions {
+    use super::*;
+
+    fn lucky_face(text: &str) -> Value {
+        json!({ "keywords": [{ "kind": "Lucky", "n": 1 }], "text": text })
+    }
+
+    fn plain_face(text: &str) -> Value {
+        json!({ "keywords": [], "text": text })
+    }
+
+    fn luck_defs() -> Vec<CardDef> {
+        vec![
+            card("core-201", "Core", "201", json!({ "radiant": lucky_face("Lucky 1\nRoll") })),
+            card("core-202", "Core", "202", json!({ "base": plain_face("Flip a coin. On heads, draw a card.") })),
+            card("core-203", "Core", "203", json!({})),
+            card("core-204", "Core", "204", json!({ "base": plain_face("Give a card Lucky 1.") })),
+            card(
+                "core-205",
+                "Core",
+                "205",
+                json!({ "tags": ["Token"], "rarity": "Token", "token": true, "base": lucky_face("Lucky 1") }),
+            ),
+            card("classic-206", "Classic", "206", json!({ "radiant": plain_face("Cry: flip a coin.") })),
+            card("meditative-207", "Meditative", "207", json!({ "base": lucky_face("Lucky 1") })),
+        ]
+    }
+
+    #[test]
+    fn r1437_luck_based_keeps_the_non_token_cards_that_print_lucky_or_flip_a_coin() {
+        register_catalog(catalog_of(luck_defs()));
+        // Lucky printed on either face, or "Flip a coin" in either face's text, any case. Lucky named
+        // in a text that prints none (#101's own "Give it Lucky") is not a roll, and a token is in no
+        // pool that does not name tokens (§5.1).
+        assert_eq!(
+            pool(json!({ "luckBased": true })),
+            vec!["core-201", "core-202", "classic-206"]
+        );
+        assert!(is_luck_based(&luck_defs()[4]));
+        assert!(!is_luck_based(&luck_defs()[3]));
+        // R1420: the pool names no set, so a set that has not shipped joins it only when previewed.
+        let _preview = preview_sets(&[SetName::Meditative]);
+        assert_eq!(
+            pool(json!({ "luckBased": true })),
+            vec!["core-201", "core-202", "classic-206", "meditative-207"]
+        );
+        // Unasked, the field filters nothing.
+        assert_eq!(pool(json!({})).len(), 6);
+    }
+}

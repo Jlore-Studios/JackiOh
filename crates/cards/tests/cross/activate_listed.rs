@@ -32,9 +32,10 @@ const LOCKDOWN: &str = "classic-084";
 const FUSION_LAB: &str = "classicplus-031";
 const DOCTORS_ORDERS: &str = "classicplus-060";
 const BROTHER_PING: &str = "classicplus-076-1";
+const GACHAHOLIC: &str = "meditative-101";
 
 /// Every card or token whose base or Radiant text has an Activate ability, each with a case below.
-const ACTIVATE_CARDS: [&str; 14] = [
+const ACTIVATE_CARDS: [&str; 15] = [
     HEROIC_POWER,
     INFINISCEPTER,
     NOSE_HUNTER,
@@ -49,6 +50,7 @@ const ACTIVATE_CARDS: [&str; 14] = [
     FUSION_LAB,
     DOCTORS_ORDERS,
     BROTHER_PING,
+    GACHAHOLIC,
 ];
 
 const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2. A spare that keeps R82's auto-end away.
@@ -745,5 +747,39 @@ mod c_n76_1_brother_ping {
             .expect_stats(MENACE, json!({ "health": 8 }));
         let id = s.card(BROTHER_PING).id.clone();
         assert!(listed(&s, &id).is_empty(), "Activate 2 is twice per turn");
+    }
+}
+
+mod m_n101_gachaholic {
+    use super::*;
+
+    fn gachaholic(radiant: bool) -> Scenario {
+        scenario(json!({
+            "p1": { "field": [on(GACHAHOLIC, radiant)], "hand": [STOCKPILE] },
+            "p2": { "hand": [FILLER] },
+        }))
+    }
+
+    #[test]
+    fn r384_base_has_no_activate() {
+        let s = gachaholic(false);
+        let id = s.card(GACHAHOLIC).id.clone();
+        assert!(listed(&s, &id).is_empty(), "the base face's pull is a Cry");
+    }
+
+    #[test]
+    fn r384_r1438_radiant_adds_a_luck_based_card_given_lucky_1_once_a_turn() {
+        let mut s = gachaholic(true);
+        activate_listed(&mut s, GACHAHOLIC, any);
+        let pulled: Vec<CardInstance> = s
+            .hand(P1)
+            .into_iter()
+            .filter(|card| card.def_id != STOCKPILE)
+            .collect();
+        assert_eq!(pulled.len(), 1);
+        assert!(is_luck_based(&jackioh_cards::card_def(&pulled[0].def_id)));
+        assert_eq!(pulled[0].granted_keywords, vec![Keyword::Lucky { n: 1 }]);
+        let id = s.card(GACHAHOLIC).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
     }
 }

@@ -6,17 +6,19 @@
 //! per side with an identical keyword coin.
 //!
 //! Engine cell: 5 or 7 seeded rolls and a permanent buff layer (§10.4 layer 4), then one seeded
-//! coin granting Divine Shield on heads, Rush on tails. R32/R130: Lucky has no defined "best" for
-//! a coin effect that pays on both faces, so it does not apply — the flips never consult it, which
-//! is why this file asks for plain coins and no `lucky` option.
+//! coin granting Divine Shield on heads, Rush on tails. R1440 (revising R32/R130): a coin flip is a
+//! luck-based roll whose better side is heads, so Gary's own Lucky X (none printed; a Lucky given to
+//! it, R1438) flips each coin X more times and keeps heads. The verbs read that Lucky themselves, so
+//! this file asks for plain coins and passes no `lucky` option.
 //!
 //! A card file may not call `ctx.rng` itself — that is state and randomness in a card script
 //! (CLAUDE.md rules 4 and 5) — so the rolls live in `flip_coins` and `flip_coin_keyword`
-//! (engine/src/effects/coins.rs). The stat flip makes exactly `coins` seeded `ctx.rng.coin()`
-//! calls and applies the totals as ONE layer-4 buff (one `buffed` event), so heads + tails always
+//! (engine/src/effects/coins.rs). With no Lucky the stat flip makes exactly `coins` seeded draws
+//! and applies the totals as ONE layer-4 buff (one `buffed` event), so heads + tails always
 //! accounts for every flip; the rider takes exactly one more seeded draw and grants the keyword
 //! (§10.4 granted keywords, one `keywordGranted` event), so a replay at the same seed and cursor
-//! reproduces both (§10.7). Stats first, rider second: the draw prefix is unchanged.
+//! reproduces both (§10.7). With Lucky X every coin takes 1 + X draws. Stats first, rider second:
+//! the draw prefix is unchanged.
 
 use jackioh_engine::effects::{flip_coin_keyword, flip_coins};
 use jackioh_engine::prelude::*;
@@ -50,7 +52,9 @@ pub fn script() -> CardScripts {
 
 // SPEC §8.1 #4 Gary the Gambler. BUILD M4-T4 row 4: "Fixed seed → fixed stats; heads+tails = 5
 // (radiant 7 at +2 each); second coin grants Divine Shield on heads, Rush on tails, identical on
-// both faces; Lucky has no effect (R32/R130)".
+// both faces; with no Lucky the 5 coins and the second coin take exactly 6 seeded draws (R32/R130);
+// with Lucky X each coin flips 1 + X times keeping heads (R1440), so a given Lucky 1 (R1438) takes
+// 12 draws and lands more heads over many seeds".
 //
 // The flips land as ONE permanent layer-4 buff (§10.4), so `buffs.attack` is the heads total and
 // `buffs.health` the tails total: the invariant the row asks for is that those two always account
@@ -123,25 +127,60 @@ mod tests {
             s.expect_stats("core-004", json!({ "attack": 2 + attack, "maxHealth": 2 + health }));
         }
 
-        #[test]
-        fn r32_r130_lucky_has_no_effect_5_coins_plus_the_rider_coin_take_exactly_6_seeded_rolls_with_no_reroll_for_a_best()
-         {
-            crate::register_all();
-            // Lucky is `rng.lucky(x, roll, better)` (rng.rs): it rolls x extra times and keeps the best,
-            // so a Lucky flip would show up as extra draws on the cursor. No Core card can put Lucky on a
-            // unit before its own Cry resolves, so counting the draws is what R32/R130 are actually
-            // about: the flips never ask for a reroll. The control play cancels whatever a play costs in
-            // draws by itself.
-            let mut control = scenario(json!({ "seed": "core-004-r32", "p1": { "hand": ["core-008"] } }));
+        /// The draws a play of Gary takes beyond what a play costs by itself (a Mr. Vanilla's on the
+        /// same seed), with `lucky` given to it in the hand.
+        fn coin_draws(seed: &str, lucky: i32) -> i64 {
+            let mut control = scenario(json!({ "seed": seed, "p1": { "hand": ["core-008"] } }));
             let control_before = i64::from(control.state().rng_cursor);
             control.play("core-008", json!({}));
             let overhead = i64::from(control.state().rng_cursor) - control_before;
 
-            let mut s = scenario(json!({ "seed": "core-004-r32", "p1": { "hand": ["core-004"] } }));
+            let mut s = scenario(json!({ "seed": seed, "p1": { "hand": ["core-004"] } }));
+            if lucky > 0 {
+                crate::give_lucky(&mut s, "core-004", lucky);
+            }
             let before = i64::from(s.state().rng_cursor);
             s.play("core-004", json!({}));
-            // 5 stat flips + 1 keyword coin.
-            assert_eq!(i64::from(s.state().rng_cursor) - before - overhead, 6);
+            i64::from(s.state().rng_cursor) - before - overhead
+        }
+
+        #[test]
+        fn r32_r130_with_no_lucky_5_coins_plus_the_rider_coin_take_exactly_6_seeded_rolls() {
+            crate::register_all();
+            // Lucky is `rng.lucky(x, roll, better)` (rng.rs): it rolls x extra times and keeps the best,
+            // so a Lucky flip shows up as extra draws on the cursor. Gary prints no Lucky, so with none
+            // given each flip is the one draw it always was (R1440). The control play cancels whatever
+            // a play costs in draws by itself. 5 stat flips + 1 keyword coin.
+            assert_eq!(coin_draws("core-004-r32", 0), 6);
+        }
+
+        #[test]
+        fn r1438_r1440_given_lucky_1_its_6_coins_take_12_draws() {
+            crate::register_all();
+            // Lucky 1 given in the hand rides onto the field (R1438), and each of the 6 coins flips twice.
+            assert_eq!(coin_draws("core-004-r32", 1), 12);
+        }
+
+        #[test]
+        fn r1440_given_lucky_1_it_lands_more_heads_over_200_seeds() {
+            crate::register_all();
+            // Heads is the better side (R1440): a coin lands heads 3 times in 4 with Lucky 1, so over
+            // 1,000 coins the attack it gains (+1 per heads) is well above the plain flip's.
+            let heads = |lucky: bool| -> i32 {
+                (0..200)
+                    .map(|n| {
+                        let mut s = scenario(json!({ "seed": format!("core-004-lucky-{n}"), "p1": { "hand": ["core-004"] } }));
+                        if lucky {
+                            crate::give_lucky(&mut s, "core-004", 1);
+                        }
+                        s.play("core-004", json!({}));
+                        let (heads, tails) = gains(&s, "core-004");
+                        assert_eq!(heads + tails, 5);
+                        heads
+                    })
+                    .sum()
+            };
+            assert!(heads(true) > heads(false));
         }
 
         #[test]

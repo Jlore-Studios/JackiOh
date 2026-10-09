@@ -18,7 +18,6 @@ use crate::effects::damage::{DamageEffectArgs, DamageFlagArgs, damage};
 use crate::effects::heal::{HealArgs, heal};
 use crate::effects::radiant::{RadiantTarget, set_radiant};
 use crate::effects::targets::{PlayerSpec, TargetSpec, player_of};
-use crate::numbers::{NumberedKey, numbered_keywords_on};
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, find_instance};
 use crate::wire::{GameEvent, PlayerId, Selection, ZoneName};
@@ -33,16 +32,11 @@ pub use crate::catalog::roll_grape;
 // ---------------------------------------------------------------------------------------------
 
 /// §6.1: the Lucky X the card running the script has now — its running face's printed Lucky, as a
-/// Degrade or an Upgrade has moved it (B3.4's X change), 0 without one.
+/// Degrade or an Upgrade has moved it (B3.4's X change), plus any it was given (R1438), 0 without one.
 fn lucky_of(ctx: &EffectContext<'_>) -> i32 {
-    let Some(own) = ctx.self_.as_ref() else {
-        return 0;
-    };
-    numbered_keywords_on(ctx.sink.state, own)
-        .into_iter()
-        .find(|keyword| keyword.key == NumberedKey::Lucky)
-        .map(|keyword| keyword.value)
-        .unwrap_or(0)
+    ctx.self_
+        .as_ref()
+        .map_or(0, |own| crate::query::lucky_on(ctx.sink.state, own))
 }
 
 /// `addRolledGrapes`' argument.

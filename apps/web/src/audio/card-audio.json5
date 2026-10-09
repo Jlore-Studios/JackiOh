@@ -1340,6 +1340,14 @@
     "meditative-099": { // Paranoia
       cast: { voice: "sapi-ghost", text: "They are all watching. Hide it." },
     },
+    "meditative-100": { // Greaser
+      play: { voice: "sapi-rasp", text: "Slick it back. Roll up the sleeves." },
+      death: { voice: "sapi-rasp", text: "Ain't nothin' but a scratch." },
+    },
+    "meditative-101": { // Gachaholic
+      play: { voice: "sapi-trickster", text: "Just one more pull. I can feel it." },
+      death: { voice: "sapi-trickster", text: "The pity was so close..." },
+    },
   },
   emotes: {
     vanilla: {

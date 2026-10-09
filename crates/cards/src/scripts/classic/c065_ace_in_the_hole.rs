@@ -12,6 +12,10 @@
 //! heads on the instance under the turn's number, and on the Radiant's tails recruits there and then —
 //! no `trapFired`, so the trap stays face-down. The window's check (R99) only reads that memory, so no
 //! predicate draws from the rng, and a memory from another turn or another stay (R78) arms nothing.
+//!
+//! The coin is a luck-based roll whose better side is heads on both faces (R1440): the trap's own
+//! Lucky (`lucky_on`: printed plus given, R1438) flips that many more coins, heads kept. It prints
+//! none, so with nothing given the flip is the one draw it always was.
 
 use jackioh_engine::effects::{recruit, remember, reveal};
 use jackioh_engine::prelude::*;
@@ -33,7 +37,8 @@ fn fire() -> TriggerDef {
 
 fn flip(on_tails: bool) -> Hook {
     hook(move |ctx| {
-        if ctx.rng.coin() {
+        let lucky = ctx.live_self().map_or(0, |me| lucky_on(&*ctx.state, me));
+        if ctx.rng.lucky_coin(lucky) {
             return vec![remember(json_as(json!({ "key": HEADS, "value": ctx.state.turn })))];
         }
         if on_tails { vec![recruit(json_as(json!({})))] } else { vec![] }
@@ -216,6 +221,65 @@ mod tests {
                     s.pile(P1, "library").iter().map(|card| card.def_id.clone()).collect::<Vec<String>>(),
                     vec![LUNAR, GARY, VANILLA],
                 );
+            }
+
+            /// R1438, R1440: set from the hand with Lucky 1 given to it, it flips twice and keeps heads,
+            /// so tails then heads fires it.
+            #[test]
+            fn r1438_r1440_given_lucky_1_tails_then_heads_fires_it() {
+                crate::register_all();
+                for attempt in 0..256 {
+                    let mut s = scenario(json!({
+                        "seed": format!("ace-in-the-hole-lucky-{attempt}"),
+                        "p1": { "hand": [ACE, FILLER], "library": [LUNAR, VANILLA, GARY, VANILLA] },
+                        "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+                    }));
+                    crate::give_lucky(&mut s, ACE, 1);
+                    s.play(ACE, json!({}));
+                    let mut coins = Rng::new(&s.state().seed, s.state().rng_cursor);
+                    if coins.coin() || !coins.coin() {
+                        continue;
+                    }
+                    let ace = s.card(ACE).clone();
+                    assert_eq!(lucky_on(s.state(), &ace), 1);
+                    let cursor = s.state().rng_cursor;
+                    s.end_turn();
+                    assert!(s.state().rng_cursor >= cursor + 2);
+                    assert_eq!(fired(&s), 1);
+                    assert_eq!(units(&s), lanes([Some(VANILLA), None, None, None, None]));
+                    s.expect_in_zone(&ace, "graveyard");
+                    return;
+                }
+                panic!("no seed flipped tails then heads");
+            }
+
+            /// R1440: given Lucky 1 it fires wherever it fires with none (its first coin is the plain
+            /// flip), and at more seeds besides.
+            #[test]
+            fn r1440_given_lucky_1_it_fires_more_often_over_100_seeds() {
+                crate::register_all();
+                let fires = |seed: usize, lucky: bool| -> bool {
+                    let mut s = scenario(json!({
+                        "seed": format!("ace-in-the-hole-seeds-{seed}"),
+                        "p1": {
+                            "hand": [FILLER],
+                            "backrow": [{ "def": ACE, "faceUp": false }],
+                            "library": [LUNAR, VANILLA, GARY, VANILLA],
+                        },
+                        "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+                    }));
+                    if lucky {
+                        crate::give_lucky(&mut s, ACE, 1);
+                    }
+                    s.end_turn();
+                    fired(&s) == 1
+                };
+                let plain: Vec<usize> = (0..100).filter(|seed| fires(*seed, false)).collect();
+                let lucky: Vec<usize> = (0..100).filter(|seed| fires(*seed, true)).collect();
+                for seed in &plain {
+                    assert!(lucky.contains(seed));
+                }
+                assert!(lucky.len() > plain.len());
             }
 
             #[test]

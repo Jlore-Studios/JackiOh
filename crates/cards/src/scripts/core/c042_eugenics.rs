@@ -41,13 +41,15 @@ pub const ID: &str = "core-042";
 /// §8.2: "Exile 7 random cards from your deck", on both faces (patch v0.1.1: 8 became 7).
 const EXILE_COUNT: i32 = 7;
 
-/// The faces differ only in the chance and in how many extra rolls Lucky keeps (§6.1).
-fn eugenics(chance: f64, lucky: Option<i32>) -> Script {
+/// The faces differ only in the chance and in the Lucky they print (§6.1). The Lucky is the card's own
+/// (`lucky_on`: printed plus given, R1438), so a base face given Lucky 1 rolls twice a card too.
+fn eugenics(chance: f64) -> Script {
     Script {
         // A Spell's script hangs off `cry`: that is its on-resolve hook (§10.9).
-        cry: Some(hook(move |_ctx| {
+        cry: Some(hook(move |ctx| {
+            let lucky = ctx.live_self().map_or(0, |me| lucky_on(&*ctx.state, me));
             let mut chance_args = json!({ "zone": "library", "chance": chance });
-            if let Some(lucky) = lucky {
+            if lucky > 0 {
                 chance_args["lucky"] = json!(lucky);
             }
             vec![
@@ -61,8 +63,8 @@ fn eugenics(chance: f64, lucky: Option<i32>) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: eugenics(0.3, None),
-        radiant: eugenics(0.4, Some(1)),
+        base: eugenics(0.3),
+        radiant: eugenics(0.4),
     }
 }
 
@@ -208,6 +210,24 @@ mod tests {
                 vec!["exileRandomFromLibrary", "radiantChance"],
             );
         }
+    }
+
+    /// R1438: given Lucky 1, the base face rolls each remaining card twice at 30% and keeps a success:
+    /// 50 more draws than the plain base face over the same exile, and more cards come up Radiant.
+    #[test]
+    fn r1438_given_lucky_1_the_base_face_rolls_twice_and_keeps_the_better() {
+        let plain = cast(57, "eugenics-lucky");
+        let mut lucky = scenario(json!({
+            "seed": "eugenics-lucky",
+            "p1": { "hand": ["core-042", "core-021"], "library": library(57) },
+        }));
+        crate::give_lucky(&mut lucky, "core-042", 1);
+        lucky.play("core-042", json!({}));
+
+        assert_eq!(lucky.state().rng_cursor - plain.state().rng_cursor, 50);
+        let converted = |s: &Scenario| s.pile(PlayerId::P1, "library").iter().filter(|card| card.radiant).count();
+        assert!(converted(&lucky) > converted(&plain));
+        assert!(converted(&lucky) < 50);
     }
 
     /// "#42 Eugenics — radiant"

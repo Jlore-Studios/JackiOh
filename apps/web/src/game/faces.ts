@@ -2,12 +2,13 @@
 // showcase, a log line, a pile and a prompt draw for a card the view names (SPEC §10.10).
 //
 // A face in play is the card as the view says it stands (R243): the cost the view gives it, a Unit
-// card's stats in its owner's hand, a unit's numbers, keywords and Vanilla mark on the field, the
-// power a Heroic Power rolled, a match-made definition's own name and text, and what the card's
-// formula comes to now (`CardView.preview`, R280), and patch v0.2.0's per-card states: the Brittle
-// count (R385), what Degrade and Upgrade changed (R386), the enchantments riding it (E39), a backrow
-// card standing as a Unit (R383), a face's own type (B2.7), a quest line (E33, R404) and the Spell
-// text a copier has (E14, R399: its `copies` drawn from that Spell's definition). Everything is read
+// card's stats in its owner's hand, a hand card's keywords where the view gives them (E38, R1438), a
+// unit's numbers, keywords and Vanilla mark on the field, the power a Heroic Power rolled, a
+// match-made definition's own name and text, and what the card's formula comes to now
+// (`CardView.preview`, R280), and patch v0.2.0's per-card states: the Brittle count (R385), what
+// Degrade and Upgrade changed (R386), the enchantments riding it (E39), a backrow card standing as a
+// Unit (R383), a face's own type (B2.7), a quest line (E33, R404) and the Spell text a copier has
+// (E14, R399: its `copies` drawn from that Spell's definition). Everything is read
 // off the view — never worked out — so none of it is a rule (CLAUDE.md rule 7). The collection's
 // faces, the card as printed, are the deck builder's own (`faceModel` with no `inPlay`). A card the
 // view says is Chinese (`CardView.chinese`, ME-CN, R1301) is drawn in the Chinese table's words.
@@ -51,7 +52,8 @@ export type LiveFacts = {
 
 /**
  * The face in play of a card the view lists: its live cost, and whatever else the view says about
- * it — a unit's numbers and keywords, a hand Unit's stats, a Heroic Power's power, the Vanilla mark.
+ * it — a unit's numbers and keywords, a hand Unit's stats, a hand card's keywords, a Heroic Power's
+ * power, the Vanilla mark.
  */
 export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}): FaceModel {
   const unit = isUnitView(card) ? card : undefined;
@@ -59,6 +61,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit === undefined && card.attack !== undefined && card.health !== undefined) {
     inPlay.handStats = { attack: card.attack, health: card.health };
   }
+  // B5 E38, R1438: a hand card's keywords as the view gives them, a given Lucky included.
+  if (unit === undefined && card.keywords !== undefined) inPlay.handKeywords = card.keywords;
   // R43, R243: in hand the power rides on the card; on the field the hero's power list names it.
   const power = card.power !== undefined ? { name: card.power } : facts.fieldPower;
   if (power !== undefined) inPlay.power = power;

@@ -28,8 +28,8 @@ use crate::config::{
 use crate::rng::Rng;
 use crate::state::GameState;
 use crate::wire::{
-    CATALOG_SETS, CardCost, CardDef, CardDefs, CardType, CatalogQuery, CostRange, FusedIngredient, OneOrMany,
-    Rarity, SetName, Tag, set_ships,
+    CATALOG_SETS, CardCost, CardDef, CardDefs, CardType, CatalogQuery, CostRange, FusedIngredient, KeywordKind,
+    OneOrMany, Rarity, SetName, Tag, has_keyword, set_ships,
 };
 
 /// A hasher for the registries' card ids (`catalog-NNN`, `classicplus-NNN`, …): short strings looked
@@ -213,6 +213,9 @@ pub struct CatalogQueryArgs {
     /// R1422: has at least one of these tags.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub any_tags: Option<Vec<Tag>>,
+    /// R1437: only Luck-based cards (`is_luck_based`), Meditative #101 Gachaholic's pool.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub luck_based: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rarity: Option<OneOrMany<Rarity>>,
     /// A set, or several ("Classic or Classic+"). Absent is every set that ships (R380, R1420).
@@ -241,6 +244,7 @@ impl From<CatalogQuery> for CatalogQueryArgs {
             tags: query.tags,
             not_tags: query.not_tags,
             any_tags: query.any_tags,
+            luck_based: None,
             rarity: query.rarity,
             set: query.set,
             exclude_def_id: query.exclude_def_id,
@@ -294,6 +298,18 @@ fn tag_pool_takes_token(args: &CatalogQueryArgs, def: &CardDef) -> bool {
     asked
         .into_iter()
         .any(|tag| POOL_TOKEN_TAGS.contains(tag) && def.tags.contains(tag))
+}
+
+/// R1437: the words of a card's text that make it flip a coin, read lower-cased.
+pub const COIN_FLIP_WORDS: &str = "flip a coin";
+
+/// MD-G1, R1437: a Luck-based card has a roll Lucky improves — it prints Lucky on either face (§6.1),
+/// or its text flips a coin, whose better side is heads (R1440). Read off the definition, so Lucky
+/// given to a card (R1438) never puts it in the pool.
+pub fn is_luck_based(def: &CardDef) -> bool {
+    [&def.base, &def.radiant].into_iter().any(|face| {
+        has_keyword(&face.keywords, KeywordKind::Lucky) || face.text.to_lowercase().contains(COIN_FLIP_WORDS)
+    })
 }
 
 fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -> bool {
@@ -353,6 +369,9 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
     if let Some(any_tags) = &args.any_tags
         && !any_tags.iter().any(|tag| def.tags.contains(tag))
     {
+        return false;
+    }
+    if args.luck_based == Some(true) && !is_luck_based(def) {
         return false;
     }
 

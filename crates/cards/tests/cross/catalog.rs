@@ -4402,6 +4402,27 @@ const MEDITATIVE: &[SpecRow] = &[
         NO_STATS,
         NO_STATS,
     ),
+    row("100", "Greaser", c(2), T::Unit, &[], R::Common, st(7, 7), st(21, 21)),
+    row(
+        "101",
+        "Gachaholic",
+        c(1),
+        T::Unit,
+        &[G::Cn, G::Human],
+        R::Common,
+        st(1, 1),
+        st(2, 2),
+    ),
+    row(
+        "102",
+        "Catboy Maid SSR+",
+        c(1),
+        T::Unit,
+        &[G::Cn, G::Felinor],
+        R::Common,
+        st(1, 1),
+        st(2, 2),
+    ),
 ];
 
 const FIXTURES: &[(SetName, &[SpecRow])] = &[
@@ -4469,7 +4490,7 @@ const RARITY_COUNTS: &[(&str, &[(&str, usize)])] = &[
     (
         "Meditative",
         &[
-            ("Common", 26),
+            ("Common", 29),
             ("Rare", 29),
             ("Epic", 22),
             ("Legendary", 16),
@@ -4504,7 +4525,7 @@ const SET_SIZES: &[SetSize] = &[
     // R1420: docs/meditative-set.md M2, a ceiling until the set ships.
     SetSize {
         set: "Meditative",
-        cards: 99,
+        cards: 102,
         tokens: 30,
     },
 ];

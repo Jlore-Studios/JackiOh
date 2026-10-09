@@ -1072,3 +1072,30 @@ Can’t attack
 [0/50]
 Activate 2: Fill your board with random Radiant Jlockheed cards
 ```
+
+Added by the designer after the brief (issue #571), verbatim:
+
+```text
+(1) Gachaholic, Unit, Human, CN, Common, Meditative, #98
+1/1
+Cry: Add a random Luck-based card to your hand. Give it Lucky 1.
+~~~
+2/2
+Activate: Add a random Luck-based card to your hand. Give it Lucky 1.
+
+(1) Catboy Maid SSR+, Unit, Felinor, CN, Common, Meditative, #99
+1/1
+Lucky 1
+Cry: Draw 1-2. +1-4 to your Jade Counter.
+~~~
+2/2
+Lucky 2
+Cry: Draw 1-2. +1-10 to your Jade Counter.
+
+(2) Greaser, Unit, Common, Meditative, #100
+7/7
+~~~
+21/21
+
+any card that flips coins can by default get Lucky (heads is the Lucky side)
+```

@@ -311,6 +311,14 @@ pub fn tags_of(state: &GameState, card: &CardInstance) -> Vec<Tag> {
     tags
 }
 
+/// §6.1, R1438: the Lucky X a card instance has — the Lucky its running face prints, as a Degrade or
+/// an Upgrade has moved it (B3.4), plus every Lucky it was given (a granted keyword, B5 E38) — or 0.
+/// Every luck-based roll a card makes reads its Lucky here, so given Lucky counts wherever printed
+/// Lucky does. The auras of the field are the unit's (`unit_view`), not the card's.
+pub fn lucky_on(state: &GameState, card: &CardInstance) -> i32 {
+    crate::tuning::numbered_sum(&crate::layers::card_keywords(state, card), KeywordKind::Lucky).unwrap_or(0)
+}
+
 /// B5 E4: how many cards carrying `tag` this player has played this game, casts included (R70),
 /// countered plays never (R448); never reset (Classic+ #64's Fruit, AI Scaling Law's AI).
 pub fn played_this_game_with_tag(state: &GameState, player: PlayerId, tag: Tag) -> i32 {

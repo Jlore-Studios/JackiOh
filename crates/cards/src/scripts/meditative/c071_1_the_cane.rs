@@ -29,6 +29,9 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use jackioh_engine::testkit::*; // TEMP-571
+    #[allow(dead_code)] const P1: PlayerId = PlayerId::P1; // TEMP-571
+    #[allow(dead_code)] const P2: PlayerId = PlayerId::P2; // TEMP-571
     use jackioh_engine::resolve::{HookOptions, apply_effects, make_context};
     use jackioh_engine::rng::Rng;
     use jackioh_engine::script::EngineSink;

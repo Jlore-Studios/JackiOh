@@ -212,6 +212,31 @@ mod tests {
             }
         }
 
+        /// R1438: given Lucky 1, the base face picks twice and keeps the better: two draws where the plain
+        /// base face makes one, and of a 9/9 and a 3/4 the 9/9 dies more often than one pick kills it.
+        #[test]
+        fn r1438_given_lucky_1_the_base_face_rolls_twice_and_keeps_the_better() {
+            let board = json!({ "field": [{ "def": SMALL, "lane": 1 }, { "def": BIG, "lane": 2 }] });
+            let cast = |seed: i32, lucky: bool| -> (bool, u32) {
+                let mut s = shot(board.clone(), false, &format!("lucky-base-{seed}"));
+                if lucky {
+                    crate::give_lucky(&mut s, SHOT, 1);
+                }
+                let before = s.state().rng_cursor;
+                s.play(SHOT, json!({}));
+                assert_eq!(destroyed_ids(&s).len(), 1);
+                (s.unit(P2, 2).is_none(), s.state().rng_cursor - before)
+            };
+            let (mut plain_big, mut lucky_big) = (0, 0);
+            for seed in 1..=24 {
+                let ((plain, plain_draws), (lucky, lucky_draws)) = (cast(seed, false), cast(seed, true));
+                assert_eq!(lucky_draws, 2 * plain_draws);
+                plain_big += i32::from(plain);
+                lucky_big += i32::from(lucky);
+            }
+            assert!(lucky_big > plain_big);
+        }
+
         mod radiant {
             use super::*;
 

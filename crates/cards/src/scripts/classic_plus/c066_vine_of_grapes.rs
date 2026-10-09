@@ -174,6 +174,32 @@ mod tests {
         }
     }
 
+    /// R1438: given Lucky 1, the base face rolls each of its five Grapes twice and keeps the better: ten
+    /// draws of the rng, and the Grapes the same cursor's pairs predict, none of them Radiant.
+    #[test]
+    fn r1438_given_lucky_1_the_base_face_rolls_twice_and_keeps_the_better() {
+        crate::register_all();
+        let mut s = played(false, Some("lucky-vine"), None);
+        crate::give_lucky(&mut s, VINE, 1);
+        let cursor = s.state().rng_cursor;
+        s.play(VINE, json!({}));
+
+        let mut rng = Rng::new("lucky-vine", cursor);
+        let ids = grape_ids();
+        let expected: Vec<String> = [0, 1, 2, 3, 4]
+            .iter()
+            .map(|_| {
+                let first = index_of(&jackioh_engine::catalog::roll_grape(&mut rng, 0));
+                let second = index_of(&jackioh_engine::catalog::roll_grape(&mut rng, 0));
+                ids[first.max(second) as usize].to_string()
+            })
+            .collect();
+        let got: Vec<String> = added(&s).into_iter().map(|event| event.def_id).collect();
+        assert_eq!(got, expected);
+        assert!(added(&s).iter().all(|event| !s.card(&event.instance_id).radiant));
+        assert_eq!(s.state().rng_cursor - cursor, 10);
+    }
+
     mod radiant {
         use super::*;
 

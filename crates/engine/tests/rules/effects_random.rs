@@ -274,6 +274,62 @@ mod r32_flip_coins_s8_1_c4_s10_4_layer_4_s10_7 {
         );
     }
 
+    /// R1440: a flipper with Lucky 1 (given to it, R1438) flips each coin twice and keeps heads if
+    /// either lands heads, so five coins take ten draws and land the heads the seed's pairs predict.
+    /// Gary's rider is one more coin, rolled the same way: two draws.
+    #[test]
+    fn r1440_a_flipper_with_lucky_1_takes_two_draws_a_coin_and_keeps_heads() {
+        let mut state = game("coins-known");
+        let unit = put(
+            &mut state,
+            &gary().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        find_instance_mut(&mut state, &unit.id)
+            .expect("gary is on the field")
+            .granted_keywords
+            .push(Keyword::Lucky { n: 1 });
+        let flipper = live(&state, &unit.id).clone();
+
+        let ran = run(
+            &mut state,
+            &[coins(json!({
+                "target": { "of": "self" }, "coins": 5, "perHeads": { "attack": 1 }, "perTails": { "health": 1 }
+            }))],
+            with_self(&flipper),
+        );
+
+        assert_eq!(draws(&ran), 10);
+        let mut predicted = Rng::new("coins-known", 0);
+        let heads = (0..5)
+            .filter(|_| {
+                let first = predicted.coin();
+                let second = predicted.coin();
+                first || second
+            })
+            .count() as i32;
+        // "coins-known" at cursor 0 flips T H H H H H T …: the first three pairs land heads.
+        assert!(heads >= 3);
+        assert_eq!(
+            live(&state, &unit.id).buffs,
+            AttackHealth {
+                attack: heads,
+                health: 5 - heads
+            }
+        );
+
+        let rider = flip_coin_keyword(json_as(json!({
+            "target": { "of": "self" },
+            "headsKeyword": { "kind": "Divine Shield" },
+            "tailsKeyword": { "kind": "Rush" },
+        })));
+        let before = state.rng_cursor;
+        let flipper = live(&state, &unit.id).clone();
+        let ran = run(&mut state, &[rider], with_self(&flipper));
+        assert_eq!(ran.cursor - before, 2);
+    }
+
     #[test]
     fn s8_1_the_radiant_face_is_the_same_flip_at_7_coins_and_2_a_side() {
         let mut state = game("coins-known");

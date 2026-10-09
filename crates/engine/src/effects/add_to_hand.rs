@@ -34,6 +34,8 @@ struct HandRiders {
     temporary: Option<bool>,
     /// ME-CN, R1300: the card is a copy of a Chinese card, so it is Chinese too.
     chinese: Option<bool>,
+    /// R1438: the card is given Lucky X (a granted keyword) as it reaches the hand.
+    lucky: Option<i32>,
 }
 
 /// `costMod` ADDS (R65 sums it); `costOverride` and `radiant` replace.
@@ -68,6 +70,14 @@ fn apply_cost_riders(card: &mut CardInstance, riders: &HandRiders) {
             .any(|keyword| matches!(keyword, Keyword::Temporary))
     {
         card.granted_keywords.push(Keyword::Temporary);
+    }
+    // R1438: given Lucky is the card's own from the hand on, so it goes on with the prices, once it is
+    // there (a burned card gets none), and adds to any Lucky the card has: Lucky sums (§6.1). The view
+    // shows it to the hand's owner alone (B5 E38), and no event says it.
+    if let Some(n) = riders.lucky
+        && n > 0
+    {
+        card.granted_keywords.push(Keyword::Lucky { n });
     }
 }
 
@@ -122,6 +132,9 @@ pub struct AddToHandArgs {
     /// Initiative), so it is Chinese too.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chinese: Option<bool>,
+    /// R1438: give the card Lucky X once it is in the hand.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lucky: Option<i32>,
 }
 
 impl AddToHandArgs {
@@ -133,6 +146,7 @@ impl AddToHandArgs {
             cost_mod: self.cost_mod,
             temporary: self.temporary,
             chinese: self.chinese,
+            lucky: self.lucky,
         }
     }
 }
@@ -205,6 +219,9 @@ pub struct AddRandomFromCatalogArgs {
     /// ME-CN, R921: the cards added are shown in Chinese (Meditative #33).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chinese: Option<bool>,
+    /// R1438: give each card added Lucky X once it is in the hand (Meditative #101 Gachaholic).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lucky: Option<i32>,
 }
 
 impl AddRandomFromCatalogArgs {
@@ -216,6 +233,7 @@ impl AddRandomFromCatalogArgs {
             cost_mod: self.cost_mod,
             temporary: self.temporary,
             chinese: self.chinese,
+            lucky: self.lucky,
         }
     }
 }

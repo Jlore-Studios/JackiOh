@@ -22,16 +22,10 @@ const RUSH_TOKEN: &str = "core-t-rush";
 const MIN_TOKENS: i32 = 1;
 const MAX_TOKENS: i32 = 2;
 
-/// §6.1: the Lucky X the running card has now (its Radiant face prints Lucky 1).
+/// §6.1: the Lucky X the running card has now, printed plus given (R1438; its Radiant face prints
+/// Lucky 1).
 fn lucky_of(ctx: &EffectContext<'_>) -> i32 {
-    let Some(card) = ctx.live_self() else {
-        return 0;
-    };
-    numbered_keywords_on(&*ctx.state, card)
-        .iter()
-        .find(|keyword| matches!(keyword.key, NumberedKey::Lucky))
-        .map(|keyword| keyword.value)
-        .unwrap_or(0)
+    ctx.live_self().map_or(0, |card| lucky_on(&*ctx.state, card))
 }
 
 fn book_of_tokens(radiant: bool) -> Script {
@@ -173,6 +167,33 @@ mod tests {
             assert!(!tokens(&s).is_empty());
             assert!(tokens(&s).len() <= 2);
         }
+    }
+
+    /// R1438: given Lucky 1, the base face rolls its count twice and keeps the most: its first roll is
+    /// the plain face's, so it never summons fewer, at more seeds it summons 2, and each cast takes
+    /// one more draw.
+    #[test]
+    fn r1438_given_lucky_1_the_base_face_rolls_twice_and_keeps_the_better() {
+        crate::register_all();
+        let cast = |n: i32, lucky: bool| -> (usize, u32) {
+            let mut s = book(false, json!([]), Some(&format!("book-of-tokens-lucky-{n}")));
+            if lucky {
+                crate::give_lucky(&mut s, BOOK, 1);
+            }
+            let before = s.state().rng_cursor;
+            s.play(BOOK, json!({}));
+            (tokens(&s).len(), s.state().rng_cursor - before)
+        };
+        let mut more = 0;
+        for n in 0..40 {
+            let ((plain, plain_draws), (lucky, lucky_draws)) = (cast(n, false), cast(n, true));
+            assert!(lucky >= plain);
+            assert_eq!(lucky_draws, plain_draws + 1);
+            if lucky > plain {
+                more += 1;
+            }
+        }
+        assert!(more > 0);
     }
 
     mod radiant {

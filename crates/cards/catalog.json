@@ -11752,5 +11752,66 @@
       "text": "Aura: You may play your Spells face-down as Traps. Each reveals at the time you choose as you play it: the end of this turn, the start of your next turn, or the end of your next turn. Each has Echo +{echo}.\nCry: Draw {draw|card|cards}."
     },
     "tags": []
+  },
+  "meditative-100": {
+    "id": "meditative-100",
+    "index": "100",
+    "name": "Greaser",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "attack": 7,
+      "health": 7,
+      "keywords": [],
+      "text": ""
+    },
+    "radiant": {
+      "attack": 21,
+      "health": 21,
+      "keywords": [],
+      "text": ""
+    }
+  },
+  "meditative-101": {
+    "id": "meditative-101",
+    "index": "101",
+    "name": "Gachaholic",
+    "set": "Meditative",
+    "type": "Unit",
+    "tags": [
+      "CN",
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "lucky",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 29,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [],
+      "text": "Cry: Add a random Luck-based card to your hand. Give it Lucky {lucky}."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Activate: Add a random Luck-based card to your hand. Give it Lucky {lucky}."
+    }
   }
 }
