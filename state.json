@@ -4213,7 +4213,7 @@
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
-    "issue": null,
+    "issue": 589,
     "reading": {
       "at": "2026-10-09T03:38:41Z",
       "free": 5168898048,
@@ -4222,7 +4222,7 @@
     },
     "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/37879921447",
     "runner": "night-vm-muse-4",
-    "shown": null
+    "shown": "2026-10-09T03:38:41Z"
   },
   "machine_memory": [
     {
