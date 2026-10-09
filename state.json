@@ -4660,9 +4660,9 @@
     "what": "build #601 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-10-09T23:38:18Z",
+    "at": "2026-10-09T23:51:06Z",
     "notes": [
-      "started a night run, as a lane was free: #558 (hard) is queued to build, for `claude-1`: build on `claude-1` (claude, `opus`, strong); review on `claude-1` (claude, `opus`, strong)"
+      "started a night run, as a lane was free: #601 (medium) is queued to build, for `gpt`: build on `gpt` (codex, `gpt-5.6-terra`, medium); review on `gpt` (codex, `gpt-5.6-terra`, medium)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
