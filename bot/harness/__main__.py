@@ -489,7 +489,7 @@ def cmd_providers(cfg: Config, args: argparse.Namespace) -> int:
         except (GitHubError, HarnessError) as exc:
             print(f"(the state file could not be read: {exc}; usage is not shown)")
     for provider in cfg.pool.ordered():
-        reason = providers_mod.availability(provider, state, now, cfg.timezone, cfg.secrets)
+        reason = providers_mod.start_reason(provider, state, now, cfg.timezone, cfg.secrets)
         limits = provider.limits
         caps = ", ".join([f"{k} {v:.0%}" for k, v in limits.stops.items()]
                          + [f"{k} {v} min" for k, v in limits.budgets.items()]) or "none"
