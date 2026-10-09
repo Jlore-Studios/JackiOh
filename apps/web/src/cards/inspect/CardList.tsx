@@ -1,27 +1,16 @@
-// A list of cards to look through: what a graveyard or an exile pile holds (both public, §10.8),
-// or what is left in the viewer's own library (R310, R313). The caller hands the entries over in
-// the order to show them (the board: a pile newest first, the library in the view's order) and says
-// what that order is (`order`), and renders these through `useInspectTrigger`'s `render`, so they
-// take the one inspect slot like a card's preview and sheet do (B23).
+// A list of cards to look through: a graveyard or exile pile (public, §10.8) or the viewer's own
+// library (R310, R313). The caller hands the entries over in display order, says what that order is
+// (`order`) and renders these through `useInspectTrigger`'s `render`, so they take the one inspect
+// slot like a card's preview and sheet do (B23).
 //
-// An entry is one face and how many cards it stands for (`count`, "×2" on the face when above 1: a
-// library's list is grouped, R310), or a card back (`face: null`) for cards the viewer was never
-// shown (R312). A back names nothing and opens nothing. The count in the header is the cards'.
+// An entry is one face and a `count` ("×2" above 1: a library's list is grouped, R310), or a card
+// back (`face: null`, R312) for cards the viewer was never shown, which names and opens nothing.
+// `CardListPreview` is what a resting mouse opens (click-through, hidden from assistive tech, like
+// HoverPreview); `CardListSheet` is what a click, tap, long-press or Enter opens (useModalOverlay).
 //
-// - `CardListPreview`: what a resting mouse opens. The title, the count and up to LIST_PREVIEW_MAX
-//   faces, fixed beside the pile, click-through and hidden from assistive tech, like HoverPreview;
-//   past the cap it says how many more there are and that a click shows them all.
-// - `CardListSheet`: what a click, a tap, a long-press or Enter opens. A modal dialog with every
-//   face in a scrolling grid; a face opens large with its glossary, and Back returns to the grid.
-//   Focus moves to Close on open and back on close, Tab stays inside, and Escape, the scrim and
-//   Close all close it (useModalOverlay).
-//
-// B5 E11: while a permission lets the viewer play cards from their graveyard, `legalActions` lists
-// a `play` for each such card, and the board hands this list an entry's `play` for exactly those
-// (game/Board.tsx reads `Highlight.legal`; this file decides nothing, CLAUDE.md rule 7). Such a
-// face carries a "Play" button under it, in the grid and in the face opened large; pressing it
-// reports the play to the board, which builds it as it builds a hand card's (zone, targets, the
-// Plague Counters paying it), and closes the sheet so the board can be seen.
+// B5 E11: while a permission lets the viewer play cards from their graveyard, the board hands an
+// entry's `play` for exactly the cards `legalActions` lists a `play` for (game/Board.tsx; this file
+// decides nothing, CLAUDE.md rule 7). "Play" reports it to the board and closes the sheet.
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
@@ -58,21 +47,12 @@ import {
 import "./inspect.css";
 import "./list-play.css";
 
-/**
- * One face in the list, or a card back (`face: null`, R312). `key` is stable for what it shows (a
- * pile card's instance id, a library entry's definition and face). `count` is how many cards it
- * stands for, 1 when absent.
- */
+/** One face in the list, or a card back (`face: null`, R312). `key` is stable for what it shows; `count` is 1 when absent. */
 export type CardListEntry = { key: string; face: FaceModel | null; count?: number; play?: CardListPlay };
 
-/**
- * B5 E11: a card the viewer may play from this pile now. `testId` is the button's (`pile-play-<id>`,
- * game/contract.ts), `glow` whether the board's green glow is on it, and `onPlay` what pressing it
- * reports. The caller hands one over only for a card `legalActions` lists a play for.
- */
+/** B5 E11: a card the viewer may play from this pile now. `testId` is the button's (`pile-play-<id>`, game/contract.ts). */
 export type CardListPlay = { testId: string; glow: boolean; onPlay: () => void };
 
-/** The word on the button, and what a screen reader hears before the card's name. */
 const PLAY_WORD = "Play";
 
 export type CardListProps = {
@@ -101,18 +81,15 @@ function totalOf(entries: readonly CardListEntry[]): number {
   return entries.reduce((sum, entry) => sum + countOf(entry), 0);
 }
 
-/** The entry's name, for a label: a back names nothing but what it is. */
 function nameOf(entry: CardListEntry): string {
   return entry.face?.name ?? UNKNOWN_NAME;
 }
 
-/** "2 × Bigot", "Bigot", "3 × Unknown card". */
 function entryLabel(entry: CardListEntry): string {
   const count = countOf(entry);
   return count > 1 ? `${String(count)} × ${nameOf(entry)}` : nameOf(entry);
 }
 
-/** The face, or a back, with its count on it when it stands for more than one card. */
 function EntryFace({ entry }: { entry: CardListEntry }): ReactElement {
   const count = countOf(entry);
   return (
@@ -127,7 +104,7 @@ function EntryFace({ entry }: { entry: CardListEntry }): ReactElement {
   );
 }
 
-/** B5 E11: "Play" under a face the viewer may play from the pile; the sheet closes as it reports. */
+/** B5 E11: "Play" under a face the viewer may play from the pile. */
 function PlayButton({ entry, play, onClose }: { entry: CardListEntry; play: CardListPlay; onClose: () => void }): ReactElement {
   return (
     <button
@@ -233,10 +210,7 @@ export function CardListPreview({
   );
 }
 
-/**
- * One face in the sheet's grid: a button that opens it large, and, for a card the viewer may play
- * from the pile (B5 E11), the "Play" under it. Without a play it is exactly the face button.
- */
+/** One face in the sheet's grid: a button that opens it large, with "Play" under it when the viewer may (B5 E11). */
 function FaceTile({
   entry,
   face,
@@ -281,7 +255,6 @@ export function CardListSheet({
   const backButton = useRef<HTMLButtonElement>(null);
   const grid = useRef<HTMLUListElement>(null);
   const modal = useModalOverlay(onClose, closeButton);
-  /** The face opened large, by its key; null shows the grid. */
   const [open, setOpen] = useState<string | null>(null);
   // A back opens nothing: it has no face to show large.
   const openedEntry = open === null ? undefined : entries.find((entry) => entry.key === open);
@@ -289,7 +262,7 @@ export function CardListSheet({
   // B5 E11: the face opened large keeps its "Play" while it is listed.
   const openedPlay = opened === undefined ? undefined : openedEntry?.play;
   const total = totalOf(entries);
-  /** The face last opened, so Back puts focus on it again rather than dropping it on <body>. */
+  /** The face last opened, so Back refocuses it rather than dropping focus on <body>. */
   const returnTo = useRef<string | null>(null);
 
   // The button that had focus leaves the DOM on both switches, so focus is moved on purpose: to

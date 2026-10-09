@@ -1,36 +1,24 @@
 // Test helper for the audio suite (docs/polish/2-sound.md, "Tests"). It is not a test file.
 //
-// `FakeAudio` implements exactly the permitted Web Audio subset the design names, and nothing else:
-// `currentTime`, `sampleRate`, `destination`, `createGain`, `createOscillator` (sine, square,
-// sawtooth, triangle; `frequency`, `detune`), `createBiquadFilter` (lowpass, highpass, bandpass;
-// `frequency`, `detune`, `Q`, `gain`), `createBufferSource` (`buffer`, `playbackRate`, `loop`, and the music
-// player's `loopStart` and `loopEnd`), `createBuffer`,
-// `connect(node | AudioParam)` / `disconnect`, `start` / `stop` / `onended`, and the AudioParam
-// `value`, `setValueAtTime`, `linearRampToValueAtTime`, `exponentialRampToValueAtTime`,
-// `setTargetAtTime` and `cancelScheduledValues`. The engine's extras are there too:
-// `createDynamicsCompressor`, `decodeAudioData`, `resume`, `close` and `state`, and the mix's
-// `createStereoPanner` (`pan`) and `createConvolver` (`buffer`, set once) (R669).
+// `FakeAudio` implements exactly the permitted Web Audio subset the design names (see CONTEXT_KEYS,
+// PARAM_KEYS and `createNode`) and nothing else, plus the engine's extras: the compressor,
+// `decodeAudioData`, `resume`, `close`, `state`, and the mix's stereo panner and convolver (R669).
 //
 // Every object the code under test touches is a Proxy. Reading or writing anything outside that
 // subset records a violation and throws, as does anything the real API would reject (a negative
 // time, a non-finite value, an exponential ramp to 0, starting a source twice). A caught throw is
 // still in `violations`, so a test can assert the list is empty.
 //
-// The recording side (nodes, connections, start and stop times, AudioParam calls) is read from the
-// `FakeAudio` controller, which the code under test never sees. The controller also owns the
-// context state, a `resume()` spy, the decode behaviour, and `advance()`, which moves `currentTime`
-// and fires `onended` on every source whose end has passed.
-//
-// Also here: a fake `SpeechPort`, a fake `fetchBytes` that resolves, rejects or hangs, and a
-// settable millisecond clock.
+// The `FakeAudio` controller, which the code under test never sees, records nodes, connections,
+// start and stop times and AudioParam calls, and owns the context state, a `resume()` spy, the
+// decode behaviour and `advance()` (moves `currentTime`, fires `onended` on every ended source).
+// Also here: a fake `SpeechPort`, a fake `fetchBytes` and a settable millisecond clock.
 
 import { vi, type Mock } from "vitest";
 
 import type { SpeechPort } from "../engine.ts";
 
-/* --------------------------------------------------------------------------------------------- *
- * Strictness
- * --------------------------------------------------------------------------------------------- */
+// Strictness
 
 /**
  * Keys that a test framework, a pretty-printer or `await` may probe on any object. They read
@@ -114,9 +102,7 @@ function strict<T extends object>(
   });
 }
 
-/* --------------------------------------------------------------------------------------------- *
- * Records
- * --------------------------------------------------------------------------------------------- */
+// Records
 
 export type ParamEvent =
   | { method: "value"; value: number }
@@ -251,9 +237,7 @@ export class FakeNode {
   }
 }
 
-/* --------------------------------------------------------------------------------------------- *
- * The context
- * --------------------------------------------------------------------------------------------- */
+// The context
 
 /** "interrupted" is Safari's; the engine must read it as "suspended". */
 export type FakeContextState = "suspended" | "running" | "closed" | "interrupted";
@@ -756,9 +740,7 @@ export function fakeContextFactory(options: FakeAudioOptions = {}): FakeContextF
   };
 }
 
-/* --------------------------------------------------------------------------------------------- *
- * Speech, fetch, clock
- * --------------------------------------------------------------------------------------------- */
+// Speech, fetch, clock
 
 export type SpokenLine = {
   text: string;

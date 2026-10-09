@@ -1,34 +1,16 @@
-// R502: flourishes a card earns by name, and the cast on draw any card earns by how it was cast.
+// R502: flourishes a card earns by name, and the cast on draw any card earns by how it was cast,
+// both planned from the redacted stream alone (R202).
 //
-// Two things live here, both planned from the redacted stream alone (R202):
-//
-// - `castOnDrawCues`: a `cardPlayed` the planner's memory saw come right after its own `drawn`
-//   (castOnDraw.ts) bursts out of its drawer's Deck pile, gold and arcane, with light rays and a small
-//   shake. It keys off the order of the events, never the card, so a card a Classic+ effect gives
-//   Cast on draw earns it too, and a card the viewer may not read earns exactly the same.
-//
-// - `CARD_FX`, one table from a card's definition to a signature recipe, and the recipes. While a
-//   card with an entry is resolving (the planner's memory keeps the plays in flight), its recipe may
-//   claim the events of its own resolution, replacing or adding to their row's recipe:
-//     #21 Hinder, "manaCrack": its `modifierChanged` on the victim's next refresh flies a frost bolt
-//     from the caster's hero into the victim's crystal tray and cracks the crystals the refresh will
-//     not fill; how many is the view's number (manaMarks.ts), never the card's. With no number to read
-//     the whole tray cracks.
-//     #27 Blood Ridden Glowy Jelly Bean, "bloodDrain": its `radiantSet` in the caster's hand draws a
-//     crimson stream from the caster's hero into the card made Radiant, which bursts gold as the
-//     stream lands; on the other seat the card is a back (R97), so the stream lands on a back picked
-//     by the play's own event count, which is the same whatever card it was; its `healthLost` spills
-//     blood at the hero over the row's own drain.
-//     Classic+ #24 Crushing Walls, "crushingWalls": at the first `destroyed` of its own play (the
-//     memory's count by type), two spiked walls close in on the board from both sides over lanes 1
-//     and 5, hit with dust and a shake, and slide back out; each card's own death still plays. A
-//     Crushing Walls that destroys nothing, or is countered, draws no walls.
-//   Another card reuses a recipe by adding its definition to `CARD_FX`. The table is keyed by the
-//   `cardPlayed`'s `defId`, which a hidden play never has, so a hidden card never keys a recipe.
-//
+// - `castOnDrawCues`: a `cardPlayed` the planner's memory saw right after its own `drawn`
+//   (castOnDraw.ts) bursts out of its drawer's Deck pile. It keys off the order of the events, never
+//   the card, so a card a Classic+ effect gives Cast on draw earns it too, as does one the viewer may
+//   not read.
+// - `CARD_FX`: a card's definition to a signature recipe. While a card with an entry is resolving
+//   (the memory keeps the plays in flight), its recipe may claim the events of its own resolution,
+//   replacing or adding to their row's recipe. Keyed by the `cardPlayed`'s `defId`, which a hidden
+//   play never has, so a hidden card never keys a recipe.
 // - R670: the same table gives a few marquee Legendary and Mythic Units an entrance of their own
-//   (entrances.ts). An entrance key claims the `summoned` that puts its own card into a unit zone,
-//   keyed by that event's `defId`, whoever cast it, and replaces the rarity entrance the row plans.
+//   (entrances.ts), keyed by the `summoned` event's `defId` whoever cast it, replacing the row's.
 //
 // R200: every delay lands inside the entry and everything trails off within FX_MAX_TAIL_MS.
 
@@ -111,7 +93,11 @@ function projectile(intensity: number, preset: FxProjectileCue["preset"], from: 
   return { kind: "projectile", preset, from, to, delayMs, flightMs, density: intensity };
 }
 
-/** #21 Hinder: the victim's crystals crack (see the header). */
+/**
+ * #21 Hinder: its `modifierChanged` on the victim's next refresh flies a frost bolt from the caster's
+ * hero and cracks the crystals the refresh will not fill. How many is the view's number
+ * (manaMarks.ts), never the card's; with no number to read the whole tray cracks.
+ */
 const manaCrack: CardRecipe = (event, p) => {
   if (event.type !== "modifierChanged" || event.modifierId !== FX_NEXT_REFRESH_MODIFIER_ID || !event.added) return null;
   const i = p.env.intensity;
@@ -147,7 +133,12 @@ function radiantTarget(event: Extract<GameEvent, { type: "radiantSet" }>, p: Car
   return { kind: "handCard", side, pick: FX_BLOOD_PICK_BASE + (play.step - 1) * FX_BLOOD_PICK_STRIDE };
 }
 
-/** #27 Blood Ridden Glowy Jelly Bean: the blood price paid into the hand (see the header). */
+/**
+ * #27 Blood Ridden Glowy Jelly Bean: its `radiantSet` in the caster's hand streams blood from the hero
+ * into the card made Radiant, which bursts gold on landing. On the other seat the card is a back
+ * (R97), picked by the play's own event count so it is the same whatever the card was. Its
+ * `healthLost` spills blood at the hero over the row's own drain.
+ */
 const bloodDrain: CardRecipe = (event, p, play) => {
   const i = p.env.intensity;
   if (event.type === "radiantSet") {
@@ -180,7 +171,11 @@ const bloodDrain: CardRecipe = (event, p, play) => {
   return null;
 };
 
-/** Classic+ #24 Crushing Walls: the walls close in once, at the first card its play destroys (see the header). */
+/**
+ * Classic+ #24 Crushing Walls: at the first `destroyed` of its own play, two walls close in over
+ * lanes 1 and 5, hit with dust and a shake, and slide back out. A play that destroys nothing, or is
+ * countered, draws none.
+ */
 const crushingWalls: CardRecipe = (event, p, play) => {
   if (event.type !== "destroyed" || play.seen.destroyed !== 1) return null;
   const i = p.env.intensity;

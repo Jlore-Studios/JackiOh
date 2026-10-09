@@ -1,33 +1,14 @@
 // The procedural card art as data (docs/polish/6-cards.md, Surface A, behaviours B1 and B2).
 //
 // `artSpec` is pure: the only randomness is `seededRandom(hashId(defId))`, so equal arguments give
-// deep-equal specs and `Math.random` is never read. The geometry is drawn first, from that one
-// generator, in an order that never looks at `radiant`. The radiant variant therefore reuses the
-// base geometry exactly (composition, every ridge path, the emblem's glyph and place) and changes
-// only colour, plus its rays, which come from a second generator salted off the same seed.
+// deep-equal specs. The geometry is drawn first, from that one generator, in an order that never
+// looks at `radiant`, so the radiant variant reuses the base geometry exactly and changes only
+// colour, plus its rays, which come from a second generator salted off the same seed.
 //
-// Per-card variety. A theme sets the palette and the kind of picture; within a theme, each card
-// draws its own large-scale features from a stream salted off its seed, so two Humans or two plain
-// Spells never share a picture: the composition's LAYOUT (a figure left, right, centred or close
-// up; a spell as a starburst, a spiral, an orbit or a shatter; …), a BACKDROP motif behind it (a
-// moon, rings, pillars, beams, clouds, a constellation, arches, waves or a floor grid), the SKY's
-// lighting (dusk, night, dawn or a split second hue), the emblem from a wider pool, a hue turn, and
-// often a second, smaller ACCENT glyph in a free corner.
-//
-// Everything lives in a 0..100 box and every number is rounded to 2 dp, so the SVG that
-// `svg.ts` prints is short and identical on every machine.
-//
-// v0.2.0 (R503). Three things join the picture, each from its own salted stream so a Core card
-// without them draws exactly what it drew before:
-// - the card's MOTIF (motifs.ts), the picture its name asks for: a plain card (a type theme or a
-//   Token) wears it as its emblem, in the motif's own colours; a tribe or family keeps its emblem
-//   and carries the motif beside it (a corner glyph, a scatter, a row along the ground or a fall
-//   from the sky), and a figure may wear it on its head;
-// - the Book, Pancake and AI families' TWIST: pages in the air, steam and syrup, circuit traces with
-//   scanlines and a glitch;
-// - a per-set VARIETY SALT: the Classic and Classic+ cards draw their layout, backdrop, sky and
-//   emblem from their own salted streams, chosen (like Core's) so that no two catalog cards of one
-//   theme share all of them, while Core's stays the salt it always was.
+// Per-card variety: layout, backdrop, sky lighting, emblem, hue turn and accent glyph each come from
+// a stream salted off the card's seed, so two cards of one theme never share a picture. R503 adds the
+// card's MOTIF (motifs.ts), the Book, Pancake and AI families' TWIST and a per-set VARIETY SALT for
+// Classic and Classic+, each from its own salted stream so a Core card without them draws as before.
 
 import type { EmblemGlyph } from "./emblems.ts";
 import { fmt, hashId, round2, seededRandom } from "./hash.ts";
@@ -115,10 +96,8 @@ const RADIANT_SALT = 0x9e3779b9;
 /** Salts the generator that picks a card's emblem and hue drift, so the geometry stream is untouched. */
 const VARIETY_SALT = 0x2545f491;
 /**
- * R503: the variety salt of each set's cards, by the set's id prefix (B2.2: `classic-043`,
- * `classicplus-012-1`). Each was chosen, as Core's was, so that no two catalog cards of one theme
- * share their layout, backdrop, sky, emblem and motif, and the families spread over every layout;
- * an id of any other set (a transient `t-<n>`) uses Core's.
+ * R503: each set's variety salt, by its id prefix (B2.2: `classic-043`), chosen so that no two
+ * catalog cards of one theme share layout, backdrop, sky, emblem and motif; any other id uses Core's.
  */
 const SET_VARIETY_SALTS: Readonly<Record<string, number>> = {
   classic: 0x79bdaf98,
@@ -274,11 +253,8 @@ type Headgear = "bare" | "hood" | "crown" | "helm" | "ears" | "hat" | "antennae"
 type Build = "plain" | "pauldrons" | "collar";
 
 /**
- * Per theme, the silhouettes a Unit may take; the geometry stream picks one. A tribe's own shape
- * is listed more than once so most of its units wear it: Felinor ears, KY's pointed hat, CN's
- * antennae, a Fruit's sprout, Call to Chaos horns, a Quickdraw's wide brim, a Token's round
- * critter, a Book scholar's hood, a Pancake cook's toque, an AI's helm and antennae. Only Units are
- * figures, so the Spell and Trap themes never reach this table.
+ * Per theme, the silhouettes a Unit may take, picked by the geometry stream; a tribe's own shape is
+ * listed more than once so most of its units wear it. Spell and Trap themes never reach this table.
  */
 const HEADGEAR: Readonly<Record<ArtThemeId, readonly Headgear[]>> = {
   human: ["bare", "hood", "crown", "helm", "helm"],
@@ -335,9 +311,8 @@ function mirrored(draw: (side: number) => string): string {
 type Head = { cx: number; cy: number; r: number; top: number; lean: number };
 
 /**
- * The headgear layer and the glowing detail layer (eyes, a visor, inner ears, antenna bulbs).
- * Every shape here is one closed subpath that never overlaps another in the same layer, because
- * the ridges are filled even-odd and an overlap would punch a hole.
+ * The headgear layer and the glowing detail layer (eyes, a visor, inner ears, antenna bulbs). Shapes
+ * in one layer never overlap, because the ridges are filled even-odd and an overlap punches a hole.
  */
 function headgear(kind: Headgear, head: Head, rng: Rng): { gear: string; detail: string } {
   const { cx, cy, r, top, lean } = head;
@@ -489,10 +464,8 @@ function buildLayer(build: Build, cx: number, shoulderY: number, half: number, n
 }
 
 /**
- * Units: a silhouetted figure before two rows of hills. The theme picks what it wears and how it
- * stands (HEADGEAR, BUILDS), so a Felinor, a KY scholar and a Call to Chaos fiend read apart
- * before the emblem does. Everything comes from the geometry stream, never from `radiant`, so the
- * base and radiant faces share every path (B2).
+ * Units: a silhouetted figure before two rows of hills. The theme picks what it wears (HEADGEAR,
+ * BUILDS), all from the geometry stream and never from `radiant`, so both faces share every path (B2).
  */
 /** Where a figure stands for each layout: its centre line, and how close the viewer is. */
 const FIGURE_STANCE: Readonly<Record<string, { from: number; to: number; scale: number; drop: number }>> = {
@@ -1163,7 +1136,7 @@ const COMPOSERS: Readonly<Record<Composition, (rng: Rng, theme: ArtThemeId, layo
   sigil,
 };
 
-/* ------------------------------------------------------------------ R503: twists and motifs --- */
+// R503: twists and motifs
 
 /** A thin band along a polyline, as one closed path. */
 function bandPath(points: readonly (readonly [number, number])[], width: number): string {
@@ -1267,8 +1240,7 @@ function steam(rng: Rng): string {
 
 /**
  * Pancake: syrup across the top, running down in drips. It reaches just past the top of the band a
- * full face shows, so the drips hang from the window's top edge there, and a squarer window shows
- * the pool they run from.
+ * full face shows, so the drips hang from the window's top edge; a squarer window shows the pool.
  */
 function syrup(rng: Rng): string {
   const depth = between(rng, 17.5, 19.5);
@@ -1340,9 +1312,8 @@ const PLAIN_THEMES: ReadonlySet<ArtThemeId> = new Set<ArtThemeId>(["unit", "spel
 type Placed = { x: number; y: number; size: number };
 
 /**
- * The band of the square every face shows. A full face's art window is about 1.6 times as wide as
- * it is tall and `background-size: cover` fills it, so it shows roughly y 18 to 82 of the box (a
- * Unit's portrait a little more, a compact face nearly all). A motif stays inside this band.
+ * The band of the square every face shows: a full face's window is about 1.6 times as wide as it is
+ * tall and `background-size: cover` fills it, so it shows roughly y 18 to 82. A motif stays inside it.
  */
 const SHOWN_TOP = 22;
 const SHOWN_BOTTOM = 78;
@@ -1352,12 +1323,8 @@ function farEnough(x: number, y: number, size: number, taken: readonly Placed[])
 }
 
 /**
- * Where a motif's glyphs go (R503), from the motif stream, inside the band every face shows and
- * inside the rounded windows (a portrait's oval, a Field Spell's arch). `hero` puts one larger glyph
- * in the upper corner furthest from the emblem and the glow (a plain card has already made it its
- * emblem, so it adds nothing; a figure standing to one side has its emblem in that corner, so the
- * motif goes just under it); `scatter` strews a handful through the composition's sky; `rise`
- * stands a row along the ground; `fall` drops a few from above. Nothing lands on the emblem.
+ * Where a motif's glyphs go (R503), from the motif stream, inside the band every face shows and the
+ * rounded windows. `hero` takes the upper corner furthest from the emblem (none on a plain card).
  */
 function motifPlacements(
   rng: Rng,
@@ -1428,7 +1395,7 @@ function motifPlacements(
   }
 }
 
-/* ------------------------------------------------------------------------------ colour --- */
+// Colour
 
 type Colors = {
   sky: readonly [string, string];
@@ -1564,9 +1531,8 @@ export function artSpec(
 ): ArtSpec {
   const seed = hashId(defId);
   const rng = seededRandom(seed);
-  // Per card, never per variant: the emblem from the theme's pool, how far the palette turns, the
-  // layout, the backdrop, the sky's lighting and the accent. All come from their own salted stream,
-  // so the base and radiant faces agree on them (B2).
+  // Per card, never per variant, from their own salted stream, so the base and radiant faces agree on
+  // the emblem, hue drift, layout, backdrop, sky and accent (B2).
   const variety = seededRandom((seed ^ varietySalt(defId)) >>> 0);
   const pool = EMBLEM_POOLS[theme];
   const pooled = pool[Math.floor(variety() * pool.length)] ?? THEME_PALETTES[theme].emblem.glyph;

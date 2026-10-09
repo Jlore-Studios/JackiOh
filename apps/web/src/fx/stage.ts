@@ -1,26 +1,16 @@
 // Stage directions (docs/polish/1-animations.md, visual pass 2, B46–B48).
 //
-// The S7 recipes draw OVER the board. The cues planned here act on the board's own elements, to hide
-// a seam in how the board is shown: BUILD M5-T4 keeps the view from before a burst on screen until
-// the whole burst has played, so a card the burst moves stays where it was until the very end.
-// Played from the hand, a unit went back into the hand as soon as its own entry ended and sat there
-// while its Cry resolved; a destroyed card came back after its dissolve; an attacker lunged straight
-// up the screen whoever it attacked. Three cues fix that without touching the runner:
-//
-// - `hold`: a stand-in carries the card to the zone the next view shows it in (flying from the hand
-//   card, or from the opponent's hand of backs, or appearing as a card-shaped light) and stays there
-//   until the board shows that view.
-// - `conceal`: the card the burst has taken away stays hidden once its own motion ends, until the
-//   board shows the view it is gone from.
+// The S7 recipes draw OVER the board; these cues act on the board's own elements. BUILD M5-T4 keeps
+// the view from before a burst on screen until the burst has played, so a card the burst moves would
+// stay where it was until the very end. Three cues cover that seam without touching the runner:
+// - `hold`: a stand-in carries the card to the zone the next view shows it in, until the board shows it.
+// - `conceal`: the card the burst took away stays hidden once its own motion ends, until it is gone.
 // - `lunge`: the attacker's lunge aims at the element it attacks, and a spark meets it on contact.
 //
-// R200 still holds: nothing here paces, extends or reschedules an entry. A hold or a conceal lasts
-// until the shown view changes (FxLayer releases them in the same commit that draws the new board)
-// and never past FX_HOLD_MAX_MS. R202 still holds: a stand-in copies only what the viewer's board
-// already renders (the viewer's own hand card, a face-up board card, a card back), and a unit that
-// comes from nowhere the viewer can see arrives as a card-shaped light.
-//
-// Pure, like `cues.ts`: it reads its arguments and returns data.
+// R200: nothing here paces, extends or reschedules an entry; a hold or conceal lasts until the shown
+// view changes and never past FX_HOLD_MAX_MS. R202: a stand-in copies only what the viewer's board
+// already renders, and a unit from nowhere the viewer can see arrives as a card-shaped light.
+// Pure, like `cues.ts`.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
@@ -35,7 +25,7 @@ import {
 } from "./constants.ts";
 import type { FxAnchor, FxCue, FxPlanEnv } from "./types.ts";
 
-/** The contact spark's base count and power (rule 9), scaled by intensity like every burst. */
+/** The contact spark's base count and power (rule 9). */
 const STAGE_TUNING = {
   contactSpark: { count: 14, power: 1 },
 } as const;
@@ -89,7 +79,7 @@ function stageOf(event: GameEvent, c: Ctx): FxCue[] {
       const played = entry.events.find(
         (e): e is Extract<GameEvent, { type: "cardPlayed" }> => e.type === "cardPlayed" && e.instanceId === event.instanceId,
       );
-      // #185: a slam's stand-in waits out the anticipation before it lands.
+      // A slam's stand-in waits out the anticipation before it lands.
       const wait = entry.slam?.instanceId === event.instanceId ? entry.slam.anticipationMs : 0;
       const landMs = wait + frac(FX_SLAM_AT, D - wait);
       // R502: a card cast as it was drawn never was in a hand, so it comes out of its Deck pile.

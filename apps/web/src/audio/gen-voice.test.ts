@@ -1,21 +1,14 @@
-// Polish task 2 (docs/polish/2-sound.md), behaviour B45: `gen-voice.mjs` in its default, generate
-// mode (B37 covers `--check`).
+// Polish task 2 (docs/polish/2-sound.md), B45: `gen-voice.mjs` in its default, generate mode (B37
+// covers `--check`).
 //
-//   B45  With no synthesizer at all (neither macOS `say`, `afconvert` and `afinfo`, nor Windows SAPI
-//        through `powershell.exe` with `ffmpeg`), it exits 2 and prints
-//        `gen-voice: needs macOS say and afconvert, or Windows SAPI (powershell.exe) and ffmpeg`. On
-//        macOS it is idempotent by input hash: on an unchanged tree it renders nothing and writes
-//        nothing; it deletes an orphan file and an orphan manifest entry; and after one line is
-//        edited it renders that key alone and records its new hash, leaving every other file and
-//        entry as it was.
-//   R501 Where Windows SAPI and ffmpeg are (WSL, or Windows), it renders a SAPI voice's line to an
-//        M4A in the committed format within the length cap and records its hash, renders nothing on
-//        an unchanged tree, and reports a stale `say` line as needing macOS instead of touching it.
+//   B45  With no synthesizer (neither macOS `say`, `afconvert`, `afinfo` nor Windows SAPI through
+//        `powershell.exe` with `ffmpeg`) it exits 2 with its needs-macOS line. On macOS it is
+//        idempotent by input hash, deletes orphans, and renders only an edited line's key.
+//   R501 Where Windows SAPI and ffmpeg are, it renders a SAPI voice's line to an M4A in the committed
+//        format within the length cap, and reports a stale `say` line as needing macOS.
 //
-// Every run points `--root` at a copy of the tree in a temp dir, never at the committed files; an
-// edit parses the copy's card-audio.json5 with JSON5 and writes it back as JSON, which is JSON5 too.
-// The macOS cases need the real `say`, so they run only on a Mac, and the SAPI ones only where SAPI
-// is; CI (Linux) runs the first case.
+// Every run points `--root` at a temp copy of the tree, never the committed files. The macOS cases
+// need the real `say` and the SAPI ones need SAPI; CI (Linux) runs the first case.
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -56,7 +49,7 @@ const CATALOG_PATH = resolve(WEB, "../../crates/cards/catalog.json");
 /** VOICE_FILE_MAX_MS in constants.ts, in seconds. */
 const MAX_SECONDS = 4;
 
-/** The Surface's formula, recomputed here rather than imported from the script. */
+/** The hash formula, recomputed here rather than imported from the script. */
 function voiceHash(values: { say: string; rate: number; pbas: number; pmod: number; text: string }): string {
   const { say, rate, pbas, pmod, text } = values;
   return createHash("sha1").update(JSON.stringify({ v: 1, say, rate, pbas, pmod, text })).digest("hex").slice(0, 16);

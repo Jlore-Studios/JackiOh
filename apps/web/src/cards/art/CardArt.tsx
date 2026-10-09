@@ -1,15 +1,13 @@
 // The art in a card's window (docs/polish/6-cards.md, Surface A, B6).
 //
-// A card with real art listed in the manifest gets an <img>; every other card, and any card
-// whose image fails to load, gets its procedural SVG as the span's background. The art is
-// decoration: it is aria-hidden, holds no text and names nothing, so a face-down card can never
-// leak through it (CLAUDE.md rule 7). The span fills whatever box its parent gives it and clips
-// itself to `shape`; sizing it is the parent's job, so nothing here sets a width.
+// Real art listed in the manifest gets an <img>; every other card, and one whose image fails to
+// load, gets its procedural SVG as the span's background. The art is aria-hidden and holds no
+// text, so a face-down card can never leak through it (CLAUDE.md rule 7). The span fills its
+// parent's box and clips itself to `shape`; sizing it is the parent's job.
 //
-// R503: the procedural picture carries the card's motif, read from its printed name (motifs.ts). A
-// caller that holds the name passes it; one that does not gets it from the closest catalog
-// (`useDefResolver`: the deck builder's, else the board's), so a card draws the same picture in the
-// hand, on the board and in the deck list. With no name anywhere, the picture has no motif.
+// R503: the picture carries the card's motif, read from its printed name (motifs.ts). A caller
+// without the name gets it from the closest catalog (`useDefResolver`), so a card draws the same
+// picture in the hand, on the board and in the deck list.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -39,10 +37,8 @@ export type CardArtProps = {
   className?: string;
   /**
    * A grid of many faces: draw the procedural picture only once the window has stayed near the
-   * screen for a short dwell (near.ts), so a card flicked straight past never pays the parse.
-   * Until then the window is its theme's sky as a flat gradient, `data-art-pending="true"`
-   * (art.css). A real-art `<img>` is already `loading="lazy"`, and a window that cannot be
-   * watched draws at once.
+   * screen for a short dwell (near.ts); until then it is its theme's sky as a flat gradient,
+   * `data-art-pending="true"` (art.css). A window that cannot be watched draws at once.
    */
   lazy?: boolean;
 };

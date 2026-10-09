@@ -1,5 +1,4 @@
-// The effects layer's contract (docs/polish/1-animations.md, Surface S1). Every other fx module
-// compiles against these types, so they are written exactly as the design document states them.
+// The effects layer's contract (docs/polish/1-animations.md, Surface S1).
 
 import type { CardType, GameEvent, PlayerId, PlayerView, Rarity, Row, Tag } from "@jackioh/shared";
 import type { Side } from "../game/contract.ts";
@@ -14,12 +13,9 @@ export type FxVec = { x: number; y: number };
 export type FxBox = { x: number; y: number; width: number; height: number };
 
 /**
- * Where a cue plays. Resolved to an `FxBox` by the director at the moment the cue fires.
- *
- * `handCard` is one card of a hand as the board draws it: the `pick`-th `.card` in `hand-<side>`,
- * counted modulo the cards there, falling back to the hand's own box when it holds none. It exists for
- * a hand of backs (R202): the planner picks a back by a counter of its own, never by the hidden card
- * an event names, so the back it lands on says nothing about which card it was.
+ * Where a cue plays; the director resolves it to an `FxBox` when the cue fires. `handCard` is the
+ * `pick`-th `.card` in `hand-<side>` (modulo, the hand's own box when empty), chosen by a planner
+ * counter, never by the hidden card an event names (R202).
  */
 export type FxAnchor =
   | { kind: "testid"; testid: string; at?: FxPoint }
@@ -51,10 +47,7 @@ export type FxRayTone = "legendary" | "mythic" | "radiant" | "holy" | "victory";
 export type FxBannerTone = "you" | "opponent" | "muted";
 export type FxOutcome = "victory" | "defeat" | "draw";
 
-/**
- * `scale` (issue #124) multiplies every particle's size, as `power` multiplies its speed, so one preset
- * gives a fine mist or a heavy spray. Absent: 1.
- */
+/** `scale` multiplies every particle's size, as `power` does its speed. Absent: 1. */
 export type FxBurstCue = {
   kind: "burst";
   preset: FxPreset;
@@ -79,38 +72,25 @@ export type FxGhostCue = { kind: "ghost"; from: FxAnchor; to: FxAnchor; delayMs:
 export type FxArrowsCue = { kind: "arrows"; direction: "up" | "down"; at: FxAnchor; delayMs: number; durationMs: number };
 export type FxBannerCue = { kind: "banner"; text: string; tone: FxBannerTone; delayMs: number; durationMs: number };
 export type FxResultCue = { kind: "result"; outcome: FxOutcome; text: string; delayMs: number; durationMs: number };
-/**
- * R502: one mana crystal cracking and going dark, with frost over it (#21 Hinder's refresh loss). It
- * sits on the crystal's own box; the lasting mark after it is the board's (`manaMarks.ts`).
- */
+/** R502: a mana crystal cracking and going dark under frost (#21 Hinder's refresh loss); the lasting mark is `manaMarks.ts`'s. */
 export type FxFractureCue = { kind: "fracture"; at: FxAnchor; delayMs: number; durationMs: number };
-/**
- * Classic+ #24 Crushing Walls: two spiked walls closing in from the left and right edges of `at`'s
- * box, each `reach` of its width deep, then sliding back out (fx.css draws them).
- */
+/** Classic+ #24 Crushing Walls: two walls close in from the left and right edges of `at`'s box, each `reach` of its width deep. */
 export type FxWallsCue = { kind: "walls"; at: FxAnchor; reach: number; delayMs: number; durationMs: number };
 /** A colour set for a DOM cue, as CSS colours: the rim, the bright core and the glow around it. */
 export type FxTint = { rim: string; core: string; glow: string };
 /** R437: a mark branded onto a card: a sigil in the mark's colours slams on and fades into the aura. */
 export type FxBrandCue = { kind: "brand"; at: FxAnchor; tint: FxTint; delayMs: number; durationMs: number };
-/**
- * R1363 (MN05): a shield flashing up over a hero or a unit as its Armor takes a hit: `small` when the
- * Armor took half or more of a hit that still landed, `full` when it took the whole hit.
- */
+/** R1363 (MN05): a shield flashing over a hero or unit as its Armor takes a hit: `small` for half or more of a hit that still landed, `full` for the whole hit. */
 export type FxShieldCue = { kind: "shield"; size: "small" | "full"; at: FxAnchor; delayMs: number; durationMs: number };
-/**
- * One line of a Call to Chaos reveal: a reel of effect names that spins and lands on `text`, the
- * last name in `reel`, at `landMs` after the cue fires.
- */
+/** One line of a Call to Chaos reveal: a reel of effect names landing on `text` (the last in `reel`) at `landMs`. */
 export type FxChaosLine = { text: string; reel: readonly string[]; landMs: number };
 /** R436: the slot-machine reveal of the effects a Call to Chaos rolled, one line each, over the board. */
 export type FxChaosCue = { kind: "chaos"; title: string; lines: readonly FxChaosLine[]; delayMs: number; durationMs: number };
 /** A small glyph a DOM cue draws (an emblem of `cards/art/emblems.ts`): SVG path data in a 24×24 box. */
 export type FxIcon = { d: string; rule: "nonzero" | "evenodd" };
 /**
- * Issue #124: a sweep's fog. A bank of cloud rolls over a whole row of units, left to right across the
- * boxes from `from` to `to` (the row's first and last unit zones), in `tint`, which says what cast it,
- * with small `icon`s drifting in it (the caster's emblem, or a flame or a heart). `tone` is hits or heals.
+ * A sweep's fog: a bank of cloud rolling over a row of units from `from` to `to` (its first and last
+ * unit zones) in `tint`, which says what cast it, with small `icon`s drifting in it. `tone` is hits or heals.
  */
 export type FxFogCue = {
   kind: "fog";
@@ -122,10 +102,7 @@ export type FxFogCue = {
   delayMs: number;
   durationMs: number;
 };
-/**
- * Issue #124: a whole Deck, Graveyard or Exile reached at once. A wave in `tint` washes over the pile
- * once, pushing `direction` (a Degrade down, an Upgrade up), and `text` says how much it reached.
- */
+/** A whole Deck, Graveyard or Exile reached at once: a wave in `tint` pushing `direction` (a Degrade down, an Upgrade up); `text` says how much it reached. */
 export type FxZoneCue = {
   kind: "zone";
   at: FxAnchor;
@@ -137,22 +114,12 @@ export type FxZoneCue = {
 };
 
 /**
- * Stage cues (docs/polish/1-animations.md, B46–B48): they act on the board's own elements rather than
- * drawing over them, and they are planned by `stage.ts`, not by the S7 recipe table.
- *
- * A stand-in that carries a card to the zone the next view shows it in (a summoned unit, a stolen
- * one) and holds it there until the board catches up, because the board keeps showing the view from
- * before the burst until the whole burst has played (BUILD M5-T4). `from` is the card element it
- * takes off (a hand card, a board card, or a hand of backs, whose last back it copies); without one
- * the stand-in is a card-shaped light. It lands at `landMs`. It is removed the moment the board
- * shows the next view; `durationMs` (FX_HOLD_MAX_MS) is only the safety cap (R200).
+ * Stage cues (docs/polish/1-animations.md, B46–B48): planned by `stage.ts`, not the S7 recipe table. `hold` is a
+ * stand-in carrying a card to the zone the next view shows it in, held until the board catches up (BUILD M5-T4);
+ * `from` is its source (a hand of backs: its last back), else a card-shaped light. Lands at `landMs`; `durationMs` is only the safety cap (R200).
  */
 export type FxHoldCue = { kind: "hold"; from: FxAnchor | null; to: FxAnchor; delayMs: number; landMs: number; durationMs: number };
-/**
- * Hides a card the burst has already taken away (played, destroyed, bounced, stolen) until the board
- * shows the view it is gone from. "now" hides it at once (a stand-in has taken its place); "after"
- * hides it once its own motion has ended, so its keyframes still play.
- */
+/** Hides a card the burst has already taken away until the board shows the view it is gone from: "now" at once, "after" once its own motion has ended. */
 export type FxConcealCue = { kind: "conceal"; testid: string; mode: "now" | "after"; delayMs: number; durationMs: number };
 /** Aims an attacker's lunge at the element it attacks, for the attackDeclared entry it rides. */
 export type FxLungeCue = { kind: "lunge"; attacker: string; target: string; delayMs: number; durationMs: number };
@@ -215,34 +182,26 @@ export type FxRecipe =
 /** The optional `fx` field of an `ANIMATIONS` row: which recipe decorates the event. Data only. */
 export type FxDescriptor = { readonly recipe: FxRecipe };
 
-/**
- * Public catalog facts about a readable defId (base face). `undefined` for "hidden" or unknown ids.
- * `type` and `tags` (issue #124) pick the card's look (`looks.ts`): its particles, tint and emblem.
- */
+/** Public catalog facts about a readable defId (base face); `undefined` for "hidden" or unknown ids. `type` and `tags` pick the card's look (`looks.ts`). */
 export type FxCardFacts = { rarity?: Rarity; attack?: number; health?: number; type?: CardType; tags?: readonly Tag[] };
 
 export type FxTrapZone = { player: PlayerId; row: Row; lane: number };
 
 /**
- * A play the planner has seen start and not yet seen finish: the `cardPlayed` it began with, and
- * whether it was cast the moment it was drawn (R502, `castOnDraw.ts`). Its `defId` is the sentinel
- * when the viewer may not read the card (R97), and then no per-card recipe ever keys off it (R202).
+ * A play seen starting and not yet finishing: its `cardPlayed`, and whether it was cast the moment it
+ * was drawn (R502, `castOnDraw.ts`). `defId` is the sentinel when the viewer may not read the card
+ * (R97), and then no per-card recipe keys off it (R202).
  */
 export type FxPlay = {
   player: PlayerId;
   instanceId: string;
   defId: string;
   castOnDraw: boolean;
-  /**
-   * How many events the planner has seen since this play's `cardPlayed` (its next event is step 1).
-   * A count of events, public on both seats, so a recipe may use it to vary what it draws without
-   * reading anything a hidden card would change (R202).
-   */
+  /** Events seen since this play's `cardPlayed` (its next event is step 1): public on both seats (R202). */
   step: number;
   /**
-   * Those events by type: how many of each the planner has seen since the `cardPlayed`, the event
-   * being planned included. Types and counts only, public on both seats (R202). Classic+ #24
-   * Crushing Walls draws its walls at the first `destroyed` of its own play.
+   * Those events by type, the one being planned included: types and counts only, public on both seats
+   * (R202). Classic+ #24 Crushing Walls draws its walls at the first `destroyed` of its own play.
    */
   seen: Readonly<Partial<Record<GameEvent["type"], number>>>;
 };
@@ -251,9 +210,8 @@ export type FxPlay = {
 export type FxMemory = {
   /**
    * Records `cardPlayed` (instanceId → player) and `trapFired` (instanceId → zone), ignoring "hidden"
-   * ids; keeps the last few events in order, so a `cardPlayed` right after its own `drawn` reads as a
-   * cast on draw; and keeps the plays still resolving (`cardPlayed` opens one, its `cardResolved` or
-   * `countered` closes it).
+   * ids; keeps the last few events in order (a `cardPlayed` right after its own `drawn` is a cast on
+   * draw) and the plays still resolving (`cardResolved` or `countered` closes one).
    */
   remember(events: readonly GameEvent[]): void;
   casterOf(instanceId: string): PlayerId | undefined;
@@ -270,11 +228,7 @@ export type FxPlanEnv = {
   intensity: number;
   card: (defId: string) => FxCardFacts | undefined;
   memory: FxMemory;
-  /**
-   * The newest view the layer has been given (Game's `view`, the one the burst is heading to), when
-   * it has one. A number an event does not carry but the view does is read here: how far #21 Hinder
-   * lowered the next refresh (R502). Absent: the planner plans without it.
-   */
+  /** The newest view the layer was given (the one the burst heads to): a number an event lacks but the view has, such as how far #21 Hinder lowered the next refresh (R502). */
   next?: PlayerView;
 };
 

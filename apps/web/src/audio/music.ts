@@ -5,41 +5,28 @@
 //   voice gain ─┴─▶ bed ─▶ turn low-pass ─▶ turn gain ─▶ focus gain ─▶ engine music bus ─▶ duck ─▶ master
 //                                           intro gain ─┘
 //
-// A REQUEST NAMES WHAT SHOULD PLAY, never when. Asking for the track already playing does nothing,
-// so a Mythic played again while its theme runs does not restart it. A change waits for the playing
-// track's next bar line (at most MUSIC_BAR_WAIT_MAX_S away), then the new track fades in over
-// MUSIC_FADE_S while the old one fades out, with no hard cut. A track that opens on a sting (a
-// result, a Mythic theme, a station's match start) comes in at once rather than fading, so its
-// first note lands. A sting hands off to the next track on its own last bar line, and a change that
-// arrives while a sting plays replaces the track it hands off to, never the sting. A station's own
-// tracks pick up within a match where they left off, on a bar line.
+// A REQUEST NAMES WHAT SHOULD PLAY, never when: asking for the track already playing does nothing.
+// A change waits for the playing track's next bar line (at most MUSIC_BAR_WAIT_MAX_S away), then
+// fades in over MUSIC_FADE_S as the old one fades out. A track that opens on a sting comes in at
+// once so its first note lands; a sting hands off on its own last bar line, and a change arriving
+// meanwhile replaces the track it hands off to. A station's tracks pick up where they left off.
 //
-// The opponent's turn is a mix, not a track: a low-pass and a little less level, ramped. Losing
-// focus (the page hidden, or the window blurred) fades the music out unless the player turned on
-// `playMusicInBackground`. Muted, or with the music at zero, nothing new loads or starts; the music picks up the moment
-// it can be heard again.
+// The opponent's turn is a mix, not a track: a ramped low-pass and a little less level. Losing focus
+// fades the music out unless `playMusicInBackground`. Muted or at zero, nothing new loads or starts.
 //
-// A CARD'S INTRO (R1350, R1351) is a clip that plays once on top of whatever plays: a Legendary's or
-// a Mythic's few bars, asked for at its card's moment. It goes straight into the focus gain, so it
-// follows the music volume, the mute and the page's focus but not the opponent's-turn low-pass, and
-// while its music runs (to its last bar line, the manifest's `handoff`) the bed it sits on ducks to
-// MUSIC_INTRO_DUCK_GAIN and comes back. The bed is every track: a change asked for meanwhile (the
-// theme the card brings) is made as ever, on a bar line, and comes in ducked until the intro's music
-// ends. Another card's intro cuts it with a MUSIC_INTRO_CUT_FADE_S fade, as `stopIntro` does, and
-// the same intro asked for again while its music runs (copies of one card arriving together)
-// changes nothing, as a theme asked for again does not restart; one
-// whose file is not ready MUSIC_INTRO_LATE_S after it was asked for is dropped. An intro asked for is
-// fetched at once even while the board animates (it is the card's moment, like a voice line), and
-// `preloadIntros` fetches ahead between bursts. Intro files have caches of their own, so they never
-// push a track's bytes out.
+// A CARD'S INTRO (R1350, R1351) plays once on top of whatever plays, straight into the focus gain, so
+// it follows volume, mute and focus but not the turn low-pass. While its music runs (to the
+// manifest's `handoff`) the bed ducks to MUSIC_INTRO_DUCK_GAIN, and a change asked for meanwhile
+// comes in ducked. Another card's intro cuts it with a MUSIC_INTRO_CUT_FADE_S fade; the same one
+// asked for again does nothing; one not ready MUSIC_INTRO_LATE_S after it was asked for is dropped.
+// Intro files have caches of their own, so they never push a track's bytes out.
 //
-// Like the engine, nothing is scheduled on a context that is not running, and the player never
-// throws. A turn or focus change that arrives while the context is suspended is applied the moment
-// it runs again. A track's file is fetched once (MUSIC_BYTES_MAX kept, compressed) and decoded only
-// to play (MUSIC_DECODED_MAX kept); one that cannot be fetched or decoded is tried again when a
-// request next names it or at the next turn boundary, never at every idle. No file is fetched
-// or decoded while the board animates (B58): a preload fetches bytes only, and both wait for the
-// burst to end. A sting whose file cannot be had is skipped, never waited on.
+// Nothing is scheduled on a context that is not running, and the player never throws: a turn or
+// focus change that arrives while it is suspended is applied when it runs. A track's file is
+// fetched once (MUSIC_BYTES_MAX kept) and decoded only to play (MUSIC_DECODED_MAX kept); one that
+// fails is tried again when a request next names it or at the next turn boundary, never at every
+// idle. No file is fetched or decoded while the board animates (B58). A sting that cannot be had
+// is skipped, never waited on.
 
 import {
   MUSIC_BAR_WAIT_MAX_S,

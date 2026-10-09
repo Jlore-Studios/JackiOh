@@ -2,35 +2,20 @@
 // root and renders `overlay` as a sibling of that root, never inside it, so the root's own
 // onClickCapture never sees a click inside the overlay.
 //
-// Hover: a mouse or pen pointer (or one with no pointerType, treated as a mouse) resting for
-// HOVER_DELAY_MS opens the preview, unless `options.hover` is false or the hoverPreviews setting is
-// off. pointerleave, any pointerdown, Escape, a window blur, any scroll, or the page going hidden
-// closes it.
-//
-// Long-press: a touch held for LONG_PRESS_MS without moving more than LONG_PRESS_SLOP_PX opens the
-// sheet, or calls `onLongPress`. Lifting, a pointercancel or a move past the slop before then
-// cancels the press.
-//
-// With `options.touchHold === "preview"` (and no `onLongPress`) the hold is a touch's mouse-over
-// (#165) instead: the press opens the hover preview, which lifting, a pointercancel or a move past
-// the slop then closes. It answers to the same hover-previews switches, so with them off a hold
-// opens nothing.
-// After it fires, the next click on the trigger is swallowed so the press does not also play or
-// pick the card; that disarms on the next pointerdown or after CLICK_SUPPRESS_MS. The native
-// context menu is prevented while a touch press is pending or has fired, and a mouse right-click
-// calls `options.onContextMenu` when one is given.
-//
-// A subject is a card face by default (`face`: the preview and the sheet draw it). A subject that
-// is not one card — a graveyard pile, say — passes `render` instead and draws its own overlay for
-// each mode; it still takes the one inspect slot and closes on everything above. `openSheet` opens
-// the sheet at once, for a tap or Enter on a trigger that has nothing else to do on a click.
+// Hover: a mouse or pen pointer (no pointerType counts as a mouse) resting for HOVER_DELAY_MS opens
+// the preview, unless `options.hover` is false or hoverPreviews is off; leaving, pointerdown, Escape,
+// blur, scroll or the page hiding closes it. Long-press: a touch held LONG_PRESS_MS within
+// LONG_PRESS_SLOP_PX opens the sheet or calls `onLongPress`; `touchHold: "preview"` opens the hover
+// preview instead until lift, cancel or slop, under the same switches. After it fires the next click
+// is swallowed (until the next pointerdown or CLICK_SUPPRESS_MS), and the native context menu is
+// prevented while a touch press is pending or fired. A subject that is not one card (a pile) passes
+// `render` instead of `face`; `openSheet` opens the sheet at once.
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactElement } from "react";
 import type { FaceModel } from "../model.ts";
 import { readCardSettings, useCardSettings } from "../settings.ts";
-// The settings panel's "Hover previews" switch (task 7) is the player's handle on this preview: it
-// opens only while both that switch and this module's own `hoverPreviews` allow it.
+// The settings panel's "Hover previews" switch also gates the preview (with `hoverPreviews`).
 import { readSettings as readPanelSettings, useSetting as usePanelSetting } from "../../settings/store.ts";
 import { CLICK_SUPPRESS_MS, HOVER_DELAY_MS, LONG_PRESS_MS, LONG_PRESS_SLOP_PX } from "./constants.ts";
 import { HoverPreview } from "./HoverPreview.tsx";
@@ -39,7 +24,6 @@ import type { PreviewPrefer, Rect } from "./placement.ts";
 import { closeHoverFor, closeInspect, inspectSnapshot, openInspect, subscribeInspect } from "./store.ts";
 import "./inspect.css";
 
-/** What a custom overlay is drawn from: the open mode, the trigger's box and a way to close it. */
 export type InspectOverlayState = { mode: "hover" | "sheet"; anchor: Rect; close: () => void };
 
 /**
@@ -58,15 +42,13 @@ export type InspectOptions = {
   longPress?: boolean;
   onLongPress?: () => void;
   /**
-   * What a touch long-press opens when no `onLongPress` is given: "sheet" (the default) is the
-   * inspect sheet; "preview" is the hover preview instead, held open only while the finger stays
-   * down — the touch stand-in for a mouse-over (#165), used where a card cannot be played anyway
-   * (the opponent's turn, the landing fan). It obeys the same hover-previews settings, so with
-   * them off the hold opens nothing and its release click is a plain tap, not swallowed.
+   * What a touch long-press opens when no `onLongPress` is given: "sheet" (default), or "preview",
+   * the hover preview held open only while the finger stays down. It obeys the hover-previews
+   * settings: with them off the hold opens nothing and its release click is a plain tap.
    */
   touchHold?: "sheet" | "preview";
-  /** When given, a mouse right-click calls it and prevents the native menu. The deck builder only;
-      the board leaves right-click to task 7's drag cancel. */
+  /** A mouse right-click calls it and prevents the native menu. The deck builder only: the board
+      leaves right-click to the drag cancel. */
   onContextMenu?: () => void;
   /** Which side of the card the hover preview tries first; "beside" (B27's order) by default. */
   prefer?: PreviewPrefer;
@@ -93,13 +75,12 @@ export type InspectBindings = {
   handlers: InspectHandlers;
   overlay: ReactElement | null;
   open: "hover" | "sheet" | null;
-  /** Opens the sheet now, anchored on `element`; a no-op for a null subject. */
+  /** Opens the sheet now on `element`; a no-op for a null subject. */
   openSheet: (element: Element) => void;
 };
 
 type Timer = ReturnType<typeof setTimeout>;
 
-/** Where a touch press started. */
 type Press = { x: number; y: number; pointerId: number };
 
 /** idle; pending: a touch is down and its timer runs; fired: the long-press happened. */
@@ -125,7 +106,6 @@ function hoverAllowed(): boolean {
   return readCardSettings().hoverPreviews && readPanelSettings().hoverPreviews;
 }
 
-/** Mouse, pen, or an event with no pointerType at all. */
 function hoverPointer(pointerType: string | undefined): boolean {
   return pointerType === undefined || pointerType === "" || pointerType === "mouse" || pointerType === "pen";
 }
@@ -248,8 +228,7 @@ export function useInspectTrigger(
           pressState.current = "fired";
           armSuppressor();
           if (previewHold) {
-            // `press` keeps the start point, so a drift past the slop still reads as the look
-            // ending; the other paths forget it, as before.
+            // `press` keeps the start point, so a drift past the slop still ends the look.
             holdPreview.current = pressKey;
             openInspect({ key: pressKey, mode: "hover", anchor: rectOf(element) });
             return;
@@ -277,8 +256,7 @@ export function useInspectTrigger(
         closeHoldPreview();
         press.current = null;
         if (pressState.current === "pending") clearPress();
-        // The finger has just lifted from a long-press: its click is on the way, so the swallow
-        // window runs from here.
+        // The lift's click is on the way, so the swallow window runs from here.
         else if (pressState.current === "fired" && suppressClick.current) armSuppressor();
       },
 
@@ -289,7 +267,7 @@ export function useInspectTrigger(
       },
 
       onContextMenu: (event) => {
-        // Newer browsers send contextmenu as a PointerEvent that names the pointer.
+        // Newer browsers send contextmenu as a PointerEvent.
         const native: Event = event.nativeEvent;
         const nativeType = "pointerType" in native ? (native as PointerEvent).pointerType : undefined;
         if (pressState.current !== "idle" || nativeType === "touch") {
@@ -323,7 +301,6 @@ export function useInspectTrigger(
     [],
   );
 
-  // Timers never outlive the card.
   useEffect(() => {
     const t = timers.current;
     return () => {
@@ -350,9 +327,8 @@ export function useInspectTrigger(
   const panelHover = usePanelSetting("hoverPreviews");
   const hoverPreviews = settings.hoverPreviews && panelHover;
 
-  // While the preview is open, the page closes it: Escape, any pointerdown, a window blur, any
-  // scroll (capturing, so a scrolled zone counts), or the tab going hidden. Turning hover previews
-  // off closes it too.
+  // While the preview is open the page closes it (scroll is captured, so a scrolled zone counts);
+  // turning hover previews off closes it too.
   useEffect(() => {
     if (key === null || mode !== "hover") return;
     if (!hoverPreviews) {
@@ -387,7 +363,6 @@ export function useInspectTrigger(
     if ("render" in subject) {
       overlay = subject.render({ mode: active.mode, anchor: active.anchor, close });
     } else {
-      // Lines of code is a hidden stat in matches: an in-match trigger shows no LocLine.
       const face = options?.showLoc === false ? { ...subject.face, loc: null } : subject.face;
       overlay =
         active.mode === "hover" ? (

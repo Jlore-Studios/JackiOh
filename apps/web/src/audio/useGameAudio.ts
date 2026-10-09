@@ -1,17 +1,14 @@
 // The one hook `Game` calls for sound (SPEC §10.11). It feeds the director every view, tells it
 // (and the engine) when the animation runner starts an entry or goes idle, installs the gesture
-// unlock, the UI ticks and the debug handle for the component's lifetime, and preloads the voice
-// lines the view makes likely. It also gives the board the music (R631): a music director that
-// hears every view, every event the sound director resolves, and each idle, for as long as the
-// board is mounted. The same events reach the haptics (R669), so a buzz lands with its sound.
+// unlock, UI ticks and debug handle, preloads the voice lines the view makes likely, and gives the
+// board its music (R631) and haptics (R669), which hear the same events as the sound director.
 //
 // ORDER MATTERS. `Game` calls this directly after `const runner = queue.current;`, before its own
 // layout effects, so the director's `onView` runs before Game's enqueue layout effect: the events
 // of a view are owed by the time the runner starts their first entry, and a reduced-motion burst
 // (which drains inside `enqueue`) is flushed with the view that carried it.
 //
-// It never throws. With no AudioContext (jsdom) every call inside it is a no-op, and a failure in
-// the sound path is swallowed rather than taking the board down with it.
+// It never throws: with no AudioContext (jsdom) every call is a no-op, and a failure is swallowed.
 
 import { useContext, useEffect, useLayoutEffect, useRef } from "react";
 
@@ -83,7 +80,7 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView): void {
       quietly(() => musicRef.current?.onEvent(event, planned));
       quietly(() => haptics.onEvent(event, planned));
       if (event.type === "damage") quietly(() => crowdRef.current?.observeDamage(event.amount));
-      // #185: a landing Unit's crowd reaction, through the same quiet period as a hit's, at the tier
+      // A landing Unit's crowd reaction, through the same quiet period as a hit's, at the tier
       // the board slams it at (the newest view, as the queue reads it).
       const landing = landingOf(event);
       if (landing !== null) quietly(() => crowdRef.current?.observeSlam(slamTierFor(landing, viewRef.current, lookupRef.current)));

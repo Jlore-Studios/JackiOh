@@ -3,10 +3,8 @@
 // composition comes from the type alone and sets the geometry. Both are presentation only: no
 // rule reads them (CLAUDE.md rule 7).
 //
-// v0.2.0 (R503) adds three families: Book (a leather tome under candlelight, ink drops, pages in the
-// air), Pancake (a warm griddle morning: stacks, butter, syrup and steam) and AI (cold neon: a chip,
-// circuit traces, scanlines, square pixels). Each is a tag theme, so an AI or Pancake token reads
-// as its family and not as a plain Token.
+// Book, Pancake and AI (R503) are tag themes, so an AI or Pancake token reads as its family and
+// not as a plain Token.
 
 import type { CardType, Tag } from "@jackioh/shared";
 
@@ -32,10 +30,9 @@ export type ThemePalette = {
 };
 
 /**
- * First match wins; Token and the type themes come after every tag here. AI comes straight after
- * Call to Chaos (an AI generated card is that before it is anything else), Book after KY (a KY card
- * is KY's first, and KY's own emblem is already a book), and Pancake before Fruit, Quickdraw and
- * Human, so Classic+ #13 Mommy Barker (Human, Pancake) wears the Pancake family's picture.
+ * First match wins; Token and the type themes come after every tag. AI follows Call to Chaos, Book
+ * follows KY (KY's own emblem is already a book), and Pancake precedes Fruit, Quickdraw and Human,
+ * so Classic+ #13 Mommy Barker (Human, Pancake) wears the Pancake picture.
  */
 export const TAG_THEMES: readonly (readonly [Tag, ArtThemeId])[] = [
   ["Call to Chaos", "chaos"],

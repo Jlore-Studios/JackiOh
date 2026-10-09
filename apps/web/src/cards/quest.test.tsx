@@ -1,12 +1,8 @@
 // Classic #90 In Too Deep's quest line on the board and in the inspect overlays (B5 E33, R404, SPEC
-// §10.8): the view carries `quest` on every view of the card on the field (a face-up Field Spell both
-// players read), and the client draws it — a progress badge per open quest on the face, each quest's
-// text, progress and rewards and each aura the line holds in the inspect notes, a log line per report
-// — and the reward prompt it opens takes the reward the engine offers.
-//
-// The fixtures are shaped as `viewFor` builds the view (`crates/engine/src/wire/view.rs` `QuestView`);
-// the last block plays the real engine (the WebAssembly module, through `audio/test/realGame.ts`),
-// so a renamed field or a reworded event breaks it.
+// §10.8): the view carries `quest` on every view of the card, and the client draws a badge, inspect
+// notes and log lines; the reward prompt takes the reward the engine offers. The fixtures follow
+// `QuestView` (`crates/engine/src/wire/view.rs`); the last block plays the real engine, so a renamed
+// field or a reworded event breaks it.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -50,7 +46,6 @@ function withCatalog(node: ReactElement, catalog = lookup): ReactElement {
   return <CatalogContext.Provider value={catalog}>{node}</CatalogContext.Provider>;
 }
 
-/** Quest 1 at 1 of 2, its two rewards on offer (In Too Deep's own tree, `090-in-too-deep.ts`). */
 const FIRST: QuestView = {
   open: [
     {
@@ -126,7 +121,6 @@ function longPress(element: HTMLElement): HTMLElement {
   return screen.getByTestId(INSPECT_SHEET);
 }
 
-/** The quest lines of an inspect overlay: each one's id, words and rewards. */
 function questLines(overlay: HTMLElement): { id: string | null; words: string; rewards: string[] }[] {
   return Array.from(within(overlay).getByTestId(INSPECT_STATES).querySelectorAll<HTMLElement>('li[data-state="quest"]')).map((line) => ({
     id: line.getAttribute("data-quest"),
@@ -265,14 +259,11 @@ describe("R404 the log reads a quest's reports in words", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // The real engine
-// ---------------------------------------------------------------------------------------------
 
 /** The step budget for one of the game's waits: a few turns of End turn and first answers. */
 const STEPS_MAX = 40;
 
-/** In Too Deep's view on `player`'s board, as `viewer` is shown it. */
 function questCardIn(view: PlayerView, player: PlayerId): Extract<BackrowView, { faceDown: false }> | null {
   const side = view.you.player === player ? view.you : view.opponent;
   for (const entry of side.backrow) {
@@ -306,7 +297,6 @@ describe("R404 In Too Deep through the real engine", () => {
     game.act("p1", must(playOf(game, "p1", itd.instanceId), "a legal play of In Too Deep"));
     answerPrompts(game);
 
-    // Quest 1 opens as it enters, on both seats' boards.
     for (const viewer of ["p1", "p2"] as const) {
       const view = game.view(viewer);
       const entry = must(questCardIn(view, "p1"), `In Too Deep on ${viewer}'s board`);
@@ -318,7 +308,6 @@ describe("R404 In Too Deep through the real engine", () => {
       cleanup();
     }
 
-    // p1's next draw moves it: the badge and the log both say 1/2.
     until(game, () => progressOf(game) === 1);
     const view = game.view("p1");
     render(withCatalog(<Board view={view} />, catalog));
@@ -328,7 +317,6 @@ describe("R404 In Too Deep through the real engine", () => {
     expect(screen.getByTestId(testid.log).textContent).toContain("Your In Too Deep quest: Draw 2 cards, 1/2");
     cleanup();
 
-    // The second draw completes it, and p1 is asked for a reward.
     until(game, () => {
       const pending = game.view("p1").pending;
       return pending?.forYou === true && pending.kind === "reward";
@@ -354,7 +342,6 @@ describe("R404 In Too Deep through the real engine", () => {
     expect(game.legal("p1")).toContainEqual(answer);
     cleanup();
 
-    // The engine takes it: reward A, and quest 2 opens at 0/2.
     game.act("p1", answer);
     answerPrompts(game);
     const after = game.view("p2");

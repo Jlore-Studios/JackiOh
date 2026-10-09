@@ -1,39 +1,27 @@
 // Emailed auth links, read once and scrubbed (R193, R323, R324).
 //
-// A confirmation or recovery email links to `/login` (`authRedirectUrl`). The mailers send a PKCE
-// challenge (R323, `auth/pkce.ts`), so a link comes back with a one-time `?code=…` in the QUERY,
-// which `/login` exchanges for a session with the verifier this browser kept (`net/auth.ts`
-// `exchangeAuthCode`). A link mailed before that switch, or to a browser that could not hash, still
-// comes back the implicit flow's way, with the session in the URL FRAGMENT: `#access_token=…&
-// refresh_token=…&expires_at=…&type=signup`, and is read as before (R324). A link that failed (mail
-// scanners prefetch links and spend one-time tokens) comes back with `error`, `error_code` and
-// `error_description`, in the fragment, the query, or both.
+// A confirmation or recovery email links to `/login` (`authRedirectUrl`). A PKCE link (R323,
+// `auth/pkce.ts`) carries a one-time `?code=…` in the QUERY, which `/login` exchanges for a session
+// with the verifier this browser kept (`net/auth.ts` `exchangeAuthCode`). An older link, or one to a
+// browser that could not hash, carries the session in the URL FRAGMENT (`#access_token=…&
+// type=signup`) and is read as before (R324). A failed link (mail scanners spend one-time tokens)
+// carries `error`, `error_code` and `error_description`, in the fragment, the query, or both.
 //
-// `code` is an auth parameter only on the two paths a link can land on: `/login`, where
-// `redirect_to` points, and `/`, the project's Site URL, which the provider falls back to when a
-// `redirect_to` misses its allow-list. Anywhere else a `code` in the query is some other page's.
+// `code` is an auth parameter only on `/login` (where `redirect_to` points) and `/` (the Site URL,
+// the provider's fallback when a `redirect_to` misses its allow-list); elsewhere it is some other page's.
 //
-// Before this module the client ignored all of it and left the tokens in the address bar and in
-// history. Now:
+//   - `parseAuthRedirect` is pure and never reads `error_description`: provider text is never shown,
+//     a known error code maps to our sentence.
+//   - `consumeAuthRedirect` drops the query and fragment with `history.replaceState` BEFORE
+//     returning, so the tokens are gone before anything renders. The result is cached for
+//     StrictMode's second call, which sees the scrubbed URL.
+//   - A recovery session is held HERE, for this tab only (memory and `sessionStorage`, never
+//     `localStorage`), and becomes the stored session only once a new password is saved
+//     (`/reset-password`). Leaving the reset screen unsaved abandons it (`abandonRecoverySession`).
 //
-//   - `parseAuthRedirect` reads a URL into one of four outcomes. It is pure, and it never reads
-//     `error_description`: provider text is never shown, a known error code maps to our sentence.
-//   - `consumeAuthRedirect` reads `window.location` and, if any auth parameter is present, drops the
-//     query and the fragment with `history.replaceState` BEFORE returning, so the tokens are gone
-//     before anything renders. The result is cached, so React StrictMode's second call (which sees
-//     the already-scrubbed URL) gets the same answer.
-//   - A recovery session is held HERE, for this tab only (memory, and `sessionStorage` so a reload or
-//     a phone discarding the tab does not spend the reset; never `localStorage`), and becomes the
-//     stored session only once a new password is saved (`/reset-password`). Closing the tab forgets
-//     it here (`/login` renewed it on arrival, so the refresh token the link's URL carried is spent
-//     already), and leaving the reset screen unsaved abandons it (`abandonRecoverySession`, which
-//     also revokes it at the provider, renewing it first if its access token has run out).
-//
-// A LINK'S ADDRESS IS A CLAIM, NOT A FACT. `email` below is read from the access token's payload
-// without checking its signature, and anyone can write a link. What a `session` or `recovery`
-// outcome may do is `/login`'s decision, and `/login` acts on the address only once the server has
-// accepted the token (see `routes/login.tsx`). Nothing here chooses a destination either; every
-// navigation after an auth link goes to a `paths` value.
+// A LINK'S ADDRESS IS A CLAIM, NOT A FACT. `email` is read from the access token's payload without
+// checking its signature, and anyone can write a link. `/login` acts on it only once the server has
+// accepted the token (`routes/login.tsx`); every navigation after an auth link goes to a `paths` value.
 
 import { isAuthCode, revokeSignedOutSession } from "../net/auth.ts";
 import { paths } from "../net/navigate.ts";
@@ -115,10 +103,9 @@ function tokenClaim(token: string, name: "email" | "sub" | "session_id"): string
 }
 
 /**
- * The `email` claim of an access token's payload, base64url-decoded and NEVER verified: anyone can
- * write a token whose payload names any address. So it is only a claim. A link's address is acted
- * on only once the server has accepted the token (`/login`), and a stored session's address is
- * only ever shown back to the player who holds it.
+ * The `email` claim, base64url-decoded and NEVER verified: anyone can write a token naming any
+ * address. A link's address is acted on only once the server has accepted the token (`/login`); a
+ * stored session's is only shown back to the player who holds it.
  */
 export function emailFromToken(token: string): string | null {
   return tokenClaim(token, "email");
@@ -161,10 +148,8 @@ function readParams(params: URLSearchParams): AuthRedirect {
     refreshToken: refreshToken !== null && refreshToken.length > 0 ? refreshToken : null,
     expiresAt: null,
   };
-  // The expiry is counted on THIS device's clock: `expires_in` from now. `expires_at` is the
-  // provider's clock, and every reader compares `expiresAt` with `Date.now()`, so on a device an
-  // hour fast it read a session the provider had just issued as already expired. It is only the
-  // fallback, for a link that carries no `expires_in`.
+  // Counted on THIS device's clock (`expires_in` from now), since readers compare `expiresAt` with
+  // `Date.now()`; `expires_at` is the provider's clock, the fallback for a link with no `expires_in`.
   const expiresAt = positiveNumber(params.get("expires_at"));
   const expiresIn = positiveNumber(params.get("expires_in"));
   if (expiresIn !== null) {
@@ -200,10 +185,9 @@ function carriesAuth(url: URL): boolean {
 let consumed: AuthRedirect | null = null;
 
 /**
- * Parses `window.location`. If any recognised auth parameter is present in the query or the
- * fragment, it calls `history.replaceState(null, "", pathname)` -- dropping both -- before it
- * returns (R193). The result is cached, so a second call (StrictMode) returns the same value until
- * `clearConsumedAuthRedirect()`. A URL with nothing to consume is simply `none` and caches nothing.
+ * Parses `window.location`. If any auth parameter is present, `history.replaceState` drops the
+ * query and fragment before it returns (R193). The result is cached (StrictMode's second call) until
+ * `clearConsumedAuthRedirect()`; a URL with nothing to consume is `none` and caches nothing.
  */
 export function consumeAuthRedirect(): AuthRedirect {
   if (consumed !== null) return consumed;
@@ -226,15 +210,12 @@ export function clearConsumedAuthRedirect(): void {
 }
 
 /**
- * R193 on every path. Supabase falls back to the project's Site URL whenever a `redirect_to` misses
- * its allow-list, and emails sent from the dashboard (an invite, a recovery) always use it, so a
- * link can land on `/` or anywhere else with a live refresh token in its fragment. Called once at
- * boot, before the route switch and before anything renders: if the address bar holds any auth
- * parameter, the link is consumed (read, cached, scrubbed from the address bar and history) at
- * once, `/login` included. `/login`'s own screen is a lazily loaded chunk, and waiting for it left
- * the tokens in the address bar while it loaded, and there for good (a "Reload" included) when it
- * failed to load. A link on any other path is then moved to `loginPathname`, where `/login` applies
- * its checks exactly as for a link that landed there. Returns whether it moved.
+ * R193 on every path. Supabase falls back to the Site URL when a `redirect_to` misses its
+ * allow-list, and dashboard emails always use it, so a link can land anywhere with a live refresh
+ * token in its fragment. Called once at boot, before the route switch and before anything renders:
+ * a link is consumed (read, cached, scrubbed) at once, `/login` included, since its lazily loaded
+ * chunk could leave the tokens in the address bar. A link on any other path is then moved to
+ * `loginPathname`, where `/login` checks it as usual. Returns whether it moved.
  */
 export function adoptAuthRedirect(loginPathname: string): boolean {
   if (typeof window === "undefined") return false;
@@ -250,12 +231,10 @@ export function adoptAuthRedirect(loginPathname: string): boolean {
   return true;
 }
 
-// --- the recovery session, for this tab only ------------------------------------------------------
-//
-// In memory, and mirrored to `sessionStorage`, which belongs to this one tab and dies with it. The
-// mirror is what lets the reset survive a reload, or a phone discarding the backgrounded tab while
-// the player is in a password manager: the link cannot be opened a second time. It is never written
-// to `localStorage`, where every tab (and the next person at a shared computer) would find it.
+// The recovery session, for this tab only. In memory, and mirrored to `sessionStorage`, which dies
+// with the tab: the mirror lets the reset survive a reload or a phone discarding the backgrounded
+// tab, since the link cannot be opened twice. Never `localStorage`, where every tab (and the next
+// person at a shared computer) would find it.
 
 export const RECOVERY_STORAGE_KEY = "jackioh.auth.recovery";
 
@@ -336,11 +315,9 @@ export function releaseRecoverySession(): void {
 
 /**
  * The player left the reset without saving: forget the session and revoke it at the provider, so
- * nobody who comes to this tab later (the Back button on a shared computer) finds a working "choose
- * a new password" form for the account, and no token of it works any more. The form stays open past
- * the access token's hour (the save renews it), so an expired one is renewed first and then
- * revoked (`revokeSignedOutSession`, R194): the provider refuses to revoke with an expired access
- * token, and the refresh token would have stayed live. Best effort, never throws.
+ * nobody at this tab later (Back on a shared computer) finds a working reset form. The form outlives
+ * the access token's hour, so an expired one is renewed first (`revokeSignedOutSession`, R194): the
+ * provider refuses to revoke with an expired access token. Best effort, never throws.
  */
 export function abandonRecoverySession(): void {
   const held = recovery ?? readRecoveryMirror();

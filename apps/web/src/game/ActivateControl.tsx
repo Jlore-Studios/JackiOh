@@ -1,26 +1,17 @@
 // The Activate control (docs/classic-sets.md B3.2, SPEC §6.2, R384; its presentation R510).
 //
-// A card the viewer controls whose view lists `activations` (the engine puts them on its
-// controller's own view of a card acting on the field: the top of a pile, or a face-up backrow
-// card) wears one control per ability on the card itself: a lightning glyph and a badge counting
-// the uses left this turn ("2"; "∞" for Activate ♾️, whose `usesLeft` is null). Its label, the
-// ability's words, is the control's tooltip and accessible name, beside the card's full text in the
-// hover preview and the inspect sheet.
+// A card whose view lists `activations` (a pile's top card or a face-up backrow card) wears one control
+// per ability: a lightning glyph and a badge of the uses left this turn ("∞" for Activate ♾️, whose
+// `usesLeft` is null). Its label is the control's tooltip and accessible name.
 //
-// No rule lives here (CLAUDE.md rule 7). Whether the control fires is `highlight.legal`, which
-// `actions.ts` derived from the `activate` actions `legalActions` listed; the view's `usable` and
-// `reason` are drawn, never obeyed: a control that is not legal is greyed, says why in its tooltip
-// (the engine's own words, `ActivationView.reason`) and sends nothing. A press reports
-// `{ on: "activate", instanceId, ability? }`, which `actions.ts` builds exactly as a play's choices
-// are built: one listed activation is sent at once, several wait for a target clicked (or dragged
-// to, game/drag) on the board, a Tribute, or a mode in the inline picker.
+// No rule lives here (CLAUDE.md rule 7). Whether the control fires is `highlight.legal`, derived from
+// the `activate` actions `legalActions` listed; the view's `usable` and `reason` are drawn, never
+// obeyed: a control that is not legal is greyed, says why in its tooltip and sends nothing. A press
+// reports `{ on: "activate", instanceId, ability? }`, which `actions.ts` builds as a play's choices
+// are built. `ability` is named only when the card lists several (`namedAbility`).
 //
-// `ability` is named only when the card lists several abilities (`namedAbility`), so a card with
-// one is `activate-<instanceId>` and its badge `activate-uses-<instanceId>`.
-//
-// The `activated` event's animation row plays on the card (`card-<instanceId>`, animations.ts); the
-// control reads that from the board's animating map and flashes (`data-flash="activated"`). Under
-// reduced motion the flash does not move: a static ring marks the control for the row's duration.
+// The control flashes (`data-flash="activated"`) while the `activated` row plays on its card
+// (animations.ts); under reduced motion a static ring marks it instead.
 
 import type { KeyboardEvent, MouseEvent, ReactElement } from "react";
 
@@ -65,10 +56,7 @@ function capitalised(text: string): string {
   return text.length === 0 ? text : `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
 }
 
-/**
- * The ability's words with the card's declared numbers filled in (B3.4: a Degrade or Upgrade moves
- * them, and the view carries them as `params`), so no raw `{key}` reaches the screen.
- */
+/** The ability's words with the card's declared numbers (the view's `params`) filled in, B3.4, so no raw `{key}` reaches the screen. */
 export function abilityLabel(info: CardInfo, card: CardView, label: string): string {
   const def = info.def;
   if (def === undefined || !label.includes("{")) return label;

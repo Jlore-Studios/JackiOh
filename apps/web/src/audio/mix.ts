@@ -5,28 +5,21 @@
 //                                  reverb sends ◀───────┘─▶ reverb ─────┤
 //   music player ─▶ music bus ─▶ music duck ────────────────────────────┴─▶ master ─▶ limiter ─▶ destination
 //
-// The music bus carries the music volume (R631); the duck under it is the engine's, which dips it
-// under a voice line or an important effect while `duckMusic` is on. R669 (#259): the effects have
-// a duck of their own, which the engine dips under every voice line so a line is never buried under
-// the board, and a cue about a unit is panned to its lane before the bus (the engine adds the
-// panner). The effects (after their duck) and the voice lines each feed a little of themselves into
-// one shared reverb, a small room's impulse built here from seeded noise, so every sound sits in the
-// same space; the music, which is mixed with its own room, does not.
+// The music bus carries the music volume (R631); its duck is the engine's, which dips it under a
+// voice line or an important effect while `duckMusic` is on. R669: the effects have a duck of their
+// own, dipped under every voice line, and a cue about a unit is panned to its lane before the bus.
+// The effects (after their duck) and the voice lines each feed a little of themselves into one
+// shared reverb; the music, mixed with its own room, does not.
 //
-// The limiter is a DynamicsCompressor set as a peak catcher for the sum: a hard knee at LIMITER's
-// threshold, so a lone sound passes through at one fixed gain and only a pile-up (a board wipe's
-// hits under a death line) is held back. Left at the Web Audio default 30 dB knee, the same node
-// squeezes everything from 36 dB under its threshold and takes a few dB off every single effect,
-// which is how the mix came out quieter than its recipes.
+// The limiter is a DynamicsCompressor set as a peak catcher: a hard knee at LIMITER's threshold, so
+// a lone sound passes at one fixed gain and only a pile-up is held back (the default 30 dB knee
+// takes a few dB off every effect). Measured in Chrome (audio-recipes.cy.tsx, B57): its automatic
+// makeup gain is the same for every sound, so a -6 dB threshold lifts effects and lines alike and
+// keeps the densest scene under full scale. The attack stays at 3 ms: at 1 ms Chrome's detector
+// clips 4 to 6 dB off short transients.
 //
-// Measured in Chrome (audio-recipes.cy.tsx, B57): its compressor adds automatic makeup gain, the
-// same for every sound, so a lower threshold lifts effects and lines alike and leaves their balance
-// alone; a -6 dB threshold keeps the densest scene the director can play under full scale. The
-// attack stays at 3 ms: at 1 ms Chrome's detector clips 4 to 6 dB off short transients (a hit, a
-// card draw, a UI tick) that are nowhere near the threshold.
-//
-// This file imports only ./types.ts and ./constants.ts, like sfx.ts, so the Cypress component spec can render the
-// real mix in an OfflineAudioContext and measure what a player hears at the default settings.
+// Imports only ./types.ts and ./constants.ts, like sfx.ts, so the Cypress component spec can render
+// the real mix in an OfflineAudioContext.
 
 import {
   REVERB_CHANNELS,
@@ -56,8 +49,8 @@ export type Mix = {
 };
 
 /**
- * R669: the shared reverb's impulse: REVERB_SECONDS of seeded white noise on each of its channels (a different seed each, so it is wide), falling
- * off by REVERB_DECAY_POWER, a small room with no early reflections to colour a lone hit.
+ * R669: the shared reverb's impulse: REVERB_SECONDS of seeded white noise on each channel (a
+ * different seed each, so it is wide), falling off by REVERB_DECAY_POWER, with no early reflections.
  */
 export function reverbImpulse(ctx: BaseAudioContext): AudioBuffer {
   const length = Math.max(1, Math.round(REVERB_SECONDS * ctx.sampleRate));

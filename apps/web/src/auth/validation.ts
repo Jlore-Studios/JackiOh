@@ -1,13 +1,9 @@
 // What the sign-in, sign-up and reset forms check before they send anything (B24, B31).
 //
-// UX, NOT RULES. The auth provider is the authority on what an address or a password may be, and
-// it refuses on its own terms (`classifyProviderRefusal` turns that into a sentence). These checks
-// only save a round trip and say what is wrong next to the field that is wrong. So they are
-// deliberately loose: an address needs an `@` and a dot after it, and a new password only has to
-// fit the provider's length window. Anything subtler is the provider's call.
-//
-// The length window is two named constants in `crates/server/src/config.rs` (CLAUDE.md rule 9),
-// imported by relative path the way `invite.tsx` imports the code alphabet. Both are public.
+// UX, NOT RULES. The auth provider is the authority and refuses on its own terms
+// (`classifyProviderRefusal`). These checks only save a round trip, so they are deliberately loose:
+// an address needs an `@` and a dot after it, and a new password only has to fit the provider's
+// length window, two public named constants in `crates/server/src/config.rs` (CLAUDE.md rule 9).
 
 import { AUTH_PASSWORD_MAX_LENGTH, AUTH_PASSWORD_MIN_LENGTH } from "@jackioh/server-config";
 
@@ -34,12 +30,11 @@ export function passwordBytes(password: string): number {
 
 /**
  * A password being CHOSEN (sign-up and reset). Sign-in never calls this: an existing password is
- * whatever the account has, and judging it here would refuse a player the provider would accept.
+ * whatever the account has, and judging it here would refuse one the provider would accept.
  *
- * The upper limit is the provider's, which counts BYTES (`AUTH_PASSWORD_MAX_LENGTH`): 40 Cyrillic
- * letters or 25 Chinese characters are over it. So the sentence promises no number of characters.
- * The lower limit counts characters, which is never more than the bytes the provider counts, so a
- * password this check lets through is never too short for it.
+ * The upper limit counts BYTES (`AUTH_PASSWORD_MAX_LENGTH`), as the provider does, so the sentence
+ * promises no number of characters. The lower limit counts characters, never more than the bytes
+ * the provider counts, so a password this check lets through is never too short for it.
  */
 export function newPasswordProblem(password: string): string | null {
   if (password.length < AUTH_PASSWORD_MIN_LENGTH) {

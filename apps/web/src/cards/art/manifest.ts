@@ -2,13 +2,11 @@
 //
 // Real art is a file in `apps/web/public/art/` per card id and face: `<id>.webp` and
 // `<id>-radiant.webp`. The client asks for a file only when this manifest lists it, so a card
-// without art never costs a request and the board never fires a storm of 404s. Until an artist
-// delivers, every card is procedural, and the procedural art stays every card's fallback.
+// without art never costs a request; the procedural art stays every card's fallback.
 //
-// The delivery convention (format, size, weight) is in ART.md beside this file, and convention.ts
-// holds its numbers; convention.test.ts fails on a listed file that is missing or breaks it, and on
-// a file in the directory that no line here lists (R660). To add art: drop the file(s) in
-// `apps/web/public/art/`, then add a line here, for example
+// ART.md beside this file sets the delivery convention and convention.ts its numbers;
+// convention.test.ts fails on a listed file that is missing or breaks it, and on a file in the
+// directory that no line here lists (R660). To add art: drop the file(s) in, add a line such as
 //   "core-002": { base: true, radiant: true },
 // and, if the artist is credited, their name as the card's `artist` in crates/cards/flavour.json.
 // A radiant face whose own file is missing shows the base file under a gold tint.

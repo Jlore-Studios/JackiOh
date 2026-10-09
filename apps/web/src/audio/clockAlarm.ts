@@ -4,16 +4,14 @@
 //
 // It decides nothing (CLAUDE.md rule 7): the clock is the server's (R79), `game/Clock.tsx` reads it,
 // and this only listens to the number Clock shows. The other seat's clock never beats, a paused
-// clock is the caller's `own: false`, and nothing sounds while sound is muted, the master or effects
-// volume is 0, or before the first gesture has unlocked the context (§10.11 Autoplay).
+// clock is the caller's `own: false`, and nothing sounds while muted, at volume 0, or before the
+// first gesture has unlocked the context (§10.11 Autoplay).
 //
-// SCHEDULING. Clock repaints every 200 ms, so the remaining time arrives in steps. Each beat belongs
-// to a whole second: second `s` sounds the moment the clock reaches `s × CLOCK_ALARM_BEAT_MS`. On
-// each reading, every beat whose moment is at most CLOCK_ALARM_LOOKAHEAD_MS ahead is scheduled that
-// far ahead on the audio clock, so the beats land on the second and not on the repaint; one whose
-// moment passed at most CLOCK_ALARM_LATE_MS ago plays at once, and an older one is skipped rather
-// than played late. A beat is scheduled once (`lastSecond`); a clock that goes back up is a new
-// countdown. The planner is pure; `stepClockAlarm` hands its beats to an engine.
+// SCHEDULING. Clock repaints every 200 ms, so the remaining time arrives in steps. Second `s` sounds
+// when the clock reaches `s × CLOCK_ALARM_BEAT_MS`: a beat at most CLOCK_ALARM_LOOKAHEAD_MS ahead is
+// scheduled that far ahead on the audio clock, so beats land on the second and not on the repaint;
+// one that passed at most CLOCK_ALARM_LATE_MS ago plays at once, an older one is skipped. A beat is
+// scheduled once (`lastSecond`); a clock that goes back up is a new countdown.
 
 import {
   CLOCK_ALARM_BEAT_MS,

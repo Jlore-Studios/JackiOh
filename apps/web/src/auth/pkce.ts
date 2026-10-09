@@ -2,22 +2,13 @@
 // email change's confirmation (R663); and for the two ways in that come back with a code to sign
 // this browser in: the email sign-in link (R664) and an OAuth provider (R666).
 //
-// GoTrue's implicit flow put a session's tokens in the link's URL fragment (`#access_token=…`), where
-// history, a shared screen or a referrer could see them. With PKCE the request that mails a link
-// carries `code_challenge` (the SHA-256 of a random verifier, base64url) and
-// `code_challenge_method: "s256"`; the link then comes back to `/login?code=…`, and only the browser
-// holding the verifier can turn that code into a session (`net/auth.ts` `exchangeAuthCode`, at
-// `/auth/v1/token?grant_type=pkce`). No token is ever in a URL.
+// The request that mails a link carries `code_challenge` (base64url SHA-256 of a random verifier)
+// and `code_challenge_method: "s256"`; the link comes back to `/login?code=…`, and only the browser
+// holding the verifier can exchange the code (`net/auth.ts` `exchangeAuthCode`). No token is in a URL.
 //
-// The verifier is kept in `localStorage`, inside try/catch like every store here: a confirmation
-// link is usually opened in a new tab, and `sessionStorage` would not reach it. One verifier per
-// kind of link (`signup`, which a resend reuses so the first email's link keeps working,
-// `recovery` and `email_change`), each with the time it was made, so the newest is tried first. A
-// code that comes back with no verifier here was asked for on another device or browser (R324),
-// which the caller says in its own words. A verifier is forgotten once its code has been exchanged.
-//
-// A verifier on its own grants nothing: the one-time code from the email is needed too, and that
-// code is worth nothing without it. Nothing here is ever shown or read from a URL.
+// Verifiers live in `localStorage` (a confirmation link usually opens in a new tab; `sessionStorage`
+// would not reach it), one per flow, each timestamped so the newest is tried first. A code with no
+// verifier here was asked for on another device or browser (R324). A verifier is forgotten once used.
 
 /** Where the verifiers live (R323). */
 export const PKCE_STORAGE_KEY = "jackioh.auth.pkce";

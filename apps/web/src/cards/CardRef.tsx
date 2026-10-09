@@ -1,18 +1,15 @@
 // A name in a card's text that points at another card (SPEC §10.10, R279).
 //
-// Every such name is marked (`.cf-ref`, a dotted underline), and carries the id and face it points
-// at (`data-ref`, `data-ref-face`). Where the surface makes references controls (`RefsInteractive`:
-// the collection's detail view, the touch inspect sheet), it is also focusable, and it shows the
-// named card's printed face in a tooltip beside it: after a mouse or pen rests on it for
-// REF_HOVER_DELAY_MS, at once when the keyboard focuses it, on a click, and on a tap on a touch
-// screen. The tooltip is a portal at the end of <body> with `role="tooltip"`, and the reference is
-// `aria-describedby` it while it is open. Leaving, blurring, Escape, a press anywhere else, or
-// tapping it again closes it; a scroll or a resize moves it with its reference. Escape closes the
+// Every such name is marked (`.cf-ref`, a dotted underline) and carries the id and face it points at
+// (`data-ref`, `data-ref-face`). Where the surface makes references controls (`RefsInteractive`: the
+// collection's detail view, the touch inspect sheet), it is focusable and shows the named card's
+// printed face in a tooltip portal (`role="tooltip"`, `aria-describedby`): after a mouse or pen rests
+// on it for REF_HOVER_DELAY_MS, at once on keyboard focus, on a click, on a tap. Leaving, blurring,
+// Escape, a press elsewhere or a second tap closes it; a scroll or resize moves it. Escape closes the
 // tooltip alone: the detail view and the sheet leave their own Escape to an open reference
 // (`inspect/store.ts`).
 //
-// Elsewhere — a face inside a button, the hover preview, a small board face — the mark is all it
-// is, and the hover preview lists the named cards beside the face instead (References.tsx).
+// Elsewhere the mark is all it is, and the hover preview lists the named cards (References.tsx).
 // Presentation only: the tooltip shows a printed catalog face, public by §5.1 (CLAUDE.md rule 7).
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactElement, type ReactNode } from "react";

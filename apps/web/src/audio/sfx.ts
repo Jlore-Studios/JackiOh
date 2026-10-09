@@ -1,32 +1,19 @@
-// Procedural sound effects (docs/polish/2-sound.md, "sfx.ts"; B14, B15, B16).
-//
-// One recipe per `SfxId`, in the sfxr tradition: an oscillator or a noise buffer, a filter and a
-// gain envelope, plus two-operator FM for bells and chimes. No audio files ship for effects.
-//
-// The recipe contract every entry keeps:
-//   - it schedules nothing before `at` and stops every source it starts by `at + returned`, and
+// Procedural sound effects (docs/polish/2-sound.md, "sfx.ts"; B14, B15, B16): one recipe per `SfxId`
+// in the sfxr tradition: an oscillator or noise buffer, a filter and a gain envelope, plus FM for
+// bells. No audio files ship for effects. Every recipe keeps this contract:
+//   - it schedules nothing before `at` and stops every source by `at + returned`, and
 //     `returned <= durationMs / 1000` (every time goes through `time()`, which clamps into the span);
 //   - it connects only into `out`, never `ctx.destination`, and its peak output stays at or under 1;
 //   - exponential ramps target a positive value (`FLOOR`), never 0;
-//   - it uses only the permitted Web Audio subset (gain, oscillator, biquad, buffer source, buffer,
-//     connect, start/stop and AudioParam automation), which is all the test fake implements.
-//
-// This file imports only `./types.ts` and `./constants.ts`, because the Cypress component spec
-// imports it on its own and renders each recipe into an OfflineAudioContext.
-//
-// The frequencies and times below are each recipe's data, like keyframes in `animations.css`, and
-// stay local to it (CLAUDE.md rule 9 names only the numbers another module reads).
-//
-// PITCH (R655). A card's effect plays a recipe shifted in pitch (`renderSfx`): every oscillator and
-// filter the run builds is detuned by the same cents, and the crushed wavetable plays that much
-// faster or slower. The times stay as written, so a pitched recipe keeps its contract.
-//
-// LEVELS (B57). The recipes use their headroom (each peaks well inside 1 on its own), and the gains
-// in the SFX table set the mix against the voice lines, which sit at about -20 dBFS active RMS at
-// the default settings: a maximum hit and the big moments (death, a trap springing, turn start,
-// victory, defeat) within a few dB of a line, routine card and board sounds 5 to 9 dB under it, and
-// the UI ticks quieter still but plainly audible. The component spec (audio-recipes.cy.tsx)
-// renders every recipe through the real mix and holds these bands, so a retune cannot drift.
+//   - it uses only the permitted Web Audio subset, which is all the test fake implements.
+// The Cypress component spec imports this file alone, so it imports only `./types.ts` and
+// `./constants.ts`. Frequencies and times stay local to each recipe (CLAUDE.md rule 9 names only the
+// numbers another module reads).
+// PITCH (R655): `renderSfx` detunes every oscillator and filter by the same cents (the crushed
+// wavetable plays faster or slower); the times stay as written, so the contract holds.
+// LEVELS (B57): the SFX table's gains set the mix against the voice lines (about -20 dBFS RMS):
+// big moments within a few dB of a line, routine sounds 5 to 9 dB under, UI ticks quieter but
+// audible. audio-recipes.cy.tsx holds these bands, so a retune cannot drift.
 
 import { CHAOS_REVEAL_MAX, IMPACT_AMOUNT_CAP, IMPACT_HEADROOM } from "./constants.ts";
 import type { SfxId, SfxParams, SfxTimbre } from "./types.ts";
@@ -56,9 +43,7 @@ export const SFX_TIMBRES: readonly SfxTimbre[] = [
 export type SfxRecipe = (ctx: BaseAudioContext, out: AudioNode, at: number, params: SfxParams) => number;
 export type SfxSpec = { recipe: SfxRecipe; /** upper bound over all params */ durationMs: number; gain: number };
 
-/* ------------------------------------------------------------------------------------------- *
- * Noise
- * ------------------------------------------------------------------------------------------- */
+// Noise
 
 const NOISE_SEED = 0x4a41434b; // "JACK"
 const noiseCache = new WeakMap<BaseAudioContext, AudioBuffer>();
@@ -86,9 +71,7 @@ export function noiseBuffer(ctx: BaseAudioContext): AudioBuffer {
   return buffer;
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * The bit-crushed wavetable (the AI family, R506)
- * ------------------------------------------------------------------------------------------- */
+// The bit-crushed wavetable (the AI family, R506)
 
 /** Samples in one cycle of the crushed wave; a looped buffer source plays it at any pitch. */
 const CRUSH_CYCLE = 32;
@@ -116,9 +99,7 @@ function crushedBuffer(ctx: BaseAudioContext): AudioBuffer {
   return buffer;
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * Building blocks
- * ------------------------------------------------------------------------------------------- */
+// Building blocks
 
 /** The quietest level an exponential ramp aims at: -80 dB, silent in practice and never 0. */
 const FLOOR = 0.0001;
@@ -328,9 +309,7 @@ function amountT(params: SfxParams): number {
   return (clamped - 1) / (IMPACT_AMOUNT_CAP - 1);
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * Recipes
- * ------------------------------------------------------------------------------------------- */
+// Recipes
 
 /** A card slides off the deck: a bright rising noise flick. */
 const draw: SfxRecipe = (ctx, out, at) => {
@@ -362,9 +341,7 @@ const ACCENT_AT = 0.05;
 
 /**
  * The family's voice on top of a summon thud, quiet and short (it ends by 0.24 s, inside the
- * shortest thud), so the thud still carries the size of the unit and the accent only says what kind
- * of thing landed: armour for a Human, a chirp for a Felinor, a page's bell for KY, bubbles for CN,
- * a squelch for Fruit, a warble for Call to Chaos, a zip for Quickdraw, a pop for a token.
+ * shortest thud): the thud carries the unit's size, the accent only says what kind landed.
  */
 function summonAccent(k: Kit, timbre: SfxTimbre | undefined): void {
   const t0 = ACCENT_AT;
@@ -411,8 +388,6 @@ function summonAccent(k: Kit, timbre: SfxTimbre | undefined): void {
       glide(k, pop.frequency, 500, t0 + 0.04);
       return;
     }
-    // Patch v0.2.0's tags (R506): a page riffled over a low bell for a Book, a soft plop into a
-    // sizzling pan for a Pancake, bit-crushed blips and a servo's whirr for an AI.
     case "book": {
       const noise = noiseSource(k);
       const riffle = modulatedGain(k, "square", 40, 0.5, 0.5);
@@ -447,12 +422,11 @@ function summonAccent(k: Kit, timbre: SfxTimbre | undefined): void {
 
 /**
  * A unit lands: a falling sine thud and a puff of dust, sized by the unit (`amount` is its attack
- * plus health): a 1/1 taps the table high and short, a 7/7 lands low, long and loud. A unit the
- * viewer can name adds its family's accent (`timbre`).
+ * plus health), plus its family's accent (`timbre`) when the viewer can name it.
  */
 const summon: SfxRecipe = (ctx, out, at, params) => {
-  // #185: a landing Unit's tier weighs its thud (a soft tap to a deep boom) at a pitch within
-  // SLAM_PITCH_SPREAD; without one, its stats do, as before.
+  // A landing Unit's tier weighs its thud at a pitch within SLAM_PITCH_SPREAD; without one, its
+  // stats do.
   const t = params.slamTier === undefined ? amountT(params) : UNIT_SLAM[params.slamTier].thud;
   const pitch = params.slamTier === undefined ? 1 : 1 + (Math.min(1, Math.max(0, params.variation ?? 0.5)) * 2 - 1) * SLAM_PITCH_SPREAD;
   const len = 0.25 + 0.12 * t;
@@ -483,7 +457,7 @@ const attack: SfxRecipe = (ctx, out, at) => {
 
 /** A hit whose weight is chosen by the public damage tier, from a tap to a GIGA board thump. */
 const impact: SfxRecipe = (ctx, out, at, params) => {
-  // A caller with no tier (a preview, a recipe test) is sized by its amount, capped as before (B16).
+  // A caller with no tier (a preview, a recipe test) is sized by its amount, capped (B16).
   const tier = params.impactTier ?? damageTier(Math.min(params.amount ?? 0, IMPACT_AMOUNT_CAP));
   const tierT = { tiny: 0.1, normal: 0.34, moderate: 0.54, big: 0.76, giga: 1 }[tier];
   const t = tierT;
@@ -609,12 +583,8 @@ const trapSting: SfxRecipe = (ctx, out, at) => {
 };
 
 /**
- * Each family's four chimes, their FM ratio and their spacing (the default is the plain spell): a
- * Field Spell rings an octave lower and warmer, Call to Chaos clashes in semitones, KY climbs a
- * major arpeggio, CN sours on a tritone, a Quickdraw spell runs its notes twice as fast; a Book
- * tolls lower on bell-like partials, a Pancake rings warm and pure, an AI chirps inharmonic data
- * notes in a quick scatter. The peak and the span are the plain spell's, so a family changes the
- * colour and never the level.
+ * Each family's four chimes, their FM ratio and their spacing (the default is the plain spell). The
+ * peak and the span are the plain spell's, so a family changes the colour and never the level.
  */
 const SPELL_CHIMES: Readonly<Record<SfxTimbre | "plain", { hz: readonly number[]; ratio: number; step: number }>> = {
   plain: { hz: [1319, 1760, 2093, 2637], ratio: 3.5, step: 0.06 },
@@ -856,9 +826,8 @@ const endTurn: SfxRecipe = (ctx, out, at) => {
 };
 
 /**
- * A notice: two rising blips. An `urgent` one — a question the viewer has to answer, the other
- * seat's draw offer — is a doorbell instead: a bright bell struck twice, a falling major third
- * apart, so it is never taken for the routine blips.
+ * A notice: two rising blips. An `urgent` one (a question the viewer has to answer, the other seat's
+ * draw offer) is a doorbell instead: a bell struck twice, so it is never taken for the routine blips.
  */
 const notify: SfxRecipe = (ctx, out, at, params) => {
   if (params.urgent === true) {
@@ -901,8 +870,7 @@ const cancel: SfxRecipe = (ctx, out, at) => {
 
 /**
  * A Legendary or Mythic unit enters (cues.ts, with the effects layer's light rays): a low gong under
- * a brass fifth that swells open, and a run of high glints once it has risen. A Mythic's glints are
- * a longer, faster, shimmering climb.
+ * a brass fifth that swells open, and high glints; a Mythic's are longer, faster and shimmering.
  */
 const entrance: SfxRecipe = (ctx, out, at, params) => {
   const len = 1.3;
@@ -971,9 +939,7 @@ const refuse: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/* ------------------------------------------------------------------------------------------- *
- * Patch v0.2.0 (R506): card moments, Call to Chaos's roll (R436), a mark (R437), the clock (R439)
- * ------------------------------------------------------------------------------------------- */
+// Card moments (R506), Call to Chaos's roll (R436), a mark (R437), the clock (R439)
 
 /**
  * #21 Hinder lands on the victim's next refresh: a mana crystal cracks, sharp and glassy, its shards
@@ -1063,9 +1029,8 @@ const castOnDraw: SfxRecipe = (ctx, out, at) => {
 const CHAOS_DINGS: readonly number[] = [1568, 2093, 2637];
 
 /**
- * Call to Chaos rolls (R436): a slot machine's reels spin, ratcheting and slowing under a jangling
- * jingle, and clunk to a stop; then one bright ding for each effect the roll names (`amount`, up to
- * CHAOS_REVEAL_MAX), so the player hears how many it picked as the board shows which.
+ * Call to Chaos rolls (R436): a slot machine's reels ratchet and slow under a jangling jingle and
+ * clunk to a stop; then one bright ding per effect the roll names (`amount`, up to CHAOS_REVEAL_MAX).
  */
 const chaosRoll: SfxRecipe = (ctx, out, at, params) => {
   const reveals = Math.min(CHAOS_REVEAL_MAX, Math.max(0, Math.round(params.amount ?? 1)));
@@ -1100,8 +1065,7 @@ const chaosRoll: SfxRecipe = (ctx, out, at, params) => {
 
 /**
  * A mark settles on a card (R437; #50 K-Pop Fanatic's pending steal): a dark brand sears in, a low
- * beating drone swelling under a hiss, with a cold shimmer of clashing partials on top. With
- * `release` the mark lifts instead: the shimmer alone, rising softly away.
+ * beating drone under a hiss and a cold shimmer. With `release` the mark lifts: the shimmer alone.
  */
 const brand: SfxRecipe = (ctx, out, at, params) => {
   if (params.release === true) {
@@ -1178,10 +1142,7 @@ const clockTick: SfxRecipe = (ctx, out, at, params) => {
   return len;
 };
 
-/* ------------------------------------------------------------------------------------------- *
- * R644's emoji emotes (issue §4): five animated-sticker sounds, all synthesized, on the effects
- * channel like every other SFX. Wah Wah is the sad-trombone sting.
- * ------------------------------------------------------------------------------------------- */
+// R644's emoji emotes (issue §4): five synthesized sticker sounds on the effects channel
 
 /** Sob: a wobbly falling whimper — two little cries, each sliding down and shaking. */
 const emoteSob: SfxRecipe = (ctx, out, at) => {
@@ -1281,10 +1242,7 @@ const emoteWahWah: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/* ------------------------------------------------------------------------------------------- *
- * R1345, MN03's fourteen emoji emotes (#545): one sticker sound each, synthesized like the five
- * above and played on the effects channel. Short and light — a reaction, never a card moment.
- * ------------------------------------------------------------------------------------------- */
+// R1345, MN03's fourteen emoji emotes: one short, light sticker sound each, never a card moment
 
 /** Wave: a bright two-note "hi-ya" — a quick chirp, then a higher one sliding up with a wiggle. */
 const emoteWave: SfxRecipe = (ctx, out, at) => {
@@ -1471,14 +1429,11 @@ const emoteParty: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/* ------------------------------------------------------------------------------------------- *
- * Patch v0.2.X (#259, R669): the play sting
- * ------------------------------------------------------------------------------------------- */
+// The play sting (R669)
 
 /**
  * R669: a card the viewer can read is played (cues.ts), a sting sized by its rarity under the card
- * whoosh. Common: a bright pluck and its fifth. Rare: a three-note bell arpeggio. Epic: a four-note
- * climb over a shimmering open chord. Legendary and Mythic cards have the entrance instead.
+ * whoosh: Common, Rare and Epic grow in notes and shimmer. Legendary and Mythic have the entrance.
  */
 const sting: SfxRecipe = (ctx, out, at, params) => {
   const tier = params.tier ?? "common";
@@ -1503,9 +1458,7 @@ const sting: SfxRecipe = (ctx, out, at, params) => {
   return len;
 };
 
-/* ------------------------------------------------------------------------------------------- *
- * Patch v0.3.X (docs/meditative-set.md M8, MN05): Armor (R1363) and the niche moments (R1364–R1366)
- * ------------------------------------------------------------------------------------------- */
+// Armor (R1363) and the niche moments (R1364–R1366), docs/meditative-set.md M8, MN05
 
 /**
  * R1363: Armor takes half or more of a hit (`damage.absorbed`), under the hit's own impact: a dull

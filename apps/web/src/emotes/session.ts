@@ -1,20 +1,12 @@
-// The emote session (R643, R644): what is on screen, who is muted, and when the next send is
-// admitted — pure data plus a notify, so the unit tests run the same object the routes drive.
+// The emote session (R643, R644): what is on screen, who is muted, and when the next send is admitted,
+// as pure data plus a notify, so the unit tests run the same object the routes drive.
 //
-//   - `send` is the local player's emote: the shared `emoteGate` judges it, and an admitted emote
-//     shows at once, without waiting for the server's relay (issue §7: "the sender sees their own
-//     emote locally"). The gate is the ONLY limiter — the same function the actor runs — so a menu
-//     that reads its `retryAfterMs` for the grey-out and a server that drops on it can never
-//     disagree (R643).
-//   - `receive` is an emote arriving from the peer (the actor's relay, or the practice AI's
-//     persona): it is shown unless that player is muted — by the one-item "Mute emotes" menu
-//     (`mute`), or by the "Mute opponent emotes" device setting (`globalMute`). A muted emote is
-//     never kept: it does not show and its sound is never scheduled (issue §5).
-//   - One emote per player at a time: `show` replaces the player's current one immediately.
-//
-// The session itself keeps no timers (tests inject `now`) — `useEmotes` owns the expiry timers and
-// the sound. Players are keyed by PlayerId, never "you"/"opponent", so a hotseat hand-over that
-// flips the view does not move a bubble.
+// `send` is the local player's emote: the shared `emoteGate`, the one limiter and the function the actor
+// runs (R643), judges it, and an admitted emote shows at once, without the relay (issue §7). `receive` is
+// the peer's (the actor's relay or the practice AI's persona), shown unless that player is muted, by
+// `mute` or the `globalMute` setting; a muted emote is never kept and its sound never scheduled (issue
+// §5). One emote per player: `show` replaces it. No timers here (tests inject `now`): `useEmotes` owns
+// expiry and sound. Players are keyed by PlayerId, so a hotseat hand-over does not move a bubble.
 
 import type { EmoteId, PlayerId } from "@jackioh/shared";
 import { emoteGate, type EmoteGate } from "@jackioh/shared";
@@ -32,18 +24,17 @@ export type EmoteShow = {
 
 export type EmoteSession = {
   /**
-   * The local seat at `player` asked for `emote`. Admitted: it shows and returns true — the caller
-   * then transmits it (net send, or the AI's `onPlayerEmote`). Dropped by the gate: false, nothing
-   * shown, nothing sent — the same silent drop the server gives (R643).
+   * `player` asked for `emote`. Admitted: it shows and returns true, and the caller transmits it.
+   * Dropped by the gate (R643): false, nothing shown or sent.
    */
   send: (player: PlayerId, emote: EmoteId, text: string | null, holdMs: number) => boolean;
   /** An emote arrived from `player`: shown unless muted; returns whether it was shown. */
   receive: (player: PlayerId, emote: EmoteId, text: string | null, holdMs: number) => boolean;
   /** What `player`'s portrait displays, or null. */
   visible: (player: PlayerId) => EmoteShow | null;
-  /** The gate state for `player` at `now` (or the injected clock) — the menu's grey-out data. */
+  /** The gate state for `player` at `now`: the menu's grey-out data. */
   gate: (player: PlayerId, now?: number) => EmoteGate;
-  /** Mute `player` for the rest of the match: their current emote leaves, the next never lands. */
+  /** Mute `player` for the rest of the match: their current emote leaves. */
   mute: (player: PlayerId) => void;
   muted: (player: PlayerId) => boolean;
   /** Forget `player`'s emote, but only if it is still `key` (a newer show keeps standing). */

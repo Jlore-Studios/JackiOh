@@ -1,58 +1,25 @@
 // The Web Audio engine (docs/polish/2-sound.md, "engine.ts"; B1–B11, B46–B53).
 //
-// Lazily built: no AudioContext exists until the first `unlock()`, which the unlock listeners call
-// inside a user gesture (autoplay policy, and iOS's resume-plus-silent-buffer rule). The graph is
+// Lazily built: no AudioContext exists until the first `unlock()`, called inside a user gesture
+// (autoplay policy; iOS's resume-plus-silent-buffer rule). Both play calls go through one acceptance
+// gate and never throw. While `duckMusic` is on, the music (music.ts plays into `musicOutput()`) ducks
+// under every voice line and the effects MUSIC_DUCK_SFX names (R631); every voice line also dips the
+// effects, and an sfx cue whose params carry a `pan` plays through a stereo panner (R669).
 //
-//   per-cue gain ─▶ (lane pan) ─▶ sfx bus ─▶ sfx duck ──┐   (both sending a little to one reverb)
-//   persona gain ─▶ voice bus ──────────────────────────┤
-//   music player ─▶ music bus ─▶ music duck ────────────┴─▶ master ─▶ limiter ─▶ destination
+// NOTHING IS SCHEDULED ON A CONTEXT THAT IS NOT RUNNING: a suspended context's clock stands still, so
+// everything scheduled on it would start at once on resume. Such a cue is accepted and logged,
+// flagged, with no nodes built.
 //
-// with bus gains read from the settings store and smoothed on change (mix.ts builds it). Both play
-// calls go through one acceptance gate and never throw. The music player (music.ts) plays into the
-// music bus `musicOutput()` hands out, and the engine ducks it under every voice line and the
-// effects MUSIC_DUCK_SFX names while `duckMusic` is on (R631). Every voice line also dips the
-// effects to SFX_VOICE_DUCK_GAIN for its span, whatever `duckMusic` says, and an sfx cue whose
-// params carry a `pan` (a unit's lane, cues.ts) plays through a stereo panner (R669).
+// BACKGROUND VOICE WORK NEVER RUNS DURING AN ANIMATION BURST (B58): the runner times each entry with a
+// main-thread setTimeout, and the prefetch's requests landing in an R82 auto-ended turn run pushed a
+// 3.8 s burst past 4 s. While `setBusy(true)` the prefetch starts nothing and a preload is held; a
+// line asked to play is never held.
 //
-// NOTHING IS SCHEDULED ON A CONTEXT THAT IS NOT RUNNING. A suspended (or Safari "interrupted")
-// context's clock stands still, so everything scheduled on it would start together the moment it
-// resumed: every queued line at once. Such a cue is still accepted and logged, flagged, so a
-// headless browser with no output device can be observed, but it builds no nodes.
-//
-// SFX are polyphonic up to SFX_MAX_VOICES with a per-id retrigger guard. Voice is one channel with
-// priorities (VOICE_PRIORITY): a more important line cuts in, fading the one it replaces; an equal
-// or less important one waits in a short queue and is dropped if it has waited too long by the
-// time the channel frees. A rendered line holds the channel for its audible span only (its silent
-// head and tail are skipped), and a line not ready VOICE_LATE_MS after it takes the channel is
-// dropped rather than spoken out of step. A line with no file falls back to the browser's speech
-// synthesis. Muting, or turning voice lines off, stops the line that is speaking and clears the
-// queue.
-//
-// Voice files are cached twice: the compressed bytes of every line fetched (1.6 MB for the whole
-// set, fetched in the background once the context runs, so an opponent's first card is not late)
-// and the decoded buffers of the VOICE_DECODED_MAX most recently used lines (a decoded line is
-// about 20 times its file).
-//
-// BACKGROUND VOICE WORK NEVER RUNS DURING AN ANIMATION BURST (B58). The runner times each entry
-// with a main-thread setTimeout, so a burst takes as long as the page's busiest moment lets it: the
-// prefetch's stream of requests (and, under Cypress, the command log entry each one adds) landing
-// in an R82 auto-ended turn run pushed a 3.8 s burst past 4 s. `useGameAudio` calls
-// `setBusy(true)` while the runner has an entry in flight. Until it clears, the prefetch starts no
-// new request and a preload is held (the newest one, run when it clears). A line asked to play is
-// never held. With sound muted or voice lines off, neither the prefetch nor a preload runs at all.
-//
-// CARD EFFECTS (R655). A card's hook may play a named effect from `card-audio.json5`'s bank: one of
-// the procedural recipes at its own pitch (varied a little on each play) and gain, on the effects
-// bus beside the plain sfx. It is refused for the sentinel, while muted or hidden, and past
-// SFX_MAX_VOICES like any sfx; its retrigger guard is its own name's, since it shares a recipe with
-// the plain sounds of the same moment. It ducks the music like a line, and it plays with voice lines
-// off. A Unit the viewer picks up to attack (`playPickup`) plays its `attack` hook at once, the
-// effect first and the line CARD_EFFECT_DELAY_MS later at VOICE_PRIORITY.pickup, which cuts in on any
-// line, an earlier pick-up's included. A pick-up within PICKUP_MIN_GAP_MS of the last one accepted
-// plays nothing; any later one fades out what the last is still playing.
-//
-// Every accepted cue is logged (at most LOG_LIMIT), which is how tests and the e2e debug handle
-// observe the engine in a headless browser with no audio device.
+// CARD EFFECTS (R655): a hook may play a named effect from `card-audio.json5`'s bank. Its retrigger
+// guard is its own name's, since it shares a recipe with the plain sounds of the same moment, and it
+// plays with voice lines off. `playPickup` plays the `attack` hook's effect at once and its line
+// CARD_EFFECT_DELAY_MS later at VOICE_PRIORITY.pickup, which cuts in on any line; a pick-up within
+// PICKUP_MIN_GAP_MS of the last accepted one plays nothing, and a later one fades out the last.
 
 import {
   CARD_EFFECT_DELAY_MS,
@@ -162,9 +129,7 @@ export type AudioEngineOptions = {
   random?: () => number;                               // [0, 1); an effect's pitch variation (R655); default Math.random
 };
 
-/* ------------------------------------------------------------------------------------------- *
- * Defaults
- * ------------------------------------------------------------------------------------------- */
+// Defaults
 
 /** How long after a cue's last sample its gain node is disconnected. */
 const DISCONNECT_GRACE_MS = 250;
@@ -193,19 +158,16 @@ function defaultVisibility(): DocumentVisibilityState {
   return document.visibilityState;
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * A rendered line's audible span
- * ------------------------------------------------------------------------------------------- */
+// A rendered line's audible span
 
 type Span = { offsetS: number; lengthS: number };
 
 const spans = new WeakMap<AudioBuffer, Span>();
 
 /**
- * Where the speech in a rendered line starts and ends. `say` pads a line with silence (a third of a
- * second at the end on average) and AAC adds encoder priming at the start; played whole, that
- * silence holds the one voice channel and delays the next line for nothing. A buffer with no sample
- * above the threshold is played whole.
+ * Where the speech in a rendered line starts and ends. `say` pads a line with silence and AAC adds
+ * encoder priming, which played whole would hold the one voice channel for nothing. A buffer with no
+ * sample above the threshold is played whole.
  */
 export function audibleSpan(buffer: AudioBuffer): Span {
   const cached = spans.get(buffer);
@@ -235,9 +197,7 @@ export function audibleSpan(buffer: AudioBuffer): Span {
   return span;
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * The engine
- * ------------------------------------------------------------------------------------------- */
+// The engine
 
 type VoiceEntry = Extract<PlayedCue, { kind: "voice" }>;
 type EffectEntry = Extract<PlayedCue, { kind: "effect" }>;
@@ -448,11 +408,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     gain.setTargetAtTime(1, sfxDuckUntil, SFX_DUCK_RELEASE_TC_S);
   }
 
-  /**
-   * R669: where an sfx cue enters the effects bus: straight in, or through a stereo panner when its
-   * params pan it off centre. Returns what the cue's gain connects to, and the panner to disconnect
-   * after it.
-   */
+  /** R669: where an sfx cue enters the effects bus: straight in, or through a stereo panner when its params pan it off centre. */
   function sfxInput(c: AudioContext, b: Mix, pan: number | undefined): { input: AudioNode; extra: AudioNode | null } {
     if (pan === undefined || pan === 0 || !Number.isFinite(pan)) {
       return { input: b.sfx, extra: null };
@@ -522,8 +478,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
 
       if (!rapid) {
         lastSfxAt.set(id, t);
-        // The fidget surface has its own deliberately unbounded short-voice path. Do not let a
-        // burst of sand grains consume the gameplay/SFX polyphony budget.
+        // Sand's short voices stay out of the gameplay polyphony budget.
         sfxEnds.push(t + delay + lengthMs);
       }
       if (MUSIC_DUCK_SFX.includes(id)) duck(ctx.currentTime + delay / 1000, lengthMs / 1000);
@@ -1084,9 +1039,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
   };
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * The singleton
- * ------------------------------------------------------------------------------------------- */
+// The singleton
 
 let singleton: AudioEngine | null = null;
 
