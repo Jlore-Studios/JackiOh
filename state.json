@@ -5672,9 +5672,9 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-09T07:50:00Z",
-          "utilization": 0.44
+          "utilization": 0.45
         },
-        "observed_at": "2026-10-09T03:31:45Z",
+        "observed_at": "2026-10-09T03:34:44Z",
         "status": "allowed"
       }
     },
