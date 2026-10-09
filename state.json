@@ -5058,6 +5058,10 @@
         {
           "at": "2026-10-09T03:01:05Z",
           "minutes": 7.0
+        },
+        {
+          "at": "2026-10-09T03:01:13Z",
+          "minutes": 6.0
         }
       ],
       "usage": {
@@ -5065,7 +5069,7 @@
           "resets_at": "2026-10-09T07:50:00Z",
           "utilization": 0.9
         },
-        "observed_at": "2026-10-09T03:01:05Z",
+        "observed_at": "2026-10-09T03:01:13Z",
         "seven_day": {
           "resets_at": "2026-10-10T05:00:00Z",
           "utilization": 0.74
