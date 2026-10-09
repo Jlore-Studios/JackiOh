@@ -4254,10 +4254,8 @@
     "what": "build #530 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-09T03:45:49Z",
-    "notes": [
-      "#589: typed it Task"
-    ],
+    "at": "2026-10-09T03:58:05Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
