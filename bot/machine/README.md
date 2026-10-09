@@ -22,7 +22,7 @@ bot/machine/on-machine.sh bot/machine/setup.sh gpt agy muse devin
 
 | | |
 |---|---|
-| Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus 8 GB swap), Ubuntu 24.04, 60 GB gp3, tagged `Name=jackioh-night-vm`, in the project's Region (`us-east-2`) |
+| Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus 8 GB swap), Ubuntu 24.04, 120 GB gp3, tagged `Name=jackioh-night-vm`, in the project's Region (`us-east-2`) |
 | Way in | Session Manager only (`aws ssm start-session --target <instance>`): no inbound port, no key pair. The instance role has `AmazonSSMManagedInstanceCore` and nothing else. |
 | Users | `agent-<id>` per subscription (`agent-gpt`, `agent-agy`, `agent-muse`, `agent-devin`): a home only it can read, no `sudo`, no Docker |
 | Runners | `~agent-<id>/actions-runner` (and `actions-runner-2` … for a subscription with `lanes` over 1), registered as `night-vm-<id>` (`night-vm-<id>-2` …) with the one label `night-vm-<id>`, each a systemd service under that user |
@@ -65,7 +65,7 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 
 ## Building it
 
-1. **The instance.** Launch Ubuntu 24.04 (x86_64) as `m7i-flex.large` with a 60 GB gp3 disk, an
+1. **The instance.** Launch Ubuntu 24.04 (x86_64) as `m7i-flex.large` with a 120 GB gp3 disk, an
    instance profile holding `AmazonSSMManagedInstanceCore`, a security group with no inbound
    rule, no key pair, shutdown behaviour **stop**, and the tag `Name=jackioh-night-vm`.
 2. **Set it up**, with the ids from `providers.json`:
@@ -199,18 +199,25 @@ Running the lanes:
     status issue shows the newest reading. To see what fills it:
     `bot/machine/on-machine.sh bot/machine/disk-report.sh`.
   - **A bigger disk:** it was 30 GB until it filled up on 2026-10-04 (254 MB free), and was grown
-    to 60 GB in place. About 22 GB is fixed: 8 GB of swap, ten runners' installs at about 0.7 GB
-    each (twice that after a self-update until `clean.sh` removes the old version), the system and
-    the CLIs; six jobs' worktrees and installs come on top. To grow it again, raise the volume's
+    to 60 GB in place; then to 120 GB on 2026-10-09, after four Muse jobs building cards at once
+    (the first since the Rust rewrite) took it to 98% (#590): each kept about 8.5 GB of Rust
+    builds. About 27 GB is fixed: 8 GB of swap, twelve runners' installs at about 0.7 GB each
+    (twice that after a self-update until `clean.sh` removes the old version), the agent users'
+    Rust toolchains, the system and the CLIs; six jobs' worktrees and builds come on top. To grow it again, raise the volume's
     size (`aws ec2 modify-volume`); `setup.sh` grows the partition and the filesystem into it
     (`growpart`, `resize2fs`), and cloud-init does at the machine's next start. Neither needs a
     restart.
   - `CYPRESS_INSTALL_BINARY=0` keeps `pnpm install` from fetching Cypress's 800 MB binary at all,
     since the bot's checks never run e2e.
   - **Rust:** each agent user's toolchain (about 0.8 GB) and its crate downloads
-    (`~/.cargo/registry`, a few hundred MB) stay in its home; a job's `target/` (about 1.5 GB for
-    the release build of `jackioh` its checks run) is in its worktree under `RUNNER_TEMP`, and goes
-    with the job.
+    (`~/.cargo/registry`, a few hundred MB) stay in its home; a job's `target/` is in its worktree
+    under `RUNNER_TEMP`, and goes with the job. The release build of `jackioh` the checks run is
+    about 0.3 GB; what grows it is the builds a model runs itself, the tests above all. So a job
+    here builds with no incremental cache and no debug info (`CARGO_INCREMENTAL=0`,
+    `CARGO_PROFILE_DEV_DEBUG=0` and `CARGO_PROFILE_TEST_DEBUG=0`, set in `bot-night.yml`): the
+    worktree goes when the job ends, so neither was ever reused, and the cards' tests build in
+    0.55 GB instead of 5.2 GB, a third faster. A failing test still names its file and line; only
+    a full backtrace loses its line numbers. GitHub's runners and CI build as before.
 - **How many at once:** six machine jobs (`machine_parallel`), because a job here runs only the
   light checks. The load is each job's checks, not its model: on 2026-10-02 three jobs running
   the full set had the machine at load average 14 on 2 vCPUs with 1.5 GB swapped. Measured on
