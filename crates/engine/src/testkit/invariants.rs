@@ -54,8 +54,10 @@
 //!        - Echo's `copies` (R399) names the definition of the card it copied (read off the copier);
 //!        - `swapsBook.from` (R671) names the Book a swap took the text from (read off the card).
 //!      A card in no pile that has no successor (no Transform or Fuse made it another, R177) reads only
-//!      when it is a token (R11); a Glitch's reset or boards (R676, R678) takes the rest unseen, and
-//!      the first oracle excused it, which was the engine's own R97 rule restated: R764 fixed it.
+//!      when it is a token (R11) or a card a full library refused before it existed that copies nothing
+//!      (R316, fuzz seed 5967 of the handicapped wave, #562); a Glitch's reset or boards (R676, R678)
+//!      takes the rest unseen, and the first oracle excused it, which was the engine's own R97 rule
+//!      restated: R764 fixed it.
 //!      Judging former ids by the log found a sixth, fuzz seed 992: R419's Rollback recreated a
 //!      face-down trap #83 had transformed away, and the `formerId` it carries goes with the card
 //!      (R227) once that card is public, R177's mark on the old id notwithstanding.
@@ -195,6 +197,9 @@ struct Lineage {
     next: IndexMap<String, String>,
     /// R177: an id that ceased to exist where this viewer could not read it (`transformed.hiddenFrom`).
     unread: IndexSet<String>,
+    /// R316: an id a full library refused before it existed (`libraryOverflow`, `notCreated`) that copies
+    /// nothing. It was never in any pile, so it reads openly to both seats.
+    never_made: IndexSet<String>,
     /// Each id, and the definitions the engine's own events pair with it.
     ties: IndexMap<String, IndexSet<String>>,
 }
@@ -202,6 +207,7 @@ struct Lineage {
 fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
     let mut next: IndexMap<String, String> = IndexMap::new();
     let mut unread: IndexSet<String> = IndexSet::new();
+    let mut never_made: IndexSet<String> = IndexSet::new();
     let mut ties: IndexMap<String, IndexSet<String>> = IndexMap::new();
     let tie =
         |ties: &mut IndexMap<String, IndexSet<String>>, id: Option<&Value>, values: &[Option<&Value>]| {
@@ -251,6 +257,10 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
             }
             if let Some(copy_of) = object.get("copyOf").and_then(Value::as_str) {
                 next.insert(id.to_string(), copy_of.to_string());
+            } else if object.get("type").and_then(Value::as_str) == Some("libraryOverflow")
+                && object.get("outcome").and_then(Value::as_str) == Some("notCreated")
+            {
+                never_made.insert(id.to_string());
             }
             let fresh = object.get("newInstanceId").and_then(Value::as_str);
             if object.get("type").and_then(Value::as_str) == Some("transformed")
@@ -276,7 +286,12 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
             }
         }
     }
-    Lineage { next, unread, ties }
+    Lineage {
+        next,
+        unread,
+        never_made,
+        ties,
+    }
 }
 
 /// Where a card an id names stands for one viewer (`standing_of`'s answer).
@@ -287,7 +302,8 @@ struct Standing {
 
 /// Whether this viewer reads the card an id names, judged by where the card is now: a card the state
 /// holds reads unless the hidden set has it, and a vanished one by its successor. A vanished card with
-/// none reads only when every definition the log pairs with it is a token's: R11's tokens go public
+/// none reads when a full library refused it before it existed and it copies nothing (R316), and
+/// otherwise only when every definition the log pairs with it is a token's: R11's tokens go public
 /// (leaving the field, discarded, burned), where any other card in no pile went unseen, out of a
 /// Glitch's reset or boards (R676, R678), and stays as hidden as it was. An id neither the state nor
 /// the log knows vouches for nothing.
@@ -320,6 +336,13 @@ fn standing_of(
             });
         }
         let Some(successor) = lineage.next.get(id) else {
+            // R316: a card a full library refused before it existed, copying nothing, was never hidden.
+            if lineage.never_made.contains(id) {
+                return Some(Standing {
+                    reads: true,
+                    where_: "no pile (it was never created)".to_string(),
+                });
+            }
             let defs = lineage.ties.get(id)?;
             // R11: a token that ceased to exist (it left the field, was discarded or burned) was public when
             // it went. Any other card in no pile went unseen (a Glitch's reset or boards, R676, R678) and
