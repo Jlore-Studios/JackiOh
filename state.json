@@ -6091,14 +6091,18 @@
         {
           "at": "2026-10-09T14:39:01Z",
           "minutes": 26.3
+        },
+        {
+          "at": "2026-10-09T14:45:49Z",
+          "minutes": 3.9
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-09T19:10:00Z",
-          "utilization": 0.07
+          "utilization": 0.11
         },
-        "observed_at": "2026-10-09T14:39:01Z",
+        "observed_at": "2026-10-09T14:45:49Z",
         "status": "allowed"
       }
     },
