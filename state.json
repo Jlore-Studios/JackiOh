@@ -5044,17 +5044,21 @@
         {
           "at": "2026-10-08T22:13:58Z",
           "minutes": 20.5
+        },
+        {
+          "at": "2026-10-09T03:01:05Z",
+          "minutes": 7.0
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-09T02:50:00Z",
-          "utilization": 0.91
+          "resets_at": "2026-10-09T07:50:00Z",
+          "utilization": 0.9
         },
-        "observed_at": "2026-10-08T22:13:58Z",
+        "observed_at": "2026-10-09T03:01:05Z",
         "seven_day": {
           "resets_at": "2026-10-10T05:00:00Z",
-          "utilization": 0.65
+          "utilization": 0.74
         },
         "status": "allowed_warning"
       }
