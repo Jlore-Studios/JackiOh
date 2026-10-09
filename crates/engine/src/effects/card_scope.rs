@@ -1,7 +1,7 @@
 //! How a verb names cards anywhere a player keeps them — on the field, in a hand, in a deck — which
 //! patch v0.2.0's instance-data verbs need (docs/classic-sets.md B3.3, B3.4, B5 E38, E39): Brittle
-//! given to a hand, "Upgrade every card in your hand and deck twice", "your Units on the field, in your
-//! hand and in your deck get +2X Attack and Rush", "Degrade 4 random cards in your opponent's deck".
+//! given to a hand, "Buff every card in your hand and deck twice", "your Units on the field, in your
+//! hand and in your deck get +2X Attack and Rush", "Nerf 4 random cards in your opponent's deck".
 //!
 //! `targets::BoardScope` names cards on the field only, so this is the wider vocabulary, and each verb
 //! that takes it walks `cards_in_card_scope`. A card dormant under a Stack is not on the field (§3.2,

@@ -211,7 +211,7 @@ pub const CHAOS_PLUS_EFFECTS: &[ChaosEffectDef] = &[
     },
     ChaosEffectDef {
         name: "upgrade",
-        label: "Upgrade every card in your hand and deck twice",
+        label: "Buff every card in your hand and deck twice",
         build: build_upgrade,
     },
     ChaosEffectDef {
@@ -221,7 +221,7 @@ pub const CHAOS_PLUS_EFFECTS: &[ChaosEffectDef] = &[
     },
     ChaosEffectDef {
         name: "degrade",
-        label: "Degrade every card on your opponent's field and in their hand three times",
+        label: "Nerf every card on your opponent's field and in their hand three times",
         build: build_degrade,
     },
     ChaosEffectDef {
