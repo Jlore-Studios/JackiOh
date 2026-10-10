@@ -1,28 +1,17 @@
 //! #10 Rapid Replenish (SPEC §8.1): a 0-cost Spell, "Combo 3: draw 3; otherwise nothing", radiant
-//! "Combo 3: draw 6" — a Radiant cell that changes only a number changes only that number (§8
-//! Conventions), so the two faces differ only in how many cards the Combo draws.
+//! "Combo 3: draw 6": the faces differ only in how many cards the Combo draws (§8 Conventions).
 //!
-//! §8.1's Engine cell is "Checks `turnLog.cardsPlayed >= 3`; always playable". Always playable needs
-//! nothing: the cost is 0 and the card declares no target, so a Combo that is not met simply draws
-//! nothing and the spell still counts as played and still goes to the graveyard (§8 Conventions,
-//! R40, R70).
+//! Always playable needs nothing: cost 0, no target, so an unmet Combo draws nothing and the spell
+//! still counts as played and goes to the graveyard (§8 Conventions, R40, R70).
 //!
-//! THE OFF-BY-ONE, which is the whole subtlety of this card: §6.2 defines "Combo X" as "X or more
-//! cards were played EARLIER this turn", and §10.5 step 4 counts the card before step 5 runs this
-//! script, so Rapid Replenish is already inside `turnLog.cardsPlayed` when its own hook asks. And
-//! step 5 runs /fullsend's granted Combo draw before this script, so a cast-on-draw card that draw
-//! casts (R70) is in the count too, though it was played after Rapid Replenish. §6.2 checks the
-//! count "at play time", so the script reads `played_earlier`, this play's own place in the turn's
-//! log. BUILD M4-T4's must-pass row says the same in numbers: two prior plays draw
-//! nothing, three prior plays draw 3.
+//! THE OFF-BY-ONE: §6.2's "Combo X" is "X or more cards were played EARLIER this turn", but §10.5
+//! step 4 counts this spell before step 5 runs its script, and step 5's granted Combo draw, run before
+//! this script, can cast a cast-on-draw card (R70) that is in the count too, though played after it.
+//! §6.2 checks "at play time", so the script reads `played_earlier`, this play's own place in the
+//! controller's turn log. BUILD M4-T4: two prior plays draw nothing, three draw 3.
 //!
-//! It is read per player: `ctx.controller`'s own turn log, which is the only per-turn record there
-//! is, so a card the opponent cast during this turn counts on their log and not on this one.
-//!
-//! R195, the yellow glow: `condition_met` answers the same question from the hand, before the card is
-//! played. `played_earlier` answers it there too: a card still in hand has not been played, so every
-//! play this turn is earlier than the one it would be. One reader for both, so the glow and the draw
-//! cannot disagree.
+//! R195, the yellow glow: `condition_met` asks `played_earlier` from the hand too (every play this
+//! turn is earlier), so the glow and the draw cannot disagree.
 
 use jackioh_engine::effects::draw;
 use jackioh_engine::prelude::*;
@@ -64,22 +53,13 @@ pub fn script() -> CardScripts {
 // #10 Rapid Replenish — SPEC §8.1 row 10, BUILD M4-T4 must-pass: "2 prior plays → no draw; 3 →
 // draw 3; radiant 6; counts as played either way".
 //
-// The boundary is the point of this card. §6.2 counts the cards played EARLIER this turn, and
-// §10.5 step 4 has already counted this spell by the time its script runs, so "2 prior plays" and
-// "3 prior plays" are `turnLog.cardsPlayed` of 3 and 4. The tests below never read that counter:
-// they play real cards first and then assert the draw, which is the only thing a player can see.
-//
-// "Counts as played either way" (R40, R70) is proved the same way — with a second copy. A Rapid
-// Replenish that drew nothing still raised the count, so the copy played right after it is the one
-// that finds three earlier plays.
-//
-// Nothing in the libraries here is cast-on-draw (#21, #27, #90.1 are), so a draw is just a draw.
-// The last case is the exception, on purpose (hunt round 8): a cast-on-draw Hinder that /fullsend's
-// Combo draw casts at §10.5 step 5, before this script, is played after Rapid Replenish, not
-// earlier, since §6.2 checks the count at play time.
-//
-// R195's yellow glow (`conditionMet`): both answers of this card's hook, checked against the branch
-// its resolution then takes, are in condition_active.rs with the other hooked cards (README §5).
+// §6.2 counts cards played EARLIER and §10.5 step 4 has already counted this spell, so "2 prior
+// plays" and "3 prior plays" are `turnLog.cardsPlayed` of 3 and 4. "Counts as played either way"
+// (R40, R70) is proved with a second copy, which finds three earlier plays. Nothing in the other
+// libraries is cast-on-draw (#21, #27, #90.1 are), so a draw is just a draw; the last case is the
+// exception (hunt round 8): a cast-on-draw Hinder cast by /fullsend's Combo draw at §10.5 step 5 is
+// played after, not earlier (§6.2). R195's yellow glow (`conditionMet`) is in condition_active.rs
+// (README §5).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

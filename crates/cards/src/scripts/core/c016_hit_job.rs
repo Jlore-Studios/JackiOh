@@ -1,21 +1,16 @@
 //! #16 Hit Job (SPEC §8.1): "Destroy target unit", radiant "Destroy target unit and the units
 //! adjacent to it on its side". Engine cell: "Adjacency 3.1; Indestructible survives".
 //!
-//! The radiant cell restates the base clause and adds the neighbours, so the target is destroyed on
-//! both faces (§8 Conventions) and only the extra kills are radiant-only.
+//! The target is destroyed on both faces (§8 Conventions); only the neighbours are radiant-only.
 //!
 //! Nothing here knows about Indestructible: §6.3 Destroy only marks the card and §4.5 step 1 collects
 //! it at the next state check, where R46 lets an Indestructible unit ignore the mark. Both destroys
-//! are in one effect list, so the whole spell resolves before anything is collected and the target
-//! and its neighbours die together (R59).
+//! are in one effect list, so the target and its neighbours die together (R59).
 //!
 //! §3.1: "Adjacent means index N-1 and N+1 on the same side and same row", never across the centre
-//! line, and the target is picked with the play rather than by a prompt (R81), so it arrives in
-//! `ctx.targets` as `{ of: "chosen" }`.
-//!
-//! The neighbours are `destroy_adjacent_to` (engine/src/effects/destroy.rs), which marks lanes N-1 and
-//! N+1 on the target's own side and row and only marks, exactly like `destroy`. It fizzles silently
-//! when the target is off the field or has no neighbour.
+//! line. The target is picked with the play (R81), so it arrives in `ctx.targets` as
+//! `{ of: "chosen" }`. `destroy_adjacent_to` (engine/src/effects/destroy.rs) only marks, like
+//! `destroy`, and fizzles silently when the target is off the field or has no neighbour.
 
 use jackioh_engine::effects::{destroy, destroy_adjacent_to};
 use jackioh_engine::prelude::*;
@@ -49,24 +44,15 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #16 Hit Job — SPEC §8.1 row 16, BUILD M4-T4 row 16.
-//
-// Must-pass (M4-T4): "Target destroyed; Indestructible survives; radiant also kills same-side
-// neighbours, never across".
-//
-// Engine cell: "Adjacency 3.1; Indestructible survives" (R46). §3.1: "Adjacent means index N-1 and
-// N+1 on the same side and same row", so a radiant Hit Job can never reach over the centre line.
-//
-// The target travels in the `play` action (R81), never as a prompt, so every test here names it with
-// `play(..., { targets })` and no test answers anything.
+// #16 Hit Job — SPEC §8.1 row 16, BUILD M4-T4 row 16. Must-pass: "Target destroyed; Indestructible
+// survives; radiant also kills same-side neighbours, never across" (R46, §3.1). The target travels
+// in the `play` action (R81), so every test names it with `play(..., { targets })`.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
 
-    /// HARNESS GAP: `SideSetup.hand` takes def ids, so a test cannot put a RADIANT card in a hand the
-    /// way `field`/`backrow` take `{ def, radiant: true }`. Until it does, the radiant face is reached
-    /// by setting the flag on the instance the setup created — which is exactly the state §5.2's
-    /// `set_radiant` leaves behind on a card in hand (R60), so the play that follows is a real one.
+    /// Reach the radiant face by setting the flag on the hand instance, the state §5.2's `set_radiant`
+    /// leaves behind on a card in hand (R60), so the play that follows is a real one.
     fn make_radiant<'a>(s: &'a mut Scenario, card: &str) -> &'a mut Scenario {
         let id = s.card(card).id.clone();
         match find_instance_mut(s.state_mut(), &id) {
@@ -146,7 +132,6 @@ mod tests {
             s.play("core-016", json!({}));
 
             s.expect_in_zone("core-016", "graveyard");
-            // Hit Job costs (3) since patch v0.2.0 (issue #40).
             s.expect_mana(PlayerId::P1, 1);
             s.expect_events(json!(["cardPlayed"]));
         }

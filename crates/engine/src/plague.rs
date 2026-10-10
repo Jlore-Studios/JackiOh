@@ -1,26 +1,21 @@
 //! Plague Counters (SPEC §6.3 Plague Counter; docs/classic-sets.md B5 E19; R471): the counter on a
 //! permanent, how many a placement puts there, and how they come off again.
 //!
-//! A Plague Counter is `instance.counters.plague` (§10.1), a count on a permanent that R78 clears when
-//! the card leaves the field. Three things touch it and this module owns all three, so a card, the
-//! play pipeline and a verb in `effects/` can never disagree about them:
-//!   - a placement (`place_plague_on`): one effect putting N tokens on one card, multiplied by what the
-//!     card receiving them says (Classic #27 Pestilent Slime's "doubled", `Script.plague_multiplier`),
-//!     and reported once as `counterChanged` with `placed`, which "whenever Plague Counters are placed
-//!     on this" answers once per placement however many tokens it put there (R471). Every gain of
-//!     tokens is a placement, Core #91 Fed Fauci's "+1 Plague Counter" included;
-//!   - a removal (`remove_plague`): Classic #78 Mutate Spell's "remove a Plague Counter", and Classic #74
-//!     Corpse Plantation's tokens spent as mana, which the play pipeline pays through this, never by
-//!     writing the counter itself. A removal is no placement and carries no `placed`;
-//!   - the reads a card asks (`plague_on`, `plague_on_field`, `permanents_on_field`), which `query.rs`
-//!     re-exports as board facts.
+//! A Plague Counter is `instance.counters.plague` (§10.1), cleared by R78 when the card leaves the
+//! field. This module owns all three things that touch it, so no caller can disagree about them:
+//!   - a placement (`place_plague_on`): N tokens on one card, multiplied by what that card says
+//!     (Classic #27 Pestilent Slime's "doubled", `Script.plague_multiplier`), reported once as
+//!     `counterChanged` with `placed`, which "whenever Plague Counters are placed on this" answers once
+//!     per placement however many tokens (R471). Every gain is a placement, Core #91 Fed Fauci's
+//!     "+1 Plague Counter" included;
+//!   - a removal (`remove_plague`): Classic #78 Mutate Spell's "remove a Plague Counter" and Classic
+//!     #74 Corpse Plantation's tokens spent as mana, paid through this. It carries no `placed`;
+//!   - the reads (`plague_on`, `plague_on_field`, `permanents_on_field`), re-exported by `query.rs`.
 //!
 //! Only a permanent on the field carries tokens: the top of a unit pile or a backrow card, face-down
-//! ones included (R471), never a card dormant under a Stack (R13) or one in a hand, deck or pile.
-//!
-//! Port of `packages/engine/src/plague.ts`. The two writers take the card as the caller holds it and
-//! write the counter on the card as it stands in the state (found by id), where TS wrote through the
-//! live object.
+//! ones included (R471), never a card dormant under a Stack (R13) or one in a hand, deck or pile. The
+//! two writers take the card as the caller holds it and write the counter on the card as it stands in
+//! the state (found by id).
 
 use crate::config::PLAGUE_MULTIPLIER_NONE;
 use crate::script::{EngineSink, HookArgs};
@@ -35,9 +30,8 @@ pub fn plague_on(card: &CardInstance) -> i32 {
 }
 
 /// Every permanent on the field in R68's order — the given side first (the active player's when
-/// `first` is `None`, TS's default), units lane 1 upward then the backrow lane 1 upward, then the
-/// other side: the top of each unit pile only (R13), and every backrow card, face-down or not.
-/// `first` takes a `PlayerId` or an `Option` (`None` for TS's omitted argument).
+/// `first` is `None`), units lane 1 upward then the backrow lane 1 upward, then the other side: the
+/// top of each unit pile only (R13), and every backrow card, face-down or not.
 pub fn permanents_on_field(state: &GameState, first: impl Into<Option<PlayerId>>) -> Vec<&CardInstance> {
     let first = first.into().unwrap_or(state.active);
     let sides = [first, opponent_of(first)];
@@ -55,8 +49,7 @@ pub fn permanents_on_field(state: &GameState, first: impl Into<Option<PlayerId>>
 }
 
 /// Classic #59 Plague Doctor: "the number of Plague Counters on the field" — every token on every
-/// permanent, both sides, face-down cards included; or one side's only, with `player` (a `PlayerId`, or
-/// `None` for TS's omitted argument).
+/// permanent, both sides, face-down cards included; or one side's only, with `player`.
 pub fn plague_on_field(state: &GameState, player: impl Into<Option<PlayerId>>) -> i32 {
     let player: Option<PlayerId> = player.into();
     permanents_on_field(state, None)

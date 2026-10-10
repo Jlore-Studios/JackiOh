@@ -1,26 +1,15 @@
 //! C #84 Lockdown (SPEC §8.6 row 84). (2) Field Spell, Rare.
 //!   Base:    "Indestructible\nAfter a permanent is played, Lock its zone.\nActivate: Tribute this."
 //!   Radiant: "Indestructible\nAfter your opponent plays a permanent, Lock its zone.\nActivate: Tribute this."
-//!   Engine:  "A trigger on `cardPlayed` of a permanent (either player's; Radiant: the opponent's) that
-//!            Locks (Lock / Unlock, §6.3) the zone the card entered; the card stays, since Lock evicts
-//!            nothing. The designer's "cast" is "played": a cast by an effect counts (R70); a summon
-//!            that is no play (a token, a Recruit) does not; Lockdown doesn't answer its own arrival
-//!            (R119). Activate (§6.2, R384), once per turn: Tribute this, which bypasses Indestructible
-//!            (§6.3 Sacrifice). Tunes: none."
 //!
-//! The trigger answers `cardPlayed` — a play or a cast (R70), never a summon, a Recruit, a Reborn or a
-//! countered play, none of which emits it — and `lockPlayedZone` Locks the zone the played card stands
-//! in, the card staying (§3.2); a played Spell stands in none and locks nothing. R119: a permanent that
-//! is not a trap gets no filter for its own arrival, so the trigger passes over the `cardPlayed` naming
-//! Lockdown itself. The `locked` event names the zone only, so a face-down Trap's zone locks without the
-//! other player learning the Trap (R33). The Radiant face answers only the opponent's plays.
+//! A trigger on `cardPlayed` Locks the zone the permanent entered; the card stays (§3.2, §6.3). A cast
+//! by an effect counts (R70); a summon that is not a play does not; Lockdown does not answer its own
+//! arrival (R119). Face-down Trap zones lock without revealing the Trap (R33).
 //!
-//! Indestructible is the catalog keyword: a destroy leaves it (R46); an exile removes it. The Activate is
-//! R384's once-per-turn ability whose cost is "Tribute this" (`tributeSelf`): a Sacrifice, which
-//! bypasses Indestructible (§6.3), and which is the whole of the ability. The Locks it made stay after it
-//! leaves.
+//! Indestructible survives destroy (R46); exile removes it. Activate (§6.2, R384), once per turn:
+//! Tribute this (bypasses Indestructible, §6.3). The Locks stay after it leaves.
 //!
-//! Rulings: R33, R46, R70, R119, R384. Its proof: `test/classic/084-lockdown.test.ts`.
+//! Rulings: R33, R46, R70, R119, R384.
 
 use jackioh_engine::effects::lock_played_zone;
 use jackioh_engine::prelude::*;
@@ -71,14 +60,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #84 Lockdown (SPEC §8.6 row 84; BUILD M9 row C 84). (2) Field Spell, Rare: Indestructible; after
-// a permanent is played, Lock its zone; Activate: Tribute this. Radiant: after your opponent plays a
-// permanent.
-//
-// A countered card is shown with the real C #72 Grand Counterspell. No card in the catalog casts a
-// permanent by its effect (C #7, #47 and #56 cast Spells only; no Cast-on-draw card with a script is a
-// permanent), so "a cast counts" uses a fixture Spell that casts a Mr. Vanilla (`castNew`, R70), as
-// `test/combat-windows.test.ts` does.
+// C #84 Lockdown (SPEC §8.6 row 84). (2) Field Spell, Rare: Indestructible; after a permanent is
+// played, Lock its zone; Activate: Tribute this. Radiant: after your opponent plays a permanent.
+// Countered cards use C #72 Grand Counterspell; a fixture Spell tests that a cast counts (R70).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::{CastNewArgs, cast_new};
@@ -112,7 +96,6 @@ mod tests {
         }
     }
 
-    /// TS `const SPARE: SideSetup = { hand: [STOCKPILE], library: [VANILLA, VANILLA, VANILLA] }`.
     fn spare() -> Value {
         json!({ "hand": [STOCKPILE], "library": spare_library() })
     }
@@ -121,7 +104,7 @@ mod tests {
         json!([VANILLA, VANILLA, VANILLA])
     }
 
-    /// TS `{ ...side, ...SPARE }`: the side's keys, then SPARE's over them.
+    /// The side's keys, then SPARE's over them.
     fn with_spare(side: Value) -> Value {
         let mut merged = side;
         if let (Some(into), Value::Object(extra)) = (merged.as_object_mut(), spare()) {
@@ -132,7 +115,7 @@ mod tests {
         merged
     }
 
-    /// TS `{ ...SPARE, ...side }`: SPARE's keys, then the side's over them.
+    /// SPARE's keys, then the side's over them.
     fn spare_with(side: Value) -> Value {
         let mut merged = spare();
         if let (Some(into), Value::Object(extra)) = (merged.as_object_mut(), side) {

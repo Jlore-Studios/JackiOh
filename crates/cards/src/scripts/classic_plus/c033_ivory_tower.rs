@@ -18,8 +18,7 @@ fn rider_of(state: &GameState, tower: &CardInstance) -> Option<CardInstance> {
     carried_at(state, at).cloned()
 }
 
-/// R653: the event is the play of the Unit stacked onto this Tower, landing or resolved. (TS's
-/// `TriggerContext` is the context and the event, two arguments here.)
+/// R653: the event is the play of the Unit stacked onto this Tower, landing or resolved.
 fn is_stacked_play(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
     let Some(tower) = ctx.live_self() else {
         return false;
@@ -80,15 +79,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #33 Ivory Tower — SPEC §8.7 row 33, R418, R653, BUILD M9 Classic+ row C+ 33: "Field Spell: the first
-// Unit you play onto its zone stands on it while its play resolves, its Cry included, and is then fused
-// into it per R77, the Tower the kept card: a Field Spell still, with the Unit's text, keywords and stats,
-// so the Unit's aura covers your side, its end-of-turn line runs and its Death fires when the Tower dies;
-// the Unit ceases to exist, with no Death; after that first Unit, no other may be played onto it this
-// stay; a Tower that leaves before the play resolves fuses nothing, its Unit stepping down (R446); an
-// answer that replaced the Unit in place leaves its replacement to be fused; the old aura (your cards have
-// Stack) and the Unit that could neither attack nor be attacked are gone; radiant the Unit becomes Radiant
-// as it lands, so its Cry runs on that face, and is fused in on its Radiant face (R469)".
+// C+ #33 Ivory Tower (SPEC §8.7, R418, R653): the first Unit played onto its zone stands on it
+// while play resolves, then fuses in per R77 (kept card). If Tower leaves early, Unit steps down
+// (R446). Radiant makes the Unit Radiant as it lands and fuses on Radiant face (R469).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -110,7 +103,6 @@ mod tests {
     const FILLER: &str = "core-005";
     const DECK: [&str; 4] = [FILLER, FILLER, FILLER, FILLER];
 
-    /// TS `towerWith`'s options.
     #[derive(Default)]
     struct TowerOptions {
         radiant: bool,
@@ -145,7 +137,6 @@ mod tests {
         if card.radiant { def.radiant.text.clone() } else { def.base.text.clone() }
     }
 
-    /// TS `types.indexOf(type)`: -1 when absent.
     fn index_of(s: &Scenario, want: GameEventType) -> i64 {
         s.events()
             .iter()

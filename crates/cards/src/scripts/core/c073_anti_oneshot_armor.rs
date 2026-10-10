@@ -2,26 +2,16 @@
 //! Cry: draw 1", radiant "Your hero can't take more than 3 damage in one instance. Cry: draw 2" (§8's
 //! cell "Cap 3; Cry: draw 2", R275: the cap is tightened AND the Cry draws twice as many).
 //!
-//! The cap is not an effect and not an aura: it is step 3 of the §4.4 damage pipeline
-//! ("Hero cap: if the target is a hero with Anti-oneshot Armor, clamp to 5 (radiant 3)"), so the card
-//! contributes a static flag and the pipeline reads it. `damage.rs hero_damage_cap` walks the cards
-//! acting on the player's side for `static_flags.anti_oneshot`, takes `ANTI_ONESHOT_CAP.radiant` when the INSTANCE is
-//! radiant and `.base` otherwise, and clamps with the smallest cap on that side. Three consequences
-//! this card gets for free and must not re-implement:
-//!   - the cap is per damage instance, so two 12-damage hits cost the hero 5 each;
-//!   - it is hero-only — `hero_damage_cap` is consulted only for `target.kind === "hero"` — so units
-//!     take their full hit;
-//!   - the radiant number comes from `jackioh_engine::config`, not from this file, which is why
-//!     "Cap 3" needs no radiant-specific code at all. The Cry's draw count is the one number the
-//!     two faces differ in here.
+//! The cap is not an effect or an aura: it is step 3 of the §4.4 damage pipeline, so the card only
+//! contributes a static flag. `damage.rs hero_damage_cap` reads `static_flags.anti_oneshot` on the
+//! player's side, takes `ANTI_ONESHOT_CAP.radiant` for a radiant instance (else `.base`) and clamps with
+//! the smallest. It is per damage instance and hero-only; the radiant number comes from
+//! `jackioh_engine::config`, so "Cap 3" needs no radiant-specific code here.
 //!
-//! R18 is likewise the engine's: "lose health" is not damage — no Armor, no Anti-oneshot cap — and
-//! `damage.rs lose_health` never calls `hero_damage_cap`. #27 Blood Ridden Glowy Jelly Bean's "you lose
-//! 5 health" therefore goes through in full past this card, which the test proves.
-//!
-//! §5.1 lists Anti-oneshot Armor as the example of "a Field Spell that may have a Cry", and §3.2
-//! makes a played Field Spell public, so nothing here touches `face_up` either (`summon_onto` and the
-//! play pipeline set it). The Cry fires only when the card is played from hand or cast (R1).
+//! R18: "lose health" is not damage, and `lose_health` never calls `hero_damage_cap`, so #27 Blood
+//! Ridden Glowy Jelly Bean's "you lose 5 health" goes through in full past this card.
+//! §5.1 names this the example of a Field Spell with a Cry and §3.2 makes a played Field Spell public,
+//! so nothing here touches `face_up`. The Cry fires only when played from hand or cast (R1).
 
 use jackioh_engine::effects::draw;
 use jackioh_engine::prelude::*;
@@ -50,12 +40,9 @@ pub fn script() -> CardScripts {
 
 // #73 Anti-oneshot Armor — SPEC §8.3, BUILD M4-T4: "A 12 hit becomes 5 (radiant 3), per instance,
 // hero only; Cry draws 1 (radiant 2, R275)", plus R18's "lose health bypasses the cap".
-//
-// The 12-damage hit is a radiant core-002 Bigot (12/2). Its script is a Cry only, and a unit placed
-// by a `field` setup never fires one (R1), so the attack is a bare 12-damage instance through the
-// §4.4 pipeline with nothing else in it. R18's bypass is #27 Blood Ridden Glowy Jelly Bean's "you
-// lose 5 health", read against the RADIANT cap of 3: 5 is below the base cap of 5, so only the
-// radiant face can tell a clamp apart from a bypass.
+// The 12-damage hit is a radiant core-002 Bigot (12/2): a `field` setup fires no Cry (R1), so the
+// attack is a bare 12-damage instance. R18's "lose 5 health" is read against the RADIANT cap of 3:
+// 5 fits under the base cap of 5, so only the radiant face can tell a clamp from a bypass.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -63,7 +50,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// `scenario(opts)` with the shipped cards registered first (the TS globalSetup's `registerAll()`).
+    /// `scenario(opts)` with the shipped cards registered first.
     fn setup(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)
@@ -180,8 +167,6 @@ mod tests {
             assert_eq!(s.pile(P1, "library").len(), 1);
             s.expect_events(json!(["cardPlayed", "summoned", "drawn", "addedToHand"]));
             // §5.1: a Field Spell with a Cry — it went to the backrow and stayed there.
-            // (§3.2 also makes a played Field Spell public, but `reduce.playCard` does not set `faceUp`
-            // the way `effects/summon.ts` does; that engine gap is reported, not asserted here.)
             assert_eq!(s.backrow(P1, 1).map(|card| card.def_id), Some("core-073".to_string()));
         }
 

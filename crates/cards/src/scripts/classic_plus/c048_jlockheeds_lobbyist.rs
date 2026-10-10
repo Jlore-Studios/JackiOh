@@ -46,11 +46,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #48 Jlockheed's Lobbyist — SPEC §8.7 row 48, BUILD M9 Classic+ row C+ 48: "0/3: cannot be in
-// Defense Position (a switch is refused, a switch-all effect leaves it in Attack) and never attacks
-// with 0 attack; Death adds a random non-token Jlockeed card that costs (0), the pool exactly Core #13,
-// #14, Classic #4 and C+ #51, #52 (one tag, never itself, R387); a full hand burns it; hidden from the
-// opponent (R97); radiant 0/6, may go to Defense Position, and the card is Radiant".
+// C+ #48 Jlockheed's Lobbyist — SPEC §8.7 row 48, BUILD M9 Classic+ row C+ 48: 0/3, never in Defense
+// Position (a switch is refused, a switch-all leaves it in Attack), never attacks with 0 attack; Death
+// adds a random non-token Jlockeed card costing (0), the pool Core #13, #14, Classic #4, C+ #51, #52
+// (one tag, never itself, R387); a full hand burns it; hidden from the opponent (R97); radiant 0/6.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -66,7 +65,6 @@ mod tests {
     const FILLER: &str = "core-005";
     const POOL: [&str; 5] = ["classic-004", "classicplus-051", "classicplus-052", "core-013", "core-014"];
 
-    /// TS `board({ radiant?, seed?, hand? })`'s options.
     #[derive(Default)]
     struct Board {
         radiant: bool,

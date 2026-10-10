@@ -1,17 +1,13 @@
 //! SPEC §8.1 #3 Right-house defender — 1/1 → 2/2 Unit, Human, cost 1.
-//! Base: "Divine Shield, Reborn" — both are printed on both faces in the catalog and the layer
-//! system applies them (§10.4), so the base script has nothing to do. Never re-grant a printed
-//! keyword from a script.
+//! Base: "Divine Shield, Reborn" — printed on both faces and applied by the layer system (§10.4),
+//! so the base script has nothing to do. Never re-grant a printed keyword from a script.
+//! Radiant: "Divine Shield, Reborn; Death: summon a base Right-house defender" (§8 Conventions).
 //!
-//! Radiant: "Divine Shield, Reborn; Death: summon a base Right-house defender". The radiant cell
-//! keeps the base keywords and adds the Death clause (§8 Conventions).
-//!
-//! Engine cell: Death fires on both deaths of a Reborn unit (§4.5's ruling, R8) — the Reborn death
-//! and the reborn body's death — and the reborn body keeps the radiant flag (R78), so the radiant
-//! form summons twice in total. What it summons is a NEW base Right-house defender rather than a
-//! copy: `summon` without `radiant: true` creates the base face, whose script is `base` above and
-//! has no Death hook, so the chain ends there. Placement is R64's leftmost free zone, and the dying
-//! unit's own zone is reserved for its Reborn return, so the summon lands beside it, not in it.
+//! Engine cell: Death fires on both deaths of a Reborn unit (§4.5's ruling, R8), and the reborn
+//! body keeps the radiant flag (R78), so the radiant form summons twice in total. It summons a NEW
+//! base face (no `radiant: true`), which has no Death hook, so the chain ends. Placement is R64's
+//! leftmost free zone; the dying unit's zone is reserved for its Reborn return, so the summon lands
+//! beside it.
 
 use jackioh_engine::effects::summon;
 use jackioh_engine::prelude::*;
@@ -28,19 +24,13 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// SPEC §8.1 #3 Right-house defender. BUILD M4-T4 row 3: "Shield eats first hit; dies → returns at
-// 1 without Reborn; radiant Death summons a base Right-house defender on both deaths while Reborn
-// keeps its zone (R8, R64)".
-//
-// Every death here is a combat death, so each one needs its own attacker: #8 Mr. Vanilla (3/3,
-// Immutable, no hooks, 3 attack) survives the 1- or 2-point retaliation, so four of them on p2's
-// board give four clean hits in one turn.
-//
-// Divine Shield absorbs a whole hit (§4.4 step 1), so each death costs two hits: one to burn the
-// shield, one to kill. The reborn body's shield is back — §4.5 step 4 returns it "as a reset
-// instance (R78)", and R78's reset is what clears `divineShieldSpent` — while Reborn itself does
-// not come back (the state check marks it used). See the report: R78's enumerated list does not
-// name Divine Shield, so this reading deserves its own ruling row.
+// BUILD M4-T4 row 3: "Shield eats first hit; dies → returns at 1 without Reborn; radiant Death
+// summons a base Right-house defender on both deaths while Reborn keeps its zone (R8, R64)".
+// Four #8 Mr. Vanilla (3/3, survives the retaliation) give four clean hits in one turn.
+// Divine Shield absorbs a whole hit (§4.4 step 1), so each death costs two hits. The reborn body's
+// shield is back (§4.5 step 4 returns it "as a reset instance (R78)", which clears
+// `divineShieldSpent`); Reborn itself does not come back. R78's list does not name Divine Shield,
+// so this reading deserves its own ruling row.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -58,9 +48,7 @@ mod tests {
     mod n3_right_house_defender {
         use super::*;
 
-        /// Taunt on BOTH faces, added by the Core Set balance pass (issue #1, "it just makes sense").
-        /// A 1-mana Divine Shield + Reborn body that could be walked past was a defender that did not
-        /// defend; with Taunt the enemy has to spend the shield before anything behind it is reachable.
+        /// Taunt on BOTH faces: the enemy has to spend the shield before anything behind it is reachable.
         #[test]
         fn s6_1_taunt_is_printed_on_both_faces_so_the_enemy_must_come_through_it() {
             crate::register_all();

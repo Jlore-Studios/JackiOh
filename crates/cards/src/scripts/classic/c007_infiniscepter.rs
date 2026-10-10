@@ -2,23 +2,14 @@
 //!   Both faces: "Cry: Exile a ({costLimit}) Cost or less Spell from your hand.
 //!                Activate: Cast a copy of that Spell." — costLimit 1 on the base face, 2 on the Radiant.
 //!
-//! The Cry (a Field Spell's Cry, as #73 Anti-oneshot Armor's) declares a hand pick (R81): a Spell — the
-//! Spell type — in your hand whose cost now (R65, a hand card at its hand cost; an X Spell 0) is
-//! ({costLimit}) or less, a number no declaration field can carry once Degrade or Upgrade moves it, so
-//! it is a `targetChecks` rule (§10.6). It exiles that card and remembers its definition and Radiant
-//! flag on the instance (`memory.scepter`). With no such Spell the play is still legal (R90) and the
-//! Cry does nothing, so nothing is remembered and the card can never activate. The exiled card stays
-//! in exile; the Radiant face keeps "from your hand", since the Cry has nowhere else to look.
-//!
-//! Activate (R384), once per turn: cast a fresh copy of the remembered Spell (§6.3 Cast, B5 E12,
-//! `castNew`): free, counted as a play (R70) — the activation itself is not one — with its radiant flag
-//! kept, its targets and modes chosen by you in prompts as the cast begins (R70, R81), the `activate`
-//! action carrying none; the copy goes to your graveyard after it resolves (R87). With nothing
-//! remembered the ability can't be activated (`canActivate`). Leaving the field clears the memory
-//! (R78), so a replayed InfiniScepter needs a new Cry.
-//!
-//! R520: a remembered X-cost Spell is cast with the X its caster chooses as the cast begins, from 1 to
-//! their current mana (R348); the cast pays nothing, so the X is not paid.
+//! The Cry (a Field Spell's Cry, as #73 Anti-oneshot Armor's) declares a hand pick (R81): a Spell in your
+//! hand whose cost now (R65; an X Spell 0) is ({costLimit}) or less. Degrade and Upgrade move that number,
+//! so it is a `targetChecks` rule (§10.6). It exiles the card and remembers its definition and Radiant
+//! flag (`memory.scepter`); with no such Spell the play is legal (R90) and the card can never activate.
+//! Activate (R384), once per turn: cast a fresh copy (§6.3 Cast, B5 E12, `castNew`), free and counted as a
+//! play (R70; the activation is not one), radiant flag kept, targets chosen in prompts as the cast begins
+//! (R81); the copy goes to your graveyard (R87). Leaving the field clears the memory (R78). R520: an
+//! X-cost copy is cast with the X its caster chooses, 1 to their mana (R348); the cast pays nothing.
 
 use jackioh_engine::effects::{cast_new, exile, instance_of, remember};
 use jackioh_engine::prelude::*;
@@ -30,21 +21,18 @@ const SCEPTER: &str = "scepter";
 /// The name of the Cry's hand-pick rule in `targetChecks`.
 const WITHIN_LIMIT: &str = "spellWithinLimit";
 
-/// TS `type Held = { defId: string; radiant: boolean }`.
 #[derive(Clone, Debug, PartialEq)]
 struct Held {
     def_id: String,
     radiant: bool,
 }
 
-/// TS `heldSpell(ctx: Pick<EffectContext, "self" | "data">)`: what the instance remembers under
-/// `scepter`, read as `query::recalled` reads it (`self.memory[partMemoryKey(data, key)]`, the running
+/// What the instance remembers under `scepter`, read as `query::recalled` reads it (the running
 /// ingredient's own key on a fused card, R102). The memory is JSON, so it is narrowed, never cast.
 fn held_spell(self_: Option<&CardInstance>, data: &IndexMap<String, Value>) -> Option<Held> {
     let held = self_?
         .memory
         .get(&jackioh_engine::work::part_memory_key(data, SCEPTER))?;
-    // TS `held === null || typeof held !== "object"`, then `typeof defId === "string"`.
     let held = held.as_object()?;
     let def_id = held.get("defId")?.as_str()?;
     Some(Held {
@@ -116,20 +104,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #7 InfiniScepter — SPEC §8.6 row 7, BUILD M9 Classic row C 7: "Cry: exile a (1) Cost or less Spell
-// (the Spell type) of your choice from your hand, a hand pick carried in the play action (R81),
-// remembering its definition and Radiant flag; no such Spell → the Cry does nothing and the card can
-// never activate; the exiled card stays in exile; Activate, once per turn (R384): cast a fresh copy
-// (free, counted as played, R70), its targets and modes chosen by you in prompts as the cast begins
-// (R70, R81), the `activate` action carrying none, the copy going to your graveyard afterwards (R87);
-// usable the turn it is played, only in your main phase with no prompt open; a second activation that
-// turn is refused and absent from `legalActions`, and it is back next turn; activating is not a play
-// (Combo, Quickstriker and Ceaseless Void don't count it) while the cast is one; leaving the field
-// clears the memory (R78), so a replayed one needs a new Cry; radiant: a (2) Cost or less Spell, still
-// from your hand; its tuned number (cost limit) reads through `param()` (R386)".
-//
-// R520 (this workstream's ruling on OPEN-QUESTIONS' InfiniScepter item): an X-cost Spell it holds is
-// cast with the X its caster picks as the cast begins, 1 to their current mana (R348), and not paid.
+// C #7 InfiniScepter — SPEC §8.6 row 7, BUILD M9 Classic row C 7: the Cry's hand pick (R81); Activate,
+// once per turn (R384), casts a free copy counted as played (R70) that lands in your graveyard (R87);
+// activating is not a play while the cast is one; leaving the field clears the memory (R78); radiant:
+// a (2) Cost or less Spell, still from your hand; the cost limit reads through `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -202,7 +180,6 @@ mod tests {
             crate::register_all();
             assert_eq!(ID, SCEPTER);
             let scripts = script();
-            // TS `expect(radiant).toBe(base)`: the radiant face is the very same script.
             let (Some(base_cry), Some(radiant_cry)) = (&scripts.base.cry, &scripts.radiant.cry) else {
                 panic!("both faces have a Cry");
             };

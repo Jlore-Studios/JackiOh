@@ -11,8 +11,6 @@
 //! before the hit goes to its controller's hero as a new instance (§4.4 step 9, R63). A Divine Shield
 //! (step 1) or an Indestructible target (step 4) stops the whole hit, and nothing tramples. The amount
 //! is the declared `damage` (R386), 10 or 20, read through `param`.
-//!
-//! Its proof: `test/classic/083-flame-lance.test.ts`.
 
 use jackioh_engine::effects::damage;
 use jackioh_engine::prelude::*;
@@ -69,7 +67,6 @@ mod tests {
         }
     }
 
-    /// TS `const SPARE: SideSetup = { hand: [STOCKPILE], library: [VANILLA, VANILLA] }`.
     fn spare() -> Value {
         json!({ "hand": [STOCKPILE], "library": spare_library() })
     }
@@ -78,7 +75,6 @@ mod tests {
         json!([VANILLA, VANILLA])
     }
 
-    /// TS `{ ...side, ...SPARE }`: the side's keys, then SPARE's over them.
     fn with_spare(side: Value) -> Value {
         let mut merged = side;
         if let (Some(into), Value::Object(extra)) = (merged.as_object_mut(), spare()) {
@@ -107,7 +103,6 @@ mod tests {
         hits_of(s).into_iter().map(|(_, amount)| amount).collect()
     }
 
-    /// base
     mod base {
         use super::*;
 
@@ -237,7 +232,6 @@ mod tests {
         }
     }
 
-    /// radiant
     mod radiant {
         use super::*;
 

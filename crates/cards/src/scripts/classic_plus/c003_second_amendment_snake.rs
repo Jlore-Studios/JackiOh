@@ -36,16 +36,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #3 Second Amendment Snake — SPEC §8.7 row 3, BUILD M9 Classic+ row C+ 3: "At its controller's end
-// of turn places 2 Plague Counters on itself as one placement (`counterChanged` with `plague`), not at the
-// opponent's end; Death reads its last-known tokens (R78) and deals that many hits of 1, each to a
-// random enemy (hero or Unit) still standing, so a unit an earlier hit brought to 0 is not picked again,
-// all before the state check (R59); 0 tokens deals nothing and draws nothing (R129); its hits are no
-// Spell's, so Spell Damage never raises them; its preview is the hits its Death would deal now (R280);
-// tokens per turn and damage per token read through `param()`; radiant 3 tokens a turn".
-//
-// The R280 proofs are in this file's "R280 preview" block (the pinned list in `../preview.test.ts` is
-// the lead's to update). The Death is set off by p1's own Hit Job (Core #16, "Destroy target Unit").
+// SPEC §8.7 row 3: Death reads last-known tokens (R78) and deals that many hits of 1,
+// each to a random enemy still standing, all before the state check (R59); 0 tokens deals
+// nothing and draws nothing (R129); preview is the hits its Death would deal now (R280).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -84,7 +77,6 @@ mod tests {
 
     use crate::merged;
 
-    /// TS `extra: { radiant?; p1?; seed? }`.
     #[derive(Default)]
     struct Extra {
         radiant: bool,
@@ -143,7 +135,7 @@ mod tests {
             def.params.unwrap_or_default().iter().map(|p| (p.key.clone(), p.base, p.radiant)).collect::<Vec<_>>(),
             vec![("tokens".to_string(), 2, 3), ("damage".to_string(), 1, 1)]
         );
-        // TS `expect(radiant).toBe(base)`: the Radiant face is the base face's very script.
+        // The Radiant face is the base face's very script.
         let scripts = script();
         let same = |a: &Option<Hook>, b: &Option<Hook>| match (a, b) {
             (Some(a), Some(b)) => Arc::ptr_eq(a, b),

@@ -13,23 +13,20 @@
 //!            redirects the first. Joro answers from the hand only, a Yu-Gi-Oh hand trap (R394). Its
 //!            Radiant face doubles to 2/2 and adds Indestructible, an endless decoy. Tunes: none."
 //!
-//! THE WHOLE CARD IS ONE REPLACEMENT, declared as data (B5 E5, `Script.replacements`): at "targeted",
-//! standing in its controller's hand (`where: "hand"`), answering only a Spell's targeting
-//! (`by: "spell"`, R651), it interposes — the engine summons it into its controller's leftmost empty,
-//! unlocked, unreserved unit zone (R64), with no Cry and summoning sick, and moves the pick to it
-//! (`redirected`). The engine asks only for the opponent's Spell choices of one of its controller's
-//! units on the field: a Spell's declared target (§10.5 step 1) or a Spell's prompt answer; never an
-//! attack, a Unit's Cry pick, an activation, a Trap's pick, a random pick, an "all" effect, a forced
-//! attack (R121) or its own controller's pick. With no open zone it does nothing and stays in hand.
-//! A Joro in a deck, a graveyard or on the field is not in the hand and answers nothing.
-//! The first Joro in the hand answers; one answers one targeting.
+//! The whole card is one replacement, declared as data (B5 E5, `Script.replacements`): at "targeted",
+//! from its controller's hand (`where: "hand"`), answering only a Spell's targeting (`by: "spell"`,
+//! R651), the engine summons it into the leftmost empty, unlocked, unreserved unit zone (R64), with
+//! no Cry and summoning sick, and moves the pick to it (`redirected`). It is asked only for the
+//! opponent's Spell picks (declared target, §10.5 step 1, or prompt answer) of a unit of its
+//! controller's on the field: never an attack, Cry pick, activation, Trap pick, random pick, "all"
+//! effect, forced attack (R121) or its controller's own pick. With no open zone it stays in hand.
+//! In a deck, graveyard or on the field it answers nothing; one Joro answers one targeting.
 //!
-//! Nothing about it shows while it waits (R97, R177): a hand card is its owner's to read, and a
-//! replacement is decided in the engine, not offered as a choice, so neither the opponent's view nor
-//! their `legalActions` changes with a Joro in the hand.
+//! Nothing shows while it waits (R97, R177): a hand card is its owner's to read, and a replacement
+//! is decided in the engine, not offered, so the opponent's view and `legalActions` don't change.
 //!
-//! The Radiant face's Indestructible is the catalog's (2/2, holding R275's doubling), so the
-//! script is the same; it survives the hit it draws, and R347 keeps Taunt off it.
+//! The Radiant face's Indestructible is the catalog's (2/2, holding R275's doubling), so the script
+//! is the same; it survives the hit it draws, and R347 keeps Taunt off it.
 
 use jackioh_engine::prelude::*;
 
@@ -50,8 +47,7 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face differs only in what the engine reads off the catalog (its
-    // Indestructible).
+    // Same script: the Radiant face differs only in the catalog's Indestructible.
     CardScripts { radiant: base.clone(), base }
 }
 
@@ -66,11 +62,10 @@ pub fn script() -> CardScripts {
 // sign of Joro in your hand until it is summoned (R97); radiant 2/2: Indestructible, so it survives
 // the redirected hit, with no Taunt (R347); no tuned numbers".
 //
-// "A friendly unit is targeted" is one replacement point the engine runs for an attack (§4.2 step 2,
-// `combat.ts`), for a play's declared targets (§10.5 step 1, `playSteps.ts`) and for every target
-// prompt (`targetingPoint.ts`); each carries the targeting card's type, and a `by: "spell"`
-// replacement answers only a Spell's. The Unit-Cry prompt case uses C #76 Plague Bringer, the
-// activation case C #20 The Power to Punish, the Trap case C #5 Tesla.
+// "A friendly unit is targeted" is one replacement point, run for an attack (§4.2 step 2), a play's
+// declared targets (§10.5 step 1) and every target prompt; each carries the targeting card's type,
+// and `by: "spell"` answers only a Spell's. The Cry case uses C #76 Plague Bringer, the activation
+// case C #20 The Power to Punish, the Trap case C #5 Tesla.
 #[cfg(test)]
 mod tests {
     use super::{script, ID};
@@ -100,13 +95,13 @@ mod tests {
         s.events().iter().map(js).filter(|event| event["type"] == "redirected").collect()
     }
 
-    /// `opts[key]`, or `fallback` where the TS default (`??`) applies.
+    /// `opts[key]`, or `fallback` when it is null.
     fn or(opts: &Value, key: &str, fallback: Value) -> Value {
         if opts[key].is_null() { fallback } else { opts[key].clone() }
     }
 
     /// p2 (active) holds removal; p1 has a Vanilla in lane 1 and Joro in hand.
-    /// `opts`: `radiantFace`, `myField`, `myHand`, `myLibrary`, as the TS helper's.
+    /// `opts`: `radiantFace`, `myField`, `myHand`, `myLibrary`.
     fn under_attack(opts: Value) -> Scenario {
         let radiant_face = opts["radiantFace"] == true;
         scenario(json!({
@@ -128,10 +123,9 @@ mod tests {
             crate::register_all();
             assert!(crate::card_def(ID).params.is_none());
             let scripts = script();
-            // TS `toEqual([{ id: "joro", on: "targeted", where: "hand", by: "spell", instead: { interpose: true } }])`:
             // `ReplacementDef` is not serialisable (its `when` is a closure), so field by field.
             for face in [&scripts.base, &scripts.radiant] {
-                // TS `expect(radiant).toBe(base)`: the Radiant face is the same declaration.
+                // The Radiant face is the same declaration.
                 assert_eq!(face.replacements.len(), 1);
                 let joro = &face.replacements[0];
                 assert_eq!(joro.id, "joro");

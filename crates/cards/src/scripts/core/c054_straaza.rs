@@ -6,33 +6,18 @@
 //!            The cell restates only what the cards are and cost, so the count and the pool are
 //!            the base clause's, unchanged (§8 Conventions).
 //!
-//! The Engine cell is "Non-token pool excluding #54; `costOverride`", which is §5.1's one query and
-//! nothing else:
-//!   * no tokens — automatic: "Random pools never include Token-tagged cards", so `{ type: "Unit" }`
-//!     already leaves out the Sheep, Rush, Felinor and Spikey Pillow token units;
-//!   * not #54 — `excludeDefId: ID`, §5.1's "never include the generating card's own
-//!     definition", passed explicitly rather than trusted to the verb;
-//!   * costing 3 or 4 — `costRange: { min: 3, max: 4 }`, read out of play per R65, so an X-cost card
-//!     counts as 0 (never in this bracket) and an embiggen card at its base price (#59, base 2, also
-//!     out). `query_cost` in engine/src/catalog.rs is the one number every bracket in the game reads.
-//!
-//! R60: "Cards generated from the catalog may repeat unless the card says 'different'". This row
-//! does not say different, so both picks may land on the same def — two draws with replacement, not
-//! a shuffle of the pool.
-//! R65/R78: "they cost 1" (radiant: 0) is `cost_override` on each created instance, which is the first
-//! term of the cost calculation and survives in every zone, so the discount is still there next turn.
-//! §5.2: "Radiant" on the radiant face is the created instance's flag, set as it is made, so each
-//! card arrives showing its Radiant face.
-//! R4: the hand caps at 10 and an extra add is burned to the graveyard; the add-to-hand pipeline
-//! owns that (engine/src/draw.rs), so this file never counts hand space. R215: the price is the
-//! card's price in the hand, so the verb sets it only on a card that reaches one, and a card the
-//! full hand burns reaches the graveyard at its printed price — Radiant still on the radiant face,
-//! since that flag is set as the card is made (engine/src/effects/add_to_hand.rs).
-//!
-//! The verb is `add_random_from_catalog` (engine/src/effects/add_to_hand.rs): a hook may not roll the
-//! dice itself — `ctx.rng.*` advances `rng_cursor`, which is state — so it picks `count` definitions
-//! from `query(...)` with `ctx.rng` (repeats allowed, R60) and creates each one in the hand through the
-//! same pipeline `add_to_hand` uses (§2.4, R4), with `cost_override` and `radiant` set on every card.
+//! The Engine cell, "Non-token pool excluding #54; `costOverride`", is §5.1's one query: tokens are
+//! left out automatically, `excludeDefId: ID` is passed explicitly, and `costRange: { min: 3, max: 4 }`
+//! is read out of play per R65 (X-cost reads 0, embiggen its base; `query_cost` is the one number
+//! every bracket reads).
+//! R60: both picks may repeat, since the row does not say "different": two draws with replacement.
+//! R65/R78: "they cost 1" (radiant: 0) is `cost_override` on each created instance, which survives in
+//! every zone. §5.2: on the radiant face the instance's Radiant flag is set as it is made.
+//! R4: the add-to-hand pipeline owns the hand cap, so this file never counts space. R215: the price is
+//! the card's price in the hand, so a card the full hand burns reaches the graveyard at its printed
+//! price, Radiant still on the radiant face.
+//! `add_random_from_catalog` picks with `ctx.rng` (a hook may not roll dice itself: that advances
+//! `rng_cursor`, which is state) and creates each card through the `add_to_hand` pipeline (§2.4, R4).
 
 use jackioh_engine::prelude::*;
 
@@ -41,8 +26,8 @@ pub const ID: &str = "core-054";
 /// §8: two cards, both Units in the 3-4 bracket.
 const COUNT: i32 = 2;
 
-/// §5.1's pool: Units costing 3 or 4, no tokens (automatic), never Straaza herself. `ID` is
-/// "core-054", the card's own catalog id, so the exclusion cannot drift from the card's own id (R387).
+/// §5.1's pool: Units costing 3 or 4, no tokens (automatic), never Straaza herself. `ID` is the
+/// card's own catalog id, so the exclusion cannot drift (R387).
 fn unit_pool() -> Value {
     json!({
         "type": "Unit",
@@ -76,12 +61,8 @@ pub fn script() -> CardScripts {
 
 // #54 Straaza (SPEC §8.3, §5.1, §6.3 Add to hand; R4, R60, R65, R78, R215, R275).
 // BUILD M4-T4 row 54: "2 random units of cost 3 or 4, no tokens, not #54, cost override 1; radiant
-// Radiant units at 0".
-//   Base:    "Cry: add 2 random Units costing 3 or 4 to your hand; they cost 1"
-//   Radiant: "Cry: add 2 random Radiant Units costing 3 or 4 to your hand; they cost 0" — the same
-//            pool, the cards Radiant as they are made (R275).
-// R215: the price is the card's price in the hand, so a card the full hand burns reaches the
-// graveyard without it — Radiant still, on the radiant face, since that flag is set as it is made.
+// Radiant units at 0". R215: a card the full hand burns reaches the graveyard without the price —
+// Radiant still on the radiant face, since that flag is set as it is made.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

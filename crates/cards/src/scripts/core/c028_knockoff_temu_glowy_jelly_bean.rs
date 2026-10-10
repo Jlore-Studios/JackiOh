@@ -2,30 +2,22 @@
 //! field become Radiant", radiant "5" — a Radiant cell that changes only a number changes only that
 //! number (§8 Conventions).
 //!
-//! ONE `setRadiantRandom` call, not N calls and not one call per zone. The pick has to be uniform
-//! over the union of the three zones and has to produce `count` DIFFERENT cards (R60), and both only
-//! hold if the union is pooled once and drawn from once: three calls of one card each would weight
-//! small zones and could repeat, and N calls of one card each would re-pool between picks.
-//! `effects/radiant.ts` pools the non-Radiant cards of the named zones in a fixed order (hand order,
-//! library top down, then lane order), shuffles that pool with the match rng and takes the first
-//! `count` — so it is uniform, the cards are all different, it takes all of them when fewer exist,
-//! and it does nothing at all when every card is already Radiant (R60).
+//! ONE `setRadiantRandom` call, not N calls and not one call per zone: the pick has to be uniform
+//! over the union of the three zones and give `count` DIFFERENT cards (R60), which only holds if the
+//! union is pooled once and drawn from once. The pool is the non-Radiant cards in a fixed order, shuffled
+//! with the match rng: it takes all of them when fewer exist and nothing when all are Radiant (R60).
 //!
-//! "Field" is the field as §3.2 and R13 define it, which `setRadiantRandom` already honours: both
-//! rows, and only the top of a Stack pile, since cards under a Stack are not on the field.
+//! "Field" is §3.2 and R13's: both rows, only the top of a Stack pile.
 //!
-//! A field card converts in place (§5.2, R22): setting the flag is not an entry to the field, so the
-//! base-stat layer swaps at once through `faceOf`/`unitView` while damage taken, buffs and granted
-//! keywords stay and the Cry does not re-fire. A 4/5 that has taken 2 becomes an 8/10 that has taken
-//! 2, i.e. 8 health. None of that is this card's code — it is what "set a flag" buys.
+//! A field card converts in place (§5.2, R22): setting the flag is not an entry to the field, so
+//! damage, buffs and granted keywords stay and the Cry does not re-fire.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-028";
 
-/// The union the pick is uniform over. Listed in `effects/radiant.ts`'s canonical pool order (hand,
-/// then library top down, then lane order) so the draw depends only on (seed, cursor) and replays
-/// exactly (§9.3); §8.2 writes the same three zones as "your library, hand and field".
+/// The union the pick is uniform over, in the pool's canonical order (hand, then library top down,
+/// then lane order) so the draw depends only on (seed, cursor) and replays exactly (§9.3).
 const ZONES: [&str; 3] = ["hand", "library", "field"];
 
 /// The count is the declared number `cards` (R386): 2, 5 on the Radiant face.
@@ -74,14 +66,14 @@ mod tests {
             .collect()
     }
 
-    /// `side` is the TS `{ hand, library?, field? }`, given as the JSON it would be; p1 gets 2 mana.
+    /// `side` is `{ hand, library?, field? }` as JSON; p1 gets 2 mana.
     fn knockoff(mut side: Value) -> Scenario {
         side["mana"] = json!(2);
         scenario(json!({ "seed": SEED, "p1": side }))
     }
 
     /// §3.2: put a fresh `core-025` on top of p1's unit pile in lane 1, burying what stood there, and
-    /// hand back the buried card's id and the new top's (`newInstance` + `pile.unshift`).
+    /// hand back the buried card's id and the new top's.
     fn stack_on_lane_1(s: &mut Scenario) -> Option<(String, CardInstance)> {
         let dormant_id = s.state().players.p1.units[0].as_ref()?.first().map(|card| card.id.clone()).unwrap_or_default();
         let top = new_instance(

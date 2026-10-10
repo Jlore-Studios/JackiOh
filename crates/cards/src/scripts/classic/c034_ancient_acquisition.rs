@@ -6,7 +6,7 @@
 //!            (balance patch 1: no pick prompt; R684); fewer cards than asked ends it; the hand cap
 //!            applies (R4). C #47 Recurring Felinor casts it. Tunes: cards 2 ↑."
 //!
-//! Each return moves through §2.4's pipeline (`addRandomFromGraveyard`): a full hand burns it into
+//! Each return moves through §2.4's pipeline: a full hand burns it into
 //! your graveyard (R4, R317). A card in your hand is yours to read alone again (R97). The Spell
 //! itself is resolving (§10.5), in no pile, so it is never one of its own returns.
 //!
@@ -65,12 +65,12 @@ mod tests {
 
     use crate::js;
 
-    /// `opts[key]`, or `fallback` where the TS default (`??`) applies.
+    /// `opts[key]`, or `fallback` when it is null.
     fn or(opts: &Value, key: &str, fallback: Value) -> Value {
         if opts[key].is_null() { fallback } else { opts[key].clone() }
     }
 
-    /// `piles`: `graveyard`, `exile`, `hand`, as the TS helper's (`{}` for none).
+    /// `piles`: `graveyard`, `exile`, `hand` (`{}` for none).
     fn acquire(radiant_face: bool, piles: Value) -> Scenario {
         let mut hand = vec![json!({ "def": ACQUIRE, "radiant": radiant_face })];
         hand.extend(or(&piles, "hand", json!([FILLER])).as_array().cloned().unwrap_or_default());

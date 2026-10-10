@@ -2,23 +2,16 @@
 //! Common.
 //!   Base:    "Look at your opponent's hand. Exile {cards|card|cards} from it."
 //!   Radiant: "Look at your opponent's hand. Choose a cost. Exile every card of that cost from it."
-//!   Engine:  "Look at a hand (§6.3, §10.8): their hand cards are the options of a `pick` prompt of one
-//!            card (§10.6), seen by you alone. Radiant: a `mode` prompt whose options are their hand
-//!            grouped by cost (the cost each would be played for now, R65); every card of the chosen
-//!            cost is exiled. The opponent sees that a prompt is open, then which cards left their
-//!            hand (exile is public). An empty hand opens no prompt. Tunes: cards exiled 1 ↑."
 //!
 //! LOOKING AT THE HAND is the prompt itself (B5 E17): `chooseFromHand({ of: "enemy" })` offers the
 //! opponent's hand cards to you, and `viewFor` shows an open prompt's options to the player it is for
-//! alone — the hand's owner reads only that a prompt is open for you (R177). The answer exiles what it
-//! picked; exile is public, so from then on both players read those cards. The count is the card's
-//! declared number (`param(ctx, "cards")`), so an Upgrade makes it two; a hand shorter than that
-//! offers what it holds, and an empty hand asks nothing (`openPrompt` opens no prompt without options).
+//! alone — the hand's owner reads only that a prompt is open for you (R177). Exile is public, so from
+//! then on both players read the exiled cards. The count is `param(ctx, "cards")`, so an Upgrade makes
+//! it two; a shorter hand offers what it holds, and an empty hand asks nothing (`openPrompt`).
 //!
 //! THE RADIANT COST is the one each card would be played for now (R65, `effectiveCost`): the engine's
 //! `chooseCostInHand` groups the hand by it into the options of a `number` prompt, and `exileMatching`
-//! reads the same cost when it sweeps the hand, so the group chosen is the group exiled. The option
-//! captions name the cards of each cost, which only you are shown.
+//! reads the same cost when it sweeps the hand, so the group chosen is the group exiled.
 
 use jackioh_engine::prelude::*;
 
@@ -67,13 +60,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #11 Mind Melt — SPEC §8.6 row 11, BUILD M9 Classic row C 11: "Opens a prompt whose options are
-// the opponent's hand cards, readable by you alone (§10.8), and exiles the one chosen; an empty hand
-// opens no prompt; the opponent's view shows a prompt open for you and names none of its options
-// (R177), then the exiled card (exile is public); once it closes your view names none of their
-// remaining hand; the open prompt survives a JSON round trip; radiant: the options are their hand
-// grouped by cost (each card's cost to play now, R65) and every card of the chosen cost is exiled;
-// its tuned number (cards exiled) reads through `param()` (R386)".
+// C #11 Mind Melt — SPEC §8.6 row 11, BUILD M9 Classic row C 11: the prompt's options are the
+// opponent's hand cards, readable by you alone (§10.8); their view shows a prompt open and names none
+// of its options (R177); radiant: the options are their hand grouped by cost (R65); its tuned number
+// (cards exiled) reads through `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -108,7 +98,7 @@ mod tests {
 
     use crate::js;
 
-    /// TS `melt(radiantFace, theirHand = THEIR_HAND)`: each hand entry a def id or `{ def, costMod }`.
+    /// Each hand entry is a def id or `{ def, costMod }`.
     fn melt(radiant_face: bool, their_hand: Value) -> Scenario {
         scenario(json!({
             "p1": { "hand": [{ "def": MELT, "radiant": radiant_face }, FILLER] },

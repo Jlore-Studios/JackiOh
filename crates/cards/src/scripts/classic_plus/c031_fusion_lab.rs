@@ -1,20 +1,15 @@
 //! C+ #31 Fusion Lab (SPEC §8.7 row 31; §6.3 Fuse, R23, R65, R77, R81, R102, R380, R387, R561).
 //! (2) Field Spell, Epic.
-//!   Base:    "Activate: Choose a card in your hand. Fuse a random card into it. Its cost doesn't
-//!            change." (balance patch 1: the Cry and the end-of-turn trigger became one Activate)
+//!   Base:    "Activate: Choose a card in your hand. Fuse a random card into it. Its cost doesn't change."
 //!   Radiant: "… Fuse a random Radiant card into it …"
 //!
-//! "A card in your hand" has no "random", so its controller chooses: the pick is declared with the
-//! activation and travels in the `activate` action (R81). An Immutable card can't be chosen, since no
-//! Fuse keeps one (R23), and an empty hand offers no activation.
+//! Controller chooses hand card: declared with activation in `activate` action (R81). Immutable
+//! cards can't be chosen (R23); empty hand offers no activation.
 //!
-//! The Fuse is B5 E23's "fuse a random card into a card in your hand" (`fuseRandomInto`): one random
-//! non-token card of every set (R380) but Fusion Lab — every ingredient's id, on a fused Lab (R387) — is
-//! fused per R77 and R102 into the chosen card, which is the kept instance and stays in the hand, its
-//! type the result's, with a `costOverride` of the cost it had (R65), so its cost doesn't change. On
-//! the Radiant face the random card goes in on its Radiant face and lends it to both of the fusion's
-//! forms, so its text and stats show whether or not the hand card is Radiant (R561). The opponent's
-//! view names neither the hand card, the ingredient nor the fused id (R97, R179).
+//! B5 E23's `fuseRandomInto`: one random non-token card of every set (R380) but Fusion Lab (R387)
+//! is fused per R77 and R102 into the chosen hand card, keeping instance, type and cost (R65).
+//! On Radiant, the ingredient lends its Radiant face to both forms (R561). Opponent's view hides
+//! hand card, ingredient and fused id (R97, R179).
 
 use jackioh_engine::effects::fuse_random_into;
 use jackioh_engine::prelude::*;
@@ -70,14 +65,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #31 Fusion Lab — SPEC §8.7 row 31, BUILD M9 Classic+ row C+ 31: "Field Spell (balance patch 1: the
-// Cry and the end-of-turn trigger became one Activate, once): Activate fuses a random non-token card of
-// any set but Fusion Lab (R387) into a hand card chosen with the activation (R81); the hand card is the
-// kept instance, its type wins (R77) and it costs what it cost before (`costOverride`); an Immutable
-// hand card is never offered (R23); an empty hand offers no activation; the opponent's view names
-// neither the hand card, the ingredient nor the fused id (R97, R179); radiant the random card is fused
-// in on its Radiant face and lends it to both of the fusion's forms, so its rider shows whether or not
-// the hand card is Radiant" (R561).
+// C+ #31 Fusion Lab — SPEC §8.7 row 31: Activate fuses a random non-token card of any set but
+// Fusion Lab (R387) into a hand card chosen with activation (R81); hand card is kept instance,
+// keeping type (R77) and cost; Immutable is never offered (R23); opponent's view hides all ids
+// (R97, R179); radiant ingredient lends its Radiant face to both forms (R561).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -143,7 +134,7 @@ mod tests {
                 json!([{ "kind": "hand", "min": 1, "max": 1, "filter": { "check": "fusable" } }])
             );
             assert!(matches!(scripts.base.activations[0].uses, ActivationUses::Count(1)));
-            // TS `expect(base).not.toBe(radiant)`: each face is its own script, built by its own call.
+            // Each face is its own script, built by its own call.
             assert!(!std::sync::Arc::ptr_eq(
                 &scripts.base.activations[0].run,
                 &scripts.radiant.activations[0].run

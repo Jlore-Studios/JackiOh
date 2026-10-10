@@ -1,43 +1,22 @@
 //! #74 Adaptive UI (SPEC §8.3): cost X, "Deal X damage to a target, heal your hero X, draw X, summon
 //! an X/X Ghoul Token"; radiant "2X damage, heal 3X, draw 2X, a 3X/3X token" — the radiant cell
-//! changes only the four multipliers, so the clauses, their order and the target are all kept
-//! (§8 Conventions). Patch v0.1.1 (issue #27) made the token a Ghoul Token (§7, R353: X/X with
-//! Pierce) where it was a Rush Token, and made X at least 1 (R348).
+//! changes only the four multipliers (§8 Conventions). The token is a Ghoul Token (§7, R353: X/X with
+//! Pierce); X is at least 1 (R348).
 //!
-//! X is a PLAY choice, not a prompt (R81, and §10.6: no Core card opens an `x` prompt). The play
-//! action carries it, `play_card` bounds it by the player's current mana and stores it on the
-//! instance, and `make_context` hands it to the hook as `ctx.x`. R65: an X-cost card being played
-//! costs exactly X — `costMod` and player discounts do not change it — so nothing here reads a price.
-//!
-//! R348: X is at least 1 (`MIN_CHOSEN_X`), which `legal_actions` and the play refusal hold to through
-//! one check (`play_choices::why_x_refused`), so a play never reaches this hook with X = 0. The guard
-//! below stays for a run that carries no X at all, so that nothing — above all no 0/0 Ghoul Token —
-//! comes of it.
-//!
-//! The four clauses resolve in the order §8 writes them, which `apply_effects` guarantees (it applies
-//! the array in order) and which matters: the damage lands before the heal, so a Lifesteal-less
-//! exchange on your own hero nets correctly, and the draw happens before the summon, so a unit-token card
-//! drawn into a full hand (R4) is burned before the board grows.
-//!
-//! "Heal your hero X" is `{ of: "selfHero" }` — the controller's own hero, never a chosen target
-//! (R19's "any unit or hero" is #47 Fig of Life's licence, not this card's). §3 gives a hero no
-//! maximum health, so `heal_hero` simply adds.
-//!
-//! The token is the shipped Ghoul Token definition plus a §7 `statsOverride` (its printed 0/0 is the
-//! X/X's placeholder, as the Bread Token's is), so it keeps Pierce and its printed 0 cost and only
-//! its stats are the X. The token is summoned on its base face on both faces of this card: the
-//! radiant card's 3X/3X is the card's own multiplier, not the token's Radiant face (R349 would double
-//! it again). R64 places it in the leftmost empty, unlocked unit zone; a full board fizzles the
-//! summon and the other three clauses still happen.
+//! X is a PLAY choice, not a prompt (R81, §10.6): the play action carries it, `make_context` hands it
+//! to the hook as `ctx.x`, and R65 makes an X-cost card cost exactly X. R348 (`MIN_CHOSEN_X`) keeps
+//! X = 0 out of the hook; the guard below covers a run with no X. Clauses resolve in §8's order:
+//! damage before heal, draw before summon (a draw into a full hand burns, R4, before the board grows).
+//! "Heal your hero X" is `{ of: "selfHero" }`, not the target (R19's licence is #47 Fig of Life's);
+//! §3 gives a hero no maximum. The token is the Ghoul Token plus a §7 `statsOverride`, summoned on its
+//! base face on both faces (R349 would double the 3X); R64 places it in the leftmost empty unit zone.
 
 use jackioh_engine::effects::{damage, draw, heal, summon};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-074";
 
-/// §7, R353: the token is the catalog's Ghoul Token, named by id. TS read it through `cardDef(...)` so a
-/// missing entry failed at load; here `build.rs` and `catalog check` hold the catalog to its ids, and
-/// the tests below summon it.
+/// §7, R353: the token is the catalog's Ghoul Token, named by id.
 const GHOUL_TOKEN: &str = "core-t-ghoul";
 
 /// R81: "a target" travels in the play action and never pauses resolution. §8's Conventions make it
@@ -52,7 +31,6 @@ fn targets() -> Vec<TargetDecl> {
 /// read is the declared X off the context — negative and fractional values are impossible (the play
 /// validator refuses X < 0), and the clamp is belt and braces so no clause can go backwards.
 fn chosen_x(ctx: &EffectContext<'_>) -> i32 {
-    // TS `Math.max(0, Math.trunc(ctx.x))`: `x` is already whole here.
     ctx.x.max(0)
 }
 
@@ -90,15 +68,10 @@ pub fn script() -> CardScripts {
 }
 
 // #74 Adaptive UI — SPEC §8.3, BUILD M4-T4: "X=2: 2 damage, heal 2, draw 2, a 2/2 Ghoul Token;
-// radiant 4 / 6 / 4 / 6-6; X=0 refused (R348)". Patch v0.1.1 (issue #27) put a Ghoul Token (§7,
-// R353: X/X with Pierce) where a Rush Token was, and made X at least 1.
-//
-// X is a play choice (R81), so every test passes it as `play(..., { x })` alongside the declared
-// target — never as an answered prompt. §10.6 says no Core card opens an `x` prompt, and these
-// tests assert that by never having a prompt to answer.
-//
-// Each hero starts below HERO_HEALTH (`health: 20`) so the heal is visible as a number rather than
-// as 30-plus-something; §3 gives a hero no maximum, so the direction is all that matters.
+// radiant 4 / 6 / 4 / 6-6; X=0 refused (R348)".
+// X is a play choice (R81): every test passes it as `play(..., { x })` with the declared target,
+// never as an answered prompt (§10.6: no Core card opens an `x` prompt).
+// Each hero starts below HERO_HEALTH (`health: 20`) so the heal shows as a number.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -106,10 +79,9 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// TS `toThrow(/X must be at least 1/)`: a literal pattern.
     const X_REFUSAL: &str = "X must be at least 1";
 
-    /// `scenario(opts)` with the shipped cards registered first (the TS globalSetup's `registerAll()`).
+    /// `scenario(opts)` with the shipped cards registered first.
     fn setup(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)

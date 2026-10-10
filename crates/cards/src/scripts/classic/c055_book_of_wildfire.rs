@@ -1,25 +1,15 @@
 //! C #55 Book of Wildfire (SPEC §8.6 row 55, BUILD M9 Classic row C 55). (1) Spell, Book, Epic.
 //!   Base:    "Deal {damage} damage. / End of turn: Become a random other Book." (4)
 //!   Radiant: "Deal {damage} damage. / End of turn: Become a random other Radiant Book." (8)
-//!   Engine:  "One targeted hit, as C #16 Book of Flame. The designer's second 'Book of Flame' is
-//!            renamed so that the two names never collide and no text that names Book of Flame (C #23
-//!            Devil's Pact, C #29 Book of Vital Kill) finds it (R381). At the end of its owner's turn,
-//!            while in their hand, it is Replaced by a random other non-token Book of any set (not
-//!            Wildfire), on the same face, which keeps swapping each turn (R671). Tunes: damage 4 ↑."
 //!
-//! "Deal N damage" with no target named is targeted (§8 Conventions, as #68 Twisted Sorcerer's is): one
-//! declared pick (R81) of any Unit on top of its pile or either hero, either side, and one §4.4 damage
-//! instance from this Spell, so Spell Damage raises it (§4.4 step 0) and Armor and Divine Shield meet
-//! it. A Unit Immune to Spells is never offered (R81, E35). With no Unit, the heroes remain, so the
-//! Spell always has a target. The number is the declared one, `param(ctx, "damage")` (R386). It is a
-//! Book (its tag), which C #4 Palantir's base face answers; it names no card and no card names it.
+//! "Deal N damage" with no target named is targeted (§8 Conventions): one declared pick (R81) of
+//! any unit or hero, either side, and one §4.4 damage instance (`param`, R386). Nothing names it,
+//! so C #23 and C #29 never make it (R381).
 //!
-//! The swap (Patch v0.2.X, #271, R671) is the engine's one Book-swap hand trigger (`BOOK_SWAP_TRIGGER`):
-//! on its owner's `turnEnded`, while this is in their hand, it becomes a Book drawn with the match rng
-//! from §5.1's pool — every non-token Book (R380), Book of Flame included, but neither this card nor
-//! Wildfire — in the same place in the hand and on the same face, so a Radiant Wildfire becomes the
-//! Radiant face of that Book. The Book it becomes has that Book's own text and carries the swap as the
-//! `swapsBook` enchantment, so it keeps changing every end of its owner's turn while it stays in hand.
+//! The swap (R671) is the engine's Book-swap hand trigger (`BOOK_SWAP_TRIGGER`): on its owner's
+//! `turnEnded` in hand, it becomes a random non-token Book from §5.1's pool (R380, Book of Flame
+//! included, except Wildfire) in its place in the hand on the same face, carrying the swap (`swapsBook`)
+//! so it keeps changing each turn.
 
 use jackioh_engine::effects::damage;
 use jackioh_engine::prelude::*;
@@ -47,19 +37,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #55 Book of Wildfire — SPEC §8.6 row 55, BUILD M9 Classic row C 55: "`classic-055`, a Book: one
-// targeted hit of 4 on any Unit or hero, either side; nothing names it, so C #23 and C #29 never make
-// it (R381); C #4's base face answers it as a Book; radiant 8; its tuned number (damage) reads through
-// `param()` (R386)".
-//
-// The hit is one §4.4 damage instance from the Spell, so Divine Shield, Armor and Spell Damage meet it
-// as they meet any Spell's. C #4 Palantir's base face answers it as a Book (its steal prompt), and
-// C #29's Radiant face makes a Book of Flame, never this card (R381).
-//
-// Patch v0.2.X (#271, R671): at the end of its owner's turn, while it is in their hand, it becomes a
-// different Book — every non-token Book but Wildfire, Book of Flame included, drawn with the match rng
-// — on its own face, in its place in the hand; the Book it becomes has that Book's own text and keeps
-// the swap (the `swapsBook` enchantment), so it changes again at each end of its owner's turn.
+// C #55 Book of Wildfire — SPEC §8.6 row 55, BUILD M9 Classic row C 55: targeted hit on any unit or hero
+// (§4.4); nothing names it, so C #23 and C #29 never make it (R381); C #4 Palantir answers it as a Book;
+// tuned damage reads through `param()` (R386). At the end of its owner's turn in hand, it swaps to a
+// random other non-token Book on the same face, keeping the swap (R671).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -82,7 +63,7 @@ mod tests {
 
     use crate::js;
 
-    /// TS `JSON.parse(JSON.stringify(state))`: written and read back field by field, in field order.
+    /// Written and read back field by field, in field order.
     fn round_trip(state: &GameState) -> GameState {
         let text = serde_json::to_string(state).expect("the state serialises");
         serde_json::from_str(&text).expect("the state parses back")
@@ -98,7 +79,7 @@ mod tests {
         json!({ "pick": "instance", "instanceId": s.card(card).id })
     }
 
-    /// The target lists `legalActions` offers for p1's Wildfire, each as its JSON (TS `targets ?? []`).
+    /// The target lists `legalActions` offers for p1's Wildfire, each as its JSON.
     fn wildfire_plays(s: &Scenario, player: PlayerId) -> Vec<Value> {
         let id = s.card(WILDFIRE).id.clone();
         legal_actions(s.state(), player)
@@ -164,14 +145,14 @@ mod tests {
                 js(&scripts.base.targets),
                 json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }]),
             );
-            // TS `expect(radiant).toBe(base)`: the Radiant face is the same declaration and the same hooks.
+            // The Radiant face is the same declaration and the same hooks.
             assert_eq!(js(&scripts.radiant.targets), js(&scripts.base.targets));
             assert_eq!(scripts.radiant.cry.is_some(), scripts.base.cry.is_some());
             assert_eq!(
                 scripts.radiant.hand_triggers.iter().map(|trigger| trigger.id.clone()).collect::<Vec<String>>(),
                 scripts.base.hand_triggers.iter().map(|trigger| trigger.id.clone()).collect::<Vec<String>>(),
             );
-            // TS `toEqual([BOOK_SWAP_TRIGGER])`: the one engine trigger, by its id and the events it answers.
+            // The one engine trigger, by its id and the events it answers.
             let swap = book_swap_trigger();
             assert_eq!(scripts.base.hand_triggers.len(), 1);
             assert_eq!(scripts.base.hand_triggers[0].id, swap.id);

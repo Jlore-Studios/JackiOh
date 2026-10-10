@@ -1,26 +1,21 @@
 //! C #3 Book of Heal (SPEC §8.6 row 3). (1) Spell, Book, Epic.
 //!   Base:    "Heal a target {heal}." — heal 9
 //!   Radiant: "Heal a target {heal}." — heal 18
-//!   Engine:  "§6.3 Heal on any unit or hero, as #47 Fig of Life reads "Heal" (R19). Tunes: heal 9 ↑
-//!            (step 2)."
 //!
 //! R19 and §8's Conventions: "a target" is any unit or hero on either side, so the declaration names
 //! both kinds with `side: "any"` (a bare `target` is units only, R90). The pick is declared, so it
-//! travels in the play action (R81) and resolution never pauses.
-//!
-//! What "heal" does is §6.3's row, not this card's: a unit loses up to that much damage and never
-//! rises past its max health, a hero gains it with no cap (§3). `effects/heal.ts` is that split.
+//! travels in the play action (R81) and resolution never pauses. What heal does is §6.3's row: a
+//! unit heals up to its max health, a hero with no cap (§3).
 //!
 //! The amount is the declared number `heal` (R386), read through `param`: 9 on the base face, 18 on
-//! the Radiant one, moved by a Degrade or an Upgrade two at a time (its declared step). Both faces run
-//! this one script, since the faces differ only in that number.
+//! the Radiant one, two at a time per Degrade or Upgrade. Both faces run this one script.
 
 use jackioh_engine::effects::heal;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-003";
 
-/// R19: any unit or hero, either side. (TS `const targets: TargetDecl[]`.)
+/// R19: any unit or hero, either side.
 fn targets() -> Vec<TargetDecl> {
     vec![
         // R656: a heal helps, so a random cast that targets enemies aims this at friends.
@@ -93,7 +88,7 @@ mod tests {
                 js(&scripts.base.targets),
                 json!([{ "kind": "target", "min": 1, "max": 1, "aim": "help", "filter": { "side": "any", "of": ["unit", "hero"] } }])
             );
-            // TS `expect(radiant).toBe(base)`: the radiant face is the very same script.
+            // The radiant face is the very same script.
             let (Some(base_cry), Some(radiant_cry)) = (&scripts.base.cry, &scripts.radiant.cry) else {
                 panic!("both faces have a Cry");
             };

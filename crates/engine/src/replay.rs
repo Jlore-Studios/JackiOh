@@ -1,14 +1,13 @@
 //! Replay: (seed, decks, action log) rebuilds a match exactly, and a state hash makes two folds
 //! comparable (SPEC §9.2, §9.3). A practice game adds its handicaps to that tuple (§9.9, R180, R187),
 //! a game with a dealt deck the seats that were dealt one (R433), and a match its seats' last boards
-//! (R417) and its Glitch boards (R678): they are setup, not actions, so
-//! the fold hands them to `create_game` exactly as the live game did.
+//! (R417) and its Glitch boards (R678): they are setup, not actions, so the fold hands them to
+//! `create_game` exactly as the live game did.
 //!
-//! Port of `packages/engine/src/replay.ts` (part 5). `canonical`, `fnv1a32_utf16` and `hash_state`
-//! follow SURFACE §5.2 to the bit: practice saves on players' devices store the hash, the hotseat
+//! The hash's text is fixed (`docs/v0.3.0/SURFACE.md` §5.2; §4.4.1 sort stability, §4.4.7 absent
+//! options; §6.1 `fold`'s signature): practice saves on players' devices store the hash, the hotseat
 //! fixture pins `"a798906b"`, and the golden traces (§13) and the server's migration checksum use the
-//! same two functions. `fold` is SURFACE §6.1's `fold(&FoldArgs) -> FoldResult`; `FoldArgs` and
-//! `FoldResult` are TS's `ReplayInput` and `ReplayResult` under the names SURFACE gives them.
+//! same `canonical` and `fnv1a32_utf16`.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -21,12 +20,9 @@ use crate::wire::{
     ReplayRefusal, ReplayStep,
 };
 
-/// Canonical JSON: keys sorted, so two equal states always produce the same text.
-///
-/// SURFACE §5.2 step 2: a string, number, bool or null as `JSON.stringify` writes it; an array as
-/// `[` + items joined by `,` + `]`; an object as `{` + `"key":canonical(value)` pairs, keys sorted
-/// ascending by UTF-16 code units (TS's `<`), joined by `,` + `}`. TS drops `undefined` values; a
-/// serialised Rust value has none (an absent `Option` is no key at all, SURFACE §4.4.7).
+/// Canonical JSON: keys sorted, so two equal states always produce the same text. A string, number,
+/// bool or null as `JSON.stringify` writes it; an array as `[a,b]`; an object as `{"key":value}` with
+/// its keys sorted ascending by UTF-16 code units. An absent `Option` is no key at all.
 pub fn canonical(value: &Value) -> String {
     let mut out = String::new();
     write_canonical(value, &mut out);
@@ -51,8 +47,7 @@ fn write_canonical(value: &Value, out: &mut String) {
         }
         Value::Object(map) => {
             let mut entries: Vec<(&String, &Value)> = map.iter().collect();
-            // TS: `.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))`, a comparison of UTF-16 code
-            // units. A stable sort, as `Array.prototype.sort` is (SURFACE §4.4.1); keys are unique.
+            // UTF-16 code unit order, a stable sort; keys are unique.
             entries.sort_by(|(a, _), (b, _)| a.encode_utf16().cmp(b.encode_utf16()));
             out.push('{');
             for (at, (key, item)) in entries.into_iter().enumerate() {
@@ -69,7 +64,7 @@ fn write_canonical(value: &Value, out: &mut String) {
 }
 
 /// `JSON.stringify(text)`: serde_json writes the same escapes (`\" \\ \b \f \n \r \t`, `\u00xx` in
-/// lower-case hex for the other control characters, everything else raw), SURFACE §5.2.
+/// lower-case hex for the other control characters, everything else raw).
 fn json_string(text: &str) -> String {
     serde_json::to_string(text).unwrap_or_else(|_| String::from("\"\""))
 }
@@ -90,8 +85,8 @@ fn js_number(number: &serde_json::Number) -> String {
     }
 }
 
-/// FNV-1a 32 over the UTF-16 code units of `text` (TS's `charCodeAt` loop), printed as 8 lower-case
-/// hex digits (SURFACE §5.2 step 3). UTF-8 bytes would differ: state strings carry `× − – ♾ ³ ²`.
+/// FNV-1a 32 over the UTF-16 code units of `text`, printed as 8 lower-case hex digits. UTF-8 bytes
+/// would differ: state strings carry `× − – ♾ ³ ²`.
 pub fn fnv1a32_utf16(text: &str) -> String {
     let mut hash: u32 = 0x811c_9dc5;
     let mut step = |unit: u16| {
@@ -122,11 +117,9 @@ pub fn fnv1a32_utf16(text: &str) -> String {
 
 /// FNV-1a over the canonical state, minus the nonce log, which is bookkeeping, and the opening a Glitch
 /// reset deals again (R676), which is a copy of the fold's own input, so no hash moved when it came.
-///
 /// The text is written straight from `Serialize` (`direct::canonical_text`), byte for byte what
-/// `canonical(&to_value(state))` writes, without building the `Value` tree, which was most of the
-/// cost. A shape that writer leaves alone (an `i128`, bytes, a map key that is not a string) takes the
-/// `Value` path below, so the hash never depends on which path ran.
+/// `canonical(&to_value(state))` writes; a shape that writer leaves alone takes the `Value` path
+/// below, so the hash never depends on which path ran.
 pub fn hash_state(state: &GameState) -> String {
     if let Some(text) = direct::canonical_text(state, &["applied", "opening"]) {
         return fnv1a32_utf16(&text);
@@ -142,21 +135,16 @@ pub fn hash_state(state: &GameState) -> String {
     fnv1a32_utf16(&canonical(&value))
 }
 
-/// `canonical(&serde_json::to_value(value))`, written from `Serialize` without the `Value` tree.
+/// `canonical(&serde_json::to_value(value))`, written from `Serialize` without the `Value` tree. Every
+/// shape is written as `to_value` would build it: an object's keys in UTF-16 order (a later duplicate
+/// replacing an earlier, as a `Value` map's insert does), `None` and `()` as `null`, a unit variant as
+/// its name, a newtype variant as `{"variant":value}`, an `f64` through `Value::from` and `js_number`.
+/// What it cannot write (128-bit integers, bytes, a map key that is not a string, char, bool or
+/// integer) is an error, and the caller takes the `Value` path instead.
 ///
-/// Every shape is written as `serde_json::to_value` would have built it and `canonical` would then
-/// have written it: a struct's, a map's or a struct variant's fields as one object whose keys are
-/// sorted by UTF-16 code units (a later duplicate key replacing an earlier one, as a `Value` map's
-/// insert does), `None` and `()` as `null`, a unit variant as its name, a newtype variant as
-/// `{"variant":value}`, strings escaped by serde_json itself, an `f64` or `f32` through `Value::from`
-/// and `js_number`. What it does not write (128-bit integers, bytes, a map key that is not a string,
-/// a char, a bool or an integer) is an error, and the caller takes the `Value` path instead.
-///
-/// An object's entries are written in the order they come and put in key order when it closes. A
-/// struct's keys are its field names, the same `&'static str`s every time it is written, so the order
-/// they sort into is worked out once per set of names and remembered for the rest of the text
-/// (`Out::orders`, keyed by the names' addresses and lengths: the same address and length is the same
-/// text, so a remembered order is always the one sorting would give).
+/// Entries go out as they come and are put in key order when the object closes. A struct's keys are
+/// its `&'static str` field names, so their sorted order is worked out once per set and remembered
+/// (`Out::orders`, keyed by the names' addresses and lengths: the same pair is the same text).
 mod direct {
     use std::borrow::Cow;
     use std::cmp::Ordering;
@@ -515,8 +503,8 @@ mod direct {
     }
 
     impl Entry {
-        /// TS's `a < b` on two keys: UTF-16 code units. UTF-8 byte order is code point order, which
-        /// differs from UTF-16's only between a character from U+E000 to U+FFFF and one past U+FFFF.
+        /// Key order by UTF-16 code units. UTF-8 byte order is code point order, which differs from
+        /// UTF-16's only between a character from U+E000 to U+FFFF and one past U+FFFF.
         fn cmp_key(&self, other: &Entry) -> Ordering {
             if self.plain && other.plain {
                 self.key.as_bytes().cmp(other.key.as_bytes())
@@ -794,7 +782,7 @@ mod direct {
     }
 }
 
-/// TS `ReplayInput`: what a fold starts from.
+/// What a fold starts from.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ReplayInput {
@@ -817,7 +805,6 @@ pub struct ReplayInput {
     pub glitch_boards: Option<LastBoardInput>,
 }
 
-/// SURFACE §6.1's name for `ReplayInput`.
 pub type FoldArgs = ReplayInput;
 
 /// One rejected action of a folded log: its nonce and the reducer's refusal, verbatim.
@@ -828,7 +815,6 @@ pub struct FoldError {
     pub error: String,
 }
 
-/// TS `ReplayResult`: `{ state, errors: [{ nonce, error }] }`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ReplayResult {
@@ -836,7 +822,6 @@ pub struct ReplayResult {
     pub errors: Vec<FoldError>,
 }
 
-/// SURFACE §6.1's name for `ReplayResult`.
 pub type FoldResult = ReplayResult;
 
 /// Fold a recorded log from scratch. Errors are collected, not thrown: a log may hold rejects. The
@@ -875,13 +860,12 @@ fn opening(input: &ReplayInput) -> GameState {
     crate::reduce::begin_game(&start).state
 }
 
-/// R768: fold a finished game once and check it before any step is shown. A game of another
-/// catalog version than `build_version` is refused as `earlier_patch`, before anything is folded;
-/// a log that does not fold to `record.final_hash` is refused as `rules_changed`. Otherwise the
-/// answer holds the step count (step 0 is the state after `begin_game`, step k the state after the
-/// k-th accepted action: a rejected one is no step) and a state every `REPLAY_CHECKPOINT_EVERY`
-/// accepted actions. As with `fold`, a setup `create_game` refuses panics; the WASM binding checks
-/// it first.
+/// R768: fold a finished game once and check it before any step is shown: another catalog version
+/// than `build_version` is refused as `earlier_patch` before anything is folded, a log that does not
+/// fold to `record.final_hash` as `rules_changed`. Otherwise the answer holds the step count (step 0
+/// is the state after `begin_game`, step k the one after the k-th accepted action; a rejected one is
+/// no step) and a state every `REPLAY_CHECKPOINT_EVERY` accepted actions. As with `fold`, a setup
+/// `create_game` refuses panics; the WASM binding checks it first.
 pub fn replay_open(input: &ReplayInput, record: &ReplayRecord, build_version: &str) -> ReplayOpen {
     if record.catalog_version != build_version {
         return ReplayOpen::Refused {
