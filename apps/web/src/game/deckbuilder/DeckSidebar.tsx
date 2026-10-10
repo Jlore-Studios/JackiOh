@@ -7,7 +7,7 @@
 //
 // On phones the list folds but stays mounted (deckbuilder.css).
 //
-// Tiles support preview, inspect and keyboard detail view.
+// Tiles support preview, inspect, and keyboard detail view (I, the context-menu key or Shift+F10).
 
 import { useId, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type ReactElement, type ReactNode, type RefObject } from "react";
 

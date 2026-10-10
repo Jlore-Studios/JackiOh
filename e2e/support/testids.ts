@@ -1,4 +1,4 @@
-// E2E selector contract: BUILD M5-T1, BUILD M5-T2, BUILD M5-T3 and BUILD M5-T4 fix base testids and attributes; assumptions are in e2e/README.md.
+// E2E selector contract: BUILD M5-T1, BUILD M5-T2, BUILD M5-T3 and BUILD M5-T4 fix base testids and attributes; BUILD M8 exercises them. Assumptions are in e2e/README.md.
 
 import type { EventType, Lane, PromptKind, Row, Side } from "./types.ts";
 

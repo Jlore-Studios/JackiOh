@@ -1,4 +1,4 @@
-// BUILD M8 07: #96 My Pawn (§8.5) cancels a lethal declaration and lets the §10.7 AI finish it.
+// BUILD M8 07: P2's #96 My Pawn (§8.5) cancels P1's lethal declaration and lets the §10.7 AI finish it.
 // R44 defines lethal; the fixture excludes armor #84/#1/#73. R99 keeps the trap armed until lethal.
 // R121 makes forced attackers #9/#60 ineligible; attacks here are player-declared. R33/§10.8 hide
 // the face-down trap from seat 1. Use testids and settled/retried waits, never fixed sleeps.

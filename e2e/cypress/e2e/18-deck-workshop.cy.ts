@@ -1,6 +1,7 @@
 // BUILD M8 spec 18: drafts, autosave, codes, trios, and deck caps (R250, R252, R255, R256).
 // Autosave is proven from server state after its own retry; trio readiness is also queue-validated.
 // This spec uses p2 because R109 rate-limits accounts and specs 09/19 share p1 (R253).
+// BUILD M6 supplies the deck endpoints.
 
 import {
   DECK_AUTOSAVE_RETRY_SECONDS,

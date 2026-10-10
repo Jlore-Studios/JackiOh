@@ -1,4 +1,4 @@
-// BUILD M9-T12 `29-animated-trap.cy.ts`: Tesla's opponent-turn animation (R383).
+// BUILD M9-T12 `29-animated-trap.cy.ts`: P2's Tesla animates during P1's turn (R383).
 // Read each seat's DOM only (CLAUDE.md rule 7): P1 cannot identify a set Tesla (R33), and Lifesteal
 // can heal beyond 30 (R19). An animated Tesla remains in place on later triggers (R383).
 

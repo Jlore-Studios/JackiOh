@@ -2,6 +2,7 @@
 // `net/session.ts` owns storage (M8 e2e contract, A6); a verified account stays pending until §9.4's invite.
 // Emailed links use PKCE when possible (R323, R324); the client never exposes provider text (R160).
 // Auth flow rules: R192, R194, R663, R664, R665 and R666.
+// BUILD M6-T1's server-only scope leaves client sign-in to this module.
 
 import {
   AUTH_EMAIL_RESEND_COOLDOWN_SECONDS,

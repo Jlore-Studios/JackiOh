@@ -1,4 +1,4 @@
-// Spec 13: practice against the AI without a server (SPEC §9.9, R187; B40).
+// Spec 13 (V19): practice against the AI without a server (SPEC §9.9, R187; B40).
 // It observes R265 mulligan thinking, R745 log retention, R181/R180 handicaps, R668 reload, and R765 save/leave.
 // BUILD M8 uses deterministic seeds, retried testids, and no `cy.wait(ms)`; recorder history and reduced motion make BUILD M5-T4 AI turns observable.
 

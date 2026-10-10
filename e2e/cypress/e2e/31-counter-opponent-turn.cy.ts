@@ -1,4 +1,4 @@
-// BUILD M9-T12 `31-counter-opponent-turn.cy.ts`: Counterspell's announce window (§10.5, R17, R448).
+// BUILD M9-T12 `31-counter-opponent-turn.cy.ts`: P2's C #17 Counterspell announces for P1's Spell (§10.5, R17, R448).
 // Read player 1's DOM and unrendered play counts (CLAUDE.md rule 7). A countered Spell neither
 // resolves nor reaches another trap (R17).
 

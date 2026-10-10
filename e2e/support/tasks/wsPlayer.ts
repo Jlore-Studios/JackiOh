@@ -2,6 +2,7 @@
 // `protocol.rs` fixes hello (fresh full view, §9.5), action, view (SPEC §10.8), ack (nonce/seq,
 // SPEC §9.3), error, prompt (record only, §10.6) and clock (R79, §9.5). HTTP joins atomically;
 // the actor stamps `playerId`'s authenticated seat.
+// BUILD M8 runs these specs individually and as one suite.
 
 import { WebSocket } from "ws";
 

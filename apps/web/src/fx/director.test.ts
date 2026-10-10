@@ -1,5 +1,6 @@
 // Polish 1 (docs/polish/1-animations.md, S8): effects director tests, B32–B35.
 // Public seams only; 5 ms frames make every multiple-of-five delay land exactly on its due frame.
+// Timing starts at T0.
 
 import { afterEach, describe, expect, it } from "vitest";
 

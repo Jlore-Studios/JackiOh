@@ -3,6 +3,7 @@
 // R265 and R268 cover sealed mulligans and their shared clock; R36 and R269 cover draw offers.
 // Fixture turns stay actionable under R82 and R244; kept and redrawn cards follow R9 and R10.
 // Room setup follows R143 and R257 (SPEC §11; §§2.1, 2.5, 9.5; SURFACE §11.3); clocks follow R79.
+// BUILD M6 and M7-T1 supply the server and clock; M8 requires isolated seeds and retried waits.
 
 import { MULLIGAN_CLOCK_MS } from "../../../apps/web/src/wire/serverConfig.ts";
 import { accounts, routes, seedFor, server, timeouts } from "../../support/config.ts";

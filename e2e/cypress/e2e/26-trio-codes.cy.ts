@@ -1,6 +1,7 @@
 // Trio-code copy/import and capacity refusal (R339–R341).
 // `e2e-p2` supplies one installed trio; `e2e-p1` starts empty, proving this import created every listing.
 // Read the code from the output field because Cypress may deny clipboard access. See e2e/README.md.
+// BUILD M6 supplies deck endpoints; L4 forbids cards shared between trio decks.
 
 import { MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "../../../apps/web/src/wire/serverConfig.ts";
 import { INSTALLED_DECK_NAMES, INSTALLED_TRIO_NAME, mintId, type InstalledLoadout } from "../../support/commands.ts";

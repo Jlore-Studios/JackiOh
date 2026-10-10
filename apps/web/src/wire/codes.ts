@@ -28,7 +28,7 @@ export type CodeInputReading = {
   readonly problem: CodeInputProblem | null;
 };
 
-/** Code separators, including Unicode dashes and invisible characters introduced by mail or chat. */
+/** Code separators, including U+FE58/U+FE63 dashes and invisible characters introduced by mail or chat. */
 const SEPARATOR_CLASS =
   "[\\s\\-\\u2010-\\u2015\\u2212\\uFE58\\uFE63\\uFF0D\\u00AD\\u200B-\\u200D\\u2060\\uFEFF]";
 const SEPARATOR = new RegExp(`^${SEPARATOR_CLASS}$`, "u");

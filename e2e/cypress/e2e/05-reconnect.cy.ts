@@ -1,4 +1,4 @@
-// BUILD M8 05: reload during #65 Masochism Mask's active-player `PendingChoice` (SPEC §8, §6.2).
+// BUILD M8 05 (V14): reload during #65 Masochism Mask's active-player `PendingChoice` (SPEC §8, §6.2).
 // Prompts are state (§9.3), so reconnect gets a full view rather than replay (§9.5).
 // Turn 7 makes #77 Professor Curvature's R48 modifier live; fingerprint also covers R169 badges.
 // It checks testids (BUILD M5-T1, M5-T4), prompt, counters and badges; R79 owns the clock limits
