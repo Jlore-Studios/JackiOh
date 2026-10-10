@@ -86,13 +86,16 @@ mod tests {
     fn destroyed_it_stops() {
         crate::register_all();
         let mut s = scenario(json!({
-            "p1": { "hand": ["core-034", FILLER], "backrow": [ID], "library": LIBRARY },
+            // Mana to spare after the (4) exile, so the turn does not auto-end (R82) and
+            // `start_turn` below is p1's.
+            "p1": { "mana": 8, "hand": ["core-034", FILLER], "backrow": [ID], "library": LIBRARY },
             "p2": { "hand": [FILLER], "library": LIBRARY },
         }));
         let well = s.backrow(P1, 1).expect("the Well").id.clone();
 
         // #34 Collateral Damage exiles the Well (its deck-milling side effect is harmless here).
         s.play("core-034", json!({ "targets": [{ "pick": "instance", "instanceId": well }] }));
+        assert_eq!(s.state().active, P1);
         s.start_turn();
 
         // Exiled, it adds nothing; the draw still lands.

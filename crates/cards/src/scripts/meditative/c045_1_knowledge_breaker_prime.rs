@@ -3,13 +3,13 @@
 //!
 //! Base:    "Rush
 //!           Cry: Summon {traps|random Trap|random Traps}. Destroy every other CN or KY permanent.
-//!           Aura: You may play your Units face-down into your backrow as Animated Field Traps that
-//!           reveal at the start of your turn."
+//!           Aura: You may play your Units face-down as Animated Field Traps that reveal at the
+//!           start of your next turn."
 //! Radiant: "Rush, Poisonous
 //!           Cry: Summon {traps|random Radiant Trap|random Radiant Traps}. Exile every other CN or KY
 //!           permanent.
-//!           Aura: You may play your Units face-down into your backrow as Animated Field Traps that
-//!           reveal at the start of your turn."
+//!           Aura: You may play your Units face-down as Animated Field Traps that reveal at the
+//!           start of your next turn."
 //! Engine: five `summon_random` Traps then `destroy_all` (Radiant: `exile_all`), then the Aura.
 
 use jackioh_engine::prelude::*;
@@ -80,9 +80,12 @@ mod tests {
 
     const PRIME: &str = "meditative-045-1";
     const BREAKER: &str = "meditative-045";
-    const CNKY: &str = "meditative-038";
+    const CN_UNIT: &str = "meditative-039"; // 赌石 Addict, a CN Unit.
+    const KY_UNIT: &str = "meditative-079"; // Touched by KY, a KY Unit.
     const VANILLA: &str = "core-008";
     const ROCK: &str = "core-066"; // Indestructible.
+    const MANA_WELL: &str = "core-006"; // An untagged Field Spell.
+    const BEAUTY: &str = "meditative-039-5"; // Jade Beauty: CN, Indestructible.
 
     fn trap_count(s: &Scenario, player: PlayerId) -> usize {
         s.state().players[player]
@@ -113,16 +116,17 @@ mod tests {
             s.play(&prime.id, json!({ "zone": 1 }));
             assert_eq!(trap_count(&s, P1), 5);
 
-            // Three lanes taken: only two Traps fit.
+            // Three backrow zones taken (by Field Spells, which no Trap count sees): only two
+            // Traps fit.
             let mut full = scenario(json!({
                 "seed": "prime-traps-full",
                 "p1": {
                     "mana": 8,
                     "hand": [PRIME],
                     "backrow": [
-                        { "def": VANILLA },
-                        { "def": VANILLA },
-                        { "def": VANILLA },
+                        { "def": MANA_WELL },
+                        { "def": MANA_WELL },
+                        { "def": MANA_WELL },
                     ],
                     "library": [VANILLA],
                 },
@@ -140,32 +144,40 @@ mod tests {
                 "seed": "prime-destroy",
                 "p1": {
                     "mana": 8,
-                    "hand": [PRIME, CNKY],
+                    "hand": [PRIME, CN_UNIT],
                     "field": [
                         { "def": BREAKER, "lane": 1 },
-                        { "def": CNKY, "lane": 2 },
+                        { "def": KY_UNIT, "lane": 2 },
                         { "def": ROCK, "lane": 3 },
                     ],
                     "library": [VANILLA],
                 },
                 "p2": {
                     "hand": [VANILLA],
-                    "field": [{ "def": CNKY, "lane": 1 }],
+                    "field": [
+                        { "def": CN_UNIT, "lane": 1 },
+                        { "def": BEAUTY, "lane": 2 },
+                    ],
                     "library": [VANILLA],
                 },
             }));
-            // A CN/KY unit set face-down is a permanent too: set the spare 038 first.
-            let spare = s.hand(P1).iter().find(|card| card.def_id == CNKY).cloned().unwrap();
+            // A CN/KY unit set face-down is a permanent too: set the spare CN Unit first, under
+            // the Breaker's permission.
+            let spare = s.hand(P1).iter().find(|card| card.def_id == CN_UNIT).cloned().unwrap();
             s.play(&spare.id, json!({ "zone": 1, "row": "backrow", "faceDown": "startOfNextTurn" }));
             let prime = s.hand(P1).iter().find(|card| card.def_id == PRIME).cloned().unwrap();
             s.play(&prime.id, json!({ "zone": 4 }));
-            // Every other CN/KY permanent is gone: the face-up 038s, the set 038, and the
-            // Breaker granter itself. The Indestructible Rock stands.
+            // Every other CN or KY permanent on both fields is gone: the CN and the KY Unit, the
+            // set CN Unit, and the Breaker granter itself.
             assert!(s.unit(P1, 1).is_none());
             assert!(s.unit(P1, 2).is_none());
             assert!(s.unit(P2, 1).is_none());
             assert!(s.backrow(P1, 1).is_none());
+            // The Indestructible Jade Beauty, CN, stays (R46); the untagged Rock is not reached;
+            // the Prime is not "other".
+            assert_eq!(s.unit(P2, 2).map(|card| card.def_id), Some(BEAUTY.to_string()));
             assert_eq!(s.unit(P1, 3).map(|card| card.def_id), Some(ROCK.to_string()));
+            assert_eq!(s.unit(P1, 4).map(|card| card.def_id), Some(PRIME.to_string()));
         }
 
         #[test]
@@ -211,30 +223,45 @@ mod tests {
                 "p1": {
                     "mana": 8,
                     "hand": [{ "def": PRIME, "radiant": true }],
-                    "field": [{ "def": CNKY, "lane": 1 }],
+                    "field": [{ "def": CN_UNIT, "lane": 1 }],
                     "library": [VANILLA],
                 },
                 "p2": {
                     "hand": [VANILLA],
-                    "field": [{ "def": CNKY, "lane": 1 }],
+                    "field": [{ "def": KY_UNIT, "lane": 1 }, { "def": BEAUTY, "lane": 2 }],
                     "library": [VANILLA],
                 },
             }));
             let prime = s.hand(P1).iter().find(|card| card.def_id == PRIME).cloned().unwrap();
             s.play(&prime.id, json!({ "zone": 2 }));
-            // Exiled, not destroyed: neither graveyard holds them.
+            // Exiled, not destroyed: neither graveyard holds them, and the exile beats the
+            // Indestructible Jade Beauty.
             assert!(s.unit(P1, 1).is_none());
             assert!(s.unit(P2, 1).is_none());
+            assert!(s.unit(P2, 2).is_none());
             for player in [P1, P2] {
                 assert!(
                     !s.state().players[player]
                         .graveyard
                         .iter()
-                        .any(|card| card.def_id == CNKY)
+                        .any(|card| [CN_UNIT, KY_UNIT, BEAUTY].contains(&card.def_id.as_str()))
                 );
             }
-            // Its Traps arrive Radiant-tracked: five set, all from the Trap pool.
+            assert!(
+                s.state().players[P1]
+                    .exile
+                    .iter()
+                    .any(|card| card.def_id == CN_UNIT)
+            );
+            assert!(
+                s.state().players[P2]
+                    .exile
+                    .iter()
+                    .any(|card| card.def_id == KY_UNIT)
+            );
+            // Its Traps arrive Radiant: five set, all from the Trap pool.
             assert_eq!(trap_count(&s, P1), 5);
+            assert!(s.state().players[P1].backrow.iter().flatten().all(|card| card.radiant));
         }
     }
 }

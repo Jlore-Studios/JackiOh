@@ -84,7 +84,9 @@ mod tests {
     const FILLER: &str = "core-005";
     const VANILLA: &str = "core-008"; // 4/4, untagged.
     const BROTHER: &str = "classicplus-076"; // CN Unit.
-    const HONEYPOT: &str = "core-060"; // Untagged Trap, set face-down.
+    // Untagged Trap, set face-down; it answers a Unit play, so it stays set under this Spell (#60
+    // Bear Honeypot answers any (1) Cost play and would leave the field before the Spell resolved).
+    const SHEEPISH: &str = "core-041";
 
     fn filler(count: usize) -> Value {
         json!(vec!["core-005"; count])
@@ -167,7 +169,7 @@ mod tests {
 
             #[test]
             fn r924_an_enemy_face_down_trap_is_a_legal_pick_and_fizzles_if_cn() {
-                // The enemy's face-down Honeypot is a legal pick, whatever its tags: the play
+                // The enemy's face-down Sheepish is a legal pick, whatever its tags: the play
                 // resolves onto it, granting CN, Chinese, stats and a Buff.
                 crate::register_all();
                 let mut s = scenario(json!({
@@ -178,7 +180,7 @@ mod tests {
                     },
                     "p2": {
                         "hand": [FILLER],
-                        "backrow": [{ "def": HONEYPOT, "lane": 1 }],
+                        "backrow": [{ "def": SHEEPISH, "lane": 1 }],
                         "library": filler(4),
                     },
                 }));
@@ -200,7 +202,7 @@ mod tests {
                     },
                     "p2": {
                         "hand": [FILLER],
-                        "backrow": [{ "def": HONEYPOT, "lane": 1 }],
+                        "backrow": [{ "def": SHEEPISH, "lane": 1 }],
                         "library": filler(4),
                     },
                 }));
