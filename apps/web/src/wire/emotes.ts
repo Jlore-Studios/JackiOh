@@ -7,7 +7,7 @@
 
 import type { PlayerId } from "./catalog.ts";
 
-/** The wire's twenty-four emotes: five portrait-specific voice lines, then nineteen shared emoji (R1340, R643). */
+/** MN03's twenty-four emotes: five portrait-specific voice lines, then nineteen shared emoji (R1340, R643). */
 export const VOICE_EMOTE_IDS = ["greetings", "wellPlayed", "oops", "thanks", "threaten"] as const;
 export const EMOJI_EMOTE_IDS = [
   "sob",
