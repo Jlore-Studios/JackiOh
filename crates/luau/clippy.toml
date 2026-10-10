@@ -1,0 +1,22 @@
+disallowed-types = [
+  { path = "std::collections::HashMap", reason = "iteration order is random per process: use indexmap::IndexMap (insertion order, like a JS Map) or BTreeMap" },
+  { path = "std::collections::HashSet", reason = "iteration order is random per process: use indexmap::IndexSet or BTreeSet" },
+  { path = "std::time::Instant", reason = "CLAUDE.md rule 4: no clocks in pure crates" },
+  { path = "std::time::SystemTime", reason = "CLAUDE.md rule 4: no clocks in pure crates" },
+  { path = "std::fs::File", reason = "CLAUDE.md rule 4: no I/O in pure crates" },
+  { path = "std::thread::Thread", reason = "CLAUDE.md rule 4: no threads in pure crates" },
+  { path = "std::sync::Mutex", reason = "no mutable statics: per-game state lives in GameState, per-call state in EngineSink" },
+  { path = "std::sync::RwLock", reason = "no mutable statics" },
+  { path = "std::cell::RefCell", reason = "no interior mutability in the rules" },
+]
+disallowed-methods = [
+  { path = "std::time::Instant::now", reason = "CLAUDE.md rule 4" },
+  { path = "std::time::SystemTime::now", reason = "CLAUDE.md rule 4" },
+  { path = "std::env::var", reason = "CLAUDE.md rule 4" },
+  { path = "std::env::vars", reason = "CLAUDE.md rule 4" },
+  { path = "std::fs::read", reason = "CLAUDE.md rule 4" },
+  { path = "std::fs::read_to_string", reason = "CLAUDE.md rule 4" },
+  { path = "std::fs::write", reason = "CLAUDE.md rule 4" },
+  { path = "std::thread::spawn", reason = "CLAUDE.md rule 4" },
+  { path = "std::process::exit", reason = "CLAUDE.md rule 4" },
+]
