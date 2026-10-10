@@ -13,8 +13,11 @@ use crate::config::LUAU_HOOK_INTERRUPTS;
 use crate::lint::MATH_ALLOWED;
 
 /// The base library's globals a script never sees: output, environments, loading code at run time,
-/// the collector and `newproxy`'s metatables.
-pub const REMOVED_GLOBALS: [&str; 8] = [
+/// the collector and `newproxy`'s metatables (L5), and `xpcall`. A failure raised inside an `xpcall`
+/// message handler becomes Luau's "error in error handling", which drops whatever it was, a nested
+/// hook's panic included, so with `xpcall` a hook could catch that failure and go on. `pcall` stays:
+/// mlua's `pcall` has no handler and raises a panic again.
+pub const REMOVED_GLOBALS: [&str; 9] = [
     "print",
     "getfenv",
     "setfenv",
@@ -23,11 +26,15 @@ pub const REMOVED_GLOBALS: [&str; 8] = [
     "collectgarbage",
     "gcinfo",
     "newproxy",
+    "xpcall",
 ];
 
 /// The libraries a script never sees. None of them is opened; each is cleared too, so a later mlua
-/// that opened one by default could not hand it over.
-pub const ABSENT_LIBRARIES: [&str; 4] = ["os", "io", "debug", "coroutine"];
+/// that opened one by default could not hand it over. `buffer`, `vector` and `integer` are named as
+/// well, since Luau's compiler calls a library's builtins (`vector.magnitude`, a square root) without
+/// reading the global, so the lint refuses their names and `compile` turns their builtins off
+/// (`DISABLED_BUILTINS`).
+pub const ABSENT_LIBRARIES: [&str; 7] = ["os", "io", "debug", "coroutine", "buffer", "vector", "integer"];
 
 /// The base library's iterators in the hash's order (L7), which the lint refuses as `pairs` and
 /// `next`.
@@ -41,6 +48,69 @@ pub const REMOVED_TABLE: [&str; 2] = ["sort", "foreach"];
 /// rule 4), and `noise` is a float. `math` keeps only `lint::MATH_ALLOWED`, so these go with every
 /// other member the lint refuses (L6).
 pub const REMOVED_MATH: [&str; 3] = ["random", "randomseed", "noise"];
+
+/// The builtins Luau's compiler knows (its `Builtins.cpp`, Luau 0.740) of the libraries the sandbox
+/// takes away, in part or whole. Luau calls a builtin written `library.member(…)` straight from the
+/// bytecode (a fastcall), and folds one with constant arguments while compiling, without reading the
+/// global, so a member the sandbox removed would still run. `compile` turns each of these off (every
+/// `vector` and `buffer` builtin, and every `math` one outside `lint::MATH_ALLOWED`), so such a call
+/// reads the global and finds nothing. The lint refuses all of them by name first.
+pub const DISABLED_BUILTINS: [&str; 54] = [
+    "vector.create",
+    "vector.magnitude",
+    "vector.normalize",
+    "vector.cross",
+    "vector.dot",
+    "vector.floor",
+    "vector.ceil",
+    "vector.abs",
+    "vector.sign",
+    "vector.clamp",
+    "vector.min",
+    "vector.max",
+    "vector.lerp",
+    "buffer.readi8",
+    "buffer.readu8",
+    "buffer.writeu8",
+    "buffer.readi16",
+    "buffer.readu16",
+    "buffer.writeu16",
+    "buffer.readi32",
+    "buffer.readu32",
+    "buffer.writeu32",
+    "buffer.readf32",
+    "buffer.writef32",
+    "buffer.readf64",
+    "buffer.writef64",
+    "buffer.readinteger",
+    "buffer.writeinteger",
+    "math.acos",
+    "math.asin",
+    "math.atan2",
+    "math.atan",
+    "math.cosh",
+    "math.cos",
+    "math.deg",
+    "math.exp",
+    "math.fmod",
+    "math.frexp",
+    "math.ldexp",
+    "math.log10",
+    "math.log",
+    "math.modf",
+    "math.pow",
+    "math.rad",
+    "math.sinh",
+    "math.sin",
+    "math.sqrt",
+    "math.tanh",
+    "math.tan",
+    "math.round",
+    "math.lerp",
+    "math.isnan",
+    "math.isinf",
+    "math.isfinite",
+];
 
 /// The one name `require` answers.
 pub const MODULE: &str = "@jackioh";

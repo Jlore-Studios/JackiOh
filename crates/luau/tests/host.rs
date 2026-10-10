@@ -16,7 +16,7 @@ use jackioh_luau::sandbox::{
     ABSENT_LIBRARIES, REMOVED_GLOBALS, REMOVED_ITERATORS, REMOVED_MATH, REMOVED_TABLE, new_sandbox,
 };
 use jackioh_luau::vm::{call_hook, declared_hooks};
-use jackioh_luau::{EffectCall, Face, Finding, LuauError, Rule, Site, compile, lint, load_card};
+use jackioh_luau::{EffectCall, Face, Finding, LuauError, Rule, Site, compile, compiler, lint, load_card};
 use mlua::{Table, Value};
 use serde_json::json;
 
@@ -432,6 +432,32 @@ fn pcall_does_not_catch_a_nested_hooks_failure() {
     let _ = with_ctx(|ctx| call_hook(site("fixture-catching", Face::Base, "cry"), catching, ctx));
 }
 
+#[test]
+fn xpcall_is_absent_so_no_handler_can_drop_a_nested_hooks_failure() {
+    // A failure raised in an `xpcall` handler becomes "error in error handling", which would drop
+    // the nested hook's panic and let the outer hook go on. The lint refuses `xpcall`, and behind the
+    // lint the global is gone, so the outer hook fails.
+    let Ok(scripts) = load_card("fixture-bad-numbers", fixture!("bad_numbers")) else {
+        panic!("the fixture loads");
+    };
+    register_scripts(IndexMap::from([("fixture-bad-numbers".to_string(), scripts)]));
+    let source = "local J = require(\"@jackioh\")\n\
+         return { base = { cry = function(ctx)\n\
+         \tlocal _, kinds = xpcall(error, function() return ctx:effects_of(\"fixture-bad-numbers\", \"base\", \"cry\") end)\n\
+         \treturn { J.damage({ to = { of = \"enemyHero\" }, amount = 1 }) }\nend } }\n";
+    let rules: Vec<Rule> = lint("handler.luau", source)
+        .into_iter()
+        .map(|finding| finding.rule)
+        .collect();
+    assert_eq!(rules, [Rule::RemovedGlobal("xpcall".into())]);
+    let code: &'static [u8] = Vec::leak(compiler().compile(source).unwrap());
+    let called = with_ctx(|ctx| call_hook(site("fixture-handler", Face::Base, "cry"), code, ctx));
+    assert!(
+        matches!(&called, Err(LuauError::Hook { message, .. }) if message.contains("nil")),
+        "{called:?}"
+    );
+}
+
 /// `board`'s base cry as calls, and its radiant cry, loaded, as effect kinds.
 fn board() -> (Vec<EffectCall>, Vec<&'static str>, i32) {
     let code = fixture!("board");
@@ -534,6 +560,15 @@ fn the_lint_refuses_each_rules_example() {
         ("print(n)", Rule::RemovedGlobal("print".into())),
         ("os.time()", Rule::RemovedGlobal("os".into())),
         ("local d = debug", Rule::RemovedGlobal("debug".into())),
+        ("xpcall(n, n)", Rule::RemovedGlobal("xpcall".into())),
+        ("vector.magnitude(n)", Rule::RemovedGlobal("vector".into())),
+        ("local b = buffer", Rule::RemovedGlobal("buffer".into())),
+        // An `=` inside a loop variable's type annotation does not make the `for` numeric.
+        ("for k: typeof({ a = 1 }), v in t do end", Rule::GenericFor),
+        ("for k: { [string]: number } in t do end", Rule::GenericFor),
+        // Luau ends a line comment at a carriage return, as at a newline (which alone counts a line).
+        ("-- a note\rlocal x = n / 2", Rule::Slash),
+        ("--[ not a block\rfor k in t do end", Rule::GenericFor),
     ];
     assert_eq!(lint("example.luau", header), vec![]);
     for (example, rule) in cases {
@@ -550,6 +585,86 @@ fn the_lint_refuses_each_rules_example() {
         .map(|finding| finding.rule)
         .collect();
     assert_eq!(rules, [Rule::GenericFor, Rule::Pairs]);
+}
+
+#[test]
+fn the_lint_reads_strings_and_numbers_as_luau_does() {
+    let header = "local n, t, list = 1, {}, {}\n";
+    // A string breaks where Luau's does (and Luau refuses it), so the code after it is read.
+    for broken in [
+        "local s = \"a\rn / 2",
+        "local s = 'a\nn / 2",
+        "local s = `a\rn / 2",
+    ] {
+        let rules: Vec<Rule> = lint("broken.luau", &format!("{header}{broken}\n"))
+            .into_iter()
+            .map(|finding| finding.rule)
+            .collect();
+        assert_eq!(rules, [Rule::Slash], "{broken:?}");
+    }
+    // Escapes that run on over a line: `\` before a newline or before `\r\n`, and `\z`.
+    for (escaped, line) in [
+        ("local s = \"a\\\nb\" local x = n / 2", 3),
+        ("local s = \"a\\\r\nb\" local x = n / 2", 3),
+        ("local s = \"a\\z\n\t  b\" local x = n / 2", 3),
+        ("local s = `a\\z\n {n}` local x = n / 2", 3),
+    ] {
+        let finding = Finding {
+            file: "escaped.luau".into(),
+            line,
+            rule: Rule::Slash,
+        };
+        assert_eq!(
+            lint("escaped.luau", &format!("{header}{escaped}\n")),
+            vec![finding],
+            "{escaped:?}"
+        );
+    }
+    // Code Luau never reads is not linted: Luau's lexer ends the source at a NUL byte.
+    assert_eq!(lint("nul.luau", &format!("{header}local x = 1\0n / 2\n")), vec![]);
+}
+
+#[test]
+fn compiling_turns_off_the_builtins_the_sandbox_took_away() {
+    // Luau calls `vector.magnitude` and folds `math.sqrt` without reading the global, so a chunk
+    // compiled without `compiler()`'s disabled builtins gets a square root from a sandbox that has
+    // none. The lint refuses both names; behind it, `compiler()` makes each call read the global,
+    // which is gone.
+    let source = |amount: &str| {
+        format!(
+            "local J = require(\"@jackioh\")\n\
+             return {{ base = {{ cry = function(ctx)\n\
+             \treturn {{ J.damage({{ to = {{ of = \"enemyHero\" }}, amount = {amount} }}) }}\n\
+             end }} }}\n"
+        )
+    };
+    for (card, amount) in [
+        (
+            "fixture-vector",
+            "math.floor(vector.magnitude(vector.create(1, 1, 0)) * 1000)",
+        ),
+        ("fixture-sqrt", "math.floor(math.sqrt(2) * 1000)"),
+    ] {
+        let source = source(amount);
+        assert!(
+            matches!(compile("builtin.luau", &source), Err(LuauError::Lint(_))),
+            "{card}"
+        );
+        let open: &'static [u8] = Vec::leak(mlua::chunk::Compiler::new().compile(&source).unwrap());
+        let open_card: &'static str = String::leak(format!("{card}-open"));
+        let called = with_ctx(|ctx| call_hook(site(open_card, Face::Base, "cry"), open, ctx));
+        assert_eq!(
+            called,
+            Ok(vec![hit(1414)]),
+            "{card} without the disabled builtins"
+        );
+        let shut: &'static [u8] = Vec::leak(compiler().compile(&source).unwrap());
+        let refused = with_ctx(|ctx| call_hook(site(card, Face::Base, "cry"), shut, ctx));
+        assert!(
+            matches!(&refused, Err(LuauError::Hook { message, .. }) if message.contains("nil")),
+            "{card}: {refused:?}"
+        );
+    }
 }
 
 #[test]

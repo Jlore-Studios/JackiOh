@@ -136,12 +136,21 @@ fn name_rule(name: &str, before: Option<Token<'_>>, rest: &[(Token<'_>, u32)]) -
 
 /// Whether the `for` whose tokens follow is numeric (`for i = …`) or runs over `ipairs(…)` alone
 /// (`for i, x in ipairs(list) do`).
+///
+/// Only an `=` or an `in` outside brackets counts, so one inside a type annotation on a loop
+/// variable (`for k: typeof({ a = 1 }), v in t`) does not make the `for` numeric. A `for` with
+/// neither is refused (Luau refuses it too).
 fn for_is_numeric_or_ipairs(rest: &[(Token<'_>, u32)]) -> bool {
-    let Some(at) = rest
-        .iter()
-        .position(|(token, _)| matches!(token, Token::Op("=") | Token::Name("in")))
-    else {
-        return true;
+    let mut depth = 0i32;
+    let Some(at) = rest.iter().position(|(token, _)| {
+        match token {
+            Token::Op("(" | "{" | "[") => depth += 1,
+            Token::Op(")" | "}" | "]") => depth -= 1,
+            _ => {}
+        }
+        depth == 0 && matches!(token, Token::Op("=") | Token::Name("in"))
+    }) else {
+        return false;
     };
     if rest[at].0 == Token::Op("=") {
         return true;
@@ -229,6 +238,8 @@ impl<'s> Lexer<'s> {
         while let Some(byte) = self.peek(0) {
             let line = self.line;
             match byte {
+                // Luau's lexer reads a NUL byte as the end of the source.
+                b'\0' => return,
                 b'-' if self.peek(1) == Some(b'-') => self.comment(),
                 b'"' | b'\'' => {
                     self.quoted(byte);
@@ -296,28 +307,56 @@ impl<'s> Lexer<'s> {
         }
     }
 
-    /// `--` to the end of the line, or a `--[==[ … ]==]` block.
+    /// `--` to the end of the line, or a `--[==[ … ]==]` block. A line comment ends, as Luau's does,
+    /// at a newline, a carriage return or a NUL byte.
     fn comment(&mut self) {
         self.at += 2;
         if self.peek(0) == Some(b'[') && self.long_bracket().is_some() {
             self.long_string();
             return;
         }
-        while self.peek(0).is_some_and(|b| b != b'\n') {
+        while self.peek(0).is_some_and(|b| !breaks_string(b)) {
             self.at += 1;
         }
     }
 
-    /// A `'…'` or `"…"` string, escapes included.
+    /// A `'…'` or `"…"` string, escapes included. An unescaped newline, carriage return or NUL byte
+    /// ends it where Luau's lexer breaks it (and refuses the source), so what follows is read as code.
     fn quoted(&mut self, quote: u8) {
         self.at += 1;
         while let Some(byte) = self.peek(0) {
-            self.bump();
-            if byte == b'\\' {
-                self.bump();
-            } else if byte == quote {
+            if byte == quote {
+                self.at += 1;
                 return;
             }
+            match byte {
+                _ if breaks_string(byte) => return,
+                b'\\' => self.backslash(),
+                _ => self.at += 1,
+            }
+        }
+    }
+
+    /// At a `\` in a string: the escape, read as Luau's `readBackslashInString` reads it. A `\`
+    /// before a carriage return takes a newline after it too, `\z` takes the whitespace after it,
+    /// and any other escape is one byte (the rest of `\x41` or `\u{41}` is plain text).
+    fn backslash(&mut self) {
+        self.at += 1;
+        match self.peek(0) {
+            Some(b'\r') => {
+                self.at += 1;
+                if self.peek(0) == Some(b'\n') {
+                    self.bump();
+                }
+            }
+            Some(b'z') => {
+                self.at += 1;
+                while self.peek(0).is_some_and(is_space) {
+                    self.bump();
+                }
+            }
+            Some(b'\0') | None => {}
+            Some(_) => self.bump(),
         }
     }
 
@@ -330,7 +369,8 @@ impl<'s> Lexer<'s> {
         (self.peek(1 + level) == Some(b'[')).then_some(level)
     }
 
-    /// A `[==[ … ]==]` string or comment body, from its opening bracket to its closing one.
+    /// A `[==[ … ]==]` string or comment body, from its opening bracket to its closing one, or to a
+    /// NUL byte, where Luau's lexer breaks it.
     fn long_string(&mut self) {
         let level = self.long_bracket().unwrap_or(0);
         self.at += level + 2;
@@ -338,7 +378,7 @@ impl<'s> Lexer<'s> {
             .chain(std::iter::repeat_n(b'=', level))
             .chain(std::iter::once(b']'))
             .collect();
-        while self.peek(0).is_some() {
+        while self.peek(0).is_some_and(|b| b != b'\0') {
             if self.bytes[self.at..].starts_with(&close) {
                 self.at += close.len();
                 return;
@@ -348,36 +388,59 @@ impl<'s> Lexer<'s> {
     }
 
     /// The text of an interpolated string, up to its closing `` ` `` or the `{` of an expression,
-    /// which is read as code until its own `}`.
+    /// which is read as code until its own `}`. It breaks where a quoted string does.
     fn interpolated(&mut self) {
         while let Some(byte) = self.peek(0) {
-            self.bump();
             match byte {
-                b'\\' => self.bump(),
-                b'`' => return,
+                _ if breaks_string(byte) => return,
+                b'\\' if self.peek(1) == Some(b'u') && self.peek(2) == Some(b'{') => self.at += 3,
+                b'\\' => self.backslash(),
+                b'`' => {
+                    self.at += 1;
+                    return;
+                }
                 b'{' => {
+                    self.at += 1;
                     self.interpolations.push(0);
                     return;
                 }
-                _ => {}
+                _ => self.at += 1,
             }
         }
     }
 
-    /// A number, stopping before a `..` that follows it (`1..2` is `1`, `..`, `2`).
+    /// A number, read as Luau's `readNumber` reads it: digits, `.` and `_`, then an exponent's `e`
+    /// and sign, then letters, digits and `_`. Luau checks the text afterwards and refuses a malformed
+    /// one (`1..2` among them).
     fn number(&mut self) {
-        let hex = self.peek(0) == Some(b'0') && matches!(self.peek(1), Some(b'x' | b'X'));
-        while let Some(byte) = self.peek(0) {
-            if byte.is_ascii_alphanumeric() || byte == b'_' {
+        self.at += 1;
+        while self
+            .peek(0)
+            .is_some_and(|b| b.is_ascii_digit() || b == b'.' || b == b'_')
+        {
+            self.at += 1;
+        }
+        if matches!(self.peek(0), Some(b'e' | b'E')) {
+            self.at += 1;
+            if matches!(self.peek(0), Some(b'+' | b'-')) {
                 self.at += 1;
-                if !hex && matches!(byte, b'e' | b'E') && matches!(self.peek(0), Some(b'+' | b'-')) {
-                    self.at += 1;
-                }
-            } else if byte == b'.' && self.peek(1) != Some(b'.') {
-                self.at += 1;
-            } else {
-                return;
             }
         }
+        while self
+            .peek(0)
+            .is_some_and(|b| b.is_ascii_alphanumeric() || b == b'_')
+        {
+            self.at += 1;
+        }
     }
+}
+
+/// Whether `byte` ends a line comment and breaks a string, as in Luau's lexer.
+fn breaks_string(byte: u8) -> bool {
+    matches!(byte, b'\0' | b'\r' | b'\n')
+}
+
+/// Luau's whitespace, which a `\z` escape skips.
+fn is_space(byte: u8) -> bool {
+    matches!(byte, b' ' | b'\t' | b'\r' | b'\n' | 0x0b | 0x0c)
 }

@@ -91,15 +91,19 @@ pub fn compile(file: &str, source: &str) -> Result<Vec<u8>, LuauError> {
     if !findings.is_empty() {
         return Err(LuauError::Lint(findings));
     }
-    Compiler::new()
-        .compile(source)
-        .map_err(|error| LuauError::Syntax {
-            file: file.to_string(),
-            message: match error {
-                mlua::Error::SyntaxError { message, .. } => message,
-                other => other.to_string(),
-            },
-        })
+    compiler().compile(source).map_err(|error| LuauError::Syntax {
+        file: file.to_string(),
+        message: match error {
+            mlua::Error::SyntaxError { message, .. } => message,
+            other => other.to_string(),
+        },
+    })
+}
+
+/// The compiler `compile` uses, which builds no fastcall to a builtin the sandbox took away
+/// (`sandbox::DISABLED_BUILTINS`), so such a call reads the global, which is gone, behind the lint.
+pub fn compiler() -> Compiler {
+    Compiler::new().set_disabled_builtins(sandbox::DISABLED_BUILTINS)
 }
 
 /// A card's scripts from its compiled module. The module runs once here to read which hooks each face

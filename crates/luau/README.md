@@ -37,7 +37,16 @@ only on its context, on any thread. The cache needs no `RefCell`: it is a Lua ta
 - `os`, `io`, `debug` and `coroutine` absent, and `print`, `getfenv`, `setfenv`, `loadstring`,
   `load`, `collectgarbage`, `gcinfo` and `newproxy` removed (`REMOVED_GLOBALS`,
   `ABSENT_LIBRARIES`), along with `math.random`, `math.randomseed` and `math.noise`
-  (`REMOVED_MATH`);
+  (`REMOVED_MATH`). `xpcall` is removed too: a failure raised inside its message handler becomes
+  Luau's "error in error handling", which drops what it was, a nested hook's panic included, so a
+  hook could catch that failure and go on. `pcall` stays (below);
+- no builtin of a library it took away: Luau's compiler calls a builtin written `library.member(…)`
+  straight from the bytecode (a fastcall), and folds one with constant arguments, without reading
+  the global, so `vector.magnitude` would give a square root in a sandbox with no `vector`.
+  `compile` uses `compiler()`, which turns off every `vector` and `buffer` builtin and every `math`
+  one outside `lint::MATH_ALLOWED` (`sandbox::DISABLED_BUILTINS`, from Luau 0.740's
+  `Builtins.cpp`), so such a call reads the global and finds nothing; the lint refuses the names
+  `vector`, `buffer` and `integer` first (`ABSENT_LIBRARIES`);
 - what the lint refuses by name taken away as well, so a key the lint cannot read (`_G["pairs"]`,
   `math["sqrt"]`) finds nothing: `pairs` and `next` (`REMOVED_ITERATORS`), `table.sort` and
   `table.foreach` (`REMOVED_TABLE`), and every `math` member but `lint::MATH_ALLOWED`;
@@ -53,8 +62,9 @@ only on its context, on any thread. The cache needs no `RefCell`: it is a Lua ta
   call. A spent budget stays spent: a hook that catches its stop with `pcall` is stopped again at
   its next interrupt, and a call that ends with its budget spent fails all the same. Running a
   module to read its declarations spends a budget named for a `load` hook on the base face;
-- Rust panics that `pcall` and `xpcall` cannot catch (`LuaOptions::catch_rust_panics(false)`): a
-  nested hook that fails panics (below), and the panic goes on through the hook that called it.
+- Rust panics that `pcall` cannot catch (`LuaOptions::catch_rust_panics(false)`): a nested hook
+  that fails panics (below), and the panic goes on through the hook that called it, since mlua's
+  `pcall` raises it again and runs no handler that could replace it.
   This holds while Luau's fast `pcall` is off (its `LuauFastpcall` and `LuauCompileFastpcall`
   flags, off in 0.740), since that path calls Luau's own `pcall` rather than the global mlua puts
   in its place; `pcall_does_not_catch_a_nested_hooks_failure` fails on a Luau that turns it on.
@@ -155,21 +165,29 @@ return {
 ## Compiling
 
 `compile(file, source)` lints the source and compiles it with Luau's compiler to the bytecode
-`load_card` takes. `crates/cards/build.rs` will call it in part 4; until then only the tests do.
+`load_card` takes, with `compiler()`. `crates/cards/build.rs` will call it in part 4; until then
+only the tests do.
 Its errors name the file: a lint finding as `"<file>:<line>: <rule>"`, one per line, a syntax error
 as `"<file>:<line>: <Luau's message>"`.
 
 The lint (`lint.rs`, L6, L7) is a pure function over the source: a lexer that knows Luau's
-comments, strings (interpolated ones included) and operators, then a pass over the tokens. A name
+comments, strings (interpolated ones included) and operators, then a pass over the tokens. The
+lexer reads the source as Luau 0.740's (`Ast/src/Lexer.cpp`) does wherever that decides what is
+code: a line comment ends at a newline, a carriage return or a NUL byte; a string breaks at an
+unescaped one of them (which Luau refuses, so the code after it is linted); escapes are read as
+Luau reads them (`\z` and a `\` before a newline run a string on); a NUL byte ends the source;
+and a number is read as Luau's `readNumber` reads it. A name
 after `.`, `:` or `::` is a field, a method or a type and is never refused. It refuses:
 
 - `pairs`, `next` (a table key spelled `next = …` included; write `["next"]`), `table.sort`,
-  `table.foreach`, a generic `for … in` over anything but `ipairs(…)`, and `ipairs` anywhere but
+  `table.foreach`, a generic `for … in` over anything but `ipairs(…)` (an `=` or `in` counts only
+  outside brackets, so a loop variable's type annotation cannot make a `for` look numeric), and
+  `ipairs` anywhere but
   right after `in` (`local each = ipairs`, a parameter or a key named `ipairs`);
 - the `/` and `^` operators (and `/=`, `^=`), and every `math.` member except `floor`, `ceil`,
   `max`, `min`, `abs`, `clamp` and `sign` (`math.pi` and `math.huge` included), and `math` used
   bare;
-- the names the sandbox removed.
+- the names the sandbox removed, `xpcall`, `vector`, `buffer` and `integer` among them.
 
 ## What is bound
 
