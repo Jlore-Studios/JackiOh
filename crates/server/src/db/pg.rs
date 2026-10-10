@@ -63,16 +63,17 @@ use sqlx::{Postgres, Row, Transaction};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use jackioh_engine::wire::{GameRecord, parse_game_record, portrait_or_default, sources_of};
-use jackioh_engine::{Action, LastBoardEntry};
+use jackioh_engine::wire::{GameEventType, GameRecord, parse_game_record, portrait_or_default, sources_of};
+use jackioh_engine::{Action, LastBoardEntry, PlayerId};
 
 use crate::auth::is_uuid;
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
-    BotRating, CodeAttempt, CollectionEntry, CollectionGrant, FrozenDeck, FrozenTrio, GameRecordQuery,
-    InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, PerMode, PlayerSettingsGroup,
-    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
-    PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileRecord, ProfileStatus,
+    ActionTimingRow, BotRating, CodeAttempt, CollectionEntry, CollectionGrant, EmoteEventRow, FrozenDeck,
+    FrozenTrio, GameRecordQuery, InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow,
+    MatchSignalRow, PerMode, PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits,
+    PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
+    PlayerStatsRow, Profile, ProfileCreateInput, ProfileRecord, ProfileStatus,
     PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ResultRow,
     RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow,
     SeriesSide, StoreError, Ticket, TicketStatus, TrioUpsertOutcome, TutorialHiddenChoice,
@@ -1731,22 +1732,26 @@ pub async fn redeem_invite_code(
     .await
 }
 
-/// The retention purge, as one call to `app.purge_expired_rows` (migration 0013): the only path
-/// `match_actions`' append-only guard lets a delete through.
+/// The retention purge, as one call to `app.purge_expired_rows` (migration 0013, with 0029's third
+/// cutoff for the play telemetry, R1442): the only path `match_actions`' append-only guard lets a
+/// delete through.
 pub async fn purge_expired(
     t: &mut PgTx<'_>,
     input: &RetentionPurgeInput,
 ) -> Result<RetentionPurgeResult, StoreError> {
     run_as(t, None).await?;
     let row = sqlx::query(concat!(
-        "select code_attempts, match_actions from app.purge_expired_rows(",
+        "select code_attempts, match_actions, play_telemetry from app.purge_expired_rows(",
         ts!("$1"),
         ", ",
         ts!("$2"),
+        ", ",
+        ts!("$3"),
         ")"
     ))
     .bind(input.code_attempts_before)
     .bind(input.match_actions_ended_before)
+    .bind(input.play_telemetry_ended_before)
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
@@ -1756,6 +1761,7 @@ pub async fn purge_expired(
     Ok(RetentionPurgeResult {
         code_attempts: get::<i64>(&row, "code_attempts")?,
         match_actions: get::<i64>(&row, "match_actions")?,
+        play_telemetry: get::<i64>(&row, "play_telemetry")?,
     })
 }
 
@@ -3886,6 +3892,275 @@ pub async fn game_records_list(
 }
 
 // ---------------------------------------------------------------------------
+// Play telemetry (SPEC §9.11, R1442): migration 0029's three tables. No `app.*` function: each
+// write is one insert per table that skips a key already held, and each read a single select.
+// ---------------------------------------------------------------------------
+
+/// R1442: one `jsonb_to_recordset` insert per table that has rows, each skipping a key already
+/// held, in the one transaction. A row naming a match the store does not hold fails the insert on
+/// the foreign key, and the transaction with it.
+pub async fn play_telemetry_insert(t: &mut PgTx<'_>, telemetry: &PlayTelemetry) -> Result<(), StoreError> {
+    run_as(t, None).await?;
+    if !telemetry.action_timings.is_empty() {
+        let rows = telemetry
+            .action_timings
+            .iter()
+            .map(|row| -> Result<Value, StoreError> {
+                Ok(json!({
+                    "match_id": row.match_id,
+                    "seq": row.seq,
+                    "seat": row.seat.as_str(),
+                    "action_kind": row.action_kind.as_str(),
+                    "legal_count": row.legal_count,
+                    "turn": row.turn,
+                    "think_ms": row.think_ms,
+                    "clock_left_ms": row.clock_left_ms,
+                    "first_in_turn": row.first_in_turn,
+                    "rank_bucket": literal_or_null(&row.rank_bucket)?,
+                    "pilot": row.pilot.as_str(),
+                }))
+            })
+            .collect::<Result<Vec<Value>, StoreError>>()?;
+        sqlx::query(
+            "insert into public.action_timings
+               (match_id, seq, seat, action_kind, legal_count, turn, think_ms, clock_left_ms,
+                first_in_turn, rank_bucket, pilot)
+             select r.match_id::uuid, r.seq, r.seat, r.action_kind, r.legal_count, r.turn, r.think_ms,
+                    r.clock_left_ms, r.first_in_turn, r.rank_bucket, r.pilot
+               from jsonb_to_recordset($1::jsonb)
+                 as r(match_id text, seq bigint, seat text, action_kind text, legal_count int, turn int,
+                      think_ms bigint, clock_left_ms bigint, first_in_turn boolean, rank_bucket text,
+                      pilot text)
+             on conflict do nothing",
+        )
+        .bind(json(&rows)?)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    }
+    if !telemetry.emote_events.is_empty() {
+        let rows: Vec<Value> = telemetry
+            .emote_events
+            .iter()
+            .map(|row| {
+                json!({
+                    "match_id": row.match_id,
+                    "ordinal": row.ordinal,
+                    "seat": row.seat.as_str(),
+                    "emote_id": row.emote_id.as_str(),
+                    "turn": row.turn,
+                    "trigger_event": row.trigger_event.map(GameEventType::as_str),
+                    "ms_since_trigger": row.ms_since_trigger,
+                    "reply_to_opponent_ms": row.reply_to_opponent_ms,
+                    "pilot": row.pilot.as_str(),
+                })
+            })
+            .collect();
+        sqlx::query(
+            "insert into public.emote_events
+               (match_id, ordinal, seat, emote_id, turn, trigger_event, ms_since_trigger,
+                reply_to_opponent_ms, pilot)
+             select r.match_id::uuid, r.ordinal, r.seat, r.emote_id, r.turn, r.trigger_event,
+                    r.ms_since_trigger, r.reply_to_opponent_ms, r.pilot
+               from jsonb_to_recordset($1::jsonb)
+                 as r(match_id text, ordinal int, seat text, emote_id text, turn int, trigger_event text,
+                      ms_since_trigger bigint, reply_to_opponent_ms bigint, pilot text)
+             on conflict do nothing",
+        )
+        .bind(json(&rows)?)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    }
+    if !telemetry.match_signals.is_empty() {
+        let rows: Vec<Value> = telemetry
+            .match_signals
+            .iter()
+            .map(|row| {
+                json!({
+                    "match_id": row.match_id,
+                    "seat": row.seat.as_str(),
+                    "conceded_turn": row.conceded_turn,
+                    "concede_eval_deficit": row.concede_eval_deficit,
+                    "draw_offers": row.draw_offers,
+                    "draw_accepted": row.draw_accepted,
+                    "rematch_offered": row.rematch_offered,
+                    "rematch_accepted": row.rematch_accepted,
+                    "timeouts": row.timeouts,
+                    "pilot": row.pilot.as_str(),
+                })
+            })
+            .collect();
+        sqlx::query(
+            "insert into public.match_signals
+               (match_id, seat, conceded_turn, concede_eval_deficit, draw_offers, draw_accepted,
+                rematch_offered, rematch_accepted, timeouts, pilot)
+             select r.match_id::uuid, r.seat, r.conceded_turn, r.concede_eval_deficit, r.draw_offers,
+                    r.draw_accepted, r.rematch_offered, r.rematch_accepted, r.timeouts, r.pilot
+               from jsonb_to_recordset($1::jsonb)
+                 as r(match_id text, seat text, conceded_turn int, concede_eval_deficit double precision,
+                      draw_offers int, draw_accepted boolean, rematch_offered boolean,
+                      rematch_accepted boolean, timeouts int, pilot text)
+             on conflict do nothing",
+        )
+        .bind(json(&rows)?)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    }
+    Ok(())
+}
+
+/// R672, R1442: marks the seat's offer, and whether it made the rematch; an offer once made stays.
+pub async fn play_telemetry_note_rematch(
+    t: &mut PgTx<'_>,
+    match_id: &str,
+    seat: PlayerId,
+    made: bool,
+) -> Result<(), StoreError> {
+    run_as(t, None).await?;
+    sqlx::query(
+        "update public.match_signals
+            set rematch_offered = true, rematch_accepted = rematch_accepted or $3::boolean
+          where match_id = $1::uuid and seat = $2::text",
+    )
+    .bind(match_id)
+    .bind(seat.as_str())
+    .bind(made)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(())
+}
+
+/// The columns `action_timing_of` reads.
+macro_rules! action_timing_columns {
+    () => {
+        "match_id, seq, seat, action_kind, legal_count, turn, think_ms, clock_left_ms, first_in_turn, \
+         rank_bucket, pilot"
+    };
+}
+
+fn action_timing_of(row: &PgRow) -> Result<ActionTimingRow, StoreError> {
+    Ok(ActionTimingRow {
+        match_id: uuid_text(row, "match_id")?,
+        seat: from_literal(&get::<String>(row, "seat")?)?,
+        seq: get(row, "seq")?,
+        action_kind: from_literal(&get::<String>(row, "action_kind")?)?,
+        legal_count: get(row, "legal_count")?,
+        turn: get(row, "turn")?,
+        think_ms: get(row, "think_ms")?,
+        clock_left_ms: get(row, "clock_left_ms")?,
+        first_in_turn: get(row, "first_in_turn")?,
+        rank_bucket: get::<Option<String>>(row, "rank_bucket")?
+            .map(|tier| from_literal(&tier))
+            .transpose()?,
+        pilot: from_literal(&get::<String>(row, "pilot")?)?,
+    })
+}
+
+
+/// Three selects, one per table, in the orders the port names.
+pub async fn play_telemetry_of(t: &mut PgTx<'_>, match_id: &str) -> Result<PlayTelemetry, StoreError> {
+    run_as(t, None).await?;
+    let timings = sqlx::query(concat!(
+        "select ",
+        action_timing_columns!(),
+        " from public.action_timings where match_id = $1::uuid order by seq"
+    ))
+    .bind(match_id)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let emotes = sqlx::query(
+        "select match_id, ordinal, seat, emote_id, turn, trigger_event, ms_since_trigger,
+                reply_to_opponent_ms, pilot
+           from public.emote_events where match_id = $1::uuid order by ordinal",
+    )
+    .bind(match_id)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let signals = sqlx::query(
+        "select match_id, seat, conceded_turn, concede_eval_deficit, draw_offers, draw_accepted,
+                rematch_offered, rematch_accepted, timeouts, pilot
+           from public.match_signals where match_id = $1::uuid order by seat",
+    )
+    .bind(match_id)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(PlayTelemetry {
+        action_timings: timings.iter().map(action_timing_of).collect::<Result<_, _>>()?,
+        emote_events: emotes
+            .iter()
+            .map(|row| -> Result<EmoteEventRow, StoreError> {
+                Ok(EmoteEventRow {
+                    match_id: uuid_text(row, "match_id")?,
+                    seat: from_literal(&get::<String>(row, "seat")?)?,
+                    ordinal: get(row, "ordinal")?,
+                    emote_id: from_literal(&get::<String>(row, "emote_id")?)?,
+                    turn: get(row, "turn")?,
+                    trigger_event: get::<Option<String>>(row, "trigger_event")?
+                        .map(|event| from_literal(&event))
+                        .transpose()?,
+                    ms_since_trigger: get(row, "ms_since_trigger")?,
+                    reply_to_opponent_ms: get(row, "reply_to_opponent_ms")?,
+                    pilot: from_literal(&get::<String>(row, "pilot")?)?,
+                })
+            })
+            .collect::<Result<_, _>>()?,
+        match_signals: signals
+            .iter()
+            .map(|row| -> Result<MatchSignalRow, StoreError> {
+                Ok(MatchSignalRow {
+                    match_id: uuid_text(row, "match_id")?,
+                    seat: from_literal(&get::<String>(row, "seat")?)?,
+                    conceded_turn: get(row, "conceded_turn")?,
+                    concede_eval_deficit: get(row, "concede_eval_deficit")?,
+                    draw_offers: get(row, "draw_offers")?,
+                    draw_accepted: get(row, "draw_accepted")?,
+                    rematch_offered: get(row, "rematch_offered")?,
+                    rematch_accepted: get(row, "rematch_accepted")?,
+                    timeouts: get(row, "timeouts")?,
+                    pilot: from_literal(&get::<String>(row, "pilot")?)?,
+                })
+            })
+            .collect::<Result<_, _>>()?,
+    })
+}
+
+/// Every row of `action_timings`, for `timing-fit`.
+pub async fn play_telemetry_timings(t: &mut PgTx<'_>) -> Result<Vec<ActionTimingRow>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        "select ",
+        action_timing_columns!(),
+        " from public.action_timings order by match_id, seq"
+    ))
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(action_timing_of).collect()
+}
+
+/// The finished matches (`over`) with a log and no timing, oldest ending first.
+pub async fn play_telemetry_unfolded(t: &mut PgTx<'_>) -> Result<Vec<String>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(
+        "select m.id from public.matches m
+          where m.status = 'over'
+            and exists (select 1 from public.match_actions a where a.match_id = m.id)
+            and not exists (select 1 from public.action_timings s where s.match_id = m.id)
+          order by m.ended_at, m.id",
+    )
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(|row| uuid_text(row, "id")).collect()
+}
+
+// ---------------------------------------------------------------------------
 // Ranked ladder (SPEC §9.12): migration 0022's four tables — `seasons`, `season_ranks`,
 // `bot_ratings` and `rated_games` — plus the Glicko triple on `profiles`. None of these reaches
 // an `app.*` function, because none has a rule to hold that one statement does not already hold:
@@ -4454,7 +4729,8 @@ fn from_ticket_status(status: &TicketStatus) -> Result<&'static str, StoreError>
 //    agree exactly; with one, the database grants a card the fake does not.
 //  * action timestamps. `app.append_match_action` stamps `at` with the database clock and
 //    `match_actions` is append-only, so `MatchActionRow.at` cannot be written by the caller. The
-//    log's order (`seq`) is unaffected, and nothing reads `at` back except a replay tool.
+//    log's order (`seq`) is unaffected, and nothing reads `at` back except a replay tool and
+//    `timing-backfill` (R1442), whose think times therefore run from one commit to the next.
 //  * rooms. There is no `rooms` table: a room is a `public.matches` row with `status = 'open'`, and
 //    `Room.expires_at` is kept in `ceiling_at`, the column migration 0004 documents as meaningless
 //    while a room is open. `rooms_claim` rewrites the row's id to the match id the server minted.

@@ -389,7 +389,8 @@ declare
   missing text := '';
 begin
   foreach t in array array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series', 'game_records', 'player_stats',
-                           'seasons', 'season_ranks', 'bot_ratings', 'rated_games'] loop
+                           'seasons', 'season_ranks', 'bot_ratings', 'rated_games',
+                           'action_timings', 'emote_events', 'match_signals'] loop
     if to_regclass('public.' || t) is null then
       missing := missing || t || ' ';
     end if;
@@ -406,9 +407,11 @@ declare
   -- R376): both hands and both decklists of every recorded game. `player_stats` (0021, R654):
   -- each player's tracked stats and privacy settings, accessed solely via service_role. The four
   -- ranked tables (0022, R603–R612): hidden ratings, which R612 says no client read may ever carry —
-  -- the client gets its rank through the API, never a row.
+  -- the client gets its rank through the API, never a row. The three play telemetry tables (0029,
+  -- R1442): how each person paced, emoted and gave up, which the server alone reads and writes.
   forbidden constant text[] := array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series', 'game_records', 'player_stats',
-                                     'seasons', 'season_ranks', 'bot_ratings', 'rated_games'];
+                                     'seasons', 'season_ranks', 'bot_ratings', 'rated_games',
+                                     'action_timings', 'emote_events', 'match_signals'];
   missing   text := coalesce(current_setting('rls3.missing', true), 'unknown');
   t         text;
   n         bigint;

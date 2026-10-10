@@ -26,6 +26,7 @@ use jackioh_engine::{PLAYER_IDS, PerPlayer, PlayerId, portrait_or_default};
 use crate::actor::contracts::one_tx;
 use crate::actor::engine;
 use crate::actor::match_actor::{MatchActor, MatchActorInput, create_match_actor, last_boards_of};
+use crate::actor::telemetry;
 use crate::actor::ws_server::Socket;
 use crate::api::http::{ApiError, ApiErrorCode, lock};
 use crate::app::{App, now_ms};
@@ -111,7 +112,8 @@ fn initial_clocks(now: i64, ceiling_minutes: i64) -> MatchClocks {
 /// not shown going in. The match row does not record its mode, so it is read off what made the
 /// match (`matches_mode_of`, as `api/game_records.rs` files a record): the same answer at the start
 /// and at every rebuild, so a rebuilt actor folds the same game. Every other mode's decks were built.
-fn dealt_for(mode: Option<QueueMode>) -> Option<Vec<PlayerId>> {
+/// `timing-backfill` folds a finished match's log the same way (R1442).
+pub(crate) fn dealt_for(mode: Option<QueueMode>) -> Option<Vec<PlayerId>> {
     if matches!(mode, Some(QueueMode::Random)) {
         Some(PLAYER_IDS.to_vec())
     } else {
@@ -238,6 +240,7 @@ impl Registry {
                 state: Some(state),
                 log: Vec::new(),
                 on_voided: Some(Registry::on_voided(app, &match_id)),
+                telemetry: None,
             },
         );
         lock(&self.actors).insert(match_id.clone(), actor);
@@ -266,10 +269,16 @@ impl Registry {
             log.iter().map(|row| row.action.clone()).collect(),
             last_boards,
             glitch_boards,
-            dealt,
+            dealt.clone(),
         );
-        let folded = std::panic::catch_unwind(AssertUnwindSafe(|| engine::fold(&args)))
-            .map_err(|payload| RebuildError::Internal(panic_text(payload)))?;
+        // R1442: the play telemetry the log holds, so a rebuilt actor's think times carry on. A match
+        // already finished has none left to write, and is not replayed twice.
+        let live = match_row.status == MatchStatus::Live;
+        let (folded, telemetry) = std::panic::catch_unwind(AssertUnwindSafe(|| {
+            let telemetry = live.then(|| telemetry::replay(&match_row, &log, dealt.clone()).0);
+            (engine::fold(&args), telemetry)
+        }))
+        .map_err(|payload| RebuildError::Internal(panic_text(payload)))?;
         if !folded.errors.is_empty() {
             // An action the engine once accepted and now refuses is a determinism break: the log no
             // longer reconstructs the match (§9.3). Rebuild anyway — a live match is better than a dead
@@ -285,6 +294,7 @@ impl Registry {
                 state: Some(folded.state),
                 log,
                 on_voided: Some(Registry::on_voided(app, match_id)),
+                telemetry,
             },
         );
         lock(&self.actors).insert(match_id.to_string(), actor.clone());

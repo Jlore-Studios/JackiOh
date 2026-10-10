@@ -87,6 +87,7 @@ use indexmap::{IndexMap, IndexSet};
 use serde_json::Value;
 use tokio::sync::{Mutex, MutexGuard};
 
+use jackioh_engine::wire::PlayerId;
 use jackioh_engine::wire::stats::{
     CardStatsFilter, DEV_RECORD_ID_PREFIX, GameRecord, GameSource, PilotFilter, record_matches,
 };
@@ -97,9 +98,10 @@ use crate::config::{
     RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START, USERNAME_DEFAULT_BASE,
 };
 use crate::db::store::{
-    BotRating, CodeAttempt, CodeAttemptResult, CollectionEntry, CollectionGrant, Db, FavouriteCard, FunStats,
-    GameRecordQuery, InviteCode, LastBoardEntry, LastBoardKind, MatchActionRow, MatchClocks, MatchRow,
-    MatchStatus, PerMode, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
+    ActionTimingRow, BotRating, CodeAttempt, CodeAttemptResult, CollectionEntry, CollectionGrant, Db,
+    EmoteEventRow, FavouriteCard, FunStats, GameRecordQuery, InviteCode, LastBoardEntry, LastBoardKind,
+    MatchActionRow, MatchClocks, MatchRow, MatchSignalRow, MatchStatus, PerMode, PlayTelemetry,
+    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
     PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileRecord,
     ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult,
     ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding,
@@ -178,6 +180,10 @@ pub struct FakeTables {
     pub season_ranks: Vec<SeasonRank>,
     pub bots: Vec<BotRating>,
     pub rated_games: Vec<RatedGameRow>,
+    // PlayTelemetryTables: the three tables R1442 adds (migration 0029), keyed by match and seat.
+    pub action_timings: Vec<ActionTimingRow>,
+    pub emote_events: Vec<EmoteEventRow>,
+    pub match_signals: Vec<MatchSignalRow>,
 }
 
 /// TS `emptyTables()` (with `emptyDeckTables`, `emptyTutorialTables`, `emptyPlayerSettingsTables`,
@@ -2006,6 +2012,139 @@ pub fn game_records_list(f: &mut FakeTx<'_>, query: &GameRecordQuery) -> Result<
 }
 
 // ---------------------------------------------------------------------------
+// Play telemetry (SPEC §9.11, R1442; migration 0029)
+// ---------------------------------------------------------------------------
+
+/// R1442: refused, with nothing written, when a row names a match the store does not hold (the
+/// foreign key on `matches`); otherwise every row whose key is not held yet goes in.
+pub fn play_telemetry_insert(f: &mut FakeTx<'_>, telemetry: &PlayTelemetry) -> Result<(), StoreError> {
+    call(f, "playTelemetry.insert")?;
+    let tables = f.tables();
+    let named = telemetry
+        .action_timings
+        .iter()
+        .map(|row| &row.match_id)
+        .chain(telemetry.emote_events.iter().map(|row| &row.match_id))
+        .chain(telemetry.match_signals.iter().map(|row| &row.match_id));
+    for match_id in named {
+        if !tables.matches.iter().any(|row| &row.id == match_id) {
+            return Err(StoreError::from(format!(
+                "play telemetry names no match {match_id}"
+            )));
+        }
+    }
+    for row in &telemetry.action_timings {
+        if !tables
+            .action_timings
+            .iter()
+            .any(|held| held.match_id == row.match_id && held.seq == row.seq)
+        {
+            tables.action_timings.push(row.clone());
+        }
+    }
+    for row in &telemetry.emote_events {
+        if !tables
+            .emote_events
+            .iter()
+            .any(|held| held.match_id == row.match_id && held.ordinal == row.ordinal)
+        {
+            tables.emote_events.push(row.clone());
+        }
+    }
+    for row in &telemetry.match_signals {
+        if !tables
+            .match_signals
+            .iter()
+            .any(|held| held.match_id == row.match_id && held.seat == row.seat)
+        {
+            tables.match_signals.push(row.clone());
+        }
+    }
+    Ok(())
+}
+
+/// R672, R1442: marks the seat's offer, and whether it made the rematch; an offer once made stays.
+pub fn play_telemetry_note_rematch(
+    f: &mut FakeTx<'_>,
+    match_id: &str,
+    seat: PlayerId,
+    made: bool,
+) -> Result<(), StoreError> {
+    call(f, "playTelemetry.noteRematch")?;
+    if let Some(row) = f
+        .tables()
+        .match_signals
+        .iter_mut()
+        .find(|row| row.match_id == match_id && row.seat == seat)
+    {
+        row.rematch_offered = true;
+        row.rematch_accepted = row.rematch_accepted || made;
+    }
+    Ok(())
+}
+
+pub fn play_telemetry_of(f: &mut FakeTx<'_>, match_id: &str) -> Result<PlayTelemetry, StoreError> {
+    call(f, "playTelemetry.of")?;
+    let tables = f.tables();
+    let mut action_timings: Vec<ActionTimingRow> = tables
+        .action_timings
+        .iter()
+        .filter(|row| row.match_id == match_id)
+        .cloned()
+        .collect();
+    action_timings.sort_by_key(|row| row.seq);
+    let mut emote_events: Vec<EmoteEventRow> = tables
+        .emote_events
+        .iter()
+        .filter(|row| row.match_id == match_id)
+        .cloned()
+        .collect();
+    emote_events.sort_by_key(|row| row.ordinal);
+    let mut match_signals: Vec<MatchSignalRow> = tables
+        .match_signals
+        .iter()
+        .filter(|row| row.match_id == match_id)
+        .cloned()
+        .collect();
+    match_signals.sort_by_key(|row| row.seat);
+    Ok(PlayTelemetry {
+        action_timings,
+        emote_events,
+        match_signals,
+    })
+}
+
+pub fn play_telemetry_timings(f: &mut FakeTx<'_>) -> Result<Vec<ActionTimingRow>, StoreError> {
+    call(f, "playTelemetry.timings")?;
+    let mut rows = f.tables().action_timings.clone();
+    rows.sort_by(|a, b| a.match_id.cmp(&b.match_id).then(a.seq.cmp(&b.seq)));
+    Ok(rows)
+}
+
+/// Finished matches with a log and no timing, by when they ended (a missing end last, as
+/// Postgres sorts a null) and then by id.
+pub fn play_telemetry_unfolded(f: &mut FakeTx<'_>) -> Result<Vec<String>, StoreError> {
+    call(f, "playTelemetry.unfolded")?;
+    let tables = f.tables();
+    let mut unfolded: Vec<&MatchRow> = tables
+        .matches
+        .iter()
+        .filter(|row| {
+            row.status == MatchStatus::Finished
+                && tables.match_actions.iter().any(|action| action.match_id == row.id)
+                && !tables.action_timings.iter().any(|timing| timing.match_id == row.id)
+        })
+        .collect();
+    unfolded.sort_by(|a, b| {
+        a.finished_at
+            .unwrap_or(i64::MAX)
+            .cmp(&b.finished_at.unwrap_or(i64::MAX))
+            .then_with(|| a.id.cmp(&b.id))
+    });
+    Ok(unfolded.into_iter().map(|row| row.id.clone()).collect())
+}
+
+// ---------------------------------------------------------------------------
 // Player statistics on the account (SPEC §9.11, R639, R654)
 // ---------------------------------------------------------------------------
 
@@ -2208,13 +2347,30 @@ fn keep_only<T>(rows: &mut Vec<T>, wanted: impl FnMut(&T) -> bool) -> usize {
 }
 
 /// The profile store's `remove`, as migration 0012 makes Postgres do it: the profile's own rows go,
-/// its invite-code attempts lose their link to it, and a room it opened that nobody joined goes too.
+/// its invite-code attempts lose their link to it, a room it opened that nobody joined goes too,
+/// and (0029, R1442) so does the play telemetry of every seat it held.
 /// Finished matches, results and series stay for the other player. Postgres empties this profile's
 /// seat on them; here the id stays, since no port read of a finished match looks the seat up.
 pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     if keep_only(&mut tables.profiles, |row| row.id != profile_id) == 0 {
         return false;
     }
+    // 0029, R1442: the play telemetry of every seat the profile held goes; the opponent's stays.
+    let held: IndexSet<(String, PlayerId)> = tables
+        .matches
+        .iter()
+        .flat_map(|row| {
+            [
+                (row.players.0 == profile_id).then(|| (row.id.clone(), PlayerId::P1)),
+                (row.players.1 == profile_id).then(|| (row.id.clone(), PlayerId::P2)),
+            ]
+        })
+        .flatten()
+        .collect();
+    let seat_held = |match_id: &str, seat: PlayerId| held.contains(&(match_id.to_string(), seat));
+    keep_only(&mut tables.action_timings, |row| !seat_held(&row.match_id, row.seat));
+    keep_only(&mut tables.emote_events, |row| !seat_held(&row.match_id, row.seat));
+    keep_only(&mut tables.match_signals, |row| !seat_held(&row.match_id, row.seat));
     for attempt in tables.attempts.iter_mut() {
         if attempt.profile_id.as_deref() == Some(profile_id) {
             attempt.profile_id = None;
@@ -2273,7 +2429,8 @@ pub fn forget_voided_rows(tables: &mut FakeTables, match_id: &str) {
     }
 }
 
-/// The root `purgeExpired`: old attempts, and the logs of matches that ended before the cutoff.
+/// The root `purgeExpired`: old attempts, the logs of matches that ended before the cutoff, and the
+/// play telemetry of matches that ended before its own (R1442).
 pub fn purge_expired_rows(tables: &mut FakeTables, input: &RetentionPurgeInput) -> RetentionPurgeResult {
     let code_attempts = keep_only(&mut tables.attempts, |row| row.at >= input.code_attempts_before);
     let expired: IndexSet<String> = tables
@@ -2288,9 +2445,29 @@ pub fn purge_expired_rows(tables: &mut FakeTables, input: &RetentionPurgeInput) 
         .map(|row| row.id.clone())
         .collect();
     let match_actions = keep_only(&mut tables.match_actions, |row| !expired.contains(&row.match_id));
+    // 0029, R1442: the play telemetry, on its own cutoff.
+    let telemetry_expired: IndexSet<String> = tables
+        .matches
+        .iter()
+        .filter(|row| {
+            row.status == MatchStatus::Finished
+                && row
+                    .finished_at
+                    .is_some_and(|finished_at| finished_at < input.play_telemetry_ended_before)
+        })
+        .map(|row| row.id.clone())
+        .collect();
+    let play_telemetry = keep_only(&mut tables.action_timings, |row| {
+        !telemetry_expired.contains(&row.match_id)
+    }) + keep_only(&mut tables.emote_events, |row| {
+        !telemetry_expired.contains(&row.match_id)
+    }) + keep_only(&mut tables.match_signals, |row| {
+        !telemetry_expired.contains(&row.match_id)
+    });
     RetentionPurgeResult {
         code_attempts: code_attempts as i64,
         match_actions: match_actions as i64,
+        play_telemetry: play_telemetry as i64,
     }
 }
 

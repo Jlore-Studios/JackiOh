@@ -30,12 +30,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use jackioh_engine::wire::{
-    Action, GameMode, GameOverReason, GameRecord, PerPlayer, PlayerId, PortraitId, SourceFilter, Winner,
+    Action, ActionType, EmoteId, GameEventType, GameMode, GameOverReason, GameRecord, PerPlayer, PlayerId,
+    PortraitId, SourceFilter, Winner,
 };
 
 use super::{fake, pg};
 use crate::ranked::glicko2::Glicko;
-use crate::ranked::ladder::{SeasonRank, VisibleRank};
+use crate::ranked::ladder::{RankTier, SeasonRank, VisibleRank};
 use crate::ranked::season::{ResetChange, ResetPlayer};
 use crate::username::render_username;
 
@@ -1020,6 +1021,8 @@ pub struct PlayerStatsListOptions {
 pub struct RetentionPurgeInput {
     pub code_attempts_before: i64,
     pub match_actions_ended_before: i64,
+    /// R1442: the play telemetry of every match that ended before this goes.
+    pub play_telemetry_ended_before: i64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -1027,6 +1030,84 @@ pub struct RetentionPurgeInput {
 pub struct RetentionPurgeResult {
     pub code_attempts: i64,
     pub match_actions: i64,
+    /// R1442: the rows of the three telemetry tables, together.
+    pub play_telemetry: i64,
+}
+
+// Play telemetry (R1442, migration 0029). Server-only, keyed by match and seat, naming no profile.
+// `seat` is always the seat the account BEGAN the match in (R677), the one `MatchRow.players` names.
+
+/// R1442: one move a seat made, and how long it took (`public.action_timings`).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ActionTimingRow {
+    pub match_id: String,
+    pub seat: PlayerId,
+    /// The move's `match_actions.seq`.
+    pub seq: i64,
+    pub action_kind: ActionType,
+    /// How many actions the seat could have taken instead (`legal_actions` before the move).
+    pub legal_count: i32,
+    pub turn: i32,
+    /// From the push of the view that made it the seat's move to the move, epoch ms apart.
+    pub think_ms: i64,
+    /// The seat's clock as the move arrived; absent when no clock was read (a backfilled row).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub clock_left_ms: Option<i64>,
+    pub first_in_turn: bool,
+    /// The player's ladder tier as the match began; absent when none was read.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rank_bucket: Option<RankTier>,
+    pub pilot: Pilot,
+}
+
+/// R1442: one emote relayed before the result (`public.emote_events`).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct EmoteEventRow {
+    pub match_id: String,
+    pub seat: PlayerId,
+    /// The emote's place among the match's emotes, from 0.
+    pub ordinal: i32,
+    pub emote_id: EmoteId,
+    pub turn: i32,
+    /// The last game event before the emote; absent when the match had none yet.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigger_event: Option<GameEventType>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ms_since_trigger: Option<i64>,
+    /// When the opponent emoted since this seat last did: how long after it this one came.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reply_to_opponent_ms: Option<i64>,
+    pub pilot: Pilot,
+}
+
+/// R1442: how the match ended for one seat (`public.match_signals`).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct MatchSignalRow {
+    pub match_id: String,
+    pub seat: PlayerId,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conceded_turn: Option<i32>,
+    /// How far behind the seat stood as it conceded: the AI's evaluation of the seat, negated.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub concede_eval_deficit: Option<f64>,
+    pub draw_offers: i32,
+    pub draw_accepted: bool,
+    pub rematch_offered: bool,
+    pub rematch_accepted: bool,
+    pub timeouts: i32,
+    pub pilot: Pilot,
+}
+
+/// R1442: one match's telemetry, as the actor writes it with the result.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayTelemetry {
+    pub action_timings: Vec<ActionTimingRow>,
+    pub emote_events: Vec<EmoteEventRow>,
+    pub match_signals: Vec<MatchSignalRow>,
 }
 
 // Live matches: what `queue.rs`, the room endpoints, the series and the rematch hand
@@ -1171,9 +1252,11 @@ impl Tx<'_> {
 
     /// The retention purge (`api/retention.rs`): deletes `code_attempts` rows made before
     /// `code_attempts_before` and the action log of every match that ended before
-    /// `match_actions_ended_before` (epoch ms). Results, and so ratings, are kept. Answers how many
-    /// rows of each went. In Postgres this is `app.purge_expired_rows` (migration 0013), the one
-    /// path the append-only guard on `match_actions` lets a delete through.
+    /// `match_actions_ended_before` (epoch ms), and the play telemetry of every match that ended
+    /// before `play_telemetry_ended_before` (R1442). Results, and so ratings, are kept. Answers how
+    /// many rows of each went. In Postgres this is `app.purge_expired_rows` (migration 0013, given
+    /// its third cutoff by 0029), the one path the append-only guard on `match_actions` lets a
+    /// delete through.
     pub async fn purge_expired(&mut self, input: &RetentionPurgeInput) -> StoreResult<RetentionPurgeResult> {
         dispatch!(self, purge_expired(input))
     }
@@ -1746,5 +1829,41 @@ impl Tx<'_> {
         options: &PlayerStatsListOptions,
     ) -> StoreResult<Vec<PublicPlayerSummary>> {
         dispatch!(self, player_stats_list_public(options))
+    }
+
+    // playTelemetry (R1442: how each seat played a match, migration 0029)
+
+    /// Writes one match's telemetry. A row whose key is already held is left as it stands, so a
+    /// repeated write changes nothing. Refused, with nothing written, when a row names a match the
+    /// store does not hold (the foreign key on `matches`).
+    pub async fn play_telemetry_insert(&mut self, telemetry: &PlayTelemetry) -> StoreResult<()> {
+        dispatch!(self, play_telemetry_insert(telemetry))
+    }
+
+    /// R672: the account that began the match in `seat` offered a rematch; `made` when that offer
+    /// made one. A no-op when the seat has no signals row yet.
+    pub async fn play_telemetry_note_rematch(
+        &mut self,
+        match_id: &str,
+        seat: PlayerId,
+        made: bool,
+    ) -> StoreResult<()> {
+        dispatch!(self, play_telemetry_note_rematch(match_id, seat, made))
+    }
+
+    /// One match's telemetry: its timings by seq, its emotes by ordinal, its signals p1 first.
+    pub async fn play_telemetry_of(&mut self, match_id: &str) -> StoreResult<PlayTelemetry> {
+        dispatch!(self, play_telemetry_of(match_id))
+    }
+
+    /// Every action timing held, by match id then seq, for `timing-fit`.
+    pub async fn play_telemetry_timings(&mut self) -> StoreResult<Vec<ActionTimingRow>> {
+        dispatch!(self, play_telemetry_timings())
+    }
+
+    /// The finished matches whose action log is still held and that have no action timing yet, by
+    /// when they ended and then by id: what `timing-backfill` folds.
+    pub async fn play_telemetry_unfolded(&mut self) -> StoreResult<Vec<String>> {
+        dispatch!(self, play_telemetry_unfolded())
     }
 }

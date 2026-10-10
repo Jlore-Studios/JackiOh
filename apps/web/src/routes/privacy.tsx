@@ -8,14 +8,19 @@
 // migrations/), what this browser keeps (net/session.ts, auth/pkce.ts, settings/store.ts,
 // tutorial/progress.ts, auth/redirect.ts), where it runs (render.yaml, vercel.json), how long it
 // is kept (the retention constants in crates/server/src/config.rs, purged by migration 0013), what
-// deleting an account removes (migration 0012) and the summary each finished
-// match leaves for the card statistics (migration 0014, SPEC §9.11). The two things the code
+// deleting an account removes (migration 0012), the summary each finished
+// match leaves for the card statistics (migration 0014, SPEC §9.11) and the record of how each
+// seat played it (migration 0029, R1442). The two things the code
 // cannot say, a minimum age and a private contact address, are marked for the owner. Change the
 // date on the page whenever the text changes.
 
 import type { ReactElement } from "react";
 
-import { CODE_ATTEMPT_RETENTION_DAYS, MATCH_ACTION_RETENTION_DAYS } from "@jackioh/server-config";
+import {
+  CODE_ATTEMPT_RETENTION_DAYS,
+  MATCH_ACTION_RETENTION_DAYS,
+  PLAY_TELEMETRY_RETENTION_DAYS,
+} from "@jackioh/server-config";
 
 import { CONTACT_URL } from "./SiteFooter.tsx";
 import { BackLink } from "./nav.tsx";
@@ -29,7 +34,7 @@ export const privacyTestid = {
 } as const;
 
 /** The date the text below last changed, as the page shows it. */
-export const PRIVACY_LAST_UPDATED = "2026-10-08";
+export const PRIVACY_LAST_UPDATED = "2026-10-10";
 
 export default function PrivacyRoute(): ReactElement {
   return (
@@ -82,6 +87,11 @@ export default function PrivacyRoute(): ReactElement {
               who won. The summary itself names no account.
             </li>
             <li>
+              A record of how you play each online match: how long each of your moves took and how much of
+              your clock was left, the emotes you send and when, and whether you conceded, offered or accepted
+              a draw, or offered a rematch. It is kept by match and seat, and names no account.
+            </li>
+            <li>
               Our hosts receive your IP address, your browser type and the pages you ask for with each
               request, and may keep them in their logs. Supabase also records your IP address and browser
               when you sign in.
@@ -98,6 +108,7 @@ export default function PrivacyRoute(): ReactElement {
             <li>To create your account, sign you in, and email you the links you ask for: to confirm your address or reset your password.</li>
             <li>To run online matches, keep score, and set your rating.</li>
             <li>To see how often each card wins, so the cards can be balanced.</li>
+            <li>To make the computer opponents play at a human pace.</li>
             <li>To save your decks and tutorial progress so they follow your account.</li>
             <li>To stop invite-code guessing and other abuse.</li>
             <li>To keep the site running and fix problems.</li>
@@ -122,7 +133,7 @@ export default function PrivacyRoute(): ReactElement {
           <h3 id="privacy-not">What we don&rsquo;t do</h3>
           <ul>
             <li>We don&rsquo;t sell your data or share it for advertising.</li>
-            <li>We don&rsquo;t show ads, and we use no analytics, tracking pixels or session recording.</li>
+            <li>We don&rsquo;t show ads, and we use no third-party analytics, tracking pixels or session recording.</li>
             <li>
               We don&rsquo;t track you across other sites, and no third party tracks you across sites through
               JackiOh. So a browser&rsquo;s &ldquo;Do Not Track&rdquo; signal doesn&rsquo;t change anything
@@ -165,6 +176,10 @@ export default function PrivacyRoute(): ReactElement {
               A finished match&rsquo;s summary for card statistics: for as long as the statistics are kept. It
               names no account, and once your account is deleted nothing links it to you.
             </li>
+            <li>
+              The record of how you played a finished match: {PLAY_TELEMETRY_RETENTION_DAYS} days after the
+              match ends.
+            </li>
             <li>Our hosts&rsquo; request logs: as long as each host&rsquo;s own policy says.</li>
           </ul>
         </section>
@@ -173,7 +188,8 @@ export default function PrivacyRoute(): ReactElement {
           <h3 id="privacy-choices">Deleting your account or getting a copy</h3>
           <p>
             You can delete your account yourself: sign in, open your Account page, and choose &ldquo;Delete my
-            account&rdquo;. That deletes your sign-in, your decks, trios and cards, and your tutorial progress.
+            account&rdquo;. That deletes your sign-in, your decks, trios and cards, your tutorial progress, and the
+            records of how you played.
             Finished matches and their results stay in the other player&rsquo;s history, with your account
             removed from them. You can&rsquo;t delete your account during a match or a Conquest series that
             hasn&rsquo;t finished.

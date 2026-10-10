@@ -33,8 +33,9 @@ use indexmap::IndexMap;
 use tokio::sync::{mpsc, oneshot};
 
 use jackioh_engine::{
-    Action, ActionBody, Aim, AimEnd, EmoteId, GameOverReason, HandView, PLAYER_IDS, PendingView, PerPlayer,
-    PlayerId, PlayerView, PortraitId, aim_key, deal_emote_hand, emote_gate, hand_holds, portrait_or_default,
+    Action, ActionBody, Aim, AimEnd, EmoteId, GameEvent, GameOverReason, HandView, PLAYER_IDS, PendingView,
+    PerPlayer, PlayerId, PlayerView, PortraitId, aim_key, deal_emote_hand, emote_gate, hand_holds,
+    portrait_or_default,
 };
 
 use crate::actor::clock::{Timer, after, create_match_clock};
@@ -43,6 +44,7 @@ use crate::actor::contracts::{
     SocketHandlers, VoidMatchInput, one_tx,
 };
 use crate::actor::engine::{self, EngineState, LastBoards, MatchSnapshot};
+use crate::actor::telemetry::{self, LIVE_PILOTS, Recorder};
 use crate::actor::protocol::{
     ClientMessage, MATCH_VOIDED_CLOSE_REASON, SERVER_NONCE_PREFIX, ServerMessage, SocketErrorCode,
     ack_message, aim_relay_message, clock_message, emote_relay_message, encode, error_message,
@@ -55,6 +57,7 @@ use crate::config::{
     MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_VOIDED_CLOSE_CODE,
 };
 use crate::db::store::{MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus};
+use crate::ranked::ladder::RankTier;
 
 const PLAYERS: [PlayerId; 2] = PLAYER_IDS;
 
@@ -72,6 +75,9 @@ pub struct MatchActorInput {
     /// R679: called once, synchronously, when a Glitch voids the match, before the store forgets it —
     /// the registry drops the actor here, so nothing can reach a match that no longer exists.
     pub on_voided: Option<Box<dyn Fn() + Send + Sync>>,
+    /// R1442: the play telemetry a rebuild replayed from `log` (`telemetry::replay`). `None`, the
+    /// actor starts recording from the match's creation.
+    pub telemetry: Option<Recorder>,
 }
 
 /// R417, R678: the boards a match was created with — its seats' last boards and the two other
@@ -189,6 +195,11 @@ struct Core {
     last_pending_for: Option<PlayerId>,
     /// R265: which seats owed a mulligan at the last push, so a `prompt` frame goes out on a change.
     last_mulligan_owed: String,
+    /// R1442: the match's play telemetry, written once its result has landed.
+    telemetry: Recorder,
+    /// R1442: each player's ladder tier as the actor armed (seat order, `MatchRow.players`), the
+    /// telemetry's rank bucket; `None` until then, or when it could not be read.
+    tiers: Option<PerPlayer<RankTier>>,
 }
 
 struct Shared {
@@ -263,6 +274,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         state,
         log,
         on_voided,
+        telemetry,
     } = input;
     let seats = (
         MatchSeat {
@@ -310,6 +322,8 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         deal_emote_hand(&match_row.seed, PlayerId::P2),
     );
     let opening = engine::snapshot(&state);
+    let telemetry =
+        telemetry.unwrap_or_else(|| Recorder::new(&match_row.id, match_row.created_at, &opening));
 
     let core = Core {
         state,
@@ -328,6 +342,8 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         swapped: opening.seats_swapped,
         last_pending_for: opening.pending_for,
         last_mulligan_owed: mulligan_key(&mulligan_window(&opening)),
+        telemetry,
+        tiers: None,
     };
 
     let (inbox, inbox_rx) = mpsc::unbounded_channel();
@@ -388,6 +404,13 @@ impl MatchActor {
                 let snapshot = engine::snapshot(&self.lock().state);
                 self.shared.clock.sync(&clock_view_for(&snapshot));
                 self.persist_clocks().await;
+                // R1442: the rank bucket is the tier each player holds as the match arms.
+                if !self.lock().finished {
+                    let tiers =
+                        telemetry::ladder_tiers_or_none(&self.shared.deps, &self.shared.match_row.players)
+                            .await;
+                    self.lock().tiers = tiers;
+                }
                 if snapshot.result.is_some() {
                     self.on_terminal(&snapshot).await;
                 }
@@ -642,6 +665,8 @@ impl MatchActor {
             for player in PLAYERS {
                 self.push_clock(&core, player);
             }
+            // R1442: a seat's think time runs from this push.
+            core.telemetry.on_pushed(&snapshot, now_ms());
         }
 
         if snapshot.result.is_some() {
@@ -809,6 +834,12 @@ impl MatchActor {
             self.let_go_unrecorded();
             return;
         }
+        // R1442: the play telemetry goes after the result, so its write can never cost it.
+        let played = {
+            let core = self.lock();
+            core.telemetry.finish(&LIVE_PILOTS, core.tiers.as_ref())
+        };
+        telemetry::record(&self.shared.deps, &played).await;
 
         tracing::info!(
             event = "match.over",
@@ -906,7 +937,17 @@ impl MatchActor {
 
         let ack = ack_message(&nonce, seq);
         {
-            let mut core = self.lock();
+            let mut guard = self.lock();
+            let core = &mut *guard;
+            // R1442: the move as it arrived, on the state it was made in.
+            core.telemetry.on_action(
+                &core.state,
+                &row.action,
+                seq,
+                row.at,
+                self.shared.clock.remaining_for(player),
+                result.events.last().map(GameEvent::event_type),
+            );
             core.state = result.state;
             core.next_seq = seq + 1;
             core.acks.insert(nonce, ack.clone());
@@ -963,6 +1004,11 @@ impl MatchActor {
                     player.opponent(),
                     &emote_relay_message(player, emote.emote),
                 );
+                // R1442: recorded until the result, which the telemetry is written with.
+                if !core.finished {
+                    let turn = core.state.turn;
+                    core.telemetry.on_emote(home, emote.emote, turn, now);
+                }
             }
             Ok(ClientMessage::Aim(aim)) => self.receive_aim(&mut core, player, aim.aim),
             Ok(ClientMessage::Action(action)) => {

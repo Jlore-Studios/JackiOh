@@ -33,8 +33,8 @@ use crate::db::store::{
 };
 use crate::ranked::glicko2::{Glicko, START_GLICKO, rate_game};
 use crate::ranked::ladder::{
-    self, ApplyRankedGameInput, GRAPE_TIERS, GrapeTier, PeakBadge, SeasonRank, Standing, VisibleRank,
-    apply_ranked_game, fresh_rank, jlorious_order, peak_badge, percentile_of, place_of, target_ladder,
+    self, ApplyRankedGameInput, GRAPE_TIERS, GrapeTier, PeakBadge, RankTier, SeasonRank, Standing,
+    VisibleRank, VisibleRankWire, apply_ranked_game, fresh_rank, jlorious_order, peak_badge, percentile_of, place_of, target_ladder,
     tier_index_of, visible_rank, with_jlorious_peak,
 };
 use crate::ranked::season::{ResetReport, season_id_of, soft_reset};
@@ -871,6 +871,19 @@ pub async fn match_ranks(
             p2: seat(&row.players.1),
         },
     }))
+}
+
+/// R1442: the ladder tier each of a match's players holds now (seat order, `MatchRow.players`), read
+/// as `match_ranks` reads a rank, for the play telemetry's rank bucket.
+pub async fn ladder_tiers(app: &App, players: &(String, String)) -> Result<(RankTier, RankTier), StoreError> {
+    let mut tx = app.db.begin(None).await?;
+    let standings = tx
+        .ranked_standings(&build_season_id(&SeasonDeps::current()))
+        .await?;
+    tx.commit().await?;
+    let jlorious = jlorious_order(&standings_of(&standings));
+    let tier = |profile_id: &str| VisibleRankWire::from(rank_in(&standings, &jlorious, profile_id)).tier;
+    Ok((tier(&players.0), tier(&players.1)))
 }
 
 // TS's `createRankedRoutes()`, in its order, is three `AuthLevel::Active` rows of `app.rs`'s

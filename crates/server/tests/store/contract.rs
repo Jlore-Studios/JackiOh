@@ -45,7 +45,7 @@ use jackioh_server::config::USERNAME_CHANGE_COOLDOWN_MS;
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
     BotRating, CodeAttempt, CollectionEntry, CollectionGrant, Db, FrozenTrio, GameRecordQuery, InviteCode,
-    LastBoardKind, MatchActionRow, MatchClocks, MatchRow, PlayerSettingsLimits, PlayerSettingsMergeInput,
+    LastBoardKind, MatchActionRow, MatchClocks, MatchRow, PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput,
     PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput, ProfileStatus, RatedGameRow,
     RedeemInviteCodeInput, ResultRow, RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeriesRow,
     StoreError, Ticket, TutorialMergeInput, TutorialProgressRow, Tx, UsernameClaim, UsernameClaimOutcome,
@@ -4180,9 +4180,13 @@ mod purge_expired {
         let cutoffs: RetentionPurgeInput = from(json!({
             "codeAttemptsBefore": now - 30 * day,
             "matchActionsEndedBefore": now - 90 * day,
+            "playTelemetryEndedBefore": now - 365 * day,
         }));
         let purged = q!(harness, t => t.purge_expired(&cutoffs));
-        assert_eq!(j(&purged), json!({ "codeAttempts": 1, "matchActions": 1 }));
+        assert_eq!(
+            j(&purged),
+            json!({ "codeAttempts": 1, "matchActions": 1, "playTelemetry": 0 })
+        );
         assert_eq!(q!(harness, t => t.codes_count_attempts_by_ip("ip-old", 0)), 0);
         assert_eq!(q!(harness, t => t.codes_count_attempts_by_ip("ip-new", 0)), 1);
         assert!(q!(harness, t => t.matches_actions(&old_match)).is_empty());
@@ -4192,6 +4196,264 @@ mod purge_expired {
     }
 
     both_stores!(deletes_attempts_and_finished_logs_older_than_the_cutoffs_and_nothing_newer);
+}
+
+/// R1442: the play telemetry (migration 0029), keyed by match and seat, naming no profile.
+mod r1442_play_telemetry {
+    use super::*;
+
+    const DAY: i64 = 86_400_000;
+
+    /// One match's telemetry: a timing per seat, an emote, both seats' signals. `think_ms` is the
+    /// first timing's think time, so a second write can differ from the first in its values alone.
+    fn telemetry(match_id: &str, think_ms: i64) -> PlayTelemetry {
+        from(json!({
+            "actionTimings": [
+                {
+                    "matchId": match_id, "seat": "p1", "seq": 1, "actionKind": "mulligan", "legalCount": 2,
+                    "turn": 0, "thinkMs": think_ms, "clockLeftMs": 29_000, "firstInTurn": true,
+                    "rankBucket": "raisin", "pilot": "human",
+                },
+                {
+                    "matchId": match_id, "seat": "p2", "seq": 2, "actionKind": "endTurn", "legalCount": 5,
+                    "turn": 1, "thinkMs": 640, "firstInTurn": false, "pilot": "human",
+                },
+            ],
+            "emoteEvents": [
+                {
+                    "matchId": match_id, "seat": "p2", "ordinal": 0, "emoteId": "greetings", "turn": 1,
+                    "triggerEvent": "drawn", "msSinceTrigger": 250, "replyToOpponentMs": 900,
+                    "pilot": "human",
+                },
+            ],
+            "matchSignals": [
+                {
+                    "matchId": match_id, "seat": "p1", "drawOffers": 1, "drawAccepted": false,
+                    "rematchOffered": false, "rematchAccepted": false, "timeouts": 0, "pilot": "human",
+                },
+                {
+                    "matchId": match_id, "seat": "p2", "concededTurn": 3, "concedeEvalDeficit": 12.5,
+                    "drawOffers": 0, "drawAccepted": true, "rematchOffered": false,
+                    "rematchAccepted": false, "timeouts": 2, "pilot": "ai",
+                },
+            ],
+        }))
+    }
+
+    /// A match between `p1` and `p2`, finished at `ended_at` when it is given, else live.
+    async fn a_match(harness: &StoreHarness, p1: &str, p2: &str, ended_at: Option<i64>) -> String {
+        let match_id = id();
+        let now = harness.now();
+        q!(harness, t => t.matches_create(&match_row(&match_id, p1, p2, harness, now)));
+        if let Some(at) = ended_at {
+            q!(harness, t => t.matches_finish(&match_id, at));
+        }
+        match_id
+    }
+
+    /// Which seats a match's rows of each table name, in the read's order.
+    async fn seats_of(harness: &StoreHarness, match_id: &str) -> Value {
+        let held = j(&q!(harness, t => t.play_telemetry_of(match_id)));
+        let seats = |table: &str| -> Vec<Value> {
+            held[table]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|row| row["seat"].clone())
+                .collect()
+        };
+        json!({
+            "timings": seats("actionTimings"),
+            "emotes": seats("emoteEvents"),
+            "signals": seats("matchSignals"),
+        })
+    }
+
+    async fn round_trips_and_a_second_write_changes_nothing(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let match_id = a_match(harness, &a.id, &b.id, Some(harness.now())).await;
+        let written = telemetry(&match_id, 1_500);
+        q!(harness, t => t.play_telemetry_insert(&written));
+        assert_eq!(j(&q!(harness, t => t.play_telemetry_of(&match_id))), j(&written));
+
+        // The same keys again, with other values: every row stays as the first write left it.
+        q!(harness, t => t.play_telemetry_insert(&telemetry(&match_id, 9_999)));
+        assert_eq!(j(&q!(harness, t => t.play_telemetry_of(&match_id))), j(&written));
+        assert_eq!(
+            j(&q!(harness, t => t.play_telemetry_timings())),
+            j(&written.action_timings)
+        );
+        assert_eq!(
+            j(&q!(harness, t => t.play_telemetry_of(&id()))),
+            j(&PlayTelemetry::default())
+        );
+    }
+
+    async fn a_rematch_note_marks_only_its_seat(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let match_id = a_match(harness, &a.id, &b.id, Some(harness.now())).await;
+        q!(harness, t => t.play_telemetry_insert(&telemetry(&match_id, 1_500)));
+        let marks = |held: &Value| -> Vec<(bool, bool)> {
+            held["matchSignals"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|row| {
+                    (
+                        row["rematchOffered"] == json!(true),
+                        row["rematchAccepted"] == json!(true),
+                    )
+                })
+                .collect()
+        };
+
+        q!(harness, t => t.play_telemetry_note_rematch(&match_id, from(json!("p1")), false));
+        let held = j(&q!(harness, t => t.play_telemetry_of(&match_id)));
+        assert_eq!(marks(&held), vec![(true, false), (false, false)]);
+
+        q!(harness, t => t.play_telemetry_note_rematch(&match_id, from(json!("p2")), true));
+        // A later offer that made nothing never takes back a rematch that was made.
+        q!(harness, t => t.play_telemetry_note_rematch(&match_id, from(json!("p2")), false));
+        let held = j(&q!(harness, t => t.play_telemetry_of(&match_id)));
+        assert_eq!(marks(&held), vec![(true, false), (true, true)]);
+        // Nothing else on the rows moved.
+        assert_eq!(held["matchSignals"][1]["timeouts"], 2);
+
+        // A match with no signals: nothing to mark, and no error.
+        q!(harness, t => t.play_telemetry_note_rematch(&id(), from(json!("p1")), true));
+    }
+
+    async fn rows_for_a_match_the_store_does_not_hold_are_refused_and_the_result_stands(
+        harness: &StoreHarness,
+    ) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let match_id = a_match(harness, &a.id, &b.id, None).await;
+        let result: ResultRow = from(json!({
+            "matchId": match_id,
+            "players": [a.id, b.id],
+            "winnerProfileId": a.id,
+            "reason": "concede",
+            "turns": 3,
+            "endedAt": now,
+            "ratingBefore": [1000, 1000],
+            "ratingAfter": [1016, 984],
+        }));
+        q!(harness, t => t.results_insert(&result));
+        q!(harness, t => t.matches_finish(&match_id, now));
+
+        let mut stray = telemetry(&match_id, 1_500);
+        stray.match_signals[1].match_id = id();
+        let refused = call!(harness, t => t.play_telemetry_insert(&stray));
+        assert!(refused.is_err(), "{}: a row naming no match was written", harness.name);
+
+        // Nothing of the write landed, and the result it would have followed is untouched.
+        assert_eq!(
+            j(&q!(harness, t => t.play_telemetry_of(&match_id))),
+            j(&PlayTelemetry::default())
+        );
+        assert_eq!(
+            j(&must(
+                q!(harness, t => t.results_get_by_match(&match_id)),
+                "the result"
+            )),
+            j(&result)
+        );
+    }
+
+    async fn deleting_an_account_deletes_its_seats_rows_only(harness: &StoreHarness) {
+        let gone = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        // `gone` holds p1 of the first match and p2 of the second.
+        let first = a_match(harness, &gone.id, &other.id, Some(now)).await;
+        let second = a_match(harness, &other.id, &gone.id, Some(now)).await;
+        for match_id in [&first, &second] {
+            q!(harness, t => t.play_telemetry_insert(&telemetry(match_id, 1_500)));
+        }
+
+        assert!(q!(harness, t => t.profiles_remove(&gone.id)));
+
+        assert_eq!(
+            seats_of(harness, &first).await,
+            json!({ "timings": ["p2"], "emotes": ["p2"], "signals": ["p2"] })
+        );
+        assert_eq!(
+            seats_of(harness, &second).await,
+            json!({ "timings": ["p1"], "emotes": [], "signals": ["p1"] })
+        );
+    }
+
+    async fn the_purge_deletes_telemetry_past_its_cutoff(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let old = a_match(harness, &a.id, &b.id, Some(now - 366 * DAY)).await;
+        let recent = a_match(harness, &a.id, &b.id, Some(now - 364 * DAY)).await;
+        let live = a_match(harness, &a.id, &b.id, None).await;
+        for match_id in [&old, &recent, &live] {
+            q!(harness, t => t.play_telemetry_insert(&telemetry(match_id, 1_500)));
+        }
+
+        let cutoffs: RetentionPurgeInput = from(json!({
+            "codeAttemptsBefore": now - 30 * DAY,
+            "matchActionsEndedBefore": now - 90 * DAY,
+            "playTelemetryEndedBefore": now - 365 * DAY,
+        }));
+        let purged = q!(harness, t => t.purge_expired(&cutoffs));
+        // Two timings, an emote and two signals: the old match's five rows.
+        assert_eq!(
+            j(&purged),
+            json!({ "codeAttempts": 0, "matchActions": 0, "playTelemetry": 5 })
+        );
+        assert_eq!(
+            j(&q!(harness, t => t.play_telemetry_of(&old))),
+            j(&PlayTelemetry::default())
+        );
+        for kept in [&recent, &live] {
+            assert_eq!(
+                j(&q!(harness, t => t.play_telemetry_of(kept))),
+                j(&telemetry(kept, 1_500))
+            );
+        }
+        assert!(q!(harness, t => t.matches_get(&old)).is_some());
+    }
+
+    async fn unfolded_lists_finished_matches_with_a_log_and_no_timings(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let later = a_match(harness, &a.id, &b.id, Some(now - DAY)).await;
+        let earlier = a_match(harness, &a.id, &b.id, Some(now - 2 * DAY)).await;
+        let folded = a_match(harness, &a.id, &b.id, Some(now - 3 * DAY)).await;
+        // Finished first of all, but with no log to fold.
+        a_match(harness, &a.id, &b.id, Some(now - 4 * DAY)).await;
+        let live = a_match(harness, &a.id, &b.id, None).await;
+        for match_id in [&later, &earlier, &folded, &live] {
+            q!(harness, t => t.matches_append_actions(&[action_row(match_id, 1, "p1", "n1", now)]));
+        }
+        q!(harness, t => t.play_telemetry_insert(&telemetry(&folded, 1_500)));
+        // Signals alone (no timing) leave a match unfolded.
+        let signals_only = PlayTelemetry {
+            match_signals: telemetry(&later, 1_500).match_signals,
+            ..PlayTelemetry::default()
+        };
+        q!(harness, t => t.play_telemetry_insert(&signals_only));
+
+        assert_eq!(q!(harness, t => t.play_telemetry_unfolded()), vec![earlier, later]);
+    }
+
+    both_stores!(
+        round_trips_and_a_second_write_changes_nothing,
+        a_rematch_note_marks_only_its_seat,
+        rows_for_a_match_the_store_does_not_hold_are_refused_and_the_result_stands,
+        deleting_an_account_deletes_its_seats_rows_only,
+        the_purge_deletes_telemetry_past_its_cutoff,
+        unfolded_lists_finished_matches_with_a_log_and_no_timings,
+    );
 }
 
 mod tx {

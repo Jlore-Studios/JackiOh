@@ -35,6 +35,7 @@ export const MATCH_FOUND_NAV_DELAY_MS = 1200;
 export const MAX_SAVED_DECKS = 10;
 export const MAX_SAVED_TRIOS = 5;
 export const MULLIGAN_CLOCK_MS = 45000;
+export const PLAY_TELEMETRY_RETENTION_DAYS = 365;
 export const PROMPT_CLOCK_MS = 30000;
 export const PROMPT_CLOCK_SECONDS = 30;
 export const RATING_WINDOW_UNCAPPED_AFTER_SECONDS = 60;

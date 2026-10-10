@@ -420,6 +420,7 @@ async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
         }
     };
 
+    let made = claimed.is_some();
     let match_id = match claimed {
         None => answered,
         Some((new_id, generation, leans)) => {
@@ -440,6 +441,8 @@ async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
             Some(new_id)
         }
     };
+    // R1442: the offer, and whether it made the rematch, among the finished match's signals.
+    crate::actor::telemetry::note_rematch(app, &match_row.id, seat, made).await;
     let created = RematchOfferBody { match_id };
     Ok(json(
         200,

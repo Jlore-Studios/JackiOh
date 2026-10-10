@@ -185,8 +185,8 @@ pub const CODE_ATTEMPTS_PER_IP_PER_HOUR: i64 = 20;
 pub const CODE_ATTEMPT_WINDOW_SECONDS: i64 = 3600;
 
 // ---------------------------------------------------------------------------------------------
-// Retention: how long the server keeps rows nothing reads any more. Not in SPEC, and no R-row.
-// The privacy policy must state these same periods.
+// Retention: how long the server keeps rows nothing reads any more. Not in SPEC, and no R-row
+// (the play telemetry's period is R1442's). The privacy policy must state these same periods.
 // ---------------------------------------------------------------------------------------------
 
 /// Days a `code_attempts` row (profile id, peppered IP hash, time) is kept. The limits that read the
@@ -195,6 +195,10 @@ pub const CODE_ATTEMPT_RETENTION_DAYS: i64 = 30;
 /// Days a finished match's action log is kept after the match ended. Only a live match is ever
 /// replayed from its log; the result row, and so the rating history, is kept.
 pub const MATCH_ACTION_RETENTION_DAYS: i64 = 90;
+/// R1442: days a finished match's play telemetry (`action_timings`, `emote_events`,
+/// `match_signals`, migration 0029) is kept after the match ended. Longer than the log, so the
+/// think-time fits (`jackioh-server timing-fit`) have a year of games to draw on.
+pub const PLAY_TELEMETRY_RETENTION_DAYS: i64 = 365;
 /// How often the retention purge runs. It also runs once at boot, since a free instance sleeps.
 pub const RETENTION_PURGE_INTERVAL_SECONDS: i64 = 3600;
 
@@ -621,6 +625,31 @@ pub const PLAYER_STATS_PAGE_LIMIT: usize = 50;
 /// The most text the stored player statistics JSON of one account may come to, in bytes.
 /// Bounds request body and stored payload.
 pub const PLAYER_STATS_BYTES_MAX: usize = 16384;
+
+// ---------------------------------------------------------------------------------------------
+// Play telemetry (SPEC §9.11, R1442): how humans pace their moves, for the ladder bots (#636).
+// ---------------------------------------------------------------------------------------------
+
+/// R1442: the fewest human think times a bucket needs before `jackioh-server timing-fit` fits it.
+pub const TIMING_FIT_MIN_SAMPLES: usize = 30;
+
+/// R1442: one bucket's log-normal fit of human think times: `ln(think_ms)` has mean `mu` and
+/// standard deviation `sigma` over `samples` moves of `action_kind` (an `ActionType` literal), made
+/// first or later in the turn, by players in `rank_bucket` (a `RankTier` literal; `None` for the
+/// moves no tier was read for).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ThinkTimeFit {
+    pub rank_bucket: Option<&'static str>,
+    pub action_kind: &'static str,
+    pub first_in_turn: bool,
+    pub samples: usize,
+    pub mu: f64,
+    pub sigma: f64,
+}
+
+/// R1442: the think-time fits, pasted by hand from `jackioh-server timing-fit` (CLAUDE.md rule 9);
+/// the ladder bots (#636) read it. Empty until enough human games are recorded.
+pub const THINK_TIME_FITS: &[ThinkTimeFit] = &[];
 
 // ---------------------------------------------------------------------------------------------
 // Derived millisecond helpers, since timers (`tokio::time`) take milliseconds.

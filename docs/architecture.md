@@ -613,8 +613,8 @@ step that is not yet implemented says which BUILD task delivers it.
    `0017_last_boards.sql` → `0018_player_settings.sql` → `0019_hero_portraits.sql` →
    `0020_plague_tag.sql` → `0021_player_stats.sql` → `0022_ranked_ladder.sql` →
    `0023_rematch.sql` → `0024_glitch_boards.sql` → `0025_patch_retcon.sql` →
-   `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` → `0028_usernames.sql` — and records them in `app.migrations`. Expected
-   result: 25 tables
+   `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` → `0028_usernames.sql` →
+   `0029_play_telemetry.sql` — and records them in `app.migrations`. Expected result: 28 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `seed-catalog` can
@@ -644,7 +644,11 @@ step that is not yet implemented says which BUILD task delivers it.
    in order of sign-up, and names every new one the lowest free `Player#n` by trigger; a client
    reads its own row's username columns and writes none of them. It only adds: `display_name`,
    which no server reads from 0028 on, stays for the deploy before it, which reads it until the new
-   one serves, and a later migration drops it.
+   one serves, and a later migration drops it. 0029 adds the three server-only play telemetry tables
+   of R1442, `action_timings`, `emote_events` and `match_signals`, which no client role may read or
+   write: the retention purge gains a third cutoff that deletes a match's telemetry once
+   `PLAY_TELEMETRY_RETENTION_DAYS` days have passed since it ended, and deleting an account deletes
+   the rows of every seat it held. 0013's two-cutoff purge stays beside the new one for the server a deploy replaces.
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL
