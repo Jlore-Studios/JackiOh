@@ -672,6 +672,7 @@ const ENGINE_WORK_HOOKS: &[&str] = &[
     "@drawCount",
     "@attackWindow",
     "@attackSummon",
+    "@combatCopies",
     "@forcedRun",
     "@forcedRandom",
     "@afterAttack",

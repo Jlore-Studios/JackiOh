@@ -544,17 +544,6 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
         aiStep(active);
         return snapshotResponse(request.id, active);
       }
-      case "aiEmote": {
-        // MD-D29, R1127: the persona's emote, applied only while the AI seat's `legalActions` hold
-        // it — an unheard emote is dropped without an error, and the snapshot still answers.
-        const active = current();
-        const body = { type: "emote", emote: request.emote } as ActionBody;
-        const legal = legalActions(active.state, aiSeatNow(active));
-        if (legal.some((action) => action.type === "emote" && action.emote === request.emote)) {
-          apply(active, body, false);
-        }
-        return snapshotResponse(request.id, active);
-      }
       case "catalog":
         // The card data the setup screen previews decks with, before any game exists (§5.1: the
         // catalog is public). The same map `started` carries.

@@ -60,13 +60,12 @@ function dealPersona(config: PracticeStartConfig, seat: PlayerId, hand: readonly
  * undefined until the AI's seat is known (it arrives with the first snapshot).
  */
 /**
- * MD-D29, R1127: the page's side of the `Emote` action — the player's sends and the persona's.
- * The player's emote becomes an action only while the view hears emotes; the persona's goes
- * through the same gate on the worker's side.
+ * MD-D29, R1127: the page's side of the `Emote` action — the player's sends. The player's emote
+ * becomes an action only while the view hears emotes. The persona's emotes stay cosmetic (R643):
+ * they are no AI decision, so they never reach the game.
  */
 export type PracticeEmotePort = {
   act(action: ActionBody): void;
-  aiEmote(emote: EmoteId): void;
 };
 
 export function usePracticeEmotes(
@@ -111,9 +110,6 @@ export function usePracticeEmotes(
     const timer = window.setTimeout(() => {
       timers.current = timers.current.filter((held) => held !== timer);
       emotesRef.current?.receive(seat, intent.emote);
-      // MD-D29, R1127: the persona's emote goes through the worker's gate too — heard, it is an
-      // action; unheard, the worker drops it without an error.
-      portRef.current?.aiEmote(intent.emote);
     }, intent.delayMs);
     timers.current.push(timer);
   }, []);

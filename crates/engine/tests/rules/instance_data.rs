@@ -332,6 +332,26 @@ mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
         assert_eq!(query::lucky_on(&state, &burned), 1);
     }
 
+    /// R1438: `given_lucky_on` counts only the Lucky a card was given, never what it prints, so a
+    /// shipped card that rolls with a fixed printed Lucky (#23, #42) adds only the given part.
+    #[test]
+    fn r1438_given_lucky_counts_the_granted_lucky_alone() {
+        let mut state = playing("r1438-given");
+        let rider = effects::add_to_hand(json_as(json!({ "defId": numbered_body.id, "lucky": 1 })));
+        run(&mut state, &rider);
+        let card = state
+            .players
+            .p1
+            .hand
+            .last()
+            .cloned()
+            .expect("the card is in the hand");
+        assert_eq!(query::lucky_on(&state, &card), 2);
+        assert_eq!(query::given_lucky_on(&card), 1);
+        let printed_only = first(in_hand(&mut state, &numbered_body.id, PlayerId::P1, 1));
+        assert_eq!(query::given_lucky_on(&printed_only), 0);
+    }
+
     #[test]
     fn r440_a_scope_over_the_field_a_hand_and_a_deck_reports_its_public_cards_only() {
         let mut state = playing("e38-military");

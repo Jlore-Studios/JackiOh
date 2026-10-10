@@ -41,13 +41,17 @@ pub const ID: &str = "core-042";
 /// §8.2: "Exile 7 random cards from your deck", on both faces (patch v0.1.1: 8 became 7).
 const EXILE_COUNT: i32 = 7;
 
-/// The faces differ only in the chance and in the Lucky they print (§6.1). The Lucky is the card's own
-/// (`lucky_on`: printed plus given, R1438), so a base face given Lucky 1 rolls twice a card too.
-fn eugenics(chance: f64) -> Script {
+/// §8.2: "Lucky 1 at 40%", the Radiant face's printed Lucky.
+const RADIANT_LUCKY: i32 = 1;
+
+/// The faces differ only in the chance and in the Lucky they print (§6.1): the printed number as it
+/// always was (a Nerf or a Buff never reaches this roll, D14) plus any Lucky given (`given_lucky_on`,
+/// R1438), so a base face given Lucky 1 rolls twice a card too.
+fn eugenics(chance: f64, printed_lucky: i32) -> Script {
     Script {
         // A Spell's script hangs off `cry`: that is its on-resolve hook (§10.9).
         cry: Some(hook(move |ctx| {
-            let lucky = ctx.live_self().map_or(0, |me| lucky_on(&*ctx.state, me));
+            let lucky = printed_lucky + ctx.live_self().map_or(0, given_lucky_on);
             let mut chance_args = json!({ "zone": "library", "chance": chance });
             if lucky > 0 {
                 chance_args["lucky"] = json!(lucky);
@@ -63,8 +67,8 @@ fn eugenics(chance: f64) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: eugenics(0.3),
-        radiant: eugenics(0.4),
+        base: eugenics(0.3, 0),
+        radiant: eugenics(0.4, RADIANT_LUCKY),
     }
 }
 

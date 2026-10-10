@@ -10,8 +10,10 @@
 //!
 //! Both rolls go through the seeded `ctx.rng` (CLAUDE.md rule 4), the base one roll at 0.3 and the
 //! radiant `lucky(1, …)` — two rolls at 0.4, keeping a success, which is §6.1's Lucky X read on a
-//! yes/no roll. The X is the card's own Lucky (`lucky_on`: printed plus given, R1438), so a base face
-//! given Lucky 1 rolls twice at 0.3, and a Radiant face given Lucky 1 three times at 0.4. No effect verb gates on a probability, so the hook does the roll and returns either
+//! yes/no roll. The X is the face's printed Lucky as it always was (0, or 1 on the Radiant face; a
+//! Nerf or a Buff never reaches it, D14) plus any Lucky given (`given_lucky_on`, R1438), so a base
+//! face given Lucky 1 rolls twice at 0.3, and a Radiant face given Lucky 1 three times at 0.4. No
+//! effect verb gates on a probability, so the hook does the roll and returns either
 //! the effect or nothing; see the report for the `chanceOf` verb this wants. With an empty hand the
 //! effect has nothing to do, so it rolls nothing (R129, R60). A hand that is all Radiant is rolled
 //! like any other: whether the hand holds a base-face card is the hand's (§9.1), so neither the roll
@@ -45,9 +47,12 @@ fn any_to_make_radiant(ctx: &EffectContext<'_>) -> bool {
     !zone_cards(ctx.state, ctx.controller, OffFieldZone::Hand).is_empty()
 }
 
-/// §6.1, R1438: the Lucky the Dream has as it resolves, printed plus given.
-fn lucky(ctx: &EffectContext<'_>) -> i32 {
-    ctx.live_self().map_or(0, |me| lucky_on(&*ctx.state, me))
+/// §6.1: the Lucky the Radiant face prints, fixed (D14: tuning never reached this roll).
+const RADIANT_LUCKY: i32 = 1;
+
+/// §6.1, R1438: the Lucky the Dream rolls with: the face's printed number plus any Lucky given.
+fn lucky(ctx: &EffectContext<'_>, printed: i32) -> i32 {
+    printed + ctx.live_self().map_or(0, given_lucky_on)
 }
 
 /// §5.1 and R68: at the end of the turn it was played on, the spell goes from the graveyard back to
@@ -76,7 +81,7 @@ fn end_of_turn() -> Hook {
 pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(hook(|ctx| {
-            let lucky = lucky(ctx);
+            let lucky = lucky(ctx, 0);
             if any_to_make_radiant(ctx) && ctx.rng.lucky(lucky, |rng| rng.chance(BASE_CHANCE), |a, b| a || b)
             {
                 make_one_radiant()
@@ -94,7 +99,7 @@ pub fn script() -> CardScripts {
             if !any_to_make_radiant(ctx) {
                 return vec![];
             }
-            let lucky = lucky(ctx);
+            let lucky = lucky(ctx, RADIANT_LUCKY);
             let hit = ctx
                 .rng
                 .lucky(lucky, |rng| rng.chance(RADIANT_CHANCE), |a, b| a || b);

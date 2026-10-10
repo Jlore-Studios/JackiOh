@@ -971,6 +971,11 @@ pub const CRAFT_LOC_BUDGET: i32 = 24;
 pub const CRAFT_LOC_SKELETON: i32 = 3;
 /// The most effect blocks one recipe may hold.
 pub const CRAFT_MAX_EFFECTS: usize = 8;
+/// R881: the points a Unit preset must hold before it spends a 2-point keyword, so at least as many
+/// are left for its stats.
+pub const CRAFT_PRESET_KEYWORD_MIN_POINTS: i32 = 4;
+/// R881: the health every preset recipe starts from before its points are spent.
+pub const CRAFT_PRESET_BASE_HEALTH: i32 = 1;
 /// The range of every block number: 1 to 10.
 pub const CRAFT_MAX_N: i32 = 10;
 /// The Radiant face doubles every number and stat (R275 by construction).

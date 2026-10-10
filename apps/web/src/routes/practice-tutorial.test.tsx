@@ -114,7 +114,6 @@ function routeHost(options: HostOptions = {}): RouteHost {
           };
           break;
         case "aiStep":
-        case "aiEmote":
           response = { id: mine, type: "snapshot", snapshot: snapshotFor(human, false) };
           break;
         case "catalog":

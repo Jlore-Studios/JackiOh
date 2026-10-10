@@ -9,7 +9,7 @@
 // page may read the summaries of the finished games the worker kept and, for one of them, the
 // human's `viewFor` at each step (R768): never its log, seed or decks.
 
-import type { Action, ActionBody, CardDefs, DistributiveOmit, EmoteId, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
+import type { Action, ActionBody, CardDefs, DistributiveOmit, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
 import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
 import type { Difficulty, Handicap } from "@jackioh/engine/config";
 
@@ -110,11 +110,6 @@ export type PracticeRequest =
   | { id: number; type: "resume"; config: PracticeStartConfig }
   | { id: number; type: "act"; action: ActionBody }
   | { id: number; type: "aiStep" }
-  /**
-   * MD-D29, R1127: the AI persona's emote, sent the same way the match actor mints one — applied
-   * only while the AI seat's `legalActions` hold it, dropped without an error otherwise.
-   */
-  | { id: number; type: "aiEmote"; emote: EmoteId }
   /** The public card data, for the setup screen's deck preview; needs no game. */
   | { id: number; type: "catalog" }
   /**

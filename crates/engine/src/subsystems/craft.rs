@@ -17,7 +17,8 @@ use crate::catalog::{FUSED_DIGEST_MARK, def_of};
 use crate::config::{
     CRAFT_ADJECTIVES, CRAFT_ECHO_POINTS_PER_N, CRAFT_HAT_PRICES, CRAFT_ID_PREFIX, CRAFT_KEYWORD_PRICES,
     CRAFT_LOC_BUDGET, CRAFT_LOC_SKELETON, CRAFT_MAX_COST, CRAFT_MAX_EFFECTS, CRAFT_MAX_N, CRAFT_NOUNS,
-    CRAFT_RADIANT_MULTIPLIER, CRAFT_VERB_PRICES, craft_points_budget,
+    CRAFT_PRESET_BASE_HEALTH, CRAFT_PRESET_KEYWORD_MIN_POINTS, CRAFT_RADIANT_MULTIPLIER, CRAFT_VERB_PRICES,
+    craft_points_budget,
 };
 use indexmap::IndexMap;
 
@@ -922,7 +923,7 @@ fn preset_recipe(
         adjective,
         noun,
         attack: 0,
-        health: 1,
+        health: CRAFT_PRESET_BASE_HEALTH,
         keywords,
         echo: 0,
         hats,
@@ -931,7 +932,7 @@ fn preset_recipe(
 
 /// The Unit preset: a 2-point keyword when the budget holds one, and all the rest in stats.
 fn preset_unit(rng: &mut Rng, cost: i32, budget: i32) -> CraftRecipe {
-    let keyword = if budget >= 4 {
+    let keyword = if budget >= CRAFT_PRESET_KEYWORD_MIN_POINTS {
         rng.pick(UNIT_PRESET_KEYWORDS)
             .copied()
             .map(|kind| CraftKeyword { kind, n: None })
@@ -952,7 +953,7 @@ fn preset_unit(rng: &mut Rng, cost: i32, budget: i32) -> CraftRecipe {
         Vec::new(),
     );
     recipe.attack = attack;
-    recipe.health = 1 + rest - attack;
+    recipe.health = CRAFT_PRESET_BASE_HEALTH + rest - attack;
     recipe
 }
 
