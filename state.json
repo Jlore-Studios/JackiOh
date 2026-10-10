@@ -4614,20 +4614,32 @@
       "taken_asks": [],
       "votes": {
         "approvals": [
-          "claude"
+          "gemini"
         ],
-        "builder": "claude",
+        "builder": "gemini",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/game/net.test.ts",
+            "apps/web/src/game/net.ts",
+            "spec/09-architecture.md",
+            "spec/11-rulings.md",
+            "spec/INDEX.md"
+          ],
+          "from": "42aa28b0b8d071a37d10591ac803fbbb95112ad5",
+          "main": "13b096c2eb6df8cd7e334386cd0215a737aa1ef1"
+        },
         "rejections": [],
         "reviews": [
           {
-            "family": "claude",
-            "run": "38026639251",
-            "tier": "strong"
+            "family": "gemini",
+            "run": "38034038037",
+            "tier": "medium"
           }
         ],
-        "sha": "42aa28b0b8d071a37d10591ac803fbbb95112ad5",
+        "sha": "fa08b2cdc744464874041b4d692c9d5d6e27f0a4",
         "tiers": {
-          "claude": "strong"
+          "gemini": "medium"
         }
       }
     },
