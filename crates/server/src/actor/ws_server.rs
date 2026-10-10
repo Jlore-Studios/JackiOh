@@ -6,7 +6,11 @@
 //! authenticate through `app.auth`, apply §9.4's gate (`assert_active`), refuse unless the profile is
 //! in the match it asked for, §9.1). `handle` also bounds what an unauthenticated client costs: a
 //! frame over `MAX_FRAME_BYTES` closes the socket with 1009, and one client address holds at most
-//! `WS_MAX_CONNECTIONS_PER_ADDRESS` sockets.
+//! `WS_MAX_CONNECTIONS_PER_ADDRESS` sockets. A socket that stops answering is found and dropped: the
+//! pump pings every `WS_PING_INTERVAL_SECONDS` and drops a connection that has sent nothing for
+//! `WS_IDLE_TIMEOUT_SECONDS`, and a socket's outgoing queue holds at most `WS_OUTBOX_MAX_FRAMES`
+//! frames (SPEC §9.5, §9.8, R1441), so a dead or unread peer starts its seat's grace and cannot grow
+//! the server's memory without limit.
 //!
 //! Surface contract: docs/v0.3.0/SURFACE.md §4.1, §4.2, §11.2, §11.3. The token comes from `?token=`
 //! only, and `jackioh.v1` is echoed when offered.
@@ -16,6 +20,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Duration;
 
+use axum::body::Bytes;
 use axum::extract::ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade};
 use axum::extract::{ConnectInfo, FromRequestParts, Query, Request};
 use axum::http::{HeaderMap, HeaderValue, StatusCode, Uri};
@@ -28,7 +33,10 @@ use crate::actor::protocol::{MAX_FRAME_BYTES, SocketErrorCode, encode, error_mes
 use crate::actor::registry::AttachError;
 use crate::api::http::{ApiError, ApiErrorCode, assert_active, client_address, lock, rate_limit_address};
 use crate::app::{App, browser_origins};
-use crate::config::{DEFAULT_TRUSTED_PROXY_HOPS, WS_MAX_CONNECTIONS_PER_ADDRESS};
+use crate::config::{
+    DEFAULT_TRUSTED_PROXY_HOPS, WS_IDLE_TIMEOUT_SECONDS, WS_MAX_CONNECTIONS_PER_ADDRESS,
+    WS_OUTBOX_MAX_FRAMES, WS_PING_INTERVAL_SECONDS,
+};
 
 /// SPEC §9.2: one WebSocket per player, upgraded on the same listener the API serves.
 pub const WS_PATH: &str = "/ws/match";
@@ -65,6 +73,13 @@ const CLOSE_NORMAL: u16 = 1000;
 /// the connection is dropped.
 const CLOSE_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(30);
 
+/// R1441: how often the pump pings its peer.
+const PING_INTERVAL: Duration = Duration::from_secs(WS_PING_INTERVAL_SECONDS as u64);
+
+/// R1441: how long the pump waits for any frame from its peer, and for the peer to take a frame
+/// the pump is sending, before it drops the connection.
+const IDLE_TIMEOUT: Duration = Duration::from_secs(WS_IDLE_TIMEOUT_SECONDS as u64);
+
 // Transport
 
 /// What a `Socket` hands its transport: a text frame, or the closing handshake.
@@ -75,7 +90,9 @@ pub enum SocketFrame {
 }
 
 struct SocketInner {
-    out: mpsc::UnboundedSender<SocketFrame>,
+    /// The transport's queue, bounded by `WS_OUTBOX_MAX_FRAMES`. `None` once it overflowed and was
+    /// let go (R1441): the transport drains what it holds, then ends.
+    out: Mutex<Option<mpsc::Sender<SocketFrame>>>,
     open: AtomicBool,
     /// The close handler has run; it runs once, whichever side closed.
     gone: AtomicBool,
@@ -96,7 +113,7 @@ impl Socket {
     /// A socket over two channels: its frames go to `out`, the client's arrive on `incoming`. When
     /// `incoming`'s sender is dropped the transport is gone and the close handler runs. Spawns the
     /// reader, so call it inside a tokio runtime.
-    pub fn new(out: mpsc::UnboundedSender<SocketFrame>, incoming: mpsc::UnboundedReceiver<String>) -> Socket {
+    pub fn new(out: mpsc::Sender<SocketFrame>, incoming: mpsc::UnboundedReceiver<String>) -> Socket {
         let socket = Socket::detached(out);
         let reader = socket.clone();
         tokio::spawn(async move {
@@ -111,10 +128,10 @@ impl Socket {
 
     /// A socket whose frames go to `out` and whose transport calls `receive` and
     /// `transport_closed` itself (the axum adapter does).
-    pub fn detached(out: mpsc::UnboundedSender<SocketFrame>) -> Socket {
+    pub fn detached(out: mpsc::Sender<SocketFrame>) -> Socket {
         Socket {
             inner: Arc::new(SocketInner {
-                out,
+                out: Mutex::new(Some(out)),
                 open: AtomicBool::new(true),
                 gone: AtomicBool::new(false),
                 handlers: Mutex::new(None),
@@ -123,8 +140,9 @@ impl Socket {
     }
 
     /// A detached socket and the receiving end of its frames, for a transport (or a test) to drain.
-    pub fn channel() -> (Socket, mpsc::UnboundedReceiver<SocketFrame>) {
-        let (out, frames) = mpsc::unbounded_channel();
+    /// The queue holds `WS_OUTBOX_MAX_FRAMES` frames (§9.8, R1441).
+    pub fn channel() -> (Socket, mpsc::Receiver<SocketFrame>) {
+        let (out, frames) = mpsc::channel(WS_OUTBOX_MAX_FRAMES);
         (Socket::detached(out), frames)
     }
 
@@ -132,13 +150,34 @@ impl Socket {
         self.inner.open.load(Ordering::SeqCst)
     }
 
-    /// Sends one text frame. A frame sent after the socket closed goes nowhere.
+    /// Sends one text frame. A frame sent after the socket closed goes nowhere. A frame that finds the
+    /// outbox full closes the socket (§9.8, R1441): the peer is not reading, and views are full
+    /// snapshots, so its reconnect loses nothing.
     pub fn send(&self, text: impl Into<String>) {
         if !self.is_open() {
             return;
         }
-        // The transport is gone if its end of the channel is; the close below is what reports it.
-        let _ = self.inner.out.send(SocketFrame::Text(text.into()));
+        if !self.queue(SocketFrame::Text(text.into())) {
+            tracing::warn!(event = "ws.socket.overflow", limit = WS_OUTBOX_MAX_FRAMES);
+            // Not `notify_gone`: the actor sends while it holds its own lock, and the close handler
+            // takes that lock. The transport drains the queue, finds it ended and reports the close.
+            self.inner.open.store(false, Ordering::SeqCst);
+        }
+    }
+
+    /// Queues one frame for the transport. False when the outbox is full (§9.8, R1441): it is let go,
+    /// so the transport sends what it holds and ends the connection. A transport already gone counts
+    /// as queued; its own close reports it.
+    fn queue(&self, frame: SocketFrame) -> bool {
+        let mut out = lock(&self.inner.out);
+        let full = matches!(
+            out.as_ref().map(|sender| sender.try_send(frame)),
+            Some(Err(mpsc::error::TrySendError::Full(_)))
+        );
+        if full {
+            *out = None;
+        }
+        !full
     }
 
     /// Starts the closing handshake. The close handler runs once, now.
@@ -146,7 +185,8 @@ impl Socket {
         if !self.inner.open.swap(false, Ordering::SeqCst) {
             return;
         }
-        let _ = self.inner.out.send(SocketFrame::Close {
+        // A full outbox has no room for the close frame; the transport ends when it drains.
+        self.queue(SocketFrame::Close {
             code: code.unwrap_or(CLOSE_NORMAL),
             reason: reason.unwrap_or("").to_string(),
         });
@@ -225,46 +265,82 @@ pub fn socket_from_ws(ws: WebSocket) -> (Socket, tokio::task::JoinHandle<()>) {
     (socket, pump)
 }
 
-async fn pump(mut ws: WebSocket, socket: Socket, mut frames: mpsc::UnboundedReceiver<SocketFrame>) {
+/// One frame out, or false when it failed or the peer has not taken it by `by` (R1441): a peer that
+/// stops reading would otherwise hold the pump, and its address slot, until TCP gives up.
+async fn send_by(ws: &mut WebSocket, message: Message, by: tokio::time::Instant) -> bool {
+    matches!(tokio::time::timeout_at(by, ws.send(message)).await, Ok(Ok(())))
+}
+
+async fn pump(mut ws: WebSocket, socket: Socket, mut frames: mpsc::Receiver<SocketFrame>) {
     let mut closing: Option<tokio::time::Instant> = None;
+    let mut heard = tokio::time::Instant::now();
+    let mut ping_at = heard + PING_INTERVAL;
     loop {
         let deadline = closing.map(|since| since + CLOSE_HANDSHAKE_TIMEOUT);
+        let idle_at = heard + IDLE_TIMEOUT;
+        // A socket being closed is not pinged: the closing handshake has its own deadline.
+        let wake_at = if closing.is_some() {
+            idle_at
+        } else {
+            ping_at.min(idle_at)
+        };
         tokio::select! {
-            incoming = ws.recv() => match incoming {
-                Some(Ok(Message::Text(text))) => socket.receive(text.as_str().to_owned()),
-                Some(Ok(Message::Binary(_))) => {
-                    let frame = error_frame(SocketErrorCode::Malformed, "text frames only: every message is JSON");
-                    if ws.send(Message::Text(frame.into())).await.is_err() {
+            incoming = ws.recv() => {
+                if matches!(incoming, Some(Ok(_))) {
+                    heard = tokio::time::Instant::now();
+                }
+                match incoming {
+                    Some(Ok(Message::Text(text))) => socket.receive(text.as_str().to_owned()),
+                    Some(Ok(Message::Binary(_))) => {
+                        let text = "text frames only: every message is JSON";
+                        let frame = error_frame(SocketErrorCode::Malformed, text);
+                        if !send_by(&mut ws, Message::Text(frame.into()), idle_at).await {
+                            break;
+                        }
+                    }
+                    // tungstenite answers a ping itself, and a pong, like any frame, is what `heard`
+                    // reads (R1441): the idle timer runs on what the peer sent.
+                    Some(Ok(Message::Ping(_) | Message::Pong(_))) => {}
+                    // The peer's half of the closing handshake; the stream ends next.
+                    Some(Ok(Message::Close(_))) => {}
+                    Some(Err(error)) => {
+                        // §9.8: a frame over `MAX_FRAME_BYTES` is refused with 1009 as its length
+                        // arrives, never buffered whole.
+                        if too_large(&error) {
+                            let code = CLOSE_MESSAGE_TOO_BIG;
+                            let close = Message::Close(Some(CloseFrame { code, reason: "".into() }));
+                            let _ = send_by(&mut ws, close, idle_at).await;
+                        }
                         break;
                     }
+                    None => break,
                 }
-                // tungstenite answers a ping itself; nothing else listens for either.
-                Some(Ok(Message::Ping(_) | Message::Pong(_))) => {}
-                // The peer's half of the closing handshake; the stream ends next.
-                Some(Ok(Message::Close(_))) => {}
-                Some(Err(error)) => {
-                    // §9.8: a frame over `MAX_FRAME_BYTES` is refused with 1009 as its length
-                    // arrives, never buffered whole.
-                    if too_large(&error) {
-                        let _ = ws
-                            .send(Message::Close(Some(CloseFrame { code: CLOSE_MESSAGE_TOO_BIG, reason: "".into() })))
-                            .await;
-                    }
-                    break;
-                }
-                None => break,
             },
             outgoing = frames.recv() => match outgoing {
                 Some(SocketFrame::Text(text)) => {
-                    if ws.send(Message::Text(text.into())).await.is_err() {
+                    if !send_by(&mut ws, Message::Text(text.into()), idle_at).await {
                         break;
                     }
                 }
                 Some(SocketFrame::Close { code, reason }) => {
-                    let _ = ws.send(Message::Close(Some(CloseFrame { code, reason: reason.into() }))).await;
+                    let close = Message::Close(Some(CloseFrame { code, reason: reason.into() }));
+                    let _ = send_by(&mut ws, close, idle_at).await;
                     closing.get_or_insert_with(tokio::time::Instant::now);
                 }
                 None => break,
+            },
+            () = tokio::time::sleep_until(wake_at) => {
+                if tokio::time::Instant::now() >= idle_at {
+                    // §9.5, R1441: nothing heard for the idle timeout. The peer is gone: it is dropped
+                    // with no closing handshake it could not answer, and `transport_closed` below
+                    // starts its grace.
+                    tracing::info!(event = "ws.socket.idle");
+                    break;
+                }
+                ping_at = tokio::time::Instant::now() + PING_INTERVAL;
+                if !send_by(&mut ws, Message::Ping(Bytes::new()), idle_at).await {
+                    break;
+                }
             },
             () = async {
                 match deadline {

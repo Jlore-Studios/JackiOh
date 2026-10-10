@@ -118,7 +118,7 @@ fn real_decks() -> (Vec<String>, Vec<String>) {
 struct Client {
     seat: &'static str,
     socket: Socket,
-    frames: mpsc::UnboundedReceiver<SocketFrame>,
+    frames: mpsc::Receiver<SocketFrame>,
     view: Option<Value>,
     sent: u32,
 }

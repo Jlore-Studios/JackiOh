@@ -153,6 +153,9 @@ the client sends `hello` and `action`, the server sends `hello`, `view`, `ack`, 
 never part of an action or a view. The `portraits` frame also carries the receiving account's own emote
 hand, eight of the pool dealt from the match seed (R1341, R1342), and the actor drops an emote outside
 the sender's hand as silently as a rate-limited one. A frame over `MAX_FRAME_BYTES` closes the socket with 1009.
+The pump pings every `WS_PING_INTERVAL_SECONDS` and drops a socket that has sent no frame for
+`WS_IDLE_TIMEOUT_SECONDS`, which starts its seat's grace; a socket's outgoing queue holds
+`WS_OUTBOX_MAX_FRAMES` frames, and the one that overflows it is closed (R1441).
 
 What the actor holds, each with a test named after it:
 
