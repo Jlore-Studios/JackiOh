@@ -4125,6 +4125,7 @@
     "602": {
       "action": "build",
       "asks": [],
+      "failures": 0,
       "handoff": {
         "at": "2026-10-10T13:19:36Z",
         "family": "claude",
@@ -4141,7 +4142,9 @@
       "planned_at": "2026-10-09T14:57:38Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_tier": "strong",
+      "pr": 642,
       "provider": "agy",
+      "question": "",
       "run_id": "38055395433",
       "started_at": "2026-10-10T13:22:13Z",
       "stop_requested": false,
