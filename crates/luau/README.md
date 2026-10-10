@@ -44,9 +44,10 @@ only on its context, on any thread. The cache needs no `RefCell`: it is a Lua ta
   gives the main thread, so writing a global fails ("attempt to modify a readonly table");
 - an interrupt that stops a hook after `LUAU_HOOK_INTERRUPTS` interrupts (`config.rs`), with an
   error naming the card, face and hook: `"<card> <face> <hook>: stopped after 1000000 interrupts
-  (L5)"`. Luau interrupts about once per loop iteration and three times per call. Each hook call in
-  flight has its own budget on a stack, so a nested call spends its own. Running a module to read
-  its declarations counts against a budget named for a `load` hook on the base face.
+  (L5)"`. Luau interrupts about once per loop iteration and three times per call. A spent budget
+  stays spent, so a hook that catches the error with `pcall` fails at its next interrupt. Each hook
+  call in flight has its own budget on a stack, so a nested call spends its own. Running a module to
+  read its declarations counts against a budget named for a `load` hook on the base face.
 
 The bytecode a VM loads is the crate's own `compile`'s, built from the repository's sources:
 Luau does not verify bytecode, so nothing else may be handed to `load_card`.

@@ -1,9 +1,9 @@
 //! Integers at the boundary (#442 L6). Every value that leaves Luau passes `walk` before it becomes a
 //! Rust value: a hook's return and every argument a host function reads. The rules count in `i32`,
 //! while a Luau number is an `f64`, so a number crosses only when it is integral, finite and inside
-//! `i32`; anything else is refused, naming the value. Tables
-//! cross as JSON: a list (keys exactly `1..=n`) as an array in index order, a record (string keys
-//! only) as an object with its keys sorted, so nothing that crosses depends on Luau's hash order.
+//! `i32`; anything else is refused, naming the value. Tables cross as JSON: a list (keys exactly
+//! `1..=n`) as an array in index order, a record (string keys only) as an object with its keys
+//! sorted, so nothing that crosses depends on Luau's hash order.
 //!
 //! `J.div` and `J.rem` (`div`, `rem`) are the only division a script has: they truncate toward zero
 //! as Rust's `/` and `%` do, where Luau's own `//` and `%` floor.

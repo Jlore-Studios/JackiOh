@@ -147,6 +147,19 @@ fn a_loop_that_never_ends_stops_at_the_cap_naming_the_card() {
     let expected = format!("fixture-endless base cry: stopped after {LUAU_HOOK_INTERRUPTS} interrupts");
     assert!(text.contains(&expected), "{text}");
 
+    // A hook that catches the stop with `pcall` is still stopped: the budget stays spent, so the
+    // next interrupt fails it again.
+    let caught = bytecode(
+        "endless_caught.luau",
+        "return { base = { cry = function(ctx)\n\tpcall(function() while true do end end)\n\treturn nil\nend } }\n",
+    );
+    let text = error_text(with_ctx(|ctx| {
+        call_hook(site("fixture-endless-caught", Face::Base, "cry"), caught, ctx)
+    }));
+    let expected =
+        format!("fixture-endless-caught base cry: stopped after {LUAU_HOOK_INTERRUPTS} interrupts");
+    assert!(text.contains(&expected), "{text}");
+
     let at_load = bytecode("endless_load.luau", "while true do\nend\nreturn {}\n");
     let text = error_text(load_card("fixture-endless-load", at_load));
     assert!(
