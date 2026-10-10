@@ -4593,15 +4593,6 @@
       "failures": 0,
       "feedback_since": "2026-10-10T07:20:13Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-10-10T07:18:56Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "",
-        "provider": "claude-3",
-        "reason": "`claude-3` reached its usage limit",
-        "trail": "- said: You've hit your session limit \u00b7 resets 10:10am (UTC)"
-      },
       "interruptions": 0,
       "issue": 622,
       "kind": "revise",
